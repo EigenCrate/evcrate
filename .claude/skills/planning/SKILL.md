@@ -31,13 +31,17 @@ Load: `references/research-phase.md`
 Load: `references/codebase-understanding.md`
 **Skip if:** Provided with scout reports
 
-### 3. Solution Design
+### 3. Architecture-First Design Gate
+Load: `references/architecture-first-design.md`
+**Always:** Check for `docs/architecture.md` or equivalent. Update it to reflect the design before writing the plan. Activate `mermaidjs-v11` skill for any diagram edits.
+
+### 4. Solution Design
 Load: `references/solution-design.md`
 
-### 4. Plan Creation & Organization
+### 5. Plan Creation & Organization
 Load: `references/plan-organization.md`
 
-### 5. Task Breakdown & Output Standards
+### 6. Task Breakdown & Output Standards
 Load: `references/output-standards.md`
 
 ## Workflow Process
@@ -45,9 +49,11 @@ Load: `references/output-standards.md`
 1. **Initial Analysis** → Read codebase docs, understand context
 2. **Research Phase** → Spawn researchers, investigate approaches
 3. **Synthesis** → Analyze reports, identify optimal solution
-4. **Design Phase** → Create architecture, implementation design
-5. **Plan Documentation** → Write comprehensive plan
-6. **Review & Refine** → Ensure completeness, clarity, actionability
+4. **Architecture Gate** → Find architecture doc → update diagrams (use `mermaidjs-v11`) → review invariants
+5. **Design Phase** → Create implementation design, validate against updated architecture
+6. **Plan Documentation** → Write comprehensive plan
+7. **Review & Refine** → Ensure completeness, clarity, actionability
+8. **Post-impl Gate** (after code) → Diff code vs architecture → patch any drift
 
 ## Output Requirements
 
