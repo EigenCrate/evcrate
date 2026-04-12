@@ -485,7 +485,7 @@ positional arguments:
 optional arguments:
   -h, --help            Show help message
   -t, --transport       Transport type: stdio, sse, or http (default: stdio)
-  -m, --model           gemini model to use (default: gemini-3-flash-preview-20250219)
+  -m, --model           gemini model to use (default: gemini-3-flash-preview)
   -o, --output          Output file for report (default: print to stdout)
 
 stdio options:
@@ -596,7 +596,7 @@ If many evaluations fail:
 ### Timeout Issues
 
 If tasks are timing out:
-- Use a more capable model (e.g., `gemini-3-flash-preview-20250219`)
+- Use a more capable model (e.g., `gemini-3-flash-preview`)
 - Check if tools are returning too much data
 - Verify pagination is working correctly
 - Consider simplifying complex questions

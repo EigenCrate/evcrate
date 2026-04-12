@@ -305,7 +305,7 @@ Keep output concise (<1k chars). No explanations of what you did.
 
 **Delegation rationale:**
 - Gemini Flash 2.5: $0.075/$0.30 per 1M tokens
-- flash-lite 4.5: $1/$5 per 1M tokens
+- flash-lite: $1/$5 per 1M tokens
 - For 100-line diffs, Gemini = **13x cheaper** for analysis
 - flash-lite focuses on orchestration, Gemini does heavy lifting
 

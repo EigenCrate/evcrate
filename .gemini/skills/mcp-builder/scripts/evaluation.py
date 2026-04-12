@@ -228,7 +228,7 @@ TASK_TEMPLATE = """
 async def run_evaluation(
     eval_path: Path,
     connection: Any,
-    model: str = "gemini-3-flash-preview-20250219",
+    model: str = "gemini-3-flash-preview",
 ) -> str:
     """Run evaluation with MCP server tools."""
     print("🚀 Starting Evaluation")
@@ -323,13 +323,13 @@ Examples:
   python evaluation.py -t sse -u https://example.com/mcp -H "Authorization: Bearer token" eval.xml
 
   # Evaluate an HTTP MCP server with custom model
-  python evaluation.py -t http -u https://example.com/mcp -m gemini-3-flash-preview-20241022 eval.xml
+  python evaluation.py -t http -u https://example.com/mcp -m gemini-3-flash-preview eval.xml
         """,
     )
 
     parser.add_argument("eval_file", type=Path, help="Path to evaluation XML file")
     parser.add_argument("-t", "--transport", choices=["stdio", "sse", "http"], default="stdio", help="Transport type (default: stdio)")
-    parser.add_argument("-m", "--model", default="gemini-3-flash-preview-20250219", help="gemini model to use (default: gemini-3-flash-preview-20250219)")
+    parser.add_argument("-m", "--model", default="gemini-3-flash-preview", help="gemini model to use (default: gemini-3-flash-preview)")
 
     stdio_group = parser.add_argument_group("stdio options")
     stdio_group.add_argument("-c", "--command", help="Command to run MCP server (stdio only)")
