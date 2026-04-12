@@ -123,7 +123,7 @@ Leverage LLM evaluation for context-aware decisions.
 {
   "type": "prompt",
   "prompt": "Analyze the session transcript and determine if...",
-  "model": "gemini-3-flash-preview-20241022"
+  "model": "gemini-3-flash-preview"
 }
 ```
 
@@ -597,7 +597,7 @@ echo "$FILE_HASH" >> "$CACHE_FILE"
           {
             "type": "prompt",
             "prompt": "Review the session and log key accomplishments.",
-            "model": "gemini-3-flash-preview-20241022"
+            "model": "gemini-3-flash-preview"
           }
         ]
       }

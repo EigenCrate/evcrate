@@ -52,7 +52,7 @@ Predictable degradation as context grows. Not binary - a continuum.
 | Model | Degradation Onset | Severe Degradation |
 |-------|-------------------|-------------------|
 | GPT-5.2 | ~64K tokens | ~200K tokens |
-| gemini pro 4.5 | ~100K tokens | ~180K tokens |
+| gemini 3.1 pro | ~100K tokens | ~180K tokens |
 | gemini flash 4.5 | ~80K tokens | ~150K tokens |
 | Gemini 3 Pro | ~500K tokens | ~800K tokens |
 

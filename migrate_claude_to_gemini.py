@@ -10,10 +10,54 @@ GEMINI_DIR = ".gemini"
 
 # Mappings for models and terms
 REPLACEMENTS = {
-    r"claude-3-7-sonnet": "gemini-3-flash-preview",
-    r"claude-3-5-sonnet": "gemini-3-flash-preview",
-    r"claude-3-5-haiku": "gemini-3.1-flash-lite-preview",
-    r"claude-3-opus": "gemini-3.1-pro-preview",
+    # API Names and specific string mappings
+    r"claude-4-6-opus(?:-[a-z0-9]+)?": "gemini-3.1-pro-preview",
+    r"claude-4-6-sonnet(?:-[a-z0-9]+)?": "gemini-3-flash-preview",
+    r"claude-4-5-opus(?:-[a-z0-9]+)?": "gemini-3.1-pro-preview",
+    r"claude-4-5-haiku(?:-[a-z0-9]+)?": "gemini-3.1-flash-lite-preview",
+    r"claude-3-7-sonnet(?:-[a-z0-9]+)?": "gemini-3-flash-preview",
+    r"claude-3-5-sonnet(?:-[a-z0-9]+)?": "gemini-3-flash-preview",
+    r"claude-3-5-haiku(?:-[a-z0-9]+)?": "gemini-3.1-flash-lite-preview",
+    r"claude-3-opus(?:-[a-z0-9]+)?": "gemini-3.1-pro-preview",
+
+    # Human-readable models
+    r"claude[\s-]*4[\.\-]*6[\s-]*opus": "gemini 3.1 pro",
+    r"claude[\s-]*opus[\s-]*4[\.\-]*6": "gemini 3.1 pro",
+    r"claude[\s-]*4[\.\-]*6[\s-]*sonnet": "gemini 3 flash",
+    r"claude[\s-]*sonnet[\s-]*4[\.\-]*6": "gemini 3 flash",
+    r"claude[\s-]*4[\.\-]*5[\s-]*opus": "gemini 3.1 pro",
+    r"claude[\s-]*opus[\s-]*4[\.\-]*5": "gemini 3.1 pro",
+    r"claude[\s-]*4[\.\-]*5[\s-]*haiku": "gemini 3.1 flash-lite",
+    r"claude[\s-]*haiku[\s-]*4[\.\-]*5": "gemini 3.1 flash-lite",
+    r"claude[\s-]*3[\.\-]*7[\s-]*sonnet": "gemini 3 flash",
+    r"claude[\s-]*sonnet[\s-]*3[\.\-]*7": "gemini 3 flash",
+    r"claude[\s-]*3[\.\-]*5[\s-]*sonnet": "gemini 3 flash",
+    r"claude[\s-]*sonnet[\s-]*3[\.\-]*5": "gemini 3 flash",
+    r"claude[\s-]*3[\.\-]*5[\s-]*haiku": "gemini 3.1 flash-lite",
+    r"claude[\s-]*haiku[\s-]*3[\.\-]*5": "gemini 3.1 flash-lite",
+    r"claude[\s-]*3[\s-]*opus": "gemini 3.1 pro",
+    r"claude[\s-]*opus[\s-]*3": "gemini 3.1 pro",
+
+    # Truncate dangling versions
+    r"opus[\s-]*4[\.\-]*6": "pro",
+    r"sonnet[\s-]*4[\.\-]*6": "flash",
+    r"opus[\s-]*4[\.\-]*5": "pro",
+    r"haiku[\s-]*4[\.\-]*5": "flash-lite",
+    r"sonnet[\s-]*3[\.\-]*7": "flash",
+    r"sonnet[\s-]*3[\.\-]*5": "flash",
+    r"haiku[\s-]*3[\.\-]*5": "flash-lite",
+    r"opus[\s-]*3": "pro",
+    
+    r"4[\.\-]*6[\s-]*opus": "pro",
+    r"4[\.\-]*6[\s-]*sonnet": "flash",
+    r"4[\.\-]*5[\s-]*opus": "pro",
+    r"4[\.\-]*5[\s-]*haiku": "flash-lite",
+    r"3[\.\-]*7[\s-]*sonnet": "flash",
+    r"3[\.\-]*5[\s-]*sonnet": "flash",
+    r"3[\.\-]*5[\s-]*haiku": "flash-lite",
+    r"3[\s-]*opus": "pro",
+
+    # Base replacements
     r"sonnet": "flash",
     r"haiku": "flash-lite",
     r"opus": "pro",
