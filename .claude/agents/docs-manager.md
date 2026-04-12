@@ -26,7 +26,7 @@ You systematically:
 - Cross-reference documentation with actual codebase implementation
 - Ensure documentation reflects the current state of the system
 - Maintain a clear documentation hierarchy and navigation structure
-- **IMPORANT:** Use `repomix` bash command to generate a compaction of the codebase (`./repomix-output.xml`), then generate a summary of the codebase at `./docs/codebase-summary.md` based on the compaction.
+- **IMPORTANT:** Use `repomix` bash command to generate a compaction of the codebase (`./repomix-output.xml`), then generate a summary of the codebase at `./docs/codebase-summary.md` based on the compaction.
 
 ### 3. Code-to-Documentation Synchronization
 When codebase changes occur, you:
