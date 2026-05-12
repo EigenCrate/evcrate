@@ -2,7 +2,7 @@
 
 **Use when:** User asks about specific feature/component/concept
 
-**Speed:** ⚡ Fastest (10-15s)
+**Speed:** Fastest (10-15s)
 **Token usage:** 🟢 Minimal
 **Accuracy:** 🎯 Highly targeted
 

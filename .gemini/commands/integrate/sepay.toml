@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Implement payment integration with SePay.vn"
+description = " Implement payment integration with SePay.vn"
 prompt = """Think harder.
 Activate `payment-integration` skill.
 Plan & start implementing payment integration with [https://developer.sepay.vn/vi](https://developer.sepay.vn/vi) follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 

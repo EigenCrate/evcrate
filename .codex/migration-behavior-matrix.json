@@ -1,0 +1,581 @@
+{
+  "generated_at": "2026-05-12T17:29:28Z",
+  "target": "codex",
+  "project_doc_fallback_filenames": [
+    "CLAUDE.md",
+    "GEMINI.md"
+  ],
+  "unsupported_events": {
+    "SubagentStart": "No Codex hook targets subagent startup; behavior is intentionally dropped.",
+    "PreCompact": "No clean Codex analog for Claude PreCompact; behavior is intentionally dropped.",
+    "SessionEnd": "Codex exposes no SessionEnd hook in the documented hook set; cleanup is intentionally omitted."
+  },
+  "behaviors": [
+    {
+      "kind": "memory-file",
+      "source": "CLAUDE.md",
+      "classification": "memory-file",
+      "status": "not-present",
+      "target": null
+    },
+    {
+      "kind": "command-prose",
+      "source": "ask.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/ask.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "bootstrap/auto/fast.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/bootstrap/auto/fast.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "bootstrap/auto/parallel.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/bootstrap/auto/parallel.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "bootstrap/auto.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/bootstrap/auto.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "bootstrap.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/bootstrap.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "brainstorm.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/brainstorm.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "code/auto.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/code/auto.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "code/no-test.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/code/no-test.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "code/parallel.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/code/parallel.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "code.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/code.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "coding-level.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/coding-level.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "content/cro.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/content/cro.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "content/enhance.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/content/enhance.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "content/fast.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/content/fast.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "content/good.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/content/good.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "cook/auto/fast.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/cook/auto/fast.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "cook/auto/parallel.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/cook/auto/parallel.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "cook/auto.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/cook/auto.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "cook.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/cook.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "debug.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/debug.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "design/3d.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/design/3d.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "design/describe.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/design/describe.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "design/fast.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/design/fast.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "design/good.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/design/good.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "design/screenshot.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/design/screenshot.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "design/video.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/design/video.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "docs/init.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/docs/init.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "docs/summarize.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/docs/summarize.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "docs/update.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/docs/update.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/ci.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/ci.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/fast.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/fast.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/hard.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/hard.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/logs.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/logs.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/parallel.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/parallel.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/test.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/test.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/types.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/types.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix/ui.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix/ui.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "fix.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/fix.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "git/cm.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/git/cm.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "git/cp.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/git/cp.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "git/merge.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/git/merge.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "git/pr.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/git/pr.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "integrate/polar.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/integrate/polar.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "integrate/sepay.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/integrate/sepay.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "journal.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/journal.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/archive.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/archive.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/ci.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/ci.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/cro.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/cro.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/fast.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/fast.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/hard.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/hard.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/parallel.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/parallel.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/two.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/two.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan/validate.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan/validate.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "plan.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/plan.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "preview.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/preview.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "review/codebase/parallel.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/review/codebase/parallel.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "review/codebase.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/review/codebase.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "scout/ext.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/scout/ext.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "scout.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/scout.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "skill/add.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/skill/add.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "skill/create.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/skill/create.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "skill/fix-logs.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/skill/fix-logs.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "skill/optimize/auto.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/skill/optimize/auto.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "skill/optimize.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/skill/optimize.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "skill/plan.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/skill/plan.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "test/ui.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/test/ui.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "test.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/test.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "use-mcp.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/use-mcp.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "watzup.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/watzup.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "worktree.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/claude-commands/references/commands/worktree.md"
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "SessionStart",
+      "source_matcher": "startup|resume|clear|compact",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-init.cjs",
+      "classification": "hook-driven",
+      "status": "migrated",
+      "target_event": "SessionStart"
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "SubagentStart",
+      "source_matcher": "*",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent-init.cjs",
+      "classification": "unsupported",
+      "status": "dropped",
+      "reason": "No Codex hook targets subagent startup; behavior is intentionally dropped."
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "UserPromptSubmit",
+      "source_matcher": "*",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/dev-rules-reminder.cjs",
+      "classification": "hook-driven",
+      "status": "migrated",
+      "target_event": "UserPromptSubmit"
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "PreToolUse",
+      "source_matcher": "Bash|Glob|Grep|Read|Edit|Write",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/scout-block.cjs",
+      "classification": "hook-driven",
+      "status": "migrated",
+      "target_event": "PreToolUse",
+      "target_followups": [
+        "PermissionRequest"
+      ]
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "PreToolUse",
+      "source_matcher": "Bash|Glob|Grep|Read|Edit|Write",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/privacy-block.cjs",
+      "classification": "hook-driven",
+      "status": "migrated",
+      "target_event": "PreToolUse",
+      "target_followups": [
+        "PermissionRequest"
+      ]
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "PreCompact",
+      "source_matcher": "manual|auto",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/write-compact-marker.cjs",
+      "classification": "unsupported",
+      "status": "dropped",
+      "reason": "No clean Codex analog for Claude PreCompact; behavior is intentionally dropped."
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "SessionEnd",
+      "source_matcher": "clear",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-end.cjs",
+      "classification": "unsupported",
+      "status": "dropped",
+      "reason": "Codex exposes no SessionEnd hook in the documented hook set; cleanup is intentionally omitted."
+    }
+  ]
+}

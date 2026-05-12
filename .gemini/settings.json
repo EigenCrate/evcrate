@@ -12,15 +12,6 @@
         "YOUR_API_KEY"
       ]
     },
-    "human-mcp": {
-      "command": "npx",
-      "args": [
-        "@goonnguyen/human-mcp"
-      ],
-      "env": {
-        "GOOGLE_GEMINI_API_KEY": "your_gemini_api_key_here"
-      }
-    },
     "chrome-devtools": {
       "command": "npx",
       "args": [
@@ -35,5 +26,67 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ]
     }
+  },
+  "context": {
+    "fileName": [
+      "GEMINI.md",
+      "AGENTS.md",
+      "CLAUDE.md"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "claude-session-start",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/session-start.cjs"
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "claude-user-prompt-submit",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-agent.cjs"
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command|glob|grep_search|read_file|replace|write_file",
+        "hooks": [
+          {
+            "name": "claude-scout-block",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-tool-scout-block.cjs"
+          },
+          {
+            "name": "claude-privacy-block",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-tool-privacy-block.cjs"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "claude-session-end",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/session-end.cjs"
+          }
+        ]
+      }
+    ]
   }
 }

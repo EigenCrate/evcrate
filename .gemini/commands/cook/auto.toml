@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Implement a feature automatically (\"trust me bro\")"
+description = " Implement a feature automatically (\"trust me bro\")"
 prompt = """**Ultrathink** to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <tasks>{{args}}</tasks>
 

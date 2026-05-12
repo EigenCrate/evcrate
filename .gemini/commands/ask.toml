@@ -1,4 +1,4 @@
-description = "\u26a1 Answer technical and architectural questions."
+description = " Answer technical and architectural questions."
 prompt = """## Context
 Technical question or architecture challenge: 
 <questions>{{args}}</questions>

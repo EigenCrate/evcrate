@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Analyze and fix UI issues"
+description = " Analyze and fix UI issues"
 prompt = """## Required Skills (Priority Order)
 1. **`ui-ux-pro-max`** - Design intelligence database (ALWAYS ACTIVATE FIRST)
 2. **`aesthetic`** - Design principles

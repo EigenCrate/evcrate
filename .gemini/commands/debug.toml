@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Debugging technical issues and providing solutions."
+description = " Debugging technical issues and providing solutions."
 prompt = """**Reported Issues**:
  {{args}}
 

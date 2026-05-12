@@ -1,4 +1,4 @@
-description = ""
+description = " Analyze the codebase and update documentation"
 prompt = """Use `docs-manager` agent to analyze the codebase based on `docs/codebase-summary.md` and respond with a summary report.
 
 ## Arguments:

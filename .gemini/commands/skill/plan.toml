@@ -1,4 +1,4 @@
-description = ""
+description = "Plan to create a new agent skill"
 prompt = """Think harder.
 First: Activate `skill-creator` and `gemini-cli` skills.
 Use `docs-seeker` skills to search for documentation if needed.

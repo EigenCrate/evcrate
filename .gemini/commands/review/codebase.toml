@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1\u26a1 Scan & analyze the codebase."
+description = " Scan & analyze the codebase."
 prompt = """Think harder to scan the codebase and analyze it follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <tasks>{{args}}</tasks>
 

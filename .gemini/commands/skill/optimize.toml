@@ -1,4 +1,4 @@
-description = ""
+description = "Optimize an existing agent skill"
 prompt = """Think harder.
 Use `skill-creator` and `gemini-cli` skills.
 Use `docs-seeker` skills to search for documentation if needed.

@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1\u26a1 Plan parallel phases & execute with fullstack-developer agents"
+description = " Plan parallel phases & execute with fullstack-developer agents"
 prompt = """**Ultrathink parallel** to implement: <tasks>{{args}}</tasks>
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.

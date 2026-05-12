@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Implement payment integration with Polar.sh"
+description = " Implement payment integration with Polar.sh"
 prompt = """Think harder.
 Activate `payment-integration` skill.
 Plan & start implementing payment integration with [Polar.sh](https://polar.sh/docs/llms-full.txt) follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 

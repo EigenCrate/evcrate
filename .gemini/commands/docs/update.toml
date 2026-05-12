@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1\u26a1 Analyze the codebase and update documentation"
+description = " Analyze the codebase and update documentation"
 prompt = """## Phase 1: Parallel Codebase Scouting
 
 1. Scan the codebase and calculate the number of files with LOC in each directory (skip credentials, cache or external modules directories, such as `.gemini`, `.opencode`, `.git`, `tests`, `node_modules`, `__pycache__`, `secrets`, etc.)

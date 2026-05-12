@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1\u26a1 Use subagents to plan and fix hard issues"
+description = " Use subagents to plan and fix hard issues"
 prompt = """**Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <issues>{{args}}</issues>
 

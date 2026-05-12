@@ -316,7 +316,7 @@ const animation: JSAnimation = animate('.element', { x: 250, duration: 1 } as An
 const timeline: Timeline = createTimeline({ defaults: { duration: 0.8 } } as TimelineParams);
 ```
 
-## ⚡ Performance Tips
+## Performance Tips
 
 1. **Use transforms over position properties**
    ```javascript
