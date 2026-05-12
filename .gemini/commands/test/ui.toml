@@ -1,4 +1,4 @@
-description = ""
+description = "\u26a1\u26a1 Run UI tests on a website & generate a detailed report."
 prompt = """Activate the chrome-devtools skill.
 
 ## Purpose

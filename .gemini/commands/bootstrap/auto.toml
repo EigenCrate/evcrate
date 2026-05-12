@@ -1,5 +1,5 @@
 description = "\u26a1\u26a1\u26a1\u26a1 Bootstrap a new project automatically"
-prompt = """**Ultrathink** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `gemini.md` file: 
+prompt = """**Ultrathink** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
 
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
 

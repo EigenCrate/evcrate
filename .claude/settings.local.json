@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(sudo /home/pi/pideepsleep/install.sh:*)",
+      "Bash(systemctl status:*)",
+      "Bash(echo:*)",
+      "Bash(pgrep:*)",
+      "Bash(cat:*)",
+      "Bash(sudo mv:*)",
+      "Bash(sudo systemctl restart:*)",
+      "Bash(git rm:*)",
+      "WebFetch(domain:docs.claudekit.cc)",
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)",
+      "Bash(tail:*)",
+      "Bash(cd:*)",
+      "Bash(cargo run:*)",
+      "Bash(grep:*)",
+      "Bash(awk 'END {print \"\"FILES:\"\"NR}')",
+      "Bash(node:*)",
+      "Bash(grep warning\\\\[:*)",
+      "Bash(echo no scripts:*)",
+      "Bash(pnpm test:run:*)",
+      "Bash(git add -A)",
+      "Bash(find:*)",
+      "Bash(pnpm:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(python3:*)",
+      "Bash(npx tsc:*)",
+      "Bash(vtracer:*)",
+      "Bash(ls:*)",
+      "Bash(python:*)"
+    ]
+  }
+}

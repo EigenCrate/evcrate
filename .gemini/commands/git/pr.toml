@@ -1,4 +1,4 @@
-description = ""
+description = "Create a pull request"
 prompt = """## Variables
 
 TO_BRANCH: $1 (defaults to `main`)

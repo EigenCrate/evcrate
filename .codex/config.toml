@@ -1,0 +1,38 @@
+# Generated from ".claude" by migrate_claude_to_codex.py
+# Token-conscious default: use mini for the main session and reserve
+# heavier models for explicit /model switches when a task needs them.
+model = "gpt-5.4-mini"
+model_reasoning_effort = "low"
+plan_mode_reasoning_effort = "medium"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+personality = "pragmatic"
+tool_output_token_limit = 8192
+
+project_doc_fallback_filenames = ["CLAUDE.md", "GEMINI.md"]
+
+[agents]
+# Keep fan-out bounded; subagents each run their own model/tool loop.
+max_threads = 4
+max_depth = 1
+
+[features]
+codex_hooks = true
+
+[mcp_servers."chrome-devtools"]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest"]
+
+[mcp_servers."context7"]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+
+[mcp_servers."human-mcp"]
+command = "npx"
+args = ["@goonnguyen/human-mcp"]
+[mcp_servers."human-mcp".env]
+GOOGLE_GEMINI_API_KEY = "your_gemini_api_key_here"
+
+[mcp_servers."sequential-thinking"]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]

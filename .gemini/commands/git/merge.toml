@@ -1,4 +1,4 @@
-description = ""
+description = "\u26a0\ufe0f Merge code from one branch to another"
 prompt = """## Variables
 
 TO_BRANCH: $1 (defaults to `main`)

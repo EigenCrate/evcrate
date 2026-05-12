@@ -1,12 +1,13 @@
 import os
 import re
-import yaml
 import shutil
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 
 CLAUDE_DIR = ".claude"
 GEMINI_DIR = ".gemini"
+SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 
 # Mappings for models and terms
 REPLACEMENTS = {
@@ -62,6 +63,7 @@ REPLACEMENTS = {
     r"haiku": "flash-lite",
     r"opus": "pro",
     r"claude-code": "gemini-cli",
+    r"\bCLAUDE\.md\b": "CLAUDE.md",
     r"claude": "gemini",
     r"claudekit": "geminikit",
     r"anthropic": "google",
@@ -91,19 +93,37 @@ TOOL_MAPPING = {
     "WebSearch": "google_web_search",
 }
 
+GEMINI_CONTEXT_FILENAMES = ["GEMINI.md", "AGENTS.md", "CLAUDE.md"]
+GEMINI_HOOK_EVENT_MAP = {
+    "SessionStart": "SessionStart",
+    "UserPromptSubmit": "BeforeAgent",
+    "PreToolUse": "BeforeTool",
+    "SessionEnd": "SessionEnd",
+}
+GEMINI_UNSUPPORTED_EVENTS = {
+    "SubagentStart": "No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped.",
+    "PreCompact": "No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.",
+}
+
 def apply_replacements(text):
     if not isinstance(text, str):
         return text
+    claude_md_token = "__SOURCE_MEMORY_DOC__"
+    text = re.sub(r"\bCLAUDE\.md\b", claude_md_token, text, flags=re.IGNORECASE)
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    text = text.replace(claude_md_token, "CLAUDE.md")
     return text
 
 def clean_destination():
-    for subdir in ["agents", "commands", "skills", "workflows"]:
+    for subdir in ["agents", "commands", "hooks", "scripts", "skills", "workflows"]:
         dest_dir = Path(GEMINI_DIR) / subdir
         if dest_dir.exists():
             print(f"Cleaning destination: {dest_dir}")
             shutil.rmtree(dest_dir)
+    matrix_file = Path(GEMINI_DIR) / "migration-behavior-matrix.json"
+    if matrix_file.exists():
+        matrix_file.unlink()
 
 def parse_markdown_with_frontmatter(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -112,12 +132,32 @@ def parse_markdown_with_frontmatter(file_path):
     if match:
         frontmatter_raw = match.group(1)
         body = match.group(2)
-        try:
-            frontmatter = yaml.safe_load(frontmatter_raw)
-        except Exception:
-            frontmatter = {}
+        frontmatter = {}
+        for line in frontmatter_raw.splitlines():
+            if ":" not in line:
+                continue
+            key, raw_value = line.split(":", 1)
+            value = raw_value.strip()
+            if value.startswith("[") and value.endswith("]"):
+                frontmatter[key.strip()] = [
+                    item.strip().strip("\"'")
+                    for item in value.strip("[]").split(",")
+                    if item.strip()
+                ]
+            else:
+                frontmatter[key.strip()] = value.strip("\"'")
         return frontmatter, body
     return {}, content
+
+def write_markdown_frontmatter(data, f):
+    f.write("---\n")
+    for key, value in data.items():
+        if isinstance(value, list):
+            rendered = ", ".join(json.dumps(str(item), ensure_ascii=False) for item in value)
+            f.write(f"{key}: [{rendered}]\n")
+        else:
+            f.write(f"{key}: {json.dumps(str(value), ensure_ascii=False)}\n")
+    f.write("---\n")
 
 def write_toml_simple(data, f):
     for key, value in data.items():
@@ -129,6 +169,305 @@ def write_toml_simple(data, f):
                 f.write(f'{key} = {json.dumps(value)}\n')
         else:
             f.write(f'{key} = {json.dumps(value)}\n')
+
+def read_json(path):
+    if not path.exists():
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+def deep_merge(base, override):
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(merged.get(key), dict) and isinstance(value, dict):
+            merged[key] = deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+def build_hook_behavior_entries():
+    settings = read_json(Path(CLAUDE_DIR) / "settings.json")
+    entries = []
+    hooks = settings.get("hooks", {})
+    for event_name, matcher_groups in hooks.items():
+        mapped_event = GEMINI_HOOK_EVENT_MAP.get(event_name)
+        for matcher_group in matcher_groups:
+            for hook in matcher_group.get("hooks", []):
+                entry = {
+                    "kind": "hook-driven",
+                    "source_event": event_name,
+                    "source_matcher": matcher_group.get("matcher", "*"),
+                    "source_command": hook.get("command", ""),
+                }
+                if mapped_event:
+                    entry.update({
+                        "target_event": mapped_event,
+                        "classification": "hook-driven",
+                        "status": "migrated",
+                    })
+                else:
+                    entry.update({
+                        "classification": "unsupported",
+                        "status": "dropped",
+                        "reason": GEMINI_UNSUPPORTED_EVENTS.get(
+                            event_name,
+                            "No Gemini CLI hook mapping was defined for this Claude event.",
+                        ),
+                    })
+                entries.append(entry)
+    return entries
+
+def write_behavior_matrix():
+    commands_dir = Path(CLAUDE_DIR) / "commands"
+    entries = [{
+        "kind": "memory-file",
+        "source": "CLAUDE.md",
+        "classification": "memory-file",
+        "status": "migrated-wrapper" if Path("CLAUDE.md").exists() else "not-present",
+        "target": "GEMINI.md -> @./CLAUDE.md" if Path("CLAUDE.md").exists() else None,
+    }]
+    for source in sorted(commands_dir.rglob("*.md")) if commands_dir.exists() else []:
+        entries.append({
+            "kind": "command-prose",
+            "source": str(source.relative_to(commands_dir)).replace("\\", "/"),
+            "classification": "command-prose",
+            "status": "migrated",
+            "target": str(source.relative_to(commands_dir).with_suffix(".toml")).replace("\\", "/"),
+        })
+    entries.extend(build_hook_behavior_entries())
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "target": "gemini",
+        "context_file_names": GEMINI_CONTEXT_FILENAMES,
+        "unsupported_events": GEMINI_UNSUPPORTED_EVENTS,
+        "behaviors": entries,
+    }
+    with open(Path(GEMINI_DIR) / "migration-behavior-matrix.json", "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+
+def write_gemini_memory_wrapper():
+    claude_md = Path("CLAUDE.md")
+    if not claude_md.exists():
+        return
+    wrapper = [
+        "# Gemini Project Context",
+        "",
+        "The authoritative project memory file for this migrated workspace remains `CLAUDE.md`.",
+        "Gemini should load native context first and then import the source memory document below.",
+        "",
+        "@./CLAUDE.md",
+        "",
+    ]
+    Path("GEMINI.md").write_text("\n".join(wrapper), encoding="utf-8")
+
+def write_gemini_hook_assets():
+    hooks_dir = Path(GEMINI_DIR) / "hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    hook_files = {
+        "session-start.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "SessionStart", ".claude/hooks/session-init.cjs"),
+        "before-agent.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "BeforeAgent", ".claude/hooks/dev-rules-reminder.cjs"),
+        "before-tool-scout-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/scout-block.cjs"),
+        "before-tool-privacy-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/privacy-block.cjs"),
+        "session-end.cjs": create_passthrough_bridge("GEMINI_PROJECT_DIR", ".claude/hooks/session-end.cjs"),
+    }
+    for name, content in hook_files.items():
+        (hooks_dir / name).write_text(content, encoding="utf-8")
+
+def create_context_bridge(project_env_var, hook_event_name, source_rel_path):
+    return """#!/usr/bin/env node
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const {{ spawnSync }} = require('child_process');
+
+const input = fs.readFileSync(0, 'utf-8');
+
+function resolveHookSource() {{
+  const candidates = [];
+  if (process.env.{project_env_var}) candidates.push(process.env.{project_env_var});
+  candidates.push(process.cwd());
+
+  for (const start of candidates) {{
+    if (!start) continue;
+    let current = path.resolve(start);
+    while (true) {{
+      const probe = path.join(current, {source_rel_path_json});
+      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }}
+  }}
+
+  const homeHook = path.join(os.homedir(), {source_rel_path_json});
+  if (fs.existsSync(homeHook)) {{
+    return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
+  }}
+
+  return {{
+    projectDir: process.env.{project_env_var} || process.cwd(),
+    sourceHook: path.join(process.cwd(), {source_rel_path_json}),
+  }};
+}}
+
+const {{ projectDir, sourceHook }} = resolveHookSource();
+const result = spawnSync(process.execPath, [sourceHook], {{
+  input,
+  encoding: 'utf-8',
+  env: {{
+    ...process.env,
+    CLAUDE_PROJECT_DIR: projectDir,
+    GEMINI_PROJECT_DIR: projectDir,
+  }},
+}});
+
+const additionalContext = (result.stdout || '').trim();
+const systemMessage = (result.stderr || '').trim();
+const payload = {{
+  hookSpecificOutput: {{
+    hookEventName: {hook_event_name_json},
+    additionalContext,
+  }},
+}};
+
+if (systemMessage) {{
+  payload.systemMessage = systemMessage;
+}}
+
+process.stdout.write(JSON.stringify(payload));
+""".format(
+        project_env_var=project_env_var,
+        source_rel_path_json=json.dumps(source_rel_path),
+        hook_event_name_json=json.dumps(hook_event_name),
+    )
+
+
+def create_block_bridge(project_env_var, hook_event_name, source_rel_path):
+    return """#!/usr/bin/env node
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const {{ spawnSync }} = require('child_process');
+
+const input = fs.readFileSync(0, 'utf-8');
+
+function resolveHookSource() {{
+  const candidates = [];
+  if (process.env.{project_env_var}) candidates.push(process.env.{project_env_var});
+  candidates.push(process.cwd());
+
+  for (const start of candidates) {{
+    if (!start) continue;
+    let current = path.resolve(start);
+    while (true) {{
+      const probe = path.join(current, {source_rel_path_json});
+      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }}
+  }}
+
+  const homeHook = path.join(os.homedir(), {source_rel_path_json});
+  if (fs.existsSync(homeHook)) {{
+    return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
+  }}
+
+  return {{
+    projectDir: process.env.{project_env_var} || process.cwd(),
+    sourceHook: path.join(process.cwd(), {source_rel_path_json}),
+  }};
+}}
+
+const {{ projectDir, sourceHook }} = resolveHookSource();
+const result = spawnSync(process.execPath, [sourceHook], {{
+  input,
+  encoding: 'utf-8',
+  env: {{
+    ...process.env,
+    CLAUDE_PROJECT_DIR: projectDir,
+    GEMINI_PROJECT_DIR: projectDir,
+  }},
+}});
+
+const reason = (result.stderr || result.stdout || '').trim();
+if (result.status === 2) {{
+  process.stdout.write(JSON.stringify({{
+    decision: 'deny',
+    reason: reason || 'Blocked by migrated Claude hook.',
+    hookSpecificOutput: {{
+      hookEventName: {hook_event_name_json},
+    }},
+  }}));
+}} else {{
+  process.stdout.write(JSON.stringify({{
+    hookSpecificOutput: {{
+      hookEventName: {hook_event_name_json},
+    }},
+  }}));
+}}
+""".format(
+        project_env_var=project_env_var,
+        source_rel_path_json=json.dumps(source_rel_path),
+        hook_event_name_json=json.dumps(hook_event_name),
+    )
+
+
+def create_passthrough_bridge(project_env_var, source_rel_path):
+    return """#!/usr/bin/env node
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const {{ spawnSync }} = require('child_process');
+
+const input = fs.readFileSync(0, 'utf-8');
+
+function resolveHookSource() {{
+  const candidates = [];
+  if (process.env.{project_env_var}) candidates.push(process.env.{project_env_var});
+  candidates.push(process.cwd());
+
+  for (const start of candidates) {{
+    if (!start) continue;
+    let current = path.resolve(start);
+    while (true) {{
+      const probe = path.join(current, {source_rel_path_json});
+      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }}
+  }}
+
+  const homeHook = path.join(os.homedir(), {source_rel_path_json});
+  if (fs.existsSync(homeHook)) {{
+    return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
+  }}
+
+  return {{
+    projectDir: process.env.{project_env_var} || process.cwd(),
+    sourceHook: path.join(process.cwd(), {source_rel_path_json}),
+  }};
+}}
+
+const {{ projectDir, sourceHook }} = resolveHookSource();
+spawnSync(process.execPath, [sourceHook], {{
+  input,
+  encoding: 'utf-8',
+  env: {{
+    ...process.env,
+    CLAUDE_PROJECT_DIR: projectDir,
+    GEMINI_PROJECT_DIR: projectDir,
+  }},
+}});
+process.stdout.write(JSON.stringify({{}}));
+""".format(
+        project_env_var=project_env_var,
+        source_rel_path_json=json.dumps(source_rel_path),
+    )
 
 def migrate_agents():
     src_dir = Path(CLAUDE_DIR) / "agents"
@@ -155,9 +494,7 @@ def migrate_agents():
             elif isinstance(frontmatter[key], list): frontmatter[key] = [apply_replacements(item) if isinstance(item, str) else item for item in frontmatter[key]]
         dest_file = dest_dir / file.name
         with open(dest_file, "w", encoding="utf-8") as f:
-            f.write("---\n")
-            yaml.dump(frontmatter, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
-            f.write("---\n")
+            write_markdown_frontmatter(frontmatter, f)
             f.write(body)
         print(f"Migrated agent: {file.name}")
 
@@ -176,6 +513,76 @@ def migrate_commands():
         with open(dest_path, "w", encoding="utf-8") as f:
             write_toml_simple({"description": description, "prompt": body.strip()}, f)
         print(f"Migrated command: {rel_path}")
+
+def migrate_commands_as_skill():
+    src_dir = Path(CLAUDE_DIR) / "commands"
+    if not src_dir.exists(): return
+
+    skill_dir = Path(GEMINI_DIR) / "skills" / "claude-commands"
+    references_dir = skill_dir / "references" / "commands"
+    workflow_references_dir = skill_dir / "references" / "workflows"
+    if skill_dir.exists(): shutil.rmtree(skill_dir)
+    references_dir.mkdir(parents=True, exist_ok=True)
+    workflow_references_dir.mkdir(parents=True, exist_ok=True)
+
+    workflow_dir = Path(CLAUDE_DIR) / "workflows"
+    if workflow_dir.exists():
+        for workflow in sorted(workflow_dir.glob("*.md")):
+            workflow_references_dir.joinpath(workflow.name).write_text(
+                apply_replacements(workflow.read_text(encoding="utf-8")),
+                encoding="utf-8",
+            )
+
+    command_index = []
+    for source in sorted(src_dir.rglob("*.md")):
+        rel = source.relative_to(src_dir)
+        frontmatter, body = parse_markdown_with_frontmatter(source)
+        description = apply_replacements(str(frontmatter.get("description", "")).strip())
+        command_body = apply_replacements(body).strip()
+        command_name = "/" + str(rel.with_suffix("")).replace("\\", "/")
+        command_index.append(f"- `{command_name}`: {description or 'Migrated Claude command'}")
+
+        ref_dest = references_dir / rel
+        ref_dest.parent.mkdir(parents=True, exist_ok=True)
+        ref_dest.write_text(
+            f"# {command_name}\n\nDescription: {description or 'Migrated Claude command'}\n\n{command_body}\n",
+            encoding="utf-8",
+        )
+
+    skill_md = [
+        "---",
+        "name: claude-commands",
+        'description: "Use when the user asks to run, inspect, or adapt a migrated Claude Code slash command such as /code, /plan, /fix, /test, /docs, /design, /git, /scout, /skill, /cook, or /bootstrap in Gemini CLI."',
+        "---",
+        "",
+        "# Claude Commands",
+        "",
+        "Use `references/commands/` as reusable prompt recipes for migrated Claude Code commands.",
+        "Gemini CLI already exposes native slash commands from `.gemini/commands`, so keep using",
+        "those for direct execution. Use this skill when you need the command semantics as a",
+        "reference workflow, when adapting a Claude command to Gemini, or when another agent needs",
+        "the command instructions as skill context instead of invoking a slash command directly.",
+        "",
+        "When the user asks for a migrated Claude command, or explicitly mentions this skill with a",
+        "command name:",
+        "1. Read `references/workflows/development-rules.md`, `references/workflows/orchestration-protocol.md`, `references/workflows/primary-workflow.md`, and `references/workflows/documentation-management.md` as the governing workflow context.",
+        "2. Map the requested command path to `references/commands/<command>.md`.",
+        "3. Read that command reference file.",
+        "4. Substitute any user arguments for `{{args}}`.",
+        "5. Either invoke the equivalent native Gemini slash command from `.gemini/commands`, or execute the command intent directly by following the reference instructions.",
+        "",
+        "Invocation examples:",
+        "- `Use claude-commands to inspect /plan`",
+        "- `Use claude-commands to adapt /fix/test to Gemini`",
+        "- `Use claude-commands as reference for /docs/update`",
+        "",
+        "## Available Commands",
+        "",
+        *command_index,
+        "",
+    ]
+    (skill_dir / "SKILL.md").write_text("\n".join(skill_md), encoding="utf-8")
+    print(f"Migrated {len(command_index)} commands into skill: claude-commands")
 
 def is_text_file(file_path):
     """Check if a file is likely text-based and not binary."""
@@ -196,7 +603,10 @@ def migrate_skills():
     if not src_dir.exists(): return
     for skill_dir in src_dir.iterdir():
         if skill_dir.is_dir():
-            skill_name = "gemini-cli" if skill_dir.name == "claude-code" else re.sub(r"claude", "gemini", skill_dir.name, flags=re.IGNORECASE)
+            if skill_dir.name in SKILLS_TO_SKIP:
+                print(f"Skipped vendor skill: {skill_dir.name}")
+                continue
+            skill_name = re.sub(r"claude", "gemini", skill_dir.name, flags=re.IGNORECASE)
             dest_skill_dir = dest_dir / skill_name
             if dest_skill_dir.exists(): shutil.rmtree(dest_skill_dir)
             shutil.copytree(skill_dir, dest_skill_dir)
@@ -225,6 +635,28 @@ def migrate_workflows():
         with open(dest_file, "w", encoding="utf-8") as f: f.write(apply_replacements(content))
         print(f"Migrated workflow: {file.name}")
 
+def migrate_scripts():
+    src_dir = Path(CLAUDE_DIR) / "scripts"
+    dest_dir = Path(GEMINI_DIR) / "scripts"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    if not src_dir.exists(): return
+    for source in src_dir.rglob("*"):
+        rel_path = source.relative_to(src_dir)
+        if "__pycache__" in rel_path.parts:
+            continue
+        dest_path = dest_dir / rel_path
+        if source.is_dir():
+            dest_path.mkdir(parents=True, exist_ok=True)
+            continue
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, dest_path)
+        if is_text_file(dest_path):
+            try:
+                with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
+                with open(dest_path, "w", encoding="utf-8") as f: f.write(apply_replacements(content))
+            except: pass
+        print(f"Migrated script: {rel_path}")
+
 def migrate_mcp():
     mcp_example = Path(CLAUDE_DIR) / ".mcp.json.example"
     settings_file = Path(GEMINI_DIR) / "settings.json"
@@ -233,22 +665,67 @@ def migrate_mcp():
         with open(mcp_example, "r") as f:
             try: mcp_config = json.load(f).get("mcpServers", {})
             except: pass
-    settings = {"model": {"name": "gemini-3.1-flash-lite-preview"}, "mcpServers": mcp_config}
-    if settings_file.exists():
-        try:
-            with open(settings_file, "r") as f:
-                existing = json.load(f)
-                existing.update(settings)
-                settings = existing
-        except: pass
-    with open(settings_file, "w") as f: json.dump(settings, f, indent=2)
+    migration_settings = {
+        "model": {"name": "gemini-3.1-flash-lite-preview"},
+        "context": {"fileName": GEMINI_CONTEXT_FILENAMES},
+        "hooks": {
+            "SessionStart": [{
+                "matcher": "*",
+                "hooks": [{
+                    "name": "claude-session-start",
+                    "type": "command",
+                    "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/session-start.cjs",
+                }],
+            }],
+            "BeforeAgent": [{
+                "matcher": "*",
+                "hooks": [{
+                    "name": "claude-user-prompt-submit",
+                    "type": "command",
+                    "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-agent.cjs",
+                }],
+            }],
+            "BeforeTool": [{
+                "matcher": "run_shell_command|glob|grep_search|read_file|replace|write_file",
+                "hooks": [
+                    {
+                        "name": "claude-scout-block",
+                        "type": "command",
+                        "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-tool-scout-block.cjs",
+                    },
+                    {
+                        "name": "claude-privacy-block",
+                        "type": "command",
+                        "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-tool-privacy-block.cjs",
+                    },
+                ],
+            }],
+            "SessionEnd": [{
+                "matcher": "*",
+                "hooks": [{
+                    "name": "claude-session-end",
+                    "type": "command",
+                    "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/session-end.cjs",
+                }],
+            }],
+        },
+        "mcpServers": mcp_config,
+    }
+    settings = deep_merge(read_json(settings_file), migration_settings)
+    with open(settings_file, "w", encoding="utf-8") as f:
+        json.dump(settings, f, indent=2)
     print("Migrated settings (Gemini 3.1 Flash-Lite)")
 
 if __name__ == "__main__":
     clean_destination()
     migrate_agents()
     migrate_commands()
+    migrate_commands_as_skill()
+    migrate_scripts()
     migrate_skills()
     migrate_workflows()
+    write_gemini_memory_wrapper()
+    write_gemini_hook_assets()
     migrate_mcp()
+    write_behavior_matrix()
     print("\nMigration complete!")

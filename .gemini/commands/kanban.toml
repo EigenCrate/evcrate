@@ -1,4 +1,4 @@
-description = ""
+description = "Plans directory (default: ./plans)"
 prompt = """Plans dashboard with progress tracking and timeline visualization.
 
 ## Usage
