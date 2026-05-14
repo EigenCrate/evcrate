@@ -17,6 +17,7 @@ CODEX_DIR = Path(os.environ.get("CODEX_OUTPUT_DIR", ".codex"))
 AGENTS_DIR = Path(os.environ.get("AGENTS_OUTPUT_DIR", ".agents"))
 PROJECT_DOCS_DIR = Path(os.environ.get("PROJECT_DOCS_OUTPUT_DIR", "."))
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
+MCP_SERVERS_TO_SKIP = {"human-mcp"}
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
 CODEX_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Codex hook targets subagent startup; behavior is intentionally dropped.",
@@ -58,8 +59,8 @@ REPLACEMENTS = {
     r"\$ARGUMENTS": "{{args}}",
     r"\bTask tool\b": "subagent workflow",
     r"\bTask\(subagent_type=": "Ask Codex to spawn a subagent with type=",
-    r"\bAskUserQuestion tool\b": "ask the user directly",
-    r"\bAskUserQuestion\b": "user input prompt",
+    r"\bAskUserQuestion tool\b": "request_user_input tool",
+    r"\bAskUserQuestion\b": "request_user_input",
     r"\bSlashCommands\b": "Codex slash commands",
     r"\bSlashCommand\b": "Codex slash command",
     r"\bCustom Commands\b": "Codex slash commands",
@@ -68,11 +69,11 @@ REPLACEMENTS = {
 
 MODEL_MAP = {
     # Keep migrated subagents close to Claude Code's token-conscious model tiers.
-    # Nano is cheapest and still supports shell/apply-patch/skills/MCP; mini is
-    # the default subagent-capable coding model for more involved work.
+    # Use only models that are broadly available in Codex CLI accounts. Mini is
+    # the safe floor for lightweight migrated agents when nano is unavailable.
     "opus": ("gpt-5.4-mini", "medium"),
     "sonnet": ("gpt-5.4-mini", "low"),
-    "haiku": ("gpt-5.4-nano", "low"),
+    "haiku": ("gpt-5.4-mini", "low"),
 }
 
 
@@ -94,14 +95,26 @@ def is_text_file(path: Path) -> bool:
 
 
 def clean_destination() -> None:
+    def clear_path(path: Path) -> None:
+        if not path.exists():
+            return
+        if path.is_symlink() or path.is_file():
+            path.unlink()
+            return
+        for child in path.iterdir():
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+
     for path in [
         CODEX_DIR / "agents",
+        CODEX_DIR / "bin",
         CODEX_DIR / "hooks",
         CODEX_DIR / "workflows",
         AGENTS_DIR / "skills",
     ]:
-        if path.exists():
-            shutil.rmtree(path)
+        clear_path(path)
     hooks_json = CODEX_DIR / "hooks.json"
     if hooks_json.exists():
         hooks_json.unlink()
@@ -413,6 +426,9 @@ def migrate_commands_as_skill() -> None:
         "4. Substitute any user arguments for `{{args}}`.",
         "5. Execute the command as normal Codex instructions, following the workflow context and using the closest Codex capability for Claude-only tools.",
         "",
+        "Claude `AskUserQuestion` references are migrated to Codex `request_user_input`.",
+        "Use that tool when the active Codex mode exposes it; otherwise ask the user a concise direct question and wait for their reply.",
+        "",
         "Invocation examples:",
         "- `$claude-commands run /plan implement authentication`",
         "- `$claude-commands /fix/test failing auth tests`",
@@ -585,18 +601,141 @@ process.stdout.write(JSON.stringify({
 """
 
 
+def create_run_node_hook_script() -> str:
+    return """#!/usr/bin/env sh
+set -eu
+
+script_path="${1:?missing hook script path}"
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+runtime_env="${CODEX_RUNTIME_ENV:-$script_dir/../runtime.env}"
+
+if [ -r "$runtime_env" ]; then
+  # shellcheck disable=SC1090
+  . "$runtime_env"
+fi
+
+resolve_executable() {
+  for candidate in "$@"; do
+    [ -n "$candidate" ] || continue
+    if [ -x "$candidate" ]; then
+      printf '%s\\n' "$candidate"
+      return 0
+    fi
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if node_bin="$(resolve_executable \
+  "${CODEX_NODE_BIN:-}" \
+  node \
+  nodejs \
+  /usr/local/bin/node \
+  /usr/bin/node \
+  "$HOME/.volta/bin/node" \
+  "$HOME/.local/bin/node"
+)"; then
+  "$node_bin" "$script_path"
+else
+  printf '{}'
+  exit 0
+fi
+"""
+
+
+def create_run_mcp_package_script() -> str:
+    return """#!/usr/bin/env sh
+set -eu
+
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+runtime_env="${CODEX_RUNTIME_ENV:-$script_dir/../runtime.env}"
+
+if [ -r "$runtime_env" ]; then
+  # shellcheck disable=SC1090
+  . "$runtime_env"
+fi
+
+resolve_executable() {
+  for candidate in "$@"; do
+    [ -n "$candidate" ] || continue
+    if [ -x "$candidate" ]; then
+      printf '%s\\n' "$candidate"
+      return 0
+    fi
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -y|--yes)
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+package="${1:-}"
+if [ -z "$package" ]; then
+  echo "Missing MCP package spec." >&2
+  exit 64
+fi
+shift
+
+if launcher="$(resolve_executable "${CODEX_NPX_BIN:-}" npx)"; then
+  exec "$launcher" -y "$package" "$@"
+fi
+
+if launcher="$(resolve_executable "${CODEX_PNPM_BIN:-}" pnpm)"; then
+  exec "$launcher" dlx "$package" "$@"
+fi
+
+if launcher="$(resolve_executable "${CODEX_BUNX_BIN:-}" bunx)"; then
+  exec "$launcher" "$package" "$@"
+fi
+
+if launcher="$(resolve_executable "${CODEX_YARN_BIN:-}" yarn)"; then
+  exec "$launcher" dlx "$package" "$@"
+fi
+
+if launcher="$(resolve_executable "${CODEX_COREPACK_BIN:-}" corepack)"; then
+  exec "$launcher" pnpm dlx "$package" "$@"
+fi
+
+echo "No supported package runner found for MCP package: $package" >&2
+exit 127
+"""
+
+
 def write_codex_hooks() -> None:
     hooks_dir = CODEX_DIR / "hooks"
     hooks_dir.mkdir(parents=True, exist_ok=True)
+    bin_dir = CODEX_DIR / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
     hook_files = {
         "session-start.cjs": create_context_bridge("CODEX_PROJECT_DIR", "SessionStart", ".claude/hooks/session-init.cjs"),
         "user-prompt-submit.cjs": create_context_bridge("CODEX_PROJECT_DIR", "UserPromptSubmit", ".claude/hooks/dev-rules-reminder.cjs"),
         "pretool-scout-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/scout-block.cjs"),
         "pretool-privacy-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/privacy-block.cjs"),
         "permission-request.cjs": create_permission_request_hook(),
+        "run-node-hook.sh": create_run_node_hook_script(),
     }
     for name, content in hook_files.items():
         (hooks_dir / name).write_text(content, encoding="utf-8")
+    (bin_dir / "run-mcp-package.sh").write_text(create_run_mcp_package_script(), encoding="utf-8")
 
     hooks_json = {
         "hooks": {
@@ -604,13 +743,13 @@ def write_codex_hooks() -> None:
                 "matcher": "*",
                 "hooks": [{
                     "type": "command",
-                    "command": "node \"$CODEX_PROJECT_DIR\"/.codex/hooks/session-start.cjs",
+                    "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/run-node-hook.sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/session-start.cjs",
                 }],
             }],
             "UserPromptSubmit": [{
                 "hooks": [{
                     "type": "command",
-                    "command": "node \"$CODEX_PROJECT_DIR\"/.codex/hooks/user-prompt-submit.cjs",
+                    "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/run-node-hook.sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/user-prompt-submit.cjs",
                 }],
             }],
             "PreToolUse": [{
@@ -618,11 +757,11 @@ def write_codex_hooks() -> None:
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "node \"$CODEX_PROJECT_DIR\"/.codex/hooks/pretool-scout-block.cjs",
+                        "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/run-node-hook.sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/pretool-scout-block.cjs",
                     },
                     {
                         "type": "command",
-                        "command": "node \"$CODEX_PROJECT_DIR\"/.codex/hooks/pretool-privacy-block.cjs",
+                        "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/run-node-hook.sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/pretool-privacy-block.cjs",
                     },
                 ],
             }],
@@ -630,7 +769,7 @@ def write_codex_hooks() -> None:
                 "matcher": "Bash",
                 "hooks": [{
                     "type": "command",
-                    "command": "node \"$CODEX_PROJECT_DIR\"/.codex/hooks/permission-request.cjs",
+                    "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/run-node-hook.sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/permission-request.cjs",
                 }],
             }],
         }
@@ -640,14 +779,6 @@ def write_codex_hooks() -> None:
 
 
 def migrate_mcp_and_config() -> None:
-    mcp_file = CLAUDE_DIR / ".mcp.json.example"
-    servers: dict[str, Any] = {}
-    if mcp_file.exists():
-        try:
-            servers = json.loads(mcp_file.read_text(encoding="utf-8")).get("mcpServers", {})
-        except json.JSONDecodeError:
-            servers = {}
-
     lines = [
         '# Generated from ".claude" by migrate_claude_to_codex.py',
         "# Token-conscious default: use mini for the main session and reserve",
@@ -672,23 +803,8 @@ def migrate_mcp_and_config() -> None:
         "",
     ]
 
-    for name, config in sorted(servers.items()):
-        safe_name = str(name).replace('"', '\\"')
-        lines.append(f'[mcp_servers."{safe_name}"]')
-        if "command" in config:
-            write_toml_value(lines, "command", str(config["command"]))
-        if "args" in config:
-            write_toml_value(lines, "args", config["args"])
-        if "cwd" in config:
-            write_toml_value(lines, "cwd", str(config["cwd"]))
-        if "url" in config:
-            write_toml_value(lines, "url", str(config["url"]))
-        if "env" in config and isinstance(config["env"], dict):
-            env = {str(k): apply_replacements(str(v)) for k, v in config["env"].items()}
-            lines.append(f'[mcp_servers."{safe_name}".env]')
-            for env_key, env_value in sorted(env.items()):
-                write_toml_value(lines, env_key, env_value)
-        lines.append("")
+    # Intentionally do not migrate MCP servers from .claude.
+    # Codex keeps its own MCP config and should not inherit Claude's servers.
 
     (CODEX_DIR / "config.toml").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     print(f"Generated Codex config: {CODEX_DIR / 'config.toml'}")

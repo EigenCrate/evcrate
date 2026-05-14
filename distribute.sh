@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Configuration
 # Use the directory where the script is located as the project root
@@ -10,8 +11,108 @@ TARGET_CODEX="$HOME/.codex"
 TARGET_AGENTS="$HOME/.agents"
 CODEX_STAGE="${CODEX_STAGE:-/tmp/devkit-codex-migration}"
 GEMINI_GLOBAL_MODE="${GEMINI_GLOBAL_MODE:-config-and-scripts}"
+DEVKIT_GLOBAL_SYNC_MODE="${DEVKIT_GLOBAL_SYNC_MODE:-managed}"
+
+resolve_bin() {
+    local name="$1"
+    type -P "$name" 2>/dev/null || true
+}
+
+reset_dir_contents() {
+    local target_dir="$1"
+    mkdir -p "$target_dir"
+    python3 - "$target_dir" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+
+target = Path(sys.argv[1])
+for child in target.iterdir():
+    if child.is_dir() and not child.is_symlink():
+        shutil.rmtree(child)
+    else:
+        child.unlink()
+PY
+}
+
+remove_managed_paths() {
+    local target_dir="$1"
+    shift
+
+    mkdir -p "$target_dir"
+    for rel_path in "$@"; do
+        rm -rf "$target_dir/$rel_path"
+    done
+}
+
+sync_tree() {
+    local source_dir="$1"
+    local target_dir="$2"
+
+    mkdir -p "$target_dir"
+    cp -rv "$source_dir/." "$target_dir/"
+}
+
+write_codex_runtime_env() {
+    local runtime_file="$1"
+    local node_bin=""
+
+    node_bin="$(resolve_bin node)"
+    if [ -z "$node_bin" ]; then
+        node_bin="$(resolve_bin nodejs)"
+    fi
+
+    cat > "$runtime_file" <<EOF
+CODEX_NODE_BIN="${node_bin}"
+CODEX_NPX_BIN="$(resolve_bin npx)"
+CODEX_PNPM_BIN="$(resolve_bin pnpm)"
+CODEX_BUNX_BIN="$(resolve_bin bunx)"
+CODEX_YARN_BIN="$(resolve_bin yarn)"
+CODEX_COREPACK_BIN="$(resolve_bin corepack)"
+EOF
+}
+
+rewrite_codex_global_paths() {
+    local target_codex="$1"
+    TARGET_CODEX_FOR_PY="$target_codex" python3 <<'PY'
+import json
+import os
+from pathlib import Path
+
+target = Path(os.environ["TARGET_CODEX_FOR_PY"]).resolve()
+
+hooks_path = target / "hooks.json"
+if hooks_path.exists():
+    data = json.loads(hooks_path.read_text(encoding="utf-8"))
+    local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
+    global_prefix = str(target / "hooks")
+    for groups in data.get("hooks", {}).values():
+        for group in groups:
+            for hook in group.get("hooks", []):
+                command = hook.get("command")
+                if isinstance(command, str):
+                    hook["command"] = command.replace(local_prefix, global_prefix)
+    hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+config_path = target / "config.toml"
+if config_path.exists():
+    wrapper = json.dumps(str(target / "bin" / "run-mcp-package.sh"))
+    lines = []
+    for line in config_path.read_text(encoding="utf-8").splitlines():
+        if line.strip() == 'command = ".codex/bin/run-mcp-package.sh"':
+            lines.append(f"command = {wrapper}")
+        else:
+            lines.append(line)
+    config_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+PY
+}
 
 echo "🚀 Starting distribution from $DEVKIT_DIR..."
+echo "   Global sync mode: $DEVKIT_GLOBAL_SYNC_MODE"
+if [ "$DEVKIT_GLOBAL_SYNC_MODE" != "managed" ] && [ "$DEVKIT_GLOBAL_SYNC_MODE" != "full" ]; then
+    echo "❌ Error: DEVKIT_GLOBAL_SYNC_MODE must be 'managed' or 'full'."
+    exit 1
+fi
 
 # 1. Ensure .gemini is up to date by running the migration script
 if [ -f "$DEVKIT_DIR/migrate_claude_to_gemini.py" ]; then
@@ -115,23 +216,40 @@ if [ -d "$CODEX_STAGE/.agents" ]; then
 fi
 
 if [ -d "$CODEX_SOURCE" ]; then
-    echo "🧹 Cleaning global Codex directory: $TARGET_CODEX"
-    rm -rf "$TARGET_CODEX"
-    mkdir -p "$TARGET_CODEX"
+    if [ "$DEVKIT_GLOBAL_SYNC_MODE" = "full" ]; then
+        echo "🧹 Fully replacing global Codex directory: $TARGET_CODEX"
+        reset_dir_contents "$TARGET_CODEX"
+    else
+        echo "🧹 Removing managed Codex assets only: $TARGET_CODEX"
+        remove_managed_paths "$TARGET_CODEX" \
+            agents \
+            bin \
+            hooks \
+            workflows \
+            config.toml \
+            hooks.json \
+            migration-behavior-matrix.json
+    fi
 
     echo "📦 Copying .codex items..."
-    cp -rv "$CODEX_SOURCE/." "$TARGET_CODEX/"
+    sync_tree "$CODEX_SOURCE" "$TARGET_CODEX"
+    write_codex_runtime_env "$TARGET_CODEX/runtime.env"
+    rewrite_codex_global_paths "$TARGET_CODEX"
 else
     echo "⚠️ Warning: Codex source not found. Codex migration may have failed."
 fi
 
 if [ -d "$AGENTS_SOURCE" ]; then
-    echo "🧹 Cleaning global Codex agents directory: $TARGET_AGENTS"
-    rm -rf "$TARGET_AGENTS"
-    mkdir -p "$TARGET_AGENTS"
+    if [ "$DEVKIT_GLOBAL_SYNC_MODE" = "full" ]; then
+        echo "🧹 Fully replacing global Codex agents directory: $TARGET_AGENTS"
+        reset_dir_contents "$TARGET_AGENTS"
+    else
+        echo "🧹 Removing managed Codex agents assets only: $TARGET_AGENTS"
+        remove_managed_paths "$TARGET_AGENTS" skills
+    fi
 
     echo "📦 Copying .agents items..."
-    cp -rv "$AGENTS_SOURCE/." "$TARGET_AGENTS/"
+    sync_tree "$AGENTS_SOURCE" "$TARGET_AGENTS"
 else
     echo "⚠️ Warning: Codex agents source not found. Codex skills migration may have failed."
 fi
@@ -139,9 +257,24 @@ fi
 # 3. Distribute .claude (Legacy Support)
 if [ -d "$DEVKIT_DIR/.claude" ]; then
     echo "📦 Syncing legacy .claude items to $TARGET_CLAUDE..."
-    rm -rf "$TARGET_CLAUDE"
-    mkdir -p "$TARGET_CLAUDE"
-    cp -rv "$DEVKIT_DIR/.claude/." "$TARGET_CLAUDE/"
+    if [ "$DEVKIT_GLOBAL_SYNC_MODE" = "full" ]; then
+        echo "🧹 Fully replacing legacy Claude directory: $TARGET_CLAUDE"
+        rm -rf "$TARGET_CLAUDE"
+        mkdir -p "$TARGET_CLAUDE"
+    else
+        echo "🧹 Removing managed Claude assets only: $TARGET_CLAUDE"
+        remove_managed_paths "$TARGET_CLAUDE" \
+            agents \
+            commands \
+            hooks \
+            scripts \
+            skills \
+            workflows \
+            settings.json \
+            .mcp.json.example \
+            statusline.cjs
+    fi
+    sync_tree "$DEVKIT_DIR/.claude" "$TARGET_CLAUDE"
 fi
 
 echo "✅ Distribution complete! Your global configurations are now synced with devkit."

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 CLAUDE_DIR = ".claude"
 GEMINI_DIR = ".gemini"
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
+MCP_SERVERS_TO_SKIP = {"human-mcp"}
 
 # Mappings for models and terms
 REPLACEMENTS = {
@@ -658,13 +659,7 @@ def migrate_scripts():
         print(f"Migrated script: {rel_path}")
 
 def migrate_mcp():
-    mcp_example = Path(CLAUDE_DIR) / ".mcp.json.example"
     settings_file = Path(GEMINI_DIR) / "settings.json"
-    mcp_config = {}
-    if mcp_example.exists():
-        with open(mcp_example, "r") as f:
-            try: mcp_config = json.load(f).get("mcpServers", {})
-            except: pass
     migration_settings = {
         "model": {"name": "gemini-3.1-flash-lite-preview"},
         "context": {"fileName": GEMINI_CONTEXT_FILENAMES},
@@ -709,7 +704,6 @@ def migrate_mcp():
                 }],
             }],
         },
-        "mcpServers": mcp_config,
     }
     settings = deep_merge(read_json(settings_file), migration_settings)
     with open(settings_file, "w", encoding="utf-8") as f:
