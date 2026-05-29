@@ -216,10 +216,33 @@ def read_json(path):
         return {}
 
 def deep_merge(base, override):
+    if not isinstance(base, dict) or not isinstance(override, dict):
+        return override
     merged = dict(base)
     for key, value in override.items():
-        if isinstance(merged.get(key), dict) and isinstance(value, dict):
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
             merged[key] = deep_merge(merged[key], value)
+        elif key in merged and isinstance(merged[key], list) and isinstance(value, list):
+            # For hooks and similar lists, we want to append or merge by name
+            if all(isinstance(x, dict) and "name" in x for x in value):
+                # Merge lists of objects with "name" property
+                base_list = merged[key]
+                new_list = list(base_list)
+                for item in value:
+                    name = item["name"]
+                    # Replace existing item with same name, or append
+                    found = False
+                    for i, base_item in enumerate(new_list):
+                        if isinstance(base_item, dict) and base_item.get("name") == name:
+                            new_list[i] = deep_merge(base_item, item)
+                            found = True
+                            break
+                    if not found:
+                        new_list.append(item)
+                merged[key] = new_list
+            else:
+                # Fallback to simple replacement for other lists or if no names
+                merged[key] = value
         else:
             merged[key] = value
     return merged
@@ -716,6 +739,70 @@ def migrate_scripts():
 
 def migrate_mcp():
     settings_file = Path(GEMINI_DIR) / "settings.json"
+    claude_settings_file = Path(CLAUDE_DIR) / "settings.json"
+    
+    # Start with existing Gemini settings or empty
+    settings = read_json(settings_file)
+    
+    # If Claude settings exist, migrate them as a base
+    if claude_settings_file.exists():
+        claude_settings = read_json(claude_settings_file)
+        # Apply replacements to the whole Claude settings dict
+        claude_settings_str = json.dumps(claude_settings)
+        claude_settings_str = apply_replacements(claude_settings_str)
+        # Fix the node "..." command patterns that apply_replacements might have missed or partially changed
+        claude_settings_str = re.sub(
+            r'node\s+\"(\$GEMINI_PROJECT_DIR)\"/\.gemini/hooks/',
+            r'\1/.gemini/hooks/',
+            claude_settings_str
+        )
+        # Also handle unquoted node $GEMINI_PROJECT_DIR
+        claude_settings_str = re.sub(
+            r'node\s+(\$GEMINI_PROJECT_DIR)/\.gemini/hooks/',
+            r'\1/.gemini/hooks/',
+            claude_settings_str
+        )
+        
+        claude_settings = json.loads(claude_settings_str)
+        
+        # Map Claude hooks to Gemini hooks
+        if "hooks" in claude_settings:
+            gemini_hooks = {}
+            for claude_event, groups in claude_settings["hooks"].items():
+                gemini_event = GEMINI_HOOK_EVENT_MAP.get(claude_event)
+                if gemini_event:
+                    # Initialize or merge groups
+                    if gemini_event not in gemini_hooks:
+                        gemini_hooks[gemini_event] = []
+                    
+                    for group in groups:
+                        # Clean up matchers in group
+                        if "matcher" in group:
+                            matcher = group["matcher"]
+                            for old_tool, new_tool in TOOL_MAPPING.items():
+                                matcher = re.sub(rf"\b{old_tool}\b", new_tool, matcher)
+                            group["matcher"] = matcher
+                        
+                        # Clean up hooks in group
+                        for hook in group.get("hooks", []):
+                            # Ensure name exists for merging
+                            if "name" not in hook:
+                                command = hook.get("command", "")
+                                if "session-init" in command: hook["name"] = "claude-session-start"
+                                elif "dev-rules" in command: hook["name"] = "claude-user-prompt-submit"
+                                elif "scout-block" in command: hook["name"] = "claude-scout-block"
+                                elif "privacy-block" in command: hook["name"] = "claude-privacy-block"
+                                elif "session-end" in command: hook["name"] = "claude-session-end"
+                                else: hook["name"] = f"migrated-{claude_event.lower()}-{hash(command) % 10000}"
+                        
+                        gemini_hooks[gemini_event].append(group)
+            
+            claude_settings["hooks"] = gemini_hooks
+        
+        # Merge Claude settings into our base
+        settings = deep_merge(settings, claude_settings)
+
+    # Now apply the hardcoded Gemini overrides/bridges
     migration_settings = {
         "model": {"name": "gemini-3.1-flash-lite-preview"},
         "context": {"fileName": GEMINI_CONTEXT_FILENAMES},
@@ -761,10 +848,24 @@ def migrate_mcp():
             }],
         },
     }
-    settings = deep_merge(read_json(settings_file), migration_settings)
+    
+    settings = deep_merge(settings, migration_settings)
+    
+    # Final cleanup: remove unsupported hook types and ensure everything is Gemini-branded
+    if "hooks" in settings:
+        for event in list(settings["hooks"].keys()):
+            if event in GEMINI_UNSUPPORTED_EVENTS:
+                del settings["hooks"][event]
+    
+    # Remove effortLevel and env as they might be Claude-specific
+    for key in ["effortLevel", "env", "includeCoAuthoredBy", "statusLine"]:
+        if key in settings:
+            del settings[key]
+
     with open(settings_file, "w", encoding="utf-8") as f:
         json.dump(settings, f, indent=2)
     print("Migrated settings (Gemini 3.1 Flash-Lite)")
+
 
 if __name__ == "__main__":
     clean_destination()
