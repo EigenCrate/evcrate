@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import json
+import yaml
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -92,6 +93,23 @@ TOOL_MAPPING = {
     "Bash": "run_shell_command",
     "AskUserQuestion": "ask_user",
     "WebSearch": "google_web_search",
+    "LS": "list_directory",
+    "WebFetch": "web_fetch",
+    "MultiEdit": "replace",
+    "NotebookEdit": "replace",
+    "TodoWrite": "write_file",
+    "BashOutput": "run_shell_command",
+    "KillBash": "run_shell_command",
+    "KillShell": "run_shell_command",
+    "ListMcpResourcesTool": "run_shell_command",
+    "ReadMcpResourceTool": "run_shell_command",
+}
+
+VALID_GEMINI_TOOLS = {
+    "update_topic", "list_directory", "read_file", "grep_search", "glob",
+    "replace", "write_file", "web_fetch", "run_shell_command",
+    "list_background_processes", "read_background_output", "google_web_search",
+    "ask_user", "enter_plan_mode", "invoke_agent", "activate_skill"
 }
 
 GEMINI_CONTEXT_FILENAMES = ["GEMINI.md", "AGENTS.md", "CLAUDE.md"]
@@ -129,35 +147,52 @@ def clean_destination():
 def parse_markdown_with_frontmatter(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", content, re.DOTALL)
-    if match:
-        frontmatter_raw = match.group(1)
-        body = match.group(2)
+    if not content.startswith("---"):
+        return {}, content
+    
+    parts = re.split(r"^---\s*$", content, maxsplit=2, flags=re.MULTILINE)
+    if len(parts) >= 3:
+        frontmatter_raw = parts[1]
+        body = parts[2].lstrip()
+        
+        # Try proper YAML first
+        try:
+            frontmatter = yaml.safe_load(frontmatter_raw)
+            if isinstance(frontmatter, dict):
+                return frontmatter, body
+        except yaml.YAMLError:
+            pass
+            
+        # Fallback to robust naive parser for non-standard YAML (e.g. unquoted colons in values)
         frontmatter = {}
+        current_key = None
         for line in frontmatter_raw.splitlines():
-            if ":" not in line:
+            if not line.strip(): continue
+            if line.startswith(" ") or line.startswith("\t"):
+                if current_key:
+                    frontmatter[current_key] += "\n" + line.strip()
                 continue
-            key, raw_value = line.split(":", 1)
-            value = raw_value.strip()
-            if value.startswith("[") and value.endswith("]"):
-                frontmatter[key.strip()] = [
-                    item.strip().strip("\"'")
-                    for item in value.strip("[]").split(",")
-                    if item.strip()
-                ]
+            
+            if ":" in line:
+                key, value = line.split(":", 1)
+                current_key = key.strip()
+                frontmatter[current_key] = value.strip()
             else:
-                frontmatter[key.strip()] = value.strip("\"'")
+                if current_key:
+                    frontmatter[current_key] += " " + line.strip()
+        
+        # Post-process values
+        for key, value in frontmatter.items():
+            if isinstance(value, str):
+                if value.startswith("[") and value.endswith("]"):
+                    frontmatter[key] = [item.strip().strip("\"'") for item in value[1:-1].split(",") if item.strip()]
+        
         return frontmatter, body
     return {}, content
 
 def write_markdown_frontmatter(data, f):
     f.write("---\n")
-    for key, value in data.items():
-        if isinstance(value, list):
-            rendered = ", ".join(json.dumps(str(item), ensure_ascii=False) for item in value)
-            f.write(f"{key}: [{rendered}]\n")
-        else:
-            f.write(f"{key}: {json.dumps(str(value), ensure_ascii=False)}\n")
+    yaml.dump(data, f, allow_unicode=True, sort_keys=False)
     f.write("---\n")
 
 def write_toml_simple(data, f):
@@ -486,13 +521,36 @@ def migrate_agents():
                 body = re.sub(r"^description:\s*.*$\n?", "", body, flags=re.MULTILINE | re.IGNORECASE)
             else:
                 frontmatter["description"] = f"Subagent {frontmatter['name']}"
+        
         if "tools" in frontmatter:
             raw_tools = frontmatter["tools"]
-            tools_list = [t.strip() for t in raw_tools.split(",")] if isinstance(raw_tools, str) else [str(t) for t in (raw_tools if isinstance(raw_tools, list) else [raw_tools])]
-            frontmatter["tools"] = [TOOL_MAPPING.get(t, t) for t in tools_list]
-        for key in frontmatter:
-            if isinstance(frontmatter[key], str): frontmatter[key] = apply_replacements(frontmatter[key])
-            elif isinstance(frontmatter[key], list): frontmatter[key] = [apply_replacements(item) if isinstance(item, str) else item for item in frontmatter[key]]
+            if isinstance(raw_tools, str):
+                tools_list = [t.strip() for t in raw_tools.split(",")]
+            elif isinstance(raw_tools, list):
+                tools_list = [str(t) for t in raw_tools]
+            else:
+                tools_list = [str(raw_tools)]
+            
+            mapped_tools = []
+            for t in tools_list:
+                gemini_tool = TOOL_MAPPING.get(t, t)
+                if gemini_tool in VALID_GEMINI_TOOLS or gemini_tool.startswith("mcp_"):
+                    mapped_tools.append(gemini_tool)
+            
+            frontmatter["tools"] = sorted(list(set(mapped_tools)))
+            if not frontmatter["tools"]:
+                 frontmatter["tools"] = ["read_file", "glob", "grep_search"]
+
+        for key in list(frontmatter.keys()):
+            val = frontmatter[key]
+            if isinstance(val, str):
+                frontmatter[key] = apply_replacements(val)
+            elif isinstance(val, list):
+                frontmatter[key] = [apply_replacements(item) if isinstance(item, str) else item for item in val]
+            
+            if key in ["Examples", "Context", "user", "assistant"]:
+                del frontmatter[key]
+
         dest_file = dest_dir / file.name
         with open(dest_file, "w", encoding="utf-8") as f:
             write_markdown_frontmatter(frontmatter, f)
@@ -510,7 +568,7 @@ def migrate_commands():
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         frontmatter, body = parse_markdown_with_frontmatter(file)
         body = apply_replacements(body)
-        description = apply_replacements(frontmatter.get("description", ""))
+        description = apply_replacements(str(frontmatter.get("description", "")))
         with open(dest_path, "w", encoding="utf-8") as f:
             write_toml_simple({"description": description, "prompt": body.strip()}, f)
         print(f"Migrated command: {rel_path}")
@@ -587,10 +645,8 @@ def migrate_commands_as_skill():
 
 def is_text_file(file_path):
     """Check if a file is likely text-based and not binary."""
-    # Common binary extensions to skip
     binary_exts = {'.pyc', '.exe', '.dll', '.so', '.dylib', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.zip', '.tar', '.gz', '.coverage', '.pyo'}
     if file_path.suffix.lower() in binary_exts: return False
-    # Check first 1024 bytes for null character
     try:
         with open(file_path, 'rb') as f:
             chunk = f.read(1024)

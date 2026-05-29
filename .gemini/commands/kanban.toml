@@ -1,4 +1,4 @@
-description = "Plans directory (default: ./plans)"
+description = "AI agent orchestration board (Coming Soon)"
 prompt = """Plans dashboard with progress tracking and timeline visualization.
 
 ## Usage

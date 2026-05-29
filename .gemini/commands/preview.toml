@@ -1,4 +1,4 @@
-description = "Path to file or directory to preview"
+description = "Path to markdown file, plan directory, or plans collection"
 prompt = """Universal viewer using `markdown-novel-viewer` skill - pass ANY path and see it rendered nicely.
 
 ## Usage
