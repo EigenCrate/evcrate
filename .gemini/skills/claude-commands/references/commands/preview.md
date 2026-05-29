@@ -1,6 +1,6 @@
 # /preview
 
-Description: Path to file or directory to preview
+Description: Path to markdown file, plan directory, or plans collection
 
 Universal viewer using `markdown-novel-viewer` skill - pass ANY path and see it rendered nicely.
 

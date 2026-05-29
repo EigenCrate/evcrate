@@ -1,6 +1,6 @@
 # /kanban
 
-Description: Plans directory (default: ./plans)
+Description: AI agent orchestration board (Coming Soon)
 
 Plans dashboard with progress tracking and timeline visualization.
 

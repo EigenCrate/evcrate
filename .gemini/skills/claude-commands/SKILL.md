@@ -72,7 +72,7 @@ Invocation examples:
 - `/integrate/polar`: ⚡⚡ Implement payment integration with Polar.sh
 - `/integrate/sepay`: ⚡⚡ Implement payment integration with SePay.vn
 - `/journal`: ⚡ Write some journal entries.
-- `/kanban`: Plans directory (default: ./plans)
+- `/kanban`: AI agent orchestration board (Coming Soon)
 - `/plan/archive`: Write journal entries and archive specific plans or all plans
 - `/plan/ci`: Analyze Github Actions logs and provide a plan to fix the issues
 - `/plan/cro`: Create a CRO plan for the given content
@@ -82,7 +82,7 @@ Invocation examples:
 - `/plan/two`: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
 - `/plan/validate`: Validate plan with critical questions interview
 - `/plan`: ⚡⚡⚡ Intelligent plan creation with prompt enhancement
-- `/preview`: Path to file or directory to preview
+- `/preview`: Path to markdown file, plan directory, or plans collection
 - `/review/codebase/parallel`: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
 - `/review/codebase`: ⚡⚡⚡ Scan & analyze the codebase.
 - `/scout/ext`: ⚡ Use external agentic tools to scout given directories
