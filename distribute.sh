@@ -152,6 +152,7 @@ if [ -d "$DEVKIT_DIR/.gemini" ]; then
         python3 - "$TARGET_GEMINI/settings.json" "$TARGET_GEMINI" <<'PY'
 import json
 import sys
+import re
 from pathlib import Path
 
 settings_path = Path(sys.argv[1])
@@ -163,10 +164,18 @@ for event_groups in data.get("hooks", {}).values():
         for hook in group.get("hooks", []):
             command = hook.get("command")
             if isinstance(command, str):
-                hook["command"] = command.replace(
-                    "$GEMINI_PROJECT_DIR/.gemini/hooks",
+                # Handle both quoted and unquoted project dir with or without node prefix
+                # node "$GEMINI_PROJECT_DIR"/.gemini/hooks -> ~/.gemini/hooks
+                # node $GEMINI_PROJECT_DIR/.gemini/hooks -> ~/.gemini/hooks
+                # "$GEMINI_PROJECT_DIR"/.gemini/hooks -> ~/.gemini/hooks
+                # $GEMINI_PROJECT_DIR/.gemini/hooks -> ~/.gemini/hooks
+                
+                command = re.sub(
+                    r'(?:node\s+)?\"?\$GEMINI_PROJECT_DIR\"?/\.gemini/hooks',
                     hook_root,
+                    command
                 )
+                hook["command"] = command
 
 settings_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 PY
