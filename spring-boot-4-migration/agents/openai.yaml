@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spring Boot 4 Migration"
+  short_description: "Guide Spring Boot 4 upgrade tasks"
+  default_prompt: "Use $spring-boot-4-migration to audit this project and guide the upgrade to Spring Boot 4.0.0."
