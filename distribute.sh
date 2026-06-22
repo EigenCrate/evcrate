@@ -9,6 +9,7 @@ TARGET_GEMINI="$HOME/.gemini"
 TARGET_CLAUDE="$HOME/.claude"
 TARGET_CODEX="$HOME/.codex"
 TARGET_AGENTS="$HOME/.agents"
+TARGET_AGY_CONFIG="$HOME/.gemini/config"
 CODEX_STAGE="${CODEX_STAGE:-/tmp/devkit-codex-migration}"
 GEMINI_GLOBAL_MODE="${GEMINI_GLOBAL_MODE:-config-and-scripts}"
 DEVKIT_GLOBAL_SYNC_MODE="${DEVKIT_GLOBAL_SYNC_MODE:-managed}"
@@ -104,6 +105,32 @@ if config_path.exists():
         else:
             lines.append(line)
     config_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+PY
+}
+
+rewrite_agy_global_paths() {
+    local target_agy="$1"
+    TARGET_AGY_FOR_PY="$target_agy" python3 <<'PY'
+import json
+import os
+from pathlib import Path
+
+target = Path(os.environ["TARGET_AGY_FOR_PY"]).resolve()
+
+hooks_path = target / "hooks.json"
+if hooks_path.exists():
+    data = json.loads(hooks_path.read_text(encoding="utf-8"))
+    local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
+    local_prefix_agy = '"$AGY_PROJECT_DIR"/.gemini/config/hooks'
+    global_prefix = str(target / "hooks")
+    for groups in data.get("hooks", {}).values():
+        for group in groups:
+            for hook in group.get("hooks", []):
+                command = hook.get("command")
+                if isinstance(command, str):
+                    command = command.replace(local_prefix, global_prefix).replace(local_prefix_agy, global_prefix)
+                    hook["command"] = command
+    hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 PY
 }
 
@@ -236,6 +263,7 @@ if [ -d "$CODEX_SOURCE" ]; then
             hooks \
             workflows \
             config.toml \
+            global-guidance.md \
             hooks.json \
             migration-behavior-matrix.json
     fi
@@ -261,6 +289,37 @@ if [ -d "$AGENTS_SOURCE" ]; then
     sync_tree "$AGENTS_SOURCE" "$TARGET_AGENTS"
 else
     echo "⚠️ Warning: Codex agents source not found. Codex skills migration may have failed."
+fi
+
+# 2c. Distribute to .gemini/config for Antigravity CLI (agy)
+if [ -d "$CODEX_SOURCE" ]; then
+    if [ "$DEVKIT_GLOBAL_SYNC_MODE" = "full" ]; then
+        echo "🧹 Fully replacing global Antigravity config directory: $TARGET_AGY_CONFIG"
+        reset_dir_contents "$TARGET_AGY_CONFIG"
+    else
+        echo "🧹 Removing managed Antigravity config assets only: $TARGET_AGY_CONFIG"
+        remove_managed_paths "$TARGET_AGY_CONFIG" \
+            agents \
+            bin \
+            hooks \
+            workflows \
+            hooks.json \
+            skills \
+            migration-behavior-matrix.json \
+            global-guidance.md
+    fi
+
+    echo "📦 Copying .codex items to Antigravity config..."
+    sync_tree "$CODEX_SOURCE" "$TARGET_AGY_CONFIG"
+    write_codex_runtime_env "$TARGET_AGY_CONFIG/runtime.env"
+    rewrite_agy_global_paths "$TARGET_AGY_CONFIG"
+else
+    echo "⚠️ Warning: Codex source not found. Antigravity config migration may have failed."
+fi
+
+if [ -d "$AGENTS_SOURCE" ]; then
+    echo "📦 Copying .agents items to Antigravity config..."
+    sync_tree "$AGENTS_SOURCE" "$TARGET_AGY_CONFIG"
 fi
 
 # 3. Distribute .claude (Legacy Support)

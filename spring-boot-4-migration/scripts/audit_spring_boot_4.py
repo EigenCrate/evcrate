@@ -122,6 +122,26 @@ def contextual_findings(path: Path, text: str):
     return findings
 
 
+def matches_pattern(line: str, pattern: str) -> bool:
+    # Avoid substring false positives for token-like checks.
+    if any(token in pattern for token in ["spring-boot-starter-", "HttpMessageConverters", "@MockBean", "@SpyBean"]):
+        escaped = re.escape(pattern)
+        return re.search(rf"(?<![A-Za-z0-9_-]){escaped}(?![A-Za-z0-9_-])", line) is not None
+    return pattern in line
+
+
+def is_comment_line(line: str) -> bool:
+    stripped = line.strip()
+    return (
+        stripped.startswith("<!--")
+        or stripped.startswith("--")
+        or stripped.startswith("//")
+        or stripped.startswith("/*")
+        or stripped.startswith("*")
+        or stripped.startswith("#")
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Audit a repository for Spring Boot 4 migration risks.")
     parser.add_argument("root", nargs="?", default=".", help="Repository root to scan")
@@ -147,11 +167,12 @@ def main():
     findings = []
     for path, text in files.items():
         for check in CHECKS:
-            if check.pattern in text:
-                for line_no, line in enumerate(text.splitlines(), start=1):
-                    if check.pattern in line:
-                        findings.append((check.severity, path, line_no, check.message))
-                        break
+            for line_no, line in enumerate(text.splitlines(), start=1):
+                if is_comment_line(line):
+                    continue
+                if matches_pattern(line, check.pattern):
+                    findings.append((check.severity, path, line_no, check.message))
+                    break
         for severity, cpath, message in contextual_findings(path, text):
             findings.append((severity, cpath, 1, message))
 
