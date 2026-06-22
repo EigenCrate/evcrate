@@ -443,7 +443,12 @@ def migrate_commands_as_skill() -> None:
     print(f"Migrated {len(command_index)} commands into skill: claude-commands")
 
 
-def create_context_bridge(project_env_var: str, hook_event_name: str, source_rel_path: str) -> str:
+def create_context_bridge(
+    project_env_var: str,
+    hook_event_name: str,
+    source_rel_path: str,
+    guidance_rel_path: str | None = None,
+) -> str:
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -451,6 +456,7 @@ const path = require('path');
 const {{ spawnSync }} = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
+{guidance_bootstrap}
 
 function resolveHookSource() {{
   const candidates = [];
@@ -491,7 +497,9 @@ const result = spawnSync(process.execPath, [sourceHook], {{
   }},
 }});
 
-const additionalContext = (result.stdout || '').trim();
+const additionalContext = [(result.stdout || '').trim(){guidance_suffix}]
+  .filter(Boolean)
+  .join('\\n\\n');
 if (!additionalContext) {{
   process.stdout.write(JSON.stringify({{}}));
   process.exit(0);
@@ -506,6 +514,17 @@ process.stdout.write(JSON.stringify({{
 """.format(
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
+        guidance_bootstrap=(
+            "const scriptDir = path.dirname(__filename);\n\n"
+            "function readManagedGuidance() {\n"
+            f"  const guidancePath = path.join(scriptDir, {json.dumps(guidance_rel_path)});\n"
+            "  if (!fs.existsSync(guidancePath)) return '';\n"
+            "  return fs.readFileSync(guidancePath, 'utf-8').trim();\n"
+            "}"
+            if guidance_rel_path
+            else ""
+        ),
+        guidance_suffix=", readManagedGuidance()" if guidance_rel_path else "",
         hook_event_name_json=json.dumps(hook_event_name),
     )
 
@@ -720,13 +739,32 @@ exit 127
 """
 
 
+def write_codex_global_guidance() -> None:
+    lines = [
+        "## Podman Docker Guidance",
+        "",
+        "- On Fedora hosts, treat `podman` with `podman-docker` as sufficient for Docker-compatible checks. Do not require Docker Engine if `docker info`, `docker build`, and `docker run` work.",
+        "- Before concluding Docker is unavailable, ensure `XDG_RUNTIME_DIR=/run/user/$(id -u)` is exported in the shell running Codex.",
+        "- If needed, start the user socket with `systemctl --user start podman.socket` and prefer keeping it enabled for future sessions.",
+        "- When validating container availability, run both `docker info` and a real smoke check such as `docker run --rm hello-world` or a minimal `docker build`.",
+        "- If `docker` resolves to the Podman compatibility CLI, that is acceptable. The common failure mode is missing runtime environment, not missing Docker Engine.",
+    ]
+    (CODEX_DIR / "global-guidance.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Generated Codex global guidance: {CODEX_DIR / 'global-guidance.md'}")
+
+
 def write_codex_hooks() -> None:
     hooks_dir = CODEX_DIR / "hooks"
     hooks_dir.mkdir(parents=True, exist_ok=True)
     bin_dir = CODEX_DIR / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
     hook_files = {
-        "session-start.cjs": create_context_bridge("CODEX_PROJECT_DIR", "SessionStart", ".claude/hooks/session-init.cjs"),
+        "session-start.cjs": create_context_bridge(
+            "CODEX_PROJECT_DIR",
+            "SessionStart",
+            ".claude/hooks/session-init.cjs",
+            "../global-guidance.md",
+        ),
         "user-prompt-submit.cjs": create_context_bridge("CODEX_PROJECT_DIR", "UserPromptSubmit", ".claude/hooks/dev-rules-reminder.cjs"),
         "pretool-scout-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/scout-block.cjs"),
         "pretool-privacy-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/privacy-block.cjs"),
@@ -819,6 +857,7 @@ def main() -> None:
     migrate_agents()
     migrate_skills()
     migrate_commands_as_skill()
+    write_codex_global_guidance()
     write_codex_hooks()
     migrate_mcp_and_config()
     write_behavior_matrix()
