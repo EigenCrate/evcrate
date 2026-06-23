@@ -78,6 +78,7 @@ rewrite_codex_global_paths() {
     TARGET_CODEX_FOR_PY="$target_codex" python3 <<'PY'
 import json
 import os
+import shlex
 from pathlib import Path
 
 target = Path(os.environ["TARGET_CODEX_FOR_PY"]).resolve()
@@ -86,7 +87,7 @@ hooks_path = target / "hooks.json"
 if hooks_path.exists():
     data = json.loads(hooks_path.read_text(encoding="utf-8"))
     local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
-    global_prefix = str(target / "hooks")
+    global_prefix = shlex.quote(str(target / "hooks"))
     for groups in data.get("hooks", {}).values():
         for group in groups:
             for hook in group.get("hooks", []):
@@ -113,6 +114,7 @@ rewrite_agy_global_paths() {
     TARGET_AGY_FOR_PY="$target_agy" python3 <<'PY'
 import json
 import os
+import shlex
 from pathlib import Path
 
 target = Path(os.environ["TARGET_AGY_FOR_PY"]).resolve()
@@ -122,7 +124,7 @@ if hooks_path.exists():
     data = json.loads(hooks_path.read_text(encoding="utf-8"))
     local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
     local_prefix_agy = '"$AGY_PROJECT_DIR"/.gemini/config/hooks'
-    global_prefix = str(target / "hooks")
+    global_prefix = shlex.quote(str(target / "hooks"))
     for groups in data.get("hooks", {}).values():
         for group in groups:
             for hook in group.get("hooks", []):
@@ -260,6 +262,7 @@ if [ -d "$CODEX_SOURCE" ]; then
         remove_managed_paths "$TARGET_CODEX" \
             agents \
             bin \
+            commands \
             hooks \
             workflows \
             config.toml \
@@ -301,6 +304,7 @@ if [ -d "$CODEX_SOURCE" ]; then
         remove_managed_paths "$TARGET_AGY_CONFIG" \
             agents \
             bin \
+            commands \
             hooks \
             workflows \
             hooks.json \
@@ -320,6 +324,47 @@ fi
 if [ -d "$AGENTS_SOURCE" ]; then
     echo "📦 Copying .agents items to Antigravity config..."
     sync_tree "$AGENTS_SOURCE" "$TARGET_AGY_CONFIG"
+fi
+
+if [ -d "$AGENTS_SOURCE/skills" ]; then
+    if find "$AGENTS_SOURCE/skills" -maxdepth 1 -type d -name 'cmd_*' | grep -q .; then
+        echo "ℹ️ Reusing migrated cmd_* skills from $AGENTS_SOURCE for Antigravity."
+    elif [ -d "$DEVKIT_DIR/.claude/commands" ]; then
+        echo "📦 Converting legacy .claude slash commands to Antigravity skills (fallback)..."
+        python3 - "$DEVKIT_DIR" "$TARGET_AGY_CONFIG" <<'PY'
+import sys
+from pathlib import Path
+
+source_dir = Path(sys.argv[1]) / ".claude" / "commands"
+target_skills = Path(sys.argv[2]) / "skills"
+target_skills.mkdir(parents=True, exist_ok=True)
+
+if source_dir.exists():
+    for md_file in source_dir.rglob("*.md"):
+        rel_path = md_file.relative_to(source_dir).with_suffix("")
+        cmd_name = str(rel_path).replace("\\", "/")
+
+        content = md_file.read_text(encoding="utf-8")
+        desc = "Migrated command from .claude"
+        for line in content.splitlines():
+            if line.startswith("Description:"):
+                desc = line[len("Description:"):].strip()
+                break
+
+        skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
+        skill_dir = target_skills / skill_dir_name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+
+        skill_content = (
+            f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
+            f"# {skill_dir_name}\n\n"
+            f"Command Path: /{cmd_name}\n\n"
+            f"Description: {desc}\n\n"
+            f"{content}"
+        )
+        (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
+PY
+    fi
 fi
 
 # 3. Distribute .claude (Legacy Support)
@@ -346,7 +391,16 @@ if [ -d "$DEVKIT_DIR/.claude" ]; then
 fi
 
 echo "✅ Distribution complete! Your global configurations are now synced with devkit."
-echo "   Model set to: $(grep '"name":' "$TARGET_GEMINI/settings.json" | cut -d'"' -f4)"
+echo "   Model set to: $(python3 - "$TARGET_GEMINI/settings.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh)
+
+print(data.get("model", {}).get("name", "unknown"))
+PY
+)"
 if [ -f "$TARGET_CODEX/config.toml" ]; then
     echo "   Codex model set to: $(grep '^model = ' "$TARGET_CODEX/config.toml" | head -1 | cut -d'"' -f2)"
 fi
