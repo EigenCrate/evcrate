@@ -596,75 +596,37 @@ def migrate_commands():
             write_toml_simple({"description": description, "prompt": body.strip()}, f)
         print(f"Migrated command: {rel_path}")
 
-def migrate_commands_as_skill():
+def migrate_commands_as_native_skills():
     src_dir = Path(CLAUDE_DIR) / "commands"
+    dest_dir = Path(GEMINI_DIR) / "skills"
     if not src_dir.exists(): return
-
-    skill_dir = Path(GEMINI_DIR) / "skills" / "claude-commands"
-    references_dir = skill_dir / "references" / "commands"
-    workflow_references_dir = skill_dir / "references" / "workflows"
-    if skill_dir.exists(): shutil.rmtree(skill_dir)
-    references_dir.mkdir(parents=True, exist_ok=True)
-    workflow_references_dir.mkdir(parents=True, exist_ok=True)
-
-    workflow_dir = Path(CLAUDE_DIR) / "workflows"
-    if workflow_dir.exists():
-        for workflow in sorted(workflow_dir.glob("*.md")):
-            workflow_references_dir.joinpath(workflow.name).write_text(
-                apply_replacements(workflow.read_text(encoding="utf-8")),
-                encoding="utf-8",
-            )
-
-    command_index = []
-    for source in sorted(src_dir.rglob("*.md")):
-        rel = source.relative_to(src_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    
+    count = 0
+    for source in src_dir.rglob("*.md"):
+        rel_path = source.relative_to(src_dir).with_suffix("")
+        cmd_name = str(rel_path).replace("\\", "/")
+        
         frontmatter, body = parse_markdown_with_frontmatter(source)
-        description = apply_replacements(str(frontmatter.get("description", "")).strip())
-        command_body = apply_replacements(body).strip()
-        command_name = "/" + str(rel.with_suffix("")).replace("\\", "/")
-        command_index.append(f"- `{command_name}`: {description or 'Migrated Claude command'}")
-
-        ref_dest = references_dir / rel
-        ref_dest.parent.mkdir(parents=True, exist_ok=True)
-        ref_dest.write_text(
-            f"# {command_name}\n\nDescription: {description or 'Migrated Claude command'}\n\n{command_body}\n",
-            encoding="utf-8",
+        desc = frontmatter.get("description", "Migrated command from .claude")
+        
+        skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
+        skill_dir = dest_dir / skill_dir_name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        
+        # apply_replacements to body? Yes, makes sense.
+        body = apply_replacements(body)
+        
+        content = (
+            f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
+            f"# {skill_dir_name}\n\n"
+            f"Command Path: /{cmd_name}\n\n"
+            f"Description: {desc}\n\n"
+            f"{body}"
         )
-
-    skill_md = [
-        "---",
-        "name: claude-commands",
-        'description: "Use when the user asks to run, inspect, or adapt a migrated Claude Code slash command such as /code, /plan, /fix, /test, /docs, /design, /git, /scout, /skill, /cook, or /bootstrap in Gemini CLI."',
-        "---",
-        "",
-        "# Claude Commands",
-        "",
-        "Use `references/commands/` as reusable prompt recipes for migrated Claude Code commands.",
-        "Gemini CLI already exposes native slash commands from `.gemini/commands`, so keep using",
-        "those for direct execution. Use this skill when you need the command semantics as a",
-        "reference workflow, when adapting a Claude command to Gemini, or when another agent needs",
-        "the command instructions as skill context instead of invoking a slash command directly.",
-        "",
-        "When the user asks for a migrated Claude command, or explicitly mentions this skill with a",
-        "command name:",
-        "1. Read `references/workflows/development-rules.md`, `references/workflows/orchestration-protocol.md`, `references/workflows/primary-workflow.md`, and `references/workflows/documentation-management.md` as the governing workflow context.",
-        "2. Map the requested command path to `references/commands/<command>.md`.",
-        "3. Read that command reference file.",
-        "4. Substitute any user arguments for `{{args}}`.",
-        "5. Either invoke the equivalent native Gemini slash command from `.gemini/commands`, or execute the command intent directly by following the reference instructions.",
-        "",
-        "Invocation examples:",
-        "- `Use claude-commands to inspect /plan`",
-        "- `Use claude-commands to adapt /fix/test to Gemini`",
-        "- `Use claude-commands as reference for /docs/update`",
-        "",
-        "## Available Commands",
-        "",
-        *command_index,
-        "",
-    ]
-    (skill_dir / "SKILL.md").write_text("\n".join(skill_md), encoding="utf-8")
-    print(f"Migrated {len(command_index)} commands into skill: claude-commands")
+        (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
+        count += 1
+    print(f"Migrated {count} native skills for commands")
 
 def is_text_file(file_path):
     """Check if a file is likely text-based and not binary."""
@@ -824,7 +786,7 @@ def migrate_mcp():
                 }],
             }],
             "BeforeTool": [{
-                "matcher": "run_shell_command|glob|grep_search|read_file|replace|write_file",
+                "matcher": "run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file",
                 "hooks": [
                     {
                         "name": "claude-scout-block",
@@ -871,7 +833,7 @@ if __name__ == "__main__":
     clean_destination()
     migrate_agents()
     migrate_commands()
-    migrate_commands_as_skill()
+    migrate_commands_as_native_skills()
     migrate_scripts()
     migrate_skills()
     migrate_workflows()

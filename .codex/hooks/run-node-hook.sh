@@ -25,14 +25,7 @@ resolve_executable() {
   return 1
 }
 
-if node_bin="$(resolve_executable \
-  "${CODEX_NODE_BIN:-}" \
-  node \
-  nodejs \
-  /usr/local/bin/node \
-  /usr/bin/node \
-  "$HOME/.volta/bin/node" \
-  "$HOME/.local/bin/node"
+if node_bin="$(resolve_executable   "${CODEX_NODE_BIN:-}"   node   nodejs   /usr/local/bin/node   /usr/bin/node   "$HOME/.volta/bin/node"   "$HOME/.local/bin/node"
 )"; then
   "$node_bin" "$script_path"
 else

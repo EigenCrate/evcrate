@@ -67,6 +67,7 @@ function isVenvExecutable(command) {
 try {
   // Read stdin synchronously
   const hookInput = fs.readFileSync(0, 'utf-8');
+  
 
   // Validate input not empty
   if (!hookInput || hookInput.trim().length === 0) {
@@ -95,7 +96,8 @@ try {
   const toolName = data.tool_name || 'unknown';
 
   // Check if it's a build command or venv executable (allowed regardless of paths)
-  if (toolInput.command && (isBuildCommand(toolInput.command) || isVenvExecutable(toolInput.command))) {
+  const cmd = toolInput.command || toolInput.CommandLine;
+  if (cmd && (isBuildCommand(cmd) || isVenvExecutable(cmd))) {
     process.exit(0);
   }
 

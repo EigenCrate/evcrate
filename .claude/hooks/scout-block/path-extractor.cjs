@@ -21,7 +21,7 @@ function extractFromToolInput(toolInput) {
   }
 
   // Direct path params (Read, Edit, Write, Grep, Glob tools)
-  const directParams = ['file_path', 'path', 'pattern'];
+  const directParams = ['file_path', 'path', 'pattern', 'AbsolutePath', 'SearchPath', 'DirectoryPath', 'TargetFile'];
   for (const param of directParams) {
     if (toolInput[param] && typeof toolInput[param] === 'string') {
       const normalized = normalizeExtractedPath(toolInput[param]);
@@ -29,9 +29,10 @@ function extractFromToolInput(toolInput) {
     }
   }
 
-  // Extract from Bash command if present
-  if (toolInput.command && typeof toolInput.command === 'string') {
-    const cmdPaths = extractFromCommand(toolInput.command);
+  // Extract from Bash command if present (Claude uses 'command', agy uses 'CommandLine')
+  const cmd = toolInput.command || toolInput.CommandLine;
+  if (cmd && typeof cmd === 'string') {
+    const cmdPaths = extractFromCommand(cmd);
     paths.push(...cmdPaths);
   }
 
