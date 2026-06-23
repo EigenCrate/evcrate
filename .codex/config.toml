@@ -18,15 +18,3 @@ max_depth = 1
 
 [features]
 hooks = true
-
-[mcp_servers."chrome-devtools"]
-command = ".codex/bin/run-mcp-package.sh"
-args = ["-y", "chrome-devtools-mcp@latest"]
-
-[mcp_servers."context7"]
-command = ".codex/bin/run-mcp-package.sh"
-args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-
-[mcp_servers."sequential-thinking"]
-command = ".codex/bin/run-mcp-package.sh"
-args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]

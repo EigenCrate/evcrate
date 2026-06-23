@@ -76,12 +76,85 @@ MODEL_MAP = {
     "haiku": ("gpt-5.4-mini", "low"),
 }
 
+COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
+
 
 def apply_replacements(text: str) -> str:
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     text = text.replace(".Codex", ".codex")
     text = re.sub(r"codexkit", "codexkit", text, flags=re.IGNORECASE)
+    return text
+
+
+def collect_migrated_command_paths() -> set[str]:
+    commands_dir = CLAUDE_DIR / "commands"
+    if not commands_dir.exists():
+        return set()
+    return {
+        "/" + str(path.relative_to(commands_dir).with_suffix("")).replace(os.sep, "/")
+        for path in commands_dir.rglob("*.md")
+    }
+
+
+def canonicalize_command_tokens(text: str, known_commands: set[str]) -> str:
+    if not known_commands:
+        return text
+
+    def repl(match: re.Match[str]) -> str:
+        token = match.group(0)
+        canonical = "/" + token[1:].replace(":", "/")
+        return canonical if canonical in known_commands else token
+
+    return COMMAND_TOKEN_RE.sub(repl, text)
+
+
+def rewrite_command_execution_guidance(text: str, known_commands: set[str]) -> str:
+    text = canonicalize_command_tokens(text, known_commands)
+    replacements = [
+        (
+            r"(?im)^(\s*(?:[-*]|\d+\.)\s*)Trigger slash command (`/[^`]+`)(.*)$",
+            r"\1Use the matching `cmd_*` skill to run \2\3",
+        ),
+        (
+            r"(?im)^(\s*(?:[-*]|\d+\.)\s*)Trigger (`/[^`]+`)(.*)$",
+            r"\1Use the matching `cmd_*` skill to run \2\3",
+        ),
+        (
+            r"(?im)(:\s*)Trigger slash command (`/[^`]+`)(.*)$",
+            r"\1Use the matching `cmd_*` skill to run \2\3",
+        ),
+        (
+            r"(?im)(:\s*)Trigger (`/[^`]+`)(.*)$",
+            r"\1Use the matching `cmd_*` skill to run \2\3",
+        ),
+        (
+            r"(?im)^(\s*(?:[-*]|\d+\.)\s*)Execute Codex slash command:\s*(.*)$",
+            r"\1Use the matching `cmd_*` skill to run \2",
+        ),
+        (
+            r"(?im)(:\s*)Execute (`/[^`]+`)(?: Codex slash command)?",
+            r"\1use the matching `cmd_*` skill to run \2",
+        ),
+        (
+            r"(?im)\btrigger (`/[^`]+`) slash command\b",
+            r"use the matching `cmd_*` skill to run \1",
+        ),
+        (
+            r"(?im)Use (`/[^`]+`) Codex slash command to",
+            r"Use the matching `cmd_*` skill to run \1 to",
+        ),
+        (
+            r"(?im)Use (`/[^`]+`) Slash Command to",
+            r"Use the matching `cmd_*` skill to run \1 to",
+        ),
+        (
+            r"(?im)(→\s*)(`/[^`]+`)",
+            r"\1Use the matching `cmd_*` skill to run \2",
+        ),
+    ]
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text)
     return text
 
 
@@ -261,12 +334,14 @@ def write_behavior_matrix() -> None:
     commands_dir = CLAUDE_DIR / "commands"
     if commands_dir.exists():
         for source in sorted(commands_dir.rglob("*.md")):
+            rel = source.relative_to(commands_dir).with_suffix("")
+            skill_dir_name = "cmd_" + str(rel).replace(os.sep, "_")
             entries.append({
                 "kind": "command-prose",
                 "source": str(source.relative_to(commands_dir)).replace("\\", "/"),
                 "classification": "command-prose",
                 "status": "migrated",
-                "target": f".agents/skills/claude-commands/references/commands/{str(source.relative_to(commands_dir)).replace(os.sep, '/')}",
+                "target": f".agents/skills/{skill_dir_name}/SKILL.md",
             })
     entries.extend(build_hook_behavior_entries())
     payload = {
@@ -288,14 +363,18 @@ def migrate_agents() -> None:
     dest_dir.mkdir(parents=True, exist_ok=True)
     if not src_dir.exists():
         return
+    known_commands = collect_migrated_command_paths()
 
     for source in sorted(src_dir.glob("*.md")):
         frontmatter, body = parse_markdown_with_frontmatter(source)
         name = apply_replacements(str(frontmatter.get("name") or source.stem))
-        description = apply_replacements(
-            str(frontmatter.get("description") or f"Specialized Codex subagent for {name}.")
+        description = rewrite_command_execution_guidance(
+            apply_replacements(
+                str(frontmatter.get("description") or f"Specialized Codex subagent for {name}.")
+            ),
+            known_commands,
         )
-        body = apply_replacements(body)
+        body = rewrite_command_execution_guidance(apply_replacements(body), known_commands)
 
         lines: list[str] = []
         write_toml_value(lines, "name", name)
@@ -321,10 +400,14 @@ def migrate_workflows() -> None:
     workflow_dir = CLAUDE_DIR / "workflows"
     dest_workflows = CODEX_DIR / "workflows"
     dest_workflows.mkdir(parents=True, exist_ok=True)
+    known_commands = collect_migrated_command_paths()
 
     if workflow_dir.exists():
         for source in sorted(workflow_dir.glob("*.md")):
-            content = apply_replacements(source.read_text(encoding="utf-8"))
+            content = rewrite_command_execution_guidance(
+                apply_replacements(source.read_text(encoding="utf-8")),
+                known_commands,
+            )
             (dest_workflows / source.name).write_text(content, encoding="utf-8")
             print(f"Migrated workflow: {source.name}")
 
@@ -344,6 +427,7 @@ def migrate_skills() -> None:
     dest_root.mkdir(parents=True, exist_ok=True)
     if not src_dir.exists():
         return
+    known_commands = collect_migrated_command_paths()
 
     for source in sorted(src_dir.iterdir()):
         if not source.is_dir():
@@ -366,81 +450,50 @@ def migrate_skills() -> None:
                 path = new_path
             if is_text_file(path):
                 content = path.read_text(encoding="utf-8", errors="ignore")
-                path.write_text(apply_replacements(content), encoding="utf-8")
+                path.write_text(
+                    rewrite_command_execution_guidance(apply_replacements(content), known_commands),
+                    encoding="utf-8",
+                )
             if path.name == "SKILL.md":
                 normalize_skill_file(path, dest.name)
         print(f"Migrated skill: {source.name} -> {target_name}")
 
 
-def migrate_commands_as_skill() -> None:
+def migrate_commands_as_native_skills() -> None:
     src_dir = CLAUDE_DIR / "commands"
+    dest_dir = AGENTS_DIR / "skills"
     if not src_dir.exists():
         return
 
-    skill_dir = AGENTS_DIR / "skills" / "claude-commands"
-    references_dir = skill_dir / "references" / "commands"
-    workflow_references_dir = skill_dir / "references" / "workflows"
-    if skill_dir.exists():
-        shutil.rmtree(skill_dir)
-    references_dir.mkdir(parents=True, exist_ok=True)
-    workflow_references_dir.mkdir(parents=True, exist_ok=True)
-
-    workflow_dir = CLAUDE_DIR / "workflows"
-    if workflow_dir.exists():
-        for workflow in sorted(workflow_dir.glob("*.md")):
-            workflow_references_dir.joinpath(workflow.name).write_text(
-                apply_replacements(workflow.read_text(encoding="utf-8")),
-                encoding="utf-8",
-            )
-
-    command_index: list[str] = []
+    known_commands = collect_migrated_command_paths()
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    count = 0
     for source in sorted(src_dir.rglob("*.md")):
-        rel = source.relative_to(src_dir)
+        rel_path = source.relative_to(src_dir).with_suffix("")
+        cmd_name = str(rel_path).replace("\\", "/")
+
         frontmatter, body = parse_markdown_with_frontmatter(source)
-        description = apply_replacements(str(frontmatter.get("description", "")).strip())
-        skill_body = apply_replacements(body).strip()
-        command_name = "/" + str(rel.with_suffix("")).replace("\\", "/")
-        command_index.append(f"- `{command_name}`: {description or 'Migrated Claude command'}")
+        desc = apply_replacements(str(frontmatter.get("description", "Migrated command from .claude")).strip())
+        body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
 
-        skill_dest = references_dir / rel
-        skill_dest.parent.mkdir(parents=True, exist_ok=True)
-        skill_dest.write_text(
-            f"# {command_name}\n\nDescription: {description or 'Migrated Claude command'}\n\n{skill_body}\n",
-            encoding="utf-8",
+        skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
+        skill_dir = dest_dir / skill_dir_name
+        if skill_dir.exists():
+            shutil.rmtree(skill_dir)
+        skill_dir.mkdir(parents=True, exist_ok=True)
+
+        content = (
+            f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
+            f"# {skill_dir_name}\n\n"
+            f"Command Path: /{cmd_name}\n\n"
+            f"Description: {desc}\n\n"
+            "Codex note: when this recipe says to run another `/...` command, "
+            "invoke the matching `cmd_*` skill for that path.\n\n"
+            f"{body}\n"
         )
-
-    skill_md = [
-        "---",
-        "name: claude-commands",
-        "description: Use when the user asks to run, inspect, or adapt a migrated Claude Code slash command such as /code, /plan, /fix, /test, /docs, /design, /git, /scout, /skill, /cook, or /bootstrap in Codex CLI.",
-        "---",
-        "",
-        "# Claude Commands",
-        "",
-        "Use `references/commands/` as reusable prompt recipes for migrated Claude Code commands. Codex CLI 0.130.0 does not load custom slash commands from `.codex/commands`, so invoke these through this skill instead.",
-        "",
-        "When the user asks for a migrated command, or explicitly mentions this skill with a command name:",
-        "1. Read `references/workflows/development-rules.md`, `references/workflows/orchestration-protocol.md`, `references/workflows/primary-workflow.md`, and `references/workflows/documentation-management.md` as the governing workflow context.",
-        "2. Map the requested command path to `references/commands/<command>.md`.",
-        "3. Read that command reference file.",
-        "4. Substitute any user arguments for `{{args}}`.",
-        "5. Execute the command as normal Codex instructions, following the workflow context and using the closest Codex capability for Claude-only tools.",
-        "",
-        "Claude `AskUserQuestion` references are migrated to Codex `request_user_input`.",
-        "Use that tool when the active Codex mode exposes it; otherwise ask the user a concise direct question and wait for their reply.",
-        "",
-        "Invocation examples:",
-        "- `$claude-commands run /plan implement authentication`",
-        "- `$claude-commands /fix/test failing auth tests`",
-        "- `Use claude-commands to run /docs/update`",
-        "",
-        "## Available Commands",
-        "",
-        *command_index,
-        "",
-    ]
-    (skill_dir / "SKILL.md").write_text("\n".join(skill_md), encoding="utf-8")
-    print(f"Migrated {len(command_index)} commands into skill: claude-commands")
+        (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
+        count += 1
+    print(f"Migrated {count} native skills for commands")
 
 
 def create_context_bridge(
@@ -741,6 +794,12 @@ exit 127
 
 def write_codex_global_guidance() -> None:
     lines = [
+        "## Migrated Claude Commands",
+        "",
+        "- This devkit migrates Claude slash commands into `.agents/skills/cmd_*` skills rather than native `.codex/commands` entries.",
+        "- When a user asks for `/plan`, `/fix`, `/code`, `/test`, `/docs/update`, `/git/cm`, or similar, use the matching `cmd_*` skill.",
+        "- If a migrated recipe tells you to run another `/...` command, switch to the corresponding `cmd_*` skill for that path.",
+        "",
         "## Podman Docker Guidance",
         "",
         "- On Fedora hosts, treat `podman` with `podman-docker` as sufficient for Docker-compatible checks. Do not require Docker Engine if `docker info`, `docker build`, and `docker run` work.",
@@ -791,7 +850,7 @@ def write_codex_hooks() -> None:
                 }],
             }],
             "PreToolUse": [{
-                "matcher": "Bash|Read|Edit|Write|apply_patch|mcp__.*",
+                "matcher": "Bash|Read|Edit|Write|apply_patch|mcp__.*|run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file",
                 "hooks": [
                     {
                         "type": "command",
@@ -804,7 +863,7 @@ def write_codex_hooks() -> None:
                 ],
             }],
             "PermissionRequest": [{
-                "matcher": "Bash",
+                "matcher": "Bash|run_command",
                 "hooks": [{
                     "type": "command",
                     "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/run-node-hook.sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/permission-request.cjs",
@@ -856,7 +915,7 @@ def main() -> None:
     write_project_agents_md()
     migrate_agents()
     migrate_skills()
-    migrate_commands_as_skill()
+    migrate_commands_as_native_skills()
     write_codex_global_guidance()
     write_codex_hooks()
     migrate_mcp_and_config()

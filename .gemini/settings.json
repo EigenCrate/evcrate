@@ -1,39 +1,4 @@
 {
-  "model": {
-    "name": "gemini-3.1-flash-lite-preview"
-  },
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "YOUR_API_KEY"
-      ]
-    },
-    "chrome-devtools": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "chrome-devtools-mcp@latest"
-      ]
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
-    }
-  },
-  "context": {
-    "fileName": [
-      "GEMINI.md",
-      "AGENTS.md",
-      "CLAUDE.md"
-    ]
-  },
   "hooks": {
     "SessionStart": [
       {
@@ -61,7 +26,7 @@
     ],
     "BeforeTool": [
       {
-        "matcher": "run_shell_command|glob|grep_search|read_file|replace|write_file",
+        "matcher": "run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file",
         "hooks": [
           {
             "name": "claude-scout-block",
@@ -87,6 +52,16 @@
           }
         ]
       }
+    ]
+  },
+  "model": {
+    "name": "gemini-3.1-flash-lite-preview"
+  },
+  "context": {
+    "fileName": [
+      "GEMINI.md",
+      "AGENTS.md",
+      "CLAUDE.md"
     ]
   }
 }
