@@ -122,17 +122,144 @@ target = Path(os.environ["TARGET_AGY_FOR_PY"]).resolve()
 hooks_path = target / "hooks.json"
 if hooks_path.exists():
     data = json.loads(hooks_path.read_text(encoding="utf-8"))
+    
     local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
     local_prefix_agy = '"$AGY_PROJECT_DIR"/.gemini/config/hooks'
+    local_prefix_claude = '"$CLAUDE_PROJECT_DIR"/.claude/hooks'
     global_prefix = shlex.quote(str(target / "hooks"))
     for groups in data.get("hooks", {}).values():
         for group in groups:
             for hook in group.get("hooks", []):
                 command = hook.get("command")
                 if isinstance(command, str):
-                    command = command.replace(local_prefix, global_prefix).replace(local_prefix_agy, global_prefix)
+                    command = command.replace(local_prefix, global_prefix).replace(local_prefix_agy, global_prefix).replace(local_prefix_claude, global_prefix)
                     hook["command"] = command
     hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    
+    # Generate Antigravity-specific wrappers for pretool blocks
+    hooks_dir = target / "hooks"
+    if hooks_dir.exists():
+        import re
+        for hook_file in ["scout-block.cjs", "privacy-block.cjs", "pretool-scout-block.cjs", "pretool-privacy-block.cjs"]:
+            hook_path = hooks_dir / hook_file
+            if not hook_path.exists(): continue
+            
+            # The original script may contain a path to os.homedir()
+            original = hook_path.read_text(encoding="utf-8")
+            
+            # Since we copied the script directly from .claude, we rename the original script to a backup name
+            # and write the wrapper in its place so that hooks.json still points to the correct filename.
+            original_backup = hooks_dir / f"{hook_file}.original.cjs"
+            original_backup.write_text(original, encoding="utf-8")
+            
+            wrapper = f"""#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const {{ spawnSync }} = require('child_process');
+
+const input = fs.readFileSync(0, 'utf-8');
+
+const sourceHook = path.join(__dirname, "{hook_file}.original.cjs");
+
+// Format Antigravity payload for Claude hook
+let claudePayload = input;
+try {{
+  const data = JSON.parse(input);
+  if (data && !data.tool_input) {{
+    let toolName = "unknown";
+    if (data.toolCall && data.toolCall.args) {{
+       const args = data.toolCall.args;
+       if (args.CommandLine) toolName = "run_command";
+       else if (args.TargetFile) toolName = "replace_file_content";
+       else if (args.Query) toolName = "grep_search";
+       else if (args.DirectoryPath) toolName = "list_dir";
+       else if (args.AbsolutePath) toolName = "view_file";
+       
+        const findProjectRoot = () => {{
+          if (data.workspacePaths && data.workspacePaths.length > 0) {{
+            return data.workspacePaths[0];
+          }}
+          if (data.cwd) {{
+            return data.cwd;
+          }}
+          if (process.env.GEMINI_PROJECT_DIR) return process.env.GEMINI_PROJECT_DIR;
+          if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
+          let current = process.cwd();
+          while (true) {{
+            if (fs.existsSync(path.join(current, '.agents')) || 
+                fs.existsSync(path.join(current, '.claude')) || 
+                fs.existsSync(path.join(current, '.git'))) {{
+              return current;
+            }}
+            const parent = path.dirname(current);
+            if (parent === current) break;
+            current = parent;
+          }}
+          return process.cwd();
+        }};
+
+        const mapKeys = (obj) => {{
+          if (typeof obj === "string") {{
+            let normalized = obj.replace(/\\\\/g, '/');
+            let projNormalized = findProjectRoot().replace(/\\\\/g, '/');
+            if (normalized.startsWith(projNormalized)) {{
+              let rel = normalized.substring(projNormalized.length);
+              if (rel.startsWith('/')) rel = rel.substring(1);
+              return rel;
+            }}
+            return obj;
+          }}
+          if (Array.isArray(obj)) return obj.map(mapKeys);
+          if (typeof obj === "object" && obj !== null) {{
+            const newObj = {{}};
+            for (const key of Object.keys(obj)) {{
+              let mappedKey = key;
+              if (key === 'AbsolutePath') mappedKey = 'path';
+              else if (key === 'TargetFile') mappedKey = 'path';
+              else if (key === 'SearchPath') mappedKey = 'path';
+              else if (key === 'DirectoryPath') mappedKey = 'path';
+              else if (key === 'CommandLine') mappedKey = 'command';
+              
+              newObj[mappedKey] = mapKeys(obj[key]);
+            }}
+            return newObj;
+          }}
+          return obj;
+        }};
+        
+        claudePayload = JSON.stringify({{
+          tool_name: toolName,
+          tool_input: mapKeys(args)
+        }});
+     }}
+   }}
+ }} catch(e) {{}}
+
+const result = spawnSync(process.execPath, [sourceHook], {{
+  input: claudePayload,
+  encoding: 'utf-8',
+  env: {{
+    ...process.env,
+    CLAUDE_PROJECT_DIR: process.cwd(),
+    GEMINI_PROJECT_DIR: process.cwd(),
+  }},
+}});
+
+const reason = (result.stderr || result.stdout || '').trim();
+if (result.status === 2 || result.status === 1) {{
+  // Output JSON format required by Antigravity CLI
+  process.stdout.write(JSON.stringify({{
+    decision: "deny",
+    reason: reason || 'Blocked by migrated Claude hook.'
+  }}) + '\\n');
+  process.exit(0);
+}} else {{
+  // Allow
+  process.stdout.write(JSON.stringify({{ decision: "allow" }}) + '\\n');
+  process.exit(0);
+}}
+"""
+            hook_path.write_text(wrapper, encoding="utf-8")
 PY
 }
 
@@ -295,7 +422,8 @@ else
 fi
 
 # 2c. Distribute to .gemini/config for Antigravity CLI (agy)
-if [ -d "$CODEX_SOURCE" ]; then
+CLAUDE_SOURCE="$DEVKIT_DIR/.claude"
+if [ -d "$CLAUDE_SOURCE" ]; then
     if [ "$DEVKIT_GLOBAL_SYNC_MODE" = "full" ]; then
         echo "🧹 Fully replacing global Antigravity config directory: $TARGET_AGY_CONFIG"
         reset_dir_contents "$TARGET_AGY_CONFIG"
@@ -303,34 +431,56 @@ if [ -d "$CODEX_SOURCE" ]; then
         echo "🧹 Removing managed Antigravity config assets only: $TARGET_AGY_CONFIG"
         remove_managed_paths "$TARGET_AGY_CONFIG" \
             agents \
-            bin \
             commands \
             hooks \
-            workflows \
-            hooks.json \
+            scripts \
             skills \
-            migration-behavior-matrix.json \
-            global-guidance.md
+            workflows \
+            settings.json \
+            .mcp.json.example \
+            statusline.cjs
     fi
 
-    echo "📦 Copying .codex items to Antigravity config..."
-    sync_tree "$CODEX_SOURCE" "$TARGET_AGY_CONFIG"
-    write_codex_runtime_env "$TARGET_AGY_CONFIG/runtime.env"
-    rewrite_agy_global_paths "$TARGET_AGY_CONFIG"
-else
-    echo "⚠️ Warning: Codex source not found. Antigravity config migration may have failed."
-fi
+    echo "📦 Copying .claude items to Antigravity config..."
+    sync_tree "$CLAUDE_SOURCE" "$TARGET_AGY_CONFIG"
+    
+    echo "📦 Extracting hooks from settings.json..."
+    if [ -f "$TARGET_AGY_CONFIG/settings.json" ]; then
+        python3 - "$TARGET_AGY_CONFIG" <<'PY'
+import sys, json
+from pathlib import Path
 
-if [ -d "$AGENTS_SOURCE" ]; then
-    echo "📦 Copying .agents items to Antigravity config..."
-    sync_tree "$AGENTS_SOURCE" "$TARGET_AGY_CONFIG"
-fi
+target = Path(sys.argv[1])
+settings_file = target / "settings.json"
+hooks_file = target / "hooks.json"
 
-if [ -d "$AGENTS_SOURCE/skills" ]; then
-    if find "$AGENTS_SOURCE/skills" -maxdepth 1 -type d -name 'cmd_*' | grep -q .; then
-        echo "ℹ️ Reusing migrated cmd_* skills from $AGENTS_SOURCE for Antigravity."
-    elif [ -d "$DEVKIT_DIR/.claude/commands" ]; then
-        echo "📦 Converting legacy .claude slash commands to Antigravity skills (fallback)..."
+if settings_file.exists():
+    try:
+        data = json.loads(settings_file.read_text(encoding="utf-8"))
+        if "hooks" in data:
+            # Translate legacy Claude tool matchers to Antigravity tool names
+            if "PreToolUse" in data["hooks"]:
+                for group in data["hooks"]["PreToolUse"]:
+                    if "matcher" in group:
+                        group["matcher"] = "run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file"
+            hooks_file.write_text(json.dumps({"hooks": data["hooks"]}, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"Failed to extract hooks: {e}")
+PY
+    fi
+
+    echo "🧹 Cleaning up legacy assets for Antigravity CLI..."
+    rm -f "$TARGET_AGY_CONFIG/settings.json" \
+          "$TARGET_AGY_CONFIG/.ck.json" \
+          "$TARGET_AGY_CONFIG/.mcp.json.example" \
+          "$TARGET_AGY_CONFIG/statusline.cjs" \
+          "$TARGET_AGY_CONFIG/statusline.ps1" \
+          "$TARGET_AGY_CONFIG/statusline.sh"
+    rm -rf "$TARGET_AGY_CONFIG/agents"
+    rm -rf "$TARGET_AGY_CONFIG/commands"
+
+    if [ -d "$CLAUDE_SOURCE/commands" ]; then
+        echo "📦 Converting legacy .claude slash commands to Antigravity skills..."
         python3 - "$DEVKIT_DIR" "$TARGET_AGY_CONFIG" <<'PY'
 import sys
 from pathlib import Path
@@ -365,6 +515,10 @@ if source_dir.exists():
         (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
 PY
     fi
+    
+    rewrite_agy_global_paths "$TARGET_AGY_CONFIG"
+else
+    echo "⚠️ Warning: Claude source not found. Antigravity config migration may have failed."
 fi
 
 # 3. Distribute .claude (Legacy Support)

@@ -404,6 +404,7 @@ process.stdout.write(JSON.stringify(payload));
 
 
 def create_block_bridge(project_env_var, hook_event_name, source_rel_path):
+    hook_name = source_rel_path.split("/")[-1]
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -412,9 +413,23 @@ const {{ spawnSync }} = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
 
+let workspacePaths = [];
+let payloadCwd = null;
+try {{
+  const data = JSON.parse(input);
+  if (data) {{
+    if (data.workspacePaths) workspacePaths = data.workspacePaths;
+    if (data.cwd) payloadCwd = data.cwd;
+  }}
+}} catch(e) {{}}
+
 function resolveHookSource() {{
   const candidates = [];
   if (process.env.{project_env_var}) candidates.push(process.env.{project_env_var});
+  if (workspacePaths && workspacePaths.length > 0) {{
+    for (const p of workspacePaths) candidates.push(p);
+  }}
+  if (payloadCwd) candidates.push(payloadCwd);
   candidates.push(process.cwd());
 
   for (const start of candidates) {{
@@ -431,18 +446,72 @@ function resolveHookSource() {{
 
   const homeHook = path.join(os.homedir(), {source_rel_path_json});
   if (fs.existsSync(homeHook)) {{
-    return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
+    const fallbackDir = (workspacePaths && workspacePaths.length > 0) ? workspacePaths[0] : (payloadCwd || process.env.{project_env_var} || process.cwd());
+    return {{ projectDir: fallbackDir, sourceHook: homeHook }};
   }}
 
+  const fallbackDir = (workspacePaths && workspacePaths.length > 0) ? workspacePaths[0] : (payloadCwd || process.env.{project_env_var} || process.cwd());
   return {{
-    projectDir: process.env.{project_env_var} || process.cwd(),
+    projectDir: fallbackDir,
     sourceHook: path.join(process.cwd(), {source_rel_path_json}),
   }};
 }}
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
-const result = spawnSync(process.execPath, [sourceHook], {{
-  input,
+
+// Format Antigravity payload for Claude hook & convert paths to relative
+let claudePayload = input;
+try {{
+  const data = JSON.parse(input);
+  if (data && !data.tool_input) {{
+    let toolName = "unknown";
+    if (data.toolCall && data.toolCall.args) {{
+      const args = data.toolCall.args;
+      if (args.CommandLine) toolName = "run_command";
+      else if (args.TargetFile) toolName = "replace_file_content";
+      else if (args.Query) toolName = "grep_search";
+      else if (args.DirectoryPath) toolName = "list_dir";
+      else if (args.AbsolutePath) toolName = "view_file";
+      
+      const mapKeys = (obj) => {{
+        if (typeof obj === "string") {{
+          let normalized = obj.replace(/\\\\/g, '/');
+          let projNormalized = projectDir.replace(/\\\\/g, '/');
+          if (normalized.startsWith(projNormalized)) {{
+            let rel = normalized.substring(projNormalized.length);
+            if (rel.startsWith('/')) rel = rel.substring(1);
+            return rel;
+          }}
+          return obj;
+        }}
+        if (Array.isArray(obj)) return obj.map(mapKeys);
+        if (typeof obj === "object" && obj !== null) {{
+          const newObj = {{}};
+          for (const key of Object.keys(obj)) {{
+            let mappedKey = key;
+            if (key === 'AbsolutePath') mappedKey = 'path';
+            else if (key === 'TargetFile') mappedKey = 'path';
+            else if (key === 'SearchPath') mappedKey = 'path';
+            else if (key === 'DirectoryPath') mappedKey = 'path';
+            else if (key === 'CommandLine') mappedKey = 'command';
+            
+            newObj[mappedKey] = mapKeys(obj[key]);
+          }}
+          return newObj;
+        }}
+        return obj;
+      }};
+      
+      claudePayload = JSON.stringify({{
+        tool_name: toolName,
+        tool_input: mapKeys(args)
+      }});
+    }}
+  }}
+}} catch(e) {{}}
+
+let result = spawnSync(process.execPath, [sourceHook], {{
+  input: claudePayload,
   encoding: 'utf-8',
   env: {{
     ...process.env,
@@ -451,8 +520,26 @@ const result = spawnSync(process.execPath, [sourceHook], {{
   }},
 }});
 
+// Fallback to global hook if local hook failed to run or crashed (status 1 or error)
+if ((result.status === 1 || result.error) && !sourceHook.includes('.gemini/config')) {{
+  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/{hook_name}");
+  if (fs.existsSync(globalHook)) {{
+    const fallbackResult = spawnSync(process.execPath, [globalHook], {{
+      input: input,
+      encoding: 'utf-8',
+      env: {{
+        ...process.env,
+        CLAUDE_PROJECT_DIR: projectDir,
+        GEMINI_PROJECT_DIR: projectDir,
+      }},
+    }});
+    process.stdout.write(fallbackResult.stdout);
+    process.exit(fallbackResult.status);
+  }}
+}}
+
 const reason = (result.stderr || result.stdout || '').trim();
-if (result.status === 2) {{
+if (result.status === 2 || result.status === 1) {{
   process.stdout.write(JSON.stringify({{
     decision: 'deny',
     reason: reason || 'Blocked by migrated Claude hook.',
@@ -462,6 +549,7 @@ if (result.status === 2) {{
   }}));
 }} else {{
   process.stdout.write(JSON.stringify({{
+    decision: 'allow',
     hookSpecificOutput: {{
       hookEventName: {hook_event_name_json},
     }},
@@ -471,6 +559,7 @@ if (result.status === 2) {{
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
         hook_event_name_json=json.dumps(hook_event_name),
+        hook_name=hook_name,
     )
 
 
