@@ -3,11 +3,20 @@ import re
 import shutil
 import json
 import yaml
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-CLAUDE_DIR = ".claude"
-GEMINI_DIR = ".gemini"
+CLAUDE_DIR = Path(".claude")
+GEMINI_DIR = Path(".gemini")
+
+# Command-line parameter support to generate local or global config baselines
+for arg in sys.argv[1:]:
+    if arg.lower() in ("--global", "global"):
+        GEMINI_DIR = Path.home() / ".gemini"
+    elif arg.lower() in ("--local", "local"):
+        GEMINI_DIR = Path(".gemini")
+
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
 

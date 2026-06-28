@@ -16,6 +16,17 @@ CLAUDE_DIR = Path(".claude")
 CODEX_DIR = Path(os.environ.get("CODEX_OUTPUT_DIR", ".codex"))
 AGENTS_DIR = Path(os.environ.get("AGENTS_OUTPUT_DIR", ".agents"))
 PROJECT_DOCS_DIR = Path(os.environ.get("PROJECT_DOCS_OUTPUT_DIR", "."))
+
+import sys
+# Command-line parameter support to generate local or global config baselines
+for arg in sys.argv[1:]:
+    if arg.lower() in ("--global", "global"):
+        CODEX_DIR = Path.home() / ".codex"
+        AGENTS_DIR = Path.home() / ".agents"
+    elif arg.lower() in ("--local", "local"):
+        CODEX_DIR = Path(".codex")
+        AGENTS_DIR = Path(".agents")
+
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
