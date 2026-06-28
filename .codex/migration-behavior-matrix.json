@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-23T06:57:01Z",
+  "generated_at": "2026-06-28T18:11:54Z",
   "target": "codex",
   "project_doc_fallback_filenames": [
     "CLAUDE.md",
@@ -15,8 +15,8 @@
       "kind": "memory-file",
       "source": "CLAUDE.md",
       "classification": "memory-file",
-      "status": "not-present",
-      "target": null
+      "status": "materialized-copy",
+      "target": "AGENTS.md"
     },
     {
       "kind": "command-prose",
