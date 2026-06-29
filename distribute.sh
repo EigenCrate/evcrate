@@ -482,7 +482,7 @@ PY
     if [ -d "$CLAUDE_SOURCE/commands" ]; then
         echo "📦 Converting legacy .claude slash commands to Antigravity skills..."
         python3 - "$DEVKIT_DIR" "$TARGET_AGY_CONFIG" <<'PY'
-import sys
+import sys, re
 from pathlib import Path
 
 source_dir = Path(sys.argv[1]) / ".claude" / "commands"
@@ -497,8 +497,12 @@ if source_dir.exists():
         content = md_file.read_text(encoding="utf-8")
         desc = "Migrated command from .claude"
         for line in content.splitlines():
-            if line.startswith("Description:"):
-                desc = line[len("Description:"):].strip()
+            stripped = line.strip()
+            match = re.match(r'^description\s*:\s*(.*)$', stripped, re.IGNORECASE)
+            if match:
+                desc = match.group(1).strip()
+                if (desc.startswith('"') and desc.endswith('"')) or (desc.startswith("'") and desc.endswith("'")):
+                    desc = desc[1:-1].strip()
                 break
 
         skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
