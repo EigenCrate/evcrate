@@ -178,8 +178,12 @@ def sync_antigravity_config():
                     content = md_file.read_text(encoding="utf-8")
                     desc = "Migrated command from .claude"
                     for line in content.splitlines():
-                        if line.startswith("Description:"):
-                            desc = line[len("Description:"):].strip()
+                        stripped = line.strip()
+                        match = re.match(r'^description\s*:\s*(.*)$', stripped, re.IGNORECASE)
+                        if match:
+                            desc = match.group(1).strip()
+                            if (desc.startswith('"') and desc.endswith('"')) or (desc.startswith("'") and desc.endswith("'")):
+                                desc = desc[1:-1].strip()
                             break
 
                     skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
