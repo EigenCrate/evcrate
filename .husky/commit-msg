@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Skip husky hooks in CI environment
+if [ "$CI" = "true" ]; then
+  exit 0
+fi
+
+npx --no-install commitlint --edit $1

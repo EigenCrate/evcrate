@@ -15,6 +15,7 @@
     "context7",
     "docs-discovery"
   ],
+  "author": "EVCrate",
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {},
