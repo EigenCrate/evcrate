@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-28T18:11:54Z",
+  "generated_at": "2026-07-04T02:54:46Z",
   "target": "codex",
   "project_doc_fallback_filenames": [
     "CLAUDE.md",
@@ -572,6 +572,15 @@
       "target_followups": [
         "PermissionRequest"
       ]
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "PostToolUse",
+      "source_matcher": "Write|Edit",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/modularization-hook.js",
+      "classification": "unsupported",
+      "status": "dropped",
+      "reason": "No Codex hook mapping was defined for this Claude event."
     },
     {
       "kind": "hook-driven",

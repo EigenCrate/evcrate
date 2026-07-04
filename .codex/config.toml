@@ -1,8 +1,8 @@
 # Generated from ".claude" by migrate_claude_to_codex.py
-# Token-conscious default: use mini for the main session and reserve
-# heavier models for explicit /model switches when a task needs them.
-model = "gpt-5.4-mini"
-model_reasoning_effort = "low"
+# Parent/main session runs on the strongest model (gpt-5.5) at medium
+# reasoning effort; subagents are pinned to cheaper tiers via MODEL_MAP.
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
 plan_mode_reasoning_effort = "medium"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
