@@ -8,14 +8,14 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 CLAUDE_DIR = Path(".claude")
-GEMINI_DIR = Path(".gemini")
+GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", ".gemini"))
 
 # Command-line parameter support to generate local or global config baselines
 for arg in sys.argv[1:]:
     if arg.lower() in ("--global", "global"):
         GEMINI_DIR = Path.home() / ".gemini"
     elif arg.lower() in ("--local", "local"):
-        GEMINI_DIR = Path(".gemini")
+        GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", ".gemini"))
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
@@ -147,7 +147,9 @@ def clean_destination():
         dest_dir = Path(GEMINI_DIR) / subdir
         if dest_dir.exists():
             print(f"Cleaning destination: {dest_dir}")
-            shutil.rmtree(dest_dir)
+            # ignore_errors: FUSE/overlay filesystems may leave transient
+            # .fuse_hidden* files that block the final directory removal.
+            shutil.rmtree(dest_dir, ignore_errors=True)
     matrix_file = Path(GEMINI_DIR) / "migration-behavior-matrix.json"
     if matrix_file.exists():
         matrix_file.unlink()
@@ -747,8 +749,8 @@ def migrate_skills():
                 continue
             skill_name = re.sub(r"claude", "gemini", skill_dir.name, flags=re.IGNORECASE)
             dest_skill_dir = dest_dir / skill_name
-            if dest_skill_dir.exists(): shutil.rmtree(dest_skill_dir)
-            shutil.copytree(skill_dir, dest_skill_dir)
+            if dest_skill_dir.exists(): shutil.rmtree(dest_skill_dir, ignore_errors=True)
+            shutil.copytree(skill_dir, dest_skill_dir, dirs_exist_ok=True)
             for target_file in dest_skill_dir.rglob("*"):
                 if target_file.is_file() and is_text_file(target_file):
                     if target_file.name.lower() == "skill.md" and target_file.name != "SKILL.md":

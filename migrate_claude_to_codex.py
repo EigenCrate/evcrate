@@ -79,12 +79,19 @@ REPLACEMENTS = {
 }
 
 MODEL_MAP = {
-    # Keep migrated subagents close to Claude Code's token-conscious model tiers.
-    # Use only models that are broadly available in Codex CLI accounts. Mini is
-    # the safe floor for lightweight migrated agents when nano is unavailable.
-    "opus": ("gpt-5.4-mini", "medium"),
-    "sonnet": ("gpt-5.4-mini", "low"),
+    # Restore 3-tier model delegation from the .claude baseline:
+    #   opus   → gpt-5.5 / high      (heavy reasoning: planner)
+    #   sonnet → gpt-5.4 / high      (capable coding: reviewer, debugger, …)
+    #   haiku  → gpt-5.4-mini / low  (light/parallel: tester, researcher, …)
+    # inherit / "" get explicit pins so every agent is deterministically pinned
+    # (Q4): inherit → gpt-5.4 / medium (ui-ux-designer); "" → gpt-5.5 / high
+    # (brainstormer, missing model field). gpt-5.3-codex-spark is intentionally
+    # excluded (Pro-only preview) and must never be a default tier.
+    "opus": ("gpt-5.5", "high"),
+    "sonnet": ("gpt-5.4", "high"),
     "haiku": ("gpt-5.4-mini", "low"),
+    "inherit": ("gpt-5.4", "medium"),
+    "": ("gpt-5.5", "high"),
 }
 
 COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
@@ -183,13 +190,21 @@ def clean_destination() -> None:
         if not path.exists():
             return
         if path.is_symlink() or path.is_file():
-            path.unlink()
+            try:
+                path.unlink()
+            except OSError:
+                pass
             return
         for child in path.iterdir():
             if child.is_dir() and not child.is_symlink():
-                shutil.rmtree(child)
+                # ignore_errors: FUSE/overlay filesystems may leave transient
+                # .fuse_hidden* files that block the final directory removal.
+                shutil.rmtree(child, ignore_errors=True)
             else:
-                child.unlink()
+                try:
+                    child.unlink()
+                except OSError:
+                    pass
 
     for path in [
         CODEX_DIR / "agents",
@@ -449,8 +464,8 @@ def migrate_skills() -> None:
         target_name = re.sub("claude", "codex", source.name, flags=re.IGNORECASE)
         dest = dest_root / target_name
         if dest.exists():
-            shutil.rmtree(dest)
-        shutil.copytree(source, dest)
+            shutil.rmtree(dest, ignore_errors=True)
+        shutil.copytree(source, dest, dirs_exist_ok=True)
 
         for path in sorted(dest.rglob("*")):
             if not path.is_file():
@@ -490,7 +505,7 @@ def migrate_commands_as_native_skills() -> None:
         skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
         skill_dir = dest_dir / skill_dir_name
         if skill_dir.exists():
-            shutil.rmtree(skill_dir)
+            shutil.rmtree(skill_dir, ignore_errors=True)
         skill_dir.mkdir(parents=True, exist_ok=True)
 
         content = (
@@ -889,10 +904,10 @@ def write_codex_hooks() -> None:
 def migrate_mcp_and_config() -> None:
     lines = [
         '# Generated from ".claude" by migrate_claude_to_codex.py',
-        "# Token-conscious default: use mini for the main session and reserve",
-        "# heavier models for explicit /model switches when a task needs them.",
-        'model = "gpt-5.4-mini"',
-        'model_reasoning_effort = "low"',
+        "# Parent/main session runs on the strongest model (gpt-5.5) at medium",
+        "# reasoning effort; subagents are pinned to cheaper tiers via MODEL_MAP.",
+        'model = "gpt-5.5"',
+        'model_reasoning_effort = "medium"',
         'plan_mode_reasoning_effort = "medium"',
         'approval_policy = "on-request"',
         'sandbox_mode = "workspace-write"',
