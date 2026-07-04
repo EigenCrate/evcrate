@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-27T10:03:06Z",
+  "generated_at": "2026-07-04T03:08:02Z",
   "target": "gemini",
   "context_file_names": [
     "GEMINI.md",
@@ -566,6 +566,15 @@
       "target_event": "BeforeTool",
       "classification": "hook-driven",
       "status": "migrated"
+    },
+    {
+      "kind": "hook-driven",
+      "source_event": "PostToolUse",
+      "source_matcher": "Write|Edit",
+      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/modularization-hook.js",
+      "classification": "unsupported",
+      "status": "dropped",
+      "reason": "No Gemini CLI hook mapping was defined for this Claude event."
     },
     {
       "kind": "hook-driven",
