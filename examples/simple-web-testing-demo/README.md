@@ -14,7 +14,9 @@ The demo renders a semantic release-gate page with a modal form used to check cl
 npm install
 npm run dev
 npm run build
+npm run test
+npm run test:e2e
 npm run preview
 ```
 
-`npm test` is still a placeholder gate. `npm run build` runs TypeScript and Vite production build validation.
+`npm run test` runs Vitest validation helper checks. `npm run test:e2e` builds the app and runs the Playwright browser flow. Local E2E runs use the installed Chrome channel; CI uses Playwright-managed Chromium.

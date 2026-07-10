@@ -26,7 +26,7 @@ devkit/
 ├── docs/                # Project documentation
 │   └── research/        # Research reports directory
 ├── examples/            # Isolated example apps for validating skills and workflows
-│   └── simple-web-testing-demo/ # Vite + TypeScript browser release-gate demo
+│   └── simple-web-testing-demo/ # Vite + TypeScript browser release-gate demo with Vitest and Playwright checks
 ├── guide/               # User guides and references
 ├── plans/               # Implementation plans and reports
 │   ├── reports/         # Agent-to-agent communication
@@ -49,7 +49,7 @@ devkit/
 - **Commitlint**: Conventional commit enforcement
 - **Husky**: Git hooks automation
 - **Repomix**: Codebase compaction for AI consumption
-- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` with an accessible modal flow for web-testing release-gate validation
+- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` with an accessible modal flow, Vitest validation helper tests, and Playwright browser flow checks
 
 ### CI/CD
 - **GitHub Actions**: Automated release workflow
@@ -239,6 +239,8 @@ Types:
 ## Testing Strategy
 
 - Comprehensive unit tests required
+- Demo unit checks use Vitest via `cd examples/simple-web-testing-demo && npm run test`
+- Demo browser checks use Playwright via `cd examples/simple-web-testing-demo && npm run test:e2e`
 - High code coverage mandatory
 - Error scenario testing
 - Performance validation

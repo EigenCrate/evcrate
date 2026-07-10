@@ -1,6 +1,6 @@
 # Devkit - Project Roadmap
 
-**Last Updated:** 2026-06-29
+**Last Updated:** 2026-07-10
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/devkit
 
@@ -229,6 +229,9 @@ Enterprise-grade features and deployment options.
 - ✅ Cross-platform performance optimization
 - ✅ Git workflow automation
 - ✅ Comprehensive error handling
+
+### Recent Additions (2026-07-10)
+- ✅ Simple Web Testing Demo Phase 03: Added core Vitest and Playwright tooling for the demo release-gate workflow; Phase 03 marked complete in implementation plan.
 
 ### Recent Additions (2026-06-29)
 - ✅ Refactor Distribute Script to Python (Phase 1): Ported legacy bash distribution logic to Python, created utility helpers, sync logic, hook conversions, and command-to-skill parser.
