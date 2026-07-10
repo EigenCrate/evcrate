@@ -1,3 +1,41 @@
+## 1.0.0 (2026-07-10)
+
+
+### 🚀 Features
+
+* add kit ([81dc951](https://github.com/NEBULEA-M/devkit/commit/81dc951955d4879f286ff85c7463ebfa6ffcd0b5))
+* **agent:** initialize gemini cli core ([e8a9539](https://github.com/NEBULEA-M/devkit/commit/e8a953933f50af2b51ae100cef13138c740ab67f))
+* **codex:** add MCP package runner and Node hook execution utilities ([e9bb995](https://github.com/NEBULEA-M/devkit/commit/e9bb995a3f3511f930dd6644050f7c985e86bebb))
+* enhance migration scripts, distribute agy config, and improve audit accuracy ([a1c3f1e](https://github.com/NEBULEA-M/devkit/commit/a1c3f1e7185916e1336af9e4b3a798ce68ce623a))
+* **migration:** add parameter support for local and global target baselines in migration scripts ([3808b09](https://github.com/NEBULEA-M/devkit/commit/3808b0956c966a756af9cfdae65798726e03a783))
+* **refactor:** port distribute.sh to modular distribute.py script ([62f112b](https://github.com/NEBULEA-M/devkit/commit/62f112b97c1112adb63d81534d99d336be41d8a2))
+* **releases:** complete devkit renaming, setup guides, and fail-closed hooks migration refinements ([4bf9574](https://github.com/NEBULEA-M/devkit/commit/4bf9574c67c6662dc02a2cb809fb97d2b95227aa))
+* **skill:** add spring boot 4 migration skill ([1aa8549](https://github.com/NEBULEA-M/devkit/commit/1aa854968a9f68f962b785f201f2d87057b9866c))
+* **take:** make take a first-class command and skill ([83a6f98](https://github.com/NEBULEA-M/devkit/commit/83a6f98426fbfb5fe68f77cf5992dcb77857d0e0))
+* update design first and review for plan ([d501287](https://github.com/NEBULEA-M/devkit/commit/d501287025636192fe149dafdc3d747b34401433))
+
+
+### 🐞 Bug Fixes
+
+* **cli:** update Gemini migration script and configuration ([aedabf4](https://github.com/NEBULEA-M/devkit/commit/aedabf4982999dcbd7018c555ba841f1b92c03ce))
+* **codex:** restore 3-tier model delegation in migration generator ([12d8e22](https://github.com/NEBULEA-M/devkit/commit/12d8e22760a751b58fd0d78e2dac59f2cf447d5f))
+* **cook:** add preflight and quality gates ([594321f](https://github.com/NEBULEA-M/devkit/commit/594321fd4ef65314fa5027317a3dec878df88e86))
+* harden distribute.sh distribution logic ([fa10e9d](https://github.com/NEBULEA-M/devkit/commit/fa10e9d78906653899732c1600b3d9db9ec7d67d))
+* **refactor:** correct command description extraction from frontmatter ([eecdfa1](https://github.com/NEBULEA-M/devkit/commit/eecdfa1ca0cf606161315014cbf3ffc062ce9233))
+* resolve safety hooks project root and argument mapping in multi-workspace setups ([5dc1e82](https://github.com/NEBULEA-M/devkit/commit/5dc1e82f1f890bb2bc2224cc2f03bc82fd572ca3))
+
+
+### 📚 Documentation
+
+* **agents:** update agent and skill frontmatter ([9d1964f](https://github.com/NEBULEA-M/devkit/commit/9d1964fade71babcad7b40f6a292f7261c117aa3))
+
+
+### ♻️ Code Refactoring
+
+* **migrate:** migrate claude to gemini ([575f936](https://github.com/NEBULEA-M/devkit/commit/575f936d6db0bb7b9b73d762e91bf12615e5ac38))
+* **models:** update model mapping to properly migrate recent Claude 4.5/4.6 models to Gemini 3/3.1 equivalents ([0c91651](https://github.com/NEBULEA-M/devkit/commit/0c916516a04ca5d5f3666f7bd62e65bcc95b80a2))
+* remove namespace prefix, default to bare command names ([39b9817](https://github.com/NEBULEA-M/devkit/commit/39b9817a57aeece4afed881a586256551bcce904))
+
 ## [1.14.8](https://github.com/claudekit/claudekit-engineer/compare/v1.14.7...v1.14.8) (2025-11-17)
 
 
