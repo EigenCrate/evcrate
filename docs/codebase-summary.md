@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Last Updated**: 2026-06-29
+**Last Updated**: 2026-07-10
 **Version**: 1.14.8
 **Repository**: [NEBULEA-M/devkit](https://github.com/NEBULEA-M/devkit)
 
@@ -25,6 +25,8 @@ devkit/
 │   └── workflows/       # CI/CD automation
 ├── docs/                # Project documentation
 │   └── research/        # Research reports directory
+├── examples/            # Isolated example apps for validating skills and workflows
+│   └── simple-web-testing-demo/ # Vite + TypeScript browser release-gate demo
 ├── guide/               # User guides and references
 ├── plans/               # Implementation plans and reports
 │   ├── reports/         # Agent-to-agent communication
@@ -47,6 +49,7 @@ devkit/
 - **Commitlint**: Conventional commit enforcement
 - **Husky**: Git hooks automation
 - **Repomix**: Codebase compaction for AI consumption
+- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` for web-testing release-gate validation
 
 ### CI/CD
 - **GitHub Actions**: Automated release workflow
