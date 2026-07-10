@@ -49,7 +49,7 @@ devkit/
 - **Commitlint**: Conventional commit enforcement
 - **Husky**: Git hooks automation
 - **Repomix**: Codebase compaction for AI consumption
-- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` for web-testing release-gate validation
+- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` with an accessible modal flow for web-testing release-gate validation
 
 ### CI/CD
 - **GitHub Actions**: Automated release workflow
