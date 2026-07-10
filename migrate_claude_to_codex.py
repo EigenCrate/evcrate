@@ -109,10 +109,15 @@ def collect_migrated_command_paths() -> set[str]:
     commands_dir = CLAUDE_DIR / "commands"
     if not commands_dir.exists():
         return set()
-    return {
-        "/" + str(path.relative_to(commands_dir).with_suffix("")).replace(os.sep, "/")
-        for path in commands_dir.rglob("*.md")
-    }
+    command_paths: set[str] = set()
+    for path in commands_dir.rglob("*.md"):
+        rel_command = str(path.relative_to(commands_dir).with_suffix("")).replace(os.sep, "/")
+        command_paths.add("/" + rel_command)
+        frontmatter, _ = parse_markdown_with_frontmatter(path)
+        explicit_name = str(frontmatter.get("name") or "").strip()
+        if explicit_name.startswith("/"):
+            command_paths.add(explicit_name)
+    return command_paths
 
 
 def canonicalize_command_tokens(text: str, known_commands: set[str]) -> str:
@@ -499,6 +504,7 @@ def migrate_commands_as_native_skills() -> None:
         cmd_name = str(rel_path).replace("\\", "/")
 
         frontmatter, body = parse_markdown_with_frontmatter(source)
+        command_path = str(frontmatter.get("name") or f"/{cmd_name}").strip()
         desc = apply_replacements(str(frontmatter.get("description", "Migrated command from .claude")).strip())
         body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
 
@@ -511,7 +517,7 @@ def migrate_commands_as_native_skills() -> None:
         content = (
             f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
             f"# {skill_dir_name}\n\n"
-            f"Command Path: /{cmd_name}\n\n"
+            f"Command Path: {command_path}\n\n"
             f"Description: {desc}\n\n"
             "Codex note: when this recipe says to run another `/...` command, "
             "invoke the matching `cmd_*` skill for that path.\n\n"
@@ -820,12 +826,6 @@ exit 127
 
 def write_codex_global_guidance() -> None:
     lines = [
-        "## Migrated Claude Commands",
-        "",
-        "- This devkit migrates Claude slash commands into `.agents/skills/cmd_*` skills rather than native `.codex/commands` entries.",
-        "- When a user asks for `/plan`, `/fix`, `/code`, `/test`, `/docs/update`, `/git/cm`, or similar, use the matching `cmd_*` skill.",
-        "- If a migrated recipe tells you to run another `/...` command, switch to the corresponding `cmd_*` skill for that path.",
-        "",
         "## Podman Docker Guidance",
         "",
         "- On Fedora hosts, treat `podman` with `podman-docker` as sufficient for Docker-compatible checks. Do not require Docker Engine if `docker info`, `docker build`, and `docker run` work.",
