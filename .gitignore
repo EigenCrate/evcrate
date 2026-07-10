@@ -90,6 +90,9 @@ stdout.log
 # test/coverage artifacts
 .coverage
 test_failures.log
+examples/**/test-results/
+examples/**/playwright-report/
+examples/**/blob-report/
 
 # archives
 *.tar.gz
