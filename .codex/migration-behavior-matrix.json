@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-04T03:08:04Z",
+  "generated_at": "2026-07-10T06:00:42Z",
   "target": "codex",
   "project_doc_fallback_filenames": [
     "CLAUDE.md",
@@ -486,6 +486,13 @@
       "classification": "command-prose",
       "status": "migrated",
       "target": ".agents/skills/cmd_skill_plan/SKILL.md"
+    },
+    {
+      "kind": "command-prose",
+      "source": "take.md",
+      "classification": "command-prose",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_take/SKILL.md"
     },
     {
       "kind": "command-prose",

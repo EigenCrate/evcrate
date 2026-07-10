@@ -1,9 +1,3 @@
-## Migrated Claude Commands
-
-- This devkit migrates Claude slash commands into `.agents/skills/cmd_*` skills rather than native `.codex/commands` entries.
-- When a user asks for `/plan`, `/fix`, `/code`, `/test`, `/docs/update`, `/git/cm`, or similar, use the matching `cmd_*` skill.
-- If a migrated recipe tells you to run another `/...` command, switch to the corresponding `cmd_*` skill for that path.
-
 ## Podman Docker Guidance
 
 - On Fedora hosts, treat `podman` with `podman-docker` as sufficient for Docker-compatible checks. Do not require Docker Engine if `docker info`, `docker build`, and `docker run` work.

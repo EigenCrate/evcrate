@@ -280,9 +280,9 @@ Docs: `.gemini/hooks/notifications/docs/`""",
 
 
 def detect_prefix(commands_dir: Path) -> str:
-    """Detect if commands use /ck: prefix based on directory structure."""
-    ck_commands_dir = commands_dir / "ck"
-    return "ck:" if ck_commands_dir.exists() and ck_commands_dir.is_dir() else ""
+    """Detect if commands use /devkit: prefix based on directory structure."""
+    devkit_commands_dir = commands_dir / "devkit"
+    return "devkit:" if devkit_commands_dir.exists() and devkit_commands_dir.is_dir() else ""
 
 
 def parse_frontmatter(file_path: Path) -> dict:
@@ -504,13 +504,13 @@ def show_command(data: dict, command: str, prefix: str) -> None:
     commands = data["commands"]
 
     # Normalize search term
-    search = command.lower().replace("/ck:", "").replace("/", "").replace(":", "")
+    search = command.lower().replace("/devkit:", "").replace("/", "").replace(":", "")
 
     found = None
     for cmds in commands.values():
         for cmd in cmds:
             # Normalize command name for comparison
-            name = cmd["name"].lower().replace("/ck:", "").replace("/", "").replace(":", "")
+            name = cmd["name"].lower().replace("/devkit:", "").replace("/", "").replace(":", "")
             if name == search:
                 found = cmd
                 break

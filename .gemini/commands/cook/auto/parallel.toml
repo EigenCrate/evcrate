@@ -3,16 +3,27 @@ prompt = """**Ultrathink parallel** to implement: <tasks>{{args}}</tasks>
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
+## Positioning
+
+Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/cook` first.
+
 ## Workflow
 
-### 1. Research (Optional)
+### 1. Preflight & Research
+- Scout codebase with `/scout:ext` before planning
+- Define output, acceptance criteria, scope boundary, side-effect risks, and testing strategy
 - Use max 2 `researcher` agents in parallel if tasks complex
-- Use `/scout:ext` to search codebase
 - Keep reports ≤150 lines
 
 ### 2. Parallel Planning
 - Trigger `/plan:parallel <detailed-instruction>`
-- Wait for plan with dependency graph, execution strategy, file ownership matrix
+- Wait for plan with:
+  - dependency graph
+  - execution strategy
+  - file ownership matrix
+  - side-effect review checklist
+  - per-phase success criteria
+- Do not proceed if any parallel phase has overlapping file ownership
 
 ### 3. Parallel Implementation
 - Read `plan.md` for dependency graph
@@ -30,7 +41,7 @@ prompt = """**Ultrathink parallel** to implement: <tasks>{{args}}</tasks>
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
-- If critical issues: fix, retest
+- If critical issues: fix, retest, rerun review
 
 ### 6. Project Management & Docs
 - If approved: use `project-manager` + `docs-manager` in parallel
