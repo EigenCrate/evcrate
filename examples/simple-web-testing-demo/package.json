@@ -8,10 +8,16 @@
     "build": "tsc && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "test:lighthouse": "npm run build && node scripts/run-lighthouse-gate.mjs",
+    "test:k6": "k6 run k6/smoke.js",
+    "test:web-gate": "npm run test:e2e && npm run test:lighthouse"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@playwright/test": "^1.61.1",
+    "chrome-launcher": "^1.1.2",
+    "lighthouse": "12.5.1",
     "typescript": "5.9.3",
     "vite": "8.1.4",
     "vitest": "^4.1.10"
