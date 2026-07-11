@@ -37,8 +37,26 @@ npx playwright test tests/visual.spec.ts --update-snapshots
 
 The optional k6 smoke check requires the `k6` binary and a running preview server. It targets the local app only and is separate from `test:web-gate` because k6 may not be installed on every workstation:
 
+Windows install option:
+
+```powershell
+winget install k6.k6
+```
+
 ```bash
 npm run build
 npm run preview
 BASE_URL=http://127.0.0.1:4173 npm run test:k6
 ```
+
+## Latest Gate Evidence
+
+2026-07-11 dogfood run:
+
+- `npm run test`: passed, 1 file and 4 tests.
+- `npm run test:e2e`: passed, 5 Playwright tests after build.
+- `npm run test:lighthouse`: passed, reports written to `test-results/lighthouse`.
+- `npm run test:web-gate`: passed, Playwright plus Lighthouse.
+- `npm run test:k6`: blocked because `k6` is not installed locally.
+
+Full evidence report: `../../plans/260710-simple-web-testing-demo/reports/260710-from-tester-to-main-web-gate-report.md`.
