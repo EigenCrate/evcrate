@@ -49,7 +49,16 @@ devkit/
 - **Commitlint**: Conventional commit enforcement
 - **Husky**: Git hooks automation
 - **Repomix**: Codebase compaction for AI consumption
-- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` with an accessible modal flow, Vitest validation helper tests, and Playwright browser flow checks
+- **Vite + TypeScript**: Isolated browser demo under `examples/simple-web-testing-demo/` with release-gate testing workflow
+
+### Testing & Quality Assurance (simple-web-testing-demo)
+- **Playwright**: Browser flow testing (5 tests covering modal interactions, validation, focus, keyboard navigation)
+- **Vitest**: Helper validation tests for client logic
+- **Axe + Playwright**: WCAG accessibility scanning with `@axe-core/playwright` (page and modal-open states)
+- **Playwright Visual Regression**: Deterministic snapshot testing with frozen viewport
+- **Lighthouse**: Direct budget enforcement against built demo output (local reports, no external upload)
+- **k6**: Optional smoke testing (documented; k6 binary not required locally)
+- **Security**: npm audit --audit-level=high: 0 vulnerabilities
 
 ### CI/CD
 - **GitHub Actions**: Automated release workflow

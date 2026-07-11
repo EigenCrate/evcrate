@@ -456,8 +456,34 @@ describe('UserService', () => {
 - **Unit tests**: > 80% code coverage
 - **Integration tests**: Critical user flows
 - **E2E tests**: Happy paths and edge cases
-- **Browser demo**: `examples/simple-web-testing-demo/` uses Vitest for validation helper checks and Playwright for the accessible modal browser flow
+- **Browser tests**: Playwright for accessibility modal flow, validation helpers via Vitest
+- **Accessibility**: `@axe-core/playwright` WCAG scanning (page and modal-open states; no critical/serious issues)
+- **Visual regression**: Playwright visual snapshots (deterministic viewport, frozen animations)
+- **Performance**: Lighthouse budget gates (local reports only; no external upload)
+- **Load testing**: k6 smoke tests optional (documented when k6 binary unavailable)
+- **Security**: npm audit --audit-level=high must pass
 - **Error scenarios**: All error paths tested
+
+### Release Gate Script (test:web-gate)
+
+Browser demo includes `npm run test:web-gate` combining all release gates:
+1. **Playwright tests** - Browser flow and interactions
+2. **Axe accessibility** - WCAG page & modal scanning
+3. **Visual regression** - Snapshot comparison
+4. **Lighthouse budget** - Performance/SEO thresholds
+
+Visual baseline refresh (after layout review):
+```bash
+npm run build
+npx playwright test tests/visual.spec.ts --update-snapshots
+```
+
+Optional k6 smoke check (requires k6 binary + running preview):
+```bash
+npm run build
+npm run preview
+BASE_URL=http://127.0.0.1:4173 npm run test:k6
+```
 
 ### Test Best Practices
 

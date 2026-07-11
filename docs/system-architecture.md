@@ -347,7 +347,14 @@ Planner incorporates into plan
 - Cross-platform test suites (`test-scout-block.sh`, `test-scout-block.ps1`)
 - Comprehensive test coverage (11+ test cases)
 - Validates blocked/allowed patterns, error handling, edge cases
-- `examples/simple-web-testing-demo/` validates the web-testing release gate with Vitest unit checks and a Playwright browser flow
+- `examples/simple-web-testing-demo/` validates the web-testing release gate with:
+  - Vitest unit checks (helper validation tests)
+  - Playwright browser flow tests (5 tests; modal interactions, focus, keyboard navigation, validation)
+  - Axe accessibility scanning (WCAG page & modal-open states; no critical/serious issues)
+  - Visual regression snapshots (deterministic, frozen viewport)
+  - Lighthouse budget gate (local reports; no external upload)
+  - Optional k6 smoke tests (documented; k6 binary not required locally)
+  - npm audit --audit-level=high: 0 vulnerabilities
 
 **Hook Configuration** (`.claude/settings.json`):
 ```json

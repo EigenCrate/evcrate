@@ -93,6 +93,7 @@ test_failures.log
 examples/**/test-results/
 examples/**/playwright-report/
 examples/**/blob-report/
+examples/**/.lighthouseci/
 
 # archives
 *.tar.gz
