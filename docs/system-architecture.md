@@ -353,7 +353,7 @@ Planner incorporates into plan
   - Axe accessibility scanning (WCAG page & modal-open states; no critical/serious issues)
   - Visual regression snapshots (deterministic, frozen viewport)
   - Lighthouse budget gate (local reports; no external upload)
-  - Optional k6 smoke tests (documented; k6 binary not required locally)
+    - k6 smoke tests as part of the demo web gate (install guidance if no usable binary is found; Windows install-path fallback supported)
   - npm audit --audit-level=high: 0 vulnerabilities
 
 **Hook Configuration** (`.claude/settings.json`):

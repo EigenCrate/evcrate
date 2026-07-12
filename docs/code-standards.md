@@ -460,7 +460,7 @@ describe('UserService', () => {
 - **Accessibility**: `@axe-core/playwright` WCAG scanning (page and modal-open states; no critical/serious issues)
 - **Visual regression**: Playwright visual snapshots (deterministic viewport, frozen animations)
 - **Performance**: Lighthouse budget gates (local reports only; no external upload)
-- **Load testing**: k6 smoke tests optional (documented when k6 binary unavailable)
+- **Load testing**: k6 smoke tests required for the demo `test:web-gate`; fail with install guidance when no usable k6 binary is available
 - **Security**: npm audit --audit-level=high must pass
 - **Error scenarios**: All error paths tested
 
@@ -478,11 +478,10 @@ npm run build
 npx playwright test tests/visual.spec.ts --update-snapshots
 ```
 
-Optional k6 smoke check (requires k6 binary + running preview):
+k6 smoke check (requires a usable k6 binary; the demo runner can also use the default Windows install path):
 ```bash
 npm run build
-npm run preview
-BASE_URL=http://127.0.0.1:4173 npm run test:k6
+npm run test:k6
 ```
 
 ### Test Best Practices

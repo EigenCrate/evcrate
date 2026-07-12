@@ -57,7 +57,7 @@ devkit/
 - **Axe + Playwright**: WCAG accessibility scanning with `@axe-core/playwright` (page and modal-open states)
 - **Playwright Visual Regression**: Deterministic snapshot testing with frozen viewport
 - **Lighthouse**: Direct budget enforcement against built demo output (local reports, no external upload)
-- **k6**: Optional smoke testing (documented; k6 binary not required locally)
+- **k6**: Required smoke testing in the demo web gate, with install guidance or Windows install-path fallback when PATH is not refreshed
 - **Security**: npm audit --audit-level=high: 0 vulnerabilities
 
 ### CI/CD

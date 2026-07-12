@@ -234,7 +234,7 @@ Enterprise-grade features and deployment options.
 - ✅ Simple Web Testing Demo Phase 05 (COMPLETE): Evidence report generated, README updated with test evidence, CSP meta tag added, k6 Windows install docs provided. Validation: npm test 4/4✓, npm test:e2e 5/5✓, npm test:lighthouse✓, npm test:web-gate 5/5 Playwright+Lighthouse✓. Code review 10/10, no issues. Full release gate workflow validated and skill dogfooding complete.
 
 ### Recent Additions (2026-07-10)
-- ✅ Simple Web Testing Demo Phase 04: Applied web release gate with Playwright axe accessibility tests, visual snapshots, direct Lighthouse budget runner, optional k6 smoke script, README docs; 0 vulnerabilities audit, 5/5 test pass, 9.2/10 code review; Phase 04 marked complete.
+- ✅ Simple Web Testing Demo Phase 04: Applied web release gate with Playwright axe accessibility tests, visual snapshots, direct Lighthouse budget runner, required k6 smoke script with install guidance, README docs; 0 vulnerabilities audit, 5/5 test pass, 9.2/10 code review; Phase 04 marked complete.
 - ✅ Simple Web Testing Demo Phase 03: Added core Vitest and Playwright tooling for the demo release-gate workflow; Phase 03 marked complete in implementation plan.
 
 ### Recent Additions (2026-06-29)

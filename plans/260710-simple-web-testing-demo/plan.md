@@ -40,10 +40,10 @@ Create a minimal Vite + TypeScript demo project, then use the new `web-testing` 
 - Phase 01 completed with isolated Vite + TypeScript scaffold, lockfile exception, and passing install, build, placeholder test, and audit validation.
 - Phase 02 completed with accessible modal/form flow and user-approved review on 2026-07-10.
 - Phase 03 completed on 2026-07-10 with Vitest and Playwright core tooling; artifact hygiene warning fixed, review score 10/10, user approved.
-- Phase 04 completed on 2026-07-10: Added axe WCAG accessibility tests, visual snapshot tests, direct Lighthouse budget runner, optional k6 smoke test, README documentation; npm audit --audit-level=high: 0 vulnerabilities; npm run test:web-gate passed 5/5 Playwright + Lighthouse gate; code review score 9.2/10, user approved.
-- Phase 05 completed on 2026-07-11: Evidence report generated at `plans/260710-simple-web-testing-demo/reports/260710-from-tester-to-main-web-gate-report.md`; README updated with latest evidence notes; CSP meta tag added; k6 Windows install docs provided. Test results: npm test 4/4✓, npm test:e2e 5/5✓, npm test:lighthouse✓, npm test:web-gate 5/5 Playwright+Lighthouse✓, npm test:k6 blocked (k6 binary missing—optional). Code review 10/10, no critical/warnings/suggestions, approved. Full release gate validation complete.
+- Phase 04 completed on 2026-07-10: Added axe WCAG accessibility tests, visual snapshot tests, direct Lighthouse budget runner, k6 smoke test with install guidance, README documentation; npm audit --audit-level=high: 0 vulnerabilities; npm run test:web-gate passed 5/5 Playwright + Lighthouse + k6 gate; code review score 9.2/10, user approved.
+- Phase 05 completed on 2026-07-11: Evidence report generated at `plans/260710-simple-web-testing-demo/reports/260710-from-tester-to-main-web-gate-report.md`; README updated with latest evidence notes; CSP meta tag added; k6 Windows install docs provided. Test results: npm test 4/4✓, npm test:e2e 5/5✓, npm test:lighthouse✓, npm test:k6✓, npm test:web-gate 5/5 Playwright+Lighthouse+k6✓. Code review 10/10, no critical/warnings/suggestions, approved. Full release gate validation complete.
 
 ## Unresolved Questions
 
 - Should the demo be checked into package distribution, or only used as an internal example?
-- Should k6 be mandatory in CI, or optional local smoke because k6 may not be installed everywhere?
+- Should CI install k6 with an OS package manager or run the k6 smoke through Docker?
