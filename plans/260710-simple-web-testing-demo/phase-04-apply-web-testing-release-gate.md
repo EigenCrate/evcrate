@@ -13,7 +13,7 @@
 - Priority: P2
 - Implementation status: Complete
 - Review status: Approved (9.2/10)
-- Description: Applied web-testing skill to add release gates: accessibility scanning, visual regression, direct Lighthouse budget checks, optional k6 smoke checks.
+- Description: Applied web-testing skill to add release gates: accessibility scanning, visual regression, direct Lighthouse budget checks, mandatory k6 smoke checks with explicit install guidance.
 
 ## Key Insights
 
@@ -26,7 +26,7 @@
 - Add axe/WCAG accessibility gate for page and modal-open states.
 - Add visual regression screenshot for page/modal layout.
 - Add Lighthouse budget against built preview.
-- Add k6 smoke test against local preview if k6 available.
+- Add k6 smoke test against local preview and fail with install guidance when k6 is unavailable.
 - Add a combined `test:web-gate` script or documented command sequence.
 
 ## Architecture
@@ -53,7 +53,7 @@
 2. Add axe dependency and accessibility tests.
 3. Add screenshot tests with deterministic data and viewport.
 4. Configure Lighthouse budget with realistic thresholds for tiny Vite app.
-5. Add k6 smoke script and npm wrapper if k6 exists; document manual prerequisite otherwise.
+5. Add k6 smoke script and npm wrapper that verifies k6 exists, documents install options, and starts local preview automatically.
 6. Add `test:web-gate` script or release-gate command checklist.
 
 ## Todo List
@@ -61,7 +61,7 @@
 - [x] Add accessibility gate.
 - [x] Add visual regression gate.
 - [x] Add Lighthouse budget.
-- [x] Add k6 smoke check (documented; k6 binary absent locally).
+- [x] Add k6 smoke check with explicit binary prerequisite and install guidance.
 - [x] Add release-gate script/docs.
 
 ## Success Criteria
@@ -69,13 +69,14 @@
 - [x] Accessibility gate passes with no serious/critical issues.
 - [x] Visual baseline is deterministic.
 - [x] Lighthouse budget passes or threshold rationale is documented.
-- [x] k6 smoke documented as optional (k6 binary absent locally).
+- [x] k6 smoke fails clearly if the binary is absent and runs as part of `test:web-gate` when installed.
 - [x] Release gate script integrated: `npm run test:web-gate` runs all gates.
 
 ### Validation Results
 
 - npm audit --audit-level=high: **0 vulnerabilities**
-- npm run test:web-gate: **Passed** (Playwright 5/5 tests, Lighthouse budget gate)
+- npm run test:web-gate: **Passed** (Playwright 5/5 tests, Lighthouse budget gate, k6 smoke)
+- npm run test:k6: **Passed** (local preview, 1 VU / 10s smoke, 100% checks)
 - Visual regression: **Baseline committed** (deterministic snapshots)
 - Accessibility: **No critical/serious issues**
 

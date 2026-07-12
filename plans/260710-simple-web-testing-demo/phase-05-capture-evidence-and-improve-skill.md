@@ -56,7 +56,7 @@
 
 - [x] Run all available gates.
 - [x] Capture evidence report.
-- [x] Note blocked gates with reason.
+- [x] Note k6 install/PATH behavior and rerun blocked gate after install.
 - [x] Compare results to skill eval expectations.
 - [x] Patch skill if needed.
 
@@ -69,7 +69,7 @@
 ## Risk Assessment
 
 - Risk: Environment lacks browsers or k6.
-- Mitigation: Record blocker and provide next cheapest check.
+- Mitigation: Record blocker, provide install guidance, and make k6 runner fail clearly when the binary is unavailable.
 - Risk: Agent overfits skill to demo.
 - Mitigation: Improve general guidance only when gap applies beyond the demo.
 
