@@ -99,7 +99,10 @@ def sync_codex_and_agents_assets(codex_stage: Path):
             ])
         
         print("📦 Copying .codex items...")
-        sync_tree(codex_source, target_codex)
+        managed_skip_names = set() if devkit_global_sync_mode == "full" else {".devkit.json"}
+        if managed_skip_names:
+            print("🔒 Preserving user-owned global Codex config: .devkit.json")
+        sync_tree(codex_source, target_codex, skip_names=managed_skip_names)
         write_codex_runtime_env(target_codex / "runtime.env")
         rewrite_codex_global_paths(target_codex)
     else:
@@ -150,7 +153,7 @@ def sync_antigravity_config():
                 print(f"Failed to extract hooks: {e}")
 
         print("🧹 Cleaning up legacy assets for Antigravity CLI...")
-        for f in ["settings.json", ".ck.json", ".mcp.json.example", "statusline.cjs", "statusline.ps1", "statusline.sh"]:
+        for f in ["settings.json", ".devkit.json", ".mcp.json.example", "statusline.cjs", "statusline.ps1", "statusline.sh"]:
             p = target_agy_config / f
             if p.exists():
                 try:

@@ -30,6 +30,7 @@ for arg in sys.argv[1:]:
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
+DEVKIT_CONFIG_FILE = ".devkit.json"
 CODEX_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Codex hook targets subagent startup; behavior is intentionally dropped.",
     "PreCompact": "No clean Codex analog for Claude PreCompact; behavior is intentionally dropped.",
@@ -67,6 +68,7 @@ REPLACEMENTS = {
     r"\bCLAUDE_PROJECT_DIR\b": "CODEX_PROJECT_DIR",
     r"\bCLAUDE_COMMAND\b": "CODEX_COMMAND",
     r"\bANTHROPIC_API_KEY\b": "OPENAI_API_KEY",
+    r"\.ck\.json": DEVKIT_CONFIG_FILE,
     r"\$ARGUMENTS": "{{args}}",
     r"\bTask tool\b": "subagent workflow",
     r"\bTask\(subagent_type=": "Ask Codex to spawn a subagent with type=",
@@ -225,6 +227,9 @@ def clean_destination() -> None:
     matrix_file = CODEX_DIR / "migration-behavior-matrix.json"
     if matrix_file.exists():
         matrix_file.unlink()
+    config_file = CODEX_DIR / DEVKIT_CONFIG_FILE
+    if config_file.exists():
+        config_file.unlink()
     CODEX_DIR.mkdir(parents=True, exist_ok=True)
     AGENTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -312,6 +317,17 @@ def read_json(path: Path) -> dict[str, Any]:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
+
+
+def migrate_devkit_config() -> None:
+    """Materialize the checked-in Claude config as the local Codex baseline."""
+    source = CLAUDE_DIR / DEVKIT_CONFIG_FILE
+    target = CODEX_DIR / DEVKIT_CONFIG_FILE
+    if not source.exists():
+        print(f"Warning: canonical config not found: {source}")
+        return
+    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"Migrated config: {source} -> {target}")
 
 
 def build_hook_behavior_entries() -> list[dict[str, Any]]:
@@ -448,6 +464,7 @@ def write_project_agents_md() -> None:
     if not claude_md.exists():
         return
     target = PROJECT_DOCS_DIR / "AGENTS.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(apply_replacements(claude_md.read_text(encoding="utf-8")), encoding="utf-8")
     print(f"Generated project AGENTS.md: {target}")
 
@@ -507,6 +524,13 @@ def migrate_commands_as_native_skills() -> None:
         command_path = str(frontmatter.get("name") or f"/{cmd_name}").strip()
         desc = apply_replacements(str(frontmatter.get("description", "Migrated command from .claude")).strip())
         body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
+        if cmd_name == "coding-level":
+            body = body.replace(
+                "1. Set `codingLevel` in `.codex/.devkit.json`",
+                "1. Set `codingLevel` in `.codex/.devkit.json`.\n"
+                "   This file is materialized from canonical `.claude/.devkit.json`; "
+                "update that source before regenerating to persist changes.",
+            )
 
         skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
         skill_dir = dest_dir / skill_dir_name
@@ -532,6 +556,7 @@ def create_context_bridge(
     project_env_var: str,
     hook_event_name: str,
     source_rel_path: str,
+    config_dir: str,
     guidance_rel_path: str | None = None,
 ) -> str:
     return """#!/usr/bin/env node
@@ -573,12 +598,14 @@ function resolveHookSource() {{
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
 const result = spawnSync(process.execPath, [sourceHook], {{
+  cwd: projectDir,
   input,
   encoding: 'utf-8',
   env: {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
+    DEVKIT_CONFIG_DIR: {config_dir_json},
   }},
 }});
 
@@ -599,6 +626,7 @@ process.stdout.write(JSON.stringify({{
 """.format(
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
+        config_dir_json=json.dumps(config_dir),
         guidance_bootstrap=(
             "const scriptDir = path.dirname(__filename);\n\n"
             "function readManagedGuidance() {\n"
@@ -614,7 +642,7 @@ process.stdout.write(JSON.stringify({{
     )
 
 
-def create_pretool_bridge(project_env_var: str, source_rel_path: str) -> str:
+def create_pretool_bridge(project_env_var: str, source_rel_path: str, config_dir: str) -> str:
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -653,12 +681,14 @@ function resolveHookSource() {{
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
 const result = spawnSync(process.execPath, [sourceHook], {{
+  cwd: projectDir,
   input,
   encoding: 'utf-8',
   env: {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
+    DEVKIT_CONFIG_DIR: {config_dir_json},
   }},
 }});
 
@@ -677,6 +707,7 @@ if (result.status === 2) {{
 """.format(
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
+        config_dir_json=json.dumps(config_dir),
     )
 
 
@@ -848,11 +879,12 @@ def write_codex_hooks() -> None:
             "CODEX_PROJECT_DIR",
             "SessionStart",
             ".claude/hooks/session-init.cjs",
+            ".codex",
             "../global-guidance.md",
         ),
-        "user-prompt-submit.cjs": create_context_bridge("CODEX_PROJECT_DIR", "UserPromptSubmit", ".claude/hooks/dev-rules-reminder.cjs"),
-        "pretool-scout-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/scout-block.cjs"),
-        "pretool-privacy-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/privacy-block.cjs"),
+        "user-prompt-submit.cjs": create_context_bridge("CODEX_PROJECT_DIR", "UserPromptSubmit", ".claude/hooks/dev-rules-reminder.cjs", ".codex"),
+        "pretool-scout-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/scout-block.cjs", ".codex"),
+        "pretool-privacy-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/privacy-block.cjs", ".codex"),
         "permission-request.cjs": create_permission_request_hook(),
         "run-node-hook.sh": create_run_node_hook_script(),
     }
@@ -937,6 +969,7 @@ def main() -> None:
     if not CLAUDE_DIR.exists():
         raise SystemExit("Error: .claude directory not found")
     clean_destination()
+    migrate_devkit_config()
     migrate_workflows()
     write_project_agents_md()
     migrate_agents()
