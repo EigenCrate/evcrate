@@ -52,9 +52,12 @@ def remove_managed_paths(target_dir: Path, rel_paths: list):
             except OSError as e:
                 print(f"⚠️ Warning: Failed to remove managed path {full_path}: {e}", file=sys.stderr)
 
-def sync_tree(source_dir: Path, target_dir: Path):
+def sync_tree(source_dir: Path, target_dir: Path, skip_names: set[str] | None = None):
     target_dir.mkdir(parents=True, exist_ok=True)
+    skip_names = skip_names or set()
     for item in source_dir.iterdir():
+        if item.name in skip_names:
+            continue
         s = source_dir / item.name
         d = target_dir / item.name
         try:

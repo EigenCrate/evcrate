@@ -185,8 +185,9 @@ devkit/
 - **distribute_utils.py**: Path handling, environment resolver, and CLI utilities
 - **migrate_claude_to_codex.py**: Claude Code to Codex migration engine
 - **migrate_claude_to_gemini.py**: Claude Code to Gemini/Antigravity migration engine
-- **ck-config-utils.cjs**: Shared hook config resolver for product-scoped .devkit.json files under .claude/ and .codex/
-- **privacy-block.cjs**: Sensitive-file blocker that consults only the selected local .devkit.json for privacyBlock
+- **ck-config-utils.cjs**: Shared hook config resolver for product-scoped `.devkit.json` files under `.claude/` and `.codex/`, using the discovered project root and the fixed `DEVKIT_CONFIG_DIR=.codex` selector for Codex bridges
+- **privacy-block.cjs**: Sensitive-file blocker that consults only the selected local `.devkit.json` for `privacyBlock`
+- **distribute_sync.py**: Python sync path that preserves user-owned global `~/.codex/.devkit.json` during normal sync and only replaces it on explicit full sync
 
 ### For Agents
 - **CLAUDE.md**: Primary agent instructions

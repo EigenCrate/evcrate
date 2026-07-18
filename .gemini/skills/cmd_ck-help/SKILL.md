@@ -48,8 +48,8 @@ Full documentation (config, schema, setup guides).
 ## Additional Tips
 
 **When to use global vs local config:**
-- Use global (~/.gemini/.ck.json) for personal preferences like language, issue prefix style
-- Use local (./.gemini/.ck.json) for project-specific paths, naming conventions
+- Use global (~/.gemini/.devkit.json) for personal preferences like language, issue prefix style
+- Use local (./.gemini/.devkit.json) for project-specific paths, naming conventions
 
 **Common setup for teams:**
 Each team member sets their locale globally, but projects share local config via git.

@@ -78,7 +78,7 @@ Provide a production-ready template that:
   - Zero-configuration setup
   - Blocks: node_modules, __pycache__, .git/, dist/, build/
   - Improves AI agent response time and token efficiency
-- **Config Hardening**: Shared hook config now resolves product-scoped `.devkit.json` under `.claude/` and `.codex/`; privacy blocking uses the selected local config only
+- **Config Hardening**: Shared hook config resolves product-scoped `.devkit.json` under `.claude/` and `.codex/`, with Codex bridges pinned to `DEVKIT_CONFIG_DIR=.codex`; runtime resolves from the discovered project root, privacy blocking uses only the selected local config, and Python-managed global sync preserves user-owned `~/.codex/.devkit.json` unless full sync is explicitly requested
 
 ### 2. Comprehensive Slash Commands (50+)
 
@@ -496,7 +496,7 @@ Provide a production-ready template that:
 
 ### Phase 2: Enhancement (Current)
 - ✅ Repository adaptation to Devkit (renaming, configurations, scripts integration)
-- ✅ Devkit hook config hardening (`.devkit.json` resolution and local-only privacy toggle)
+- ✅ Devkit hook config hardening (`.devkit.json` resolution, fixed Codex selector, and local-only privacy toggle)
 - 🔄 Additional skills (GCP, AWS, Azure)
 - 🔄 UI/UX improvements
 - 🔄 Performance optimization

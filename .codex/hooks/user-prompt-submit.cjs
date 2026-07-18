@@ -37,12 +37,14 @@ function resolveHookSource() {
 
 const { projectDir, sourceHook } = resolveHookSource();
 const result = spawnSync(process.execPath, [sourceHook], {
+  cwd: projectDir,
   input,
   encoding: 'utf-8',
   env: {
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
+    DEVKIT_CONFIG_DIR: ".codex",
   },
 });
 

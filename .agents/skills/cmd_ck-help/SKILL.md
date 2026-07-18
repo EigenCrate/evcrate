@@ -50,8 +50,8 @@ Full documentation (config, schema, setup guides).
 ## Additional Tips
 
 **When to use global vs local config:**
-- Use global (~/.codex/.ck.json) for personal preferences like language, issue prefix style
-- Use local (./.codex/.ck.json) for project-specific paths, naming conventions
+- Use global (~/.codex/.devkit.json) for personal preferences like language, issue prefix style
+- Use local (./.codex/.devkit.json) for project-specific paths, naming conventions
 
 **Common setup for teams:**
 Each team member sets their locale globally, but projects share local config via git.

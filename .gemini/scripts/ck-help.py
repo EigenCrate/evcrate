@@ -59,7 +59,7 @@ TASK_MAPPINGS = {
     "integrate": ["integrate", "payment", "api", "connect", "webhook", "third-party"],
     "skill": ["skill", "agent", "automate", "workflow"],
     "scout": ["find", "search", "locate", "explore", "scan", "where"],
-    "config": ["config", "configure", "settings", "ck.json", ".ck.json", "setup", "locale", "language", "paths"],
+    "config": ["config", "configure", "settings", "devkit.json", ".devkit.json", "setup", "locale", "language", "paths"],
     "coding-level": ["coding", "level", "eli5", "junior", "senior", "lead", "god", "beginner", "expert", "teach", "learn", "explain"],
     # New categories
     "worktree": ["worktree", "parallel", "isolate", "isolation", "concurrent", "multiple branches"],
@@ -194,13 +194,13 @@ CATEGORY_GUIDES = {
             ("Tech Lead", "`codingLevel: 4` (risk matrix, strategy)"),
             ("God Mode", "`codingLevel: 5` (code first, no fluff)"),
         ],
-        "tip": "Set in .ck.json. Guidelines auto-inject on session start",
+        "tip": "Set in .devkit.json. Guidelines auto-inject on session start",
     },
     "config": {
-        "title": "geminiKit Configuration (.ck.json)",
+        "title": "geminiKit Configuration (.devkit.json)",
         "workflow": [
-            ("Global", "Set user prefs in `~/.gemini/.ck.json`"),
-            ("Local", "Override per-project in `./.gemini/.ck.json`"),
+            ("Global", "Set user prefs in `~/.gemini/.devkit.json`"),
+            ("Local", "Override per-project in `./.gemini/.devkit.json`"),
             ("Resolution", "DEFAULT → global → local (deep merge)"),
         ],
         "tip": "Global config works in fresh dirs; local overrides for projects",
@@ -630,14 +630,14 @@ def recommend_task(data: dict, task: str, prefix: str) -> None:
 
 
 def show_config_guide() -> None:
-    """Display comprehensive .ck.json configuration guide."""
+    """Display comprehensive .devkit.json configuration guide."""
     emit_output_type("comprehensive-docs")
 
-    print("# geminiKit Configuration (.ck.json)")
+    print("# geminiKit Configuration (.devkit.json)")
     print()
     print("**Locations (cascading resolution):**")
-    print("- Global: `~/.gemini/.ck.json` (user preferences)")
-    print("- Local: `./.gemini/.ck.json` (project overrides)")
+    print("- Global: `~/.gemini/.devkit.json` (user preferences)")
+    print("- Local: `./.gemini/.devkit.json` (project overrides)")
     print()
     print("**Resolution Order:** `DEFAULT → global → local`")
     print("- Global config sets user defaults")
@@ -650,7 +650,7 @@ def show_config_guide() -> None:
     print()
     print("## Quick Start")
     print()
-    print("**Global config** (`~/.gemini/.ck.json`) - your preferences:")
+    print("**Global config** (`~/.gemini/.devkit.json`) - your preferences:")
     print("```json")
     print('{')
     print('  "locale": {')
@@ -661,7 +661,7 @@ def show_config_guide() -> None:
     print('}')
     print("```")
     print()
-    print("**Local override** (`./.gemini/.ck.json`) - project-specific:")
+    print("**Local override** (`./.gemini/.devkit.json`) - project-specific:")
     print("```json")
     print('{')
     print('  "plan": { "issuePrefix": "JIRA-" },')
@@ -839,7 +839,7 @@ def show_coding_level_guide() -> None:
     print()
     print("## Configuration")
     print()
-    print("**Set in `.ck.json`:**")
+    print("**Set in `.devkit.json`:**")
     print("```json")
     print('{')
     print('  "codingLevel": 0')
@@ -847,14 +847,14 @@ def show_coding_level_guide() -> None:
     print("```")
     print()
     print("**Location (cascading):**")
-    print("- Global: `~/.gemini/.ck.json` - personal preference")
-    print("- Local: `./.gemini/.ck.json` - project override")
+    print("- Global: `~/.gemini/.devkit.json` - personal preference")
+    print("- Local: `./.gemini/.devkit.json` - project override")
     print()
     print("---")
     print()
     print("## How It Works")
     print()
-    print("1. SessionStart hook reads `codingLevel` from `.ck.json`")
+    print("1. SessionStart hook reads `codingLevel` from `.devkit.json`")
     print("2. If 0-5, injects guidelines from `.gemini/output-styles/coding-level-*.md`")
     print("3. Commands like `/brainstorm` follow the injected guidelines")
     print()
@@ -944,7 +944,7 @@ def main():
     input_str = " ".join(args).strip()
 
     # Special case: config documentation (not a command category)
-    if input_str.lower() in ["config", "configuration", ".ck.json", "ck.json"]:
+    if input_str.lower() in ["config", "configuration", ".devkit.json", "devkit.json"]:
         show_config_guide()
         return
 

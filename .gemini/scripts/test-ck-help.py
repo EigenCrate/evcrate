@@ -191,7 +191,7 @@ def main():
     tests.append(test_case(
         "config guide",
         ["config"],
-        [".ck.json", "Configuration", "locale", "codingLevel"]
+        [".devkit.json", "Configuration", "locale", "codingLevel"]
     ))
 
     tests.append(test_case(

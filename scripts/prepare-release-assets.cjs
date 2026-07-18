@@ -104,7 +104,6 @@ const { execSync } = require('child_process');
       '.repomixignore',
       '.mcp.json',
       'CLAUDE.md',
-      'distribute.sh',
       'distribute.py',
       'distribute_utils.py',
       'distribute_sync.py',

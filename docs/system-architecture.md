@@ -59,11 +59,13 @@ ClaudeKit Engineer implements a multi-agent AI orchestration architecture where 
 - Workflow templates
 - Product-scoped DevKit config (`.devkit.json`)
 
-**DevKit Config Resolution**:
+- **DevKit Config Resolution**:
+- Runtime discovers the project root first, then resolves config from that root rather than the current working directory.
 - Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.devkit.json`, then local `./.claude/.devkit.json`; local values win.
-- Codex bridge hooks are designed to set `DEVKIT_CONFIG_DIR=.codex`, so shared Claude hook logic can merge `DEFAULT_CONFIG`, global `~/.codex/.devkit.json`, then local `./.codex/.devkit.json`; local values win.
+- Codex bridge hooks use a fixed `DEVKIT_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.devkit.json`, then local `./.codex/.devkit.json`; local values win.
 - The internal selector accepts only `.claude` and `.codex`; invalid values fall back to `.claude`.
 - Privacy blocking is stricter: the disable switch reads only the selected local `.devkit.json`, so global config cannot disable secret-file blocking.
+- The Python-managed global sync preserves user-owned `~/.codex/.devkit.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
 
 ### 2. Agent Layer
