@@ -1,6 +1,6 @@
 # Devkit - Project Roadmap
 
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-07-18
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/devkit
 
@@ -232,6 +232,9 @@ Enterprise-grade features and deployment options.
 
 ### Recent Additions (2026-07-11)
 - ✅ Simple Web Testing Demo Phase 05 (COMPLETE): Evidence report generated, README updated with test evidence, CSP meta tag added, k6 Windows install docs provided. Validation: npm test 4/4✓, npm test:e2e 5/5✓, npm test:lighthouse✓, npm test:web-gate 5/5 Playwright+Lighthouse✓. Code review 10/10, no issues. Full release gate workflow validated and skill dogfooding complete.
+
+### Recent Additions (2026-07-18)
+- ✅ Refactor DevKit Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.devkit.json`; phase 4 remains pending.
 
 ### Recent Additions (2026-07-10)
 - ✅ Simple Web Testing Demo Phase 04: Applied web release gate with Playwright axe accessibility tests, visual snapshots, direct Lighthouse budget runner, required k6 smoke script with install guidance, README docs; 0 vulnerabilities audit, 5/5 test pass, 9.2/10 code review; Phase 04 marked complete.

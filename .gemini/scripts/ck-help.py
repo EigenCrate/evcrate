@@ -14,7 +14,16 @@ Usage:
 import sys
 import re
 import io
+import ast
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility
+    try:
+        import tomli as tomllib
+    except ModuleNotFoundError:
+        tomllib = None
 
 # Fix Windows console encoding for Unicode characters
 if sys.platform == 'win32':
@@ -312,33 +321,57 @@ def parse_frontmatter(file_path: Path) -> dict:
     return result
 
 
+def parse_command_metadata(file_path: Path) -> dict:
+    """Read command metadata from gemini Markdown or migrated TOML files."""
+    if file_path.suffix == ".toml":
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except OSError:
+            return {}
+        if tomllib is None:
+            match = re.search(r"^description\s*=\s*(\".*\")\s*$", content, re.MULTILINE)
+            if not match:
+                return {}
+            try:
+                return {"description": ast.literal_eval(match.group(1))}
+            except (SyntaxError, ValueError):
+                return {}
+        try:
+            return tomllib.loads(content)
+        except (OSError, tomllib.TOMLDecodeError):
+            return {}
+    return parse_frontmatter(file_path)
+
+
 def discover_commands(commands_dir: Path, prefix: str) -> dict:
-    """Scan .gemini/commands/ and build command catalog."""
+    """Scan command files and build the command catalog."""
     commands = {}
     categories = {}
 
     if not commands_dir.exists():
         return {"commands": commands, "categories": categories}
 
-    # Scan all .md files
-    for md_file in commands_dir.rglob("*.md"):
+    command_files = sorted(
+        [*commands_dir.rglob("*.md"), *commands_dir.rglob("*.toml")]
+    )
+    for command_file in command_files:
         # Skip non-command files
-        rel_path = md_file.relative_to(commands_dir)
+        rel_path = command_file.relative_to(commands_dir)
         parts = rel_path.parts
 
         # Get command name from path
         # e.g., fix/fast.md -> fix:fast, plan.md -> plan
         if len(parts) == 1:
-            # Root command: plan.md -> plan
-            cmd_name = parts[0].replace('.md', '')
+            # Root command: plan.md or plan.toml -> plan
+            cmd_name = command_file.stem
             category = "core"
         else:
             # Nested command: fix/fast.md -> fix:fast
             category = parts[0]
-            cmd_name = ':'.join([p.replace('.md', '') for p in parts])
+            cmd_name = ':'.join([*parts[:-1], command_file.stem])
 
         # Parse frontmatter
-        fm = parse_frontmatter(md_file)
+        fm = parse_command_metadata(command_file)
         description = fm.get('description', '')
 
         # Skip if no description (not a real command)
@@ -791,14 +824,14 @@ def show_config_guide() -> None:
     print()
     print("**Global install user (fresh directories work):**")
     print("```bash")
-    print("# ~/.gemini/.ck.json - applies everywhere")
+    print("# ~/.gemini/.devkit.json - applies everywhere")
     print("cd /tmp/new-project && gemini  # Uses global config")
     print("```")
     print()
     print("**Project with local override:**")
     print("```bash")
     print("# Global: issuePrefix = \"GH-\"")
-    print("# Local (.gemini/.ck.json): issuePrefix = \"JIRA-\"")
+    print("# Local (.gemini/.devkit.json): issuePrefix = \"JIRA-\"")
     print("# Result: issuePrefix = \"JIRA-\" (local wins)")
     print("```")
     print()

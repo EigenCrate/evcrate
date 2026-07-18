@@ -195,6 +195,18 @@ def main():
     ))
 
     tests.append(test_case(
+        "config filename routes to config guide",
+        [".devkit.json"],
+        ["Configuration", "~/.gemini/.devkit.json"]
+    ))
+
+    tests.append(test_case(
+        "config filename alias routes to config guide",
+        ["devkit.json"],
+        ["Configuration", "./.gemini/.devkit.json"]
+    ))
+
+    tests.append(test_case(
         "coding-level guide",
         ["coding-level"],
         ["Coding Level", "ELI5", "God Mode", "-1"]

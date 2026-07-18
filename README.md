@@ -303,6 +303,9 @@ Reusable templates for:
 - Refactoring strategies
 - Architecture decisions
 
+### .devkit.json
+Documented project config filename for DevKit settings. The runtime resolves the local project config from the discovered project root.
+
 ## Gemini Skills Configuration
 
 This project includes several Gemini-powered skills that require a Google Gemini API key:
