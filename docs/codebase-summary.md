@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Last Updated**: 2026-07-10
+**Last Updated**: 2026-07-18
 **Version**: 1.14.8
 **Repository**: [NEBULEA-M/devkit](https://github.com/NEBULEA-M/devkit)
 
@@ -185,6 +185,8 @@ devkit/
 - **distribute_utils.py**: Path handling, environment resolver, and CLI utilities
 - **migrate_claude_to_codex.py**: Claude Code to Codex migration engine
 - **migrate_claude_to_gemini.py**: Claude Code to Gemini/Antigravity migration engine
+- **ck-config-utils.cjs**: Shared hook config resolver for product-scoped .devkit.json files under .claude/ and .codex/
+- **privacy-block.cjs**: Sensitive-file blocker that consults only the selected local .devkit.json for privacyBlock
 
 ### For Agents
 - **CLAUDE.md**: Primary agent instructions

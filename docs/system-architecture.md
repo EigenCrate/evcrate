@@ -50,13 +50,21 @@ ClaudeKit Engineer implements a multi-agent AI orchestration architecture where 
 - `$1, $2, $3...` - Individual positional arguments
 
 #### 1.3 Configuration Manager
-**Location**: `.claude/` and `.opencode/` directories
+**Location**: `.claude/`, `.codex/`, and `.opencode/` directories
 **Responsibility**: Load agent and command definitions
 **File Types**:
 - Agent definitions (`.md` with YAML frontmatter)
 - Command definitions (`.md` with embedded agent calls)
 - Skill modules (knowledge bases)
 - Workflow templates
+- Product-scoped DevKit config (`.devkit.json`)
+
+**DevKit Config Resolution**:
+- Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.devkit.json`, then local `./.claude/.devkit.json`; local values win.
+- Codex bridge hooks are designed to set `DEVKIT_CONFIG_DIR=.codex`, so shared Claude hook logic can merge `DEFAULT_CONFIG`, global `~/.codex/.devkit.json`, then local `./.codex/.devkit.json`; local values win.
+- The internal selector accepts only `.claude` and `.codex`; invalid values fall back to `.claude`.
+- Privacy blocking is stricter: the disable switch reads only the selected local `.devkit.json`, so global config cannot disable secret-file blocking.
+- No legacy `.ck.json` fallback is used.
 
 ### 2. Agent Layer
 
