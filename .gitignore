@@ -94,6 +94,7 @@ examples/**/test-results/
 examples/**/playwright-report/
 examples/**/blob-report/
 examples/**/.lighthouseci/
+patches
 
 # archives
 *.tar.gz

@@ -68,6 +68,12 @@ ClaudeKit Engineer implements a multi-agent AI orchestration architecture where 
 - The Python-managed global sync preserves user-owned `~/.codex/.devkit.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
 
+**Codex Model Migration**:
+- `migrate_claude_to_codex.py` is the model-policy source of truth; `distribute.py` runs it and synchronizes the generated `.codex/` and `.agents/` assets.
+- The parent session and `opus` roles use `gpt-5.6-sol`; parent reasoning is `medium`, while delegated `opus` reasoning is `high`.
+- `sonnet` roles use `gpt-5.6-terra` with `high` reasoning, `haiku` roles use `gpt-5.6-luna` with `low` reasoning, and inherited roles use `gpt-5.6-terra` with `medium` reasoning.
+- Agents with no source model use `gpt-5.6-sol` with `high` reasoning. Preview-only models are not selected as default tiers.
+
 ### 2. Agent Layer
 
 #### 2.1 Agent Types
@@ -337,11 +343,9 @@ Planner incorporates into plan
 **Purpose**: Intercept and control Claude Code operations for performance and security
 
 **Scout Block Hook** (Cross-Platform):
-- **Architecture**: Node.js dispatcher with platform-specific implementations
-- **Windows**: PowerShell implementation (`scout-block.ps1`)
-- **Unix (Linux/macOS/WSL)**: Bash implementation (`scout-block.sh`)
-- **Platform Detection**: Automatic via `process.platform` in dispatcher
-- **Configuration**: Zero-config - automatic platform selection
+- **Architecture**: Node.js entry point with shared pattern matching
+- **Configuration**: `.claude/.devkitignore`, using gitignore-style patterns
+- **Runtime**: Identical behavior across supported platforms via Node.js
 
 **Functionality**:
 - Blocks access to heavy directories (node_modules, __pycache__, .git/, dist/, build/)
@@ -354,7 +358,8 @@ Planner incorporates into plan
 - No additional dependencies
 
 **Testing**:
-- Cross-platform test suites (`test-scout-block.sh`, `test-scout-block.ps1`)
+- Node.js test suites under `.claude/hooks/scout-block/tests/`
+- End-to-end hook checks in `.claude/hooks/tests/test-scout-block.js` and `test-devkitignore.js`
 - Comprehensive test coverage (11+ test cases)
 - Validates blocked/allowed patterns, error handling, edge cases
 - `examples/simple-web-testing-demo/` validates the web-testing release gate with:
@@ -372,7 +377,7 @@ Planner incorporates into plan
   "hooks": {
     "BeforeBash": [{
       "type": "command",
-      "command": "node ${CLAUDE_PROJECT_DIR}/.claude/hooks/scout-block.js"
+      "command": "node ${CLAUDE_PROJECT_DIR}/.claude/hooks/scout-block.cjs"
     }]
   }
 }

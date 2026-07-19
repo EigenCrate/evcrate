@@ -7,8 +7,9 @@
  * Updated to use Node.js dispatcher directly (not bash wrapper)
  */
 
-const { execSync } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
+const scriptPath = path.join(__dirname, '..', 'scout-block.cjs');
 
 const testCases = [
   // Directory access - should be BLOCKED
@@ -182,22 +183,29 @@ const testCases = [
   }
 ];
 
+async function runHook(input) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [scriptPath], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    let stderr = '';
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('error', error => resolve({ status: null, stderr: error.message }));
+    child.on('close', status => resolve({ status, stderr }));
+    child.stdin.end(JSON.stringify(input));
+  });
+}
+
+(async function main() {
 console.log('Testing scout-block.cjs hook...\n');
 
 // Test Node.js dispatcher directly
-const scriptPath = path.join(__dirname, '..', 'scout-block.cjs');
 let passed = 0;
 let failed = 0;
 
 for (const test of testCases) {
-  try {
-    const input = JSON.stringify(test.input);
-    const result = execSync(`node "${scriptPath}"`, {
-      input,
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
+  const result = await runHook(test.input);
+  if (result.status === 0) {
     const actual = 'ALLOWED';
     const success = actual === test.expected;
 
@@ -208,8 +216,8 @@ for (const test of testCases) {
       console.log(`\x1b[31m✗\x1b[0m ${test.name}: expected ${test.expected}, got ${actual}`);
       failed++;
     }
-  } catch (error) {
-    const actual = error.status === 2 ? 'BLOCKED' : 'ERROR';
+  } else {
+    const actual = result.status === 2 ? 'BLOCKED' : 'ERROR';
     const success = actual === test.expected;
 
     if (success) {
@@ -217,8 +225,8 @@ for (const test of testCases) {
       passed++;
     } else {
       console.log(`\x1b[31m✗\x1b[0m ${test.name}: expected ${test.expected}, got ${actual}`);
-      if (error.stderr) {
-        console.log(`  Error: ${error.stderr.toString().trim().split('\n')[0]}`);
+      if (result.stderr) {
+        console.log(`  Error: ${result.stderr.trim().split('\n')[0]}`);
       }
       failed++;
     }
@@ -227,3 +235,4 @@ for (const test of testCases) {
 
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
+})();

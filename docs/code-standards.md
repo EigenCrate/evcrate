@@ -722,29 +722,25 @@ Mistakes to avoid
 ### Scout Block Hook Architecture
 
 **Cross-Platform Design Pattern**:
-- **Dispatcher Pattern**: Single Node.js entry point delegates to platform-specific implementations
-- **Platform Detection**: Use `process.platform` for automatic selection
+- **Single Entry Point**: Node.js hook runs consistently across supported platforms
+- **Shared Modules**: Matching, extraction, and error formatting stay platform-neutral
 - **Security-First**: Input validation, sanitized errors, safe execution
 
 **File Organization**:
 ```
 .claude/hooks/
-├── scout-block.js        # Node.js dispatcher (cross-platform entry)
-├── scout-block.sh        # Bash implementation (Unix)
-├── scout-block.ps1       # PowerShell implementation (Windows)
-├── test-scout-block.sh   # Unix test suite
-└── test-scout-block.ps1  # Windows test suite
+├── scout-block.cjs       # Cross-platform Node.js entry point
+├── scout-block/          # Shared matcher, extraction, and formatting modules
+└── tests/                # Hook integration tests
 ```
 
 **Implementation Requirements**:
-- **Node.js Dispatcher**:
+- **Node.js Hook**:
   - Read stdin synchronously
   - Validate JSON structure before parsing
-  - Check platform via `process.platform`
-  - Execute platform-specific script with piped input
   - Handle errors with exit codes (0 = success, 2 = error)
 
-- **Platform-Specific Scripts**:
+- **Pattern Modules**:
   - Parse JSON input (use Node.js for consistency, avoid jq dependency)
   - Validate command structure and content
   - Apply pattern matching for blocked paths
