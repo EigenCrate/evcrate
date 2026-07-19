@@ -28,7 +28,7 @@ RELEVANT_FILE_OUTPUT_DIR: Use `Report:` from `## Naming` section
 - External agentic tools are faster and more efficient when using LLMs with large context windows (1M+ tokens).
 
 **How to prompt the agents:**
-- If `gemini` or `opencode` is not available, ask the user if they want to install it:
+- If `agy` or `opencode` is not available, ask the user if they want to install it:
   - If **yes**, install it (if there are permission issues, instruct the user to install it manually, including authentication steps)
   - If **no**, use the default `Explore` subagents.
 - IMPORTANT: Kick these agents off in parallel using the `Task` tool, analyze and divide folders for each agent to scout intelligently and quickly.

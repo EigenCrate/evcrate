@@ -131,7 +131,7 @@ def sync_antigravity_config():
             print(f"🧹 Removing managed Antigravity config assets only: {target_agy_config}")
             remove_managed_paths(target_agy_config, [
                 "agents", "commands", "hooks", "scripts", "skills", "workflows",
-                "settings.json", ".mcp.json.example", "statusline.cjs"
+                "settings.json", ".mcp.json.example", "statusline.cjs", ".ckignore"
             ])
 
         print("📦 Copying .claude items to Antigravity config...")
@@ -224,6 +224,6 @@ def sync_legacy_claude_assets():
             print(f"🧹 Removing managed Claude assets only: {target_claude}")
             remove_managed_paths(target_claude, [
                 "agents", "commands", "hooks", "scripts", "skills", "workflows",
-                "settings.json", ".mcp.json.example", "statusline.cjs"
+                "settings.json", ".mcp.json.example", "statusline.cjs", ".ckignore"
             ])
         sync_tree(claude_source, target_claude)

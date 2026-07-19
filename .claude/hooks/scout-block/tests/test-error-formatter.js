@@ -31,9 +31,9 @@ console.log('Testing error-formatter module...\n');
 
 // formatConfigPath tests
 console.log('--- formatConfigPath Tests ---');
-test('formatConfigPath with claudeDir', formatConfigPath('/home/user/.claude').includes('.ckignore'));
-test('formatConfigPath without claudeDir', formatConfigPath(null) === '.claude/.ckignore');
-test('formatConfigPath empty string', formatConfigPath('') === '.claude/.ckignore');
+test('formatConfigPath with claudeDir', formatConfigPath('/home/user/.claude').includes('.devkitignore'));
+test('formatConfigPath without claudeDir', formatConfigPath(null) === '.claude/.devkitignore');
+test('formatConfigPath empty string', formatConfigPath('') === '.claude/.devkitignore');
 
 // formatBlockedError tests
 console.log('\n--- formatBlockedError Tests ---');

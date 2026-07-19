@@ -50,16 +50,16 @@ function colorize(text, color) {
 }
 
 /**
- * Get .ckignore config path
+ * Get .devkitignore config path
  *
  * @param {string} claudeDir - Path to .claude directory
  * @returns {string}
  */
 function formatConfigPath(claudeDir) {
   if (claudeDir) {
-    return path.join(claudeDir, '.ckignore');
+    return path.join(claudeDir, '.devkitignore');
   }
-  return '.claude/.ckignore';
+  return '.claude/.devkitignore';
 }
 
 /**

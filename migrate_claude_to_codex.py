@@ -82,18 +82,19 @@ REPLACEMENTS = {
 
 MODEL_MAP = {
     # Restore 3-tier model delegation from the .claude baseline:
-    #   opus   → gpt-5.5 / high      (heavy reasoning: planner)
-    #   sonnet → gpt-5.4 / high      (capable coding: reviewer, debugger, …)
-    #   haiku  → gpt-5.4-mini / low  (light/parallel: tester, researcher, …)
+    #   opus   → gpt-5.6-sol / high    (complex/open-ended: planner)
+    #   sonnet → gpt-5.6-terra / high  (balanced coding: reviewer, debugger, …)
+    #   haiku  → gpt-5.6-luna / low    (light/parallel: tester, researcher, …)
     # inherit / "" get explicit pins so every agent is deterministically pinned
-    # (Q4): inherit → gpt-5.4 / medium (ui-ux-designer); "" → gpt-5.5 / high
-    # (brainstormer, missing model field). gpt-5.3-codex-spark is intentionally
-    # excluded (Pro-only preview) and must never be a default tier.
-    "opus": ("gpt-5.5", "high"),
-    "sonnet": ("gpt-5.4", "high"),
-    "haiku": ("gpt-5.4-mini", "low"),
-    "inherit": ("gpt-5.4", "medium"),
-    "": ("gpt-5.5", "high"),
+    # (Q4): inherit → gpt-5.6-terra / medium (ui-ux-designer);
+    # "" → gpt-5.6-sol / high (brainstormer, missing model field).
+    # gpt-5.3-codex-spark is intentionally excluded (Pro-only preview) and must
+    # never be a default tier.
+    "opus": ("gpt-5.6-sol", "high"),
+    "sonnet": ("gpt-5.6-terra", "high"),
+    "haiku": ("gpt-5.6-luna", "low"),
+    "inherit": ("gpt-5.6-terra", "medium"),
+    "": ("gpt-5.6-sol", "high"),
 }
 
 COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
@@ -936,9 +937,9 @@ def write_codex_hooks() -> None:
 def migrate_mcp_and_config() -> None:
     lines = [
         '# Generated from ".claude" by migrate_claude_to_codex.py',
-        "# Parent/main session runs on the strongest model (gpt-5.5) at medium",
+        "# Parent/main session runs on the strongest model (gpt-5.6-sol) at medium",
         "# reasoning effort; subagents are pinned to cheaper tiers via MODEL_MAP.",
-        'model = "gpt-5.5"',
+        'model = "gpt-5.6-sol"',
         'model_reasoning_effort = "medium"',
         'plan_mode_reasoning_effort = "medium"',
         'approval_policy = "on-request"',

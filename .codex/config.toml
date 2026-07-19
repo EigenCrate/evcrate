@@ -1,7 +1,7 @@
 # Generated from ".claude" by migrate_claude_to_codex.py
-# Parent/main session runs on the strongest model (gpt-5.5) at medium
+# Parent/main session runs on the strongest model (gpt-5.6-sol) at medium
 # reasoning effort; subagents are pinned to cheaper tiers via MODEL_MAP.
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
 plan_mode_reasoning_effort = "medium"
 approval_policy = "on-request"
