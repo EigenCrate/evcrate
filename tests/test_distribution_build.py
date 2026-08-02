@@ -162,6 +162,9 @@ class DistributionBuildTest(unittest.TestCase):
         self.assertEqual(codex.output_roots, (".codex", ".agents"))
         self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
         self.assertIsNone(codex.runtime)
+        manifest_text = registry.targets["codex"].read_text(encoding="utf-8")
+        self.assertNotIn("advisor", manifest_text.lower())
+        self.assertFalse((registry.targets["codex"].parent / "runtime").exists())
         self.assertEqual(set(registry.targets), {"antigravity", "codex", "gemini"})
 
     def test_staging_writes_a_deterministic_authorization_manifest(self) -> None:
@@ -181,6 +184,16 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
             self.assertFalse((stage / ".antigravity" / "config").exists())
             self.assertFalse((stage / ".codex" / "runtime").exists())
+            manifest = (stage / BUILD_MANIFEST_PATH).read_text(encoding="utf-8")
+            for marker in (
+                "advisor_consult",
+                "mcp_servers.advisor",
+                "advisor-broker",
+                "pretool-advisor-admission",
+                "advisor-ledger",
+                "runtime-advisor-launcher",
+            ):
+                self.assertNotIn(marker, manifest)
             return (stage / BUILD_MANIFEST_PATH).read_bytes()
 
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
