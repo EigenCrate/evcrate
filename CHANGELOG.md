@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Bug Fixes
+
+* **distribution:** preserve unrelated HOME symlinks while rejecting any symlink that overlaps a managed publication path.
+
 ### Breaking Changes
 
 * **advisor:** remove the unshipped `advisor_consult` MCP/broker/admission runtime. Use explicit `$advisor-strategy` for current-session guidance; it provides no independent model call, isolation, quota, audit, or enforcement.
