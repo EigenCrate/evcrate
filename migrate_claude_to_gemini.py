@@ -5,14 +5,20 @@ import json
 import yaml
 import sys
 from pathlib import Path
-from datetime import datetime, timezone
 
 CLAUDE_DIR = Path(".claude")
 GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", ".gemini"))
+PROJECT_DOCS_DIR = Path(os.environ.get("GEMINI_PROJECT_DOCS_OUTPUT_DIR", "."))
 
 # Command-line parameter support to generate local or global config baselines
 for arg in sys.argv[1:]:
     if arg.lower() in ("--global", "global"):
+        if os.environ.get("DEVKIT_ALLOW_DIRECT_GLOBAL") != "1":
+            raise SystemExit(
+                "Direct --global migration is disabled; use 'python3 distribute.py --publish'. "
+                "Set DEVKIT_ALLOW_DIRECT_GLOBAL=1 only for a documented emergency."
+            )
+        print("WARNING: direct --global migration bypasses distribution verification.", file=sys.stderr)
         GEMINI_DIR = Path.home() / ".gemini"
     elif arg.lower() in ("--local", "local"):
         GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", ".gemini"))
@@ -147,9 +153,7 @@ def clean_destination():
         dest_dir = Path(GEMINI_DIR) / subdir
         if dest_dir.exists():
             print(f"Cleaning destination: {dest_dir}")
-            # ignore_errors: FUSE/overlay filesystems may leave transient
-            # .fuse_hidden* files that block the final directory removal.
-            shutil.rmtree(dest_dir, ignore_errors=True)
+            shutil.rmtree(dest_dir)
     matrix_file = Path(GEMINI_DIR) / "migration-behavior-matrix.json"
     if matrix_file.exists():
         matrix_file.unlink()
@@ -222,8 +226,8 @@ def read_json(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return {}
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"Could not read JSON source {path}") from error
 
 def deep_merge(base, override):
     if not isinstance(base, dict) or not isinstance(override, dict):
@@ -308,7 +312,6 @@ def write_behavior_matrix():
         })
     entries.extend(build_hook_behavior_entries())
     payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "target": "gemini",
         "context_file_names": GEMINI_CONTEXT_FILENAMES,
         "unsupported_events": GEMINI_UNSUPPORTED_EVENTS,
@@ -330,7 +333,9 @@ def write_gemini_memory_wrapper():
         "@./CLAUDE.md",
         "",
     ]
-    Path("GEMINI.md").write_text("\n".join(wrapper), encoding="utf-8")
+    target = PROJECT_DOCS_DIR / "GEMINI.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("\n".join(wrapper), encoding="utf-8")
 
 def write_gemini_hook_assets():
     hooks_dir = Path(GEMINI_DIR) / "hooks"
@@ -735,7 +740,8 @@ def is_text_file(file_path):
         with open(file_path, 'rb') as f:
             chunk = f.read(1024)
             return b'\x00' not in chunk
-    except: return False
+    except OSError as error:
+        raise RuntimeError(f"Could not inspect source file {file_path}") from error
 
 def migrate_skills():
     src_dir = Path(CLAUDE_DIR) / "skills"
@@ -749,7 +755,7 @@ def migrate_skills():
                 continue
             skill_name = re.sub(r"claude", "gemini", skill_dir.name, flags=re.IGNORECASE)
             dest_skill_dir = dest_dir / skill_name
-            if dest_skill_dir.exists(): shutil.rmtree(dest_skill_dir, ignore_errors=True)
+            if dest_skill_dir.exists(): shutil.rmtree(dest_skill_dir)
             shutil.copytree(skill_dir, dest_skill_dir, dirs_exist_ok=True)
             for target_file in dest_skill_dir.rglob("*"):
                 if target_file.is_file() and is_text_file(target_file):
@@ -757,12 +763,10 @@ def migrate_skills():
                         new_md_file = target_file.with_name("SKILL.md")
                         target_file.rename(new_md_file)
                         target_file = new_md_file
-                    try:
-                        with open(target_file, "r", encoding="utf-8") as f: content = f.read()
-                        new_content = apply_replacements(content)
-                        if new_content != content:
-                            with open(target_file, "w", encoding="utf-8") as f: f.write(new_content)
-                    except: continue
+                    with open(target_file, "r", encoding="utf-8") as f: content = f.read()
+                    new_content = apply_replacements(content)
+                    if new_content != content:
+                        with open(target_file, "w", encoding="utf-8") as f: f.write(new_content)
             print(f"Migrated skill: {skill_dir.name} -> {skill_name}")
 
 def migrate_workflows():
@@ -792,10 +796,8 @@ def migrate_scripts():
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest_path)
         if is_text_file(dest_path):
-            try:
-                with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
-                with open(dest_path, "w", encoding="utf-8") as f: f.write(apply_replacements(content))
-            except: pass
+            with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
+            with open(dest_path, "w", encoding="utf-8") as f: f.write(apply_replacements(content))
         print(f"Migrated script: {rel_path}")
 
 def migrate_mcp():

@@ -7,8 +7,8 @@ import json
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
-from datetime import datetime, timezone
 from typing import Any
 
 
@@ -17,10 +17,16 @@ CODEX_DIR = Path(os.environ.get("CODEX_OUTPUT_DIR", ".codex"))
 AGENTS_DIR = Path(os.environ.get("AGENTS_OUTPUT_DIR", ".agents"))
 PROJECT_DOCS_DIR = Path(os.environ.get("PROJECT_DOCS_OUTPUT_DIR", "."))
 
-import sys
-# Command-line parameter support to generate local or global config baselines
+# Direct HOME writes bypass distribution's verification gate. Keep an explicit,
+# temporary escape hatch for incident recovery while callers migrate to --publish.
 for arg in sys.argv[1:]:
     if arg.lower() in ("--global", "global"):
+        if os.environ.get("DEVKIT_ALLOW_DIRECT_GLOBAL") != "1":
+            raise SystemExit(
+                "Direct --global migration is disabled; use 'python3 distribute.py --publish'. "
+                "Set DEVKIT_ALLOW_DIRECT_GLOBAL=1 only for a documented emergency."
+            )
+        print("WARNING: direct --global migration bypasses distribution verification.", file=sys.stderr)
         CODEX_DIR = Path.home() / ".codex"
         AGENTS_DIR = Path.home() / ".agents"
     elif arg.lower() in ("--local", "local"):
@@ -189,8 +195,8 @@ def is_text_file(path: Path) -> bool:
         return False
     try:
         return b"\0" not in path.read_bytes()[:1024]
-    except OSError:
-        return False
+    except OSError as error:
+        raise RuntimeError(f"Could not inspect source file {path}") from error
 
 
 def clean_destination() -> None:
@@ -198,21 +204,13 @@ def clean_destination() -> None:
         if not path.exists():
             return
         if path.is_symlink() or path.is_file():
-            try:
-                path.unlink()
-            except OSError:
-                pass
+            path.unlink()
             return
         for child in path.iterdir():
             if child.is_dir() and not child.is_symlink():
-                # ignore_errors: FUSE/overlay filesystems may leave transient
-                # .fuse_hidden* files that block the final directory removal.
-                shutil.rmtree(child, ignore_errors=True)
+                shutil.rmtree(child)
             else:
-                try:
-                    child.unlink()
-                except OSError:
-                    pass
+                child.unlink()
 
     for path in [
         CODEX_DIR / "agents",
@@ -316,8 +314,8 @@ def read_json(path: Path) -> dict[str, Any]:
         return {}
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"Could not read JSON source {path}") from error
 
 
 def migrate_devkit_config() -> None:
@@ -393,7 +391,6 @@ def write_behavior_matrix() -> None:
             })
     entries.extend(build_hook_behavior_entries())
     payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "target": "codex",
         "project_doc_fallback_filenames": CODEX_FALLBACK_DOCS,
         "unsupported_events": CODEX_UNSUPPORTED_EVENTS,
@@ -487,7 +484,7 @@ def migrate_skills() -> None:
         target_name = re.sub("claude", "codex", source.name, flags=re.IGNORECASE)
         dest = dest_root / target_name
         if dest.exists():
-            shutil.rmtree(dest, ignore_errors=True)
+            shutil.rmtree(dest)
         shutil.copytree(source, dest, dirs_exist_ok=True)
 
         for path in sorted(dest.rglob("*")):
@@ -536,7 +533,7 @@ def migrate_commands_as_native_skills() -> None:
         skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
         skill_dir = dest_dir / skill_dir_name
         if skill_dir.exists():
-            shutil.rmtree(skill_dir, ignore_errors=True)
+            shutil.rmtree(skill_dir)
         skill_dir.mkdir(parents=True, exist_ok=True)
 
         content = (
