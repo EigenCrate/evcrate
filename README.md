@@ -455,7 +455,10 @@ Then add your MCP servers, below are some examples:
 
 ### Configuration & Baseline Management
 - **Single Source of Truth**: All configurations, hooks, workflows, and skills must be authored inside the `.claude/` directory.
-- **No Direct Downstream Edits**: Do not edit `.gemini/`, `.agents/`, or `.codex/` directly. They are generated automatically by running the `python distribute.py` script.
+- **Two Distribution Gates**: Run `python3 distribute.py --build` to generate local artifacts, `--check` to verify them without writes, and `--publish` to publish existing artifacts to HOME. `--all` runs build then publish; bare invocation remains a deprecated `--all` compatibility path.
+- **No Direct Downstream Edits**: Do not edit `.gemini/`, `.agents/`, or `.codex/` directly. They are generated automatically by the local build gate.
+- **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `DEVKIT_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
+- **Legacy HOME Cleanup Window**: Managed publication retains the pre-manifest cleanup lists for this transition phase; manifest-scoped deletion and user-root preservation land in the Phase 3 publish gate.
 - **Track Downstream Assets**: Generated folders (`.gemini/`, `.agents/`, `.codex/`) must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions.
 
 ### Code Quality

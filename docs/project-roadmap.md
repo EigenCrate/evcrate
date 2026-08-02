@@ -1,6 +1,6 @@
 # Devkit - Project Roadmap
 
-**Last Updated:** 2026-07-19
+**Last Updated:** 2026-08-02 10:16:52 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/devkit
 
@@ -232,6 +232,9 @@ Enterprise-grade features and deployment options.
 
 ### Recent Additions (2026-07-19)
 - ✅ Codex Model Migration (COMPLETE): migrated parent and subagent role tiers to GPT-5.6 equivalents, preserved reasoning efforts, regenerated Codex outputs, and passed tester/code-review gates (9/10 review). Distribution diff review retained only pre-existing scout whitespace and migration-matrix timestamp drift.
+
+### Recent Additions (2026-08-02)
+- ✅ Two-Gate Distribution and Enforced Advisor — Phase 1 (DONE): explicit build/check/publish/all CLI contracts, immutable distribution context, staged project-doc generation, fatal subprocess handling, guarded direct-global migrator modes, atomic promotion safeguards, and 17/17 CLI regression tests. `pytest` unavailable; validation used `python3 -m unittest tests/test_distribution_cli.py`.
 
 ### Recent Additions (2026-07-18)
 - ✅ Refactor DevKit Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.devkit.json`; phase 4 remains pending.

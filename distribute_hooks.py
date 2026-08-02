@@ -19,8 +19,8 @@ def rewrite_codex_global_paths(target_codex: Path):
                         if isinstance(command, str):
                             hook["command"] = command.replace(local_prefix, global_prefix)
             hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except (json.JSONDecodeError, OSError) as e:
-            print(f"⚠️ Warning: Failed to rewrite Codex hooks: {e}", file=sys.stderr)
+        except (json.JSONDecodeError, OSError) as error:
+            raise RuntimeError(f"Failed to rewrite Codex hooks: {error}") from error
 
     config_path = target_codex / "config.toml"
     if config_path.exists():
@@ -33,8 +33,8 @@ def rewrite_codex_global_paths(target_codex: Path):
                 content
             )
             config_path.write_text(content, encoding="utf-8")
-        except OSError as e:
-            print(f"⚠️ Warning: Failed to rewrite Codex config.toml: {e}", file=sys.stderr)
+        except OSError as error:
+            raise RuntimeError(f"Failed to rewrite Codex config.toml: {error}") from error
 
 def get_agy_js_wrapper(hook_file: str) -> str:
     return f"""#!/usr/bin/env node
@@ -169,8 +169,8 @@ def rewrite_agy_global_paths(target_agy: Path):
                             command = command.replace(local_prefix, global_prefix).replace(local_prefix_agy, global_prefix).replace(local_prefix_claude, global_prefix)
                             hook["command"] = command
             hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except (json.JSONDecodeError, OSError) as e:
-            print(f"⚠️ Warning: Failed to rewrite Antigravity hooks: {e}", file=sys.stderr)
+        except (json.JSONDecodeError, OSError) as error:
+            raise RuntimeError(f"Failed to rewrite Antigravity hooks: {error}") from error
 
     hooks_dir = target_agy / "hooks"
     if hooks_dir.exists():
@@ -190,9 +190,6 @@ def rewrite_agy_global_paths(target_agy: Path):
                 
                 wrapper = get_agy_js_wrapper(hook_file)
                 hook_path.write_text(wrapper, encoding="utf-8")
-                try:
-                    hook_path.chmod(0o755)
-                except Exception:
-                    pass
-            except OSError as e:
-                print(f"⚠️ Warning: Failed to write wrapper for {hook_file}: {e}", file=sys.stderr)
+                hook_path.chmod(0o755)
+            except OSError as error:
+                raise RuntimeError(f"Failed to write wrapper for {hook_file}: {error}") from error

@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Last Updated**: 2026-07-18
+**Last Updated**: 2026-08-02
 **Version**: 1.14.8
 **Repository**: [NEBULEA-M/devkit](https://github.com/NEBULEA-M/devkit)
 
@@ -32,10 +32,18 @@ devkit/
 │   ├── reports/         # Agent-to-agent communication
 │   └── templates/       # Plan templates
 ├── CLAUDE.md           # Project-specific Claude instructions
+├── distribute.py       # Build/check/publish distribution gate entrypoint
+├── distribution/       # Immutable path context, gate contracts, and gate orchestration
+├── migrate_claude_to_codex.py   # Codex target generator
+├── migrate_claude_to_gemini.py  # Gemini target generator
 ├── README.md           # Project overview
 ├── package.json        # Node.js dependencies
 └── repomix-output.xml  # Codebase compaction file
 ```
+
+### Distribution gates
+
+The distribution entrypoint separates local generation from HOME publication. `--build` creates finalized local `.gemini`, `.codex`, `.agents`, and project-doc outputs; `--check` verifies them without writes; `--publish` consumes verified local artifacts without running migrators; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `DEVKIT_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
 ## Core Technologies
 

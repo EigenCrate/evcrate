@@ -2,23 +2,20 @@
 import json
 import re
 import shutil
-import sys
+import tempfile
 from pathlib import Path
 
-from distribute_utils import (
-    devkit_dir, target_gemini, target_claude, target_codex, target_agents,
-    target_agy_config, gemini_global_mode, devkit_global_sync_mode,
-    reset_dir_contents, remove_managed_paths, sync_tree, write_codex_runtime_env
-)
-from distribute_hooks import (
-    rewrite_codex_global_paths, rewrite_agy_global_paths
-)
+from distribution.context import DistributionContext
+from distribution.antigravity_publish import publish_antigravity_config
+from distribute_utils import remove_managed_paths, remove_path, reset_dir_contents, sync_tree, write_codex_runtime_env
+from distribute_hooks import rewrite_codex_global_paths
 
-def sync_gemini_assets():
-    devkit_gemini = devkit_dir / ".gemini"
+def sync_gemini_assets(context: DistributionContext):
+    devkit_gemini = context.local_gemini
+    target_gemini = context.target_gemini
+    gemini_global_mode = context.gemini_global_mode
     if not devkit_gemini.exists():
-        print("❌ Error: .gemini not found in devkit.", file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError("Local .gemini artifact is missing")
         
     target_gemini.mkdir(parents=True, exist_ok=True)
     print(f"🧹 Syncing global Gemini assets (mode: {gemini_global_mode})")
@@ -43,17 +40,14 @@ def sync_gemini_assets():
                             )
                             hook["command"] = command
             settings_dest.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except (json.JSONDecodeError, OSError) as e:
-            print(f"⚠️ Warning: Failed to rewrite Gemini settings.json: {e}", file=sys.stderr)
+        except (json.JSONDecodeError, OSError) as error:
+            raise RuntimeError(f"Failed to rewrite Gemini settings.json: {error}") from error
 
     for subdir in ["scripts", "hooks"]:
         if (devkit_gemini / subdir).exists():
             subdir_dest = target_gemini / subdir
             if subdir_dest.exists():
-                try:
-                    shutil.rmtree(subdir_dest)
-                except OSError:
-                    pass
+                shutil.rmtree(subdir_dest)
             shutil.copytree(devkit_gemini / subdir, subdir_dest, dirs_exist_ok=True)
 
     subdirs = ["agents", "commands", "skills", "workflows"]
@@ -62,29 +56,22 @@ def sync_gemini_assets():
             if (devkit_gemini / subdir).exists():
                 subdir_dest = target_gemini / subdir
                 if subdir_dest.exists():
-                    try:
-                        shutil.rmtree(subdir_dest)
-                    except OSError:
-                        pass
+                    shutil.rmtree(subdir_dest)
                 shutil.copytree(devkit_gemini / subdir, subdir_dest, dirs_exist_ok=True)
     else:
         for subdir in subdirs:
             subdir_dest = target_gemini / subdir
             if subdir_dest.exists():
-                try:
-                    shutil.rmtree(subdir_dest)
-                except OSError:
-                    pass
+                shutil.rmtree(subdir_dest)
         print("ℹ️ Skipping ~/.gemini/{agents,commands,skills,workflows} to avoid user/workspace duplication.")
         print("   Hooks and scripts are still synced globally because they do not create duplicated command/skill registries.")
 
-def sync_codex_and_agents_assets(codex_stage: Path):
-    codex_source = devkit_dir / ".codex"
-    agents_source = devkit_dir / ".agents"
-    if (codex_stage / ".codex").exists():
-        codex_source = codex_stage / ".codex"
-    if (codex_stage / ".agents").exists():
-        agents_source = codex_stage / ".agents"
+def sync_codex_and_agents_assets(context: DistributionContext):
+    codex_source = context.local_codex
+    agents_source = context.local_agents
+    target_codex = context.target_codex
+    target_agents = context.target_agents
+    devkit_global_sync_mode = context.global_sync_mode
 
     if codex_source.exists():
         if devkit_global_sync_mode == "full":
@@ -106,7 +93,7 @@ def sync_codex_and_agents_assets(codex_stage: Path):
         write_codex_runtime_env(target_codex / "runtime.env")
         rewrite_codex_global_paths(target_codex)
     else:
-        print("⚠️ Warning: Codex source not found. Codex migration may have failed.")
+        raise RuntimeError("Local .codex artifact is missing")
 
     if agents_source.exists():
         if devkit_global_sync_mode == "full":
@@ -119,106 +106,22 @@ def sync_codex_and_agents_assets(codex_stage: Path):
         print("📦 Copying .agents items...")
         sync_tree(agents_source, target_agents)
     else:
-        print("⚠️ Warning: Codex agents source not found. Codex skills migration may have failed.")
+        raise RuntimeError("Local .agents artifact is missing")
 
-def sync_antigravity_config():
-    claude_source = devkit_dir / ".claude"
-    if claude_source.exists():
-        if devkit_global_sync_mode == "full":
-            print(f"🧹 Fully replacing global Antigravity config directory: {target_agy_config}")
-            reset_dir_contents(target_agy_config)
-        else:
-            print(f"🧹 Removing managed Antigravity config assets only: {target_agy_config}")
-            remove_managed_paths(target_agy_config, [
-                "agents", "commands", "hooks", "scripts", "skills", "workflows",
-                "settings.json", ".mcp.json.example", "statusline.cjs", ".ckignore"
-            ])
+def sync_antigravity_config(context: DistributionContext):
+    print("📦 Publishing legacy Antigravity configuration...")
+    publish_antigravity_config(context)
 
-        print("📦 Copying .claude items to Antigravity config...")
-        sync_tree(claude_source, target_agy_config)
-
-        print("📦 Extracting hooks from settings.json...")
-        settings_file = target_agy_config / "settings.json"
-        hooks_file = target_agy_config / "hooks.json"
-        if settings_file.exists():
-            try:
-                data = json.loads(settings_file.read_text(encoding="utf-8"))
-                if "hooks" in data:
-                    if "PreToolUse" in data["hooks"]:
-                        for group in data["hooks"]["PreToolUse"]:
-                            if "matcher" in group:
-                                group["matcher"] = "run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file"
-                    hooks_file.write_text(json.dumps({"hooks": data["hooks"]}, indent=2), encoding="utf-8")
-            except (json.JSONDecodeError, OSError) as e:
-                print(f"Failed to extract hooks: {e}")
-
-        print("🧹 Cleaning up legacy assets for Antigravity CLI...")
-        for f in ["settings.json", ".devkit.json", ".mcp.json.example", "statusline.cjs", "statusline.ps1", "statusline.sh"]:
-            p = target_agy_config / f
-            if p.exists():
-                try:
-                    p.unlink()
-                except OSError:
-                    pass
-        for d in ["agents", "commands"]:
-            p = target_agy_config / d
-            if p.exists():
-                try:
-                    shutil.rmtree(p)
-                except OSError:
-                    pass
-
-        commands_dir = claude_source / "commands"
-        if commands_dir.exists():
-            print("📦 Converting legacy .claude slash commands to Antigravity skills...")
-            target_skills = target_agy_config / "skills"
-            target_skills.mkdir(parents=True, exist_ok=True)
-            for md_file in commands_dir.rglob("*.md"):
-                try:
-                    rel_path = md_file.relative_to(commands_dir).with_suffix("")
-                    cmd_name = str(rel_path).replace("\\", "/")
-
-                    content = md_file.read_text(encoding="utf-8")
-                    desc = "Migrated command from .claude"
-                    for line in content.splitlines():
-                        stripped = line.strip()
-                        match = re.match(r'^description\s*:\s*(.*)$', stripped, re.IGNORECASE)
-                        if match:
-                            desc = match.group(1).strip()
-                            if (desc.startswith('"') and desc.endswith('"')) or (desc.startswith("'") and desc.endswith("'")):
-                                desc = desc[1:-1].strip()
-                            break
-
-                    skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
-                    skill_dir = target_skills / skill_dir_name
-                    skill_dir.mkdir(parents=True, exist_ok=True)
-
-                    skill_content = (
-                        f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
-                        f"# {skill_dir_name}\n\n"
-                        f"Command Path: /{cmd_name}\n\n"
-                        f"Description: {desc}\n\n"
-                        f"{content}"
-                    )
-                    (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
-                except (OSError, Exception) as e:
-                    print(f"Failed to convert slash command {md_file}: {e}")
-
-        rewrite_agy_global_paths(target_agy_config)
-    else:
-        print("⚠️ Warning: Claude source not found. Antigravity config migration may have failed.")
-
-def sync_legacy_claude_assets():
-    claude_source = devkit_dir / ".claude"
+def sync_legacy_claude_assets(context: DistributionContext):
+    claude_source = context.local_claude
+    target_claude = context.target_claude
+    devkit_global_sync_mode = context.global_sync_mode
     if claude_source.exists():
         print(f"📦 Syncing legacy .claude items to {target_claude}...")
         if devkit_global_sync_mode == "full":
             print(f"🧹 Fully replacing legacy Claude directory: {target_claude}")
             if target_claude.exists():
-                try:
-                    shutil.rmtree(target_claude)
-                except OSError:
-                    pass
+                shutil.rmtree(target_claude)
             target_claude.mkdir(parents=True, exist_ok=True)
         else:
             print(f"🧹 Removing managed Claude assets only: {target_claude}")
@@ -227,3 +130,30 @@ def sync_legacy_claude_assets():
                 "settings.json", ".mcp.json.example", "statusline.cjs", ".ckignore"
             ])
         sync_tree(claude_source, target_claude)
+
+
+def publish_local_artifacts(context: DistributionContext) -> None:
+    """Legacy publisher routed behind the explicit Phase 1 publish gate."""
+    with tempfile.TemporaryDirectory(prefix=".devkit-home-publish-", dir=context.home.parent) as temp:
+        backup_root = Path(temp)
+        targets = (context.target_gemini, context.target_codex, context.target_agents, context.target_claude)
+        backups: list[tuple[Path | None, Path]] = []
+        try:
+            for target in targets:
+                if target.exists():
+                    backup = backup_root / target.name
+                    shutil.copytree(target, backup, symlinks=True)
+                    backups.append((backup, target))
+                else:
+                    backups.append((None, target))
+            sync_gemini_assets(context)
+            sync_codex_and_agents_assets(context)
+            sync_antigravity_config(context)
+            sync_legacy_claude_assets(context)
+        except Exception:
+            for backup, target in reversed(backups):
+                if target.exists():
+                    remove_path(target)
+                if backup is not None:
+                    shutil.copytree(backup, target, symlinks=True)
+            raise

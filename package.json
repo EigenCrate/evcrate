@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "distribute": "python3 distribute.py",
+    "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
+    "distribute:publish": "python3 distribute.py --publish",
+    "distribute:all": "python3 distribute.py --all",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
     "test": "echo \"Warning: no test specified\" && exit 0",

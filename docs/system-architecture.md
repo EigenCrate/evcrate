@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: 2025-10-26
+**Last Updated**: 2026-08-02
 **Version**: 1.8.0
 **Project**: ClaudeKit Engineer
 
@@ -895,6 +895,18 @@ User Project
 - Memory management for large files
 - Cleanup of temporary files
 - Optimized git operations
+
+## Distribution Architecture (Phase 1)
+
+[Two-gate target distribution and advisor consultation](./advisor-distribution-architecture.md) defines the broader target-overlay, manifest, and advisor boundary. Phase 1 now implements the CLI and gate contracts:
+
+- `python3 distribute.py --build` runs migrators in repository-root context and atomically promotes local generated trees and project docs.
+- `python3 distribute.py --check` regenerates into isolated staging and compares outputs without writing the repository or HOME.
+- `python3 distribute.py --publish` verifies existing local artifacts and publishes them without invoking migrators.
+- `python3 distribute.py --all` performs build then publish; bare invocation remains a deprecated compatibility alias and emits a warning.
+- Direct migrator `--global` modes are refused unless `DEVKIT_ALLOW_DIRECT_GLOBAL=1` is set for an explicitly documented emergency; that path warns that it bypasses distribution verification.
+
+Phase 2–6 work (overlays, manifests, advisor broker, admission, and rollout validation) remains planned.
 
 ## Future Architecture Evolution
 
