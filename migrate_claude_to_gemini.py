@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import json
+import hashlib
 import yaml
 import sys
 from pathlib import Path
@@ -25,6 +26,17 @@ for arg in sys.argv[1:]:
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
+
+
+def ignore_migration_artifacts(_: str, names: list[str]) -> set[str]:
+    """Keep interpreter and coverage by-products out of deterministic targets."""
+
+    return {
+        name for name in names
+        if (name.startswith("__") and name.endswith("cache__"))
+        or name == ".coverage"
+        or name.endswith((".pyc", ".pyo"))
+    }
 
 # Mappings for models and terms
 REPLACEMENTS = {
@@ -319,7 +331,8 @@ def write_behavior_matrix():
         "behaviors": entries,
     }
     with open(Path(GEMINI_DIR) / "migration-behavior-matrix.json", "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(payload, f, indent=2, sort_keys=True)
+        f.write("\n")
 
 def write_gemini_memory_wrapper():
     claude_md = Path("CLAUDE.md")
@@ -757,7 +770,7 @@ def migrate_skills():
             skill_name = re.sub(r"claude", "gemini", skill_dir.name, flags=re.IGNORECASE)
             dest_skill_dir = dest_dir / skill_name
             if dest_skill_dir.exists(): shutil.rmtree(dest_skill_dir)
-            shutil.copytree(skill_dir, dest_skill_dir, dirs_exist_ok=True)
+            shutil.copytree(skill_dir, dest_skill_dir, dirs_exist_ok=True, ignore=ignore_migration_artifacts)
             for target_file in dest_skill_dir.rglob("*"):
                 if target_file.is_file() and is_text_file(target_file):
                     if target_file.name.lower() == "skill.md" and target_file.name != "SKILL.md":
@@ -857,7 +870,10 @@ def migrate_mcp():
                                 elif "scout-block" in command: hook["name"] = "claude-scout-block"
                                 elif "privacy-block" in command: hook["name"] = "claude-privacy-block"
                                 elif "session-end" in command: hook["name"] = "claude-session-end"
-                                else: hook["name"] = f"migrated-{claude_event.lower()}-{hash(command) % 10000}"
+                                else:
+                                    # Python hashes vary by process. A digest keeps builds stable.
+                                    digest = hashlib.sha256(command.encode("utf-8")).hexdigest()[:8]
+                                    hook["name"] = f"migrated-{claude_event.lower()}-{digest}"
                         
                         gemini_hooks[gemini_event].append(group)
             

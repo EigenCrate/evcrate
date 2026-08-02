@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "antigravity",
+  "adapter": null,
+  "output_root": ".antigravity",
+  "additional_roots": [],
+  "project_docs": [],
+  "overlay_root": ".devkit/targets/antigravity/files",
+  "patches": [],
+  "home_roots": [".antigravity"],
+  "preservation_policy": "managed"
+}

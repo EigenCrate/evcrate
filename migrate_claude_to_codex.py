@@ -61,6 +61,17 @@ TEXT_BINARY_EXTS = {
     ".zip",
 }
 
+
+def ignore_migration_artifacts(_: str, names: list[str]) -> set[str]:
+    """Keep interpreter and coverage by-products out of deterministic targets."""
+
+    return {
+        name for name in names
+        if (name.startswith("__") and name.endswith("cache__"))
+        or name == ".coverage"
+        or name.endswith((".pyc", ".pyo"))
+    }
+
 REPLACEMENTS = {
     r"\.claude/skills": ".agents/skills",
     r"\.claude": ".codex",
@@ -397,7 +408,7 @@ def write_behavior_matrix() -> None:
         "behaviors": entries,
     }
     (CODEX_DIR / "migration-behavior-matrix.json").write_text(
-        json.dumps(payload, indent=2),
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -485,7 +496,7 @@ def migrate_skills() -> None:
         dest = dest_root / target_name
         if dest.exists():
             shutil.rmtree(dest)
-        shutil.copytree(source, dest, dirs_exist_ok=True)
+        shutil.copytree(source, dest, dirs_exist_ok=True, ignore=ignore_migration_artifacts)
 
         for path in sorted(dest.rglob("*")):
             if not path.is_file():

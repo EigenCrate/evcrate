@@ -1,0 +1,221 @@
+"""Validated source manifests and deterministic build-manifest rendering."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Mapping
+
+from .contracts import BuildError
+from .hashing import HashingError, canonical_json_bytes, contained_path, hash_bytes, hash_file, normalize_relative_path, tree_hash
+
+
+BUILD_MANIFEST_SCHEMA_VERSION = 1
+
+
+@dataclass(frozen=True)
+class PatchSpec:
+    source: str
+    destination: str
+    keys: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TargetManifest:
+    name: str
+    adapter: str | None
+    output_roots: tuple[str, ...]
+    owned_paths: tuple[str, ...]
+    patches: tuple[PatchSpec, ...]
+    project_docs: tuple[str, ...]
+    home_policy: Mapping[str, Any]
+    source_root: Path
+    overlay_root: Path | None = None
+
+
+@dataclass(frozen=True)
+class TargetRegistry:
+    targets: Mapping[str, Path]
+
+
+def _expect_object(value: Any, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise BuildError(f"{label} must be a JSON object")
+    return value
+
+
+def _paths(value: Any, label: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in value):
+        raise BuildError(f"{label} must be a non-empty list of paths")
+    try:
+        paths = tuple(normalize_relative_path(item) for item in value)
+    except HashingError as error:
+        raise BuildError(str(error)) from error
+    if len(set(paths)) != len(paths):
+        raise BuildError(f"{label} contains duplicate paths")
+    return paths
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    try:
+        if path.is_symlink():
+            raise BuildError(f"Manifest cannot be a symlink: {path}")
+        return _expect_object(json.loads(path.read_text(encoding="utf-8")), str(path))
+    except (OSError, json.JSONDecodeError) as error:
+        raise BuildError(f"Could not read manifest {path}: {error}") from error
+
+
+def load_target_manifest(path: Path) -> TargetManifest:
+    """Load one target contract; reject unowned outputs and unsafe source paths."""
+
+    data = _load_json(path)
+    if data.get("schema_version") != BUILD_MANIFEST_SCHEMA_VERSION:
+        raise BuildError(f"Unsupported target manifest schema: {data.get('schema_version')!r}")
+    name = data.get("name")
+    if not isinstance(name, str) or not name or "/" in name or "\\" in name:
+        raise BuildError("Target manifest name must be a simple non-empty string")
+    adapter = data.get("adapter")
+    if adapter is not None:
+        if not isinstance(adapter, str):
+            raise BuildError("Target adapter must be a script path or null")
+        try:
+            adapter = normalize_relative_path(adapter)
+        except HashingError as error:
+            raise BuildError(str(error)) from error
+    root_values = data.get("output_roots")
+    if root_values is None:
+        primary_root = data.get("output_root")
+        additional_roots = data.get("additional_roots", [])
+        if not isinstance(primary_root, str) or not isinstance(additional_roots, list):
+            raise BuildError("Target manifest requires output_root or output_roots")
+        root_values = [primary_root, *additional_roots]
+    roots = _paths(root_values, "output_roots")
+    owned = _paths(data.get("owned_paths", []), "owned_paths") if data.get("owned_paths") else ()
+    patches: list[PatchSpec] = []
+    raw_patches = data.get("patches", [])
+    if not isinstance(raw_patches, list):
+        raise BuildError("patches must be a list")
+    for raw in raw_patches:
+        patch = _expect_object(raw, "patch")
+        source, destination, keys = patch.get("source"), patch.get("destination"), patch.get("keys")
+        if not isinstance(source, str) or not isinstance(destination, str) or not isinstance(keys, list):
+            raise BuildError("Each patch requires source, destination, and keys")
+        try:
+            safe_source = normalize_relative_path(source)
+            safe_destination = normalize_relative_path(destination)
+        except HashingError as error:
+            raise BuildError(str(error)) from error
+        if not safe_source.startswith("patches/"):
+            raise BuildError(f"Patch source must be under patches/: {safe_source}")
+        if not all(isinstance(key, str) and key and all(part for part in key.split(".")) for key in keys):
+            raise BuildError("Patch keys must be exact non-empty dotted paths")
+        if len(set(keys)) != len(keys):
+            raise BuildError("Patch keys must not contain duplicates")
+        patches.append(PatchSpec(safe_source, safe_destination, tuple(keys)))
+    destinations = [patch.destination for patch in patches]
+    if len(set(destinations)) != len(destinations):
+        raise BuildError("Only one patch declaration may target each destination")
+    policy = data.get("home_policy")
+    if policy is None:
+        policy = {
+            "home_roots": data.get("home_roots", []),
+            "preservation_policy": data.get("preservation_policy", "managed"),
+            "project_docs": data.get("project_docs", []),
+        }
+    if not isinstance(policy, dict):
+        raise BuildError("home_policy must be an object")
+    docs_value = data.get("project_docs", policy.get("project_docs", []))
+    if not isinstance(docs_value, list) or not all(isinstance(document, str) for document in docs_value):
+        raise BuildError("project_docs must be a list of filenames")
+    try:
+        docs = tuple(normalize_relative_path(document) for document in docs_value)
+    except HashingError as error:
+        raise BuildError(str(error)) from error
+    if any("/" in document for document in docs) or len(set(docs)) != len(docs):
+        raise BuildError("project_docs must be unique root-level filenames")
+    source_root = path.parent.resolve()
+    for owned_path in owned:
+        if not owned_path.startswith("files/"):
+            raise BuildError(f"Owned source must be under files/: {owned_path}")
+        owned_source = contained_path(source_root, owned_path, must_exist=True)
+        if owned_source.is_symlink():
+            raise BuildError(f"Owned source cannot be a symlink: {owned_path}")
+    for patch in patches:
+        patch_source = contained_path(source_root, patch.source, must_exist=True)
+        if patch_source.is_symlink():
+            raise BuildError(f"Patch source cannot be a symlink: {patch.source}")
+        if not any(patch.destination.startswith(root + "/") for root in roots):
+            raise BuildError(f"Patch destination is outside declared output roots: {patch.destination}")
+    overlay_root: Path | None = None
+    overlay_value = data.get("overlay_root")
+    if overlay_value is not None:
+        if not isinstance(overlay_value, str):
+            raise BuildError("overlay_root must be a path string")
+        try:
+            safe_overlay = normalize_relative_path(overlay_value)
+        except HashingError as error:
+            raise BuildError(str(error)) from error
+        repository = path.parents[3] if path.parent.parent.name == "targets" else source_root
+        overlay_root = contained_path(repository, safe_overlay)
+    return TargetManifest(name, adapter, roots, owned, tuple(patches), docs, policy, source_root, overlay_root)
+
+
+def load_target_registry(path: Path) -> TargetRegistry:
+    """Load a target-name to manifest-path registry beneath ``.devkit/targets``."""
+
+    data = _load_json(path)
+    if data.get("schema_version") != BUILD_MANIFEST_SCHEMA_VERSION:
+        raise BuildError(f"Unsupported target registry schema: {data.get('schema_version')!r}")
+    targets = data.get("targets")
+    if not isinstance(targets, dict) or not targets:
+        raise BuildError("Target registry requires a non-empty targets object")
+    resolved: dict[str, Path] = {}
+    for name, relative in targets.items():
+        if not isinstance(name, str) or not name or not isinstance(relative, str):
+            raise BuildError("Target registry names and paths must be strings")
+        try:
+            candidate = contained_path(path.parent, relative, must_exist=True)
+        except HashingError as error:
+            raise BuildError(str(error)) from error
+        if candidate.name != "manifest.json":
+            raise BuildError(f"Target registry entry must name a manifest.json file: {relative}")
+        resolved[name] = candidate
+    return TargetRegistry(dict(sorted(resolved.items())))
+
+
+def source_hashes(manifests: tuple[TargetManifest, ...]) -> dict[str, str]:
+    """Hash declared overlay sources only; never include environment values."""
+
+    hashes: dict[str, str] = {}
+    for manifest in manifests:
+        hashes[f"{manifest.name}/manifest.json"] = hash_file(manifest.source_root / "manifest.json")
+        if manifest.overlay_root is not None:
+            key = f"{manifest.name}/{manifest.overlay_root.name}"
+            hashes[key] = tree_hash(manifest.overlay_root) if manifest.overlay_root.exists() else hash_bytes(b"")
+        for relative in manifest.owned_paths:
+            path = contained_path(manifest.source_root, relative, must_exist=True)
+            hashes[f"{manifest.name}/{relative}"] = tree_hash(path) if path.is_dir() else hash_file(path)
+        for patch in manifest.patches:
+            path = contained_path(manifest.source_root, patch.source, must_exist=True)
+            hashes[f"{manifest.name}/{patch.source}"] = hash_file(path)
+    return dict(sorted(hashes.items()))
+
+
+def build_manifest_bytes(*, source_hashes: Mapping[str, str], adapter_hashes: Mapping[str, str], owners: Mapping[str, str], output_roots: Mapping[str, Path], home_policy: Mapping[str, Any], validation: Mapping[str, Any]) -> bytes:
+    """Return canonical, timestamp-free authorization bytes for a completed build."""
+
+    outputs = {
+        name: tree_hash(path) if path.is_dir() else hash_file(path)
+        for name, path in sorted(output_roots.items())
+    }
+    payload = {
+        "schema_version": BUILD_MANIFEST_SCHEMA_VERSION,
+        "source_hashes": dict(sorted(source_hashes.items())),
+        "adapter_hashes": dict(sorted(adapter_hashes.items())),
+        "owners": dict(sorted(owners.items())),
+        "output_hashes": outputs,
+        "validation": dict(sorted(validation.items())),
+        "home_policy": home_policy,
+    }
+    return canonical_json_bytes(payload)

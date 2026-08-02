@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "codex",
+  "adapter": "migrate_claude_to_codex.py",
+  "output_root": ".codex",
+  "additional_roots": [".agents"],
+  "project_docs": ["AGENTS.md"],
+  "overlay_root": ".devkit/targets/codex/files",
+  "patches": [],
+  "home_roots": [".codex", ".agents"],
+  "preservation_policy": "managed"
+}
