@@ -5,34 +5,48 @@ import shlex
 import sys
 from pathlib import Path
 
+def rewrite_codex_global_file(relative_path: str, content: bytes, global_codex: Path) -> bytes:
+    if relative_path == "hooks.json":
+        data = json.loads(content.decode("utf-8"))
+        local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
+        global_prefix = shlex.quote((global_codex / "hooks").as_posix())
+        for groups in data.get("hooks", {}).values():
+            for group in groups:
+                for hook in group.get("hooks", []):
+                    command = hook.get("command")
+                    if isinstance(command, str):
+                        hook["command"] = command.replace(local_prefix, global_prefix)
+        return json.dumps(data, indent=2).encode("utf-8")
+
+    if relative_path == "config.toml":
+        wrapper = json.dumps((global_codex / "bin" / "run-mcp-package.sh").as_posix())
+        content_text = content.decode("utf-8")
+        content_text = re.sub(
+            r'command\s*=\s*"\.codex/bin/run-mcp-package\.sh"',
+            f"command = {wrapper}",
+            content_text,
+        )
+        return content_text.encode("utf-8")
+
+    return content
+
+
 def rewrite_codex_global_paths(target_codex: Path):
     hooks_path = target_codex / "hooks.json"
     if hooks_path.exists():
         try:
-            data = json.loads(hooks_path.read_text(encoding="utf-8"))
-            local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
-            global_prefix = shlex.quote(Path(target_codex / "hooks").as_posix())
-            for groups in data.get("hooks", {}).values():
-                for group in groups:
-                    for hook in group.get("hooks", []):
-                        command = hook.get("command")
-                        if isinstance(command, str):
-                            hook["command"] = command.replace(local_prefix, global_prefix)
-            hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            hooks_path.write_bytes(
+                rewrite_codex_global_file("hooks.json", hooks_path.read_bytes(), target_codex)
+            )
         except (json.JSONDecodeError, OSError) as error:
             raise RuntimeError(f"Failed to rewrite Codex hooks: {error}") from error
 
     config_path = target_codex / "config.toml"
     if config_path.exists():
         try:
-            wrapper = json.dumps(Path(target_codex / "bin" / "run-mcp-package.sh").as_posix())
-            content = config_path.read_text(encoding="utf-8")
-            content = re.sub(
-                r'command\s*=\s*"\.codex/bin/run-mcp-package\.sh"',
-                f"command = {wrapper}",
-                content
+            config_path.write_bytes(
+                rewrite_codex_global_file("config.toml", config_path.read_bytes(), target_codex)
             )
-            config_path.write_text(content, encoding="utf-8")
         except OSError as error:
             raise RuntimeError(f"Failed to rewrite Codex config.toml: {error}") from error
 
