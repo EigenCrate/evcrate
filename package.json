@@ -11,7 +11,7 @@
     "distribute:all": "python3 distribute.py --all",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
-    "test": "echo \"Warning: no test specified\" && exit 0",
+    "test": "python3 -m unittest tests.test_distribution_build tests.test_distribution_cli tests.test_distribution_publish",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"

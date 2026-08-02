@@ -149,8 +149,8 @@ class DistributionBuildTest(unittest.TestCase):
         registry = load_target_registry(repository / ".devkit/targets/manifest.json")
         codex = load_target_manifest(registry.targets["codex"])
         self.assertEqual(codex.output_roots, (".codex", ".agents"))
-        self.assertEqual(codex.home_policy["preservation_policy"], "managed")
-        self.assertEqual(set(registry.targets), {"codex", "gemini"})
+        self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
+        self.assertEqual(set(registry.targets), {"antigravity", "codex", "gemini"})
 
     def test_staging_writes_a_deterministic_authorization_manifest(self) -> None:
         def run(stage: Path) -> bytes:
@@ -166,6 +166,8 @@ class DistributionBuildTest(unittest.TestCase):
                     Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
 
             generate_stage(context, fake_migrator)
+            self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
+            self.assertFalse((stage / ".antigravity" / "config").exists())
             return (stage / BUILD_MANIFEST_PATH).read_bytes()
 
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:

@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "targets": {
+    "antigravity": "antigravity/manifest.json",
     "codex": "codex/manifest.json",
     "gemini": "gemini/manifest.json"
   }

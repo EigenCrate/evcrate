@@ -12,6 +12,7 @@ class DistributionAction(str, Enum):
     CHECK = "check"
     PUBLISH = "publish"
     ALL = "all"
+    RECOVER = "recover"
 
 
 class DistributionError(RuntimeError):

@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 /**
  * Generate metadata.json aligned with the package version and
@@ -71,45 +71,17 @@ const { execSync } = require('child_process');
       fs.unlinkSync(archivePath);
     }
 
-    console.log('🔄 Running project migrations to update Gemini & Codex configs...');
-    try {
-      execSync('python3 migrate_claude_to_gemini.py', { stdio: 'inherit' });
-      console.log('✓ Project migrated to Gemini');
-    } catch (e) {
-      console.warn('⚠️ Warning: migrate_claude_to_gemini.py failed, using existing .gemini folder if present');
-    }
-    
-    try {
-      execSync('python3 migrate_claude_to_codex.py', {
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          CODEX_OUTPUT_DIR: path.join(projectRoot, '.codex'),
-          AGENTS_OUTPUT_DIR: path.join(projectRoot, '.agents')
-        }
-      });
-      console.log('✓ Project migrated to Codex');
-    } catch (e) {
-      console.warn('⚠️ Warning: migrate_claude_to_codex.py failed, using existing .codex/.agents folders if present');
-    }
+    console.log('🔄 Building and verifying release artifacts...');
+    execFileSync('python3', ['distribute.py', '--build'], { cwd: projectRoot, stdio: 'inherit' });
+    execFileSync('python3', ['distribute.py', '--check'], { cwd: projectRoot, stdio: 'inherit' });
 
     const archiveTargets = [
-      '.claude',
       '.gemini',
       '.codex',
       '.agents',
-      '.opencode',
-      'plans',
-      '.gitignore',
-      '.repomixignore',
-      '.mcp.json',
-      'CLAUDE.md',
-      'distribute.py',
-      'distribute_utils.py',
-      'distribute_sync.py',
-      'distribute_hooks.py',
-      'migrate_claude_to_gemini.py',
-      'migrate_claude_to_codex.py'
+      '.antigravity',
+      '.devkit/build-manifest.json',
+      '.devkit/targets'
     ];
 
     const existingTargets = archiveTargets.filter((target) => fs.existsSync(path.join(projectRoot, target)));
@@ -118,8 +90,7 @@ const { execSync } = require('child_process');
       throw new Error('No release assets found to include in archive.');
     }
 
-    const zipCommand = ['zip', '-r', archivePath, ...existingTargets].join(' ');
-    execSync(zipCommand, { stdio: 'inherit' });
+    execFileSync('zip', ['-r', archivePath, ...existingTargets], { cwd: projectRoot, stdio: 'inherit' });
     console.log(`✓ Prepared ${archivePath}`);
   } catch (error) {
     console.error(`✗ Failed to prepare release assets: ${error.message}`);

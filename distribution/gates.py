@@ -157,19 +157,23 @@ def verified_local_artifact(context: DistributionContext) -> VerifiedArtifact:
     return VerifiedArtifact(repository=context.repository, roots=context.local_roots)
 
 
-def run_home_publish(context: DistributionContext, artifact: VerifiedArtifact) -> None:
+def run_home_publish(
+    context: DistributionContext,
+    artifact: VerifiedArtifact,
+    *,
+    dry_run: bool = False,
+) -> list[object]:
     """Publish an explicit local artifact; this function never invokes a migrator."""
 
-    if artifact.repository != context.repository or artifact.roots != context.local_roots:
-        raise PublishError("Artifact reference does not belong to this repository")
     if context.global_sync_mode not in {"managed", "full"}:
         raise PublishError("DEVKIT_GLOBAL_SYNC_MODE must be 'managed' or 'full'")
-    from distribute_sync import publish_local_artifacts
+    from .publish import publish_local_artifacts
 
     try:
-        publish_local_artifacts(context)
+        return publish_local_artifacts(context, artifact, dry_run=dry_run)
+    except PublishError:
+        raise
     except Exception as error:
-        # Keep publication failures machine-readable and avoid raw tracebacks.
         raise PublishError("HOME publication failed") from error
 
 
@@ -177,3 +181,9 @@ def run_all() -> None:
     artifact = run_local_build()
     context = create_context(DistributionAction.ALL)
     run_home_publish(context, artifact)
+
+
+def run_home_recovery(context: DistributionContext) -> None:
+    from .publish import recover_interrupted_publish
+
+    recover_interrupted_publish(context)

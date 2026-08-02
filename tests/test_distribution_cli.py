@@ -28,6 +28,9 @@ class DistributionCliTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             with patch("sys.stderr", new_callable=io.StringIO):
                 distribute.parse_args(["--build", "--publish"])
+        with self.assertRaises(SystemExit):
+            with patch("sys.stderr", new_callable=io.StringIO):
+                distribute.parse_args(["--dry-run"])
 
     def test_staged_migrators_run_from_repository_with_fatal_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -123,11 +126,11 @@ class DistributionCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"DEVKIT_HOME": home}):
             context = create_context(DistributionAction.PUBLISH)
             artifact = VerifiedArtifact(context.repository, context.local_roots)
-            with patch("distribute_sync.publish_local_artifacts") as publish, patch(
+            with patch("distribution.publish.publish_local_artifacts") as publish, patch(
                 "distribution.gates._run_migrator"
             ) as migrator:
                 gates.run_home_publish(context, artifact)
-        publish.assert_called_once_with(context)
+        publish.assert_called_once_with(context, artifact, dry_run=False)
         migrator.assert_not_called()
 
     def test_gemini_publisher_rewrites_settings_without_runtime_name_error(self) -> None:
@@ -152,29 +155,21 @@ class DistributionCliTest(unittest.TestCase):
     def test_unexpected_publish_failure_is_wrapped(self) -> None:
         context = create_context(DistributionAction.PUBLISH)
         artifact = VerifiedArtifact(context.repository, context.local_roots)
-        with patch("distribute_sync.publish_local_artifacts", side_effect=NameError("bug")):
+        with patch("distribution.publish.publish_local_artifacts", side_effect=NameError("bug")):
             with self.assertRaises(PublishError) as raised:
                 gates.run_home_publish(context, artifact)
         self.assertEqual(str(raised.exception), "HOME publication failed")
 
-    def test_home_publisher_restores_roots_on_later_failure(self) -> None:
+    def test_legacy_publisher_delegates_to_manifest_publisher(self) -> None:
         from distribute_sync import publish_local_artifacts
         from distribution.context import DistributionContext
 
         with tempfile.TemporaryDirectory() as temp:
             root, home = Path(temp) / "repo", Path(temp) / "home"
             context = DistributionContext(DistributionAction.PUBLISH, root, home, None, "managed", "config-and-scripts")
-            context.target_gemini.mkdir(parents=True)
-            (context.target_gemini / "sentinel").write_text("old", encoding="utf-8")
-            with patch("distribute_sync.sync_gemini_assets") as gemini, patch(
-                "distribute_sync.sync_codex_and_agents_assets", side_effect=OSError("fail")
-            ):
-                def mutate(_: object) -> None:
-                    (context.target_gemini / "sentinel").write_text("new", encoding="utf-8")
-                gemini.side_effect = mutate
-                with self.assertRaises(OSError):
-                    publish_local_artifacts(context)
-            self.assertEqual((context.target_gemini / "sentinel").read_text(encoding="utf-8"), "old")
+            with patch("distribution.publish.publish_local_artifacts") as publish:
+                publish_local_artifacts(context)
+        publish.assert_called_once()
 
     def test_direct_global_migrators_require_emergency_opt_in(self) -> None:
         for script in ("migrate_claude_to_codex.py", "migrate_claude_to_gemini.py"):

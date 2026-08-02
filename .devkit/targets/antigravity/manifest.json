@@ -1,12 +1,15 @@
 {
   "schema_version": 1,
   "name": "antigravity",
-  "adapter": null,
+  "adapter": "migrate_claude_to_gemini.py",
   "output_root": ".antigravity",
   "additional_roots": [],
   "project_docs": [],
   "overlay_root": ".devkit/targets/antigravity/files",
   "patches": [],
-  "home_roots": [".antigravity"],
-  "preservation_policy": "managed"
+  "home_policy": {
+    "bindings": {".antigravity": ".gemini/config"},
+    "preserve_paths": {},
+    "promotion_order": 30
+  }
 }
