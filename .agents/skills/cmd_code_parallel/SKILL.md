@@ -10,6 +10,8 @@ Description: ⚡ Execute parallel or sequential phases based on plan structure
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Execute plan: <plan>{{args}}</plan>
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.

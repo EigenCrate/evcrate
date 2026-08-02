@@ -10,6 +10,8 @@ Description: Analyze the current copy issues and enhance it
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Enhance the copy based on reported issues:
 <issues>{{args}}</issues>
 

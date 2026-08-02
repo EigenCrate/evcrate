@@ -10,6 +10,8 @@ Description: ⚡ Answer technical and architectural questions.
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 ## Context
 Technical question or architecture challenge: 
 <questions>{{args}}</questions>

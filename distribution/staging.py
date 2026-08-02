@@ -102,7 +102,6 @@ def _apply_targets(
         ".claude": tree_hash(context.repository / ".claude"),
         "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
         ".devkit/targets": source_tree_hash(context.repository / ".devkit/targets"),
-        ".devkit/models.json": hash_file(context.repository / ".devkit/models.json"),
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }

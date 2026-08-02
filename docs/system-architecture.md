@@ -74,6 +74,12 @@ ClaudeKit Engineer implements a multi-agent AI orchestration architecture where 
 - `sonnet` roles use `gpt-5.6-terra` with `high` reasoning, `haiku` roles use `gpt-5.6-luna` with `low` reasoning, and inherited roles use `gpt-5.6-terra` with `medium` reasoning.
 - Agents with no source model use `gpt-5.6-sol` with `high` reasoning. Preview-only models are not selected as default tiers.
 
+**Advisor Guidance**:
+- `advisor-strategy` is a static, portable skill distributed from `.claude/skills` to the managed skill roots.
+- It helps an executor decide whether independent review is useful, form a minimal evidence brief, and evaluate advice already available in the current session.
+- It does not start a nested model session, expose MCP tools, execute commands, access credentials, enforce quotas, or claim isolation. Normal host approvals and sandbox policy remain authoritative.
+- Generated `.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
+
 ### 2. Agent Layer
 
 #### 2.1 Agent Types
@@ -896,24 +902,13 @@ User Project
 - Cleanup of temporary files
 - Optimized git operations
 
-## Distribution Architecture (Phase 4 advisor runtime)
+## Distribution Architecture (current skill-only advisor)
 
-[Two-gate target distribution and advisor consultation](./advisor-distribution-architecture.md) defines the broader target-overlay, manifest, and advisor boundary. Phases 1–4 implement the build, verification, publication, and constrained-advisor contracts:
+[Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the current static skill boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
 
-- `python3 distribute.py --build` runs migrators in repository-root context and atomically promotes local generated trees and project docs.
-- `python3 distribute.py --check` regenerates into isolated staging and compares outputs without writing the repository or HOME.
-- `python3 distribute.py --publish` verifies existing local artifacts and publishes them without invoking migrators.
-- `python3 distribute.py --publish --dry-run` prints the create/update/delete/preserve diff without changing HOME; add `--json` for machine-readable records.
-- `python3 distribute.py --recover` restores an interrupted publication from its durable release marker.
-- `python3 distribute.py --all` performs build then publish; bare invocation remains a deprecated compatibility alias and emits a warning.
-- Publication requires a complete, current `.devkit/build-manifest.json`; stale source hashes or modified output hashes are rejected.
-- Target manifest HOME policies control managed paths. Declared `preserve_paths` and unmanaged user files remain untouched. State and the owner-only lock live at `$DEVKIT_STATE_HOME/devkit` (or `$XDG_STATE_HOME/devkit`, otherwise `~/.local/state/devkit`).
-- Release preparation bundles verified build metadata and generated assets; CI does not publish to a developer HOME.
-- Direct migrator `--global` modes are refused unless `DEVKIT_ALLOW_DIRECT_GLOBAL=1` is set for an explicitly documented emergency; that path warns that it bypasses distribution verification.
-- The Codex target stages and bundles `runtime/advisor-broker` from source, injects `.devkit/models.json` as `registry.json`, removes `node_modules`, and records runtime ownership in the build manifest.
-- The bundled MCP server exposes exactly `advisor_consult`; it bounds request/response schemas, requires contained symlink-free evidence, redacts secrets, resolves a distinct advisor role, verifies Codex artifact integrity, and writes owner-only JSONL audit records under `$HOME/.local/state/devkit/advisor/audit.jsonl`.
-
-Overlay, manifest, advisor broker/admission, artifact integrity, and final rollout validation are implemented. The default adapter remains a safe escalation-only placeholder until configured.
+- The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill.
+- The skill reasons over evidence already available in the current session. It does not invoke providers, models, MCP, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
+- The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
 
 ## Future Architecture Evolution
 

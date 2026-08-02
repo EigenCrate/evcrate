@@ -10,6 +10,8 @@ Description: ⚡⚡ Analyze and fix UI issues
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 ## Required Skills (Priority Order)
 1. **`ui-ux-pro-max`** - Design intelligence database (ALWAYS ACTIVATE FIRST)
 2. **`aesthetic`** - Design principles

@@ -10,6 +10,8 @@ Description: ⚡ Fix type errors
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Run `bun run typecheck` or `tsc` or `npx tsc` and fix all type errors.
 
 ## Rules

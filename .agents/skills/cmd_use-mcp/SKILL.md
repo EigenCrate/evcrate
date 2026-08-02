@@ -10,6 +10,8 @@ Description: Utilize tools of Model Context Protocol (MCP) servers
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Execute MCP operations via **Gemini CLI** to preserve context budget.
 
 ## Execution Steps

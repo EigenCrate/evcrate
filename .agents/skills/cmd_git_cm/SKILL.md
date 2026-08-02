@@ -10,5 +10,7 @@ Description: Stage all files and create a commit.
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Use `git-manager` agent to stage all files and create a commit.
 **IMPORTANT: DO NOT push the changes to remote repository**

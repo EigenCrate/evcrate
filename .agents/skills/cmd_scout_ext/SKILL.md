@@ -10,6 +10,8 @@ Description: ⚡ Use external agentic tools to scout given directories
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 ## Purpose
 
 Utilize external agentic tools to scout given directories or explore the codebase for files needed to complete the task using a fast, token efficient agent.

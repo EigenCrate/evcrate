@@ -1,21 +1,23 @@
 ---
 name: "advisor-strategy"
-description: "Decide when a constrained advisor consultation adds value, prepare a bounded brief, and evaluate the recommendation before acting."
+description: "Guide current-session reasoning for high-impact architecture, security, debugging, and review decisions with a bounded decision brief."
 ---
 
 # Advisor strategy
 
-Use `advisor_consult` for high-impact architecture, security, debugging, or review decisions where an independent recommendation can materially reduce risk.
+Use this skill explicitly for high-impact architecture, security, debugging, or review decisions where a structured second look at the available evidence can reduce risk.
 
 Do not use it for routine edits, straightforward lookups, status updates, tasks with enough local evidence, or repeated attempts to get a preferred answer.
 
-## Consultation workflow
+## Scope
+
+This is static guidance for the current session. It does not invoke a provider or model, MCP server, app, command, network request, file operation, delegation, quota, audit, or enforcement mechanism. It adds no tool capability, isolation boundary, fixed-model guarantee, or required consultation step. Host permissions, sandboxing, and human approval remain authoritative.
+
+## Decision workflow
 
 1. State the decision, constraints, and a precise question.
-2. Supply only the smallest relevant repository evidence paths; never request secrets, credentials, or unrelated files.
-3. Treat the response as a recommendation, not delegated ownership. Verify it against the repository and applicable requirements.
-4. Record why you accepted or rejected material advice in the task result.
+2. Identify only the smallest relevant repository evidence paths; do not include secrets, credentials, or unrelated files.
+3. Form an independent recommendation from the available evidence and applicable requirements.
+4. Compare alternatives, prefer the least complex safe option, and record why a material decision was accepted or rejected.
 
-If consultation is unavailable or denied, continue with the best supported local reasoning, state the limitation, and do not retry through another advisor path.
-
-See [the brief contract](references/brief-contract.md) for the request shape and examples.
+See [the brief contract](references/brief-contract.md) for the decision-brief shape and examples.

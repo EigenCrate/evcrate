@@ -10,6 +10,8 @@ Description: ⚡⚡ Implement payment integration with Polar.sh
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Think harder.
 Activate `payment-integration` skill.
 Plan & start implementing payment integration with [Polar.sh](https://polar.sh/docs/llms-full.txt) follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 

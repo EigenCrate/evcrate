@@ -10,6 +10,8 @@ Description: Analyze the current content and optimize for conversion
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 You are an expert in conversion optimization. Analyze the content based on reported issues:
 <issues>{{args}}</issues>
 
