@@ -133,27 +133,9 @@ def sync_legacy_claude_assets(context: DistributionContext):
 
 
 def publish_local_artifacts(context: DistributionContext) -> None:
-    """Legacy publisher routed behind the explicit Phase 1 publish gate."""
-    with tempfile.TemporaryDirectory(prefix=".devkit-home-publish-", dir=context.home.parent) as temp:
-        backup_root = Path(temp)
-        targets = (context.target_gemini, context.target_codex, context.target_agents, context.target_claude)
-        backups: list[tuple[Path | None, Path]] = []
-        try:
-            for target in targets:
-                if target.exists():
-                    backup = backup_root / target.name
-                    shutil.copytree(target, backup, symlinks=True)
-                    backups.append((backup, target))
-                else:
-                    backups.append((None, target))
-            sync_gemini_assets(context)
-            sync_codex_and_agents_assets(context)
-            sync_antigravity_config(context)
-            sync_legacy_claude_assets(context)
-        except Exception:
-            for backup, target in reversed(backups):
-                if target.exists():
-                    remove_path(target)
-                if backup is not None:
-                    shutil.copytree(backup, target, symlinks=True)
-            raise
+    """Compatibility wrapper for callers that have not adopted gate contracts."""
+
+    from distribution.contracts import VerifiedArtifact
+    from distribution.publish import publish_local_artifacts as publish_verified_artifacts
+
+    publish_verified_artifacts(context, VerifiedArtifact(context.repository, context.local_roots))

@@ -152,7 +152,7 @@ if (result.status === 0 && !result.error) {{
 }}
 """
 
-def rewrite_agy_global_paths(target_agy: Path):
+def rewrite_agy_global_paths(target_agy: Path, global_prefix: str | None = None):
     hooks_path = target_agy / "hooks.json"
     if hooks_path.exists():
         try:
@@ -160,13 +160,13 @@ def rewrite_agy_global_paths(target_agy: Path):
             local_prefix = '"$CODEX_PROJECT_DIR"/.codex/hooks'
             local_prefix_agy = '"$AGY_PROJECT_DIR"/.gemini/config/hooks'
             local_prefix_claude = '"$CLAUDE_PROJECT_DIR"/.claude/hooks'
-            global_prefix = shlex.quote(Path(target_agy / "hooks").as_posix())
+            resolved_prefix = global_prefix or shlex.quote(Path(target_agy / "hooks").as_posix())
             for groups in data.get("hooks", {}).values():
                 for group in groups:
                     for hook in group.get("hooks", []):
                         command = hook.get("command")
                         if isinstance(command, str):
-                            command = command.replace(local_prefix, global_prefix).replace(local_prefix_agy, global_prefix).replace(local_prefix_claude, global_prefix)
+                            command = command.replace(local_prefix, resolved_prefix).replace(local_prefix_agy, resolved_prefix).replace(local_prefix_claude, resolved_prefix)
                             hook["command"] = command
             hooks_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except (json.JSONDecodeError, OSError) as error:

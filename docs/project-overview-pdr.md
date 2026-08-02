@@ -219,6 +219,13 @@ Provide a production-ready template that:
 - Create initial documentation
 - Set up CI/CD
 
+**FR7: Verified Distribution Publication**
+- Provide `--publish`, `--publish --dry-run [--json]`, and `--recover` operations.
+- Publish only artifacts authorized by a complete, current `.devkit/build-manifest.json`.
+- Apply target HOME policies atomically while preserving declared and unmanaged user files.
+- Persist owner-only release state, reject concurrent publishers, and recover interrupted promotions.
+- Include verified build metadata and generated assets in release CI without mutating developer HOME.
+
 ### Non-Functional Requirements
 
 **NFR1: Performance**

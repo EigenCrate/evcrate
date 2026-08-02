@@ -7,6 +7,9 @@
   "project_docs": ["AGENTS.md"],
   "overlay_root": ".devkit/targets/codex/files",
   "patches": [],
-  "home_roots": [".codex", ".agents"],
-  "preservation_policy": "managed"
+  "home_policy": {
+    "bindings": {".codex": ".codex", ".agents": ".agents"},
+    "preserve_paths": {".codex": [".devkit.json"]},
+    "promotion_order": 20
+  }
 }

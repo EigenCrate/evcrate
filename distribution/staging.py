@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from .context import DistributionContext
+from .antigravity_publish import build_antigravity_config
 from .contracts import BuildError, VerifiedArtifact
 from .hashing import hash_file, tree_hash
 from .manifest import TargetManifest, build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
@@ -97,6 +98,8 @@ def _apply_targets(
         ".claude": tree_hash(context.repository / ".claude"),
         "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
         ".devkit/targets": tree_hash(context.repository / ".devkit/targets"),
+        "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
+        "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }
     adapters = {manifest.adapter: hash_file(context.repository / manifest.adapter) for manifest in manifests if manifest.adapter}
     return owners, {**baseline_sources, **source_hashes(manifests), **adapters}, target_policies, tuple(project_docs)
@@ -120,10 +123,11 @@ def generate_stage(
         "PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
         "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
     })
-    for directory in (*roots.values(), context.stage_project_docs):
+    for directory in (*(root for name, root in roots.items() if name != ".antigravity"), context.stage_project_docs):
         directory.mkdir(parents=True, exist_ok=True)
     for script in dict.fromkeys(manifest.adapter for manifest in manifests if manifest.adapter):
         run_migrator(context, script, env)
+    build_antigravity_config(context.repository / ".claude", roots[".antigravity"])
 
     owners, sources_and_adapters, policies, required_docs = _apply_targets(context, roots, manifests)
     adapter_names = {manifest.adapter for manifest in manifests if manifest.adapter}

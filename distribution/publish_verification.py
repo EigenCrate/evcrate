@@ -1,0 +1,68 @@
+"""Build-manifest verification isolated from HOME mutation logic."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from .context import DistributionContext
+from .contracts import PublishError, VerifiedArtifact
+from .hashing import hash_file, tree_hash
+from .manifest import load_target_manifest, load_target_registry, source_hashes
+from .staging import BUILD_MANIFEST_PATH
+
+
+def _load_build_manifest(context: DistributionContext) -> dict[str, Any]:
+    path = context.repository / BUILD_MANIFEST_PATH
+    if not path.is_file() or path.is_symlink():
+        raise PublishError("Missing or unsafe build manifest; run --build first")
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise PublishError(f"Could not read build manifest: {error}") from error
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
+        raise PublishError("Build manifest has an unsupported schema")
+    if manifest.get("validation", {}).get("complete") is not True:
+        raise PublishError("Build manifest does not authorize publication")
+    return manifest
+
+
+def _current_source_hashes(context: DistributionContext) -> dict[str, str]:
+    registry = load_target_registry(context.repository / ".devkit/targets/manifest.json")
+    manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
+    values = {
+        ".claude": tree_hash(context.repository / ".claude"),
+        "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
+        ".devkit/targets": tree_hash(context.repository / ".devkit/targets"),
+        "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
+        "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
+    }
+    values.update(source_hashes(manifests))
+    for manifest in manifests:
+        if manifest.adapter:
+            values[manifest.adapter] = hash_file(context.repository / manifest.adapter)
+    return dict(sorted(values.items()))
+
+
+def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifact) -> dict[str, Any]:
+    """Verify source and output hashes without executing a generator."""
+
+    if artifact.repository != context.repository or artifact.roots != context.local_roots:
+        raise PublishError("Artifact reference does not belong to this repository")
+    manifest = _load_build_manifest(context)
+    expected_sources = _current_source_hashes(context)
+    actual_sources = {**manifest.get("source_hashes", {}), **manifest.get("adapter_hashes", {})}
+    if actual_sources != expected_sources:
+        raise PublishError("Build manifest is stale; run --build before publishing")
+    output_hashes = manifest.get("output_hashes")
+    if not isinstance(output_hashes, dict):
+        raise PublishError("Build manifest has no output hashes")
+    for relative, expected in output_hashes.items():
+        path = context.repository / relative
+        if not path.exists() or path.is_symlink():
+            raise PublishError(f"Build artifact is missing or unsafe: {relative}")
+        actual = tree_hash(path) if path.is_dir() else hash_file(path)
+        if actual != expected:
+            raise PublishError(f"Build artifact hash mismatch: {relative}")
+    return manifest

@@ -896,17 +896,22 @@ User Project
 - Cleanup of temporary files
 - Optimized git operations
 
-## Distribution Architecture (Phase 1)
+## Distribution Architecture (Phase 3 publication)
 
-[Two-gate target distribution and advisor consultation](./advisor-distribution-architecture.md) defines the broader target-overlay, manifest, and advisor boundary. Phase 1 now implements the CLI and gate contracts:
+[Two-gate target distribution and advisor consultation](./advisor-distribution-architecture.md) defines the broader target-overlay, manifest, and advisor boundary. Phases 1–3 implement the build, verification, and publication gate contracts:
 
 - `python3 distribute.py --build` runs migrators in repository-root context and atomically promotes local generated trees and project docs.
 - `python3 distribute.py --check` regenerates into isolated staging and compares outputs without writing the repository or HOME.
 - `python3 distribute.py --publish` verifies existing local artifacts and publishes them without invoking migrators.
+- `python3 distribute.py --publish --dry-run` prints the create/update/delete/preserve diff without changing HOME; add `--json` for machine-readable records.
+- `python3 distribute.py --recover` restores an interrupted publication from its durable release marker.
 - `python3 distribute.py --all` performs build then publish; bare invocation remains a deprecated compatibility alias and emits a warning.
+- Publication requires a complete, current `.devkit/build-manifest.json`; stale source hashes or modified output hashes are rejected.
+- Target manifest HOME policies control managed paths. Declared `preserve_paths` and unmanaged user files remain untouched. State and the owner-only lock live at `$DEVKIT_STATE_HOME/devkit` (or `$XDG_STATE_HOME/devkit`, otherwise `~/.local/state/devkit`).
+- Release preparation bundles verified build metadata and generated assets; CI does not publish to a developer HOME.
 - Direct migrator `--global` modes are refused unless `DEVKIT_ALLOW_DIRECT_GLOBAL=1` is set for an explicitly documented emergency; that path warns that it bypasses distribution verification.
 
-Phase 2–6 work (overlays, manifests, advisor broker, admission, and rollout validation) remains planned.
+Overlay and manifest validation are implemented. Advisor broker/admission and final rollout validation remain planned.
 
 ## Future Architecture Evolution
 

@@ -7,6 +7,9 @@
   "project_docs": ["GEMINI.md"],
   "overlay_root": ".devkit/targets/gemini/files",
   "patches": [],
-  "home_roots": [".gemini"],
-  "preservation_policy": "managed"
+  "home_policy": {
+    "bindings": {".gemini": ".gemini"},
+    "preserve_paths": {},
+    "promotion_order": 10
+  }
 }

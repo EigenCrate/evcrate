@@ -17,6 +17,7 @@ class DistributionContext:
     stage: Path | None
     global_sync_mode: str
     gemini_global_mode: str
+    state_home: Path | None = None
 
     @property
     def local_gemini(self) -> Path:
@@ -31,12 +32,16 @@ class DistributionContext:
         return self.repository / ".agents"
 
     @property
+    def local_antigravity(self) -> Path:
+        return self.repository / ".antigravity"
+
+    @property
     def local_claude(self) -> Path:
         return self.repository / ".claude"
 
     @property
     def local_roots(self) -> tuple[Path, ...]:
-        return (self.local_gemini, self.local_codex, self.local_agents)
+        return (self.local_gemini, self.local_codex, self.local_agents, self.local_antigravity)
 
     @property
     def stage_project_docs(self) -> Path:
@@ -64,6 +69,14 @@ class DistributionContext:
     def target_agy_config(self) -> Path:
         return self.target_gemini / "config"
 
+    @property
+    def state_dir(self) -> Path:
+        """Return the owner-only state directory without relying on CWD."""
+
+        if self.state_home is not None:
+            return self.state_home
+        return self.home / ".local" / "state" / "devkit"
+
 
 def create_context(
     action: DistributionAction,
@@ -76,6 +89,12 @@ def create_context(
     env = os.environ if environ is None else environ
     repository = Path(__file__).resolve().parents[1]
     home = Path(env.get("DEVKIT_HOME", str(Path.home()))).expanduser().resolve()
+    state_base = env.get("DEVKIT_STATE_HOME") or env.get("XDG_STATE_HOME")
+    state_home = (
+        Path(state_base).expanduser().resolve() / "devkit"
+        if state_base
+        else home / ".local" / "state" / "devkit"
+    )
     resolved_stage = stage.resolve() if stage is not None else None
     return DistributionContext(
         action=action,
@@ -84,4 +103,5 @@ def create_context(
         stage=resolved_stage,
         global_sync_mode=env.get("DEVKIT_GLOBAL_SYNC_MODE", "managed"),
         gemini_global_mode=env.get("GEMINI_GLOBAL_MODE", "config-and-scripts"),
+        state_home=state_home,
     )

@@ -23,6 +23,7 @@ examples/**/node_modules/
 
 # misc
 .DS_Store
+/.antigravity/
 *.pem
 
 # debug

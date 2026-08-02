@@ -43,9 +43,9 @@ devkit/
 
 ### Distribution gates
 
-The distribution entrypoint separates local generation from HOME publication. `--build` creates finalized local `.gemini`, `.codex`, `.agents`, and project-doc outputs; `--check` verifies them without writes; `--publish` consumes verified local artifacts without running migrators; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `DEVKIT_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
+The distribution entrypoint separates local generation from HOME publication. `--build` creates finalized local `.gemini`, `.codex`, `.agents`, and project-doc outputs; `--check` verifies them without writes; `--publish` consumes verified local artifacts without running migrators; `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `DEVKIT_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
-Phase 2 build support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.devkit/build-manifest.json`. Successful builds promote the complete local artifact set with rollback recovery; `--check` rebuilds and compares bytes without promotion. Build behavior is covered by `tests/test_distribution_build.py`.
+Phase 2/3 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.devkit/build-manifest.json`. Publication rejects stale manifests or changed outputs, applies HOME policies with user-file preservation, and records owner-only release state/locking. Build/publication behavior is covered by the distribution build, CLI, and publish tests.
 
 ## Core Technologies
 

@@ -8,27 +8,26 @@ import shutil
 from pathlib import Path
 
 from distribute_hooks import rewrite_agy_global_paths
-from distribute_utils import remove_managed_paths, reset_dir_contents, sync_tree
 
 from .context import DistributionContext
 
 
-def publish_antigravity_config(context: DistributionContext) -> None:
-    claude_source = context.local_claude
-    target = context.target_agy_config
-    if not claude_source.exists():
-        raise RuntimeError("Local .claude source is missing")
-    if context.global_sync_mode == "full":
-        reset_dir_contents(target)
-    else:
-        remove_managed_paths(target, [
-            "agents", "commands", "hooks", "scripts", "skills", "workflows",
-            "settings.json", ".mcp.json.example", "statusline.cjs", ".ckignore",
-        ])
-    sync_tree(claude_source, target)
+def build_antigravity_config(claude_source: Path, output_root: Path) -> None:
+    """Generate the legacy config during Gate 1, never while publishing HOME."""
+
+    target = output_root
+    if not claude_source.is_dir() or claude_source.is_symlink():
+        raise RuntimeError("Local .claude source is missing or unsafe")
+    shutil.copytree(claude_source, target, symlinks=False)
     _extract_hooks(target)
     _replace_legacy_assets(claude_source, target)
-    rewrite_agy_global_paths(target)
+    rewrite_agy_global_paths(target, '"$HOME"/.gemini/config/hooks')
+
+
+def publish_antigravity_config(context: DistributionContext) -> None:
+    """Deprecated compatibility entrypoint; Gate 2 must only copy build output."""
+
+    raise RuntimeError("Antigravity generation belongs to --build; use --build then --publish")
 
 
 def _extract_hooks(target: Path) -> None:

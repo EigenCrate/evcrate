@@ -41,6 +41,11 @@ jobs:
       - name: Run linting
         run: npm run lint
 
+      - name: Verify generated distribution artifacts
+        run: |
+          npm run distribute:build
+          npm run distribute:check
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,6 @@
 # Devkit - Project Roadmap
 
-**Last Updated:** 2026-08-02 10:16:52 +0700
+**Last Updated:** 2026-08-02 13:22:03 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/devkit
 
@@ -236,6 +236,7 @@ Enterprise-grade features and deployment options.
 ### Recent Additions (2026-08-02)
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 1 (DONE): explicit build/check/publish/all CLI contracts, immutable distribution context, staged project-doc generation, fatal subprocess handling, guarded direct-global migrator modes, atomic promotion safeguards, and 17/17 CLI regression tests. `pytest` unavailable; validation used `python3 -m unittest tests/test_distribution_cli.py`.
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 2 (DONE, 2026-08-02 12:37 +0700): deterministic staged targets, declared overlays, parser-backed exact patches, collision/traversal/symlink validation, hashed build manifests, atomic recovery/locking, and byte-level drift checks. Validation: 40/40 unittest cases; `pytest` unavailable.
+- ✅ Two-Gate Distribution and Enforced Advisor — Phase 3 (DONE, 2026-08-02): manifest-verified non-destructive HOME publish with dry-run JSON/text, owner-only locking/markers and recovery; Gate 1 Antigravity artifact to `.gemini/config`; fail-closed release build/check and verified-output archive. Validation: full 50/50, `npm test` 46/46, build/check/lint passed.
 
 ### Recent Additions (2026-07-18)
 - ✅ Refactor DevKit Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.devkit.json`; phase 4 remains pending.
@@ -255,7 +256,7 @@ Enterprise-grade features and deployment options.
 - ✅ Advanced configuration guides
 
 ### In Development
-- ✅ Two-Gate Distribution and Enforced Advisor — Phases 1–2 complete; HOME publication, advisor broker/admission, and final rollout remain pending.
+- ✅ Two-Gate Distribution and Enforced Advisor — Phases 1–3 complete; advisor broker/admission and final rollout remain pending.
 - 🔄 Refactor Distribute Script to Python (Phase 2 & 3): Integration with NPM package.json scripts and validation.
 - 🔄 Additional cloud platform integrations
 - 🔄 UI/UX improvements
