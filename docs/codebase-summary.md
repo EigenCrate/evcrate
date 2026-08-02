@@ -47,7 +47,7 @@ The distribution entrypoint separates local generation from HOME publication. `-
 
 Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.devkit/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, applies HOME policies with user-file preservation, and records owner-only release state/locking.
 
-The advisor is current-session guidance only: it structures a local decision brief and reasons over already available evidence. It invokes no provider, model, MCP server, app, command, network or file operation, delegation, quota, audit, or enforcement mechanism. Distribution behavior is covered by the Python regression suites.
+The advisor is current-session guidance only: it structures a local decision brief and reasons over already available evidence. It invokes no provider, model, MCP server, app, command, network or file operation, delegation, quota, audit, or enforcement mechanism. The former `advisor_consult` broker contract is removed; callers use explicit `$advisor-strategy`. Distribution behavior is covered by the Python regression suites.
 
 ## Core Technologies
 

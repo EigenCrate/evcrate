@@ -15,6 +15,5 @@ project_doc_fallback_filenames = ["CLAUDE.md", "GEMINI.md"]
 # Keep fan-out bounded; subagents each run their own model/tool loop.
 max_threads = 4
 max_depth = 1
-
 [features]
 hooks = true

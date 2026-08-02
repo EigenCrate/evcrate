@@ -1,3 +1,13 @@
+## Unreleased
+
+### Breaking Changes
+
+* **advisor:** remove the unshipped `advisor_consult` MCP/broker/admission runtime. Use explicit `$advisor-strategy` for current-session guidance; it provides no independent model call, isolation, quota, audit, or enforcement.
+
+### Tests
+
+* **distribution:** add skill packaging, command-pointer, runtime-absence, idempotence, and user-configuration preservation regressions to the normal test command.
+
 ## 1.0.0 (2026-07-10)
 
 

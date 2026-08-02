@@ -1,0 +1,98 @@
+# Advisor Skill and Target Distribution Architecture
+
+**Status**: Active; former broker design superseded
+**Last Updated**: 2026-08-02
+**Parent**: [System Architecture](./system-architecture.md)
+
+## Purpose
+
+Define reproducible multi-platform generation and the boundary of the portable `advisor-strategy` skill. The skill is current-session guidance, not an advisor runtime or security control.
+
+## Architectural Decisions
+
+- `.claude` remains the shared baseline authoring source.
+- `.devkit/targets/<target>` owns target-only files and explicit config patches.
+- Local `.claude`, `.agents`, `.codex`, `.gemini`, and other target trees are finalized artifacts.
+- HOME distribution consumes finalized local artifacts only and preserves declared user-owned configuration.
+- `.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.agents/skills/advisor-strategy/` with its brief contract.
+- Each generated `cmd_*` skill contains one static pointer recommending explicit `$advisor-strategy` use. The pointer does not activate the skill.
+- No advisor provider/model call, MCP server, hook, broker, launcher, quota, ledger, audit, or isolation claim is distributed.
+
+## Distribution Data Flow
+
+```mermaid
+flowchart LR
+  Claude[.claude baseline] --> Build[Local build gate]
+  Targets[.devkit/targets overlays] --> Build
+  Models[.devkit/models.json] --> Build
+  Build --> Validate{All targets valid?}
+  Validate -->|No| Reject[Keep prior local artifacts]
+  Validate -->|Yes| Local[Finalized local target trees]
+  Local --> Verify{Manifest and hashes valid?}
+  Verify -->|No| Block[Block HOME publish]
+  Verify -->|Yes| Publish[HOME publish gate]
+  Publish --> Home[User HOME target roots]
+```
+
+### Local build gate
+
+1. Validate source and target manifests.
+2. Generate baseline into same-volume temporary staging.
+3. Append declared target-only files.
+4. Apply only exact, allowlisted key patches.
+5. Validate schemas, ownership, collisions, and hashes.
+6. Write build manifest.
+7. Atomically promote staging to local target trees.
+
+Build failure must not mutate the last valid local artifacts or HOME.
+
+### HOME publish gate
+
+1. Read finalized local artifacts and build manifest.
+2. Reject stale, failed, missing, or hash-mismatched builds.
+3. Compute create/update/delete/preserve diff per HOME target.
+4. Stage and promote each target with release/recovery metadata.
+
+No migration or overlay logic runs during publication.
+
+## Ownership and Collision Invariants
+
+- Every finalized path has one owner: baseline generator or named target overlay.
+- New overlay paths append normally.
+- File, directory, or config-key collisions fail by default.
+- Intentional config changes require an exact destination and allowed key paths.
+- Shared generated configuration cannot be replaced wholesale.
+- Managed publication deletes only manifest-owned paths.
+- User-owned HOME paths remain preserved unless explicit full policy says otherwise.
+- Concurrent build/publish operations require a repository/release lock.
+
+## Advisor Guidance Flow
+
+```text
+Developer identifies a high-impact decision
+  -> explicitly invokes $advisor-strategy
+  -> current session forms a bounded decision brief from available evidence
+  -> current session compares alternatives and records its recommendation
+  -> developer verifies the conclusion under normal host policy
+```
+
+The skill can structure architecture, security, debugging, and review reasoning. It cannot independently inspect evidence, call another model, execute tools, guarantee consultation, or enforce a verdict. Host permissions, sandboxing, tool approvals, and human review remain authoritative.
+
+## Compatibility Note
+
+The unshipped `advisor_consult` interface and its target-owned broker, admission hook, runtime launcher, registry, quota ledger, and audit behavior were removed. Callers must replace `advisor_consult` with explicit `$advisor-strategy` use and accept that the result is guidance from the current session, not independent inference or an enforced isolation boundary. Generic MCP and hook support remain unchanged.
+
+## Validation Gates
+
+- Generated skill frontmatter and brief contract are present.
+- Every generated `cmd_*` skill has exactly one non-invoking pointer.
+- Repeated migration is byte-identical.
+- Generated config, hooks, target manifest, and build manifest contain no advisor runtime wiring.
+- Staged build and publish dry-run preserve declared user-owned configuration.
+- Tests run without provider credentials and start no App Server, MCP server, app, or model call.
+
+## References
+
+- [Replacement plan](../plans/260802-1726-skill-only-advisor/plan.md)
+- [System architecture](./system-architecture.md)
+- [Superseded broker plan](../plans/260802-0249-advisor-two-gate-distribution/plan.md)

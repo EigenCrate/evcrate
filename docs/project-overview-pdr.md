@@ -2,7 +2,7 @@
 
 **Project Name**: devkit
 **Version**: 1.8.0
-**Last Updated**: 2026-07-18
+**Last Updated**: 2026-08-02
 **Status**: Active Development
 **Repository**: https://github.com/NEBULEA-M/devkit
 
@@ -225,8 +225,14 @@ Provide a production-ready template that:
 - Apply target HOME policies atomically while preserving declared and unmanaged user files.
 - Persist owner-only release state, reject concurrent publishers, and recover interrupted promotions.
 - Include verified build metadata and generated assets in release CI without mutating developer HOME.
-- Bundle the declared Codex advisor runtime only after source validation and dependency removal; inject the model registry and verify the published Codex tree against the build manifest.
-- Expose one bounded, read-only `advisor_consult` MCP tool with structured recommendation-only outcomes, allowlisted evidence, secret redaction, distinct advisor policy, and owner-only audit records.
+- Distribute the canonical `advisor-strategy` skill and brief contract through the verified Codex artifact path.
+- Add one non-invoking pointer to every generated command skill; explicit `$advisor-strategy` use structures current-session reasoning only.
+- Keep generated Codex targets free of advisor-specific provider/model calls, MCP wiring, hooks, runtime launchers, quota ledgers, and audit claims.
+
+**Advisor compatibility boundary (Phase 2)**
+- `advisor-strategy` is a static, current-session skill. Use it explicitly as `$advisor-strategy` when a decision benefits from a bounded advisory brief.
+- The skill does not invoke providers, models, MCP servers, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
+- The unshipped `advisor_consult` interface is removed. Integrations must not depend on a broker, admission hook, runtime launcher, registry, quota ledger, or audit transport.
 
 ### Non-Functional Requirements
 

@@ -238,7 +238,8 @@ Enterprise-grade features and deployment options.
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 2 (DONE, 2026-08-02 12:37 +0700): deterministic staged targets, declared overlays, parser-backed exact patches, collision/traversal/symlink validation, hashed build manifests, atomic recovery/locking, and byte-level drift checks. Validation: 40/40 unittest cases; `pytest` unavailable.
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 3 (DONE, 2026-08-02): manifest-verified non-destructive HOME publish with dry-run JSON/text, owner-only locking/markers and recovery; Gate 1 Antigravity artifact to `.gemini/config`; fail-closed release build/check and verified-output archive. Validation: full 50/50, `npm test` 46/46, build/check/lint passed.
 - ⚠️ Two-Gate Distribution and Enforced Advisor — Phase 4 (superseded, 2026-08-02): the former Codex advisor runtime/MCP broker design was replaced after isolation revalidation; its broker/admission artifacts are removed by the skill-only replacement.
-- ✅ Skill-Only Advisor Replacement — Phase 1 (DONE, 2026-08-02 20:09 +0700): retained the portable `advisor-strategy` skill, added one explicit non-invoking pointer to generated command skills, removed target-owned broker/MCP/admission artifacts, and preserved user-owned configuration. Phase 2 validation and compatibility documentation remain pending.
+- ✅ Skill-Only Advisor Replacement — Phase 1 (DONE, 2026-08-02 20:09 +0700): retained the portable `advisor-strategy` skill, added one explicit non-invoking pointer to generated command skills, removed target-owned broker/MCP/admission artifacts, and preserved user-owned configuration.
+- ✅ Skill-Only Advisor Replacement — Phase 2 (DONE, 2026-08-02 21:30 +0700): static packaging, pointer, runtime-absence, idempotence, preservation, and compatibility documentation complete. Validation: 52/52 tests passed via `npm test`; code review 10/10 approved. Removed `advisor_consult` callers must use explicit `$advisor-strategy`; no provider/model, App Server, MCP, or app invocation.
 
 ### Recent Additions (2026-07-18)
 - ✅ Refactor DevKit Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.devkit.json`; phase 4 remains pending.
@@ -258,7 +259,7 @@ Enterprise-grade features and deployment options.
 - ✅ Advanced configuration guides
 
 ### In Development
-- 🔄 Skill-Only Advisor Replacement — Phase 1 complete; Phase 2 validation/documentation pending. This supersedes the former Codex advisor broker runtime design.
+- ✅ Skill-Only Advisor Replacement — Phase 2 validation/review complete (52/52 tests, 10/10 review). This supersedes the former Codex advisor broker runtime design.
 - 🔄 Refactor Distribute Script to Python (Phase 2 & 3): Integration with NPM package.json scripts and validation.
 - 🔄 Additional cloud platform integrations
 - 🔄 UI/UX improvements
