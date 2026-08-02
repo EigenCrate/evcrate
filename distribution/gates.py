@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import filecmp
-import os
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
+from .build import promote_transaction, repository_lock, staged_build_root
 from .context import DistributionContext, create_context
 from .contracts import BuildError, DistributionAction, PublishError, VerifiedArtifact
+from .staging import BUILD_MANIFEST_PATH, generate_stage
 
 
 GENERATED_DOCS = ("AGENTS.md", "GEMINI.md")
@@ -42,33 +41,32 @@ def _stage_context(action: DistributionAction, stage: Path) -> DistributionConte
 
 
 def _generate_stage(context: DistributionContext) -> VerifiedArtifact:
-    if context.stage is None:
-        raise BuildError("Local generation requires a staging directory")
-    env = os.environ.copy()
-    env.update({
-        "GEMINI_OUTPUT_DIR": str(context.stage / ".gemini"),
-        "CODEX_OUTPUT_DIR": str(context.stage / ".codex"),
-        "AGENTS_OUTPUT_DIR": str(context.stage / ".agents"),
-        "PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
-        "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
-    })
-    for directory in (*[context.stage / name for name in (".gemini", ".codex", ".agents")], context.stage_project_docs):
-        directory.mkdir(parents=True, exist_ok=True)
-    _run_migrator(context, "migrate_claude_to_gemini.py", env)
-    _run_migrator(context, "migrate_claude_to_codex.py", env)
-    roots = tuple(context.stage / root.name for root in context.local_roots)
-    return VerifiedArtifact(repository=context.repository, roots=roots)
+    return generate_stage(context, _run_migrator)
+
+
+def _tree_differences(source: Path, target: Path, relative: str) -> list[str]:
+    """Return exact byte-level drift paths without trusting mtime or file size."""
+
+    if source.is_symlink() or target.is_symlink():
+        return [relative]
+    if source.exists() != target.exists() or source.is_dir() != target.is_dir():
+        return [relative]
+    if source.is_file():
+        return [] if source.read_bytes() == target.read_bytes() else [relative]
+    differences: list[str] = []
+    source_names = {path.name for path in source.iterdir()}
+    target_names = {path.name for path in target.iterdir()}
+    for name in sorted(source_names | target_names):
+        child_relative = f"{relative}/{name}"
+        if name not in source_names or name not in target_names:
+            differences.append(child_relative)
+        else:
+            differences.extend(_tree_differences(source / name, target / name, child_relative))
+    return differences
 
 
 def _same_tree(source: Path, target: Path) -> bool:
-    if not source.exists() or not target.exists():
-        return source.exists() == target.exists()
-    comparison = filecmp.dircmp(source, target)
-    if comparison.left_only or comparison.right_only or comparison.common_funny or comparison.funny_files:
-        return False
-    if comparison.diff_files:
-        return False
-    return all(_same_tree(source / name, target / name) for name in comparison.common_dirs)
+    return not _tree_differences(source, target, source.name)
 
 
 def _promote_path(source: Path, destination: Path) -> None:
@@ -95,67 +93,61 @@ def _remove_path(path: Path) -> None:
 
 
 def _promote_transaction(pairs: list[tuple[Path | None, Path]]) -> None:
-    """Promote all local outputs together and restore prior outputs on failure."""
+    """Compatibility wrapper for the Phase 2 transactional promoter."""
 
-    repository = pairs[0][1].parent
-    with tempfile.TemporaryDirectory(prefix=".devkit-promotion-", dir=repository.parent) as temp:
-        backup_root = Path(temp)
-        backups: list[tuple[Path, Path]] = []
-        promoted: list[Path] = []
-        try:
-            for source, destination in pairs:
-                backup = backup_root / destination.name
-                if destination.exists():
-                    destination.replace(backup)
-                    backups.append((backup, destination))
-                if source is not None:
-                    source.replace(destination)
-                promoted.append(destination)
-        except Exception as error:
-            for destination in reversed(promoted):
-                if destination.exists():
-                    _remove_path(destination)
-            for backup, destination in reversed(backups):
-                if backup.exists():
-                    backup.replace(destination)
-            if isinstance(error, BuildError):
-                raise
-            raise BuildError(f"Could not promote local artifacts: {error}") from error
+    promote_transaction(pairs)
 
 
 def run_local_build() -> VerifiedArtifact:
     """Generate local artifacts in isolation, then promote only complete output."""
 
-    with tempfile.TemporaryDirectory(prefix=".devkit-build-", dir=create_context(DistributionAction.BUILD).repository.parent) as temp:
-        context = _stage_context(DistributionAction.BUILD, Path(temp))
-        staged = _generate_stage(context)
-        pairs = list(zip(staged.roots, context.local_roots, strict=True))
-        for document in GENERATED_DOCS:
-            staged_document = context.stage_project_docs / document
-            if staged_document.exists():
-                pairs.append((staged_document, context.repository / document))
-            elif (context.repository / document).exists():
-                pairs.append((None, context.repository / document))
-        _promote_transaction(pairs)
-        return VerifiedArtifact(repository=context.repository, roots=context.local_roots)
+    base_context = create_context(DistributionAction.BUILD)
+    with repository_lock(base_context.repository):
+        with staged_build_root(base_context.repository) as stage:
+            context = _stage_context(DistributionAction.BUILD, stage)
+            staged = _generate_stage(context)
+            pairs = list(zip(staged.roots, context.local_roots, strict=True))
+            for document in GENERATED_DOCS:
+                staged_document = context.stage_project_docs / document
+                if staged_document.exists():
+                    pairs.append((staged_document, context.repository / document))
+                elif (context.repository / document).exists():
+                    pairs.append((None, context.repository / document))
+            pairs.append((context.stage / BUILD_MANIFEST_PATH, context.repository / BUILD_MANIFEST_PATH))
+            _promote_transaction(pairs)
+            return VerifiedArtifact(repository=context.repository, roots=context.local_roots)
 
 
 def run_local_check() -> None:
     """Compare staged output with local artifacts without writing repository or HOME."""
 
-    with tempfile.TemporaryDirectory(prefix=".devkit-check-") as temp:
-        context = _stage_context(DistributionAction.CHECK, Path(temp))
-        staged = _generate_stage(context)
-        differences = [root.name for root, local in zip(staged.roots, context.local_roots, strict=True) if not _same_tree(root, local)]
-        for document in GENERATED_DOCS:
-            staged_document = context.stage_project_docs / document
-            local_document = context.repository / document
-            if staged_document.exists() != local_document.exists() or (
-                staged_document.exists() and staged_document.read_bytes() != local_document.read_bytes()
+    base_context = create_context(DistributionAction.CHECK)
+    with repository_lock(base_context.repository):
+        with staged_build_root(base_context.repository, prefix=".devkit-check-", recover=False) as stage:
+            context = _stage_context(DistributionAction.CHECK, stage)
+            staged = _generate_stage(context)
+            differences = [
+                path
+                for root, local in zip(staged.roots, context.local_roots, strict=True)
+                for path in _tree_differences(root, local, root.name)
+            ]
+            for document in GENERATED_DOCS:
+                staged_document = context.stage_project_docs / document
+                local_document = context.repository / document
+                if staged_document.exists() != local_document.exists() or (
+                    staged_document.exists() and staged_document.read_bytes() != local_document.read_bytes()
+                ):
+                    differences.append(document)
+            staged_manifest = context.stage / BUILD_MANIFEST_PATH
+            local_manifest = context.repository / BUILD_MANIFEST_PATH
+            if (
+                not staged_manifest.is_file()
+                or not local_manifest.is_file()
+                or staged_manifest.read_bytes() != local_manifest.read_bytes()
             ):
-                differences.append(document)
-        if differences:
-            raise BuildError("Local artifacts are out of date: " + ", ".join(differences))
+                differences.append(str(BUILD_MANIFEST_PATH))
+            if differences:
+                raise BuildError("Local artifacts are out of date: " + ", ".join(differences))
 
 
 def verified_local_artifact(context: DistributionContext) -> VerifiedArtifact:

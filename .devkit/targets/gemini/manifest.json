@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "gemini",
+  "adapter": "migrate_claude_to_gemini.py",
+  "output_root": ".gemini",
+  "additional_roots": [],
+  "project_docs": ["GEMINI.md"],
+  "overlay_root": ".devkit/targets/gemini/files",
+  "patches": [],
+  "home_roots": [".gemini"],
+  "preservation_policy": "managed"
+}

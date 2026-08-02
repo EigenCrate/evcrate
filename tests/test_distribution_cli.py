@@ -33,6 +33,15 @@ class DistributionCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             context = create_context(DistributionAction.BUILD, stage=Path(temp))
             with patch("distribution.gates.subprocess.run") as run:
+                def write_required_docs(*args: object, **kwargs: object) -> None:
+                    env = kwargs["env"]
+                    script = str(args[0][1])
+                    if script.endswith("migrate_claude_to_codex.py"):
+                        Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
+                    else:
+                        Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
+
+                run.side_effect = write_required_docs
                 gates._generate_stage(context)
             self.assertEqual(run.call_count, 2)
             for call in run.call_args_list:
