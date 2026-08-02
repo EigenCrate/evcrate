@@ -9,9 +9,10 @@ from typing import Callable
 from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
 from .contracts import BuildError, VerifiedArtifact
-from .hashing import hash_file, tree_hash
+from .hashing import hash_file, source_tree_hash, tree_hash
 from .manifest import TargetManifest, build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from .overlay import apply_patch_file, copy_overlay_files
+from .runtime import stage_runtime
 
 
 BUILD_MANIFEST_PATH = Path(".devkit/build-manifest.json")
@@ -84,6 +85,9 @@ def _apply_targets(
             )
             for relative, owner in local_owners.items():
                 owners[f"{active_roots[0]}/{relative}"] = owner
+        if manifest.runtime is not None:
+            for relative in stage_runtime(context.repository, manifest.source_root, primary, manifest.runtime):
+                owners[f"{active_roots[0]}/{relative}"] = manifest.name
         for patch in manifest.patches:
             destination = context.stage / patch.destination
             if not destination.is_file() or destination.is_symlink():
@@ -97,7 +101,8 @@ def _apply_targets(
     baseline_sources = {
         ".claude": tree_hash(context.repository / ".claude"),
         "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
-        ".devkit/targets": tree_hash(context.repository / ".devkit/targets"),
+        ".devkit/targets": source_tree_hash(context.repository / ".devkit/targets"),
+        ".devkit/models.json": hash_file(context.repository / ".devkit/models.json"),
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }

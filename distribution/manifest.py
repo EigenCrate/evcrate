@@ -9,6 +9,7 @@ from typing import Any, Mapping
 
 from .contracts import BuildError
 from .hashing import HashingError, canonical_json_bytes, contained_path, hash_bytes, hash_file, normalize_relative_path, tree_hash
+from .runtime import RuntimeSpec, load_runtime_spec
 
 
 BUILD_MANIFEST_SCHEMA_VERSION = 1
@@ -32,6 +33,7 @@ class TargetManifest:
     home_policy: Mapping[str, Any]
     source_root: Path
     overlay_root: Path | None = None
+    runtime: RuntimeSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -158,7 +160,7 @@ def load_target_manifest(path: Path) -> TargetManifest:
             raise BuildError(str(error)) from error
         repository = path.parents[3] if path.parent.parent.name == "targets" else source_root
         overlay_root = contained_path(repository, safe_overlay)
-    return TargetManifest(name, adapter, roots, owned, tuple(patches), docs, policy, source_root, overlay_root)
+    return TargetManifest(name, adapter, roots, owned, tuple(patches), docs, policy, source_root, overlay_root, load_runtime_spec(data.get("runtime")))
 
 
 def load_target_registry(path: Path) -> TargetRegistry:

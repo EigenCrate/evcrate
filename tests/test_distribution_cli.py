@@ -37,8 +37,14 @@ class DistributionCliTest(unittest.TestCase):
             context = create_context(DistributionAction.BUILD, stage=Path(temp))
             with patch("distribution.gates.subprocess.run") as run:
                 def write_required_docs(*args: object, **kwargs: object) -> None:
+                    command = args[0]
+                    if command[0] == "npm":
+                        if command[-1] == "build":
+                            Path(kwargs["cwd"]).joinpath("dist").mkdir()
+                            Path(kwargs["cwd"]).joinpath("dist/server.js").write_text("bundle", encoding="utf-8")
+                        return
                     env = kwargs["env"]
-                    script = str(args[0][1])
+                    script = str(command[1])
                     if script.endswith("migrate_claude_to_codex.py"):
                         Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
                     else:
@@ -46,8 +52,9 @@ class DistributionCliTest(unittest.TestCase):
 
                 run.side_effect = write_required_docs
                 gates._generate_stage(context)
-            self.assertEqual(run.call_count, 2)
-            for call in run.call_args_list:
+            migrator_calls = [call for call in run.call_args_list if call.args[0][0] != "npm"]
+            self.assertEqual(len(migrator_calls), 2)
+            for call in migrator_calls:
                 self.assertEqual(call.kwargs["cwd"], context.repository)
                 self.assertTrue(call.kwargs["check"])
                 self.assertEqual(call.kwargs["env"]["PROJECT_DOCS_OUTPUT_DIR"], str(context.stage_project_docs))
