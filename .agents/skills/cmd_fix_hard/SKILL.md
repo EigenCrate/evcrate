@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_hard
-description: ⚡⚡⚡ Use subagents to plan and fix hard issues
+description: Use subagents to plan and fix hard issues
 ---
 # cmd_fix_hard
 
@@ -9,6 +9,8 @@ Command Path: /fix/hard
 Description: Use subagents to plan and fix hard issues
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 **Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <issues>{{args}}</issues>

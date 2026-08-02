@@ -1,6 +1,6 @@
 ---
 name: cmd_scout_ext
-description: ⚡ Use external agentic tools to scout given directories
+description: Use external agentic tools to scout given directories
 ---
 # cmd_scout_ext
 
@@ -9,6 +9,8 @@ Command Path: /scout/ext
 Description: Use external agentic tools to scout given directories
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 ## Purpose
 

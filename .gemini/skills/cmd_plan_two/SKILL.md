@@ -1,6 +1,6 @@
 ---
 name: cmd_plan_two
-description: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
+description: Research & create an implementation plan with 2 approaches
 ---
 # cmd_plan_two
 

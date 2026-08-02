@@ -1,6 +1,6 @@
 ---
 name: cmd_docs_init
-description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
+description: Analyze the codebase and create initial documentation
 ---
 # cmd_docs_init
 

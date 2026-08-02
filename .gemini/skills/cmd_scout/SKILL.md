@@ -1,6 +1,6 @@
 ---
 name: cmd_scout
-description: ⚡⚡ Scout given directories to respond to the user's requests
+description: Scout given directories to respond to the user's requests
 ---
 # cmd_scout
 

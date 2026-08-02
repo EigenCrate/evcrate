@@ -1,6 +1,6 @@
 ---
 name: cmd_plan_parallel
-description: ⚡⚡⚡ Create detailed plan with parallel-executable phases
+description: Create detailed plan with parallel-executable phases
 ---
 # cmd_plan_parallel
 
@@ -9,6 +9,8 @@ Command Path: /plan/parallel
 Description: Create detailed plan with parallel-executable phases
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 Think strategically about parallelization.
 Activate `planning` skill.

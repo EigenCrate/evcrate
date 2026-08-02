@@ -1,6 +1,6 @@
 ---
 name: cmd_bootstrap_auto_fast
-description: ⚡⚡⚡ Quickly bootstrap a new project automatically
+description: Quickly bootstrap a new project automatically
 ---
 # cmd_bootstrap_auto_fast
 

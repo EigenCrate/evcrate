@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_fast
-description: ⚡ Analyze and fix small issues [FAST]
+description: Analyze and fix small issues [FAST]
 ---
 # cmd_fix_fast
 

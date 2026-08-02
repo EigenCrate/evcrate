@@ -1,6 +1,6 @@
 ---
 name: cmd_scout
-description: ⚡⚡ Scout given directories to respond to the user's requests
+description: Scout given directories to respond to the user's requests
 ---
 # cmd_scout
 
@@ -9,6 +9,8 @@ Command Path: /scout
 Description: Scout given directories to respond to the user's requests
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 ## Purpose
 

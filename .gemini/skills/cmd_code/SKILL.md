@@ -1,6 +1,6 @@
 ---
 name: cmd_code
-description: ⚡⚡⚡ Start coding & testing an existing plan
+description: Start coding & testing an existing plan
 ---
 # cmd_code
 

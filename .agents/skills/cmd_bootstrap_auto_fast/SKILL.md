@@ -1,6 +1,6 @@
 ---
 name: cmd_bootstrap_auto_fast
-description: ⚡⚡⚡ Quickly bootstrap a new project automatically
+description: Quickly bootstrap a new project automatically
 ---
 # cmd_bootstrap_auto_fast
 
@@ -10,7 +10,9 @@ Description: Quickly bootstrap a new project automatically
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
-**Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `Codex.md` file: 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
+**Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `AGENTS.md` file: 
 
 ---
 

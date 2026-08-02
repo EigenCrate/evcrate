@@ -1,6 +1,6 @@
 ---
 name: cmd_docs_update
-description: ⚡⚡⚡ Analyze the codebase and update documentation
+description: Analyze the codebase and update documentation
 ---
 # cmd_docs_update
 

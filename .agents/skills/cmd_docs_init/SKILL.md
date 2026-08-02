@@ -1,6 +1,6 @@
 ---
 name: cmd_docs_init
-description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
+description: Analyze the codebase and create initial documentation
 ---
 # cmd_docs_init
 
@@ -9,6 +9,8 @@ Command Path: /docs/init
 Description: Analyze the codebase and create initial documentation
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 ## Phase 1: Parallel Codebase Scouting
 

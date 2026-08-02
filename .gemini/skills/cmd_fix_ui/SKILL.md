@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_ui
-description: ⚡⚡ Analyze and fix UI issues
+description: Analyze and fix UI issues
 ---
 # cmd_fix_ui
 

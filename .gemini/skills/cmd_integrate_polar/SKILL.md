@@ -1,6 +1,6 @@
 ---
 name: cmd_integrate_polar
-description: ⚡⚡ Implement payment integration with Polar.sh
+description: Implement payment integration with Polar.sh
 ---
 # cmd_integrate_polar
 

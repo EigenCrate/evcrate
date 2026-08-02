@@ -11,10 +11,7 @@
     "distribute:all": "python3 distribute.py --all",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
-    "advisor:install": "npm --prefix .devkit/targets/codex/runtime/advisor-broker ci --ignore-scripts",
-    "advisor:build": "npm run advisor:install && npm --prefix .devkit/targets/codex/runtime/advisor-broker run build",
-    "advisor:test": "npm run advisor:install && npm --prefix .devkit/targets/codex/runtime/advisor-broker test",
-    "test": "python3 -m unittest tests.test_distribution_build tests.test_distribution_cli tests.test_distribution_publish && npm run advisor:test",
+    "test": "python3 -m unittest tests.test_distribution_build tests.test_distribution_cli tests.test_distribution_publish tests.test_advisor_codex_wiring",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"

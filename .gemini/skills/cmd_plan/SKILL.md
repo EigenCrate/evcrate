@@ -1,6 +1,6 @@
 ---
 name: cmd_plan
-description: ⚡⚡⚡ Intelligent plan creation with prompt enhancement
+description: Intelligent plan creation with prompt enhancement
 ---
 # cmd_plan
 

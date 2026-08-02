@@ -1,6 +1,6 @@
 ---
 name: cmd_test
-description: ⚡ Run tests locally and analyze the summary report.
+description: Run tests locally and analyze the summary report.
 ---
 # cmd_test
 

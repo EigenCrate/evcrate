@@ -1,6 +1,6 @@
 ---
 name: cmd_plan_hard
-description: ⚡⚡⚡ Research, analyze, and create an implementation plan
+description: Research, analyze, and create an implementation plan
 ---
 # cmd_plan_hard
 

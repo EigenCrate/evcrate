@@ -1,6 +1,6 @@
 ---
 name: cmd_bootstrap
-description: ⚡⚡⚡⚡⚡ Bootstrap a new project step by step
+description: Bootstrap a new project step by step
 ---
 # cmd_bootstrap
 

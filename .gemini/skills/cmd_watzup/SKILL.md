@@ -1,6 +1,6 @@
 ---
 name: cmd_watzup
-description: ⚡ Review recent changes and wrap up the work
+description: Review recent changes and wrap up the work
 ---
 # cmd_watzup
 

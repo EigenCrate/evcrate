@@ -10,6 +10,8 @@ Description: Create a CRO plan for the given content
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 You are an expert in conversion optimization. Analyze the content based on the given issues:
 <issues>{{args}}</issues>
 

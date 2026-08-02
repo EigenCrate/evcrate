@@ -34,7 +34,6 @@ yarn-error.log*
 
 # package manager
 package-lock.json
-!.devkit/targets/codex/runtime/advisor-broker/package-lock.json
 !examples/simple-web-testing-demo/package-lock.json
 yarn.lock
 pnpm-lock.yaml

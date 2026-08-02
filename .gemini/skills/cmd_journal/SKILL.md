@@ -1,6 +1,6 @@
 ---
 name: cmd_journal
-description: ⚡ Write some journal entries.
+description: Write some journal entries.
 ---
 # cmd_journal
 

@@ -1,6 +1,6 @@
 ---
 name: cmd_review_codebase
-description: ⚡⚡⚡ Scan & analyze the codebase.
+description: Scan & analyze the codebase.
 ---
 # cmd_review_codebase
 

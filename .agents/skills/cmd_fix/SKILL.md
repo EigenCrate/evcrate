@@ -1,6 +1,6 @@
 ---
 name: cmd_fix
-description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+description: Analyze and fix issues [INTELLIGENT ROUTING]
 ---
 # cmd_fix
 
@@ -9,6 +9,8 @@ Command Path: /fix
 Description: Analyze and fix issues [INTELLIGENT ROUTING]
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 **Analyze issues and route to specialized fix command:**
 <issues>{{args}}</issues>

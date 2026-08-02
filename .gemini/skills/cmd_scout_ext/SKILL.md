@@ -1,6 +1,6 @@
 ---
 name: cmd_scout_ext
-description: ⚡ Use external agentic tools to scout given directories
+description: Use external agentic tools to scout given directories
 ---
 # cmd_scout_ext
 

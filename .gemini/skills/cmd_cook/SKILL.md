@@ -1,6 +1,6 @@
 ---
 name: cmd_cook
-description: ⚡⚡⚡ Implement a feature [step by step]
+description: Implement a feature [step by step]
 ---
 # cmd_cook
 

@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_ci
-description: ⚡ Analyze Github Actions logs and fix issues
+description: Analyze Github Actions logs and fix issues
 ---
 # cmd_fix_ci
 

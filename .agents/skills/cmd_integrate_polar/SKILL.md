@@ -1,6 +1,6 @@
 ---
 name: cmd_integrate_polar
-description: ⚡⚡ Implement payment integration with Polar.sh
+description: Implement payment integration with Polar.sh
 ---
 # cmd_integrate_polar
 
@@ -9,6 +9,8 @@ Command Path: /integrate/polar
 Description: Implement payment integration with Polar.sh
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 Think harder.
 Activate `payment-integration` skill.

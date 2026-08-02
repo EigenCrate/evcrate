@@ -1,6 +1,6 @@
 ---
 name: cmd_review_codebase_parallel
-description: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
+description: Ultrathink edge cases, then parallel verify with code-reviewers
 ---
 # cmd_review_codebase_parallel
 
@@ -9,6 +9,8 @@ Command Path: /review/codebase/parallel
 Description: Ultrathink edge cases, then parallel verify with code-reviewers
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 **Ultrathink** to exhaustively list ALL potential edge cases, then dispatch parallel `code-reviewer` agents to verify: <scope>{{args}}</scope>
 

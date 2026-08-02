@@ -36,6 +36,10 @@ for arg in sys.argv[1:]:
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
+ADVISOR_RUBRIC_POINTER = (
+    "For high-impact architecture, security, debugging, or review decisions, consider explicit "
+    "`$advisor-strategy` use for current-session guidance; this pointer does not activate it."
+)
 DEVKIT_CONFIG_FILE = ".devkit.json"
 CODEX_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Codex hook targets subagent startup; behavior is intentionally dropped.",
@@ -554,6 +558,7 @@ def migrate_commands_as_native_skills() -> None:
             f"Description: {desc}\n\n"
             "Codex note: when this recipe says to run another `/...` command, "
             "invoke the matching `cmd_*` skill for that path.\n\n"
+            f"{ADVISOR_RUBRIC_POINTER}\n\n"
             f"{body}\n"
         )
         (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
@@ -961,14 +966,12 @@ def migrate_mcp_and_config() -> None:
         "# Keep fan-out bounded; subagents each run their own model/tool loop.",
         "max_threads = 4",
         "max_depth = 1",
-        "",
         "[features]",
         "hooks = true",
         "",
     ]
 
-    # Intentionally do not migrate MCP servers from .claude.
-    # Codex keeps its own MCP config and should not inherit Claude's servers.
+    # Claude MCP servers do not cross the target boundary.
 
     (CODEX_DIR / "config.toml").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     print(f"Generated Codex config: {CODEX_DIR / 'config.toml'}")

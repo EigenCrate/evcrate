@@ -1,6 +1,6 @@
 ---
 name: cmd_fix
-description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+description: Analyze and fix issues [INTELLIGENT ROUTING]
 ---
 # cmd_fix
 

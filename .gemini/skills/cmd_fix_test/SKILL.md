@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_test
-description: ⚡⚡ Run test suite and fix issues
+description: Run test suite and fix issues
 ---
 # cmd_fix_test
 

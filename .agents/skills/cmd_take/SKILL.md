@@ -10,6 +10,8 @@ Description: Transfer a feature from another project through compare, copy, impr
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 ## Mission
 
 Transfer a feature from a source project into the current project without treating unfamiliar code as a drop-in patch. Preserve the useful behavior, reject incompatible assumptions, and produce evidence for every important decision.

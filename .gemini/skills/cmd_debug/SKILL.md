@@ -1,6 +1,6 @@
 ---
 name: cmd_debug
-description: ⚡⚡ Debugging technical issues and providing solutions.
+description: Debugging technical issues and providing solutions.
 ---
 # cmd_debug
 

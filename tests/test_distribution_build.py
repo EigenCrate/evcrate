@@ -161,7 +161,7 @@ class DistributionBuildTest(unittest.TestCase):
         codex = load_target_manifest(registry.targets["codex"])
         self.assertEqual(codex.output_roots, (".codex", ".agents"))
         self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
-        self.assertEqual(codex.runtime.entry if codex.runtime else None, "dist/server.js")
+        self.assertIsNone(codex.runtime)
         self.assertEqual(set(registry.targets), {"antigravity", "codex", "gemini"})
 
     def test_staging_writes_a_deterministic_authorization_manifest(self) -> None:
@@ -180,10 +180,7 @@ class DistributionBuildTest(unittest.TestCase):
             generate_stage(context, fake_migrator)
             self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
             self.assertFalse((stage / ".antigravity" / "config").exists())
-            runtime = stage / ".codex" / "runtime" / "advisor-broker"
-            self.assertTrue((runtime / "dist" / "server.js").is_file())
-            self.assertEqual(json.loads((runtime / "runtime-context.json").read_text(encoding="utf-8"))["repository_root"], str(context.repository))
-            self.assertFalse((runtime / "node_modules").exists())
+            self.assertFalse((stage / ".codex" / "runtime").exists())
             return (stage / BUILD_MANIFEST_PATH).read_bytes()
 
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:

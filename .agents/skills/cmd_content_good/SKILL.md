@@ -10,6 +10,8 @@ Description: Write good creative & smart copy [GOOD]
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Write good creative & smart copy for this user request:
 <user_request>{{args}}</user_request>
 

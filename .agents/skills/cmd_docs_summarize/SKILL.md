@@ -1,6 +1,6 @@
 ---
 name: cmd_docs_summarize
-description: ⚡ Analyze the codebase and update documentation
+description: Analyze the codebase and update documentation
 ---
 # cmd_docs_summarize
 
@@ -9,6 +9,8 @@ Command Path: /docs/summarize
 Description: Analyze the codebase and update documentation
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 Use `docs-manager` agent to analyze the codebase based on `docs/codebase-summary.md` and respond with a summary report.
 

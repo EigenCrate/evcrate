@@ -1,6 +1,6 @@
 ---
 name: cmd_ask
-description: ⚡ Answer technical and architectural questions.
+description: Answer technical and architectural questions.
 ---
 # cmd_ask
 
@@ -9,6 +9,8 @@ Command Path: /ask
 Description: Answer technical and architectural questions.
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 ## Context
 Technical question or architecture challenge: 

@@ -10,6 +10,8 @@ Description: Fix the agent skill based on `logs.txt` file.
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
 Think harder.
 Use `skill-creator` and `codex-cli` skills.
 Use `docs-seeker` skills to search for documentation if needed.

@@ -1,6 +1,6 @@
 ---
 name: cmd_code_parallel
-description: ⚡ Execute parallel or sequential phases based on plan structure
+description: Execute parallel or sequential phases based on plan structure
 ---
 # cmd_code_parallel
 
@@ -9,6 +9,8 @@ Command Path: /code/parallel
 Description: Execute parallel or sequential phases based on plan structure
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 Execute plan: <plan>{{args}}</plan>
 

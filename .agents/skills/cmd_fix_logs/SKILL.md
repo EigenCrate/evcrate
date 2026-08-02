@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_logs
-description: ⚡ Analyze logs and fix issues
+description: Analyze logs and fix issues
 ---
 # cmd_fix_logs
 
@@ -9,6 +9,8 @@ Command Path: /fix/logs
 Description: Analyze logs and fix issues
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
 

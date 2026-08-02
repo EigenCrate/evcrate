@@ -1,6 +1,6 @@
 ---
 name: cmd_bootstrap_auto_parallel
-description: ⚡⚡⚡⚡⚡ Bootstrap project with parallel execution
+description: Bootstrap project with parallel execution
 ---
 # cmd_bootstrap_auto_parallel
 

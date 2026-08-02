@@ -1,6 +1,6 @@
 ---
 name: cmd_code_auto
-description: ⚡⚡⚡ [AUTO] Start coding & testing an existing plan ("trust me bro")
+description: [AUTO] Start coding & testing an existing plan ("trust me bro")
 ---
 # cmd_code_auto
 

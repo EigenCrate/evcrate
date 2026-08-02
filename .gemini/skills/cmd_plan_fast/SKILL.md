@@ -1,6 +1,6 @@
 ---
 name: cmd_plan_fast
-description: ⚡⚡ No research. Only analyze and create an implementation plan
+description: No research. Only analyze and create an implementation plan
 ---
 # cmd_plan_fast
 

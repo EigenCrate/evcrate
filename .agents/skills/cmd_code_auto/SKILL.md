@@ -1,6 +1,6 @@
 ---
 name: cmd_code_auto
-description: ⚡⚡⚡ [AUTO] Start coding & testing an existing plan ("trust me bro")
+description: [AUTO] Start coding & testing an existing plan ("trust me bro")
 ---
 # cmd_code_auto
 
@@ -10,7 +10,9 @@ Description: [AUTO] Start coding & testing an existing plan ("trust me bro")
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
-**MUST READ** `Codex.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
+**MUST READ** `AGENTS.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <plan>{{args}}</plan>
 
 ## Arguments

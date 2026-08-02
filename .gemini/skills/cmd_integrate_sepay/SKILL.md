@@ -1,6 +1,6 @@
 ---
 name: cmd_integrate_sepay
-description: ⚡⚡ Implement payment integration with SePay.vn
+description: Implement payment integration with SePay.vn
 ---
 # cmd_integrate_sepay
 

@@ -1,6 +1,6 @@
 ---
 name: cmd_plan
-description: ⚡⚡⚡ Intelligent plan creation with prompt enhancement
+description: Intelligent plan creation with prompt enhancement
 ---
 # cmd_plan
 
@@ -9,6 +9,8 @@ Command Path: /plan
 Description: Intelligent plan creation with prompt enhancement
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 ## Your mission
 <task>

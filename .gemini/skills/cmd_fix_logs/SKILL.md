@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_logs
-description: ⚡ Analyze logs and fix issues
+description: Analyze logs and fix issues
 ---
 # cmd_fix_logs
 

@@ -1,6 +1,6 @@
 ---
 name: cmd_debug
-description: ⚡⚡ Debugging technical issues and providing solutions.
+description: Debugging technical issues and providing solutions.
 ---
 # cmd_debug
 
@@ -9,6 +9,8 @@ Command Path: /debug
 Description: Debugging technical issues and providing solutions.
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 **Reported Issues**:
  {{args}}

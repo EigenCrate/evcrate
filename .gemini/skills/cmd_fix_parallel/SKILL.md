@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_parallel
-description: ⚡⚡ Analyze & fix issues with parallel fullstack-developer agents
+description: Analyze & fix issues with parallel fullstack-developer agents
 ---
 # cmd_fix_parallel
 

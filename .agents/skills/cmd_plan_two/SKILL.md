@@ -1,6 +1,6 @@
 ---
 name: cmd_plan_two
-description: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
+description: Research & create an implementation plan with 2 approaches
 ---
 # cmd_plan_two
 
@@ -9,6 +9,8 @@ Command Path: /plan/two
 Description: Research & create an implementation plan with 2 approaches
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 Think harder.
 Activate `planning` skill.

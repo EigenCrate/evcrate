@@ -1,6 +1,6 @@
 ---
 name: cmd_code_no-test
-description: ⚡⚡ Start coding an existing plan (no testing)
+description: Start coding an existing plan (no testing)
 ---
 # cmd_code_no-test
 

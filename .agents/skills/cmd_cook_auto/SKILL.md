@@ -1,14 +1,16 @@
 ---
 name: cmd_cook_auto
-description: ⚡⚡ Implement a feature automatically with plan and quality gates
+description: Implement a feature automatically with plan and quality gates
 ---
 # cmd_cook_auto
 
 Command Path: /cook/auto
 
-Description: ⚡⚡ Implement a feature automatically with plan and quality gates
+Description: Implement a feature automatically with plan and quality gates
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 **Ultrathink** to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <tasks>{{args}}</tasks>

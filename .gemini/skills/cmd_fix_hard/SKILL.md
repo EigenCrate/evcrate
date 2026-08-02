@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_hard
-description: ⚡⚡⚡ Use subagents to plan and fix hard issues
+description: Use subagents to plan and fix hard issues
 ---
 # cmd_fix_hard
 

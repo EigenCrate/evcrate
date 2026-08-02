@@ -1,6 +1,6 @@
 ---
 name: cmd_bootstrap_auto
-description: ⚡⚡⚡⚡ Bootstrap a new project automatically
+description: Bootstrap a new project automatically
 ---
 # cmd_bootstrap_auto
 

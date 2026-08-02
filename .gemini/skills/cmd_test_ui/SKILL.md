@@ -1,6 +1,6 @@
 ---
 name: cmd_test_ui
-description: ⚡⚡ Run UI tests on a website & generate a detailed report.
+description: Run UI tests on a website & generate a detailed report.
 ---
 # cmd_test_ui
 

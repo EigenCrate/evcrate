@@ -1,6 +1,6 @@
 ---
 name: cmd_brainstorm
-description: ⚡⚡ Brainstorm a feature
+description: Brainstorm a feature
 ---
 # cmd_brainstorm
 

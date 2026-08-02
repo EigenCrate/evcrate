@@ -1,6 +1,6 @@
 ---
 name: cmd_fix_types
-description: ⚡ Fix type errors
+description: Fix type errors
 ---
 # cmd_fix_types
 

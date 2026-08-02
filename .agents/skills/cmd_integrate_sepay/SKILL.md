@@ -1,6 +1,6 @@
 ---
 name: cmd_integrate_sepay
-description: ⚡⚡ Implement payment integration with SePay.vn
+description: Implement payment integration with SePay.vn
 ---
 # cmd_integrate_sepay
 
@@ -9,6 +9,8 @@ Command Path: /integrate/sepay
 Description: Implement payment integration with SePay.vn
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
 Think harder.
 Activate `payment-integration` skill.
