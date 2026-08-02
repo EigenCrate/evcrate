@@ -11,10 +11,11 @@ from typing import Any
 
 from .context import DistributionContext
 from .contracts import PublishError, VerifiedArtifact
-from .hashing import normalize_relative_path, tree_hash
+from .hashing import normalize_relative_path
 from .locking import publish_lock, read_release_marker, write_release_marker
 from .manifest import load_target_manifest, load_target_registry
 from .publish_verification import verify_local_artifact
+from .publish_inventory import artifact_files as _files, home_inventory, home_tree_hash, prior_managed_paths, protected_paths
 from .publish_recovery import recover_interrupted_publish, restore_roots
 
 
@@ -23,18 +24,6 @@ class PublishChange:
     root: str
     path: str
     action: str
-
-
-def _files(root: Path) -> dict[str, bytes]:
-    if root.is_symlink() or not root.is_dir():
-        raise PublishError(f"Artifact root is missing or unsafe: {root}")
-    result: dict[str, bytes] = {}
-    for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
-        if path.is_symlink():
-            raise PublishError(f"Artifact contains symlink: {path}")
-        if path.is_file():
-            result[path.relative_to(root).as_posix()] = path.read_bytes()
-    return result
 
 
 def _validate_home_ancestors(context: DistributionContext, home: Path) -> None:
@@ -99,19 +88,20 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     changes: list[PublishChange] = []
     for name, local, home, preserved in _policies(context):
         source = _files(local)
-        existing = _files(home) if home.exists() else {}
+        prior_paths = prior_managed_paths(prior, name)
+        existing = home_inventory(home, protected_paths(source, prior_paths, preserved)) if home.exists() or home.is_symlink() else None
         for relative, content in source.items():
             if relative in preserved:
                 changes.append(PublishChange(name, relative, "preserve"))
-            elif relative not in existing:
+            elif existing is None or relative not in existing.files:
                 changes.append(PublishChange(name, relative, "create"))
-            elif existing[relative] != content:
+            elif existing.files[relative] != content:
                 changes.append(PublishChange(name, relative, "update"))
-        for relative in prior.get(name, []):
-            if relative not in source and relative not in preserved and relative in existing:
+        for relative in prior_paths:
+            if relative not in source and relative not in preserved and existing is not None and relative in existing.files:
                 changes.append(PublishChange(name, relative, "delete"))
-        for relative in existing:
-            if relative not in source and relative not in prior.get(name, []):
+        for relative in existing.paths if existing is not None else set():
+            if relative not in source and relative not in prior_paths:
                 changes.append(PublishChange(name, relative, "preserve"))
     return sorted(changes, key=lambda item: (item.root, item.path, item.action))
 
@@ -124,13 +114,17 @@ def _copy_candidate(
     prior: set[str],
 ) -> tuple[Path, set[str]]:
     _validate_home_ancestors(context, home)
+    if home.exists() or home.is_symlink():
+        source = _files(local)
+        home_inventory(home, protected_paths(source, prior, preserved))
+    else:
+        source = _files(local)
     if home.exists() and (home.is_symlink() or not home.is_dir()):
         raise PublishError(f"HOME root is unsafe: {home}")
     home.parent.mkdir(parents=True, exist_ok=True)
     candidate = Path(tempfile.mkdtemp(prefix=f".{home.name}.devkit-stage-", dir=home.parent))
     if home.exists():
         shutil.copytree(home, candidate, dirs_exist_ok=True, symlinks=True)
-    source = _files(local)
     for relative in prior - set(source):
         path = candidate / relative
         if path.exists() and not path.is_symlink():
@@ -140,6 +134,8 @@ def _copy_candidate(
         if relative in preserved:
             continue
         destination = candidate / relative
+        if destination.is_symlink():
+            raise PublishError(f"Refusing to write through HOME symlink: {home / relative}")
         if any(parent.is_symlink() for parent in destination.parents if parent != candidate.parent):
             raise PublishError(f"Refusing to write through HOME symlink: {home / relative}")
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -171,7 +167,7 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
         write_release_marker(context.state_dir, marker)
         try:
             for name, local, home, preserved in _policies(context):
-                candidate, managed = _copy_candidate(context, local, home, preserved, set(prior_paths.get(name, [])))
+                candidate, managed = _copy_candidate(context, local, home, preserved, prior_managed_paths(prior_paths, name))
                 backup = home.with_name(f".{home.name}.devkit-backup-{release_id}") if home.exists() else None
                 marker["roots"][name] = {"backup": backup.name if backup else None, "completed": False}
                 write_release_marker(context.state_dir, marker)
@@ -180,7 +176,7 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
                 completed.append((home, backup))
                 candidate.replace(home)
                 managed_paths[name] = sorted(managed)
-                marker["roots"][name] = {"hash": tree_hash(home), "completed": True, "backup": backup.name if backup else None}
+                marker["roots"][name] = {"hash": home_tree_hash(home), "completed": True, "backup": backup.name if backup else None}
                 marker["managed_paths"] = managed_paths
                 write_release_marker(context.state_dir, marker)
             marker["status"] = "complete"
