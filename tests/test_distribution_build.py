@@ -14,7 +14,7 @@ from unittest.mock import patch
 from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
 from distribution.context import create_context
 from distribution.contracts import BuildError, DistributionAction
-from distribution.hashing import HashingError, normalize_relative_path, tree_hash
+from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
 from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from distribution.overlay import OverlayError, apply_exact_patch, apply_patch_file, copy_overlay_files
 from distribution.staging import BUILD_MANIFEST_PATH, generate_stage
@@ -36,6 +36,17 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertEqual(first, tree_hash(root))
             (root / "empty").rmdir()
             self.assertNotEqual(first, tree_hash(root))
+
+    def test_source_tree_hash_ignores_local_dependency_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "source.txt").write_text("source", encoding="utf-8")
+            before = source_tree_hash(root)
+            (root / "node_modules").mkdir()
+            (root / "node_modules" / "local.js").write_text("generated", encoding="utf-8")
+            (root / "dist").mkdir()
+            (root / "dist" / "bundle.js").write_text("generated", encoding="utf-8")
+            self.assertEqual(before, source_tree_hash(root))
 
     def test_overlay_rejects_baseline_file_collision(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -150,6 +161,7 @@ class DistributionBuildTest(unittest.TestCase):
         codex = load_target_manifest(registry.targets["codex"])
         self.assertEqual(codex.output_roots, (".codex", ".agents"))
         self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
+        self.assertEqual(codex.runtime.entry if codex.runtime else None, "dist/server.js")
         self.assertEqual(set(registry.targets), {"antigravity", "codex", "gemini"})
 
     def test_staging_writes_a_deterministic_authorization_manifest(self) -> None:
@@ -168,6 +180,10 @@ class DistributionBuildTest(unittest.TestCase):
             generate_stage(context, fake_migrator)
             self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
             self.assertFalse((stage / ".antigravity" / "config").exists())
+            runtime = stage / ".codex" / "runtime" / "advisor-broker"
+            self.assertTrue((runtime / "dist" / "server.js").is_file())
+            self.assertEqual(json.loads((runtime / "runtime-context.json").read_text(encoding="utf-8"))["repository_root"], str(context.repository))
+            self.assertFalse((runtime / "node_modules").exists())
             return (stage / BUILD_MANIFEST_PATH).read_bytes()
 
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:

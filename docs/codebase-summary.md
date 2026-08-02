@@ -45,7 +45,9 @@ devkit/
 
 The distribution entrypoint separates local generation from HOME publication. `--build` creates finalized local `.gemini`, `.codex`, `.agents`, and project-doc outputs; `--check` verifies them without writes; `--publish` consumes verified local artifacts without running migrators; `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `DEVKIT_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
-Phase 2/3 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.devkit/build-manifest.json`. Publication rejects stale manifests or changed outputs, applies HOME policies with user-file preservation, and records owner-only release state/locking. Build/publication behavior is covered by the distribution build, CLI, and publish tests.
+Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.devkit/build-manifest.json`. The Codex target stages and bundles `runtime/advisor-broker`, injects `.devkit/models.json` as `registry.json`, and removes dependencies from the published artifact. Publication rejects stale manifests or changed outputs, applies HOME policies with user-file preservation, and records owner-only release state/locking.
+
+The advisor broker is a single-tool stdio MCP server (`advisor_consult`) with bounded schemas, distinct advisor policy, contained/redacted evidence excerpts, artifact-integrity checks, and owner-only JSONL audit logging. Its default adapter intentionally returns escalation until configured. Distribution and broker behavior are covered by the Python regression suites and TypeScript/Vitest suite.
 
 ## Core Technologies
 

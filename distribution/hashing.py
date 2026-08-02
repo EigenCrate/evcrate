@@ -80,3 +80,26 @@ def tree_hash(root: Path) -> str:
         else:
             raise HashingError(f"Unsupported artifact path: {relative}")
     return hash_bytes(b"".join(records))
+
+
+def source_tree_hash(root: Path) -> str:
+    """Hash source trees while excluding local dependency and compiler outputs."""
+
+    excluded = {"node_modules", "dist", "__pycache__"}
+    if not root.is_dir() or root.is_symlink():
+        raise HashingError(f"Expected a real directory: {root}")
+    records: list[bytes] = []
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        relative = path.relative_to(root)
+        if any(part in excluded for part in relative.parts):
+            continue
+        normalized = normalize_relative_path(relative.as_posix())
+        if path.is_symlink():
+            raise HashingError(f"Symlinks are not allowed in build artifacts: {normalized}")
+        if path.is_dir():
+            records.append(f"d\0{normalized}\n".encode())
+        elif path.is_file():
+            records.append(f"f\0{normalized}\0{hash_file(path)}\n".encode())
+        else:
+            raise HashingError(f"Unsupported artifact path: {normalized}")
+    return hash_bytes(b"".join(records))

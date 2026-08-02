@@ -896,9 +896,9 @@ User Project
 - Cleanup of temporary files
 - Optimized git operations
 
-## Distribution Architecture (Phase 3 publication)
+## Distribution Architecture (Phase 4 advisor runtime)
 
-[Two-gate target distribution and advisor consultation](./advisor-distribution-architecture.md) defines the broader target-overlay, manifest, and advisor boundary. Phases 1–3 implement the build, verification, and publication gate contracts:
+[Two-gate target distribution and advisor consultation](./advisor-distribution-architecture.md) defines the broader target-overlay, manifest, and advisor boundary. Phases 1–4 implement the build, verification, publication, and constrained-advisor contracts:
 
 - `python3 distribute.py --build` runs migrators in repository-root context and atomically promotes local generated trees and project docs.
 - `python3 distribute.py --check` regenerates into isolated staging and compares outputs without writing the repository or HOME.
@@ -910,8 +910,10 @@ User Project
 - Target manifest HOME policies control managed paths. Declared `preserve_paths` and unmanaged user files remain untouched. State and the owner-only lock live at `$DEVKIT_STATE_HOME/devkit` (or `$XDG_STATE_HOME/devkit`, otherwise `~/.local/state/devkit`).
 - Release preparation bundles verified build metadata and generated assets; CI does not publish to a developer HOME.
 - Direct migrator `--global` modes are refused unless `DEVKIT_ALLOW_DIRECT_GLOBAL=1` is set for an explicitly documented emergency; that path warns that it bypasses distribution verification.
+- The Codex target stages and bundles `runtime/advisor-broker` from source, injects `.devkit/models.json` as `registry.json`, removes `node_modules`, and records runtime ownership in the build manifest.
+- The bundled MCP server exposes exactly `advisor_consult`; it bounds request/response schemas, requires contained symlink-free evidence, redacts secrets, resolves a distinct advisor role, verifies Codex artifact integrity, and writes owner-only JSONL audit records under `$HOME/.local/state/devkit/advisor/audit.jsonl`.
 
-Overlay and manifest validation are implemented. Advisor broker/admission and final rollout validation remain planned.
+Overlay, manifest, advisor broker/admission, artifact integrity, and final rollout validation are implemented. The default adapter remains a safe escalation-only placeholder until configured.
 
 ## Future Architecture Evolution
 

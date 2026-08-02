@@ -225,6 +225,8 @@ Provide a production-ready template that:
 - Apply target HOME policies atomically while preserving declared and unmanaged user files.
 - Persist owner-only release state, reject concurrent publishers, and recover interrupted promotions.
 - Include verified build metadata and generated assets in release CI without mutating developer HOME.
+- Bundle the declared Codex advisor runtime only after source validation and dependency removal; inject the model registry and verify the published Codex tree against the build manifest.
+- Expose one bounded, read-only `advisor_consult` MCP tool with structured recommendation-only outcomes, allowlisted evidence, secret redaction, distinct advisor policy, and owner-only audit records.
 
 ### Non-Functional Requirements
 

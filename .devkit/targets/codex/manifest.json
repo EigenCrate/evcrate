@@ -6,6 +6,12 @@
   "additional_roots": [".agents"],
   "project_docs": ["AGENTS.md"],
   "overlay_root": ".devkit/targets/codex/files",
+  "runtime": {
+    "source": "runtime/advisor-broker",
+    "destination": "runtime/advisor-broker",
+    "entry": "dist/server.js",
+    "registry_source": ".devkit/models.json"
+  },
   "patches": [],
   "home_policy": {
     "bindings": {".codex": ".codex", ".agents": ".agents"},

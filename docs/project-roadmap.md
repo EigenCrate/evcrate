@@ -237,6 +237,7 @@ Enterprise-grade features and deployment options.
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 1 (DONE): explicit build/check/publish/all CLI contracts, immutable distribution context, staged project-doc generation, fatal subprocess handling, guarded direct-global migrator modes, atomic promotion safeguards, and 17/17 CLI regression tests. `pytest` unavailable; validation used `python3 -m unittest tests/test_distribution_cli.py`.
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 2 (DONE, 2026-08-02 12:37 +0700): deterministic staged targets, declared overlays, parser-backed exact patches, collision/traversal/symlink validation, hashed build manifests, atomic recovery/locking, and byte-level drift checks. Validation: 40/40 unittest cases; `pytest` unavailable.
 - ✅ Two-Gate Distribution and Enforced Advisor — Phase 3 (DONE, 2026-08-02): manifest-verified non-destructive HOME publish with dry-run JSON/text, owner-only locking/markers and recovery; Gate 1 Antigravity artifact to `.gemini/config`; fail-closed release build/check and verified-output archive. Validation: full 50/50, `npm test` 46/46, build/check/lint passed.
+- ✅ Two-Gate Distribution and Enforced Advisor — Phase 4 (DONE, 2026-08-02): declared Codex advisor runtime staging/build, shared model registry injection, artifact-integrity verification, distinct advisor policy, bounded `advisor_consult` MCP contract, contained/redacted evidence, fail-closed outcomes, and owner-only JSONL audit logging. Validation: distribution regression suite plus advisor-broker TypeScript/Vitest suite passed.
 
 ### Recent Additions (2026-07-18)
 - ✅ Refactor DevKit Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.devkit.json`; phase 4 remains pending.
@@ -256,7 +257,7 @@ Enterprise-grade features and deployment options.
 - ✅ Advanced configuration guides
 
 ### In Development
-- ✅ Two-Gate Distribution and Enforced Advisor — Phases 1–3 complete; advisor broker/admission and final rollout remain pending.
+- ✅ Two-Gate Distribution and Enforced Advisor — Phases 1–4 complete; final rollout remains adapter/configuration dependent.
 - 🔄 Refactor Distribute Script to Python (Phase 2 & 3): Integration with NPM package.json scripts and validation.
 - 🔄 Additional cloud platform integrations
 - 🔄 UI/UX improvements
