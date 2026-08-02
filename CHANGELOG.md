@@ -3,6 +3,7 @@
 ### Bug Fixes
 
 * **distribution:** preserve unrelated HOME symlinks while rejecting any symlink that overlaps a managed publication path.
+* **distribution:** rewrite Codex hook and MCP wrapper paths only in the HOME publication view, preserving project-relative local artifacts.
 
 ### Breaking Changes
 

@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from distribute_hooks import rewrite_codex_global_file
+
 from .context import DistributionContext
 from .contracts import PublishError, VerifiedArtifact
 from .hashing import normalize_relative_path
@@ -87,7 +89,7 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     prior = marker.get("managed_paths", {}) if marker.get("status") == "complete" else {}
     changes: list[PublishChange] = []
     for name, local, home, preserved in _policies(context):
-        source = _files(local)
+        source = _publication_files(context, local, home)
         prior_paths = prior_managed_paths(prior, name)
         existing = home_inventory(home, protected_paths(source, prior_paths, preserved)) if home.exists() or home.is_symlink() else None
         for relative, content in source.items():
@@ -106,6 +108,19 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     return sorted(changes, key=lambda item: (item.root, item.path, item.action))
 
 
+def _publication_files(context: DistributionContext, local: Path, home: Path) -> dict[str, bytes]:
+    source = _files(local)
+    if home != context.target_codex:
+        return source
+    try:
+        return {
+            relative: rewrite_codex_global_file(relative, content, home)
+            for relative, content in source.items()
+        }
+    except (AttributeError, UnicodeDecodeError, TypeError, ValueError) as error:
+        raise PublishError(f"Invalid generated Codex global configuration: {error}") from error
+
+
 def _copy_candidate(
     context: DistributionContext,
     local: Path,
@@ -115,10 +130,10 @@ def _copy_candidate(
 ) -> tuple[Path, set[str]]:
     _validate_home_ancestors(context, home)
     if home.exists() or home.is_symlink():
-        source = _files(local)
+        source = _publication_files(context, local, home)
         home_inventory(home, protected_paths(source, prior, preserved))
     else:
-        source = _files(local)
+        source = _publication_files(context, local, home)
     if home.exists() and (home.is_symlink() or not home.is_dir()):
         raise PublishError(f"HOME root is unsafe: {home}")
     home.parent.mkdir(parents=True, exist_ok=True)

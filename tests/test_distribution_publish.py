@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -60,6 +61,46 @@ class DistributionPublishTest(unittest.TestCase):
                 second = publish_diff(context, artifact)
             self.assertEqual(first, second)
             self.assertIn(("unknown", "preserve"), {(change.path, change.action) for change in first})
+
+    def test_codex_global_paths_are_rewritten_only_for_home_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "workspace with spaces"
+            root.mkdir()
+            context = self._context(root)
+            source, home = root / "source", context.home / ".codex"
+            source.mkdir(parents=True)
+            hooks = {
+                "hooks": {
+                    "SessionStart": [{
+                        "hooks": [{
+                            "type": "command",
+                            "command": 'sh "$CODEX_PROJECT_DIR"/.codex/hooks/run-node-hook.sh "$CODEX_PROJECT_DIR"/.codex/hooks/session-start.cjs',
+                        }],
+                    }],
+                },
+            }
+            (source / "hooks.json").write_text(json.dumps(hooks, indent=2), encoding="utf-8")
+            (source / "config.toml").write_text('command = ".codex/bin/run-mcp-package.sh"\n', encoding="utf-8")
+            artifact = VerifiedArtifact(context.repository, context.local_roots)
+            policy = self._policy(context, source, home)
+
+            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=policy):
+                publish_local_artifacts(context, artifact)
+                self.assertEqual(publish_diff(context, artifact), [])
+
+            local_command = json.loads((source / "hooks.json").read_text(encoding="utf-8"))["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+            global_command = json.loads((home / "hooks.json").read_text(encoding="utf-8"))["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+            self.assertIn("$CODEX_PROJECT_DIR", local_command)
+            self.assertNotIn("$CODEX_PROJECT_DIR", global_command)
+            self.assertIn(str(home / "hooks"), global_command)
+            self.assertEqual(
+                (home / "config.toml").read_text(encoding="utf-8"),
+                f'command = "{home / "bin" / "run-mcp-package.sh"}"\n',
+            )
+            self.assertEqual(
+                (source / "config.toml").read_text(encoding="utf-8"),
+                'command = ".codex/bin/run-mcp-package.sh"\n',
+            )
 
     def test_stale_source_hash_blocks_before_home_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
