@@ -40,6 +40,19 @@ ADVISOR_RUBRIC_POINTER = (
     "For high-impact architecture, security, debugging, or review decisions, consider explicit "
     "`$advisor-strategy` use for current-session guidance; this pointer does not activate it."
 )
+SUBAGENT_WAIT_CONTRACT = """## Subagent Completion Contract
+
+Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
+
+- Parallel prompt format: **spawn N agents; wait for all N to finish; collect one terminal result from each; then summarize**.
+- Wait protocol: use the native agent wait/poll operation for the same agent set. **"No agents completed yet" is a non-terminal poll result; wait again.** Do not treat it as a timeout, sleep instead of polling, restart, interrupt, or advance the workflow.
+- A polling interval or retry count is not a delegation deadline. Do not invent a wall-clock limit (including 180 seconds) for a blocking gate. Continue polling until a terminal result, explicit user stop, or an actual parent-runtime termination.
+- Treat an interrupted, timed-out, missing, or partial result as a failed gate. Do not continue from partial work or silently skip/restart the agent.
+- Sequential prompt format: **run one agent; wait for its terminal result; verify the report/artifacts; then run the next agent**.
+- Every delegated prompt must define scope, file ownership, expected report/artifact, and validation signal.
+- A spawn acknowledgement, progress event, or file change does not mean the agent completed. Completion requires the terminal response and requested validation.
+- If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
+"""
 DEVKIT_CONFIG_FILE = ".devkit.json"
 CODEX_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Codex hook targets subagent startup; behavior is intentionally dropped.",
@@ -127,6 +140,14 @@ def apply_replacements(text: str) -> str:
     text = text.replace(".Codex", ".codex")
     text = re.sub(r"codexkit", "codexkit", text, flags=re.IGNORECASE)
     return text
+
+
+def apply_subagent_wait_contract(text: str) -> str:
+    """Make delegated work blocking and fail closed on incomplete results."""
+
+    if "## Subagent Completion Contract" in text:
+        return text
+    return f"{text.rstrip()}\n\n{SUBAGENT_WAIT_CONTRACT}"
 
 
 def collect_migrated_command_paths() -> set[str]:
@@ -434,7 +455,9 @@ def migrate_agents() -> None:
             ),
             known_commands,
         )
-        body = rewrite_command_execution_guidance(apply_replacements(body), known_commands)
+        body = apply_subagent_wait_contract(
+            rewrite_command_execution_guidance(apply_replacements(body), known_commands)
+        )
 
         lines: list[str] = []
         write_toml_value(lines, "name", name)
@@ -464,9 +487,11 @@ def migrate_workflows() -> None:
 
     if workflow_dir.exists():
         for source in sorted(workflow_dir.glob("*.md")):
-            content = rewrite_command_execution_guidance(
-                apply_replacements(source.read_text(encoding="utf-8")),
-                known_commands,
+            content = apply_subagent_wait_contract(
+                rewrite_command_execution_guidance(
+                    apply_replacements(source.read_text(encoding="utf-8")),
+                    known_commands,
+                )
             )
             (dest_workflows / source.name).write_text(content, encoding="utf-8")
             print(f"Migrated workflow: {source.name}")
@@ -559,6 +584,7 @@ def migrate_commands_as_native_skills() -> None:
             "Codex note: when this recipe says to run another `/...` command, "
             "invoke the matching `cmd_*` skill for that path.\n\n"
             f"{ADVISOR_RUBRIC_POINTER}\n\n"
+            f"{SUBAGENT_WAIT_CONTRACT}\n"
             f"{body}\n"
         )
         (skill_dir / "SKILL.md").write_text(content, encoding="utf-8")
@@ -879,7 +905,8 @@ def write_codex_global_guidance() -> None:
         "- When validating container availability, run both `docker info` and a real smoke check such as `docker run --rm hello-world` or a minimal `docker build`.",
         "- If `docker` resolves to the Podman compatibility CLI, that is acceptable. The common failure mode is missing runtime environment, not missing Docker Engine.",
     ]
-    (CODEX_DIR / "global-guidance.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    guidance = "\n".join(lines) + "\n\n" + SUBAGENT_WAIT_CONTRACT
+    (CODEX_DIR / "global-guidance.md").write_text(guidance.rstrip() + "\n", encoding="utf-8")
     print(f"Generated Codex global guidance: {CODEX_DIR / 'global-guidance.md'}")
 
 
@@ -963,9 +990,11 @@ def migrate_mcp_and_config() -> None:
         "project_doc_fallback_filenames = [\"CLAUDE.md\", \"GEMINI.md\"]",
         "",
         "[agents]",
-        "# Keep fan-out bounded; subagents each run their own model/tool loop.",
-        "max_threads = 4",
+        "# Keep fan-out bounded; prompt contracts require terminal results before continuation.",
+        "enabled = true",
+        "max_concurrent_threads_per_session = 4",
         "max_depth = 1",
+        "interrupt_message = true",
         "[features]",
         "hooks = true",
         "",

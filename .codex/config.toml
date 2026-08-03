@@ -12,8 +12,10 @@ tool_output_token_limit = 8192
 project_doc_fallback_filenames = ["CLAUDE.md", "GEMINI.md"]
 
 [agents]
-# Keep fan-out bounded; subagents each run their own model/tool loop.
-max_threads = 4
+# Keep fan-out bounded; prompt contracts require terminal results before continuation.
+enabled = true
+max_concurrent_threads_per_session = 4
 max_depth = 1
+interrupt_message = true
 [features]
 hooks = true

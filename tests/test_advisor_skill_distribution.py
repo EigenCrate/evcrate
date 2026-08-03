@@ -12,7 +12,7 @@ from pathlib import Path
 from distribution.context import DistributionContext
 from distribution.contracts import DistributionAction, VerifiedArtifact
 from distribution.publish import publish_diff
-from migrate_claude_to_codex import parse_markdown_with_frontmatter
+from migrate_claude_to_codex import SUBAGENT_WAIT_CONTRACT, parse_markdown_with_frontmatter
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -94,6 +94,33 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 content = command_skill.read_text(encoding="utf-8")
                 self.assertEqual(content.count(POINTER), 1, command_skill.as_posix())
                 self.assertNotIn("advisor_consult", content)
+
+    def test_generated_commands_workflows_agents_and_config_wait_for_terminal_results(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.run_migrator(root)
+
+            command = (root / ".agents/skills/cmd_cook/SKILL.md").read_text(encoding="utf-8")
+            code_command = (root / ".agents/skills/cmd_code/SKILL.md").read_text(encoding="utf-8")
+            workflow = (root / ".codex/workflows/orchestration-protocol.md").read_text(encoding="utf-8")
+            agent = (root / ".codex/agents/planner.toml").read_text(encoding="utf-8")
+            guidance = (root / ".codex/global-guidance.md").read_text(encoding="utf-8")
+            config = (root / ".codex/config.toml").read_text(encoding="utf-8")
+
+            for generated in (command, guidance):
+                self.assertIn(SUBAGENT_WAIT_CONTRACT, generated)
+            self.assertIn("Subagent Completion Contract", workflow)
+            self.assertIn('"No agents completed yet" is a non-terminal poll result', workflow)
+            self.assertIn("preserve the agent identity", workflow)
+            self.assertIn("Wait-loop protocol", code_command)
+            self.assertIn('"No agents completed yet"', code_command)
+            self.assertIn("cycle counter advances only after a terminal review result", code_command)
+            self.assertIn("Return a terminal report", code_command)
+            self.assertIn("## Subagent Completion Contract", agent)
+            self.assertIn("wait for all N to finish", agent)
+            self.assertIn("max_concurrent_threads_per_session = 4", config)
+            self.assertIn("interrupt_message = true", config)
+            self.assertNotIn("max_threads = 4", config)
 
     def test_generated_target_contains_no_advisor_runtime_or_wiring(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

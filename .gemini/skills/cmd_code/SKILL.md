@@ -40,6 +40,10 @@ Description: ⚡⚡⚡ Start coding & testing an existing plan
 Task(subagent_type="[type]", prompt="[task description]", description="[brief]")
 ```
 
+**Blocking delegation rule:** Every Task/subagent call is synchronous. The parent must wait for the terminal response, verify the requested report/artifact and validation status, and only then continue. For parallel calls, explicitly say **wait for all agents**, collect one terminal result per call, and stop on any interrupted, timed-out, missing, or partial result.
+
+**Wait-loop protocol:** After each Task call, record the returned agent identity and use the native wait operation for that same agent. A response such as **"No agents completed yet"** is expected polling feedback, not a timeout: immediately wait again. Do not use shell `sleep`, start another task, ask for approval, synthesize a score, restart, or interrupt the agent while it is active. Polling intervals and the three-review-cycle limit do not end the gate; the cycle counter advances only after a terminal review result and a user fix decision. If the parent runtime terminates first, report the review gate incomplete with the agent identity and no fabricated result.
+
 ---
 
 ## Workflow Sequence
@@ -95,7 +99,9 @@ Mark Step 3 complete in TodoWrite, mark Step 4 in_progress.
 
 ## Step 4: Code Review & Approval ⏸ BLOCKING GATE
 
-Call `code-reviewer` subagent: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
+Call exactly one `code-reviewer` subagent per review cycle: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return a terminal report with score (X/10), critical issues list, warnings list, suggestions list, reviewed files, validation commands/results, and unresolved questions. Do not return a progress-only response."
+
+**Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
