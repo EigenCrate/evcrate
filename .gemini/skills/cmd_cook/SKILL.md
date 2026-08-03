@@ -43,6 +43,8 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 - `/code` owns file edits, compile/typecheck, tests, code review, approval, docs/project updates, and finalization.
 - Do not edit code directly from `/cook`. Use `/code <plan-path>` after the plan is ready.
 
+**Subagent synchronization:** Treat every planner, researcher, scout, tester, debugger, reviewer, project-manager, or docs-manager delegation as a blocking call. Wait for the terminal result, verify the requested report/artifact, and do not hand off, continue, or finalize from partial output. For parallel work, wait for every requested agent and require one result per agent.
+
 ## Workflow
 
 ### 1. Intake

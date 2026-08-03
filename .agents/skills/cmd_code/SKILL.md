@@ -12,6 +12,19 @@ Codex note: when this recipe says to run another `/...` command, invoke the matc
 
 For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
 
+## Subagent Completion Contract
+
+Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
+
+- Parallel prompt format: **spawn N agents; wait for all N to finish; collect one terminal result from each; then summarize**.
+- Wait protocol: use the native agent wait/poll operation for the same agent set. **"No agents completed yet" is a non-terminal poll result; wait again.** Do not treat it as a timeout, sleep instead of polling, restart, interrupt, or advance the workflow.
+- A polling interval or retry count is not a delegation deadline. Do not invent a wall-clock limit (including 180 seconds) for a blocking gate. Continue polling until a terminal result, explicit user stop, or an actual parent-runtime termination.
+- Treat an interrupted, timed-out, missing, or partial result as a failed gate. Do not continue from partial work or silently skip/restart the agent.
+- Sequential prompt format: **run one agent; wait for its terminal result; verify the report/artifacts; then run the next agent**.
+- Every delegated prompt must define scope, file ownership, expected report/artifact, and validation signal.
+- A spawn acknowledgement, progress event, or file change does not mean the agent completed. Completion requires the terminal response and requested validation.
+- If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
+
 **MUST READ** `AGENTS.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <plan>{{args}}</plan>
 
@@ -43,6 +56,10 @@ For high-impact architecture, security, debugging, or review decisions, consider
 ```
 Ask Codex to spawn a subagent with type="[type]", prompt="[task description]", description="[brief]")
 ```
+
+**Blocking delegation rule:** Every Task/subagent call is synchronous. The parent must wait for the terminal response, verify the requested report/artifact and validation status, and only then continue. For parallel calls, explicitly say **wait for all agents**, collect one terminal result per call, and stop on any interrupted, timed-out, missing, or partial result.
+
+**Wait-loop protocol:** After each Task call, record the returned agent identity and use the native wait operation for that same agent. A response such as **"No agents completed yet"** is expected polling feedback, not a timeout: immediately wait again. Do not use shell `sleep`, start another task, ask for approval, synthesize a score, restart, or interrupt the agent while it is active. Polling intervals and the three-review-cycle limit do not end the gate; the cycle counter advances only after a terminal review result and a user fix decision. If the parent runtime terminates first, report the review gate incomplete with the agent identity and no fabricated result.
 
 ---
 
@@ -99,7 +116,9 @@ Mark Step 3 complete in update_plan, mark Step 4 in_progress.
 
 ## Step 4: Code Review & Approval ⏸ BLOCKING GATE
 
-Call `code-reviewer` subagent: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
+Call exactly one `code-reviewer` subagent per review cycle: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return a terminal report with score (X/10), critical issues list, warnings list, suggestions list, reviewed files, validation commands/results, and unresolved questions. Do not return a progress-only response."
+
+**Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
 **Interactive Review-Fix Cycle (max 3 cycles):**
 

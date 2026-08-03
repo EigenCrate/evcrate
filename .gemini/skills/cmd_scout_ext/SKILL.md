@@ -24,6 +24,8 @@ RELEVANT_FILE_OUTPUT_DIR: Use `Report:` from `## Naming` section
   - `opencode run "[prompt]" --model opencode/grok-code` (if count > 3 and count < 6)
   - if count >= 6, spawn `Explore` subagents to search the codebase in parallel
 
+The parent agent must wait for all requested scout agents or external searches to return terminal results before synthesizing the report. Missing, interrupted, timed-out, or partial results do not satisfy the scout gate.
+
 **Why use external agentic tools?**
 - External agentic tools are faster and more efficient when using LLMs with large context windows (1M+ tokens).
 
@@ -36,5 +38,6 @@ RELEVANT_FILE_OUTPUT_DIR: Use `Report:` from `## Naming` section
 - IMPORTANT: That means with the `Task` tool, you'll immediately call the Bash tool to run the respective agentic coding tool (gemini, opencode, gemini, etc.)
 - IMPORTANT: Instruct the agents to quickly search the codebase for files needed to complete the task. This isn't about a full blown search, just a quick search to find the files needed to complete the task.
 - Instruct the subagent to use a timeout of 3 minutes for each agent's bash call. Skip any agents that don't return within the timeout, don't restart them.
+- Report every skipped or missing result and stop before downstream work; retry only as an explicit controlled retry.
 - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
