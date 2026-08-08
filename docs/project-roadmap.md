@@ -79,9 +79,9 @@ Enabled Windows users to use Claude Code statusline functionality through multip
 - Advanced configuration examples
 - 380+ lines of comprehensive guidance
 
-#### Sub-Task: Refactor Distribute Script to Python
-**Status:** 🔄 In Progress | **Completion Target:** Jul 2026
-**Progress:** 60%
+#### Sub-Task: Refactor Distribute Script to Python and HOME Publication
+**Status:** ✅ COMPLETE | **Completed:** 2026-08-08
+**Progress:** 100%
 
 Refactor the legacy bash distribution script to a cross-platform Python script (`distribute.py`) to run natively on Windows, macOS, and Linux.
 
@@ -91,10 +91,11 @@ Refactor the legacy bash distribution script to a cross-platform Python script (
 - `distribute_sync.py` - Asset tree synchronization and cleanups
 - `distribute_hooks.py` - Pre-tool javascript wrapper generations and settings.json hook adaptation
 - Command-to-Skill converter implementation to migrate legacy slash commands to Antigravity skills
-- 1 of 3 implementation phases complete:
+- All implementation phases complete:
   - Phase 1: Refactor Script to Python (COMPLETE - 2026-06-29)
-  - Phase 2: NPM & Release Integration (Pending)
-  - Phase 3: Testing & Validation (Pending)
+  - Phase 2: NPM & Release Integration (COMPLETE - 2026-08-08)
+  - Phase 3: Testing & Validation (COMPLETE - 2026-08-08)
+  - Nested agent source and verified HOME publication (COMPLETE - 2026-08-08)
 
 **Features:**
 - ✅ Platform-independent python implementation
@@ -242,7 +243,7 @@ Enterprise-grade features and deployment options.
 - ✅ Skill-Only Advisor Replacement — Phase 2 (DONE, 2026-08-02 21:30 +0700): static packaging, pointer, runtime-absence, idempotence, preservation, and compatibility documentation complete. Validation: 52/52 tests passed via `npm test`; code review 10/10 approved. Removed `advisor_consult` callers must use explicit `$advisor-strategy`; no provider/model, App Server, MCP, or app invocation.
 
 ### Recent Additions (2026-08-03)
-- ✅ Claude HOME Distribution (COMPLETE): complete repository `.claude` tree is source-backed, verified through build/check, and published through the generic HOME distribution pipeline with unmanaged HOME preservation. Validation: targeted tests 63/63, `npm test` 69/69, `distribute.py --build` and `--check` passed; temporary HOME dry-run included 855 Claude entries without mutating `HOME/.claude`; code review 9/10 with no critical issues.
+- ✅ Claude HOME Distribution (COMPLETE): complete `.evcrate/source/.claude` tree is source-backed, verified through build/check, and published through the generic HOME distribution pipeline with unmanaged HOME preservation. Validation: targeted tests 63/63, `npm test` 69/69, `distribute.py --build` and `--check` passed; temporary HOME dry-run included 855 Claude entries without mutating `HOME/.claude`; code review 9/10 with no critical issues.
 
 ### Recent Additions (2026-07-18)
 - ✅ Refactor EVCrate Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.evcrate.json`; phase 4 remains pending.
@@ -263,7 +264,7 @@ Enterprise-grade features and deployment options.
 
 ### In Development
 - ✅ Skill-Only Advisor Replacement — Phase 2 validation/review complete (52/52 tests, 10/10 review). This supersedes the former Codex advisor broker runtime design.
-- 🔄 Refactor Distribute Script to Python (Phase 2 & 3): Integration with NPM package.json scripts and validation.
+- ✅ Refactor Distribute Script and Nested HOME Publication: npm integration, root-clean agent source layout, build/check verification, and HOME publication complete.
 - 🔄 Additional cloud platform integrations
 - 🔄 UI/UX improvements
 - 🔄 Enhanced error handling patterns

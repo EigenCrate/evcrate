@@ -4,14 +4,14 @@
   "description": "A comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code and Open Code).",
   "main": "index.js",
   "scripts": {
-    "distribute": "python3 distribute.py",
+    "distribute": "python3 distribute.py --all",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
     "distribute:publish": "python3 distribute.py --publish",
     "distribute:all": "python3 distribute.py --all",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
-    "test": "python3 -m unittest tests.test_distribution_build tests.test_distribution_cli tests.test_distribution_publish tests.test_distribution_publish_symlinks tests.test_advisor_skill_distribution tests.test_migrate_claude_to_gemini",
+    "test": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"
@@ -34,15 +34,16 @@
   },
   "homepage": "https://github.com/NEBULEA-M/evcrate#readme",
   "files": [
-    ".claude/",
-    ".opencode/",
+    ".evcrate/source/.claude/",
+    ".evcrate/source/.opencode/",
+    ".evcrate/source/AGENTS.md",
+    ".evcrate/source/CLAUDE.md",
+    ".evcrate/source/GEMINI.md",
     "plans/",
-    "AGENTS.md",
-    "CLAUDE.md",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    ".claude/metadata.json"
+    ".evcrate/source/.claude/metadata.json"
   ],
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",

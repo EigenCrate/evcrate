@@ -26,7 +26,7 @@ Slash commands are powerful shortcuts that trigger specialized AI agents and wor
 /<command-name> [arguments]
 ```
 
-Commands are stored in `.claude/commands/` directory and can be customized for your project needs.
+Canonical commands are stored in `.evcrate/source/.claude/commands/` and can be customized for your project needs.
 
 ### Benefits
 
@@ -1275,7 +1275,7 @@ Commands work best in sequences:
 
 ### Custom Commands
 
-You can create your own commands by adding Markdown files to `.claude/commands/`:
+You can create your own commands by adding Markdown files to `.evcrate/source/.claude/commands/`:
 
 ```markdown
 ---
@@ -1293,7 +1293,7 @@ Use $1, $2, etc. for specific arguments.
 Organize commands in subdirectories:
 
 ```
-.claude/commands/
+.evcrate/source/.claude/commands/
 ├── design/
 │   ├── fast.md
 │   ├── good.md
@@ -1313,7 +1313,7 @@ Usage: `/design:fast`, `/fix:hard`, `/custom:your-command`
 
 ### Command Not Found
 
-- Check if command file exists in `.claude/commands/`
+- Check if command file exists in `.evcrate/source/.claude/commands/`
 - Verify frontmatter syntax is correct
 - Ensure file has `.md` extension
 
@@ -1321,11 +1321,11 @@ Usage: `/design:fast`, `/fix:hard`, `/custom:your-command`
 
 - Review command arguments syntax
 - Check if required MCP servers are installed
-- Verify project context in `CLAUDE.md`
+- Verify project context in `.evcrate/source/CLAUDE.md`
 
 ### Agent Not Responding
 
-- Check if agent is defined in `.opencode/agent/`
+- Check if agent is defined in `.evcrate/source/.opencode/agent/`
 - Verify agent has necessary tool permissions
 - Review error messages for specific issues
 

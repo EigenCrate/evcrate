@@ -23,7 +23,7 @@ examples/**/node_modules/
 
 # misc
 .DS_Store
-/.antigravity/
+/.evcrate/source/.antigravity/
 *.pem
 
 # debug
@@ -70,8 +70,8 @@ test-ck
 __pycache__
 prompt.md
 
-# Gemini CLI settings (symlink to .claude/.mcp.json)
-.gemini/settings.json
+# Gemini CLI settings (symlink to .evcrate/source/.claude/.mcp.json)
+/.evcrate/source/.gemini/settings.json
 
 # build output
 /dist/

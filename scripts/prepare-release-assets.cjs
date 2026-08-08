@@ -18,7 +18,8 @@ const { execFileSync } = require('child_process');
 
   const projectRoot = process.cwd();
   const packageJsonPath = path.join(projectRoot, 'package.json');
-  const claudeDir = path.join(projectRoot, '.claude');
+  const sourceRoot = path.join(projectRoot, '.evcrate', 'source');
+  const claudeDir = path.join(sourceRoot, '.claude');
   const metadataPath = path.join(claudeDir, 'metadata.json');
   const distDir = path.join(projectRoot, 'dist');
   const archivePath = path.join(distDir, 'evcrate.zip');
@@ -76,10 +77,12 @@ const { execFileSync } = require('child_process');
     execFileSync('python3', ['distribute.py', '--check'], { cwd: projectRoot, stdio: 'inherit' });
 
     const archiveTargets = [
-      '.gemini',
-      '.codex',
-      '.agents',
-      '.antigravity',
+      '.evcrate/source/.gemini',
+      '.evcrate/source/.codex',
+      '.evcrate/source/.agents',
+      '.evcrate/source/.antigravity',
+      '.evcrate/source/AGENTS.md',
+      '.evcrate/source/GEMINI.md',
       '.evcrate/build-manifest.json',
       '.evcrate/targets'
     ];

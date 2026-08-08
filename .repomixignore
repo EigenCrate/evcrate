@@ -11,8 +11,13 @@ __tests__/*
 __pycache__/*
 node_modules/*
 
-.opencode/*
-.claude/*
+.evcrate/source/.opencode/*
+.evcrate/source/.claude/*
+.evcrate/source/.codex/*
+.evcrate/source/.agents/*
+.evcrate/source/.gemini/*
+.evcrate/source/.antigravity/*
+.evcrate/source/*.md
 .serena/*
 .pnpm-store/*
 .github/*

@@ -17,6 +17,13 @@ from .staging import BUILD_MANIFEST_PATH, generate_stage
 GENERATED_DOCS = ("AGENTS.md", "GEMINI.md")
 
 
+def _assert_legacy_root_clean(context: DistributionContext) -> None:
+    legacy = [path for path in context.legacy_local_paths if path.exists() or path.is_symlink()]
+    if legacy:
+        names = ", ".join(path.name for path in legacy)
+        raise BuildError(f"Legacy project-local agent paths must be moved under .evcrate/source: {names}")
+
+
 def _run_migrator(context: DistributionContext, script_name: str, env: dict[str, str]) -> None:
     script = context.repository / script_name
     if not script.is_file():
@@ -109,6 +116,7 @@ def run_local_build() -> VerifiedArtifact:
     """Generate local artifacts in isolation, then promote only complete output."""
 
     base_context = create_context(DistributionAction.BUILD)
+    _assert_legacy_root_clean(base_context)
     with repository_lock(base_context.repository):
         with staged_build_root(base_context.repository) as stage:
             context = _stage_context(DistributionAction.BUILD, stage)
@@ -117,9 +125,9 @@ def run_local_build() -> VerifiedArtifact:
             for document in GENERATED_DOCS:
                 staged_document = context.stage_project_docs / document
                 if staged_document.exists():
-                    pairs.append((staged_document, context.repository / document))
-                elif (context.repository / document).exists():
-                    pairs.append((None, context.repository / document))
+                    pairs.append((staged_document, context.local_path(document)))
+                elif context.local_path(document).exists():
+                    pairs.append((None, context.local_path(document)))
             pairs.append((context.stage / BUILD_MANIFEST_PATH, context.repository / BUILD_MANIFEST_PATH))
             _promote_transaction(pairs)
             return VerifiedArtifact(repository=context.repository, roots=context.local_roots)
@@ -129,6 +137,7 @@ def run_local_check() -> None:
     """Compare staged output with local artifacts without writing repository or HOME."""
 
     base_context = create_context(DistributionAction.CHECK)
+    _assert_legacy_root_clean(base_context)
     with repository_lock(base_context.repository):
         with staged_build_root(base_context.repository, prefix=".evcrate-check-", recover=False) as stage:
             context = _stage_context(DistributionAction.CHECK, stage)
@@ -140,7 +149,7 @@ def run_local_check() -> None:
             ]
             for document in GENERATED_DOCS:
                 staged_document = context.stage_project_docs / document
-                local_document = context.repository / document
+                local_document = context.local_path(document)
                 if staged_document.exists() != local_document.exists() or (
                     staged_document.exists() and staged_document.read_bytes() != local_document.read_bytes()
                 ):

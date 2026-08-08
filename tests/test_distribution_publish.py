@@ -345,7 +345,7 @@ class DistributionPublishTest(unittest.TestCase):
         content = script.read_text(encoding="utf-8")
         self.assertIn("['distribute.py', '--build']", content)
         self.assertIn("['distribute.py', '--check']", content)
-        self.assertIn("'.antigravity'", content)
+        self.assertIn("'.evcrate/source/.antigravity'", content)
         self.assertNotIn("migrate_claude_to_gemini.py', {", content)
         self.assertNotIn("migrate_claude_to_codex.py', {", content)
 

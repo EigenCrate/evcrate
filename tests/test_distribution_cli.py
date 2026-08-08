@@ -111,7 +111,7 @@ class DistributionCliTest(unittest.TestCase):
 
     def test_check_is_read_only_for_project_docs_and_home(self) -> None:
         context = create_context(DistributionAction.CHECK)
-        documents = [context.repository / name for name in gates.GENERATED_DOCS]
+        documents = [context.local_path(name) for name in gates.GENERATED_DOCS]
         before = {path: path.read_bytes() if path.exists() else None for path in documents}
         with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
             def generate(stage_context: object) -> VerifiedArtifact:
@@ -201,8 +201,8 @@ class DistributionCliTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             root, home = Path(temp) / "repo", Path(temp) / "home"
-            (root / ".gemini").mkdir(parents=True)
-            (root / ".gemini" / "settings.json").write_text('{"hooks": {}}', encoding="utf-8")
+            (root / ".evcrate/source/.gemini").mkdir(parents=True)
+            (root / ".evcrate/source/.gemini" / "settings.json").write_text('{"hooks": {}}', encoding="utf-8")
             context = DistributionContext(
                 action=DistributionAction.PUBLISH,
                 repository=root,

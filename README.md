@@ -61,7 +61,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - **[Commands Reference](./guide/COMMANDS.md)** - Complete guide to all available slash commands
 
 ### 📖 Additional Resources
-- **[CLAUDE.md](./CLAUDE.md)** - Development instructions and workflows for AI agents
+- **[CLAUDE.md](./.evcrate/source/CLAUDE.md)** - Canonical development instructions and workflows for AI agents
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
 - **[Windows Statusline Support](./docs/statusline-windows-support.md)** - Windows compatibility guide for Claude Code statusline
 - **[Statusline Architecture](./docs/statusline-architecture.md)** - Technical documentation for statusline implementation
@@ -110,35 +110,22 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 ## Project Structure
 
 ```
-├── .claude/                 # Claude Code configuration
-│   ├── agents/             # Claude Code agents
-│   ├── commands/           # Claude Code commands
-│   ├── hooks/              # Claude Code hooks
-│   ├── skills/             # Claude Code skills
-│   ├── CLAUDE.md           # Global development instructions
-│   └── send-discord.sh     # Notification script
-├── .opencode/              # Open Code CLI agent definitions
-│   ├── agent/              # Specialized agent configurations
-│   │   ├── planner.md      # Technical planning agent
-│   │   ├── researcher.md   # Research and analysis agent
-│   │   ├── tester.md       # Testing and validation agent
-│   │   ├── debugger.md     # Issue analysis agent
-│   │   ├── code-reviewer.md# Code quality agent
-│   │   ├── docs-manager.md # Documentation agent
-│   │   ├── git-manager.md  # Version control agent
-│   │   └── project-manager.md # Progress tracking agent
-│   └── command/            # Custom command definitions
+├── .evcrate/source/         # Physical local config root (not project-discovered)
+│   ├── .claude/            # Canonical Claude Code source
+│   ├── .codex/             # Generated Codex artifact
+│   ├── .agents/            # Generated Pi skill artifact
+│   ├── .gemini/            # Generated Gemini artifact
+│   ├── .antigravity/       # Generated Antigravity artifact
+│   ├── .opencode/          # OpenCode compatibility source
+│   ├── CLAUDE.md           # Canonical instructions
+│   ├── AGENTS.md           # Generated Codex instructions
+│   └── GEMINI.md           # Generated Gemini instructions
+├── .evcrate/targets/       # Logical target manifests and overlays
+├── distribution/           # Build, check, and HOME publication code
 ├── docs/                   # Project documentation
-│   ├── codebase-summary.md # Auto-generated codebase overview
-│   ├── code-standards.md   # Development standards
-│   ├── project-overview-pdr.md # Product requirements
-│   └── development-roadmap.md  # Project roadmap
 ├── plans/                  # Implementation plans and reports
-│   ├── templates/          # Plan templates
-│   └── reports/            # Agent-to-agent communication
-├── CLAUDE.md              # Project-specific Claude instructions
-├── AGENTS.md              # Agent coordination guidelines
-└── README.md              # This file
+├── README.md               # This file
+└── package.json            # npm commands and release metadata
 ```
 
 ## The AI Agent Team
@@ -275,8 +262,8 @@ planner agent spawns:
 # Update documentation
 /docs
 
-# Generate codebase summary
-repomix  # Creates ./docs/codebase-summary.md
+# Generate a repository compaction snapshot
+repomix  # Regenerates the configured compaction output
 
 # Review project status
 /watzup
@@ -284,15 +271,11 @@ repomix  # Creates ./docs/codebase-summary.md
 
 ## Configuration Files
 
-### CLAUDE.md
-Project-specific instructions for Claude Code. Customize this file to define:
-- Project architecture guidelines
-- Development standards and conventions
-- Agent coordination protocols
-- Specific workflows for your project
+### `.evcrate/source/CLAUDE.md`
+Canonical project-specific instructions for Claude Code. Edit this file, then run the distribution build to regenerate target artifacts under `.evcrate/source/`.
 
-### .opencode/agent/*.md
-Individual agent configurations defining:
+### `.evcrate/source/.opencode/agent/*.md`
+Individual OpenCode agent configurations defining:
 - Agent expertise and responsibilities
 - Interaction patterns
 - Output formats
@@ -333,24 +316,24 @@ The Gemini skills check for `GEMINI_API_KEY` in the following order (priority fr
    echo 'GEMINI_API_KEY=your-api-key-here' > .env
    ```
 
-3. **`.claude/.env`** (For Claude-specific configuration)
+3. **`.evcrate/source/.claude/.env`** (For Claude-specific configuration)
    ```bash
    # Copy example and edit
-   cp .claude/.env.example .claude/.env
-   # Then edit .claude/.env and set your API key
+   cp .evcrate/source/.claude/.env.example .evcrate/source/.claude/.env
+   # Then edit .evcrate/source/.claude/.env and set your API key
    ```
 
-4. **`.claude/skills/.env`** (For shared skills configuration)
+4. **`.evcrate/source/.claude/skills/.env`** (For shared skills configuration)
    ```bash
    # Copy example and edit
-   cp .claude/skills/.env.example .claude/skills/.env
-   # Then edit .claude/skills/.env and set your API key
+   cp .evcrate/source/.claude/skills/.env.example .evcrate/source/.claude/skills/.env
+   # Then edit .evcrate/source/.claude/skills/.env and set your API key
    ```
 
 5. **Individual Skill Directory `.env`** (For skill-specific keys)
    ```bash
    # Example for gemini-audio skill
-   cp .claude/skills/gemini-audio/.env.example .claude/skills/gemini-audio/.env
+   cp .evcrate/source/.claude/skills/gemini-audio/.env.example .evcrate/source/.claude/skills/gemini-audio/.env
    # Then edit and set your API key
    ```
 
@@ -401,11 +384,11 @@ claude "What objects are in this image: photo.jpg"
 
 ### Pre-requisites
 
-In EVCrate, you need to set up the MCP servers in `.claude/.mcp.json`.
+In EVCrate, configure MCP servers in `.evcrate/source/.claude/.mcp.json`.
 
 Copy the example file:
 ```bash
-mv .claude/.mcp.json.example .claude/.mcp.json
+mv .evcrate/source/.claude/.mcp.json.example .evcrate/source/.claude/.mcp.json
 ```
 
 Then add your MCP servers, below are some examples:
@@ -456,15 +439,15 @@ Then add your MCP servers, below are some examples:
 - **DRY**: Don't Repeat Yourself - eliminate code duplication
 
 ### Configuration & Baseline Management
-- **Canonical Authoring**: Shared Claude Code configuration, hooks, workflows, commands, and skills are authored in `.claude/`. Target manifests/overlays in `.evcrate/targets/` are distribution metadata; `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` are generated outputs and must not be hand-edited.
-- **Two Distribution Gates**: Run `python3 distribute.py --build` to regenerate local artifacts, `--check` to verify them without writes, and `--publish` to publish an existing verified build to HOME. After changing `.claude/`, use `python3 distribute.py --all` (or `--build` then `--publish`); `--publish` requires that verified build and never runs migrators.
-- **HOME Publication**: The local `.claude` artifact remains complete, while HOME publication sanitizes `$HOME/.claude` by excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives), retaining skill package directories and nested resources, and removing stale managed copies. The Pi-compatible `.agents/skills/` tree continues to publish to `$HOME/.agents/skills/`; unmanaged files remain preserved according to target policy.
+- **Canonical Authoring**: Shared Claude Code configuration, hooks, workflows, commands, and skills are authored in `.evcrate/source/.claude/`. Target manifests/overlays in `.evcrate/targets/` are distribution metadata; generated artifacts remain under `.evcrate/source/` so no agent CLI discovers them as project-local configuration.
+- **Two Distribution Gates**: Run `python3 distribute.py --build` to regenerate nested local artifacts, `--check` to verify them without writes, and `--publish` to publish an existing verified build to HOME. After changing `.evcrate/source/.claude/`, use `python3 distribute.py --all` (or `--build` then `--publish`); `--publish` requires that verified build and never runs migrators.
+- **HOME Publication**: The nested `.evcrate/source/.claude` artifact remains complete, while HOME publication sanitizes `$HOME/.claude` by excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives), retaining skill package directories and nested resources, and removing stale managed copies. The Pi-compatible `.evcrate/source/.agents/skills/` tree continues to publish to `$HOME/.agents/skills/`; unmanaged files remain preserved according to target policy.
 - **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
 - **Pi Settings**: Pi discovers `$HOME/.agents/skills/` globally; publication does not create or modify `~/.pi/agent/settings.json`.
-- **No Direct Downstream Edits**: Do not edit `.gemini/`, `.agents/`, or `.codex/` directly. They are generated automatically by the local build gate.
+- **No Direct Downstream Edits**: Do not edit `.evcrate/source/.gemini/`, `.evcrate/source/.agents/`, or `.evcrate/source/.codex/` directly. They are generated automatically by the local build gate.
 - **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
-- **Legacy HOME Cleanup Window**: Managed publication retains the pre-manifest cleanup lists for this transition phase; manifest-scoped deletion and user-root preservation land in the Phase 3 publish gate.
-- **Track Downstream Assets**: Generated folders (`.gemini/`, `.agents/`, `.codex/`) must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions.
+- **HOME Cleanup**: Managed publication uses manifest-scoped deletion and preservation while keeping unrelated user-owned HOME paths intact.
+- **Track Downstream Assets**: Generated folders under `.evcrate/source/` must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions.
 
 ### Code Quality
 - All code changes go through automated review
@@ -551,8 +534,8 @@ claude "Plan the next development phase"
 ## Customization Guide
 
 ### 1. Project Setup
-- Update `CLAUDE.md` with your project specifics
-- Modify agent configurations in `.opencode/agent/`
+- Update `.evcrate/source/CLAUDE.md` with your project specifics
+- Modify agent configurations in `.evcrate/source/.opencode/agent/`
 - Customize plan templates in `plans/templates/`
 
 ### 2. Agent Specialization

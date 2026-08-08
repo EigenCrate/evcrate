@@ -12,40 +12,34 @@ evcrate is a comprehensive boilerplate template for building professional softwa
 
 ```
 evcrate/
-├── .claude/               # Claude Code configuration
-│   ├── agents/           # Specialized agent definitions (14 agents)
-│   ├── commands/         # Slash command implementations (50+ commands)
-│   ├── hooks/            # Git hooks and scripts
-│   ├── skills/           # Specialized skills library (20+ skills)
-│   └── workflows/        # Development workflow definitions
-├── .opencode/            # Open Code CLI configuration
-│   ├── agent/           # Agent definitions for OpenCode (13 agents)
-│   └── command/         # Command definitions for OpenCode
-├── .github/             # GitHub Actions workflows
-│   └── workflows/       # CI/CD automation
-├── docs/                # Project documentation
-│   └── research/        # Research reports directory
-├── examples/            # Isolated example apps for validating skills and workflows
-│   └── simple-web-testing-demo/ # Vite + TypeScript browser release-gate demo with Vitest and Playwright checks
-├── guide/               # User guides and references
-├── plans/               # Implementation plans and reports
-│   ├── reports/         # Agent-to-agent communication
-│   └── templates/       # Plan templates
-├── CLAUDE.md           # Project-specific Claude instructions
-├── distribute.py       # Build/check/publish distribution gate entrypoint
-├── distribution/       # Immutable path context, gate contracts, and gate orchestration
+├── .evcrate/source/      # Physical local config root; not project-discovered
+│   ├── .claude/          # Canonical Claude Code source
+│   ├── .codex/           # Generated Codex artifact
+│   ├── .agents/          # Generated Pi artifact
+│   ├── .gemini/          # Generated Gemini artifact
+│   ├── .antigravity/     # Generated Antigravity artifact
+│   ├── .opencode/        # OpenCode compatibility source
+│   ├── CLAUDE.md         # Canonical project instructions
+│   ├── AGENTS.md         # Generated Codex instructions
+│   └── GEMINI.md         # Generated Gemini instructions
+├── .evcrate/targets/     # Logical target manifests and overlays
+├── docs/                 # Project documentation
+├── guide/                # User guides and references
+├── plans/                # Implementation plans and reports
+├── distribute.py         # Build/check/publish distribution gate entrypoint
+├── distribution/         # Immutable path context, gate contracts, and gate orchestration
 ├── migrate_claude_to_codex.py   # Codex target generator
 ├── migrate_claude_to_gemini.py  # Gemini target generator
-├── README.md           # Project overview
-├── package.json        # Node.js dependencies
-└── repomix-output.xml  # Codebase compaction file
+├── README.md             # Project overview
+├── package.json          # Node.js dependencies
+└── repomix-output.xml    # Codebase compaction file
 ```
 
 ### Distribution gates
 
-The distribution entrypoint separates local generation from HOME publication. `.claude` is a source-backed target: the build gate copies the complete source tree into the finalized local `.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` consumes that complete artifact for `HOME/.claude`, excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources; stale managed copies absent from the current source are removed. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
+The distribution entrypoint separates local generation from HOME publication. `.evcrate/source/.claude` is a source-backed target: the build gate copies the complete source tree into the finalized nested `.evcrate/source/.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` consumes that complete artifact for `HOME/.claude`, excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources; stale managed copies absent from the current source are removed. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
-Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
+Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.evcrate/source/.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
 
 `EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime compatibility retains existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
 
@@ -83,7 +77,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 
 ### 1. Agent Orchestration System
 
-**Claude Code Agents** (`.claude/agents/`):
+**Claude Code Agents** (`.evcrate/source/.claude/agents/`):
 - `planner.md` - Technical planning and architecture
 - `researcher.md` - Research and analysis
 - `tester.md` - Testing and validation
@@ -99,7 +93,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 - `journal-writer.md` - Development journaling
 - `brainstormer.md` - Solution ideation
 
-**OpenCode Agents** (`.opencode/agent/`):
+**OpenCode Agents** (`.evcrate/source/.opencode/agent/`):
 - Similar agent definitions optimized for OpenCode CLI
 - `planner-researcher.md` - Combined planning and research
 - `solution-brainstormer.md` - Advanced brainstorming
@@ -120,7 +114,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 
 ### 3. Skills Library
 
-**Skills Organization** (`.claude/skills/`):
+**Skills Organization** (`.evcrate/source/.claude/skills/`):
 
 **Phase 1 Skill Groups** (Progressive Disclosure Pattern):
 - **DevOps** (`devops/`) - Cloudflare edge platform, Docker containerization, Google Cloud Platform
@@ -149,7 +143,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 - **Ecommerce**: `shopify/`
 - **Development**: `sequential-thinking/`, `skill-creator/`, `google-adk-python/`
 
-**Archived Skills** (`.claude/skills/_archive/20251104-*/`):
+**Archived Skills** (`.evcrate/source/.claude/skills/_archive/20251104-*/`):
 - 14 original skills consolidated into Phase 1 groups
 - Full preservation of original content
 - Available for reference or rollback
@@ -158,7 +152,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 
 ### 4. Workflows
 
-**Primary Workflows** (`.claude/workflows/`):
+**Primary Workflows** (`.evcrate/source/.claude/workflows/`):
 1. **primary-workflow.md**: Core development cycle
    - Code implementation
    - Testing
@@ -186,7 +180,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 ### For Users
 - **README.md**: Project overview and quick start
 - **guide/COMMANDS.md**: Comprehensive command reference (7,073 tokens)
-- **CLAUDE.md**: Development instructions and workflows
+- **.evcrate/source/CLAUDE.md**: Development instructions and workflows
 
 ### For Developers
 - **package.json**: Dependencies and scripts
@@ -204,8 +198,8 @@ The advisor is current-session guidance only: it structures a local decision bri
 - **distribute_sync.py**: Python sync path that preserves user-owned global `~/.codex/.evcrate.json` during normal sync and only replaces it on explicit full sync
 
 ### For Agents
-- **CLAUDE.md**: Primary agent instructions
-- **.claude/workflows/**: Workflow definitions
+- **.evcrate/source/CLAUDE.md**: Primary agent instructions
+- **.evcrate/source/.claude/workflows/**: Workflow definitions
 - **plans/templates/**: Implementation plan templates
 
 ## Development Principles
@@ -320,13 +314,13 @@ None (template project)
 1. `guide/COMMANDS.md` - 7,073 tokens (18.2%)
 2. `CHANGELOG.md` - 4,836 tokens (12.4%)
 3. `README.md` - 3,261 tokens (8.4%)
-4. `.opencode/agent/ui-ux-designer.md` - 2,521 tokens (6.5%)
-5. `.opencode/agent/system-architecture.md` - 1,714 tokens (4.4%)
+4. `.evcrate/source/.opencode/agent/ui-ux-designer.md` - 2,521 tokens (6.5%)
+5. `.evcrate/source/.opencode/agent/system-architecture.md` - 1,714 tokens (4.4%)
 
 ## Integration Capabilities
 
 ### Discord Notifications
-Script: `.claude/hooks/send-discord.sh`
+Script: `.evcrate/source/.claude/hooks/send-discord.sh`
 Purpose: Send project updates to Discord channels
 
 ### GitHub Actions
@@ -342,31 +336,31 @@ Features: Automated releases, changelog generation
 ## Critical Files
 
 ### Configuration
-- `/mnt/data/ws/sharing/evcrate/package.json` - Node.js config
-- `/mnt/data/ws/sharing/evcrate/.releaserc.json` - Release config
-- `/mnt/data/ws/sharing/evcrate/.commitlintrc.json` - Commit linting
-- `/mnt/data/ws/sharing/evcrate/.gitignore` - Git exclusions
-- `/mnt/data/ws/sharing/evcrate/.repomixignore` - Repomix exclusions
+- `package.json` - Node.js config
+- `.releaserc.json` - Release config
+- `.commitlintrc.json` - Commit linting
+- `.gitignore` - Git exclusions
+- `.repomixignore` - Repomix exclusions
 
 ### Documentation
-- `/mnt/data/ws/sharing/evcrate/README.md` - Main project docs
-- `/mnt/data/ws/sharing/evcrate/CLAUDE.md` - Agent instructions
-- `/mnt/data/ws/sharing/evcrate/CHANGELOG.md` - Version history
-- `/mnt/data/ws/sharing/evcrate/guide/COMMANDS.md` - Command reference
+- `README.md` - Main project docs
+- `.evcrate/source/CLAUDE.md` - Agent instructions
+- `CHANGELOG.md` - Version history
+- `guide/COMMANDS.md` - Command reference
 
 ### Migration & Distribution
-- `/mnt/data/ws/sharing/evcrate/distribute.py` - Core distribution runner script
-- `/mnt/data/ws/sharing/evcrate/distribute_sync.py` - Asset, config, and skills sync manager
-- `/mnt/data/ws/sharing/evcrate/distribute_hooks.py` - Hook rewriter and wrapper generator
-- `/mnt/data/ws/sharing/evcrate/distribute_utils.py` - Shared utilities and path config resolver
-- `/mnt/data/ws/sharing/evcrate/migrate_claude_to_codex.py` - Codex migration engine
-- `/mnt/data/ws/sharing/evcrate/migrate_claude_to_gemini.py` - Gemini migration engine
+- `distribute.py` - Core distribution runner script
+- `distribute_sync.py` - Asset, config, and skills sync manager
+- `distribute_hooks.py` - Hook rewriter and wrapper generator
+- `distribute_utils.py` - Shared utilities and path config resolver
+- `migrate_claude_to_codex.py` - Codex migration engine
+- `migrate_claude_to_gemini.py` - Gemini migration engine
 
 ### Workflows
-- `/mnt/data/ws/sharing/evcrate/.claude/workflows/primary-workflow.md`
-- `/mnt/data/ws/sharing/evcrate/.claude/workflows/development-rules.md`
-- `/mnt/data/ws/sharing/evcrate/.claude/workflows/orchestration-protocol.md`
-- `/mnt/data/ws/sharing/evcrate/.claude/workflows/documentation-management.md`
+- `.evcrate/source/.claude/workflows/primary-workflow.md`
+- `.evcrate/source/.claude/workflows/development-rules.md`
+- `.evcrate/source/.claude/workflows/orchestration-protocol.md`
+- `.evcrate/source/.claude/workflows/documentation-management.md`
 
 ## Related Projects
 

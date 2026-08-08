@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -7,6 +10,27 @@ import migrate_claude_to_gemini as migrator
 
 
 class ApplyReplacementsTest(unittest.TestCase):
+    def test_local_mode_writes_only_inside_nested_source_root(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context", encoding="utf-8")
+            env = os.environ.copy()
+            env["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_gemini.py"), "--local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertTrue((source_root / ".gemini/settings.json").is_file())
+            for name in (".gemini",):
+                self.assertFalse((root / name).exists())
+
     def test_standalone_claude_platform_prose_is_migrated(self) -> None:
         self.assertEqual(
             migrator.apply_replacements("Use Claude Code and the CLI."),
@@ -39,7 +63,7 @@ class ApplyReplacementsTest(unittest.TestCase):
         )
 
     def test_gemini_help_command_path_is_migrated_precisely(self) -> None:
-        source = Path(".claude/commands/evcrate-help.md").read_text(encoding="utf-8")
+        source = Path(".evcrate/source/.claude/commands/evcrate-help.md").read_text(encoding="utf-8")
         self.assertIn("python .claude/scripts/ev-help.py", source)
         migrated = migrator.apply_replacements(source)
         self.assertIn("python .gemini/scripts/ev-help.py", migrated)
@@ -52,7 +76,7 @@ class ApplyReplacementsTest(unittest.TestCase):
 
 class MigrateScriptsTest(unittest.TestCase):
     def test_gemini_help_script_keeps_each_project_environment_name_once(self) -> None:
-        source_script = Path(".claude/scripts/ev-help.py").read_text(encoding="utf-8")
+        source_script = Path(".evcrate/source/.claude/scripts/ev-help.py").read_text(encoding="utf-8")
 
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

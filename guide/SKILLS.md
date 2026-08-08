@@ -34,7 +34,7 @@ Skills are invoked automatically when Claude detects relevant context in your re
 claude "How do I implement OAuth with Better Auth?"
 
 # List all available skills
-ls .claude/skills/
+ls .evcrate/source/.claude/skills/
 ```
 
 Skills work seamlessly with slash commands:
@@ -179,15 +179,15 @@ export GEMINI_API_KEY='your-api-key-here'
 echo 'GEMINI_API_KEY=your-api-key-here' > .env
 
 # 3. Claude configuration
-cp .claude/.env.example .claude/.env
-# Edit .claude/.env and add your key
+cp .evcrate/source/.claude/.env.example .evcrate/source/.claude/.env
+# Edit .evcrate/source/.claude/.env and add your key
 
 # 4. Shared skills configuration
-cp .claude/skills/.env.example .claude/skills/.env
-# Edit .claude/skills/.env and add your key
+cp .evcrate/source/.claude/skills/.env.example .evcrate/source/.claude/skills/.env
+# Edit .evcrate/source/.claude/skills/.env and add your key
 
 # 5. Individual skill directory
-cp .claude/skills/gemini-audio/.env.example .claude/skills/gemini-audio/.env
+cp .evcrate/source/.claude/skills/gemini-audio/.env.example .evcrate/source/.claude/skills/gemini-audio/.env
 # Edit and add your key
 ```
 
@@ -732,7 +732,7 @@ claude "Create a skill for [technology/framework]"
 
 Or manually create a skill:
 
-1. Create directory: `.claude/skills/my-skill/`
+1. Create directory: `.evcrate/source/.claude/skills/my-skill/`
 2. Add `SKILL.md` with frontmatter:
    ```markdown
    ---
@@ -766,8 +766,8 @@ Or manually create a skill:
 
 ## Need Help?
 
-- **List skills:** `ls .claude/skills/`
-- **View skill:** `cat .claude/skills/[skill-name]/SKILL.md`
+- **List skills:** `ls .evcrate/source/.claude/skills/`
+- **View skill:** `cat .evcrate/source/.claude/skills/[skill-name]/SKILL.md`
 - **Get help:** Ask Claude "How do I use the [skill-name] skill?"
 - **Create skill:** Use the `skill-creator` skill
 
@@ -776,4 +776,4 @@ Or manually create a skill:
 For more information, see:
 - [Commands Reference](./COMMANDS.md)
 - [Project Documentation](../docs/)
-- [CLAUDE.md](../CLAUDE.md)
+- [CLAUDE.md](../.evcrate/source/CLAUDE.md)

@@ -71,11 +71,11 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertTrue(reference.is_file())
             self.assertEqual(
                 reference.read_bytes(),
-                (REPOSITORY / ".claude/skills/advisor-strategy/references/brief-contract.md").read_bytes(),
+                (REPOSITORY / ".evcrate/source/.claude/skills/advisor-strategy/references/brief-contract.md").read_bytes(),
             )
             frontmatter, generated_body = parse_markdown_with_frontmatter(skill)
             canonical_frontmatter, canonical_body = parse_markdown_with_frontmatter(
-                REPOSITORY / ".claude/skills/advisor-strategy/SKILL.md"
+                REPOSITORY / ".evcrate/source/.claude/skills/advisor-strategy/SKILL.md"
             )
             self.assertEqual(frontmatter["name"], "advisor-strategy")
             self.assertTrue(frontmatter["description"])
@@ -102,7 +102,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
 
     def test_claude_authored_skills_have_pi_discoverable_metadata(self) -> None:
         skipped = {"claude-code", "skill-creator"}
-        for skill_file in sorted((REPOSITORY / ".claude/skills").rglob("SKILL.md")):
+        for skill_file in sorted((REPOSITORY / ".evcrate/source/.claude/skills").rglob("SKILL.md")):
             if skill_file.parent.name in skipped:
                 continue
             frontmatter, _ = parse_markdown_with_frontmatter(skill_file)

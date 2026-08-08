@@ -100,7 +100,7 @@ def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[s
                 raise PublishError(f"Invalid preserved paths for target {manifest.name}") from error
             if len(preserved) != len(raw_preserved):
                 raise PublishError(f"Duplicate preserved paths for target {manifest.name}")
-            local = context.repository / local_name
+            local = context.local_path(local_name)
             home = context.home / safe_home_name
             policies.append((safe_home_name, local, home, preserved, order))
     ordered = sorted(policies, key=lambda value: (value[4], value[0]))

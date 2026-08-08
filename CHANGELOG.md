@@ -5,6 +5,7 @@
 * **orchestration:** require parent agents to poll the same subagent until a terminal result, treat no-result polls as non-terminal, and fail closed on interrupted or partial work across Claude and generated Codex command/workflow prompts.
 * **distribution:** preserve unrelated HOME symlinks while rejecting any symlink that overlaps a managed publication path.
 * **distribution:** rewrite Codex hook and MCP wrapper paths only in the HOME publication view, preserving project-relative local artifacts.
+* **distribution:** move agent configuration under `.evcrate/source`, keep the project root free of CLI discovery paths, and publish verified artifacts to HOME through npm distribution commands.
 
 ### Breaking Changes
 

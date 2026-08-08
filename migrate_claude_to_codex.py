@@ -12,10 +12,23 @@ from pathlib import Path
 from typing import Any
 
 
-CLAUDE_DIR = Path(".claude")
-CODEX_DIR = Path(os.environ.get("CODEX_OUTPUT_DIR", ".codex"))
-AGENTS_DIR = Path(os.environ.get("AGENTS_OUTPUT_DIR", ".agents"))
-PROJECT_DOCS_DIR = Path(os.environ.get("PROJECT_DOCS_OUTPUT_DIR", "."))
+DEFAULT_SOURCE_ROOT = Path(__file__).resolve().parent / ".evcrate" / "source"
+SOURCE_ROOT = Path(os.environ.get("EVCRATE_SOURCE_DIR", str(DEFAULT_SOURCE_ROOT)))
+CLAUDE_DIR = Path(os.environ.get("CLAUDE_SOURCE_DIR", str(SOURCE_ROOT / ".claude")))
+CODEX_DIR = Path(os.environ.get("CODEX_OUTPUT_DIR", str(SOURCE_ROOT / ".codex")))
+AGENTS_DIR = Path(os.environ.get("AGENTS_OUTPUT_DIR", str(SOURCE_ROOT / ".agents")))
+PROJECT_DOCS_DIR = Path(os.environ.get("PROJECT_DOCS_OUTPUT_DIR", str(SOURCE_ROOT)))
+
+
+def local_output(name: str) -> Path:
+    """Return a local artifact path without recreating root discovery paths."""
+
+    return SOURCE_ROOT / name
+
+
+def source_document(name: str) -> Path:
+    return CLAUDE_DIR.parent / name
+
 
 # Direct HOME writes bypass distribution's verification gate. Keep an explicit,
 # temporary escape hatch for incident recovery while callers migrate to --publish.
@@ -30,8 +43,8 @@ for arg in sys.argv[1:]:
         CODEX_DIR = Path.home() / ".codex"
         AGENTS_DIR = Path.home() / ".agents"
     elif arg.lower() in ("--local", "local"):
-        CODEX_DIR = Path(".codex")
-        AGENTS_DIR = Path(".agents")
+        CODEX_DIR = local_output(".codex")
+        AGENTS_DIR = local_output(".agents")
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
@@ -432,8 +445,8 @@ def write_behavior_matrix() -> None:
         "kind": "memory-file",
         "source": "CLAUDE.md",
         "classification": "memory-file",
-        "status": "materialized-copy" if Path("CLAUDE.md").exists() else "not-present",
-        "target": "AGENTS.md" if Path("CLAUDE.md").exists() else None,
+        "status": "materialized-copy" if source_document("CLAUDE.md").exists() else "not-present",
+        "target": "AGENTS.md" if source_document("CLAUDE.md").exists() else None,
     }]
 
     commands_dir = CLAUDE_DIR / "commands"
@@ -521,7 +534,7 @@ def migrate_workflows() -> None:
 
 
 def write_project_agents_md() -> None:
-    claude_md = Path("CLAUDE.md")
+    claude_md = source_document("CLAUDE.md")
     if not claude_md.exists():
         return
     target = PROJECT_DOCS_DIR / "AGENTS.md"

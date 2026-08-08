@@ -78,7 +78,7 @@ Provide a production-ready template that:
   - Zero-configuration setup
   - Blocks: node_modules, __pycache__, .git/, dist/, build/
   - Improves AI agent response time and token efficiency
-- **Config Hardening**: Shared hook config resolves product-scoped `.evcrate.json` under `.claude/` and `.codex/`, with Codex bridges pinned to `EVCRATE_CONFIG_DIR=.codex`; runtime resolves from the discovered project root, privacy blocking uses only the selected local config, and Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` unless full sync is explicitly requested
+- **Config Hardening**: Shared hook config is authored under `.evcrate/source/.claude/` and generated under `.evcrate/source/.codex/`, while logical target names remain `.claude` and `.codex` for HOME bindings. Codex bridges stay pinned to `EVCRATE_CONFIG_DIR=.codex`; runtime resolves from the discovered project root, privacy blocking uses only the selected local config, and Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` unless full sync is explicitly requested
 
 ### 2. Comprehensive Slash Commands (50+)
 

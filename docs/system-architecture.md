@@ -1,7 +1,7 @@
 # System Architecture
 
-**Last Updated**: 2026-08-08
-**Version**: 1.8.0
+**Last Updated**: 2026-08-09
+**Version**: 1.9.0
 **Project**: EVCrate
 
 ## Overview
@@ -30,7 +30,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 ### 1. Core Layer
 
 #### 1.1 CLI Interface
-**Location**: Claude Code / Open Code CLI
+**Location**: Claude Code / Open Code CLI / Pi Coding Agent
 **Responsibility**: User interaction and command routing
 **Key Functions**:
 - Parse slash commands
@@ -38,7 +38,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - Display results to users
 - Manage conversation context
 
-**Technology**: Anthropic Claude Code CLI / OpenCode AI CLI
+**Technology**: Anthropic Claude Code CLI / OpenCode AI CLI / Pi Coding Agent
 
 #### 1.2 Command Parser
 **Location**: Built into CLI
@@ -50,7 +50,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - `$1, $2, $3...` - Individual positional arguments
 
 #### 1.3 Configuration Manager
-**Location**: `.claude/` for canonical authoring, generated `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` projections, plus the separate `.opencode/` compatibility tree
+**Location**: `.evcrate/source/` for canonical authoring and generated `.claude/`, `.pi/`, `.agents/`, `.codex/`, `.gemini/`, `.antigravity/`, and `.opencode/` trees. The nested physical root prevents project-local CLI discovery; logical target names remain unchanged for HOME publication.
 **Responsibility**: Load agent and command definitions
 **File Types**:
 - Agent definitions (`.md` with YAML frontmatter)
@@ -61,32 +61,41 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 
 - **EVCrate Config Resolution**:
 - Runtime discovers the project root first, then resolves config from that root rather than the current working directory.
-- Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.evcrate.json`, then local `./.claude/.evcrate.json`; local values win.
-- Codex bridge hooks use a fixed `EVCRATE_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.evcrate.json`, then local `./.codex/.evcrate.json`; local values win.
+- Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.evcrate.json`, then local `.evcrate/source/.claude/.evcrate.json`; local values win.
+- Codex bridge hooks use a fixed logical `EVCRATE_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.evcrate.json`, then the nested local `.evcrate/source/.codex/.evcrate.json`; local values win.
 - The internal selector accepts only `.claude` and `.codex`; invalid values fall back to `.claude`.
 - Privacy blocking is stricter: the disable switch reads only the selected local `.evcrate.json`, so global config cannot disable secret-file blocking.
 - The Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
 - `EVCRATE_HOME` overrides the HOME root used by distribution publish and verification; when unset, the runtime uses the platform HOME directory.
-- `.claude/` is the canonical authoring source; target manifests/overlays under `.evcrate/targets/` describe distribution metadata. The manifest-driven local build regenerates `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` projections. Generated targets are not hand-edited.
-- After `.claude/` changes, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` consumes only a current verified build, never runs migrators, and publishes the complete local `.claude` artifact to `~/.claude` after excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives); skill package directories and nested resources remain.
-- The generated `.agents/skills/` projection is also Pi-compatible: HOME publication places it at `~/.agents/skills/`, one of Pi's global skill locations, without modifying `~/.pi/agent/settings.json`. Its authored and generated `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
+- `.evcrate/source/.claude/` is the canonical authoring source; target manifests/overlays under `.evcrate/targets/` describe distribution metadata. The manifest-driven local build regenerates `.evcrate/source/.pi/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, `.evcrate/source/.gemini/`, and `.evcrate/source/.antigravity/` projections. Generated targets are not hand-edited.
+- The native Pi target owns `.pi`. The existing Codex adapter continues to own `.codex` plus the shared `.agents` skill projection during the first migration slice; Pi consumes `~/.agents/skills` through its native Agent Skills discovery. Splitting `.agents` into an independent target is deferred until Codex command-skill compatibility can be changed without regression.
+- Pi publication merges only EVCrate-owned package and hook entries into `~/.pi/agent/settings.json`. User model/provider defaults, credentials, sessions, custom packages, and unrelated settings remain user-owned. Shared-file publication records EVCrate ownership at entry level so removing the target never deletes the user's settings file.
+- EVCrate's generated local Pi package contains recursive command registration, static workflow resources, hook payload adapters, and runtime model-role resolution. Third-party Pi packages are pinned in the managed settings fragment and remain independently auditable/updateable.
+- After `.evcrate/source/.claude/` changes, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` consumes only a current verified build, never runs migrators, and publishes the complete nested `.evcrate/source/.claude` artifact to `~/.claude` after excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives); skill package directories and nested resources remain.
+- The generated `.evcrate/source/.agents/skills/` projection is also Pi-compatible: HOME publication places it at `~/.agents/skills/`, one of Pi's global skill locations, without modifying `~/.pi/agent/settings.json`. Its authored and generated `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
 - Runtime compatibility remains at the existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries.
 
 **Canonical Help Command**:
 - `/evcrate-help` is the canonical command for command discovery and usage guidance. The legacy `ck-help` command/path is not a first-party interface.
 
 **Codex Model Migration**:
-- `migrate_claude_to_codex.py` is the model-policy source of truth; `distribute.py` runs it and synchronizes the generated `.codex/` and `.agents/` assets.
+- `migrate_claude_to_codex.py` is the Codex model-policy source of truth; `distribute.py` runs it and synchronizes the generated `.evcrate/source/.codex/` and shared `.evcrate/source/.agents/` artifacts. Native Pi consumes the shared Agent Skills projection but does not use Codex's model policy.
 - The parent session and `opus` roles use `gpt-5.6-sol`; parent reasoning is `medium`, while delegated `opus` reasoning is `high`.
 - `sonnet` roles use `gpt-5.6-terra` with `high` reasoning, `haiku` roles use `gpt-5.6-luna` with `low` reasoning, and inherited roles use `gpt-5.6-terra` with `medium` reasoning.
 - Agents with no source model use `gpt-5.6-sol` with `high` reasoning. Preview-only models are not selected as default tiers.
 
+**Pi Runtime Model Migration**:
+- Canonical Claude agent models are converted to semantic Pi roles, not provider IDs embedded in commands or workflows: `opus → strong`, `sonnet → standard`, `haiku → fast`, `inherit → parent`; an unspecified model defaults to `standard` unless an agent policy says otherwise.
+- The managed Pi extension resolves semantic roles on `session_start` and `model_select` against the active provider and Pi model registry. For `openai-codex`, `strong → gpt-5.6-sol:high`, `standard → gpt-5.6-terra:high`, and `fast → gpt-5.6-luna:low`.
+- Provider routes are explicit and user-extensible. If the active provider has no configured route, generated agents omit the model pin and inherit the parent model while emitting a setup warning. Pi must never silently switch to a different provider.
+- Commands and static workflow documents remain provider-neutral. Only effective generated agent definitions contain concrete provider/model IDs, and they are rematerialized when the active provider changes.
+
 **Advisor Guidance**:
-- `advisor-strategy` is a static, portable skill distributed from `.claude/skills` to the managed skill roots.
+- `advisor-strategy` is a static, portable skill distributed from `.evcrate/source/.claude/skills` to the managed skill roots.
 - It helps an executor decide whether independent review is useful, form a minimal evidence brief, and evaluate advice already available in the current session.
 - It does not start a nested model session, expose MCP tools, execute commands, access credentials, enforce quotas, or claim isolation. Normal host approvals and sandbox policy remain authoritative.
-- Generated `.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
+- Generated `.evcrate/source/.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
 
 ### 2. Agent Layer
 
@@ -310,7 +319,7 @@ Explore different approaches simultaneously
 
 **Structure**:
 ```
-.claude/skills/
+.evcrate/source/.claude/skills/
 └── [skill-name]/
     ├── SKILL.md           # Main skill definition
     ├── references/        # Supporting documentation
@@ -358,7 +367,7 @@ Planner incorporates into plan
 
 **Scout Block Hook** (Cross-Platform):
 - **Architecture**: Node.js entry point with shared pattern matching
-- **Configuration**: `.claude/.evcrateignore`, using gitignore-style patterns
+- **Configuration**: `.evcrate/source/.claude/.evcrateignore`, using gitignore-style patterns
 - **Runtime**: Identical behavior across supported platforms via Node.js
 
 **Functionality**:
@@ -372,8 +381,8 @@ Planner incorporates into plan
 - No additional dependencies
 
 **Testing**:
-- Node.js test suites under `.claude/hooks/scout-block/tests/`
-- End-to-end hook checks in `.claude/hooks/tests/test-scout-block.js` and `test-evcrateignore.js`
+- Node.js test suites under `.evcrate/source/.claude/hooks/scout-block/tests/`
+- End-to-end hook checks in `.evcrate/source/.claude/hooks/tests/test-scout-block.js` and `test-evcrateignore.js`
 - Comprehensive test coverage (11+ test cases)
 - Validates blocked/allowed patterns, error handling, edge cases
 - `examples/simple-web-testing-demo/` validates the web-testing release gate with:
@@ -385,7 +394,7 @@ Planner incorporates into plan
     - k6 smoke tests as part of the demo web gate (install guidance if no usable binary is found; Windows install-path fallback supported)
   - npm audit --audit-level=high: 0 vulnerabilities
 
-**Hook Configuration** (`.claude/settings.json`):
+**Hook Configuration** (`.evcrate/source/.claude/settings.json`):
 ```json
 {
   "hooks": {
@@ -397,10 +406,16 @@ Planner incorporates into plan
 }
 ```
 
+**Native Pi Hook Migration**:
+- The Pi target uses the pinned `@hsingjui/pi-hooks` package for Claude-compatible command hook events that have a direct Pi lifecycle seam: `SessionStart`, `SessionEnd`, `PreCompact`, `PostCompact`, `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `UserPromptSubmit`, and `Stop`.
+- Generated wrapper commands translate Pi's lowercase tool names and `path` fields to the payload contract expected by canonical Claude hook scripts, then normalize Claude hook output back to the package contract.
+- `SubagentStart` has no package event. The managed EVCrate Pi extension injects equivalent child context when it detects a `pi-subagents` child session.
+- Hook execution remains fail-closed for explicit safety denials and fail-open for missing optional context hooks. Package and wrapper versions are pinned and covered by payload-contract tests.
+
 **Codex & Gemini Hook Migration Bridges**:
 To ensure that safety/privacy hooks are consistently enforced when migrating from Claude Code to Codex CLI or Gemini/Antigravity platforms, the migration process automatically generates wrapper scripts.
-- **Codex Wrappers**: Located in `.codex/hooks/pretool-scout-block.cjs` and `.codex/hooks/pretool-privacy-block.cjs`.
-- **Gemini/Antigravity Wrappers**: Located in `.gemini/hooks/before-tool-scout-block.cjs` and `.gemini/hooks/before-tool-privacy-block.cjs`.
+- **Codex Wrappers**: Generated under `.evcrate/source/.codex/hooks/pretool-scout-block.cjs` and `.evcrate/source/.codex/hooks/pretool-privacy-block.cjs`.
+- **Gemini/Antigravity Wrappers**: Generated under `.evcrate/source/.gemini/hooks/before-tool-scout-block.cjs` and `.evcrate/source/.gemini/hooks/before-tool-privacy-block.cjs`.
 - **Design Pattern**:
   - **Dynamic Root Resolution**: Traverses parent directories to locate local workspace hooks, with a fallback lookup to global hook directories in the user's home directory.
   - **Fail-Open Policy**: If no local or global hook is found, the wrapper fails-open to prevent disabling the terminal environment (returns allowed status).
@@ -454,8 +469,9 @@ To ensure that safety/privacy hooks are consistently enforced when migrating fro
 #### 7.1 File-Based Storage
 
 **Configuration Data**:
-- `.claude/` - Claude Code config
-- `.opencode/` - OpenCode config
+- `.evcrate/source/.claude/` - Claude Code config source
+- `.evcrate/source/.opencode/` - OpenCode config source
+- `.evcrate/source/.pi/`, `.evcrate/source/.codex/`, `.evcrate/source/.agents/`, `.evcrate/source/.gemini/` - generated artifacts
 - `.gitignore` - Git exclusions
 - `package.json` - Node.js config
 - `.releaserc.json` - Release config
@@ -766,8 +782,8 @@ Generate Summary        │
 ```
 Developer Machine
 ├── Claude Code CLI / Open Code CLI
-├── .claude/ (configuration)
-├── .opencode/ (configuration)
+├── .evcrate/source/ (nested configuration and artifacts, including native `.pi`)
+├── .evcrate/targets/ (logical target manifests)
 ├── Git repository
 └── Node.js runtime
 ```
@@ -792,8 +808,7 @@ Semantic Release
 
 ```
 User Project
-├── .claude/ (from template)
-├── .opencode/ (from template)
+├── $HOME/.claude/ (published from EVCrate)
 ├── docs/ (generated)
 ├── plans/ (generated)
 ├── src/ (user code)
@@ -862,28 +877,28 @@ User Project
 
 ### Adding New Agents
 
-1. Create agent definition file: `.claude/agents/my-agent.md`
+1. Create agent definition file: `.evcrate/source/.claude/agents/my-agent.md`
 2. Define YAML frontmatter (name, description, mode, model)
 3. Write agent instructions and workflows
 4. Reference in commands or other agents
 
 ### Adding New Commands
 
-1. Create command file: `.claude/commands/my-command.md`
+1. Create command file: `.evcrate/source/.claude/commands/my-command.md`
 2. Define YAML frontmatter
 3. Write command workflow with agent invocations
 4. Use `$ARGUMENTS` or `$1, $2` for parameters
 
 ### Adding New Skills
 
-1. Create skill directory: `.claude/skills/my-skill/`
+1. Create skill directory: `.evcrate/source/.claude/skills/my-skill/`
 2. Write `SKILL.md` with knowledge content
 3. Add references and examples
 4. Reference in agent definitions
 
 ### Custom Workflows
 
-1. Define workflow in `.claude/workflows/`
+1. Define workflow in `.evcrate/source/.claude/workflows/`
 2. Document orchestration patterns
 3. Specify agent handoffs
 4. Provide examples
@@ -910,13 +925,16 @@ User Project
 - Cleanup of temporary files
 - Optimized git operations
 
-## Distribution Architecture (current skill-only advisor)
+## Distribution Architecture (native Pi and skill-only advisor)
 
-[Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the current static skill boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
+[Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the static advisor boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
 
-- `.claude` is a source-backed target. Build/check validate the complete tree, and HOME publication binds its sanitized view to `HOME/.claude` without limiting publication to a subpath.
+- `.evcrate/source/.claude` is the only authored agent-config target. Build/check validate the complete source tree and deterministically generate `.pi`, `.agents`, `.codex`, `.gemini`, and `.antigravity` outputs before promotion.
 - Generic manifest bindings preserve unmanaged files already present under HOME targets. The `.claude` binding removes stale managed copies absent from the current source and excludes regular files directly under its `skills/` root; skill package directories and nested resources remain. Publication rejects stale or incomplete build manifests, output drift, managed symlinks, and unsafe HOME symlink paths.
-- The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill.
+- Shared JSON files use entry-level ownership. The Pi publisher may upsert pinned EVCrate package/hook entries in `HOME/.pi/agent/settings.json`, but it must preserve unknown keys and entries, reject malformed or symlinked settings, and remove only entries previously recorded as EVCrate-owned.
+- Native Pi commands are registered recursively from the managed local package using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. Static workflow Markdown remains data referenced by commands; it is not silently converted into dynamic executable orchestration.
+- Native Pi agents run through `pi-subagents`. Semantic model roles are resolved against the active provider at runtime; concrete models are never baked into command or workflow prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
+- The Codex and Pi outputs include the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill.
 - The skill reasons over evidence already available in the current session. It does not invoke providers, models, MCP, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
 

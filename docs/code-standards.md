@@ -34,20 +34,14 @@ This document defines coding standards, file organization patterns, naming conve
 
 ```
 project-root/
-├── .claude/                    # Claude Code configuration
-│   ├── agents/                # Agent definitions (*.md)
-│   ├── commands/              # Slash commands (*.md)
-│   │   ├── [category]/       # Nested command categories
-│   │   └── [command].md      # Individual commands
-│   ├── hooks/                # Git hooks and scripts
-│   ├── skills/               # Reusable knowledge modules
-│   │   └── [skill-name]/     # Individual skill directories
-│   │       ├── SKILL.md      # Skill definition
-│   │       └── references/   # Supporting materials
-│   └── workflows/            # Workflow definitions
-├── .opencode/                 # OpenCode configuration
-│   ├── agent/                # OpenCode agent definitions
-│   └── command/              # OpenCode commands
+├── .evcrate/source/           # Physical local config root; not project-discovered
+│   ├── .claude/              # Canonical Claude Code source
+│   ├── .codex/               # Generated Codex artifact
+│   ├── .agents/              # Generated Pi artifact
+│   ├── .gemini/              # Generated Gemini artifact
+│   ├── .antigravity/         # Generated Antigravity artifact
+│   └── .opencode/            # OpenCode compatibility source
+├── .evcrate/targets/          # Logical target manifests and overlays
 ├── .github/                   # GitHub-specific files
 │   └── workflows/            # CI/CD workflows
 ├── docs/                      # Project documentation
@@ -60,7 +54,7 @@ project-root/
 ├── src/                       # Source code (if applicable)
 ├── tests/                     # Test suites (if applicable)
 ├── .gitignore                # Git ignore patterns
-├── CLAUDE.md                 # Claude-specific instructions
+├── .evcrate/source/CLAUDE.md # Canonical Claude-specific instructions
 ├── README.md                 # Project overview
 ├── package.json              # Node.js dependencies
 └── LICENSE                   # License file
@@ -68,13 +62,13 @@ project-root/
 
 ### File Naming Conventions
 
-**Agent Definitions** (`.claude/agents/`, `.opencode/agent/`):
+**Agent Definitions** (`.evcrate/source/.claude/agents/`, `.evcrate/source/.opencode/agent/`):
 - Format: `[agent-name].md`
 - Use kebab-case: `code-reviewer.md`, `docs-manager.md`
 - Descriptive, role-based names
 - Examples: `planner.md`, `tester.md`, `git-manager.md`
 
-**Commands** (`.claude/commands/`, `.opencode/command/`):
+**Commands** (`.evcrate/source/.claude/commands/`, `.evcrate/source/.opencode/command/`):
 - Format: `[command-name].md` or `[category]/[command-name].md`
 - Use kebab-case for names
 - Group related commands in subdirectories
@@ -84,7 +78,7 @@ project-root/
   - `design/screenshot.md`
   - `git/cm.md`
 
-**Skills** (`.claude/skills/`):
+**Skills** (`.evcrate/source/.claude/skills/`):
 - Format: `[skill-name]/SKILL.md`
 - Use kebab-case for directory names
 - Main file always named `SKILL.md`
@@ -728,7 +722,7 @@ Mistakes to avoid
 
 **File Organization**:
 ```
-.claude/hooks/
+.evcrate/source/.claude/hooks/
 ├── scout-block.cjs       # Cross-platform Node.js entry point
 ├── scout-block/          # Shared matcher, extraction, and formatting modules
 └── tests/                # Hook integration tests
