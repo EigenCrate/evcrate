@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,6 +15,28 @@ from migrate_claude_to_codex import (
 
 
 class ApplyReplacementsTest(unittest.TestCase):
+    def test_local_mode_writes_only_inside_nested_source_root(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context", encoding="utf-8")
+            env = os.environ.copy()
+            env["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_codex.py"), "--local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertTrue((source_root / ".codex/config.toml").is_file())
+            self.assertTrue((source_root / ".agents/skills").is_dir())
+            for name in (".codex", ".agents"):
+                self.assertFalse((root / name).exists())
+
     def test_claude_markdown_filename_uses_canonical_agents_name(self) -> None:
         for source in ("CLAUDE.md", "Claude.md", "claude.md"):
             with self.subTest(source=source):

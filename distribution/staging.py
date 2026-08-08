@@ -110,8 +110,8 @@ def _apply_targets(
             owners[patch.destination] = manifest.name
 
     baseline_sources = {
-        ".claude": tree_hash(context.repository / ".claude"),
-        "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
+        ".claude": tree_hash(context.local_claude),
+        "CLAUDE.md": hash_file(context.source_root / "CLAUDE.md"),
         ".evcrate/targets": source_tree_hash(context.repository / ".evcrate/targets"),
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
@@ -132,6 +132,8 @@ def generate_stage(
     manifests = _load_targets(context, roots)
     env = os.environ.copy()
     env.update({
+        "EVCRATE_SOURCE_DIR": str(context.source_root),
+        "CLAUDE_SOURCE_DIR": str(context.local_claude),
         "GEMINI_OUTPUT_DIR": str(roots[".gemini"]),
         "CODEX_OUTPUT_DIR": str(roots[".codex"]),
         "AGENTS_OUTPUT_DIR": str(roots[".agents"]),
@@ -147,7 +149,7 @@ def generate_stage(
     _baseline_owners({".claude": roots[".claude"]})
     for script in dict.fromkeys(manifest.adapter for manifest in manifests if manifest.adapter):
         run_migrator(context, script, env)
-    build_antigravity_config(context.repository / ".claude", roots[".antigravity"])
+    build_antigravity_config(context.local_claude, roots[".antigravity"])
 
     owners, sources_and_adapters, policies, required_docs = _apply_targets(context, roots, manifests)
     adapter_names = {manifest.adapter for manifest in manifests if manifest.adapter}

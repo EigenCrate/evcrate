@@ -168,6 +168,25 @@ class DistributionBuildTest(unittest.TestCase):
             with self.assertRaises(BuildError):
                 load_target_manifest(path)
 
+    def test_context_uses_nested_source_root_and_rejects_legacy_roots(self) -> None:
+        from distribution.gates import _assert_legacy_root_clean
+
+        with tempfile.TemporaryDirectory() as temp:
+            repository = Path(temp)
+            context = DistributionContext(
+                DistributionAction.BUILD,
+                repository,
+                repository / "home",
+                repository / "stage",
+                "managed",
+                "config-and-scripts",
+            )
+            self.assertEqual(context.local_claude, repository / ".evcrate/source/.claude")
+            self.assertEqual(context.local_path("AGENTS.md"), repository / ".evcrate/source/AGENTS.md")
+            (repository / ".claude").mkdir()
+            with self.assertRaisesRegex(BuildError, "under .evcrate/source"):
+                _assert_legacy_root_clean(context)
+
     def test_current_target_registry_schema_accepts_singular_output_root(self) -> None:
         repository = Path(__file__).resolve().parents[1]
         registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
@@ -221,8 +240,8 @@ class DistributionBuildTest(unittest.TestCase):
     def test_antigravity_adapter_rewrites_help_script_and_preserves_command_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            source = root / ".claude"
-            target = root / ".antigravity"
+            source = root / ".evcrate/source/.claude"
+            target = root / ".evcrate/source/.antigravity"
             (source / "commands").mkdir(parents=True)
             (source / "scripts").mkdir()
             (source / "scripts/ev-help.py").write_text("help", encoding="utf-8")
@@ -269,11 +288,12 @@ class DistributionBuildTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             repository, stage, outside = root / "repo", root / "stage", root / "outside"
-            (repository / ".claude").mkdir(parents=True)
+            source_root = repository / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
             outside.mkdir()
             (outside / "escaped.txt").write_text("outside", encoding="utf-8")
-            (repository / ".claude/escape").symlink_to(outside, target_is_directory=True)
-            (repository / "CLAUDE.md").write_text("context", encoding="utf-8")
+            (source_root / ".claude/escape").symlink_to(outside, target_is_directory=True)
+            (source_root / "CLAUDE.md").write_text("context", encoding="utf-8")
             (repository / "distribution").mkdir()
             (repository / "distribution/antigravity_publish.py").write_text("adapter", encoding="utf-8")
             (repository / "distribute_hooks.py").write_text("hooks", encoding="utf-8")

@@ -7,9 +7,22 @@ import yaml
 import sys
 from pathlib import Path
 
-CLAUDE_DIR = Path(".claude")
-GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", ".gemini"))
-PROJECT_DOCS_DIR = Path(os.environ.get("GEMINI_PROJECT_DOCS_OUTPUT_DIR", "."))
+DEFAULT_SOURCE_ROOT = Path(__file__).resolve().parent / ".evcrate" / "source"
+SOURCE_ROOT = Path(os.environ.get("EVCRATE_SOURCE_DIR", str(DEFAULT_SOURCE_ROOT)))
+CLAUDE_DIR = Path(os.environ.get("CLAUDE_SOURCE_DIR", str(SOURCE_ROOT / ".claude")))
+GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", str(SOURCE_ROOT / ".gemini")))
+PROJECT_DOCS_DIR = Path(os.environ.get("GEMINI_PROJECT_DOCS_OUTPUT_DIR", str(SOURCE_ROOT)))
+
+
+def local_output(name: str) -> Path:
+    """Return a local artifact path without recreating root discovery paths."""
+
+    return SOURCE_ROOT / name
+
+
+def source_document(name: str) -> Path:
+    return CLAUDE_DIR.parent / name
+
 
 # Command-line parameter support to generate local or global config baselines
 for arg in sys.argv[1:]:
@@ -22,7 +35,7 @@ for arg in sys.argv[1:]:
         print("WARNING: direct --global migration bypasses distribution verification.", file=sys.stderr)
         GEMINI_DIR = Path.home() / ".gemini"
     elif arg.lower() in ("--local", "local"):
-        GEMINI_DIR = Path(os.environ.get("GEMINI_OUTPUT_DIR", ".gemini"))
+        GEMINI_DIR = local_output(".gemini")
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
@@ -324,8 +337,8 @@ def write_behavior_matrix():
         "kind": "memory-file",
         "source": "CLAUDE.md",
         "classification": "memory-file",
-        "status": "migrated-wrapper" if Path("CLAUDE.md").exists() else "not-present",
-        "target": "GEMINI.md -> @./CLAUDE.md" if Path("CLAUDE.md").exists() else None,
+        "status": "migrated-wrapper" if source_document("CLAUDE.md").exists() else "not-present",
+        "target": "GEMINI.md -> @./CLAUDE.md" if source_document("CLAUDE.md").exists() else None,
     }]
     for source in sorted(commands_dir.rglob("*.md")) if commands_dir.exists() else []:
         entries.append({
@@ -347,7 +360,7 @@ def write_behavior_matrix():
         f.write("\n")
 
 def write_gemini_memory_wrapper():
-    claude_md = Path("CLAUDE.md")
+    claude_md = source_document("CLAUDE.md")
     if not claude_md.exists():
         return
     wrapper = [

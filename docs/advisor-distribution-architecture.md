@@ -10,16 +10,16 @@ Define reproducible multi-platform generation and the boundary of the portable `
 
 ## Architectural Decisions
 
-- `.claude` remains the shared baseline authoring source.
-- `.claude` is also a source-backed distribution target: build/check validate its complete tree, and publication binds its sanitized HOME view to `HOME/.claude` with no subpath limit.
-- The local `.claude` artifact remains complete, but HOME publication excludes regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources. Stale managed copies absent from the current source are removed; unmanaged HOME paths remain preserved.
-- The Codex projection owns the shared Pi-compatible skill tree: publication binds `.agents/skills` to `$HOME/.agents/skills`, which Pi discovers globally without a settings-file edit.
+- `.evcrate/source/.claude` remains the shared baseline authoring source and is the physical source-backed distribution target.
+- Build/check validate the complete nested tree, and publication binds its sanitized HOME view to `HOME/.claude` with no subpath limit.
+- The local `.evcrate/source/.claude` artifact remains complete, but HOME publication excludes regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources. Stale managed copies absent from the current source are removed; unmanaged HOME paths remain preserved.
+- The Codex projection owns the shared Pi-compatible skill tree under `.evcrate/source/.agents/skills`; publication binds it to `$HOME/.agents/skills`, which Pi discovers globally without a settings-file edit.
 - Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
 - `.evcrate/targets/<target>` owns target-only files and explicit config patches.
-- Local `.claude`, `.agents`, `.codex`, `.gemini`, and other target trees are finalized artifacts.
+- Local `.evcrate/source/.claude`, `.evcrate/source/.agents`, `.evcrate/source/.codex`, `.evcrate/source/.gemini`, and other target trees are finalized artifacts.
 - HOME distribution consumes finalized local artifacts only and preserves declared user-owned configuration.
 - Generic publication preserves unmanaged HOME files; stale or incomplete manifests, output drift, and symlinks in managed artifacts or unsafe HOME paths are rejected.
-- `.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.agents/skills/advisor-strategy/` with its brief contract.
+- `.evcrate/source/.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.evcrate/source/.agents/skills/advisor-strategy/` with its brief contract.
 - Each generated `cmd_*` skill contains one static pointer recommending explicit `$advisor-strategy` use. The pointer does not activate the skill.
 - No advisor provider/model call, MCP server, hook, broker, launcher, quota, ledger, audit, or isolation claim is distributed.
 
@@ -58,7 +58,7 @@ Build failure must not mutate the last valid local artifacts or HOME.
 3. Compute create/update/delete/preserve diff per HOME target.
 4. Stage and promote each target with release/recovery metadata.
 
-After changing `.claude`, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` requires a current verified build, never runs migrators, and publishes the sanitized HOME view of the complete `.claude` artifact to `$HOME/.claude`. Pi receives global skills through `$HOME/.agents/skills`; publication does not create or modify `~/.pi/agent/settings.json`.
+After changing `.evcrate/source/.claude`, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` requires a current verified build, never runs migrators, and publishes the sanitized HOME view of the complete `.evcrate/source/.claude` artifact to `$HOME/.claude`. Pi receives global skills through `$HOME/.agents/skills`; publication does not create or modify `~/.pi/agent/settings.json`.
 
 No migration or overlay logic runs during publication.
 

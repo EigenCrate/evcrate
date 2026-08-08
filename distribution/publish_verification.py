@@ -32,8 +32,8 @@ def _current_source_hashes(context: DistributionContext) -> dict[str, str]:
     registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
     manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
     values = {
-        ".claude": tree_hash(context.repository / ".claude"),
-        "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
+        ".claude": tree_hash(context.local_claude),
+        "CLAUDE.md": hash_file(context.source_root / "CLAUDE.md"),
         ".evcrate/targets": tree_hash(context.repository / ".evcrate/targets"),
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
@@ -56,6 +56,10 @@ def _expected_output_names(context: DistributionContext) -> set[str]:
 def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifact) -> dict[str, Any]:
     """Verify source and output hashes without executing a generator."""
 
+    legacy = [path for path in context.legacy_local_paths if path.exists() or path.is_symlink()]
+    if legacy:
+        names = ", ".join(path.name for path in legacy)
+        raise PublishError(f"Legacy project-local agent paths must be moved under .evcrate/source: {names}")
     if artifact.repository != context.repository or artifact.roots != context.local_roots:
         raise PublishError("Artifact reference does not belong to this repository")
     manifest = _load_build_manifest(context)
@@ -69,7 +73,7 @@ def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifa
     if set(output_hashes) != _expected_output_names(context):
         raise PublishError("Build manifest output hashes do not match current artifacts")
     for relative, expected in output_hashes.items():
-        path = context.repository / relative
+        path = context.local_path(relative)
         if not path.exists() or path.is_symlink():
             raise PublishError(f"Build artifact is missing or unsafe: {relative}")
         actual = tree_hash(path) if path.is_dir() else hash_file(path)
