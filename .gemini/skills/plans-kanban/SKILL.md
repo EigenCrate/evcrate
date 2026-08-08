@@ -7,11 +7,11 @@ Plans dashboard server with progress tracking and timeline visualization.
 **This skill requires npm dependencies.** Run one of the following:
 
 ```bash
-# Option 1: Install via geminiKit CLI (recommended)
+# Option 1: Install via ClaudeKit CLI (recommended)
 ck init  # Runs install.sh which handles all skills
 
 # Option 2: Manual installation
-cd .gemini/skills/plans-kanban
+cd .claude/skills/plans-kanban
 npm install
 ```
 
@@ -31,23 +31,23 @@ Visual dashboard for viewing plan directories with:
 
 ```bash
 # View plans dashboard
-node .gemini/skills/plans-kanban/scripts/server.cjs \
+node .claude/skills/plans-kanban/scripts/server.cjs \
   --dir ./plans \
   --open
 
 # Remote access (all interfaces)
-node .gemini/skills/plans-kanban/scripts/server.cjs \
+node .claude/skills/plans-kanban/scripts/server.cjs \
   --dir ./plans \
   --host 0.0.0.0 \
   --open
 
 # Background mode
-node .gemini/skills/plans-kanban/scripts/server.cjs \
+node .claude/skills/plans-kanban/scripts/server.cjs \
   --dir ./plans \
   --background
 
 # Stop all running servers
-node .gemini/skills/plans-kanban/scripts/server.cjs --stop
+node .claude/skills/plans-kanban/scripts/server.cjs --stop
 ```
 
 ## Slash Command

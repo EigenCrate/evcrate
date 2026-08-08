@@ -2,11 +2,11 @@
 
 **Last Updated**: 2026-08-03
 **Version**: 1.8.0
-**Project**: ClaudeKit Engineer
+**Project**: EVCrate
 
 ## Overview
 
-ClaudeKit Engineer implements a multi-agent AI orchestration architecture where specialized agents collaborate through a file-based communication protocol. The system enables developers to leverage AI assistance throughout the entire software development lifecycle - from planning and implementation to testing, review, and deployment.
+EVCrate implements a multi-agent AI orchestration architecture where specialized agents collaborate through a file-based communication protocol. The system enables developers to leverage AI assistance throughout the entire software development lifecycle - from planning and implementation to testing, review, and deployment.
 
 ## Architectural Pattern
 
@@ -67,6 +67,12 @@ ClaudeKit Engineer implements a multi-agent AI orchestration architecture where 
 - Privacy blocking is stricter: the disable switch reads only the selected local `.evcrate.json`, so global config cannot disable secret-file blocking.
 - The Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
+- `EVCRATE_HOME` overrides the HOME root used by distribution publish and verification; when unset, the runtime uses the platform HOME directory.
+- `.claude/` is the authoring source; the manifest-driven local build regenerates `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` projections. Generated targets are not hand-edited.
+- Runtime compatibility remains at the existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries.
+
+**Canonical Help Command**:
+- `/evcrate-help` is the canonical command for command discovery and usage guidance. The legacy `ck-help` command/path is not a first-party interface.
 
 **Codex Model Migration**:
 - `migrate_claude_to_codex.py` is the model-policy source of truth; `distribute.py` runs it and synchronizes the generated `.codex/` and `.agents/` assets.

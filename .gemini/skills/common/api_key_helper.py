@@ -7,8 +7,8 @@ Supports both Google AI Studio and Vertex AI endpoints.
 API Key Detection Order:
 1. Process environment variable
 2. Project root .env file
-3. ./.gemini/.env
-4. ./.gemini/skills/.env
+3. ./.claude/.env
+4. ./.claude/skills/.env
 5. Skill directory .env file
 
 Vertex AI Configuration:
@@ -29,8 +29,8 @@ def find_api_key(skill_dir: Optional[Path] = None) -> Optional[str]:
     Find GEMINI_API_KEY using 5-step lookup:
     1. Process environment
     2. Project root .env
-    3. ./.gemini/.env
-    4. ./.gemini/skills/.env
+    3. ./.claude/.env
+    4. ./.claude/skills/.env
     5. Skill directory .env
 
     Args:
@@ -58,20 +58,20 @@ def find_api_key(skill_dir: Optional[Path] = None) -> Optional[str]:
             print(f"✓ Using API key from {project_env}", file=sys.stderr)
             return api_key
 
-    # Step 3: Check ./.gemini/.env
-    gemini_env = project_dir / '.gemini' / '.env'
-    if gemini_env.exists():
-        api_key = load_env_file(gemini_env)
+    # Step 3: Check ./.claude/.env
+    claude_env = project_dir / '.claude' / '.env'
+    if claude_env.exists():
+        api_key = load_env_file(claude_env)
         if api_key:
-            print(f"✓ Using API key from {gemini_env}", file=sys.stderr)
+            print(f"✓ Using API key from {claude_env}", file=sys.stderr)
             return api_key
 
-    # Step 4: Check ./.gemini/skills/.env
-    gemini_skills_env = project_dir / '.gemini' / 'skills' / '.env'
-    if gemini_skills_env.exists():
-        api_key = load_env_file(gemini_skills_env)
+    # Step 4: Check ./.claude/skills/.env
+    claude_skills_env = project_dir / '.claude' / 'skills' / '.env'
+    if claude_skills_env.exists():
+        api_key = load_env_file(claude_skills_env)
         if api_key:
-            print(f"✓ Using API key from {gemini_skills_env}", file=sys.stderr)
+            print(f"✓ Using API key from {claude_skills_env}", file=sys.stderr)
             return api_key
 
     # Step 5: Check skill directory .env
@@ -161,8 +161,8 @@ def find_env_var(var_name: str, skill_dir: Optional[Path] = None) -> Optional[st
     # Step 2-5: Check .env files in order
     env_files = [
         project_dir / '.env',
-        project_dir / '.gemini' / '.env',
-        project_dir / '.gemini' / 'skills' / '.env',
+        project_dir / '.claude' / '.env',
+        project_dir / '.claude' / 'skills' / '.env',
         skill_dir / '.env'
     ]
 
@@ -202,8 +202,8 @@ def find_all_api_keys(skill_dir: Optional[Path] = None) -> List[str]:
     # Collect all .env file paths in priority order
     env_files = [
         project_dir / '.env',
-        project_dir / '.gemini' / '.env',
-        project_dir / '.gemini' / 'skills' / '.env',
+        project_dir / '.claude' / '.env',
+        project_dir / '.claude' / 'skills' / '.env',
         skill_dir / '.env'
     ]
 
@@ -338,11 +338,11 @@ def get_api_key_or_exit(skill_dir: Optional[Path] = None) -> str:
         print("\n2️⃣  Project root .env file:", file=sys.stderr)
         print(f"   echo 'GEMINI_API_KEY=your-api-key' > {project_dir}/.env", file=sys.stderr)
 
-        print("\n3️⃣  .gemini/.env file:", file=sys.stderr)
-        print(f"   echo 'GEMINI_API_KEY=your-api-key' > {project_dir}/.gemini/.env", file=sys.stderr)
+        print("\n3️⃣  .claude/.env file:", file=sys.stderr)
+        print(f"   echo 'GEMINI_API_KEY=your-api-key' > {project_dir}/.claude/.env", file=sys.stderr)
 
-        print("\n4️⃣  .gemini/skills/.env file (shared across all Gemini skills):", file=sys.stderr)
-        print(f"   echo 'GEMINI_API_KEY=your-api-key' > {project_dir}/.gemini/skills/.env", file=sys.stderr)
+        print("\n4️⃣  .claude/skills/.env file (shared across all Gemini skills):", file=sys.stderr)
+        print(f"   echo 'GEMINI_API_KEY=your-api-key' > {project_dir}/.claude/skills/.env", file=sys.stderr)
 
         print("\n5️⃣  Skill directory .env file:", file=sys.stderr)
         print(f"   echo 'GEMINI_API_KEY=your-api-key' > {skill_dir}/.env", file=sys.stderr)

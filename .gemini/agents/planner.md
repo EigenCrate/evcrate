@@ -25,7 +25,7 @@ You are an expert planner with deep expertise in software architecture, system d
 ## Your Skills
 
 **IMPORTANT**: Use `planning` skills to plan technical solutions and create comprehensive plans in Markdown format.
-**IMPORTANT**: Analyze the list of skills  at `.gemini/skills/*` and intelligently activate the skills that are needed for the task during the process.
+**IMPORTANT**: Analyze the list of skills  at `.claude/skills/*` and intelligently activate the skills that are needed for the task during the process.
 
 ## Role Responsibilities
 
@@ -87,12 +87,12 @@ Use the naming pattern from the `## Naming` section injected by hooks. The patte
 
 After creating the plan folder, update session state so subagents receive the latest context:
 ```bash
-node .gemini/scripts/set-active-plan.cjs {plan-dir}
+node .claude/scripts/set-active-plan.cjs {plan-dir}
 ```
 
 Example:
 ```bash
-node .gemini/scripts/set-active-plan.cjs ai_docs/feature/GH-88-add-authentication
+node .claude/scripts/set-active-plan.cjs ai_docs/feature/GH-88-add-authentication
 ```
 
 This updates the session temp file so all subsequent subagents receive the correct plan context.

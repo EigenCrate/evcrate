@@ -189,10 +189,10 @@ function generateCardMeta(plan) {
     metaTags.push(`<span class="meta-tag priority ${priorityColorClass}" title="Priority">${escapeHtml(plan.priority)}</span>`);
   }
 
-  // Issue tag - clickable link to GitHub (uses branch to derive repo, falls back to claudekit)
+  // Issue tag - clickable link to GitHub (uses branch to derive repo, falls back to evcrate)
   if (plan.issue) {
     // TODO: Make repo configurable via project settings
-    const issueUrl = `https://github.com/claudekit/claudekit/issues/${plan.issue}`;
+    const issueUrl = `https://github.com/evcrate/evcrate/issues/${plan.issue}`;
     metaTags.push(`<a href="${issueUrl}" target="_blank" rel="noopener" class="meta-tag issue" title="Issue #${plan.issue}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> #${plan.issue}</a>`);
   }
 

@@ -35,6 +35,12 @@ function resolveHookSource() {
 }
 
 const { projectDir, sourceHook } = resolveHookSource();
+
+if (!fs.existsSync(sourceHook)) {
+  process.stdout.write(JSON.stringify({}));
+  process.exit(0);
+}
+
 const result = spawnSync(process.execPath, [sourceHook], {
   cwd: projectDir,
   input,
@@ -43,15 +49,19 @@ const result = spawnSync(process.execPath, [sourceHook], {
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
-    DEVKIT_CONFIG_DIR: ".codex",
+    EVCRATE_CONFIG_DIR: ".codex",
   },
 });
 
 const reason = (result.stderr || result.stdout || '').trim();
-if (result.status === 2) {
-  process.stderr.write(reason || 'Blocked by migrated Claude hook.');
-  process.exit(1);
-} else {
+if (result.status === 0 && !result.error) {
   process.stdout.write(JSON.stringify({}));
-  process.exit(0);
+} else {
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: reason || (result.error ? result.error.message : '') || 'Blocked by migrated Claude hook.',
+    },
+  }));
 }

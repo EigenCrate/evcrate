@@ -44,14 +44,14 @@ Set your coding experience level for tailored explanations and output format.
 
 ## How It Works
 
-1. Set `codingLevel` in `.codex/.devkit.json`.
-   This file is materialized from canonical `.claude/.devkit.json`; update that source before regenerating to persist changes.
+1. Set `codingLevel` in `.codex/.evcrate.json`.
+   This file is materialized from canonical `.claude/.evcrate.json`; update that source before regenerating to persist changes.
 2. Guidelines are **automatically injected** on every session start
 3. No manual activation needed - it just works!
 
 ## Example
 
-Set level 1 in `.codex/.devkit.json`:
+Set level 1 in `.codex/.evcrate.json`:
 ```json
 {
   "codingLevel": 1,

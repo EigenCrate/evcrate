@@ -117,4 +117,4 @@ The `/kanban` command will evolve into **VibeKanban-inspired** AI agent orchestr
 - Agent output streaming
 - Conflict detection
 
-Track progress: https://github.com/claudekit/claudekit-engineer/issues/189
+Track progress: https://github.com/NEBULEA-M/evcrate/issues/189

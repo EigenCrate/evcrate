@@ -27,13 +27,13 @@ Set your coding experience level for tailored explanations and output format.
 
 ## How It Works
 
-1. Set `codingLevel` in `.gemini/.devkit.json`
+1. Set `codingLevel` in `.claude/.evcrate.json`
 2. Guidelines are **automatically injected** on every session start
 3. No manual activation needed - it just works!
 
 ## Example
 
-Set level 1 in `.gemini/.devkit.json`:
+Set level 1 in `.claude/.evcrate.json`:
 ```json
 {
   "codingLevel": 1,

@@ -1,6 +1,6 @@
-# Claude Code Boilerplate
+# EVCrate
 
-A comprehensive boilerplate template for building professional software projects with **CLI Coding Agents** (**Claude Code** and **Open Code**). This template provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
+EVCrate is a comprehensive boilerplate template for building professional software projects with **CLI Coding Agents** (**Claude Code** and **Open Code**). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
 
 ## What is Claude Code?
 
@@ -16,6 +16,8 @@ A comprehensive boilerplate template for building professional software projects
 
 ## Related Projects & Directories
 
+The ClaudeKit repositories and CLI below are external compatibility dependencies; their names and commands remain unchanged.
+
 - `claudekit` - Website of ClaudeKit
   - Directory: `../claudekit`
   - Repo: https://github.com/claudekit/claudekit
@@ -25,7 +27,7 @@ A comprehensive boilerplate template for building professional software projects
 - `claudekit-cli` - CLI tool for quick project setup
   - Directory: `../claudekit-cli`
   - Repo: https://github.com/mrgoonie/claudekit-cli
-- `claudekit-docs` - Public documentation repository: https://docs.claudekit.cc
+- `claudekit-docs` - Public documentation repository: https://docs.evcrate.cloud
   - Directory: `../claudekit-docs`
   - Repo: https://github.com/claudekit/claudekit-docs
 
@@ -73,19 +75,19 @@ A comprehensive boilerplate template for building professional software projects
 - Operating Systems: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
 - Hardware: 4GB+ RAM
 
-### Setup your new project with ClaudeKit
+### Set up an EVCrate project with the external ClaudeKit CLI
 
-1. **Install ClaudeKit CLI**:
+1. **Install the external ClaudeKit CLI**:
    ```bash
    npm install -g claudekit-cli
    ```
 
-2. **Create your new project with ClaudeKit framework**:
+2. **Create an EVCrate project with the external CLI**:
    ```bash
    ck new --dir my-project --kit engineer
    ```
    
-   **Note:** If you want to use the kit with your existing project:
+   **Note:** The `ck new` and `ck update` commands belong to the external CLI. If you want to use the kit with an existing project:
    ```bash
    cd /path/to/project
    ck update --kit engineer
@@ -103,7 +105,7 @@ A comprehensive boilerplate template for building professional software projects
    /cook "add database integration"
    ```
 
-📖 **Learn more from our docs:** [https://docs.claudekit.cc](https://docs.claudekit.cc)
+📖 **Learn more from our docs:** [https://docs.evcrate.cloud](https://docs.evcrate.cloud)
 
 ## Project Structure
 
@@ -303,8 +305,8 @@ Reusable templates for:
 - Refactoring strategies
 - Architecture decisions
 
-### .devkit.json
-Documented project config filename for DevKit settings. The runtime resolves the local project config from the discovered project root.
+### .evcrate.json
+Documented project config filename for EVCrate settings. The runtime resolves the local project config from the discovered project root.
 
 ## Gemini Skills Configuration
 
@@ -399,7 +401,7 @@ claude "What objects are in this image: photo.jpg"
 
 ### Pre-requisites
 
-In ClaudeKit, you need to setup the MCP servers in `.claude/.mcp.json` file.
+In EVCrate, you need to set up the MCP servers in `.claude/.mcp.json`.
 
 Copy the example file:
 ```bash
@@ -457,7 +459,7 @@ Then add your MCP servers, below are some examples:
 - **Single Source of Truth**: All configurations, hooks, workflows, and skills must be authored inside the `.claude/` directory.
 - **Two Distribution Gates**: Run `python3 distribute.py --build` to generate local artifacts, `--check` to verify them without writes, and `--publish` to publish existing artifacts to HOME. `--all` runs build then publish; bare invocation remains a deprecated `--all` compatibility path.
 - **No Direct Downstream Edits**: Do not edit `.gemini/`, `.agents/`, or `.codex/` directly. They are generated automatically by the local build gate.
-- **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `DEVKIT_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
+- **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
 - **Legacy HOME Cleanup Window**: Managed publication retains the pre-manifest cleanup lists for this transition phase; manifest-scoped deletion and user-root preservation land in the Phase 3 publish gate.
 - **Track Downstream Assets**: Generated folders (`.gemini/`, `.agents/`, `.codex/`) must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions.
 

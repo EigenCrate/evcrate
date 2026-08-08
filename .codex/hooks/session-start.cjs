@@ -50,7 +50,7 @@ const result = spawnSync(process.execPath, [sourceHook], {
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
-    DEVKIT_CONFIG_DIR: ".codex",
+    EVCRATE_CONFIG_DIR: ".codex",
   },
 });
 

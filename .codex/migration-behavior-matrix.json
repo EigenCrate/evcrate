@@ -52,13 +52,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "ck-help.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_ck-help/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "code/auto.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_code_auto/SKILL.md"
@@ -216,6 +209,13 @@
       "source": "docs/update.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_docs_update/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "evcrate-help.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_evcrate-help/SKILL.md"
     },
     {
       "classification": "command-prose",

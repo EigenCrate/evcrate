@@ -19,10 +19,10 @@ Use `ui-ux-designer` subagent to read and analyze `./docs/design-guidelines.md` 
 ## Workflow
 **FIRST**: Run `ui-ux-pro-max` searches to understand context and common issues:
 ```bash
-python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "<product-type>" --domain product
-python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "<style-keywords>" --domain style
-python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "accessibility" --domain ux
-python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "z-index animation" --domain ux
+python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "<product-type>" --domain product
+python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "<style-keywords>" --domain style
+python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "accessibility" --domain ux
+python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "z-index animation" --domain ux
 ```
 
 If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.

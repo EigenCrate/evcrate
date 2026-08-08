@@ -13,10 +13,10 @@ Skills can exist in **project-scope** or **user-scope**. Priority: project-scope
 ```bash
 # Detect skill location
 SKILL_DIR=""
-if [ -d ".gemini/skills/chrome-devtools/scripts" ]; then
-  SKILL_DIR=".gemini/skills/chrome-devtools/scripts"
-elif [ -d "$HOME/.gemini/skills/chrome-devtools/scripts" ]; then
-  SKILL_DIR="$HOME/.gemini/skills/chrome-devtools/scripts"
+if [ -d ".claude/skills/chrome-devtools/scripts" ]; then
+  SKILL_DIR=".claude/skills/chrome-devtools/scripts"
+elif [ -d "$HOME/.claude/skills/chrome-devtools/scripts" ]; then
+  SKILL_DIR="$HOME/.claude/skills/chrome-devtools/scripts"
 fi
 cd "$SKILL_DIR"
 ```
@@ -25,7 +25,7 @@ cd "$SKILL_DIR"
 
 ```bash
 pwd  # Should show current working directory
-cd $SKILL_DIR/.gemini/skills/chrome-devtools/scripts
+cd $SKILL_DIR/.claude/skills/chrome-devtools/scripts
 ./install.sh  # Auto-checks dependencies and installs
 ```
 

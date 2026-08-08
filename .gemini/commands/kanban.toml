@@ -19,9 +19,9 @@ prompt = """Plans dashboard with progress tracking and timeline visualization.
 
 **IMPORTANT:** Run server as gemini Code background task using `run_in_background: true` with the Bash tool. This makes the server visible in `/tasks` and manageable via `KillShell`.
 
-Check if this script is located in the current workspace or in `$HOME/.gemini/skills/plans-kanban` directory:
-- If in current workspace: `$SKILL_DIR_PATH` = `./.gemini/skills/plans-kanban/`
-- If in home directory: `$SKILL_DIR_PATH` = `$HOME/.gemini/skills/plans-kanban/`
+Check if this script is located in the current workspace or in `$HOME/.claude/skills/plans-kanban` directory:
+- If in current workspace: `$SKILL_DIR_PATH` = `./.claude/skills/plans-kanban/`
+- If in home directory: `$SKILL_DIR_PATH` = `$HOME/.claude/skills/plans-kanban/`
 
 ### Stop Server
 
@@ -56,7 +56,7 @@ node $SKILL_DIR_PATH/scripts/server.cjs \\
 Example Bash tool call:
 ```json
 {
-  \"command\": \"node .gemini/skills/plans-kanban/scripts/server.cjs --dir \\\"./plans\\\" --host 0.0.0.0 --open --foreground\",
+  \"command\": \"node .claude/skills/plans-kanban/scripts/server.cjs --dir \\\"./plans\\\" --host 0.0.0.0 --open --foreground\",
   \"run_in_background\": true,
   \"timeout\": 300000,
   \"description\": \"Start kanban server in background\"
@@ -91,4 +91,4 @@ The `/kanban` command will evolve into **VibeKanban-inspired** AI agent orchestr
 - Agent output streaming
 - Conflict detection
 
-Track progress: https://github.com/geminikit/geminikit-engineer/issues/189"""
+Track progress: https://github.com/NEBULEA-M/evcrate/issues/189"""

@@ -2,7 +2,7 @@
 
 ## Configuration File Structure
 
-MCP servers are configured in `.gemini/.mcp.json`:
+MCP servers are configured in `.claude/.mcp.json`:
 
 ```json
 {
@@ -101,9 +101,9 @@ Reference env vars with `${VAR_NAME}` syntax:
 Scripts check for config in this order:
 
 1. `process.env` (runtime environment)
-2. `.gemini/skills/mcp-management/.env`
-3. `.gemini/skills/.env`
-4. `.gemini/.env`
+2. `.claude/skills/mcp-management/.env`
+3. `.claude/skills/.env`
+4. `.claude/.env`
 
 ## Validation
 

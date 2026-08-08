@@ -98,7 +98,7 @@ Check the `## Plan Context` section injected by hooks:
 1. **If "Plan:" shows a path**: Ask "Continue with existing plan? [Y/n]"
 2. **If "Suggested:" shows a path**: Inform user, ask if they want to activate or create new
 3. **If "Plan: none"**: Create new plan using naming from `## Naming` section
-4. **Update on create**: Run `node .gemini/scripts/set-active-plan.cjs {plan-dir}`
+4. **Update on create**: Run `node .claude/scripts/set-active-plan.cjs {plan-dir}`
 
 ### Report Output Location
 

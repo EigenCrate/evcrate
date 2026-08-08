@@ -1,14 +1,14 @@
 # Project Overview & Product Development Requirements (PDR)
 
-**Project Name**: devkit
+**Project Name**: EVCrate
 **Version**: 1.8.0
 **Last Updated**: 2026-08-02
 **Status**: Active Development
-**Repository**: https://github.com/NEBULEA-M/devkit
+**Repository**: https://github.com/NEBULEA-M/evcrate
 
 ## Executive Summary
 
-ClaudeKit Engineer is a comprehensive boilerplate template that revolutionizes software development by integrating AI-powered CLI coding agents (Claude Code and Open Code) into the development workflow. It provides a complete orchestration framework where specialized AI agents collaborate to handle planning, implementation, testing, code review, documentation, and project management.
+EVCrate is a comprehensive boilerplate template that integrates AI-powered CLI coding agents (Claude Code and Open Code) into the development workflow. It provides a complete orchestration framework where specialized AI agents collaborate to handle planning, implementation, testing, code review, documentation, and project management.
 
 ## Project Purpose
 
@@ -78,7 +78,7 @@ Provide a production-ready template that:
   - Zero-configuration setup
   - Blocks: node_modules, __pycache__, .git/, dist/, build/
   - Improves AI agent response time and token efficiency
-- **Config Hardening**: Shared hook config resolves product-scoped `.devkit.json` under `.claude/` and `.codex/`, with Codex bridges pinned to `DEVKIT_CONFIG_DIR=.codex`; runtime resolves from the discovered project root, privacy blocking uses only the selected local config, and Python-managed global sync preserves user-owned `~/.codex/.devkit.json` unless full sync is explicitly requested
+- **Config Hardening**: Shared hook config resolves product-scoped `.evcrate.json` under `.claude/` and `.codex/`, with Codex bridges pinned to `EVCRATE_CONFIG_DIR=.codex`; runtime resolves from the discovered project root, privacy blocking uses only the selected local config, and Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` unless full sync is explicitly requested
 
 ### 2. Comprehensive Slash Commands (50+)
 
@@ -134,7 +134,7 @@ Provide a production-ready template that:
 - **Databases**: MongoDB, PostgreSQL
 - **Design**: Canvas-based design generation
 - **Debugging**: Systematic debugging, root-cause tracing, defense-in-depth
-- **Development**: Next.js, Turborepo, Claude Code workflows
+- **Development**: Next.js, Turborepo, EVCrate workflows
 - **Documentation**: Repomix, docs-seeker
 - **Documents**: PDF, DOCX, PPTX, XLSX processing
 - **Infrastructure**: Docker containerization
@@ -221,7 +221,7 @@ Provide a production-ready template that:
 
 **FR7: Verified Distribution Publication**
 - Provide `--publish`, `--publish --dry-run [--json]`, and `--recover` operations.
-- Publish only artifacts authorized by a complete, current `.devkit/build-manifest.json`.
+- Publish only artifacts authorized by a complete, current `.evcrate/build-manifest.json`.
 - Apply target HOME policies atomically while preserving declared and unmanaged user files.
 - Persist owner-only release state, reject concurrent publishers, and recover interrupted promotions.
 - Include verified build metadata and generated assets in release CI without mutating developer HOME.
@@ -510,8 +510,8 @@ Provide a production-ready template that:
 - ✅ Documentation system
 
 ### Phase 2: Enhancement (Current)
-- ✅ Repository adaptation to Devkit (renaming, configurations, scripts integration)
-- ✅ Devkit hook config hardening (`.devkit.json` resolution, fixed Codex selector, and local-only privacy toggle)
+- ✅ Repository adaptation to EVCrate (renaming, configurations, scripts integration)
+- ✅ EVCrate hook config hardening (`.evcrate.json` resolution, fixed Codex selector, and local-only privacy toggle)
 - 🔄 Additional skills (GCP, AWS, Azure)
 - 🔄 UI/UX improvements
 - 🔄 Performance optimization
@@ -611,9 +611,9 @@ Provide a production-ready template that:
 - [Keep a Changelog](https://keepachangelog.com/)
 
 ### Support & Community
-- GitHub Issues: https://github.com/NEBULEA-M/devkit/issues
-- Discussions: https://github.com/NEBULEA-M/devkit/discussions
-- Repository: https://github.com/NEBULEA-M/devkit
+- GitHub Issues: https://github.com/NEBULEA-M/evcrate/issues
+- Discussions: https://github.com/NEBULEA-M/evcrate/discussions
+- Repository: https://github.com/NEBULEA-M/evcrate
 
 ## Unresolved Questions
 

@@ -8,7 +8,7 @@
   "patches": [],
   "home_policy": {
     "bindings": {".codex": ".codex", ".agents": ".agents"},
-    "preserve_paths": {".codex": [".devkit.json"]},
+    "preserve_paths": {".codex": [".evcrate.json"]},
     "promotion_order": 20
   }
 }

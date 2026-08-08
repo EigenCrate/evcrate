@@ -10,7 +10,7 @@
       "Bash(sudo mv:*)",
       "Bash(sudo systemctl restart:*)",
       "Bash(git rm:*)",
-      "WebFetch(domain:docs.claudekit.cc)",
+      "WebFetch(domain:docs.evcrate.cloud)",
       "Bash(head:*)",
       "Bash(wc:*)",
       "Bash(cargo check:*)",

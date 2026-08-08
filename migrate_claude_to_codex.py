@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate Claude Code devkit files to Codex CLI conventions."""
+"""Migrate Claude Code evcrate files to Codex CLI conventions."""
 
 from __future__ import annotations
 
@@ -21,10 +21,10 @@ PROJECT_DOCS_DIR = Path(os.environ.get("PROJECT_DOCS_OUTPUT_DIR", "."))
 # temporary escape hatch for incident recovery while callers migrate to --publish.
 for arg in sys.argv[1:]:
     if arg.lower() in ("--global", "global"):
-        if os.environ.get("DEVKIT_ALLOW_DIRECT_GLOBAL") != "1":
+        if os.environ.get("EVCRATE_ALLOW_DIRECT_GLOBAL") != "1":
             raise SystemExit(
                 "Direct --global migration is disabled; use 'python3 distribute.py --publish'. "
-                "Set DEVKIT_ALLOW_DIRECT_GLOBAL=1 only for a documented emergency."
+                "Set EVCRATE_ALLOW_DIRECT_GLOBAL=1 only for a documented emergency."
             )
         print("WARNING: direct --global migration bypasses distribution verification.", file=sys.stderr)
         CODEX_DIR = Path.home() / ".codex"
@@ -53,7 +53,7 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - A spawn acknowledgement, progress event, or file change does not mean the agent completed. Completion requires the terminal response and requested validation.
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 """
-DEVKIT_CONFIG_FILE = ".devkit.json"
+EVCRATE_CONFIG_FILE = ".evcrate.json"
 CODEX_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Codex hook targets subagent startup; behavior is intentionally dropped.",
     "PreCompact": "No clean Codex analog for Claude PreCompact; behavior is intentionally dropped.",
@@ -92,17 +92,16 @@ def ignore_migration_artifacts(_: str, names: list[str]) -> set[str]:
 REPLACEMENTS = {
     r"\.claude/skills": ".agents/skills",
     r"\.claude": ".codex",
+    r"\bCLAUDE\.md\b": "AGENTS.md",
     r"\bClaude Code\b": "Codex CLI",
     r"\bclaude-code\b": "codex-cli",
     r"\bClaude\b": "Codex",
     r"\bclaude\b": "codex",
     r"\bAnthropic\b": "OpenAI",
     r"\banthropic\b": "openai",
-    r"\bCLAUDE\.md\b": "AGENTS.md",
     r"\bCLAUDE_PROJECT_DIR\b": "CODEX_PROJECT_DIR",
     r"\bCLAUDE_COMMAND\b": "CODEX_COMMAND",
     r"\bANTHROPIC_API_KEY\b": "OPENAI_API_KEY",
-    r"\.ck\.json": DEVKIT_CONFIG_FILE,
     r"\$ARGUMENTS": "{{args}}",
     r"\bTask tool\b": "subagent workflow",
     r"\bTask\(subagent_type=": "Ask Codex to spawn a subagent with type=",
@@ -125,9 +124,9 @@ MODEL_MAP = {
     # gpt-5.3-codex-spark is intentionally excluded (Pro-only preview) and must
     # never be a default tier.
     "opus": ("gpt-5.6-sol", "high"),
-    "sonnet": ("gpt-5.6-terra", "high"),
+    "sonnet": ("gpt-5.6-luna", "xhigh"),
     "haiku": ("gpt-5.6-luna", "low"),
-    "inherit": ("gpt-5.6-terra", "medium"),
+    "inherit": ("gpt-5.6-luna", "high"),
     "": ("gpt-5.6-sol", "high"),
 }
 
@@ -262,7 +261,7 @@ def clean_destination() -> None:
     matrix_file = CODEX_DIR / "migration-behavior-matrix.json"
     if matrix_file.exists():
         matrix_file.unlink()
-    config_file = CODEX_DIR / DEVKIT_CONFIG_FILE
+    config_file = CODEX_DIR / EVCRATE_CONFIG_FILE
     if config_file.exists():
         config_file.unlink()
     CODEX_DIR.mkdir(parents=True, exist_ok=True)
@@ -354,10 +353,10 @@ def read_json(path: Path) -> dict[str, Any]:
         raise RuntimeError(f"Could not read JSON source {path}") from error
 
 
-def migrate_devkit_config() -> None:
+def migrate_evcrate_config() -> None:
     """Materialize the checked-in Claude config as the local Codex baseline."""
-    source = CLAUDE_DIR / DEVKIT_CONFIG_FILE
-    target = CODEX_DIR / DEVKIT_CONFIG_FILE
+    source = CLAUDE_DIR / EVCRATE_CONFIG_FILE
+    target = CODEX_DIR / EVCRATE_CONFIG_FILE
     if not source.exists():
         print(f"Warning: canonical config not found: {source}")
         return
@@ -545,6 +544,23 @@ def migrate_skills() -> None:
         print(f"Migrated skill: {source.name} -> {target_name}")
 
 
+def migrate_help_scripts() -> None:
+    """Copy the portable help pair into the Codex runtime layout."""
+    source_dir = CLAUDE_DIR / "scripts"
+    dest_dir = CODEX_DIR / "scripts"
+    if not source_dir.is_dir():
+        return
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("ev-help.py", "test-evcrate-help.py"):
+        source = source_dir / name
+        if not source.is_file() or source.is_symlink() or source.suffix in {".pyc", ".pyo"}:
+            continue
+        destination = dest_dir / name
+        shutil.copyfile(source, destination)
+        print(f"Migrated help script: {name}")
+
+
 def migrate_commands_as_native_skills() -> None:
     src_dir = CLAUDE_DIR / "commands"
     dest_dir = AGENTS_DIR / "skills"
@@ -564,9 +580,9 @@ def migrate_commands_as_native_skills() -> None:
         body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
         if cmd_name == "coding-level":
             body = body.replace(
-                "1. Set `codingLevel` in `.codex/.devkit.json`",
-                "1. Set `codingLevel` in `.codex/.devkit.json`.\n"
-                "   This file is materialized from canonical `.claude/.devkit.json`; "
+                "1. Set `codingLevel` in `.codex/.evcrate.json`",
+                "1. Set `codingLevel` in `.codex/.evcrate.json`.\n"
+                "   This file is materialized from canonical `.claude/.evcrate.json`; "
                 "update that source before regenerating to persist changes.",
             )
 
@@ -645,7 +661,7 @@ const result = spawnSync(process.execPath, [sourceHook], {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
-    DEVKIT_CONFIG_DIR: {config_dir_json},
+    EVCRATE_CONFIG_DIR: {config_dir_json},
   }},
 }});
 
@@ -720,6 +736,12 @@ function resolveHookSource() {{
 }}
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
+
+if (!fs.existsSync(sourceHook)) {{
+  process.stdout.write(JSON.stringify({{}}));
+  process.exit(0);
+}}
+
 const result = spawnSync(process.execPath, [sourceHook], {{
   cwd: projectDir,
   input,
@@ -728,21 +750,21 @@ const result = spawnSync(process.execPath, [sourceHook], {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     CODEX_PROJECT_DIR: projectDir,
-    DEVKIT_CONFIG_DIR: {config_dir_json},
+    EVCRATE_CONFIG_DIR: {config_dir_json},
   }},
 }});
 
 const reason = (result.stderr || result.stdout || '').trim();
-if (result.status === 2) {{
+if (result.status === 0 && !result.error) {{
+  process.stdout.write(JSON.stringify({{}}));
+}} else {{
   process.stdout.write(JSON.stringify({{
     hookSpecificOutput: {{
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: reason || 'Blocked by migrated Claude hook.',
+      permissionDecisionReason: reason || (result.error ? result.error.message : '') || 'Blocked by migrated Claude hook.',
     }},
   }}));
-}} else {{
-  process.stdout.write(JSON.stringify({{}}));
 }}
 """.format(
         project_env_var=project_env_var,
@@ -1010,11 +1032,12 @@ def main() -> None:
     if not CLAUDE_DIR.exists():
         raise SystemExit("Error: .claude directory not found")
     clean_destination()
-    migrate_devkit_config()
+    migrate_evcrate_config()
     migrate_workflows()
     write_project_agents_md()
     migrate_agents()
     migrate_skills()
+    migrate_help_scripts()
     migrate_commands_as_native_skills()
     write_codex_global_guidance()
     write_codex_hooks()

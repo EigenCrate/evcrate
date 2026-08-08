@@ -1,1 +1,1 @@
-"""Explicit build and publication boundaries for DevKit distribution."""
+"""Explicit build and publication boundaries for EVCrate distribution."""

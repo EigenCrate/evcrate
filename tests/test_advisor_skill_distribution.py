@@ -154,7 +154,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             home = root / "home"
             destination = home / ".codex"
             destination.mkdir(parents=True)
-            user_config = destination / ".devkit.json"
+            user_config = destination / ".evcrate.json"
             user_config.write_text("user-owned\n", encoding="utf-8")
             context = DistributionContext(
                 DistributionAction.PUBLISH,
@@ -168,7 +168,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             artifact = VerifiedArtifact(REPOSITORY, context.local_roots)
             changes = publish_diff(context, artifact)
 
-            self.assertIn((".devkit.json", "preserve"), {(item.path, item.action) for item in changes})
+            self.assertIn((".evcrate.json", "preserve"), {(item.path, item.action) for item in changes})
             self.assertEqual(user_config.read_text(encoding="utf-8"), "user-owned\n")
 
 

@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-geminiKit Help Command - All-in-one guide with dynamic command discovery.
-Scans .gemini/commands/ directory to build catalog at runtime.
+    EVCrate Help Command - All-in-one guide with dynamic command discovery.
+Scans .claude/commands/ directory to build catalog at runtime.
 
 Usage:
-    python ck-help.py                    # Overview with quick start
-    python ck-help.py fix                # Category guide with workflow
-    python ck-help.py plan:fast          # Command details
-    python ck-help.py debug login error  # Task recommendations
-    python ck-help.py auth               # Search (unknown word)
+    python ev-help.py                    # Overview with quick start
+    python ev-help.py fix                # Category guide with workflow
+    python ev-help.py plan:fast          # Command details
+    python ev-help.py debug login error  # Task recommendations
+    python ev-help.py auth               # Search (unknown word)
 """
 
 import sys
 import re
 import io
 import ast
+import os
 from pathlib import Path
 
 try:
@@ -31,7 +32,7 @@ if sys.platform == 'win32':
 
 
 # Output type markers for LLM presentation guidance
-# Format: @CK_OUTPUT_TYPE:<type>
+# Format: @EVCRATE_OUTPUT_TYPE:<type>
 # Types:
 #   - comprehensive-docs: Full documentation, show verbatim + add context
 #   - category-guide: Workflow guide, show full + explain workflow
@@ -49,7 +50,7 @@ OUTPUT_TYPES = {
 
 def emit_output_type(output_type: str) -> None:
     """Emit output type marker for LLM presentation guidance."""
-    print(f"@CK_OUTPUT_TYPE:{output_type}")
+    print(f"@EVCRATE_OUTPUT_TYPE:{output_type}")
     print()
 
 
@@ -68,7 +69,7 @@ TASK_MAPPINGS = {
     "integrate": ["integrate", "payment", "api", "connect", "webhook", "third-party"],
     "skill": ["skill", "agent", "automate", "workflow"],
     "scout": ["find", "search", "locate", "explore", "scan", "where"],
-    "config": ["config", "configure", "settings", "devkit.json", ".devkit.json", "setup", "locale", "language", "paths"],
+    "config": ["config", "configure", "settings", "evcrate.json", ".evcrate.json", "setup", "locale", "language", "paths"],
     "coding-level": ["coding", "level", "eli5", "junior", "senior", "lead", "god", "beginner", "expert", "teach", "learn", "explain"],
     # New categories
     "worktree": ["worktree", "parallel", "isolate", "isolation", "concurrent", "multiple branches"],
@@ -203,13 +204,13 @@ CATEGORY_GUIDES = {
             ("Tech Lead", "`codingLevel: 4` (risk matrix, strategy)"),
             ("God Mode", "`codingLevel: 5` (code first, no fluff)"),
         ],
-        "tip": "Set in .devkit.json. Guidelines auto-inject on session start",
+        "tip": "Set in .evcrate.json. Guidelines auto-inject on session start",
     },
     "config": {
-        "title": "geminiKit Configuration (.devkit.json)",
+        "title": "EVCrate Configuration (.evcrate.json)",
         "workflow": [
-            ("Global", "Set user prefs in `~/.gemini/.devkit.json`"),
-            ("Local", "Override per-project in `./.gemini/.devkit.json`"),
+            ("Global", "Set user prefs in `~/.claude/.evcrate.json`"),
+            ("Local", "Override per-project in `./.claude/.evcrate.json`"),
             ("Resolution", "DEFAULT → global → local (deep merge)"),
         ],
         "tip": "Global config works in fresh dirs; local overrides for projects",
@@ -275,23 +276,23 @@ CATEGORY_GUIDES = {
     "notifications": {
         "title": "Session Notifications (Discord/Telegram/Slack)",
         "workflow": [
-            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.gemini/.env`"),
-            ("2. Add hook", "Add Stop hook to `.gemini/settings.json` (see below)"),
-            ("3. Test", "`echo '{\"hook_event_name\":\"Stop\"}' | node .gemini/hooks/notifications/notify.cjs`"),
+            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.claude/.env`"),
+            ("2. Add hook", "Add Stop hook to `.claude/settings.json` (see below)"),
+            ("3. Test", "`echo '{\"hook_event_name\":\"Stop\"}' | node .claude/hooks/notifications/notify.cjs`"),
         ],
         "tip": """Add to settings.json:
 ```json
-"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "node .gemini/hooks/notifications/notify.cjs"}]}]
+"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "node .claude/hooks/notifications/notify.cjs"}]}]
 ```
-Docs: `.gemini/hooks/notifications/docs/`""",
+Docs: `.claude/hooks/notifications/docs/`""",
     },
 }
 
 
 def detect_prefix(commands_dir: Path) -> str:
-    """Detect if commands use /devkit: prefix based on directory structure."""
-    devkit_commands_dir = commands_dir / "devkit"
-    return "devkit:" if devkit_commands_dir.exists() and devkit_commands_dir.is_dir() else ""
+    """Detect if commands use /evcrate: prefix based on directory structure."""
+    evcrate_commands_dir = commands_dir / "evcrate"
+    return "evcrate:" if evcrate_commands_dir.exists() and evcrate_commands_dir.is_dir() else ""
 
 
 def parse_frontmatter(file_path: Path) -> dict:
@@ -322,7 +323,7 @@ def parse_frontmatter(file_path: Path) -> dict:
 
 
 def parse_command_metadata(file_path: Path) -> dict:
-    """Read command metadata from gemini Markdown or migrated TOML files."""
+    """Read command metadata from Claude Markdown or migrated TOML files."""
     if file_path.suffix == ".toml":
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -341,6 +342,101 @@ def parse_command_metadata(file_path: Path) -> dict:
         except (OSError, tomllib.TOMLDecodeError):
             return {}
     return parse_frontmatter(file_path)
+
+
+COMMAND_PATH_RE = re.compile(r"(?im)^\s*Command Path:\s*(/\S+)")
+
+
+def _normalize_command_path(command_path: str) -> str:
+    """Use the canonical colon form for commands stored as skill paths."""
+    command_path = command_path.strip()
+    if not command_path.startswith("/"):
+        return ""
+    command_name = command_path[1:]
+    if command_name.startswith("evcrate:"):
+        return command_path
+    return "/" + command_name.replace("/", ":")
+
+
+def _skill_category(command_name: str) -> str:
+    """Match command-file categories, including root evcrate-prefixed commands."""
+    name = command_name.removeprefix("/")
+    if name.startswith("evcrate:") or ":" not in name:
+        return "core"
+    return name.split(":", 1)[0]
+
+
+def discover_skill_commands(skills_dir: Path) -> dict:
+    """Discover migrated cmd_* skills through their embedded Command Path."""
+    commands = {}
+    categories = {}
+    if not skills_dir.is_dir():
+        return {"commands": commands, "categories": categories}
+
+    for skill_file in sorted(skills_dir.glob("cmd_*/SKILL.md")):
+        metadata = parse_command_metadata(skill_file)
+        description = metadata.get("description", "")
+        match = COMMAND_PATH_RE.search(skill_file.read_text(encoding="utf-8"))
+        if not description or not match:
+            continue
+
+        command_name = _normalize_command_path(match.group(1))
+        if not command_name:
+            continue
+        category = _skill_category(command_name)
+        clean_desc = re.sub(r"^[^\w\s]+\s*", "", description).strip()
+        commands.setdefault(category, []).append({
+            "name": command_name,
+            "description": clean_desc,
+            "category": category,
+        })
+        categories.setdefault(category, category.title())
+
+    for category in commands:
+        commands[category].sort(key=lambda command: command["name"])
+    return {"commands": commands, "categories": categories}
+
+
+def _candidate_roots(*roots: Path) -> list[Path]:
+    """Return unique roots plus their parents for project-local execution."""
+    candidates = []
+    for root in roots:
+        try:
+            current = root.expanduser().resolve()
+        except OSError:
+            continue
+        for candidate in (current, *current.parents):
+            if candidate not in candidates:
+                candidates.append(candidate)
+    return candidates
+
+
+def resolve_command_source(script_path: Path) -> tuple[str, Path]:
+    """Find canonical commands or a generated target's command skills."""
+    target_root = script_path.parent.parent
+    direct_commands = target_root / "commands"
+    if direct_commands.is_dir():
+        return "commands", direct_commands
+
+    # Antigravity removes commands while retaining generated cmd_* skills.
+    direct_skills = target_root / "skills"
+    if target_root.name == "antigravity" and direct_skills.is_dir():
+        return "skills", direct_skills
+
+    project_roots = [
+        Path(value)
+        for name in ("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")
+        if (value := os.environ.get(name))
+    ]
+    project_roots.extend((target_root.parent, Path.cwd()))
+    for project_root in _candidate_roots(*project_roots):
+        commands_dir = project_root / ".claude" / "commands"
+        if commands_dir.is_dir():
+            return "commands", commands_dir
+
+    if direct_skills.is_dir():
+        return "skills", direct_skills
+    return "", target_root / "commands"
 
 
 def discover_commands(commands_dir: Path, prefix: str) -> dict:
@@ -443,9 +539,9 @@ def show_overview(data: dict, prefix: str) -> None:
     commands = data["commands"]
     categories = data["categories"]
     total = sum(len(cmds) for cmds in commands.values())
-    help_cmd = f"/{prefix}ck-help" if prefix else "/ck-help"
+    help_cmd = f"/{prefix}evcrate-help" if prefix else "/evcrate-help"
 
-    print("# geminiKit Commands")
+    print("# EVCrate Commands")
     print()
     print(f"{total} commands across {len(categories)} categories.")
     print()
@@ -537,13 +633,13 @@ def show_command(data: dict, command: str, prefix: str) -> None:
     commands = data["commands"]
 
     # Normalize search term
-    search = command.lower().replace("/devkit:", "").replace("/", "").replace(":", "")
+    search = command.lower().replace("/evcrate:", "").replace("/", "").replace(":", "")
 
     found = None
     for cmds in commands.values():
         for cmd in cmds:
             # Normalize command name for comparison
-            name = cmd["name"].lower().replace("/devkit:", "").replace("/", "").replace(":", "")
+            name = cmd["name"].lower().replace("/evcrate:", "").replace("/", "").replace(":", "")
             if name == search:
                 found = cmd
                 break
@@ -663,14 +759,14 @@ def recommend_task(data: dict, task: str, prefix: str) -> None:
 
 
 def show_config_guide() -> None:
-    """Display comprehensive .devkit.json configuration guide."""
+    """Display comprehensive .evcrate.json configuration guide."""
     emit_output_type("comprehensive-docs")
 
-    print("# geminiKit Configuration (.devkit.json)")
+    print("# EVCrate Configuration (.evcrate.json)")
     print()
     print("**Locations (cascading resolution):**")
-    print("- Global: `~/.gemini/.devkit.json` (user preferences)")
-    print("- Local: `./.gemini/.devkit.json` (project overrides)")
+    print("- Global: `~/.claude/.evcrate.json` (user preferences)")
+    print("- Local: `./.claude/.evcrate.json` (project overrides)")
     print()
     print("**Resolution Order:** `DEFAULT → global → local`")
     print("- Global config sets user defaults")
@@ -683,7 +779,7 @@ def show_config_guide() -> None:
     print()
     print("## Quick Start")
     print()
-    print("**Global config** (`~/.gemini/.devkit.json`) - your preferences:")
+    print("**Global config** (`~/.claude/.evcrate.json`) - your preferences:")
     print("```json")
     print('{')
     print('  "locale": {')
@@ -694,7 +790,7 @@ def show_config_guide() -> None:
     print('}')
     print("```")
     print()
-    print("**Local override** (`./.gemini/.devkit.json`) - project-specific:")
+    print("**Local override** (`./.claude/.evcrate.json`) - project-specific:")
     print("```json")
     print('{')
     print('  "plan": { "issuePrefix": "JIRA-" },')
@@ -762,7 +858,7 @@ def show_config_guide() -> None:
     print("- `thinkingLanguage` - Language for internal reasoning (\"en\" recommended)")
     print("- `responseLanguage` - Language for user-facing output (\"vi\", \"fr\", etc.)")
     print()
-    print("When both are set, gemini thinks in one language but responds in another.")
+    print("When both are set, Claude thinks in one language but responds in another.")
     print("This improves precision (English) while maintaining natural output (your language).")
     print()
     print("**Plan Validation:**")
@@ -824,14 +920,14 @@ def show_config_guide() -> None:
     print()
     print("**Global install user (fresh directories work):**")
     print("```bash")
-    print("# ~/.gemini/.devkit.json - applies everywhere")
-    print("cd /tmp/new-project && gemini  # Uses global config")
+    print("# ~/.claude/.evcrate.json - applies everywhere")
+    print("cd /tmp/new-project && claude  # Uses global config")
     print("```")
     print()
     print("**Project with local override:**")
     print("```bash")
     print("# Global: issuePrefix = \"GH-\"")
-    print("# Local (.gemini/.devkit.json): issuePrefix = \"JIRA-\"")
+    print("# Local (.claude/.evcrate.json): issuePrefix = \"JIRA-\"")
     print("# Result: issuePrefix = \"JIRA-\" (local wins)")
     print("```")
     print()
@@ -851,7 +947,7 @@ def show_coding_level_guide() -> None:
 
     print("# Coding Level (Adaptive Communication)")
     print()
-    print("Adjusts gemini's communication style based on user's experience level.")
+    print("Adjusts EVCrate's communication style based on user's experience level.")
     print("Guidelines auto-inject on SessionStart. Commands respect them.")
     print()
     print("---")
@@ -872,7 +968,7 @@ def show_coding_level_guide() -> None:
     print()
     print("## Configuration")
     print()
-    print("**Set in `.devkit.json`:**")
+    print("**Set in `.evcrate.json`:**")
     print("```json")
     print('{')
     print('  "codingLevel": 0')
@@ -880,15 +976,15 @@ def show_coding_level_guide() -> None:
     print("```")
     print()
     print("**Location (cascading):**")
-    print("- Global: `~/.gemini/.devkit.json` - personal preference")
-    print("- Local: `./.gemini/.devkit.json` - project override")
+    print("- Global: `~/.claude/.evcrate.json` - personal preference")
+    print("- Local: `./.claude/.evcrate.json` - project override")
     print()
     print("---")
     print()
     print("## How It Works")
     print()
-    print("1. SessionStart hook reads `codingLevel` from `.devkit.json`")
-    print("2. If 0-5, injects guidelines from `.gemini/output-styles/coding-level-*.md`")
+    print("1. SessionStart hook reads `codingLevel` from `.evcrate.json`")
+    print("2. If 0-5, injects guidelines from `.claude/output-styles/coding-level-*.md`")
     print("3. Commands like `/brainstorm` follow the injected guidelines")
     print()
     print("**Token Efficiency:**")
@@ -948,28 +1044,28 @@ def show_coding_level_guide() -> None:
     print()
     print("## Customization")
     print()
-    print("Guidelines live in `.gemini/output-styles/coding-level-*.md`")
+    print("Guidelines live in `.claude/output-styles/coding-level-*.md`")
     print("Edit these files directly to customize behavior per level.")
     print()
     print("*Tip: Use `-1` (disabled) unless you're teaching or want guided explanations.*")
 
 
 def main():
-    # Find .gemini/commands directory
     script_path = Path(__file__).resolve()
-    gemini_dir = script_path.parent.parent  # .gemini/scripts -> .gemini
-    commands_dir = gemini_dir / "commands"
-
-    if not commands_dir.exists():
-        print("Error: .gemini/commands/ directory not found.")
+    source_kind, source_dir = resolve_command_source(script_path)
+    if not source_dir.is_dir():
+        print("Error: no .claude/commands or generated command skills directory found.")
         sys.exit(1)
 
-    # Detect prefix and discover commands
-    prefix = detect_prefix(commands_dir)
-    data = discover_commands(commands_dir, prefix)
+    if source_kind == "skills":
+        prefix = ""
+        data = discover_skill_commands(source_dir)
+    else:
+        prefix = detect_prefix(source_dir)
+        data = discover_commands(source_dir, prefix)
 
     if not data["commands"]:
-        print("No commands found in .gemini/commands/")
+        print(f"No commands found in {source_dir}.")
         sys.exit(1)
 
     # Parse input
@@ -977,7 +1073,7 @@ def main():
     input_str = " ".join(args).strip()
 
     # Special case: config documentation (not a command category)
-    if input_str.lower() in ["config", "configuration", ".devkit.json", "devkit.json"]:
+    if input_str.lower() in ["config", "configuration", ".evcrate.json", "evcrate.json"]:
         show_config_guide()
         return
 

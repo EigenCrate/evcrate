@@ -99,7 +99,7 @@ Refactor the legacy bash distribution script to a cross-platform Python script (
 **Features:**
 - ✅ Platform-independent python implementation
 - ✅ Path safety using pathlib for backslash/forward-slash compatibility
-- ✅ Dynamic environment configuration (EVCRATE_DIR, global mode, sync mode)
+- ✅ Dynamic environment configuration (EVCRATE_HOME, global mode, sync mode)
 - ✅ Hook script execution and settings.json translation
 - ✅ Converting slash commands to Antigravity skills
 

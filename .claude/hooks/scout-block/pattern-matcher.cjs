@@ -2,7 +2,7 @@
 /**
  * pattern-matcher.cjs - Gitignore-spec compliant pattern matching
  *
- * Uses 'ignore' package for .devkitignore parsing and path matching.
+ * Uses 'ignore' package for .evcrateignore parsing and path matching.
  * Supports negation patterns (!) for allowlisting.
  */
 
@@ -10,7 +10,7 @@ const Ignore = require('./vendor/ignore');
 const fs = require('fs');
 const path = require('path');
 
-// Default patterns if .devkitignore doesn't exist or is empty
+// Default patterns if .evcrateignore doesn't exist or is empty
 // Only includes directories with HEAVY file counts (1000+ files typical)
 const DEFAULT_PATTERNS = [
   // JavaScript/TypeScript - package dependencies & build outputs
@@ -34,19 +34,19 @@ const DEFAULT_PATTERNS = [
 ];
 
 /**
- * Load patterns from .devkitignore file
+ * Load patterns from .evcrateignore file
  * Falls back to DEFAULT_PATTERNS if file doesn't exist or is empty
  *
- * @param {string} devkitIgnorePath - Path to .devkitignore file
+ * @param {string} evcrateIgnorePath - Path to .evcrateignore file
  * @returns {string[]} Array of patterns
  */
-function loadPatterns(devkitIgnorePath) {
-  if (!devkitIgnorePath || !fs.existsSync(devkitIgnorePath)) {
+function loadPatterns(evcrateIgnorePath) {
+  if (!evcrateIgnorePath || !fs.existsSync(evcrateIgnorePath)) {
     return DEFAULT_PATTERNS;
   }
 
   try {
-    const content = fs.readFileSync(devkitIgnorePath, 'utf-8');
+    const content = fs.readFileSync(evcrateIgnorePath, 'utf-8');
     const patterns = content
       .split('\n')
       .map(line => line.trim())
@@ -54,7 +54,7 @@ function loadPatterns(devkitIgnorePath) {
 
     return patterns.length > 0 ? patterns : DEFAULT_PATTERNS;
   } catch (error) {
-    console.error('WARN: Failed to read .devkitignore:', error.message);
+    console.error('WARN: Failed to read .evcrateignore:', error.message);
     return DEFAULT_PATTERNS;
   }
 }
@@ -63,7 +63,7 @@ function loadPatterns(devkitIgnorePath) {
  * Create a matcher from patterns
  * Normalizes patterns to match anywhere in the path tree
  *
- * @param {string[]} patterns - Array of patterns from .devkitignore
+ * @param {string[]} patterns - Array of patterns from .evcrateignore
  * @returns {Object} Matcher object with ig instance and pattern info
  */
 function createMatcher(patterns) {
@@ -145,7 +145,7 @@ function matchPath(matcher, testPath) {
 /**
  * Find which original pattern matched (for error messages)
  *
- * @param {string[]} originalPatterns - Original patterns from .devkitignore
+ * @param {string[]} originalPatterns - Original patterns from .evcrateignore
  * @param {string} path - The path that was blocked
  * @returns {string} The pattern that matched
  */

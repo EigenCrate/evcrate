@@ -46,7 +46,7 @@ export class MCPClientManager {
   private clients: Map<string, Client> = new Map();
   private transports: Map<string, StdioClientTransport> = new Map();
 
-  async loadConfig(configPath: string = '.gemini/.mcp.json'): Promise<MCPConfig> {
+  async loadConfig(configPath: string = '.claude/.mcp.json'): Promise<MCPConfig> {
     const fullPath = resolve(process.cwd(), configPath);
     const content = await readFile(fullPath, 'utf-8');
     const config = JSON.parse(content) as MCPConfig;

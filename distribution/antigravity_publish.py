@@ -45,7 +45,7 @@ def _extract_hooks(target: Path) -> None:
 
 
 def _replace_legacy_assets(source: Path, target: Path) -> None:
-    for name in ["settings.json", ".devkit.json", ".mcp.json.example", "statusline.cjs", "statusline.ps1", "statusline.sh"]:
+    for name in ["settings.json", ".evcrate.json", ".mcp.json.example", "statusline.cjs", "statusline.ps1", "statusline.sh"]:
         path = target / name
         if path.exists():
             path.unlink()
@@ -60,13 +60,17 @@ def _replace_legacy_assets(source: Path, target: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for source_file in commands.rglob("*.md"):
         relative = source_file.relative_to(commands).with_suffix("")
-        command_path = str(relative).replace("\\", "/")
-        skill_name = "cmd_" + str(relative).replace("\\", "_").replace("/", "_")
         content = source_file.read_text(encoding="utf-8")
+        command_path = _command_path(content, relative)
+        skill_name = "cmd_" + str(relative).replace("\\", "_").replace("/", "_")
+        content = content.replace(
+            "python .claude/scripts/ev-help.py",
+            "python .antigravity/scripts/ev-help.py",
+        )
         (destination / skill_name).mkdir(parents=True, exist_ok=True)
         (destination / skill_name / "SKILL.md").write_text(
             f"---\nname: {skill_name}\ndescription: {_description(content)}\n---\n"
-            f"# {skill_name}\n\nCommand Path: /{command_path}\n\n"
+            f"# {skill_name}\n\nCommand Path: {command_path}\n\n"
             f"Description: {_description(content)}\n\n{content}",
             encoding="utf-8",
         )
@@ -78,3 +82,15 @@ def _description(content: str) -> str:
         if match:
             return match.group(1).strip().strip("\"'")
     return "Migrated command from .claude"
+
+
+def _command_path(content: str, relative: Path) -> str:
+    """Prefer an explicit command name over a filename-derived path."""
+    for line in content.splitlines():
+        match = re.match(r"^name\s*:\s*(.*)$", line.strip(), re.IGNORECASE)
+        if not match:
+            continue
+        value = match.group(1).strip().strip("\"'")
+        if value.startswith("/"):
+            return value
+    return "/" + str(relative).replace("\\", "/")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Comprehensive test suite for ck-help.py
-Run: python3 .gemini/scripts/test-ck-help.py
+Comprehensive test suite for ev-help.py
+Run: python3 ev-help.py
 """
 
 import subprocess
@@ -14,11 +14,11 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-SCRIPT_PATH = Path(__file__).parent / "ck-help.py"
+SCRIPT_PATH = Path(__file__).parent / "ev-help.py"
 
 
-def run_ck_help(*args):
-    """Run ck-help.py with given arguments and return output."""
+def run_evcrate_help(*args):
+    """Run ev-help.py with given arguments and return output."""
     result = subprocess.run(
         [sys.executable, str(SCRIPT_PATH)] + list(args),
         capture_output=True,
@@ -29,21 +29,25 @@ def run_ck_help(*args):
 
 def test_case(name, args, expected_patterns, unexpected_patterns=None):
     """Run a test case and check for expected patterns."""
-    output = run_ck_help(*args) if args else run_ck_help()
+    output = run_evcrate_help(*args) if args else run_evcrate_help()
 
     passed = True
     errors = []
+
+    if not output.startswith("@EVCRATE_OUTPUT_TYPE:"):
+        passed = False
+        errors.append("Missing: '@EVCRATE_OUTPUT_TYPE:<type>' as first line")
 
     for pattern in expected_patterns:
         if pattern not in output:
             passed = False
             errors.append(f"Missing: '{pattern}'")
 
-    if unexpected_patterns:
-        for pattern in unexpected_patterns:
-            if pattern in output:
-                passed = False
-                errors.append(f"Unexpected: '{pattern}'")
+    forbidden_patterns = ["@CK_" + "OUTPUT_TYPE", "ck-" + "help" + ".py", "/" + "ck-" + "help"]
+    for pattern in [*(unexpected_patterns or []), *forbidden_patterns]:
+        if pattern in output:
+            passed = False
+            errors.append(f"Unexpected: '{pattern}'")
 
     status = f"{GREEN}✓ PASS{RESET}" if passed else f"{RED}✗ FAIL{RESET}"
     print(f"{status} {name}")
@@ -57,7 +61,7 @@ def test_case(name, args, expected_patterns, unexpected_patterns=None):
 
 def main():
     print("=" * 60)
-    print("ck-help.py Test Suite")
+    print("ev-help.py Test Suite")
     print("=" * 60)
     print()
 
@@ -191,19 +195,19 @@ def main():
     tests.append(test_case(
         "config guide",
         ["config"],
-        [".devkit.json", "Configuration", "locale", "codingLevel"]
+        [".evcrate.json", "Configuration", "locale", "codingLevel"]
     ))
 
     tests.append(test_case(
         "config filename routes to config guide",
-        [".devkit.json"],
-        ["Configuration", "~/.gemini/.devkit.json"]
+        [".evcrate.json"],
+        ["Configuration", "~/.claude/.evcrate.json"]
     ))
 
     tests.append(test_case(
         "config filename alias routes to config guide",
-        ["devkit.json"],
-        ["Configuration", "./.gemini/.devkit.json"]
+        ["evcrate.json"],
+        ["Configuration", "./.claude/.evcrate.json"]
     ))
 
     tests.append(test_case(

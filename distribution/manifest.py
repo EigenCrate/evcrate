@@ -164,7 +164,7 @@ def load_target_manifest(path: Path) -> TargetManifest:
 
 
 def load_target_registry(path: Path) -> TargetRegistry:
-    """Load a target-name to manifest-path registry beneath ``.devkit/targets``."""
+    """Load a target-name to manifest-path registry beneath ``.evcrate/targets``."""
 
     data = _load_json(path)
     if data.get("schema_version") != BUILD_MANIFEST_SCHEMA_VERSION:

@@ -47,6 +47,8 @@ The distribution entrypoint separates local generation from HOME publication. `.
 
 Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking.
 
+`EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime compatibility retains existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
+
 The advisor is current-session guidance only: it structures a local decision brief and reasons over already available evidence. It invokes no provider, model, MCP server, app, command, network or file operation, delegation, quota, audit, or enforcement mechanism. The former `advisor_consult` broker contract is removed; callers use explicit `$advisor-strategy`. Distribution behavior is covered by the Python regression suites.
 
 ## Core Technologies

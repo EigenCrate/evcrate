@@ -21,7 +21,7 @@ const { execFileSync } = require('child_process');
   const claudeDir = path.join(projectRoot, '.claude');
   const metadataPath = path.join(claudeDir, 'metadata.json');
   const distDir = path.join(projectRoot, 'dist');
-  const archivePath = path.join(distDir, 'devkit.zip');
+  const archivePath = path.join(distDir, 'evcrate.zip');
 
   try {
     if (!fs.existsSync(packageJsonPath)) {
@@ -80,8 +80,8 @@ const { execFileSync } = require('child_process');
       '.codex',
       '.agents',
       '.antigravity',
-      '.devkit/build-manifest.json',
-      '.devkit/targets'
+      '.evcrate/build-manifest.json',
+      '.evcrate/targets'
     ];
 
     const existingTargets = archiveTargets.filter((target) => fs.existsSync(path.join(projectRoot, target)));

@@ -1,4 +1,4 @@
-# Codex.md
+# AGENTS.md
 
 This file provides guidance to Codex CLI (Codex.ai/code) when working with code in this repository.
 

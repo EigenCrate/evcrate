@@ -14,10 +14,10 @@ PROJECT_DOCS_DIR = Path(os.environ.get("GEMINI_PROJECT_DOCS_OUTPUT_DIR", "."))
 # Command-line parameter support to generate local or global config baselines
 for arg in sys.argv[1:]:
     if arg.lower() in ("--global", "global"):
-        if os.environ.get("DEVKIT_ALLOW_DIRECT_GLOBAL") != "1":
+        if os.environ.get("EVCRATE_ALLOW_DIRECT_GLOBAL") != "1":
             raise SystemExit(
                 "Direct --global migration is disabled; use 'python3 distribute.py --publish'. "
-                "Set DEVKIT_ALLOW_DIRECT_GLOBAL=1 only for a documented emergency."
+                "Set EVCRATE_ALLOW_DIRECT_GLOBAL=1 only for a documented emergency."
             )
         print("WARNING: direct --global migration bypasses distribution verification.", file=sys.stderr)
         GEMINI_DIR = Path.home() / ".gemini"
@@ -91,13 +91,13 @@ REPLACEMENTS = {
     r"sonnet": "flash",
     r"haiku": "flash-lite",
     r"opus": "pro",
-    r"claude-code": "gemini-cli",
     r"\bCLAUDE\.md\b": "CLAUDE.md",
-    r"claude": "gemini",
-    r"claudekit": "geminikit",
+    # Match standalone platform prose only; preserve ClaudeKit provenance and
+    # external claudekit-cli names.
+    r"(?<![A-Za-z0-9_.-])claude(?![A-Za-z0-9_-]|\.(?:com|ai)\b)": "gemini",
+    # URL literals are protected before these replacements; keep URL-specific
+    # mappings out of this table so canonical URLs remain unchanged.
     r"anthropic": "google",
-    r"console.anthropic.com": "aistudio.google.com",
-    r"anthropic-ai/claude-code": "google-gemini/gemini-cli",
     r"ANTHROPIC_API_KEY": "GEMINI_API_KEY",
     r"CLAUDE_PROJECT_DIR": "GEMINI_PROJECT_DIR",
     r"CLAUDE_COMMAND": "GEMINI_COMMAND",
@@ -106,6 +106,7 @@ REPLACEMENTS = {
     r"AskUserQuestion": "ask_user",
     r"\$ARGUMENTS": "{{args}}",
     r"\"\$CLAUDE_PROJECT_DIR\"": "\"$GEMINI_PROJECT_DIR\"",
+    r"python \.claude/scripts/ev-help\.py\b": "python .gemini/scripts/ev-help.py",
     r"gemini-sonnet": "gemini-3-flash-preview",
     r"gemini-haiku": "gemini-3.1-flash-lite-preview",
     r"gemini-opus": "gemini-3.1-pro-preview",
@@ -154,11 +155,22 @@ GEMINI_UNSUPPORTED_EVENTS = {
 def apply_replacements(text):
     if not isinstance(text, str):
         return text
+    protected_values = []
+
+    def protect(match):
+        protected_values.append(match.group(0))
+        return f"__GEMINI_PROTECTED_{len(protected_values) - 1}__"
+
+    # Protect URL literals before adapting nearby platform prose. URL-specific
+    # rules are intentionally absent from REPLACEMENTS.
+    text = re.sub(r"https?://[^\s<>()]+", protect, text, flags=re.IGNORECASE)
     claude_md_token = "__SOURCE_MEMORY_DOC__"
     text = re.sub(r"\bCLAUDE\.md\b", claude_md_token, text, flags=re.IGNORECASE)
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     text = text.replace(claude_md_token, "CLAUDE.md")
+    for index, value in enumerate(protected_values):
+        text = text.replace(f"__GEMINI_PROTECTED_{index}__", value)
     return text
 
 def clean_destination():
@@ -357,8 +369,8 @@ def write_gemini_hook_assets():
     hook_files = {
         "session-start.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "SessionStart", ".claude/hooks/session-init.cjs"),
         "before-agent.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "BeforeAgent", ".claude/hooks/dev-rules-reminder.cjs"),
-        "before-tool-scout-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/scout-block.cjs"),
-        "before-tool-privacy-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/privacy-block.cjs"),
+        "before-tool-scout-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/scout-block.cjs", "before-tool-scout-block.cjs"),
+        "before-tool-privacy-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/privacy-block.cjs", "before-tool-privacy-block.cjs"),
         "session-end.cjs": create_passthrough_bridge("GEMINI_PROJECT_DIR", ".claude/hooks/session-end.cjs"),
     }
     for name, content in hook_files.items():
@@ -433,8 +445,8 @@ process.stdout.write(JSON.stringify(payload));
     )
 
 
-def create_block_bridge(project_env_var, hook_event_name, source_rel_path):
-    hook_name = source_rel_path.split("/")[-1]
+def create_block_bridge(project_env_var, hook_event_name, source_rel_path, wrapper_name):
+    hook_name = wrapper_name
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -540,7 +552,23 @@ try {{
   }}
 }} catch(e) {{}}
 
-let result = spawnSync(process.execPath, [sourceHook], {{
+let activeHook = sourceHook;
+if (!fs.existsSync(activeHook)) {{
+  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/{hook_name}");
+  if (fs.existsSync(globalHook)) {{
+    activeHook = globalHook;
+  }} else {{
+    process.stdout.write(JSON.stringify({{
+      decision: 'allow',
+      hookSpecificOutput: {{
+        hookEventName: {hook_event_name_json},
+      }},
+    }}));
+    process.exit(0);
+  }}
+}}
+
+const result = spawnSync(process.execPath, [activeHook], {{
   input: claudePayload,
   encoding: 'utf-8',
   env: {{
@@ -550,36 +578,18 @@ let result = spawnSync(process.execPath, [sourceHook], {{
   }},
 }});
 
-// Fallback to global hook if local hook failed to run or crashed (status 1 or error)
-if ((result.status === 1 || result.error) && !sourceHook.includes('.gemini/config')) {{
-  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/{hook_name}");
-  if (fs.existsSync(globalHook)) {{
-    const fallbackResult = spawnSync(process.execPath, [globalHook], {{
-      input: input,
-      encoding: 'utf-8',
-      env: {{
-        ...process.env,
-        CLAUDE_PROJECT_DIR: projectDir,
-        GEMINI_PROJECT_DIR: projectDir,
-      }},
-    }});
-    process.stdout.write(fallbackResult.stdout);
-    process.exit(fallbackResult.status);
-  }}
-}}
-
 const reason = (result.stderr || result.stdout || '').trim();
-if (result.status === 2 || result.status === 1) {{
+if (result.status === 0 && !result.error) {{
   process.stdout.write(JSON.stringify({{
-    decision: 'deny',
-    reason: reason || 'Blocked by migrated Claude hook.',
+    decision: 'allow',
     hookSpecificOutput: {{
       hookEventName: {hook_event_name_json},
     }},
   }}));
 }} else {{
   process.stdout.write(JSON.stringify({{
-    decision: 'allow',
+    decision: 'deny',
+    reason: reason || (result.error ? result.error.message : '') || 'Blocked by migrated Claude hook.',
     hookSpecificOutput: {{
       hookEventName: {hook_event_name_json},
     }},
@@ -811,7 +821,16 @@ def migrate_scripts():
         shutil.copy2(source, dest_path)
         if is_text_file(dest_path):
             with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
-            with open(dest_path, "w", encoding="utf-8") as f: f.write(apply_replacements(content))
+            content = apply_replacements(content)
+            if rel_path.as_posix() == "ev-help.py":
+                # Keep both source and target project variables in the
+                # portable discovery tuple for migrated help scripts.
+                content = content.replace(
+                    '("GEMINI_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")',
+                    '("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")',
+                    1,
+                )
+            with open(dest_path, "w", encoding="utf-8") as f: f.write(content)
         print(f"Migrated script: {rel_path}")
 
 def migrate_mcp():

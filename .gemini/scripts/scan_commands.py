@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scan .gemini/commands directory and extract command metadata.
+Scan .claude/commands directory and extract command metadata.
 """
 
 import re
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List
 import yaml
 
-COMMAND_NAME_RE = re.compile(r'^/(?:devkit:)?[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*$')
+COMMAND_NAME_RE = re.compile(r'^/(?:evcrate:)?[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*$')
 
 def extract_frontmatter(content: str) -> Dict:
     """Extract YAML frontmatter from markdown content."""
@@ -25,7 +25,7 @@ def resolve_command_name(frontmatter: Dict, parts: List[str]) -> str:
     command_name = str(frontmatter.get('name') or ('/' + ':'.join(parts)))
     if not COMMAND_NAME_RE.match(command_name):
         raise ValueError(
-            f"Invalid command name '{command_name}'. Expected /name or /devkit:name format."
+            f"Invalid command name '{command_name}'. Expected /name or /evcrate:name format."
         )
     return command_name
 
@@ -84,7 +84,7 @@ def group_by_category(commands: List[Dict]) -> Dict[str, List[Dict]]:
 
 def main():
     """Main execution."""
-    base_path = Path('.gemini/commands')
+    base_path = Path('.claude/commands')
 
     if not base_path.exists():
         print(f"Error: {base_path} not found")
@@ -105,7 +105,7 @@ def main():
             print(f"  {cmd['name']:40} {power:10} {cmd['description'][:80]}")
 
     # Output YAML for processing (generate_catalogs.py expects YAML format)
-    output_path = Path('.gemini/scripts/commands_data.yaml')
+    output_path = Path('.claude/scripts/commands_data.yaml')
     output_path.write_text(yaml.dump(commands, allow_unicode=True, default_flow_style=False))
     print(f"\n✓ Saved metadata to {output_path}")
 

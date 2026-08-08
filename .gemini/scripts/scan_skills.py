@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scan .gemini/skills directory and extract skill metadata.
+Scan .claude/skills directory and extract skill metadata.
 """
 
 import re
@@ -74,7 +74,7 @@ def scan_skills(base_path: Path) -> List[Dict]:
 
             skills.append({
                 'name': skill_name,
-                'path': str(skill_file.relative_to(Path('.gemini/skills'))),
+                'path': str(skill_file.relative_to(Path('.claude/skills'))),
                 'description': description,
                 'category': category,
                 'has_scripts': (skill_dir / 'scripts').exists(),
@@ -112,7 +112,7 @@ def categorize_skill(name: str, description: str, content: str) -> str:
         return 'database'
 
     # Development Tools
-    if any(x in lower_name for x in ['mcp', 'skill-creator', 'gemini-cli', 'repomix', 'docs-seeker']):
+    if any(x in lower_name for x in ['mcp', 'skill-creator', 'claude-code', 'repomix', 'docs-seeker']):
         return 'dev-tools'
 
     # Multimedia
@@ -143,7 +143,7 @@ def group_by_category(skills: List[Dict]) -> Dict[str, List[Dict]]:
 
 def main():
     """Main execution."""
-    base_path = Path('.gemini/skills')
+    base_path = Path('.claude/skills')
 
     if not base_path.exists():
         print(f"Error: {base_path} not found")
@@ -178,7 +178,7 @@ def main():
             print(f"  {scripts}{refs} {skill['name']:30} {skill['description'][:80]}")
 
     # Output YAML for processing (generate_catalogs.py reads YAML)
-    output_path = Path('.gemini/scripts/skills_data.yaml')
+    output_path = Path('.claude/scripts/skills_data.yaml')
     output_path.write_text(yaml.dump(skills, allow_unicode=True, default_flow_style=False))
     print(f"\n✓ Saved metadata to {output_path}")
 

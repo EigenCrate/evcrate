@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Windows compatibility utilities for geminiKit scripts.
+"""Windows compatibility utilities for EVCrate scripts.
 
 Provides UTF-8 encoding support for Windows console (cp1252).
 Import this module early in scripts that output Unicode content.

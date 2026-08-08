@@ -36,19 +36,19 @@ The helper checks for `GEMINI_API_KEY` in this order:
    echo 'GEMINI_API_KEY=your-api-key' > .env
    ```
 
-3. **.gemini/.env file**
+3. **.claude/.env file**
    ```bash
-   echo 'GEMINI_API_KEY=your-api-key' > .gemini/.env
+   echo 'GEMINI_API_KEY=your-api-key' > .claude/.env
    ```
 
-4. **.gemini/skills/.env file** (shared across all Gemini skills)
+4. **.claude/skills/.env file** (shared across all Gemini skills)
    ```bash
-   echo 'GEMINI_API_KEY=your-api-key' > .gemini/skills/.env
+   echo 'GEMINI_API_KEY=your-api-key' > .claude/skills/.env
    ```
 
 5. **Skill directory `.env` file**
    ```bash
-   echo 'GEMINI_API_KEY=your-api-key' > .gemini/skills/your-skill/.env
+   echo 'GEMINI_API_KEY=your-api-key' > .claude/skills/your-skill/.env
    ```
 
 ### Vertex AI Support

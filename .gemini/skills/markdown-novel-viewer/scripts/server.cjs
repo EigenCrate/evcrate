@@ -367,7 +367,7 @@ async function main() {
 
     // Output for CLI/command integration
     // In foreground mode (CC background task), always output JSON
-    if (args.foreground || args.isChild || process.env.gemini_COMMAND) {
+    if (args.foreground || args.isChild || process.env.GEMINI_COMMAND) {
       const result = {
         success: true,
         url,

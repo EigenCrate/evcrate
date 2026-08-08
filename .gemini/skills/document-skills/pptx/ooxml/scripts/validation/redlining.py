@@ -39,19 +39,19 @@ class RedliningValidator:
             ins_elements = root.findall(".//w:ins", self.namespaces)
 
             # Filter to only include changes by gemini
-            gemini_del_elements = [
+            claude_del_elements = [
                 elem
                 for elem in del_elements
                 if elem.get(f"{{{self.namespaces['w']}}}author") == "gemini"
             ]
-            gemini_ins_elements = [
+            claude_ins_elements = [
                 elem
                 for elem in ins_elements
                 if elem.get(f"{{{self.namespaces['w']}}}author") == "gemini"
             ]
 
             # Redlining validation is only needed if tracked changes by gemini have been used.
-            if not gemini_del_elements and not gemini_ins_elements:
+            if not claude_del_elements and not claude_ins_elements:
                 if self.verbose:
                     print("PASSED - No tracked changes by gemini found.")
                 return True
@@ -92,8 +92,8 @@ class RedliningValidator:
                 return False
 
             # Remove gemini's tracked changes from both documents
-            self._remove_gemini_tracked_changes(original_root)
-            self._remove_gemini_tracked_changes(modified_root)
+            self._remove_claude_tracked_changes(original_root)
+            self._remove_claude_tracked_changes(modified_root)
 
             # Extract and compare text content
             modified_text = self._extract_text_content(modified_root)
@@ -214,7 +214,7 @@ class RedliningValidator:
 
         return None
 
-    def _remove_gemini_tracked_changes(self, root):
+    def _remove_claude_tracked_changes(self, root):
         """Remove tracked changes authored by gemini from the XML root."""
         ins_tag = f"{{{self.namespaces['w']}}}ins"
         del_tag = f"{{{self.namespaces['w']}}}del"

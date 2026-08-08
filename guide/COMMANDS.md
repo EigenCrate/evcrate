@@ -1,6 +1,6 @@
-# ClaudeKit Commands Reference
+# EVCrate Commands Reference
 
-A comprehensive guide to all available slash commands in ClaudeKit Engineer.
+A comprehensive guide to all available slash commands in EVCrate.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ A comprehensive guide to all available slash commands in ClaudeKit Engineer.
 
 ### What are Slash Commands?
 
-Slash commands are powerful shortcuts that trigger specialized AI agents and workflows in ClaudeKit Engineer. They follow the simple syntax:
+Slash commands are powerful shortcuts that trigger specialized AI agents and workflows in EVCrate. They follow the simple syntax:
 
 ```bash
 /<command-name> [arguments]
@@ -1334,12 +1334,12 @@ Usage: `/design:fast`, `/fix:hard`, `/custom:your-command`
 ## Resources
 
 - [Claude Code Documentation](https://docs.claude.com/en/docs/claude-code/overview)
-- [ClaudeKit Official Site](https://claudekit.cc/)
+- [EVCrate Official Site](https://evcrate.cloud/)
 - [Slash Commands Guide](https://docs.claude.com/en/docs/claude-code/slash-commands)
-- [GitHub Repository](https://github.com/NEBULEA-M/devkit)
+- [GitHub Repository](https://github.com/NEBULEA-M/evcrate)
 
 ---
 
 **Last Updated**: 2025-01-16
 
-For questions or support, visit [ClaudeKit.cc](https://claudekit.cc/) or open an issue on GitHub.
+For questions or support, visit [EVCrate](https://evcrate.cloud/) or open an issue on GitHub.

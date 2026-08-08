@@ -1,12 +1,12 @@
 ---
-name: cmd_ck-help
-description: ClaudeKit usage guide - just type naturally
+name: cmd_evcrate-help
+description: EVCrate usage guide - just type naturally
 ---
-# cmd_ck-help
+# cmd_evcrate-help
 
-Command Path: /ck-help
+Command Path: /evcrate-help
 
-Description: ClaudeKit usage guide - just type naturally
+Description: EVCrate usage guide - just type naturally
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 
@@ -26,7 +26,7 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 
 Think harder.
-All-in-one ClaudeKit guide. Run the script and present output based on type markers.
+All-in-one EVCrate guide. Run the script and present output based on type markers.
 
 ## Pre-Processing
 
@@ -39,16 +39,16 @@ The Python script only understands English keywords. If `{{args}}` is in another
 ## Execution
 
 ```bash
-python .codex/scripts/ck-help.py "{{args}}"
+python .codex/scripts/ev-help.py "{{args}}"
 ```
 
 ## Output Type Detection
 
-The script outputs a type marker on the first line: `@CK_OUTPUT_TYPE:<type>`
+The script outputs a type marker on the first line: `@EVCRATE_OUTPUT_TYPE:<type>`
 
 **Read this marker and adjust your presentation accordingly:**
 
-### `@CK_OUTPUT_TYPE:comprehensive-docs`
+### `@EVCRATE_OUTPUT_TYPE:comprehensive-docs`
 
 Full documentation (config, schema, setup guides).
 
@@ -65,8 +65,8 @@ Full documentation (config, schema, setup guides).
 ## Additional Tips
 
 **When to use global vs local config:**
-- Use global (~/.codex/.devkit.json) for personal preferences like language, issue prefix style
-- Use local (./.codex/.devkit.json) for project-specific paths, naming conventions
+- Use global (~/.codex/.evcrate.json) for personal preferences like language, issue prefix style
+- Use local (./.codex/.evcrate.json) for project-specific paths, naming conventions
 
 **Common setup for teams:**
 Each team member sets their locale globally, but projects share local config via git.
@@ -74,7 +74,7 @@ Each team member sets their locale globally, but projects share local config via
 Need help setting up a specific configuration?
 ```
 
-### `@CK_OUTPUT_TYPE:category-guide`
+### `@EVCRATE_OUTPUT_TYPE:category-guide`
 
 Workflow guides for command categories (fix, plan, cook, etc.).
 
@@ -86,7 +86,7 @@ Workflow guides for command categories (fix, plan, cook, etc.).
    - Transition tips between commands
 3. Offer to help with a specific task
 
-### `@CK_OUTPUT_TYPE:command-details`
+### `@EVCRATE_OUTPUT_TYPE:command-details`
 
 Single command documentation.
 
@@ -98,7 +98,7 @@ Single command documentation.
    - Common flags or variations
 3. Offer to run the command for them
 
-### `@CK_OUTPUT_TYPE:search-results`
+### `@EVCRATE_OUTPUT_TYPE:search-results`
 
 Search matches for a keyword.
 
@@ -110,7 +110,7 @@ Search matches for a keyword.
    - Offer to explain any specific command
 3. Ask what they're trying to accomplish
 
-### `@CK_OUTPUT_TYPE:task-recommendations`
+### `@EVCRATE_OUTPUT_TYPE:task-recommendations`
 
 Task-based command suggestions.
 

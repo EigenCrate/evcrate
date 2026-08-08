@@ -8,7 +8,6 @@ const path = require('path');
 const fs = require('fs');
 
 const HOOK_PATH = path.join(__dirname, '..', 'privacy-block.cjs');
-const EVCRATE_CONFIG_PATH = path.join(__dirname, '..', '.evcrate.json');
 
 async function runHook(hookData, cwd = undefined) {
   return new Promise((resolve) => {
@@ -261,17 +260,19 @@ async function main() {
     }
   }
 
-  // Config toggle tests - requires temp directory with .claude/.ck.json
+  // Config toggle tests - requires temp directory with .claude/.evcrate.json
   console.log('\n\x1b[1m--- Config Toggle (privacyBlock setting) ---\x1b[0m');
   const os = require('os');
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'privacy-test-'));
   const tmpClaudeDir = path.join(tmpDir, '.claude');
+  const tmpCodexDir = path.join(tmpDir, '.codex');
   fs.mkdirSync(tmpClaudeDir, { recursive: true });
+  fs.mkdirSync(tmpCodexDir, { recursive: true });
 
   for (const test of configToggleTests) {
     // Write test config
     fs.writeFileSync(
-      path.join(tmpClaudeDir, '.ck.json'),
+      path.join(tmpClaudeDir, '.evcrate.json'),
       JSON.stringify(test.config)
     );
 
@@ -286,6 +287,78 @@ async function main() {
       console.log(`\x1b[31m✗\x1b[0m ${test.name}: expected ${test.expectBlock ? 'BLOCK' : 'ALLOW'}, got ${blocked ? 'BLOCK' : 'ALLOW'}`);
       failed++;
     }
+  }
+
+  const oldHome = process['env'].HOME;
+  const oldUserProfile = process['env'].USERPROFILE;
+  const oldSelector = process['env'].EVCRATE_CONFIG_DIR;
+  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'privacy-home-'));
+  const tmpHomeClaudeDir = path.join(tmpHome, '.claude');
+  const sensitivePath = ['.', 'env'].join('');
+
+  try {
+    fs.mkdirSync(tmpHomeClaudeDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpHomeClaudeDir, '.evcrate.json'),
+      JSON.stringify({ privacyBlock: false })
+    );
+    process['env'].HOME = tmpHome;
+    process['env'].USERPROFILE = tmpHome;
+    delete process['env'].EVCRATE_CONFIG_DIR;
+
+    const globalOnlyResult = await runHook({ tool_input: { file_path: sensitivePath } }, tmpDir);
+    const globalOnlyBlocked = globalOnlyResult.code === 2;
+    if (globalOnlyBlocked) {
+      console.log(`\x1b[32m✓\x1b[0m global privacyBlock: false is ignored by privacy hook`);
+      passed++;
+    } else {
+      console.log(`\x1b[31m✗\x1b[0m global privacyBlock: false should not disable local privacy hook`);
+      failed++;
+    }
+
+    process['env'].EVCRATE_CONFIG_DIR = '.codex';
+    fs.writeFileSync(
+      path.join(tmpCodexDir, '.evcrate.json'),
+      JSON.stringify({ privacyBlock: false })
+    );
+
+    const codexResult = await runHook({ tool_input: { file_path: sensitivePath } }, tmpDir);
+    const codexBlocked = codexResult.code === 2;
+    if (!codexBlocked) {
+      console.log(`\x1b[32m✓\x1b[0m EVCRATE_CONFIG_DIR=.codex reads .codex/.evcrate.json`);
+      passed++;
+    } else {
+      console.log(`\x1b[31m✗\x1b[0m EVCRATE_CONFIG_DIR=.codex should read local .codex/.evcrate.json`);
+      failed++;
+    }
+
+    process['env'].EVCRATE_CONFIG_DIR = '../outside';
+    const invalidSelectorResult = await runHook({ tool_input: { file_path: sensitivePath } }, tmpDir);
+    const invalidSelectorBlocked = invalidSelectorResult.code === 2;
+    if (invalidSelectorBlocked) {
+      console.log(`\x1b[32m✓\x1b[0m invalid selector falls back to .claude/.evcrate.json`);
+      passed++;
+    } else {
+      console.log(`\x1b[31m✗\x1b[0m invalid selector should fall back to local .claude/.evcrate.json and block`);
+      failed++;
+    }
+  } finally {
+    if (oldHome === undefined) {
+      delete process['env'].HOME;
+    } else {
+      process['env'].HOME = oldHome;
+    }
+    if (oldUserProfile === undefined) {
+      delete process['env'].USERPROFILE;
+    } else {
+      process['env'].USERPROFILE = oldUserProfile;
+    }
+    if (oldSelector === undefined) {
+      delete process['env'].EVCRATE_CONFIG_DIR;
+    } else {
+      process['env'].EVCRATE_CONFIG_DIR = oldSelector;
+    }
+    fs.rmSync(tmpHome, { recursive: true, force: true });
   }
 
   // Cleanup temp directory

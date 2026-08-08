@@ -25,7 +25,7 @@ Check the `## Plan Context` section in the injected context:
 
 ## Workflow
 Use `planner` subagent to:
-1. If creating new: Create directory using `Plan dir:` from `## Naming` section, then run `node .gemini/scripts/set-active-plan.cjs {plan-dir}`
+1. If creating new: Create directory using `Plan dir:` from `## Naming` section, then run `node .claude/scripts/set-active-plan.cjs {plan-dir}`
    If reusing: Use the active plan path from Plan Context.
    Make sure you pass the directory path to every subagent during the process.
 2. Follow strictly to the "Plan Creation & Organization" rules of `planning` skill.

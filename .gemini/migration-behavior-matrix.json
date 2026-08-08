@@ -52,13 +52,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "ck-help.md",
-      "status": "migrated",
-      "target": "ck-help.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "code/auto.md",
       "status": "migrated",
       "target": "code/auto.toml"
@@ -216,6 +209,13 @@
       "source": "docs/update.md",
       "status": "migrated",
       "target": "docs/update.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "evcrate-help.md",
+      "status": "migrated",
+      "target": "evcrate-help.toml"
     },
     {
       "classification": "command-prose",
