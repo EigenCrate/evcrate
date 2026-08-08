@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -12,12 +13,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
-from distribution.context import create_context
+from distribution.context import DistributionContext, create_context
 from distribution.contracts import BuildError, DistributionAction
 from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
 from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from distribution.overlay import OverlayError, apply_exact_patch, apply_patch_file, copy_overlay_files
-from distribution.staging import BUILD_MANIFEST_PATH, generate_stage
+from distribution.staging import BUILD_MANIFEST_PATH, _baseline_owners, _copy_source_root, _load_targets, generate_stage
 
 
 class DistributionBuildTest(unittest.TestCase):
@@ -157,7 +158,17 @@ class DistributionBuildTest(unittest.TestCase):
 
     def test_current_target_registry_schema_accepts_singular_output_root(self) -> None:
         repository = Path(__file__).resolve().parents[1]
-        registry = load_target_registry(repository / ".devkit/targets/manifest.json")
+        registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
+        context = create_context(DistributionAction.BUILD)
+        self.assertEqual(context.local_roots[-1], context.local_claude)
+        claude = load_target_manifest(registry.targets["claude"])
+        self.assertEqual(claude.output_roots, (".claude",))
+        self.assertIsNone(claude.adapter)
+        self.assertEqual(claude.project_docs, ())
+        self.assertEqual(
+            claude.home_policy,
+            {"bindings": {".claude": ".claude"}, "preserve_paths": {}, "promotion_order": 40},
+        )
         codex = load_target_manifest(registry.targets["codex"])
         self.assertEqual(codex.output_roots, (".codex", ".agents"))
         self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
@@ -165,7 +176,99 @@ class DistributionBuildTest(unittest.TestCase):
         manifest_text = registry.targets["codex"].read_text(encoding="utf-8")
         self.assertNotIn("advisor", manifest_text.lower())
         self.assertFalse((registry.targets["codex"].parent / "runtime").exists())
-        self.assertEqual(set(registry.targets), {"antigravity", "codex", "gemini"})
+        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini"})
+
+    def test_generated_target_cannot_use_a_null_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            repository = Path(temp)
+            targets = repository / ".evcrate/targets"
+            targets.mkdir(parents=True)
+            (targets / "manifest.json").write_text(
+                json.dumps({"schema_version": 1, "targets": {"generated": "generated/manifest.json"}}),
+                encoding="utf-8",
+            )
+            generated = targets / "generated"
+            generated.mkdir()
+            (generated / "manifest.json").write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "name": "generated",
+                    "adapter": None,
+                    "output_root": ".gemini",
+                    "additional_roots": [],
+                    "project_docs": [],
+                    "patches": [],
+                    "home_policy": {},
+                }),
+                encoding="utf-8",
+            )
+            context = DistributionContext(DistributionAction.BUILD, repository, repository / "home", repository / "stage", "managed", "config-and-scripts")
+            with self.assertRaisesRegex(BuildError, "has no build adapter"):
+                _load_targets(context, {".gemini": repository / "stage/.gemini"})
+
+    def test_source_symlink_is_not_followed_and_baseline_rejects_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, destination, outside = root / "source", root / "stage", root / "outside"
+            source.mkdir()
+            outside.mkdir()
+            (outside / "escaped.txt").write_text("outside", encoding="utf-8")
+            (source / "escape").symlink_to(outside, target_is_directory=True)
+            _copy_source_root(source, destination)
+            self.assertTrue((destination / "escape").is_symlink())
+            self.assertFalse((destination / "escaped.txt").exists())
+            with self.assertRaisesRegex(BuildError, "Generated symlink is not allowed"):
+                _baseline_owners({".claude": destination})
+
+    def test_generate_stage_rejects_nested_symlink_before_consumers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repository, stage, outside = root / "repo", root / "stage", root / "outside"
+            (repository / ".claude").mkdir(parents=True)
+            outside.mkdir()
+            (outside / "escaped.txt").write_text("outside", encoding="utf-8")
+            (repository / ".claude/escape").symlink_to(outside, target_is_directory=True)
+            (repository / "CLAUDE.md").write_text("context", encoding="utf-8")
+            (repository / "distribution").mkdir()
+            (repository / "distribution/antigravity_publish.py").write_text("adapter", encoding="utf-8")
+            (repository / "distribute_hooks.py").write_text("hooks", encoding="utf-8")
+            (repository / "adapter.py").write_text("adapter", encoding="utf-8")
+            targets = repository / ".evcrate/targets"
+            targets.mkdir(parents=True)
+            target_roots = {
+                "antigravity": [".antigravity"],
+                "claude": [".claude"],
+                "codex": [".codex", ".agents"],
+                "gemini": [".gemini"],
+            }
+            registry = {name: f"{name}/manifest.json" for name in target_roots}
+            (targets / "manifest.json").write_text(json.dumps({"schema_version": 1, "targets": registry}), encoding="utf-8")
+            for name, roots in target_roots.items():
+                target = targets / name
+                target.mkdir()
+                manifest = {
+                    "schema_version": 1,
+                    "name": name,
+                    "adapter": None if name == "claude" else "adapter.py",
+                    "output_root": roots[0],
+                    "additional_roots": roots[1:],
+                    "project_docs": ["AGENTS.md"] if name == "codex" else (["GEMINI.md"] if name == "gemini" else []),
+                    "patches": [],
+                    "home_policy": {},
+                }
+                (target / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+            context = DistributionContext(DistributionAction.BUILD, repository, root / "home", stage, "managed", "config-and-scripts")
+
+            def unsafe_consumer(source: Path, destination: Path) -> None:
+                shutil.copytree(source, destination, symlinks=False)
+
+            with patch("distribution.staging.build_antigravity_config", side_effect=unsafe_consumer) as consumer:
+                with self.assertRaises(BuildError):
+                    generate_stage(context, lambda *_: None)
+            consumer.assert_not_called()
+            self.assertTrue((stage / ".claude/escape").is_symlink())
+            self.assertFalse((stage / ".claude/escaped.txt").exists())
+            self.assertFalse((stage / ".antigravity").exists())
 
     def test_staging_writes_a_deterministic_authorization_manifest(self) -> None:
         def run(stage: Path) -> bytes:
@@ -182,9 +285,19 @@ class DistributionBuildTest(unittest.TestCase):
 
             generate_stage(context, fake_migrator)
             self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
+            source_file = context.local_claude / "commands/code.md"
+            self.assertEqual((stage / ".claude/commands/code.md").read_bytes(), source_file.read_bytes())
             self.assertFalse((stage / ".antigravity" / "config").exists())
             self.assertFalse((stage / ".codex" / "runtime").exists())
             manifest = (stage / BUILD_MANIFEST_PATH).read_text(encoding="utf-8")
+            manifest_data = json.loads(manifest)
+            self.assertIn(".claude", manifest_data["output_hashes"])
+            self.assertIn(".claude/commands/code.md", manifest_data["owners"])
+            self.assertEqual(manifest_data["source_hashes"][".claude"], tree_hash(context.local_claude))
+            self.assertEqual(
+                manifest_data["home_policy"]["claude"],
+                {"bindings": {".claude": ".claude"}, "preserve_paths": {}, "promotion_order": 40},
+            )
             for marker in (
                 "advisor_consult",
                 "mcp_servers.advisor",
@@ -224,7 +337,7 @@ class DistributionBuildTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             destination, staged = root / "artifact", root / "staged"
-            backup_root = root / ".devkit-promotion-interrupted"
+            backup_root = root / ".evcrate-promotion-interrupted"
             destination.write_text("old", encoding="utf-8")
             staged.write_text("new", encoding="utf-8")
             backup_root.mkdir()
@@ -305,15 +418,15 @@ class DistributionBuildTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             repository = Path(temp) / "repo"
             repository.mkdir()
-            (repository / ".devkit").mkdir()
+            (repository / ".evcrate").mkdir()
             with staged_build_root(repository) as stage:
                 codex, manifest = stage / ".codex", stage / "build-manifest.json"
                 codex.mkdir()
                 (codex / "config.toml").write_text('model = "new"\n', encoding="utf-8")
                 manifest.write_text('{"schema_version":1}\n', encoding="utf-8")
-                promote_transaction([(codex, repository / ".codex"), (manifest, repository / ".devkit/build-manifest.json")])
+                promote_transaction([(codex, repository / ".codex"), (manifest, repository / ".evcrate/build-manifest.json")])
             self.assertTrue((repository / ".codex/config.toml").is_file())
-            self.assertEqual((repository / ".devkit/build-manifest.json").read_text(encoding="utf-8"), '{"schema_version":1}\n')
+            self.assertEqual((repository / ".evcrate/build-manifest.json").read_text(encoding="utf-8"), '{"schema_version":1}\n')
 
 
 if __name__ == "__main__":

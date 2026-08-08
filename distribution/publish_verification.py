@@ -29,12 +29,12 @@ def _load_build_manifest(context: DistributionContext) -> dict[str, Any]:
 
 
 def _current_source_hashes(context: DistributionContext) -> dict[str, str]:
-    registry = load_target_registry(context.repository / ".devkit/targets/manifest.json")
+    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
     manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
     values = {
         ".claude": tree_hash(context.repository / ".claude"),
         "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
-        ".devkit/targets": tree_hash(context.repository / ".devkit/targets"),
+        ".evcrate/targets": tree_hash(context.repository / ".evcrate/targets"),
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }
@@ -43,6 +43,14 @@ def _current_source_hashes(context: DistributionContext) -> dict[str, str]:
         if manifest.adapter:
             values[manifest.adapter] = hash_file(context.repository / manifest.adapter)
     return dict(sorted(values.items()))
+
+
+def _expected_output_names(context: DistributionContext) -> set[str]:
+    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
+    manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
+    names = {root.name for root in context.local_roots}
+    names.update(document for manifest in manifests for document in manifest.project_docs)
+    return names
 
 
 def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifact) -> dict[str, Any]:
@@ -58,6 +66,8 @@ def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifa
     output_hashes = manifest.get("output_hashes")
     if not isinstance(output_hashes, dict):
         raise PublishError("Build manifest has no output hashes")
+    if set(output_hashes) != _expected_output_names(context):
+        raise PublishError("Build manifest output hashes do not match current artifacts")
     for relative, expected in output_hashes.items():
         path = context.repository / relative
         if not path.exists() or path.is_symlink():
