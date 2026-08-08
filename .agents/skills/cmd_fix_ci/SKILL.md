@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_ci
-description: Analyze Github Actions logs and fix issues
+name: "cmd-fix-ci"
+description: "Analyze Github Actions logs and fix issues"
 ---
+
 # cmd_fix_ci
 
 Command Path: /fix/ci

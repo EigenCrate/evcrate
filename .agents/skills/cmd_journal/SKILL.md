@@ -1,7 +1,8 @@
 ---
-name: cmd_journal
-description: Write some journal entries.
+name: "cmd-journal"
+description: "Write some journal entries."
 ---
+
 # cmd_journal
 
 Command Path: /journal

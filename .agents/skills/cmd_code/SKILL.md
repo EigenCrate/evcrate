@@ -1,7 +1,8 @@
 ---
-name: cmd_code
-description: Start coding & testing an existing plan
+name: "cmd-code"
+description: "Start coding & testing an existing plan"
 ---
+
 # cmd_code
 
 Command Path: /code

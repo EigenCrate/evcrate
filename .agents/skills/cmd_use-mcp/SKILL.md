@@ -1,7 +1,8 @@
 ---
-name: cmd_use-mcp
-description: Utilize tools of Model Context Protocol (MCP) servers
+name: "cmd-use-mcp"
+description: "Utilize tools of Model Context Protocol (MCP) servers"
 ---
+
 # cmd_use-mcp
 
 Command Path: /use-mcp

@@ -1,12 +1,13 @@
 ---
-name: cmd_coding-level
-description: Migrated command from .codex
+name: "cmd-coding-level"
+description: "Set your coding experience level for tailored explanations and output format."
 ---
+
 # cmd_coding-level
 
 Command Path: /coding-level
 
-Description: Migrated command from .codex
+Description: Set your coding experience level for tailored explanations and output format.
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 

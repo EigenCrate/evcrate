@@ -1,7 +1,8 @@
 ---
-name: cmd_code_no-test
-description: Start coding an existing plan (no testing)
+name: "cmd-code-no-test"
+description: "Start coding an existing plan (no testing)"
 ---
+
 # cmd_code_no-test
 
 Command Path: /code/no-test

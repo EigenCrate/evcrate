@@ -1,7 +1,8 @@
 ---
-name: cmd_take
-description: Transfer a feature from another project through compare, copy, improve, or port gates
+name: "cmd-take"
+description: "Transfer a feature from another project through compare, copy, improve, or port gates"
 ---
+
 # cmd_take
 
 Command Path: /evcrate:take

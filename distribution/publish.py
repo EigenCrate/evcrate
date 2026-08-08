@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from distribute_hooks import rewrite_codex_global_file
@@ -28,18 +28,49 @@ class PublishChange:
     action: str
 
 
+CLAUDE_SKILLS_ROOT = PurePosixPath("skills")
+
+
+def _is_claude_skill_root_file(relative: str) -> bool:
+    """Exclude documentation and archives placed beside Claude skill packages."""
+
+    return PurePosixPath(relative).parent == CLAUDE_SKILLS_ROOT
+
+
+def _managed_paths_for_publish(marker: dict[str, Any]) -> object:
+    """Reuse managed paths after a rolled-back release so stale files can be removed."""
+
+    if marker.get("status") not in {"complete", "recovered"}:
+        return {}
+    return marker.get("managed_paths", {})
+
+
+def _reject_symlinked_ancestors(path: Path, message: str) -> None:
+    probe = path
+    while True:
+        if probe.is_symlink():
+            raise PublishError(message)
+        if probe.parent == probe:
+            break
+        probe = probe.parent
+
+
 def _validate_home_ancestors(context: DistributionContext, home: Path) -> None:
-    if context.home.exists() and (context.home.is_symlink() or not context.home.is_dir()):
+    _reject_symlinked_ancestors(context.home, "HOME root must not contain symlinked ancestors")
+    _reject_symlinked_ancestors(home, f"HOME binding has an unsafe ancestor: {home}")
+    if context.home.exists() and not context.home.is_dir():
         raise PublishError("HOME root must be a real directory")
     try:
-        relative = home.relative_to(context.home)
+        home.relative_to(context.home)
     except ValueError as error:
         raise PublishError("HOME binding escapes the configured HOME root") from error
-    ancestor = context.home
-    for part in relative.parts[:-1]:
-        ancestor /= part
-        if ancestor.exists() and (ancestor.is_symlink() or not ancestor.is_dir()):
-            raise PublishError(f"HOME binding has an unsafe ancestor: {home}")
+
+
+def _validate_state_ancestors(context: DistributionContext) -> None:
+    _reject_symlinked_ancestors(
+        context.state_dir,
+        "Distribution state path must not contain symlinked ancestors",
+    )
 
 
 def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[str]]]:
@@ -86,7 +117,7 @@ def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[s
 def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> list[PublishChange]:
     verify_local_artifact(context, artifact)
     marker = read_release_marker(context.state_dir)
-    prior = marker.get("managed_paths", {}) if marker.get("status") == "complete" else {}
+    prior = _managed_paths_for_publish(marker)
     changes: list[PublishChange] = []
     for name, local, home, preserved in _policies(context):
         source = _publication_files(context, local, home)
@@ -110,6 +141,14 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
 
 def _publication_files(context: DistributionContext, local: Path, home: Path) -> dict[str, bytes]:
     source = _files(local)
+    if local == context.local_claude:
+        # Keep the complete local authoring artifact, but do not expose files
+        # beside skill packages to Pi's Claude skill discovery path.
+        source = {
+            relative: content
+            for relative, content in source.items()
+            if not _is_claude_skill_root_file(relative)
+        }
     if home != context.target_codex:
         return source
     try:
@@ -162,12 +201,15 @@ def _copy_candidate(
 def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArtifact, *, dry_run: bool = False) -> list[PublishChange]:
     """Publish verified artifacts only; source generation is deliberately absent."""
 
+    # Validate HOME bindings and state paths before creating any lock directory.
+    _policies(context)
+    _validate_state_ancestors(context)
     with publish_lock(context.state_dir):
         changes = publish_diff(context, artifact)
         if dry_run:
             return changes
         prior_marker = read_release_marker(context.state_dir)
-        prior_paths = prior_marker.get("managed_paths", {}) if prior_marker.get("status") == "complete" else {}
+        prior_paths = _managed_paths_for_publish(prior_marker)
         release_id = uuid.uuid4().hex
         completed: list[tuple[Path, Path | None]] = []
         managed_paths: dict[str, list[str]] = {}
@@ -207,5 +249,6 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
             restore_roots(completed)
             marker["status"] = "recovered"
             marker["recovery_action"] = "restored-completed-roots"
+            marker["managed_paths"] = prior_paths
             write_release_marker(context.state_dir, marker)
             raise PublishError(f"HOME publication recovered after failure: {error}") from error

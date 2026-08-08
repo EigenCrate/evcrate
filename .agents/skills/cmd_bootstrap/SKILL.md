@@ -1,7 +1,8 @@
 ---
-name: cmd_bootstrap
-description: Bootstrap a new project step by step
+name: "cmd-bootstrap"
+description: "Bootstrap a new project step by step"
 ---
+
 # cmd_bootstrap
 
 Command Path: /bootstrap

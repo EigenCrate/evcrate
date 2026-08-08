@@ -1,7 +1,8 @@
 ---
-name: cmd_bootstrap_auto_parallel
-description: Bootstrap project with parallel execution
+name: "cmd-bootstrap-auto-parallel"
+description: "Bootstrap project with parallel execution"
 ---
+
 # cmd_bootstrap_auto_parallel
 
 Command Path: /bootstrap/auto/parallel

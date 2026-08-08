@@ -39,6 +39,17 @@ class DistributionBuildTest(unittest.TestCase):
             (root / "empty").rmdir()
             self.assertNotEqual(first, tree_hash(root))
 
+    def test_artifact_hash_ignores_compiler_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "entry.txt").write_text("same", encoding="utf-8")
+            before = tree_hash(root)
+            (root / "__pycache__").mkdir()
+            (root / "__pycache__" / "module.pyc").write_bytes(b"runtime")
+            (root / "generated.pyc").write_bytes(b"runtime")
+            (root / ".coverage").write_bytes(b"runtime")
+            self.assertEqual(before, tree_hash(root))
+
     def test_source_tree_hash_ignores_local_dependency_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -227,6 +238,18 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertIn("Command Path: /evcrate:help", generated)
             self.assertIn("python .antigravity/scripts/ev-help.py", generated)
             self.assertNotIn("python .claude/scripts/ev-help.py", generated)
+
+    def test_source_copy_omits_compiler_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source, destination = root / "source", root / "stage"
+            source.mkdir()
+            (source / "kept.md").write_text("kept", encoding="utf-8")
+            (source / "__pycache__").mkdir()
+            (source / "__pycache__" / "module.pyc").write_bytes(b"runtime")
+            _copy_source_root(source, destination)
+            self.assertTrue((destination / "kept.md").is_file())
+            self.assertFalse((destination / "__pycache__").exists())
 
     def test_source_symlink_is_not_followed_and_baseline_rejects_it(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

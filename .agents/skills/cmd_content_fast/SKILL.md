@@ -1,7 +1,8 @@
 ---
-name: cmd_content_fast
-description: Write creative & smart copy [FAST]
+name: "cmd-content-fast"
+description: "Write creative & smart copy [FAST]"
 ---
+
 # cmd_content_fast
 
 Command Path: /content/fast

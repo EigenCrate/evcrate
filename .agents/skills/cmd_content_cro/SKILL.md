@@ -1,7 +1,8 @@
 ---
-name: cmd_content_cro
-description: Analyze the current content and optimize for conversion
+name: "cmd-content-cro"
+description: "Analyze the current content and optimize for conversion"
 ---
+
 # cmd_content_cro
 
 Command Path: /content/cro

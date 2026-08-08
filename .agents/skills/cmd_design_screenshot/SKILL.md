@@ -1,7 +1,8 @@
 ---
-name: cmd_design_screenshot
-description: Create a design based on screenshot
+name: "cmd-design-screenshot"
+description: "Create a design based on screenshot"
 ---
+
 # cmd_design_screenshot
 
 Command Path: /design/screenshot

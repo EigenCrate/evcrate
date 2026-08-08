@@ -1,7 +1,8 @@
 ---
-name: cmd_scout
-description: Scout given directories to respond to the user's requests
+name: "cmd-scout"
+description: "Scout given directories to respond to the user's requests"
 ---
+
 # cmd_scout
 
 Command Path: /scout

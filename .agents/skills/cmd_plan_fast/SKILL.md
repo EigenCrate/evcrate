@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_fast
-description: No research. Only analyze and create an implementation plan
+name: "cmd-plan-fast"
+description: "No research. Only analyze and create an implementation plan"
 ---
+
 # cmd_plan_fast
 
 Command Path: /plan/fast

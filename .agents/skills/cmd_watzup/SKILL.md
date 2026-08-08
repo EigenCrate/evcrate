@@ -1,7 +1,8 @@
 ---
-name: cmd_watzup
-description: Review recent changes and wrap up the work
+name: "cmd-watzup"
+description: "Review recent changes and wrap up the work"
 ---
+
 # cmd_watzup
 
 Command Path: /watzup

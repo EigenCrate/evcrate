@@ -1,7 +1,8 @@
 ---
-name: cmd_debug
-description: Debugging technical issues and providing solutions.
+name: "cmd-debug"
+description: "Debugging technical issues and providing solutions."
 ---
+
 # cmd_debug
 
 Command Path: /debug

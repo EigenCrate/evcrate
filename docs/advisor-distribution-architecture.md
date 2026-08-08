@@ -1,7 +1,7 @@
 # Advisor Skill and Target Distribution Architecture
 
 **Status**: Active; former broker design superseded
-**Last Updated**: 2026-08-03
+**Last Updated**: 2026-08-08
 **Parent**: [System Architecture](./system-architecture.md)
 
 ## Purpose
@@ -11,7 +11,10 @@ Define reproducible multi-platform generation and the boundary of the portable `
 ## Architectural Decisions
 
 - `.claude` remains the shared baseline authoring source.
-- `.claude` is also a source-backed distribution target: build/check validate its complete tree, and publication binds it to `HOME/.claude` with no subpath limit.
+- `.claude` is also a source-backed distribution target: build/check validate its complete tree, and publication binds its sanitized HOME view to `HOME/.claude` with no subpath limit.
+- The local `.claude` artifact remains complete, but HOME publication excludes regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources. Stale managed copies absent from the current source are removed; unmanaged HOME paths remain preserved.
+- The Codex projection owns the shared Pi-compatible skill tree: publication binds `.agents/skills` to `$HOME/.agents/skills`, which Pi discovers globally without a settings-file edit.
+- Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
 - `.evcrate/targets/<target>` owns target-only files and explicit config patches.
 - Local `.claude`, `.agents`, `.codex`, `.gemini`, and other target trees are finalized artifacts.
 - HOME distribution consumes finalized local artifacts only and preserves declared user-owned configuration.
@@ -55,6 +58,8 @@ Build failure must not mutate the last valid local artifacts or HOME.
 3. Compute create/update/delete/preserve diff per HOME target.
 4. Stage and promote each target with release/recovery metadata.
 
+After changing `.claude`, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` requires a current verified build, never runs migrators, and publishes the sanitized HOME view of the complete `.claude` artifact to `$HOME/.claude`. Pi receives global skills through `$HOME/.agents/skills`; publication does not create or modify `~/.pi/agent/settings.json`.
+
 No migration or overlay logic runs during publication.
 
 ## Ownership and Collision Invariants
@@ -64,7 +69,7 @@ No migration or overlay logic runs during publication.
 - File, directory, or config-key collisions fail by default.
 - Intentional config changes require an exact destination and allowed key paths.
 - Shared generated configuration cannot be replaced wholesale.
-- Managed publication deletes only manifest-owned paths.
+- Managed publication deletes only manifest-owned paths, including stale paths recorded from the previous release when absent from the current source.
 - User-owned HOME paths remain preserved unless explicit full policy says otherwise.
 - Concurrent build/publish operations require a repository/release lock.
 

@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_cro
-description: Create a CRO plan for the given content
+name: "cmd-plan-cro"
+description: "Create a CRO plan for the given content"
 ---
+
 # cmd_plan_cro
 
 Command Path: /plan/cro

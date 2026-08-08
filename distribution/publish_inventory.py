@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .contracts import PublishError
-from .hashing import hash_bytes, hash_file, normalize_relative_path
+from .hashing import hash_bytes, hash_file, is_ignored_artifact, normalize_relative_path
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,8 @@ def artifact_files(root: Path) -> dict[str, bytes]:
         raise PublishError(f"Artifact root is missing or unsafe: {root}")
     result: dict[str, bytes] = {}
     for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
+        if is_ignored_artifact(path.relative_to(root)):
+            continue
         if path.is_symlink():
             raise PublishError(f"Artifact contains symlink: {path}")
         if path.is_file():

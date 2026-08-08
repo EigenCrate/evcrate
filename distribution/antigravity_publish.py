@@ -10,6 +10,7 @@ from pathlib import Path
 from distribute_hooks import rewrite_agy_global_paths
 
 from .context import DistributionContext
+from .hashing import ignore_artifacts
 
 
 def build_antigravity_config(claude_source: Path, output_root: Path) -> None:
@@ -18,7 +19,7 @@ def build_antigravity_config(claude_source: Path, output_root: Path) -> None:
     target = output_root
     if not claude_source.is_dir() or claude_source.is_symlink():
         raise RuntimeError("Local .claude source is missing or unsafe")
-    shutil.copytree(claude_source, target, symlinks=False)
+    shutil.copytree(claude_source, target, symlinks=False, ignore=ignore_artifacts)
     _extract_hooks(target)
     _replace_legacy_assets(claude_source, target)
     rewrite_agy_global_paths(target, '"$HOME"/.gemini/config/hooks')

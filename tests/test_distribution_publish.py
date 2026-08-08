@@ -71,9 +71,24 @@ class DistributionPublishTest(unittest.TestCase):
             home.mkdir(parents=True)
             (source / "agents/deep/rules.md").parent.mkdir(parents=True)
             (source / "agents/deep/rules.md").write_text("new nested rule", encoding="utf-8")
+            (source / "skills").mkdir()
+            (source / "skills/INSTALLATION.md").write_text("non-skill document", encoding="utf-8")
+            (source / "skills/planning/SKILL.md").parent.mkdir(parents=True)
+            (source / "skills/planning/SKILL.md").write_text("skill metadata", encoding="utf-8")
+            (source / "skills/planning/README.md").write_text("skill support file", encoding="utf-8")
             (source / "settings.json").write_text("new managed", encoding="utf-8")
             (home / "settings.json").write_text("old managed", encoding="utf-8")
             (home / "unmanaged.txt").write_text("keep", encoding="utf-8")
+            (home / "skills/INSTALLATION.md").parent.mkdir(parents=True)
+            (home / "skills/INSTALLATION.md").write_text("stale non-skill document", encoding="utf-8")
+            write_release_marker(
+                context.state_dir,
+                {
+                    "schema_version": 1,
+                    "status": "complete",
+                    "managed_paths": {".claude": ["skills/INSTALLATION.md"]},
+                },
+            )
             policy = [(".claude", source, home, set())]
             artifact = VerifiedArtifact(context.repository, context.local_roots)
 
@@ -83,6 +98,9 @@ class DistributionPublishTest(unittest.TestCase):
                 self.assertIn((".claude", "settings.json", "update"), {(change.root, change.path, change.action) for change in changes})
                 self.assertIn((".claude", "unmanaged.txt", "preserve"), {(change.root, change.path, change.action) for change in changes})
                 self.assertEqual((home / "agents/deep/rules.md").read_text(encoding="utf-8"), "new nested rule")
+                self.assertFalse((home / "skills/INSTALLATION.md").exists())
+                self.assertEqual((home / "skills/planning/SKILL.md").read_text(encoding="utf-8"), "skill metadata")
+                self.assertEqual((home / "skills/planning/README.md").read_text(encoding="utf-8"), "skill support file")
                 self.assertEqual((home / "settings.json").read_text(encoding="utf-8"), "new managed")
                 before = {path.relative_to(home).as_posix(): path.read_bytes() for path in home.rglob("*") if path.is_file()}
                 (source / "new/deeper/file.txt").parent.mkdir(parents=True)
@@ -198,6 +216,15 @@ class DistributionPublishTest(unittest.TestCase):
                 home.mkdir(parents=True)
                 (source / "managed").write_text("new", encoding="utf-8")
                 (home / "managed").write_text("old", encoding="utf-8")
+            (first_home / "stale").write_text("stale managed file", encoding="utf-8")
+            write_release_marker(
+                context.state_dir,
+                {
+                    "schema_version": 1,
+                    "status": "complete",
+                    "managed_paths": {".gemini": ["stale"], ".codex": []},
+                },
+            )
             policy = [(".gemini", first_source, first_home, set()), (".codex", second_source, second_home, set())]
             original = __import__("distribution.publish", fromlist=["_copy_candidate"])._copy_candidate
             calls = 0
@@ -212,7 +239,9 @@ class DistributionPublishTest(unittest.TestCase):
             with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=policy), patch("distribution.publish._copy_candidate", side_effect=fail_second):
                 with self.assertRaisesRegex(PublishError, "recovered"):
                     publish_local_artifacts(context, VerifiedArtifact(context.repository, context.local_roots))
-            self.assertEqual((first_home / "managed").read_text(encoding="utf-8"), "old")
+                self.assertEqual((first_home / "managed").read_text(encoding="utf-8"), "old")
+                publish_local_artifacts(context, VerifiedArtifact(context.repository, context.local_roots))
+            self.assertFalse((first_home / "stale").exists())
 
     def test_failure_after_backup_rename_restores_current_root(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -250,6 +279,20 @@ class DistributionPublishTest(unittest.TestCase):
                     publish_local_artifacts(context, VerifiedArtifact(context.repository, context.local_roots))
             self.assertFalse(any(outside.iterdir()))
 
+    def test_home_root_symlink_is_rejected_before_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            context = self._context(root)
+            source, outside = root / "source", root / "outside"
+            source.mkdir()
+            outside.mkdir()
+            context.home.symlink_to(outside, target_is_directory=True)
+            policy = [(".gemini", source, context.home / ".gemini", set())]
+            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=policy):
+                with self.assertRaisesRegex(PublishError, "symlinked ancestors"):
+                    publish_local_artifacts(context, VerifiedArtifact(context.repository, context.local_roots))
+            self.assertFalse((outside / "value").exists())
+
     def test_recovery_restores_marker_recorded_backup(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -281,9 +324,21 @@ class DistributionPublishTest(unittest.TestCase):
             outside.mkdir()
             state = root / "state"
             state.symlink_to(outside, target_is_directory=True)
-            with self.assertRaisesRegex(PublishError, "state directory"):
+            with self.assertRaisesRegex(PublishError, "state path"):
                 with publish_lock(state):
                     pass
+
+    def test_publish_lock_rejects_symlinked_state_ancestor(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            outside = root / "outside"
+            outside.mkdir()
+            parent = root / "parent"
+            parent.symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(PublishError, "state path"):
+                with publish_lock(parent / "state"):
+                    pass
+            self.assertFalse((outside / "state").exists())
 
     def test_release_preparation_uses_verified_gate_not_direct_migrators(self) -> None:
         script = Path(__file__).resolve().parents[1] / "scripts" / "prepare-release-assets.cjs"

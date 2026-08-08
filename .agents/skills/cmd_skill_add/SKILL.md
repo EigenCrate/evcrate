@@ -1,7 +1,8 @@
 ---
-name: cmd_skill_add
-description: Add new reference files or scripts to a skill
+name: "cmd-skill-add"
+description: "Add new reference files or scripts to a skill"
 ---
+
 # cmd_skill_add
 
 Command Path: /skill/add

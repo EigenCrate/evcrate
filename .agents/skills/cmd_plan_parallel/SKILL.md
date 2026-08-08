@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_parallel
-description: Create detailed plan with parallel-executable phases
+name: "cmd-plan-parallel"
+description: "Create detailed plan with parallel-executable phases"
 ---
+
 # cmd_plan_parallel
 
 Command Path: /plan/parallel

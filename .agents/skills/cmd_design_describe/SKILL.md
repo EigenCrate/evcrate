@@ -1,7 +1,8 @@
 ---
-name: cmd_design_describe
-description: Describe a design based on screenshot/video
+name: "cmd-design-describe"
+description: "Describe a design based on screenshot/video"
 ---
+
 # cmd_design_describe
 
 Command Path: /design/describe

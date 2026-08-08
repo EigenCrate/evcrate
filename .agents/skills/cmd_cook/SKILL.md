@@ -1,7 +1,8 @@
 ---
-name: cmd_cook
-description: Implement a feature [step by step]
+name: "cmd-cook"
+description: "Implement a feature [step by step]"
 ---
+
 # cmd_cook
 
 Command Path: /cook

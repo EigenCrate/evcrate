@@ -1,7 +1,8 @@
 ---
-name: cmd_skill_fix-logs
-description: Fix the agent skill based on `logs.txt` file.
+name: "cmd-skill-fix-logs"
+description: "Fix the agent skill based on `logs.txt` file."
 ---
+
 # cmd_skill_fix-logs
 
 Command Path: /skill/fix-logs

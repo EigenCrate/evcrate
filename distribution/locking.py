@@ -18,7 +18,14 @@ LOCK_NAME = "publish.lock"
 
 
 def _state_file(state_dir: Path, name: str) -> Path:
-    if state_dir.exists() and (state_dir.is_symlink() or not state_dir.is_dir()):
+    probe = state_dir
+    while True:
+        if probe.is_symlink():
+            raise PublishError("Distribution state path must not contain symlinked ancestors")
+        if probe.parent == probe:
+            break
+        probe = probe.parent
+    if state_dir.exists() and not state_dir.is_dir():
         raise PublishError("Distribution state directory must be a real directory")
     state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:

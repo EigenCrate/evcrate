@@ -1,7 +1,8 @@
 ---
-name: cmd_ask
-description: Answer technical and architectural questions.
+name: "cmd-ask"
+description: "Answer technical and architectural questions."
 ---
+
 # cmd_ask
 
 Command Path: /ask

@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_ci
-description: Analyze Github Actions logs and provide a plan to fix the issues
+name: "cmd-plan-ci"
+description: "Analyze Github Actions logs and provide a plan to fix the issues"
 ---
+
 # cmd_plan_ci
 
 Command Path: /plan/ci

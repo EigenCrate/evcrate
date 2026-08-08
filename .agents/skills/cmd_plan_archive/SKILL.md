@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_archive
-description: Write journal entries and archive specific plans or all plans
+name: "cmd-plan-archive"
+description: "Write journal entries and archive specific plans or all plans"
 ---
+
 # cmd_plan_archive
 
 Command Path: /plan/archive

@@ -1,7 +1,8 @@
 ---
-name: cmd_git_cp
-description: Stage, commit and push all code in the current branch
+name: "cmd-git-cp"
+description: "Stage, commit and push all code in the current branch"
 ---
+
 # cmd_git_cp
 
 Command Path: /git/cp

@@ -1,7 +1,8 @@
 ---
-name: cmd_skill_create
-description: Create a new agent skill
+name: "cmd-skill-create"
+description: "Create a new agent skill"
 ---
+
 # cmd_skill_create
 
 Command Path: /skill/create

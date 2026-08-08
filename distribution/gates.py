@@ -10,6 +10,7 @@ from pathlib import Path
 from .build import promote_transaction, repository_lock, staged_build_root
 from .context import DistributionContext, create_context
 from .contracts import BuildError, DistributionAction, PublishError, VerifiedArtifact
+from .hashing import is_ignored_artifact
 from .staging import BUILD_MANIFEST_PATH, generate_stage
 
 
@@ -47,6 +48,8 @@ def _generate_stage(context: DistributionContext) -> VerifiedArtifact:
 def _tree_differences(source: Path, target: Path, relative: str) -> list[str]:
     """Return exact byte-level drift paths without trusting mtime or file size."""
 
+    if is_ignored_artifact(Path(relative)):
+        return []
     if source.is_symlink() or target.is_symlink():
         return [relative]
     if source.exists() != target.exists() or source.is_dir() != target.is_dir():
@@ -54,8 +57,12 @@ def _tree_differences(source: Path, target: Path, relative: str) -> list[str]:
     if source.is_file():
         return [] if source.read_bytes() == target.read_bytes() else [relative]
     differences: list[str] = []
-    source_names = {path.name for path in source.iterdir()}
-    target_names = {path.name for path in target.iterdir()}
+    source_names = {
+        path.name for path in source.iterdir() if not is_ignored_artifact(Path(relative) / path.name)
+    }
+    target_names = {
+        path.name for path in target.iterdir() if not is_ignored_artifact(Path(relative) / path.name)
+    }
     for name in sorted(source_names | target_names):
         child_relative = f"{relative}/{name}"
         if name not in source_names or name not in target_names:

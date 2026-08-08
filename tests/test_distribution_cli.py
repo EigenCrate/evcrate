@@ -140,6 +140,61 @@ class DistributionCliTest(unittest.TestCase):
         publish.assert_called_once_with(context, artifact, dry_run=False)
         migrator.assert_not_called()
 
+    def test_publish_exports_claude_source_and_pi_discoverable_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
+            context = create_context(DistributionAction.PUBLISH)
+            artifact = VerifiedArtifact(context.repository, context.local_roots)
+            gates.run_home_publish(context, artifact)
+
+            published_claude = Path(home) / ".claude"
+            published_pi_skills = Path(home) / ".agents" / "skills"
+            self.assertEqual(
+                (published_claude / "skills/planning/SKILL.md").read_bytes(),
+                (context.local_claude / "skills/planning/SKILL.md").read_bytes(),
+            )
+            self.assertEqual(
+                (published_pi_skills / "planning/SKILL.md").read_bytes(),
+                (context.local_agents / "skills/planning/SKILL.md").read_bytes(),
+            )
+            for source_file in (context.local_claude / "skills").iterdir():
+                if source_file.is_file():
+                    self.assertFalse((published_claude / "skills" / source_file.name).exists())
+            self.assertTrue((published_claude / "skills/common/README.md").is_file())
+            self.assertFalse((Path(home) / ".pi/agent/settings.json").exists())
+
+    def test_publish_rejects_symlinked_home_before_creating_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            outside = root / "outside"
+            outside.mkdir()
+            home = root / "home"
+            home.symlink_to(outside, target_is_directory=True)
+            context = create_context(
+                DistributionAction.PUBLISH,
+                environ={"EVCRATE_HOME": str(home)},
+            )
+            artifact = VerifiedArtifact(context.repository, context.local_roots)
+            with self.assertRaisesRegex(PublishError, "symlinked ancestors"):
+                gates.run_home_publish(context, artifact)
+            self.assertFalse((outside / ".local").exists())
+
+    def test_publish_rejects_symlinked_state_ancestor_before_creating_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            home = root / "home"
+            outside = root / "outside"
+            home.mkdir()
+            outside.mkdir()
+            (home / ".local").symlink_to(outside, target_is_directory=True)
+            context = create_context(
+                DistributionAction.PUBLISH,
+                environ={"EVCRATE_HOME": str(home)},
+            )
+            artifact = VerifiedArtifact(context.repository, context.local_roots)
+            with self.assertRaisesRegex(PublishError, "state path"):
+                gates.run_home_publish(context, artifact)
+            self.assertFalse((outside / "evcrate").exists())
+
     def test_gemini_publisher_rewrites_settings_without_runtime_name_error(self) -> None:
         from distribute_sync import sync_gemini_assets
         from distribution.context import DistributionContext

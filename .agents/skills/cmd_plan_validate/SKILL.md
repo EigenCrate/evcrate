@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_validate
-description: Validate plan with critical questions interview
+name: "cmd-plan-validate"
+description: "Validate plan with critical questions interview"
 ---
+
 # cmd_plan_validate
 
 Command Path: /plan/validate

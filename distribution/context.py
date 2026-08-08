@@ -88,10 +88,10 @@ def create_context(
 
     env = os.environ if environ is None else environ
     repository = Path(__file__).resolve().parents[1]
-    home = Path(env.get("EVCRATE_HOME", str(Path.home()))).expanduser().resolve()
+    home = Path(env.get("EVCRATE_HOME", str(Path.home()))).expanduser().absolute()
     state_base = env.get("EVCRATE_STATE_HOME") or env.get("XDG_STATE_HOME")
     state_home = (
-        Path(state_base).expanduser().resolve() / "evcrate"
+        Path(state_base).expanduser().absolute() / "evcrate"
         if state_base
         else home / ".local" / "state" / "evcrate"
     )

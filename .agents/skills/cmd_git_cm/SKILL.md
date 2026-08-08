@@ -1,7 +1,8 @@
 ---
-name: cmd_git_cm
-description: Stage all files and create a commit.
+name: "cmd-git-cm"
+description: "Stage all files and create a commit."
 ---
+
 # cmd_git_cm
 
 Command Path: /git/cm
