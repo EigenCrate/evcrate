@@ -4,12 +4,12 @@ Centralized environment variable resolver for gemini Code skills.
 
 Resolves environment variables following the gemini Code hierarchy:
 1. process.env                    - Runtime environment (HIGHEST)
-2. .gemini/skills/<skill>/.env    - Project skill-specific
-3. .gemini/skills/.env            - Project shared
-4. .gemini/.env                   - Project global
-5. ~/.gemini/skills/<skill>/.env  - User skill-specific
-6. ~/.gemini/skills/.env          - User shared
-7. ~/.gemini/.env                 - User global (LOWEST)
+2. .claude/skills/<skill>/.env    - Project skill-specific
+3. .claude/skills/.env            - Project shared
+4. .claude/.env                   - Project global
+5. ~/.claude/skills/<skill>/.env  - User skill-specific
+6. ~/.claude/skills/.env          - User shared
+7. ~/.claude/.env                 - User global (LOWEST)
 
 Usage:
     from resolve_env import resolve_env
@@ -71,12 +71,12 @@ except ImportError:
 
 
 def find_project_root() -> Optional[Path]:
-    """Find project root by looking for .git or .gemini directory."""
+    """Find project root by looking for .git or .claude directory."""
     current = Path.cwd()
 
     # Check current directory and all parents
     for directory in [current] + list(current.parents):
-        if (directory / '.git').exists() or (directory / '.gemini').exists():
+        if (directory / '.git').exists() or (directory / '.claude').exists():
             return directory
 
     return None
@@ -105,34 +105,34 @@ def get_env_file_paths(skill: Optional[str] = None) -> List[Tuple[str, Path]]:
         if skill:
             paths.append((
                 f"Project skill-specific ({skill})",
-                project_root / '.gemini' / 'skills' / skill / '.env'
+                project_root / '.claude' / 'skills' / skill / '.env'
             ))
 
         paths.append((
             "Project skills shared",
-            project_root / '.gemini' / 'skills' / '.env'
+            project_root / '.claude' / 'skills' / '.env'
         ))
 
         paths.append((
             "Project global",
-            project_root / '.gemini' / '.env'
+            project_root / '.claude' / '.env'
         ))
 
     # Priority 5-7: User-level configs
     if skill:
         paths.append((
             f"User skill-specific ({skill})",
-            home / '.gemini' / 'skills' / skill / '.env'
+            home / '.claude' / 'skills' / skill / '.env'
         ))
 
     paths.append((
         "User skills shared",
-        home / '.gemini' / 'skills' / '.env'
+        home / '.claude' / 'skills' / '.env'
     ))
 
     paths.append((
         "User global",
-        home / '.gemini' / '.env'
+        home / '.claude' / '.env'
     ))
 
     return paths

@@ -4,8 +4,8 @@
 
 ## Why It's Needed
 
-- `.gitignore` typically covers source artifacts but NOT dot-folders like `.gemini/`, `.idea/`
-- `.gemini/` contains agent configs, scripts, potential secrets — must be excluded
+- `.gitignore` typically covers source artifacts but NOT dot-folders like `.claude/`, `.idea/`
+- `.claude/` contains agent configs, scripts, potential secrets — must be excluded
 - Pattern precedence: `.repomixignore` > config > `.gitignore` > defaults
 
 ## Setup Workflow
@@ -17,7 +17,7 @@ Before first repomix run:
 ls .repomixignore 2>/dev/null && echo "exists" || echo "missing"
 
 # Create from skill template
-cp .gemini/skills/repomix/assets/.repomixignore .repomixignore
+cp .claude/skills/repomix/assets/.repomixignore .repomixignore
 
 # Or verify what's excluded
 cat .repomixignore
@@ -26,7 +26,7 @@ cat .repomixignore
 ## Always Exclude (Dot-folders)
 
 ```
-.gemini/        # AI tooling configs, scripts, potential secrets
+.claude/        # AI tooling configs, scripts, potential secrets
 .git/           # Version control internals
 .idea/          # JetBrains IDE
 .vscode/        # VS Code settings
@@ -38,7 +38,7 @@ cat .repomixignore
 
 ## Template Location
 
-The full template is at `.gemini/skills/repomix/assets/.repomixignore`.
+The full template is at `.claude/skills/repomix/assets/.repomixignore`.
 
 It covers:
 - All common dot-folders
@@ -62,7 +62,7 @@ secrets/
 
 ## Verification
 
-After setup, confirm `.gemini/` is excluded:
+After setup, confirm `.claude/` is excluded:
 ```bash
 repomix --verbose 2>&1 | grep -i "gemini\|skipping"
 ```

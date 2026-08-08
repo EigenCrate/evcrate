@@ -113,7 +113,7 @@ class DistributionCliTest(unittest.TestCase):
         context = create_context(DistributionAction.CHECK)
         documents = [context.repository / name for name in gates.GENERATED_DOCS]
         before = {path: path.read_bytes() if path.exists() else None for path in documents}
-        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"DEVKIT_HOME": home}):
+        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
             def generate(stage_context: object) -> VerifiedArtifact:
                 stage = stage_context.stage
                 assert stage is not None
@@ -130,7 +130,7 @@ class DistributionCliTest(unittest.TestCase):
         self.assertEqual(before, {path: path.read_bytes() if path.exists() else None for path in documents})
 
     def test_publish_requires_a_matching_artifact_and_never_runs_migrators(self) -> None:
-        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"DEVKIT_HOME": home}):
+        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
             context = create_context(DistributionAction.PUBLISH)
             artifact = VerifiedArtifact(context.repository, context.local_roots)
             with patch("distribution.publish.publish_local_artifacts") as publish, patch(
@@ -187,7 +187,7 @@ class DistributionCliTest(unittest.TestCase):
                 text=True,
             )
             self.assertNotEqual(completed.returncode, 0)
-            self.assertIn("DEVKIT_ALLOW_DIRECT_GLOBAL=1", completed.stderr)
+            self.assertIn("EVCRATE_ALLOW_DIRECT_GLOBAL=1", completed.stderr)
 
 
 if __name__ == "__main__":

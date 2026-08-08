@@ -21,7 +21,7 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 
 ---
 
-**IMPORTANT**: Analyze the list of skills  at `.gemini/skills/*` and intelligently activate the skills that are needed for the task during the process.
+**IMPORTANT**: Analyze the list of skills  at `.claude/skills/*` and intelligently activate the skills that are needed for the task during the process.
 **Ensure token efficiency while maintaining high quality.**
 
 ## Positioning

@@ -2,7 +2,7 @@
 /**
  * Update session state with new active plan
  *
- * Usage: node .gemini/scripts/set-active-plan.cjs <plan-path>
+ * Usage: node .claude/scripts/set-active-plan.cjs <plan-path>
  *
  * This script updates the session temp file with the new active plan path,
  * allowing subagents to receive the latest plan context via SubagentStart hook.
@@ -12,15 +12,15 @@
  * the initial snapshot from session start.
  */
 
-const { writeSessionState, readSessionState } = require('../hooks/lib/ev-config-utils.cjs');
+const { writeSessionState, readSessionState } = require('../hooks/lib/evcrate-config-utils.cjs');
 
 const sessionId = process.env.CK_SESSION_ID;
 const newPlan = process.argv[2];
 
 if (!newPlan) {
   console.error('Error: Plan path required');
-  console.log('Usage: node .gemini/scripts/set-active-plan.cjs <plan-path>');
-  console.log('Example: node .gemini/scripts/set-active-plan.cjs plans/251207-1030-feature-name');
+  console.log('Usage: node .claude/scripts/set-active-plan.cjs <plan-path>');
+  console.log('Example: node .claude/scripts/set-active-plan.cjs plans/251207-1030-feature-name');
   process.exit(1);
 }
 

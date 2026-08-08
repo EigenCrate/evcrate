@@ -5,7 +5,7 @@
   "output_root": ".antigravity",
   "additional_roots": [],
   "project_docs": [],
-  "overlay_root": ".devkit/targets/antigravity/files",
+  "overlay_root": ".evcrate/targets/antigravity/files",
   "patches": [],
   "home_policy": {
     "bindings": {".antigravity": ".gemini/config"},

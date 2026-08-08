@@ -96,11 +96,11 @@ KEY4=value=with=equals
     def test_load_env_files(self, auth_init, mock_project_root):
         """Test loading environment variables from multiple files."""
         # Create .env files
-        gemini_env = mock_project_root / ".gemini" / ".env"
-        gemini_env.parent.mkdir(parents=True, exist_ok=True)
-        gemini_env.write_text("BASE_VAR=base\nOVERRIDE=gemini")
+        claude_env = mock_project_root / ".claude" / ".env"
+        claude_env.parent.mkdir(parents=True, exist_ok=True)
+        claude_env.write_text("BASE_VAR=base\nOVERRIDE=gemini")
 
-        skills_env = mock_project_root / ".gemini" / "skills" / ".env"
+        skills_env = mock_project_root / ".claude" / "skills" / ".env"
         skills_env.parent.mkdir(parents=True, exist_ok=True)
         skills_env.write_text("OVERRIDE=skills\nSKILLS_VAR=skills")
 

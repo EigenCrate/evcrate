@@ -123,7 +123,7 @@ def run_local_check() -> None:
 
     base_context = create_context(DistributionAction.CHECK)
     with repository_lock(base_context.repository):
-        with staged_build_root(base_context.repository, prefix=".devkit-check-", recover=False) as stage:
+        with staged_build_root(base_context.repository, prefix=".evcrate-check-", recover=False) as stage:
             context = _stage_context(DistributionAction.CHECK, stage)
             staged = _generate_stage(context)
             differences = [
@@ -166,7 +166,7 @@ def run_home_publish(
     """Publish an explicit local artifact; this function never invokes a migrator."""
 
     if context.global_sync_mode not in {"managed", "full"}:
-        raise PublishError("DEVKIT_GLOBAL_SYNC_MODE must be 'managed' or 'full'")
+        raise PublishError("EVCRATE_GLOBAL_SYNC_MODE must be 'managed' or 'full'")
     from .publish import publish_local_artifacts
 
     try:

@@ -9,7 +9,7 @@ Command Path: /skill/add
 Description: Add new reference files or scripts to a skill
 
 Think harder.
-Use `skill-creator` and `gemini-cli` skills.
+Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.
 
 ## Arguments
@@ -18,7 +18,7 @@ $2: reference or script prompt (required, default: "")
 If $1 or $2 is not provided, ask the user to provide it.
 
 ## Your mission
-Add new reference files or scripts to a skill at `.gemini/skills/$1` directory.
+Add new reference files or scripts to a skill at `.claude/skills/$1` directory.
 
 ## Requirements
 <reference-or-script-prompt>

@@ -65,7 +65,7 @@ Create `.repomixignore` for Repomix-specific exclusions (gitignore format). Crit
 
 ```
 # Dot-folders (AI tooling, IDE, VCS)
-.gemini/
+.claude/
 .git/
 .idea/
 .vscode/

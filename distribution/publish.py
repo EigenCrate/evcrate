@@ -43,7 +43,7 @@ def _validate_home_ancestors(context: DistributionContext, home: Path) -> None:
 
 
 def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[str]]]:
-    registry = load_target_registry(context.repository / ".devkit/targets/manifest.json")
+    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
     policies: list[tuple[str, Path, Path, set[str], int]] = []
     for manifest_path in registry.targets.values():
         manifest = load_target_manifest(manifest_path)
@@ -137,7 +137,7 @@ def _copy_candidate(
     if home.exists() and (home.is_symlink() or not home.is_dir()):
         raise PublishError(f"HOME root is unsafe: {home}")
     home.parent.mkdir(parents=True, exist_ok=True)
-    candidate = Path(tempfile.mkdtemp(prefix=f".{home.name}.devkit-stage-", dir=home.parent))
+    candidate = Path(tempfile.mkdtemp(prefix=f".{home.name}.evcrate-stage-", dir=home.parent))
     if home.exists():
         shutil.copytree(home, candidate, dirs_exist_ok=True, symlinks=True)
     for relative in prior - set(source):
@@ -183,7 +183,7 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
         try:
             for name, local, home, preserved in _policies(context):
                 candidate, managed = _copy_candidate(context, local, home, preserved, prior_managed_paths(prior_paths, name))
-                backup = home.with_name(f".{home.name}.devkit-backup-{release_id}") if home.exists() else None
+                backup = home.with_name(f".{home.name}.evcrate-backup-{release_id}") if home.exists() else None
                 marker["roots"][name] = {"backup": backup.name if backup else None, "completed": False}
                 write_release_marker(context.state_dir, marker)
                 if backup is not None:

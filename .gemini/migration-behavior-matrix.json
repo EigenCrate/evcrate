@@ -212,6 +212,13 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "evcrate-help.md",
+      "status": "migrated",
+      "target": "evcrate-help.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "fix/ci.md",
       "status": "migrated",
       "target": "fix/ci.toml"

@@ -13,7 +13,10 @@
  */
 
 const path = require('path');
-const fs = require('fs');
+const {
+  getEVCrateConfigPaths,
+  loadConfigFromPath
+} = require('./lib/evcrate-config-utils.cjs');
 
 const APPROVED_PREFIX = 'APPROVED:';
 
@@ -39,13 +42,12 @@ const PRIVACY_PATTERNS = [
 ];
 
 /**
- * Load .evcrate.json config to check if privacy block is disabled
+ * Load EVCrate config to check if privacy block is disabled.
  * @returns {boolean} true if privacy block should be skipped
  */
 function isPrivacyBlockDisabled() {
   try {
-    const configPath = path.join(process.cwd(), '.claude', '.ck.json');
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    const config = loadConfigFromPath(getEVCrateConfigPaths().localConfigPath);
     return config.privacyBlock === false;
   } catch {
     return false; // Default to enabled on error (file not found or invalid JSON)
@@ -137,27 +139,31 @@ function extractPaths(toolInput) {
   if (toolInput.file_path) paths.push({ value: toolInput.file_path, field: 'file_path' });
   if (toolInput.path) paths.push({ value: toolInput.path, field: 'path' });
   if (toolInput.pattern) paths.push({ value: toolInput.pattern, field: 'pattern' });
+  if (toolInput.AbsolutePath) paths.push({ value: toolInput.AbsolutePath, field: 'AbsolutePath' });
+  if (toolInput.SearchPath) paths.push({ value: toolInput.SearchPath, field: 'SearchPath' });
+  if (toolInput.TargetFile) paths.push({ value: toolInput.TargetFile, field: 'TargetFile' });
 
   // Check bash commands for file paths
-  if (toolInput.command) {
+  const cmd = toolInput.command || toolInput.CommandLine;
+  if (cmd) {
     // Look for APPROVED:.env or .env patterns
-    const approvedMatch = toolInput.command.match(/APPROVED:[^\s]+/g) || [];
+    const approvedMatch = cmd.match(/APPROVED:[^\s]+/g) || [];
     approvedMatch.forEach(p => paths.push({ value: p, field: 'command' }));
 
     // Only look for .env if no APPROVED: version found
     if (approvedMatch.length === 0) {
-      const envMatch = toolInput.command.match(/\.env[^\s]*/g) || [];
+      const envMatch = cmd.match(/\.env[^\s]*/g) || [];
       envMatch.forEach(p => paths.push({ value: p, field: 'command' }));
 
       // Also check bash variable assignments (FILE=.env, ENV_FILE=.env.local)
-      const varAssignments = toolInput.command.match(/\w+=[^\s]*\.env[^\s]*/g) || [];
+      const varAssignments = cmd.match(/\w+=[^\s]*\.env[^\s]*/g) || [];
       varAssignments.forEach(a => {
         const value = a.split('=')[1];
         if (value) paths.push({ value, field: 'command' });
       });
 
       // Check command substitution containing sensitive patterns - extract .env from inside
-      const cmdSubst = toolInput.command.match(/\$\([^)]*?(\.env[^\s)]*)[^)]*\)/g) || [];
+      const cmdSubst = cmd.match(/\$\([^)]*?(\.env[^\s)]*)[^)]*\)/g) || [];
       for (const subst of cmdSubst) {
         const inner = subst.match(/\.env[^\s)]*/);
         if (inner) paths.push({ value: inner[0], field: 'command' });
@@ -221,7 +227,7 @@ function formatApprovalNotice(filePath) {
 
 // Main
 async function main() {
-  // Check if privacy block is disabled via .ck.json
+  // Check if privacy block is disabled via EVCrate config
   if (isPrivacyBlockDisabled()) {
     process.exit(0); // Disabled, allow all
   }
@@ -242,7 +248,7 @@ async function main() {
 
   // For Bash commands, only warn but don't block - let Claude Code's permission system handle it
   // This allows the "Yes → bash cat" flow after AskUserQuestion approval
-  const isBashTool = toolName === 'Bash';
+  const isBashTool = toolName === 'Bash' || toolName === 'run_shell_command' || toolName === 'run_command';
 
   const paths = extractPaths(toolInput);
 

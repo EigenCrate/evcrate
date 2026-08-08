@@ -15,7 +15,7 @@ Create an isolated git worktree for parallel feature development.
 ### Step 1: Get Repository Info
 
 ```bash
-node .gemini/scripts/worktree.cjs info --json
+node .claude/scripts/worktree.cjs info --json
 ```
 
 **Response fields:**
@@ -71,12 +71,12 @@ ask_user({
 
 **Monorepo:**
 ```bash
-node .gemini/scripts/worktree.cjs create "<PROJECT>" "<SLUG>" --prefix <TYPE> --env "<FILES>"
+node .claude/scripts/worktree.cjs create "<PROJECT>" "<SLUG>" --prefix <TYPE> --env "<FILES>"
 ```
 
 **Standalone:**
 ```bash
-node .gemini/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>"
+node .claude/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>"
 ```
 
 **Options:**
@@ -113,7 +113,7 @@ node .gemini/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>
 ```
 User: /worktree fix the login validation bug
 
-gemini: [Runs: node .gemini/scripts/worktree.cjs info --json]
+gemini: [Runs: node .claude/scripts/worktree.cjs info --json]
         [Detects: standalone repo, envFiles: [".env.example"]]
         [Detects prefix from "fix" keyword: fix]
         [Converts slug: "login-validation-bug"]
@@ -124,7 +124,7 @@ gemini: [Uses ask_user for env files]
 
 User: .env.example
 
-gemini: [Runs: node .gemini/scripts/worktree.cjs create "login-validation-bug" --prefix fix --env ".env.example"]
+gemini: [Runs: node .claude/scripts/worktree.cjs create "login-validation-bug" --prefix fix --env ".env.example"]
 
 Output: Worktree created at ../worktrees/myrepo-login-validation-bug
         Branch: fix/login-validation-bug

@@ -1,7 +1,7 @@
 description = " Analyze the codebase and update documentation"
 prompt = """## Phase 1: Parallel Codebase Scouting
 
-1. Scan the codebase and calculate the number of files with LOC in each directory (skip credentials, cache or external modules directories, such as `.gemini`, `.opencode`, `.git`, `tests`, `node_modules`, `__pycache__`, `secrets`, etc.)
+1. Scan the codebase and calculate the number of files with LOC in each directory (skip credentials, cache or external modules directories, such as `.claude`, `.opencode`, `.git`, `tests`, `node_modules`, `__pycache__`, `secrets`, etc.)
 2. Target directories **that actually exist** - adapt to project structure, don't hardcode paths
 3. Main agent spawns multiple `scout` subagents via Task tool:
    - Write a detailed instructions prompt for each scout subagent with exact directories or files it should read
@@ -62,7 +62,7 @@ After docs-manager completes:
 ## Phase 4: Documentation Validation (Post-Update)
 
 Run validation to detect potential hallucinations:
-1. Run: `node .gemini/scripts/validate-docs.cjs docs/`
+1. Run: `node .claude/scripts/validate-docs.cjs docs/`
 2. Display validation report (warnings only, non-blocking)
 3. Checks performed:
    - Code references: Verify `functionName()` and `ClassName` exist in codebase

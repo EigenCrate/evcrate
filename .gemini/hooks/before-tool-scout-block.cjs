@@ -103,7 +103,23 @@ try {
   }
 } catch(e) {}
 
-let result = spawnSync(process.execPath, [sourceHook], {
+let activeHook = sourceHook;
+if (!fs.existsSync(activeHook)) {
+  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/before-tool-scout-block.cjs");
+  if (fs.existsSync(globalHook)) {
+    activeHook = globalHook;
+  } else {
+    process.stdout.write(JSON.stringify({
+      decision: 'allow',
+      hookSpecificOutput: {
+        hookEventName: "BeforeTool",
+      },
+    }));
+    process.exit(0);
+  }
+}
+
+const result = spawnSync(process.execPath, [activeHook], {
   input: claudePayload,
   encoding: 'utf-8',
   env: {
@@ -113,36 +129,18 @@ let result = spawnSync(process.execPath, [sourceHook], {
   },
 });
 
-// Fallback to global hook if local hook failed to run or crashed (status 1 or error)
-if ((result.status === 1 || result.error) && !sourceHook.includes('.gemini/config')) {
-  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/scout-block.cjs");
-  if (fs.existsSync(globalHook)) {
-    const fallbackResult = spawnSync(process.execPath, [globalHook], {
-      input: input,
-      encoding: 'utf-8',
-      env: {
-        ...process.env,
-        CLAUDE_PROJECT_DIR: projectDir,
-        GEMINI_PROJECT_DIR: projectDir,
-      },
-    });
-    process.stdout.write(fallbackResult.stdout);
-    process.exit(fallbackResult.status);
-  }
-}
-
 const reason = (result.stderr || result.stdout || '').trim();
-if (result.status === 2 || result.status === 1) {
+if (result.status === 0 && !result.error) {
   process.stdout.write(JSON.stringify({
-    decision: 'deny',
-    reason: reason || 'Blocked by migrated Claude hook.',
+    decision: 'allow',
     hookSpecificOutput: {
       hookEventName: "BeforeTool",
     },
   }));
 } else {
   process.stdout.write(JSON.stringify({
-    decision: 'allow',
+    decision: 'deny',
+    reason: reason || (result.error ? result.error.message : '') || 'Blocked by migrated Claude hook.',
     hookSpecificOutput: {
       hookEventName: "BeforeTool",
     },

@@ -89,7 +89,7 @@ def check_centralized_resolver():
     """Check if centralized resolver is available."""
     print_header("Checking Centralized Resolver")
 
-    resolver_path = Path.home() / '.gemini' / 'scripts' / 'resolve_env.py'
+    resolver_path = Path.home() / '.claude' / 'scripts' / 'resolve_env.py'
 
     if resolver_path.exists():
         print_success(f"Centralized resolver found: {resolver_path}")
@@ -114,7 +114,7 @@ def find_api_key():
     print_header("Checking API Key Configuration")
 
     # Try to use centralized resolver
-    sys.path.insert(0, str(Path.home() / '.gemini' / 'scripts'))
+    sys.path.insert(0, str(Path.home() / '.claude' / 'scripts'))
     try:
         from resolve_env import resolve_env
 
@@ -127,7 +127,7 @@ def find_api_key():
 
             # Show hierarchy
             print_info("\nTo see where the key was found, run:")
-            print_info("python ~/.gemini/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose")
+            print_info("python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose")
 
             return api_key
         else:
@@ -232,7 +232,7 @@ def provide_setup_instructions():
     print("\n2. Configure the API key (choose one method):")
 
     print(f"\n   Option A: User global config (recommended)")
-    print(f"   $ echo 'GEMINI_API_KEY=your-api-key-here' >> ~/.gemini/.env")
+    print(f"   $ echo 'GEMINI_API_KEY=your-api-key-here' >> ~/.claude/.env")
 
     script_dir = Path(__file__).parent
     skill_dir = script_dir.parent
@@ -249,8 +249,8 @@ def provide_setup_instructions():
     print(f"   $ python {Path(__file__)}")
 
     print("\n4. Debug if needed:")
-    print(f"   $ python ~/.gemini/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
-    print(f"   $ python ~/.gemini/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose")
+    print(f"   $ python ~/.claude/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
+    print(f"   $ python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose")
 
 
 def main():

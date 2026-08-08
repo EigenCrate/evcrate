@@ -9,7 +9,7 @@ Command Path: /skill/fix-logs
 Description: Fix the agent skill based on `logs.txt` file.
 
 Think harder.
-Use `skill-creator` and `gemini-cli` skills.
+Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.
 
 ## Your mission

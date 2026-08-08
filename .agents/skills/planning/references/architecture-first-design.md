@@ -15,7 +15,7 @@ Request → [GATE 1: Design] → Plan & Code → [GATE 2: Post-impl review]
 Check in priority order:
 1. `docs/architecture.md` (preferred convention)
 2. `ARCHITECTURE.md` at project root
-3. Any file referenced in `Codex.md` under "Architecture Reference"
+3. Any file referenced in `AGENTS.md` under "Architecture Reference"
 
 If no architecture doc exists, skip to solution design — but flag it as a gap.
 

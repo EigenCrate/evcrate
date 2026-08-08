@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Git Worktree Manager for geminiKit
+ * Git Worktree Manager for EVCrate
  * Cross-platform Node.js script for creating isolated git worktrees
  *
  * Usage: node worktree.cjs <command> [options]

@@ -42,9 +42,9 @@ def find_api_key() -> Optional[str]:
 
     Priority order (highest to lowest):
     1. process.env (runtime environment variables)
-    2. .gemini/skills/ai-multimodal/.env (skill-specific config)
-    3. .gemini/skills/.env (shared skills config)
-    4. .gemini/.env (gemini global config)
+    2. .claude/skills/ai-multimodal/.env (skill-specific config)
+    3. .claude/skills/.env (shared skills config)
+    4. .claude/.env (gemini global config)
     """
     # Priority 1: Already in process.env (highest)
     api_key = os.getenv('GEMINI_API_KEY')
@@ -55,9 +55,9 @@ def find_api_key() -> Optional[str]:
     if load_dotenv:
         # Determine base paths
         script_dir = Path(__file__).parent
-        skill_dir = script_dir.parent  # .gemini/skills/ai-multimodal
-        skills_dir = skill_dir.parent   # .gemini/skills
-        gemini_dir = skills_dir.parent  # .gemini
+        skill_dir = script_dir.parent  # .claude/skills/ai-multimodal
+        skills_dir = skill_dir.parent   # .claude/skills
+        claude_dir = skills_dir.parent  # .claude
 
         # Priority 2: Skill-specific .env
         env_file = skill_dir / '.env'
@@ -76,7 +76,7 @@ def find_api_key() -> Optional[str]:
                 return api_key
 
         # Priority 4: gemini global .env
-        env_file = gemini_dir / '.env'
+        env_file = claude_dir / '.env'
         if env_file.exists():
             load_dotenv(env_file)
             api_key = os.getenv('GEMINI_API_KEY')
@@ -90,9 +90,9 @@ def find_project_root() -> Path:
     """Find project root directory."""
     script_dir = Path(__file__).parent
 
-    # Look for .git or .gemini directory
+    # Look for .git or .claude directory
     for parent in [script_dir] + list(script_dir.parents):
-        if (parent / '.git').exists() or (parent / '.gemini').exists():
+        if (parent / '.git').exists() or (parent / '.claude').exists():
             return parent
 
     return script_dir

@@ -11,16 +11,16 @@ from distribute_utils import remove_managed_paths, remove_path, reset_dir_conten
 from distribute_hooks import rewrite_codex_global_paths
 
 def sync_gemini_assets(context: DistributionContext):
-    devkit_gemini = context.local_gemini
+    evcrate_gemini = context.local_gemini
     target_gemini = context.target_gemini
     gemini_global_mode = context.gemini_global_mode
-    if not devkit_gemini.exists():
+    if not evcrate_gemini.exists():
         raise RuntimeError("Local .gemini artifact is missing")
         
     target_gemini.mkdir(parents=True, exist_ok=True)
     print(f"🧹 Syncing global Gemini assets (mode: {gemini_global_mode})")
     
-    settings_src = devkit_gemini / "settings.json"
+    settings_src = evcrate_gemini / "settings.json"
     if settings_src.exists():
         shutil.copy2(settings_src, target_gemini / "settings.json")
         settings_dest = target_gemini / "settings.json"
@@ -44,20 +44,20 @@ def sync_gemini_assets(context: DistributionContext):
             raise RuntimeError(f"Failed to rewrite Gemini settings.json: {error}") from error
 
     for subdir in ["scripts", "hooks"]:
-        if (devkit_gemini / subdir).exists():
+        if (evcrate_gemini / subdir).exists():
             subdir_dest = target_gemini / subdir
             if subdir_dest.exists():
                 shutil.rmtree(subdir_dest)
-            shutil.copytree(devkit_gemini / subdir, subdir_dest, dirs_exist_ok=True)
+            shutil.copytree(evcrate_gemini / subdir, subdir_dest, dirs_exist_ok=True)
 
     subdirs = ["agents", "commands", "skills", "workflows"]
     if gemini_global_mode == "full":
         for subdir in subdirs:
-            if (devkit_gemini / subdir).exists():
+            if (evcrate_gemini / subdir).exists():
                 subdir_dest = target_gemini / subdir
                 if subdir_dest.exists():
                     shutil.rmtree(subdir_dest)
-                shutil.copytree(devkit_gemini / subdir, subdir_dest, dirs_exist_ok=True)
+                shutil.copytree(evcrate_gemini / subdir, subdir_dest, dirs_exist_ok=True)
     else:
         for subdir in subdirs:
             subdir_dest = target_gemini / subdir
@@ -71,10 +71,10 @@ def sync_codex_and_agents_assets(context: DistributionContext):
     agents_source = context.local_agents
     target_codex = context.target_codex
     target_agents = context.target_agents
-    devkit_global_sync_mode = context.global_sync_mode
+    evcrate_global_sync_mode = context.global_sync_mode
 
     if codex_source.exists():
-        if devkit_global_sync_mode == "full":
+        if evcrate_global_sync_mode == "full":
             print(f"🧹 Fully replacing global Codex directory: {target_codex}")
             reset_dir_contents(target_codex)
         else:
@@ -86,9 +86,9 @@ def sync_codex_and_agents_assets(context: DistributionContext):
             ])
         
         print("📦 Copying .codex items...")
-        managed_skip_names = set() if devkit_global_sync_mode == "full" else {".devkit.json"}
+        managed_skip_names = set() if evcrate_global_sync_mode == "full" else {".evcrate.json"}
         if managed_skip_names:
-            print("🔒 Preserving user-owned global Codex config: .devkit.json")
+            print("🔒 Preserving user-owned global Codex config: .evcrate.json")
         sync_tree(codex_source, target_codex, skip_names=managed_skip_names)
         write_codex_runtime_env(target_codex / "runtime.env")
         rewrite_codex_global_paths(target_codex)
@@ -96,7 +96,7 @@ def sync_codex_and_agents_assets(context: DistributionContext):
         raise RuntimeError("Local .codex artifact is missing")
 
     if agents_source.exists():
-        if devkit_global_sync_mode == "full":
+        if evcrate_global_sync_mode == "full":
             print(f"🧹 Fully replacing global Codex agents directory: {target_agents}")
             reset_dir_contents(target_agents)
         else:
@@ -115,10 +115,10 @@ def sync_antigravity_config(context: DistributionContext):
 def sync_legacy_claude_assets(context: DistributionContext):
     claude_source = context.local_claude
     target_claude = context.target_claude
-    devkit_global_sync_mode = context.global_sync_mode
+    evcrate_global_sync_mode = context.global_sync_mode
     if claude_source.exists():
         print(f"📦 Syncing legacy .claude items to {target_claude}...")
-        if devkit_global_sync_mode == "full":
+        if evcrate_global_sync_mode == "full":
             print(f"🧹 Fully replacing legacy Claude directory: {target_claude}")
             if target_claude.exists():
                 shutil.rmtree(target_claude)

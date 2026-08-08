@@ -1,6 +1,14 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from migrate_claude_to_codex import SUBAGENT_WAIT_CONTRACT, apply_replacements, apply_subagent_wait_contract
+from migrate_claude_to_codex import (
+    SUBAGENT_WAIT_CONTRACT,
+    apply_replacements,
+    apply_subagent_wait_contract,
+    migrate_help_scripts,
+)
 
 
 class ApplyReplacementsTest(unittest.TestCase):
@@ -38,6 +46,25 @@ class ApplyReplacementsTest(unittest.TestCase):
         self.assertIn("partial result as a failed gate", generated)
         self.assertIn("preserve the agent identity", generated)
         self.assertEqual(apply_subagent_wait_contract(generated), generated)
+
+    def test_help_scripts_copy_to_codex_without_bytecode(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude" / "scripts"
+            target_dir = root / ".codex"
+            source_dir.mkdir(parents=True)
+            (source_dir / "ev-help.py").write_bytes(b"help")
+            (source_dir / "test-evcrate-help.py").write_bytes(b"test")
+            (source_dir / "ignored.pyc").write_bytes(b"bytecode")
+
+            with patch("migrate_claude_to_codex.CLAUDE_DIR", root / ".claude"), patch(
+                "migrate_claude_to_codex.CODEX_DIR", target_dir
+            ):
+                migrate_help_scripts()
+
+            self.assertEqual((target_dir / "scripts/ev-help.py").read_bytes(), b"help")
+            self.assertEqual((target_dir / "scripts/test-evcrate-help.py").read_bytes(), b"test")
+            self.assertFalse((target_dir / "scripts/ignored.pyc").exists())
 
 
 if __name__ == "__main__":

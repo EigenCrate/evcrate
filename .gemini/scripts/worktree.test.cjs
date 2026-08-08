@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Test suite for worktree.cjs
- * Run: node .gemini/scripts/worktree.test.cjs
+ * Run: node .claude/scripts/worktree.test.cjs
  */
 
 const { execSync } = require('child_process');
@@ -10,7 +10,7 @@ const fs = require('fs');
 
 const SCRIPT_PATH = path.join(__dirname, 'worktree.cjs');
 const STANDALONE_DIR = path.dirname(path.dirname(__dirname)); // worktree dir
-const MONOREPO_DIR = '/home/kai/geminikit';
+const MONOREPO_DIR = '/home/kai/evcrate';
 
 let passed = 0;
 let failed = 0;
@@ -222,7 +222,7 @@ test('create in monorepo with project works', () => {
   const result = run('create engineer test-mono --prefix feat --dry-run --json', { cwd: MONOREPO_DIR });
   assert(result.success, 'Should succeed with project');
   const json = assertJSON(result.output);
-  assert(json.wouldCreate.project === 'geminikit-engineer', 'Should detect project');
+  assert(json.wouldCreate.project === 'evcrate', 'Should detect project');
 });
 
 test('create detects invalid project', () => {

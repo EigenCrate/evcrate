@@ -35,7 +35,7 @@ def recover_interrupted_publish(context: DistributionContext) -> None:
             target = policy_by_name[name]
             backup_name = details.get("backup")
             backup = target.parent / backup_name if isinstance(backup_name, str) else None
-            if backup is not None and (backup.parent != target.parent or not backup.name.startswith(f".{target.name}.devkit-backup-")):
+            if backup is not None and (backup.parent != target.parent or not backup.name.startswith(f".{target.name}.evcrate-backup-")):
                 raise PublishError("Interrupted release marker has an unsafe backup")
             restored.append((target, backup))
         restore_roots(restored)

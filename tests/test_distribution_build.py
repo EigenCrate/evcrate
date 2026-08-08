@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
+from distribution.antigravity_publish import build_antigravity_config
 from distribution.context import DistributionContext, create_context
 from distribution.contracts import BuildError, DistributionAction
 from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
@@ -205,6 +206,27 @@ class DistributionBuildTest(unittest.TestCase):
             context = DistributionContext(DistributionAction.BUILD, repository, repository / "home", repository / "stage", "managed", "config-and-scripts")
             with self.assertRaisesRegex(BuildError, "has no build adapter"):
                 _load_targets(context, {".gemini": repository / "stage/.gemini"})
+
+    def test_antigravity_adapter_rewrites_help_script_and_preserves_command_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / ".claude"
+            target = root / ".antigravity"
+            (source / "commands").mkdir(parents=True)
+            (source / "scripts").mkdir()
+            (source / "scripts/ev-help.py").write_text("help", encoding="utf-8")
+            (source / "commands/evcrate-help.md").write_text(
+                "---\nname: /evcrate:help\ndescription: Help\n---\n"
+                "python .claude/scripts/ev-help.py \"$ARGUMENTS\"\n",
+                encoding="utf-8",
+            )
+
+            build_antigravity_config(source, target)
+
+            generated = (target / "skills/cmd_evcrate-help/SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("Command Path: /evcrate:help", generated)
+            self.assertIn("python .antigravity/scripts/ev-help.py", generated)
+            self.assertNotIn("python .claude/scripts/ev-help.py", generated)
 
     def test_source_symlink_is_not_followed_and_baseline_rejects_it(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -1,5 +1,5 @@
 ---
-name: "/devkit:take"
+name: "/evcrate:take"
 description: Transfer a feature from another project through compare, copy, improve, or port gates
 argument-hint: [mode] <source-repo-or-path> <feature> [local-notes]
 ---
@@ -17,7 +17,7 @@ $ARGUMENTS
 Canonical shape:
 
 ```text
-/devkit:take [mode] <source-repo-or-path> <feature> [local-notes]
+/evcrate:take [mode] <source-repo-or-path> <feature> [local-notes]
 ```
 
 Modes:

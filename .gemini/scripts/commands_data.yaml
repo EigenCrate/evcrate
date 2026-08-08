@@ -43,9 +43,9 @@
 - argument_hint:
   - category|command|task description
   category: core
-  description: geminiKit usage guide - just type naturally
-  name: /ck-help
-  path: ck-help.md
+  description: EVCrate usage guide - just type naturally
+  name: /evcrate-help
+  path: evcrate-help.md
   power_level: 0
 - argument_hint: ''
   category: code
@@ -454,7 +454,7 @@
   category: core
   description: Take a feature from another project with compare, copy, improve, and
     port modes
-  name: /devkit:take
+  name: /evcrate:take
   path: take.md
   power_level: 0
 - argument_hint: ''

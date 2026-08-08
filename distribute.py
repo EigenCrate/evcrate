@@ -12,7 +12,7 @@ from distribution.gates import run_all, run_home_publish, run_home_recovery, run
 
 
 def parse_args(argv: list[str]) -> DistributionAction:
-    parser = argparse.ArgumentParser(description="Build and publish DevKit artifacts.")
+    parser = argparse.ArgumentParser(description="Build and publish EVCrate artifacts.")
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--build", action="store_true", help="Generate local artifacts only.")
     actions.add_argument("--check", action="store_true", help="Verify local artifacts without writing.")

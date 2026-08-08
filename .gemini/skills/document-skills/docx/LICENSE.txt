@@ -5,8 +5,8 @@ and other components of this Skill) is governed by your agreement with
 google regarding use of google's services. If no separate agreement
 exists, use is governed by google's Consumer Terms of Service or
 Commercial Terms of Service, as applicable:
-https://www.google.com/legal/consumer-terms
-https://www.google.com/legal/commercial-terms
+https://www.anthropic.com/legal/consumer-terms
+https://www.anthropic.com/legal/commercial-terms
 Your applicable agreement is referred to as the "Agreement." "Services" are
 as defined in the Agreement.
 

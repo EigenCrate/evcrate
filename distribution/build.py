@@ -15,7 +15,7 @@ from typing import Iterator, Sequence
 from .contracts import BuildError
 
 
-JOURNAL_NAME = ".devkit-promotion-journal.json"
+JOURNAL_NAME = ".evcrate-promotion-journal.json"
 
 
 @contextmanager
@@ -49,7 +49,7 @@ def _windows_repository_lock(repository: Path) -> Iterator[None]:
     except ImportError as error:  # pragma: no cover - unsupported host
         raise BuildError("Exclusive repository locking is unavailable on this platform") from error
     token = hashlib.sha256(str(repository.resolve()).encode("utf-8")).hexdigest()[:24]
-    lock_path = Path(tempfile.gettempdir()) / f"devkit-distribution-{token}.lock"
+    lock_path = Path(tempfile.gettempdir()) / f"evcrate-distribution-{token}.lock"
     with lock_path.open("a+b") as handle:
         handle.seek(0)
         if not handle.read(1):
@@ -114,7 +114,7 @@ def recover_interrupted_promotion(common_parent: Path) -> None:
         backup_dir = common_parent / data["backup_dir"]
         destinations = [common_parent / relative for relative in data["destinations"]]
         resolved_backup = backup_dir.resolve(strict=False)
-        if backup_dir.parent != common_parent or not backup_dir.name.startswith(".devkit-promotion-"):
+        if backup_dir.parent != common_parent or not backup_dir.name.startswith(".evcrate-promotion-"):
             raise ValueError("journal backup has an invalid location")
         if common_parent not in (resolved_backup, *resolved_backup.parents):
             raise ValueError("journal backup escapes common parent")
@@ -136,7 +136,7 @@ def recover_interrupted_promotion(common_parent: Path) -> None:
 
 
 @contextmanager
-def staged_build_root(repository: Path, *, prefix: str = ".devkit-build-", recover: bool = True) -> Iterator[Path]:
+def staged_build_root(repository: Path, *, prefix: str = ".evcrate-build-", recover: bool = True) -> Iterator[Path]:
     """Create an empty stage beside the repository so renames stay same-volume."""
 
     repository = repository.resolve()
@@ -184,7 +184,7 @@ def promote_transaction(pairs: Sequence[tuple[Path | None, Path]]) -> None:
         if destination.is_symlink():
             raise BuildError(f"Refusing to replace symlinked destination: {destination}")
     recover_interrupted_promotion(common_parent)
-    backup_dir = Path(tempfile.mkdtemp(prefix=".devkit-promotion-", dir=common_parent))
+    backup_dir = Path(tempfile.mkdtemp(prefix=".evcrate-promotion-", dir=common_parent))
     journal = common_parent / JOURNAL_NAME
     _write_journal(journal, backup_dir, common_parent, destinations)
     try:

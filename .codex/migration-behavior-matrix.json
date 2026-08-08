@@ -212,6 +212,13 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "evcrate-help.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_evcrate-help/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "fix/ci.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_fix_ci/SKILL.md"

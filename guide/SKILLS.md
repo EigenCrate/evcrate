@@ -1,6 +1,6 @@
 # Skills Guide
 
-This guide documents all available skills in the EVCrate project. Skills extend Claude's capabilities with specialized knowledge, workflows, and tool integrations.
+This guide documents all available skills in the EVCrate project. Skills extend Claude Code and other supported CLI agents with specialized knowledge, workflows, and tool integrations.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ This guide documents all available skills in the EVCrate project. Skills extend 
 
 ## What Are Skills?
 
-Skills are specialized knowledge modules that enhance Claude's capabilities in specific domains. Each skill provides:
+Skills are specialized knowledge modules that enhance EVCrate agents in specific domains. Each skill provides:
 
 - **Domain expertise** - Deep knowledge in a specific technology or framework
 - **Best practices** - Industry-standard patterns and approaches
@@ -606,7 +606,7 @@ cp .claude/skills/gemini-audio/.env.example .claude/skills/gemini-audio/.env
 
 ### skill-creator
 
-**Create new Claude skills**
+**Create new EVCrate skills**
 
 **Features:**
 - Skill template generation

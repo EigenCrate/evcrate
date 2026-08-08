@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Test script for .devkitignore functionality.
- * Tests that scout-block.cjs respects .devkitignore patterns.
+ * Test script for .evcrateignore functionality.
+ * Tests that scout-block.cjs respects .evcrateignore patterns.
  */
 
 const { spawn } = require('child_process');
@@ -10,14 +10,14 @@ const fs = require('fs');
 const path = require('path');
 
 const scriptPath = path.join(__dirname, '..', 'scout-block.cjs');
-const devkitIgnorePath = path.join(__dirname, '..', '..', '.devkitignore');
-const devkitIgnoreBackupPath = devkitIgnorePath + '.backup';
+const evcrateIgnorePath = path.join(__dirname, '..', '..', '.evcrateignore');
+const evcrateIgnoreBackupPath = evcrateIgnorePath + '.backup';
 
-// Backup original .devkitignore if it exists.
-let originalDevkitIgnore = null;
-if (fs.existsSync(devkitIgnorePath)) {
-  originalDevkitIgnore = fs.readFileSync(devkitIgnorePath, 'utf-8');
-  fs.copyFileSync(devkitIgnorePath, devkitIgnoreBackupPath);
+// Backup original .evcrateignore if it exists.
+let originalEVCrateIgnore = null;
+if (fs.existsSync(evcrateIgnorePath)) {
+  originalEVCrateIgnore = fs.readFileSync(evcrateIgnorePath, 'utf-8');
+  fs.copyFileSync(evcrateIgnorePath, evcrateIgnoreBackupPath);
 }
 
 function runTest(name, input, expected) {
@@ -38,31 +38,31 @@ function runTest(name, input, expected) {
   });
 }
 
-function writeDevkitIgnore(patterns) {
-  fs.writeFileSync(devkitIgnorePath, patterns.join('\n') + '\n');
+function writeEVCrateIgnore(patterns) {
+  fs.writeFileSync(evcrateIgnorePath, patterns.join('\n') + '\n');
 }
 
-function restoreDevkitIgnore() {
-  if (originalDevkitIgnore !== null) {
-    fs.writeFileSync(devkitIgnorePath, originalDevkitIgnore);
-  } else if (fs.existsSync(devkitIgnorePath)) {
-    fs.unlinkSync(devkitIgnorePath);
+function restoreEVCrateIgnore() {
+  if (originalEVCrateIgnore !== null) {
+    fs.writeFileSync(evcrateIgnorePath, originalEVCrateIgnore);
+  } else if (fs.existsSync(evcrateIgnorePath)) {
+    fs.unlinkSync(evcrateIgnorePath);
   }
-  if (fs.existsSync(devkitIgnoreBackupPath)) {
-    fs.unlinkSync(devkitIgnoreBackupPath);
+  if (fs.existsSync(evcrateIgnoreBackupPath)) {
+    fs.unlinkSync(evcrateIgnoreBackupPath);
   }
 }
 
-process.on('exit', restoreDevkitIgnore);
+process.on('exit', restoreEVCrateIgnore);
 
 (async function main() {
-console.log('Testing .devkitignore functionality...\n');
+console.log('Testing .evcrateignore functionality...\n');
 
 let passed = 0;
 let failed = 0;
 
-// Test 1: Default patterns work (with existing .devkitignore)
-console.log('--- Test 1: Default patterns from .devkitignore ---');
+// Test 1: Default patterns work (with existing .evcrateignore)
+console.log('--- Test 1: Default patterns from .evcrateignore ---');
 let result = await runTest(
   'node_modules blocked (default)',
   { tool_name: 'Read', tool_input: { file_path: 'node_modules/pkg.json' } },
@@ -77,8 +77,8 @@ if (result.success) {
 }
 
 // Test 2: Custom pattern - only block 'vendor' directory
-console.log('\n--- Test 2: Custom .devkitignore with only "vendor" ---');
-writeDevkitIgnore(['# Custom ignore', 'vendor']);
+console.log('\n--- Test 2: Custom .evcrateignore with only "vendor" ---');
+writeEVCrateIgnore(['# Custom ignore', 'vendor']);
 
 result = await runTest(
   'vendor blocked (custom)',
@@ -94,7 +94,7 @@ if (result.success) {
 }
 
 result = await runTest(
-  'node_modules ALLOWED when not in .devkitignore',
+  'node_modules ALLOWED when not in .evcrateignore',
   { tool_name: 'Read', tool_input: { file_path: 'node_modules/pkg.json' } },
   'ALLOWED'
 );
@@ -108,7 +108,7 @@ if (result.success) {
 
 // Test 3: Multiple custom patterns
 console.log('\n--- Test 3: Multiple custom patterns ---');
-writeDevkitIgnore(['vendor', 'temp', '.cache']);
+writeEVCrateIgnore(['vendor', 'temp', '.cache']);
 
 result = await runTest(
   'vendor blocked',
@@ -164,7 +164,7 @@ if (result.success) {
 
 // Test 4: Comments and empty lines ignored
 console.log('\n--- Test 4: Comments and empty lines handled ---');
-writeDevkitIgnore(['# This is a comment', '', 'blockeddir', '# Another comment', '']);
+writeEVCrateIgnore(['# This is a comment', '', 'blockeddir', '# Another comment', '']);
 
 result = await runTest(
   'blockeddir blocked',
@@ -192,8 +192,8 @@ if (result.success) {
   failed++;
 }
 
-// Restore original .devkitignore
-restoreDevkitIgnore();
+// Restore original .evcrateignore
+restoreEVCrateIgnore();
 
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

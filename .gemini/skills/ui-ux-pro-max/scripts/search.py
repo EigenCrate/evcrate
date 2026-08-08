@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 # Add shared scripts to path for win_compat
-sys.path.insert(0, str(Path.home() / '.gemini' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.claude' / 'scripts'))
 try:
     from win_compat import ensure_utf8_stdout
     ensure_utf8_stdout()
