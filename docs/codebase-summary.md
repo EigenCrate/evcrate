@@ -1,17 +1,17 @@
 # Codebase Summary
 
-**Last Updated**: 2026-08-02
+**Last Updated**: 2026-08-03
 **Version**: 1.14.8
-**Repository**: [NEBULEA-M/devkit](https://github.com/NEBULEA-M/devkit)
+**Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Overview
 
-devkit is a comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code and Open Code). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
+evcrate is a comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code and Open Code). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
 
 ## Project Structure
 
 ```
-devkit/
+evcrate/
 ├── .claude/               # Claude Code configuration
 │   ├── agents/           # Specialized agent definitions (14 agents)
 │   ├── commands/         # Slash command implementations (50+ commands)
@@ -43,9 +43,9 @@ devkit/
 
 ### Distribution gates
 
-The distribution entrypoint separates local generation from HOME publication. `--build` creates finalized local `.gemini`, `.codex`, `.agents`, and project-doc outputs; `--check` verifies them without writes; `--publish` consumes verified local artifacts without running migrators; `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `DEVKIT_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
+The distribution entrypoint separates local generation from HOME publication. `.claude` is a source-backed target: the build gate copies the complete source tree into the finalized local `.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` binds the complete `.claude` artifact to `HOME/.claude` with no subpath limit; it consumes verified local artifacts without running migrators. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
-Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.devkit/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, applies HOME policies with user-file preservation, and records owner-only release state/locking.
+Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking.
 
 The advisor is current-session guidance only: it structures a local decision brief and reasons over already available evidence. It invokes no provider, model, MCP server, app, command, network or file operation, delegation, quota, audit, or enforcement mechanism. The former `advisor_consult` broker contract is removed; callers use explicit `$advisor-strategy`. Distribution behavior is covered by the Python regression suites.
 
@@ -197,9 +197,9 @@ The advisor is current-session guidance only: it structures a local decision bri
 - **distribute_utils.py**: Path handling, environment resolver, and CLI utilities
 - **migrate_claude_to_codex.py**: Claude Code to Codex migration engine and source of truth for GPT-5.6 role-tier model mappings
 - **migrate_claude_to_gemini.py**: Claude Code to Gemini/Antigravity migration engine
-- **ck-config-utils.cjs**: Shared hook config resolver for product-scoped `.devkit.json` files under `.claude/` and `.codex/`, using the discovered project root and the fixed `DEVKIT_CONFIG_DIR=.codex` selector for Codex bridges
-- **privacy-block.cjs**: Sensitive-file blocker that consults only the selected local `.devkit.json` for `privacyBlock`
-- **distribute_sync.py**: Python sync path that preserves user-owned global `~/.codex/.devkit.json` during normal sync and only replaces it on explicit full sync
+- **evcrate-config-utils.cjs**: Shared hook config resolver for product-scoped `.evcrate.json` files under `.claude/` and `.codex/`, using the discovered project root and the fixed `EVCRATE_CONFIG_DIR=.codex` selector for Codex bridges
+- **privacy-block.cjs**: Sensitive-file blocker that consults only the selected local `.evcrate.json` for `privacyBlock`
+- **distribute_sync.py**: Python sync path that preserves user-owned global `~/.codex/.evcrate.json` during normal sync and only replaces it on explicit full sync
 
 ### For Agents
 - **CLAUDE.md**: Primary agent instructions
@@ -340,31 +340,31 @@ Features: Automated releases, changelog generation
 ## Critical Files
 
 ### Configuration
-- `/mnt/data/ws/sharing/devkit/package.json` - Node.js config
-- `/mnt/data/ws/sharing/devkit/.releaserc.json` - Release config
-- `/mnt/data/ws/sharing/devkit/.commitlintrc.json` - Commit linting
-- `/mnt/data/ws/sharing/devkit/.gitignore` - Git exclusions
-- `/mnt/data/ws/sharing/devkit/.repomixignore` - Repomix exclusions
+- `/mnt/data/ws/sharing/evcrate/package.json` - Node.js config
+- `/mnt/data/ws/sharing/evcrate/.releaserc.json` - Release config
+- `/mnt/data/ws/sharing/evcrate/.commitlintrc.json` - Commit linting
+- `/mnt/data/ws/sharing/evcrate/.gitignore` - Git exclusions
+- `/mnt/data/ws/sharing/evcrate/.repomixignore` - Repomix exclusions
 
 ### Documentation
-- `/mnt/data/ws/sharing/devkit/README.md` - Main project docs
-- `/mnt/data/ws/sharing/devkit/CLAUDE.md` - Agent instructions
-- `/mnt/data/ws/sharing/devkit/CHANGELOG.md` - Version history
-- `/mnt/data/ws/sharing/devkit/guide/COMMANDS.md` - Command reference
+- `/mnt/data/ws/sharing/evcrate/README.md` - Main project docs
+- `/mnt/data/ws/sharing/evcrate/CLAUDE.md` - Agent instructions
+- `/mnt/data/ws/sharing/evcrate/CHANGELOG.md` - Version history
+- `/mnt/data/ws/sharing/evcrate/guide/COMMANDS.md` - Command reference
 
 ### Migration & Distribution
-- `/mnt/data/ws/sharing/devkit/distribute.py` - Core distribution runner script
-- `/mnt/data/ws/sharing/devkit/distribute_sync.py` - Asset, config, and skills sync manager
-- `/mnt/data/ws/sharing/devkit/distribute_hooks.py` - Hook rewriter and wrapper generator
-- `/mnt/data/ws/sharing/devkit/distribute_utils.py` - Shared utilities and path config resolver
-- `/mnt/data/ws/sharing/devkit/migrate_claude_to_codex.py` - Codex migration engine
-- `/mnt/data/ws/sharing/devkit/migrate_claude_to_gemini.py` - Gemini migration engine
+- `/mnt/data/ws/sharing/evcrate/distribute.py` - Core distribution runner script
+- `/mnt/data/ws/sharing/evcrate/distribute_sync.py` - Asset, config, and skills sync manager
+- `/mnt/data/ws/sharing/evcrate/distribute_hooks.py` - Hook rewriter and wrapper generator
+- `/mnt/data/ws/sharing/evcrate/distribute_utils.py` - Shared utilities and path config resolver
+- `/mnt/data/ws/sharing/evcrate/migrate_claude_to_codex.py` - Codex migration engine
+- `/mnt/data/ws/sharing/evcrate/migrate_claude_to_gemini.py` - Gemini migration engine
 
 ### Workflows
-- `/mnt/data/ws/sharing/devkit/.claude/workflows/primary-workflow.md`
-- `/mnt/data/ws/sharing/devkit/.claude/workflows/development-rules.md`
-- `/mnt/data/ws/sharing/devkit/.claude/workflows/orchestration-protocol.md`
-- `/mnt/data/ws/sharing/devkit/.claude/workflows/documentation-management.md`
+- `/mnt/data/ws/sharing/evcrate/.claude/workflows/primary-workflow.md`
+- `/mnt/data/ws/sharing/evcrate/.claude/workflows/development-rules.md`
+- `/mnt/data/ws/sharing/evcrate/.claude/workflows/orchestration-protocol.md`
+- `/mnt/data/ws/sharing/evcrate/.claude/workflows/documentation-management.md`
 
 ## Related Projects
 
@@ -378,7 +378,7 @@ Features: Automated releases, changelog generation
 **Current**: v1.8.0
 **License**: MIT
 **Author**: Duy Nguyen
-**Repository**: https://github.com/NEBULEA-M/devkit
+**Repository**: https://github.com/NEBULEA-M/evcrate
 
 ## Unresolved Questions
 

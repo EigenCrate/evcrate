@@ -1,12 +1,12 @@
-# Devkit - Project Roadmap
+# EVCrate - Project Roadmap
 
 **Last Updated:** 2026-08-02 20:09:00 +0700
 **Current Version:** 1.14.8
-**Repository:** https://github.com/NEBULEA-M/devkit
+**Repository:** https://github.com/NEBULEA-M/evcrate
 
 ## Executive Summary
 
-Devkit (formerly ClaudeKit Engineer) is an AI-powered development orchestration framework enabling developers to build professional software faster through intelligent agent collaboration, automated workflows, and comprehensive quality management. The project has successfully completed core foundation phases and is advancing cross-platform compatibility and advanced features.
+EVCrate (formerly ClaudeKit Engineer) is an AI-powered development orchestration framework enabling developers to build professional software faster through intelligent agent collaboration, automated workflows, and comprehensive quality management. The project has successfully completed core foundation phases and is advancing cross-platform compatibility and advanced features.
 
 ---
 
@@ -99,7 +99,7 @@ Refactor the legacy bash distribution script to a cross-platform Python script (
 **Features:**
 - ✅ Platform-independent python implementation
 - ✅ Path safety using pathlib for backslash/forward-slash compatibility
-- ✅ Dynamic environment configuration (DEVKIT_DIR, global mode, sync mode)
+- ✅ Dynamic environment configuration (EVCRATE_DIR, global mode, sync mode)
 - ✅ Hook script execution and settings.json translation
 - ✅ Converting slash commands to Antigravity skills
 
@@ -183,7 +183,7 @@ Enterprise-grade features and deployment options.
 ### Q2 2026 Milestones
 | Milestone | Status | Due Date | Progress |
 |-----------|--------|----------|----------|
-| Repository Adaptation to Devkit | ✅ Complete | 2026-06-28 | 100% |
+| Repository Adaptation to EVCrate | ✅ Complete | 2026-06-28 | 100% |
 | Refactor Distribute Script to Python (Phase 1) | ✅ Complete | 2026-06-29 | 100% |
 
 ---
@@ -241,8 +241,11 @@ Enterprise-grade features and deployment options.
 - ✅ Skill-Only Advisor Replacement — Phase 1 (DONE, 2026-08-02 20:09 +0700): retained the portable `advisor-strategy` skill, added one explicit non-invoking pointer to generated command skills, removed target-owned broker/MCP/admission artifacts, and preserved user-owned configuration.
 - ✅ Skill-Only Advisor Replacement — Phase 2 (DONE, 2026-08-02 21:30 +0700): static packaging, pointer, runtime-absence, idempotence, preservation, and compatibility documentation complete. Validation: 52/52 tests passed via `npm test`; code review 10/10 approved. Removed `advisor_consult` callers must use explicit `$advisor-strategy`; no provider/model, App Server, MCP, or app invocation.
 
+### Recent Additions (2026-08-03)
+- ✅ Claude HOME Distribution (COMPLETE): complete repository `.claude` tree is source-backed, verified through build/check, and published through the generic HOME distribution pipeline with unmanaged HOME preservation. Validation: targeted tests 63/63, `npm test` 69/69, `distribute.py --build` and `--check` passed; temporary HOME dry-run included 855 Claude entries without mutating `HOME/.claude`; code review 9/10 with no critical issues.
+
 ### Recent Additions (2026-07-18)
-- ✅ Refactor DevKit Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.devkit.json`; phase 4 remains pending.
+- ✅ Refactor EVCrate Config and Enable Codex Coding Levels Phase 3 (COMPLETE): user-facing config references, help output, TOML-aware discovery, and generated asset tracking updated to `.evcrate.json`; phase 4 remains pending.
 
 ### Recent Additions (2026-07-11)
 - ✅ Simple Web Testing Demo Phase 05 (COMPLETE): Evidence report generated, README updated with test evidence, CSP meta tag added, k6 Windows install docs provided. Validation: npm test 4/4✓, npm test:e2e 5/5✓, npm test:lighthouse✓, npm test:web-gate 5/5 Playwright+Lighthouse✓. Code review 10/10, no issues. Full release gate workflow validated and skill dogfooding complete.
@@ -253,7 +256,7 @@ Enterprise-grade features and deployment options.
 
 ### Recent Additions (2026-06-29)
 - ✅ Refactor Distribute Script to Python (Phase 1): Ported legacy bash distribution logic to Python, created utility helpers, sync logic, hook conversions, and command-to-skill parser.
-- ✅ Repository Adaptation to Devkit: Renamed the project, synced package metadata, updated release zip compilation structure, and ran migration cleanups.
+- ✅ Repository Adaptation to EVCrate: Renamed the project, synced package metadata, updated release zip compilation structure, and ran migration cleanups.
 - ✅ Windows statusline support (PowerShell, Node.js)
 - ✅ Cross-platform statusline documentation
 - ✅ Advanced configuration guides
@@ -461,6 +464,6 @@ Enterprise-grade features and deployment options.
 
 ---
 
-**Maintained By:** Devkit Team
+**Maintained By:** EVCrate Team
 **Last Review:** 2026-06-29
 **Next Review Target:** 2026-07-29

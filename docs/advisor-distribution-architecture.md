@@ -1,7 +1,7 @@
 # Advisor Skill and Target Distribution Architecture
 
 **Status**: Active; former broker design superseded
-**Last Updated**: 2026-08-02
+**Last Updated**: 2026-08-03
 **Parent**: [System Architecture](./system-architecture.md)
 
 ## Purpose
@@ -11,9 +11,11 @@ Define reproducible multi-platform generation and the boundary of the portable `
 ## Architectural Decisions
 
 - `.claude` remains the shared baseline authoring source.
-- `.devkit/targets/<target>` owns target-only files and explicit config patches.
+- `.claude` is also a source-backed distribution target: build/check validate its complete tree, and publication binds it to `HOME/.claude` with no subpath limit.
+- `.evcrate/targets/<target>` owns target-only files and explicit config patches.
 - Local `.claude`, `.agents`, `.codex`, `.gemini`, and other target trees are finalized artifacts.
 - HOME distribution consumes finalized local artifacts only and preserves declared user-owned configuration.
+- Generic publication preserves unmanaged HOME files; stale or incomplete manifests, output drift, and symlinks in managed artifacts or unsafe HOME paths are rejected.
 - `.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.agents/skills/advisor-strategy/` with its brief contract.
 - Each generated `cmd_*` skill contains one static pointer recommending explicit `$advisor-strategy` use. The pointer does not activate the skill.
 - No advisor provider/model call, MCP server, hook, broker, launcher, quota, ledger, audit, or isolation claim is distributed.
@@ -23,8 +25,8 @@ Define reproducible multi-platform generation and the boundary of the portable `
 ```mermaid
 flowchart LR
   Claude[.claude baseline] --> Build[Local build gate]
-  Targets[.devkit/targets overlays] --> Build
-  Models[.devkit/models.json] --> Build
+  Targets[.evcrate/targets overlays] --> Build
+  Models[.evcrate/models.json] --> Build
   Build --> Validate{All targets valid?}
   Validate -->|No| Reject[Keep prior local artifacts]
   Validate -->|Yes| Local[Finalized local target trees]

@@ -41,7 +41,7 @@ class DistributionContext:
 
     @property
     def local_roots(self) -> tuple[Path, ...]:
-        return (self.local_gemini, self.local_codex, self.local_agents, self.local_antigravity)
+        return (self.local_gemini, self.local_codex, self.local_agents, self.local_antigravity, self.local_claude)
 
     @property
     def stage_project_docs(self) -> Path:
@@ -75,7 +75,7 @@ class DistributionContext:
 
         if self.state_home is not None:
             return self.state_home
-        return self.home / ".local" / "state" / "devkit"
+        return self.home / ".local" / "state" / "evcrate"
 
 
 def create_context(
@@ -88,12 +88,12 @@ def create_context(
 
     env = os.environ if environ is None else environ
     repository = Path(__file__).resolve().parents[1]
-    home = Path(env.get("DEVKIT_HOME", str(Path.home()))).expanduser().resolve()
-    state_base = env.get("DEVKIT_STATE_HOME") or env.get("XDG_STATE_HOME")
+    home = Path(env.get("EVCRATE_HOME", str(Path.home()))).expanduser().resolve()
+    state_base = env.get("EVCRATE_STATE_HOME") or env.get("XDG_STATE_HOME")
     state_home = (
-        Path(state_base).expanduser().resolve() / "devkit"
+        Path(state_base).expanduser().resolve() / "evcrate"
         if state_base
-        else home / ".local" / "state" / "devkit"
+        else home / ".local" / "state" / "evcrate"
     )
     resolved_stage = stage.resolve() if stage is not None else None
     return DistributionContext(
@@ -101,7 +101,7 @@ def create_context(
         repository=repository,
         home=home,
         stage=resolved_stage,
-        global_sync_mode=env.get("DEVKIT_GLOBAL_SYNC_MODE", "managed"),
+        global_sync_mode=env.get("EVCRATE_GLOBAL_SYNC_MODE", "managed"),
         gemini_global_mode=env.get("GEMINI_GLOBAL_MODE", "config-and-scripts"),
         state_home=state_home,
     )

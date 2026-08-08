@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "name": "claude",
+  "adapter": null,
+  "output_root": ".claude",
+  "additional_roots": [],
+  "project_docs": [],
+  "patches": [],
+  "home_policy": {
+    "bindings": {".claude": ".claude"},
+    "preserve_paths": {},
+    "promotion_order": 40
+  }
+}

@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: 2026-08-02
+**Last Updated**: 2026-08-03
 **Version**: 1.8.0
 **Project**: ClaudeKit Engineer
 
@@ -57,15 +57,15 @@ ClaudeKit Engineer implements a multi-agent AI orchestration architecture where 
 - Command definitions (`.md` with embedded agent calls)
 - Skill modules (knowledge bases)
 - Workflow templates
-- Product-scoped DevKit config (`.devkit.json`)
+- Product-scoped EVCrate config (`.evcrate.json`)
 
-- **DevKit Config Resolution**:
+- **EVCrate Config Resolution**:
 - Runtime discovers the project root first, then resolves config from that root rather than the current working directory.
-- Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.devkit.json`, then local `./.claude/.devkit.json`; local values win.
-- Codex bridge hooks use a fixed `DEVKIT_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.devkit.json`, then local `./.codex/.devkit.json`; local values win.
+- Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.evcrate.json`, then local `./.claude/.evcrate.json`; local values win.
+- Codex bridge hooks use a fixed `EVCRATE_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.evcrate.json`, then local `./.codex/.evcrate.json`; local values win.
 - The internal selector accepts only `.claude` and `.codex`; invalid values fall back to `.claude`.
-- Privacy blocking is stricter: the disable switch reads only the selected local `.devkit.json`, so global config cannot disable secret-file blocking.
-- The Python-managed global sync preserves user-owned `~/.codex/.devkit.json` by default; a full sync must be requested explicitly to replace it.
+- Privacy blocking is stricter: the disable switch reads only the selected local `.evcrate.json`, so global config cannot disable secret-file blocking.
+- The Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
 
 **Codex Model Migration**:
@@ -350,7 +350,7 @@ Planner incorporates into plan
 
 **Scout Block Hook** (Cross-Platform):
 - **Architecture**: Node.js entry point with shared pattern matching
-- **Configuration**: `.claude/.devkitignore`, using gitignore-style patterns
+- **Configuration**: `.claude/.evcrateignore`, using gitignore-style patterns
 - **Runtime**: Identical behavior across supported platforms via Node.js
 
 **Functionality**:
@@ -365,7 +365,7 @@ Planner incorporates into plan
 
 **Testing**:
 - Node.js test suites under `.claude/hooks/scout-block/tests/`
-- End-to-end hook checks in `.claude/hooks/tests/test-scout-block.js` and `test-devkitignore.js`
+- End-to-end hook checks in `.claude/hooks/tests/test-scout-block.js` and `test-evcrateignore.js`
 - Comprehensive test coverage (11+ test cases)
 - Validates blocked/allowed patterns, error handling, edge cases
 - `examples/simple-web-testing-demo/` validates the web-testing release gate with:
@@ -906,6 +906,8 @@ User Project
 
 [Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the current static skill boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
 
+- `.claude` is a source-backed target. Build/check validate the complete tree, and HOME publication binds that artifact to `HOME/.claude` without limiting publication to a subpath.
+- Generic manifest bindings preserve unmanaged files already present under HOME targets. Publication rejects stale or incomplete build manifests, output drift, managed symlinks, and unsafe HOME symlink paths.
 - The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill.
 - The skill reasons over evidence already available in the current session. It does not invoke providers, models, MCP, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.

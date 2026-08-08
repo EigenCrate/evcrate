@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -15,7 +16,8 @@ from .overlay import apply_patch_file, copy_overlay_files
 from .runtime import stage_runtime
 
 
-BUILD_MANIFEST_PATH = Path(".devkit/build-manifest.json")
+BUILD_MANIFEST_PATH = Path(".evcrate/build-manifest.json")
+SOURCE_BACKED_TARGET = ("claude", (".claude",))
 
 
 def _stage_roots(context: DistributionContext) -> dict[str, Path]:
@@ -35,16 +37,25 @@ def _baseline_owners(roots: dict[str, Path]) -> dict[str, str]:
     return owners
 
 
+def _copy_source_root(source: Path, destination: Path) -> None:
+    """Copy a source-backed root without following links before ownership checks."""
+
+    if source.is_symlink() or not source.is_dir():
+        raise BuildError(f"Source root is missing or unsafe: {source.name}")
+    shutil.copytree(source, destination, symlinks=True)
+
+
 def _load_targets(context: DistributionContext, roots: dict[str, Path]) -> tuple[TargetManifest, ...]:
-    registry = load_target_registry(context.repository / ".devkit/targets/manifest.json")
+    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
     manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
     if len({manifest.name for manifest in manifests}) != len(manifests):
         raise BuildError("Target registry contains duplicate manifest names")
     claimed_roots: set[str] = set()
     for manifest in manifests:
-        if manifest.adapter is None:
+        source_backed = (manifest.name, manifest.output_roots) == SOURCE_BACKED_TARGET
+        if manifest.adapter is None and not source_backed:
             raise BuildError(f"Target {manifest.name} has no build adapter")
-        if not (context.repository / manifest.adapter).is_file():
+        if manifest.adapter is not None and not (context.repository / manifest.adapter).is_file():
             raise BuildError(f"Target {manifest.name} adapter is missing: {manifest.adapter}")
         if not set(manifest.output_roots).issubset(roots):
             raise BuildError(f"Target {manifest.name} declares an unsupported output root")
@@ -101,7 +112,7 @@ def _apply_targets(
     baseline_sources = {
         ".claude": tree_hash(context.repository / ".claude"),
         "CLAUDE.md": hash_file(context.repository / "CLAUDE.md"),
-        ".devkit/targets": source_tree_hash(context.repository / ".devkit/targets"),
+        ".evcrate/targets": source_tree_hash(context.repository / ".evcrate/targets"),
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }
@@ -127,8 +138,13 @@ def generate_stage(
         "PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
         "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
     })
-    for directory in (*(root for name, root in roots.items() if name != ".antigravity"), context.stage_project_docs):
+    for directory in (
+        *(root for name, root in roots.items() if name not in {".antigravity", ".claude"}),
+        context.stage_project_docs,
+    ):
         directory.mkdir(parents=True, exist_ok=True)
+    _copy_source_root(context.local_claude, roots[".claude"])
+    _baseline_owners({".claude": roots[".claude"]})
     for script in dict.fromkeys(manifest.adapter for manifest in manifests if manifest.adapter):
         run_migrator(context, script, env)
     build_antigravity_config(context.repository / ".claude", roots[".antigravity"])
