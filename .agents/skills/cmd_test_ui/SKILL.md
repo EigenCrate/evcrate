@@ -1,7 +1,8 @@
 ---
-name: cmd_test_ui
-description: ⚡⚡ Run UI tests on a website & generate a detailed report.
+name: "cmd-test-ui"
+description: "⚡⚡ Run UI tests on a website & generate a detailed report."
 ---
+
 # cmd_test_ui
 
 Command Path: /test/ui

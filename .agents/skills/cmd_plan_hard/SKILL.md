@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_hard
-description: ⚡⚡⚡ Research, analyze, and create an implementation plan
+name: "cmd-plan-hard"
+description: "⚡⚡⚡ Research, analyze, and create an implementation plan"
 ---
+
 # cmd_plan_hard
 
 Command Path: /plan/hard

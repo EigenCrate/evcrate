@@ -1,7 +1,8 @@
 ---
-name: cmd_bootstrap_auto_fast
-description: ⚡⚡⚡ Quickly bootstrap a new project automatically
+name: "cmd-bootstrap-auto-fast"
+description: "⚡⚡⚡ Quickly bootstrap a new project automatically"
 ---
+
 # cmd_bootstrap_auto_fast
 
 Command Path: /bootstrap/auto/fast

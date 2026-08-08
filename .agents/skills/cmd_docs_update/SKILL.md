@@ -1,7 +1,8 @@
 ---
-name: cmd_docs_update
-description: ⚡⚡⚡ Analyze the codebase and update documentation
+name: "cmd-docs-update"
+description: "⚡⚡⚡ Analyze the codebase and update documentation"
 ---
+
 # cmd_docs_update
 
 Command Path: /docs/update

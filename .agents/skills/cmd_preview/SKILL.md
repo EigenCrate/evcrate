@@ -1,7 +1,8 @@
 ---
-name: cmd_preview
-description: Path to file or directory to preview
+name: "cmd-preview"
+description: "Path to file or directory to preview"
 ---
+
 # cmd_preview
 
 Command Path: /preview

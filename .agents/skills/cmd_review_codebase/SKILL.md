@@ -1,7 +1,8 @@
 ---
-name: cmd_review_codebase
-description: ⚡⚡⚡ Scan & analyze the codebase.
+name: "cmd-review-codebase"
+description: "⚡⚡⚡ Scan & analyze the codebase."
 ---
+
 # cmd_review_codebase
 
 Command Path: /review/codebase

@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: 2026-08-03
+**Last Updated**: 2026-08-08
 **Version**: 1.8.0
 **Project**: EVCrate
 
@@ -50,7 +50,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - `$1, $2, $3...` - Individual positional arguments
 
 #### 1.3 Configuration Manager
-**Location**: `.claude/`, `.codex/`, and `.opencode/` directories
+**Location**: `.claude/` for canonical authoring, generated `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` projections, plus the separate `.opencode/` compatibility tree
 **Responsibility**: Load agent and command definitions
 **File Types**:
 - Agent definitions (`.md` with YAML frontmatter)
@@ -68,7 +68,9 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - The Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
 - `EVCRATE_HOME` overrides the HOME root used by distribution publish and verification; when unset, the runtime uses the platform HOME directory.
-- `.claude/` is the authoring source; the manifest-driven local build regenerates `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` projections. Generated targets are not hand-edited.
+- `.claude/` is the canonical authoring source; target manifests/overlays under `.evcrate/targets/` describe distribution metadata. The manifest-driven local build regenerates `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` projections. Generated targets are not hand-edited.
+- After `.claude/` changes, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` consumes only a current verified build, never runs migrators, and publishes the complete local `.claude` artifact to `~/.claude` after excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives); skill package directories and nested resources remain.
+- The generated `.agents/skills/` projection is also Pi-compatible: HOME publication places it at `~/.agents/skills/`, one of Pi's global skill locations, without modifying `~/.pi/agent/settings.json`. Its authored and generated `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
 - Runtime compatibility remains at the existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries.
 
 **Canonical Help Command**:
@@ -912,8 +914,8 @@ User Project
 
 [Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the current static skill boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
 
-- `.claude` is a source-backed target. Build/check validate the complete tree, and HOME publication binds that artifact to `HOME/.claude` without limiting publication to a subpath.
-- Generic manifest bindings preserve unmanaged files already present under HOME targets. Publication rejects stale or incomplete build manifests, output drift, managed symlinks, and unsafe HOME symlink paths.
+- `.claude` is a source-backed target. Build/check validate the complete tree, and HOME publication binds its sanitized view to `HOME/.claude` without limiting publication to a subpath.
+- Generic manifest bindings preserve unmanaged files already present under HOME targets. The `.claude` binding removes stale managed copies absent from the current source and excludes regular files directly under its `skills/` root; skill package directories and nested resources remain. Publication rejects stale or incomplete build manifests, output drift, managed symlinks, and unsafe HOME symlink paths.
 - The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill.
 - The skill reasons over evidence already available in the current session. It does not invoke providers, models, MCP, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.

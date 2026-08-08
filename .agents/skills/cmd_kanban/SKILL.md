@@ -1,7 +1,8 @@
 ---
-name: cmd_kanban
-description: Plans directory (default: ./plans)
+name: "cmd-kanban"
+description: "Plans directory (default: ./plans)"
 ---
+
 # cmd_kanban
 
 Command Path: /kanban

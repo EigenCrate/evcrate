@@ -1,7 +1,8 @@
 ---
-name: cmd_design_good
-description: Create an immersive design
+name: "cmd-design-good"
+description: "Create an immersive design"
 ---
+
 # cmd_design_good
 
 Command Path: /design/good

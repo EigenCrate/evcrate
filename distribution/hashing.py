@@ -12,6 +12,36 @@ class HashingError(ValueError):
     """Raised when an artifact cannot be safely or deterministically hashed."""
 
 
+IGNORED_ARTIFACT_DIRECTORIES = frozenset({"node_modules", "__pycache__"})
+IGNORED_SOURCE_DIRECTORIES = frozenset({"dist"})
+IGNORED_ARTIFACT_FILES = frozenset({".coverage"})
+IGNORED_ARTIFACT_SUFFIXES = frozenset({".pyc", ".pyo"})
+
+
+def is_ignored_artifact(relative: str | Path) -> bool:
+    """Return whether a local compiler or dependency artifact is non-distributable."""
+
+    path = Path(relative)
+    return (
+        any(part in IGNORED_ARTIFACT_DIRECTORIES for part in path.parts)
+        or path.name in IGNORED_ARTIFACT_FILES
+        or path.suffix.lower() in IGNORED_ARTIFACT_SUFFIXES
+    )
+
+
+def ignore_artifacts(_: str, names: list[str]) -> set[str]:
+    """Provide a ``shutil.copytree`` filter for non-distributable local artifacts."""
+
+    return {name for name in names if is_ignored_artifact(name)}
+
+
+def is_ignored_source(relative: str | Path) -> bool:
+    """Return whether a source-only dependency output should be excluded from hashes."""
+
+    path = Path(relative)
+    return is_ignored_artifact(path) or any(part in IGNORED_SOURCE_DIRECTORIES for part in path.parts)
+
+
 def normalize_relative_path(value: str | Path) -> str:
     """Return a strict, portable repository-relative POSIX path."""
 
@@ -70,7 +100,10 @@ def tree_hash(root: Path) -> str:
         raise HashingError(f"Expected a real directory: {root}")
     records: list[bytes] = []
     for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
-        relative = normalize_relative_path(path.relative_to(root).as_posix())
+        relative_path = path.relative_to(root)
+        if is_ignored_artifact(relative_path):
+            continue
+        relative = normalize_relative_path(relative_path.as_posix())
         if path.is_symlink():
             raise HashingError(f"Symlinks are not allowed in build artifacts: {relative}")
         if path.is_dir():
@@ -85,13 +118,12 @@ def tree_hash(root: Path) -> str:
 def source_tree_hash(root: Path) -> str:
     """Hash source trees while excluding local dependency and compiler outputs."""
 
-    excluded = {"node_modules", "dist", "__pycache__"}
     if not root.is_dir() or root.is_symlink():
         raise HashingError(f"Expected a real directory: {root}")
     records: list[bytes] = []
     for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
         relative = path.relative_to(root)
-        if any(part in excluded for part in relative.parts):
+        if is_ignored_source(relative):
             continue
         normalized = normalize_relative_path(relative.as_posix())
         if path.is_symlink():

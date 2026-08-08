@@ -1,7 +1,8 @@
 ---
-name: cmd_content_good
-description: Write good creative & smart copy [GOOD]
+name: "cmd-content-good"
+description: "Write good creative & smart copy [GOOD]"
 ---
+
 # cmd_content_good
 
 Command Path: /content/good

@@ -1,7 +1,8 @@
 ---
-name: cmd_docs_summarize
-description: ⚡ Analyze the codebase and update documentation
+name: "cmd-docs-summarize"
+description: "⚡ Analyze the codebase and update documentation"
 ---
+
 # cmd_docs_summarize
 
 Command Path: /docs/summarize

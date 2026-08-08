@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_hard
-description: ⚡⚡⚡ Use subagents to plan and fix hard issues
+name: "cmd-fix-hard"
+description: "⚡⚡⚡ Use subagents to plan and fix hard issues"
 ---
+
 # cmd_fix_hard
 
 Command Path: /fix/hard

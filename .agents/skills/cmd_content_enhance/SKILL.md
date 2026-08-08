@@ -1,7 +1,8 @@
 ---
-name: cmd_content_enhance
-description: Analyze the current copy issues and enhance it
+name: "cmd-content-enhance"
+description: "Analyze the current copy issues and enhance it"
 ---
+
 # cmd_content_enhance
 
 Command Path: /content/enhance

@@ -1,7 +1,8 @@
 ---
-name: cmd_brainstorm
-description: ⚡⚡ Brainstorm a feature
+name: "cmd-brainstorm"
+description: "⚡⚡ Brainstorm a feature"
 ---
+
 # cmd_brainstorm
 
 Command Path: /brainstorm

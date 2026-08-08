@@ -1,7 +1,8 @@
 ---
-name: cmd_evcrate-help
-description: EVCrate usage guide - just type naturally
+name: "cmd-evcrate-help"
+description: "EVCrate usage guide - just type naturally"
 ---
+
 # cmd_evcrate-help
 
 Command Path: /evcrate-help

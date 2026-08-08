@@ -1,7 +1,8 @@
 ---
-name: cmd_git_pr
-description: Create a pull request
+name: "cmd-git-pr"
+description: "Create a pull request"
 ---
+
 # cmd_git_pr
 
 Command Path: /git/pr

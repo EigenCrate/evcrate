@@ -63,5 +63,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "pi-code-graph": "^0.16.0"
   }
 }

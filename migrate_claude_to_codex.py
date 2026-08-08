@@ -275,19 +275,34 @@ def parse_markdown_with_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
         return {}, content
 
     frontmatter: dict[str, Any] = {}
-    for line in match.group(1).splitlines():
+    lines = match.group(1).splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
         if ":" not in line:
+            index += 1
             continue
         key, raw_value = line.split(":", 1)
+        key = key.strip()
         value = raw_value.strip()
+        if value in {"|", "|-", "|+", ">", ">-", ">+"}:
+            block: list[str] = []
+            index += 1
+            while index < len(lines) and (not lines[index].strip() or lines[index].startswith((" ", "\t"))):
+                block.append(lines[index].strip())
+                index += 1
+            separator = "\n" if value.startswith("|") else " "
+            frontmatter[key] = separator.join(block).strip()
+            continue
         if value.startswith("[") and value.endswith("]"):
-            frontmatter[key.strip()] = [
+            frontmatter[key] = [
                 item.strip().strip("\"'")
                 for item in value.strip("[]").split(",")
                 if item.strip()
             ]
         else:
-            frontmatter[key.strip()] = value.strip("\"'")
+            frontmatter[key] = value.strip("\"'")
+        index += 1
     return frontmatter, match.group(2)
 
 
@@ -313,13 +328,22 @@ def first_paragraph(text: str) -> str:
     return ""
 
 
-def normalize_skill_file(path: Path, fallback_name: str) -> None:
-    frontmatter, body = parse_markdown_with_frontmatter(path)
-    name = str(frontmatter.get("name") or fallback_name)
-    description = str(frontmatter.get("description") or first_paragraph(body) or f"Use the {name} skill.")
+def normalize_skill_description(raw: object, body: str, fallback: str) -> str:
+    description = str(raw or "").strip()
+    if not description or description.lower().startswith("migrated command from"):
+        description = first_paragraph(body) or fallback
     description = re.sub(r"\s+", " ", description).strip()
     if len(description) > 1024:
         description = description[:1021].rstrip() + "..."
+    return description
+
+
+def normalize_skill_file(path: Path, fallback_name: str) -> None:
+    frontmatter, body = parse_markdown_with_frontmatter(path)
+    name = str(frontmatter.get("name") or fallback_name)
+    description = normalize_skill_description(
+        frontmatter.get("description"), body, f"Use the {name} skill."
+    )
 
     normalized = {
         **frontmatter,
@@ -576,8 +600,12 @@ def migrate_commands_as_native_skills() -> None:
 
         frontmatter, body = parse_markdown_with_frontmatter(source)
         command_path = str(frontmatter.get("name") or f"/{cmd_name}").strip()
-        desc = apply_replacements(str(frontmatter.get("description", "Migrated command from .claude")).strip())
         body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
+        desc = normalize_skill_description(
+            apply_replacements(str(frontmatter.get("description", ""))).strip(),
+            body,
+            f"Run the /{cmd_name} command workflow.",
+        )
         if cmd_name == "coding-level":
             body = body.replace(
                 "1. Set `codingLevel` in `.codex/.evcrate.json`",
@@ -587,13 +615,14 @@ def migrate_commands_as_native_skills() -> None:
             )
 
         skill_dir_name = "cmd_" + str(rel_path).replace("\\", "_").replace("/", "_")
+        skill_name = "cmd-" + str(rel_path).replace("\\", "-").replace("/", "-")
         skill_dir = dest_dir / skill_dir_name
         if skill_dir.exists():
             shutil.rmtree(skill_dir)
         skill_dir.mkdir(parents=True, exist_ok=True)
 
         content = (
-            f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
+            f"{markdown_frontmatter({'name': skill_name, 'description': desc})}\n\n"
             f"# {skill_dir_name}\n\n"
             f"Command Path: {command_path}\n\n"
             f"Description: {desc}\n\n"

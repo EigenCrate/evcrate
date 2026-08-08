@@ -21,8 +21,10 @@ def restore_roots(roots: list[tuple[Path, Path | None]]) -> None:
 def recover_interrupted_publish(context: DistributionContext) -> None:
     """Restore roots recorded before an interrupted per-root promotion."""
 
-    from .publish import _policies
+    from .publish import _policies, _validate_state_ancestors
 
+    _policies(context)
+    _validate_state_ancestors(context)
     with publish_lock(context.state_dir):
         marker = read_release_marker(context.state_dir)
         if marker.get("status") != "in_progress":

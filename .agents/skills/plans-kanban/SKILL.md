@@ -1,6 +1,6 @@
 ---
 name: "plans-kanban"
-description: "Plans dashboard server with progress tracking and timeline visualization."
+description: "View plan progress, activity, and timelines in a local dashboard."
 ---
 
 # plans-kanban

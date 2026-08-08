@@ -456,8 +456,11 @@ Then add your MCP servers, below are some examples:
 - **DRY**: Don't Repeat Yourself - eliminate code duplication
 
 ### Configuration & Baseline Management
-- **Single Source of Truth**: All configurations, hooks, workflows, and skills must be authored inside the `.claude/` directory.
-- **Two Distribution Gates**: Run `python3 distribute.py --build` to generate local artifacts, `--check` to verify them without writes, and `--publish` to publish existing artifacts to HOME. `--all` runs build then publish; bare invocation remains a deprecated `--all` compatibility path.
+- **Canonical Authoring**: Shared Claude Code configuration, hooks, workflows, commands, and skills are authored in `.claude/`. Target manifests/overlays in `.evcrate/targets/` are distribution metadata; `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` are generated outputs and must not be hand-edited.
+- **Two Distribution Gates**: Run `python3 distribute.py --build` to regenerate local artifacts, `--check` to verify them without writes, and `--publish` to publish an existing verified build to HOME. After changing `.claude/`, use `python3 distribute.py --all` (or `--build` then `--publish`); `--publish` requires that verified build and never runs migrators.
+- **HOME Publication**: The local `.claude` artifact remains complete, while HOME publication sanitizes `$HOME/.claude` by excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives), retaining skill package directories and nested resources, and removing stale managed copies. The Pi-compatible `.agents/skills/` tree continues to publish to `$HOME/.agents/skills/`; unmanaged files remain preserved according to target policy.
+- **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
+- **Pi Settings**: Pi discovers `$HOME/.agents/skills/` globally; publication does not create or modify `~/.pi/agent/settings.json`.
 - **No Direct Downstream Edits**: Do not edit `.gemini/`, `.agents/`, or `.codex/` directly. They are generated automatically by the local build gate.
 - **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
 - **Legacy HOME Cleanup Window**: Managed publication retains the pre-manifest cleanup lists for this transition phase; manifest-scoped deletion and user-root preservation land in the Phase 3 publish gate.

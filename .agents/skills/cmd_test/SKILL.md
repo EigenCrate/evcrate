@@ -1,7 +1,8 @@
 ---
-name: cmd_test
-description: ⚡ Run tests locally and analyze the summary report.
+name: "cmd-test"
+description: "⚡ Run tests locally and analyze the summary report."
 ---
+
 # cmd_test
 
 Command Path: /test

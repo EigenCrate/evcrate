@@ -1,7 +1,8 @@
 ---
-name: cmd_integrate_sepay
-description: ⚡⚡ Implement payment integration with SePay.vn
+name: "cmd-integrate-sepay"
+description: "⚡⚡ Implement payment integration with SePay.vn"
 ---
+
 # cmd_integrate_sepay
 
 Command Path: /integrate/sepay

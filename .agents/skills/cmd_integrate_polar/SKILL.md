@@ -1,7 +1,8 @@
 ---
-name: cmd_integrate_polar
-description: ⚡⚡ Implement payment integration with Polar.sh
+name: "cmd-integrate-polar"
+description: "⚡⚡ Implement payment integration with Polar.sh"
 ---
+
 # cmd_integrate_polar
 
 Command Path: /integrate/polar

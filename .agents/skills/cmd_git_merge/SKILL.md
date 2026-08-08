@@ -1,7 +1,8 @@
 ---
-name: cmd_git_merge
-description: ⚠️ Merge code from one branch to another
+name: "cmd-git-merge"
+description: "⚠️ Merge code from one branch to another"
 ---
+
 # cmd_git_merge
 
 Command Path: /git/merge

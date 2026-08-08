@@ -1,7 +1,8 @@
 ---
-name: cmd_code_auto
-description: ⚡⚡⚡ [AUTO] Start coding & testing an existing plan ("trust me bro")
+name: "cmd-code-auto"
+description: "⚡⚡⚡ [AUTO] Start coding & testing an existing plan (\"trust me bro\")"
 ---
+
 # cmd_code_auto
 
 Command Path: /code/auto

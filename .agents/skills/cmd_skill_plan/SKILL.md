@@ -1,7 +1,8 @@
 ---
-name: cmd_skill_plan
-description: Plan to create a new agent skill
+name: "cmd-skill-plan"
+description: "Plan to create a new agent skill"
 ---
+
 # cmd_skill_plan
 
 Command Path: /skill/plan

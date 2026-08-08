@@ -1,7 +1,8 @@
 ---
-name: cmd_skill_optimize_auto
-description: Optimize an existing agent skill [auto]
+name: "cmd-skill-optimize-auto"
+description: "Optimize an existing agent skill [auto]"
 ---
+
 # cmd_skill_optimize_auto
 
 Command Path: /skill/optimize/auto

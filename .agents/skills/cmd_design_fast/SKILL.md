@@ -1,7 +1,8 @@
 ---
-name: cmd_design_fast
-description: Create a quick design
+name: "cmd-design-fast"
+description: "Create a quick design"
 ---
+
 # cmd_design_fast
 
 Command Path: /design/fast

@@ -1,7 +1,8 @@
 ---
-name: cmd_worktree
-description: Create isolated git worktree for parallel development
+name: "cmd-worktree"
+description: "Create isolated git worktree for parallel development"
 ---
+
 # cmd_worktree
 
 Command Path: /worktree

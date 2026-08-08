@@ -1,7 +1,8 @@
 ---
-name: cmd_cook_auto_fast
-description: ⚡ Low-risk fast cook: scout, plan fast, implement with quality gates
+name: "cmd-cook-auto-fast"
+description: "⚡ Low-risk fast cook: scout, plan fast, implement with quality gates"
 ---
+
 # cmd_cook_auto_fast
 
 Command Path: /cook/auto/fast

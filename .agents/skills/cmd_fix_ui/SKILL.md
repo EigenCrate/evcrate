@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_ui
-description: ⚡⚡ Analyze and fix UI issues
+name: "cmd-fix-ui"
+description: "⚡⚡ Analyze and fix UI issues"
 ---
+
 # cmd_fix_ui
 
 Command Path: /fix/ui

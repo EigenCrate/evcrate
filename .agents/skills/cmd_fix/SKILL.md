@@ -1,7 +1,8 @@
 ---
-name: cmd_fix
-description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+name: "cmd-fix"
+description: "⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]"
 ---
+
 # cmd_fix
 
 Command Path: /fix

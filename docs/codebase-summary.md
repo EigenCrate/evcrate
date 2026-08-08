@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Last Updated**: 2026-08-03
+**Last Updated**: 2026-08-08
 **Version**: 1.14.8
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
@@ -43,9 +43,9 @@ evcrate/
 
 ### Distribution gates
 
-The distribution entrypoint separates local generation from HOME publication. `.claude` is a source-backed target: the build gate copies the complete source tree into the finalized local `.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` binds the complete `.claude` artifact to `HOME/.claude` with no subpath limit; it consumes verified local artifacts without running migrators. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
+The distribution entrypoint separates local generation from HOME publication. `.claude` is a source-backed target: the build gate copies the complete source tree into the finalized local `.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` consumes that complete artifact for `HOME/.claude`, excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources; stale managed copies absent from the current source are removed. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
-Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking.
+Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
 
 `EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime compatibility retains existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
 

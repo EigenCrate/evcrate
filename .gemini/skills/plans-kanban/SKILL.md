@@ -1,3 +1,8 @@
+---
+name: plans-kanban
+description: View plan progress, activity, and timelines in a local dashboard.
+---
+
 # plans-kanban
 
 Plans dashboard server with progress tracking and timeline visualization.

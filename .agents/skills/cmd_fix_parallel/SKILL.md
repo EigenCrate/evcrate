@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_parallel
-description: ⚡⚡ Analyze & fix issues with parallel fullstack-developer agents
+name: "cmd-fix-parallel"
+description: "⚡⚡ Analyze & fix issues with parallel fullstack-developer agents"
 ---
+
 # cmd_fix_parallel
 
 Command Path: /fix/parallel

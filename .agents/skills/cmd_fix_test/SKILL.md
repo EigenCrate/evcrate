@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_test
-description: ⚡⚡ Run test suite and fix issues
+name: "cmd-fix-test"
+description: "⚡⚡ Run test suite and fix issues"
 ---
+
 # cmd_fix_test
 
 Command Path: /fix/test

@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_logs
-description: ⚡ Analyze logs and fix issues
+name: "cmd-fix-logs"
+description: "⚡ Analyze logs and fix issues"
 ---
+
 # cmd_fix_logs
 
 Command Path: /fix/logs

@@ -10,7 +10,7 @@ from typing import Callable
 from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
 from .contracts import BuildError, VerifiedArtifact
-from .hashing import hash_file, source_tree_hash, tree_hash
+from .hashing import hash_file, ignore_artifacts, source_tree_hash, tree_hash
 from .manifest import TargetManifest, build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from .overlay import apply_patch_file, copy_overlay_files
 from .runtime import stage_runtime
@@ -42,7 +42,7 @@ def _copy_source_root(source: Path, destination: Path) -> None:
 
     if source.is_symlink() or not source.is_dir():
         raise BuildError(f"Source root is missing or unsafe: {source.name}")
-    shutil.copytree(source, destination, symlinks=True)
+    shutil.copytree(source, destination, symlinks=True, ignore=ignore_artifacts)
 
 
 def _load_targets(context: DistributionContext, roots: dict[str, Path]) -> tuple[TargetManifest, ...]:

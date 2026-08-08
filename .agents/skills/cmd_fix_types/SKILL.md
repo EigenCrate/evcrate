@@ -1,7 +1,8 @@
 ---
-name: cmd_fix_types
-description: ⚡ Fix type errors
+name: "cmd-fix-types"
+description: "⚡ Fix type errors"
 ---
+
 # cmd_fix_types
 
 Command Path: /fix/types

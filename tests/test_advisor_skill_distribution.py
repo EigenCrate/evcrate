@@ -92,8 +92,33 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertTrue(command_skills)
             for command_skill in command_skills:
                 content = command_skill.read_text(encoding="utf-8")
+                frontmatter, _ = parse_markdown_with_frontmatter(command_skill)
+                self.assertRegex(frontmatter["name"], r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+                self.assertTrue(frontmatter["description"].strip())
+                self.assertLessEqual(len(frontmatter["description"]), 1024)
+                self.assertNotIn("Migrated command from", frontmatter["description"])
                 self.assertEqual(content.count(POINTER), 1, command_skill.as_posix())
                 self.assertNotIn("advisor_consult", content)
+
+    def test_claude_authored_skills_have_pi_discoverable_metadata(self) -> None:
+        skipped = {"claude-code", "skill-creator"}
+        for skill_file in sorted((REPOSITORY / ".claude/skills").rglob("SKILL.md")):
+            if skill_file.parent.name in skipped:
+                continue
+            frontmatter, _ = parse_markdown_with_frontmatter(skill_file)
+            self.assertRegex(frontmatter.get("name", ""), r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+            self.assertTrue(frontmatter.get("description"), skill_file.as_posix())
+            self.assertLessEqual(len(frontmatter["description"]), 1024, skill_file.as_posix())
+
+    def test_multiline_skill_descriptions_are_preserved_in_pi_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.run_migrator(root)
+            for name in ("context-engineering", "svg-icon-generator"):
+                generated = root / ".agents/skills" / name / "SKILL.md"
+                frontmatter, _ = parse_markdown_with_frontmatter(generated)
+                self.assertGreater(len(frontmatter["description"]), 20)
+                self.assertNotIn(frontmatter["description"], {"|", ">-"})
 
     def test_generated_commands_workflows_agents_and_config_wait_for_terminal_results(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

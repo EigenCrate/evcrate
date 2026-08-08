@@ -1,7 +1,8 @@
 ---
-name: cmd_design_video
-description: Create a design based on video
+name: "cmd-design-video"
+description: "Create a design based on video"
 ---
+
 # cmd_design_video
 
 Command Path: /design/video

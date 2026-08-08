@@ -1,7 +1,8 @@
 ---
-name: cmd_plan_two
-description: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
+name: "cmd-plan-two"
+description: "⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches"
 ---
+
 # cmd_plan_two
 
 Command Path: /plan/two
