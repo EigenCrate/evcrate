@@ -4,7 +4,7 @@
 **Scope:** Pi target and distribution contract only
 **Updated:** 2026-08-09
 
-Phase 01 makes Pi a first-class distribution target without claiming native Pi runtime support. The canonical authoring source remains `.evcrate/source/.claude/`. Later resource, extension, hook, integration, and cutover work is not included.
+This historical Phase 01 record makes Pi a first-class distribution target without claiming native Pi runtime support. The canonical authoring source remains `.evcrate/source/.claude/`. Phase 03 has since implemented the runtime; its current boundary and release blockers are in the [System Architecture](./system-architecture.md#native-pi-phase-03-runtime-boundary-implemented-not-release-ready).
 
 ## Delivered contract
 
@@ -17,7 +17,7 @@ Phase 01 makes Pi a first-class distribution target without claiming native Pi r
 - The generated target is deterministic and currently contains only the minimal Pi skeleton shown below.
 - Existing Claude, Codex/agents, Gemini, and Antigravity target contracts remain separate; Phase 01 does not refactor their ownership.
 
-## Current generated artifact
+## Phase 01 generated artifact (historical)
 
 ```text
 .evcrate/source/.pi/
@@ -28,7 +28,7 @@ Phase 01 makes Pi a first-class distribution target without claiming native Pi r
         └── managed-settings.json
 ```
 
-Phase 01 does **not** generate Pi commands, agents, skills, workflows, hooks, extensions, model-role data, or runtime resource translation. Those are later phases.
+At Phase 01 completion, this artifact did **not** include Pi commands, agents, skills, workflows, hooks, extensions, model-role data, or runtime resource translation. Those resources were added in later phases.
 
 ## Shared settings ownership
 
@@ -63,13 +63,13 @@ Malformed or symlinked settings fail closed. Existing `pi-code` identities are r
 | Phase | Scope | Status |
 |---|---|---|
 | 01 | Target, staging, hashing, shared settings, and safe candidate publication | **Complete** |
-| 02 | Deterministic commands, agents, workflows, skills, scripts, and resource migration | Pending |
-| 03 | Native commands, structured delegation, and model roles | Pending |
+| 02 | Deterministic commands, agents, workflows, skills, scripts, and resource migration | Complete |
+| 03 | Native commands, structured delegation, and model roles | Implemented; release blocked |
 | 04 | Native hooks and finalized managed settings behavior | Pending |
 | 05 | Integration, safety, release gates, and native Pi smoke tests | Pending |
 | 06 | User documentation, manual `pi-code` removal, and live cutover | Pending |
 
-Phase 01 is therefore distribution-ready for isolated build/check and candidate tests, not runtime-ready for native Pi use.
+Phase 01 remains the distribution baseline. Phase 03 is runtime-implemented but not release-ready: XML closing-tag marker corruption and a shell descendant timeout/process-tree leak are accepted unresolved criticals.
 
 ## References
 

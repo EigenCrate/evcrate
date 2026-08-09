@@ -58,7 +58,7 @@ If a real codebase is involved, scout the relevant implementation surface before
 5. **Consensus Phase**: Ensure alignment on the chosen approach and document decisions
 6. **Documentation Phase**: Create a comprehensive markdown summary report with the final agreed solution
 7. **Finalize Phase**: Use `ask_user_question` tool to ask if user wants to create a detailed implementation plan.
-   - If `Yes`: Use the **Pi skill** to invoke `/plan:fast` or `/plan:hard` SlashCommand based on complexity.
+   - If `Yes`: Use the **Pi skill** to invoke {{evcrate:commands/plan:fast}} or {{evcrate:commands/plan:hard}} SlashCommand based on complexity.
      Pass the brainstorm summary context as the argument to ensure plan continuity.
      **CRITICAL:** The invoked plan command will create `plan.md` with YAML frontmatter including `status: pending`.
    - If `No`: End the session.

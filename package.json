@@ -11,7 +11,9 @@
     "distribute:all": "python3 distribute.py --all",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
-    "test": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "test": "npm run test:python && npm run test:pi",
+    "test:python": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "test:pi": "node --test .evcrate/targets/pi/tests/*.test.mjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"
@@ -34,8 +36,14 @@
   },
   "homepage": "https://github.com/NEBULEA-M/evcrate#readme",
   "files": [
-    ".evcrate/source/.claude/",
-    ".evcrate/source/.opencode/",
+    ".evcrate/source/.claude/**",
+    ".evcrate/source/.opencode/**",
+    ".evcrate/source/.pi/**",
+    ".evcrate/targets/pi/**",
+    "migrate_claude_to_pi.py",
+    "pi_adapter/**",
+    "!**/__pycache__/**",
+    "!**/*.pyc",
     ".evcrate/source/AGENTS.md",
     ".evcrate/source/CLAUDE.md",
     ".evcrate/source/GEMINI.md",
@@ -57,10 +65,11 @@
     "@semantic-release/release-notes-generator": "^12.1.0",
     "conventional-changelog-conventionalcommits": "^7.0.2",
     "husky": "^8.0.3",
+    "pi-subagents": "0.44.0",
     "semantic-release": "^22.0.12"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.19.0"
   },
   "publishConfig": {
     "access": "public"

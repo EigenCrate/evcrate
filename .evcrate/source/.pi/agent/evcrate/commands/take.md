@@ -51,7 +51,7 @@ Handoff rules:
 
 - Pass report paths and compact findings to `/plan:*`; do not paste full source or duplicate the planner's research workflow.
 - Pass the validated plan path plus mode, provenance, rejected material, and unresolved questions to `/code*`; do not duplicate implementation instructions from the code command.
-- Do not call `planner`, `tester`, `debugger`, `code-reviewer`, `project-manager`, or `docs-manager` directly for work already owned by `/plan` or `/code`. Direct delegation is allowed only for a focused read-only question before handoff or when the owning command explicitly requests it.
+- Do not call `planner`, `tester`, `debugger`, `code-reviewer`, `project-manager`, or `docs-manager` directly for work already owned by {{evcrate:commands/plan}} or {{evcrate:commands/code}}. Direct delegation is allowed only for a focused read-only question before handoff or when the owning command explicitly requests it.
 - Do not use `/code:no-test` for `take`; transferred features require the normal `/code` quality gates. Do not use `/code:auto` or commit/push shortcuts unless the user explicitly requests that workflow and its gates remain intact.
 - If a delegated command is unavailable, stop and report the missing command. Do not silently inline a weaker replacement workflow.
 - After a delegated command returns, inspect its report and verify its required gate evidence before continuing.
@@ -196,7 +196,7 @@ Classify each risk as `blocker`, `must resolve before code`, `test requirement`,
 
 ### `compare`
 
-Run Recon, Transfer Map, Analyze, and Challenge. Return a comparison report with evidence, compatibility matrix, recommended mode, rejected assumptions, and unresolved questions. Do not create a plan, edit product files, install dependencies, or call `/code`.
+Run Recon, Transfer Map, Analyze, and Challenge. Return a comparison report with evidence, compatibility matrix, recommended mode, rejected assumptions, and unresolved questions. Do not create a plan, edit product files, install dependencies, or call {{evcrate:commands/code}}.
 
 ### `copy`
 
@@ -238,7 +238,7 @@ Build one concise prompt for the selected `/plan:*` command containing the prefl
 - rollback and onboarding steps;
 - no implementation before validation.
 
-Run the existing `/plan:validate <plan-path>` before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/plan:*` command and re-plan before coding.
+Run the existing {{evcrate:commands/plan:validate}} <plan-path> before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/plan:*` command and re-plan before coding.
 
 Required side-effect checklist:
 
@@ -269,7 +269,7 @@ After validation, route to `/code <plan-path>` for sequential work or `/code:par
 
 For parallel implementation, trust `/code:parallel` to delegate phases to `fullstack-developer` according to the plan's exclusive file-ownership matrix. No two agents may write the same file. `database-admin` or `ui-ux-designer` may be used only for conditional concerns identified in the plan.
 
-If any delegated gate fails: stop the success claim, preserve the failure evidence, return the failure to `/code` for its debugger/fix/retest loop, update the plan if scope or assumptions changed, and re-run the owning command. `take` must not patch implementation files directly.
+If any delegated gate fails: stop the success claim, preserve the failure evidence, return the failure to {{evcrate:commands/code}} for its debugger/fix/retest loop, update the plan if scope or assumptions changed, and re-run the owning command. `take` must not patch implementation files directly.
 
 ## Final Report
 

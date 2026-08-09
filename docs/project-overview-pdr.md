@@ -236,7 +236,16 @@ Provide a production-ready template that:
 - Merge only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0` into the shared `agent/settings.json` package key.
 - Preserve user-owned settings, package entries, provider/model values, and sessions; keep the shared settings file outside file-level managed ownership.
 - Detect `pi-code` conflicts without removing them. Require manual Pi quiescence and abort on concurrent HOME changes before promotion.
-- Limit Phase 01 to deterministic target/build/publish contracts. Native resources, runtime extension, hooks, integration gates, and live cutover remain pending.
+- Limit Phase 01 to deterministic target/build/publish contracts. Later runtime delivery does not authorize a live cutover.
+
+**FR9: Native Pi Phase 03 Runtime (implemented; release blocked)**
+- Register native Markdown commands recursively and preserve provider-neutral command/workflow content.
+- Bound model-initiated nested command dispatch by depth, invocation count, and cycle detection; reject dispatcher calls mixed with sibling tool calls.
+- Enforce command `allowed-tools` with an authoritative `tool_call` policy gate and restore the active tool set after settlement or shutdown.
+- Resolve `strong`, `standard`, `fast`, and `parent` roles against the active provider and Pi model registry only at delegation time; never silently cross provider boundaries.
+- Delegate only through the structured `pi-subagents` transport, preserving its public `workflowScript` tool, and invoke the child-start seam before each request.
+- Keep the Node.js baseline at `>=22.19.0` and the managed package identities pinned exactly to `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`.
+- Block release/cutover acceptance until XML closing-tag marker corruption and the shell descendant timeout/process-tree leak are corrected and regression-tested.
 
 **Advisor compatibility boundary (Phase 2)**
 - `advisor-strategy` is a static, current-session skill. Use it explicitly as `$advisor-strategy` when a decision benefits from a bounded advisory brief.
@@ -351,7 +360,7 @@ Provide a production-ready template that:
 ### Technology Stack
 
 **Runtime**:
-- Node.js >= 18.0.0
+- Node.js >= 22.19.0
 - Bash scripting (Unix hooks)
 - PowerShell scripting (Windows hooks)
 - Cross-platform hook dispatcher (Node.js)
@@ -465,7 +474,7 @@ Provide a production-ready template that:
 ## Constraints & Limitations
 
 ### Technical Constraints
-- Requires Node.js >= 18.0.0
+- Requires Node.js >= 22.19.0
 - Depends on Claude Code or Open Code CLI
 - File-based communication has I/O overhead
 - Token limits on AI model context windows

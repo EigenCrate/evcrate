@@ -102,7 +102,7 @@ Before handoff, verify the plan accounts for:
 
 ### 7. Implementation Handoff
 
-* Use `/code <plan-path>` Slash Command to implement the plan step by step.
+* Use {{evcrate:commands/code}} <plan-path> Slash Command to implement the plan step by step.
 * Pass the plan path and any unresolved questions to `/code`.
 * If the plan includes frontend work, ensure the `/code` handoff calls `ui-ux-designer` and follows `./docs/design-guidelines.md`.
 * If the plan needs visual assets, include `ai-multimodal` and `media-processing` requirements in the plan.

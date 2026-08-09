@@ -153,9 +153,18 @@ Enterprise-grade features and deployment options.
 
 - Delivered deterministic native Pi resource migration, including inventory validation, semantic compatibility translation, agent model-role conversion, hook/script dependency closure, and idempotence coverage.
 
-### Phases 03–06: PENDING
+### Phase 03: Native Commands, Structured Delegation, and Model Roles — DONE
+**Completed:** 260809
+**Status:** User-approved with unresolved criticals
 
-Native command/delegation/model-role runtime, native hooks, integration/release gates, and documentation/manual cutover are not delivered by this change.
+- Delivered the native command/delegation/model-role runtime scope.
+- **Accepted defects (unresolved criticals):**
+  - XML closing-tag marker corruption
+  - shell descendant timeout/process-tree leak
+
+### Phases 04–06: PENDING
+
+Native hooks, integration/release gates, and documentation/manual cutover are not delivered by this change.
 
 See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
 
@@ -303,7 +312,7 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 ## Technical Architecture
 
 ### Technology Stack
-- **Runtime:** Node.js >= 18.0.0, Bash, PowerShell, Cross-platform hooks
+- **Runtime:** Node.js >= 22.19.0, Bash, PowerShell, Cross-platform hooks
 - **AI Platforms:** Anthropic Claude, OpenRouter, Google Gemini, Grok Code
 - **Development Tools:** Semantic Release, Commitlint, Husky, Repomix, Scout Block Hook
 - **CI/CD:** GitHub Actions
@@ -319,7 +328,7 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 ## Known Constraints & Limitations
 
 ### Technical
-- Requires Node.js >= 18.0.0
+- Requires Node.js >= 22.19.0
 - Depends on Claude Code or Open Code CLI
 - File-based communication has I/O overhead
 - Token limits on AI model context windows
@@ -457,11 +466,6 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 - [Code Standards](./code-standards.md)
 - [System Architecture](./system-architecture.md)
 - [Codebase Summary](./codebase-summary.md)
-- [Release Process](./RELEASE.md)
-
-### Feature Documentation
-- [Windows Statusline Support Guide](./statusline-windows-support.md)
-- [Statusline Architecture](./statusline-architecture.md)
 
 ### External Resources
 - [Claude Code Documentation](https://docs.claude.com/en/docs/claude-code/overview)

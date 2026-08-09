@@ -10,7 +10,18 @@
   ],
   "output_root": ".pi",
   "additional_roots": [],
-  "owned_paths": [],
+  "owned_paths": [
+    "files/agent/extensions/evcrate/ATTRIBUTION.md",
+    "files/agent/extensions/evcrate/child-context.js",
+    "files/agent/extensions/evcrate/command-files.js",
+    "files/agent/extensions/evcrate/command-tool.js",
+    "files/agent/extensions/evcrate/commands.js",
+    "files/agent/extensions/evcrate/delegation-tool.js",
+    "files/agent/extensions/evcrate/index.js",
+    "files/agent/extensions/evcrate/model-roles.js",
+    "files/agent/extensions/evcrate/operation-policy.js",
+    "files/agent/extensions/evcrate/paths.js"
+  ],
   "overlay_root": ".evcrate/targets/pi/files",
   "shared_json": {
     "schema": "pi-settings-v1",

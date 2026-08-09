@@ -8,7 +8,7 @@ import re
 import stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Callable
+from typing import Callable, Collection
 
 from .frontmatter import FrontmatterError, normalize_lf, split_frontmatter, validate_skill_frontmatter
 
@@ -39,6 +39,67 @@ _TOOL_TRANSLATIONS = (
     (re.compile(r"\bWebSearch\b|\bWebFetch\b"), "web research"),
     (re.compile(r"\bSkill tool\b"), "Pi skill"),
 )
+_COMMAND_NAME = r"[a-z0-9][a-z0-9:_-]*"
+_QUOTED_COMMAND_REFERENCE = re.compile(
+    rf"`/(?P<name>{_COMMAND_NAME})(?P<args>[^`\n]*)`", re.IGNORECASE
+)
+_BARE_COMMAND_REFERENCE = re.compile(
+    rf"(?<![\w/:])/(?P<name>{_COMMAND_NAME})(?![a-z0-9:_-]|\*)", re.IGNORECASE
+)
+_DIRECTIVE_VERB = re.compile(r"\b(?:trigger|invoke|execute|run|dispatch|call)\b", re.IGNORECASE)
+_SLASH_COMMAND_PHRASE = re.compile(r"\bslash\s*[- ]?commands?\b", re.IGNORECASE)
+_USE_DIRECTIVE = re.compile(r"\buse\b", re.IGNORECASE)
+_NON_DIRECTIVE_COMMAND_PROSE = re.compile(
+    r"\b(?:command\s*[- ]?path|discover(?:y|ing)?|available|examples?)\b", re.IGNORECASE
+)
+_FENCE = re.compile(r"^\s*(?:`{3,}|~{3,})")
+
+
+def _command_names(commands: Collection[str]) -> frozenset[str]:
+    return frozenset(command.replace("/", ":").lower() for command in commands)
+
+
+def _markdown_link_reference(value: str, position: int) -> bool:
+    opening = value.rfind("[", 0, position)
+    return opening >= 0 and value.find("]", opening) >= position
+
+
+def _translate_directive_line(line: str, commands: frozenset[str]) -> str:
+    if not commands or _NON_DIRECTIVE_COMMAND_PROSE.search(line):
+        return line
+    if not (_DIRECTIVE_VERB.search(line) or (_USE_DIRECTIVE.search(line) and _SLASH_COMMAND_PHRASE.search(line))):
+        return line
+
+    def quoted(command: re.Match[str]) -> str:
+        name = command["name"].lower()
+        if name not in commands or _markdown_link_reference(line, command.start()):
+            return command[0]
+        return f"{{{{evcrate:commands/{name}}}}}{command['args']}"
+
+    translated = _QUOTED_COMMAND_REFERENCE.sub(quoted, line)
+
+    def bare(command: re.Match[str]) -> str:
+        name = command["name"].lower()
+        if name not in commands or _markdown_link_reference(translated, command.start()):
+            return command[0]
+        if command.start() and translated[command.start() - 1] in "[(":
+            return command[0]
+        return f"{{{{evcrate:commands/{name}}}}}"
+
+    return _BARE_COMMAND_REFERENCE.sub(bare, translated)
+
+
+def _translate_nested_commands(value: str, commands: Collection[str]) -> str:
+    """Mark known model-directed slash directives, preserving literal prose."""
+
+    known_commands = _command_names(commands)
+    fenced = False
+    translated: list[str] = []
+    for line in value.splitlines(keepends=True):
+        if _FENCE.match(line):
+            fenced = not fenced
+        translated.append(line if fenced else _translate_directive_line(line, known_commands))
+    return "".join(translated)
 
 
 def _relative(root: Path, path: Path) -> Path:
@@ -104,7 +165,7 @@ def inventory(source: Path) -> ResourceInventory:
     return ResourceInventory(commands, workflows, agents, tuple(sorted(skills)), scripts, hooks)
 
 
-def translate_prompt(value: str) -> str:
+def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
     """Translate only named compatibility tokens, never broad product prose."""
 
     translated = normalize_lf(value)
@@ -112,6 +173,7 @@ def translate_prompt(value: str) -> str:
         translated = pattern.sub(replacement, translated)
     translated = translated.replace(".claude/skills/", ".pi/skills/")
     translated = translated.replace(".claude/.evcrate.json", ".pi/.evcrate.json")
+    translated = _translate_nested_commands(translated, commands)
     for pattern, replacement in _TOOL_TRANSLATIONS:
         translated = pattern.sub(replacement, translated)
     return translated
@@ -156,18 +218,23 @@ def copy_tree(source: Path, destination: Path, output: Path, transform: Callable
         _copy_file(item, destination / relative, output, transform)
 
 
-def copy_markdown(source: Path, destination: Path, output: Path) -> None:
+def copy_markdown(source: Path, destination: Path, output: Path, commands: Collection[str] = ()) -> None:
     for item in _walk_files(source):
         if item.suffix == ".md":
-            _copy_file(item, destination / _relative(source, item), output, translate_prompt)
+            _copy_file(
+                item,
+                destination / _relative(source, item),
+                output,
+                lambda value: translate_prompt(value, commands),
+            )
 
 
-def copy_commands_and_workflows(source: Path, output: Path) -> None:
-    """Copy every canonical command and static workflow once."""
+def copy_commands_and_workflows(source: Path, output: Path, commands: Collection[str]) -> None:
+    """Copy commands and workflows using the canonical command inventory."""
 
     root = output / "agent" / "evcrate"
-    copy_markdown(source / "commands", root / "commands", output)
-    copy_markdown(source / "workflows", root / "workflows", output)
+    copy_markdown(source / "commands", root / "commands", output, commands)
+    copy_markdown(source / "workflows", root / "workflows", output, commands)
 
 
 def copy_skills(source: Path, output: Path) -> None:

@@ -58,7 +58,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - **[Codebase Summary](./docs/codebase-summary.md)** - High-level overview of project structure, technologies, and components
 - **[Code Standards](./docs/code-standards.md)** - Coding standards, naming conventions, and best practices
 - **[System Architecture](./docs/system-architecture.md)** - Detailed architecture documentation, component interactions, and data flow
-- **[Native Pi Phase 01](./docs/pi-native-migration-phase-01.md)** - Implemented Pi target and safe publication boundary; later runtime phases remain pending
+- **[Native Pi Phase 01](./docs/pi-native-migration-phase-01.md)** - Historical target/publication contract; see the [System Architecture](./docs/system-architecture.md#native-pi-phase-03-runtime-boundary-implemented-not-release-ready) for the implemented runtime and release blockers
 - **[Commands Reference](./guide/COMMANDS.md)** - Complete guide to all available slash commands
 
 ### 📖 Additional Resources
@@ -72,7 +72,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 ### Prerequisites
 - [Claude Code](https://code.claude.com/docs/en/setup) installed and configured
 - Git for version control
-- Node.js 18+ (or your preferred runtime)
+- Node.js >=22.19.0
 - Operating Systems: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
 - Hardware: 4GB+ RAM
 
@@ -115,7 +115,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 │   ├── .claude/            # Canonical Claude Code source
 │   ├── .codex/             # Generated Codex artifact
 │   ├── .agents/            # Codex-owned, Pi-compatible shared skill artifact
-│   ├── .pi/                # Generated native Pi Phase 01 skeleton
+│   ├── .pi/                # Generated native Pi Phase 03 resources and extension
 │   ├── .gemini/            # Generated Gemini artifact
 │   ├── .antigravity/       # Generated Antigravity artifact
 │   ├── .opencode/          # OpenCode compatibility source
@@ -445,8 +445,8 @@ Then add your MCP servers, below are some examples:
 - **Two Distribution Gates**: Run `python3 distribute.py --build` to regenerate nested local artifacts, `--check` to verify them without writes, and `--publish` to publish an existing verified build to HOME. After changing `.evcrate/source/.claude/`, use `python3 distribute.py --all` (or `--build` then `--publish`); `--publish` requires that verified build and never runs migrators.
 - **HOME Publication**: The nested `.evcrate/source/.claude` artifact remains complete, while HOME publication sanitizes `$HOME/.claude` by excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives), retaining skill package directories and nested resources, and removing stale managed copies. The Pi-compatible `.evcrate/source/.agents/skills/` tree continues to publish to `$HOME/.agents/skills/`; unmanaged files remain preserved according to target policy.
 - **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
-- **Pi Phase 01 settings**: The Pi target merges only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0` into `~/.pi/agent/settings.json`; unknown keys, packages, provider/model settings, and sessions remain user-owned. The settings file is shared, not file-managed.
-- **Pi publication safety**: Stop Pi manually before live publication. Concurrent HOME changes abort promotion. Phase 01 supports isolated build/check and candidate tests only; it does not authorize live cutover or automatically remove `pi-code`.
+- **Pi runtime and settings**: Phase 03 registers native commands, bounded nested dispatch, policy-gated tool restrictions, semantic provider roles, and structured `pi-subagents` delegation. The target merges only the exact pins `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0` into `~/.pi/agent/settings.json`; unknown keys, packages, provider/model settings, and sessions remain user-owned.
+- **Pi publication safety**: Stop Pi manually before live publication. Concurrent HOME changes abort promotion. XML closing-tag marker corruption and a shell descendant timeout/process-tree leak remain unresolved criticals; no release/cutover is approved and `pi-code` is not removed automatically.
 - **No Direct Downstream Edits**: Do not edit `.evcrate/source/.gemini/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, or `.evcrate/source/.pi/` directly. They are generated automatically by the local build gate.
 - **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
 - **HOME Cleanup**: Managed publication uses manifest-scoped deletion and preservation while keeping unrelated user-owned HOME paths intact.
