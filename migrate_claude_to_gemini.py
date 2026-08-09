@@ -3,7 +3,6 @@ import re
 import shutil
 import json
 import hashlib
-import yaml
 import sys
 from pathlib import Path
 
@@ -36,6 +35,13 @@ for arg in sys.argv[1:]:
         GEMINI_DIR = Path.home() / ".gemini"
     elif arg.lower() in ("--local", "local"):
         GEMINI_DIR = local_output(".gemini")
+
+try:
+    import yaml
+except ModuleNotFoundError as error:
+    if error.name == "yaml":
+        raise SystemExit("PyYAML is required; run 'python3 -m pip install -r requirements.txt'.") from error
+    raise
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}

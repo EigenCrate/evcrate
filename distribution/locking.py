@@ -17,10 +17,14 @@ MARKER_NAME = "release-marker.json"
 LOCK_NAME = "publish.lock"
 
 
+def _is_reparse_point(path: Path) -> bool:
+    return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
+
+
 def _state_file(state_dir: Path, name: str) -> Path:
     probe = state_dir
     while True:
-        if probe.is_symlink():
+        if _is_reparse_point(probe):
             raise PublishError("Distribution state path must not contain symlinked ancestors")
         if probe.parent == probe:
             break
@@ -39,13 +43,35 @@ def _state_file(state_dir: Path, name: str) -> Path:
 def publish_lock(state_dir: Path) -> Iterator[None]:
     """Reject concurrent publishers without trusting a lock-file path from input."""
 
-    try:
-        import fcntl
-    except ImportError as error:  # pragma: no cover - Windows fallback is platform work
-        raise PublishError("HOME publish locking is unavailable on this platform") from error
     lock_path = _state_file(state_dir, LOCK_NAME)
     if lock_path.is_symlink():
         raise PublishError("Distribution publish lock must not be a symlink")
+    try:
+        import fcntl
+    except ImportError:
+        try:
+            import msvcrt
+        except ImportError as error:  # pragma: no cover
+            raise PublishError("HOME publish locking is unavailable on this platform") from error
+        descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        acquired = False
+        try:
+            os.chmod(lock_path, 0o600)
+            if os.fstat(descriptor).st_size == 0:
+                os.write(descriptor, b"0")
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            try:
+                msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+                acquired = True
+            except OSError as error:
+                raise PublishError("Another HOME publication is already active") from error
+            yield
+        finally:
+            if acquired:
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+            os.close(descriptor)
+        return
     descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         os.chmod(lock_path, 0o600)

@@ -112,6 +112,27 @@ def _promote_transaction(pairs: list[tuple[Path | None, Path]]) -> None:
     promote_transaction(pairs)
 
 
+def _changed_promotion_pairs(context: DistributionContext, staged: VerifiedArtifact) -> list[tuple[Path | None, Path]]:
+    pairs = [
+        (source, destination)
+        for source, destination in zip(staged.roots, context.local_roots, strict=True)
+        if not _same_tree(source, destination)
+    ]
+    for document in GENERATED_DOCS:
+        source = context.stage_project_docs / document
+        destination = context.local_path(document)
+        if source.exists():
+            if not _same_tree(source, destination):
+                pairs.append((source, destination))
+        elif destination.exists() or destination.is_symlink():
+            pairs.append((None, destination))
+    manifest = context.stage / BUILD_MANIFEST_PATH
+    destination = context.repository / BUILD_MANIFEST_PATH
+    if not _same_tree(manifest, destination):
+        pairs.append((manifest, destination))
+    return pairs
+
+
 def run_local_build() -> VerifiedArtifact:
     """Generate local artifacts in isolation, then promote only complete output."""
 
@@ -121,15 +142,7 @@ def run_local_build() -> VerifiedArtifact:
         with staged_build_root(base_context.repository) as stage:
             context = _stage_context(DistributionAction.BUILD, stage)
             staged = _generate_stage(context)
-            pairs = list(zip(staged.roots, context.local_roots, strict=True))
-            for document in GENERATED_DOCS:
-                staged_document = context.stage_project_docs / document
-                if staged_document.exists():
-                    pairs.append((staged_document, context.local_path(document)))
-                elif context.local_path(document).exists():
-                    pairs.append((None, context.local_path(document)))
-            pairs.append((context.stage / BUILD_MANIFEST_PATH, context.repository / BUILD_MANIFEST_PATH))
-            _promote_transaction(pairs)
+            _promote_transaction(_changed_promotion_pairs(context, staged))
             return VerifiedArtifact(repository=context.repository, roots=context.local_roots)
 
 

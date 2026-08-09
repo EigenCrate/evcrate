@@ -60,7 +60,7 @@ class DistributionPublishTest(unittest.TestCase):
                 first = publish_diff(context, artifact)
                 second = publish_diff(context, artifact)
             self.assertEqual(first, second)
-            self.assertIn(("unknown", "preserve"), {(change.path, change.action) for change in first})
+            self.assertNotIn("unknown", {change.path for change in first})
 
     def test_nested_claude_publish_preserves_unmanaged_files_and_dry_run(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -96,7 +96,7 @@ class DistributionPublishTest(unittest.TestCase):
                 changes = publish_local_artifacts(context, artifact)
                 self.assertIn((".claude", "agents/deep/rules.md", "create"), {(change.root, change.path, change.action) for change in changes})
                 self.assertIn((".claude", "settings.json", "update"), {(change.root, change.path, change.action) for change in changes})
-                self.assertIn((".claude", "unmanaged.txt", "preserve"), {(change.root, change.path, change.action) for change in changes})
+                self.assertNotIn("unmanaged.txt", {change.path for change in changes})
                 self.assertEqual((home / "agents/deep/rules.md").read_text(encoding="utf-8"), "new nested rule")
                 self.assertFalse((home / "skills/INSTALLATION.md").exists())
                 self.assertEqual((home / "skills/planning/SKILL.md").read_text(encoding="utf-8"), "skill metadata")
@@ -140,10 +140,10 @@ class DistributionPublishTest(unittest.TestCase):
             global_command = json.loads((home / "hooks.json").read_text(encoding="utf-8"))["hooks"]["SessionStart"][0]["hooks"][0]["command"]
             self.assertIn("$CODEX_PROJECT_DIR", local_command)
             self.assertNotIn("$CODEX_PROJECT_DIR", global_command)
-            self.assertIn(str(home / "hooks"), global_command)
+            self.assertIn((home / "hooks").as_posix(), global_command)
             self.assertEqual(
                 (home / "config.toml").read_text(encoding="utf-8"),
-                f'command = "{home / "bin" / "run-mcp-package.sh"}"\n',
+                f'command = "{(home / "bin" / "run-mcp-package.sh").as_posix()}"\n',
             )
             self.assertEqual(
                 (source / "config.toml").read_text(encoding="utf-8"),
@@ -226,7 +226,7 @@ class DistributionPublishTest(unittest.TestCase):
                 },
             )
             policy = [(".gemini", first_source, first_home, set()), (".codex", second_source, second_home, set())]
-            original = __import__("distribution.publish", fromlist=["_copy_candidate"])._copy_candidate
+            original = __import__("distribution.publish", fromlist=["_replace_managed_file"])._replace_managed_file
             calls = 0
 
             def fail_second(*args: object):
@@ -236,7 +236,7 @@ class DistributionPublishTest(unittest.TestCase):
                     raise OSError("injected failure")
                 return original(*args)
 
-            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=policy), patch("distribution.publish._copy_candidate", side_effect=fail_second):
+            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=policy), patch("distribution.publish._replace_managed_file", side_effect=fail_second):
                 with self.assertRaisesRegex(PublishError, "recovered"):
                     publish_local_artifacts(context, VerifiedArtifact(context.repository, context.local_roots))
                 self.assertEqual((first_home / "managed").read_text(encoding="utf-8"), "old")
@@ -253,9 +253,12 @@ class DistributionPublishTest(unittest.TestCase):
             (source / "managed").write_text("new", encoding="utf-8")
             (home / "managed").write_text("old", encoding="utf-8")
             original_replace = Path.replace
+            failed = False
 
             def fail_candidate(path: Path, destination: Path) -> Path:
-                if ".evcrate-stage-" in path.name:
+                nonlocal failed
+                if not failed and ".evcrate-publish-" in path.name:
+                    failed = True
                     raise OSError("injected candidate promotion failure")
                 return original_replace(path, destination)
 

@@ -18,7 +18,7 @@ def sync_gemini_assets(context: DistributionContext):
         raise RuntimeError("Local .gemini artifact is missing")
         
     target_gemini.mkdir(parents=True, exist_ok=True)
-    print(f"🧹 Syncing global Gemini assets (mode: {gemini_global_mode})")
+    print(f"[sync] Syncing global Gemini assets (mode: {gemini_global_mode})")
     
     settings_src = evcrate_gemini / "settings.json"
     if settings_src.exists():
@@ -63,7 +63,7 @@ def sync_gemini_assets(context: DistributionContext):
             subdir_dest = target_gemini / subdir
             if subdir_dest.exists():
                 shutil.rmtree(subdir_dest)
-        print("ℹ️ Skipping ~/.gemini/{agents,commands,skills,workflows} to avoid user/workspace duplication.")
+        print("[info] Skipping ~/.gemini/{agents,commands,skills,workflows} to avoid user/workspace duplication.")
         print("   Hooks and scripts are still synced globally because they do not create duplicated command/skill registries.")
 
 def sync_codex_and_agents_assets(context: DistributionContext):
@@ -75,20 +75,20 @@ def sync_codex_and_agents_assets(context: DistributionContext):
 
     if codex_source.exists():
         if evcrate_global_sync_mode == "full":
-            print(f"🧹 Fully replacing global Codex directory: {target_codex}")
+            print(f"[sync] Fully replacing global Codex directory: {target_codex}")
             reset_dir_contents(target_codex)
         else:
-            print(f"🧹 Removing managed Codex assets only: {target_codex}")
+            print(f"[sync] Removing managed Codex assets only: {target_codex}")
             remove_managed_paths(target_codex, [
                 "agents", "bin", "commands", "hooks", "workflows",
                 "config.toml", "global-guidance.md", "hooks.json",
                 "migration-behavior-matrix.json"
             ])
         
-        print("📦 Copying .codex items...")
+        print("[copy] Copying .codex items...")
         managed_skip_names = set() if evcrate_global_sync_mode == "full" else {".evcrate.json"}
         if managed_skip_names:
-            print("🔒 Preserving user-owned global Codex config: .evcrate.json")
+            print("[preserve] Preserving user-owned global Codex config: .evcrate.json")
         sync_tree(codex_source, target_codex, skip_names=managed_skip_names)
         write_codex_runtime_env(target_codex / "runtime.env")
         rewrite_codex_global_paths(target_codex)
@@ -97,19 +97,19 @@ def sync_codex_and_agents_assets(context: DistributionContext):
 
     if agents_source.exists():
         if evcrate_global_sync_mode == "full":
-            print(f"🧹 Fully replacing global Codex agents directory: {target_agents}")
+            print(f"[sync] Fully replacing global Codex agents directory: {target_agents}")
             reset_dir_contents(target_agents)
         else:
-            print(f"🧹 Removing managed Codex agents assets only: {target_agents}")
+            print(f"[sync] Removing managed Codex agents assets only: {target_agents}")
             remove_managed_paths(target_agents, ["skills"])
 
-        print("📦 Copying .agents items...")
+        print("[copy] Copying .agents items...")
         sync_tree(agents_source, target_agents)
     else:
         raise RuntimeError("Local .agents artifact is missing")
 
 def sync_antigravity_config(context: DistributionContext):
-    print("📦 Publishing legacy Antigravity configuration...")
+    print("[copy] Publishing legacy Antigravity configuration...")
     publish_antigravity_config(context)
 
 def sync_legacy_claude_assets(context: DistributionContext):
@@ -117,14 +117,14 @@ def sync_legacy_claude_assets(context: DistributionContext):
     target_claude = context.target_claude
     evcrate_global_sync_mode = context.global_sync_mode
     if claude_source.exists():
-        print(f"📦 Syncing legacy .claude items to {target_claude}...")
+        print(f"[copy] Syncing legacy .claude items to {target_claude}...")
         if evcrate_global_sync_mode == "full":
-            print(f"🧹 Fully replacing legacy Claude directory: {target_claude}")
+            print(f"[sync] Fully replacing legacy Claude directory: {target_claude}")
             if target_claude.exists():
                 shutil.rmtree(target_claude)
             target_claude.mkdir(parents=True, exist_ok=True)
         else:
-            print(f"🧹 Removing managed Claude assets only: {target_claude}")
+            print(f"[sync] Removing managed Claude assets only: {target_claude}")
             remove_managed_paths(target_claude, [
                 "agents", "commands", "hooks", "scripts", "skills", "workflows",
                 "settings.json", ".mcp.json.example", "statusline.cjs", ".ckignore"
