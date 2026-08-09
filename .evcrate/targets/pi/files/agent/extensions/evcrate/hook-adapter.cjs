@@ -3,7 +3,7 @@
 /** Bounded adapter between Pi events and generated canonical EVCrate hooks. */
 const { spawn } = require("node:child_process");
 const { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } = require("node:fs");
-const { dirname, join, resolve } = require("node:path");
+const { dirname, isAbsolute, join, relative, resolve } = require("node:path");
 const { tmpdir } = require("node:os");
 
 const HOOK_TIMEOUT_MS = 30_000;
@@ -15,13 +15,14 @@ function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function containedPath(root, relative) {
-  if (typeof relative !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._/-]*\.c?js$/.test(relative)) return undefined;
+function containedPath(root, relativePath) {
+  if (typeof relativePath !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._/-]*\.c?js$/.test(relativePath)) return undefined;
   const base = realpathSync(root);
-  const candidate = resolve(base, relative);
+  const candidate = resolve(base, relativePath);
   let resolved;
   try { resolved = realpathSync(candidate); } catch { return undefined; }
-  return resolved.startsWith(`${base}/`) || resolved === base ? resolved : undefined;
+  const relation = relative(base, resolved);
+  return relation === "" || (!relation.startsWith("..") && !isAbsolute(relation)) ? resolved : undefined;
 }
 
 function mapToolName(name) {

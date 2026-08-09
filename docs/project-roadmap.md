@@ -165,7 +165,7 @@ Enterprise-grade features and deployment options.
 
 ### Phases 05–06: ISOLATED VALIDATION AND USER CUTOVER PENDING
 
-Build/check, package, and temporary-HOME validation must be reviewed before a user-approved, manually quiescent live Pi cutover. See [Native Pi migration](./pi-native-migration.md).
+Build/check, packed-tarball, native Pi discovery, and temporary-HOME validation must be reviewed before a user-approved, manually quiescent live Pi cutover. The user must manually remove `pi-code` before a live dry-run and publication; no automation changes live provider settings. Deferred follow-up work includes the Codex-owned `.agents` refactor and explicit model-role routes for providers validated after OpenAI Codex. See [Native Pi migration](./pi-native-migration.md).
 
 See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
 

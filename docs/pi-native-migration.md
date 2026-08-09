@@ -19,7 +19,7 @@ The Pi target publishes only `EVCRATE_HOME/.pi` to `EVCRATE_HOME/.pi`. `PI_CODIN
 - `evcrate_command` performs bounded nested command expansion; static workflows remain Markdown documents, not executable JavaScript workflows.
 - Generated agents retain semantic roles (`strong`, `standard`, `fast`, `parent`) rather than model IDs. For `openai-codex`, implicit routes are Sol/high, Terra/high, and Luna/low respectively. Unknown providers inherit the parent model; EVCrate never guesses a cross-provider route.
 - `evcrate_subagent` uses the structured `pi-subagents` transport. A terminal response proves execution completed, not that the parent accepted the result. The parent must still inspect artifacts and run requested tests or review gates.
-- The extension is the sole Pi lifecycle/tool-hook owner. It maps session start/resume/reload, manual/automatic compaction, prompt submission, tool pre/post events, and child delegation to the generated hook map. Pi has no equivalent for Claude's `SessionEnd: clear`; that clear-only canonical hook is not fabricated on shutdown.
+- The extension is the sole Pi lifecycle/tool-hook owner. Session starts map Pi `startup`, `new`, `resume`, `fork`, and `reload` reasons to canonical SessionStart context. Manual compaction maps to `manual`; threshold and overflow compaction map to `auto`; post-compaction reapplies compact SessionStart context. Shutdown runs canonical cleanup only—Pi has no `clear` shutdown reason, so EVCrate never fabricates Claude's `SessionEnd: clear` hook. Prompt submission, tool pre/post events, and child delegation are derived from the generated hook map.
 
 ## Managed packages and settings
 
@@ -32,6 +32,28 @@ It does not own provider credentials, defaults, themes, sessions, UI configurati
 
 The publisher rejects malformed or symlinked settings and aborts promotion if the Pi HOME tree changes concurrently. No-op, dry-run, and rollback preserve settings bytes. `pi-code` (including versioned/object forms) is a hard conflict: remove it manually before a non-dry publish. EVCrate never removes it automatically.
 
+### Optional model-role overrides
+
+User-owned routes belong under `evcrate.modelRoles.providers`; EVCrate reads them but never writes them. A route must name a model available from the same active provider. Invalid or unavailable routes warn once and inherit the parent model.
+
+```json
+{
+  "evcrate": {
+    "modelRoles": {
+      "providers": {
+        "provider-id": {
+          "strong": {"model": "provider-id/model", "thinking": "high"},
+          "standard": {"model": "provider-id/model"},
+          "fast": {"model": "provider-id/model", "thinking": "low"}
+        }
+      }
+    }
+  }
+}
+```
+
+`parent` intentionally has no implicit route. Explicit per-delegation model or thinking overrides remain authoritative when valid.
+
 ## Skills and launch isolation
 
 Pi discovers both `.pi` and `.agents` skills. Same-name Pi skills normally win with Pi's collision warning. To use only EVCrate's Pi skills:
@@ -41,6 +63,14 @@ pi --no-skills --skill "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/skills"
 ```
 
 Pi settings cannot portably exclude only `.agents` skills while retaining automatic `.pi` skill discovery.
+
+## Troubleshooting
+
+- **Missing command:** rebuild with `python3 distribute.py --build`, then run `--check`; nested Markdown paths register as `/dir:file`.
+- **`pi-code` conflict:** remove that package manually, exit Pi, and review a dry-run. Publication will not remove it for you.
+- **Role warning or inherited child model:** verify the selected provider has the configured route/model and that the route uses the schema above; unknown providers intentionally inherit.
+- **Safety hook blocks a tool:** inspect the hook diagnostic and canonical policy. Privacy/scout failures fail closed by design.
+- **Skill collision warning:** launch with the isolated-skill command above; `.agents` cannot be selectively excluded through settings.
 
 ## Safe cutover and rollback
 

@@ -16,7 +16,7 @@ evcrate/
 │   ├── .claude/          # Canonical Claude Code source
 │   ├── .codex/           # Generated Codex artifact
 │   ├── .agents/          # Codex-owned, Pi-compatible shared skills
-│   ├── .pi/              # Generated native Pi Phase 02 resource projection
+│   ├── .pi/              # Generated native Pi resource projection and runtime
 │   ├── .gemini/          # Generated Gemini artifact
 │   ├── .antigravity/     # Generated Antigravity artifact
 │   ├── .opencode/        # OpenCode compatibility source
@@ -53,7 +53,7 @@ The advisor is current-session guidance only: it structures a local decision bri
 ## Core Technologies
 
 ### Runtime & Dependencies
-- **Node.js**: >=18.0.0
+- **Node.js**: >=22.19.0
 - **Package Manager**: npm
 - **License**: MIT
 

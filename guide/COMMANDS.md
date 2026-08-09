@@ -1307,6 +1307,10 @@ Organize commands in subdirectories:
 
 Usage: `/design:fast`, `/fix:hard`, `/custom:your-command`
 
+### Native Pi command paths
+
+The native Pi target generates these commands from the same canonical Markdown files. It recursively maps `commands/dir/file.md` to `/dir:file`; root files remain `/name`. Run `python3 distribute.py --build` after changing canonical commands, then start Pi with the documented isolated skill path when you need to avoid `.agents` skill collisions. Pi command registration is native—there is no `pi-code` command emulator.
+
 ---
 
 ## Troubleshooting

@@ -8,7 +8,7 @@
 ## Overview
 
 - **Priority:** P1
-- **Status:** In progress — isolated build/check, package, temporary-HOME, and extension-load gates recorded; live cutover remains excluded.
+- **Status:** DONE (isolated validation 260809) — live cutover remains excluded.
 - **Goal:** prove native Pi behavior and distribution safety end to end before touching the user's live Pi configuration.
 - **Effort:** 6–10h
 
