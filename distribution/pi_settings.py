@@ -29,7 +29,10 @@ class PiSettingsPlan:
 
 
 def managed_settings_fragment() -> dict[str, Any]:
-    return {"packages": list(MANAGED_PACKAGES)}
+    return {
+        "packages": list(MANAGED_PACKAGES),
+        "schema": "evcrate-pi-managed-settings-v1",
+    }
 
 
 def _base_identity(value: str) -> str | None:

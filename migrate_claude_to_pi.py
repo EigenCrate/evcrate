@@ -5,12 +5,21 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import sys
 from pathlib import Path
 
 from distribution.hashing import canonical_json_bytes
 from distribution.pi_settings import managed_settings_fragment
 from pi_adapter import contained_pi_output, contained_source
+from pi_adapter.agents import convert_agents
+from pi_adapter.resources import (
+    copy_commands_and_workflows,
+    copy_hooks_and_scripts,
+    copy_skills,
+    inventory,
+    write_inventory,
+)
 
 
 def _required_path(name: str, *, directory: bool) -> Path:
@@ -44,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as error:
         raise SystemExit(str(error)) from error
     output = _output_root()
+    output.chmod(0o755)
     config = source / ".evcrate.json"
     ignore = source / ".evcrateignore"
     if config.is_symlink() or not config.is_file() or ignore.is_symlink() or not ignore.is_file():
@@ -51,10 +61,19 @@ def main(argv: list[str] | None = None) -> int:
     for source_file, destination in ((config, output / ".evcrate.json"), (ignore, output / ".evcrateignore")):
         normalized = source_file.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
         destination.write_bytes(normalized)
-    (output / "agent/evcrate").mkdir(parents=True, exist_ok=True)
-    (output / "agent/evcrate/managed-settings.json").write_bytes(
-        canonical_json_bytes(managed_settings_fragment())
-    )
+        destination.chmod(stat.S_IMODE(source_file.stat().st_mode))
+    resources = inventory(source)
+    resource_root = output / "agent/evcrate"
+    resource_root.mkdir(parents=True, exist_ok=True)
+    resource_root.chmod(0o755)
+    settings_fragment = resource_root / "managed-settings.json"
+    settings_fragment.write_bytes(canonical_json_bytes(managed_settings_fragment()))
+    settings_fragment.chmod(0o644)
+    copy_commands_and_workflows(source, output)
+    copy_skills(source, output)
+    copy_hooks_and_scripts(source, output)
+    convert_agents(source, output)
+    write_inventory(output / "agent/evcrate/inventory.json", output, resources)
     return 0
 
 
