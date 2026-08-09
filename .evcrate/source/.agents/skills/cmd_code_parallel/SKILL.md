@@ -5,7 +5,7 @@ description: "Execute parallel or sequential phases based on plan structure"
 
 # cmd_code_parallel
 
-Command Path: /code/parallel
+Command Path: /code:parallel
 
 Description: Execute parallel or sequential phases based on plan structure
 

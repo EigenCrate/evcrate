@@ -5,7 +5,7 @@ description: "Stage, commit and push all code in the current branch"
 
 # cmd_git_cp
 
-Command Path: /git/cp
+Command Path: /git:cp
 
 Description: Stage, commit and push all code in the current branch
 

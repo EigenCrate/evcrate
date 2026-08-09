@@ -75,7 +75,7 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 
 ### 2. Scout First
 
-* Use `/scout/ext` (preferred) or `/scout` (fallback) before proposing implementation details.
+* Use `/scout:ext` (preferred) or `/scout` (fallback) before proposing implementation details.
 * Scout for:
   - relevant code files and tests
   - docs and architecture references

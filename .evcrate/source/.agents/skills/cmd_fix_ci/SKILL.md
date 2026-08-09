@@ -5,7 +5,7 @@ description: "Analyze Github Actions logs and fix issues"
 
 # cmd_fix_ci
 
-Command Path: /fix/ci
+Command Path: /fix:ci
 
 Description: Analyze Github Actions logs and fix issues
 

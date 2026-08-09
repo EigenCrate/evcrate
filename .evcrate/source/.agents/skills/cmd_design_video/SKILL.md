@@ -5,7 +5,7 @@ description: "Create a design based on video"
 
 # cmd_design_video
 
-Command Path: /design/video
+Command Path: /design:video
 
 Description: Create a design based on video
 

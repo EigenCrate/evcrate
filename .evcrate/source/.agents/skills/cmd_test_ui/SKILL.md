@@ -5,7 +5,7 @@ description: "Run UI tests on a website & generate a detailed report."
 
 # cmd_test_ui
 
-Command Path: /test/ui
+Command Path: /test:ui
 
 Description: Run UI tests on a website & generate a detailed report.
 

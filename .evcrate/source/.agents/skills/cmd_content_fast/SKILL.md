@@ -5,7 +5,7 @@ description: "Write creative & smart copy [FAST]"
 
 # cmd_content_fast
 
-Command Path: /content/fast
+Command Path: /content:fast
 
 Description: Write creative & smart copy [FAST]
 

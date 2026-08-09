@@ -5,7 +5,7 @@ description: "Use subagents to plan and fix hard issues"
 
 # cmd_fix_hard
 
-Command Path: /fix/hard
+Command Path: /fix:hard
 
 Description: Use subagents to plan and fix hard issues
 

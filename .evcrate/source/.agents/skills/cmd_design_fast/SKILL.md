@@ -5,7 +5,7 @@ description: "Create a quick design"
 
 # cmd_design_fast
 
-Command Path: /design/fast
+Command Path: /design:fast
 
 Description: Create a quick design
 

@@ -62,19 +62,19 @@ If mode is omitted, use `port`. Reject unknown modes instead of guessing.
 | Take decision | Invoke | Ownership after invocation |
 | --- | --- | --- |
 | `compare` | No plan or code command | `take` returns the read-only comparison report |
-| Small, local, low-risk transfer | `/plan/fast <take-prompt>` | `/plan/fast` creates the plan through `planner` |
-| Unfamiliar, remote, cross-layer, dependency, auth, data, or license risk | `/plan/hard <take-prompt>` | `/plan/hard` coordinates up to 2 `researcher` agents and `planner` |
-| Independent phases with exclusive file ownership | `/plan/parallel <take-prompt>` | `/plan/parallel` creates the dependency graph and ownership matrix |
-| Any non-`compare` plan | `/plan/validate <plan-path>` | `/plan/validate` interviews the user and records decisions |
+| Small, local, low-risk transfer | `/plan:fast <take-prompt>` | `/plan:fast` creates the plan through `planner` |
+| Unfamiliar, remote, cross-layer, dependency, auth, data, or license risk | `/plan:hard <take-prompt>` | `/plan:hard` coordinates up to 2 `researcher` agents and `planner` |
+| Independent phases with exclusive file ownership | `/plan:parallel <take-prompt>` | `/plan:parallel` creates the dependency graph and ownership matrix |
+| Any non-`compare` plan | `/plan:validate <plan-path>` | `/plan:validate` interviews the user and records decisions |
 | Sequential implementation | `/code <plan-path>` | `/code` implements, tests, reviews, and finalizes |
-| Validated plan with independent phases only | `/code/parallel <plan-path>` | `/code/parallel` delegates owned phases to `fullstack-developer` |
+| Validated plan with independent phases only | `/code:parallel <plan-path>` | `/code:parallel` delegates owned phases to `fullstack-developer` |
 
 Handoff rules:
 
 - Pass report paths and compact findings to `/plan:*`; do not paste full source or duplicate the planner's research workflow.
 - Pass the validated plan path plus mode, provenance, rejected material, and unresolved questions to `/code*`; do not duplicate implementation instructions from the code command.
 - Do not call `planner`, `tester`, `debugger`, `code-reviewer`, `project-manager`, or `docs-manager` directly for work already owned by `/plan` or `/code`. Direct delegation is allowed only for a focused read-only question before handoff or when the owning command explicitly requests it.
-- Do not use `/code/no-test` for `take`; transferred features require the normal `/code` quality gates. Do not use `/code/auto` or commit/push shortcuts unless the user explicitly requests that workflow and its gates remain intact.
+- Do not use `/code:no-test` for `take`; transferred features require the normal `/code` quality gates. Do not use `/code:auto` or commit/push shortcuts unless the user explicitly requests that workflow and its gates remain intact.
 - If a delegated command is unavailable, stop and report the missing command. Do not silently inline a weaker replacement workflow.
 - After a delegated command returns, inspect its report and verify its required gate evidence before continuing.
 
@@ -125,11 +125,11 @@ The main agent orchestrates; subagents return report paths and short summaries. 
 | Current-project map | `scout` agent or `/scout` | Always for non-trivial scope | Read-only report |
 | Source map | `scout-external` for remote/separate/large source; `scout` for a small local source | Always for non-`compare` work; always for `compare` unless already evidenced | Read-only report |
 | Independent risk/docs research | Up to 2 `researcher` agents in parallel | Only if framework/version, dependency, license, security, or external API assumptions are unclear | Read-only report, max 150 lines |
-| Plan synthesis | `planner` via `/plan/fast`, `/plan/hard`, or `/plan/parallel` | Required for `copy`, `improve`, and `port` | Plan files only |
+| Plan synthesis | `planner` via `/plan:fast`, `/plan:hard`, or `/plan:parallel` | Required for `copy`, `improve`, and `port` | Plan files only |
 | Schema/data review | `database-admin` | Only if persistence, migration, indexes, or data integrity is involved | Read-only findings unless assigned by `/code` |
 | UI review | `ui-ux-designer` | Only if user-facing UI/UX is involved | Design report; implementation only through `/code` |
 | MCP/docs lookup | `mcp-manager` | Only when MCP resources/tools are required | Read-only report |
-| Implementation | `/code <plan-path>`; `/code/parallel` only for independent phases | After validation; never for `compare` | Files owned by plan phase |
+| Implementation | `/code <plan-path>`; `/code:parallel` only for independent phases | After validation; never for `compare` | Files owned by plan phase |
 | Verification | `tester`, then `debugger` on failures, then `code-reviewer` | Required through `/code` after implementation | Reports; fixes follow code ownership |
 | Project/docs closeout | `/code` finalization, which delegates `project-manager`/`docs-manager` when required | After implementation is approved and docs/progress need updating | Plan/docs ownership only |
 
@@ -245,9 +245,9 @@ Use the source as behavioral reference only. Reimplement with local abstractions
 
 Route to the existing plan command based on risk:
 
-- `/plan/fast` for a small, local, well-understood transfer with no schema/auth/security uncertainty.
-- `/plan/hard` for remote or unfamiliar sources, cross-layer work, dependencies, auth, data, licensing, or unresolved architectural assumptions; use at most 2 parallel `researcher` agents.
-- `/plan/parallel` only when phases can have exclusive file ownership and genuinely independent work; otherwise use sequential `/code`.
+- `/plan:fast` for a small, local, well-understood transfer with no schema/auth/security uncertainty.
+- `/plan:hard` for remote or unfamiliar sources, cross-layer work, dependencies, auth, data, licensing, or unresolved architectural assumptions; use at most 2 parallel `researcher` agents.
+- `/plan:parallel` only when phases can have exclusive file ownership and genuinely independent work; otherwise use sequential `/code`.
 
 Build one concise prompt for the selected `/plan:*` command containing the preflight contract, source/local report paths, transfer map, challenge matrix, chosen mode, rejected alternatives, and unresolved questions. The selected plan command delegates to `planner`; do not invoke `planner` a second time. Require the resulting plan to state:
 
@@ -260,7 +260,7 @@ Build one concise prompt for the selected `/plan:*` command containing the prefl
 - rollback and onboarding steps;
 - no implementation before validation.
 
-Run the existing `/plan/validate <plan-path>` before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/plan:*` command and re-plan before coding.
+Run the existing `/plan:validate <plan-path>` before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/plan:*` command and re-plan before coding.
 
 Required side-effect checklist:
 
@@ -275,7 +275,7 @@ Required side-effect checklist:
 
 ## Phase 4: Implementation Handoff and Quality Gates
 
-After validation, route to `/code <plan-path>` for sequential work or `/code/parallel <plan-path>` only when the plan proves exclusive ownership. Pass the mode, source provenance, report paths, explicit rejected material, unresolved questions, and required evidence. Do not duplicate discovery or the code workflow in the implementation prompt.
+After validation, route to `/code <plan-path>` for sequential work or `/code:parallel <plan-path>` only when the plan proves exclusive ownership. Pass the mode, source provenance, report paths, explicit rejected material, unresolved questions, and required evidence. Do not duplicate discovery or the code workflow in the implementation prompt.
 
 `take` must not re-run the implementation workflow itself. It only checks the delegated command's completion report for:
 
@@ -289,7 +289,7 @@ After validation, route to `/code <plan-path>` for sequential work or `/code/par
 8. critical review findings were fixed and retested, or explicitly accepted by the user;
 9. `/code` invoked `project-manager`/`docs-manager` only when required and after approval.
 
-For parallel implementation, trust `/code/parallel` to delegate phases to `fullstack-developer` according to the plan's exclusive file-ownership matrix. No two agents may write the same file. `database-admin` or `ui-ux-designer` may be used only for conditional concerns identified in the plan.
+For parallel implementation, trust `/code:parallel` to delegate phases to `fullstack-developer` according to the plan's exclusive file-ownership matrix. No two agents may write the same file. `database-admin` or `ui-ux-designer` may be used only for conditional concerns identified in the plan.
 
 If any delegated gate fails: stop the success claim, preserve the failure evidence, return the failure to `/code` for its debugger/fix/retest loop, update the plan if scope or assumptions changed, and re-run the owning command. `take` must not patch implementation files directly.
 

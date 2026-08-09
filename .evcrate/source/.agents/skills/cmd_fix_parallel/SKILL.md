@@ -5,7 +5,7 @@ description: "Analyze & fix issues with parallel fullstack-developer agents"
 
 # cmd_fix_parallel
 
-Command Path: /fix/parallel
+Command Path: /fix:parallel
 
 Description: Analyze & fix issues with parallel fullstack-developer agents
 
@@ -34,12 +34,12 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 ### 1. Issue Analysis
 - Use `debugger` subagent to analyze root causes
-- Use `/scout/ext` to find related files
+- Use `/scout:ext` to find related files
 - Categorize issues by scope/area (frontend, backend, auth, payments, etc.)
 - Identify dependencies between issues
 
 ### 2. Parallel Fix Planning
-- Use the matching `cmd_*` skill to run `/plan/parallel <detailed-fix-instructions>` for parallel-executable fix plan
+- Use the matching `cmd_*` skill to run `/plan:parallel <detailed-fix-instructions>` for parallel-executable fix plan
 - Wait for plan with dependency graph, execution strategy, file ownership matrix
 - Group independent fixes for parallel execution
 - Sequential fixes for dependent issues

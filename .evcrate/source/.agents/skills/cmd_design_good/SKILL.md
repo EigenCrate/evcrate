@@ -5,7 +5,7 @@ description: "Create an immersive design"
 
 # cmd_design_good
 
-Command Path: /design/good
+Command Path: /design:good
 
 Description: Create an immersive design
 

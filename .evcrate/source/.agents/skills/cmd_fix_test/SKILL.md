@@ -5,7 +5,7 @@ description: "Run test suite and fix issues"
 
 # cmd_fix_test
 
-Command Path: /fix/test
+Command Path: /fix:test
 
 Description: Run test suite and fix issues
 

@@ -5,7 +5,7 @@ description: "Analyze and fix small issues [FAST]"
 
 # cmd_fix_fast
 
-Command Path: /fix/fast
+Command Path: /fix:fast
 
 Description: Analyze and fix small issues [FAST]
 

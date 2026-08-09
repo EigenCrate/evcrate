@@ -5,7 +5,7 @@ description: "⚠️ Merge code from one branch to another"
 
 # cmd_git_merge
 
-Command Path: /git/merge
+Command Path: /git:merge
 
 Description: ⚠️ Merge code from one branch to another
 

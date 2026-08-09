@@ -40,8 +40,8 @@ Check the `## Plan Context` section in the injected context:
 
 ## Workflow
 - Analyze the given task and use `request_user_input` tool to ask for more details if needed.
-- Decide to use `/plan/fast` or `/plan/hard` Codex slash commands based on the complexity.
-- Use the matching `cmd_*` skill to run `/plan/fast <detailed-instructions-prompt>` or `/plan/hard <detailed-instructions-prompt>`
+- Decide to use `/plan:fast` or `/plan:hard` Codex slash commands based on the complexity.
+- Use the matching `cmd_*` skill to run `/plan:fast <detailed-instructions-prompt>` or `/plan:hard <detailed-instructions-prompt>`
 - Activate `planning` skill.
 - Note: `detailed-instructions-prompt` is **an enhanced prompt** that describes the task in detail based on the provided task description.
 

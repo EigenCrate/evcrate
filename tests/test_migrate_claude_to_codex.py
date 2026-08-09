@@ -1,7 +1,9 @@
 import os
+import shutil
 import subprocess
 import sys
 import unittest
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -10,6 +12,8 @@ from migrate_claude_to_codex import (
     SUBAGENT_WAIT_CONTRACT,
     apply_replacements,
     apply_subagent_wait_contract,
+    canonicalize_command_tokens,
+    migrate_commands_as_native_skills,
     migrate_help_scripts,
 )
 
@@ -90,6 +94,90 @@ class ApplyReplacementsTest(unittest.TestCase):
             self.assertEqual((target_dir / "scripts/ev-help.py").read_bytes(), b"help")
             self.assertEqual((target_dir / "scripts/test-evcrate-help.py").read_bytes(), b"test")
             self.assertFalse((target_dir / "scripts/ignored.pyc").exists())
+
+    def test_nested_command_tokens_use_colon_presentation(self) -> None:
+        known_commands = {"/fix:logs"}
+
+        self.assertEqual(canonicalize_command_tokens("Run /fix/logs", known_commands), "Run /fix:logs")
+        self.assertEqual(canonicalize_command_tokens("Run /fix:logs", known_commands), "Run /fix:logs")
+        self.assertEqual(canonicalize_command_tokens("Run /unknown/path", known_commands), "Run /unknown/path")
+
+    def test_generated_nested_command_skill_keeps_canonical_label(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude" / "commands" / "fix"
+            agents_dir = root / ".agents"
+            source_dir.mkdir(parents=True)
+            (source_dir / "logs.md").write_text(
+                "---\nname: /fix:logs\ndescription: Fix logs\n---\nUse /fix/logs next.\n",
+                encoding="utf-8",
+            )
+
+            with patch("migrate_claude_to_codex.CLAUDE_DIR", root / ".claude"), patch(
+                "migrate_claude_to_codex.AGENTS_DIR", agents_dir
+            ):
+                migrate_commands_as_native_skills()
+
+            content = (agents_dir / "skills/cmd_fix_logs/SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("Command Path: /fix:logs", content)
+            self.assertNotIn("/fix/logs", content)
+
+    def test_help_resolves_codex_sibling_command_skills_without_claude_tree(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source = repository / ".evcrate/source/.claude/scripts/ev-help.py"
+        spec = spec_from_file_location("ev_help", source)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            script_path = root / ".codex/scripts/ev-help.py"
+            skills_dir = root / ".agents/skills"
+            script_path.parent.mkdir(parents=True)
+            skills_dir.mkdir(parents=True)
+
+            with patch.dict(os.environ, {
+                "CLAUDE_PROJECT_DIR": "",
+                "CODEX_PROJECT_DIR": "",
+                "GEMINI_PROJECT_DIR": "",
+                "AGY_PROJECT_DIR": "",
+            }):
+                source_type, source_dir = module.resolve_command_source(script_path)
+
+            self.assertEqual((source_type, source_dir), ("skills", skills_dir))
+
+    def test_codex_help_executes_with_sibling_command_skills_without_claude_tree(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source_help = repository / ".evcrate/source/.claude/scripts/ev-help.py"
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            script_path = root / ".codex/scripts/ev-help.py"
+            skill_path = root / ".agents/skills/cmd_fix_logs/SKILL.md"
+            script_path.parent.mkdir(parents=True)
+            skill_path.parent.mkdir(parents=True)
+            shutil.copyfile(source_help, script_path)
+            skill_path.write_text(
+                "---\nname: cmd-fix-logs\ndescription: Fix logs\n---\n"
+                "# cmd_fix_logs\n\nCommand Path: /fix:logs\n",
+                encoding="utf-8",
+            )
+            env = os.environ.copy()
+            for name in ("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR"):
+                env.pop(name, None)
+
+            completed = subprocess.run(
+                [sys.executable, str(script_path), "fix:logs"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn("/fix:logs", completed.stdout)
+            self.assertNotIn("/fix/logs", completed.stdout)
 
 
 if __name__ == "__main__":

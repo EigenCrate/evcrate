@@ -434,6 +434,11 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
         if commands_dir.is_dir():
             return "commands", commands_dir
 
+    # Codex publishes generated command skills as a sibling .agents tree.
+    codex_skills = target_root.parent / ".agents" / "skills"
+    if target_root.name == ".codex" and codex_skills.is_dir():
+        return "skills", codex_skills
+
     if direct_skills.is_dir():
         return "skills", direct_skills
     return "", target_root / "commands"

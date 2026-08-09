@@ -5,7 +5,7 @@ description: "Bootstrap a new project automatically"
 
 # cmd_bootstrap_auto
 
-Command Path: /bootstrap/auto
+Command Path: /bootstrap:auto
 
 Description: Bootstrap a new project automatically
 

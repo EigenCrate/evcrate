@@ -5,7 +5,7 @@ description: "Stage all files and create a commit."
 
 # cmd_git_cm
 
-Command Path: /git/cm
+Command Path: /git:cm
 
 Description: Stage all files and create a commit.
 

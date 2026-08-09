@@ -5,7 +5,7 @@ description: "Create a pull request"
 
 # cmd_git_pr
 
-Command Path: /git/pr
+Command Path: /git:pr
 
 Description: Create a pull request
 

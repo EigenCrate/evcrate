@@ -5,7 +5,7 @@ description: "Create a design based on screenshot"
 
 # cmd_design_screenshot
 
-Command Path: /design/screenshot
+Command Path: /design:screenshot
 
 Description: Create a design based on screenshot
 

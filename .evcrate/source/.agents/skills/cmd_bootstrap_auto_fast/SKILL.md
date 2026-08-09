@@ -5,7 +5,7 @@ description: "Quickly bootstrap a new project automatically"
 
 # cmd_bootstrap_auto_fast
 
-Command Path: /bootstrap/auto/fast
+Command Path: /bootstrap:auto:fast
 
 Description: Quickly bootstrap a new project automatically
 

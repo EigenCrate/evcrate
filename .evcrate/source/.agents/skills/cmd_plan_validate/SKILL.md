@@ -5,7 +5,7 @@ description: "Validate plan with critical questions interview"
 
 # cmd_plan_validate
 
-Command Path: /plan/validate
+Command Path: /plan:validate
 
 Description: Validate plan with critical questions interview
 
@@ -34,7 +34,7 @@ Interview the user with critical questions to validate assumptions, confirm deci
 
 1. If `{{args}}` provided → Use that path
 2. Else check `## Plan Context` section → Use active plan path
-3. If no plan found → Ask user to specify path or run `/plan/hard` first
+3. If no plan found → Ask user to specify path or run `/plan:hard` first
 
 ## Configuration (from injected context)
 

@@ -5,7 +5,7 @@ description: "Analyze Github Actions logs and provide a plan to fix the issues"
 
 # cmd_plan_ci
 
-Command Path: /plan/ci
+Command Path: /plan:ci
 
 Description: Analyze Github Actions logs and provide a plan to fix the issues
 

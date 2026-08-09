@@ -5,7 +5,7 @@ description: "Plan parallel phases & execute with fullstack-developer agents"
 
 # cmd_cook_auto_parallel
 
-Command Path: /cook/auto/parallel
+Command Path: /cook:auto:parallel
 
 Description: Plan parallel phases & execute with fullstack-developer agents
 
@@ -37,13 +37,13 @@ Use this only when work can be split into independent phases with clear dependen
 ## Workflow
 
 ### 1. Preflight & Research
-- Scout codebase with `/scout/ext` before planning
+- Scout codebase with `/scout:ext` before planning
 - Define output, acceptance criteria, scope boundary, side-effect risks, and testing strategy
 - Use max 2 `researcher` agents in parallel if tasks complex
 - Keep reports ≤150 lines
 
 ### 2. Parallel Planning
-- Use the matching `cmd_*` skill to run `/plan/parallel <detailed-instruction>`
+- Use the matching `cmd_*` skill to run `/plan:parallel <detailed-instruction>`
 - Wait for plan with:
   - dependency graph
   - execution strategy

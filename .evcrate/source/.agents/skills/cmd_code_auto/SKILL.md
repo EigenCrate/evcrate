@@ -5,7 +5,7 @@ description: "[AUTO] Start coding & testing an existing plan (\"trust me bro\")"
 
 # cmd_code_auto
 
-Command Path: /code/auto
+Command Path: /code:auto
 
 Description: [AUTO] Start coding & testing an existing plan ("trust me bro")
 
@@ -186,7 +186,7 @@ If $ALL_PHASES is `No`, wait for user confirmation before proceeding to the next
 If this is the last phase, generate a concise summary report.
 Use `request_user_input` tool to ask these questions:
 - If user wants to preview the report with `/preview` slash command.
-- If user wants to archive the plan with `/plan/archive` slash command.
+- If user wants to archive the plan with `/plan:archive` slash command.
 
 ---
 

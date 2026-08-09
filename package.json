@@ -4,7 +4,7 @@
   "description": "A comprehensive boilerplate template for Claude Code, OpenCode, and native Pi coding agents.",
   "main": "index.js",
   "scripts": {
-    "distribute": "python3 distribute.py",
+    "distribute": "bash -o pipefail -c 'python3 distribute.py --all 2>&1 | tee logs.txt'",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
     "distribute:publish": "python3 distribute.py --publish",
@@ -12,7 +12,7 @@
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
     "test": "npm run test:python && npm run test:pi",
-    "test:python": "python3 -m unittest tests.test_distribution_build tests.test_distribution_cli tests.test_distribution_publish tests.test_distribution_publish_symlinks tests.test_advisor_skill_distribution tests.test_migrate_claude_to_gemini",
+    "test:python": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "test:pi": "node --test .evcrate/targets/pi/tests/*.test.mjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
@@ -55,10 +55,10 @@
     ".evcrate/source/CLAUDE.md",
     ".evcrate/source/GEMINI.md",
     "plans/",
-    "AGENTS.md",
-    "CLAUDE.md",
     "README.md",
-    ".claude/metadata.json"
+    "CHANGELOG.md",
+    "LICENSE",
+    ".evcrate/source/.claude/metadata.json"
   ],
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",

@@ -5,7 +5,7 @@ description: "Implement a feature automatically with plan and quality gates"
 
 # cmd_cook_auto
 
-Command Path: /cook/auto
+Command Path: /cook:auto
 
 Description: Implement a feature automatically with plan and quality gates
 
@@ -47,6 +47,6 @@ This is the lower-friction `/cook` variant. It can reduce user checkpoints, but 
 2. If unresolved questions can cause incorrect implementation, use `request_user_input` before continuing.
 3. Use the matching `cmd_*` skill to run `/plan <detailed-instruction-prompt>` to create an implementation plan based on the preflight contract and tasks.
 4. Use the matching `cmd_*` skill to run `/code <plan>` to implement the plan with compile/typecheck, tests, code review, and approval gates.
-5. Finally use `request_user_input` tool to ask user if he wants to commit to git repository, if yes use the matching `cmd_*` skill to run `/git/cm` to create a commit.
+5. Finally use `request_user_input` tool to ask user if he wants to commit to git repository, if yes use the matching `cmd_*` skill to run `/git:cm` to create a commit.
 
 **Positioning:** Use this for familiar product work where the user trusts the default workflow. Use base `/cook` when requirements, risk, or scope need explicit discussion.
