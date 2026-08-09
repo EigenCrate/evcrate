@@ -29,6 +29,35 @@ def recover_interrupted_publish(context: DistributionContext) -> None:
         marker = read_release_marker(context.state_dir)
         if marker.get("status") != "in_progress":
             return
+        operations = marker.get("operations")
+        transaction_name = marker.get("transaction_dir")
+        if isinstance(operations, list) and isinstance(transaction_name, str):
+            from .publish import _managed_destination, _replace_managed_file
+
+            transaction = context.state_dir / transaction_name
+            if transaction.parent != context.state_dir or not transaction.name.startswith("release-"):
+                raise PublishError("Interrupted release marker has an unsafe transaction")
+            policy_by_name = {name: home for name, _, home, _ in _policies(context)}
+            for operation in reversed(operations):
+                if not isinstance(operation, dict):
+                    raise PublishError("Interrupted release marker has an unsafe operation")
+                name, relative, backup = operation.get("root"), operation.get("path"), operation.get("backup")
+                if name not in policy_by_name or not isinstance(relative, str) or (backup is not None and not isinstance(backup, str)):
+                    raise PublishError("Interrupted release marker has an unsafe operation")
+                destination = _managed_destination(policy_by_name[name], relative)
+                if backup is None:
+                    destination.unlink(missing_ok=True)
+                else:
+                    backup_path = transaction / backup
+                    if backup_path.parent != transaction or not backup_path.is_file():
+                        raise PublishError("Interrupted release marker has a missing backup")
+                    _replace_managed_file(destination, backup_path.read_bytes())
+            shutil.rmtree(transaction, ignore_errors=True)
+            marker["status"] = "recovered"
+            marker["recovery_action"] = "restored-interrupted-files"
+            marker["managed_paths"] = marker.get("previous_managed_paths", {})
+            write_release_marker(context.state_dir, marker)
+            return
         policy_by_name = {name: home for name, _, home, _ in _policies(context)}
         restored: list[tuple[Path, Path | None]] = []
         for name, details in marker.get("roots", {}).items():

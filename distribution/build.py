@@ -52,7 +52,7 @@ def _windows_repository_lock(repository: Path) -> Iterator[None]:
     lock_path = Path(tempfile.gettempdir()) / f"evcrate-distribution-{token}.lock"
     with lock_path.open("a+b") as handle:
         handle.seek(0)
-        if not handle.read(1):
+        if os.fstat(handle.fileno()).st_size == 0:
             handle.write(b"0")
             handle.flush()
         handle.seek(0)
@@ -78,6 +78,7 @@ def _write_journal(path: Path, backup_dir: Path, common_parent: Path, destinatio
     payload = {
         "backup_dir": backup_dir.relative_to(common_parent).as_posix(),
         "destinations": [destination.relative_to(common_parent).as_posix() for destination in destinations],
+        "originally_present": [destination.exists() for destination in destinations],
     }
     temporary = path.with_suffix(".tmp")
     with temporary.open("w", encoding="utf-8") as handle:
@@ -113,6 +114,15 @@ def recover_interrupted_promotion(common_parent: Path) -> None:
         data = json.loads(journal.read_text(encoding="utf-8"))
         backup_dir = common_parent / data["backup_dir"]
         destinations = [common_parent / relative for relative in data["destinations"]]
+        originally_present = data.get("originally_present")
+        if originally_present is None:
+            originally_present = [True] * len(destinations)
+        if (
+            not isinstance(originally_present, list)
+            or len(originally_present) != len(destinations)
+            or any(type(present) is not bool for present in originally_present)
+        ):
+            raise ValueError("journal original-presence metadata is invalid")
         resolved_backup = backup_dir.resolve(strict=False)
         if backup_dir.parent != common_parent or not backup_dir.name.startswith(".evcrate-promotion-"):
             raise ValueError("journal backup has an invalid location")
@@ -124,12 +134,14 @@ def recover_interrupted_promotion(common_parent: Path) -> None:
             raise ValueError("journal path escapes common parent")
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
         raise BuildError(f"Could not safely recover interrupted promotion: {error}") from error
-    for destination in reversed(destinations):
+    for destination, was_present in reversed(list(zip(destinations, originally_present, strict=True))):
         backup = backup_dir / destination.relative_to(common_parent)
-        if destination.exists():
-            _remove(destination)
         if backup.exists():
+            if destination.exists():
+                _remove(destination)
             backup.replace(destination)
+        elif not was_present and destination.exists():
+            _remove(destination)
     journal.unlink()
     if backup_dir.exists():
         _remove(backup_dir)

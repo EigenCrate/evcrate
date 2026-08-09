@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from distribution.context import DistributionContext
 from distribution.contracts import DistributionAction, PublishError, VerifiedArtifact
-from distribution.publish import _copy_candidate, publish_diff, publish_local_artifacts
+from distribution.publish import _managed_destination, publish_diff, publish_local_artifacts
 from distribution.publish_inventory import home_tree_hash
 
 
@@ -36,7 +36,7 @@ class DistributionPublishSymlinkTest(unittest.TestCase):
             launcher.parent.mkdir(parents=True)
             launcher.symlink_to("../playwright/cli.js")
             changes = self._publish(context, source, home)
-            self.assertIn(("node_modules/.bin/browser", "preserve"), {(item.path, item.action) for item in changes})
+            self.assertNotIn("node_modules/.bin/browser", {item.path for item in changes})
             self.assertTrue(launcher.is_symlink())
             self.assertEqual(launcher.readlink(), Path("../playwright/cli.js"))
             self.assertEqual((home / "managed").read_text(encoding="utf-8"), "new")
@@ -110,7 +110,7 @@ class DistributionPublishSymlinkTest(unittest.TestCase):
             link.symlink_to("missing-two")
             self.assertNotEqual(first, home_tree_hash(root))
 
-    def test_candidate_write_guard_rejects_destination_symlink(self) -> None:
+    def test_managed_destination_guard_rejects_destination_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             context = self._context(root)
@@ -120,9 +120,8 @@ class DistributionPublishSymlinkTest(unittest.TestCase):
             (source / "managed").write_text("new", encoding="utf-8")
             outside.write_text("keep", encoding="utf-8")
             (home / "managed").symlink_to(outside)
-            with patch("distribution.publish.home_inventory"):
-                with self.assertRaisesRegex(PublishError, "Refusing to write"):
-                    _copy_candidate(context, source, home, set(), set())
+            with self.assertRaisesRegex(PublishError, "intersects managed"):
+                _managed_destination(home, "managed")
             self.assertEqual(outside.read_text(encoding="utf-8"), "keep")
 
     def test_source_symlink_is_still_rejected(self) -> None:

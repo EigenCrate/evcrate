@@ -136,18 +136,17 @@ class PiSettingsPublicationTest(unittest.TestCase):
             settings.parent.mkdir(parents=True)
             settings.write_text('{"packages":[]}', encoding="utf-8")
             from distribution import publish as module
-            original = module._copy_candidate
+            original = module._shared_plan
 
-            def mutate_after_candidate(*args: object, **kwargs: object):
-                candidate, managed = original(*args, **kwargs)
-                (context.target_pi / "session-live.json").write_text("concurrent", encoding="utf-8")
-                return candidate, managed
+            def mutate_after_plan(*args: object, **kwargs: object):
+                plan = original(*args, **kwargs)
+                settings.write_text('{"packages":["concurrent"]}', encoding="utf-8")
+                return plan
 
-            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._copy_candidate", side_effect=mutate_after_candidate):
+            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._shared_plan", side_effect=mutate_after_plan):
                 with self.assertRaisesRegex(PublishError, "concurrently"):
                     publish_local_artifacts(context, artifact)
-            self.assertEqual(settings.read_text(encoding="utf-8"), '{"packages":[]}')
-            self.assertEqual((context.target_pi / "session-live.json").read_text(encoding="utf-8"), "concurrent")
+            self.assertEqual(settings.read_text(encoding="utf-8"), '{"packages":["concurrent"]}')
 
 
 if __name__ == "__main__":

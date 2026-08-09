@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import uuid
@@ -18,8 +19,8 @@ from .locking import publish_lock, read_release_marker, write_release_marker
 from .manifest import SharedJsonSpec, load_target_manifest, load_target_registry
 from .pi_settings import PiSettingsError, PiSettingsPlan, plan_pi_settings
 from .publish_verification import verify_local_artifact
-from .publish_inventory import artifact_files as _files, home_inventory, home_tree_hash, prior_managed_paths, protected_paths
-from .publish_recovery import recover_interrupted_publish, restore_roots
+from .publish_inventory import artifact_files as _files, prior_managed_paths
+from .publish_recovery import recover_interrupted_publish
 
 
 @dataclass(frozen=True)
@@ -97,7 +98,7 @@ def _managed_paths_for_publish(marker: dict[str, Any]) -> object:
 def _reject_symlinked_ancestors(path: Path, message: str) -> None:
     probe = path
     while True:
-        if probe.is_symlink():
+        if _is_reparse_point(probe):
             raise PublishError(message)
         if probe.parent == probe:
             break
@@ -169,24 +170,21 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     prior = _managed_paths_for_publish(marker)
     changes: list[PublishChange] = []
     for name, local, home, preserved in _policies(context):
+        _validate_home_ancestors(context, home)
         source = _publication_files(context, local, home)
-        shared_paths = {spec.destination for _, spec in _shared_for_root(context, local, home)}
         prior_paths = prior_managed_paths(prior, name)
-        protected = protected_paths(source, prior_paths, preserved) | shared_paths
-        existing = home_inventory(home, protected) if home.exists() or home.is_symlink() else None
         for relative, content in source.items():
             if relative in preserved:
                 changes.append(PublishChange(name, relative, "preserve"))
-            elif existing is None or relative not in existing.files:
+                continue
+            destination = _managed_destination(home, relative)
+            if not destination.exists():
                 changes.append(PublishChange(name, relative, "create"))
-            elif existing.files[relative] != content:
+            elif destination.read_bytes() != content:
                 changes.append(PublishChange(name, relative, "update"))
         for relative in prior_paths:
-            if relative not in source and relative not in preserved and existing is not None and relative in existing.files:
+            if relative not in source and relative not in preserved and _managed_destination(home, relative).exists():
                 changes.append(PublishChange(name, relative, "delete"))
-        for relative in existing.paths if existing is not None else set():
-            if relative not in source and relative not in prior_paths and relative not in shared_paths:
-                changes.append(PublishChange(name, relative, "preserve"))
     for name, local, home, spec in _shared_specs(context):
         plan = _shared_plan(local, home, spec)
         changes.append(PublishChange(name, spec.destination, plan.action))
@@ -216,69 +214,49 @@ def _publication_files(context: DistributionContext, local: Path, home: Path) ->
         raise PublishError(f"Invalid generated Codex global configuration: {error}") from error
 
 
-def _copy_candidate(
-    context: DistributionContext,
-    local: Path,
-    home: Path,
-    preserved: set[str],
-    prior: set[str],
-) -> tuple[Path, set[str]]:
-    _validate_home_ancestors(context, home)
-    if home.exists() or home.is_symlink():
-        source = _publication_files(context, local, home)
-        shared_paths = {spec.destination for _, spec in _shared_for_root(context, local, home)}
-        home_inventory(home, protected_paths(source, prior, preserved) | shared_paths)
-    else:
-        source = _publication_files(context, local, home)
-    if home.exists() and (home.is_symlink() or not home.is_dir()):
+def _is_reparse_point(path: Path) -> bool:
+    return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
+
+
+def _managed_destination(home: Path, relative: str) -> Path:
+    destination = home / normalize_relative_path(relative)
+    if _is_reparse_point(home) or (home.exists() and not home.is_dir()):
         raise PublishError(f"HOME root is unsafe: {home}")
-    home.parent.mkdir(parents=True, exist_ok=True)
-    candidate = Path(tempfile.mkdtemp(prefix=f".{home.name}.evcrate-stage-", dir=home.parent))
+    current = home
+    for part in destination.relative_to(home).parts[:-1]:
+        current /= part
+        if _is_reparse_point(current) or (current.exists() and not current.is_dir()):
+            raise PublishError(f"HOME reparse point intersects managed path: {destination}")
+    if destination.exists() and (_is_reparse_point(destination) or not destination.is_file()):
+        raise PublishError(f"HOME reparse point intersects managed path: {destination}")
+    return destination
+
+
+def _replace_managed_file(destination: Path, content: bytes) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".evcrate-publish-", dir=destination.parent)
+    temporary = Path(temporary_name)
     try:
-        if home.exists():
-            shutil.copytree(home, candidate, dirs_exist_ok=True, symlinks=True)
-        for relative in prior - set(source):
-            path = candidate / relative
-            if path.exists() and not path.is_symlink():
-                path.unlink()
-        managed: set[str] = set()
-        for relative, content in source.items():
-            if relative in preserved:
-                continue
-            destination = candidate / relative
-            if destination.is_symlink():
-                raise PublishError(f"Refusing to write through HOME symlink: {home / relative}")
-            if any(parent.is_symlink() for parent in destination.parents if parent != candidate.parent):
-                raise PublishError(f"Refusing to write through HOME symlink: {home / relative}")
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(content)
-            managed.add(relative)
-        return candidate, managed
-    except (OSError, PublishError):
-        shutil.rmtree(candidate, ignore_errors=True)
-        raise
-
-
-def _merge_shared_candidate(candidate: Path, local: Path, spec: SharedJsonSpec) -> PiSettingsPlan:
-    fragment = local / spec.fragment
-    settings = candidate / spec.destination
-    existing = settings.read_bytes() if settings.exists() else None
-    try:
-        plan = plan_pi_settings(existing, fragment.read_bytes(), managed_key=spec.managed_key)
-    except (OSError, PiSettingsError) as error:
-        raise PublishError(f"Could not merge Pi shared settings: {error}") from error
-    if plan.action == "conflict":
-        raise PublishError(plan.message)
-    if plan.result is not None and plan.result != existing:
-        settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_bytes(plan.result)
-    return plan
-
-
-def _home_snapshot(home: Path) -> str | None:
-    if not home.exists() and not home.is_symlink():
-        return None
-    return home_tree_hash(home)
+        with open(descriptor, "wb", closefd=True) as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            temporary.replace(destination)
+        except PermissionError as error:
+            if os.name != "nt" or error.winerror not in {5, 32}:
+                raise
+            _reject_symlinked_ancestors(destination, "HOME reparse point intersects managed path")
+            if _is_reparse_point(destination) or not destination.is_file():
+                raise PublishError(f"HOME reparse point intersects managed path: {destination}") from error
+            with destination.open("r+b") as handle:
+                handle.seek(0)
+                handle.write(content)
+                handle.truncate()
+                handle.flush()
+                os.fsync(handle.fileno())
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArtifact, *, dry_run: bool = False) -> list[PublishChange]:
@@ -293,15 +271,9 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
             return changes
         if any(change.action == "conflict" for change in changes):
             raise PublishError("Pi settings conflict; remove npm:pi-code manually before publication")
-        shared_snapshots = {name: _home_snapshot(home) for name, _, home, _ in _shared_specs(context)}
-        shared_merges = {
-            name: next(change.action for change in changes if change.root == name and change.path == spec.destination)
-            for name, _, _, spec in _shared_specs(context)
-        }
         prior_marker = read_release_marker(context.state_dir)
         prior_paths = _managed_paths_for_publish(prior_marker)
         release_id = uuid.uuid4().hex
-        completed: list[tuple[Path, Path | None]] = []
         managed_paths: dict[str, list[str]] = {}
         marker: dict[str, Any] = {
             "schema_version": 1,
@@ -310,48 +282,68 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
             "roots": {},
             "managed_paths": {},
             "previous_managed_paths": prior_paths,
-            "shared_merges": shared_merges,
+            "operations": [],
         }
+        transaction = context.state_dir / f"release-{release_id}"
+        transaction.mkdir(mode=0o700)
+        marker["transaction_dir"] = transaction.name
         write_release_marker(context.state_dir, marker)
+        snapshots: list[tuple[Path, bytes | None]] = []
+
+        def apply(path: Path, content: bytes | None, name: str, relative: str) -> None:
+            existing = path.read_bytes() if path.exists() else None
+            if existing == content:
+                return
+            backup_name = None
+            if existing is not None:
+                backup_name = f"{len(marker['operations'])}.bin"
+                (transaction / backup_name).write_bytes(existing)
+            marker["operations"].append({"root": name, "path": relative, "backup": backup_name})
+            write_release_marker(context.state_dir, marker)
+            snapshots.append((path, existing))
+            if content is None:
+                path.unlink(missing_ok=True)
+            else:
+                _replace_managed_file(path, content)
+
         try:
             for name, local, home, preserved in _policies(context):
-                candidate: Path | None = None
-                candidate, managed = _copy_candidate(context, local, home, preserved, prior_managed_paths(prior_paths, name))
-                shared = _shared_for_root(context, local, home)
-                for _, spec in shared:
-                    _merge_shared_candidate(candidate, local, spec)
-                if shared and _home_snapshot(home) != shared_snapshots.get(name):
-                    raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
-                backup = home.with_name(f".{home.name}.evcrate-backup-{release_id}") if home.exists() else None
-                marker["roots"][name] = {"backup": backup.name if backup else None, "completed": False}
-                write_release_marker(context.state_dir, marker)
-                # Manual Pi quiescence remains required; this is the final optimistic recheck.
-                if shared and _home_snapshot(home) != shared_snapshots.get(name):
-                    raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
-                if backup is not None:
-                    home.replace(backup)
-                completed.append((home, backup))
-                candidate.replace(home)
-                candidate = None
-                managed_paths[name] = sorted(managed)
-                marker["roots"][name] = {"hash": home_tree_hash(home), "completed": True, "backup": backup.name if backup else None}
+                source = _publication_files(context, local, home)
+                prior = prior_managed_paths(prior_paths, name)
+                managed = sorted(set(source) - preserved)
+                for relative in managed:
+                    apply(_managed_destination(home, relative), source[relative], name, relative)
+                for relative in prior - set(source) - preserved:
+                    destination = _managed_destination(home, relative)
+                    if destination.exists():
+                        apply(destination, None, name, relative)
+                for _, spec in _shared_for_root(context, local, home):
+                    plan = _shared_plan(local, home, spec)
+                    if plan.action == "conflict":
+                        raise PublishError(plan.message)
+                    if plan.result != plan.original:
+                        settings = _settings_path(home, spec)
+                        current = settings.read_bytes() if settings.exists() else None
+                        if current != plan.original:
+                            raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
+                        apply(settings, plan.result, name, spec.destination)
+                managed_paths[name] = managed
+                marker["roots"][name] = {"completed": True}
                 marker["managed_paths"] = managed_paths
                 write_release_marker(context.state_dir, marker)
             marker["status"] = "complete"
             write_release_marker(context.state_dir, marker)
-            for _, backup in completed:
-                if backup is not None and backup.exists():
-                    try:
-                        shutil.rmtree(backup)
-                    except OSError:
-                        pass
+            shutil.rmtree(transaction, ignore_errors=True)
             return changes
         except (OSError, PublishError) as error:
-            if "candidate" in locals() and candidate is not None and candidate.exists():
-                shutil.rmtree(candidate)
-            restore_roots(completed)
+            for destination, content in reversed(snapshots):
+                if content is None:
+                    destination.unlink(missing_ok=True)
+                else:
+                    _replace_managed_file(destination, content)
             marker["status"] = "recovered"
-            marker["recovery_action"] = "restored-completed-roots"
+            marker["recovery_action"] = "restored-completed-files"
             marker["managed_paths"] = prior_paths
             write_release_marker(context.state_dir, marker)
+            shutil.rmtree(transaction, ignore_errors=True)
             raise PublishError(f"HOME publication recovered after failure: {error}") from error

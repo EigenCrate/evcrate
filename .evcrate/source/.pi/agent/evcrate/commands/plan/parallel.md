@@ -31,11 +31,11 @@ After plan creation, offer validation interview to confirm decisions before impl
 | Mode | Behavior |
 |------|----------|
 | `prompt` | Ask user: "Validate this plan with a brief interview?" → Yes (Recommended) / No |
-| `auto` | Automatically execute {{evcrate:commands/plan:validate}} {plan-path} |
+| `auto` | Automatically execute `/plan:validate {plan-path}` |
 | `off` | Skip validation step entirely |
 
 **If mode is `prompt`:** Use `ask_user_question` tool with options above.
-**If user chooses validation or mode is `auto`:** Execute {{evcrate:commands/plan:validate}} {plan-path} SlashCommand.
+**If user chooses validation or mode is `auto`:** Execute `/plan:validate {plan-path}` SlashCommand.
 
 ## Special Requirements for Parallel Execution
 
