@@ -69,7 +69,7 @@ async function main() {
     const baseDir = gitRoot || effectiveCwd;
 
     // Debug logging for path resolution troubleshooting
-    if (process.env.CK_DEBUG) {
+    if (process.env.EVCRATE_DEBUG) {
       console.error(`[subagent-init] effectiveCwd=${effectiveCwd}, gitRoot=${gitRoot}, baseDir=${baseDir}`);
     }
     const namePattern = resolveNamingPattern(config.plan, gitBranch);

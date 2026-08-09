@@ -44,7 +44,10 @@ class PiSettingsPlanTest(unittest.TestCase):
         self.assertEqual(merged["packages"][2]["filter"], ["tools"])
 
     def test_pi_code_conflict_is_reported_without_result(self) -> None:
-        for entry in ("pi-code", "npm:pi-code@1.0.2", {"source": "npm:pi-code@1.0.2"}):
+        for entry in (
+            "pi-code", "npm:pi-code@1.0.2", {"source": "npm:pi-code@1.0.2"},
+            {"package": "npm:pi-code"}, {"name": "pi-code"},
+        ):
             plan = plan_pi_settings(json.dumps({"packages": [entry]}).encode(), {"packages": list(MANAGED_PACKAGES)})
             self.assertEqual(plan.action, "conflict")
             self.assertIsNone(plan.result)

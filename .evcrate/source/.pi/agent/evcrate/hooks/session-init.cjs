@@ -385,63 +385,63 @@ async function main() {
 
     if (envFile) {
       // Session & plan config
-      writeEnv(envFile, 'CK_SESSION_ID', sessionId || '');
-      writeEnv(envFile, 'CK_PLAN_NAMING_FORMAT', config.plan.namingFormat);
-      writeEnv(envFile, 'CK_PLAN_DATE_FORMAT', config.plan.dateFormat);
-      writeEnv(envFile, 'CK_PLAN_ISSUE_PREFIX', config.plan.issuePrefix || '');
-      writeEnv(envFile, 'CK_PLAN_REPORTS_DIR', config.plan.reportsDir);
+      writeEnv(envFile, 'EVCRATE_SESSION_ID', sessionId || '');
+      writeEnv(envFile, 'EVCRATE_PLAN_NAMING_FORMAT', config.plan.namingFormat);
+      writeEnv(envFile, 'EVCRATE_PLAN_DATE_FORMAT', config.plan.dateFormat);
+      writeEnv(envFile, 'EVCRATE_PLAN_ISSUE_PREFIX', config.plan.issuePrefix || '');
+      writeEnv(envFile, 'EVCRATE_PLAN_REPORTS_DIR', config.plan.reportsDir);
 
       // NEW: Resolved naming pattern for DRY file naming in agents
       // Example: "251212-1830-GH-88-{slug}" or "251212-1830-{slug}"
-      // Agents use: `{agent-type}-$CK_NAME_PATTERN.md` and substitute {slug}
-      writeEnv(envFile, 'CK_NAME_PATTERN', namePattern);
+      // Agents use: `{agent-type}-$EVCRATE_NAME_PATTERN.md` and substitute {slug}
+      writeEnv(envFile, 'EVCRATE_NAME_PATTERN', namePattern);
 
       // Plan resolution
-      writeEnv(envFile, 'CK_ACTIVE_PLAN', resolved.resolvedBy === 'session' ? resolved.path : '');
-      writeEnv(envFile, 'CK_SUGGESTED_PLAN', resolved.resolvedBy === 'branch' ? resolved.path : '');
+      writeEnv(envFile, 'EVCRATE_ACTIVE_PLAN', resolved.resolvedBy === 'session' ? resolved.path : '');
+      writeEnv(envFile, 'EVCRATE_SUGGESTED_PLAN', resolved.resolvedBy === 'branch' ? resolved.path : '');
 
       // Paths - use absolute paths based on git root for unambiguous file creation
-      writeEnv(envFile, 'CK_GIT_ROOT', staticEnv.gitRoot || '');
-      writeEnv(envFile, 'CK_REPORTS_PATH', path.join(baseDir, reportsPath));
-      writeEnv(envFile, 'CK_DOCS_PATH', path.join(baseDir, config.paths.docs));
-      writeEnv(envFile, 'CK_PLANS_PATH', path.join(baseDir, config.paths.plans));
-      writeEnv(envFile, 'CK_PROJECT_ROOT', process.cwd());
+      writeEnv(envFile, 'EVCRATE_GIT_ROOT', staticEnv.gitRoot || '');
+      writeEnv(envFile, 'EVCRATE_REPORTS_PATH', path.join(baseDir, reportsPath));
+      writeEnv(envFile, 'EVCRATE_DOCS_PATH', path.join(baseDir, config.paths.docs));
+      writeEnv(envFile, 'EVCRATE_PLANS_PATH', path.join(baseDir, config.paths.plans));
+      writeEnv(envFile, 'EVCRATE_PROJECT_ROOT', process.cwd());
 
       // Project detection
-      writeEnv(envFile, 'CK_PROJECT_TYPE', detections.type || '');
-      writeEnv(envFile, 'CK_PACKAGE_MANAGER', detections.pm || '');
-      writeEnv(envFile, 'CK_FRAMEWORK', detections.framework || '');
+      writeEnv(envFile, 'EVCRATE_PROJECT_TYPE', detections.type || '');
+      writeEnv(envFile, 'EVCRATE_PACKAGE_MANAGER', detections.pm || '');
+      writeEnv(envFile, 'EVCRATE_FRAMEWORK', detections.framework || '');
 
       // NEW: Static environment info (so other hooks don't need to recompute)
-      writeEnv(envFile, 'CK_NODE_VERSION', staticEnv.nodeVersion);
-      writeEnv(envFile, 'CK_PYTHON_VERSION', staticEnv.pythonVersion || '');
-      writeEnv(envFile, 'CK_OS_PLATFORM', staticEnv.osPlatform);
-      writeEnv(envFile, 'CK_GIT_URL', staticEnv.gitUrl || '');
-      writeEnv(envFile, 'CK_GIT_BRANCH', staticEnv.gitBranch || '');
-      writeEnv(envFile, 'CK_USER', staticEnv.user);
-      writeEnv(envFile, 'CK_LOCALE', staticEnv.locale);
-      writeEnv(envFile, 'CK_TIMEZONE', staticEnv.timezone);
-      writeEnv(envFile, 'CK_CLAUDE_SETTINGS_DIR', staticEnv.claudeSettingsDir);
+      writeEnv(envFile, 'EVCRATE_NODE_VERSION', staticEnv.nodeVersion);
+      writeEnv(envFile, 'EVCRATE_PYTHON_VERSION', staticEnv.pythonVersion || '');
+      writeEnv(envFile, 'EVCRATE_OS_PLATFORM', staticEnv.osPlatform);
+      writeEnv(envFile, 'EVCRATE_GIT_URL', staticEnv.gitUrl || '');
+      writeEnv(envFile, 'EVCRATE_GIT_BRANCH', staticEnv.gitBranch || '');
+      writeEnv(envFile, 'EVCRATE_USER', staticEnv.user);
+      writeEnv(envFile, 'EVCRATE_LOCALE', staticEnv.locale);
+      writeEnv(envFile, 'EVCRATE_TIMEZONE', staticEnv.timezone);
+      writeEnv(envFile, 'EVCRATE_CLAUDE_SETTINGS_DIR', staticEnv.claudeSettingsDir);
 
       // Locale config
       if (config.locale?.thinkingLanguage) {
-        writeEnv(envFile, 'CK_THINKING_LANGUAGE', config.locale.thinkingLanguage);
+        writeEnv(envFile, 'EVCRATE_THINKING_LANGUAGE', config.locale.thinkingLanguage);
       }
       if (config.locale?.responseLanguage) {
-        writeEnv(envFile, 'CK_RESPONSE_LANGUAGE', config.locale.responseLanguage);
+        writeEnv(envFile, 'EVCRATE_RESPONSE_LANGUAGE', config.locale.responseLanguage);
       }
 
       // Plan validation config (for /plan:validate, /plan:hard, /plan:parallel)
       const validation = config.plan?.validation || {};
-      writeEnv(envFile, 'CK_VALIDATION_MODE', validation.mode || 'prompt');
-      writeEnv(envFile, 'CK_VALIDATION_MIN_QUESTIONS', validation.minQuestions || 3);
-      writeEnv(envFile, 'CK_VALIDATION_MAX_QUESTIONS', validation.maxQuestions || 8);
-      writeEnv(envFile, 'CK_VALIDATION_FOCUS_AREAS', (validation.focusAreas || ['assumptions', 'risks', 'tradeoffs', 'architecture']).join(','));
+      writeEnv(envFile, 'EVCRATE_VALIDATION_MODE', validation.mode || 'prompt');
+      writeEnv(envFile, 'EVCRATE_VALIDATION_MIN_QUESTIONS', validation.minQuestions || 3);
+      writeEnv(envFile, 'EVCRATE_VALIDATION_MAX_QUESTIONS', validation.maxQuestions || 8);
+      writeEnv(envFile, 'EVCRATE_VALIDATION_FOCUS_AREAS', (validation.focusAreas || ['assumptions', 'risks', 'tradeoffs', 'architecture']).join(','));
 
       // Coding level config (for output style selection)
       const codingLevel = config.codingLevel ?? 5;
-      writeEnv(envFile, 'CK_CODING_LEVEL', codingLevel);
-      writeEnv(envFile, 'CK_CODING_LEVEL_STYLE', getCodingLevelStyleName(codingLevel));
+      writeEnv(envFile, 'EVCRATE_CODING_LEVEL', codingLevel);
+      writeEnv(envFile, 'EVCRATE_CODING_LEVEL_STYLE', getCodingLevelStyleName(codingLevel));
     }
 
     console.log(`Session ${source}. ${buildContextOutput(config, detections, resolved, staticEnv.gitRoot)}`);
