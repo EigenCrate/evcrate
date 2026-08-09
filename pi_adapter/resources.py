@@ -44,7 +44,7 @@ _QUOTED_COMMAND_REFERENCE = re.compile(
     rf"`/(?P<name>{_COMMAND_NAME})(?P<args>[^`\n]*)`", re.IGNORECASE
 )
 _BARE_COMMAND_REFERENCE = re.compile(
-    rf"(?<![\w/:])/(?P<name>{_COMMAND_NAME})(?![a-z0-9:_-]|\*)", re.IGNORECASE
+    rf"(?<![\w/:<])/(?P<name>{_COMMAND_NAME})(?![a-z0-9:_-]|\*)", re.IGNORECASE
 )
 _DIRECTIVE_VERB = re.compile(r"\b(?:trigger|invoke|execute|run|dispatch|call)\b", re.IGNORECASE)
 _SLASH_COMMAND_PHRASE = re.compile(r"\bslash\s*[- ]?commands?\b", re.IGNORECASE)
@@ -310,7 +310,16 @@ def hook_map(source: Path) -> dict[str, object]:
                 if not match:
                     raise ResourceError(f"Unsupported canonical hook command for {event}")
                 scripts.append(_hook_relative_path(source / "hooks", match.group(1)))
-            mapped.append({"matcher": entry.get("matcher", "*"), "scripts": sorted(scripts)})
+            # Preserve canonical handler order: hook order can be semantically meaningful.
+            safety_scripts = [
+                script for script in scripts
+                if Path(script).name in {"scout-block.cjs", "privacy-block.cjs"}
+            ]
+            mapped.append({
+                "matcher": entry.get("matcher", "*"),
+                "scripts": scripts,
+                "safetyScripts": safety_scripts,
+            })
         events[event] = mapped
     return {"schema": "evcrate-pi-hook-map-v1", "events": events}
 

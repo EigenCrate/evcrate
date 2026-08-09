@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -154,6 +154,26 @@ test("Pi 0.84.1 loads a TypeBox extension from its bundled dependency", { timeou
     assert.deepEqual(JSON.parse(readFileSync(marker, "utf8")), {
       type: "object", required: ["ok"], properties: { ok: { type: "boolean" } },
     });
+
+    const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
+    const generatedPiRoot = join(projectRoot, ".evcrate/source/.pi");
+    const alternatePiRoot = join(root, "alternate-pi");
+    cpSync(generatedPiRoot, alternatePiRoot, { recursive: true });
+    const alternateAgentRoot = join(alternatePiRoot, "agent");
+    execFileSync(join(piRoot, "node_modules/.bin/pi"), [
+      "--no-session", "--no-context-files", "--no-tools", "--no-extensions",
+      "-e", join(alternateAgentRoot, "extensions/evcrate/index.js"), "--help",
+    ], {
+      cwd: root,
+      env: {
+        ...process.env,
+        PI_CODING_AGENT_DIR: alternateAgentRoot,
+        PI_OFFLINE: "1",
+        PI_SKIP_VERSION_CHECK: "1",
+        PI_TELEMETRY: "0",
+      },
+      stdio: "pipe",
+    });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -172,6 +192,9 @@ test("npm pack excludes Python bytecode from publishable Pi resources", () => {
   const paths = pack.files.map(({ path }) => path);
 
   assert.ok(paths.includes(".evcrate/targets/pi/files/agent/extensions/evcrate/index.js"));
+  assert.ok(paths.includes(".evcrate/targets/pi/files/agent/extensions/evcrate/hook-adapter.cjs"));
+  assert.ok(paths.includes("distribution/pi_settings.py"));
+  assert.ok(paths.includes("distribute.py"));
   assert.ok(paths.every((path) => !path.endsWith(".pyc") && !path.includes("/__pycache__/")));
 });
 

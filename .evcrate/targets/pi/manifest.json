@@ -17,6 +17,8 @@
     "files/agent/extensions/evcrate/command-tool.js",
     "files/agent/extensions/evcrate/commands.js",
     "files/agent/extensions/evcrate/delegation-tool.js",
+    "files/agent/extensions/evcrate/hook-adapter.cjs",
+    "files/agent/extensions/evcrate/hooks.js",
     "files/agent/extensions/evcrate/index.js",
     "files/agent/extensions/evcrate/model-roles.js",
     "files/agent/extensions/evcrate/operation-policy.js",

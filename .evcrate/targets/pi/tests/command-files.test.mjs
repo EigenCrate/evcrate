@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -122,4 +122,21 @@ test("terminates timed-out and aborted shells after streams are attached", async
   const running = executeBoundedShell(command, { signal: controller.signal });
   setTimeout(() => controller.abort(new Error("command aborted")), 20);
   await assert.rejects(running, /command aborted/);
+});
+
+test("terminates descendants with their timed-out shell process group", { skip: process.platform === "win32" }, async () => {
+  const marker = join(fixture(), "grandchild.pid");
+  const source = [
+    'const fs = require("node:fs");',
+    'const { spawn } = require("node:child_process");',
+    'const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });',
+    `fs.writeFileSync(${JSON.stringify(marker)}, String(child.pid));`,
+    'setInterval(() => {}, 1000);',
+  ].join("");
+  try {
+    await assert.rejects(executeBoundedShell(`${JSON.stringify(process.execPath)} -e ${JSON.stringify(source)}`, { timeout: 50 }), /timed out/);
+    const pid = Number(readFileSync(marker, "utf8"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.throws(() => process.kill(pid, 0), /ESRCH/);
+  } finally { rmSync(join(marker, ".."), { recursive: true, force: true }); }
 });

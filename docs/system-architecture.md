@@ -937,7 +937,7 @@ User Project
 - The skill reasons over evidence already available in the current session. It does not invoke providers, models, MCP, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
 
-### Native Pi Phase 03 runtime boundary (implemented; not release-ready)
+### Native Pi runtime boundary (Phases 03–04 implemented; live cutover pending)
 
 Phase 03 implements the native runtime on top of the Phase 01 distribution contract and Phase 02 resource projection. It is not a release, integration-gate, or live-cutover approval.
 
@@ -946,14 +946,10 @@ Phase 03 implements the native runtime on top of the Phase 01 distribution contr
 - **Operation policy:** command `allowed-tools` restrictions are normalized and applied as a temporary intersection. An authoritative `tool_call` gate blocks disallowed calls even if another extension changes active tools; policy state is cleaned up when the agent settles or the session shuts down.
 - **Semantic model roles:** generated resources keep `strong`, `standard`, `fast`, and `parent` roles instead of concrete provider IDs. Resolution checks the active provider and Pi model registry immediately before delegation. The built-in `openai-codex` routes are `strong → openai-codex/gpt-5.6-sol` (`high`), `standard → openai-codex/gpt-5.6-terra` (`high`), and `fast → openai-codex/gpt-5.6-luna` (`low`). Missing, malformed, cross-provider, or unavailable routes warn and inherit the parent; invalid explicit model/thinking overrides fail that child.
 - **Structured delegation:** the EVCrate-owned `evcrate_subagent` tool emits correlated direct, parallel, or sequential requests through `pi-subagents`; it does not parse or rewrite that package's public `workflowScript` tool. The child-start seam runs generated child-start hooks before request emission and appends only documented `additionalContext` plus active roots to the child task.
+- **Native hooks:** one EVCrate lifecycle/tool handler adapts generated canonical hook-map entries. Pre-tool privacy/scout hooks fail closed on execution/protocol failures; prompt, session, child, and post-write context is parsed before injection. Session `EVCRATE_*` values are accepted only from a bounded temporary environment file and are cleared on reload/shutdown. Authored command shell expansion uses a bounded POSIX process group so timeout/abort also terminate descendants.
 - **Runtime baseline and pins:** Node.js is `>=22.19.0`; the managed settings fragment pins exactly `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`. Pi `0.84.1` is the extension-smoke compatibility target. User settings, provider routes, credentials, sessions, hooks, and unrelated packages remain user-owned.
 
-#### Approved unresolved criticals
-
-1. **XML closing-tag marker corruption:** marker expansion can corrupt XML closing-tag markers. Do not treat XML-shaped command output or marker-bearing content as safe until the parser/marker path is corrected and covered by regression tests.
-2. **Shell descendant timeout/process-tree leak:** timeout or abort currently signals the spawned `/bin/sh` process, not a managed process group/tree. Descendants can outlive the shell; this requires process-tree termination and regression coverage.
-
-Build/check and candidate publication remain available, but Pi must be manually quiescent for any live publication, promotion still aborts on a pre-promotion HOME hash change, `pi-code` is never removed automatically, and no release or cutover is ready.
+The migration's XML closing-tag and shell-descendant defects are covered by regression tests. Build/check and candidate publication remain available, but Pi must be manually quiescent for any live publication, promotion still aborts on a pre-promotion HOME hash change, `pi-code` is never removed automatically, and live cutover requires explicit user approval.
 
 ## Future Architecture Evolution
 

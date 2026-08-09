@@ -8,13 +8,13 @@
  * allowing subagents to receive the latest plan context via SubagentStart hook.
  *
  * The session temp file (/tmp/ck-session-{id}.json) is the source of truth
- * for plan context within a session. Env vars ($CK_ACTIVE_PLAN) are just
+ * for plan context within a session. Env vars ($EVCRATE_ACTIVE_PLAN) are just
  * the initial snapshot from session start.
  */
 
 const { writeSessionState, readSessionState } = require('../hooks/lib/evcrate-config-utils.cjs');
 
-const sessionId = process.env.CK_SESSION_ID;
+const sessionId = process.env.EVCRATE_SESSION_ID;
 const newPlan = process.argv[2];
 
 if (!newPlan) {
@@ -25,7 +25,7 @@ if (!newPlan) {
 }
 
 if (!sessionId) {
-  console.warn('Warning: CK_SESSION_ID not set - session state will not persist');
+  console.warn('Warning: EVCRATE_SESSION_ID not set - session state will not persist');
   console.log(`Would set active plan to: ${newPlan}`);
   process.exit(0);
 }

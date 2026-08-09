@@ -40,6 +40,8 @@
     ".evcrate/source/.opencode/**",
     ".evcrate/source/.pi/**",
     ".evcrate/targets/pi/**",
+    "distribution/**",
+    "distribute.py",
     "migrate_claude_to_pi.py",
     "pi_adapter/**",
     "!**/__pycache__/**",

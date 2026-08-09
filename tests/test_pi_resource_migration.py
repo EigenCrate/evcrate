@@ -99,6 +99,7 @@ class PiResourceMigrationTest(unittest.TestCase):
             ("Trigger [/plan:fast](https://example.test/plan).\n", "Trigger [/plan:fast](https://example.test/plan).\n"),
             ("Trigger https://example.test/plan:fast.\n", "Trigger https://example.test/plan:fast.\n"),
             ("Trigger `/unknown-command <details>`.\n", "Trigger `/unknown-command <details>`.\n"),
+            ("Execute plan: <plan>$ARGUMENTS</plan>\n", "Execute plan: <plan>$ARGUMENTS</plan>\n"),
             ("```markdown\nTrigger `/plan:fast <details>`\n```\n", "```markdown\nTrigger `/plan:fast <details>`\n```\n"),
         )
         for source, expected in cases:
@@ -131,6 +132,12 @@ class PiResourceMigrationTest(unittest.TestCase):
             "Trigger slash command `/code",
         ):
             self.assertNotIn(residual, prompts)
+
+    def test_hook_map_preserves_order_and_marks_safety_scripts(self) -> None:
+        mapped = hook_map(CANONICAL)
+        pre_tool = mapped["events"]["PreToolUse"][0]
+        self.assertEqual(pre_tool["scripts"], ["scout-block.cjs", "privacy-block.cjs"])
+        self.assertEqual(pre_tool["safetyScripts"], ["scout-block.cjs", "privacy-block.cjs"])
 
     def test_hook_map_rejects_escaping_or_missing_hook_commands(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

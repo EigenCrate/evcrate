@@ -153,18 +153,19 @@ Enterprise-grade features and deployment options.
 
 - Delivered deterministic native Pi resource migration, including inventory validation, semantic compatibility translation, agent model-role conversion, hook/script dependency closure, and idempotence coverage.
 
-### Phase 03: Native Commands, Structured Delegation, and Model Roles — DONE
+### Phase 03: Native Commands, Structured Delegation, and Model Roles — COMPLETE
 **Completed:** 260809
-**Status:** User-approved with unresolved criticals
 
 - Delivered the native command/delegation/model-role runtime scope.
-- **Accepted defects (unresolved criticals):**
-  - XML closing-tag marker corruption
-  - shell descendant timeout/process-tree leak
+- XML closing-tag handling and bounded POSIX process-group termination have regression coverage.
 
-### Phases 04–06: PENDING
+### Phase 04: Native Hooks and Managed Settings — COMPLETE
 
-Native hooks, integration/release gates, and documentation/manual cutover are not delivered by this change.
+- The EVCrate extension is the single owner for generated canonical lifecycle/tool hooks, including fail-closed safety hooks and scoped session environment handling.
+
+### Phases 05–06: ISOLATED VALIDATION AND USER CUTOVER PENDING
+
+Build/check, package, and temporary-HOME validation must be reviewed before a user-approved, manually quiescent live Pi cutover. See [Native Pi migration](./pi-native-migration.md).
 
 See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
 

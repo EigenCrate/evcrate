@@ -246,7 +246,7 @@ async function main() {
     const payload = JSON.parse(stdin);
     if (wasRecentlyInjected(payload.transcript_path)) process.exit(0);
 
-    const sessionId = process.env.CK_SESSION_ID || null;
+    const sessionId = process.env.EVCRATE_SESSION_ID || null;
     const config = loadConfig({ includeProject: false, includeAssertions: false });
     const devRulesPath = resolveWorkflowPath('development-rules.md');
     const catalogScript = resolveScriptPath('generate_catalogs.py');

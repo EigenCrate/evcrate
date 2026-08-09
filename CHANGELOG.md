@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Features
+
+* **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
+
 ### Bug Fixes
 
 * **orchestration:** require parent agents to poll the same subagent until a terminal result, treat no-result polls as non-terminal, and fail closed on interrupted or partial work across Claude and generated Codex command/workflow prompts.
@@ -10,6 +14,10 @@
 ### Breaking Changes
 
 * **advisor:** remove the unshipped `advisor_consult` MCP/broker/admission runtime. Use explicit `$advisor-strategy` for current-session guidance; it provides no independent model call, isolation, quota, audit, or enforcement.
+
+### Documentation
+
+* **pi:** document native operating, package, skill-isolation, validation, and manual-cutover procedures.
 
 ### Tests
 

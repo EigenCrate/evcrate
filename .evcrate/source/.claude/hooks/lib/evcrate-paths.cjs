@@ -44,7 +44,7 @@ function ensureDir(dirPath) {
     }
   } catch (err) {
     // Silent fail - non-critical, but log for debugging
-    if (process.env.CK_DEBUG) {
+    if (process.env.EVCRATE_DEBUG) {
       console.error(`[CK] Failed to create ${dirPath}: ${err.message}`);
     }
   }

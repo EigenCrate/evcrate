@@ -40,7 +40,7 @@ function boundedCollector() {
   };
 }
 
-export function executeBoundedShell(shell, { cwd, signal, timeout = COMMAND_TIMEOUT_MS } = {}) {
+export function executeBoundedShell(shell, { cwd, env, signal, timeout = COMMAND_TIMEOUT_MS } = {}) {
   return new Promise((resolvePromise, reject) => {
     if (signal?.aborted) return reject(signal.reason || new Error("Command execution aborted"));
     const stdout = boundedCollector();
@@ -50,6 +50,15 @@ export function executeBoundedShell(shell, { cwd, signal, timeout = COMMAND_TIME
     let timeoutId;
     let killId;
     let termination;
+    const killTree = (signalName) => {
+      if (!child?.pid) return;
+      try {
+        if (process.platform !== "win32") process.kill(-child.pid, signalName);
+        else child.kill(signalName);
+      } catch {
+        try { child.kill(signalName); } catch { /* process has already exited */ }
+      }
+    };
     const finish = (callback, value) => {
       if (settled) return;
       settled = true;
@@ -61,12 +70,15 @@ export function executeBoundedShell(shell, { cwd, signal, timeout = COMMAND_TIME
     const stop = (error) => {
       if (termination) return;
       termination = error;
-      child.kill("SIGTERM");
-      killId = setTimeout(() => child.kill("SIGKILL"), 1_000);
+      killTree("SIGTERM");
+      killId = setTimeout(() => killTree("SIGKILL"), 1_000);
     };
     const abort = () => stop(signal.reason || new Error("Command execution aborted"));
     try {
-      child = spawn("/bin/sh", ["-c", shell], { cwd, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+      child = spawn("/bin/sh", ["-c", shell], {
+        cwd, env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
+        detached: process.platform !== "win32",
+      });
     } catch (error) {
       finish(reject, error);
       return;
@@ -118,6 +130,7 @@ export async function expandManagedCommand(command, args, context, options = {})
   const agentRoot = options.agentRoot || getAgentRoot();
   const execute = options.execute || ((shell) => executeBoundedShell(shell, {
     cwd: context.cwd,
+    env: typeof options.sessionEnv === "function" ? options.sessionEnv() : undefined,
     signal: context.signal,
   }));
   const body = await expandCommandBody(parsed.body, args, {

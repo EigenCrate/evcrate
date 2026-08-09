@@ -738,7 +738,7 @@ function resolveNamingPattern(planConfig, gitBranch) {
   const validation = validateNamingPattern(pattern);
   if (!validation.valid) {
     // Log warning but return pattern anyway (fail-safe)
-    if (process.env.CK_DEBUG) {
+    if (process.env.EVCRATE_DEBUG) {
       console.error(`[evcrate-config] Warning: ${validation.error}`);
     }
   }

@@ -3,7 +3,7 @@ description: ⚡ Execute parallel or sequential phases based on plan structure
 argument-hint: [plan-path]
 ---
 
-Execute plan: <plan>$ARGUMENTS<{{evcrate:commands/plan}}>
+Execute plan: <plan>$ARGUMENTS</plan>
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
