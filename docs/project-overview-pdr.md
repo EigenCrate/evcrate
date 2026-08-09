@@ -229,6 +229,15 @@ Provide a production-ready template that:
 - Add one non-invoking pointer to every generated command skill; explicit `$advisor-strategy` use structures current-session reasoning only.
 - Keep generated Codex targets free of advisor-specific provider/model calls, MCP wiring, hooks, runtime launchers, quota ledgers, and audit claims.
 
+**FR8: Native Pi Phase 01 Distribution Contract**
+- Register `.pi` as one manifest-owned target rooted at `.evcrate/source/.pi` with one `EVCRATE_HOME/.pi` HOME binding.
+- Run the staging-only Pi adapter only with a contained empty `PI_OUTPUT_DIR`; reject direct/global output modes, path escapes, symlinked inputs, and unsafe adapter helpers.
+- Hash the Pi adapter and declared helper source during both build and publication verification.
+- Merge only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0` into the shared `agent/settings.json` package key.
+- Preserve user-owned settings, package entries, provider/model values, and sessions; keep the shared settings file outside file-level managed ownership.
+- Detect `pi-code` conflicts without removing them. Require manual Pi quiescence and abort on concurrent HOME changes before promotion.
+- Limit Phase 01 to deterministic target/build/publish contracts. Native resources, runtime extension, hooks, integration gates, and live cutover remain pending.
+
 **Advisor compatibility boundary (Phase 2)**
 - `advisor-strategy` is a static, current-session skill. Use it explicitly as `$advisor-strategy` when a decision benefits from a bounded advisory brief.
 - The skill does not invoke providers, models, MCP servers, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.

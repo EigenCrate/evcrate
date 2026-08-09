@@ -164,7 +164,7 @@ class DistributionPublishTest(unittest.TestCase):
             context = create_context(DistributionAction.PUBLISH, environ={"EVCRATE_HOME": str(Path(temp) / "home")})
             self.assertEqual(
                 _expected_output_names(context),
-                {".gemini", ".codex", ".agents", ".antigravity", ".claude", "AGENTS.md", "GEMINI.md"},
+                {".gemini", ".codex", ".agents", ".antigravity", ".claude", ".pi", "AGENTS.md", "GEMINI.md"},
             )
 
     def test_changed_claude_output_hash_blocks_before_home_mutation(self) -> None:

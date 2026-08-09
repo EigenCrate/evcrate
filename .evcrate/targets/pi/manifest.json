@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "name": "pi",
+  "adapter": "migrate_claude_to_pi.py",
+  "adapter_sources": ["pi_adapter/__init__.py"],
+  "output_root": ".pi",
+  "additional_roots": [],
+  "owned_paths": [],
+  "overlay_root": ".evcrate/targets/pi/files",
+  "shared_json": {
+    "schema": "pi-settings-v1",
+    "destination": "agent/settings.json",
+    "fragment": "agent/evcrate/managed-settings.json",
+    "managed_key": "packages"
+  },
+  "project_docs": [],
+  "patches": [],
+  "home_policy": {
+    "bindings": {".pi": ".pi"},
+    "preserve_paths": {},
+    "promotion_order": 25
+  }
+}

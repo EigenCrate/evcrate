@@ -4,6 +4,7 @@
     "antigravity": "antigravity/manifest.json",
     "claude": "claude/manifest.json",
     "codex": "codex/manifest.json",
-    "gemini": "gemini/manifest.json"
+    "gemini": "gemini/manifest.json",
+    "pi": "pi/manifest.json"
   }
 }

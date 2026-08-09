@@ -37,7 +37,8 @@ project-root/
 ├── .evcrate/source/           # Physical local config root; not project-discovered
 │   ├── .claude/              # Canonical Claude Code source
 │   ├── .codex/               # Generated Codex artifact
-│   ├── .agents/              # Generated Pi artifact
+│   ├── .agents/              # Codex-owned, Pi-compatible shared skills
+│   ├── .pi/                  # Generated native Pi Phase 01 skeleton
 │   ├── .gemini/              # Generated Gemini artifact
 │   ├── .antigravity/         # Generated Antigravity artifact
 │   └── .opencode/            # OpenCode compatibility source
@@ -59,6 +60,14 @@ project-root/
 ├── package.json              # Node.js dependencies
 └── LICENSE                   # License file
 ```
+
+### Distribution target standards
+
+- `.evcrate/source/.claude/` is the only authored agent-configuration source. Generated `.pi`, `.agents`, `.codex`, `.gemini`, and `.antigravity` trees are build outputs and must not be hand-edited.
+- Target manifests must declare contained output roots, adapter/helper sources, ownership, overlays, and HOME bindings. Build and publication verification must hash the same adapter inputs.
+- The Phase 01 Pi adapter writes only to an empty staged `.pi` root. Direct/global output modes, symlinked ancestors, path traversal, and non-canonical Claude sources are rejected.
+- Pi's shared `agent/settings.json` is user-owned. EVCrate manages only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
+- Live Pi publication requires manual quiescence and a pre-promotion HOME recheck. Phase 01 does not authorize live cutover or automatic `pi-code` removal.
 
 ### File Naming Conventions
 
@@ -603,7 +612,7 @@ More content
 
 ## See Also
 
-- [Related Doc](./related.md)
+- [System Architecture](./system-architecture.md)
 ```
 
 **Formatting**:

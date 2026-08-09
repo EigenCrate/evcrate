@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Last Updated**: 2026-08-08
+**Last Updated**: 2026-08-09
 **Version**: 1.14.8
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
@@ -15,7 +15,8 @@ evcrate/
 ├── .evcrate/source/      # Physical local config root; not project-discovered
 │   ├── .claude/          # Canonical Claude Code source
 │   ├── .codex/           # Generated Codex artifact
-│   ├── .agents/          # Generated Pi artifact
+│   ├── .agents/          # Codex-owned, Pi-compatible shared skills
+│   ├── .pi/              # Generated native Pi Phase 01 skeleton
 │   ├── .gemini/          # Generated Gemini artifact
 │   ├── .antigravity/     # Generated Antigravity artifact
 │   ├── .opencode/        # OpenCode compatibility source
@@ -30,6 +31,8 @@ evcrate/
 ├── distribution/         # Immutable path context, gate contracts, and gate orchestration
 ├── migrate_claude_to_codex.py   # Codex target generator
 ├── migrate_claude_to_gemini.py  # Gemini target generator
+├── migrate_claude_to_pi.py      # Staging-only native Pi adapter
+├── pi_adapter/                  # Pi adapter containment helpers
 ├── README.md             # Project overview
 ├── package.json          # Node.js dependencies
 └── repomix-output.xml    # Codebase compaction file
@@ -41,7 +44,9 @@ The distribution entrypoint separates local generation from HOME publication. `.
 
 Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. The Codex output includes the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.evcrate/source/.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
 
-`EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime compatibility retains existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
+`EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime compatibility retains existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries.
+
+Native Pi Phase 01 adds a manifest-backed `.pi` target, a staging-only adapter, symmetric adapter/helper hashes, and a pure shared-settings merge for the two exact package pins. The generated skeleton contains no native commands, agents, skills, workflows, hooks, extensions, or model-role data; later Pi phases remain pending. `agent/settings.json` stays user-owned, live publication requires manual Pi quiescence, and `pi-code` is never removed automatically. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
 
 The advisor is current-session guidance only: it structures a local decision brief and reasons over already available evidence. It invokes no provider, model, MCP server, app, command, network or file operation, delegation, quota, audit, or enforcement mechanism. The former `advisor_consult` broker contract is removed; callers use explicit `$advisor-strategy`. Distribution behavior is covered by the Python regression suites.
 

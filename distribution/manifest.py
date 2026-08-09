@@ -23,6 +23,14 @@ class PatchSpec:
 
 
 @dataclass(frozen=True)
+class SharedJsonSpec:
+    schema: str
+    destination: str
+    fragment: str
+    managed_key: str
+
+
+@dataclass(frozen=True)
 class TargetManifest:
     name: str
     adapter: str | None
@@ -34,6 +42,8 @@ class TargetManifest:
     source_root: Path
     overlay_root: Path | None = None
     runtime: RuntimeSpec | None = None
+    adapter_sources: tuple[str, ...] = ()
+    shared_json: SharedJsonSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -85,6 +95,17 @@ def load_target_manifest(path: Path) -> TargetManifest:
             adapter = normalize_relative_path(adapter)
         except HashingError as error:
             raise BuildError(str(error)) from error
+    raw_adapter_sources = data.get("adapter_sources", [])
+    if not isinstance(raw_adapter_sources, list) or not all(isinstance(item, str) for item in raw_adapter_sources):
+        raise BuildError("adapter_sources must be a list of paths")
+    try:
+        adapter_sources = tuple(normalize_relative_path(item) for item in raw_adapter_sources)
+    except HashingError as error:
+        raise BuildError(str(error)) from error
+    if len(set(adapter_sources)) != len(adapter_sources):
+        raise BuildError("adapter_sources contains duplicate paths")
+    if adapter is not None and adapter in adapter_sources:
+        raise BuildError("adapter_sources must not repeat the adapter entrypoint")
     root_values = data.get("output_roots")
     if root_values is None:
         primary_root = data.get("output_root")
@@ -137,6 +158,15 @@ def load_target_manifest(path: Path) -> TargetManifest:
     if any("/" in document for document in docs) or len(set(docs)) != len(docs):
         raise BuildError("project_docs must be unique root-level filenames")
     source_root = path.parent.resolve()
+    repository = path.parents[3] if path.parent.parent.name == "targets" else source_root
+    for relative in adapter_sources:
+        helper = contained_path(repository, relative, must_exist=True)
+        if helper.is_symlink() or not helper.is_file():
+            raise BuildError(f"Adapter source must be a regular file: {relative}")
+    if adapter is not None:
+        entrypoint = contained_path(repository, adapter, must_exist=True)
+        if entrypoint.is_symlink() or not entrypoint.is_file():
+            raise BuildError(f"Target adapter must be a regular file: {adapter}")
     for owned_path in owned:
         if not owned_path.startswith("files/"):
             raise BuildError(f"Owned source must be under files/: {owned_path}")
@@ -158,9 +188,31 @@ def load_target_manifest(path: Path) -> TargetManifest:
             safe_overlay = normalize_relative_path(overlay_value)
         except HashingError as error:
             raise BuildError(str(error)) from error
-        repository = path.parents[3] if path.parent.parent.name == "targets" else source_root
         overlay_root = contained_path(repository, safe_overlay)
-    return TargetManifest(name, adapter, roots, owned, tuple(patches), docs, policy, source_root, overlay_root, load_runtime_spec(data.get("runtime")))
+    raw_shared = data.get("shared_json")
+    shared_json: SharedJsonSpec | None = None
+    if raw_shared is not None:
+        shared = _expect_object(raw_shared, "shared_json")
+        schema, destination = shared.get("schema"), shared.get("destination")
+        fragment, managed_key = shared.get("fragment"), shared.get("managed_key")
+        if schema != "pi-settings-v1":
+            raise BuildError("shared_json schema must be pi-settings-v1")
+        if not all(isinstance(value, str) for value in (destination, fragment, managed_key)):
+            raise BuildError("shared_json requires destination, fragment, and managed_key strings")
+        try:
+            destination = normalize_relative_path(destination)
+            fragment = normalize_relative_path(fragment)
+        except HashingError as error:
+            raise BuildError(str(error)) from error
+        if destination == fragment:
+            raise BuildError("shared_json destination and fragment must differ")
+        if not managed_key or any(part == "" for part in managed_key.split(".")):
+            raise BuildError("shared_json managed_key must be a non-empty dotted path")
+        shared_json = SharedJsonSpec(schema, destination, fragment, managed_key)
+    return TargetManifest(
+        name, adapter, roots, owned, tuple(patches), docs, policy, source_root,
+        overlay_root, load_runtime_spec(data.get("runtime")), adapter_sources, shared_json,
+    )
 
 
 def load_target_registry(path: Path) -> TargetRegistry:
@@ -184,6 +236,18 @@ def load_target_registry(path: Path) -> TargetRegistry:
             raise BuildError(f"Target registry entry must name a manifest.json file: {relative}")
         resolved[name] = candidate
     return TargetRegistry(dict(sorted(resolved.items())))
+
+
+def adapter_hashes(manifests: tuple[TargetManifest, ...], repository: Path) -> dict[str, str]:
+    """Hash adapter entrypoints and declared helper sources symmetrically."""
+
+    hashes: dict[str, str] = {}
+    for manifest in manifests:
+        paths = tuple(item for item in (manifest.adapter, *manifest.adapter_sources) if item is not None)
+        for relative in paths:
+            path = contained_path(repository, relative, must_exist=True)
+            hashes[relative] = hash_file(path)
+    return dict(sorted(hashes.items()))
 
 
 def source_hashes(manifests: tuple[TargetManifest, ...]) -> dict[str, str]:

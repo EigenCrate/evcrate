@@ -137,6 +137,23 @@ Enterprise-grade features and deployment options.
 
 ---
 
+## Native Pi Migration Status
+
+### Phase 01: Pi target and distribution contract — COMPLETE
+**Completed:** 260809
+
+- Registered the manifest-backed `.pi` target with one `EVCRATE_HOME/.pi` binding.
+- Added contained staging, adapter/helper hashing, deterministic minimal output, shared-settings planning, preservation, conflict detection, rollback, and concurrent-change abort behavior.
+- Managed package pins are `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`.
+- Pi settings remain shared user data; EVCrate owns only those package identities. Manual Pi quiescence is required for live publication.
+- No live cutover has occurred. `pi-code` removal remains a manual user action.
+
+### Phases 02–06: PENDING
+
+Deterministic resource migration, native command/delegation/model-role runtime, native hooks, integration/release gates, and documentation/manual cutover are not delivered by this change.
+
+See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
+
 ## Current Development Focus
 
 ### 1. Windows Ecosystem Support

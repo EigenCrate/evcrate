@@ -8,6 +8,10 @@
 
 Define reproducible multi-platform generation and the boundary of the portable `advisor-strategy` skill. The skill is current-session guidance, not an advisor runtime or security control.
 
+## Scope boundary
+
+The advisor distribution described here is the existing skill-only `.agents` projection. It must not be read as the native Pi target. Native Pi Phase 01 is documented separately in [Native Pi Phase 01](./pi-native-migration-phase-01.md): it adds a minimal `.pi` target and a shared `agent/settings.json` merge for only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`. Native Pi runtime resources, hooks, and live cutover remain pending; live publication requires manual Pi quiescence.
+
 ## Architectural Decisions
 
 - `.evcrate/source/.claude` remains the shared baseline authoring source and is the physical source-backed distribution target.
@@ -58,7 +62,7 @@ Build failure must not mutate the last valid local artifacts or HOME.
 3. Compute create/update/delete/preserve diff per HOME target.
 4. Stage and promote each target with release/recovery metadata.
 
-After changing `.evcrate/source/.claude`, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` requires a current verified build, never runs migrators, and publishes the sanitized HOME view of the complete `.evcrate/source/.claude` artifact to `$HOME/.claude`. Pi receives global skills through `$HOME/.agents/skills`; publication does not create or modify `~/.pi/agent/settings.json`.
+After changing `.evcrate/source/.claude`, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` requires a current verified build, never runs migrators, and publishes the sanitized HOME view of the complete `.evcrate/source/.claude` artifact to `$HOME/.claude`. The advisor skill's `.agents` publication does not create or modify `~/.pi/agent/settings.json`; the separate native Pi Phase 01 target owns its documented shared-settings merge.
 
 No migration or overlay logic runs during publication.
 

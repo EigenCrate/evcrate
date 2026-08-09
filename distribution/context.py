@@ -41,6 +41,10 @@ class DistributionContext:
         return self.local_path(".gemini")
 
     @property
+    def local_pi(self) -> Path:
+        return self.local_path(".pi")
+
+    @property
     def local_codex(self) -> Path:
         return self.local_path(".codex")
 
@@ -58,7 +62,7 @@ class DistributionContext:
 
     @property
     def local_roots(self) -> tuple[Path, ...]:
-        return (self.local_gemini, self.local_codex, self.local_agents, self.local_antigravity, self.local_claude)
+        return (self.local_gemini, self.local_codex, self.local_agents, self.local_antigravity, self.local_claude, self.local_pi)
 
     @property
     def local_project_docs(self) -> tuple[Path, ...]:
@@ -67,7 +71,7 @@ class DistributionContext:
     @property
     def legacy_local_paths(self) -> tuple[Path, ...]:
         return tuple(self.repository / name for name in (
-            ".claude", ".codex", ".agents", ".gemini", ".antigravity", ".opencode",
+            ".claude", ".codex", ".agents", ".gemini", ".antigravity", ".opencode", ".pi",
             "CLAUDE.md", "AGENTS.md", "GEMINI.md",
         ))
 
@@ -84,6 +88,10 @@ class DistributionContext:
     @property
     def target_claude(self) -> Path:
         return self.home / ".claude"
+
+    @property
+    def target_pi(self) -> Path:
+        return self.home / ".pi"
 
     @property
     def target_codex(self) -> Path:
