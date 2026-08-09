@@ -80,7 +80,7 @@ Pi session
 2. [Deterministic resource migration](./phase-02-resource-migration.md)
 3. [Native commands, agents, and model roles](./phase-03-native-runtime-extension.md) — DONE (260809; user-approved with unresolved criticals)
 4. [Hooks and managed settings publication](./phase-04-hooks-and-settings.md)
-5. [Integration, safety, and release gates](./phase-05-integration-validation.md)
+5. [Integration, safety, and release gates](./phase-05-integration-validation.md) — DONE (isolated validation 260809; live cutover excluded)
 6. [Documentation and manual cutover](./phase-06-documentation-cutover.md)
 
 ## Success criteria
