@@ -211,7 +211,12 @@ class DistributionBuildTest(unittest.TestCase):
         self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "pi"})
         pi = load_target_manifest(registry.targets["pi"])
         self.assertEqual(pi.output_roots, (".pi",))
-        self.assertEqual(pi.adapter_sources, ("pi_adapter/__init__.py",))
+        self.assertEqual(pi.adapter_sources, (
+            "pi_adapter/__init__.py",
+            "pi_adapter/agents.py",
+            "pi_adapter/frontmatter.py",
+            "pi_adapter/resources.py",
+        ))
         self.assertEqual(pi.shared_json.destination, "agent/settings.json")
 
     def test_manifest_rejects_escaping_duplicate_or_symlinked_adapter_sources(self) -> None:

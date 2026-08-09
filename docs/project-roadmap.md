@@ -148,9 +148,14 @@ Enterprise-grade features and deployment options.
 - Pi settings remain shared user data; EVCrate owns only those package identities. Manual Pi quiescence is required for live publication.
 - No live cutover has occurred. `pi-code` removal remains a manual user action.
 
-### Phases 02–06: PENDING
+### Phase 02: Deterministic Resource Migration — COMPLETE
+**Completed:** 260809
 
-Deterministic resource migration, native command/delegation/model-role runtime, native hooks, integration/release gates, and documentation/manual cutover are not delivered by this change.
+- Delivered deterministic native Pi resource migration, including inventory validation, semantic compatibility translation, agent model-role conversion, hook/script dependency closure, and idempotence coverage.
+
+### Phases 03–06: PENDING
+
+Native command/delegation/model-role runtime, native hooks, integration/release gates, and documentation/manual cutover are not delivered by this change.
 
 See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
 

@@ -16,7 +16,7 @@ evcrate/
 │   ├── .claude/          # Canonical Claude Code source
 │   ├── .codex/           # Generated Codex artifact
 │   ├── .agents/          # Codex-owned, Pi-compatible shared skills
-│   ├── .pi/              # Generated native Pi Phase 01 skeleton
+│   ├── .pi/              # Generated native Pi Phase 02 resource projection
 │   ├── .gemini/          # Generated Gemini artifact
 │   ├── .antigravity/     # Generated Antigravity artifact
 │   ├── .opencode/        # OpenCode compatibility source
@@ -31,8 +31,8 @@ evcrate/
 ├── distribution/         # Immutable path context, gate contracts, and gate orchestration
 ├── migrate_claude_to_codex.py   # Codex target generator
 ├── migrate_claude_to_gemini.py  # Gemini target generator
-├── migrate_claude_to_pi.py      # Staging-only native Pi adapter
-├── pi_adapter/                  # Pi adapter containment helpers
+├── migrate_claude_to_pi.py      # Deterministic, staging-only native Pi resource migrator
+├── pi_adapter/                  # Native Pi resource inventory, translation, validation, conversion, and containment helpers
 ├── README.md             # Project overview
 ├── package.json          # Node.js dependencies
 └── repomix-output.xml    # Codebase compaction file
@@ -46,7 +46,7 @@ Phase 2–4 support creates generated targets in an empty same-volume staging ro
 
 `EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime compatibility retains existing `CK_*`, `/tmp/ck`, `ck-session-*`, and external `ck` CLI boundaries.
 
-Native Pi Phase 01 adds a manifest-backed `.pi` target, a staging-only adapter, symmetric adapter/helper hashes, and a pure shared-settings merge for the two exact package pins. The generated skeleton contains no native commands, agents, skills, workflows, hooks, extensions, or model-role data; later Pi phases remain pending. `agent/settings.json` stays user-owned, live publication requires manual Pi quiescence, and `pi-code` is never removed automatically. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
+Native Pi Phase 02 extends the manifest-backed, staging-only `.pi` adapter with a deterministic `agent/` resource projection. It generates 73 commands, 4 static workflows, 17 provider-neutral agent definitions, 53 validated skill packages, and copied canonical hooks and scripts; `agent/evcrate/inventory.json` records the projection and excludes the legacy `claude-code/skill.md`. Command and workflow prompt references are translated to `{{evcrate:...}}` resource paths. Generated agent documents contain no concrete provider/model identifiers; `agent/evcrate/model-roles.json` retains only the semantic `strong`, `standard`, `fast`, and `parent` roles, and `agent-tool-audit.json` records tool mappings or omissions. The generated `hook-map.json` is derived from canonical hook settings, but it is resource metadata only: Phase 04 hook dispatch is not implemented. `managed-settings.json` uses `evcrate-pi-managed-settings-v1` and records only the exact managed package pins (`npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`); finalized managed-settings behavior remains Phase 04. `agent/settings.json` stays user-owned, live publication requires manual Pi quiescence, and `pi-code` is never removed automatically. Phase 03 native command/delegation and runtime model-role resolution is not implemented. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
 
 The advisor is current-session guidance only: it structures a local decision brief and reasons over already available evidence. It invokes no provider, model, MCP server, app, command, network or file operation, delegation, quota, audit, or enforcement mechanism. The former `advisor_consult` broker contract is removed; callers use explicit `$advisor-strategy`. Distribution behavior is covered by the Python regression suites.
 
