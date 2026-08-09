@@ -85,6 +85,53 @@ class PiResourceMigrationTest(unittest.TestCase):
             self.assertNotIn(".evcrate/source", content)
             self.assertNotRegex(content, r"/home/[^\s]+")
 
+    def test_translate_prompt_marks_only_known_model_directed_commands(self) -> None:
+        commands = ("plan/fast", "plan/hard", "plan/validate", "code", "git/cm", "scout/ext")
+        cases = (
+            ("- Trigger `/plan:fast <details>` now.\n", "- Trigger {{evcrate:commands/plan:fast}} <details> now.\n"),
+            ("Execute SlashCommand: `/code <plan>`.\n", "Execute SlashCommand: {{evcrate:commands/code}} <plan>.\n"),
+            ("Dispatch /git:cm --message 'ship'.\n", "Dispatch {{evcrate:commands/git:cm}} --message 'ship'.\n"),
+            ("Then use `/scout:ext` SlashCommand.\n", "Then use {{evcrate:commands/scout:ext}} SlashCommand.\n"),
+            ("Call `/plan:validate {plan-path}`.\n", "Call {{evcrate:commands/plan:validate}} {plan-path}.\n"),
+            ("Command Path: /plan:fast\n", "Command Path: /plan:fast\n"),
+            ("Tell users that `/plan:fast` is available.\n", "Tell users that `/plan:fast` is available.\n"),
+            ("Use `/plan:fast` for an example.\n", "Use `/plan:fast` for an example.\n"),
+            ("Trigger [/plan:fast](https://example.test/plan).\n", "Trigger [/plan:fast](https://example.test/plan).\n"),
+            ("Trigger https://example.test/plan:fast.\n", "Trigger https://example.test/plan:fast.\n"),
+            ("Trigger `/unknown-command <details>`.\n", "Trigger `/unknown-command <details>`.\n"),
+            ("```markdown\nTrigger `/plan:fast <details>`\n```\n", "```markdown\nTrigger `/plan:fast <details>`\n```\n"),
+        )
+        for source, expected in cases:
+            with self.subTest(source=source):
+                self.assertEqual(translate_prompt(source, commands), expected)
+                self.assertEqual(translate_prompt(expected, commands), expected)
+
+    def test_real_canonical_directives_have_no_migration_residuals(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            stage = Path(temp) / "stage"
+            output = stage / ".pi"
+            output.mkdir(parents=True)
+            self._migrate_canonical(output, stage)
+            prompts = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in (output / "agent/evcrate/commands").rglob("*.md")
+            )
+
+        for marker in (
+            "{{evcrate:commands/plan:fast}} <detailed-instruction-prompt>",
+            "{{evcrate:commands/plan:parallel}} <detailed-instruction>",
+            "{{evcrate:commands/plan:validate}} {plan-path}",
+            "{{evcrate:commands/code}} <plan>",
+        ):
+            self.assertIn(marker, prompts)
+        for residual in (
+            "Trigger slash command `/plan:fast",
+            "Trigger `/plan:parallel",
+            "Execute `/plan:validate",
+            "Trigger slash command `/code",
+        ):
+            self.assertNotIn(residual, prompts)
+
     def test_hook_map_rejects_escaping_or_missing_hook_commands(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp)

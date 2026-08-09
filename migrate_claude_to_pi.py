@@ -69,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     settings_fragment = resource_root / "managed-settings.json"
     settings_fragment.write_bytes(canonical_json_bytes(managed_settings_fragment()))
     settings_fragment.chmod(0o644)
-    copy_commands_and_workflows(source, output)
+    copy_commands_and_workflows(source, output, resources.commands)
     copy_skills(source, output)
     copy_hooks_and_scripts(source, output)
     convert_agents(source, output)

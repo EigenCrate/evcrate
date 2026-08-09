@@ -26,7 +26,7 @@ Analyze the skills catalog and activate other skills that are needed for the tas
 1. Use `debugger` subagent to find the root cause of the issues and report back to main agent.
 2. Use `researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
 3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
-4. Then use `/code` SlashCommand to implement the plan step by step.
+4. Then use {{evcrate:commands/code}} SlashCommand to implement the plan step by step.
 5. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
   * Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.

@@ -38,7 +38,7 @@ project-root/
 │   ├── .claude/              # Canonical Claude Code source
 │   ├── .codex/               # Generated Codex artifact
 │   ├── .agents/              # Codex-owned, Pi-compatible shared skills
-│   ├── .pi/                  # Generated native Pi Phase 01 skeleton
+│   ├── .pi/                  # Generated native Pi Phase 03 resources and extension
 │   ├── .gemini/              # Generated Gemini artifact
 │   ├── .antigravity/         # Generated Antigravity artifact
 │   └── .opencode/            # OpenCode compatibility source
@@ -66,8 +66,9 @@ project-root/
 - `.evcrate/source/.claude/` is the only authored agent-configuration source. Generated `.pi`, `.agents`, `.codex`, `.gemini`, and `.antigravity` trees are build outputs and must not be hand-edited.
 - Target manifests must declare contained output roots, adapter/helper sources, ownership, overlays, and HOME bindings. Build and publication verification must hash the same adapter inputs.
 - The Phase 01 Pi adapter writes only to an empty staged `.pi` root. Direct/global output modes, symlinked ancestors, path traversal, and non-canonical Claude sources are rejected.
-- Pi's shared `agent/settings.json` is user-owned. EVCrate manages only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
-- Live Pi publication requires manual quiescence and a pre-promotion HOME recheck. Phase 01 does not authorize live cutover or automatic `pi-code` removal.
+- Phase 03 runtime code registers native commands, keeps nested dispatch bounded, enforces `allowed-tools` through the policy gate, resolves semantic roles only at structured `pi-subagents` delegation time, and preserves provider-neutral generated resources.
+- Pi's shared `agent/settings.json` is user-owned. EVCrate manages only the exact pins `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
+- Live Pi publication requires manual quiescence and a pre-promotion HOME recheck. Phase 03 does not authorize release/cutover or automatic `pi-code` removal; XML closing-tag marker corruption and shell descendant timeout/process-tree handling remain unresolved criticals.
 
 ### File Naming Conventions
 
@@ -803,7 +804,7 @@ When migrating Claude Code hooks to other CLI environments (e.g., Codex, Gemini/
 - Specify exact dependency versions for stability
 - Include keywords for discoverability
 - Use `files` field to control published content
-- Specify minimum Node.js version (18.0.0+)
+- Specify minimum Node.js version (22.19.0+)
 
 ### .gitignore
 
