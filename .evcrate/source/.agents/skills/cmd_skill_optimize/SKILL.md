@@ -5,7 +5,7 @@ description: "Optimize an existing agent skill"
 
 # cmd_skill_optimize
 
-Command Path: /skill/optimize
+Command Path: /skill:optimize
 
 Description: Optimize an existing agent skill
 

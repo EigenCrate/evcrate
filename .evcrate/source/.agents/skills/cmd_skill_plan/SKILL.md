@@ -5,7 +5,7 @@ description: "Plan to create a new agent skill"
 
 # cmd_skill_plan
 
-Command Path: /skill/plan
+Command Path: /skill:plan
 
 Description: Plan to create a new agent skill
 

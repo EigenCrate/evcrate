@@ -5,7 +5,7 @@ description: "Describe a design based on screenshot/video"
 
 # cmd_design_describe
 
-Command Path: /design/describe
+Command Path: /design:describe
 
 Description: Describe a design based on screenshot/video
 

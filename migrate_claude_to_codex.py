@@ -169,12 +169,19 @@ def collect_migrated_command_paths() -> set[str]:
     command_paths: set[str] = set()
     for path in commands_dir.rglob("*.md"):
         rel_command = str(path.relative_to(commands_dir).with_suffix("")).replace(os.sep, "/")
-        command_paths.add("/" + rel_command)
+        command_paths.add(canonical_command_path("/" + rel_command))
         frontmatter, _ = parse_markdown_with_frontmatter(path)
         explicit_name = str(frontmatter.get("name") or "").strip()
         if explicit_name.startswith("/"):
-            command_paths.add(explicit_name)
+            command_paths.add(canonical_command_path(explicit_name))
     return command_paths
+
+
+def canonical_command_path(command_path: str) -> str:
+    """Return the portable colon-form label for a command path."""
+    if not command_path.startswith("/"):
+        return command_path
+    return "/" + command_path[1:].replace("/", ":")
 
 
 def canonicalize_command_tokens(text: str, known_commands: set[str]) -> str:
@@ -183,7 +190,7 @@ def canonicalize_command_tokens(text: str, known_commands: set[str]) -> str:
 
     def repl(match: re.Match[str]) -> str:
         token = match.group(0)
-        canonical = "/" + token[1:].replace(":", "/")
+        canonical = canonical_command_path(token)
         return canonical if canonical in known_commands else token
 
     return COMMAND_TOKEN_RE.sub(repl, text)
@@ -612,7 +619,7 @@ def migrate_commands_as_native_skills() -> None:
         cmd_name = str(rel_path).replace("\\", "/")
 
         frontmatter, body = parse_markdown_with_frontmatter(source)
-        command_path = str(frontmatter.get("name") or f"/{cmd_name}").strip()
+        command_path = canonical_command_path(str(frontmatter.get("name") or f"/{cmd_name}").strip())
         body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
         desc = normalize_skill_description(
             apply_replacements(str(frontmatter.get("description", ""))).strip(),

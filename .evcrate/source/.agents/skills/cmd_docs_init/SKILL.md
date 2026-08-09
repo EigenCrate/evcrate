@@ -5,7 +5,7 @@ description: "⚡⚡⚡⚡ Analyze the codebase and create initial documentation
 
 # cmd_docs_init
 
-Command Path: /docs/init
+Command Path: /docs:init
 
 Description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
 

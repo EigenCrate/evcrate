@@ -5,7 +5,7 @@ description: "⚡⚡ Start coding an existing plan (no testing)"
 
 # cmd_code_no-test
 
-Command Path: /code/no-test
+Command Path: /code:no-test
 
 Description: ⚡⚡ Start coding an existing plan (no testing)
 

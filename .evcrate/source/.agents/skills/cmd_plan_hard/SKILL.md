@@ -5,7 +5,7 @@ description: "⚡⚡⚡ Research, analyze, and create an implementation plan"
 
 # cmd_plan_hard
 
-Command Path: /plan/hard
+Command Path: /plan:hard
 
 Description: ⚡⚡⚡ Research, analyze, and create an implementation plan
 
@@ -62,11 +62,11 @@ After plan creation, offer validation interview to confirm decisions before impl
 | Mode | Behavior |
 |------|----------|
 | `prompt` | Ask user: "Validate this plan with a brief interview?" → Yes (Recommended) / No |
-| `auto` | Automatically execute `/plan/validate {plan-path}` |
+| `auto` | Automatically execute `/plan:validate {plan-path}` |
 | `off` | Skip validation step entirely |
 
 **If mode is `prompt`:** Use `request_user_input` tool with options above.
-**If user chooses validation or mode is `auto`:** Execute `/plan/validate {plan-path}` Codex slash command.
+**If user chooses validation or mode is `auto`:** Execute `/plan:validate {plan-path}` Codex slash command.
 
 ## Output Requirements
 

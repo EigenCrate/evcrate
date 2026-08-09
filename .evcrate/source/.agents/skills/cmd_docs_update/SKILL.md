@@ -5,7 +5,7 @@ description: "⚡⚡⚡ Analyze the codebase and update documentation"
 
 # cmd_docs_update
 
-Command Path: /docs/update
+Command Path: /docs:update
 
 Description: ⚡⚡⚡ Analyze the codebase and update documentation
 

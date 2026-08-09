@@ -5,7 +5,7 @@ description: "⚡⚡⚡⚡⚡ Bootstrap project with parallel execution"
 
 # cmd_bootstrap_auto_parallel
 
-Command Path: /bootstrap/auto/parallel
+Command Path: /bootstrap:auto:parallel
 
 Description: ⚡⚡⚡⚡⚡ Bootstrap project with parallel execution
 
@@ -56,7 +56,7 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - Ask user to approve (repeat if rejected)
 
 ### 5. Parallel Planning & Implementation
-- Use the matching `cmd_*` skill to run `/plan/parallel <detailed-instruction>` for parallel-executable plan
+- Use the matching `cmd_*` skill to run `/plan:parallel <detailed-instruction>` for parallel-executable plan
 - Read `plan.md` for dependency graph and execution strategy
 - Launch multiple `fullstack-developer` agents in PARALLEL for concurrent phases
   - Pass: phase file path, environment info

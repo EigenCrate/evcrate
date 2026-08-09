@@ -5,7 +5,7 @@ description: "⚡⚡ Implement payment integration with SePay.vn"
 
 # cmd_integrate_sepay
 
-Command Path: /integrate/sepay
+Command Path: /integrate:sepay
 
 Description: ⚡⚡ Implement payment integration with SePay.vn
 
@@ -47,5 +47,5 @@ Plan & start implementing payment integration with [https://developer.sepay.vn/v
 ## Workflow:
 
 - **Scout**: Use `scout` subagent to find related resources, documents, and code snippets in the current codebase.
-- **Plan**: Use the matching `cmd_*` skill to run `/plan/fast <detailed-instruction-prompt>` to create an implementation plan based on the reports from `scout` subagent.
+- **Plan**: Use the matching `cmd_*` skill to run `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on the reports from `scout` subagent.
 - **Implementation**: Use the matching `cmd_*` skill to run `/code <plan>` to implement the plan.

@@ -5,7 +5,7 @@ description: "⚡⚡ No research. Only analyze and create an implementation plan
 
 # cmd_plan_fast
 
-Command Path: /plan/fast
+Command Path: /plan:fast
 
 Description: ⚡⚡ No research. Only analyze and create an implementation plan
 

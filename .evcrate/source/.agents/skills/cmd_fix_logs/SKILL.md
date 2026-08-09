@@ -5,7 +5,7 @@ description: "⚡ Analyze logs and fix issues"
 
 # cmd_fix_logs
 
-Command Path: /fix/logs
+Command Path: /fix:logs
 
 Description: ⚡ Analyze logs and fix issues
 

@@ -5,7 +5,7 @@ description: "⚡ Fix type errors"
 
 # cmd_fix_types
 
-Command Path: /fix/types
+Command Path: /fix:types
 
 Description: ⚡ Fix type errors
 

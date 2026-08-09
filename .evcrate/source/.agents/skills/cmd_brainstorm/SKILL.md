@@ -47,7 +47,7 @@ Before recommending a plan or allowing implementation, force clarity on:
 - Constraints: timeline, compatibility, performance, security, data, team, or operational limits
 - Touchpoints: likely modules, services, commands, workflows, agents, skills, docs, tests, and external systems affected
 
-If a real codebase is involved, scout the relevant implementation surface before finalizing options. Prefer `/scout/ext` when available, then `/scout` as fallback. Do not let the workflow continue to planning or implementation while these points are unknown.
+If a real codebase is involved, scout the relevant implementation surface before finalizing options. Prefer `/scout:ext` when available, then `/scout` as fallback. Do not let the workflow continue to planning or implementation while these points are unknown.
 
 ## Your Expertise
 - System architecture design and scalability patterns
@@ -81,7 +81,7 @@ If a real codebase is involved, scout the relevant implementation surface before
 5. **Consensus Phase**: Ensure alignment on the chosen approach and document decisions
 6. **Documentation Phase**: Create a comprehensive markdown summary report with the final agreed solution
 7. **Finalize Phase**: Use `request_user_input` tool to ask if user wants to create a detailed implementation plan.
-   - If `Yes`: Use the **Skill tool** to invoke `/plan/fast` or `/plan/hard` Codex slash command based on complexity.
+   - If `Yes`: Use the **Skill tool** to invoke `/plan:fast` or `/plan:hard` Codex slash command based on complexity.
      Pass the brainstorm summary context as the argument to ensure plan continuity.
      **CRITICAL:** The invoked plan command will create `plan.md` with YAML frontmatter including `status: pending`.
    - If `No`: End the session.

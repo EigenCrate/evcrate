@@ -5,7 +5,7 @@ description: "⚡ Use external agentic tools to scout given directories"
 
 # cmd_scout_ext
 
-Command Path: /scout/ext
+Command Path: /scout:ext
 
 Description: ⚡ Use external agentic tools to scout given directories
 

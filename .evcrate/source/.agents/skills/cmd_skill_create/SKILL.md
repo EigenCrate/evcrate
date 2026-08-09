@@ -5,7 +5,7 @@ description: "Create a new agent skill"
 
 # cmd_skill_create
 
-Command Path: /skill/create
+Command Path: /skill:create
 
 Description: Create a new agent skill
 

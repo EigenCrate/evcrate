@@ -5,7 +5,7 @@ description: "⚡⚡ Analyze and fix UI issues"
 
 # cmd_fix_ui
 
-Command Path: /fix/ui
+Command Path: /fix:ui
 
 Description: ⚡⚡ Analyze and fix UI issues
 

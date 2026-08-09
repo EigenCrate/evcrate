@@ -5,7 +5,7 @@ description: "Create immersive interactive 3D designs with Three.js"
 
 # cmd_design_3d
 
-Command Path: /design/3d
+Command Path: /design:3d
 
 Description: Create immersive interactive 3D designs with Three.js
 

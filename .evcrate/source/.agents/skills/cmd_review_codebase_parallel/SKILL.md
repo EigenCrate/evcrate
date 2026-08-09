@@ -5,7 +5,7 @@ description: "⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-re
 
 # cmd_review_codebase_parallel
 
-Command Path: /review/codebase/parallel
+Command Path: /review:codebase:parallel
 
 Description: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
 
@@ -36,7 +36,7 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 Main agent deeply analyzes the scope to LIST all potential edge cases FIRST:
 - Read `codebase-summary.md` for context
-- Use `/scout/ext` to find relevant files
+- Use `/scout:ext` to find relevant files
 - **Think exhaustively** about what could go wrong:
   - Null/undefined scenarios
   - Boundary conditions (off-by-one, empty, max values)
@@ -110,8 +110,8 @@ Collect all verification reports:
 ### 5. Auto-Fix Pipeline
 
 **IF** unhandled/partial edge cases found:
-- Ask: "Found N unhandled edge cases. Fix with /fix/parallel? [Y/n]"
-- **IF yes:** Trigger `/fix/parallel` with unhandled list
+- Ask: "Found N unhandled edge cases. Fix with /fix:parallel? [Y/n]"
+- **IF yes:** Trigger `/fix:parallel` with unhandled list
 
 ### 6. Final Report
 
@@ -121,7 +121,7 @@ Collect all verification reports:
 ## Example
 
 ```
-User: /review/codebase/parallel auth module
+User: /review:codebase:parallel auth module
 
 1. Ultrathink → Lists 12 edge cases for auth:
    - Empty password submission
@@ -139,7 +139,7 @@ User: /review/codebase/parallel auth module
 
 4. Aggregate → 8 handled, 3 unhandled, 1 partial
 
-5. Fix → User approves → /fix/parallel
+5. Fix → User approves → /fix:parallel
 
 6. Final → Commit changes
 ```
