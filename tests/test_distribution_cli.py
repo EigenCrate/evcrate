@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import io
+import json
 import subprocess
 import sys
 import tempfile
@@ -53,12 +54,15 @@ class DistributionCliTest(unittest.TestCase):
                 run.side_effect = write_required_docs
                 gates._generate_stage(context)
             migrator_calls = [call for call in run.call_args_list if call.args[0][0] != "npm"]
-            self.assertEqual(len(migrator_calls), 2)
+            self.assertEqual(len(migrator_calls), 3)
             for call in migrator_calls:
                 self.assertEqual(call.kwargs["cwd"], context.repository)
                 self.assertTrue(call.kwargs["check"])
                 self.assertEqual(call.kwargs["env"]["PROJECT_DOCS_OUTPUT_DIR"], str(context.stage_project_docs))
                 self.assertEqual(call.kwargs["env"]["GEMINI_PROJECT_DOCS_OUTPUT_DIR"], str(context.stage_project_docs))
+            pi_call = next(call for call in migrator_calls if str(call.args[0][1]).endswith("migrate_claude_to_pi.py"))
+            self.assertEqual(pi_call.kwargs["env"]["PI_OUTPUT_DIR"], str(context.stage / ".pi"))
+            self.assertEqual(pi_call.kwargs["env"]["PI_STAGE_ROOT"], str(context.stage))
 
     def test_failed_build_never_calls_publisher(self) -> None:
         with patch("distribution.gates.run_local_build", side_effect=BuildError("generator failed")), patch(
@@ -160,7 +164,11 @@ class DistributionCliTest(unittest.TestCase):
                 if source_file.is_file():
                     self.assertFalse((published_claude / "skills" / source_file.name).exists())
             self.assertTrue((published_claude / "skills/common/README.md").is_file())
-            self.assertFalse((Path(home) / ".pi/agent/settings.json").exists())
+            settings = json.loads((Path(home) / ".pi/agent/settings.json").read_text(encoding="utf-8"))
+            self.assertEqual(settings["packages"], [
+                "npm:pi-subagents@0.44.0",
+                "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
+            ])
 
     def test_publish_rejects_symlinked_home_before_creating_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

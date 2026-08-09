@@ -11,7 +11,7 @@ from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
 from .contracts import BuildError, VerifiedArtifact
 from .hashing import hash_file, ignore_artifacts, source_tree_hash, tree_hash
-from .manifest import TargetManifest, build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
+from .manifest import adapter_hashes, TargetManifest, build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from .overlay import apply_patch_file, copy_overlay_files
 from .runtime import stage_runtime
 
@@ -116,8 +116,12 @@ def _apply_targets(
         "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }
-    adapters = {manifest.adapter: hash_file(context.repository / manifest.adapter) for manifest in manifests if manifest.adapter}
-    return owners, {**baseline_sources, **source_hashes(manifests), **adapters}, target_policies, tuple(project_docs)
+    return (
+        owners,
+        {**baseline_sources, **source_hashes(manifests), **adapter_hashes(manifests, context.repository)},
+        target_policies,
+        tuple(project_docs),
+    )
 
 
 def generate_stage(
@@ -132,11 +136,14 @@ def generate_stage(
     manifests = _load_targets(context, roots)
     env = os.environ.copy()
     env.update({
+        "EVCRATE_REPOSITORY": str(context.repository),
         "EVCRATE_SOURCE_DIR": str(context.source_root),
         "CLAUDE_SOURCE_DIR": str(context.local_claude),
         "GEMINI_OUTPUT_DIR": str(roots[".gemini"]),
         "CODEX_OUTPUT_DIR": str(roots[".codex"]),
         "AGENTS_OUTPUT_DIR": str(roots[".agents"]),
+        "PI_OUTPUT_DIR": str(roots[".pi"]),
+        "PI_STAGE_ROOT": str(context.stage),
         "PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
         "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
     })
@@ -152,7 +159,7 @@ def generate_stage(
     build_antigravity_config(context.local_claude, roots[".antigravity"])
 
     owners, sources_and_adapters, policies, required_docs = _apply_targets(context, roots, manifests)
-    adapter_names = {manifest.adapter for manifest in manifests if manifest.adapter}
+    adapter_names = set(adapter_hashes(manifests, context.repository))
     source_values = {key: value for key, value in sources_and_adapters.items() if key not in adapter_names}
     adapter_values = {key: value for key, value in sources_and_adapters.items() if key in adapter_names}
     outputs = dict(roots)

@@ -191,7 +191,8 @@ class DistributionBuildTest(unittest.TestCase):
         repository = Path(__file__).resolve().parents[1]
         registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
         context = create_context(DistributionAction.BUILD)
-        self.assertEqual(context.local_roots[-1], context.local_claude)
+        self.assertEqual(context.local_roots[-2], context.local_claude)
+        self.assertEqual(context.local_roots[-1], context.local_pi)
         claude = load_target_manifest(registry.targets["claude"])
         self.assertEqual(claude.output_roots, (".claude",))
         self.assertIsNone(claude.adapter)
@@ -207,7 +208,45 @@ class DistributionBuildTest(unittest.TestCase):
         manifest_text = registry.targets["codex"].read_text(encoding="utf-8")
         self.assertNotIn("advisor", manifest_text.lower())
         self.assertFalse((registry.targets["codex"].parent / "runtime").exists())
-        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini"})
+        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "pi"})
+        pi = load_target_manifest(registry.targets["pi"])
+        self.assertEqual(pi.output_roots, (".pi",))
+        self.assertEqual(pi.adapter_sources, ("pi_adapter/__init__.py",))
+        self.assertEqual(pi.shared_json.destination, "agent/settings.json")
+
+    def test_manifest_rejects_escaping_duplicate_or_symlinked_adapter_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            repository = Path(temp)
+            target_dir = repository / ".evcrate/targets/pi"
+            target_dir.mkdir(parents=True)
+            (repository / "migrate.py").write_text("adapter", encoding="utf-8")
+            helper = repository / "pi_adapter.py"
+            helper.write_text("helper", encoding="utf-8")
+            base = {
+                "schema_version": 1,
+                "name": "pi",
+                "adapter": "migrate.py",
+                "output_root": ".pi",
+                "additional_roots": [],
+                "adapter_sources": ["pi_adapter.py"],
+                "patches": [],
+                "home_policy": {},
+            }
+            manifest = target_dir / "manifest.json"
+            manifest.write_text(json.dumps(base), encoding="utf-8")
+            self.assertEqual(load_target_manifest(manifest).adapter_sources, ("pi_adapter.py",))
+            for sources in (["../secret"], ["pi_adapter.py", "pi_adapter.py"]):
+                invalid = dict(base, adapter_sources=sources)
+                manifest.write_text(json.dumps(invalid), encoding="utf-8")
+                with self.assertRaises(BuildError):
+                    load_target_manifest(manifest)
+            outside = repository / "outside.py"
+            outside.write_text("outside", encoding="utf-8")
+            helper.unlink()
+            helper.symlink_to(outside)
+            manifest.write_text(json.dumps(base), encoding="utf-8")
+            with self.assertRaises(BuildError):
+                load_target_manifest(manifest)
 
     def test_generated_target_cannot_use_a_null_adapter(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -305,6 +344,7 @@ class DistributionBuildTest(unittest.TestCase):
                 "claude": [".claude"],
                 "codex": [".codex", ".agents"],
                 "gemini": [".gemini"],
+                "pi": [".pi"],
             }
             registry = {name: f"{name}/manifest.json" for name in target_roots}
             (targets / "manifest.json").write_text(json.dumps({"schema_version": 1, "targets": registry}), encoding="utf-8")

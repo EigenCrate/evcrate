@@ -9,7 +9,7 @@ from typing import Any
 from .context import DistributionContext
 from .contracts import PublishError, VerifiedArtifact
 from .hashing import hash_file, tree_hash
-from .manifest import load_target_manifest, load_target_registry, source_hashes
+from .manifest import adapter_hashes, load_target_manifest, load_target_registry, source_hashes
 from .staging import BUILD_MANIFEST_PATH
 
 
@@ -39,9 +39,7 @@ def _current_source_hashes(context: DistributionContext) -> dict[str, str]:
         "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
     }
     values.update(source_hashes(manifests))
-    for manifest in manifests:
-        if manifest.adapter:
-            values[manifest.adapter] = hash_file(context.repository / manifest.adapter)
+    values.update(adapter_hashes(manifests, context.repository))
     return dict(sorted(values.items()))
 
 
