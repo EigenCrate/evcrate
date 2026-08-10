@@ -226,8 +226,14 @@ def load_target_registry(path: Path) -> TargetRegistry:
         raise BuildError("Target registry requires a non-empty targets object")
     resolved: dict[str, Path] = {}
     for name, relative in targets.items():
-        if not isinstance(name, str) or not name or not isinstance(relative, str):
-            raise BuildError("Target registry names and paths must be strings")
+        if (
+            not isinstance(name, str)
+            or not name
+            or "/" in name
+            or "\\" in name
+            or not isinstance(relative, str)
+        ):
+            raise BuildError("Target registry names must be simple strings and paths must be strings")
         try:
             candidate = contained_path(path.parent, relative, must_exist=True)
         except HashingError as error:

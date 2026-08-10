@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from dataclasses import replace
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,8 +12,12 @@ from unittest.mock import patch
 
 from distribution.context import create_context
 from distribution.contracts import DistributionAction, PublishError, VerifiedArtifact
+from distribution import gates
 from distribution.gates import run_home_publish, run_local_build, run_local_check
+from distribution.manifest import build_manifest_bytes
 from distribution.publish import publish_local_artifacts
+from distribution.publish_verification import verify_local_artifact
+from distribution.staging import build_manifest_path
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -29,16 +34,100 @@ def tree_bytes(root: Path) -> dict[str, bytes]:
 class NativePiDistributionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        run_local_build()
-        run_local_check()
+        cls._artifact_snapshot = tempfile.TemporaryDirectory()
+        snapshot = Path(cls._artifact_snapshot.name)
+        cls._tracked_artifacts = (Path(".evcrate/source/.pi"), Path(".evcrate/build-manifest-pi.json"))
+        cls._artifact_existed = {path: path.exists() for path in cls._tracked_artifacts}
+        for path, exists in cls._artifact_existed.items():
+            if exists:
+                destination = snapshot / path
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(path, destination) if path.is_dir() else shutil.copy2(path, destination)
+        run_local_build(("pi",))
+        run_local_check(("pi",))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        snapshot = Path(cls._artifact_snapshot.name)
+        for path, existed in cls._artifact_existed.items():
+            if path.is_dir():
+                shutil.rmtree(path)
+            elif path.exists() or path.is_symlink():
+                path.unlink()
+            if existed:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(snapshot / path, path) if (snapshot / path).is_dir() else shutil.copy2(snapshot / path, path)
+        cls._artifact_snapshot.cleanup()
+
+    def test_pi_build_manifest_does_not_replace_default_authorization(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            repository = Path(temp)
+            shutil.copytree(REPOSITORY / ".evcrate/targets", repository / ".evcrate/targets")
+            for relative in ("migrate_claude_to_gemini.py", "migrate_claude_to_codex.py", "migrate_claude_to_pi.py", "pi_adapter"):
+                source, destination = REPOSITORY / relative, repository / relative
+                shutil.copytree(source, destination) if source.is_dir() else shutil.copy2(source, destination)
+            all_context = replace(create_context(DistributionAction.BUILD), repository=repository)
+            pi_stage = repository / "stage"
+            pi_context = replace(
+                create_context(DistributionAction.BUILD, selected_targets=("pi",)),
+                repository=repository,
+                stage=pi_stage,
+            )
+            outputs = {path.name: path for path in (*all_context.local_roots, *all_context.local_project_docs)}
+            for path in outputs.values():
+                path.mkdir(parents=True, exist_ok=True)
+            default_manifest = repository / build_manifest_path(all_context)
+            default_manifest.parent.mkdir(parents=True, exist_ok=True)
+            default_manifest.write_bytes(build_manifest_bytes(
+                source_hashes={}, adapter_hashes={}, owners={}, output_roots=outputs,
+                home_policy={}, validation={"complete": True},
+            ))
+            pi_root = pi_stage / ".pi"
+            shutil.copytree(outputs[".pi"], pi_root)
+            pi_manifest = pi_stage / build_manifest_path(pi_context)
+            pi_manifest.parent.mkdir(parents=True, exist_ok=True)
+            pi_manifest.write_text("pi authorization", encoding="utf-8")
+
+            gates._promote_transaction(gates._changed_promotion_pairs(
+                pi_context, VerifiedArtifact(repository, (pi_root,)),
+            ))
+
+            self.assertEqual(default_manifest.read_bytes(), build_manifest_bytes(
+                source_hashes={}, adapter_hashes={}, owners={}, output_roots=outputs,
+                home_policy={}, validation={"complete": True},
+            ))
+            self.assertEqual((repository / build_manifest_path(pi_context)).read_text(encoding="utf-8"), "pi authorization")
+            with patch("distribution.publish_verification._current_source_hashes", return_value={}):
+                verify_local_artifact(
+                    all_context,
+                    VerifiedArtifact(repository, all_context.local_roots),
+                )
 
     def _context(self, root: Path):
         environment = {
             "EVCRATE_HOME": str(root / "home"),
             "EVCRATE_STATE_HOME": str(root / "state"),
         }
-        context = create_context(DistributionAction.PUBLISH, environ=environment)
+        context = create_context(DistributionAction.PUBLISH, environ=environment, selected_targets=("pi",))
         return context, VerifiedArtifact(REPOSITORY, context.local_roots)
+
+    def test_selected_publish_changes_only_pi_home_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context, artifact = self._context(Path(temp))
+            other_roots = (".claude", ".codex", ".agents", ".gemini", ".antigravity")
+            before = {}
+            for name in other_roots:
+                path = context.home / name / "user-owned.txt"
+                path.parent.mkdir(parents=True)
+                path.write_text(name, encoding="utf-8")
+                before[name] = tree_bytes(context.home / name)
+
+            changes = run_home_publish(context, artifact)
+
+            self.assertEqual({change.root for change in changes}, {".pi"})
+            self.assertTrue(context.target_pi.is_dir())
+            for name in other_roots:
+                self.assertEqual(tree_bytes(context.home / name), before[name])
 
     def test_publish_preserves_settings_and_removes_prior_managed_pi_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -106,17 +195,23 @@ class NativePiDistributionTest(unittest.TestCase):
 
             settings.write_text('{"packages":[]}', encoding="utf-8")
             from distribution import publish as publish_module
-            original_copy = publish_module._copy_candidate
+            original_snapshot = publish_module._home_snapshot
 
-            def mutate_after_candidate(*args: object, **kwargs: object):
-                candidate, managed = original_copy(*args, **kwargs)
-                (context.target_pi / "session-live.json").write_text("concurrent", encoding="utf-8")
-                return candidate, managed
+            snapshots = 0
 
-            with patch("distribution.publish._copy_candidate", side_effect=mutate_after_candidate):
+            def mutate_after_snapshot(home: Path):
+                nonlocal snapshots
+                snapshot = original_snapshot(home)
+                snapshots += 1
+                if snapshots == 1:
+                    (context.target_pi / "session-live.json").write_text("concurrent", encoding="utf-8")
+                return snapshot
+
+            with patch("distribution.publish._home_snapshot", side_effect=mutate_after_snapshot):
                 with self.assertRaisesRegex(PublishError, "concurrently"):
                     publish_local_artifacts(context, artifact)
             self.assertEqual(settings.read_text(encoding="utf-8"), '{"packages":[]}')
+            self.assertEqual((context.target_pi / "session-live.json").read_text(encoding="utf-8"), "concurrent")
 
             shutil.rmtree(context.target_pi)
             outside = root / "outside"

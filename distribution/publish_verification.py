@@ -9,12 +9,11 @@ from typing import Any
 from .context import DistributionContext
 from .contracts import PublishError, VerifiedArtifact
 from .hashing import hash_file, tree_hash
-from .manifest import adapter_hashes, load_target_manifest, load_target_registry, source_hashes
-from .staging import BUILD_MANIFEST_PATH
+from .staging import build_input_hashes, build_manifest_path
 
 
 def _load_build_manifest(context: DistributionContext) -> dict[str, Any]:
-    path = context.repository / BUILD_MANIFEST_PATH
+    path = context.repository / build_manifest_path(context)
     if not path.is_file() or path.is_symlink():
         raise PublishError("Missing or unsafe build manifest; run --build first")
     try:
@@ -29,25 +28,12 @@ def _load_build_manifest(context: DistributionContext) -> dict[str, Any]:
 
 
 def _current_source_hashes(context: DistributionContext) -> dict[str, str]:
-    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
-    manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
-    values = {
-        ".claude": tree_hash(context.local_claude),
-        "CLAUDE.md": hash_file(context.source_root / "CLAUDE.md"),
-        ".evcrate/targets": tree_hash(context.repository / ".evcrate/targets"),
-        "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
-        "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
-    }
-    values.update(source_hashes(manifests))
-    values.update(adapter_hashes(manifests, context.repository))
-    return dict(sorted(values.items()))
+    return build_input_hashes(context, context.selected_manifests)
 
 
 def _expected_output_names(context: DistributionContext) -> set[str]:
-    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
-    manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
     names = {root.name for root in context.local_roots}
-    names.update(document for manifest in manifests for document in manifest.project_docs)
+    names.update(path.name for path in context.local_project_docs)
     return names
 
 

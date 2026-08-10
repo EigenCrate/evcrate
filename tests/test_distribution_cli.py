@@ -33,6 +33,14 @@ class DistributionCliTest(unittest.TestCase):
             with patch("sys.stderr", new_callable=io.StringIO):
                 distribute.parse_args(["--dry-run"])
 
+    def test_target_selector_accepts_pi_and_rejects_duplicate_or_unknown_values(self) -> None:
+        invocation = distribute.parse_invocation(["--all", "--target", "pi"])
+        self.assertEqual(invocation.action, DistributionAction.ALL)
+        self.assertEqual(invocation.selected_targets, ("pi",))
+        for arguments in (["--all", "--target", "pi", "--target", "pi"], ["--all", "--target", "unknown"]):
+            with self.assertRaises(SystemExit), patch("sys.stderr", new_callable=io.StringIO):
+                distribute.parse_invocation(arguments)
+
     def test_staged_migrators_run_from_repository_with_fatal_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             context = create_context(DistributionAction.BUILD, stage=Path(temp))
@@ -148,7 +156,8 @@ class DistributionCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
             context = create_context(DistributionAction.PUBLISH)
             artifact = VerifiedArtifact(context.repository, context.local_roots)
-            gates.run_home_publish(context, artifact)
+            with patch("distribution.publish.verify_local_artifact"):
+                gates.run_home_publish(context, artifact)
 
             published_claude = Path(home) / ".claude"
             published_pi_skills = Path(home) / ".agents" / "skills"

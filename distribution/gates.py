@@ -11,7 +11,7 @@ from .build import promote_transaction, repository_lock, staged_build_root
 from .context import DistributionContext, create_context
 from .contracts import BuildError, DistributionAction, PublishError, VerifiedArtifact
 from .hashing import is_ignored_artifact
-from .staging import BUILD_MANIFEST_PATH, generate_stage
+from .staging import build_manifest_path, generate_stage
 
 
 GENERATED_DOCS = ("AGENTS.md", "GEMINI.md")
@@ -44,8 +44,8 @@ def _run_migrator(context: DistributionContext, script_name: str, env: dict[str,
         raise BuildError(f"Could not execute {script_name}: {error}") from error
 
 
-def _stage_context(action: DistributionAction, stage: Path) -> DistributionContext:
-    return create_context(action, stage=stage)
+def _stage_context(action: DistributionAction, stage: Path, selected_targets: tuple[str, ...]) -> DistributionContext:
+    return create_context(action, stage=stage, selected_targets=selected_targets)
 
 
 def _generate_stage(context: DistributionContext) -> VerifiedArtifact:
@@ -118,7 +118,7 @@ def _changed_promotion_pairs(context: DistributionContext, staged: VerifiedArtif
         for source, destination in zip(staged.roots, context.local_roots, strict=True)
         if not _same_tree(source, destination)
     ]
-    for document in GENERATED_DOCS:
+    for document in (path.name for path in context.local_project_docs):
         source = context.stage_project_docs / document
         destination = context.local_path(document)
         if source.exists():
@@ -126,55 +126,57 @@ def _changed_promotion_pairs(context: DistributionContext, staged: VerifiedArtif
                 pairs.append((source, destination))
         elif destination.exists() or destination.is_symlink():
             pairs.append((None, destination))
-    manifest = context.stage / BUILD_MANIFEST_PATH
-    destination = context.repository / BUILD_MANIFEST_PATH
+    manifest_path = build_manifest_path(context)
+    manifest = context.stage / manifest_path
+    destination = context.repository / manifest_path
     if not _same_tree(manifest, destination):
         pairs.append((manifest, destination))
     return pairs
 
 
-def run_local_build() -> VerifiedArtifact:
-    """Generate local artifacts in isolation, then promote only complete output."""
+def run_local_build(selected_targets: tuple[str, ...] = ()) -> VerifiedArtifact:
+    """Generate selected local artifacts in isolation, then promote complete output."""
 
-    base_context = create_context(DistributionAction.BUILD)
+    base_context = create_context(DistributionAction.BUILD, selected_targets=selected_targets)
     _assert_legacy_root_clean(base_context)
     with repository_lock(base_context.repository):
         with staged_build_root(base_context.repository) as stage:
-            context = _stage_context(DistributionAction.BUILD, stage)
+            context = _stage_context(DistributionAction.BUILD, stage, base_context.selected_target_names)
             staged = _generate_stage(context)
             _promote_transaction(_changed_promotion_pairs(context, staged))
             return VerifiedArtifact(repository=context.repository, roots=context.local_roots)
 
 
-def run_local_check() -> None:
-    """Compare staged output with local artifacts without writing repository or HOME."""
+def run_local_check(selected_targets: tuple[str, ...] = ()) -> None:
+    """Compare selected staged output with local artifacts without writing."""
 
-    base_context = create_context(DistributionAction.CHECK)
+    base_context = create_context(DistributionAction.CHECK, selected_targets=selected_targets)
     _assert_legacy_root_clean(base_context)
     with repository_lock(base_context.repository):
         with staged_build_root(base_context.repository, prefix=".evcrate-check-", recover=False) as stage:
-            context = _stage_context(DistributionAction.CHECK, stage)
+            context = _stage_context(DistributionAction.CHECK, stage, base_context.selected_target_names)
             staged = _generate_stage(context)
             differences = [
                 path
                 for root, local in zip(staged.roots, context.local_roots, strict=True)
                 for path in _tree_differences(root, local, root.name)
             ]
-            for document in GENERATED_DOCS:
+            for document in (path.name for path in context.local_project_docs):
                 staged_document = context.stage_project_docs / document
                 local_document = context.local_path(document)
                 if staged_document.exists() != local_document.exists() or (
                     staged_document.exists() and staged_document.read_bytes() != local_document.read_bytes()
                 ):
                     differences.append(document)
-            staged_manifest = context.stage / BUILD_MANIFEST_PATH
-            local_manifest = context.repository / BUILD_MANIFEST_PATH
+            manifest_path = build_manifest_path(context)
+            staged_manifest = context.stage / manifest_path
+            local_manifest = context.repository / manifest_path
             if (
                 not staged_manifest.is_file()
                 or not local_manifest.is_file()
                 or staged_manifest.read_bytes() != local_manifest.read_bytes()
             ):
-                differences.append(str(BUILD_MANIFEST_PATH))
+                differences.append(str(manifest_path))
             if differences:
                 raise BuildError("Local artifacts are out of date: " + ", ".join(differences))
 
@@ -206,9 +208,9 @@ def run_home_publish(
         raise PublishError("HOME publication failed") from error
 
 
-def run_all() -> None:
-    artifact = run_local_build()
-    context = create_context(DistributionAction.ALL)
+def run_all(selected_targets: tuple[str, ...] = ()) -> None:
+    artifact = run_local_build(selected_targets)
+    context = create_context(DistributionAction.ALL, selected_targets=selected_targets)
     run_home_publish(context, artifact)
 
 

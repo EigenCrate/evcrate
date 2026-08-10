@@ -6,7 +6,10 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .contracts import DistributionAction
+from .contracts import BuildError, DistributionAction
+
+
+ALL_LOCAL_ROOT_NAMES = (".gemini", ".codex", ".agents", ".antigravity", ".claude", ".pi")
 
 
 @dataclass(frozen=True)
@@ -18,22 +21,17 @@ class DistributionContext:
     global_sync_mode: str
     gemini_global_mode: str
     state_home: Path | None = None
+    selected_target_names: tuple[str, ...] = ()
 
     @property
     def source_root(self) -> Path:
-        """Physical repository root for all project-local agent configuration."""
-
         return self.repository / ".evcrate" / "source"
 
     @property
     def config_root(self) -> Path:
-        """Compatibility name for callers that treat source as the config root."""
-
         return self.source_root
 
     def local_path(self, logical_name: str) -> Path:
-        """Resolve a logical local artifact name inside the nested source root."""
-
         return self.source_root / logical_name
 
     @property
@@ -62,11 +60,35 @@ class DistributionContext:
 
     @property
     def local_roots(self) -> tuple[Path, ...]:
-        return (self.local_gemini, self.local_codex, self.local_agents, self.local_antigravity, self.local_claude, self.local_pi)
+        names = set(ALL_LOCAL_ROOT_NAMES) if not self.selected_target_names else self._selected_root_names()
+        return tuple(self.local_path(name) for name in ALL_LOCAL_ROOT_NAMES if name in names)
+
+    def _selected_root_names(self) -> set[str]:
+        return {root for manifest in self.selected_manifests for root in manifest.output_roots}
+
+    @property
+    def selected_manifests(self):
+        """Load only manifests authorized by this immutable target selection."""
+
+        from .manifest import load_target_manifest, load_target_registry
+
+        registry = load_target_registry(self.repository / ".evcrate/targets/manifest.json")
+        names = self.selected_target_names or tuple(registry.targets)
+        manifests = []
+        for name in names:
+            manifest = load_target_manifest(registry.targets[name])
+            if manifest.name != name:
+                raise BuildError(f"Target registry key does not match manifest name: {name}")
+            manifests.append(manifest)
+        return tuple(manifests)
 
     @property
     def local_project_docs(self) -> tuple[Path, ...]:
-        return tuple(self.local_path(name) for name in ("AGENTS.md", "GEMINI.md"))
+        if not self.selected_target_names:
+            names = ("AGENTS.md", "GEMINI.md")
+        else:
+            names = tuple(document for manifest in self.selected_manifests for document in manifest.project_docs)
+        return tuple(self.local_path(name) for name in names)
 
     @property
     def legacy_local_paths(self) -> tuple[Path, ...]:
@@ -107,8 +129,6 @@ class DistributionContext:
 
     @property
     def state_dir(self) -> Path:
-        """Return the owner-only state directory without relying on CWD."""
-
         if self.state_home is not None:
             return self.state_home
         return self.home / ".local" / "state" / "evcrate"
@@ -119,25 +139,30 @@ def create_context(
     *,
     stage: Path | None = None,
     environ: dict[str, str] | None = None,
+    selected_targets: tuple[str, ...] = (),
 ) -> DistributionContext:
-    """Resolve paths independently from the caller's current directory."""
+    """Resolve paths and validate an optional target selection."""
+
+    from .manifest import load_target_registry
 
     env = os.environ if environ is None else environ
     repository = Path(__file__).resolve().parents[1]
+    registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
+    unknown = set(selected_targets).difference(registry.targets)
+    if unknown:
+        raise BuildError("Unknown distribution target: " + ", ".join(sorted(unknown)))
+    if len(selected_targets) > 1 and set(selected_targets) != set(registry.targets):
+        raise BuildError("Only one --target value may be selected")
+    if len(selected_targets) != len(set(selected_targets)):
+        raise BuildError("Distribution target selection contains duplicates")
+    resolved_targets = selected_targets or tuple(registry.targets)
     home = Path(env.get("EVCRATE_HOME", str(Path.home()))).expanduser().absolute()
     state_base = env.get("EVCRATE_STATE_HOME") or env.get("XDG_STATE_HOME")
-    state_home = (
-        Path(state_base).expanduser().absolute() / "evcrate"
-        if state_base
-        else home / ".local" / "state" / "evcrate"
-    )
-    resolved_stage = stage.resolve() if stage is not None else None
+    state_home = Path(state_base).expanduser().absolute() / "evcrate" if state_base else home / ".local" / "state" / "evcrate"
     return DistributionContext(
-        action=action,
-        repository=repository,
-        home=home,
-        stage=resolved_stage,
+        action=action, repository=repository, home=home,
+        stage=stage.resolve() if stage is not None else None,
         global_sync_mode=env.get("EVCRATE_GLOBAL_SYNC_MODE", "managed"),
         gemini_global_mode=env.get("GEMINI_GLOBAL_MODE", "config-and-scripts"),
-        state_home=state_home,
+        state_home=state_home, selected_target_names=resolved_targets,
     )

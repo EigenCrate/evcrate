@@ -11,13 +11,40 @@ from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
 from .contracts import BuildError, VerifiedArtifact
 from .hashing import hash_file, ignore_artifacts, source_tree_hash, tree_hash
-from .manifest import adapter_hashes, TargetManifest, build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
+from .manifest import adapter_hashes, TargetManifest, build_manifest_bytes, load_target_registry, source_hashes
 from .overlay import apply_patch_file, copy_overlay_files
 from .runtime import stage_runtime
 
 
 BUILD_MANIFEST_PATH = Path(".evcrate/build-manifest.json")
 SOURCE_BACKED_TARGET = ("claude", (".claude",))
+
+
+def build_manifest_path(context: DistributionContext) -> Path:
+    """Return the authorization manifest dedicated to this target selection."""
+
+    if len(context.selected_target_names) == 1:
+        return Path(f".evcrate/build-manifest-{context.selected_target_names[0]}.json")
+    return BUILD_MANIFEST_PATH
+
+
+def build_input_hashes(context: DistributionContext, manifests: tuple[TargetManifest, ...]) -> dict[str, str]:
+    """Hash only inputs that authorize the selected build's outputs."""
+
+    values = {
+        ".claude": tree_hash(context.local_claude),
+        "CLAUDE.md": hash_file(context.source_root / "CLAUDE.md"),
+        **source_hashes(manifests),
+        **adapter_hashes(manifests, context.repository),
+    }
+    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
+    if set(context.selected_target_names) == set(registry.targets):
+        values.update({
+            ".evcrate/targets": source_tree_hash(context.repository / ".evcrate/targets"),
+            "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
+            "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
+        })
+    return dict(sorted(values.items()))
 
 
 def _stage_roots(context: DistributionContext) -> dict[str, Path]:
@@ -46,8 +73,7 @@ def _copy_source_root(source: Path, destination: Path) -> None:
 
 
 def _load_targets(context: DistributionContext, roots: dict[str, Path]) -> tuple[TargetManifest, ...]:
-    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
-    manifests = tuple(load_target_manifest(path) for path in registry.targets.values())
+    manifests = context.selected_manifests
     if len({manifest.name for manifest in manifests}) != len(manifests):
         raise BuildError("Target registry contains duplicate manifest names")
     claimed_roots: set[str] = set()
@@ -109,16 +135,9 @@ def _apply_targets(
             apply_patch_file(destination, patch_source, patch.keys)
             owners[patch.destination] = manifest.name
 
-    baseline_sources = {
-        ".claude": tree_hash(context.local_claude),
-        "CLAUDE.md": hash_file(context.source_root / "CLAUDE.md"),
-        ".evcrate/targets": source_tree_hash(context.repository / ".evcrate/targets"),
-        "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),
-        "distribute_hooks.py": hash_file(context.repository / "distribute_hooks.py"),
-    }
     return (
         owners,
-        {**baseline_sources, **source_hashes(manifests), **adapter_hashes(manifests, context.repository)},
+        build_input_hashes(context, manifests),
         target_policies,
         tuple(project_docs),
     )
@@ -139,24 +158,25 @@ def generate_stage(
         "EVCRATE_REPOSITORY": str(context.repository),
         "EVCRATE_SOURCE_DIR": str(context.source_root),
         "CLAUDE_SOURCE_DIR": str(context.local_claude),
-        "GEMINI_OUTPUT_DIR": str(roots[".gemini"]),
-        "CODEX_OUTPUT_DIR": str(roots[".codex"]),
-        "AGENTS_OUTPUT_DIR": str(roots[".agents"]),
-        "PI_OUTPUT_DIR": str(roots[".pi"]),
+        "GEMINI_OUTPUT_DIR": str(roots.get(".gemini", context.stage / ".gemini")),
+        "CODEX_OUTPUT_DIR": str(roots.get(".codex", context.stage / ".codex")),
+        "AGENTS_OUTPUT_DIR": str(roots.get(".agents", context.stage / ".agents")),
+        "PI_OUTPUT_DIR": str(roots.get(".pi", context.stage / ".pi")),
         "PI_STAGE_ROOT": str(context.stage),
         "PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
         "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
     })
-    for directory in (
-        *(root for name, root in roots.items() if name not in {".antigravity", ".claude"}),
-        context.stage_project_docs,
-    ):
-        directory.mkdir(parents=True, exist_ok=True)
-    _copy_source_root(context.local_claude, roots[".claude"])
-    _baseline_owners({".claude": roots[".claude"]})
+    for name, directory in roots.items():
+        if name not in {".antigravity", ".claude"}:
+            directory.mkdir(parents=True, exist_ok=True)
+    context.stage_project_docs.mkdir(parents=True, exist_ok=True)
+    if ".claude" in roots:
+        _copy_source_root(context.local_claude, roots[".claude"])
+        _baseline_owners({".claude": roots[".claude"]})
     for script in dict.fromkeys(manifest.adapter for manifest in manifests if manifest.adapter):
         run_migrator(context, script, env)
-    build_antigravity_config(context.local_claude, roots[".antigravity"])
+    if ".antigravity" in roots:
+        build_antigravity_config(context.local_claude, roots[".antigravity"])
 
     owners, sources_and_adapters, policies, required_docs = _apply_targets(context, roots, manifests)
     adapter_names = set(adapter_hashes(manifests, context.repository))
@@ -177,7 +197,7 @@ def generate_stage(
         home_policy=policies,
         validation={"complete": True, "symlinks": "rejected", "target_registry": "validated"},
     )
-    staged_manifest = context.stage / BUILD_MANIFEST_PATH
+    staged_manifest = context.stage / build_manifest_path(context)
     staged_manifest.parent.mkdir(parents=True, exist_ok=True)
     staged_manifest.write_bytes(manifest)
     return VerifiedArtifact(context.repository, tuple(roots.values()))

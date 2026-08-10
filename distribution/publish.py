@@ -16,10 +16,10 @@ from .context import DistributionContext
 from .contracts import PublishError, VerifiedArtifact
 from .hashing import normalize_relative_path
 from .locking import publish_lock, read_release_marker, write_release_marker
-from .manifest import SharedJsonSpec, load_target_manifest, load_target_registry
+from .manifest import SharedJsonSpec
 from .pi_settings import PiSettingsError, PiSettingsPlan, plan_pi_settings
 from .publish_verification import verify_local_artifact
-from .publish_inventory import artifact_files as _files, prior_managed_paths
+from .publish_inventory import artifact_files as _files, home_tree_hash, prior_managed_paths
 from .publish_recovery import recover_interrupted_publish
 
 
@@ -45,10 +45,8 @@ def _shared_specs(context: DistributionContext) -> list[tuple[str, Path, Path, S
     registry_path = context.repository / ".evcrate/targets/manifest.json"
     if not registry_path.is_file():
         return []
-    registry = load_target_registry(registry_path)
     result: list[tuple[str, Path, Path, SharedJsonSpec]] = []
-    for manifest_path in registry.targets.values():
-        manifest = load_target_manifest(manifest_path)
+    for manifest in context.selected_manifests:
         if manifest.shared_json is None:
             continue
         bindings = manifest.home_policy.get("bindings", {})
@@ -124,10 +122,8 @@ def _validate_state_ancestors(context: DistributionContext) -> None:
 
 
 def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[str]]]:
-    registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
     policies: list[tuple[str, Path, Path, set[str], int]] = []
-    for manifest_path in registry.targets.values():
-        manifest = load_target_manifest(manifest_path)
+    for manifest in context.selected_manifests:
         policy = manifest.home_policy
         bindings = policy.get("bindings", {})
         preserve = policy.get("preserve_paths", {})
@@ -172,6 +168,7 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     for name, local, home, preserved in _policies(context):
         _validate_home_ancestors(context, home)
         source = _publication_files(context, local, home)
+        shared_paths = {spec.destination for _, spec in _shared_for_root(context, local, home)}
         prior_paths = prior_managed_paths(prior, name)
         for relative, content in source.items():
             if relative in preserved:
@@ -183,7 +180,12 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
             elif destination.read_bytes() != content:
                 changes.append(PublishChange(name, relative, "update"))
         for relative in prior_paths:
-            if relative not in source and relative not in preserved and _managed_destination(home, relative).exists():
+            if (
+                relative not in source
+                and relative not in preserved
+                and relative not in shared_paths
+                and _managed_destination(home, relative).exists()
+            ):
                 changes.append(PublishChange(name, relative, "delete"))
     for name, local, home, spec in _shared_specs(context):
         plan = _shared_plan(local, home, spec)
@@ -212,6 +214,14 @@ def _publication_files(context: DistributionContext, local: Path, home: Path) ->
         }
     except (AttributeError, UnicodeDecodeError, TypeError, ValueError) as error:
         raise PublishError(f"Invalid generated Codex global configuration: {error}") from error
+
+
+def _home_snapshot(home: Path) -> str | None:
+    """Hash a HOME binding before planning so concurrent Pi writes abort safely."""
+
+    if not home.exists() and not home.is_symlink():
+        return None
+    return home_tree_hash(home)
 
 
 def _is_reparse_point(path: Path) -> bool:
@@ -266,6 +276,10 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
     _policies(context)
     _validate_state_ancestors(context)
     with publish_lock(context.state_dir):
+        shared_snapshots = {
+            name: _home_snapshot(home)
+            for name, _, home, _ in _shared_specs(context)
+        }
         changes = publish_diff(context, artifact)
         if dry_run:
             return changes
@@ -308,16 +322,20 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
 
         try:
             for name, local, home, preserved in _policies(context):
+                if name in shared_snapshots and _home_snapshot(home) != shared_snapshots[name]:
+                    raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
                 source = _publication_files(context, local, home)
+                shared_specs = _shared_for_root(context, local, home)
+                shared_paths = {spec.destination for _, spec in shared_specs}
                 prior = prior_managed_paths(prior_paths, name)
                 managed = sorted(set(source) - preserved)
                 for relative in managed:
                     apply(_managed_destination(home, relative), source[relative], name, relative)
-                for relative in prior - set(source) - preserved:
+                for relative in prior - set(source) - preserved - shared_paths:
                     destination = _managed_destination(home, relative)
                     if destination.exists():
                         apply(destination, None, name, relative)
-                for _, spec in _shared_for_root(context, local, home):
+                for _, spec in shared_specs:
                     plan = _shared_plan(local, home, spec)
                     if plan.action == "conflict":
                         raise PublishError(plan.message)
