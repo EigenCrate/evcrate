@@ -1,7 +1,7 @@
 ---
 title: "Native provider-aware Pi migration"
 description: "Generate and safely publish native Pi commands, workflows, agents, hooks, and skills from canonical Claude source without pi-code emulation."
-status: pending
+status: completed
 priority: P1
 branch: main
 created: 2026-08-09
@@ -81,7 +81,11 @@ Pi session
 3. [Native commands, agents, and model roles](./phase-03-native-runtime-extension.md) — DONE (260809; user-approved with unresolved criticals)
 4. [Hooks and managed settings publication](./phase-04-hooks-and-settings.md)
 5. [Integration, safety, and release gates](./phase-05-integration-validation.md) — DONE (isolated validation 260809; live cutover excluded)
-6. [Documentation and manual cutover](./phase-06-documentation-cutover.md)
+6. [Documentation and manual cutover](./phase-06-documentation-cutover.md) — DONE (user-approved; live cutover deferred)
+
+## Completion record
+
+Implementation and documentation were user-approved on 2026-08-09. The live Pi cutover is explicitly deferred by the user; it remains a manual, quiescent-shell operation and is not represented as having been performed.
 
 ## Success criteria
 
