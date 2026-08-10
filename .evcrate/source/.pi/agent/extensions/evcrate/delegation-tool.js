@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { basename, dirname, resolve } from "node:path";
 import { Type } from "typebox";
 import { runChildStart } from "./child-context.js";
 import { registerModelRoles, resolveModelRole, validateExplicitModel, validateExplicitThinking } from "./model-roles.js";
@@ -11,24 +12,35 @@ export const DELEGATION_EVENTS = Object.freeze({
   cancel: "prompt-template:subagent:cancel",
 });
 
+const DELEGATION_NODE_PARAMETERS = { type: "object", properties: { outputMode: { enum: ["inline"] } } };
+
 export const DELEGATION_PARAMETERS = Type.Unsafe({
   type: "object",
   additionalProperties: false,
   properties: {
     mode: { enum: ["direct", "parallel", "sequential"] },
     agent: { type: "string" }, task: { type: "string" },
-    nodes: { type: "array", items: { type: "object" } },
-    direct: { type: "object" }, parallel: { type: "array", items: { type: "object" } },
-    sequential: { type: "array", items: { type: "object" } },
+    nodes: { type: "array", items: DELEGATION_NODE_PARAMETERS },
+    direct: DELEGATION_NODE_PARAMETERS, parallel: { type: "array", items: DELEGATION_NODE_PARAMETERS },
+    sequential: { type: "array", items: DELEGATION_NODE_PARAMETERS },
     model: { type: "string" }, thinking: { type: "string" }, role: { type: "string" }, provider: { type: "string" },
     context: { enum: ["fresh", "fork"] }, cwd: { type: "string" }, timeoutMs: { type: "integer", minimum: 1 },
     result: { type: "object" }, turnBudget: { type: "object" }, toolBudget: { type: "object" },
-    skill: {}, artifacts: { type: "boolean" }, tasks: { type: "array", items: { type: "object" } },
+    outputMode: { enum: ["inline"] }, skill: {}, artifacts: { type: "boolean" }, tasks: { type: "array", items: DELEGATION_NODE_PARAMETERS },
   },
 });
 
 function fail(message) { throw new Error(message); }
 function text(value) { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
+function normalizeChildAgentRoot(env = process.env) {
+  const configured = env.PI_CODING_AGENT_DIR;
+  if (!configured) return () => {};
+  const resourceRoot = resolve(configured);
+  const agentRoot = dirname(resourceRoot);
+  if (basename(resourceRoot) !== "evcrate" || basename(agentRoot) !== "agent") return () => {};
+  env.PI_CODING_AGENT_DIR = agentRoot;
+  return () => { env.PI_CODING_AGENT_DIR = configured; };
+}
 function sameId(value, request) {
   return value?.requestId === request.requestId
     && value?.ownerRunId === request.ownerRunId && value?.nodeId === request.nodeId;
@@ -47,10 +59,12 @@ export function normalizeDelegation(input) {
   const nodes = mode === "direct" ? [input?.direct ?? input] : input?.nodes ?? input?.tasks ?? input?.[mode];
   if (!(["direct", "parallel", "sequential"].includes(mode) && Array.isArray(nodes) && nodes.length)) fail("delegation requires a direct node or non-empty parallel/sequential nodes");
   const { mode: _mode, nodes: _nodes, tasks: _tasks, direct: _direct, parallel: _parallel, sequential: _sequential, ...shared } = input;
+  if (shared.outputMode !== undefined && shared.outputMode !== "inline") fail("delegation outputMode must be inline");
   return { mode, nodes: nodes.map((node) => {
     const merged = { ...shared, ...node };
     if (!text(merged.agent) || !text(merged.task)) fail("each delegation node requires agent and task");
     if (merged.context !== undefined && merged.context !== "fresh" && merged.context !== "fork") fail("delegation context must be fresh or fork");
+    if (merged.outputMode !== undefined && merged.outputMode !== "inline") fail("delegation outputMode must be inline");
     return { ...merged, agent: merged.agent.trim(), task: merged.task.trim(), context: merged.context ?? "fresh" };
   }) };
 }
@@ -107,6 +121,7 @@ export function createDelegationRunner(options) {
   return async function delegate(input, context = {}) {
     const { mode, nodes } = normalizeDelegation(input);
     const ownerRunId = `evcrate-owner-${ids()}`;
+    const restoreAgentRoot = normalizeChildAgentRoot();
     const runNode = async (node, index) => {
       const explicitError = validateExplicitModel(node.model, context.modelRegistry) ?? validateExplicitThinking(node.thinking);
       if (explicitError) fail(explicitError);
@@ -118,7 +133,7 @@ export function createDelegationRunner(options) {
         agent: node.agent, task: node.task, context: node.context, cwd: node.cwd ?? context.cwd,
         result: node.result ?? { kind: "text" }, timeoutMs: node.timeoutMs ?? input.timeoutMs ?? options.timeoutMs ?? 1_800_000,
         ...(node.turnBudget ? { turnBudget: node.turnBudget } : {}), ...(node.toolBudget ? { toolBudget: node.toolBudget } : {}),
-        ...(node.skill !== undefined ? { skill: node.skill } : {}), ...(node.artifacts !== undefined ? { artifacts: node.artifacts } : {}),
+        ...(node.outputMode ? { outputMode: node.outputMode } : {}), ...(node.skill !== undefined ? { skill: node.skill } : {}), ...(node.artifacts !== undefined ? { artifacts: node.artifacts } : {}),
         ...(route.model ? { model: route.model } : {}), ...(route.thinking ? { thinking: route.thinking } : {}),
       };
       if (!text(request.cwd)) fail("delegation requires cwd");
@@ -134,11 +149,15 @@ export function createDelegationRunner(options) {
       options.events.emit(DELEGATION_EVENTS.request, request);
       return { request, response: await response };
     };
-    const results = mode === "parallel" ? await Promise.allSettled(nodes.map(runNode)) : await sequential(nodes, runNode);
-    const failures = results.filter((result) => result.status === "rejected");
-    if (failures.length === 1) throw failures[0].reason;
-    if (failures.length) throw new AggregateError(failures.map((item) => item.reason), `${failures.length} delegation node(s) failed`);
-    return { ownerRunId, mode, results: results.map((item) => item.value) };
+    try {
+      const results = mode === "parallel" ? await Promise.allSettled(nodes.map(runNode)) : await sequential(nodes, runNode);
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length === 1) throw failures[0].reason;
+      if (failures.length) throw new AggregateError(failures.map((item) => item.reason), `${failures.length} delegation node(s) failed`);
+      return { ownerRunId, mode, results: results.map((item) => item.value) };
+    } finally {
+      restoreAgentRoot();
+    }
   };
 }
 

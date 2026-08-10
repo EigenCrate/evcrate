@@ -1,25 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDelegationRunner, DELEGATION_EVENTS, registerDelegationTool } from "../files/agent/extensions/evcrate/delegation-tool.js";
+import { Compile } from "typebox/compile";
+import { createDelegationRunner, DELEGATION_EVENTS, DELEGATION_PARAMETERS, registerDelegationTool } from "../files/agent/extensions/evcrate/delegation-tool.js";
 import { resolveModelRole } from "../files/agent/extensions/evcrate/model-roles.js";
-
-function eventBus() {
-  const handlers = new Map();
-  return {
-    on(name, handler) {
-      const list = handlers.get(name) ?? [];
-      list.push(handler); handlers.set(name, list);
-      return () => handlers.set(name, (handlers.get(name) ?? []).filter((item) => item !== handler));
-    },
-    emit(name, value) { for (const handler of [...(handlers.get(name) ?? [])]) handler(value); },
-  };
-}
-
-function complete(bus, request, text = request.task) {
-  bus.emit(DELEGATION_EVENTS.started, request);
-  bus.emit(DELEGATION_EVENTS.update, { ...request, currentTool: "read" });
-  bus.emit(DELEGATION_EVENTS.response, { ...request, status: "completed", result: { kind: "text", text } });
-}
+import { complete, eventBus } from "./delegation-tool-test-helpers.mjs";
 
 test("direct delegation emits correlated structured protocol and child context", async () => {
   const events = eventBus();
@@ -39,6 +23,34 @@ test("direct delegation emits correlated structured protocol and child context",
   assert.match(seen[0].ownerRunId, /^evcrate-owner-/);
   assert.match(seen[0].nodeId, /^evcrate-node-0-/);
   assert.equal(updates[0].currentTool, "read");
+});
+
+test("inline output mode is declared and forwarded without file-only support", async () => {
+  const events = eventBus();
+  const seen = [];
+  events.on(DELEGATION_EVENTS.request, (request) => { seen.push(request); complete(events, request); });
+  const delegate = createDelegationRunner({ events });
+  await delegate({ agent: "planner", task: "plan", outputMode: "inline" }, { cwd: "/repo" });
+  const validator = Compile(DELEGATION_PARAMETERS);
+  assert.deepEqual(DELEGATION_PARAMETERS.properties.outputMode, { enum: ["inline"] });
+  assert.equal(validator.Check({ agent: "planner", task: "plan", outputMode: "inline" }), true);
+  assert.equal(validator.Check({ agent: "planner", task: "plan", outputMode: "file-only" }), false);
+  for (const input of [
+    { direct: { agent: "planner", task: "plan", outputMode: "file-only" } },
+    { nodes: [{ agent: "planner", task: "plan", outputMode: "file-only" }] },
+    { parallel: [{ agent: "planner", task: "plan", outputMode: "file-only" }] },
+    { sequential: [{ agent: "planner", task: "plan", outputMode: "file-only" }] },
+    { tasks: [{ agent: "planner", task: "plan", outputMode: "file-only" }] },
+  ]) assert.equal(validator.Check(input), false);
+  assert.equal(seen[0].outputMode, "inline");
+  await assert.rejects(delegate({ agent: "planner", task: "plan", outputMode: "file-only" }, { cwd: "/repo" }), /outputMode must be inline/);
+  for (const input of [
+    { outputMode: "file-only", direct: { agent: "planner", task: "plan", outputMode: "inline" } },
+    { mode: "parallel", nodes: [{ agent: "planner", task: "plan", outputMode: "inline" }], outputMode: "file-only" },
+    { parallel: [{ agent: "planner", task: "plan", outputMode: "inline" }], outputMode: "file-only" },
+    { sequential: [{ agent: "planner", task: "plan", outputMode: "inline" }], outputMode: "file-only" },
+    { mode: "parallel", tasks: [{ agent: "planner", task: "plan", outputMode: "inline" }], outputMode: "file-only" },
+  ]) await assert.rejects(delegate(input, { cwd: "/repo" }), /outputMode must be inline/);
 });
 
 test("parallel and sequential requests aggregate terminal responses", async () => {
