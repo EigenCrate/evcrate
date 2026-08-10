@@ -27,6 +27,7 @@ Publication entry-merges exactly these pinned package identities into `~/.pi/age
 
 - `npm:pi-subagents@0.44.0`
 - `npm:@juicesharp/rpiv-ask-user-question@2.4.0`
+- `npm:@juicesharp/rpiv-todo@2.4.0`
 
 It does not own provider credentials, defaults, themes, sessions, UI configuration, custom packages, user hooks, or `evcrate.modelRoles`. Package upgrades require contract-test review.
 

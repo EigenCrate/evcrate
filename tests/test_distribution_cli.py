@@ -177,6 +177,7 @@ class DistributionCliTest(unittest.TestCase):
             self.assertEqual(settings["packages"], [
                 "npm:pi-subagents@0.44.0",
                 "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
+                "npm:@juicesharp/rpiv-todo@2.4.0",
             ])
 
     def test_publish_rejects_symlinked_home_before_creating_state(self) -> None:

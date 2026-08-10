@@ -10,7 +10,7 @@ Define reproducible multi-platform generation and the boundary of the portable `
 
 ## Scope boundary
 
-The advisor distribution described here is the existing skill-only `.agents` projection. It must not be read as the native Pi target. [Native Pi Phase 01](./pi-native-migration-phase-01.md) records the original `.pi` target and shared `agent/settings.json` merge for only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`; Phase 03 has since implemented the native runtime. Release/cutover remains blocked by XML closing-tag marker corruption and a shell descendant timeout/process-tree leak, and live publication still requires manual Pi quiescence.
+The advisor distribution described here is the existing skill-only `.agents` projection. It must not be read as the native Pi target. [Native Pi Phase 01](./pi-native-migration-phase-01.md) records the original `.pi` target and shared `agent/settings.json` merge for only `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`; Phase 03 has since implemented the native runtime. Release/cutover remains blocked by XML closing-tag marker corruption and a shell descendant timeout/process-tree leak, and live publication still requires manual Pi quiescence.
 
 ## Architectural Decisions
 
