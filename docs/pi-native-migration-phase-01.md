@@ -46,6 +46,7 @@ The managed pins are exact:
 |---|---:|
 | `pi-subagents` | `0.44.0` |
 | `@juicesharp/rpiv-ask-user-question` | `2.4.0` |
+| `@juicesharp/rpiv-todo` | `2.4.0` |
 
 Publication may create or replace only these EVCrate package identities. It preserves unrelated keys and package entries, including user provider/model settings and Pi session data. `agent/settings.json` is not recorded in file-level `managed_paths`; its dry-run and candidate merge use the same pure plan and report `merge-create`, `merge-update`, `noop`, or `conflict`.
 

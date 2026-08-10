@@ -47,7 +47,7 @@ class PiAdapterTest(unittest.TestCase):
             }, clear=False):
                 self.assertEqual(migrate_claude_to_pi.main([]), 0)
             self.assertEqual((output / ".evcrate.json").read_text(encoding="utf-8"), '{"privacyBlock":true}\n')
-            self.assertEqual((output / "agent/evcrate/managed-settings.json").read_text(encoding="utf-8"), '{"packages":["npm:pi-subagents@0.44.0","npm:@juicesharp/rpiv-ask-user-question@2.4.0"],"schema":"evcrate-pi-managed-settings-v1"}\n')
+            self.assertEqual((output / "agent/evcrate/managed-settings.json").read_text(encoding="utf-8"), '{"packages":["npm:pi-subagents@0.44.0","npm:@juicesharp/rpiv-ask-user-question@2.4.0","npm:@juicesharp/rpiv-todo@2.4.0"],"schema":"evcrate-pi-managed-settings-v1"}\n')
             self.assertIn("evcrate_subagent", (output / "agent/agents/planner.md").read_text(encoding="utf-8"))
             self.assertEqual(json.loads((output / "agent/evcrate/model-roles.json").read_text(encoding="utf-8"))["agents"]["planner"]["role"], "standard")
             self.assertFalse((stage / "escaped").exists())

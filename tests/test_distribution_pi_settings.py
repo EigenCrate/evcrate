@@ -17,7 +17,7 @@ class PiSettingsPlanTest(unittest.TestCase):
         created = plan_pi_settings(None, {"packages": list(MANAGED_PACKAGES)})
         self.assertEqual(created.action, "merge-create")
         self.assertEqual(json.loads(created.result or b""), {"packages": list(MANAGED_PACKAGES)})
-        original = b'{"defaultModel":"keep","packages":["npm:pi-subagents@0.44.0","npm:@juicesharp/rpiv-ask-user-question@2.4.0"]}'
+        original = b'{"defaultModel":"keep","packages":["npm:pi-subagents@0.44.0","npm:@juicesharp/rpiv-ask-user-question@2.4.0","npm:@juicesharp/rpiv-todo@2.4.0"]}'
         noop = plan_pi_settings(original, {"packages": list(MANAGED_PACKAGES)})
         self.assertEqual(noop.action, "noop")
         self.assertEqual(noop.result, original)
@@ -30,6 +30,7 @@ class PiSettingsPlanTest(unittest.TestCase):
                 {"source": "npm:pi-subagents@0.1.0", "enabled": False},
                 "npm:custom@1.0.0",
                 {"source": "npm:@juicesharp/rpiv-ask-user-question@2.3.0", "filter": ["tools"]},
+                "npm:@juicesharp/rpiv-todo@2.3.0",
             ],
         }, separators=(",", ":")).encode()
         plan = plan_pi_settings(original, {"packages": list(MANAGED_PACKAGES)})
@@ -42,6 +43,7 @@ class PiSettingsPlanTest(unittest.TestCase):
         self.assertFalse(merged["packages"][1]["enabled"])
         self.assertEqual(merged["packages"][2]["source"], MANAGED_PACKAGES[1])
         self.assertEqual(merged["packages"][2]["filter"], ["tools"])
+        self.assertEqual(merged["packages"][3], MANAGED_PACKAGES[2])
 
     def test_pi_code_conflict_is_reported_without_result(self) -> None:
         for entry in (
@@ -102,6 +104,7 @@ class PiSettingsPublicationTest(unittest.TestCase):
             self.assertEqual(merged["packages"][0], "npm:custom@1.0.0")
             self.assertEqual(merged["packages"][1], MANAGED_PACKAGES[0])
             self.assertEqual(merged["packages"][2], MANAGED_PACKAGES[1])
+            self.assertEqual(merged["packages"][3], MANAGED_PACKAGES[2])
             self.assertIn((".pi", "agent/settings.json", "merge-update"), [(item.root, item.path, item.action) for item in changes])
             self.assertIn((".pi", "agent/settings.json", "noop"), [(item.root, item.path, item.action) for item in second])
             self.assertNotIn((".pi", "agent/settings.json", "delete"), [(item.root, item.path, item.action) for item in legacy_marker_publish])

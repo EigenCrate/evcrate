@@ -12,6 +12,7 @@ from .hashing import canonical_json_bytes
 MANAGED_PACKAGES = (
     "npm:pi-subagents@0.44.0",
     "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
+    "npm:@juicesharp/rpiv-todo@2.4.0",
 )
 MANAGED_BASES = tuple(item.rsplit("@", 1)[0] for item in MANAGED_PACKAGES)
 

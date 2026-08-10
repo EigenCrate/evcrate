@@ -144,7 +144,7 @@ Enterprise-grade features and deployment options.
 
 - Registered the manifest-backed `.pi` target with one `EVCRATE_HOME/.pi` binding.
 - Added contained staging, adapter/helper hashing, deterministic minimal output, shared-settings planning, preservation, conflict detection, rollback, and concurrent-change abort behavior.
-- Managed package pins are `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`.
+- Managed package pins are `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`.
 - Pi settings remain shared user data; EVCrate owns only those package identities. Manual Pi quiescence is required for live publication.
 - No live cutover has occurred. `pi-code` removal remains a manual user action.
 

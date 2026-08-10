@@ -67,7 +67,7 @@ project-root/
 - Target manifests must declare contained output roots, adapter/helper sources, ownership, overlays, and HOME bindings. Build and publication verification must hash the same adapter inputs.
 - The Phase 01 Pi adapter writes only to an empty staged `.pi` root. Direct/global output modes, symlinked ancestors, path traversal, and non-canonical Claude sources are rejected.
 - Phase 03 runtime code registers native commands, keeps nested dispatch bounded, enforces `allowed-tools` through the policy gate, resolves semantic roles only at structured `pi-subagents` delegation time, and preserves provider-neutral generated resources.
-- Pi's shared `agent/settings.json` is user-owned. EVCrate manages only the exact pins `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
+- Pi's shared `agent/settings.json` is user-owned. EVCrate manages only the exact pins `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
 - Live Pi publication requires manual quiescence and a pre-promotion HOME recheck. The XML closing-tag and shell-descendant process-group regressions are covered by tests; this does not authorize release/cutover or automatic `pi-code` removal.
 
 ### File Naming Conventions

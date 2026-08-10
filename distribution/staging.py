@@ -38,7 +38,7 @@ def build_input_hashes(context: DistributionContext, manifests: tuple[TargetMani
         **adapter_hashes(manifests, context.repository),
     }
     registry = load_target_registry(context.repository / ".evcrate/targets/manifest.json")
-    if set(context.selected_target_names) == set(registry.targets):
+    if not context.selected_target_names or set(context.selected_target_names) == set(registry.targets):
         values.update({
             ".evcrate/targets": source_tree_hash(context.repository / ".evcrate/targets"),
             "distribution/antigravity_publish.py": hash_file(context.repository / "distribution/antigravity_publish.py"),

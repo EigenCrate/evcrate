@@ -46,7 +46,11 @@ function installPi(root) {
 }
 
 function installManagedPackages(runtime, home) {
-  for (const source of ["npm:pi-subagents@0.44.0", "npm:@juicesharp/rpiv-ask-user-question@2.4.0"]) {
+  for (const source of [
+    "npm:pi-subagents@0.44.0",
+    "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
+    "npm:@juicesharp/rpiv-todo@2.4.0",
+  ]) {
     run(runtime.command, [...runtime.args, "install", source], {
       cwd: home,
       env: { ...process.env, HOME: home, PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0" },
@@ -57,10 +61,16 @@ function installManagedPackages(runtime, home) {
     .filter((path) => path.endsWith("package.json"))
     .map((path) => JSON.parse(readFileSync(join(packageRoot, path), "utf8")));
   const managed = installed
-    .filter(({ name }) => name === "pi-subagents" || name === "@juicesharp/rpiv-ask-user-question")
+    .filter(({ name }) => [
+      "pi-subagents",
+      "@juicesharp/rpiv-ask-user-question",
+      "@juicesharp/rpiv-todo",
+    ].includes(name))
     .map(({ name, version }) => `${name}@${version}`);
   assert.deepEqual(new Set(managed), new Set([
-    "pi-subagents@0.44.0", "@juicesharp/rpiv-ask-user-question@2.4.0",
+    "pi-subagents@0.44.0",
+    "@juicesharp/rpiv-ask-user-question@2.4.0",
+    "@juicesharp/rpiv-todo@2.4.0",
   ]));
 }
 
@@ -106,6 +116,7 @@ test("packed distribution builds, publishes, and Pi discovers native commands an
     assert.deepEqual(settings.packages, [
       "npm:pi-subagents@0.44.0",
       "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
+      "npm:@juicesharp/rpiv-todo@2.4.0",
     ]);
     assert.ok(!settings.packages.some((entry) => String(entry).includes("pi-code")));
   } finally {

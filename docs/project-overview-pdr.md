@@ -233,7 +233,7 @@ Provide a production-ready template that:
 - Register `.pi` as one manifest-owned target rooted at `.evcrate/source/.pi` with one `EVCRATE_HOME/.pi` HOME binding.
 - Run the staging-only Pi adapter only with a contained empty `PI_OUTPUT_DIR`; reject direct/global output modes, path escapes, symlinked inputs, and unsafe adapter helpers.
 - Hash the Pi adapter and declared helper source during both build and publication verification.
-- Merge only `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0` into the shared `agent/settings.json` package key.
+- Merge only `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0` into the shared `agent/settings.json` package key.
 - Preserve user-owned settings, package entries, provider/model values, and sessions; keep the shared settings file outside file-level managed ownership.
 - Detect `pi-code` conflicts without removing them. Require manual Pi quiescence and abort on concurrent HOME changes before promotion.
 - Limit Phase 01 to deterministic target/build/publish contracts. Later runtime delivery does not authorize a live cutover.
@@ -244,7 +244,7 @@ Provide a production-ready template that:
 - Enforce command `allowed-tools` with an authoritative `tool_call` policy gate and restore the active tool set after settlement or shutdown.
 - Resolve `strong`, `standard`, `fast`, and `parent` roles against the active provider and Pi model registry only at delegation time; never silently cross provider boundaries.
 - Delegate only through the structured `pi-subagents` transport, preserving its public `workflowScript` tool, and invoke the child-start seam before each request.
-- Keep the Node.js baseline at `>=22.19.0` and the managed package identities pinned exactly to `npm:pi-subagents@0.44.0` and `npm:@juicesharp/rpiv-ask-user-question@2.4.0`.
+- Keep the Node.js baseline at `>=22.19.0` and the managed package identities pinned exactly to `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`.
 - Block release/cutover acceptance until XML closing-tag marker corruption and the shell descendant timeout/process-tree leak are corrected and regression-tested.
 
 **Advisor compatibility boundary (Phase 2)**
