@@ -9,6 +9,7 @@
     "distribute:check": "python3 distribute.py --check",
     "distribute:publish": "python3 distribute.py --publish",
     "distribute:all": "python3 distribute.py --all",
+    "distribute:pi": "python3 distribute.py --all --target pi",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
     "test": "npm run test:python && npm run test:pi",

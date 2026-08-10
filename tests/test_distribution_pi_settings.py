@@ -91,6 +91,12 @@ class PiSettingsPublicationTest(unittest.TestCase):
                 changes = publish_local_artifacts(context, artifact)
                 merged_bytes = settings.read_bytes()
                 second = publish_local_artifacts(context, artifact)
+                marker_path = context.state_dir / "release-marker.json"
+                marker = json.loads(marker_path.read_text(encoding="utf-8"))
+                self.assertNotIn("agent/settings.json", marker["managed_paths"][".pi"])
+                marker["managed_paths"][".pi"].append("agent/settings.json")
+                marker_path.write_text(json.dumps(marker, sort_keys=True), encoding="utf-8")
+                legacy_marker_publish = publish_local_artifacts(context, artifact)
             merged = json.loads(merged_bytes)
             self.assertEqual(merged["defaultModel"], "keep")
             self.assertEqual(merged["packages"][0], "npm:custom@1.0.0")
@@ -98,8 +104,8 @@ class PiSettingsPublicationTest(unittest.TestCase):
             self.assertEqual(merged["packages"][2], MANAGED_PACKAGES[1])
             self.assertIn((".pi", "agent/settings.json", "merge-update"), [(item.root, item.path, item.action) for item in changes])
             self.assertIn((".pi", "agent/settings.json", "noop"), [(item.root, item.path, item.action) for item in second])
-            marker = json.loads((context.state_dir / "release-marker.json").read_text(encoding="utf-8"))
-            self.assertNotIn("agent/settings.json", marker["managed_paths"][".pi"])
+            self.assertNotIn((".pi", "agent/settings.json", "delete"), [(item.root, item.path, item.action) for item in legacy_marker_publish])
+            self.assertTrue(settings.is_file())
             self.assertEqual((context.target_pi / "user-session.json").read_text(encoding="utf-8"), "keep")
 
     def test_pi_code_conflict_is_dry_run_only_and_non_destructive(self) -> None:
