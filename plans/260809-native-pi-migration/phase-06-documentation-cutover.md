@@ -9,7 +9,7 @@
 ## Overview
 
 - **Priority:** P1
-- **Status:** Documentation complete; manual user-approved cutover pending.
+- **Status:** DONE — documentation and implementation user-approved on 2026-08-09; live cutover is explicitly deferred and remains manual.
 - **Goal:** document the supported Pi operating model and perform the user-controlled `pi-code` cutover only after all isolated gates pass.
 - **Effort:** 3–5h plus user cutover
 

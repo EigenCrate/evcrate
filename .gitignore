@@ -99,3 +99,5 @@ patches
 
 # archives
 *.tar.gz
+
+.pi-subagents

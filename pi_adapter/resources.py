@@ -148,17 +148,7 @@ def inventory(source: Path) -> ResourceInventory:
     if len(agents) != len(set(agents)):
         raise ResourceError("Duplicate logical agent name")
 
-    skill_root = source / "skills"
-    skills: list[str] = []
-    for item in _walk_files(skill_root):
-        relative = _relative(skill_root, item)
-        if relative == LEGACY_SKILL:
-            continue
-        if item.name == "SKILL.md":
-            validate_skill_frontmatter(item.read_text(encoding="utf-8"), item)
-            skills.append(str(relative.parent))
-    if len(skills) != len(set(skills)):
-        raise ResourceError("Duplicate logical Pi skill name")
+    skills = [str(package) for package in _skill_packages(source / "skills")]
 
     scripts = tuple(str(_relative(source / "scripts", item)) for item in _walk_files(source / "scripts"))
     hooks = tuple(str(_relative(source / "hooks", item)) for item in _walk_files(source / "hooks"))
@@ -237,16 +227,36 @@ def copy_commands_and_workflows(source: Path, output: Path, commands: Collection
     copy_markdown(source / "workflows", root / "workflows", output, commands)
 
 
-def copy_skills(source: Path, output: Path) -> None:
-    """Copy valid uppercase skill packages, recording the excluded legacy file."""
+def _skill_packages(source_root: Path) -> tuple[Path, ...]:
+    """Return validated package roots; unrelated files beside packages are not skills."""
 
-    source_root = source / "skills"
-    destination = output / "agent" / "skills"
+    packages: list[Path] = []
     for item in _walk_files(source_root):
         relative = _relative(source_root, item)
         if relative == LEGACY_SKILL:
             continue
-        _copy_file(item, destination / relative, output)
+        if item.name == "SKILL.md":
+            validate_skill_frontmatter(item.read_text(encoding="utf-8"), item)
+            packages.append(relative.parent)
+    if len(packages) != len(set(packages)):
+        raise ResourceError("Duplicate logical Pi skill name")
+    return tuple(sorted(packages))
+
+
+def _in_skill_package(relative: Path, packages: Collection[Path]) -> bool:
+    return any(relative.parts[:len(package.parts)] == package.parts for package in packages)
+
+
+def copy_skills(source: Path, output: Path) -> None:
+    """Copy files belonging to validated uppercase SKILL.md packages only."""
+
+    source_root = source / "skills"
+    destination = output / "agent" / "skills"
+    packages = _skill_packages(source_root)
+    for item in _walk_files(source_root):
+        relative = _relative(source_root, item)
+        if _in_skill_package(relative, packages):
+            _copy_file(item, destination / relative, output)
 
 
 def copy_hooks_and_scripts(source: Path, output: Path) -> None:

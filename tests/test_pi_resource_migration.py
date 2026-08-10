@@ -63,7 +63,16 @@ class PiResourceMigrationTest(unittest.TestCase):
                 "commands": 73, "workflows": 4, "agents": 17, "skills": 53,
             })
             self.assertEqual(inventory["legacySkillExcluded"], "claude-code/skill.md")
-            self.assertFalse((agent_root / "skills/claude-code/skill.md").exists())
+            skill_root = agent_root / "skills"
+            self.assertFalse((skill_root / "claude-code/skill.md").exists())
+            packages = tuple(Path(name) for name in inventory["skills"])
+            for generated in skill_root.rglob("*"):
+                if generated.is_file():
+                    relative = generated.relative_to(skill_root)
+                    self.assertTrue(
+                        any(relative.parts[:len(package.parts)] == package.parts for package in packages),
+                        f"non-skill file was projected into Pi skills: {relative}",
+                    )
 
             roles = json.loads((agent_root / "evcrate/model-roles.json").read_text())["agents"]
             self.assertEqual(len(roles), 17)
