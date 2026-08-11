@@ -75,6 +75,7 @@ test("installed pi-subagents bridge accepts EVCrate structured delegation", asyn
       timeoutMs: 1_000,
       turnBudget: { maxTurns: 2 },
       toolBudget: { hard: 3 },
+      outputMode: "inline",
       skill: ["phase-03"],
       artifacts: true,
     }, { cwd: "/evcrate-context" });

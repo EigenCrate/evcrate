@@ -22,10 +22,11 @@ test("direct delegation emits correlated structured protocol and child context",
   assert.match(seen[0].requestId, /^evcrate-request-/);
   assert.match(seen[0].ownerRunId, /^evcrate-owner-/);
   assert.match(seen[0].nodeId, /^evcrate-node-0-/);
-  assert.equal(updates[0].currentTool, "read");
+  assert.deepEqual(updates[0].content, [{ type: "text", text: "Working: read" }]);
+  assert.equal(updates[0].details.currentTool, "read");
 });
 
-test("inline output mode is declared and forwarded without file-only support", async () => {
+test("inline output mode is accepted locally without forwarding unsupported bridge fields", async () => {
   const events = eventBus();
   const seen = [];
   events.on(DELEGATION_EVENTS.request, (request) => { seen.push(request); complete(events, request); });
@@ -42,7 +43,7 @@ test("inline output mode is declared and forwarded without file-only support", a
     { sequential: [{ agent: "planner", task: "plan", outputMode: "file-only" }] },
     { tasks: [{ agent: "planner", task: "plan", outputMode: "file-only" }] },
   ]) assert.equal(validator.Check(input), false);
-  assert.equal(seen[0].outputMode, "inline");
+  assert.equal(seen[0].outputMode, undefined);
   await assert.rejects(delegate({ agent: "planner", task: "plan", outputMode: "file-only" }, { cwd: "/repo" }), /outputMode must be inline/);
   for (const input of [
     { outputMode: "file-only", direct: { agent: "planner", task: "plan", outputMode: "inline" } },
@@ -65,12 +66,44 @@ test("parallel and sequential requests aggregate terminal responses", async () =
   assert.deepEqual(order, ["a", "b", "c", "d"]);
 });
 
-test("missing, duplicate, partial, and cancelled terminal paths reject", async () => {
-  for (const scenario of ["before-started", "duplicate", "partial", "cancel"]) {
+test("correlated pre-start bridge terminal failures retain status and error", async () => {
+  for (const [status, bridgeError] of [
+    ["unavailable_context", "No active extension context."], ["invalid_request", "Malformed request."],
+    ["cancelled", undefined], ["duplicate_node", undefined],
+  ]) {
+    const events = eventBus();
+    events.on(DELEGATION_EVENTS.request, (request) => events.emit(DELEGATION_EVENTS.response, {
+      ...request, status, ...(bridgeError ? { error: bridgeError } : {}),
+    }));
+    const delegate = createDelegationRunner({ events });
+    await assert.rejects(delegate({ agent: "a", task: "x" }, { cwd: "/repo" }), (error) => {
+      assert.equal(error.message, `delegation ${status}${bridgeError ? `: ${bridgeError}` : ""}`);
+      return true;
+    });
+  }
+});
+
+test("pre-start completed, mismatched, and duplicate terminals reject", async () => {
+  for (const scenario of ["completed", "mismatched", "duplicate"]) {
+    const events = eventBus();
+    events.on(DELEGATION_EVENTS.request, (request) => {
+      if (scenario === "completed") events.emit(DELEGATION_EVENTS.response, { ...request, status: "completed", result: { kind: "text", text: "x" } });
+      if (scenario === "mismatched") events.emit(DELEGATION_EVENTS.response, { ...request, nodeId: "other", status: "unavailable_context" });
+      if (scenario === "duplicate") {
+        events.emit(DELEGATION_EVENTS.response, { ...request, status: "unavailable_context" });
+        events.emit(DELEGATION_EVENTS.response, { ...request, status: "unavailable_context" });
+      }
+    });
+    const delegate = createDelegationRunner({ events });
+    await assert.rejects(delegate({ agent: "a", task: "x" }, { cwd: "/repo" }), /delegation/);
+  }
+});
+
+test("post-start duplicate, partial, and cancelled terminal paths reject", async () => {
+  for (const scenario of ["duplicate", "partial", "cancel"]) {
     const events = eventBus();
     const controller = new AbortController();
     events.on(DELEGATION_EVENTS.request, (request) => {
-      if (scenario === "before-started") events.emit(DELEGATION_EVENTS.response, { ...request, status: "completed", result: { kind: "text", text: "x" } });
       if (scenario === "duplicate") { complete(events, request); events.emit(DELEGATION_EVENTS.response, { ...request, status: "completed", result: { kind: "text", text: "again" } }); }
       if (scenario === "partial") { events.emit(DELEGATION_EVENTS.started, request); events.emit(DELEGATION_EVENTS.response, { ...request, status: "completed" }); }
       if (scenario === "cancel") { events.emit(DELEGATION_EVENTS.started, request); controller.abort(); }
