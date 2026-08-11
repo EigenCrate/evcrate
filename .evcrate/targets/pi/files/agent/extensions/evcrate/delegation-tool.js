@@ -37,6 +37,13 @@ export const DELEGATION_PARAMETERS = Type.Unsafe({
 
 function fail(message) { throw new Error(message); }
 function text(value) { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
+function toolUpdate(value) {
+  const currentTool = text(value?.currentTool);
+  return {
+    content: [{ type: "text", text: currentTool ? `Working: ${currentTool}` : "Delegation in progress" }],
+    details: value,
+  };
+}
 function normalizeChildAgentRoot(env = process.env) {
   const configured = env.PI_CODING_AGENT_DIR;
   if (!configured) return () => {};
@@ -46,12 +53,17 @@ function normalizeChildAgentRoot(env = process.env) {
   env.PI_CODING_AGENT_DIR = agentRoot;
   return () => { env.PI_CODING_AGENT_DIR = configured; };
 }
-function sameId(value, request) {
-  return value?.requestId === request.requestId
-    && value?.ownerRunId === request.ownerRunId && value?.nodeId === request.nodeId;
+function sameId(value, request) { return value?.requestId === request.requestId
+  && value?.ownerRunId === request.ownerRunId && value?.nodeId === request.nodeId;
 }
+const TERMINAL_FAILURE_STATUSES = new Set([
+  "failed", "timed_out", "cancelled", "interrupted", "turn_budget_exhausted", "tool_budget_exhausted",
+  "structured_output_failed", "acceptance_failed", "invalid_request", "unavailable_context", "duplicate_node",
+]);
+
 function validResult(response, request) {
-  if (response?.status !== "completed") return response?.error || `delegation ${response?.status ?? "response"}`;
+  if (response?.status !== "completed") return `delegation ${response?.status ?? "response"}`
+    + `${response?.error ? `: ${response.error}` : ""}`;
   if (!response.result || response.result.kind !== request.result.kind) return "delegation completed without the requested result";
   if (request.result.kind === "text" && typeof response.result.text !== "string") return "delegation returned a partial text result";
   if (request.result.kind === "structured" && !("value" in response.result)) return "delegation returned a partial structured result";
@@ -93,12 +105,15 @@ function waitForTerminal(events, request, signal, timeoutMs, onUpdate) {
     cleanup.push(events.on(DELEGATION_EVENTS.update, (value) => {
       if (value?.requestId !== request.requestId) return;
       if (!sameId(value, request)) return rejectCorrelation(value);
-      onUpdate?.(value);
+      onUpdate?.(toolUpdate(value));
     }));
     cleanup.push(events.on(DELEGATION_EVENTS.response, (value) => {
       if (value?.requestId !== request.requestId) return;
-      if (!sameId(value, request) || !started || terminal) {
-        error = !started ? `delegation '${request.nodeId}' responded before started` : `delegation '${request.nodeId}' emitted a duplicate or partial response`;
+      if (!sameId(value, request)) return rejectCorrelation(value);
+      if (terminal) {
+        error = `delegation '${request.nodeId}' emitted a duplicate or partial response`;
+      } else if (!started && !TERMINAL_FAILURE_STATUSES.has(value?.status)) {
+        error = `delegation '${request.nodeId}' responded before started`;
       } else {
         terminal = value; error = validResult(value, request);
       }
@@ -138,7 +153,8 @@ export function createDelegationRunner(options) {
         agent: node.agent, task: node.task, context: node.context, cwd: node.cwd ?? context.cwd,
         result: node.result ?? { kind: "text" }, timeoutMs: node.timeoutMs ?? input.timeoutMs ?? options.timeoutMs ?? 1_800_000,
         ...(node.turnBudget ? { turnBudget: node.turnBudget } : {}), ...(node.toolBudget ? { toolBudget: node.toolBudget } : {}),
-        ...(node.outputMode ? { outputMode: node.outputMode } : {}), ...(node.skill !== undefined ? { skill: node.skill } : {}), ...(node.artifacts !== undefined ? { artifacts: node.artifacts } : {}),
+        // outputMode is accepted locally for inline compatibility but is not supported by the public pi-subagents bridge.
+        ...(node.skill !== undefined ? { skill: node.skill } : {}), ...(node.artifacts !== undefined ? { artifacts: node.artifacts } : {}),
         ...(route.model ? { model: route.model } : {}), ...(route.thinking ? { thinking: route.thinking } : {}),
       };
       if (!text(request.cwd)) fail("delegation requires cwd");
