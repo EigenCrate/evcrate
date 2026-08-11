@@ -6,7 +6,7 @@ import { registerManagedCommands } from "./commands.js";
 import { registerDelegationTool } from "./delegation-tool.js";
 import { registerOperationPolicyGate } from "./operation-policy.js";
 import { registerHooks } from "./hooks.js";
-import { getAgentRoot, getEvcrateRoot } from "./paths.js";
+import { getAgentRoot, getEvcrateRoot, normalizeAgentRootEnvironment } from "./paths.js";
 
 function readObject(path) {
   try {
@@ -20,6 +20,9 @@ function readObject(path) {
 /** Native Pi entrypoint. The policy gate is registered before every EVCrate tool. */
 export default async function evcrateExtension(pi) {
   const agentRoot = getAgentRoot();
+  // pi-subagents resolves user skills from PI_CODING_AGENT_DIR during its own
+  // startup, so correct an exact EVCrate resource-root override up front.
+  normalizeAgentRootEnvironment();
   const resourceRoot = getEvcrateRoot(agentRoot);
   const agentRoles = readObject(join(resourceRoot, "model-roles.json")).agents ?? {};
   const settings = readObject(join(agentRoot, "settings.json"));

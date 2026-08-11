@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { basename, dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { Type } from "typebox";
 import { runChildStart } from "./child-context.js";
+import { normalizeAgentRoot } from "./paths.js";
 import { registerModelRoles, resolveModelRole, validateExplicitModel, validateExplicitThinking } from "./model-roles.js";
 
 export const DELEGATION_EVENTS = Object.freeze({
@@ -11,6 +12,10 @@ export const DELEGATION_EVENTS = Object.freeze({
   response: "prompt-template:subagent:response",
   cancel: "prompt-template:subagent:cancel",
 });
+
+export const DELEGATION_DESCRIPTION =
+  "EVCrate structured delegation only: use agent/task or direct, parallel, and sequential nodes. "
+  + "Do not pass action or workflowScript; those belong to pi-subagents' subagent tool.";
 
 const DELEGATION_NODE_PARAMETERS = { type: "object", properties: { outputMode: { enum: ["inline"] } } };
 
@@ -36,8 +41,8 @@ function normalizeChildAgentRoot(env = process.env) {
   const configured = env.PI_CODING_AGENT_DIR;
   if (!configured) return () => {};
   const resourceRoot = resolve(configured);
-  const agentRoot = dirname(resourceRoot);
-  if (basename(resourceRoot) !== "evcrate" || basename(agentRoot) !== "agent") return () => {};
+  const agentRoot = normalizeAgentRoot(resourceRoot);
+  if (agentRoot === resourceRoot) return () => {};
   env.PI_CODING_AGENT_DIR = agentRoot;
   return () => { env.PI_CODING_AGENT_DIR = configured; };
 }
@@ -175,7 +180,7 @@ export function registerDelegationTool(pi, options = {}) {
   const delegate = createDelegationRunner({ ...options, resolveModel, events: options.events ?? pi.events });
   pi.registerTool({
     name: "evcrate_subagent", label: "EVCrate Subagent",
-    description: "Delegate direct, parallel, or sequential work through EVCrate's structured subagent protocol.",
+    description: DELEGATION_DESCRIPTION,
     parameters: DELEGATION_PARAMETERS,
     async execute(_id, params, signal, onUpdate, ctx) {
       const result = await delegate(params, { cwd: ctx.cwd, model: ctx.model, modelRegistry: ctx.modelRegistry, signal, onUpdate });

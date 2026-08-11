@@ -15,10 +15,10 @@ Think hard to plan & start working on these tasks follow the Orchestration Proto
 ## Workflow:
 1. **FIRST**: Run `ui-ux-pro-max` searches to gather design intelligence:
    ```bash
-   python3 $HOME/.pi/skills/ui-ux-pro-max/scripts/search.py "<product-type>" --domain product
-   python3 $HOME/.pi/skills/ui-ux-pro-max/scripts/search.py "<style-keywords>" --domain style
-   python3 $HOME/.pi/skills/ui-ux-pro-max/scripts/search.py "<mood>" --domain typography
-   python3 $HOME/.pi/skills/ui-ux-pro-max/scripts/search.py "<industry>" --domain color
+   python3 $HOME/.pi/agent/skills/ui-ux-pro-max/scripts/search.py "<product-type>" --domain product
+   python3 $HOME/.pi/agent/skills/ui-ux-pro-max/scripts/search.py "<style-keywords>" --domain style
+   python3 $HOME/.pi/agent/skills/ui-ux-pro-max/scripts/search.py "<mood>" --domain typography
+   python3 $HOME/.pi/agent/skills/ui-ux-pro-max/scripts/search.py "<industry>" --domain color
    ```
 2. Use `ui-ux-designer` subagent to start the design process.
 3. If user doesn't specify, create the design in pure HTML/CSS/JS.

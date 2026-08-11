@@ -161,7 +161,13 @@ def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
     translated = normalize_lf(value)
     for pattern, replacement in _PATH_TRANSLATIONS:
         translated = pattern.sub(replacement, translated)
-    translated = translated.replace(".claude/skills/", ".pi/skills/")
+    # Project skill references live under .pi/skills; global references live
+    # under Pi's agent root. Handle global prefixes before the project form.
+    for prefix in ("$HOME", "${HOME}", "~"):
+        translated = translated.replace(
+            f"{prefix}/.claude/skills", f"{prefix}/.pi/agent/skills"
+        )
+    translated = translated.replace(".claude/skills", ".pi/skills")
     translated = translated.replace(".claude/.evcrate.json", ".pi/.evcrate.json")
     translated = _translate_nested_commands(translated, commands)
     for pattern, replacement in _TOOL_TRANSLATIONS:

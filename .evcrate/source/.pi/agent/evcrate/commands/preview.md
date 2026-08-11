@@ -28,9 +28,9 @@ Universal viewer using `markdown-novel-viewer` skill - pass ANY path and see it 
 
 **IMPORTANT:** Run server as Claude Code background task using `run_in_background: true` with the Bash tool. This makes the server visible in `/tasks` and manageable via `KillShell`.
 
-Check if this script is located in the current workspace or in `$HOME/.pi/skills/markdown-novel-viewer` directory:
+Check if this script is located in the current workspace or in `$HOME/.pi/agent/skills/markdown-novel-viewer` directory:
 - If in current workspace: `$SKILL_DIR_PATH` = `./.pi/skills/markdown-novel-viewer/`
-- If in home directory: `$SKILL_DIR_PATH` = `$HOME/.pi/skills/markdown-novel-viewer/`
+- If in home directory: `$SKILL_DIR_PATH` = `$HOME/.pi/agent/skills/markdown-novel-viewer/`
 
 ### Stop Server
 

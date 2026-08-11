@@ -26,9 +26,9 @@ Plans dashboard with progress tracking and timeline visualization.
 
 **IMPORTANT:** Run server as Claude Code background task using `run_in_background: true` with the Bash tool. This makes the server visible in `/tasks` and manageable via `KillShell`.
 
-Check if this script is located in the current workspace or in `$HOME/.pi/skills/plans-kanban` directory:
+Check if this script is located in the current workspace or in `$HOME/.pi/agent/skills/plans-kanban` directory:
 - If in current workspace: `$SKILL_DIR_PATH` = `./.pi/skills/plans-kanban/`
-- If in home directory: `$SKILL_DIR_PATH` = `$HOME/.pi/skills/plans-kanban/`
+- If in home directory: `$SKILL_DIR_PATH` = `$HOME/.pi/agent/skills/plans-kanban/`
 
 ### Stop Server
 
