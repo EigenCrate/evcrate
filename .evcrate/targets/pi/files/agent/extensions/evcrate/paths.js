@@ -1,12 +1,30 @@
 import { realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+
+/** Accept the exact resource-root value sometimes passed by child launchers. */
+export function normalizeAgentRoot(value) {
+  const configured = resolve(value);
+  const parent = dirname(configured);
+  return basename(configured) === "evcrate" && basename(parent) === "agent"
+    ? parent
+    : configured;
+}
+
+/** Correct the environment before third-party Pi extensions resolve skills. */
+export function normalizeAgentRootEnvironment(env = process.env) {
+  const configured = env.PI_CODING_AGENT_DIR;
+  if (!configured) return undefined;
+  const normalized = normalizeAgentRoot(configured);
+  if (normalized !== resolve(configured)) env.PI_CODING_AGENT_DIR = normalized;
+  return normalized;
+}
 
 export function getAgentRoot(env = process.env) {
   const home = env.HOME;
   if (!env.PI_CODING_AGENT_DIR && !home) {
     throw new Error("PI_CODING_AGENT_DIR or HOME is required to locate the Pi agent root");
   }
-  return resolve(env.PI_CODING_AGENT_DIR || `${home}/.pi/agent`);
+  return normalizeAgentRoot(env.PI_CODING_AGENT_DIR || `${home}/.pi/agent`);
 }
 
 export function isContained(root, candidate) {
@@ -33,7 +51,7 @@ export function resolveContainedExistingPath(root, reference) {
 }
 
 export function getEvcrateRoot(agentRoot = getAgentRoot()) {
-  return resolve(agentRoot, "evcrate");
+  return resolve(normalizeAgentRoot(agentRoot), "evcrate");
 }
 
 function commandInstruction(root, reference) {

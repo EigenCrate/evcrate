@@ -116,6 +116,17 @@ class PiResourceMigrationTest(unittest.TestCase):
                 self.assertEqual(translate_prompt(source, commands), expected)
                 self.assertEqual(translate_prompt(expected, commands), expected)
 
+    def test_translate_prompt_maps_global_and_project_skill_roots(self) -> None:
+        cases = (
+            ("$HOME/.claude/skills/debugging/SKILL.md", "$HOME/.pi/agent/skills/debugging/SKILL.md"),
+            ("${HOME}/.claude/skills/debugging/SKILL.md", "${HOME}/.pi/agent/skills/debugging/SKILL.md"),
+            ("~/.claude/skills/debugging/SKILL.md", "~/.pi/agent/skills/debugging/SKILL.md"),
+            (".claude/skills/debugging/SKILL.md", ".pi/skills/debugging/SKILL.md"),
+        )
+        for source, expected in cases:
+            with self.subTest(source=source):
+                self.assertEqual(translate_prompt(source), expected)
+
     def test_real_canonical_directives_have_no_migration_residuals(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             stage = Path(temp) / "stage"

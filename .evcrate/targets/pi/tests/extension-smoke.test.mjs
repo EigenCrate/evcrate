@@ -117,6 +117,27 @@ test("extension registers policy before tools, preserves markers, and restores r
   }
 });
 
+test("extension normalizes an EVCrate resource root before skill discovery", async () => {
+  const container = mkdtempSync(join(tmpdir(), "evcrate-resource-root-"));
+  const agentRoot = join(container, "agent");
+  const resourceRoot = join(agentRoot, "evcrate");
+  const oldRoot = process.env.PI_CODING_AGENT_DIR;
+  try {
+    mkdirSync(join(resourceRoot, "commands"), { recursive: true });
+    writeFileSync(join(resourceRoot, "commands", "child.md"), "child");
+    process.env.PI_CODING_AGENT_DIR = resourceRoot;
+    const pi = mockPi();
+    await runExtension(pi);
+    assert.equal(process.env.PI_CODING_AGENT_DIR, agentRoot);
+    await pi.emit("session_start");
+    assert.ok(pi.commands.has("child"));
+  } finally {
+    if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = oldRoot;
+    rmSync(container, { recursive: true, force: true });
+  }
+});
+
 test("Pi 0.84.1 loads a TypeBox extension from its bundled dependency", { timeout: 120_000 }, () => {
   const root = mkdtempSync(join(tmpdir(), "evcrate-pi-typebox-"));
   const piRoot = join(root, "pi");

@@ -101,6 +101,7 @@ test("Pi registration exposes evcrate_subagent without workflowScript", async ()
   const pi = { events, on: () => {}, registerTool: (value) => { tool = value; } };
   registerDelegationTool(pi, {});
   assert.equal(tool.name, "evcrate_subagent");
+  assert.match(tool.description, /Do not pass action or workflowScript/);
   assert.equal("workflowScript" in tool.parameters.properties, false);
   const result = await tool.execute("call", { agent: "a", task: "x" }, undefined, undefined, { cwd: "/repo", modelRegistry: [] });
   assert.equal(result.details.results[0].response.status, "completed");
