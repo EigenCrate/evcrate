@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: 2026-08-09
+**Last Updated**: 2026-08-12
 **Version**: 1.9.0
 **Project**: EVCrate
 
@@ -63,7 +63,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - Runtime discovers the project root first, then resolves config from that root rather than the current working directory.
 - Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.evcrate.json`, then local `.evcrate/source/.claude/.evcrate.json`; local values win.
 - Codex bridge hooks use a fixed logical `EVCRATE_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.evcrate.json`, then the nested local `.evcrate/source/.codex/.evcrate.json`; local values win.
-- The internal selector accepts `.claude`, `.codex`, and `.pi`; invalid values fall back to `.claude`. For native Pi hooks, `EVCRATE_CONFIG_DIR=.pi`, `EVCRATE_GLOBAL_CONFIG_ROOT` names the absolute directory containing the global `.evcrate.json`, and `EVCRATE_RESOURCE_ROOT` names the absolute generated `agent/evcrate` directory. The hook adapter derives both from `PI_CODING_AGENT_DIR ?? $HOME/.pi/agent`; explicit absolute roots take precedence over logical defaults.
+- The internal selector accepts `.claude`, `.codex`, and `.pi`; invalid values fall back to `.claude`. For native Pi hooks, `EVCRATE_CONFIG_DIR=.pi`, `EVCRATE_GLOBAL_CONFIG_ROOT` names the absolute directory containing the global `.evcrate.json`, and `EVCRATE_RESOURCE_ROOT` names the absolute generated `agent/evcrate` directory. The hook adapter resolves the agent root from a non-empty `PI_CODING_AGENT_DIR`, otherwise Node's platform-aware `os.homedir()` plus `.pi/agent`; explicit roots take precedence over defaults.
 - Privacy blocking is stricter: the disable switch reads only the selected local `.evcrate.json`, so global config cannot disable secret-file blocking.
 - The Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.

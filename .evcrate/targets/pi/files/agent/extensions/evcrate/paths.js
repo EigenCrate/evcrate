@@ -1,4 +1,5 @@
 import { realpathSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 /** Accept the exact resource-root value sometimes passed by child launchers. */
@@ -19,12 +20,16 @@ export function normalizeAgentRootEnvironment(env = process.env) {
   return normalized;
 }
 
-export function getAgentRoot(env = process.env) {
-  const home = env.HOME;
-  if (!env.PI_CODING_AGENT_DIR && !home) {
+export function getAgentRoot(env = process.env, home) {
+  const configured = env.PI_CODING_AGENT_DIR;
+  if (configured) return normalizeAgentRoot(configured);
+  const fallback = home === undefined
+    ? (env === process.env ? homedir() : env.HOME)
+    : home;
+  if (!fallback) {
     throw new Error("PI_CODING_AGENT_DIR or HOME is required to locate the Pi agent root");
   }
-  return normalizeAgentRoot(env.PI_CODING_AGENT_DIR || `${home}/.pi/agent`);
+  return normalizeAgentRoot(`${fallback}/.pi/agent`);
 }
 
 export function isContained(root, candidate) {
