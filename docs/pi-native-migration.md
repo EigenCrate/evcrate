@@ -2,16 +2,16 @@
 
 ## Ownership and build
 
-EVCrate authors commands, agents, workflows, hooks, scripts, and skills only in `.evcrate/source/.claude/`. `migrate_claude_to_pi.py` deterministically projects that source into `.evcrate/source/.pi`; the only Pi-authored runtime files are the extension overlay in `.evcrate/targets/pi/files/agent/extensions/evcrate/`.
+EVCrate authors commands, agents, workflows, hooks, scripts, and skills in `.evcrate/source/.claude/`. The Pi-specific extension overlay in `.evcrate/targets/pi/files/` is applied during an isolated build; the build then generates `.evcrate/source/.pi/` from the canonical source and overlay. Generated files are not hand-edited: change the canonical source or overlay, then rebuild.
 
-Regenerate and verify without touching your live configuration:
+Regenerate and verify Pi parity without touching live configuration:
 
 ```bash
-python3 distribute.py --build
-python3 distribute.py --check
+python3 distribute.py --build --target pi
+python3 distribute.py --check --target pi
 ```
 
-The Pi target publishes only `EVCRATE_HOME/.pi` to `EVCRATE_HOME/.pi`. `PI_CODING_AGENT_DIR` is runtime-only: it may point Pi at another agent directory for a smoke test, but never changes the publisher destination.
+`--check` regenerates isolated staging and byte-compares the local generated artifact. Publication consumes only a current verified build and publishes `EVCRATE_HOME/.pi` to `EVCRATE_HOME/.pi`. `PI_CODING_AGENT_DIR` is runtime-only and never changes the publisher destination. Native Windows validation remains pending.
 
 ## Runtime model
 

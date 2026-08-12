@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-12 10:55:32 +0700
+**Last Updated:** 2026-08-12 11:13:00 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -275,7 +275,7 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 - ✅ Skill-Only Advisor Replacement — Phase 2 (DONE, 2026-08-02 21:30 +0700): static packaging, pointer, runtime-absence, idempotence, preservation, and compatibility documentation complete. Validation: 52/52 tests passed via `npm test`; code review 10/10 approved. Removed `advisor_consult` callers must use explicit `$advisor-strategy`; no provider/model, App Server, MCP, or app invocation.
 
 ### Recent Additions (2026-08-12)
-- ✅ Native Windows Pi Extension Loading — Phase 01 (DONE): canonical runtime-root resolution approved; explicit `PI_CODING_AGENT_DIR` precedence and Node platform-home fallback in `paths.js`/`hook-adapter.cjs`. Focused validation **9/9**, syntax pass, review cycle 2 **9/10**, user approved. Plan progress: **25%** (1/4 phases); Phases 02–04 remain Pending. Full Pi **41/42** retains the unrelated `subagents-doctor` baseline failure; native Windows not validated.
+- ✅ Native Windows Pi Extension Loading — Phases 01–02 (DONE): canonical runtime-root resolution approved; explicit `PI_CODING_AGENT_DIR` precedence and Node platform-home fallback in `paths.js`/`hook-adapter.cjs`; generated/build parity completed. Phase 02 validation: build/check pass, targeted distribution tests **46/46**, syntax **4/4**, canonical/generated/staged byte parity, manifest hashes, and isolated Pi publish pass. Code review **9/10**, user approved. Plan progress: **50%** (2/4 phases); Phases 03–04 remain Pending. Full suite **126/127** retains the unrelated advisor stale-manifest fixture error; native Windows not validated.
 
 ### Recent Additions (2026-08-03)
 - ✅ Claude HOME Distribution (COMPLETE): complete `.evcrate/source/.claude` tree is source-backed, verified through build/check, and published through the generic HOME distribution pipeline with unmanaged HOME preservation. Validation: targeted tests 63/63, `npm test` 69/69, `distribute.py --build` and `--check` passed; temporary HOME dry-run included 855 Claude entries without mutating `HOME/.claude`; code review 9/10 with no critical issues.
@@ -485,16 +485,15 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 ### Current Status
 - Windows statusline support implementation fully delivered and documented
 - Native Windows Pi extension root-resolution Phase 01 **DONE** (2026-08-12); focused validation 9/9, syntax pass, review cycle 2 9/10, user approved
-- Native Windows Pi extension loading remains pending generated/build parity, later regression/handoff phases, and native Windows validation
-- Known residual: full Pi suite 41/42 due to unrelated missing `subagents-doctor` baseline; no native Windows validation claimed
-- Ready for Phase 02 generated/build parity; do not claim full feature completion
+- Native Windows Pi extension loading has completed Phases 01–02; regression/handoff phases and native Windows validation remain pending
+- Known residual: full suite 126/127 due to unrelated advisor stale-manifest fixture error; no native Windows validation claimed
+- Ready for Phase 03 regression validation; do not claim full feature completion
 
 ### Next Steps (Not Yet Scheduled)
-1. Complete approved Windows Pi plan Phase 02 generated/build parity
-2. Complete Phase 03 regression validation and Phase 04 review/docs handoff; retain later phases Pending until evidence exists
-3. Run native Windows published-artifact startup validation with `HOME`/`PI_CODING_AGENT_DIR` absent and `USERPROFILE` available
-4. Track unrelated `subagents-doctor` baseline separately; do not mask it
-5. Consider additional Windows ecosystem enhancements
+1. Complete Phase 03 regression validation and Phase 04 review/docs handoff; retain later phases Pending until evidence exists
+2. Run native Windows published-artifact startup validation with `HOME`/`PI_CODING_AGENT_DIR` absent and `USERPROFILE` available
+3. Track the unrelated advisor stale-manifest fixture error separately; do not mask it
+4. Consider additional Windows ecosystem enhancements
 
 ---
 
