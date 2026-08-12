@@ -4,12 +4,22 @@
 const { spawn } = require("node:child_process");
 const { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } = require("node:fs");
 const { dirname, isAbsolute, join, relative, resolve } = require("node:path");
-const { tmpdir } = require("node:os");
+const { homedir, tmpdir } = require("node:os");
 
 const HOOK_TIMEOUT_MS = 30_000;
 const MAX_HOOK_OUTPUT_BYTES = 64 * 1024;
 const MAX_ENV_FILE_BYTES = 16 * 1024;
 const SAFETY_FILENAMES = new Set(["scout-block.cjs", "privacy-block.cjs"]);
+
+function resolveAgentRoot(options) {
+  const configured = options.agentRoot || process.env.PI_CODING_AGENT_DIR;
+  if (configured) return configured;
+  const home = options.home === undefined ? homedir() : options.home;
+  if (!home) {
+    throw new Error("PI_CODING_AGENT_DIR or HOME is required to locate the Pi agent root");
+  }
+  return join(home, ".pi", "agent");
+}
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -172,7 +182,7 @@ function readMap(resourceRoot) {
 }
 
 function createHookAdapter(options = {}) {
-  const agentRoot = options.agentRoot ?? process.env.PI_CODING_AGENT_DIR ?? join(process.env.HOME ?? "", ".pi", "agent");
+  const agentRoot = resolveAgentRoot(options);
   const resourceRoot = options.resourceRoot ?? join(agentRoot, "evcrate");
   const hooksRoot = join(resourceRoot, "hooks");
   const hookMap = options.hookMap
