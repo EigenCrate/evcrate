@@ -1,14 +1,42 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import runExtension from "../files/agent/extensions/evcrate/index.js";
 import { createChildStartRunner, runChildStart } from "../files/agent/extensions/evcrate/child-context.js";
-import { resolveEvcrateMarkers } from "../files/agent/extensions/evcrate/paths.js";
+import { getAgentRoot, resolveEvcrateMarkers } from "../files/agent/extensions/evcrate/paths.js";
+
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+const generatedExtensionPath = join(projectRoot, ".evcrate/source/.pi/agent/extensions/evcrate/index.js");
+const generatedPathsPath = join(projectRoot, ".evcrate/source/.pi/agent/extensions/evcrate/paths.js");
+const generatedExtension = (await import(pathToFileURL(generatedExtensionPath).href)).default;
+const generatedPaths = await import(pathToFileURL(generatedPathsPath).href);
+const runtimeResolvers = [
+  { name: "overlay", path: fileURLToPath(new URL("../files/agent/extensions/evcrate/paths.js", import.meta.url)), module: { getAgentRoot } },
+  { name: "generated", path: generatedPathsPath, module: generatedPaths },
+];
+const runtimeExtensions = [
+  { name: "overlay", extension: runExtension },
+  { name: "generated", extension: generatedExtension },
+];
+const REQUIRED_ROOT_ERROR = "PI_CODING_AGENT_DIR or HOME is required to locate the Pi agent root";
+
+function assertProcessHomeFallback(modulePath, home) {
+  const script = [
+    'const { homedir } = await import("node:os");',
+    'const { resolve } = await import("node:path");',
+    `const { getAgentRoot } = await import(${JSON.stringify(pathToFileURL(modulePath).href)});`,
+    'const expected = resolve(homedir(), ".pi", "agent");',
+    'if (resolve(getAgentRoot()) !== expected) process.exit(1);',
+  ].join("\n");
+  const env = { ...process.env, HOME: home };
+  delete env.PI_CODING_AGENT_DIR;
+  execFileSync(process.execPath, ["--input-type=module", "-e", script], { env, stdio: "pipe" });
+}
 
 function eventBus() {
   const handlers = new Map();
@@ -53,6 +81,7 @@ function mockPi() {
     getActiveTools() { return [...active]; },
     getAllTools() { return [...new Set([...active, ...tools.keys()])].map((name) => ({ name })); },
     setActiveTools(names) { active = [...names]; },
+    sendMessage(message) { this.messages.push(message); },
     sendUserMessage(message) { this.messages.push(message); },
   };
 }
@@ -117,6 +146,60 @@ test("extension registers policy before tools, preserves markers, and restores r
   }
 });
 
+test("overlay and generated extension entrypoints share startup registration", async () => {
+  for (const { name, extension } of runtimeExtensions) {
+    const { agentRoot, root } = fixture();
+    const oldRoot = process.env.PI_CODING_AGENT_DIR;
+    process.env.PI_CODING_AGENT_DIR = agentRoot;
+    try {
+      const pi = mockPi();
+      const result = await extension(pi);
+      assert.equal(result.agentRoot, agentRoot, `${name} selected an unexpected agent root`);
+      assert.equal(result.resourceRoot, root, `${name} selected an unexpected resource root`);
+      assert.deepEqual([...pi.tools.keys()].sort(), ["evcrate_command", "evcrate_subagent"]);
+      await pi.emit("session_start");
+      assert.ok(pi.commands.has("child"), `${name} did not register fixture commands`);
+    } finally {
+      if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
+      else process.env.PI_CODING_AGENT_DIR = oldRoot;
+      rmSync(agentRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+test("overlay and generated resolvers preserve precedence, fallback, and errors", () => {
+  const root = mkdtempSync(join(tmpdir(), "evcrate-root-resolution-"));
+  try {
+    const explicit = join(root, "missing", "agent", "evcrate");
+    const conflictingHome = join(root, "conflicting-home");
+    const injectedHome = join(root, "injected-home");
+    const windowsProfile = join(root, "windows-profile");
+    for (const { name, path, module } of runtimeResolvers) {
+      assert.equal(
+        module.getAgentRoot({ PI_CODING_AGENT_DIR: explicit, HOME: conflictingHome }, windowsProfile),
+        resolve(root, "missing", "agent"),
+        `${name} did not preserve explicit-root precedence/normalization`,
+      );
+      assert.equal(
+        module.getAgentRoot({ PI_CODING_AGENT_DIR: "", HOME: injectedHome }),
+        resolve(injectedHome, ".pi", "agent"),
+        `${name} did not preserve injected HOME fallback`,
+      );
+      const platformRoot = module.getAgentRoot({}, windowsProfile);
+      assert.ok(isAbsolute(platformRoot), `${name} returned a relative platform-home root`);
+      assert.equal(
+        platformRoot,
+        resolve(windowsProfile, ".pi", "agent"),
+        `${name} did not use the controlled platform-home value`,
+      );
+      assert.throws(() => module.getAgentRoot({}, ""), { message: REQUIRED_ROOT_ERROR });
+      assertProcessHomeFallback(path, join(root, `${name}-process-home`));
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("extension normalizes an EVCrate resource root before skill discovery", async () => {
   const container = mkdtempSync(join(tmpdir(), "evcrate-resource-root-"));
   const agentRoot = join(container, "agent");
@@ -135,6 +218,59 @@ test("extension normalizes an EVCrate resource root before skill discovery", asy
     if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
     else process.env.PI_CODING_AGENT_DIR = oldRoot;
     rmSync(container, { recursive: true, force: true });
+  }
+});
+
+test("isolated published Pi entrypoint preserves resolver and hook adapter behavior", { timeout: 180_000 }, async () => {
+  const root = mkdtempSync(join(tmpdir(), "evcrate-published-pi-"));
+  const home = join(root, "home");
+  const state = join(root, "state");
+  try {
+    const env = {
+      ...process.env,
+      EVCRATE_HOME: home,
+      EVCRATE_STATE_HOME: state,
+      HOME: join(root, "profile"),
+    };
+    delete env.PI_CODING_AGENT_DIR;
+    for (const args of [
+      ["distribute.py", "--build", "--target", "pi"],
+      ["distribute.py", "--check", "--target", "pi"],
+      ["distribute.py", "--publish", "--target", "pi"],
+    ]) execFileSync("python3", args, { cwd: projectRoot, env, stdio: "pipe" });
+
+    const publishedAgentRoot = join(home, ".pi", "agent");
+    symlinkSync(join(projectRoot, "node_modules"), join(publishedAgentRoot, "node_modules"), "dir");
+    const publishedExtensionPath = join(publishedAgentRoot, "extensions/evcrate/index.js");
+    const publishedPathsPath = join(publishedAgentRoot, "extensions/evcrate/paths.js");
+    const publishedAdapterPath = join(publishedAgentRoot, "extensions/evcrate/hook-adapter.cjs");
+    const publishedPaths = await import(`${pathToFileURL(publishedPathsPath).href}?published`);
+    const publishedAdapter = (await import(pathToFileURL(publishedAdapterPath).href)).default;
+    const explicitResource = join(root, "explicit", "agent", "evcrate");
+    assert.equal(publishedPaths.getAgentRoot({ PI_CODING_AGENT_DIR: explicitResource }), resolve(root, "explicit", "agent"));
+    const adapter = publishedAdapter.createHookAdapter({
+      home: join(root, "adapter-home"),
+      hookMap: { schema: "evcrate-pi-hook-map-v1", events: {} },
+    });
+    assert.ok(isAbsolute(adapter.agentRoot));
+    assert.equal(adapter.agentRoot, resolve(root, "adapter-home", ".pi", "agent"));
+
+    const publishedExtension = (await import(pathToFileURL(publishedExtensionPath).href)).default;
+    const oldRoot = process.env.PI_CODING_AGENT_DIR;
+    process.env.PI_CODING_AGENT_DIR = publishedAgentRoot;
+    try {
+      const pi = mockPi();
+      const result = await publishedExtension(pi);
+      assert.equal(result.agentRoot, publishedAgentRoot);
+      assert.equal(result.resourceRoot, join(publishedAgentRoot, "evcrate"));
+      await pi.emit("session_start");
+      assert.ok(pi.commands.has("plan"));
+    } finally {
+      if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
+      else process.env.PI_CODING_AGENT_DIR = oldRoot;
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
 

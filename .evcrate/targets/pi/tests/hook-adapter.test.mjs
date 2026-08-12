@@ -1,12 +1,55 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import adapterModule from "../files/agent/extensions/evcrate/hook-adapter.cjs";
 
 const { createHookAdapter, mapReason, mapToolName, parseEnvFile } = adapterModule;
+const require = createRequire(import.meta.url);
+const generatedAdapterPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../source/.pi/agent/extensions/evcrate/hook-adapter.cjs",
+);
+const adapterModules = [
+  { name: "overlay", path: resolve(dirname(fileURLToPath(import.meta.url)), "../files/agent/extensions/evcrate/hook-adapter.cjs"), module: adapterModule },
+  { name: "generated", path: generatedAdapterPath, module: require(generatedAdapterPath) },
+];
+const HOOK_MAP = JSON.stringify({ schema: "evcrate-pi-hook-map-v1", events: {} });
+const REQUIRED_ROOT_ERROR = "PI_CODING_AGENT_DIR or HOME is required to locate the Pi agent root";
+
+function assertAdapterRootMatrix(modulePath, root) {
+  const script = [
+    `const { createHookAdapter } = require(${JSON.stringify(modulePath)});`,
+    'const { isAbsolute, resolve } = require("node:path");',
+    `const hookMap = ${HOOK_MAP};`,
+    'const explicitResource = process.env.EXPLICIT_ROOT;',
+    'const fallbackHome = process.env.FALLBACK_HOME;',
+    'const expectedExplicit = resolve(explicitResource, "..");',
+    'const optionAdapter = createHookAdapter({ agentRoot: explicitResource, home: fallbackHome, hookMap });',
+    'if (!isAbsolute(optionAdapter.agentRoot) || resolve(optionAdapter.agentRoot) !== expectedExplicit) process.exit(1);',
+    'process.env.PI_CODING_AGENT_DIR = explicitResource;',
+    'const envAdapter = createHookAdapter({ home: fallbackHome, hookMap });',
+    'if (!isAbsolute(envAdapter.agentRoot) || resolve(envAdapter.agentRoot) !== expectedExplicit) process.exit(2);',
+    'delete process.env.PI_CODING_AGENT_DIR;',
+    'const relativeAdapter = createHookAdapter({ home: "relative-home", hookMap });',
+    'if (!isAbsolute(relativeAdapter.agentRoot) || resolve(relativeAdapter.agentRoot) !== resolve("relative-home", ".pi", "agent")) process.exit(3);',
+    'try { createHookAdapter({ home: "", hookMap }); }',
+    `catch (error) { if (error.message === ${JSON.stringify(REQUIRED_ROOT_ERROR)}) process.exit(0); }`,
+    'process.exit(4);',
+  ].join("\n");
+  const env = {
+    ...process.env,
+    EXPLICIT_ROOT: resolve(root, "explicit-agent", "agent", "evcrate"),
+    FALLBACK_HOME: resolve(root, "fallback-home"),
+  };
+  delete env.PI_CODING_AGENT_DIR;
+  execFileSync(process.execPath, ["-e", script], { env, stdio: "pipe" });
+}
 
 function fixture() {
   const agentRoot = mkdtempSync(join(tmpdir(), "evcrate-hook-adapter-"));
@@ -25,6 +68,15 @@ test("maps Pi reasons and built-in file tools to canonical hook values", () => {
   assert.equal(mapToolName("find"), "Glob");
   assert.equal(mapToolName("ls"), "Glob");
   assert.equal(mapToolName("write"), "Write");
+});
+
+test("overlay and generated adapters preserve root precedence, fallback, and errors", () => {
+  const root = mkdtempSync(join(tmpdir(), "evcrate-hook-root-resolution-"));
+  try {
+    for (const { name, path } of adapterModules) {
+      assert.doesNotThrow(() => assertAdapterRootMatrix(path, root), `${name} root matrix failed`);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test("safety hook failures block while optional contexts remain parsed", async () => {

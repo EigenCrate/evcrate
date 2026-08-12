@@ -67,6 +67,7 @@ Pi settings cannot portably exclude only `.agents` skills while retaining automa
 
 ## Troubleshooting
 
+- **Pi extension root:** at startup and hook adaptation, a non-empty `PI_CODING_AGENT_DIR` wins. Otherwise Node's `os.homedir()` resolves the platform profile (`USERPROFILE` on native Windows, home directory on POSIX), then existing normalization and containment checks apply. The required-root error remains unchanged when no usable root exists. Rebuild to regenerate all derived copies.
 - **Missing command:** rebuild with `python3 distribute.py --build`, then run `--check`; nested Markdown paths register as `/dir:file`.
 - **`pi-code` conflict:** remove that package manually, exit Pi, and review a dry-run. Publication will not remove it for you.
 - **Role warning or inherited child model:** verify the selected provider has the configured route/model and that the route uses the schema above; unknown providers intentionally inherit.

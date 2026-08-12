@@ -3,7 +3,7 @@
 /** Bounded adapter between Pi events and generated canonical EVCrate hooks. */
 const { spawn } = require("node:child_process");
 const { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } = require("node:fs");
-const { dirname, isAbsolute, join, relative, resolve } = require("node:path");
+const { basename, dirname, isAbsolute, join, relative, resolve } = require("node:path");
 const { homedir, tmpdir } = require("node:os");
 
 const HOOK_TIMEOUT_MS = 30_000;
@@ -11,14 +11,22 @@ const MAX_HOOK_OUTPUT_BYTES = 64 * 1024;
 const MAX_ENV_FILE_BYTES = 16 * 1024;
 const SAFETY_FILENAMES = new Set(["scout-block.cjs", "privacy-block.cjs"]);
 
+function normalizeAgentRoot(value) {
+  const configured = resolve(value);
+  const parent = dirname(configured);
+  return basename(configured) === "evcrate" && basename(parent) === "agent"
+    ? parent
+    : configured;
+}
+
 function resolveAgentRoot(options) {
   const configured = options.agentRoot || process.env.PI_CODING_AGENT_DIR;
-  if (configured) return configured;
+  if (configured) return normalizeAgentRoot(configured);
   const home = options.home === undefined ? homedir() : options.home;
   if (!home) {
     throw new Error("PI_CODING_AGENT_DIR or HOME is required to locate the Pi agent root");
   }
-  return join(home, ".pi", "agent");
+  return normalizeAgentRoot(join(home, ".pi", "agent"));
 }
 
 function isObject(value) {
