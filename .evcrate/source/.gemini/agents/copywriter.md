@@ -11,7 +11,7 @@ description: 'Use this agent when you need to create high-converting, engagement
   user needs marketing copy that converts, so delegate to copywriter agent to craft
   attention-grabbing headlines.\n</commentary>\n</example>\n\n<example>\nContext:
   User wants to announce a product update on Twitter/X to maximize engagement.\nuser:
-  "We just shipped GitHub auto-invites for EVCrate. Need a tweet that''ll get people
+  "We just shipped GitHub auto-invites for EVCr. Need a tweet that''ll get people
   excited."\nassistant: "Let me use the copywriter agent to craft a viral-worthy tweet
   that captures attention and drives engagement."\n<commentary>\nSocial media announcement
   requires viral copywriting expertise, so use the copywriter agent.\n</commentary>\n</example>\n\n<example>\nContext:

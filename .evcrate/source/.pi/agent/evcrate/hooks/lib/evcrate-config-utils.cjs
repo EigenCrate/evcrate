@@ -145,7 +145,7 @@ function loadConfigFromPath(configPath) {
  * @returns {string} Path to session temp file
  */
 function getSessionTempPath(sessionId) {
-  return path.join(os.tmpdir(), `ck-session-${sessionId}.json`);
+  return path.join(os.tmpdir(), `evcrate-session-${sessionId}.json`);
 }
 
 /**

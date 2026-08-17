@@ -20,7 +20,7 @@ Use this only when work can be split into independent phases with clear dependen
 - Keep reports ≤150 lines
 
 ### 2. Parallel Planning
-- Trigger `/plan:parallel <detailed-instruction>`
+- Trigger {{evcrate:commands/plan:parallel}} <detailed-instruction>
 - Wait for plan with:
   - dependency graph
   - execution strategy

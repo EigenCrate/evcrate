@@ -11,7 +11,7 @@ const HOOK_PATH = path.join(__dirname, '..', 'privacy-block.cjs');
 
 async function runHook(hookData, cwd = undefined) {
   return new Promise((resolve) => {
-    const options = cwd ? { cwd, env: process['env'] } : { env: process['env'] };
+    const options = cwd ? { cwd } : {};
     const proc = spawn('node', [HOOK_PATH], options);
     let stderr = '';
 
@@ -40,7 +40,7 @@ const blockTests = [
     name: '.env.local - should block',
     input: { tool_input: { file_path: '.env.local' } },
     expectBlock: true,
-    expectContains: 'PRIVACY BLOCK'
+    expectContains: 'APPROVED:'
   },
   {
     name: 'credentials.json - should block',

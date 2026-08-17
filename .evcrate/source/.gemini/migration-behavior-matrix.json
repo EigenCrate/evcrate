@@ -332,13 +332,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "kanban.md",
-      "status": "migrated",
-      "target": "kanban.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "plan/archive.md",
       "status": "migrated",
       "target": "plan/archive.toml"

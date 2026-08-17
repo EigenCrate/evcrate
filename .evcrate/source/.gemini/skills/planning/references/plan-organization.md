@@ -66,7 +66,7 @@ status: pending
 priority: P1
 effort: 8h
 issue: 123
-branch: kai/feat/oauth-auth
+branch: /feat/oauth-auth
 tags: [auth, backend, security]
 created: 2025-12-16
 ---

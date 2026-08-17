@@ -332,13 +332,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "kanban.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_kanban/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "plan/archive.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_plan_archive/SKILL.md"
