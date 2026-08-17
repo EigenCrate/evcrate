@@ -1,7 +1,9 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
+import tomllib
 import unittest
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -9,10 +11,13 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from migrate_claude_to_codex import (
+    EXTERNAL_SCOUT_STRATEGY_END,
+    EXTERNAL_SCOUT_STRATEGY_START,
     SUBAGENT_WAIT_CONTRACT,
     apply_replacements,
     apply_subagent_wait_contract,
     canonicalize_command_tokens,
+    migrate_agents,
     migrate_commands_as_native_skills,
     migrate_help_scripts,
 )
@@ -178,6 +183,70 @@ class ApplyReplacementsTest(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertIn("/fix:logs", completed.stdout)
             self.assertNotIn("/fix/logs", completed.stdout)
+
+
+class ExternalScoutCodexGenerationTest(unittest.TestCase):
+    @staticmethod
+    def _generate(source_content: str, output_dir: Path) -> Path:
+        source_dir = output_dir.parent / "canonical/.claude"
+        agents_dir = source_dir / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        (agents_dir / "scout-external.md").write_text(source_content, encoding="utf-8")
+        with patch("migrate_claude_to_codex.CLAUDE_DIR", source_dir), patch(
+            "migrate_claude_to_codex.CODEX_DIR", output_dir
+        ):
+            migrate_agents()
+        return output_dir / "agents/scout-external.toml"
+
+    @staticmethod
+    def _assert_contract(path: Path) -> str:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+        body = payload["developer_instructions"]
+        command = 'agy -p "[prompt]" --model gemini-3.7-flash-high'
+        if body.count(command) != 1:
+            raise AssertionError(f"expected one exact agy command in {path}")
+        for forbidden in ("opencode", "gemini-2.5-flash", "codex exec", "claude -p"):
+            if forbidden in body.lower():
+                raise AssertionError(f"forbidden Codex strategy token: {forbidden}")
+        if "scale" in body.lower():
+            raise AssertionError("legacy scale-provider routing remains")
+        if body.count(EXTERNAL_SCOUT_STRATEGY_START) != 1 or body.count(EXTERNAL_SCOUT_STRATEGY_END) != 1:
+            raise AssertionError("scout strategy markers are not unique")
+        return body
+
+    def test_isolated_generation_uses_canonical_agy_strategy(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        with TemporaryDirectory() as temp:
+            generated = self._generate(canonical.read_text(encoding="utf-8"), Path(temp) / ".codex")
+            self._assert_contract(generated)
+
+    def test_malformed_strategy_markers_fail_deterministically(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        source = canonical.read_text(encoding="utf-8")
+        malformed = {
+            "missing": source.replace(EXTERNAL_SCOUT_STRATEGY_START + "\n", "", 1),
+            "duplicate": source.replace(EXTERNAL_SCOUT_STRATEGY_END, EXTERNAL_SCOUT_STRATEGY_END + "\n" + EXTERNAL_SCOUT_STRATEGY_END, 1),
+            "reversed": source.replace(EXTERNAL_SCOUT_STRATEGY_START, "__START__", 1)
+            .replace(EXTERNAL_SCOUT_STRATEGY_END, EXTERNAL_SCOUT_STRATEGY_START, 1)
+            .replace("__START__", EXTERNAL_SCOUT_STRATEGY_END, 1),
+        }
+        message = "Malformed scout-external strategy markers: expected exactly one ordered start/end pair"
+        for name, content in malformed.items():
+            with self.subTest(name=name), TemporaryDirectory() as temp:
+                with self.assertRaisesRegex(ValueError, f"^{re.escape(message)}$"):
+                    self._generate(content, Path(temp) / ".codex")
+
+    def test_repeat_generation_is_byte_identical(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        content = canonical.read_text(encoding="utf-8")
+        with TemporaryDirectory() as temp:
+            first = self._generate(content, Path(temp) / "first").read_bytes()
+            second = self._generate(content, Path(temp) / "second").read_bytes()
+            self.assertEqual(first, second)
+
+    def test_checked_in_artifact_matches_canonical_strategy_after_regeneration(self) -> None:
+        artifact = Path(__file__).resolve().parents[1] / ".evcrate/source/.codex/agents/scout-external.toml"
+        self._assert_contract(artifact)
 
 
 if __name__ == "__main__":
