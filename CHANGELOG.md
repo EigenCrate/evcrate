@@ -2,6 +2,7 @@
 
 ### Features
 
+* **scout:** unify external CLI strategy rendering behind one canonical read-only source, with deterministic Codex/Gemini projections and exact fallback contracts.
 * **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
 
 ### Bug Fixes

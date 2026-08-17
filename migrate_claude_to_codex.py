@@ -143,8 +143,19 @@ MODEL_MAP = {
     "": ("gpt-5.6-sol", "high"),
 }
 
-COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
+EXTERNAL_SCOUT_STRATEGY_START = "<!-- EXTERNAL_SCOUT_STRATEGY_START -->"
+EXTERNAL_SCOUT_STRATEGY_END = "<!-- EXTERNAL_SCOUT_STRATEGY_END -->"
+CODEX_EXTERNAL_SCOUT_STRATEGY = """## External command strategy
 
+For each focused directory search, use the same read-only primary command. Prompts must request concise paths and supporting evidence, and must not ask for modifications or credentials.
+
+```bash
+agy -p "[prompt]" --model gemini-3.7-flash-high
+```
+
+Run focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command. The number of parallel searches follows the search scope and available directories, not provider selection."""
+
+COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
 
 def apply_replacements(text: str) -> str:
     for pattern, replacement in REPLACEMENTS.items():
@@ -160,6 +171,26 @@ def apply_subagent_wait_contract(text: str) -> str:
     if "## Subagent Completion Contract" in text:
         return text
     return f"{text.rstrip()}\n\n{SUBAGENT_WAIT_CONTRACT}"
+
+
+def render_external_scout_strategy(body: str, strategy: str) -> str:
+    """Replace one canonical strategy block after generic rewrites."""
+
+    start_count = body.count(EXTERNAL_SCOUT_STRATEGY_START)
+    end_count = body.count(EXTERNAL_SCOUT_STRATEGY_END)
+    start_index = body.find(EXTERNAL_SCOUT_STRATEGY_START)
+    end_index = body.find(EXTERNAL_SCOUT_STRATEGY_END)
+    if start_count != 1 or end_count != 1 or start_index < 0 or end_index < start_index:
+        raise ValueError(
+            "Malformed scout-external strategy markers: expected exactly one ordered start/end pair"
+        )
+
+    block_end = end_index + len(EXTERNAL_SCOUT_STRATEGY_END)
+    rendered = (
+        f"{EXTERNAL_SCOUT_STRATEGY_START}\n{strategy.strip()}\n"
+        f"{EXTERNAL_SCOUT_STRATEGY_END}"
+    )
+    return body[:start_index] + rendered + body[block_end:]
 
 
 def collect_migrated_command_paths() -> set[str]:
@@ -498,9 +529,11 @@ def migrate_agents() -> None:
             ),
             known_commands,
         )
-        body = apply_subagent_wait_contract(
-            rewrite_command_execution_guidance(apply_replacements(body), known_commands)
-        )
+        body = rewrite_command_execution_guidance(apply_replacements(body), known_commands)
+        if source.name == "scout-external.md":
+            # Render only after generic replacements so target command literals stay exact.
+            body = render_external_scout_strategy(body, CODEX_EXTERNAL_SCOUT_STRATEGY)
+        body = apply_subagent_wait_contract(body)
 
         lines: list[str] = []
         write_toml_value(lines, "name", name)

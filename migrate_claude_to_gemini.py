@@ -131,6 +131,22 @@ REPLACEMENTS = {
     r"gemini-opus": "gemini-3.1-pro-preview",
 }
 
+EXTERNAL_SCOUT_STRATEGY_START = "<!-- EXTERNAL_SCOUT_STRATEGY_START -->"
+EXTERNAL_SCOUT_STRATEGY_END = "<!-- EXTERNAL_SCOUT_STRATEGY_END -->"
+GEMINI_EXTERNAL_SCOUT_STRATEGY = """## External command strategy
+
+Use the read-only primary command for each focused directory search. Prompts must request concise paths and supporting evidence, and must not ask for modifications or credentials. If the primary command is unavailable or fails, use the fallback command once; otherwise do not mix commands based on search count.
+
+```bash
+codex exec -m gpt-5.6-luna "[prompt]"
+```
+
+```bash
+claude -p --model sonnet "[prompt]"
+```
+
+Run focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command. Fall back to native Glob, Grep, and Read tools when both commands are unavailable, unsafe, or fail."""
+
 TOOL_MAPPING = {
     "Glob": "glob",
     "Grep": "grep_search",
@@ -191,6 +207,26 @@ def apply_replacements(text):
     for index, value in enumerate(protected_values):
         text = text.replace(f"__GEMINI_PROTECTED_{index}__", value)
     return text
+
+def render_external_scout_strategy(body, strategy):
+    """Replace one canonical strategy block after generic rewrites."""
+
+    start_count = body.count(EXTERNAL_SCOUT_STRATEGY_START)
+    end_count = body.count(EXTERNAL_SCOUT_STRATEGY_END)
+    start_index = body.find(EXTERNAL_SCOUT_STRATEGY_START)
+    end_index = body.find(EXTERNAL_SCOUT_STRATEGY_END)
+    if start_count != 1 or end_count != 1 or start_index < 0 or end_index < start_index:
+        raise ValueError(
+            "Malformed scout-external strategy markers: expected exactly one ordered start/end pair"
+        )
+
+    block_end = end_index + len(EXTERNAL_SCOUT_STRATEGY_END)
+    rendered = (
+        f"{EXTERNAL_SCOUT_STRATEGY_START}\n{strategy.strip()}\n"
+        f"{EXTERNAL_SCOUT_STRATEGY_END}"
+    )
+    return body[:start_index] + rendered + body[block_end:]
+
 
 def clean_destination():
     for subdir in ["agents", "commands", "hooks", "scripts", "skills", "workflows"]:
@@ -683,6 +719,9 @@ def migrate_agents():
     for file in src_dir.glob("*.md"):
         frontmatter, body = parse_markdown_with_frontmatter(file)
         body = apply_replacements(body)
+        if file.name == "scout-external.md":
+            # Render after generic replacements so the literal fallback is not rewritten.
+            body = render_external_scout_strategy(body, GEMINI_EXTERNAL_SCOUT_STRATEGY)
         if "name" not in frontmatter: frontmatter["name"] = file.stem
         if "description" not in frontmatter:
             desc_match = re.search(r"^description:\s*(.*)$", body, re.MULTILINE | re.IGNORECASE)

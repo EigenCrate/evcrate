@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -7,6 +8,10 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import migrate_claude_to_gemini as migrator
+from migrate_claude_to_gemini import (
+    EXTERNAL_SCOUT_STRATEGY_END,
+    EXTERNAL_SCOUT_STRATEGY_START,
+)
 
 
 class ApplyReplacementsTest(unittest.TestCase):
@@ -94,6 +99,87 @@ class MigrateScriptsTest(unittest.TestCase):
             generated = (target_dir / "scripts" / "ev-help.py").read_text(encoding="utf-8")
             self.assertEqual(generated.count('"CLAUDE_PROJECT_DIR"'), 1)
             self.assertEqual(generated.count('"GEMINI_PROJECT_DIR"'), 1)
+
+
+class ExternalScoutGeminiGenerationTest(unittest.TestCase):
+    @staticmethod
+    def _generate(source_content: str, output_dir: Path) -> Path:
+        source_dir = output_dir.parent / "canonical/.claude"
+        agents_dir = source_dir / "agents"
+        agents_dir.mkdir(parents=True, exist_ok=True)
+        (agents_dir / "scout-external.md").write_text(source_content, encoding="utf-8")
+        with patch.object(migrator, "CLAUDE_DIR", source_dir), patch.object(
+            migrator, "GEMINI_DIR", output_dir
+        ):
+            migrator.migrate_agents()
+        return output_dir / "agents/scout-external.md"
+
+    @staticmethod
+    def _assert_contract(path: Path) -> str:
+        body = path.read_text(encoding="utf-8")
+        frontmatter, _ = migrator.parse_markdown_with_frontmatter(path)
+        tools = frontmatter.get("tools", [])
+        if isinstance(tools, str):
+            tools = [tool.strip() for tool in tools.split(",")]
+        if "write_file" in tools:
+            raise AssertionError("read-only scout generated write_file tool")
+        primary = 'codex exec -m gpt-5.6-luna "[prompt]"'
+        fallback = 'claude -p --model sonnet "[prompt]"'
+        if body.count(primary) != 1 or body.count(fallback) != 1:
+            raise AssertionError("expected one exact primary and fallback command")
+        if body.index(primary) >= body.index(fallback):
+            raise AssertionError("Gemini fallback appears before primary command")
+        for forbidden in ("agy", "opencode", "gemini-2.5-flash"):
+            if forbidden in body.lower():
+                raise AssertionError(f"forbidden Gemini strategy token: {forbidden}")
+        if "scale" in body.lower():
+            raise AssertionError("legacy scale-provider routing remains")
+        if body.count(EXTERNAL_SCOUT_STRATEGY_START) != 1 or body.count(EXTERNAL_SCOUT_STRATEGY_END) != 1:
+            raise AssertionError("scout strategy markers are not unique")
+        return body
+
+    def test_isolated_generation_uses_codex_then_claude_strategy(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        with TemporaryDirectory() as temp:
+            generated = self._generate(canonical.read_text(encoding="utf-8"), Path(temp) / ".gemini")
+            self._assert_contract(generated)
+
+    def test_fallback_stays_literal_claude_after_replacements(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        with TemporaryDirectory() as temp:
+            body = self._assert_contract(
+                self._generate(canonical.read_text(encoding="utf-8"), Path(temp) / ".gemini")
+            )
+            self.assertIn('claude -p --model sonnet "[prompt]"', body)
+            self.assertNotIn('gemini -p --model sonnet "[prompt]"', body)
+
+    def test_malformed_strategy_markers_fail_deterministically(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        source = canonical.read_text(encoding="utf-8")
+        malformed = {
+            "missing": source.replace(EXTERNAL_SCOUT_STRATEGY_START + "\n", "", 1),
+            "duplicate": source.replace(EXTERNAL_SCOUT_STRATEGY_END, EXTERNAL_SCOUT_STRATEGY_END + "\n" + EXTERNAL_SCOUT_STRATEGY_END, 1),
+            "reversed": source.replace(EXTERNAL_SCOUT_STRATEGY_START, "__START__", 1)
+            .replace(EXTERNAL_SCOUT_STRATEGY_END, EXTERNAL_SCOUT_STRATEGY_START, 1)
+            .replace("__START__", EXTERNAL_SCOUT_STRATEGY_END, 1),
+        }
+        message = "Malformed scout-external strategy markers: expected exactly one ordered start/end pair"
+        for name, content in malformed.items():
+            with self.subTest(name=name), TemporaryDirectory() as temp:
+                with self.assertRaisesRegex(ValueError, f"^{re.escape(message)}$"):
+                    self._generate(content, Path(temp) / ".gemini")
+
+    def test_repeat_generation_is_byte_identical(self) -> None:
+        canonical = Path(__file__).resolve().parents[1] / ".evcrate/source/.claude/agents/scout-external.md"
+        content = canonical.read_text(encoding="utf-8")
+        with TemporaryDirectory() as temp:
+            first = self._generate(content, Path(temp) / "first").read_bytes()
+            second = self._generate(content, Path(temp) / "second").read_bytes()
+            self.assertEqual(first, second)
+
+    def test_checked_in_artifact_matches_canonical_strategy_after_regeneration(self) -> None:
+        artifact = Path(__file__).resolve().parents[1] / ".evcrate/source/.gemini/agents/scout-external.md"
+        self._assert_contract(artifact)
 
 
 if __name__ == "__main__":
