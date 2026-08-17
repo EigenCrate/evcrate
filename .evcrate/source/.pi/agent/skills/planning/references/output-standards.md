@@ -14,7 +14,7 @@ status: pending  # pending | in-progress | completed | cancelled
 priority: P2     # P1 (High) | P2 (Medium) | P3 (Low)
 effort: 4h       # Estimated total effort
 issue: 74        # GitHub issue number (if applicable)
-branch: kai/feat/feature-name
+branch: feat/feature-name
 tags: [frontend, api]  # Category tags
 created: 2025-12-16
 ---

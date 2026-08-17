@@ -5,7 +5,7 @@
  * Tests for context-tracker.cjs 2-layer self-healing detection
  *
  * Fixes #177: Tests now verify NO global state (race condition fix)
- * Fixes #178: Tests use /tmp/ck/ namespace
+ * Fixes #178: Tests use /tmp/evcrate/ namespace
  */
 
 const {
@@ -58,10 +58,10 @@ clearAllState();
 
 console.log('\n=== Namespace Verification (#178) ===\n');
 
-test('MARKERS_DIR uses /tmp/ck/ namespace', () => {
+test('MARKERS_DIR uses /tmp/evcrate/ namespace', () => {
   assertTrue(
-    MARKERS_DIR.includes('/ck/') || MARKERS_DIR.includes('\\ck\\'),
-    `MARKERS_DIR should use /ck/ namespace: ${MARKERS_DIR}`
+    MARKERS_DIR.includes('/evcrate/') || MARKERS_DIR.includes('\\ck\\'),
+    `MARKERS_DIR should use /evcrate/ namespace: ${MARKERS_DIR}`
   );
 });
 

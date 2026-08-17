@@ -329,6 +329,7 @@
       "target": ".agents/skills/cmd_journal/SKILL.md"
     },
     {
+      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/archive.md",
       "status": "migrated",

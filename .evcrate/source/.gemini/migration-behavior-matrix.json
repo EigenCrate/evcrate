@@ -329,6 +329,7 @@
       "target": "journal.toml"
     },
     {
+      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/archive.md",
       "status": "migrated",

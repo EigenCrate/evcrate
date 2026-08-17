@@ -52,7 +52,7 @@ If you see a section like this at the start of your context:
 - Reports Path: plans/251201-1530-feature-name/reports/
 - Naming Format: {date}-{issue}-{slug}
 - Issue ID: GH-88
-- Git Branch: kai/feat/plan-name-config
+- Git Branch: /feat/plan-name-config
 ```
 
 **STEP 2: Apply the naming format.**
