@@ -1,15 +1,15 @@
 ---
 description: Analyze & fix issues with parallel fullstack-developer agents
-argument-hint: [issues] [@advisor]
+argument-hint: [issues] [--advice]
 ---
 
 **Ultrathink parallel** raw input: <raw-issues>$ARGUMENTS</raw-issues>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before analysis, read `{{evcrate:workflows/advisor-mentoring.md}}` and derive
-`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issues input and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
@@ -45,12 +45,14 @@ issues input and apply the shared default stuck-escalation contract.
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
-- In explicit advisor mode, after every terminal reviewer result and before any
-  fix or approval, synchronously call exactly one `advisor` with the bounded
-  evidence required by the shared mentoring contract. Advisor failure fails the
-  review gate.
-- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
-  the user.
+- In explicit advice mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` at
+  `review:<workflow-step>` with the bounded evidence, relevant prior counsel,
+  and owner disposition required by the shared mentoring contract. Advisor
+  failure fails the review gate.
+- Review/advisor cycle cap: at most three terminal reviewer/advisor cycles. At
+  the cap, stop without another reviewer/advisor call or cycle reset and ask the
+  user if issues remain.
 - Verify fixes don't introduce regressions
 - If critical issues: fix, retest
 

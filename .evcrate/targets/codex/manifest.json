@@ -2,6 +2,7 @@
   "schema_version": 1,
   "name": "codex",
   "adapter": "migrate_claude_to_codex.py",
+  "adapter_sources": ["distribution/contracts.py"],
   "output_root": ".codex",
   "additional_roots": [".agents"],
   "project_docs": ["AGENTS.md"],

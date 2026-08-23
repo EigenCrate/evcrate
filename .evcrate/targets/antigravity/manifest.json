@@ -2,6 +2,10 @@
   "schema_version": 1,
   "name": "antigravity",
   "adapter": "migrate_claude_to_gemini.py",
+  "adapter_sources": [
+    "distribution/antigravity_publish.py",
+    "distribution/contracts.py"
+  ],
   "output_root": ".antigravity",
   "additional_roots": [],
   "project_docs": [],

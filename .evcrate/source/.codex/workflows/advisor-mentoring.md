@@ -1,111 +1,143 @@
 # Advisor Mentoring Contract
 
 Use this contract in implementation commands that accept the optional trailing
-`@advisor` mode.
+`--advice` mode. It is the single semantics source for parsing, checkpoints,
+fresh counsel, stuck escalation, and handoffs.
 
 ## Argument Mode
 
-1. Inspect the raw command arguments before plan, phase, task, or positional
+1. Inspect raw command arguments before plan, phase, task, or positional
    argument detection.
-2. Explicit advisor mode is active only when the final whitespace-delimited
-   token is exactly the case-sensitive string `@advisor`; trailing whitespace is
-   allowed.
-3. In explicit mode, remove only that final token and its separating/trailing
-   whitespace. Preserve the remaining input exactly, including earlier
-   `@advisor` text. Call the result `WORK_ARGUMENTS`.
-4. Otherwise, advisor mode is inactive and `WORK_ARGUMENTS` is the complete raw
-   input unchanged.
-5. `@advisor` alone produces empty `WORK_ARGUMENTS`; continue with the command's
+2. A standalone token is exactly `--advice` delimited by whitespace. Count all
+   standalone tokens before deciding the mode. Two or more standalone tokens
+   are a deterministic input error; do not continue with normal work.
+3. With exactly one standalone token, explicit advice mode is active only when
+   that token is final, allowing trailing whitespace. A single non-final token
+   remains ordinary input.
+4. In explicit mode, remove only the final token, its separator, and trailing
+   whitespace. Preserve every other byte in the prefix as `WORK_ARGUMENTS`.
+5. With no active mode, `WORK_ARGUMENTS` is the complete raw input unchanged.
+   `--advice` alone produces empty `WORK_ARGUMENTS`; continue with the command's
    normal empty-input behavior.
 6. The raw-input wrapper exists only for this local parse. Never forward it to a
    scout, researcher, planner, reviewer, advisor, or another command; downstream
    prompts receive `WORK_ARGUMENTS` only.
 
-Required examples:
+Deterministic parse shape:
 
-| Raw arguments | Mode | `WORK_ARGUMENTS` |
+```text
+RAW = the unmodified argument string
+TOKENS = standalone `--advice` matches with whitespace boundaries
+if count(TOKENS) > 1: reject duplicate input and stop
+if count(TOKENS) == 1 and match is final after trailing-whitespace removal:
+    WORK_ARGUMENTS = RAW prefix before match, with only its separator removed
+    ADVICE_MODE = explicit
+else:
+    WORK_ARGUMENTS = RAW
+    ADVICE_MODE = default
+```
+
+Do not normalize, re-tokenize, trim internal whitespace, or rewrite any other
+prefix/suffix bytes. A non-final standalone token is not a mode request.
+
+Required matrix:
+
+| Raw arguments | Result | `WORK_ARGUMENTS` |
 |---|---|---|
-| `plan/path @advisor` | explicit | `plan/path` |
-| `implement abc` then newline then `@advisor` | explicit | `implement abc` |
-| `abc @advisor @advisor` | explicit | `abc @advisor` |
-| `abc@advisor` | default | unchanged |
-| `abc @advisor extra` | default | unchanged |
-| `abc @Advisor` | default | unchanged |
+| `plan/path --advice` | explicit | `plan/path` |
+| `implement abc\n--advice` | explicit | `implement abc` |
+| `--advice` | explicit, empty work | empty |
+| `abc --advice --advice` | reject duplicate | not evaluated |
+| `abc --advice extra` | default | unchanged |
+| `abc --advice` + trailing whitespace | explicit | `abc` |
+| `"--advice"` | default | unchanged |
+| `path--advice` | default | unchanged |
+| `--advice.txt` | default | unchanged |
+| `--Advice` | default | unchanged |
+| `task @advisor` | default | unchanged |
+| `task @advisor continue` | default | unchanged |
+| `before @advisor after` | default | unchanged |
 
-## Explicit Review Mentoring
+The exact final `@advisor` token is ordinary work input. It never warns,
+normalizes, aliases, or activates counsel.
 
-After every successful terminal `code-reviewer` result in explicit mode:
+## Named Counsel Checkpoints
 
-1. Before displaying, fixing, auto-approving, approving, or making a final
-   decision from the review, synchronously delegate exactly one `advisor`
-   subagent for that review cycle.
-2. Give it the phase or task, the complete reviewer terminal report, compile and
-   test evidence, changed-file paths, and one precise review decision question.
-   Exclude secrets and unrelated repository content.
-3. Wait for its terminal report. Combine its recommendation with the reviewer
-   findings, and record why any material recommendation is rejected.
-4. A missing, partial, interrupted, cancelled, or failed reviewer/advisor result
-   fails the gate. Never fabricate advice or continue from partial output.
+Use only these checkpoint IDs; do not invent a consultation merely because the
+flag is present:
 
-Every repeated reviewer cycle receives one new advisor consultation. Never run
-the reviewer and advisor in parallel.
+- `review:<workflow-step>`: after a terminal `code-reviewer` result and before
+  findings are displayed, fixes are made, approval is requested, auto-approval
+  occurs, or a final decision uses that review evidence.
+- `stuck:<blocker-signature>`: on the second consecutive matching terminal
+  blocker with no relevant gate pass or workflow-step advance, before attempt
+  three.
+- `decision:<workflow-step>`: immediately before an already-existing
+  irreversible, security-sensitive, or go/no-go decision when no review call
+  covers the same evidence.
 
-## Default Stuck Escalation
+Implementation and bootstrap commands must inspect their existing decision
+points. For example, before a bootstrap security, deployment, or go/no-go choice
+that is irreversible and not covered by terminal review, call one advisor with
+`decision:<workflow-step>` and wait for its terminal result. Routine tech-stack,
+plan, and design approvals are excluded unless the workflow explicitly marks one
+as irreversible, security-sensitive, or go/no-go; do not create extra counsel
+calls for ordinary user preferences.
 
-In default mode, use normal execution until the same blocker occurs in two
-consecutive terminal attempts with no relevant gate passing and no workflow-step
-advance between them. Explicit mode uses the same stuck detection outside review
-gates.
+Each consultation is a fresh one-shot `advisor` call. The caller supplies the
+checkpoint ID, task or phase, one precise decision question, terminal review or
+test evidence, changed paths, constraints, and relevant prior counsel plus the
+owner's earlier disposition. Include at most four repository evidence files;
+exclude secrets, credentials, broad dumps, and unrelated logs.
 
-The blocker signature is:
+The terminal advice report contains: recommendation, must-fix items, cautions,
+assumptions or evidence gaps, success checks, and unresolved questions. Advice
+is non-binding; the main workflow records material acceptance or rejection.
 
-- workflow step ID;
-- operation, validation command, or delegated role;
-- terminal status or exit code; and
-- first stable root-cause/error line after ignoring timestamps, request/session
-  IDs, and temporary absolute-path fragments.
+Call the advisor only after its prerequisite evidence is terminal and wait for
+the terminal result before any dependent mutation or decision. Reviewer and
+advisor calls are sequential, never parallel. A missing, partial, interrupted,
+cancelled, timed-out, explicitly rejected model, or failed delegation leaves
+the advice gate incomplete. Never silently downgrade. If an adapter has an
+existing warned parent-inheritance policy for an unavailable implicit semantic
+role, report that inheritance; continue after an incomplete gate only with
+explicit workflow-owner acceptance recorded to the user.
 
-On the first occurrence, use the normal remediation path. On the second matching
-occurrence, synchronously call one `advisor` before attempt three. Consult at most
-once per stuck episode. Reset the episode when the signature changes, the relevant
-gate passes, or the workflow advances. If the same signature returns after the
-advisor-directed attempt, stop and ask the user for direction.
+## Stuck and Cycle Limits
 
-At a review gate in explicit mode, the required post-review advisor result also
-satisfies any stuck consultation for that same gate and blocker occurrence. Never
-make a duplicate stuck call there. If the same blocker returns after the resulting
-advisor-directed remediation, stop and ask the user as above.
+The blocker signature is workflow step ID; operation, validation command, or
+delegated role; terminal status or exit code; and the first stable root-cause
+line after ignoring timestamps, request/session IDs, and temporary absolute-path
+fragments.
 
-## Review-Cycle Limit
+On the first occurrence use normal remediation. On the second matching
+occurrence call one `stuck:<blocker-signature>` advisor, apply one bounded
+advisor-directed remediation, and retry once. Consult at most once per stuck
+episode. Reset when the signature changes, the relevant gate passes, or the
+workflow advances. If the same signature returns after that advised retry, stop
+and ask the user for direction.
 
-Allow at most three terminal reviewer/advisor cycles for one workflow step. A
-command may impose a lower limit. If issues remain after the last allowed cycle,
-stop and ask the user instead of starting another review or advisor call. This is
-a hard cap: there is no fourth reviewer or advisor call. Count a cycle only after
-the reviewer and, in explicit mode, its required advisor have both returned
-terminal results. A fix choice at the cap cannot run another fix/test/reviewer
-sequence, and the cycle counter must never be reset within the same workflow step.
-Reset the count only when the review gate passes or the workflow advances.
+In explicit advice mode, the required `review:` result also satisfies any stuck
+consultation for the same gate and blocker occurrence. Never make a duplicate
+stuck call there. Allow at most three terminal reviewer/advisor cycles for one
+workflow step; a command may impose a lower limit. At the cap, stop and ask the
+user instead of starting another reviewer, advisor, fix, or test sequence. Never
+reset the cycle counter within the same workflow step. There is no fourth
+reviewer or advisor call.
 
 ## Cross-Command Handoff
 
-Commands that hand implementation to `/code` must use `WORK_ARGUMENTS` for their
-own discovery and planning. When explicit mode is active, append exactly one
-trailing `@advisor` to the `/code` handoff; otherwise pass no advisor token. Do not
-store mode in global or cross-command session state. The same rule applies to
-fallback handoffs between implementation commands: pass `WORK_ARGUMENTS` and
-preserve explicit mode exactly once, never the raw-input wrapper.
-
-The exact final token `@advisor` is reserved for this mode. Earlier `@advisor`
-text and other `@file`-style mentions remain ordinary work input; a literal final
-`@advisor` location is intentionally interpreted as the mode token.
+Commands that hand implementation to `/code` or another implementation command
+use `WORK_ARGUMENTS`. Append exactly one final `--advice` only when explicit
+advice mode is active; otherwise pass no mode token. Never store mode globally or
+forward the raw-input wrapper.
 
 ## Boundary
 
 The advisor is a normal blocking subagent using the portable `advisor-strategy`
-skill. It supplies non-binding mentorship and receives no new permissions. This
-contract adds no broker, MCP server, provider selector, runtime launcher, quota,
-ledger, audit mechanism, or approval bypass.
+skill. It supplies read-only, non-binding mentorship and receives no new
+permissions. This contract adds no broker, MCP server, provider selector,
+runtime launcher, quota, ledger, audit mechanism, or approval bypass.
 
 ## Subagent Completion Contract
 

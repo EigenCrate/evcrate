@@ -10,6 +10,13 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "advise.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_advise/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "ask.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_ask/SKILL.md"
@@ -509,6 +516,14 @@
       "source": "worktree.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_worktree/SKILL.md"
+    },
+    {
+      "checkpoint": "supported",
+      "classification": "target-native",
+      "inline": "supported",
+      "kind": "advisory-capability",
+      "relay": "unsupported",
+      "relay_error": "ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX"
     },
     {
       "classification": "hook-driven",

@@ -5,6 +5,8 @@ import subprocess
 import sys
 import tomllib
 import unittest
+import io
+from contextlib import redirect_stdout
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -165,6 +167,41 @@ class ApplyReplacementsTest(unittest.TestCase):
             generated = (output_dir / "skills/cmd_code/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("--advice", generated)
             self.assertNotIn("@advisor", generated)
+
+    def test_advise_skill_uses_native_questioning_and_rejects_relay_without_state(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/commands"
+            output_dir = root / ".agents"
+            source_dir.mkdir(parents=True)
+            shutil.copyfile(repository / ".evcrate/source/.claude/commands/advise.md", source_dir / "advise.md")
+            with patch("migrate_claude_to_codex.CLAUDE_DIR", root / ".claude"), patch(
+                "migrate_claude_to_codex.AGENTS_DIR", output_dir
+            ):
+                migrate_commands_as_native_skills()
+
+            generated = (output_dir / "skills/cmd_advise/SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("request_user_input", generated)
+            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX", generated)
+            self.assertIn("Do not invoke an advisor, create relay state", generated)
+            self.assertNotIn("advise-state.cjs", generated)
+
+    def test_generated_help_reports_codex_relay_rejection(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source = repository / ".evcrate/source/.claude/scripts/ev-help.py"
+        spec = spec_from_file_location("ev_help", source)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            module.show_advisory_guide("", "codex")
+        rendered = output.getvalue()
+        self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX", rendered)
+        self.assertNotIn("Claude relay v1", rendered)
 
     def test_help_resolves_codex_sibling_command_skills_without_claude_tree(self) -> None:
         repository = Path(__file__).resolve().parents[1]

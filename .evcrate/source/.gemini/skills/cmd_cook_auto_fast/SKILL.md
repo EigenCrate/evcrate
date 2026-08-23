@@ -11,14 +11,14 @@ Description: Low-risk fast cook: scout, plan fast, implement with quality gates
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>{{args}}</raw-tasks>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring in `/code`.
+A final standalone `--advice` activates explicit review mentoring in `/code`.
 Before scouting, read `.gemini/workflows/advisor-mentoring.md` and derive
-`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 task input and apply the shared default stuck-escalation contract.
 For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
-`@advisor` in explicit mode and otherwise pass no advisor token.
+`--advice` in explicit mode and otherwise pass no `--advice` token.
 
 ---
 
@@ -40,7 +40,7 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 ## Workflow
 
 - **Scout**: Use `scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
-- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cook` with `WORK_ARGUMENTS` and the same explicit mode.
+- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cook` with `WORK_ARGUMENTS` and the same explicit advice mode.
 - **Plan**: Trigger slash command `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight.
-- **Implementation**: Trigger slash command `/code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates. In explicit advisor mode append exactly one trailing `@advisor`; otherwise append none.
-- **Fallback handoff**: If `/code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cook` or `/fix:hard` using `WORK_ARGUMENTS`; append exactly one trailing `@advisor` in explicit mode and otherwise pass no advisor token.
+- **Implementation**: Trigger slash command `/code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none.
+- **Fallback handoff**: If `/code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cook` or `/fix:hard` using `WORK_ARGUMENTS`; append exactly one trailing `--advice` in explicit mode and otherwise pass no `--advice` token.

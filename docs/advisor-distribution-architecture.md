@@ -183,13 +183,27 @@ boundary. Generic MCP and hook support remain unchanged.
 - No active `@advisor` alias, provider selector, broker, or approval bypass is
   introduced.
 
-## Deferred Phase 04 Generated-Target Rollout
+## Phase 04 Generated-Target Rollout
 
-Phase 04 owns regeneration and parity validation for Codex, Gemini, Pi,
-Antigravity, and `.agents`, including target-specific advisor mapping and any
-target capability markers. Until that phase is complete, existing generated
-trees remain unchanged; do not hand-edit them or claim that they implement the
-Phase 02 `--advice` contract.
+Phase 04 regenerates and parity-checks Codex, Gemini, Pi, Antigravity, and
+`.agents` from the canonical Claude source. Generated trees remain derived
+artifacts: update `.evcrate/source/.claude` or a declared target overlay, then
+run the distribution build/check gates; do not hand-edit generated files.
+
+Advisory capability markers are a strict contract. The canonical command and
+interview workflow each contain one bounded marker block. The shared
+distribution contract validates the block's presence, order, uniqueness, and
+contents before projecting it to a target. Each projection records its target
+identity and emits the native inline `/advise` behavior. Only canonical Claude
+retains the `interview-relay/v1` path; Codex, Gemini, Pi, and Antigravity reject
+an exact final standalone `--agent` with their target-specific unsupported
+capability code before delegation or relay-state handling.
+
+Generated help is part of the parity gate. Its target-aware self-test checks
+that every generated target names its own target, describes inline advise
+behavior, and documents the matching `ADVISE_AGENT_RELAY_UNSUPPORTED_<TARGET>`
+rejection. The help script must remain correct when copied to a target-specific
+script directory, not only when run from the canonical Claude tree.
 
 ## Advisor command-mode hardening status
 
@@ -211,10 +225,10 @@ projections are intentionally deferred to Phase 04:
 
 ## Phase 03 Canonical Claude Capability
 
-Phase 03 is implemented in `.evcrate/source/.claude` as a canonical-Claude
-capability. It does not mark the plan complete or release the feature to
-generated targets; Phase 04 still owns target regeneration, capability smoke
-tests, and parity validation.
+Phase 03 is implemented in `.evcrate/source/.claude` as the canonical Claude
+capability. Phase 04 now supplies the generated-target projections, strict
+capability validation, target-native inline command behavior, and generated
+help parity checks described above.
 
 - `/advise [prompt-or-url]` runs an inline-first interview in the main session.
   It asks one concise question at a time (at most eight discovery questions),
@@ -231,8 +245,9 @@ tests, and parity validation.
   invocation leaves a 24-hour tombstone. Cancellation, interruption,
   unavailable-model, malformed-envelope, state, or report failures fail closed;
   relay never silently falls back to inline mode.
-- Codex, Pi, Gemini, and Antigravity must reject `--agent` explicitly until
-  Phase 04 supplies tested projections. Generated-file presence is not support
+- Codex, Pi, Gemini, and Antigravity reject `--agent` explicitly with their
+  target-specific unsupported capability code. Generated-file presence is not
+  support evidence; the build/check and target-aware help tests are the support
   evidence, and generated targets must not be hand-edited.
 - The canonical-source/build/check ownership model and the forbidden broker,
   MCP, launcher, provider-selector, quota, ledger, audit, and approval-bypass

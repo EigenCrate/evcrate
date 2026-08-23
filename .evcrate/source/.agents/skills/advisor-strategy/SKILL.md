@@ -1,23 +1,38 @@
 ---
 name: "advisor-strategy"
-description: "Guide current-session reasoning for high-impact architecture, security, debugging, and review decisions with a bounded decision brief."
+description: "Provide fresh, bounded one-shot strategy counsel for named implementation checkpoints without editing, delegating, or selecting a provider."
 ---
 
 # Advisor strategy
 
-Use this skill explicitly for high-impact architecture, security, debugging, or review decisions where a structured second look at the available evidence can reduce risk.
+`advisor-strategy` is EVCrate's portable kongming-equivalent counsel contract.
+It structures one current decision; it does not invoke a provider, model, MCP
+server, command, network request, file operation, delegation, quota, audit, or
+enforcement mechanism.
 
-Do not use it for routine edits, straightforward lookups, status updates, tasks with enough local evidence, or repeated attempts to get a preferred answer.
+## Fresh Checkpoint Counsel
 
-## Scope
+Every consultation is independent and one-shot. The caller names exactly one
+`review:<workflow-step>`, `stuck:<blocker-signature>`, or
+`decision:<workflow-step>` checkpoint and explicitly forwards any relevant prior
+counsel and owner disposition. Never rely on hidden conversational state.
 
-This is static guidance for the current session. It does not invoke a provider or model, MCP server, app, command, network request, file operation, delegation, quota, audit, or enforcement mechanism. It adds no tool capability, isolation boundary, fixed-model guarantee, or required consultation step. Host permissions, sandboxing, and human approval remain authoritative.
+The brief contains the task or phase, one precise question, terminal review/test
+evidence, changed paths, constraints, and at most four relevant repository text
+files. Exclude secrets, credentials, broad repository dumps, and unrelated logs.
 
-## Decision workflow
+Return a complete terminal report with recommendation, must-fix items, cautions,
+assumptions or evidence gaps, success checks, and unresolved questions. Advice
+is non-binding. The main workflow owns edits, tests, approvals, and decisions.
 
-1. State the decision, constraints, and a precise question.
-2. Identify only the smallest relevant repository evidence paths; do not include secrets, credentials, or unrelated files.
-3. Form an independent recommendation from the available evidence and applicable requirements.
-4. Compare alternatives, prefer the least complex safe option, and record why a material decision was accepted or rejected.
+## Decision Workflow
 
-See [the brief contract](references/brief-contract.md) for the decision-brief shape and examples.
+1. State the named checkpoint, decision, constraints, and precise question.
+2. Identify only the smallest relevant evidence set.
+3. Compare viable actions and recommend the least complex safe option.
+4. Record why a material recommendation is accepted or rejected and what checks
+   validate the next action.
+
+Host permissions, sandboxing, tests, code review, and human approval remain
+authoritative. Do not claim tools, isolation, provider selection, or authority
+that the caller did not provide.

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from distribute_hooks import rewrite_agy_global_paths
 
+from .contracts import project_advisor_contract, render_advisory_interview_workflow, render_inline_advise_command
 from .context import DistributionContext
 from .hashing import ignore_artifacts
 
@@ -22,6 +23,7 @@ def build_antigravity_config(claude_source: Path, output_root: Path) -> None:
     shutil.copytree(claude_source, target, symlinks=False, ignore=ignore_artifacts)
     _extract_hooks(target)
     _replace_legacy_assets(claude_source, target)
+    _project_advisory_workflow(claude_source, target)
     rewrite_agy_global_paths(target, '"$HOME"/.gemini/config/hooks')
 
 
@@ -54,6 +56,10 @@ def _replace_legacy_assets(source: Path, target: Path) -> None:
         path = target / name
         if path.exists():
             shutil.rmtree(path)
+    for relay_helper in target.rglob("*advise-state*"):
+        if relay_helper.is_file():
+            relay_helper.unlink()
+    _project_advisor(source, target)
     commands = source / "commands"
     if not commands.exists():
         return
@@ -68,13 +74,55 @@ def _replace_legacy_assets(source: Path, target: Path) -> None:
             "python .claude/scripts/ev-help.py",
             "python .antigravity/scripts/ev-help.py",
         )
+        if relative.as_posix() == "advise":
+            content = render_inline_advise_command(content, "antigravity", "ask_user")
+            description = "Interview-first technical advice with native inline questioning and explicit relay rejection"
+        else:
+            description = _description(content)
         (destination / skill_name).mkdir(parents=True, exist_ok=True)
         (destination / skill_name / "SKILL.md").write_text(
-            f"---\nname: {skill_name}\ndescription: {_description(content)}\n---\n"
+            f"---\nname: {skill_name}\ndescription: {description}\n---\n"
             f"# {skill_name}\n\nCommand Path: {command_path}\n\n"
-            f"Description: {_description(content)}\n\n{content}",
+            f"Description: {description}\n\n{content}",
             encoding="utf-8",
         )
+
+
+def _project_advisory_workflow(source: Path, target: Path) -> None:
+    """Render the shared interview semantics without claiming Claude relay support."""
+
+    canonical = source / "workflows" / "advisory-interview.md"
+    if not canonical.is_file():
+        return
+    destination = target / "workflows" / canonical.name
+    destination.write_text(
+        render_advisory_interview_workflow(canonical.read_text(encoding="utf-8"), "antigravity"),
+        encoding="utf-8",
+    )
+
+
+def _project_advisor(source: Path, target: Path) -> None:
+    """Retain the normal advisor as an Antigravity-native checkpoint resource."""
+
+    canonical = source / "agents" / "advisor.md"
+    if not canonical.is_file():
+        return
+    content = canonical.read_text(encoding="utf-8")
+    match = re.match(r"^(---\n.*?\n---\n)(.*)$", content, re.DOTALL)
+    if not match:
+        raise RuntimeError("Canonical advisor frontmatter is malformed")
+    frontmatter = re.sub(r"(?m)^model:\s*opus\s*$", "model: pro", match.group(1))
+    frontmatter = re.sub(
+        r"(?m)^description:.*$",
+        "description: Use this high-tier mentor for fresh named checkpoints; Antigravity rejects interview relay.",
+        frontmatter,
+    )
+    destination = target / "agents" / "advisor.md"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        frontmatter + project_advisor_contract(match.group(2), "antigravity"),
+        encoding="utf-8",
+    )
 
 
 def _description(content: str) -> str:

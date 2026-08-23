@@ -6,6 +6,13 @@ import hashlib
 import sys
 from pathlib import Path
 
+from distribution.contracts import (
+    advisory_relay_error,
+    project_advisor_contract,
+    render_advisory_interview_workflow,
+    render_inline_advise_command,
+)
+
 DEFAULT_SOURCE_ROOT = Path(__file__).resolve().parent / ".evcrate" / "source"
 SOURCE_ROOT = Path(os.environ.get("EVCRATE_SOURCE_DIR", str(DEFAULT_SOURCE_ROOT)))
 CLAUDE_DIR = Path(os.environ.get("CLAUDE_SOURCE_DIR", str(SOURCE_ROOT / ".claude")))
@@ -391,6 +398,14 @@ def write_behavior_matrix():
             "status": "migrated",
             "target": str(source.relative_to(commands_dir).with_suffix(".toml")).replace("\\", "/"),
         })
+    entries.append({
+        "kind": "advisory-capability",
+        "classification": "target-native",
+        "checkpoint": "supported",
+        "inline": "supported",
+        "relay": "unsupported",
+        "relay_error": advisory_relay_error("gemini"),
+    })
     entries.extend(build_hook_behavior_entries())
     payload = {
         "target": "gemini",
@@ -723,6 +738,8 @@ def migrate_agents():
         if file.name == "scout-external.md":
             # Render after generic replacements so the literal fallback is not rewritten.
             body = render_external_scout_strategy(body, GEMINI_EXTERNAL_SCOUT_STRATEGY)
+        if file.name == "advisor.md":
+            body = project_advisor_contract(body, "gemini")
         if "name" not in frontmatter: frontmatter["name"] = file.stem
         if "description" not in frontmatter:
             desc_match = re.search(r"^description:\s*(.*)$", body, re.MULTILINE | re.IGNORECASE)
@@ -760,6 +777,8 @@ def migrate_agents():
             
             if key in ["Examples", "Context", "user", "assistant"]:
                 del frontmatter[key]
+        if file.name == "advisor.md":
+            frontmatter["description"] = "Use this high-tier mentor for fresh named checkpoints; Gemini rejects interview relay."
 
         dest_file = dest_dir / file.name
         with open(dest_file, "w", encoding="utf-8") as f:
@@ -777,8 +796,13 @@ def migrate_commands():
         dest_path = dest_dir / rel_path.with_suffix(".toml")
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         frontmatter, body = parse_markdown_with_frontmatter(file)
-        body = apply_replacements(body)
+        if file.name == "advise.md":
+            body = render_inline_advise_command(body, "gemini", "ask_user").strip()
+        else:
+            body = apply_replacements(body)
         description = apply_replacements(str(frontmatter.get("description", "")))
+        if file.name == "advise.md":
+            description = "Interview-first technical advice with native inline questioning and explicit relay rejection."
         with open(dest_path, "w", encoding="utf-8") as f:
             write_toml_simple({"description": description, "prompt": body.strip()}, f)
         print(f"Migrated command: {rel_path}")
@@ -801,8 +825,11 @@ def migrate_commands_as_native_skills():
         skill_dir = dest_dir / skill_dir_name
         skill_dir.mkdir(parents=True, exist_ok=True)
         
-        # apply_replacements to body? Yes, makes sense.
-        body = apply_replacements(body)
+        if cmd_name == "advise":
+            body = render_inline_advise_command(body, "gemini", "ask_user").strip()
+            desc = "Interview-first technical advice with native inline questioning and explicit relay rejection."
+        else:
+            body = apply_replacements(body)
         
         content = (
             f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
@@ -859,8 +886,11 @@ def migrate_workflows():
     if not src_dir.exists(): return
     for file in src_dir.glob("*.md"):
         with open(file, "r", encoding="utf-8") as f: content = f.read()
+        if file.name == "advisory-interview.md":
+            content = render_advisory_interview_workflow(content, "gemini")
         dest_file = dest_dir / file.name
-        with open(dest_file, "w", encoding="utf-8") as f: f.write(apply_replacements(content))
+        content = apply_replacements(content)
+        with open(dest_file, "w", encoding="utf-8") as f: f.write(content)
         print(f"Migrated workflow: {file.name}")
 
 def migrate_scripts():
@@ -870,6 +900,8 @@ def migrate_scripts():
     if not src_dir.exists(): return
     for source in src_dir.rglob("*"):
         rel_path = source.relative_to(src_dir)
+        if "advise-state" in rel_path.name:
+            continue
         if "__pycache__" in rel_path.parts:
             continue
         dest_path = dest_dir / rel_path

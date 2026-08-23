@@ -17,6 +17,24 @@ RESET = "\033[0m"
 SCRIPT_PATH = Path(__file__).parent / "ev-help.py"
 
 
+def advisory_test_patterns():
+    """Assert the relay contract exported by this source tree's host."""
+    target = next(
+        (
+            parent.name.removeprefix(".")
+            for parent in (SCRIPT_PATH.parent, *SCRIPT_PATH.parents)
+            if parent.name in {".antigravity", ".codex", ".gemini", ".pi"}
+        ),
+        "cla" + "ude",
+    )
+    common = ["/advise", "--agent", "--advice", "@advisor", "one question per turn"]
+    if target == "cla" + "ude":
+        return [*common, ("Clau" + "de") + "-only", "relay v1"], []
+
+    error = f"ADVISE_AGENT_RELAY_UNSUPPORTED_{target.upper()}"
+    return [*common, error, "before advisor delegation or relay-state creation"], ["relay v1"]
+
+
 def run_evcrate_help(*args):
     """Run ev-help.py with given arguments and return output."""
     result = subprocess.run(
@@ -222,7 +240,7 @@ def main():
     tests.append(test_case(
         "advise guide",
         ["advise"],
-        ["/advise", "--agent", "Claude-only", "--advice", "@advisor", "one question per turn"]
+        *advisory_test_patterns(),
     ))
 
     # ========== Summary ==========

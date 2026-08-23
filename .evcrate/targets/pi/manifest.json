@@ -3,6 +3,7 @@
   "name": "pi",
   "adapter": "migrate_claude_to_pi.py",
   "adapter_sources": [
+    "distribution/contracts.py",
     "pi_adapter/__init__.py",
     "pi_adapter/agents.py",
     "pi_adapter/frontmatter.py",

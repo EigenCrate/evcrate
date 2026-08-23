@@ -1,19 +1,19 @@
 ---
 description: Implement a feature automatically with plan and quality gates
-argument-hint: [tasks] [@advisor]
+argument-hint: [tasks] [--advice]
 ---
 
 **Ultrathink** to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>$ARGUMENTS</raw-tasks>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring in `/code`.
+A final standalone `--advice` activates explicit review mentoring in `/code`.
 Before planning, read `{{evcrate:workflows/advisor-mentoring.md}}` and derive
-`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 tasks input. Apply the shared default stuck-escalation contract.
 For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
-`@advisor` in explicit mode and otherwise pass no advisor token.
+`--advice` in explicit mode and otherwise pass no `--advice` token.
 
 **IMPORTANT:** Analyze the list of skills  at `.pi/skills/*` and intelligently activate the skills that are needed for the task during the process.
 **Ensure token efficiency while maintaining high quality.**
@@ -32,10 +32,10 @@ This is the lower-friction `/cook` variant. It can reduce user checkpoints, but 
    - unresolved questions
 2. If unresolved questions can cause incorrect implementation, use `ask_user_question` before continuing.
 3. Trigger slash command {{evcrate:commands/plan}} <detailed-instruction-prompt> to create an implementation plan based on the preflight contract and tasks.
-4. Trigger slash command {{evcrate:commands/code}} <plan> to implement the plan with compile/typecheck, tests, code review, and approval gates. In explicit advisor mode append exactly one trailing `@advisor`; otherwise append none.
+4. Trigger slash command {{evcrate:commands/code}} <plan> to implement the plan with compile/typecheck, tests, code review, and approval gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none.
 5. Finally use `ask_user_question` tool to ask user if he wants to commit to git repository, if yes trigger {{evcrate:commands/git:cm}} slash command to create a commit.
 
 **Fallback handoff:** If requirements, risk, or scope require base {{evcrate:commands/cook}}, invoke
-it with `WORK_ARGUMENTS` and preserve the same explicit mode exactly once.
+it with `WORK_ARGUMENTS` and preserve the same explicit advice mode exactly once.
 
 **Positioning:** Use this for familiar product work where the user trusts the default workflow. Use base `/cook` when requirements, risk, or scope need explicit discussion.
