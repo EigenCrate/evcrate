@@ -8,7 +8,14 @@ Command Path: /fix/parallel
 
 Description: ⚡⚡ Analyze & fix issues with parallel fullstack-developer agents
 
-**Ultrathink parallel** to fix: <issues>{{args}}</issues>
+**Ultrathink parallel** raw input: <raw-issues>{{args}}</raw-issues>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before analysis, read `.gemini/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+issues input and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
@@ -43,6 +50,12 @@ Description: ⚡⚡ Analyze & fix issues with parallel fullstack-developer agent
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
+- In explicit advisor mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` with the bounded
+  evidence required by the shared mentoring contract. Advisor failure fails the
+  review gate.
+- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
+  the user.
 - Verify fixes don't introduce regressions
 - If critical issues: fix, retest
 

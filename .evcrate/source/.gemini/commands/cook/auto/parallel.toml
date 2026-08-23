@@ -1,5 +1,12 @@
 description = "\u26a1\u26a1\u26a1 Plan parallel phases & execute with fullstack-developer agents"
-prompt = """**Ultrathink parallel** to implement: <tasks>{{args}}</tasks>
+prompt = """**Ultrathink parallel** raw input: <raw-tasks>{{args}}</raw-tasks>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before planning, read `.gemini/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+tasks input and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
@@ -41,6 +48,12 @@ Use this only when work can be split into independent phases with clear dependen
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
+- In explicit advisor mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` with the bounded
+  evidence required by the shared mentoring contract. Advisor failure fails the
+  review gate.
+- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
+  the user.
 - If critical issues: fix, retest, rerun review
 
 ### 6. Project Management & Docs

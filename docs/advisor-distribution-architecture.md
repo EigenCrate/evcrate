@@ -1,16 +1,31 @@
-# Advisor Skill and Target Distribution Architecture
+# Advisor Mentoring and Target Distribution Architecture
 
 **Status**: Active; former broker design superseded
-**Last Updated**: 2026-08-08
+**Last Updated**: 2026-08-23
 **Parent**: [System Architecture](./system-architecture.md)
+
+**Release note (2026-08-23)**: Explicit advisor mentoring is shipped across the
+Claude source and generated Codex, Gemini, and Pi artifacts. Gemini migration now
+rewrites advisor workflow references to the generated `.gemini/workflows/` path;
+the fallback scout command remains literal Claude syntax by design.
 
 ## Purpose
 
-Define reproducible multi-platform generation and the boundary of the portable `advisor-strategy` skill. The skill is current-session guidance, not an advisor runtime or security control.
+Define reproducible multi-platform generation and the boundary between the portable
+`advisor-strategy` rubric, the normal high-tier `advisor` subagent, and forbidden
+advisor broker/runtime infrastructure.
 
 ## Scope boundary
 
-The advisor distribution described here is the existing skill-only `.agents` projection. It must not be read as the native Pi target. [Native Pi Phase 01](./pi-native-migration-phase-01.md) records the original `.pi` target and shared `agent/settings.json` merge for only `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`; Phase 03 has since implemented the native runtime. Release/cutover remains blocked by XML closing-tag marker corruption and a shell descendant timeout/process-tree leak, and live publication still requires manual Pi quiescence.
+The `.agents` projection described here is the shared skill distribution; normal
+advisor agents are target-specific generated resources. It must not be read as
+the native Pi target. [Native Pi Phase 01](./pi-native-migration-phase-01.md)
+records the original `.pi` target and shared `agent/settings.json` merge for only
+`npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and
+`npm:@juicesharp/rpiv-todo@2.4.0`; Phase 03 has since implemented the native
+runtime. Release/cutover remains blocked by XML closing-tag marker corruption and
+a shell descendant timeout/process-tree leak, and live publication still requires
+manual Pi quiescence.
 
 ## Architectural Decisions
 
@@ -25,7 +40,16 @@ The advisor distribution described here is the existing skill-only `.agents` pro
 - Generic publication preserves unmanaged HOME files; stale or incomplete manifests, output drift, and symlinks in managed artifacts or unsafe HOME paths are rejected.
 - `.evcrate/source/.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.evcrate/source/.agents/skills/advisor-strategy/` with its brief contract.
 - Each generated `cmd_*` skill contains one static pointer recommending explicit `$advisor-strategy` use. The pointer does not activate the skill.
-- No advisor provider/model call, MCP server, hook, broker, launcher, quota, ledger, audit, or isolation claim is distributed.
+- `.evcrate/source/.claude/agents/advisor.md` is the canonical mentor. It uses
+  `model: opus`, activates `advisor-strategy`, and migrates through the existing
+  target policies (`gpt-5.6-sol/high` in Codex, target-native pro in Gemini, and
+  semantic `strong` in Pi).
+- Scoped implementation commands recognize a final standalone `@advisor`, remove
+  only that token from work input, and call the normal advisor once after every
+  terminal reviewer result. Without the token they call it only after the same
+  blocker repeats twice without progress.
+- No advisor MCP server, hook, broker, launcher, provider selector, quota, ledger,
+  audit, permission bypass, or isolation claim is distributed.
 
 ## Distribution Data Flow
 
@@ -79,29 +103,59 @@ No migration or overlay logic runs during publication.
 - User-owned HOME paths remain preserved unless explicit full policy says otherwise.
 - Concurrent build/publish operations require a repository/release lock.
 
-## Advisor Guidance Flow
+## Advisor Mentoring Flow
 
 ```text
-Developer identifies a high-impact decision
-  -> explicitly invokes $advisor-strategy
-  -> current session forms a bounded decision brief from available evidence
-  -> current session compares alternatives and records its recommendation
-  -> developer verifies the conclusion under normal host policy
+Developer runs an implementation command
+  -> command parses optional final standalone @advisor
+  -> code-reviewer returns a terminal report
+  -> explicit mode: normal advisor subagent receives a bounded brief
+  -> default mode: advisor is called only on second matching blocker
+  -> executor records advice and keeps normal test/review/human gates
 ```
 
-The skill can structure architecture, security, debugging, and review reasoning. It cannot independently inspect evidence, call another model, execute tools, guarantee consultation, or enforce a verdict. Host permissions, sandboxing, tool approvals, and human review remain authoritative.
+The skill remains static guidance and cannot independently inspect evidence, call
+a model, or enforce a verdict. The `advisor` agent is the ordinary host delegation
+that applies that guidance at a high-tier model policy. It cannot edit files,
+approve changes, select providers, or bypass host permissions, sandboxing, tests,
+code review, tool approvals, or human review.
+
+Claude, Gemini, and Pi can enforce the canonical read/search tool declaration.
+Codex custom-agent migration records the source allowlist as a comment because the
+host has no equivalent per-agent tool allowlist; its read-only boundary is therefore
+prompt- and host-policy-enforced, not a security isolation claim.
 
 ## Compatibility Note
 
-The unshipped `advisor_consult` interface and its target-owned broker, admission hook, runtime launcher, registry, quota ledger, and audit behavior were removed. Callers must replace `advisor_consult` with explicit `$advisor-strategy` use and accept that the result is guidance from the current session, not independent inference or an enforced isolation boundary. Generic MCP and hook support remain unchanged.
+The unshipped `advisor_consult` interface and its target-owned broker, admission
+hook, runtime launcher, registry, quota ledger, and audit behavior remain removed.
+Commands use only the normal subagent mechanism already provided by each host.
+Advisor output is non-binding mentorship, not an approval or enforced isolation
+boundary. Generic MCP and hook support remain unchanged.
 
 ## Validation Gates
 
 - Generated skill frontmatter and brief contract are present.
+- The generated advisor agent exists and retains the target's high-tier/strong
+  model mapping without embedding cross-provider routing in prompt prose.
 - Every generated `cmd_*` skill has exactly one non-invoking pointer.
+- Scoped command guides preserve suffix parsing, review ordering, cook pass-through,
+  and deterministic stuck escalation.
+- Reviewer/advisor execution is bounded by the documented three-cycle contract;
+  user approval remains required before finalization.
 - Repeated migration is byte-identical.
 - Generated config, hooks, target manifest, and build manifest contain no advisor runtime wiring.
 - Staged build and publish dry-run preserve declared user-owned configuration.
+
+## Known follow-up defects
+
+These were accepted with the current implementation and are intentionally tracked
+for the next run:
+
+- `/code*` variants do not yet enforce the three-cycle cap consistently.
+- `/code:auto` does not yet handle advisor must-fix guidance and default-mode
+  behavior consistently.
+- `/cook` fallback routes can still lose the trailing `@advisor` token.
 - Tests run without provider credentials and start no App Server, MCP server, app, or model call.
 
 ## References

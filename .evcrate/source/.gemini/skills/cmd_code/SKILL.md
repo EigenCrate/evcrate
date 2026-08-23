@@ -9,7 +9,15 @@ Command Path: /code
 Description: ⚡⚡⚡ Start coding & testing an existing plan
 
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<plan>{{args}}</plan>
+<raw-plan>{{args}}</raw-plan>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before interpreting the plan, read `.gemini/workflows/advisor-mentoring.md` and
+derive `WORK_ARGUMENTS` plus explicit/default advisor mode from the raw arguments.
+Use `WORK_ARGUMENTS` as the plan input everywhere below. Apply the shared default
+stuck-escalation contract throughout this command.
 
 ---
 
@@ -27,11 +35,11 @@ Description: ⚡⚡⚡ Start coding & testing an existing plan
 
 ## Step 0: Plan Detection & Phase Selection
 
-**If `{{args}}` is empty:**
+**If `WORK_ARGUMENTS` is empty:**
 1. Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
 2. Parse plan for phases and status, auto-select next incomplete (prefer IN_PROGRESS or earliest Planned)
 
-**If `{{args}}` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
+**If `WORK_ARGUMENTS` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
 
 **Output:** `✓ Step 0: [Plan Name] - [Phase Name]`
 
@@ -103,6 +111,12 @@ Call exactly one `code-reviewer` subagent per review cycle: "Review changes for 
 
 **Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
+**Advisor gate:** In explicit advisor mode, after the reviewer terminal result and
+before displaying findings, fixing issues, or requesting approval, synchronously
+call exactly one `advisor` subagent for this review cycle using the bounded evidence
+required by the shared mentoring contract. Wait for its terminal report and include
+its must-fix guidance in the findings. Failure of this call fails Step 4.
+
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
 ```
@@ -110,7 +124,9 @@ cycle = 0
 LOOP:
   1. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-  2. DISPLAY FULL FINDINGS + SUMMARY TO USER:
+  2. IF explicit advisor mode: run advisor → get terminal mentorship report
+
+  3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
      ┌─────────────────────────────────────────┐
      │ Code Review Results: [score]/10         │
      ├─────────────────────────────────────────┤
@@ -125,7 +141,7 @@ LOOP:
      │  - [suggestion]                         │
      └─────────────────────────────────────────┘
 
-  3. Use ask_user (header: "Review & Approve"):
+  4. Use ask_user (header: "Review & Approve"):
      IF critical_count > 0:
        - "Fix critical issues" → implement fixes, re-run tester, cycle++, GOTO LOOP
        - "Fix all issues" → implement all fixes, re-run tester, cycle++, GOTO LOOP
@@ -136,7 +152,7 @@ LOOP:
        - "Fix warnings/suggestions" → implement fixes, cycle++, GOTO LOOP
        - "Abort" → stop workflow
 
-  4. IF cycle >= 3 AND user selects fix:
+  5. IF cycle >= 3 AND user selects fix:
      → Output: "⚠ 3 review cycles completed. Final decision required."
      → Use ask_user: "Approve with noted issues" / "Abort workflow"
 ```

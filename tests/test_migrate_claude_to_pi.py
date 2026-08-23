@@ -38,6 +38,10 @@ class PiAdapterTest(unittest.TestCase):
     def test_emits_only_contained_deterministic_skeleton(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             source, stage, output = self._environment(Path(temp))
+            (source / "agents/advisor.md").write_text(
+                "---\nname: advisor\ndescription: High-tier mentor\nmodel: opus\n---\nUse advisor-strategy.\n",
+                encoding="utf-8",
+            )
             with patch.dict(os.environ, {
                 "EVCRATE_REPOSITORY": str(source.parents[2]),
                 "EVCRATE_SOURCE_DIR": str(source.parent),
@@ -49,7 +53,10 @@ class PiAdapterTest(unittest.TestCase):
             self.assertEqual((output / ".evcrate.json").read_text(encoding="utf-8"), '{"privacyBlock":true}\n')
             self.assertEqual((output / "agent/evcrate/managed-settings.json").read_text(encoding="utf-8"), '{"packages":["npm:pi-subagents@0.44.0","npm:@juicesharp/rpiv-ask-user-question@2.4.0","npm:@juicesharp/rpiv-todo@2.4.0"],"schema":"evcrate-pi-managed-settings-v1"}\n')
             self.assertIn("evcrate_subagent", (output / "agent/agents/planner.md").read_text(encoding="utf-8"))
-            self.assertEqual(json.loads((output / "agent/evcrate/model-roles.json").read_text(encoding="utf-8"))["agents"]["planner"]["role"], "standard")
+            roles = json.loads((output / "agent/evcrate/model-roles.json").read_text(encoding="utf-8"))["agents"]
+            self.assertEqual(roles["planner"]["role"], "standard")
+            self.assertEqual(roles["advisor"]["role"], "strong")
+            self.assertNotRegex((output / "agent/agents/advisor.md").read_text(encoding="utf-8"), r"\bopus\b")
             self.assertFalse((stage / "escaped").exists())
 
     def test_rejects_missing_or_escaped_output_and_direct_arguments(self) -> None:

@@ -102,7 +102,7 @@ test("packed distribution builds, publishes, and Pi discovers native commands an
     const names = new Set(commands.map((command) => command.name));
     for (const name of ["plan", "fix:fast", "cook:auto:fast"]) assert.ok(names.has(name), name);
     assert.ok(names.has("skill:planning"), "generated Pi skills were not discovered");
-    assert.equal(readdirSync(join(home, ".pi/agent/agents")).filter((name) => name.endsWith(".md")).length, 17);
+    assert.equal(readdirSync(join(home, ".pi/agent/agents")).filter((name) => name.endsWith(".md")).length, 18);
 
     const isolated = rpcCommands(pi, home, ["--no-skills", "--skill", join(home, ".pi/agent/skills")]);
     assert.ok(isolated.some((command) => command.name === "skill:planning"));

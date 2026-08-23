@@ -225,9 +225,14 @@ Provide a production-ready template that:
 - Apply target HOME policies atomically while preserving declared and unmanaged user files.
 - Persist owner-only release state, reject concurrent publishers, and recover interrupted promotions.
 - Include verified build metadata and generated assets in release CI without mutating developer HOME.
-- Distribute the canonical `advisor-strategy` skill and brief contract through the verified Codex artifact path.
-- Add one non-invoking pointer to every generated command skill; explicit `$advisor-strategy` use structures current-session reasoning only.
-- Keep generated Codex targets free of advisor-specific provider/model calls, MCP wiring, hooks, runtime launchers, quota ledgers, and audit claims.
+- Distribute the canonical `advisor-strategy` skill, brief contract, and normal
+  high-tier `advisor` subagent through verified target artifact paths.
+- Add one non-invoking strategy pointer to every generated command skill. Scoped
+  implementation commands also preserve final standalone `@advisor` mode and
+  deterministic stuck escalation.
+- Keep generated targets free of advisor MCP/broker wiring, provider selectors,
+  admission hooks, runtime launchers, quota ledgers, and audit claims. Normal
+  target model-policy mapping for the advisor subagent is allowed.
 
 **FR8: Native Pi Phase 01 Distribution Contract**
 - Register `.pi` as one manifest-owned target rooted at `.evcrate/source/.pi` with one `EVCRATE_HOME/.pi` HOME binding.
@@ -247,10 +252,20 @@ Provide a production-ready template that:
 - Keep the Node.js baseline at `>=22.19.0` and the managed package identities pinned exactly to `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`.
 - Block release/cutover acceptance until XML closing-tag marker corruption and the shell descendant timeout/process-tree leak are corrected and regression-tested.
 
-**Advisor compatibility boundary (Phase 2)**
-- `advisor-strategy` is a static, current-session skill. Use it explicitly as `$advisor-strategy` when a decision benefits from a bounded advisory brief.
-- The skill does not invoke providers, models, MCP servers, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
-- The unshipped `advisor_consult` interface is removed. Integrations must not depend on a broker, admission hook, runtime launcher, registry, quota ledger, or audit transport.
+**Advisor compatibility boundary**
+- `advisor-strategy` remains a static decision rubric. The normal `advisor`
+  subagent applies it with bounded read-only evidence and target high-tier/strong
+  model mapping.
+- A final standalone `@advisor` requests one blocking advisor after every terminal
+  implementation review. Default mode calls once on the second consecutive
+  matching blocker and stops for user direction if the advised retry repeats it.
+- Review execution is intended to stop at three reviewer/advisor cycles and keeps
+  the user approval gate. Follow-up defects are known for `/code*` cap enforcement,
+  `/code:auto` advisor must-fix/default handling, and `/cook` fallback token
+  preservation.
+- The unshipped `advisor_consult` interface remains removed. Integrations must not
+  depend on a broker, provider selector, admission hook, runtime launcher,
+  registry, quota ledger, audit transport, or approval bypass.
 
 ### Non-Functional Requirements
 

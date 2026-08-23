@@ -8,7 +8,14 @@ Command Path: /bootstrap/auto/parallel
 
 Description: ⚡⚡⚡⚡⚡ Bootstrap project with parallel execution
 
-**Ultrathink parallel** to bootstrap: <user-requirements>{{args}}</user-requirements>
+**Ultrathink parallel** raw input: <raw-user-requirements>{{args}}</raw-user-requirements>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before research, read `.gemini/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+user requirements and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 **YAGNI, KISS, DRY** principles apply.
@@ -52,6 +59,12 @@ Description: ⚡⚡⚡⚡⚡ Bootstrap project with parallel execution
 
 ### 7. Code Review
 - Use `code-reviewer`
+- In explicit advisor mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` with the bounded
+  evidence required by the shared mentoring contract. Advisor failure fails the
+  review gate.
+- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
+  the user.
 - If critical: fix → retest → repeat
 
 ### 8. Documentation

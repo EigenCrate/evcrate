@@ -1,12 +1,19 @@
 ---
 description: ⚡⚡ Run test suite and fix issues
-argument-hint: [issues]
+argument-hint: [issues] [@advisor]
 ---
 
 Analyze the skills catalog and activate the skills that are needed for the task during the process.
 
 ## Reported Issues:
-<issues>$ARGUMENTS</issues>
+<raw-issues>$ARGUMENTS</raw-issues>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before testing, read `{{evcrate:workflows/advisor-mentoring.md}}` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+issues input and apply the shared default stuck-escalation contract.
 
 ## Workflow:
 1. Use `tester` subagent to compile the code and fix all syntax errors if any.
@@ -15,6 +22,6 @@ Analyze the skills catalog and activate the skills that are needed for the task 
 4. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
 5. Use main agent to implement the plan step by step.
 6. Use `tester` agent to test the fix and make sure it works, then report back to main agent.
-6. Use `code-reviewer` subagent to quickly review the code changes and make sure it meets requirements, then report back to main agent.
+6. Use `code-reviewer` subagent to review the code changes and wait for its terminal report. In explicit advisor mode, immediately follow it with exactly one blocking `advisor` call using the bounded evidence from the shared mentoring contract; do not fix, approve, or report findings before the advisor terminal result. Limit this review/advisor loop to three cycles, then stop and ask the user if issues remain.
 7. If there are issues or failed tests, repeat from step 2.
 8. After finishing, respond back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.

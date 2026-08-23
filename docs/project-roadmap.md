@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-17 10:14:58 +0700
+**Last Updated:** 2026-08-23 17:41:16 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -170,6 +170,11 @@ Build/check, packed-tarball, native Pi discovery, and temporary-HOME validation 
 See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
 
 ## Current Development Focus
+
+### Advisor Command Mode
+- ✅ Implementation phase completed and approved with issues (2026-08-23); tests passed.
+- ⚠️ Follow-up required: cap `/code*` review cycles, fix `/code:auto` advisor must-fix/default handling, and preserve `@advisor` in `/cook` fallback handoffs.
+- Next action: rerun `/code` against [advisor command mode plan](../plans/260823-1621-advisor-command-mode/plan.md) to resolve defects; no defects claimed fixed in this status update.
 
 ### 1. Windows Ecosystem Support
 - ✅ Statusline cross-platform support

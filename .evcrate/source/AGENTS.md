@@ -11,6 +11,7 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Primary workflow: `./.codex/workflows/primary-workflow.md`
 - Development rules: `./.codex/workflows/development-rules.md`
 - Orchestration protocols: `./.codex/workflows/orchestration-protocol.md`
+- Advisor mentoring: `./.codex/workflows/advisor-mentoring.md`
 - Documentation management: `./.codex/workflows/documentation-management.md`
 - And other workflows: `./.codex/workflows/*`
 

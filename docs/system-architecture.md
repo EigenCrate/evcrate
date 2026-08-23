@@ -1,7 +1,7 @@
 # System Architecture
 
-**Last Updated**: 2026-08-12
-**Version**: 1.9.0
+**Last Updated**: 2026-08-23
+**Version**: 1.10.0
 **Project**: EVCrate
 
 ## Overview
@@ -92,9 +92,14 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 
 **Advisor Guidance**:
 - `advisor-strategy` is a static, portable skill distributed from `.evcrate/source/.claude/skills` to the managed skill roots.
-- It helps an executor decide whether independent review is useful, form a minimal evidence brief, and evaluate advice already available in the current session.
-- It does not start a nested model session, expose MCP tools, execute commands, access credentials, enforce quotas, or claim isolation. Normal host approvals and sandbox policy remain authoritative.
+- `advisor` is a normal high-tier subagent (`opus` canonically; mapped by each target's existing model policy). It applies the strategy skill to a bounded review/debugging brief and returns non-binding mentorship without editing or approval authority.
+- Implementation commands accept a final standalone `@advisor`. They strip only that token and synchronously call one advisor after every terminal code-review result. Default mode calls once when the same stable blocker occurs twice without progress, then stops for user direction if the advised retry repeats it.
+- The skill itself does not start a nested session. The agent uses ordinary host delegation and receives no new tools, provider routing, credentials, quotas, or isolation. Normal host approvals and sandbox policy remain authoritative.
 - Generated `.evcrate/source/.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
+- The intended review contract allows at most three terminal reviewer/advisor
+  cycles and still requires explicit user approval before finalization. Known
+  implementation gaps remain in `/code*` cap enforcement, `/code:auto` advisor
+  must-fix/default handling, and `/cook` fallback preservation of `@advisor`.
 
 ### 2. Agent Layer
 
@@ -114,6 +119,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - `database-admin` - Database operations
 
 **Quality Assurance Agents**:
+- `advisor` - High-tier post-review/stuck mentorship using a bounded decision brief
 - `code-reviewer` - Code quality assessment
 - `tester` - Test creation and execution
 - `debugger` - Issue analysis and debugging
@@ -924,18 +930,22 @@ User Project
 - Cleanup of temporary files
 - Optimized git operations
 
-## Distribution Architecture (native Pi and skill-only advisor)
+## Distribution Architecture (native Pi and advisor mentoring)
 
-[Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the static advisor boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
+[Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the skill, normal advisor subagent, and forbidden broker boundary. Distribution verification covers generated artifacts and publication; no advisor service or consultation transport is installed:
 
 - `.evcrate/source/.claude` is the only authored agent-config target. Build/check validate the complete source tree and deterministically generate `.pi`, `.agents`, `.codex`, `.gemini`, and `.antigravity` outputs before promotion.
 - Generic manifest bindings preserve unmanaged files already present under HOME targets. The `.claude` binding removes stale managed copies absent from the current source and excludes regular files directly under its `skills/` root; skill package directories and nested resources remain. Publication rejects stale or incomplete build manifests, output drift, managed symlinks, and unsafe HOME symlink paths.
 - Shared JSON files use entry-level ownership. The Pi publisher may upsert pinned EVCrate package identities in `HOME/.pi/agent/settings.json`, but it must preserve unknown keys/entries, user hooks, and user model routes; reject malformed or symlinked settings; and remove only known EVCrate package identities.
 - Native Pi commands are registered recursively from the managed local extension using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. A bounded `evcrate_command` tool dispatches model-initiated nested commands with cycle/depth controls. An authoritative operation-policy `tool_call` gate enforces temporary tool restrictions even if later extensions alter active tools; dispatcher calls mixed with parallel siblings are rejected and retried alone. Static workflow Markdown remains referenced data; it is not silently converted into dynamic executable orchestration.
 - Native Pi agents run through the structured `pi-subagents` delegation API exposed by an EVCrate-owned tool; the package's public `workflowScript` tool is not parsed or rewritten. Semantic model roles are resolved against the active provider immediately before delegation; concrete models are never baked into command, workflow, or agent prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
-- The Codex and Pi outputs include the portable `advisor-strategy` skill and its brief contract. Migrated command guides may include one explicit, non-executing pointer to the skill.
-- The skill reasons over evidence already available in the current session. It does not invoke providers, models, MCP, apps, commands, network or file operations, delegation, quotas, audits, or enforcement.
+- The Codex and Pi outputs include the portable `advisor-strategy` skill, its brief contract, and a normal generated `advisor` subagent using the target high-tier/strong role.
+- Scoped migrated command guides preserve the explicit trailing `@advisor` mode and default stuck escalation. The skill remains static; only ordinary host subagent delegation invokes the advisor agent.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
+
+Gemini migration rewrites authored advisor workflow references to the generated
+`.gemini/workflows/` path. Its fallback scout command is deliberately retained as
+literal Claude CLI syntax and is not target-rewritten.
 
 ### Native Pi runtime boundary (Phases 03–04 implemented; live cutover pending)
 

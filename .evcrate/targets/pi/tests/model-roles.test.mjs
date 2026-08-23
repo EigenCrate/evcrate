@@ -13,10 +13,11 @@ const registry = [
   { provider: "openai-codex", id: "gpt-5.6-luna" },
   { provider: "other", id: "available" },
 ];
-const roles = { planner: { role: "strong" }, docs: { role: "fast" }, inherited: { role: "parent" } };
+const roles = { advisor: { role: "strong" }, planner: { role: "strong" }, docs: { role: "fast" }, inherited: { role: "parent" } };
 
 test("Codex semantic roles resolve to exact available defaults", () => {
   assert.deepEqual(CODEX_ROLE_DEFAULTS.strong, { model: "openai-codex/gpt-5.6-sol", thinking: "high" });
+  assert.deepEqual(resolveModelRole({ provider: "openai-codex", agent: "advisor", agentRoles: roles, registry }), CODEX_ROLE_DEFAULTS.strong);
   assert.deepEqual(resolveModelRole({ provider: "openai-codex", agent: "planner", agentRoles: roles, registry }), CODEX_ROLE_DEFAULTS.strong);
   assert.deepEqual(resolveModelRole({ provider: "openai-codex", agent: "docs", agentRoles: roles, registry }), CODEX_ROLE_DEFAULTS.fast);
 });

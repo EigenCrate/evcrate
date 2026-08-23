@@ -125,6 +125,7 @@ REPLACEMENTS = {
     r"AskUserQuestion": "ask_user",
     r"\$ARGUMENTS": "{{args}}",
     r"\"\$CLAUDE_PROJECT_DIR\"": "\"$GEMINI_PROJECT_DIR\"",
+    r"\.claude/workflows/": ".gemini/workflows/",
     r"python \.claude/scripts/ev-help\.py\b": "python .gemini/scripts/ev-help.py",
     r"gemini-sonnet": "gemini-3-flash-preview",
     r"gemini-haiku": "gemini-3.1-flash-lite-preview",

@@ -60,7 +60,7 @@ class PiResourceMigrationTest(unittest.TestCase):
             agent_root = output / "agent"
             inventory = json.loads((agent_root / "evcrate/inventory.json").read_text())
             self.assertEqual({key: len(inventory[key]) for key in ("commands", "workflows", "agents", "skills")}, {
-                "commands": 72, "workflows": 4, "agents": 17, "skills": 50,
+                "commands": 72, "workflows": 5, "agents": 18, "skills": 50,
             })
             self.assertEqual(inventory["legacySkillExcluded"], "claude-code/skill.md")
             skill_root = agent_root / "skills"
@@ -75,7 +75,8 @@ class PiResourceMigrationTest(unittest.TestCase):
                     )
 
             roles = json.loads((agent_root / "evcrate/model-roles.json").read_text())["agents"]
-            self.assertEqual(len(roles), 17)
+            self.assertEqual(len(roles), 18)
+            self.assertEqual(roles["advisor"]["role"], "strong")
             self.assertEqual({item["role"] for item in roles.values()}, {"strong", "standard", "fast", "parent"})
             agents = "\n".join(path.read_text(encoding="utf-8") for path in (agent_root / "agents").glob("*.md"))
             self.assertIsNone(re.search(r"\b(opus|sonnet|haiku|claude-[\w.-]+|gpt-[\w.-]+)\b", agents, re.IGNORECASE))

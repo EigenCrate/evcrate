@@ -74,6 +74,10 @@ class ApplyReplacementsTest(unittest.TestCase):
         self.assertIn("python .gemini/scripts/ev-help.py", migrated)
         self.assertNotIn("python .claude/scripts/ev-help.py", migrated)
 
+    def test_workflow_paths_are_target_relative(self) -> None:
+        migrated = migrator.apply_replacements("Read .claude/workflows/advisor-mentoring.md")
+        self.assertEqual(migrated, "Read .gemini/workflows/advisor-mentoring.md")
+
     def test_anthropic_urls_are_preserved(self) -> None:
         source = "See https://console.anthropic.com and https://github.com/anthropic-ai/claude-code."
         self.assertEqual(migrator.apply_replacements(source), source)
@@ -99,6 +103,51 @@ class MigrateScriptsTest(unittest.TestCase):
             generated = (target_dir / "scripts" / "ev-help.py").read_text(encoding="utf-8")
             self.assertEqual(generated.count('"CLAUDE_PROJECT_DIR"'), 1)
             self.assertEqual(generated.count('"GEMINI_PROJECT_DIR"'), 1)
+
+
+class AdvisorGeminiGenerationTest(unittest.TestCase):
+    def test_advisor_agent_maps_opus_to_pro(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        canonical = repository / ".evcrate/source/.claude/agents/advisor.md"
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/agents"
+            output_dir = root / ".gemini"
+            source_dir.mkdir(parents=True)
+            (source_dir / "advisor.md").write_bytes(canonical.read_bytes())
+            with patch.object(migrator, "CLAUDE_DIR", root / ".claude"), patch.object(
+                migrator, "GEMINI_DIR", output_dir
+            ):
+                migrator.migrate_agents()
+
+            generated = output_dir / "agents/advisor.md"
+            frontmatter, body = migrator.parse_markdown_with_frontmatter(generated)
+            self.assertEqual(frontmatter["name"], "advisor")
+            self.assertEqual(frontmatter["model"], "pro")
+            self.assertIn("advisor-strategy", body)
+
+    def test_scoped_command_reads_generated_gemini_workflow(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        canonical = repository / ".evcrate/source/.claude/commands/code.md"
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/commands"
+            output_dir = root / ".gemini"
+            source_dir.mkdir(parents=True)
+            (source_dir / "code.md").write_bytes(canonical.read_bytes())
+            with patch.object(migrator, "CLAUDE_DIR", root / ".claude"), patch.object(
+                migrator, "GEMINI_DIR", output_dir
+            ):
+                migrator.migrate_commands()
+                migrator.migrate_commands_as_native_skills()
+
+            for generated in (
+                output_dir / "commands/code.toml",
+                output_dir / "skills/cmd_code/SKILL.md",
+            ):
+                content = generated.read_text(encoding="utf-8")
+                self.assertIn(".gemini/workflows/advisor-mentoring.md", content)
+                self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
 
 
 class ExternalScoutGeminiGenerationTest(unittest.TestCase):

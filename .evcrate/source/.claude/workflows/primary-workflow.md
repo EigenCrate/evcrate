@@ -27,6 +27,10 @@
 
 #### 3. Code Quality
 - After finishing implementation, delegate to `code-reviewer` agent and wait for its complete review before deciding whether work is acceptable.
+- Follow `advisor-mentoring.md`. When explicit advisor mode is active, delegate
+  to `advisor` exactly once after every terminal reviewer report and before any
+  fix or approval decision. Without explicit mode, use its two-occurrence stuck
+  threshold and once-per-episode escalation.
 - Follow coding standards and conventions
 - Write self-documenting code
 - Add meaningful comments for complex logic
@@ -45,3 +49,7 @@
 - Read and verify the complete `debugger` report before implementing the fix.
 - Delegate to `tester` agent and wait for its complete validation report.
 - If the `tester` agent reports failed tests, fix them follow the recommendations and repeat from the **Step 2**.
+- Track stable blocker signatures as defined by `advisor-mentoring.md`. After the
+  second consecutive match without progress, obtain one terminal `advisor`
+  report before retrying; if that advised attempt returns the same blocker, stop
+  and ask the user.
