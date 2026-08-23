@@ -1,22 +1,22 @@
 ---
 description: ⚡⚡⚡ Implement a feature [step by step]
-argument-hint: [tasks] [@advisor]
+argument-hint: [tasks] [--advice]
 ---
 
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>$ARGUMENTS</raw-tasks>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring in `/code`.
+A final standalone `--advice` activates explicit review mentoring in `/code`.
 Before discovery or planning, read `.claude/workflows/advisor-mentoring.md` and
-derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS`
+derive `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS`
 as the tasks input. If explicit mode is active, append exactly one trailing
-`@advisor` to the eventual `/code` handoff; otherwise append none. Apply the
+`--advice` to the eventual `/code` handoff; otherwise append none. Apply the
 shared default stuck-escalation contract during `/cook` discovery and planning.
 Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
-appends exactly one trailing `@advisor` when explicit mode is active, and
-otherwise pass no advisor token.
+appends exactly one trailing `--advice` when explicit mode is active, and
+otherwise pass no `--advice` token.
 
 ---
 
@@ -115,7 +115,7 @@ Before handoff, verify the plan accounts for:
 ### 7. Implementation Handoff
 
 * Use `/code <plan-path>` Slash Command to implement the plan step by step. In
-  explicit advisor mode invoke `/code <plan-path> @advisor`; never pass the token
+  explicit advice mode invoke `/code <plan-path> --advice`; never pass the token
   into scout, research, preflight, or plan content.
 * Pass the plan path and any unresolved questions to `/code`.
 * If the plan includes frontend work, ensure the `/code` handoff calls `ui-ux-designer` and follows `./docs/design-guidelines.md`.

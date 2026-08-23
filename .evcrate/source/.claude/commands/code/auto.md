@@ -1,17 +1,17 @@
 ---
 description: ⚡⚡⚡ [AUTO] Start coding & testing an existing plan ("trust me bro")
-argument-hint: [plan] [all-phases-yes-or-no] [@advisor] (default: yes)
+argument-hint: [plan] [all-phases-yes-or-no] [--advice] (default: yes)
 ---
 
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>$ARGUMENTS</raw-plan>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before assigning positional arguments, read
 `.claude/workflows/advisor-mentoring.md` and derive `WORK_ARGUMENTS` plus
-explicit/default advisor mode. Apply its default stuck-escalation contract
+explicit/default advice mode. Apply its default stuck-escalation contract
 throughout this command.
 
 ## Arguments
@@ -104,11 +104,11 @@ Mark Step 3 complete in `TodoWrite`, mark Step 4 in_progress.
 
 Call `code-reviewer` subagent: "Review code changes in **Step 2** of plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
-In explicit advisor mode, every terminal reviewer result must be followed by
-exactly one blocking `advisor` call before logging, fixing, auto-approving, or
-escalating that review. Supply the bounded evidence from the shared mentoring
-contract. A missing, partial, interrupted, cancelled, or failed advisor result
-fails Step 4.
+In explicit advice mode, every terminal reviewer result must be followed by
+exactly one blocking `advisor` call at `review:<workflow-step>` before logging,
+fixing, auto-approving, or escalating that review. Supply the bounded evidence,
+relevant prior counsel, and owner disposition from the shared mentoring contract.
+A missing, partial, interrupted, cancelled, or failed advisor result fails Step 4.
 
 **Auto-Handling Logic (max 3 cycles):**
 
@@ -121,33 +121,38 @@ LOOP:
      → ESCALATE TO USER; do not start another review or advisor call
      → DISPLAY all findings and ask "Approve with noted issues" / "Abort workflow"
      → STOP
-  2. review_cycles++
-  3. Run code-reviewer → get score, critical_count, warnings, suggestions
-  4. IF explicit advisor mode: run advisor → get terminal mentorship report
-  5. reviewer_must_fix = (critical_count > 0)
-  6. advisor_must_fix = false
-     → Explicit advisor mode sets advisor_must_fix from the terminal advisor report.
+  2. Run code-reviewer → wait for its terminal result; get score, critical_count, warnings, suggestions
+  3. IF the reviewer result is missing, partial, interrupted, cancelled,
+     timed-out, or failed: STOP the gate; do not increment review_cycles.
+  4. IF explicit advice mode: run advisor → wait for its terminal mentorship report
+  5. IF explicit advice mode and the advisor result is missing, partial,
+     interrupted, cancelled, timed-out, or failed: STOP the gate; do not
+     increment review_cycles.
+  6. review_cycles++ only after every required reviewer/advisor result is terminal
+  7. reviewer_must_fix = (critical_count > 0)
+  8. advisor_must_fix = false
+     → Explicit advice mode sets advisor_must_fix from the terminal advisor report.
      → Default mode does not invent advisor guidance; leave it false unless the
-       shared stuck contract delivered a terminal advisor for this exact remediation.
-  7. review_must_fix = reviewer_must_fix OR advisor_must_fix
-  8. must_fix_count = reviewer critical count + advisor must-fix count
-  9. LOG reviewer + advisor findings: "Review: [score]/10 | Must-fix: [N] | Warnings: [N] | Suggestions: [N]"
-  10. IF score >= 9.5 AND NOT review_must_fix:
+     shared stuck contract delivered a terminal advisor for this exact remediation.
+  9. review_must_fix = reviewer_must_fix OR advisor_must_fix
+  10. must_fix_count = reviewer critical count + advisor must-fix count
+  11. LOG reviewer + advisor findings: "Review: [score]/10 | Must-fix: [N] | Warnings: [N] | Suggestions: [N]"
+  12. IF score >= 9.5 AND NOT review_must_fix:
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Auto-approved ([warnings] warnings logged)"
      → PROCEED to Step 5
-  11. ELSE IF review_must_fix AND review_cycles < 3:
+  13. ELSE IF review_must_fix AND review_cycles < 3:
      → Output: "⚙ Step 4: Auto-fixing [must_fix_count] must-fix items (cycle [review_cycles]/3)"
      → Apply every advisor must-fix item before approval, plus reviewer critical issues.
      → Re-run tester to verify no regressions
      → GOTO LOOP
-  12. ELSE IF review_must_fix AND review_cycles >= 3:
+  14. ELSE IF review_must_fix AND review_cycles >= 3:
      → ESCALATE TO USER (hard cap reached)
      → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
      → Use AskUserQuestion:
        - "Approve with noted issues" → proceed with explicit acknowledgement
        - "Abort workflow" → stop
      → STOP; do not run another fix/test/reviewer/advisor sequence
-  13. ELSE (no must-fix item, but score < 9.5):
+  15. ELSE (no must-fix item, but score < 9.5):
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Approved ([warnings] warnings, [suggestions] suggestions logged)"
      → PROCEED to Step 5
 ```

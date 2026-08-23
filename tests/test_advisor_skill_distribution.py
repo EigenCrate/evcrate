@@ -9,6 +9,7 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from distribution.context import DistributionContext
 from distribution.contracts import DistributionAction, VerifiedArtifact
@@ -35,6 +36,7 @@ CODE_COMMANDS = (
     "code/no-test.md",
     "code/parallel.md",
 )
+REVIEW_COUNTER_COMMANDS = ("code.md", "code/auto.md", "code/parallel.md")
 COOK_COMMANDS = (
     "cook.md",
     "cook/auto.md",
@@ -73,6 +75,21 @@ REVIEW_LOOP_COMMANDS = (
     "bootstrap/auto.md",
     "bootstrap/auto/fast.md",
     "bootstrap/auto/parallel.md",
+)
+ADVICE_MATRIX_ROWS = (
+    "| `plan/path --advice` | explicit | `plan/path` |",
+    r"| `implement abc\n--advice` | explicit | `implement abc` |",
+    "| `--advice` | explicit, empty work | empty |",
+    "| `abc --advice --advice` | reject duplicate | not evaluated |",
+    "| `abc --advice extra` | default | unchanged |",
+    "| `abc --advice` + trailing whitespace | explicit | `abc` |",
+    "| `\"--advice\"` | default | unchanged |",
+    "| `path--advice` | default | unchanged |",
+    "| `--advice.txt` | default | unchanged |",
+    "| `--Advice` | default | unchanged |",
+    "| `task @advisor` | default | unchanged |",
+    "| `task @advisor continue` | default | unchanged |",
+    "| `before @advisor after` | default | unchanged |",
 )
 
 
@@ -129,23 +146,40 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertEqual(generated_body.encode(), canonical_body.encode())
             self.assertNotIn("provider", completed.stdout.lower())
 
-    def test_canonical_advisor_mode_contract_and_scoped_commands(self) -> None:
+    def test_canonical_advice_contract_and_scoped_commands(self) -> None:
         canonical = REPOSITORY / ".evcrate/source/.claude"
         contract = (canonical / "workflows/advisor-mentoring.md").read_text(encoding="utf-8")
-        normalized_contract = " ".join(contract.split())
+        normalized_contract = " ".join(contract.split()).lower()
         for marker in (
-            "final whitespace-delimited",
-            "exactly the case-sensitive string `@advisor`",
-            "`abc @advisor @advisor`",
-            "`abc @advisor extra`",
-            "second matching",
-            "Consult at most once per stuck episode",
+            "standalone token is exactly `--advice` delimited by whitespace",
+            "two or more standalone tokens are a deterministic input error",
+            "`abc --advice --advice`",
+            "`abc --advice extra`",
+            '`"--advice"`',
+            "`path--advice`",
+            "`--advice.txt`",
+            "allowing trailing whitespace",
+            "`--advice` alone produces empty",
+            "non-final token remains ordinary input",
+            "preserve every other byte",
+            "`task @advisor`",
+            "review:<workflow-step>",
+            "stuck:<blocker-signature>",
+            "decision:<workflow-step>",
+            "second consecutive matching terminal",
+            "consult at most once per stuck episode",
             "stop and ask the user for direction",
-            "Explicit mode uses the same stuck detection outside review gates",
-            "also satisfies any stuck consultation for that same gate",
+            "also satisfies any stuck consultation",
+            "explicitly rejected model",
+            "missing, partial, interrupted, cancelled, timed-out",
+            "no fourth reviewer or advisor call",
             "at most three terminal reviewer/advisor cycles",
         ):
             self.assertIn(marker, normalized_contract)
+        self.assertIn('`--Advice`', " ".join(contract.split()))
+        for row in ADVICE_MATRIX_ROWS:
+            with self.subTest(matrix_row=row):
+                self.assertIn(row, contract)
 
         agent = canonical / "agents/advisor.md"
         frontmatter, body = parse_markdown_with_frontmatter(agent)
@@ -154,12 +188,15 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
         self.assertEqual(frontmatter["tools"], "Read, Glob, Grep")
         self.assertIn("advisor-strategy", body)
         self.assertIn("do not implement", body.lower())
+        self.assertIn("fresh named checkpoint", frontmatter["description"])
+        self.assertNotIn("@advisor", body)
 
         for relative in SCOPED_COMMANDS:
             with self.subTest(command=relative):
                 content = (canonical / "commands" / relative).read_text(encoding="utf-8")
                 normalized_content = " ".join(content.split())
-                self.assertIn("[@advisor]", content)
+                self.assertIn("[--advice]", content)
+                self.assertNotIn("@advisor", content)
                 self.assertIn(".claude/workflows/advisor-mentoring.md", content)
                 self.assertIn("WORK_ARGUMENTS", content)
                 self.assertIn("default stuck-escalation contract", normalized_content)
@@ -167,19 +204,46 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             with self.subTest(review_command=relative):
                 content = (canonical / "commands" / relative).read_text(encoding="utf-8")
                 normalized_content = " ".join(content.split())
-                self.assertIn("explicit advisor mode", normalized_content.lower())
+                self.assertIn("explicit advice mode", normalized_content.lower())
                 self.assertIn("`advisor`", content)
                 self.assertIn("code-reviewer", content)
                 self.assertIn("terminal", normalized_content.lower())
+                self.assertIn("review:<workflow-step>", normalized_content)
+                self.assertIn("prior counsel", normalized_content.lower())
+                self.assertIn("owner disposition", normalized_content.lower())
                 reviewer_position = normalized_content.lower().find("code-reviewer")
-                advisor_position = normalized_content.lower().find("explicit advisor mode", reviewer_position)
+                advisor_position = normalized_content.lower().find("explicit advice mode", reviewer_position)
                 self.assertGreater(advisor_position, reviewer_position)
+
+    def test_decision_checkpoint_has_explicit_bootstrap_placement(self) -> None:
+        canonical = REPOSITORY / ".evcrate/source/.claude"
+        decision_commands = (
+            "commands/bootstrap.md",
+            "commands/bootstrap/auto.md",
+            "commands/bootstrap/auto/fast.md",
+            "commands/bootstrap/auto/parallel.md",
+        )
+        for relative in decision_commands:
+            with self.subTest(command=relative):
+                content = " ".join((canonical / relative).read_text(encoding="utf-8").split()).lower()
+                self.assertIn("decision:<workflow-step>", content)
+                self.assertIn("branch explicitly", content)
+                self.assertIn("decision is irreversible", content)
+                self.assertIn("call exactly one `advisor`", content)
+                self.assertIn("otherwise continue the existing approval/action", content)
+                self.assertIn("routine", content)
+
+        primary = " ".join(
+            (canonical / "workflows/primary-workflow.md").read_text(encoding="utf-8").split()
+        ).lower()
+        self.assertIn("decision:<workflow-step>", primary)
         for relative in HANDOFF_COMMANDS:
             with self.subTest(handoff_command=relative):
                 content = (canonical / "commands" / relative).read_text(encoding="utf-8")
                 normalized_content = " ".join(content.split())
                 self.assertIn("append exactly one trailing", normalized_content)
-                self.assertIn("`@advisor`", content)
+                self.assertIn("exactly one trailing `--advice`", normalized_content)
+                self.assertNotIn("@advisor", content)
         for relative in REVIEW_LOOP_COMMANDS:
             with self.subTest(review_loop=relative):
                 content = " ".join(
@@ -191,7 +255,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
 
     def test_code_review_cycles_have_a_hard_cap(self) -> None:
         canonical = REPOSITORY / ".evcrate/source/.claude"
-        for relative in CODE_COMMANDS:
+        for relative in REVIEW_COUNTER_COMMANDS:
             with self.subTest(command=relative):
                 content = " ".join(
                     (canonical / "commands" / relative).read_text(encoding="utf-8").split()
@@ -199,12 +263,25 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertIn("at most three terminal reviewer/advisor cycles", content)
                 self.assertIn("do not start another review or advisor call", content)
                 self.assertNotIn("restart cycle counter", content)
+                self.assertIn(
+                    "review_cycles++ only after every required reviewer/advisor result is terminal",
+                    content,
+                )
+                self.assertIn("do not increment review_cycles", content)
+
+        for relative in REVIEW_LOOP_COMMANDS:
+            with self.subTest(review_loop=relative):
+                content = " ".join(
+                    (canonical / "commands" / relative).read_text(encoding="utf-8").split()
+                ).lower()
+                self.assertIn("at most three terminal reviewer/advisor cycles", content)
+                self.assertNotIn("restart cycle counter", content)
 
         auto = (canonical / "commands/code/auto.md").read_text(encoding="utf-8")
         normalized_auto = " ".join(auto.split()).lower()
         for marker in (
             "review_must_fix",
-            "explicit advisor mode sets advisor_must_fix",
+            "explicit advice mode sets advisor_must_fix",
             "default mode does not invent advisor guidance",
             "apply every advisor must-fix item before approval",
         ):
@@ -219,8 +296,9 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 )
                 self.assertIn("fallback handoff", content)
                 self.assertIn("WORK_ARGUMENTS", content)
-                self.assertIn("exactly one trailing `@advisor`", content)
-                self.assertIn("otherwise pass no advisor token", content)
+                self.assertIn("exactly one trailing `--advice`", content)
+                self.assertIn("otherwise pass no `--advice` token", content)
+                self.assertNotIn("@advisor", content)
 
     def test_generated_codex_advisor_and_command_mode_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -235,7 +313,8 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             for relative in SCOPED_COMMANDS:
                 skill_name = "cmd_" + relative.removesuffix(".md").replace("/", "_")
                 content = (root / ".agents/skills" / skill_name / "SKILL.md").read_text(encoding="utf-8")
-                self.assertIn("@advisor", content)
+                self.assertIn("--advice", content)
+                self.assertNotIn("@advisor", content)
                 self.assertIn("WORK_ARGUMENTS", content)
                 self.assertIn(".codex/workflows/advisor-mentoring.md", content)
 
@@ -302,7 +381,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertIn("preserve the agent identity", workflow)
             self.assertIn("Wait-loop protocol", code_command)
             self.assertIn('"No agents completed yet"', code_command)
-            self.assertIn("cycle counter advances only after a terminal review result", code_command)
+            self.assertIn("cycle counter advances only after every required reviewer/advisor result is terminal", code_command)
             self.assertIn("Return a terminal report", code_command)
             self.assertIn("## Subagent Completion Contract", agent)
             self.assertIn("wait for all N to finish", agent)
@@ -354,7 +433,10 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 root / "state",
             )
             artifact = VerifiedArtifact(REPOSITORY, context.local_roots)
-            changes = publish_diff(context, artifact)
+            # Phase 02 intentionally leaves generated artifacts/build manifest
+            # untouched; isolate HOME-preservation behavior from that release gate.
+            with patch("distribution.publish.verify_local_artifact"):
+                changes = publish_diff(context, artifact)
 
             self.assertIn((".evcrate.json", "preserve"), {(item.path, item.action) for item in changes})
             self.assertEqual(user_config.read_text(encoding="utf-8"), "user-owned\n")

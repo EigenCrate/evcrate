@@ -4,11 +4,13 @@
 **Last Updated**: 2026-08-23
 **Parent**: [System Architecture](./system-architecture.md)
 
-**Release note (2026-08-23)**: Explicit advisor mentoring and command-mode
-hardening are shipped across the Claude source and generated Codex, Gemini,
-Antigravity, and Pi artifacts. Gemini migration now rewrites advisor workflow
-references to the generated `.gemini/workflows/` path; the fallback scout command
-remains literal Claude syntax by design.
+**Phase 02 note (2026-08-23)**: The canonical Claude source and focused
+regression coverage now define final standalone `--advice`, ordinary `@advisor`
+input, and named review/stuck/decision checkpoints. Generated Codex, Gemini,
+Antigravity, Pi, and `.agents` projections are intentionally not regenerated in
+Phase 02; Phase 04 owns that rollout. The earlier Gemini migration rewrites
+advisor workflow references to the generated `.gemini/workflows/` path; its
+fallback scout command remains literal Claude syntax by design.
 
 ## Purpose
 
@@ -37,6 +39,9 @@ manual Pi quiescence.
 - Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
 - `.evcrate/targets/<target>` owns target-only files and explicit config patches.
 - Local `.evcrate/source/.claude`, `.evcrate/source/.agents`, `.evcrate/source/.codex`, `.evcrate/source/.gemini`, and other target trees are finalized artifacts.
+- Phase 02 changes the canonical Claude source and focused regression assertions
+  only. Generated target trees are not hand-edited or regenerated in this phase;
+  Phase 04 owns their advisory-capability rollout and parity checks.
 - HOME distribution consumes finalized local artifacts only and preserves declared user-owned configuration.
 - Generic publication preserves unmanaged HOME files; stale or incomplete manifests, output drift, and symlinks in managed artifacts or unsafe HOME paths are rejected.
 - `.evcrate/source/.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.evcrate/source/.agents/skills/advisor-strategy/` with its brief contract.
@@ -46,25 +51,30 @@ manual Pi quiescence.
   target policies: Codex selects `gpt-5.6-sol` with high reasoning, Gemini uses
   target-native `pro`, and Pi uses semantic `strong` (which resolves to
   `openai-codex/gpt-5.6-sol` with high reasoning when that provider is active).
-- `/code`, `/code:auto`, `/code:no-test`, and `/code:parallel` recognize only a
-  case-sensitive, whitespace-delimited final standalone `@advisor` (trailing
-  whitespace allowed), remove only that token into `WORK_ARGUMENTS`, and call
-  the normal advisor once after every successful terminal reviewer result. The
-  shared prompt and workflow impose an explicit hard cap of at most three
-  terminal reviewer/advisor cycles;
-  `/code:no-test` intentionally imposes a lower one-cycle limit. Without the
-  token, commands call the advisor only after the same blocker repeats twice
-  without progress.
+- Phase 02-scoped `/code`, `/cook`, `/fix`, and `/bootstrap` implementation
+  commands recognize exactly one case-sensitive, whitespace-delimited final
+  standalone `--advice` (trailing whitespace allowed), remove only that token
+  into `WORK_ARGUMENTS`, and reject duplicate standalone tokens. Non-final,
+  quoted, embedded, suffixed, or differently cased forms remain ordinary input;
+  `--advice` alone follows normal empty-input behavior.
+- Every `@advisor` occurrence, including an exact final token, is ordinary
+  unchanged work input. The final `@advisor` behavior was the Phase 01 contract;
+  Phase 02 removes it as an active mode because host file/location syntax makes
+  it ambiguous.
+- Explicit `--advice` review calls use a fresh normal advisor after each
+  terminal reviewer result. The shared contract also names
+  `review:<workflow-step>`, `stuck:<blocker-signature>`, and
+  `decision:<workflow-step>` checkpoints; default mode escalates only on the
+  second matching blocker, and uncovered irreversible/security/go-no-go
+  decisions use the existing decision point rather than inventing new ones.
+- The shared prompt and workflow impose an explicit hard cap of at most three
+  terminal reviewer/advisor cycles; `/code:no-test` intentionally imposes a
+  lower one-cycle limit. Each consultation forwards relevant prior counsel and
+  owner disposition explicitly.
 - `/code:auto` applies every explicit advisor must-fix item before approval and
   does not invent advisor guidance in default mode. Cook variants and `/fix:hard`
   preserve `WORK_ARGUMENTS` through fallback handoffs, appending exactly one
-  trailing `@advisor` in explicit mode and no advisor token otherwise.
-- The accepted compatibility decision retains the exact, case-sensitive final
-  `@advisor` token because the user approved it. That exact final token is
-  reserved for advisor mode;
-  earlier occurrences and other `@file`-style text remain work input. Claude,
-  Gemini, Codex, and Antigravity may use `@` for file or location mentions, so
-  this is a portability risk and host-level escaping is not guaranteed.
+  trailing `--advice` in explicit mode and no mode token otherwise.
 - No advisor MCP server, hook, broker, launcher, provider selector, quota, ledger,
   audit, permission bypass, or isolation claim is distributed.
 
@@ -124,18 +134,20 @@ No migration or overlay logic runs during publication.
 
 ```text
 Developer runs an implementation command
-  -> command parses optional exact trailing @advisor into WORK_ARGUMENTS
-  -> code-reviewer returns a terminal report
-  -> explicit mode: normal advisor subagent receives a bounded brief
-  -> default mode: advisor is called only on second matching blocker
+  -> command parses optional exact final --advice into WORK_ARGUMENTS
+  -> normal workflow reaches a named review, stuck, or decision checkpoint
+  -> terminal prerequisite evidence is supplied to a fresh advisor subagent
+  -> default mode escalates only on the second matching blocker
   -> at most three terminal reviewer/advisor cycles, then user direction
   -> executor records advice and keeps normal test/review/human gates
 ```
 
-The hardened command surfaces use the same contract in the canonical Claude
-source and generated target projections. Cook discovery/planning and all cook
-fallbacks pass `WORK_ARGUMENTS`; `/fix:hard` is included in the scoped fallback
-preservation rule. Explicit mode is preserved exactly once across each handoff.
+The Phase 02 contract is implemented in the canonical Claude source. Generated
+target projections retain their prior release state until Phase 04; they are not
+evidence that the new contract has been rolled out. Cook discovery/planning and
+all cook fallbacks pass `WORK_ARGUMENTS`; `/fix:hard` is included in the scoped
+fallback preservation rule. Explicit mode is preserved exactly once across each
+canonical handoff.
 
 The skill remains static guidance and cannot independently inspect evidence, call
 a model, or enforce a verdict. The `advisor` agent is the ordinary host delegation
@@ -156,27 +168,34 @@ Commands use only the normal subagent mechanism already provided by each host.
 Advisor output is non-binding mentorship, not an approval or enforced isolation
 boundary. Generic MCP and hook support remain unchanged.
 
-## Validation Gates
+## Phase 02 Validation Gates
 
-- Generated skill frontmatter and brief contract are present.
-- The generated advisor agent exists and retains the target's high-tier/strong
-  model mapping without embedding cross-provider routing in prompt prose.
-- Every generated `cmd_*` skill has exactly one non-invoking pointer.
-- Scoped command guides preserve suffix parsing, review ordering, cook and
-  `/fix:hard` pass-through, and deterministic stuck escalation.
+- Canonical skill frontmatter, brief contract, and one-shot advisor report are
+  present.
+- Canonical scoped command guides preserve final-only parsing, ordinary
+  `@advisor` input, named checkpoint ordering, prior-counsel forwarding, cook
+  and `/fix:hard` pass-through, and deterministic stuck escalation.
 - Reviewer/advisor execution is bounded by a hard cap of at most three terminal
   cycles (or a lower command-specific limit); user approval remains required
   before finalization.
-- Generated Codex, Gemini, Antigravity, and Pi projections retain the command-mode
-  contract and target-specific advisor model mapping.
-- Repeated migration is byte-identical.
-- Generated config, hooks, target manifest, and build manifest contain no advisor runtime wiring.
-- Staged build and publish dry-run preserve declared user-owned configuration.
+- Focused canonical and migrator regression tests pass without model, app, MCP,
+  or App Server calls.
+- No active `@advisor` alias, provider selector, broker, or approval bypass is
+  introduced.
+
+## Deferred Phase 04 Generated-Target Rollout
+
+Phase 04 owns regeneration and parity validation for Codex, Gemini, Pi,
+Antigravity, and `.agents`, including target-specific advisor mapping and any
+target capability markers. Until that phase is complete, existing generated
+trees remain unchanged; do not hand-edit them or claim that they implement the
+Phase 02 `--advice` contract.
 
 ## Advisor command-mode hardening status
 
-The four previously tracked command-mode follow-ups are resolved in the canonical
-source and regenerated target projections:
+The four previously tracked command-mode follow-ups are resolved in the
+canonical Claude source and its focused regression coverage. Generated target
+projections are intentionally deferred to Phase 04:
 
 - All four `/code` variants enforce the shared hard cap and advisor-before-fix or
   approval ordering; `/code:no-test` keeps its intentional one-cycle limit.
@@ -188,7 +207,20 @@ source and regenerated target projections:
   scoped fallback rule.
 - Regression tests remain intentionally credential-free and start no App Server,
   MCP server, app, or model call; this is test isolation, not an unresolved
-  advisor defect.
+  canonical advisor defect.
+
+## Subsequent Advisory Phases
+
+The following work is outside Phase 02 and remains planned:
+
+- Phase 03 adds `/advise` as a separate inline-first interview workflow and,
+  where supported, a tested Claude `--agent` relay with resumable state.
+- Phase 04 projects the Phase 02 checkpoint contract and Phase 03 capability
+  boundaries to generated targets. Unsupported target relays must be rejected
+  explicitly rather than inferred from projected files.
+- The canonical-source/build/check ownership model and the forbidden broker,
+  MCP, launcher, provider-selector, quota, ledger, audit, and approval-bypass
+  boundary remain in force.
 
 ## References
 

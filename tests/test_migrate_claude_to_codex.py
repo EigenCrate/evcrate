@@ -145,6 +145,26 @@ class ApplyReplacementsTest(unittest.TestCase):
             self.assertEqual(advisor["model"], "gpt-5.6-sol")
             self.assertEqual(advisor["model_reasoning_effort"], "high")
             self.assertIn("advisor-strategy", advisor["developer_instructions"])
+            self.assertIn("--advice", advisor["developer_instructions"])
+            self.assertNotIn("@advisor", advisor["developer_instructions"])
+
+    def test_scoped_command_projects_advice_token_without_old_alias(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        canonical = repository / ".evcrate/source/.claude/commands/code.md"
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/commands"
+            output_dir = root / ".agents"
+            source_dir.mkdir(parents=True)
+            (source_dir / "code.md").write_bytes(canonical.read_bytes())
+            with patch("migrate_claude_to_codex.CLAUDE_DIR", root / ".claude"), patch(
+                "migrate_claude_to_codex.AGENTS_DIR", output_dir
+            ):
+                migrate_commands_as_native_skills()
+
+            generated = (output_dir / "skills/cmd_code/SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("--advice", generated)
+            self.assertNotIn("@advisor", generated)
 
     def test_help_resolves_codex_sibling_command_skills_without_claude_tree(self) -> None:
         repository = Path(__file__).resolve().parents[1]

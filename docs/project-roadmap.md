@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-23 18:51:34 +0700
+**Last Updated:** 2026-08-23 22:27:03 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -171,10 +171,10 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 
 ## Current Development Focus
 
-### Advisor Command Mode
-- ✅ Implementation and follow-up complete (2026-08-23); all plan phases/tasks are done, validation/review occurred, the mandatory `gpt-5.6-sol` advisor consultation was completed, and the reviewer approved the result.
-- ✅ Resolved: `/code*` review-cycle cap, `/code:auto` advisor must-fix/default handling, and `@advisor` preservation through `/cook` fallback handoffs.
-- ⚠️ Accepted reviewer limitation: the project keeps the historical `@advisor` suffix by explicit approval; cross-host `@file`/location interpretation remains a known portability risk.
+### Advisor Supervision and Interview Workflows
+- ✅ Phase 02 canonical one-shot `--advice` supervision implementation and review complete (2026-08-23 22:27:03 +0700); user approved. Reviewer-reported validation: focused 50/50; `npm test`: 146 Python + 46 Node.
+- ⚠️ Approved non-blocking review notes: fix/test numbering and stale-artifact assertion. Both remain tracked follow-ups; no implementation files changed during this status update.
+- 📋 Remaining plan work: Phase 03 `/advise` interview and Claude relay; Phase 04 generated-target rollout; Phase 05 migration docs and release gates.
 
 ### 1. Windows Ecosystem Support
 - ✅ Statusline cross-platform support
