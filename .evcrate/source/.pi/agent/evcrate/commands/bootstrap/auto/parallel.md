@@ -1,15 +1,15 @@
 ---
 description: ⚡⚡⚡⚡⚡ Bootstrap project with parallel execution
-argument-hint: [user-requirements] [@advisor]
+argument-hint: [user-requirements] [--advice]
 ---
 
 **Ultrathink parallel** raw input: <raw-user-requirements>$ARGUMENTS</raw-user-requirements>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before research, read `{{evcrate:workflows/advisor-mentoring.md}}` and derive
-`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 user requirements and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
@@ -39,6 +39,17 @@ user requirements and apply the shared default stuck-escalation contract.
 - Screenshot with `chrome-devtools` → save to `./docs/wireframes/`
 - Ask user to approve (repeat if rejected)
 
+### Decision Checkpoints
+
+- At each existing bootstrap approval/action site, branch explicitly: if the
+  decision is irreversible, security-sensitive, or go/no-go and is not covered
+  by terminal review, call exactly one `advisor` at `decision:<workflow-step>`
+  with bounded evidence from `advisor-mentoring.md`, forward prior counsel and
+  owner disposition, and wait for the terminal report before approval or action;
+  otherwise continue the existing approval/action without an advisor checkpoint.
+  Routine stack, plan, and design approvals are excluded unless explicitly
+  classified as such.
+
 ### 5. Parallel Planning & Implementation
 - Trigger {{evcrate:commands/plan:parallel}} <detailed-instruction> for parallel-executable plan
 - Read `plan.md` for dependency graph and execution strategy
@@ -54,12 +65,14 @@ user requirements and apply the shared default stuck-escalation contract.
 
 ### 7. Code Review
 - Use `code-reviewer`
-- In explicit advisor mode, after every terminal reviewer result and before any
-  fix or approval, synchronously call exactly one `advisor` with the bounded
-  evidence required by the shared mentoring contract. Advisor failure fails the
-  review gate.
-- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
-  the user.
+- In explicit advice mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` at
+  `review:<workflow-step>` with the bounded evidence, relevant prior counsel,
+  and owner disposition required by the shared mentoring contract. Advisor
+  failure fails the review gate.
+- Review/advisor cycle cap: at most three terminal reviewer/advisor cycles. At
+  the cap, stop without another reviewer/advisor call or cycle reset and ask the
+  user if issues remain.
 - If critical: fix → retest → repeat
 
 ### 8. Documentation

@@ -10,6 +10,13 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "advise.md",
+      "status": "migrated",
+      "target": "advise.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "ask.md",
       "status": "migrated",
       "target": "ask.toml"
@@ -510,6 +517,14 @@
       "source": "worktree.md",
       "status": "migrated",
       "target": "worktree.toml"
+    },
+    {
+      "checkpoint": "supported",
+      "classification": "target-native",
+      "inline": "supported",
+      "kind": "advisory-capability",
+      "relay": "unsupported",
+      "relay_error": "ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI"
     },
     {
       "classification": "hook-driven",

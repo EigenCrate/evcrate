@@ -108,6 +108,24 @@ class MigrateScriptsTest(unittest.TestCase):
 
 
 class AdvisorGeminiGenerationTest(unittest.TestCase):
+    def test_advise_command_uses_native_questioning_and_rejects_relay(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/commands"
+            output_dir = root / ".gemini"
+            source_dir.mkdir(parents=True)
+            shutil.copyfile(repository / ".evcrate/source/.claude/commands/advise.md", source_dir / "advise.md")
+            with patch.object(migrator, "CLAUDE_DIR", root / ".claude"), patch.object(
+                migrator, "GEMINI_DIR", output_dir
+            ):
+                migrator.migrate_commands()
+
+            generated = (output_dir / "commands/advise.toml").read_text(encoding="utf-8")
+            self.assertIn("ask_user", generated)
+            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI", generated)
+            self.assertNotIn("advise-state.cjs", generated)
+
     def test_advisor_agent_maps_opus_to_pro(self) -> None:
         repository = Path(__file__).resolve().parents[1]
         canonical = repository / ".evcrate/source/.claude/agents/advisor.md"

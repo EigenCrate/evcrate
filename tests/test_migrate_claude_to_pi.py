@@ -9,10 +9,37 @@ from pathlib import Path
 from unittest.mock import patch
 
 import migrate_claude_to_pi
+from pi_adapter.resources import copy_commands_and_workflows
 from tests.test_advisor_skill_distribution import FORBIDDEN_RUNTIME_MARKERS, SCOPED_COMMANDS
 
 
 class PiAdapterTest(unittest.TestCase):
+    def test_advise_command_uses_ask_user_and_rejects_relay_before_state(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / ".claude"
+            output = root / ".pi"
+            (source / "commands").mkdir(parents=True)
+            (source / "workflows").mkdir()
+            output.mkdir()
+            shutil.copyfile(
+                repository / ".evcrate/source/.claude/commands/advise.md",
+                source / "commands/advise.md",
+            )
+            shutil.copyfile(
+                repository / ".evcrate/source/.claude/workflows/advisory-interview.md",
+                source / "workflows/advisory-interview.md",
+            )
+            copy_commands_and_workflows(source, output, ("advise",))
+
+            command = (output / "agent/evcrate/commands/advise.md").read_text(encoding="utf-8")
+            workflow = (output / "agent/evcrate/workflows/advisory-interview.md").read_text(encoding="utf-8")
+            self.assertIn("ask_user_question", command)
+            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_PI", command)
+            self.assertNotIn("advise-state.cjs", command)
+            self.assertNotIn("advise-state.cjs", workflow)
+
     def _environment(self, root: Path) -> tuple[Path, Path, Path]:
         source = root / "repo/.evcrate/source/.claude"
         stage = root / "stage"

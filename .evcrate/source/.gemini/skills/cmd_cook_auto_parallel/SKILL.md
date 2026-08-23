@@ -10,20 +10,20 @@ Description: ⚡⚡⚡ Plan parallel phases & execute with fullstack-developer a
 
 **Ultrathink parallel** raw input: <raw-tasks>{{args}}</raw-tasks>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before planning, read `.gemini/workflows/advisor-mentoring.md` and derive
-`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 tasks input and apply the shared default stuck-escalation contract.
 For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
-`@advisor` in explicit mode and otherwise pass no advisor token.
+`--advice` in explicit mode and otherwise pass no `--advice` token.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
 ## Positioning
 
-Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/cook` first with `WORK_ARGUMENTS` and preserve the same explicit mode exactly once.
+Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/cook` first with `WORK_ARGUMENTS` and preserve the same explicit advice mode exactly once.
 
 ## Workflow
 
@@ -59,12 +59,14 @@ Use this only when work can be split into independent phases with clear dependen
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
-- In explicit advisor mode, after every terminal reviewer result and before any
-  fix or approval, synchronously call exactly one `advisor` with the bounded
+- In explicit advice mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` at
+  `review:<workflow-step>` with the bounded
   evidence required by the shared mentoring contract. Advisor failure fails the
   review gate.
-- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
-  the user.
+- Review/advisor cycle cap: at most three terminal reviewer/advisor cycles. At
+  the cap, stop without another reviewer/advisor call or cycle reset and ask the
+  user if issues remain.
 - If critical issues: fix, retest, rerun review
 
 ### 6. Project Management & Docs

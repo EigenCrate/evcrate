@@ -27,8 +27,9 @@
 - Use try catch error handling & cover security standards
 - Use `code-reviewer` agent to review code after every implementation
 - Implementation commands follow `advisor-mentoring.md`: a final standalone
-  `@advisor` requests one blocking high-tier advisor after each terminal review;
-  default mode escalates on the second consecutive matching blocker.
+  `--advice` requests one blocking high-tier advisor at each named terminal
+  review checkpoint; default mode escalates on the second consecutive matching
+  blocker.
 
 ## Pre-commit/Push Rules
 - Run linting before commit

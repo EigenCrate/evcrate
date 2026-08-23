@@ -11,6 +11,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from distribution.contracts import (
+    advisory_relay_error,
+    project_advisor_contract,
+    render_advisory_interview_workflow,
+    render_inline_advise_command,
+)
+
 
 DEFAULT_SOURCE_ROOT = Path(__file__).resolve().parent / ".evcrate" / "source"
 SOURCE_ROOT = Path(os.environ.get("EVCRATE_SOURCE_DIR", str(DEFAULT_SOURCE_ROOT)))
@@ -499,6 +506,14 @@ def write_behavior_matrix() -> None:
                 "status": "migrated",
                 "target": f".agents/skills/{skill_dir_name}/SKILL.md",
             })
+    entries.append({
+        "kind": "advisory-capability",
+        "classification": "target-native",
+        "checkpoint": "supported",
+        "inline": "supported",
+        "relay": "unsupported",
+        "relay_error": advisory_relay_error("codex"),
+    })
     entries.extend(build_hook_behavior_entries())
     payload = {
         "target": "codex",
@@ -529,10 +544,14 @@ def migrate_agents() -> None:
             ),
             known_commands,
         )
+        if source.name == "advisor.md":
+            description = "Use this high-tier mentor for fresh named checkpoints; Codex rejects interview relay."
         body = rewrite_command_execution_guidance(apply_replacements(body), known_commands)
         if source.name == "scout-external.md":
             # Render only after generic replacements so target command literals stay exact.
             body = render_external_scout_strategy(body, CODEX_EXTERNAL_SCOUT_STRATEGY)
+        if source.name == "advisor.md":
+            body = project_advisor_contract(body, "codex")
         body = apply_subagent_wait_contract(body)
 
         lines: list[str] = []
@@ -563,9 +582,12 @@ def migrate_workflows() -> None:
 
     if workflow_dir.exists():
         for source in sorted(workflow_dir.glob("*.md")):
+            source_content = source.read_text(encoding="utf-8")
+            if source.name == "advisory-interview.md":
+                source_content = render_advisory_interview_workflow(source_content, "codex")
             content = apply_subagent_wait_contract(
                 rewrite_command_execution_guidance(
-                    apply_replacements(source.read_text(encoding="utf-8")),
+                    apply_replacements(source_content),
                     known_commands,
                 )
             )
@@ -653,12 +675,17 @@ def migrate_commands_as_native_skills() -> None:
 
         frontmatter, body = parse_markdown_with_frontmatter(source)
         command_path = canonical_command_path(str(frontmatter.get("name") or f"/{cmd_name}").strip())
-        body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
+        if cmd_name == "advise":
+            body = render_inline_advise_command(body, "codex", "request_user_input").strip()
+        else:
+            body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
         desc = normalize_skill_description(
             apply_replacements(str(frontmatter.get("description", ""))).strip(),
             body,
             f"Run the /{cmd_name} command workflow.",
         )
+        if cmd_name == "advise":
+            desc = "Interview-first technical advice with native inline questioning and explicit relay rejection."
         if cmd_name == "coding-level":
             body = body.replace(
                 "1. Set `codingLevel` in `.codex/.evcrate.json`",

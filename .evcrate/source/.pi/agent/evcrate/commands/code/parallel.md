@@ -1,15 +1,15 @@
 ---
 description: ⚡ Execute parallel or sequential phases based on plan structure
-argument-hint: [plan-path] [@advisor]
+argument-hint: [plan-path] [--advice]
 ---
 
 Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before interpreting the plan, read `{{evcrate:workflows/advisor-mentoring.md}}` and
-derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Execute the plan from
+derive `WORK_ARGUMENTS` plus explicit/default advice mode. Execute the plan from
 `WORK_ARGUMENTS` and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
@@ -46,10 +46,11 @@ Follow `./{{evcrate:workflows/primary-workflow.md}}`:
 
 Call `code-reviewer` subagent: "Review all changes from parallel/sequential execution. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
-In explicit advisor mode, every terminal reviewer result must be followed by
-exactly one blocking `advisor` call before findings are displayed, fixed, or
-approved. Supply the bounded evidence required by the shared mentoring contract;
-advisor failure fails this gate.
+In explicit advice mode, every terminal reviewer result must be followed by
+exactly one blocking `advisor` call at `review:<workflow-step>` before findings
+are displayed, fixed, or approved. Supply the bounded evidence, relevant prior
+counsel, and owner disposition required by the shared mentoring contract; advisor
+failure fails this gate.
 
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
@@ -62,12 +63,19 @@ LOOP:
      → Output: "⚠ 3 review cycles completed. Final decision required."
      → ask_user_question: "Approve with noted issues" / "Abort workflow"
      → STOP; do not start another review or advisor call
-  2. review_cycles++
-  3. Run code-reviewer → get score, critical_count, warnings, suggestions
+  2. Run code-reviewer → wait for its terminal result; get score, critical_count, warnings, suggestions
+  3. IF the reviewer result is missing, partial, interrupted, cancelled,
+     timed-out, or failed: STOP the gate; do not increment review_cycles.
 
-  4. IF explicit advisor mode: run advisor → get terminal mentorship report
+  4. IF explicit advice mode: run advisor → wait for its terminal mentorship report
 
-  5. DISPLAY FULL REVIEWER + ADVISOR FINDINGS TO USER:
+  5. IF explicit advice mode and the advisor result is missing, partial,
+     interrupted, cancelled, timed-out, or failed: STOP the gate; do not
+     increment review_cycles.
+
+  6. review_cycles++ only after every required reviewer/advisor result is terminal
+
+  7. DISPLAY FULL REVIEWER + ADVISOR FINDINGS TO USER:
      ┌─────────────────────────────────────────┐
      │ Code Review Results: [score]/10         │
      ├─────────────────────────────────────────┤
@@ -79,7 +87,7 @@ LOOP:
      │  - [suggestion]                         │
      └─────────────────────────────────────────┘
 
-  6. Use ask_user_question (header: "Review"):
+  8. Use ask_user_question (header: "Review"):
      IF critical_count > 0 OR advisor has must-fix items:
        - "Fix critical issues" → implement critical fixes, re-run tester
        - "Fix all issues" → implement all fixes, re-run tester
@@ -90,7 +98,7 @@ LOOP:
        - "Approve" → proceed
        - "Abort" → stop workflow
 
-  7. IF user selects fix option:
+  9. IF user selects fix option:
      IF review_cycles >= 3:
        → Output: "⚠ 3 review cycles completed. Final decision required."
        → ask_user_question: "Approve with noted issues" / "Abort workflow"
@@ -100,7 +108,7 @@ LOOP:
      → Re-run tester to verify no regressions
      → GOTO LOOP (re-run code-reviewer)
 
-  8. ON APPROVE: PROCEED to Step 5
+  10. ON APPROVE: PROCEED to Step 5
 ```
 
 ### 5. Project Management & Docs

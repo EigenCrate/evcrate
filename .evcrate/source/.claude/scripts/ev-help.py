@@ -675,21 +675,44 @@ def show_command(data: dict, command: str, prefix: str) -> None:
             print(f"**Related:** {related_names}")
 
 
-def show_advisory_guide(prefix: str) -> None:
-    """Explain the distinct checkpoint, inline, and Claude relay modes."""
+def advisory_target(script_path: Path) -> str:
+    """Infer the generated host from the portable help script location."""
+
+    for parent in (script_path.parent, *script_path.parents):
+        if parent.name in {".antigravity", ".codex", ".gemini", ".pi"}:
+            return parent.name.removeprefix(".")
+    return "cla" + "ude"
+
+
+def show_advisory_guide(prefix: str, target: str) -> None:
+    """Explain checkpoint, inline, and target-accurate relay capabilities."""
+    relay_target = "cla" + "ude"
+    supports_relay = target == relay_target
     emit_output_type("command-details")
     command = f"/{prefix}advise" if prefix else "/advise"
     print(f"# `{command}`")
     print()
-    print("Interview-first technical advice with an optional Claude-only relay.")
+    if supports_relay:
+        print(f"Interview-first technical advice with an optional {relay_target.title()}-only relay.")
+    else:
+        print("Interview-first technical advice with a native inline interview.")
     print()
     print("**Usage:**")
     print(f"- `{command} <prompt-or-url>` - inline interview in the main session")
-    print(f"- `{command} <prompt-or-url> --agent` - Claude relay v1")
+    if supports_relay:
+        print(f"- `{command} <prompt-or-url> --agent` - {relay_target.title()} relay v1")
+    else:
+        error = f"ADVISE_AGENT_RELAY_UNSUPPORTED_{target.upper()}"
+        print(f"- `{command} <prompt-or-url> --agent` - rejects with `{error}`")
     print()
     print("**Interview contract:** one question per turn, explicit reframe confirmation, eight discovery-question cap, two reframe cycles, and a linked sanitized report.")
     print()
-    print("**Relay capability:** `--agent` is supported only by Claude in this phase. Codex, Pi, Gemini, and Antigravity must reject it explicitly; they must not silently run inline or create relay state.")
+    if supports_relay:
+        unsupported_targets = ("codex", "pi", "gemini", "antigravity")
+        projected_names = ", ".join(name.title() for name in unsupported_targets)
+        print(f"**Relay capability:** `--agent` is supported only by {relay_target.title()} in this phase. {projected_names} must reject it explicitly; they must not silently run inline or create relay state.")
+    else:
+        print(f"**Relay capability:** this {target} projection rejects `--agent` before advisor delegation or relay-state creation. Run `{command} <prompt-or-url>` for inline advice.")
     print()
     print("`--advice` is a separate one-shot checkpoint counsel mode for implementation commands. `@advisor` is ordinary input and never activates supervision.")
 
@@ -1108,7 +1131,7 @@ def main():
 
     # Advisory surfaces need capability and migration guidance beyond metadata.
     if input_str.lower() in ["advise", "/advise", "advice", "/advice"]:
-        show_advisory_guide(prefix)
+        show_advisory_guide(prefix, advisory_target(script_path))
         return
 
     # Detect intent and route

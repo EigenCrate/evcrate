@@ -63,8 +63,16 @@ class NativePiDistributionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             repository = Path(temp)
             shutil.copytree(REPOSITORY / ".evcrate/targets", repository / ".evcrate/targets")
-            for relative in ("migrate_claude_to_gemini.py", "migrate_claude_to_codex.py", "migrate_claude_to_pi.py", "pi_adapter"):
+            for relative in (
+                "migrate_claude_to_gemini.py",
+                "migrate_claude_to_codex.py",
+                "migrate_claude_to_pi.py",
+                "pi_adapter",
+                "distribution/antigravity_publish.py",
+                "distribution/contracts.py",
+            ):
                 source, destination = REPOSITORY / relative, repository / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(source, destination) if source.is_dir() else shutil.copy2(source, destination)
             all_context = replace(create_context(DistributionAction.BUILD), repository=repository)
             pi_stage = repository / "stage"

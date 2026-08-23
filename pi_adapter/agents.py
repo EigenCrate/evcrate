@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from distribution.contracts import project_advisor_contract
 from .frontmatter import FrontmatterError, serialize_frontmatter, split_frontmatter
 from .resources import ResourceError, translate_prompt, write_json
 
@@ -83,6 +84,9 @@ def convert_agents(source: Path, output: Path) -> None:
         tools, dropped = _tools(parsed.fields.get("tools", ""))
         description = _neutralize_model_tokens(translate_prompt(parsed.fields.get("description", "")))
         body = _neutralize_model_tokens(translate_prompt(parsed.body))
+        if name == "advisor":
+            description = "Use this high-tier mentor for fresh named checkpoints; Pi rejects interview relay."
+            body = project_advisor_contract(body, "pi")
         fields = {"name": name, "description": description}
         if tools:
             fields["tools"] = ", ".join(tools)

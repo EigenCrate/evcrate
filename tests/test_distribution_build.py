@@ -15,7 +15,14 @@ from unittest.mock import patch
 from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
 from distribution.antigravity_publish import build_antigravity_config
 from distribution.context import DistributionContext, create_context
-from distribution.contracts import BuildError, DistributionAction
+from distribution.contracts import (
+    ADVISORY_CAPABILITY_BLOCK_END,
+    ADVISORY_CAPABILITY_BLOCK_START,
+    BuildError,
+    DistributionAction,
+    render_advisory_interview_workflow,
+    render_inline_advise_command,
+)
 from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
 from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from distribution.overlay import OverlayError, apply_exact_patch, apply_patch_file, copy_overlay_files
@@ -23,6 +30,54 @@ from distribution.staging import BUILD_MANIFEST_PATH, _baseline_owners, _copy_so
 
 
 class DistributionBuildTest(unittest.TestCase):
+    def test_advisory_capability_projection_is_strict_and_removes_relay_state(self) -> None:
+        canonical = (
+            Path(__file__).resolve().parents[1]
+            / ".evcrate/source/.claude/workflows/advisory-interview.md"
+        ).read_text(encoding="utf-8")
+        generated = render_advisory_interview_workflow(canonical, "codex")
+
+        self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX", generated)
+        self.assertNotIn("advise-agent-relay/claude/v1", generated)
+        self.assertNotIn("advise-state.cjs", generated)
+        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_START), 1)
+        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_END), 1)
+        for malformed in (
+            canonical.replace(ADVISORY_CAPABILITY_BLOCK_START, "", 1),
+            canonical.replace(ADVISORY_CAPABILITY_BLOCK_END, ADVISORY_CAPABILITY_BLOCK_END * 2, 1),
+            canonical.replace(ADVISORY_CAPABILITY_BLOCK_START, "__START__", 1)
+            .replace(ADVISORY_CAPABILITY_BLOCK_END, ADVISORY_CAPABILITY_BLOCK_START, 1)
+            .replace("__START__", ADVISORY_CAPABILITY_BLOCK_END, 1),
+        ):
+            with self.subTest(malformed=malformed[:30]):
+                with self.assertRaisesRegex(ValueError, "Malformed advisory capability markers"):
+                    render_advisory_interview_workflow(malformed, "codex")
+
+    def test_advise_command_projection_validates_its_own_capability_block(self) -> None:
+        canonical = (
+            Path(__file__).resolve().parents[1]
+            / ".evcrate/source/.claude/commands/advise.md"
+        ).read_text(encoding="utf-8")
+        generated = render_inline_advise_command(canonical, "codex", "request_user_input")
+
+        self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX", generated)
+        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_START), 1)
+        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_END), 1)
+        with self.assertRaisesRegex(ValueError, "Malformed advisory capability markers"):
+            render_inline_advise_command(
+                canonical.replace(ADVISORY_CAPABILITY_BLOCK_START, "", 1),
+                "codex",
+                "request_user_input",
+            )
+
+    def test_all_advisory_adapters_hash_the_shared_contract(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
+        for target in ("codex", "gemini", "pi", "antigravity"):
+            with self.subTest(target=target):
+                manifest = load_target_manifest(registry.targets[target])
+                self.assertIn("distribution/contracts.py", manifest.adapter_sources)
+
     def test_normalized_paths_reject_traversal_and_windows_separators(self) -> None:
         self.assertEqual(normalize_relative_path(".codex/config.toml"), ".codex/config.toml")
         for path in (".", "../secret", "/tmp/secret", "nested/../secret", "nested\\secret", "./nested", "C:escape/config.json"):
@@ -212,6 +267,7 @@ class DistributionBuildTest(unittest.TestCase):
         pi = load_target_manifest(registry.targets["pi"])
         self.assertEqual(pi.output_roots, (".pi",))
         self.assertEqual(pi.adapter_sources, (
+            "distribution/contracts.py",
             "pi_adapter/__init__.py",
             "pi_adapter/agents.py",
             "pi_adapter/frontmatter.py",
@@ -301,6 +357,20 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertIn("Command Path: /evcrate:help", generated)
             self.assertIn("python .antigravity/scripts/ev-help.py", generated)
             self.assertNotIn("python .claude/scripts/ev-help.py", generated)
+
+    def test_antigravity_projects_advisor_and_rejects_relay_without_state(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / ".antigravity"
+            build_antigravity_config(repository / ".evcrate/source/.claude", target)
+
+            advisor = (target / "agents/advisor.md").read_text(encoding="utf-8")
+            advise = (target / "skills/cmd_advise/SKILL.md").read_text(encoding="utf-8")
+            workflow = (target / "workflows/advisory-interview.md").read_text(encoding="utf-8")
+            self.assertIn("model: pro", advisor)
+            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", advise)
+            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", workflow)
+            self.assertFalse(any(target.rglob("*advise-state*")))
 
     def test_source_copy_omits_compiler_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -1,16 +1,16 @@
 ---
 description: ⚡⚡⚡ Start coding & testing an existing plan
-argument-hint: [plan] [@advisor]
+argument-hint: [plan] [--advice]
 ---
 
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>$ARGUMENTS</raw-plan>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before interpreting the plan, read `{{evcrate:workflows/advisor-mentoring.md}}` and
-derive `WORK_ARGUMENTS` plus explicit/default advisor mode from the raw arguments.
+derive `WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments.
 Use `WORK_ARGUMENTS` as the plan input everywhere below. Apply the shared default
 stuck-escalation contract throughout this command.
 
@@ -45,7 +45,7 @@ evcrate_subagent(subagent_type="[type]", prompt="[task description]", descriptio
 
 **Blocking delegation rule:** Every evcrate_subagent/subagent call is synchronous. The parent must wait for the terminal response, verify the requested report/artifact and validation status, and only then continue. For parallel calls, explicitly say **wait for all agents**, collect one terminal result per call, and stop on any interrupted, timed-out, missing, or partial result.
 
-**Wait-loop protocol:** After each evcrate_subagent call, record the returned agent identity and use the native wait operation for that same agent. A response such as **"No agents completed yet"** is expected polling feedback, not a timeout: immediately wait again. Do not use shell `sleep`, start another task, ask for approval, synthesize a score, restart, or interrupt the agent while it is active. Polling intervals and the three-review-cycle limit do not end the gate; the cycle counter advances only after a terminal review result and a user fix decision. If the parent runtime terminates first, report the review gate incomplete with the agent identity and no fabricated result.
+**Wait-loop protocol:** After each evcrate_subagent call, record the returned agent identity and use the native wait operation for that same agent. A response such as **"No agents completed yet"** is expected polling feedback, not a timeout: immediately wait again. Do not use shell `sleep`, start another task, ask for approval, synthesize a score, restart, or interrupt the agent while it is active. Polling intervals and the three-review-cycle limit do not end the gate; the cycle counter advances only after every required reviewer/advisor result is terminal, and a user fix decision is required before beginning another cycle. If the parent runtime terminates first, report the review gate incomplete with the agent identity and no fabricated result.
 
 ---
 
@@ -106,9 +106,10 @@ Call exactly one `code-reviewer` subagent per review cycle: "Review changes for 
 
 **Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
-**Advisor gate:** In explicit advisor mode, after the reviewer terminal result and
+**Advice gate:** In explicit advice mode, after the reviewer terminal result and
 before displaying findings, fixing issues, or requesting approval, synchronously
-call exactly one `advisor` subagent for this review cycle using the bounded evidence
+call exactly one `advisor` subagent at `review:<workflow-step>` for this review
+cycle. Supply the bounded evidence, relevant prior counsel, and owner disposition
 required by the shared mentoring contract. Wait for its terminal report and include
 its must-fix guidance in the findings. Failure of this call fails Step 4.
 
@@ -123,12 +124,20 @@ LOOP:
      → Output: "⚠ 3 review cycles completed. Final decision required."
      → ask_user_question: "Approve with noted issues" / "Abort workflow"
      → STOP; do not start another review or advisor call
-  2. review_cycles++
-  3. Run code-reviewer → get score, critical_count, warnings, suggestions
+  2. Run code-reviewer → wait for its terminal result; get score, critical_count, warnings, suggestions
 
-  4. IF explicit advisor mode: run advisor → get terminal mentorship report
+  3. IF the reviewer result is missing, partial, interrupted, cancelled,
+     timed-out, or failed: STOP the gate; do not increment review_cycles.
 
-  5. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
+  4. IF explicit advice mode: run advisor → wait for its terminal mentorship report
+
+  5. IF explicit advice mode and the advisor result is missing, partial,
+     interrupted, cancelled, timed-out, or failed: STOP the gate; do not
+     increment review_cycles.
+
+  6. review_cycles++ only after every required reviewer/advisor result is terminal
+
+  7. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
      ┌─────────────────────────────────────────┐
      │ Code Review Results: [score]/10         │
      ├─────────────────────────────────────────┤
@@ -143,7 +152,7 @@ LOOP:
      │  - [suggestion]                         │
      └─────────────────────────────────────────┘
 
-  6. Use ask_user_question (header: "Review & Approve"):
+  8. Use ask_user_question (header: "Review & Approve"):
      IF critical_count > 0 OR advisor has must-fix items:
        - "Fix critical issues" → implement fixes, re-run tester, GOTO LOOP
        - "Fix all issues" → implement all fixes, re-run tester, GOTO LOOP
@@ -154,7 +163,7 @@ LOOP:
        - "Fix warnings/suggestions" → implement fixes, re-run tester, GOTO LOOP
        - "Abort" → stop workflow
 
-  7. IF user selects any fix option:
+  9. IF user selects any fix option:
      IF review_cycles >= 3:
        → Output: "⚠ 3 review cycles completed. Final decision required."
        → ask_user_question: "Approve with noted issues" / "Abort workflow"

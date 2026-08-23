@@ -951,21 +951,27 @@ User Project
 - Native Pi commands are registered recursively from the managed local extension using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. A bounded `evcrate_command` tool dispatches model-initiated nested commands with cycle/depth controls. An authoritative operation-policy `tool_call` gate enforces temporary tool restrictions even if later extensions alter active tools; dispatcher calls mixed with parallel siblings are rejected and retried alone. Static workflow Markdown remains referenced data; it is not silently converted into dynamic executable orchestration.
 - Native Pi agents run through the structured `pi-subagents` delegation API exposed by an EVCrate-owned tool; the package's public `workflowScript` tool is not parsed or rewritten. Semantic model roles are resolved against the active provider immediately before delegation; concrete models are never baked into command, workflow, or agent prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
 - Existing Codex, Gemini, Antigravity, and Pi outputs include the portable
-  `advisor-strategy` skill and prior mentoring contract; their target mappings
-  remain unchanged until Phase 04 regenerates the Phase 02 contract.
+  `advisor-strategy` skill and prior mentoring contract. Phase 04 also projects
+  strict advisory capability markers and target-native inline `/advise`
+  behavior; only canonical Claude retains the relay path. Non-Claude targets
+  reject an exact final standalone `--agent` with their target-specific
+  unsupported capability code before delegation or relay-state handling.
 - The canonical Claude command guides now preserve final standalone `--advice`,
   ordinary `@advisor` input, named checkpoint ordering, the hard review-cycle
   cap, default stuck escalation, and cook/`/fix:hard` fallback handoffs. The
   skill remains static; only ordinary host subagent delegation invokes the
   advisor agent.
-- Generated targets were intentionally not regenerated for Phase 02. Do not
-  hand-edit or claim Phase 02 parity for `.codex`, `.agents`, `.pi`, `.gemini`,
-  or `.antigravity` until Phase 04 completes.
+- Generated targets are projections, not authored sources. Their capability
+  marker blocks are validated for presence, order, uniqueness, and exact
+  contents during build/check. Do not hand-edit `.codex`, `.agents`, `.pi`,
+  `.gemini`, or `.antigravity`; regenerate from canonical source and overlays.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
 
-Phase 03 `/advise` is implemented only in the canonical Claude source. Phase 04
-is the planned generated-target rollout for the Phase 02/03 advisory
-capabilities; it remains the release boundary for non-Claude targets.
+Phase 03 `/advise` is implemented in canonical Claude source, and Phase 04
+projects its inline-first behavior to generated targets. Generated help is
+target-aware and tested for the matching unsupported relay code. The release
+boundary remains the verified build/check artifact, not generated-file presence
+alone.
 
 Gemini migration rewrites authored advisor workflow references to the generated
 `.gemini/workflows/` path. Its fallback scout command is deliberately retained as

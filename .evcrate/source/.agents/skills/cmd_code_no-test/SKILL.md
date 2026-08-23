@@ -29,11 +29,11 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 **MUST READ** `AGENTS.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>{{args}}</raw-plan>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before interpreting the plan, read `.codex/workflows/advisor-mentoring.md` and
-derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS`
+derive `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS`
 as the plan input and apply the shared default stuck-escalation contract.
 
 ---
@@ -107,9 +107,10 @@ Mark Step 2 complete in update_plan, mark Step 3 in_progress.
 
 Call `code-reviewer` subagent: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
-In explicit advisor mode, follow every terminal reviewer result with exactly one
-blocking `advisor` call before displaying findings or asking for approval. Use the
-bounded evidence from the shared mentoring contract; advisor failure fails Step 3.
+In explicit advice mode, follow every terminal reviewer result with exactly one
+blocking `advisor` call at `review:<workflow-step>` before displaying findings or
+asking for approval. Use the bounded evidence, relevant prior counsel, and owner
+disposition from the shared mentoring contract; advisor failure fails Step 3.
 
 This no-test variant imposes a lower one-cycle limit. The shared cap allows at
 most three terminal reviewer/advisor cycles; if this gate is not approved, stop
@@ -120,7 +121,7 @@ and do not start another review or advisor call.
 ```
 1. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-2. IF explicit advisor mode: run advisor → get terminal mentorship report
+2. IF explicit advice mode: run advisor → get terminal mentorship report
 
 3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
    ┌─────────────────────────────────────────┐

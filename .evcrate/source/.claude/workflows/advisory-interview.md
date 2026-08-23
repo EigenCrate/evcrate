@@ -6,6 +6,11 @@ interview that must first converge on the user's problem.
 
 ## Capability
 
+<!-- EVCRATE_ADVISORY_CAPABILITIES_START -->
+<!-- EVCRATE_CAPABILITY: advise-inline/v1 -->
+<!-- EVCRATE_CAPABILITY: advise-agent-relay/claude/v1 -->
+<!-- EVCRATE_ADVISORY_CAPABILITIES_END -->
+
 ```text
 EVCRATE_CAPABILITY=advise-inline/v1
 EVCRATE_CAPABILITY=advise-agent-relay/claude/v1

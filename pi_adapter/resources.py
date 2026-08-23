@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Callable, Collection
 
+from distribution.contracts import render_advisory_interview_workflow, render_inline_advise_command
 from .frontmatter import FrontmatterError, normalize_lf, split_frontmatter, validate_skill_frontmatter
 
 
@@ -215,13 +216,27 @@ def copy_tree(source: Path, destination: Path, output: Path, transform: Callable
 
 
 def copy_markdown(source: Path, destination: Path, output: Path, commands: Collection[str] = ()) -> None:
+    def transform(item: Path, value: str) -> str:
+        relative = _relative(source, item)
+        if relative.as_posix() == "advise.md" and source.name == "commands":
+            return (
+                "---\n"
+                "description: Interview-first technical advice with native inline questioning and explicit relay rejection\n"
+                "argument-hint: [prompt-or-url] [--agent]\n"
+                "---\n\n"
+                + render_inline_advise_command(value, "pi", "ask_user_question")
+            )
+        if relative.as_posix() == "advisory-interview.md" and source.name == "workflows":
+            value = render_advisory_interview_workflow(value, "pi")
+        return translate_prompt(value, commands)
+
     for item in _walk_files(source):
         if item.suffix == ".md":
             _copy_file(
                 item,
                 destination / _relative(source, item),
                 output,
-                lambda value: translate_prompt(value, commands),
+                lambda value, item=item: transform(item, value),
             )
 
 
@@ -270,7 +285,10 @@ def copy_hooks_and_scripts(source: Path, output: Path) -> None:
 
     root = output / "agent" / "evcrate"
     copy_tree(source / "hooks", root / "hooks", output)
-    copy_tree(source / "scripts", root / "scripts", output)
+    scripts = source / "scripts"
+    for item in _walk_files(scripts):
+        if "advise-state" not in item.name:
+            _copy_file(item, root / "scripts" / _relative(scripts, item), output)
     _copy_file(source / ".evcrateignore", root / ".evcrateignore", output)
     write_json(root / "hook-map.json", output, hook_map(source))
 
@@ -343,12 +361,19 @@ def hook_map(source: Path) -> dict[str, object]:
 def write_inventory(destination: Path, output: Path, resources: ResourceInventory) -> None:
     """Write auditable source/output logical inventories in deterministic order."""
 
+    generated_scripts = tuple(item for item in resources.scripts if "advise-state" not in Path(item).name)
     write_json(destination, output, {
         "agents": list(resources.agents),
+        "advisoryCapabilities": {
+            "checkpoint": "supported",
+            "inline": "supported",
+            "relay": "unsupported",
+            "relayError": "ADVISE_AGENT_RELAY_UNSUPPORTED_PI",
+        },
         "commands": list(resources.commands),
         "hooks": list(resources.hooks),
         "legacySkillExcluded": str(LEGACY_SKILL),
-        "scripts": list(resources.scripts),
+        "scripts": list(generated_scripts),
         "skills": list(resources.skills),
         "workflows": list(resources.workflows),
     })
