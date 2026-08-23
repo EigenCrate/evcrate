@@ -86,6 +86,34 @@ Canonical commands are stored in `.evcrate/source/.claude/commands/` and can be 
 
 ---
 
+### `/advise`
+
+**Description**: Conduct an interview-first technical or architectural advice session.
+
+**Usage**:
+```bash
+/advise [prompt-or-url]
+/advise [prompt-or-url] --agent
+```
+
+**What it does**:
+- Runs inline in the main session by default, asking one concise question at a time
+- Confirms a single reframed problem before producing candid advice
+- Writes a sanitized Markdown report to the active plan's `reports/` directory, or `plans/reports/`, and links it
+
+The exact final standalone `--agent` form is a Claude-only relay in the current
+canonical release boundary. Duplicate flags are rejected; quoted, embedded,
+non-final, and differently cased forms remain prompt text. Relay state is
+temporary, owner-only, bounded, and retained only for pause/failure recovery or
+the completion tombstone. Relay failures fail closed and never silently downgrade
+to inline mode. Codex, Pi, Gemini, and Antigravity must reject `--agent` until
+Phase 04 regenerates and tests their projections.
+
+Use `--advice` on implementation commands for separate one-shot checkpoint
+counsel; `@advisor` is ordinary input and does not activate supervision.
+
+---
+
 ### `/bootstrap`
 
 **Description**: Bootstrap a new project from scratch with complete setup.

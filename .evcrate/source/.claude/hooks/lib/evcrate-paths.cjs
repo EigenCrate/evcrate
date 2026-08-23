@@ -33,6 +33,9 @@ const CALIBRATION_PATH = path.join(EVCRATE_TMP_DIR, 'calibration.json');
 // Debug logs directory
 const DEBUG_DIR = path.join(EVCRATE_TMP_DIR, 'debug');
 
+// Invocation-scoped advisory interview state; never use this for ck-session-* state.
+const ADVICE_DIR = path.join(EVCRATE_TMP_DIR, 'advice');
+
 /**
  * Ensure directory exists
  * @param {string} dirPath - Directory path to create
@@ -97,6 +100,7 @@ module.exports = {
   EVCRATE_TMP_DIR,
   MARKERS_DIR,
   DEBUG_DIR,
+  ADVICE_DIR,
 
   // Files
   CALIBRATION_PATH,

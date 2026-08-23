@@ -216,6 +216,15 @@ def main():
         ["Coding Level", "ELI5", "God Mode", "-1"]
     ))
 
+    # ========== Advisory Surfaces ==========
+    print("\n--- Advisory Surfaces ---")
+
+    tests.append(test_case(
+        "advise guide",
+        ["advise"],
+        ["/advise", "--agent", "Claude-only", "--advice", "@advisor", "one question per turn"]
+    ))
+
     # ========== Summary ==========
     print()
     print("=" * 60)

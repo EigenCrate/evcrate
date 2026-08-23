@@ -675,6 +675,25 @@ def show_command(data: dict, command: str, prefix: str) -> None:
             print(f"**Related:** {related_names}")
 
 
+def show_advisory_guide(prefix: str) -> None:
+    """Explain the distinct checkpoint, inline, and Claude relay modes."""
+    emit_output_type("command-details")
+    command = f"/{prefix}advise" if prefix else "/advise"
+    print(f"# `{command}`")
+    print()
+    print("Interview-first technical advice with an optional Claude-only relay.")
+    print()
+    print("**Usage:**")
+    print(f"- `{command} <prompt-or-url>` - inline interview in the main session")
+    print(f"- `{command} <prompt-or-url> --agent` - Claude relay v1")
+    print()
+    print("**Interview contract:** one question per turn, explicit reframe confirmation, eight discovery-question cap, two reframe cycles, and a linked sanitized report.")
+    print()
+    print("**Relay capability:** `--agent` is supported only by Claude in this phase. Codex, Pi, Gemini, and Antigravity must reject it explicitly; they must not silently run inline or create relay state.")
+    print()
+    print("`--advice` is a separate one-shot checkpoint counsel mode for implementation commands. `@advisor` is ordinary input and never activates supervision.")
+
+
 def do_search(data: dict, term: str, prefix: str) -> None:
     """Search commands by keyword."""
     emit_output_type("search-results")
@@ -1085,6 +1104,11 @@ def main():
     # Special case: coding level documentation
     if input_str.lower() in ["coding-level", "codinglevel", "coding level", "level", "eli5", "god mode"]:
         show_coding_level_guide()
+        return
+
+    # Advisory surfaces need capability and migration guidance beyond metadata.
+    if input_str.lower() in ["advise", "/advise", "advice", "/advice"]:
+        show_advisory_guide(prefix)
         return
 
     # Detect intent and route

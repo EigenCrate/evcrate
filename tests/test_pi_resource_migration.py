@@ -60,7 +60,7 @@ class PiResourceMigrationTest(unittest.TestCase):
             agent_root = output / "agent"
             inventory = json.loads((agent_root / "evcrate/inventory.json").read_text())
             self.assertEqual({key: len(inventory[key]) for key in ("commands", "workflows", "agents", "skills")}, {
-                "commands": 72, "workflows": 5, "agents": 18, "skills": 50,
+                "commands": 73, "workflows": 6, "agents": 18, "skills": 50,
             })
             self.assertEqual(inventory["legacySkillExcluded"], "claude-code/skill.md")
             skill_root = agent_root / "skills"
