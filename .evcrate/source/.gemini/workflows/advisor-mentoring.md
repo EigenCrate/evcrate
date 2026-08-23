@@ -80,15 +80,25 @@ advisor-directed remediation, stop and ask the user as above.
 
 Allow at most three terminal reviewer/advisor cycles for one workflow step. A
 command may impose a lower limit. If issues remain after the last allowed cycle,
-stop and ask the user instead of starting another review or advisor call. Reset the
-count only when the review gate passes or the workflow advances.
+stop and ask the user instead of starting another review or advisor call. This is
+a hard cap: there is no fourth reviewer or advisor call. Count a cycle only after
+the reviewer and, in explicit mode, its required advisor have both returned
+terminal results. A fix choice at the cap cannot run another fix/test/reviewer
+sequence, and the cycle counter must never be reset within the same workflow step.
+Reset the count only when the review gate passes or the workflow advances.
 
 ## Cross-Command Handoff
 
 Commands that hand implementation to `/code` must use `WORK_ARGUMENTS` for their
 own discovery and planning. When explicit mode is active, append exactly one
 trailing `@advisor` to the `/code` handoff; otherwise pass no advisor token. Do not
-store mode in global or cross-command session state.
+store mode in global or cross-command session state. The same rule applies to
+fallback handoffs between implementation commands: pass `WORK_ARGUMENTS` and
+preserve explicit mode exactly once, never the raw-input wrapper.
+
+The exact final token `@advisor` is reserved for this mode. Earlier `@advisor`
+text and other `@file`-style mentions remain ordinary work input; a literal final
+`@advisor` location is intentionally interpreted as the mode token.
 
 ## Boundary
 

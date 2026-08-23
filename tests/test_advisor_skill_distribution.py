@@ -1,4 +1,4 @@
-"""Regression coverage for skill-only advisor distribution."""
+"""Regression coverage for advisor command-mode distribution."""
 
 from __future__ import annotations
 
@@ -29,15 +29,29 @@ FORBIDDEN_RUNTIME_MARKERS = (
     "advisor-ledger",
     "runtime-advisor-launcher",
 )
-SCOPED_COMMANDS = (
+CODE_COMMANDS = (
     "code.md",
     "code/auto.md",
     "code/no-test.md",
     "code/parallel.md",
+)
+COOK_COMMANDS = (
     "cook.md",
     "cook/auto.md",
     "cook/auto/fast.md",
     "cook/auto/parallel.md",
+)
+SCOPED_COMMANDS = CODE_COMMANDS + COOK_COMMANDS + (
+    "fix/logs.md",
+    "fix/test.md",
+    "fix/parallel.md",
+    "fix/hard.md",
+    "bootstrap.md",
+    "bootstrap/auto.md",
+    "bootstrap/auto/fast.md",
+    "bootstrap/auto/parallel.md",
+)
+DIRECT_REVIEW_COMMANDS = CODE_COMMANDS + (
     "fix/logs.md",
     "fix/test.md",
     "fix/parallel.md",
@@ -46,9 +60,11 @@ SCOPED_COMMANDS = (
     "bootstrap/auto/fast.md",
     "bootstrap/auto/parallel.md",
 )
-DIRECT_REVIEW_COMMANDS = SCOPED_COMMANDS[:4] + SCOPED_COMMANDS[7:]
-HANDOFF_COMMANDS = SCOPED_COMMANDS[4:7]
+HANDOFF_COMMANDS = COOK_COMMANDS + ("fix/hard.md",)
 REVIEW_LOOP_COMMANDS = (
+    "code.md",
+    "code/auto.md",
+    "code/parallel.md",
     "cook/auto/parallel.md",
     "fix/logs.md",
     "fix/test.md",
@@ -169,7 +185,42 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 content = " ".join(
                     (canonical / "commands" / relative).read_text(encoding="utf-8").split()
                 )
-                self.assertRegex(content, r"(?:review/advisor.{0,24}three|three review/advisor)")
+                self.assertRegex(
+                    content.lower(), r"(?:review/advisor.{0,24}three|three review/advisor)"
+                )
+
+    def test_code_review_cycles_have_a_hard_cap(self) -> None:
+        canonical = REPOSITORY / ".evcrate/source/.claude"
+        for relative in CODE_COMMANDS:
+            with self.subTest(command=relative):
+                content = " ".join(
+                    (canonical / "commands" / relative).read_text(encoding="utf-8").split()
+                )
+                self.assertIn("at most three terminal reviewer/advisor cycles", content)
+                self.assertIn("do not start another review or advisor call", content)
+                self.assertNotIn("restart cycle counter", content)
+
+        auto = (canonical / "commands/code/auto.md").read_text(encoding="utf-8")
+        normalized_auto = " ".join(auto.split()).lower()
+        for marker in (
+            "review_must_fix",
+            "explicit advisor mode sets advisor_must_fix",
+            "default mode does not invent advisor guidance",
+            "apply every advisor must-fix item before approval",
+        ):
+            self.assertIn(marker, normalized_auto)
+
+    def test_cook_fallback_handoffs_preserve_explicit_mode(self) -> None:
+        canonical = REPOSITORY / ".evcrate/source/.claude"
+        for relative in HANDOFF_COMMANDS:
+            with self.subTest(handoff_command=relative):
+                content = " ".join(
+                    (canonical / "commands" / relative).read_text(encoding="utf-8").split()
+                )
+                self.assertIn("fallback handoff", content)
+                self.assertIn("WORK_ARGUMENTS", content)
+                self.assertIn("exactly one trailing `@advisor`", content)
+                self.assertIn("otherwise pass no advisor token", content)
 
     def test_generated_codex_advisor_and_command_mode_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

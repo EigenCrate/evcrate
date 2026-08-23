@@ -92,14 +92,15 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 
 **Advisor Guidance**:
 - `advisor-strategy` is a static, portable skill distributed from `.evcrate/source/.claude/skills` to the managed skill roots.
-- `advisor` is a normal high-tier subagent (`opus` canonically; mapped by each target's existing model policy). It applies the strategy skill to a bounded review/debugging brief and returns non-binding mentorship without editing or approval authority.
-- Implementation commands accept a final standalone `@advisor`. They strip only that token and synchronously call one advisor after every terminal code-review result. Default mode calls once when the same stable blocker occurs twice without progress, then stops for user direction if the advised retry repeats it.
+- `advisor` is a normal high-tier subagent (`opus` canonically; mapped by each target's existing model policy). It applies the strategy skill to a bounded review/debugging brief and returns non-binding mentorship without editing or approval authority. The Codex projection selects `gpt-5.6-sol` with high reasoning; Gemini maps to target-native `pro`; Pi uses semantic `strong`, which resolves to `openai-codex/gpt-5.6-sol` with high reasoning when applicable.
+- `/code`, `/code:auto`, `/code:no-test`, and `/code:parallel` accept only a case-sensitive, whitespace-delimited final standalone `@advisor` (trailing whitespace allowed). They strip only that token and synchronously call one advisor after every successful terminal code-review result. The shared prompt/workflow has an explicit hard cap of at most three terminal reviewer/advisor cycles, while `/code:no-test` intentionally uses a lower one-cycle limit. Default mode calls once when the same stable blocker occurs twice without progress, then stops for user direction if the advised retry repeats it.
+- `/code:auto` applies every explicit advisor must-fix item before approval and does not invent advisor guidance in default mode. Cook variants and `/fix:hard` use `WORK_ARGUMENTS` in fallback handoffs, preserving exactly one trailing `@advisor` in explicit mode and no advisor token otherwise.
+- The accepted compatibility decision keeps exact trailing `@advisor` because the user approved it. That exact final token is reserved for advisor mode; earlier occurrences and other `@file`-style text remain work input. Claude, Gemini, Codex, and Antigravity may use `@` for file or location mentions, so this is a portability risk; host-level escaping is not guaranteed.
 - The skill itself does not start a nested session. The agent uses ordinary host delegation and receives no new tools, provider routing, credentials, quotas, or isolation. Normal host approvals and sandbox policy remain authoritative.
 - Generated `.evcrate/source/.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
-- The intended review contract allows at most three terminal reviewer/advisor
-  cycles and still requires explicit user approval before finalization. Known
-  implementation gaps remain in `/code*` cap enforcement, `/code:auto` advisor
-  must-fix/default handling, and `/cook` fallback preservation of `@advisor`.
+- The completed review contract has an explicit hard cap and still requires explicit user approval before
+  finalization. All scoped command variants and generated target projections now
+  preserve the hard cap, advisor must-fix handling, and fallback token contract.
 
 ### 2. Agent Layer
 
@@ -939,8 +940,9 @@ User Project
 - Shared JSON files use entry-level ownership. The Pi publisher may upsert pinned EVCrate package identities in `HOME/.pi/agent/settings.json`, but it must preserve unknown keys/entries, user hooks, and user model routes; reject malformed or symlinked settings; and remove only known EVCrate package identities.
 - Native Pi commands are registered recursively from the managed local extension using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. A bounded `evcrate_command` tool dispatches model-initiated nested commands with cycle/depth controls. An authoritative operation-policy `tool_call` gate enforces temporary tool restrictions even if later extensions alter active tools; dispatcher calls mixed with parallel siblings are rejected and retried alone. Static workflow Markdown remains referenced data; it is not silently converted into dynamic executable orchestration.
 - Native Pi agents run through the structured `pi-subagents` delegation API exposed by an EVCrate-owned tool; the package's public `workflowScript` tool is not parsed or rewritten. Semantic model roles are resolved against the active provider immediately before delegation; concrete models are never baked into command, workflow, or agent prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
-- The Codex and Pi outputs include the portable `advisor-strategy` skill, its brief contract, and a normal generated `advisor` subagent using the target high-tier/strong role.
-- Scoped migrated command guides preserve the explicit trailing `@advisor` mode and default stuck escalation. The skill remains static; only ordinary host subagent delegation invokes the advisor agent.
+- The Codex, Gemini, Antigravity, and Pi outputs include the portable `advisor-strategy` skill and mentoring contract; target projections retain their existing advisor mapping, including Codex `gpt-5.6-sol` with high reasoning and Pi semantic `strong` resolution where applicable.
+- Scoped migrated command guides preserve the explicit trailing `@advisor` mode, hard review-cycle cap, default stuck escalation, and cook/`/fix:hard` fallback handoffs. The skill remains static; only ordinary host subagent delegation invokes the advisor agent.
+- The exact final `@advisor` token remains reserved for compatibility. Because Claude, Gemini, Codex, and Antigravity may use `@` in file/location mentions, the syntax has a documented portability risk; host-level escaping is not guaranteed.
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
 
 Gemini migration rewrites authored advisor workflow references to the generated

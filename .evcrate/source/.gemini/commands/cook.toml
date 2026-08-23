@@ -10,6 +10,9 @@ derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS`
 as the tasks input. If explicit mode is active, append exactly one trailing
 `@advisor` to the eventual `/code` handoff; otherwise append none. Apply the
 shared default stuck-escalation contract during `/cook` discovery and planning.
+Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
+appends exactly one trailing `@advisor` when explicit mode is active, and
+otherwise pass no advisor token.
 
 ---
 

@@ -1,10 +1,17 @@
 ---
 description: ⚡⚡⚡ Use subagents to plan and fix hard issues
-argument-hint: [issues]
+argument-hint: [issues] [@advisor]
 ---
 
 **Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
-<issues>$ARGUMENTS</issues>
+<raw-issues>$ARGUMENTS</raw-issues>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring in `/code`.
+Before analysis, read `{{evcrate:workflows/advisor-mentoring.md}}` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+issue input and apply the shared default stuck-escalation contract.
 
 ## Workflow:
 
@@ -26,7 +33,9 @@ Analyze the skills catalog and activate other skills that are needed for the tas
 1. Use `debugger` subagent to find the root cause of the issues and report back to main agent.
 2. Use `researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
 3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
-4. Then use {{evcrate:commands/code}} SlashCommand to implement the plan step by step.
+4. Then use {{evcrate:commands/code}} SlashCommand to implement the plan step by step. This fallback
+   handoff uses `WORK_ARGUMENTS`; append exactly one trailing `@advisor` in explicit
+   mode and otherwise pass no advisor token.
 5. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
   * Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.

@@ -76,14 +76,21 @@ advisor failure fails this gate.
 
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
+**Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.**
+
 ```
-cycle = 0
+review_cycles = 0
 LOOP:
-  1. Run code-reviewer → get score, critical_count, warnings, suggestions
+  1. IF review_cycles >= 3:
+     → Output: "⚠ 3 review cycles completed. Final decision required."
+     → request_user_input: "Approve with noted issues" / "Abort workflow"
+     → STOP; do not start another review or advisor call
+  2. review_cycles++
+  3. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-  2. IF explicit advisor mode: run advisor → get terminal mentorship report
+  4. IF explicit advisor mode: run advisor → get terminal mentorship report
 
-  3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS TO USER:
+  5. DISPLAY FULL REVIEWER + ADVISOR FINDINGS TO USER:
      ┌─────────────────────────────────────────┐
      │ Code Review Results: [score]/10         │
      ├─────────────────────────────────────────┤
@@ -95,8 +102,8 @@ LOOP:
      │  - [suggestion]                         │
      └─────────────────────────────────────────┘
 
-  4. Use request_user_input (header: "Review"):
-     IF critical_count > 0:
+  6. Use request_user_input (header: "Review"):
+     IF critical_count > 0 OR advisor has must-fix items:
        - "Fix critical issues" → implement critical fixes, re-run tester
        - "Fix all issues" → implement all fixes, re-run tester
        - "Approve anyway" → proceed with noted issues
@@ -106,19 +113,17 @@ LOOP:
        - "Approve" → proceed
        - "Abort" → stop workflow
 
-  5. IF user selects fix option AND cycle < 3:
+  7. IF user selects fix option:
+     IF review_cycles >= 3:
+       → Output: "⚠ 3 review cycles completed. Final decision required."
+       → request_user_input: "Approve with noted issues" / "Abort workflow"
+       → STOP; do not run another fix/test/reviewer/advisor sequence
+     ELSE:
      → Implement requested fixes
      → Re-run tester to verify no regressions
-     → cycle++
      → GOTO LOOP (re-run code-reviewer)
 
-  6. IF cycle >= 3 AND still has issues:
-     → Output: "⚠ 3 review cycles completed. Final decision required."
-     → Use request_user_input:
-       - "Approve with noted issues"
-       - "Abort workflow"
-
-  7. ON APPROVE: PROCEED to Step 5
+  8. ON APPROVE: PROCEED to Step 5
 ```
 
 ### 5. Project Management & Docs

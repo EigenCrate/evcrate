@@ -34,12 +34,14 @@ A final standalone `@advisor` activates explicit review mentoring.
 Before planning, read `.codex/workflows/advisor-mentoring.md` and derive
 `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
 tasks input and apply the shared default stuck-escalation contract.
+For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
+`@advisor` in explicit mode and otherwise pass no advisor token.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
 ## Positioning
 
-Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/cook` first.
+Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/cook` first with `WORK_ARGUMENTS` and preserve the same explicit mode exactly once.
 
 ## Workflow
 

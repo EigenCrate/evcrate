@@ -114,14 +114,21 @@ its must-fix guidance in the findings. Failure of this call fails Step 4.
 
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
+**Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.**
+
 ```
-cycle = 0
+review_cycles = 0
 LOOP:
-  1. Run code-reviewer → get score, critical_count, warnings, suggestions
+  1. IF review_cycles >= 3:
+     → Output: "⚠ 3 review cycles completed. Final decision required."
+     → AskUserQuestion: "Approve with noted issues" / "Abort workflow"
+     → STOP; do not start another review or advisor call
+  2. review_cycles++
+  3. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-  2. IF explicit advisor mode: run advisor → get terminal mentorship report
+  4. IF explicit advisor mode: run advisor → get terminal mentorship report
 
-  3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
+  5. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
      ┌─────────────────────────────────────────┐
      │ Code Review Results: [score]/10         │
      ├─────────────────────────────────────────┤
@@ -136,20 +143,24 @@ LOOP:
      │  - [suggestion]                         │
      └─────────────────────────────────────────┘
 
-  4. Use AskUserQuestion (header: "Review & Approve"):
-     IF critical_count > 0:
-       - "Fix critical issues" → implement fixes, re-run tester, cycle++, GOTO LOOP
-       - "Fix all issues" → implement all fixes, re-run tester, cycle++, GOTO LOOP
+  6. Use AskUserQuestion (header: "Review & Approve"):
+     IF critical_count > 0 OR advisor has must-fix items:
+       - "Fix critical issues" → implement fixes, re-run tester, GOTO LOOP
+       - "Fix all issues" → implement all fixes, re-run tester, GOTO LOOP
        - "Approve anyway" → PROCEED to Step 5
        - "Abort" → stop workflow
      ELSE:
        - "Approve" → PROCEED to Step 5
-       - "Fix warnings/suggestions" → implement fixes, cycle++, GOTO LOOP
+       - "Fix warnings/suggestions" → implement fixes, re-run tester, GOTO LOOP
        - "Abort" → stop workflow
 
-  5. IF cycle >= 3 AND user selects fix:
-     → Output: "⚠ 3 review cycles completed. Final decision required."
-     → Use AskUserQuestion: "Approve with noted issues" / "Abort workflow"
+  7. IF user selects any fix option:
+     IF review_cycles >= 3:
+       → Output: "⚠ 3 review cycles completed. Final decision required."
+       → AskUserQuestion: "Approve with noted issues" / "Abort workflow"
+       → STOP; do not run another fix/test/reviewer/advisor sequence
+     ELSE:
+       → implement fixes, re-run tester, GOTO LOOP
 ```
 
 **Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.

@@ -88,6 +88,10 @@ In explicit advisor mode, follow every terminal reviewer result with exactly one
 blocking `advisor` call before displaying findings or asking for approval. Use the
 bounded evidence from the shared mentoring contract; advisor failure fails Step 3.
 
+This no-test variant imposes a lower one-cycle limit. The shared cap allows at
+most three terminal reviewer/advisor cycles; if this gate is not approved, stop
+and do not start another review or advisor call.
+
 **Display + Approve Flow (optimized for speed):**
 
 ```
@@ -111,8 +115,8 @@ bounded evidence from the shared mentoring contract; advisor failure fails Step 
    └─────────────────────────────────────────┘
 
 4. Use AskUserQuestion (header: "Review & Approve"):
-   IF critical_count > 0:
-     - "Fix critical + approve" → implement critical fixes, PROCEED to Step 4
+   IF critical_count > 0 OR advisor has must-fix items:
+     - "Fix critical and advisor must-fix items + approve" → implement required fixes, PROCEED to Step 4
      - "Approve anyway" → PROCEED to Step 4
      - "Abort" → stop workflow
    ELSE:
