@@ -209,15 +209,31 @@ projections are intentionally deferred to Phase 04:
   MCP server, app, or model call; this is test isolation, not an unresolved
   canonical advisor defect.
 
-## Subsequent Advisory Phases
+## Phase 03 Canonical Claude Capability
 
-The following work is outside Phase 02 and remains planned:
+Phase 03 is implemented in `.evcrate/source/.claude` as a canonical-Claude
+capability. It does not mark the plan complete or release the feature to
+generated targets; Phase 04 still owns target regeneration, capability smoke
+tests, and parity validation.
 
-- Phase 03 adds `/advise` as a separate inline-first interview workflow and,
-  where supported, a tested Claude `--agent` relay with resumable state.
-- Phase 04 projects the Phase 02 checkpoint contract and Phase 03 capability
-  boundaries to generated targets. Unsupported target relays must be rejected
-  explicitly rather than inferred from projected files.
+- `/advise [prompt-or-url]` runs an inline-first interview in the main session.
+  It asks one concise question at a time (at most eight discovery questions),
+  requires explicit `confirm` or `correct` for one reframed problem (at most
+  two confirmation/correction cycles), then writes a sanitized report to the
+  active `<plan>/reports` directory or `plans/reports` and links it.
+- `/advise [prompt-or-url] --agent` enables the Claude `interview-relay/v1`
+  only when `--agent` is one exact final standalone token. Duplicate flags
+  reject; quoted, embedded, non-final, or differently cased forms remain
+  ordinary prompt input. The main session remains the sole user interlocutor
+  and report writer.
+- Relay state is invocation-scoped, temporary, owner-only, bounded, sanitized,
+  and untracked. Paused/failed state is retained for seven days and a completed
+  invocation leaves a 24-hour tombstone. Cancellation, interruption,
+  unavailable-model, malformed-envelope, state, or report failures fail closed;
+  relay never silently falls back to inline mode.
+- Codex, Pi, Gemini, and Antigravity must reject `--agent` explicitly until
+  Phase 04 supplies tested projections. Generated-file presence is not support
+  evidence, and generated targets must not be hand-edited.
 - The canonical-source/build/check ownership model and the forbidden broker,
   MCP, launcher, provider-selector, quota, ledger, audit, and approval-bypass
   boundary remain in force.
@@ -225,5 +241,7 @@ The following work is outside Phase 02 and remains planned:
 ## References
 
 - [Canonical advisor workflow](../.evcrate/source/.claude/workflows/advisor-mentoring.md)
+- [Canonical `/advise` command](../.evcrate/source/.claude/commands/advise.md)
+- [Canonical advisory interview workflow](../.evcrate/source/.claude/workflows/advisory-interview.md)
 - [System architecture](./system-architecture.md)
 - [Native Pi Phase 01](./pi-native-migration-phase-01.md)

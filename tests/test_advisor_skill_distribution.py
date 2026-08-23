@@ -237,6 +237,94 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 advisor_position = normalized_content.lower().find("explicit advice mode", reviewer_position)
                 self.assertGreater(advisor_position, reviewer_position)
 
+    def test_canonical_advisory_interview_and_claude_relay_contract(self) -> None:
+        canonical = REPOSITORY / ".evcrate/source/.claude"
+        workflow = (canonical / "workflows/advisory-interview.md").read_text(encoding="utf-8")
+        normalized_workflow = " ".join(workflow.split()).lower()
+        for marker in (
+            "exact, case-sensitive, whitespace-delimited `--agent` tokens",
+            "more than one is a deterministic input error",
+            "quoted, embedded, suffixed, non-final",
+            "one question per turn",
+            "eight substantive `discovery` questions",
+            "at most two `confirm_reframe` cycles",
+            "interview_not_converged",
+            '"protocol": "evcrate-advise-relay"',
+            '"status": "needs_user_input"',
+            '"status": "advice_ready"',
+            "no pending question may coexist",
+            "seven days",
+            "24 hours",
+            "64 kib",
+            "0700",
+            "0600",
+            "no cleanup daemon",
+            "executable `parse`, `validate-envelope`, `write-report`,",
+            "atomic tombstone transition",
+        ):
+            self.assertIn(marker, normalized_workflow)
+        self.assertEqual(workflow.count("EVCRATE_CAPABILITY=advise-inline/v1"), 1)
+        self.assertEqual(workflow.count("EVCRATE_CAPABILITY=advise-agent-relay/claude/v1"), 1)
+        for row in (
+            "| `design a cache --agent` | Claude relay | `design a cache` |",
+            "| `a --agent --agent` | reject | not evaluated |",
+            "| `a --agent later` | inline | unchanged |",
+            '| `"--agent"` | inline | unchanged |',
+            "| `path--agent` | inline | unchanged |",
+            "| `--Agent` | inline | unchanged |",
+        ):
+            self.assertIn(row, workflow)
+
+        command = (canonical / "commands/advise.md").read_text(encoding="utf-8")
+        frontmatter, body = parse_markdown_with_frontmatter(canonical / "commands/advise.md")
+        self.assertIn("--agent", str(frontmatter["argument-hint"]))
+        self.assertEqual(command.count("EVCRATE_CAPABILITY: advise-inline/v1"), 1)
+        self.assertEqual(command.count("EVCRATE_CAPABILITY: advise-agent-relay/claude/v1"), 1)
+        normalized_body = " ".join(body.split())
+        for marker in (
+            "Count exact, case-sensitive, whitespace-delimited standalone `--agent`",
+            "Ask exactly one concise substantive question per turn",
+            "Do not invoke a subagent",
+            "state helper before any analysis",
+            "validate-envelope",
+            "validate-report",
+            "write-report",
+            "interview-relay/v1",
+            "exactly one terminal JSON envelope",
+            "Never silently downgrade to inline mode",
+            "advise-state.cjs",
+            "Reframed problem",
+            "Unresolved questions",
+        ):
+            self.assertIn(marker, normalized_body)
+        self.assertNotIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CLAUDE", command)
+        helper = (canonical / "scripts/advise-state.cjs").read_text(encoding="utf-8")
+        for marker in ("parseArguments", "validateEnvelope", "validateReport", "writeReport", "STATE_BUSY", "recoverCompletion"):
+            self.assertIn(marker, helper)
+
+        agent_frontmatter, agent_body = parse_markdown_with_frontmatter(canonical / "agents/advisor.md")
+        self.assertEqual(agent_frontmatter["model"], "opus")
+        normalized_agent = " ".join(agent_body.split())
+        self.assertIn("interview-relay/v1", normalized_agent)
+        self.assertIn("exactly one JSON envelope", normalized_agent)
+        self.assertIn("Do not activate checkpoint mode implicitly", normalized_agent)
+        self.assertIn("do not ask the user directly", normalized_agent.lower())
+
+        paths = (canonical / "hooks/lib/evcrate-paths.cjs").read_text(encoding="utf-8")
+        self.assertIn("ADVICE_DIR", paths)
+        self.assertIn("path.join(EVCRATE_TMP_DIR, 'advice')", paths)
+
+        help_script = canonical / "scripts/ev-help.py"
+        result = subprocess.run(
+            [sys.executable, str(help_script), "advise"],
+            cwd=REPOSITORY,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for marker in ("/advise", "--agent", "Claude-only", "--advice", "@advisor"):
+            self.assertIn(marker, result.stdout)
+
     def test_decision_checkpoint_has_explicit_bootstrap_placement(self) -> None:
         canonical = REPOSITORY / ".evcrate/source/.claude"
         decision_commands = (
