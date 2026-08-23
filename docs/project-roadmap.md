@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-23 22:27:03 +0700
+**Last Updated:** 2026-08-23 23:00:08 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -172,9 +172,8 @@ See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented 
 ## Current Development Focus
 
 ### Advisor Supervision and Interview Workflows
-- ✅ Phase 02 canonical one-shot `--advice` supervision implementation and review complete (2026-08-23 22:27:03 +0700); user approved. Reviewer-reported validation: focused 50/50; `npm test`: 146 Python + 46 Node.
-- ⚠️ Approved non-blocking review notes: fix/test numbering and stale-artifact assertion. Both remain tracked follow-ups; no implementation files changed during this status update.
-- 📋 Remaining plan work: Phase 03 `/advise` interview and Claude relay; Phase 04 generated-target rollout; Phase 05 migration docs and release gates.
+- ✅ Phase 02 canonical one-shot `--advice` supervision implementation and review complete (2026-08-23 22:27:03 +0700); user approved. Its two approved non-blocking follow-ups closed (2026-08-23 23:00:08 +0700): duplicate `fix/test.md` step numbering corrected, and the Codex distribution assertion now generates Gemini output in a fresh temporary root before checking generated commands. Reviewer-reported validation: focused 50/50; `npm test`: 146 Python + 46 Node.
+- 📋 Remaining plan work: Phase 03 `/advise` interview and Claude relay; Phase 04 generated-target rollout; Phase 05 migration docs and release gates. All three remain pending.
 
 ### 1. Windows Ecosystem Support
 - ✅ Statusline cross-platform support

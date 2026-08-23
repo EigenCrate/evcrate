@@ -122,6 +122,28 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             text=True,
         )
 
+    def run_gemini_migrator(self, root: Path) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        for credential in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+            env.pop(credential, None)
+        source_root = REPOSITORY / ".evcrate/source"
+        env.update(
+            {
+                "EVCRATE_SOURCE_DIR": str(source_root),
+                "CLAUDE_SOURCE_DIR": str(source_root / ".claude"),
+                "GEMINI_OUTPUT_DIR": str(root / ".gemini"),
+                "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(root),
+            }
+        )
+        return subprocess.run(
+            [sys.executable, "migrate_claude_to_gemini.py"],
+            cwd=REPOSITORY,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
     def test_migrator_packages_static_skill_and_reference(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -304,6 +326,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.run_migrator(root)
+            self.run_gemini_migrator(root)
             advisor = tomllib.loads((root / ".codex/agents/advisor.toml").read_text(encoding="utf-8"))
             self.assertEqual(advisor["model"], "gpt-5.6-sol")
             self.assertEqual(advisor["model_reasoning_effort"], "high")
@@ -318,7 +341,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertIn("WORK_ARGUMENTS", content)
                 self.assertIn(".codex/workflows/advisor-mentoring.md", content)
 
-            gemini_commands = REPOSITORY / ".evcrate/source/.gemini/commands"
+            gemini_commands = root / ".gemini/commands"
             for relative in SCOPED_COMMANDS:
                 generated = gemini_commands / relative.replace(".md", ".toml")
                 content = generated.read_text(encoding="utf-8")

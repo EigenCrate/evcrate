@@ -23,5 +23,5 @@ issues input and apply the shared default stuck-escalation contract.
 5. Use main agent to implement the plan step by step.
 6. Use `tester` agent to test the fix and make sure it works, then report back to main agent.
 7. Use `code-reviewer` subagent to review the code changes and wait for its terminal report. In explicit advice mode, immediately follow it with exactly one blocking `advisor` call at `review:<workflow-step>` using the bounded evidence, prior counsel, and owner disposition from the shared mentoring contract; do not fix, approve, or report findings before the advisor terminal result. Review/advisor cycle cap: at most three terminal reviewer/advisor cycles; at the cap, stop without another review/advisor call or cycle reset, then ask the user if issues remain.
-7. If there are issues or failed tests, repeat from step 2.
-8. After finishing, respond back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
+8. If there are issues or failed tests, repeat from step 2.
+9. After finishing, respond back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
