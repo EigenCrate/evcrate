@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import subprocess
 import sys
 import unittest
@@ -12,6 +13,7 @@ from migrate_claude_to_gemini import (
     EXTERNAL_SCOUT_STRATEGY_END,
     EXTERNAL_SCOUT_STRATEGY_START,
 )
+from tests.test_advisor_skill_distribution import FORBIDDEN_RUNTIME_MARKERS, SCOPED_COMMANDS
 
 
 class ApplyReplacementsTest(unittest.TestCase):
@@ -125,29 +127,69 @@ class AdvisorGeminiGenerationTest(unittest.TestCase):
             self.assertEqual(frontmatter["name"], "advisor")
             self.assertEqual(frontmatter["model"], "pro")
             self.assertIn("advisor-strategy", body)
+            self.assertIn("--advice", body)
+            self.assertNotIn("@advisor", body)
 
     def test_scoped_command_reads_generated_gemini_workflow(self) -> None:
         repository = Path(__file__).resolve().parents[1]
-        canonical = repository / ".evcrate/source/.claude/commands/code.md"
+        canonical_root = repository / ".evcrate/source/.claude"
         with TemporaryDirectory() as temp:
             root = Path(temp)
-            source_dir = root / ".claude/commands"
+            source_dir = root / ".claude"
             output_dir = root / ".gemini"
-            source_dir.mkdir(parents=True)
-            (source_dir / "code.md").write_bytes(canonical.read_bytes())
+            (source_dir / "commands").mkdir(parents=True)
+            (source_dir / "workflows").mkdir()
+            shutil.copyfile(
+                canonical_root / "workflows/advisor-mentoring.md",
+                source_dir / "workflows/advisor-mentoring.md",
+            )
+            shutil.copytree(
+                canonical_root / "skills/advisor-strategy",
+                source_dir / "skills/advisor-strategy",
+            )
+            for relative in SCOPED_COMMANDS:
+                target = source_dir / "commands" / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(canonical_root / "commands" / relative, target)
             with patch.object(migrator, "CLAUDE_DIR", root / ".claude"), patch.object(
                 migrator, "GEMINI_DIR", output_dir
             ):
                 migrator.migrate_commands()
                 migrator.migrate_commands_as_native_skills()
+                migrator.migrate_workflows()
+                migrator.migrate_skills()
 
-            for generated in (
-                output_dir / "commands/code.toml",
-                output_dir / "skills/cmd_code/SKILL.md",
-            ):
-                content = generated.read_text(encoding="utf-8")
-                self.assertIn(".gemini/workflows/advisor-mentoring.md", content)
-                self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
+            for relative in SCOPED_COMMANDS:
+                with self.subTest(command=relative):
+                    generated = output_dir / "commands" / relative.replace(".md", ".toml")
+                    content = generated.read_text(encoding="utf-8")
+                    self.assertIn(".gemini/workflows/advisor-mentoring.md", content)
+                    self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
+                    self.assertIn("--advice", content)
+                    self.assertNotIn("@advisor", content)
+                    native_name = "cmd_" + relative.removesuffix(".md").replace("/", "_")
+                    native = output_dir / "skills" / native_name / "SKILL.md"
+                    native_content = native.read_text(encoding="utf-8")
+                    self.assertIn(".gemini/workflows/advisor-mentoring.md", native_content)
+                    self.assertIn("--advice", native_content)
+                    self.assertNotIn("@advisor", native_content)
+
+            workflow = output_dir / "workflows/advisor-mentoring.md"
+            self.assertIn("decision:<workflow-step>", workflow.read_text(encoding="utf-8"))
+            strategy = output_dir / "skills/advisor-strategy/SKILL.md"
+            self.assertIn("fresh", strategy.read_text(encoding="utf-8").lower())
+            brief = output_dir / "skills/advisor-strategy/references/brief-contract.md"
+            self.assertIn("prior_counsel", brief.read_text(encoding="utf-8"))
+
+            for generated in output_dir.rglob("*"):
+                if not generated.is_file():
+                    continue
+                try:
+                    content = generated.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    continue
+                for marker in FORBIDDEN_RUNTIME_MARKERS:
+                    self.assertNotIn(marker, content, generated.as_posix())
 
 
 class ExternalScoutGeminiGenerationTest(unittest.TestCase):

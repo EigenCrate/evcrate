@@ -26,11 +26,15 @@
 - **IMPORTANT:** Always fix failing tests following the recommendations, wait for the fix, then delegate to `tester` again and wait for a fresh result; only finish when all tests pass.
 
 #### 3. Code Quality
-- After finishing implementation, delegate to `code-reviewer` agent and wait for its complete review before deciding whether work is acceptable.
-- Follow `advisor-mentoring.md`. When explicit advisor mode is active, delegate
+- After finishing implementation, delegate to `code-reviewer` agent and wait for its complete review before deciding whether work is acceptable. Scoped commands then use the named `review:<workflow-step>` checkpoint from `advisor-mentoring.md` when explicit `--advice` is active.
+- Follow `advisor-mentoring.md`. When explicit advice mode is active, delegate
   to `advisor` exactly once after every terminal reviewer report and before any
   fix or approval decision. Without explicit mode, use its two-occurrence stuck
-  threshold and once-per-episode escalation.
+  threshold and once-per-episode escalation. Each later consultation forwards
+  relevant prior counsel and owner disposition explicitly.
+- Before an existing irreversible, security-sensitive, or go/no-go decision that
+  has no review coverage, use exactly one `decision:<workflow-step>` checkpoint;
+  routine user preferences are not new checkpoints.
 - Follow coding standards and conventions
 - Write self-documenting code
 - Add meaningful comments for complex logic

@@ -1,6 +1,6 @@
 ---
 description: Quickly bootstrap a new project automatically
-argument-hint: [user-requirements] [@advisor]
+argument-hint: [user-requirements] [--advice]
 ---
 
 **Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
@@ -11,11 +11,11 @@ argument-hint: [user-requirements] [@advisor]
 
 <raw-user-requirements>$ARGUMENTS</raw-user-requirements>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before research, read `.claude/workflows/advisor-mentoring.md` and derive
-`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 user requirements and apply the shared default stuck-escalation contract.
 
 ---
@@ -68,6 +68,17 @@ Follow strictly these following steps:
 * Use `planner` subagent to analyze all reports and create the detailed step by step implementation plan at `./plans` directory following the progressive disclosure structure above.
 * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
 
+### Decision Checkpoints
+
+At each existing bootstrap approval/action site, branch explicitly: if the
+decision is irreversible, security-sensitive, or go/no-go and is not covered by
+terminal review, call exactly one `advisor` at `decision:<workflow-step>` with
+bounded evidence from `advisor-mentoring.md`, forward prior counsel and owner
+disposition, and wait for its terminal report before approval or action;
+otherwise continue the existing approval/action without an advisor checkpoint.
+Routine stack, plan, and design preferences are excluded unless explicitly
+classified as such.
+
 ### Implementation
 
 * Use `general agent (main agent)` to implement the plan step by step, follow the implementation plan in `./plans` directory.
@@ -89,7 +100,7 @@ Follow strictly these following steps:
 
 ### Code Review
 
-* After finishing, delegate to `code-reviewer` and wait for its terminal report. In explicit advisor mode, immediately follow every terminal review with exactly one blocking `advisor` call using the shared bounded evidence; only then fix, auto-approve, or report findings. If there are critical or advisor must-fix issues, improve the code and rerun tests and review, for at most three review/advisor cycles before stopping for user direction.
+* After finishing, delegate to `code-reviewer` and wait for its terminal report. In explicit advice mode, immediately follow every terminal review with exactly one blocking `advisor` call at `review:<workflow-step>` using the shared bounded evidence, prior counsel, and owner disposition; only then fix, auto-approve, or report findings. Review/advisor cycle cap: at most three terminal reviewer/advisor cycles; at the cap, stop without another reviewer/advisor call or cycle reset before asking the user for direction.
 * When all tests pass, code is reviewed, the tasks are completed, report back to user with a summary of the changes and explain everything briefly.
 * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
 

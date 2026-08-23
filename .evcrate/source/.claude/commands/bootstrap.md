@@ -1,6 +1,6 @@
 ---
 description: Bootstrap a new project step by step
-argument-hint: [user-requirements] [@advisor]
+argument-hint: [user-requirements] [--advice]
 ---
 
 **Ultrathink** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
@@ -11,11 +11,11 @@ argument-hint: [user-requirements] [@advisor]
 
 <raw-user-requirements>$ARGUMENTS</raw-user-requirements>
 
-## Advisor Mode
+## Advice Mode
 
-A final standalone `@advisor` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring.
 Before research or planning, read `.claude/workflows/advisor-mentoring.md` and
-derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS`
+derive `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS`
 as the user requirements and apply the shared default stuck-escalation contract.
 
 ---
@@ -91,6 +91,17 @@ Follow strictly these following steps:
 * Use `chrome-devtools` skill to take a screenshot of the wireframes and save it at `./docs/wireframes/` directory.
 * Ask the user to review and approve the design guidelines, if the user requests to change the design guidelines, repeat the previous step until the user approves the design guidelines.
 
+### Decision Checkpoints
+
+At each existing bootstrap approval/action site, branch explicitly: if the
+decision is irreversible, security-sensitive, or go/no-go and is not covered by
+terminal review, call exactly one `advisor` at `decision:<workflow-step>` with
+bounded evidence from `advisor-mentoring.md`, forward prior counsel and owner
+disposition, and wait for its terminal report before asking for approval or
+acting; otherwise continue the existing approval/action without an advisor
+checkpoint. Routine tech-stack, plan, and design approvals are not decision
+checkpoints unless explicitly classified that way.
+
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skill to verify they meet requirements.
@@ -116,7 +127,7 @@ Follow strictly these following steps:
 
 ### Code Review
 
-* After finishing, delegate to `code-reviewer` and wait for its terminal report. In explicit advisor mode, immediately follow every terminal review with exactly one blocking `advisor` call using the shared bounded evidence; only then fix, approve, or display findings. If there are critical or advisor must-fix issues, improve the code and rerun tests and review, for at most three review/advisor cycles before stopping for user direction.
+* After finishing, delegate to `code-reviewer` and wait for its terminal report. In explicit advice mode, immediately follow every terminal review with exactly one blocking `advisor` call at `review:<workflow-step>` using the shared bounded evidence, prior counsel, and owner disposition; only then fix, approve, or display findings. Review/advisor cycle cap: at most three terminal reviewer/advisor cycles; at the cap, stop without another reviewer/advisor call or cycle reset before asking the user for direction.
 * When all tests pass, code is reviewed, the tasks are completed, report back to user with a summary of the changes and explain everything briefly, ask user to review the changes and approve them.
 * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
 

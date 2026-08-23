@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import migrate_claude_to_pi
+from tests.test_advisor_skill_distribution import FORBIDDEN_RUNTIME_MARKERS, SCOPED_COMMANDS
 
 
 class PiAdapterTest(unittest.TestCase):
@@ -38,10 +40,27 @@ class PiAdapterTest(unittest.TestCase):
     def test_emits_only_contained_deterministic_skeleton(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             source, stage, output = self._environment(Path(temp))
-            (source / "agents/advisor.md").write_text(
-                "---\nname: advisor\ndescription: High-tier mentor\nmodel: opus\n---\nUse advisor-strategy.\n",
-                encoding="utf-8",
+            repository = Path(__file__).resolve().parents[1]
+            (source / "agents/advisor.md").write_bytes(
+                (repository / ".evcrate/source/.claude/agents/advisor.md").read_bytes()
             )
+            (source / "commands/code.md").write_bytes(
+                (repository / ".evcrate/source/.claude/commands/code.md").read_bytes()
+            )
+            canonical_commands = repository / ".evcrate/source/.claude/commands"
+            canonical_root = repository / ".evcrate/source/.claude"
+            shutil.copyfile(
+                canonical_root / "workflows/advisor-mentoring.md",
+                source / "workflows/advisor-mentoring.md",
+            )
+            shutil.copytree(
+                canonical_root / "skills/advisor-strategy",
+                source / "skills/advisor-strategy",
+            )
+            for relative in SCOPED_COMMANDS:
+                target = source / "commands" / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((canonical_commands / relative).read_bytes())
             with patch.dict(os.environ, {
                 "EVCRATE_REPOSITORY": str(source.parents[2]),
                 "EVCRATE_SOURCE_DIR": str(source.parent),
@@ -56,7 +75,33 @@ class PiAdapterTest(unittest.TestCase):
             roles = json.loads((output / "agent/evcrate/model-roles.json").read_text(encoding="utf-8"))["agents"]
             self.assertEqual(roles["planner"]["role"], "standard")
             self.assertEqual(roles["advisor"]["role"], "strong")
-            self.assertNotRegex((output / "agent/agents/advisor.md").read_text(encoding="utf-8"), r"\bopus\b")
+            advisor = (output / "agent/agents/advisor.md").read_text(encoding="utf-8")
+            self.assertNotRegex(advisor, r"\bopus\b")
+            self.assertIn("--advice", advisor)
+            self.assertNotIn("@advisor", advisor)
+            for relative in SCOPED_COMMANDS:
+                with self.subTest(command=relative):
+                    command = (output / "agent/evcrate/commands" / relative).read_text(encoding="utf-8")
+                    self.assertIn("--advice", command)
+                    self.assertNotIn("@advisor", command)
+                    self.assertIn("{{evcrate:workflows/advisor-mentoring.md}}", command)
+
+            workflow = output / "agent/evcrate/workflows/advisor-mentoring.md"
+            self.assertIn("decision:<workflow-step>", workflow.read_text(encoding="utf-8"))
+            strategy = output / "agent/skills/advisor-strategy/SKILL.md"
+            self.assertIn("fresh", strategy.read_text(encoding="utf-8").lower())
+            brief = output / "agent/skills/advisor-strategy/references/brief-contract.md"
+            self.assertIn("prior_counsel", brief.read_text(encoding="utf-8"))
+
+            for generated in output.rglob("*"):
+                if not generated.is_file():
+                    continue
+                try:
+                    content = generated.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    continue
+                for marker in FORBIDDEN_RUNTIME_MARKERS:
+                    self.assertNotIn(marker, content, generated.as_posix())
             self.assertFalse((stage / "escaped").exists())
 
     def test_rejects_missing_or_escaped_output_and_direct_arguments(self) -> None:

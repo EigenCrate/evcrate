@@ -1,13 +1,27 @@
 # Advisor brief contract
 
-Prepare a concise, decision-oriented brief for current-session reasoning.
+Prepare one concise, decision-oriented brief for one fresh consultation.
 
-- `question`: one answerable decision question, including relevant constraints.
+## Input
+
+- `checkpoint`: exactly one `review:<workflow-step>`,
+  `stuck:<blocker-signature>`, or `decision:<workflow-step>`.
+- `question`: one answerable decision question with relevant constraints.
 - `kind`: one of `architecture`, `debugging`, `security`, or `review`.
-- `evidence`: at most four repository-relative text files that directly support the decision; read them only through the host's normal capabilities and permissions.
+- `task_or_phase`: the current work context.
+- `evidence`: terminal reviewer/test evidence and at most four repository-relative
+  text files; exclude secrets, credentials, broad dumps, and unrelated logs.
+- `changed_paths`: files changed by the current workflow step.
+- `prior_counsel`: relevant earlier advice and the owner's acceptance/rejection,
+  copied explicitly; use `none` when there is none.
 
-Good: “Should the release marker be updated before or after each root promotion, given rollback requirements?” with the publisher and recovery modules.
+## Output
 
-Not suitable: “Implement the feature for me”, “Review the whole repository”, a request containing credentials, or a request intended to select a model/provider.
+Return a terminal report containing recommendation, must-fix items, cautions,
+assumptions/evidence gaps, success checks, and unresolved questions. Advice is
+non-binding. The caller validates it and retains mutation, approval, and final
+decision authority.
 
-Use the brief to structure a local review; it does not send a request or produce an external response. Compare the resulting recommendation with the cited code and constraints. Prefer the least complex safe option; reject unsupported claims and document a materially different final decision.
+Do not implement, request credentials, select a provider/model, create nested
+delegation, or infer hidden state. A missing or partial result fails the caller's
+advice gate.
