@@ -1,14 +1,22 @@
 ---
 description: [AUTO] Start coding & testing an existing plan ("trust me bro")
-argument-hint: [plan] [all-phases-yes-or-no] (default: yes)
+argument-hint: [plan] [all-phases-yes-or-no] [@advisor] (default: yes)
 ---
 
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<plan>$ARGUMENTS</plan>
+<raw-plan>$ARGUMENTS</raw-plan>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before assigning positional arguments, read
+`.claude/workflows/advisor-mentoring.md` and derive `WORK_ARGUMENTS` plus
+explicit/default advisor mode. Apply its default stuck-escalation contract
+throughout this command.
 
 ## Arguments
-- $PLAN: $1 (Mention specific plan or auto detected, default: latest plan)
-- $ALL_PHASES: $2 (`Yes` to finish all phases in one run or `No` to implement phase-by-phase and wait for confirmation, default is `Yes`)
+- $PLAN: first positional token from `WORK_ARGUMENTS` (specific or auto-detected plan; default: latest plan)
+- $ALL_PHASES: second positional token from `WORK_ARGUMENTS` (`Yes` to finish all phases in one run or `No` to implement phase-by-phase; default: `Yes`)
 
 ---
 
@@ -96,29 +104,36 @@ Mark Step 3 complete in `TodoWrite`, mark Step 4 in_progress.
 
 Call `code-reviewer` subagent: "Review code changes in **Step 2** of plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
+In explicit advisor mode, every terminal reviewer result must be followed by
+exactly one blocking `advisor` call before logging, fixing, auto-approving, or
+escalating that review. Supply the bounded evidence from the shared mentoring
+contract. A missing, partial, interrupted, cancelled, or failed advisor result
+fails Step 4.
+
 **Auto-Handling Logic (max 3 cycles):**
 
 ```
 cycle = 0
 LOOP:
   1. Run code-reviewer → get score, critical_count, warnings, suggestions
-  2. LOG findings: "Review: [score]/10 | Critical: [N] | Warnings: [N] | Suggestions: [N]"
-  3. IF score >= 9.5 AND critical_count == 0:
+  2. IF explicit advisor mode: run advisor → get terminal mentorship report
+  3. LOG reviewer + advisor findings: "Review: [score]/10 | Critical: [N] | Warnings: [N] | Suggestions: [N]"
+  4. IF score >= 9.5 AND critical_count == 0 AND advisor has no must-fix item:
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Auto-approved ([warnings] warnings logged)"
      → PROCEED to Step 5
-  4. ELSE IF critical_count > 0 AND cycle < 3:
+  5. ELSE IF (critical_count > 0 OR advisor has must-fix items) AND cycle < 3:
      → Output: "⚙ Step 4: Auto-fixing [critical_count] critical issues (cycle [cycle+1]/3)"
      → Implement fixes for critical issues
      → Re-run tester to verify no regressions
      → cycle++, GOTO LOOP
-  5. ELSE IF critical_count > 0 AND cycle >= 3:
+  6. ELSE IF (critical_count > 0 OR advisor has must-fix items) AND cycle >= 3:
      → ESCALATE TO USER (auto-fix exhausted)
      → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
      → Use AskUserQuestion:
        - "Fix remaining issues manually" → implement, restart cycle counter
        - "Approve with noted issues" → proceed with warnings
        - "Abort workflow" → stop
-  6. ELSE (no critical, but score < 9.5):
+  7. ELSE (no must-fix item, but score < 9.5):
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Approved ([warnings] warnings, [suggestions] suggestions logged)"
      → PROCEED to Step 5
 ```

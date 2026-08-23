@@ -27,7 +27,16 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<tasks>{{args}}</tasks>
+<raw-tasks>{{args}}</raw-tasks>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring in `/code`.
+Before discovery or planning, read `.codex/workflows/advisor-mentoring.md` and
+derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS`
+as the tasks input. If explicit mode is active, append exactly one trailing
+`@advisor` to the eventual `/code` handoff; otherwise append none. Apply the
+shared default stuck-escalation contract during `/cook` discovery and planning.
 
 ---
 
@@ -125,7 +134,9 @@ Before handoff, verify the plan accounts for:
 
 ### 7. Implementation Handoff
 
-* Use the matching `cmd_*` skill to run `/code <plan-path>` to implement the plan step by step.
+* Use the matching `cmd_*` skill to run `/code <plan-path>` to implement the plan step by step. In
+  explicit advisor mode invoke `/code <plan-path> @advisor`; never pass the token
+  into scout, research, preflight, or plan content.
 * Pass the plan path and any unresolved questions to `/code`.
 * If the plan includes frontend work, ensure the `/code` handoff calls `ui-ux-designer` and follows `./docs/design-guidelines.md`.
 * If the plan needs visual assets, include `ai-multimodal` and `media-processing` requirements in the plan.

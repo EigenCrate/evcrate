@@ -9,7 +9,14 @@ Command Path: /code/no-test
 Description: Start coding an existing plan (no testing)
 
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<plan>{{args}}</plan>
+<raw-plan>{{args}}</raw-plan>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before interpreting the plan, read `.gemini/workflows/advisor-mentoring.md` and
+derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS`
+as the plan input and apply the shared default stuck-escalation contract.
 
 ---
 
@@ -27,11 +34,11 @@ Description: Start coding an existing plan (no testing)
 
 ## Step 0: Plan Detection & Phase Selection
 
-**If `{{args}}` is empty:**
+**If `WORK_ARGUMENTS` is empty:**
 1. Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
 2. Parse plan for phases and status, auto-select next incomplete (prefer IN_PROGRESS or earliest Planned)
 
-**If `{{args}}` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
+**If `WORK_ARGUMENTS` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
 
 **Output:** `✓ Step 0: [Plan Name] - [Phase Name]`
 
@@ -82,12 +89,18 @@ Mark Step 2 complete in TodoWrite, mark Step 3 in_progress.
 
 Call `code-reviewer` subagent: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
+In explicit advisor mode, follow every terminal reviewer result with exactly one
+blocking `advisor` call before displaying findings or asking for approval. Use the
+bounded evidence from the shared mentoring contract; advisor failure fails Step 3.
+
 **Display + Approve Flow (optimized for speed):**
 
 ```
 1. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-2. DISPLAY FULL FINDINGS + SUMMARY TO USER:
+2. IF explicit advisor mode: run advisor → get terminal mentorship report
+
+3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
    ┌─────────────────────────────────────────┐
    │ Code Review Results: [score]/10         │
    ├─────────────────────────────────────────┤
@@ -102,7 +115,7 @@ Call `code-reviewer` subagent: "Review changes for plan phase [phase-name]. Chec
    │  - [suggestion]                         │
    └─────────────────────────────────────────┘
 
-3. Use ask_user (header: "Review & Approve"):
+4. Use ask_user (header: "Review & Approve"):
    IF critical_count > 0:
      - "Fix critical + approve" → implement critical fixes, PROCEED to Step 4
      - "Approve anyway" → PROCEED to Step 4

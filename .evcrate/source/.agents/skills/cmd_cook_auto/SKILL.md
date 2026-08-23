@@ -27,7 +27,14 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 
 **Ultrathink** to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<tasks>{{args}}</tasks>
+<raw-tasks>{{args}}</raw-tasks>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring in `/code`.
+Before planning, read `.codex/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+tasks input. Apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Analyze the list of skills  at `.agents/skills/*` and intelligently activate the skills that are needed for the task during the process.
 **Ensure token efficiency while maintaining high quality.**
@@ -46,7 +53,7 @@ This is the lower-friction `/cook` variant. It can reduce user checkpoints, but 
    - unresolved questions
 2. If unresolved questions can cause incorrect implementation, use `request_user_input` before continuing.
 3. Use the matching `cmd_*` skill to run `/plan <detailed-instruction-prompt>` to create an implementation plan based on the preflight contract and tasks.
-4. Use the matching `cmd_*` skill to run `/code <plan>` to implement the plan with compile/typecheck, tests, code review, and approval gates.
+4. Use the matching `cmd_*` skill to run `/code <plan>` to implement the plan with compile/typecheck, tests, code review, and approval gates. In explicit advisor mode append exactly one trailing `@advisor`; otherwise append none.
 5. Finally use `request_user_input` tool to ask user if he wants to commit to git repository, if yes use the matching `cmd_*` skill to run `/git:cm` to create a commit.
 
 **Positioning:** Use this for familiar product work where the user trusts the default workflow. Use base `/cook` when requirements, risk, or scope need explicit discussion.

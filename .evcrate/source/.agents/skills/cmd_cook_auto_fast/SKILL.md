@@ -27,7 +27,14 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<tasks>{{args}}</tasks>
+<raw-tasks>{{args}}</raw-tasks>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring in `/code`.
+Before scouting, read `.codex/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+task input and apply the shared default stuck-escalation contract.
 
 ---
 
@@ -51,5 +58,5 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 - **Scout**: Use `scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
 - **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cook`.
 - **Plan**: Use the matching `cmd_*` skill to run `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight.
-- **Implementation**: Use the matching `cmd_*` skill to run `/code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates.
+- **Implementation**: Use the matching `cmd_*` skill to run `/code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates. In explicit advisor mode append exactly one trailing `@advisor`; otherwise append none.
 - **Escalation**: If `/code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, stop fast mode and continue with base `/cook` or `/fix:hard`.

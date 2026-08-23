@@ -1,9 +1,16 @@
 ---
 description: Execute parallel or sequential phases based on plan structure
-argument-hint: [plan-path]
+argument-hint: [plan-path] [@advisor]
 ---
 
-Execute plan: <plan>$ARGUMENTS</plan>
+Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before interpreting the plan, read `{{evcrate:workflows/advisor-mentoring.md}}` and
+derive `WORK_ARGUMENTS` plus explicit/default advisor mode. Execute the plan from
+`WORK_ARGUMENTS` and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
@@ -39,6 +46,11 @@ Follow `./{{evcrate:workflows/primary-workflow.md}}`:
 
 Call `code-reviewer` subagent: "Review all changes from parallel/sequential execution. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
+In explicit advisor mode, every terminal reviewer result must be followed by
+exactly one blocking `advisor` call before findings are displayed, fixed, or
+approved. Supply the bounded evidence required by the shared mentoring contract;
+advisor failure fails this gate.
+
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
 ```
@@ -46,7 +58,9 @@ cycle = 0
 LOOP:
   1. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-  2. DISPLAY FULL FINDINGS TO USER:
+  2. IF explicit advisor mode: run advisor → get terminal mentorship report
+
+  3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS TO USER:
      ┌─────────────────────────────────────────┐
      │ Code Review Results: [score]/10         │
      ├─────────────────────────────────────────┤
@@ -58,7 +72,7 @@ LOOP:
      │  - [suggestion]                         │
      └─────────────────────────────────────────┘
 
-  3. Use ask_user_question (header: "Review"):
+  4. Use ask_user_question (header: "Review"):
      IF critical_count > 0:
        - "Fix critical issues" → implement critical fixes, re-run tester
        - "Fix all issues" → implement all fixes, re-run tester
@@ -69,19 +83,19 @@ LOOP:
        - "Approve" → proceed
        - "Abort" → stop workflow
 
-  4. IF user selects fix option AND cycle < 3:
+  5. IF user selects fix option AND cycle < 3:
      → Implement requested fixes
      → Re-run tester to verify no regressions
      → cycle++
      → GOTO LOOP (re-run code-reviewer)
 
-  5. IF cycle >= 3 AND still has issues:
+  6. IF cycle >= 3 AND still has issues:
      → Output: "⚠ 3 review cycles completed. Final decision required."
      → Use ask_user_question:
        - "Approve with noted issues"
        - "Abort workflow"
 
-  6. ON APPROVE: PROCEED to Step 5
+  7. ON APPROVE: PROCEED to Step 5
 ```
 
 ### 5. Project Management & Docs

@@ -127,6 +127,25 @@ class ApplyReplacementsTest(unittest.TestCase):
             self.assertIn("Command Path: /fix:logs", content)
             self.assertNotIn("/fix/logs", content)
 
+    def test_advisor_agent_uses_high_tier_model_mapping(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        canonical = repository / ".evcrate/source/.claude/agents/advisor.md"
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/agents"
+            output_dir = root / ".codex"
+            source_dir.mkdir(parents=True)
+            shutil.copyfile(canonical, source_dir / "advisor.md")
+            with patch("migrate_claude_to_codex.CLAUDE_DIR", root / ".claude"), patch(
+                "migrate_claude_to_codex.CODEX_DIR", output_dir
+            ):
+                migrate_agents()
+
+            advisor = tomllib.loads((output_dir / "agents/advisor.toml").read_text(encoding="utf-8"))
+            self.assertEqual(advisor["model"], "gpt-5.6-sol")
+            self.assertEqual(advisor["model_reasoning_effort"], "high")
+            self.assertIn("advisor-strategy", advisor["developer_instructions"])
+
     def test_help_resolves_codex_sibling_command_skills_without_claude_tree(self) -> None:
         repository = Path(__file__).resolve().parents[1]
         source = repository / ".evcrate/source/.claude/scripts/ev-help.py"

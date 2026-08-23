@@ -34,7 +34,14 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 ## User's Objectives & Requirements
 
-<user-requirements>{{args}}</user-requirements>
+<raw-user-requirements>{{args}}</raw-user-requirements>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before research, read `.codex/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+user requirements and apply the shared default stuck-escalation contract.
 
 ---
 
@@ -111,7 +118,7 @@ Follow strictly these following steps:
 
 ### Code Review
 
-* After finishing, delegate to `code-reviewer` subagent to review code. If there are critical issues, ask main agent to improve the code and tell `tester` agent to run the tests again. Repeat the process until all tests pass.
+* After finishing, delegate to `code-reviewer` and wait for its terminal report. In explicit advisor mode, immediately follow every terminal review with exactly one blocking `advisor` call using the shared bounded evidence; only then fix, auto-approve, or report findings. If there are critical or advisor must-fix issues, improve the code and rerun tests and review, for at most three review/advisor cycles before stopping for user direction.
 * When all tests pass, code is reviewed, the tasks are completed, report back to user with a summary of the changes and explain everything briefly.
 * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
 

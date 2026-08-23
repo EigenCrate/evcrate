@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -27,6 +28,35 @@ FORBIDDEN_RUNTIME_MARKERS = (
     "pretool-advisor-admission",
     "advisor-ledger",
     "runtime-advisor-launcher",
+)
+SCOPED_COMMANDS = (
+    "code.md",
+    "code/auto.md",
+    "code/no-test.md",
+    "code/parallel.md",
+    "cook.md",
+    "cook/auto.md",
+    "cook/auto/fast.md",
+    "cook/auto/parallel.md",
+    "fix/logs.md",
+    "fix/test.md",
+    "fix/parallel.md",
+    "bootstrap.md",
+    "bootstrap/auto.md",
+    "bootstrap/auto/fast.md",
+    "bootstrap/auto/parallel.md",
+)
+DIRECT_REVIEW_COMMANDS = SCOPED_COMMANDS[:4] + SCOPED_COMMANDS[7:]
+HANDOFF_COMMANDS = SCOPED_COMMANDS[4:7]
+REVIEW_LOOP_COMMANDS = (
+    "cook/auto/parallel.md",
+    "fix/logs.md",
+    "fix/test.md",
+    "fix/parallel.md",
+    "bootstrap.md",
+    "bootstrap/auto.md",
+    "bootstrap/auto/fast.md",
+    "bootstrap/auto/parallel.md",
 )
 
 
@@ -82,6 +112,88 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertEqual(frontmatter, canonical_frontmatter)
             self.assertEqual(generated_body.encode(), canonical_body.encode())
             self.assertNotIn("provider", completed.stdout.lower())
+
+    def test_canonical_advisor_mode_contract_and_scoped_commands(self) -> None:
+        canonical = REPOSITORY / ".evcrate/source/.claude"
+        contract = (canonical / "workflows/advisor-mentoring.md").read_text(encoding="utf-8")
+        normalized_contract = " ".join(contract.split())
+        for marker in (
+            "final whitespace-delimited",
+            "exactly the case-sensitive string `@advisor`",
+            "`abc @advisor @advisor`",
+            "`abc @advisor extra`",
+            "second matching",
+            "Consult at most once per stuck episode",
+            "stop and ask the user for direction",
+            "Explicit mode uses the same stuck detection outside review gates",
+            "also satisfies any stuck consultation for that same gate",
+            "at most three terminal reviewer/advisor cycles",
+        ):
+            self.assertIn(marker, normalized_contract)
+
+        agent = canonical / "agents/advisor.md"
+        frontmatter, body = parse_markdown_with_frontmatter(agent)
+        self.assertEqual(frontmatter["name"], "advisor")
+        self.assertEqual(frontmatter["model"], "opus")
+        self.assertEqual(frontmatter["tools"], "Read, Glob, Grep")
+        self.assertIn("advisor-strategy", body)
+        self.assertIn("do not implement", body.lower())
+
+        for relative in SCOPED_COMMANDS:
+            with self.subTest(command=relative):
+                content = (canonical / "commands" / relative).read_text(encoding="utf-8")
+                normalized_content = " ".join(content.split())
+                self.assertIn("[@advisor]", content)
+                self.assertIn(".claude/workflows/advisor-mentoring.md", content)
+                self.assertIn("WORK_ARGUMENTS", content)
+                self.assertIn("default stuck-escalation contract", normalized_content)
+        for relative in DIRECT_REVIEW_COMMANDS:
+            with self.subTest(review_command=relative):
+                content = (canonical / "commands" / relative).read_text(encoding="utf-8")
+                normalized_content = " ".join(content.split())
+                self.assertIn("explicit advisor mode", normalized_content.lower())
+                self.assertIn("`advisor`", content)
+                self.assertIn("code-reviewer", content)
+                self.assertIn("terminal", normalized_content.lower())
+                reviewer_position = normalized_content.lower().find("code-reviewer")
+                advisor_position = normalized_content.lower().find("explicit advisor mode", reviewer_position)
+                self.assertGreater(advisor_position, reviewer_position)
+        for relative in HANDOFF_COMMANDS:
+            with self.subTest(handoff_command=relative):
+                content = (canonical / "commands" / relative).read_text(encoding="utf-8")
+                normalized_content = " ".join(content.split())
+                self.assertIn("append exactly one trailing", normalized_content)
+                self.assertIn("`@advisor`", content)
+        for relative in REVIEW_LOOP_COMMANDS:
+            with self.subTest(review_loop=relative):
+                content = " ".join(
+                    (canonical / "commands" / relative).read_text(encoding="utf-8").split()
+                )
+                self.assertRegex(content, r"(?:review/advisor.{0,24}three|three review/advisor)")
+
+    def test_generated_codex_advisor_and_command_mode_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.run_migrator(root)
+            advisor = tomllib.loads((root / ".codex/agents/advisor.toml").read_text(encoding="utf-8"))
+            self.assertEqual(advisor["model"], "gpt-5.6-sol")
+            self.assertEqual(advisor["model_reasoning_effort"], "high")
+            self.assertIn("advisor-strategy", advisor["developer_instructions"])
+            self.assertTrue((root / ".codex/workflows/advisor-mentoring.md").is_file())
+
+            for relative in SCOPED_COMMANDS:
+                skill_name = "cmd_" + relative.removesuffix(".md").replace("/", "_")
+                content = (root / ".agents/skills" / skill_name / "SKILL.md").read_text(encoding="utf-8")
+                self.assertIn("@advisor", content)
+                self.assertIn("WORK_ARGUMENTS", content)
+                self.assertIn(".codex/workflows/advisor-mentoring.md", content)
+
+            gemini_commands = REPOSITORY / ".evcrate/source/.gemini/commands"
+            for relative in SCOPED_COMMANDS:
+                generated = gemini_commands / relative.replace(".md", ".toml")
+                content = generated.read_text(encoding="utf-8")
+                self.assertIn(".gemini/workflows/advisor-mentoring.md", content)
+                self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
 
     def test_generated_target_has_one_non_invoking_pointer_per_command(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

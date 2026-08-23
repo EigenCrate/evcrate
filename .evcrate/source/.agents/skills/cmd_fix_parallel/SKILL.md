@@ -26,7 +26,14 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - A spawn acknowledgement, progress event, or file change does not mean the agent completed. Completion requires the terminal response and requested validation.
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 
-**Ultrathink parallel** to fix: <issues>{{args}}</issues>
+**Ultrathink parallel** raw input: <raw-issues>{{args}}</raw-issues>
+
+## Advisor Mode
+
+A final standalone `@advisor` activates explicit review mentoring.
+Before analysis, read `.codex/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advisor mode. Use `WORK_ARGUMENTS` as the
+issues input and apply the shared default stuck-escalation contract.
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
@@ -61,6 +68,12 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
+- In explicit advisor mode, after every terminal reviewer result and before any
+  fix or approval, synchronously call exactly one `advisor` with the bounded
+  evidence required by the shared mentoring contract. Advisor failure fails the
+  review gate.
+- Limit this review/advisor loop to three cycles; if issues remain, stop and ask
+  the user.
 - Verify fixes don't introduce regressions
 - If critical issues: fix, retest
 

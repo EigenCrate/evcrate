@@ -11,6 +11,7 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Primary workflow: `./.claude/workflows/primary-workflow.md`
 - Development rules: `./.claude/workflows/development-rules.md`
 - Orchestration protocols: `./.claude/workflows/orchestration-protocol.md`
+- Advisor mentoring: `./.claude/workflows/advisor-mentoring.md`
 - Documentation management: `./.claude/workflows/documentation-management.md`
 - And other workflows: `./.claude/workflows/*`
 

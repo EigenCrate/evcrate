@@ -4,10 +4,10 @@ Technical question or architecture challenge:
 <questions>{{args}}</questions>
 
 Current development workflows, system constraints, scale requirements, and business context will be considered:
-- Primary workflow: `./.claude/workflows/primary-workflow.md`
-- Development rules: `./.claude/workflows/development-rules.md`
-- Orchestration protocols: `./.claude/workflows/orchestration-protocol.md`
-- Documentation management: `./.claude/workflows/documentation-management.md`
+- Primary workflow: `./.gemini/workflows/primary-workflow.md`
+- Development rules: `./.gemini/workflows/development-rules.md`
+- Orchestration protocols: `./.gemini/workflows/orchestration-protocol.md`
+- Documentation management: `./.gemini/workflows/documentation-management.md`
 
 **Project Documentation:**
 ```

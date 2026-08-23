@@ -397,12 +397,15 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
             source_file = context.local_claude / "commands/code.md"
             self.assertEqual((stage / ".claude/commands/code.md").read_bytes(), source_file.read_bytes())
+            advisor_file = context.local_claude / "agents/advisor.md"
+            self.assertEqual((stage / ".claude/agents/advisor.md").read_bytes(), advisor_file.read_bytes())
             self.assertFalse((stage / ".antigravity" / "config").exists())
             self.assertFalse((stage / ".codex" / "runtime").exists())
             manifest = (stage / BUILD_MANIFEST_PATH).read_text(encoding="utf-8")
             manifest_data = json.loads(manifest)
             self.assertIn(".claude", manifest_data["output_hashes"])
             self.assertIn(".claude/commands/code.md", manifest_data["owners"])
+            self.assertIn(".claude/agents/advisor.md", manifest_data["owners"])
             self.assertEqual(manifest_data["source_hashes"][".claude"], tree_hash(context.local_claude))
             self.assertEqual(
                 manifest_data["home_policy"]["claude"],
