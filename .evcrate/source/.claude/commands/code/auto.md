@@ -112,28 +112,42 @@ fails Step 4.
 
 **Auto-Handling Logic (max 3 cycles):**
 
+**Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.**
+
 ```
-cycle = 0
+review_cycles = 0
 LOOP:
-  1. Run code-reviewer → get score, critical_count, warnings, suggestions
-  2. IF explicit advisor mode: run advisor → get terminal mentorship report
-  3. LOG reviewer + advisor findings: "Review: [score]/10 | Critical: [N] | Warnings: [N] | Suggestions: [N]"
-  4. IF score >= 9.5 AND critical_count == 0 AND advisor has no must-fix item:
+  1. IF review_cycles >= 3:
+     → ESCALATE TO USER; do not start another review or advisor call
+     → DISPLAY all findings and ask "Approve with noted issues" / "Abort workflow"
+     → STOP
+  2. review_cycles++
+  3. Run code-reviewer → get score, critical_count, warnings, suggestions
+  4. IF explicit advisor mode: run advisor → get terminal mentorship report
+  5. reviewer_must_fix = (critical_count > 0)
+  6. advisor_must_fix = false
+     → Explicit advisor mode sets advisor_must_fix from the terminal advisor report.
+     → Default mode does not invent advisor guidance; leave it false unless the
+       shared stuck contract delivered a terminal advisor for this exact remediation.
+  7. review_must_fix = reviewer_must_fix OR advisor_must_fix
+  8. must_fix_count = reviewer critical count + advisor must-fix count
+  9. LOG reviewer + advisor findings: "Review: [score]/10 | Must-fix: [N] | Warnings: [N] | Suggestions: [N]"
+  10. IF score >= 9.5 AND NOT review_must_fix:
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Auto-approved ([warnings] warnings logged)"
      → PROCEED to Step 5
-  5. ELSE IF (critical_count > 0 OR advisor has must-fix items) AND cycle < 3:
-     → Output: "⚙ Step 4: Auto-fixing [critical_count] critical issues (cycle [cycle+1]/3)"
-     → Implement fixes for critical issues
+  11. ELSE IF review_must_fix AND review_cycles < 3:
+     → Output: "⚙ Step 4: Auto-fixing [must_fix_count] must-fix items (cycle [review_cycles]/3)"
+     → Apply every advisor must-fix item before approval, plus reviewer critical issues.
      → Re-run tester to verify no regressions
-     → cycle++, GOTO LOOP
-  6. ELSE IF (critical_count > 0 OR advisor has must-fix items) AND cycle >= 3:
-     → ESCALATE TO USER (auto-fix exhausted)
+     → GOTO LOOP
+  12. ELSE IF review_must_fix AND review_cycles >= 3:
+     → ESCALATE TO USER (hard cap reached)
      → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
      → Use AskUserQuestion:
-       - "Fix remaining issues manually" → implement, restart cycle counter
-       - "Approve with noted issues" → proceed with warnings
+       - "Approve with noted issues" → proceed with explicit acknowledgement
        - "Abort workflow" → stop
-  7. ELSE (no must-fix item, but score < 9.5):
+     → STOP; do not run another fix/test/reviewer/advisor sequence
+  13. ELSE (no must-fix item, but score < 9.5):
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Approved ([warnings] warnings, [suggestions] suggestions logged)"
      → PROCEED to Step 5
 ```

@@ -4,10 +4,11 @@
 **Last Updated**: 2026-08-23
 **Parent**: [System Architecture](./system-architecture.md)
 
-**Release note (2026-08-23)**: Explicit advisor mentoring is shipped across the
-Claude source and generated Codex, Gemini, and Pi artifacts. Gemini migration now
-rewrites advisor workflow references to the generated `.gemini/workflows/` path;
-the fallback scout command remains literal Claude syntax by design.
+**Release note (2026-08-23)**: Explicit advisor mentoring and command-mode
+hardening are shipped across the Claude source and generated Codex, Gemini,
+Antigravity, and Pi artifacts. Gemini migration now rewrites advisor workflow
+references to the generated `.gemini/workflows/` path; the fallback scout command
+remains literal Claude syntax by design.
 
 ## Purpose
 
@@ -42,12 +43,28 @@ manual Pi quiescence.
 - Each generated `cmd_*` skill contains one static pointer recommending explicit `$advisor-strategy` use. The pointer does not activate the skill.
 - `.evcrate/source/.claude/agents/advisor.md` is the canonical mentor. It uses
   `model: opus`, activates `advisor-strategy`, and migrates through the existing
-  target policies (`gpt-5.6-sol/high` in Codex, target-native pro in Gemini, and
-  semantic `strong` in Pi).
-- Scoped implementation commands recognize a final standalone `@advisor`, remove
-  only that token from work input, and call the normal advisor once after every
-  terminal reviewer result. Without the token they call it only after the same
-  blocker repeats twice without progress.
+  target policies: Codex selects `gpt-5.6-sol` with high reasoning, Gemini uses
+  target-native `pro`, and Pi uses semantic `strong` (which resolves to
+  `openai-codex/gpt-5.6-sol` with high reasoning when that provider is active).
+- `/code`, `/code:auto`, `/code:no-test`, and `/code:parallel` recognize only a
+  case-sensitive, whitespace-delimited final standalone `@advisor` (trailing
+  whitespace allowed), remove only that token into `WORK_ARGUMENTS`, and call
+  the normal advisor once after every successful terminal reviewer result. The
+  shared prompt and workflow impose an explicit hard cap of at most three
+  terminal reviewer/advisor cycles;
+  `/code:no-test` intentionally imposes a lower one-cycle limit. Without the
+  token, commands call the advisor only after the same blocker repeats twice
+  without progress.
+- `/code:auto` applies every explicit advisor must-fix item before approval and
+  does not invent advisor guidance in default mode. Cook variants and `/fix:hard`
+  preserve `WORK_ARGUMENTS` through fallback handoffs, appending exactly one
+  trailing `@advisor` in explicit mode and no advisor token otherwise.
+- The accepted compatibility decision retains the exact, case-sensitive final
+  `@advisor` token because the user approved it. That exact final token is
+  reserved for advisor mode;
+  earlier occurrences and other `@file`-style text remain work input. Claude,
+  Gemini, Codex, and Antigravity may use `@` for file or location mentions, so
+  this is a portability risk and host-level escaping is not guaranteed.
 - No advisor MCP server, hook, broker, launcher, provider selector, quota, ledger,
   audit, permission bypass, or isolation claim is distributed.
 
@@ -107,12 +124,18 @@ No migration or overlay logic runs during publication.
 
 ```text
 Developer runs an implementation command
-  -> command parses optional final standalone @advisor
+  -> command parses optional exact trailing @advisor into WORK_ARGUMENTS
   -> code-reviewer returns a terminal report
   -> explicit mode: normal advisor subagent receives a bounded brief
   -> default mode: advisor is called only on second matching blocker
+  -> at most three terminal reviewer/advisor cycles, then user direction
   -> executor records advice and keeps normal test/review/human gates
 ```
+
+The hardened command surfaces use the same contract in the canonical Claude
+source and generated target projections. Cook discovery/planning and all cook
+fallbacks pass `WORK_ARGUMENTS`; `/fix:hard` is included in the scoped fallback
+preservation rule. Explicit mode is preserved exactly once across each handoff.
 
 The skill remains static guidance and cannot independently inspect evidence, call
 a model, or enforce a verdict. The `advisor` agent is the ordinary host delegation
@@ -139,27 +162,36 @@ boundary. Generic MCP and hook support remain unchanged.
 - The generated advisor agent exists and retains the target's high-tier/strong
   model mapping without embedding cross-provider routing in prompt prose.
 - Every generated `cmd_*` skill has exactly one non-invoking pointer.
-- Scoped command guides preserve suffix parsing, review ordering, cook pass-through,
-  and deterministic stuck escalation.
-- Reviewer/advisor execution is bounded by the documented three-cycle contract;
-  user approval remains required before finalization.
+- Scoped command guides preserve suffix parsing, review ordering, cook and
+  `/fix:hard` pass-through, and deterministic stuck escalation.
+- Reviewer/advisor execution is bounded by a hard cap of at most three terminal
+  cycles (or a lower command-specific limit); user approval remains required
+  before finalization.
+- Generated Codex, Gemini, Antigravity, and Pi projections retain the command-mode
+  contract and target-specific advisor model mapping.
 - Repeated migration is byte-identical.
 - Generated config, hooks, target manifest, and build manifest contain no advisor runtime wiring.
 - Staged build and publish dry-run preserve declared user-owned configuration.
 
-## Known follow-up defects
+## Advisor command-mode hardening status
 
-These were accepted with the current implementation and are intentionally tracked
-for the next run:
+The four previously tracked command-mode follow-ups are resolved in the canonical
+source and regenerated target projections:
 
-- `/code*` variants do not yet enforce the three-cycle cap consistently.
-- `/code:auto` does not yet handle advisor must-fix guidance and default-mode
-  behavior consistently.
-- `/cook` fallback routes can still lose the trailing `@advisor` token.
-- Tests run without provider credentials and start no App Server, MCP server, app, or model call.
+- All four `/code` variants enforce the shared hard cap and advisor-before-fix or
+  approval ordering; `/code:no-test` keeps its intentional one-cycle limit.
+- `/code:auto` distinguishes reviewer critical items from advisor must-fix items,
+  applies the latter before approval, and leaves default mode without invented
+  advisor guidance.
+- `/cook`, `/cook:auto`, `/cook:auto:fast`, and `/cook:auto:parallel` preserve
+  explicit mode through fallback handoffs, and `/fix:hard` is covered by the same
+  scoped fallback rule.
+- Regression tests remain intentionally credential-free and start no App Server,
+  MCP server, app, or model call; this is test isolation, not an unresolved
+  advisor defect.
 
 ## References
 
-- [Replacement plan](../plans/260802-1726-skill-only-advisor/plan.md)
+- [Canonical advisor workflow](../.evcrate/source/.claude/workflows/advisor-mentoring.md)
 - [System architecture](./system-architecture.md)
-- [Superseded broker plan](../plans/260802-0249-advisor-two-gate-distribution/plan.md)
+- [Native Pi Phase 01](./pi-native-migration-phase-01.md)
