@@ -167,6 +167,8 @@ class ApplyReplacementsTest(unittest.TestCase):
             generated = (output_dir / "skills/cmd_code/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("--advice", generated)
             self.assertNotIn("@advisor", generated)
+            self.assertIn(".codex/workflows/advisor-mentoring.md", generated)
+            self.assertIn("~/.codex/workflows/advisor-mentoring.md", generated)
 
     def test_advise_skill_uses_native_questioning_and_rejects_relay_without_state(self) -> None:
         repository = Path(__file__).resolve().parents[1]

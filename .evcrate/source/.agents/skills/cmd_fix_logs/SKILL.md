@@ -34,7 +34,7 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before analysis, read `.codex/workflows/advisor-mentoring.md` and derive
+Before analysis, read `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issue input and apply the shared default stuck-escalation contract.
 

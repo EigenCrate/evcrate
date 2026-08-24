@@ -32,7 +32,7 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/code`.
-Before scouting, read `.codex/workflows/advisor-mentoring.md` and derive
+Before scouting, read `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 task input and apply the shared default stuck-escalation contract.
 For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing

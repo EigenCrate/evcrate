@@ -428,6 +428,8 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertNotIn("@advisor", content)
                 self.assertIn("WORK_ARGUMENTS", content)
                 self.assertIn(".codex/workflows/advisor-mentoring.md", content)
+                self.assertIn("~/.codex/workflows/advisor-mentoring.md", content)
+                self.assertIn("the published install", content)
 
             gemini_commands = root / ".gemini/commands"
             for relative in SCOPED_COMMANDS:

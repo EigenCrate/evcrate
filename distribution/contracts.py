@@ -19,6 +19,11 @@ _RELAY_ERRORS = {
     "gemini": "ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI",
     "pi": "ADVISE_AGENT_RELAY_UNSUPPORTED_PI",
 }
+_WORKFLOW_ROOTS = {
+    "codex": (".codex/workflows", "~/.codex/workflows"),
+    "antigravity": (".antigravity/workflows", "~/.gemini/config/workflows"),
+}
+_ADVISORY_WORKFLOW_NAMES = ("advisor-mentoring.md", "advisory-interview.md")
 
 
 class DistributionAction(str, Enum):
@@ -50,6 +55,23 @@ def advisory_relay_error(target: str) -> str:
         return _RELAY_ERRORS[target]
     except KeyError as error:
         raise ValueError(f"Unknown advisory target: {target}") from error
+
+
+def add_global_workflow_fallback(text: str, target: str) -> str:
+    """Make generated workflow references work for local and HOME installs."""
+
+    try:
+        local_root, home_root = _WORKFLOW_ROOTS[target]
+    except KeyError as error:
+        raise ValueError(f"Unknown workflow target: {target}") from error
+
+    for workflow_name in _ADVISORY_WORKFLOW_NAMES:
+        local_ref = f"`{local_root}/{workflow_name}`"
+        home_ref = f"`{home_root}/{workflow_name}`"
+        fallback = f"{local_ref} if present; otherwise read {home_ref} (the published install)"
+        if fallback not in text:
+            text = text.replace(local_ref, fallback)
+    return text
 
 
 def render_advisory_capabilities(text: str, target: str) -> str:
