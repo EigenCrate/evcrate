@@ -10,7 +10,7 @@
 
 input=$(cat)
 
-# Calibration file path (now in /tmp/evcrate/ namespace - fixes #178)
+# Calibration file path in the shared /tmp/evcrate/ runtime namespace.
 # IMPORTANT: Path must match evcrate-paths.cjs CALIBRATION_PATH
 CALIBRATION_PATH="${TMPDIR:-/tmp}/evcrate/calibration.json"
 

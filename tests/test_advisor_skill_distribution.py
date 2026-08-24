@@ -312,7 +312,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
 
         paths = (canonical / "hooks/lib/evcrate-paths.cjs").read_text(encoding="utf-8")
         self.assertIn("ADVICE_DIR", paths)
-        self.assertIn("path.join(EVCRATE_TMP_DIR, 'advice')", paths)
+        self.assertIn("path.join(EVCRATE_ADVICE_ROOT, 'advice')", paths)
 
         help_script = canonical / "scripts/ev-help.py"
         result = subprocess.run(

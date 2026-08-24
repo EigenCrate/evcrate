@@ -710,9 +710,14 @@ def show_advisory_guide(prefix: str, target: str) -> None:
     if supports_relay:
         unsupported_targets = ("codex", "pi", "gemini", "antigravity")
         projected_names = ", ".join(name.title() for name in unsupported_targets)
-        print(f"**Relay capability:** `--agent` is supported only by {relay_target.title()} in this phase. {projected_names} must reject it explicitly; they must not silently run inline or create relay state.")
+        print(f"**Relay capability:** `--agent` is supported only by {relay_target.title()} relay v1. {projected_names} must reject it explicitly; they must not silently run inline or create relay state.")
     else:
         print(f"**Relay capability:** this {target} projection rejects `--agent` before advisor delegation or relay-state creation. Run `{command} <prompt-or-url>` for inline advice.")
+    print()
+    if supports_relay:
+        print(f"**State retention ({relay_target.title()} relay only):** paused/failed relay state is retained for seven days; completed relay state leaves a 24-hour tombstone.")
+    else:
+        print("**State retention:** this projection creates no relay state.")
     print()
     print("`--advice` is a separate one-shot checkpoint counsel mode for implementation commands. `@advisor` is ordinary input and never activates supervision.")
 

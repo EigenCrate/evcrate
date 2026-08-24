@@ -98,7 +98,7 @@ Every relay advisor turn returns exactly one JSON object and no prose:
   "version": 1,
   "status": "NEEDS_USER_INPUT",
   "invocationId": "uuid",
-  "statePath": "/tmp/ck/advice/v1/<project-key>/<invocation-id>/state.json",
+  "statePath": "/tmp/evcrate/advice/v1/<project-key>/<invocation-id>/state.json",
   "question": {
     "id": "q-01",
     "type": "discovery",
@@ -135,7 +135,7 @@ stops the command and retains state.
 
 ## State schema and retention
 
-The helper creates `${TMPDIR:-/tmp}/ck/advice/v1/<project-key>/<invocation-id>/`.
+The helper creates `${TMPDIR:-/tmp}/evcrate/advice/v1/<project-key>/<invocation-id>/`.
 The project key is the sanitized project basename plus `-` and the first 12
 hex characters of SHA-256(realpath(project root)); raw paths never enter state.
 The invocation ID is a UUID. The directory is `0700`, `state.json` is `0600`,

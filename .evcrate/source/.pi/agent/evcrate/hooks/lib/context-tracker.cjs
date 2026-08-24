@@ -5,7 +5,7 @@
  * Context Window Tracker - Self-healing context reset detection
  *
  * Fixes #177: Race condition from shared global state file
- * Fixes #178: Consolidates temp files to /tmp/evcrate/ namespace
+ * Fixes #178: Consolidates marker/calibration state under /tmp/evcrate/
  *
  * Architecture:
  * - NO global state file (was causing race conditions in concurrent sessions)
@@ -312,7 +312,7 @@ function writeResetMarker(sessionId, trigger = 'clear') {
 
 /**
  * Clear all markers (for testing/cleanup)
- * Uses new /tmp/evcrate/ namespace
+ * Uses the /tmp/evcrate/ runtime namespace for marker state.
  */
 function clearAllState() {
   const { cleanAll } = require('./evcrate-paths.cjs');

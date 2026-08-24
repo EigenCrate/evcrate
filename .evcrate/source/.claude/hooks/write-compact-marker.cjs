@@ -5,7 +5,7 @@
  * PreCompact Hook: Write session-specific marker file when conversation is compacted
  * Also records calibration data for accurate compact threshold estimation
  *
- * Fixes #178: Uses /tmp/evcrate/ namespace for temp files
+ * Fixes #178: Uses the /tmp/evcrate/ namespace for marker/calibration state
  *
  * Features:
  * - Session-specific markers for concurrent conversation support

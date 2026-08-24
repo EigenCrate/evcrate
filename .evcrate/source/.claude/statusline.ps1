@@ -12,7 +12,7 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Calibration file path (now in evcrate/ namespace - fixes #178)
+# Calibration file path in the shared $env:TEMP\evcrate runtime namespace.
 # IMPORTANT: Path must match evcrate-paths.cjs CALIBRATION_PATH
 $CalibrationPath = Join-Path (Join-Path $env:TEMP "evcrate") "calibration.json"
 

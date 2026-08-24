@@ -7,6 +7,11 @@ const path = require('node:path');
 const test = require('node:test');
 
 const state = require('../advise-state.cjs');
+const paths = require('../../hooks/lib/evcrate-paths.cjs');
+
+test('uses the dedicated EVCrate advisory namespace by default', () => {
+  assert.equal(paths.ADVICE_DIR, path.join(os.tmpdir(), 'evcrate', 'advice'));
+});
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-advise-test-'));
