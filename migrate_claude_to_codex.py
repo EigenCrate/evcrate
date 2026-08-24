@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from distribution.contracts import (
+    add_global_workflow_fallback,
     advisory_relay_error,
     project_advisor_contract,
     render_advisory_interview_workflow,
@@ -546,7 +547,10 @@ def migrate_agents() -> None:
         )
         if source.name == "advisor.md":
             description = "Use this high-tier mentor for fresh named checkpoints; Codex rejects interview relay."
-        body = rewrite_command_execution_guidance(apply_replacements(body), known_commands)
+        body = add_global_workflow_fallback(
+            rewrite_command_execution_guidance(apply_replacements(body), known_commands),
+            "codex",
+        )
         if source.name == "scout-external.md":
             # Render only after generic replacements so target command literals stay exact.
             body = render_external_scout_strategy(body, CODEX_EXTERNAL_SCOUT_STRATEGY)
@@ -586,9 +590,12 @@ def migrate_workflows() -> None:
             if source.name == "advisory-interview.md":
                 source_content = render_advisory_interview_workflow(source_content, "codex")
             content = apply_subagent_wait_contract(
-                rewrite_command_execution_guidance(
-                    apply_replacements(source_content),
-                    known_commands,
+                add_global_workflow_fallback(
+                    rewrite_command_execution_guidance(
+                        apply_replacements(source_content),
+                        known_commands,
+                    ),
+                    "codex",
                 )
             )
             (dest_workflows / source.name).write_text(content, encoding="utf-8")
@@ -635,7 +642,10 @@ def migrate_skills() -> None:
             if is_text_file(path):
                 content = path.read_text(encoding="utf-8", errors="ignore")
                 path.write_text(
-                    rewrite_command_execution_guidance(apply_replacements(content), known_commands),
+                    add_global_workflow_fallback(
+                        rewrite_command_execution_guidance(apply_replacements(content), known_commands),
+                        "codex",
+                    ),
                     encoding="utf-8",
                 )
             if path.name == "SKILL.md":
@@ -678,9 +688,15 @@ def migrate_commands_as_native_skills() -> None:
         if cmd_name == "advise":
             body = render_inline_advise_command(body, "codex", "request_user_input").strip()
         else:
-            body = rewrite_command_execution_guidance(apply_replacements(body), known_commands).strip()
+            body = add_global_workflow_fallback(
+                rewrite_command_execution_guidance(apply_replacements(body), known_commands),
+                "codex",
+            ).strip()
         desc = normalize_skill_description(
-            apply_replacements(str(frontmatter.get("description", ""))).strip(),
+            add_global_workflow_fallback(
+                apply_replacements(str(frontmatter.get("description", ""))),
+                "codex",
+            ).strip(),
             body,
             f"Run the /{cmd_name} command workflow.",
         )

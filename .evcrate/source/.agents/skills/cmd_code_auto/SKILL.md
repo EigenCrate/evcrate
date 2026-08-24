@@ -33,7 +33,7 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 A final standalone `--advice` activates explicit review mentoring.
 Before assigning positional arguments, read
-`.codex/workflows/advisor-mentoring.md` and derive `WORK_ARGUMENTS` plus
+`.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) and derive `WORK_ARGUMENTS` plus
 explicit/default advice mode. Apply its default stuck-escalation contract
 throughout this command.
 

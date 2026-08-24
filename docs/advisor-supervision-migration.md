@@ -73,6 +73,16 @@ creation. It must not silently run an inline interview instead. Generated files
 are projections, not proof of a capability; deterministic build/check and
 target-aware help tests are the evidence.
 
+### Workflow lookup after publication
+
+The generated checkpoint commands prefer a project-local workflow override and
+fall back to the published HOME resource when that override is absent. Codex
+reads `.codex/workflows/advisor-mentoring.md` or
+`~/.codex/workflows/advisor-mentoring.md`; Antigravity reads
+`.antigravity/workflows/advisor-mentoring.md` or
+`~/.gemini/config/workflows/advisor-mentoring.md`. A missing local path is not a
+failure condition.
+
 ## Relay state and privacy
 
 Claude relay state lives under `${TMPDIR:-/tmp}/evcrate/advice/v1/` in a sanitized,

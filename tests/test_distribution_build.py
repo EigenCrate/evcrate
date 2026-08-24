@@ -20,6 +20,7 @@ from distribution.contracts import (
     ADVISORY_CAPABILITY_BLOCK_START,
     BuildError,
     DistributionAction,
+    add_global_workflow_fallback,
     render_advisory_interview_workflow,
     render_inline_advise_command,
 )
@@ -27,9 +28,22 @@ from distribution.hashing import HashingError, normalize_relative_path, source_t
 from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from distribution.overlay import OverlayError, apply_exact_patch, apply_patch_file, copy_overlay_files
 from distribution.staging import BUILD_MANIFEST_PATH, _baseline_owners, _copy_source_root, _load_targets, generate_stage
+from tests.test_advisor_skill_distribution import SCOPED_COMMANDS
 
 
 class DistributionBuildTest(unittest.TestCase):
+    def test_workflow_reference_fallback_is_target_specific_and_idempotent(self) -> None:
+        codex = add_global_workflow_fallback(
+            "Read `.codex/workflows/advisor-mentoring.md`.", "codex"
+        )
+        self.assertIn("~/.codex/workflows/advisor-mentoring.md", codex)
+        self.assertEqual(add_global_workflow_fallback(codex, "codex"), codex)
+
+        antigravity = add_global_workflow_fallback(
+            "Read `.antigravity/workflows/advisor-mentoring.md`.", "antigravity"
+        )
+        self.assertIn("~/.gemini/config/workflows/advisor-mentoring.md", antigravity)
+
     def test_advisory_capability_projection_is_strict_and_removes_relay_state(self) -> None:
         canonical = (
             Path(__file__).resolve().parents[1]
@@ -371,6 +385,13 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", advise)
             self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", workflow)
             self.assertFalse(any(target.rglob("*advise-state*")))
+
+            for relative in SCOPED_COMMANDS:
+                skill_name = "cmd_" + relative.removesuffix(".md").replace("/", "_")
+                content = (target / f"skills/{skill_name}/SKILL.md").read_text(encoding="utf-8")
+                self.assertIn(".antigravity/workflows/advisor-mentoring.md", content)
+                self.assertIn("~/.gemini/config/workflows/advisor-mentoring.md", content)
+                self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
 
     def test_source_copy_omits_compiler_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

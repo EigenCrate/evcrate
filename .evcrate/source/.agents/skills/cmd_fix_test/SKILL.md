@@ -34,7 +34,7 @@ Analyze the skills catalog and activate the skills that are needed for the task 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before testing, read `.codex/workflows/advisor-mentoring.md` and derive
+Before testing, read `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issues input and apply the shared default stuck-escalation contract.
 

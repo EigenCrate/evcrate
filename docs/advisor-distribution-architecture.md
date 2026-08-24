@@ -10,7 +10,10 @@ Antigravity, Pi, and `.agents` projections now define final standalone
 and target-native inline `/advise`. Claude alone retains relay v1; all other
 targets explicitly reject it. The earlier Gemini migration rewrites advisor
 workflow references to the generated `.gemini/workflows/` path; its fallback
-scout command remains literal Claude syntax by design.
+scout command remains literal Claude syntax by design. Codex and Antigravity
+checkpoint commands prefer their project-local workflow path and fall back to
+the published HOME workflow (`~/.codex/workflows/` and
+`~/.gemini/config/workflows/`) when no local override exists.
 
 ## Purpose
 

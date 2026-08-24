@@ -9,7 +9,12 @@ from pathlib import Path
 
 from distribute_hooks import rewrite_agy_global_paths
 
-from .contracts import project_advisor_contract, render_advisory_interview_workflow, render_inline_advise_command
+from .contracts import (
+    add_global_workflow_fallback,
+    project_advisor_contract,
+    render_advisory_interview_workflow,
+    render_inline_advise_command,
+)
 from .context import DistributionContext
 from .hashing import ignore_artifacts
 
@@ -74,6 +79,10 @@ def _replace_legacy_assets(source: Path, target: Path) -> None:
             "python .claude/scripts/ev-help.py",
             "python .antigravity/scripts/ev-help.py",
         )
+        content = add_global_workflow_fallback(
+            content.replace(".claude/workflows/", ".antigravity/workflows/"),
+            "antigravity",
+        )
         if relative.as_posix() == "advise":
             content = render_inline_advise_command(content, "antigravity", "ask_user")
             description = "Interview-first technical advice with native inline questioning and explicit relay rejection"
@@ -96,7 +105,12 @@ def _project_advisory_workflow(source: Path, target: Path) -> None:
         return
     destination = target / "workflows" / canonical.name
     destination.write_text(
-        render_advisory_interview_workflow(canonical.read_text(encoding="utf-8"), "antigravity"),
+        add_global_workflow_fallback(
+            render_advisory_interview_workflow(
+                canonical.read_text(encoding="utf-8"), "antigravity"
+            ),
+            "antigravity",
+        ),
         encoding="utf-8",
     )
 
@@ -120,7 +134,13 @@ def _project_advisor(source: Path, target: Path) -> None:
     destination = target / "agents" / "advisor.md"
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        frontmatter + project_advisor_contract(match.group(2), "antigravity"),
+        frontmatter
+        + add_global_workflow_fallback(
+            project_advisor_contract(match.group(2), "antigravity").replace(
+                ".claude/workflows/", ".antigravity/workflows/"
+            ),
+            "antigravity",
+        ),
         encoding="utf-8",
     )
 

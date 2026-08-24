@@ -31,7 +31,7 @@ Raw implementation input: <raw-plan>{{args}}</raw-plan>
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before interpreting the plan, read `.codex/workflows/advisor-mentoring.md` and
+Before interpreting the plan, read `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) and
 derive `WORK_ARGUMENTS` plus explicit/default advice mode. Execute the plan from
 `WORK_ARGUMENTS` and apply the shared default stuck-escalation contract.
 
