@@ -5,7 +5,7 @@
  * Tests for context-tracker.cjs 2-layer self-healing detection
  *
  * Fixes #177: Tests now verify NO global state (race condition fix)
- * Fixes #178: Tests use /tmp/evcrate/ namespace
+ * Fixes #178: Tests use the /tmp/evcrate/ namespace
  */
 
 const {
@@ -21,10 +21,7 @@ const {
   MARKERS_DIR
 } = require('../lib/context-tracker.cjs');
 
-const { cleanAll } = require('../lib/evcrate-paths.cjs');
-
 const fs = require('fs');
-const path = require('path');
 
 let passed = 0;
 let failed = 0;
@@ -58,10 +55,10 @@ clearAllState();
 
 console.log('\n=== Namespace Verification (#178) ===\n');
 
-test('MARKERS_DIR uses /tmp/evcrate/ namespace', () => {
+test('MARKERS_DIR uses the /tmp/evcrate/ namespace', () => {
   assertTrue(
-    MARKERS_DIR.includes('/evcrate/') || MARKERS_DIR.includes('\\ck\\'),
-    `MARKERS_DIR should use /evcrate/ namespace: ${MARKERS_DIR}`
+    MARKERS_DIR.includes('/evcrate/') || MARKERS_DIR.includes('\\evcrate\\'),
+    `MARKERS_DIR should use the /tmp/evcrate/ namespace: ${MARKERS_DIR}`
   );
 });
 

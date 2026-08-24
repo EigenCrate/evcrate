@@ -228,8 +228,8 @@ Provide a production-ready template that:
 - Distribute the canonical `advisor-strategy` skill, brief contract, and normal
   high-tier `advisor` subagent through verified target artifact paths.
 - Add one non-invoking strategy pointer to every generated command skill. Scoped
-  implementation commands also preserve final standalone `@advisor` mode and
-  deterministic stuck escalation.
+  implementation commands recognize final standalone `--advice`, preserve
+  ordinary `@advisor` work input, and retain deterministic stuck escalation.
 - Keep generated targets free of advisor MCP/broker wiring, provider selectors,
   admission hooks, runtime launchers, quota ledgers, and audit claims. Normal
   target model-policy mapping for the advisor subagent is allowed.
@@ -256,13 +256,17 @@ Provide a production-ready template that:
 - `advisor-strategy` remains a static decision rubric. The normal `advisor`
   subagent applies it with bounded read-only evidence and target high-tier/strong
   model mapping.
-- A final standalone `@advisor` requests one blocking advisor after every terminal
-  implementation review. Default mode calls once on the second consecutive
-  matching blocker and stops for user direction if the advised retry repeats it.
-- Review execution is intended to stop at three reviewer/advisor cycles and keeps
-  the user approval gate. Follow-up defects are known for `/code*` cap enforcement,
-  `/code:auto` advisor must-fix/default handling, and `/cook` fallback token
-  preservation.
+- One final standalone `--advice` enables fresh, blocking, non-binding counsel at
+  named review, repeated-blocker, and existing decision checkpoints. Every
+  `@advisor` occurrence is ordinary unchanged work input; there is no alias or
+  deprecation window.
+- `/advise` is a separate inline-first interview. Claude alone supports exact
+  final `--agent` relay v1; Codex, Pi, Gemini, and Antigravity explicitly reject
+  relay. The relay uses bounded, sanitized, owner-only temporary state and fails
+  closed without an inline downgrade.
+- Review execution stops at three reviewer/advisor cycles and keeps the user
+  approval gate. Generated target evidence comes from deterministic build/check
+  and target-aware help tests, never from hand-edited projections.
 - The unshipped `advisor_consult` interface remains removed. Integrations must not
   depend on a broker, provider selector, admission hook, runtime launcher,
   registry, quota ledger, audit transport, or approval bypass.

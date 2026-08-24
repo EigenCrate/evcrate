@@ -27,12 +27,18 @@ def advisory_test_patterns():
         ),
         "cla" + "ude",
     )
-    common = ["/advise", "--agent", "--advice", "@advisor", "one question per turn"]
+    common = [
+        "/advise",
+        "--agent",
+        "--advice",
+        "@advisor",
+        "one question per turn",
+    ]
     if target == "cla" + "ude":
-        return [*common, ("Clau" + "de") + "-only", "relay v1"], []
+        return [*common, ("Clau" + "de") + "-only", "relay v1", "seven days", "24-hour tombstone"], []
 
     error = f"ADVISE_AGENT_RELAY_UNSUPPORTED_{target.upper()}"
-    return [*common, error, "before advisor delegation or relay-state creation"], ["relay v1"]
+    return [*common, error, "before advisor delegation or relay-state creation", "creates no relay state"], ["relay v1", "seven days", "24-hour tombstone"]
 
 
 def run_evcrate_help(*args):

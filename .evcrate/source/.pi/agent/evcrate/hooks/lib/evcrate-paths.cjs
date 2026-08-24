@@ -4,11 +4,10 @@
 /**
  * EVCrate Paths - Centralized path constants for all temporary/runtime files
  *
- * All EVCrate temp files consolidated under the compatibility /tmp/ck/ namespace for:
- * - Cleaner /tmp directory (single namespace)
- * - Easier cleanup (rm -rf /tmp/ck/)
- * - Debugging (all state in one place)
- * - No collisions with other tools
+ * All EVCrate temporary/runtime state lives under the
+ * ${TMPDIR:-/tmp}/evcrate/ namespace:
+ * - markers, calibration, and debug logs use its direct children
+ * - advisory state uses ${TMPDIR:-/tmp}/evcrate/advice/v1/
  *
  * Fixes:
  * - #177: Race condition from shared global state file
@@ -21,8 +20,8 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
-// Root directory for all EVCrate temp files; /tmp/ck is a runtime compatibility path.
-const EVCRATE_TMP_DIR = path.join(os.tmpdir(), 'ck');
+// Root directory for all EVCrate temporary/runtime files.
+const EVCRATE_TMP_DIR = path.join(os.tmpdir(), 'evcrate');
 
 // Session-specific marker files (per-session, no race conditions)
 const MARKERS_DIR = path.join(EVCRATE_TMP_DIR, 'markers');
@@ -33,8 +32,9 @@ const CALIBRATION_PATH = path.join(EVCRATE_TMP_DIR, 'calibration.json');
 // Debug logs directory
 const DEBUG_DIR = path.join(EVCRATE_TMP_DIR, 'debug');
 
-// Invocation-scoped advisory interview state; never use this for ck-session-* state.
-const ADVICE_DIR = path.join(EVCRATE_TMP_DIR, 'advice');
+// Advisory state has its own subtree under the EVCrate runtime namespace.
+const EVCRATE_ADVICE_ROOT = EVCRATE_TMP_DIR;
+const ADVICE_DIR = path.join(EVCRATE_ADVICE_ROOT, 'advice');
 
 /**
  * Ensure directory exists
@@ -48,7 +48,7 @@ function ensureDir(dirPath) {
   } catch (err) {
     // Silent fail - non-critical, but log for debugging
     if (process.env.EVCRATE_DEBUG) {
-      console.error(`[CK] Failed to create ${dirPath}: ${err.message}`);
+      console.error(`[EVCrate] Failed to create ${dirPath}: ${err.message}`);
     }
   }
 }
@@ -98,6 +98,7 @@ function cleanAll() {
 module.exports = {
   // Directories
   EVCRATE_TMP_DIR,
+  EVCRATE_ADVICE_ROOT,
   MARKERS_DIR,
   DEBUG_DIR,
   ADVICE_DIR,

@@ -7,7 +7,7 @@
  * This script updates the session temp file with the new active plan path,
  * allowing subagents to receive the latest plan context via SubagentStart hook.
  *
- * The session temp file (/tmp/ck-session-{id}.json) is the source of truth
+ * The session temp file (/tmp/evcrate-session-{id}.json) is the source of truth
  * for plan context within a session. Env vars ($EVCRATE_ACTIVE_PLAN) are just
  * the initial snapshot from session start.
  */

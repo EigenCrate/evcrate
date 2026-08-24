@@ -1,16 +1,16 @@
 # Advisor Mentoring and Target Distribution Architecture
 
 **Status**: Active; former broker design superseded
-**Last Updated**: 2026-08-23
+**Last Updated**: 2026-08-24
 **Parent**: [System Architecture](./system-architecture.md)
 
-**Phase 02 note (2026-08-23)**: The canonical Claude source and focused
-regression coverage now define final standalone `--advice`, ordinary `@advisor`
-input, and named review/stuck/decision checkpoints. Generated Codex, Gemini,
-Antigravity, Pi, and `.agents` projections are intentionally not regenerated in
-Phase 02; Phase 04 owns that rollout. The earlier Gemini migration rewrites
-advisor workflow references to the generated `.gemini/workflows/` path; its
-fallback scout command remains literal Claude syntax by design.
+**Release note (2026-08-24)**: The canonical source, generated Codex, Gemini,
+Antigravity, Pi, and `.agents` projections now define final standalone
+`--advice`, ordinary `@advisor` input, named review/stuck/decision checkpoints,
+and target-native inline `/advise`. Claude alone retains relay v1; all other
+targets explicitly reject it. The earlier Gemini migration rewrites advisor
+workflow references to the generated `.gemini/workflows/` path; its fallback
+scout command remains literal Claude syntax by design.
 
 ## Purpose
 
@@ -22,13 +22,14 @@ advisor broker/runtime infrastructure.
 
 The `.agents` projection described here is the shared skill distribution; normal
 advisor agents are target-specific generated resources. It must not be read as
-the native Pi target. [Native Pi Phase 01](./pi-native-migration-phase-01.md)
-records the original `.pi` target and shared `agent/settings.json` merge for only
+the native Pi target. [Native Pi migration](./pi-native-migration.md) records
+the `.pi` target and shared `agent/settings.json` merge for only
 `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and
-`npm:@juicesharp/rpiv-todo@2.4.0`; Phase 03 has since implemented the native
-runtime. Release/cutover remains blocked by XML closing-tag marker corruption and
-a shell descendant timeout/process-tree leak, and live publication still requires
-manual Pi quiescence.
+`npm:@juicesharp/rpiv-todo@2.4.0`; Phase 03 implemented the native runtime and
+Phase 04 completed its generated-target rollout and parity checks. Release
+publication remains user-controlled and requires manual Pi quiescence; this
+documentation describes the verified build/check boundary, not automatic live
+cutover.
 
 ## Architectural Decisions
 
@@ -39,9 +40,9 @@ manual Pi quiescence.
 - Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`; generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions capped at 1,024 characters.
 - `.evcrate/targets/<target>` owns target-only files and explicit config patches.
 - Local `.evcrate/source/.claude`, `.evcrate/source/.agents`, `.evcrate/source/.codex`, `.evcrate/source/.gemini`, and other target trees are finalized artifacts.
-- Phase 02 changes the canonical Claude source and focused regression assertions
-  only. Generated target trees are not hand-edited or regenerated in this phase;
-  Phase 04 owns their advisory-capability rollout and parity checks.
+- Phase 02 changed the canonical Claude source and focused regression assertions
+  only. Generated target trees were not hand-edited or regenerated in that phase;
+  Phase 04 completed their advisory-capability rollout and parity checks.
 - HOME distribution consumes finalized local artifacts only and preserves declared user-owned configuration.
 - Generic publication preserves unmanaged HOME files; stale or incomplete manifests, output drift, and symlinks in managed artifacts or unsafe HOME paths are rejected.
 - `.evcrate/source/.claude/skills/advisor-strategy/` is the canonical advisor source and migrates to `.evcrate/source/.agents/skills/advisor-strategy/` with its brief contract.
@@ -113,7 +114,12 @@ Build failure must not mutate the last valid local artifacts or HOME.
 3. Compute create/update/delete/preserve diff per HOME target.
 4. Stage and promote each target with release/recovery metadata.
 
-After changing `.evcrate/source/.claude`, run `python3 distribute.py --all`, or run `python3 distribute.py --build` followed by `python3 distribute.py --publish`. `--publish` requires a current verified build, never runs migrators, and publishes the sanitized HOME view of the complete `.evcrate/source/.claude` artifact to `$HOME/.claude`. The advisor skill's `.agents` publication does not create or modify `~/.pi/agent/settings.json`; the separate native Pi Phase 01 target owns its documented shared-settings merge.
+After changing `.evcrate/source/.claude`, run `python3 distribute.py --build`
+and `python3 distribute.py --check`; repeat the build when checking
+determinism. `--publish` is separate authorization: it requires a current
+verified build, never runs migrators, and publishes the sanitized HOME view of
+the complete `.evcrate/source/.claude` artifact to `$HOME/.claude`. The advisor
+skill's `.agents` publication does not create or modify `~/.pi/agent/settings.json`; the separate native Pi Phase 01 target owns its documented shared-settings merge.
 
 `python3 distribute.py --all --target pi` (also `npm run distribute:pi`) narrows stage, manifest verification, and HOME bindings to `.pi → $EVCRATE_HOME/.pi`. It still takes the repository build lock and HOME-wide publication lock, verifies a newly built Pi artifact, merges Pi shared settings, and retains pi-code, symlink, recovery, and concurrent-HOME-change guards. Use `--publish --target pi --dry-run --json` only to inspect an existing verified Pi artifact; do not use a direct migrator or copy. Omitting `--target` remains all-target.
 
@@ -142,12 +148,10 @@ Developer runs an implementation command
   -> executor records advice and keeps normal test/review/human gates
 ```
 
-The Phase 02 contract is implemented in the canonical Claude source. Generated
-target projections retain their prior release state until Phase 04; they are not
-evidence that the new contract has been rolled out. Cook discovery/planning and
-all cook fallbacks pass `WORK_ARGUMENTS`; `/fix:hard` is included in the scoped
-fallback preservation rule. Explicit mode is preserved exactly once across each
-canonical handoff.
+The contract is implemented in canonical Claude and projected through the
+deterministic build. Cook discovery/planning and all cook fallbacks pass
+`WORK_ARGUMENTS`; `/fix:hard` is included in the scoped fallback preservation
+rule. Explicit mode is preserved exactly once across each canonical handoff.
 
 The skill remains static guidance and cannot independently inspect evidence, call
 a model, or enforce a verdict. The `advisor` agent is the ordinary host delegation
@@ -185,7 +189,7 @@ boundary. Generic MCP and hook support remain unchanged.
 
 ## Phase 04 Generated-Target Rollout
 
-Phase 04 regenerates and parity-checks Codex, Gemini, Pi, Antigravity, and
+Phase 04 regenerated and parity-checked Codex, Gemini, Pi, Antigravity, and
 `.agents` from the canonical Claude source. Generated trees remain derived
 artifacts: update `.evcrate/source/.claude` or a declared target overlay, then
 run the distribution build/check gates; do not hand-edit generated files.
@@ -205,11 +209,11 @@ behavior, and documents the matching `ADVISE_AGENT_RELAY_UNSUPPORTED_<TARGET>`
 rejection. The help script must remain correct when copied to a target-specific
 script directory, not only when run from the canonical Claude tree.
 
-## Advisor command-mode hardening status
+## Historical Phase 02 command-mode hardening
 
 The four previously tracked command-mode follow-ups are resolved in the
-canonical Claude source and its focused regression coverage. Generated target
-projections are intentionally deferred to Phase 04:
+canonical Claude source and its focused regression coverage. Phase 04 completed
+the generated-target projection and parity gates:
 
 - All four `/code` variants enforce the shared hard cap and advisor-before-fix or
   approval ordering; `/code:no-test` keeps its intentional one-cycle limit.
@@ -226,7 +230,7 @@ projections are intentionally deferred to Phase 04:
 ## Phase 03 Canonical Claude Capability
 
 Phase 03 is implemented in `.evcrate/source/.claude` as the canonical Claude
-capability. Phase 04 now supplies the generated-target projections, strict
+capability. Phase 04 supplied the generated-target projections, strict
 capability validation, target-native inline command behavior, and generated
 help parity checks described above.
 
@@ -255,8 +259,9 @@ help parity checks described above.
 
 ## References
 
+- [Advisor supervision migration](./advisor-supervision-migration.md)
 - [Canonical advisor workflow](../.evcrate/source/.claude/workflows/advisor-mentoring.md)
 - [Canonical `/advise` command](../.evcrate/source/.claude/commands/advise.md)
 - [Canonical advisory interview workflow](../.evcrate/source/.claude/workflows/advisory-interview.md)
 - [System architecture](./system-architecture.md)
-- [Native Pi Phase 01](./pi-native-migration-phase-01.md)
+- [Native Pi migration](./pi-native-migration.md)

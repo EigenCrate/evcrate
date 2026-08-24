@@ -58,7 +58,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - **[Codebase Summary](./docs/codebase-summary.md)** - High-level overview of project structure, technologies, and components
 - **[Code Standards](./docs/code-standards.md)** - Coding standards, naming conventions, and best practices
 - **[System Architecture](./docs/system-architecture.md)** - Detailed architecture documentation, component interactions, and data flow
-- **[Native Pi Phase 01](./docs/pi-native-migration-phase-01.md)** - Historical target/publication contract; see the [System Architecture](./docs/system-architecture.md#native-pi-phase-03-runtime-boundary-implemented-not-release-ready) for the implemented runtime and release blockers
+- **[Advisor Supervision Migration](./docs/advisor-supervision-migration.md)** - Breaking `@advisor` to `--advice` migration, `/advise` capability matrix, and validation guidance
 - **[Commands Reference](./guide/COMMANDS.md)** - Complete guide to all available slash commands
 
 ### 📖 Additional Resources

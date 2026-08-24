@@ -92,7 +92,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 
 **Advisor Guidance**:
 - `advisor-strategy` is a static, portable skill distributed from `.evcrate/source/.claude/skills` to the managed skill roots.
-- `advisor` is a normal high-tier subagent (`opus` canonically; mapped by each target's existing model policy). It applies the strategy skill to a bounded named-checkpoint brief and returns non-binding mentorship without editing or approval authority. The existing target mappings are Codex `gpt-5.6-sol` with high reasoning, Gemini target-native `pro`, and Pi semantic `strong`; Phase 04 owns projecting the updated contract to those targets.
+- `advisor` is a normal high-tier subagent (`opus` canonically; mapped by each target's existing model policy). It applies the strategy skill to a bounded named-checkpoint brief and returns non-binding mentorship without editing or approval authority. The shipped target mappings are Codex `gpt-5.6-sol` with high reasoning, Gemini target-native `pro`, and Pi semantic `strong`.
 - Phase 02-scoped `/code`, `/cook`, `/fix`, and `/bootstrap` commands accept exactly one case-sensitive, whitespace-delimited final standalone `--advice` (trailing whitespace allowed). They strip only that token into `WORK_ARGUMENTS`, reject duplicate standalone tokens, and leave non-final, quoted, embedded, suffixed, or differently cased forms unchanged. `--advice` alone follows normal empty-input behavior.
 - Every `@advisor` occurrence, including an exact final token, is ordinary unchanged work input. The final `@advisor` mode is historical Phase 01 behavior, not an active alias in the Phase 02 canonical source.
 - Named counsel is limited to `review:<workflow-step>` after terminal review evidence, `stuck:<blocker-signature>` on the second matching no-progress blocker, and `decision:<workflow-step>` before an existing uncovered irreversible, security-sensitive, or go/no-go decision. Each call is fresh, blocking, non-binding, and explicitly receives relevant prior counsel and owner disposition.
@@ -101,13 +101,14 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - Generated `.evcrate/source/.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
 - The completed canonical review contract has an explicit hard cap and still
   requires explicit user approval before finalization. Generated target
-  projections were not regenerated in Phase 02; Phase 04 owns their rollout and
-  parity validation.
+  projections were not regenerated in Phase 02; Phase 04 completed their rollout
+  and parity validation.
 
 **Phase 03 inline interview and Claude relay:**
 - Canonical `/advise [prompt-or-url]` is implemented as an inline-first main-session interview: one question at a time, explicit reframe confirmation, bounded discovery, and a sanitized linked report.
 - Canonical Claude accepts `/advise [prompt-or-url] --agent` only for one exact final standalone `--agent`; the relay uses invocation-scoped temporary state, keeps the main session as the sole user interlocutor/report writer, fails closed, and never silently falls back to inline mode.
-- Codex, Pi, Gemini, and Antigravity remain unsupported for `--agent` until Phase 04 regenerates and tests their target-specific capability; generated files are projections, not support proof, and must not be hand-edited.
+- Codex, Pi, Gemini, and Antigravity support checkpoint and inline advice but reject relay as `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX`, `ADVISE_AGENT_RELAY_UNSUPPORTED_PI`, `ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI`, and `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` respectively. Generated files are not support evidence; deterministic build/check and target-aware help tests are.
+- See [Advisor Supervision Migration](./advisor-supervision-migration.md) for user syntax, target behavior, state retention, and local release gates.
 - The relay retains the existing no-broker/no-MCP/no-provider-selector/no-approval-bypass boundary.
 - The main workflow retains execution ownership and the existing
   no-broker/no-MCP/no-provider-selector/no-approval-bypass boundary.
@@ -951,7 +952,7 @@ User Project
 - Native Pi commands are registered recursively from the managed local extension using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. A bounded `evcrate_command` tool dispatches model-initiated nested commands with cycle/depth controls. An authoritative operation-policy `tool_call` gate enforces temporary tool restrictions even if later extensions alter active tools; dispatcher calls mixed with parallel siblings are rejected and retried alone. Static workflow Markdown remains referenced data; it is not silently converted into dynamic executable orchestration.
 - Native Pi agents run through the structured `pi-subagents` delegation API exposed by an EVCrate-owned tool; the package's public `workflowScript` tool is not parsed or rewritten. Semantic model roles are resolved against the active provider immediately before delegation; concrete models are never baked into command, workflow, or agent prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
 - Existing Codex, Gemini, Antigravity, and Pi outputs include the portable
-  `advisor-strategy` skill and prior mentoring contract. Phase 04 also projects
+  `advisor-strategy` skill and prior mentoring contract. Phase 04 also projected
   strict advisory capability markers and target-native inline `/advise`
   behavior; only canonical Claude retains the relay path. Non-Claude targets
   reject an exact final standalone `--agent` with their target-specific
@@ -968,7 +969,7 @@ User Project
 - The former `advisor_consult` broker contract is superseded; host permissions, sandboxing, and human review remain authoritative.
 
 Phase 03 `/advise` is implemented in canonical Claude source, and Phase 04
-projects its inline-first behavior to generated targets. Generated help is
+projected its inline-first behavior to generated targets. Generated help is
 target-aware and tested for the matching unsupported relay code. The release
 boundary remains the verified build/check artifact, not generated-file presence
 alone.
@@ -977,9 +978,9 @@ Gemini migration rewrites authored advisor workflow references to the generated
 `.gemini/workflows/` path. Its fallback scout command is deliberately retained as
 literal Claude CLI syntax and is not target-rewritten.
 
-### Native Pi runtime boundary (Phases 03–04 implemented; live cutover pending)
+### Native Pi runtime boundary (Phases 03–04 implemented; live cutover user-controlled)
 
-Phase 03 implements the native runtime on top of the Phase 01 distribution contract and Phase 02 resource projection. It is not a release, integration-gate, or live-cutover approval.
+Phase 03 implemented the native runtime on top of the Phase 01 distribution contract and Phase 02 resource projection; Phase 04 completed generated-target rollout and parity checks. This is not a release, integration-gate, or live-cutover approval.
 
 - **Native commands:** the managed extension recursively registers Markdown commands at session start (`dir/file.md` becomes `/dir:file`), expands arguments and supported authored shell/file events, then sends the expanded body as a user message. Static workflows remain referenced Markdown data rather than executable orchestration.
 - **Bounded nested dispatch:** `evcrate_command` lets the model invoke a managed command with depth, invocation-count, and cycle controls. It is the only tool call permitted in its assistant batch; mixed batches are rejected for an isolated retry.

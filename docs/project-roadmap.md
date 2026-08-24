@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-24 03:27:24 +0700
+**Last Updated:** 2026-08-24 07:01:11 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -167,13 +167,13 @@ Enterprise-grade features and deployment options.
 
 Build/check, packed-tarball, native Pi discovery, and temporary-HOME validation must be reviewed before a user-approved, manually quiescent live Pi cutover. The user must manually remove `pi-code` before a live dry-run and publication; no automation changes live provider settings. Deferred follow-up work includes the Codex-owned `.agents` refactor and explicit model-role routes for providers validated after OpenAI Codex. See [Native Pi migration](./pi-native-migration.md).
 
-See [Native Pi Phase 01](./pi-native-migration-phase-01.md) for the implemented boundary.
+See [Native Pi migration](./pi-native-migration.md) for the implemented boundary.
 
 ## Current Development Focus
 
 ### Advisor Supervision and Interview Workflows
 - ✅ Phase 02 canonical one-shot `--advice` supervision implementation and review complete (2026-08-23 22:27:03 +0700); user approved. Its two approved non-blocking follow-ups closed (2026-08-23 23:00:08 +0700): duplicate `fix/test.md` step numbering corrected, and the Codex distribution assertion now generates Gemini output in a fresh temporary root before checking generated commands. Reviewer-reported validation: focused 50/50; `npm test`: 146 Python + 46 Node.
-- ✅ Phase 03 `/advise` interview and Claude relay, and Phase 04 generated-target rollout complete. Codex, Pi, Gemini, and Antigravity now receive generated capability-accurate checkpoint/inline advisory surfaces with explicit relay rejection; generated-help warnings were fixed and target checks passed. Phase 05 migration docs and release gates remain pending.
+- ✅ Phase 03 `/advise` interview and Claude relay, Phase 04 generated-target rollout, and Phase 05 migration documentation/release gates complete. Codex, Pi, Gemini, and Antigravity now receive generated capability-accurate checkpoint/inline advisory surfaces with explicit relay rejection; generated-help warnings were fixed and target checks passed. Full validation and review passed; release/publish/commit remains separately user-authorized.
 
 ### 1. Windows Ecosystem Support
 - ✅ Statusline cross-platform support

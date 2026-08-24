@@ -101,16 +101,20 @@ Canonical commands are stored in `.evcrate/source/.claude/commands/` and can be 
 - Confirms a single reframed problem before producing candid advice
 - Writes a sanitized Markdown report to the active plan's `reports/` directory, or `plans/reports/`, and links it
 
-The exact final standalone `--agent` form is a Claude-only relay in the current
-canonical release boundary. Duplicate flags are rejected; quoted, embedded,
-non-final, and differently cased forms remain prompt text. Relay state is
-temporary, owner-only, bounded, and retained only for pause/failure recovery or
-the completion tombstone. Relay failures fail closed and never silently downgrade
-to inline mode. Codex, Pi, Gemini, and Antigravity must reject `--agent` until
-Phase 04 regenerates and tests their projections.
+The exact final standalone `--agent` form is a Claude-only relay v1. Duplicate
+flags are rejected; quoted, embedded, non-final, and differently cased forms
+remain prompt text. Relay state is temporary, owner-only, bounded, and retained
+for seven days after pause/failure or for 24 hours as a completion tombstone.
+Relay failures fail closed and never silently downgrade to inline mode. Codex,
+Pi, Gemini, and Antigravity support inline `/advise` but reject relay as
+`ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX`, `ADVISE_AGENT_RELAY_UNSUPPORTED_PI`,
+`ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI`, and
+`ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY`.
 
 Use `--advice` on implementation commands for separate one-shot checkpoint
-counsel; `@advisor` is ordinary input and does not activate supervision.
+counsel; `@advisor` is ordinary input and does not activate supervision. See
+[Advisor Supervision Migration](../docs/advisor-supervision-migration.md) for
+syntax, state, troubleshooting, and capability details.
 
 ---
 

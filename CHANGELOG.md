@@ -15,10 +15,12 @@
 ### Breaking Changes
 
 * **advisor:** remove the unshipped `advisor_consult` MCP/broker/admission runtime. Use explicit `$advisor-strategy` for current-session guidance; it provides no independent model call, isolation, quota, audit, or enforcement.
+* **advisor:** replace final `@advisor` command mode with final `--advice`. `@advisor` is ordinary task text with no alias or deprecation window. Add `/advise` for inline interviews and Claude-only relay v1; Codex, Pi, Gemini, and Antigravity reject relay explicitly.
 
 ### Documentation
 
 * **pi:** document native operating, package, skill-isolation, validation, and manual-cutover procedures.
+* **advisor:** document migration syntax, checkpoint and interview behavior, relay-state retention, target capability codes, and deterministic build/check gates.
 
 ### Tests
 
