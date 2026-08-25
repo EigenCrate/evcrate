@@ -172,11 +172,12 @@ Resolver/dispatcher JSON exposes only the stable sanitized fields
 filesystem paths, credentials, causes, or raw process diagnostics. Unknown
 failures normalize to the stable process error rather than leaking details.
 
-The registry declares adapter slots for Claude, Codex, Gemini, Antigravity,
-and Pi. Claude and Codex have concrete adapter contracts; Gemini and
-Antigravity are registered but fail closed when their exact effort/read-only
-boundary is not evidenced, and Pi remains a placeholder. No authenticated
-external CLI is production-enabled. Each adapter owns its exact
+The registry declares concrete adapter contracts for Claude, Codex, Gemini,
+Antigravity, and Pi. Exact capability gates still fail closed when a selected
+CLI cannot evidence the requested effort/read-only boundary; Gemini's bundled
+native route therefore reports `EFFORT_UNSUPPORTED`, and the reviewed
+Antigravity boundary remains explicitly gated. No authenticated external CLI
+is production-enabled. Each adapter owns its exact
 executable/version, model, effort/thinking, headless, structured-output,
 read-only, session, auth, and cancellation contract. Capability gaps fail at
 route validation: for example, Gemini CLI 0.47.0 exposes no exact effort flag,
@@ -249,20 +250,20 @@ No migration or overlay logic runs during publication.
 
 ### Routing runtime closure and Phase 02 boundary
 
-The validated production routing closure is fourteen files:
-`advisor-dispatch.cjs`, these nine files under `advisor-routing/`, and four
+The validated production routing closure is sixteen files:
+`advisor-dispatch.cjs`, ten shared files under `advisor-routing/`, and five
 adapter modules under `advisor-routing/adapters/`:
 
-- `adapter-contract.cjs`, `adapter-registry.cjs`, `errors.cjs`,
-  `json-document.cjs`
+- `adapter-contract.cjs`, `adapter-registry.cjs`, `checkpoint-contract.cjs`,
+  `errors.cjs`, `json-document.cjs`
 - `native-capabilities.json`, `policy-schema.cjs`, `profile.cjs`,
   `resolve-route.cjs`, `runner.cjs`
 - `adapters/antigravity.cjs`, `adapters/claude.cjs`,
-  `adapters/codex.cjs`, `adapters/gemini.cjs`
+  `adapters/codex.cjs`, `adapters/gemini.cjs`, `adapters/pi.cjs`
 
 The reviewer’s “seven runtime files” wording counted the dispatcher plus an
 earlier six-file subset. It is historical shorthand, not the current closure.
-Distribution inventory tests resolve all fourteen imports and keep generated
+Distribution inventory tests resolve all sixteen imports and keep generated
 target presence separate from runtime capability evidence. Phase 04 keeps the
 canonical closure and focused tests as the boundary. It does not regenerate
 production projections or update build-manifest integration; Phase 07 owns

@@ -37,7 +37,10 @@ agent does not implicitly activate `advisor-strategy`.
 For `checkpoint/v1` only:
 
 1. Activate the `advisor-strategy` skill and follow its one-shot checkpoint
-   brief contract.
+   brief contract. The caller supplies an
+   `evcrate-advisor-checkpoint/v1` envelope with active host, named checkpoint,
+   question, kind, task/phase, bounded evidence, changed paths, prior counsel,
+   and owner disposition.
 2. Answer one precise architecture, debugging, security, or review question from
    the supplied terminal evidence and named checkpoint.
 3. Use at most four repository-relative evidence files. Treat reviewer and test
@@ -49,6 +52,11 @@ For `checkpoint/v1` only:
    rejection when the caller supplies them. Do not infer hidden conversation
    state.
 6. Return a complete terminal report before the caller continues.
+
+The envelope is metadata only. Do not select or override backend, model, effort,
+execution, adapter, executable, argv, fallback, or provider template. Route
+selection belongs to the canonical dispatcher. Reject nested advisor work and
+retain the read-only `Read, Glob, Grep` boundary.
 
 For `interview-relay/v1`, follow the envelope rules above and the shared
 `.claude/workflows/advisory-interview.md` contract. Do not activate checkpoint

@@ -36,6 +36,8 @@ DISPATCHER_RUNTIME_PATHS = (
     ".claude/scripts/advisor-dispatch.cjs",
     ".claude/scripts/advisor-routing/",
 )
+CHECKPOINT_DISPATCH_START = "<!-- EVCRATE_ADVISOR_CHECKPOINT_DISPATCH_START -->"
+CHECKPOINT_DISPATCH_END = "<!-- EVCRATE_ADVISOR_CHECKPOINT_DISPATCH_END -->"
 ADVISOR_RUNTIME_FILES = (
     "advisor-dispatch.cjs",
     "advisor-routing/adapter-contract.cjs",
@@ -44,6 +46,8 @@ ADVISOR_RUNTIME_FILES = (
     "advisor-routing/adapters/claude.cjs",
     "advisor-routing/adapters/codex.cjs",
     "advisor-routing/adapters/gemini.cjs",
+    "advisor-routing/adapters/pi.cjs",
+    "advisor-routing/checkpoint-contract.cjs",
     "advisor-routing/errors.cjs",
     "advisor-routing/json-document.cjs",
     "advisor-routing/native-capabilities.json",
@@ -231,6 +235,35 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
         canonical = REPOSITORY / ".evcrate/source/.claude"
         contract = (canonical / "workflows/advisor-mentoring.md").read_text(encoding="utf-8")
         normalized_contract = " ".join(contract.split()).lower()
+        self.assertEqual(contract.count(CHECKPOINT_DISPATCH_START), 1)
+        self.assertEqual(contract.count(CHECKPOINT_DISPATCH_END), 1)
+        checkpoint_start = contract.index(CHECKPOINT_DISPATCH_START)
+        checkpoint_end = contract.index(CHECKPOINT_DISPATCH_END)
+        self.assertLess(checkpoint_start, checkpoint_end)
+        checkpoint_block = contract[checkpoint_start:checkpoint_end]
+        for marker in (
+            "evcrate-advisor-checkpoint/v1",
+            "evcrate-advisor-result/v1",
+            "active_host",
+            "task_or_phase",
+            "changed_paths",
+            "prior_counsel",
+            "owner_disposition",
+            "resolve the active host exactly once",
+            "exact same-backend capability",
+            "one fresh ordinary",
+            "host-native `advisor`",
+            "zero CLI processes",
+            "external adapter must return",
+            "dispatcher rejects malformed",
+            "do not invoke a native advisor in this branch",
+            "starts no alternate route",
+        ):
+            self.assertIn(marker.lower(), checkpoint_block.lower())
+        self.assertEqual(checkpoint_block.lower().count("do not invoke a native advisor"), 1)
+        request_example = checkpoint_block.split("```json", 1)[1].split("```", 1)[0]
+        for forbidden in ('"backend"', '"model"', '"effort"', '"execution"', '"adapter"', '"argv"'):
+            self.assertNotIn(forbidden, request_example)
         for marker in (
             "standalone token is exactly `--advice` delimited by whitespace",
             "two or more standalone tokens are a deterministic input error",
@@ -281,12 +314,13 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertIn(".claude/workflows/advisor-mentoring.md", content)
                 self.assertIn("WORK_ARGUMENTS", content)
                 self.assertIn("default stuck-escalation contract", normalized_content)
+                self.assertIn("evcrate-advisor-checkpoint/v1", normalized_content)
         for relative in DIRECT_REVIEW_COMMANDS:
             with self.subTest(review_command=relative):
                 content = (canonical / "commands" / relative).read_text(encoding="utf-8")
                 normalized_content = " ".join(content.split())
                 self.assertIn("explicit advice mode", normalized_content.lower())
-                self.assertIn("`advisor`", content)
+                self.assertIn("advisor", content.lower())
                 self.assertIn("code-reviewer", content)
                 self.assertIn("terminal", normalized_content.lower())
                 self.assertIn("review:<workflow-step>", normalized_content)
@@ -298,6 +332,9 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
 
     def test_canonical_advisory_interview_and_claude_relay_contract(self) -> None:
         canonical = REPOSITORY / ".evcrate/source/.claude"
+        for ordinary_path in ("commands/advise.md", "workflows/advisory-interview.md"):
+            ordinary = (canonical / ordinary_path).read_text(encoding="utf-8")
+            self.assertNotIn("evcrate-advisor-checkpoint/v1", ordinary)
         workflow = (canonical / "workflows/advisory-interview.md").read_text(encoding="utf-8")
         normalized_workflow = " ".join(workflow.split()).lower()
         for marker in (
@@ -398,7 +435,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertIn("decision:<workflow-step>", content)
                 self.assertIn("branch explicitly", content)
                 self.assertIn("decision is irreversible", content)
-                self.assertIn("call exactly one `advisor`", content)
+                self.assertIn("enter the canonical checkpoint dispatcher exactly once", content)
                 self.assertIn("otherwise continue the existing approval/action", content)
                 self.assertIn("routine", content)
 

@@ -98,17 +98,20 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - The dispatcher never substitutes a model, downgrades effort, inherits another host profile, changes execution mode, or falls back to a different backend. Capability, executable, authentication, timeout, cancellation, malformed-output, and recursion failures remain distinct actionable errors.
 - Phase 01's exact route truth table is documented in [Advisor Mentoring and Target Distribution Architecture](./advisor-distribution-architecture.md#advisor-route-and-dispatcher-contract). Gemini's bundled native capability advertises no effort values, so its default exact-effort route fails with `EFFORT_UNSUPPORTED` rather than downgrading.
 - Route descriptors, capability/policy documents, and typed errors are frozen. The dispatcher serializes only `code`, `category`, `action`, and `message`, excluding paths, policy bytes, credentials, causes, and raw diagnostics.
-- The validated advisor routing closure is ten runtime files: the dispatcher
-  plus nine `advisor-routing/` files. The reviewer’s “seven runtime files”
-  wording covered an earlier subset; the parity fixture compares all ten across
+- The validated advisor routing closure is sixteen runtime files: the dispatcher,
+  ten shared `advisor-routing/` files, and five adapter modules. The reviewer’s
+  “seven runtime files” wording covered an earlier subset; the parity fixture compares all sixteen across
   Claude, Codex, Gemini, Antigravity, and Pi and runs the same cross-host
   resolution request.
 - External adapters use argument-vector process spawning without a shell, deliver a bounded checkpoint brief through stdin, parse machine-readable output, enforce read-only/no-approval defaults, bound output and process lifetime, terminate descendants on cancellation, and sanitize diagnostics. Nested dispatch is rejected through an invocation marker and request budget.
-- Phase 02's five registry entries are fail-closed adapter placeholders, so
-  concrete installed-CLI execution is not production-enabled. Implemented input
-  limits are 16 KiB policy/request, 256-byte model, 64-byte effort, and 32 KiB
-  brief; runner defaults are 64/16 KiB stdout/stderr, 2,048 lines, 48 KiB
-  result, 30-second timeout, and 250 ms termination grace. POSIX descendant cleanup is tested;
+- The five registry entries have concrete bounded adapter contracts; capability
+  and authentication gates still fail closed, so authenticated installed-CLI
+  execution is not production-enabled. Checkpoint envelopes are validated as
+  `evcrate-advisor-checkpoint/v1` and terminal results normalize to
+  `evcrate-advisor-result/v1`. Implemented input limits are 16 KiB policy/request,
+  256-byte model, 64-byte effort, and 32 KiB brief; runner defaults are 64/16
+  KiB stdout/stderr, 2,048 lines, 48 KiB result, 30-second timeout, and 250 ms
+  termination grace. POSIX descendant cleanup is tested;
   Windows process-tree validation remains deferred.
 - Every eventual adapter requires versioned non-interactive capability
   validation; absent executables, unknown contracts, or exact model/effort
