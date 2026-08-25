@@ -12,9 +12,10 @@
     "distribute:pi": "python3 distribute.py --all --target pi",
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
-    "test": "npm run test:python && npm run test:pi",
+    "test": "npm run test:python && npm run test:pi && npm run test:advisor-routing",
     "test:python": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "test:pi": "node --test .evcrate/targets/pi/tests/*.test.mjs",
+    "test:advisor-routing": "node --test .evcrate/source/.claude/scripts/__tests__/advisor-routing-profile.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"

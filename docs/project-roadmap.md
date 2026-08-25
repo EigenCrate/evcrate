@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-24 07:01:11 +0700
+**Last Updated:** 2026-08-25 09:38:09 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -174,6 +174,7 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 ### Advisor Supervision and Interview Workflows
 - ✅ Phase 02 canonical one-shot `--advice` supervision implementation and review complete (2026-08-23 22:27:03 +0700); user approved. Its two approved non-blocking follow-ups closed (2026-08-23 23:00:08 +0700): duplicate `fix/test.md` step numbering corrected, and the Codex distribution assertion now generates Gemini output in a fresh temporary root before checking generated commands. Reviewer-reported validation: focused 50/50; `npm test`: 146 Python + 46 Node.
 - ✅ Phase 03 `/advise` interview and Claude relay, Phase 04 generated-target rollout, and Phase 05 migration documentation/release gates complete. Codex, Pi, Gemini, and Antigravity now receive generated capability-accurate checkpoint/inline advisory surfaces with explicit relay rejection; generated-help warnings were fixed and target checks passed. Full validation and review passed; release/publish/commit remains separately user-authorized.
+- ✅ Cross-Harness Advisor Routing — Phase 01 global route contract and resolver (DONE, 2026-08-25 09:38:09 +0700): implementation and review complete; user approved. Validation: focused resolver tests 14/14, distribution-boundary tests 18/18, and owned-file diff check clean. Phases 02–07 remain pending.
 
 ### 1. Windows Ecosystem Support
 - ✅ Statusline cross-platform support
