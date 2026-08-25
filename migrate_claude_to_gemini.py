@@ -910,6 +910,11 @@ def migrate_scripts():
             continue
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest_path)
+        if rel_path.as_posix() == "advisor-dispatch.cjs" or rel_path.parts[0] == "advisor-routing":
+            # The resolver is one cross-harness contract; product-name rewrites
+            # would corrupt its host table and its static capability document.
+            print(f"Migrated advisor runtime: {rel_path}")
+            continue
         if is_text_file(dest_path):
             with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
             content = apply_replacements(content)

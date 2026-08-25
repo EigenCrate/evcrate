@@ -56,6 +56,15 @@ for arg in sys.argv[1:]:
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
+ADVISOR_RUNTIME_FILES = (
+    "advisor-dispatch.cjs",
+    "advisor-routing/errors.cjs",
+    "advisor-routing/json-document.cjs",
+    "advisor-routing/native-capabilities.json",
+    "advisor-routing/policy-schema.cjs",
+    "advisor-routing/profile.cjs",
+    "advisor-routing/resolve-route.cjs",
+)
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
 ADVISOR_RUBRIC_POINTER = (
     "For high-impact architecture, security, debugging, or review decisions, consider explicit "
@@ -310,6 +319,8 @@ def clean_destination() -> None:
         CODEX_DIR / "agents",
         CODEX_DIR / "bin",
         CODEX_DIR / "hooks",
+        CODEX_DIR / "scripts" / "advisor-dispatch.cjs",
+        CODEX_DIR / "scripts" / "advisor-routing",
         CODEX_DIR / "workflows",
         AGENTS_DIR / "skills",
     ]:
@@ -668,6 +679,24 @@ def migrate_help_scripts() -> None:
         destination = dest_dir / name
         shutil.copyfile(source, destination)
         print(f"Migrated help script: {name}")
+
+
+def migrate_advisor_routing_runtime() -> None:
+    """Copy the resolver closure without target-language text rewrites."""
+
+    source_dir = CLAUDE_DIR / "scripts"
+    destination_dir = CODEX_DIR / "scripts"
+    if not (source_dir / ADVISOR_RUNTIME_FILES[0]).is_file():
+        return
+    for relative in ADVISOR_RUNTIME_FILES:
+        source = source_dir / relative
+        if source.is_symlink() or not source.is_file():
+            raise RuntimeError(f"Canonical advisor runtime file is missing or unsafe: {source}")
+        destination = destination_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        shutil.copymode(source, destination)
+        print(f"Migrated advisor runtime: {relative}")
 
 
 def migrate_commands_as_native_skills() -> None:
@@ -1163,6 +1192,7 @@ def main() -> None:
     migrate_agents()
     migrate_skills()
     migrate_help_scripts()
+    migrate_advisor_routing_runtime()
     migrate_commands_as_native_skills()
     write_codex_global_guidance()
     write_codex_hooks()

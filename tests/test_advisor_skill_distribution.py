@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from distribution.context import DistributionContext
+from distribution.antigravity_publish import build_antigravity_config
 from distribution.contracts import DistributionAction, VerifiedArtifact
 from distribution.publish import publish_diff
 from migrate_claude_to_codex import SUBAGENT_WAIT_CONTRACT, parse_markdown_with_frontmatter
@@ -29,6 +31,19 @@ FORBIDDEN_RUNTIME_MARKERS = (
     "pretool-advisor-admission",
     "advisor-ledger",
     "runtime-advisor-launcher",
+)
+DISPATCHER_RUNTIME_PATHS = (
+    ".claude/scripts/advisor-dispatch.cjs",
+    ".claude/scripts/advisor-routing/",
+)
+ADVISOR_RUNTIME_FILES = (
+    "advisor-dispatch.cjs",
+    "advisor-routing/errors.cjs",
+    "advisor-routing/json-document.cjs",
+    "advisor-routing/native-capabilities.json",
+    "advisor-routing/policy-schema.cjs",
+    "advisor-routing/profile.cjs",
+    "advisor-routing/resolve-route.cjs",
 )
 CODE_COMMANDS = (
     "code.md",
@@ -102,10 +117,17 @@ def tree_snapshot(root: Path) -> dict[str, bytes]:
 
 
 class AdvisorSkillDistributionTest(unittest.TestCase):
+    @staticmethod
+    def clean_environment() -> dict[str, str]:
+        environment = os.environ.copy()
+        private_parts = ("KEY", "TOKEN", "SECRET", "PASSWORD", "AUTH", "CREDENTIAL", "COOKIE")
+        for key in tuple(environment):
+            if any(part in key.upper() for part in private_parts):
+                environment.pop(key, None)
+        return environment
+
     def run_migrator(self, root: Path) -> subprocess.CompletedProcess[str]:
-        env = os.environ.copy()
-        for credential in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
-            env.pop(credential, None)
+        env = self.clean_environment()
         env.update(
             {
                 "CODEX_OUTPUT_DIR": str(root / ".codex"),
@@ -123,9 +145,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
         )
 
     def run_gemini_migrator(self, root: Path) -> subprocess.CompletedProcess[str]:
-        env = os.environ.copy()
-        for credential in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
-            env.pop(credential, None)
+        env = self.clean_environment()
         source_root = REPOSITORY / ".evcrate/source"
         env.update(
             {
@@ -143,6 +163,38 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             capture_output=True,
             text=True,
         )
+
+    def run_pi_migrator(self, root: Path) -> subprocess.CompletedProcess[str]:
+        output = root / ".pi"
+        output.mkdir(parents=True)
+        source_root = REPOSITORY / ".evcrate/source"
+        env = self.clean_environment()
+        env.update(
+            {
+                "EVCRATE_REPOSITORY": str(REPOSITORY),
+                "EVCRATE_SOURCE_DIR": str(source_root),
+                "CLAUDE_SOURCE_DIR": str(source_root / ".claude"),
+                "PI_OUTPUT_DIR": str(output),
+                "PI_STAGE_ROOT": str(root),
+            }
+        )
+        return subprocess.run(
+            [sys.executable, "migrate_claude_to_pi.py"],
+            cwd=REPOSITORY,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def assert_runtime_projection(self, runtime: Path) -> None:
+        canonical = REPOSITORY / ".evcrate/source/.claude/scripts"
+        for relative in ADVISOR_RUNTIME_FILES:
+            with self.subTest(runtime=runtime, relative=relative):
+                self.assertEqual(
+                    (runtime / relative).read_bytes(),
+                    (canonical / relative).read_bytes(),
+                )
 
     def test_migrator_packages_static_skill_and_reference(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -518,15 +570,113 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 for marker in encoded_markers:
                     self.assertNotIn(marker, content, generated_file.as_posix())
 
+    def test_canonical_dispatcher_is_the_narrow_runtime_exception(self) -> None:
+        canonical = REPOSITORY / ".evcrate/source"
+        dispatcher = canonical / DISPATCHER_RUNTIME_PATHS[0]
+        routing = canonical / DISPATCHER_RUNTIME_PATHS[1]
+        self.assertTrue(dispatcher.is_file())
+        self.assertTrue(routing.is_dir())
+        content = dispatcher.read_text(encoding="utf-8")
+        self.assertIn("advisor-routing/profile.cjs", content)
+        self.assertIn("advisor-routing/resolve-route.cjs", content)
+        self.assertNotIn("child_process", content)
+        self.assertNotIn("shell", content)
+
+    def test_gemini_projection_contains_dispatcher_under_declared_runtime_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.run_gemini_migrator(root)
+            runtime = root / ".gemini/scripts"
+            self.assert_runtime_projection(runtime)
+            encoded_markers = tuple(marker.encode() for marker in FORBIDDEN_RUNTIME_MARKERS)
+            for generated_file in runtime.rglob("*"):
+                if not generated_file.is_file():
+                    continue
+                content = generated_file.read_bytes()
+                for marker in encoded_markers:
+                    self.assertNotIn(marker, content, generated_file.as_posix())
+
+    def test_codex_projection_contains_byte_identical_dispatcher(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.run_migrator(root)
+            self.assert_runtime_projection(root / ".codex/scripts")
+
+    def assert_dispatcher_resolves_cross_host_route(self, script: Path, root: Path) -> None:
+        home = root / "home"
+        policy_dir = home / ".evcrate"
+        home.mkdir(parents=True, mode=0o700)
+        policy_dir.mkdir(mode=0o700)
+        policy = {
+            "version": 1,
+            "hosts": {
+                "codex": {
+                    "backend": "claude",
+                    "model": "opus",
+                    "effort": "high",
+                    "execution": "external",
+                }
+            },
+        }
+        policy_path = policy_dir / "advisor-routing.json"
+        policy_path.write_text(json.dumps(policy), encoding="utf-8")
+        home.chmod(0o700)
+        policy_dir.chmod(0o700)
+        policy_path.chmod(0o600)
+        env = self.clean_environment()
+        env["HOME"] = str(home)
+        completed = subprocess.run(
+            ["node", str(script)],
+            cwd=REPOSITORY,
+            env=env,
+            input=json.dumps({"activeHost": "codex"}),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["descriptor"]["action"], "external")
+
+    def test_all_five_harnesses_project_the_same_routing_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.run_migrator(root)
+            self.run_gemini_migrator(root)
+            self.run_pi_migrator(root)
+            build_antigravity_config(
+                REPOSITORY / ".evcrate/source/.claude",
+                root / ".antigravity",
+            )
+            runtimes = {
+                "claude": REPOSITORY / ".evcrate/source/.claude/scripts",
+                "codex": root / ".codex/scripts",
+                "gemini": root / ".gemini/scripts",
+                "antigravity": root / ".antigravity/scripts",
+                "pi": root / ".pi/agent/evcrate/scripts",
+            }
+            for host, runtime in runtimes.items():
+                with self.subTest(host=host):
+                    self.assert_runtime_projection(runtime)
+                    self.assert_dispatcher_resolves_cross_host_route(
+                        runtime / "advisor-dispatch.cjs", root / host
+                    )
+
     def test_repeated_migration_is_byte_identical(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.run_migrator(root)
             first = tree_snapshot(root / ".agents")
+            first_codex = tree_snapshot(root / ".codex")
+            stale = root / ".codex/scripts/advisor-routing/stale.cjs"
+            stale.parent.mkdir(parents=True, exist_ok=True)
+            stale.write_text("stale", encoding="utf-8")
 
             self.run_migrator(root)
             second = tree_snapshot(root / ".agents")
+            second_codex = tree_snapshot(root / ".codex")
             self.assertEqual(first, second)
+            self.assertEqual(first_codex, second_codex)
+            self.assertFalse(stale.exists())
 
     def test_publish_dry_run_preserves_user_owned_config_without_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
