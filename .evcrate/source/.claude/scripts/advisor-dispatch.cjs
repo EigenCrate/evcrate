@@ -28,10 +28,17 @@ const {
   isRoutingError,
   serializeRoutingError
 } = require('./advisor-routing/errors.cjs');
+const {
+  checkpointFromBrief,
+  normalizeResult,
+  serializeCheckpoint,
+  validateCheckpoint,
+  validateLegacyBrief
+} = require('./advisor-routing/checkpoint-contract.cjs');
 
 const MAX_REQUEST_BYTES = MAX_POLICY_BYTES;
 const MAX_BRIEF_BYTES = DEFAULT_LIMITS.maxPromptBytes;
-const REQUEST_KEYS = new Set(['operation', 'activeHost', 'brief']);
+const REQUEST_KEYS = new Set(['operation', 'activeHost', 'brief', 'checkpoint']);
 
 function validateRequest(request) {
   if (!request || typeof request !== 'object' || Array.isArray(request)) {
@@ -48,12 +55,34 @@ function validateRequest(request) {
     throw createRoutingError('REQUEST_INVALID');
   }
   const operation = request.operation || 'resolve';
-  if (operation === 'resolve' && request.brief !== undefined) {
+  const hasBrief = request.brief !== undefined;
+  const hasCheckpoint = request.checkpoint !== undefined;
+  if (operation === 'resolve' && (hasBrief || hasCheckpoint)) {
     throw createRoutingError('REQUEST_INVALID');
+  }
+  if (operation === 'dispatch' && hasBrief === hasCheckpoint) {
+    throw createRoutingError('REQUEST_INVALID');
+  }
+  if (operation === 'dispatch' && hasCheckpoint) {
+    return Object.freeze({
+      ...request,
+      checkpoint: validateCheckpoint(request.checkpoint, request.activeHost),
+      brief: undefined
+    });
   }
   if (operation === 'dispatch' && (typeof request.brief !== 'string'
     || Buffer.byteLength(request.brief, 'utf8') > MAX_BRIEF_BYTES)) {
     throw createRoutingError('REQUEST_INVALID');
+  }
+  if (operation === 'dispatch') {
+    const embeddedCheckpoint = checkpointFromBrief(request.brief, request.activeHost);
+    if (embeddedCheckpoint) {
+      return Object.freeze({
+        ...request,
+        brief: undefined,
+        checkpoint: embeddedCheckpoint
+      });
+    }
   }
   return request;
 }
@@ -96,7 +125,7 @@ function validateBrief(brief) {
   if (typeof brief !== 'string' || Buffer.byteLength(brief, 'utf8') > MAX_BRIEF_BYTES) {
     throw createRoutingError('REQUEST_INVALID');
   }
-  return brief;
+  return validateLegacyBrief(brief);
 }
 
 function assertBoundedResult(result, maxBytes) {
@@ -108,8 +137,14 @@ function assertBoundedResult(result, maxBytes) {
   return result;
 }
 
-async function dispatchExternal({ descriptor, brief }, dependencies = {}) {
-  validateBrief(brief);
+async function dispatchExternal({ descriptor, brief, checkpoint }, dependencies = {}) {
+  if (checkpoint !== undefined && brief !== undefined) throw createRoutingError('REQUEST_INVALID');
+  const validatedCheckpoint = checkpoint === undefined
+    ? checkpointFromBrief(brief, descriptor?.activeHost)
+    : validateCheckpoint(checkpoint, descriptor?.activeHost);
+  const validatedBrief = validatedCheckpoint === null || validatedCheckpoint === undefined
+    ? validateBrief(brief)
+    : serializeCheckpoint(validatedCheckpoint);
   assertNoRecursion({
     environment: dependencies.environment || process.env,
     requestDepth: dependencies.requestDepth === undefined ? 0 : dependencies.requestDepth
@@ -137,7 +172,8 @@ async function dispatchExternal({ descriptor, brief }, dependencies = {}) {
   });
   const context = {
     descriptor,
-    brief,
+    brief: validatedBrief,
+    checkpoint: validatedCheckpoint || undefined,
     environment: probeEnvironment,
     runner,
     signal: dependencies.signal
@@ -163,14 +199,48 @@ async function dispatchExternal({ descriptor, brief }, dependencies = {}) {
     });
     if (execution?.error) throw execution.failure || execution.error;
     const parsed = await adapter.parseResult({ ...context, execution: execution?.result || execution });
+    const bounded = assertBoundedResult(parsed, limits.maxResultBytes);
+    const normalized = normalizeResult(bounded, {
+      checkpoint: validatedCheckpoint || undefined,
+      maxBytes: limits.maxResultBytes
+    });
     return Object.freeze({
       ok: true,
       descriptor,
-      result: assertBoundedResult(parsed, limits.maxResultBytes)
+      result: assertBoundedResult(normalized, limits.maxResultBytes)
     });
   } catch (error) {
     throw normalizeFailure(adapter, error, context);
   }
+}
+
+async function dispatchNative({ descriptor, checkpoint }, dependencies = {}) {
+  if (!descriptor || descriptor.action !== 'native' || descriptor.adapter !== null
+    || descriptor.activeHost !== descriptor.route?.backend || !checkpoint
+    || typeof dependencies.nativeAdvisor !== 'function') {
+    throw createRoutingError('NATIVE_DISPATCH_UNSUPPORTED');
+  }
+  assertNoRecursion({
+    environment: dependencies.environment || process.env,
+    requestDepth: dependencies.requestDepth === undefined ? 0 : dependencies.requestDepth
+  });
+  let result;
+  try {
+    result = await dependencies.nativeAdvisor({ checkpoint });
+  } catch (error) {
+    if (isRoutingError(error)) throw error;
+    throw createRoutingError('PROCESS_FAILED');
+  }
+  const bounded = assertBoundedResult(result, DEFAULT_LIMITS.maxResultBytes);
+  const normalized = normalizeResult(bounded, {
+    checkpoint,
+    maxBytes: DEFAULT_LIMITS.maxResultBytes
+  });
+  return Object.freeze({
+    ok: true,
+    descriptor,
+    result: assertBoundedResult(normalized, DEFAULT_LIMITS.maxResultBytes)
+  });
 }
 
 function dispatchRequest(request, dependencies = {}) {
@@ -182,7 +252,14 @@ function dispatchRequest(request, dependencies = {}) {
     descriptor
   });
   if ((validated.operation || 'resolve') === 'dispatch') {
-    return dispatchExternal({ descriptor, brief: validated.brief }, dependencies);
+    if (descriptor.action === 'native') {
+      return dispatchNative({ descriptor, checkpoint: validated.checkpoint }, dependencies);
+    }
+    return dispatchExternal({
+      descriptor,
+      brief: validated.brief,
+      checkpoint: validated.checkpoint
+    }, dependencies);
   }
   return response;
 }
@@ -242,8 +319,10 @@ module.exports = {
   MAX_REQUEST_BYTES,
   MAX_BRIEF_BYTES,
   dispatchExternal,
+  dispatchNative,
   dispatchRequest,
   main,
   readRequest,
-  validateRequest
+  validateRequest,
+  validateBrief
 };

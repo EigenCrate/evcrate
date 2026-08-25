@@ -64,6 +64,8 @@ ADVISOR_RUNTIME_FILES = (
     "advisor-routing/adapters/claude.cjs",
     "advisor-routing/adapters/codex.cjs",
     "advisor-routing/adapters/gemini.cjs",
+    "advisor-routing/adapters/pi.cjs",
+    "advisor-routing/checkpoint-contract.cjs",
     "advisor-routing/errors.cjs",
     "advisor-routing/json-document.cjs",
     "advisor-routing/native-capabilities.json",
