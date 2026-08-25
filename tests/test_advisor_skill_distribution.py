@@ -38,12 +38,15 @@ DISPATCHER_RUNTIME_PATHS = (
 )
 ADVISOR_RUNTIME_FILES = (
     "advisor-dispatch.cjs",
+    "advisor-routing/adapter-contract.cjs",
+    "advisor-routing/adapter-registry.cjs",
     "advisor-routing/errors.cjs",
     "advisor-routing/json-document.cjs",
     "advisor-routing/native-capabilities.json",
     "advisor-routing/policy-schema.cjs",
     "advisor-routing/profile.cjs",
     "advisor-routing/resolve-route.cjs",
+    "advisor-routing/runner.cjs",
 )
 CODE_COMMANDS = (
     "code.md",

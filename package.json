@@ -15,7 +15,7 @@
     "test": "npm run test:python && npm run test:pi && npm run test:advisor-routing",
     "test:python": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "test:pi": "node --test .evcrate/targets/pi/tests/*.test.mjs",
-    "test:advisor-routing": "node --test .evcrate/source/.claude/scripts/__tests__/advisor-routing-profile.test.cjs",
+    "test:advisor-routing": "node --test .evcrate/source/.claude/scripts/__tests__/advisor-routing-profile.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-runner.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-adapter-contract.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"
@@ -51,6 +51,9 @@
     "migrate_claude_to_gemini.py",
     "migrate_claude_to_pi.py",
     "pi_adapter/**",
+    "!**/__tests__/advisor-routing-*.test.cjs",
+    "!**/__tests__/fixtures/**",
+    "!**/__tests__/helpers/**",
     "!**/__pycache__/**",
     "!**/*.pyc",
     ".evcrate/source/AGENTS.md",

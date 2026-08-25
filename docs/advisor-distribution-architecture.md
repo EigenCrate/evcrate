@@ -1,8 +1,21 @@
 # Advisor Mentoring and Target Distribution Architecture
 
-**Status**: Active; former broker design superseded
-**Last Updated**: 2026-08-24
+**Status**: Phase 02 routing contract implemented; production adapters and
+Phase 07 projection/manifest integration deferred
+**Last Updated**: 2026-08-25
 **Parent**: [System Architecture](./system-architecture.md)
+
+**Design revision (2026-08-25)**: Checkpoint advice gains one host-aware
+dispatcher. Each host owns an independent route to a native advisor or a
+declared built-in installed-CLI adapter. One global
+`$HOME/.evcrate/advisor-routing.json` owns all host entries; same-host routes
+remain native and cross-host routes resolve to one of five named adapter slots.
+Phase 02 validates the resolver/runner contract and fail-closed adapter
+placeholders; production adapter execution and Phase 07 projection/manifest
+integration remain deferred. This intentionally supersedes the former blanket
+ban on launchers/provider selection while retaining the bans on arbitrary
+command templates, direct provider APIs, credential storage, background broker
+services, and approval bypasses.
 
 **Release note (2026-08-24)**: The canonical source, generated Codex, Gemini,
 Antigravity, Pi, and `.agents` projections now define final standalone
@@ -17,9 +30,10 @@ the published HOME workflow (`~/.codex/workflows/` and
 
 ## Purpose
 
-Define reproducible multi-platform generation and the boundary between the portable
-`advisor-strategy` rubric, the normal high-tier `advisor` subagent, and forbidden
-advisor broker/runtime infrastructure.
+Define reproducible multi-platform generation and the boundary between the
+portable `advisor-strategy` rubric, independent per-host routes, native advisor
+delegation, built-in external CLI adapters, and forbidden arbitrary broker/runtime
+infrastructure.
 
 ## Scope boundary
 
@@ -79,8 +93,111 @@ cutover.
   does not invent advisor guidance in default mode. Cook variants and `/fix:hard`
   preserve `WORK_ARGUMENTS` through fallback handoffs, appending exactly one
   trailing `--advice` in explicit mode and no mode token otherwise.
-- No advisor MCP server, hook, broker, launcher, provider selector, quota, ledger,
-  audit, permission bypass, or isolation claim is distributed.
+- No advisor MCP server, arbitrary command template, direct provider API,
+  credential store, quota ledger, audit transport, permission bypass, or
+  isolation claim is distributed. Only declared built-in CLI adapters may start
+  an invocation-scoped external advisor process.
+
+## Advisor Route and Dispatcher Contract
+
+One logical profile contains independent entries for `claude`, `codex`,
+`gemini`, `antigravity`, and `pi`:
+
+```json
+{
+  "version": 1,
+  "hosts": {
+    "codex": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "execution": "auto"
+    }
+  }
+}
+```
+
+Resolve the platform user-home directory through the user-home API, never shell
+expansion or the repository working directory, and read exactly
+`<home>/.evcrate/advisor-routing.json`. A repository-local policy is ignored.
+Route precedence is the complete active-host entry in that global file, then
+the built-in same-host default. V1 has no host-native-config or per-invocation
+override; missing host entries do not inherit from another host. The file is
+user-owned, is never published or generated, and contains no authentication
+material. Implementations must reject unsafe/symlinked files where the platform
+can prove that property, use owner-only POSIX modes for EVCrate-created
+directories/files, and document Windows ACL limits without claiming POSIX
+guarantees.
+
+`execution: auto` uses native delegation only when `backend == host` and the
+native host can express the exact model and effort. Cross-host routes use the
+shared runner and the named built-in adapter. `native` is valid only when
+`backend == host`; `external` is valid only when `backend != host`. Same-host
+external execution is rejected even if native metadata cannot express the exact
+selector. All modes fail closed on unsupported capability; no model substitution,
+effort downgrade, route inheritance, backend switch, or execution-mode fallback
+is allowed.
+
+The resolver's route truth table is strict:
+
+| Backend relation | `execution` | Resolver action | Result |
+| --- | --- | --- | --- |
+| Same host | `auto` | Native | Exact native model/effort capability check |
+| Same host | `native` | Native | Exact native model/effort capability check |
+| Same host | `external` | Reject | `ROUTE_EXECUTION_INVALID` |
+| Different supported host | `auto` | External | Selected declared adapter slot |
+| Different supported host | `external` | External | Selected declared adapter slot |
+| Different supported host | `native` | Reject | `ROUTE_EXECUTION_INVALID` |
+
+Native capability checks are exact: a model mismatch is `MODEL_UNSUPPORTED` and
+an effort mismatch is `EFFORT_UNSUPPORTED`; neither falls back to another host
+profile or a weaker selector. The bundled Gemini capability record is
+`model: "pro", efforts: []` because Gemini CLI 0.47.0 exposes no exact effort
+control. Its built-in `pro`/`high` route therefore fails closed with
+`EFFORT_UNSUPPORTED` until a verified equivalent is advertised.
+
+The shared runner owns cancellation, timeout, process-tree cleanup, bounded
+stdout/stderr, diagnostic redaction, and typed error normalization. Each adapter
+owns executable/version/auth probing, exact model/effort validation, argv-only
+construction, stdin prompt delivery, structured result parsing, and backend
+error classification. The child receives a bounded read-only checkpoint brief,
+inherits no EVCrate credentials, and carries an unforgeable-by-prompt advisory
+marker; a nested dispatcher call fails as recursion.
+
+Route descriptors, loaded policy/capability documents, error definitions,
+`AdvisorRoutingError` instances, and serialized error objects are frozen.
+Resolver/dispatcher JSON exposes only the stable sanitized fields
+`code`, `category`, `action`, and `message`; it does not expose policy bytes,
+filesystem paths, credentials, causes, or raw process diagnostics. Unknown
+failures normalize to the stable process error rather than leaking details.
+
+The Phase 02 registry declares adapter slots for Claude, Codex, Gemini,
+Antigravity, and Pi, but its current entries are fail-closed placeholders that
+return `ADAPTER_UNSUPPORTED`; no authenticated external CLI is production-
+enabled. Each eventual adapter owns its exact executable/version,
+model, effort/thinking, headless, structured-output, read-only, session, auth,
+and cancellation contract. Capability gaps fail at route validation: for
+example, Gemini CLI 0.47.0 exposes no exact effort flag, so an exact-effort
+Gemini route cannot run until a verified equivalent is advertised. Deterministic
+fake-CLI tests define the adapter contract; concrete adapter implementation and
+authenticated live calls remain separately approved work. Antigravity's
+`.antigravity` path stays a logical generated target; its physical
+Gemini-compatible publication mapping remains isolated in the existing
+publisher.
+
+```mermaid
+flowchart LR
+  Workflow[Checkpoint workflow] --> Resolver[Per-host route resolver]
+  Global[HOME .evcrate profile] --> Resolver
+  Resolver --> Capability{Valid capability?}
+  Capability -->|No| Failure[Typed configuration or runtime error]
+  Capability -->|Yes| Mode{Backend equals host?}
+  Mode -->|Yes| Host[Host subagent delegation]
+  Mode -->|No| Runner[Shared bounded runner]
+  Runner --> Adapter[Declared adapter slot]
+  Host --> Advice[Non-binding advisor result]
+  Adapter --> Advice
+```
 
 ## Distribution Data Flow
 
@@ -128,6 +245,32 @@ skill's `.agents` publication does not create or modify `~/.pi/agent/settings.js
 
 No migration or overlay logic runs during publication.
 
+### Routing runtime closure and Phase 02 boundary
+
+The validated production routing closure is ten files: `advisor-dispatch.cjs`
+plus these nine files under `advisor-routing/`:
+
+- `adapter-contract.cjs`, `adapter-registry.cjs`, `errors.cjs`,
+  `json-document.cjs`
+- `native-capabilities.json`, `policy-schema.cjs`, `profile.cjs`,
+  `resolve-route.cjs`, `runner.cjs`
+
+The reviewer’s “seven runtime files” wording counted the dispatcher plus an
+earlier six-file subset. It is historical shorthand, not the current closure.
+Projection parity tests compare all ten byte-for-byte in Claude, Codex,
+Gemini, Antigravity, and Pi runtime roots and run the same cross-host resolver
+request; generated target presence alone is not evidence. Phase 02 keeps the
+canonical closure and focused tests as the boundary. It does not regenerate
+production projections or update build-manifest integration; Phase 07 owns
+that projection/manifest delivery.
+
+The implemented numeric bounds are 16 KiB for policy/request documents, 256
+bytes for model names, 64 bytes for effort names, and 32 KiB for a checkpoint
+brief. Runner defaults are 64 KiB stdout, 16 KiB stderr, 2,048 lines, 48 KiB
+result, 30 seconds, and 250 ms of termination grace. POSIX descendant cleanup
+is covered by focused tests; Windows uses direct-child termination and its
+process-tree behavior remains unvalidated and deferred.
+
 ## Ownership and Collision Invariants
 
 - Every finalized path has one owner: baseline generator or named target overlay.
@@ -145,7 +288,8 @@ No migration or overlay logic runs during publication.
 Developer runs an implementation command
   -> command parses optional exact final --advice into WORK_ARGUMENTS
   -> normal workflow reaches a named review, stuck, or decision checkpoint
-  -> terminal prerequisite evidence is supplied to a fresh advisor subagent
+  -> terminal prerequisite evidence is supplied to the host route dispatcher
+  -> dispatcher validates and starts one fresh native or external advisor
   -> default mode escalates only on the second matching blocker
   -> at most three terminal reviewer/advisor cycles, then user direction
   -> executor records advice and keeps normal test/review/human gates
@@ -157,10 +301,11 @@ deterministic build. Cook discovery/planning and all cook fallbacks pass
 rule. Explicit mode is preserved exactly once across each canonical handoff.
 
 The skill remains static guidance and cannot independently inspect evidence, call
-a model, or enforce a verdict. The `advisor` agent is the ordinary host delegation
-that applies that guidance at a high-tier model policy. It cannot edit files,
-approve changes, select providers, or bypass host permissions, sandboxing, tests,
-code review, tool approvals, or human review.
+a model, or enforce a verdict. The dispatcher, not the skill or advisor, selects
+the validated per-host route. A same-host route uses ordinary host delegation; a
+cross-host route uses one bounded built-in adapter. Neither path can edit files,
+approve changes, bypass host permissions, sandboxing, tests, code review, tool
+approvals, or human review.
 
 Claude, Gemini, and Pi can enforce the canonical read/search tool declaration.
 Codex custom-agent migration records the source allowlist as a comment because the
@@ -170,12 +315,14 @@ prompt- and host-policy-enforced, not a security isolation claim.
 ## Compatibility Note
 
 The unshipped `advisor_consult` interface and its target-owned broker, admission
-hook, runtime launcher, registry, quota ledger, and audit behavior remain removed.
-Commands use only the normal subagent mechanism already provided by each host.
-Advisor output is non-binding mentorship, not an approval or enforced isolation
-boundary. Generic MCP and hook support remain unchanged.
+hook, long-lived service, registry, quota ledger, and audit behavior remain
+removed. The new dispatcher is a local routing contract, not a resurrection of
+that broker: it uses normal subagent delegation or one declared adapter slot
+per invocation when an implementation is enabled. Advisor output is non-binding
+mentorship, not an approval or enforced isolation boundary. Generic MCP and hook
+support remain unchanged.
 
-## Phase 02 Validation Gates
+## Historical Phase 02 Validation Gates
 
 - Canonical skill frontmatter, brief contract, and one-shot advisor report are
   present.
@@ -187,8 +334,9 @@ boundary. Generic MCP and hook support remain unchanged.
   before finalization.
 - Focused canonical and migrator regression tests pass without model, app, MCP,
   or App Server calls.
-- No active `@advisor` alias, provider selector, broker, or approval bypass is
-  introduced.
+- No active `@advisor` alias, broker, or approval bypass was introduced. The
+  host-aware route selector is the explicit later design revision documented
+  above.
 
 ## Phase 04 Generated-Target Rollout
 
@@ -257,8 +405,10 @@ help parity checks described above.
   support evidence; the build/check and target-aware help tests are the support
   evidence, and generated targets must not be hand-edited.
 - The canonical-source/build/check ownership model and the forbidden broker,
-  MCP, launcher, provider-selector, quota, ledger, audit, and approval-bypass
-  boundary remain in force.
+  MCP, arbitrary launcher, direct provider API, quota, ledger, audit, and
+  approval-bypass boundary remain in force. Checkpoint dispatcher routes are
+  the sole built-in adapter exception; inline interview/relay semantics do not
+  consume them.
 
 ## References
 

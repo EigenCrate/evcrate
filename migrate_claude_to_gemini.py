@@ -904,6 +904,8 @@ def migrate_scripts():
             continue
         if "__pycache__" in rel_path.parts:
             continue
+        if any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in rel_path.parts):
+            continue
         dest_path = dest_dir / rel_path
         if source.is_dir():
             dest_path.mkdir(parents=True, exist_ok=True)

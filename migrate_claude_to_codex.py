@@ -58,12 +58,15 @@ SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
 ADVISOR_RUNTIME_FILES = (
     "advisor-dispatch.cjs",
+    "advisor-routing/adapter-contract.cjs",
+    "advisor-routing/adapter-registry.cjs",
     "advisor-routing/errors.cjs",
     "advisor-routing/json-document.cjs",
     "advisor-routing/native-capabilities.json",
     "advisor-routing/policy-schema.cjs",
     "advisor-routing/profile.cjs",
     "advisor-routing/resolve-route.cjs",
+    "advisor-routing/runner.cjs",
 )
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
 ADVISOR_RUBRIC_POINTER = (
