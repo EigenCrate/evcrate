@@ -1,0 +1,8 @@
+Gemini CLI 0.47.0
+-p, --prompt <prompt>
+--model <model>
+--approval-mode <mode> default, auto_edit, yolo, plan
+--resume [session_id]
+--list-sessions
+--output-format <format> text, json, stream-json
+--sandbox

@@ -7,6 +7,11 @@ const {
   freezeAdapter,
   validateAdapter
 } = require('./adapter-contract.cjs');
+const claudeAdapter = require('./adapters/claude.cjs');
+const codexAdapter = require('./adapters/codex.cjs');
+const geminiAdapter = require('./adapters/gemini.cjs');
+const antigravityAdapter = require('./adapters/antigravity.cjs');
+const piAdapter = require('./adapters/pi.cjs');
 
 function unsupported() {
   throw createRoutingError('ADAPTER_UNSUPPORTED');
@@ -25,9 +30,13 @@ function unavailableAdapter(name) {
   });
 }
 
-const BUILTIN_ADAPTERS = Object.freeze(Object.fromEntries(
-  ADAPTER_NAMES.map((name) => [name, unavailableAdapter(name)])
-));
+const BUILTIN_ADAPTERS = Object.freeze({
+  claude: claudeAdapter,
+  codex: codexAdapter,
+  gemini: geminiAdapter,
+  antigravity: antigravityAdapter,
+  pi: piAdapter
+});
 
 function validateRegistry(registry = BUILTIN_ADAPTERS) {
   if (registry === null || typeof registry !== 'object' || Array.isArray(registry)) {

@@ -66,6 +66,7 @@ process.stdin.on('end', () => {
   }
   if (mode === 'process') {
     const auth = process['env'].FAKE_ADVISOR_AUTH || 'opaque-secret';
+    process.stdout.write('{"error":"access_token=stdout-secret"}\n');
     process.stderr.write(`token=super-secret auth=${auth} fake process failure\n`);
     process.exitCode = 17;
     return;

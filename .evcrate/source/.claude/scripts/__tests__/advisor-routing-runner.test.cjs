@@ -170,6 +170,13 @@ test('bounds stdout, stderr, lines, and invalid UTF-8 without returning partial 
   });
   assert.equal(stderr.error, undefined);
   assert.doesNotMatch(stderr.result.stderr, /super-secret/);
+  const processFailure = await runFakeMode('process', {
+    limits: { maxStdoutBytes: 128, maxStderrBytes: 128 }
+  });
+  assert.equal(processFailure.error.code, 'PROCESS_FAILED');
+  assert.ok(Buffer.byteLength(processFailure.failure.diagnostics.stdout, 'utf8') <= 128);
+  assert.doesNotMatch(processFailure.failure.diagnostics.stdout, /stdout-secret/iu);
+  assert.doesNotMatch(processFailure.failure.diagnostics.stderr, /super-secret/iu);
   const redacted = redactDiagnostics(
     'token=super-secret auth=opaque-secret Bearer bearer-secret',
     ['opaque-secret']
@@ -198,6 +205,37 @@ test('terminates timeout and cancellation paths with typed failures', async () =
     setTimeout(() => controller.abort(), 30);
     const cancelled = await pending;
     assert.equal(cancelled.error.code, 'CANCELLED');
+  } finally {
+    cleanupWorkspace(fixture.workspace);
+  }
+});
+
+test('cancels synchronously after spawn before stdin delivery', async () => {
+  const fixture = createFakeInvocation({ limits: { killGraceMs: 0 } });
+  const controller = new AbortController();
+  const child = new EventEmitter();
+  const signals = [];
+  let stdinEnds = 0;
+  child.pid = 4343;
+  child.stdin = new EventEmitter();
+  child.stdin.destroy = () => {};
+  child.stdin.end = () => { stdinEnds += 1; };
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  try {
+    const outcome = await runInvocation(fixture.invocation, {
+      environment: { PATH: '/bin' },
+      signal: controller.signal,
+      spawn: () => {
+        controller.abort();
+        return child;
+      },
+      kill: (pid, signal) => signals.push([pid, signal])
+    });
+    assert.equal(outcome.error.code, 'CANCELLED');
+    assert.equal(outcome.result, undefined);
+    assert.equal(stdinEnds, 0);
+    assert.deepEqual(signals, [[-4343, 'SIGTERM'], [-4343, 'SIGKILL']]);
   } finally {
     cleanupWorkspace(fixture.workspace);
   }

@@ -225,7 +225,7 @@ test('rejects recursion before adapter lookup and rejects executable/argv inject
   }), 'REQUEST_INVALID');
 });
 
-test('default production dispatch fails closed through the fixed registry without launching a child', async () => {
+test('default production dispatch fails closed through the fixed Gemini capability gate', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-dispatch-contract-'));
   const home = path.join(root, 'home');
   const policyDirectory = path.join(home, '.evcrate');
@@ -234,14 +234,14 @@ test('default production dispatch fails closed through the fixed registry withou
   fs.chmodSync(policyDirectory, 0o700);
   fs.writeFileSync(path.join(policyDirectory, 'advisor-routing.json'), JSON.stringify({
     version: 1,
-    hosts: { codex: { backend: 'claude', model: 'opus', effort: 'high', execution: 'external' } }
+    hosts: { codex: { backend: 'gemini', model: 'pro', effort: 'high', execution: 'external' } }
   }), { mode: 0o600 });
   const originalHome = os.homedir;
   os.homedir = () => home;
   try {
     await assert.rejects(
       dispatcher.dispatchRequest({ operation: 'dispatch', activeHost: 'codex', brief: 'bounded brief' }),
-      (error) => error.code === 'ADAPTER_UNSUPPORTED'
+      (error) => error.code === 'EFFORT_UNSUPPORTED'
     );
   } finally {
     os.homedir = originalHome;

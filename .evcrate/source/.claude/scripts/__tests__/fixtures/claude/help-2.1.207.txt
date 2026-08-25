@@ -1,0 +1,9 @@
+Usage: claude [options] [command]
+
+-p, --print                           Print response and exit
+--model <model>                       Model for the current session
+--effort <level>                      Effort level (low, medium, high, xhigh, max)
+--permission-mode <mode>              Permission mode (acceptEdits, auto, plan)
+--output-format <format>              Output format (text, json, stream-json)
+--no-session-persistence              Disable session persistence in print mode
+--max-turns <turns>                   Maximum number of agentic turns

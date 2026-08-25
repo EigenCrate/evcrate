@@ -122,6 +122,25 @@ export function resolveModelRole({
   return { model: route.model, ...(thinking ?? route.thinking ? { thinking: thinking ?? route.thinking } : {}) };
 }
 
+const NATIVE_CAPABILITY_UNSUPPORTED = "NATIVE_CAPABILITY_UNSUPPORTED";
+
+/** Resolve advisor routes without allowing semantic-role inheritance. */
+export function resolveExactAdvisorModel({ provider, model, thinking, activeProvider, registry }) {
+  if (typeof provider !== "string" || !provider.trim()
+    || typeof activeProvider !== "string" || provider !== activeProvider) {
+    return { error: NATIVE_CAPABILITY_UNSUPPORTED };
+  }
+  if (typeof model !== "string"
+    || validateExplicitModel(model, registry)
+    || !model.startsWith(`${provider}/`)) {
+    return { error: NATIVE_CAPABILITY_UNSUPPORTED };
+  }
+  if (thinking === undefined || validateExplicitThinking(thinking)) {
+    return { error: NATIVE_CAPABILITY_UNSUPPORTED };
+  }
+  return { provider, model, thinking };
+}
+
 /** Pi registration seam: keeps one warning set per extension session. */
 export function registerModelRoles(pi, options = {}) {
   let warnings = new Set();

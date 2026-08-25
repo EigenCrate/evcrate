@@ -1,0 +1,4 @@
+{"type":"session","version":3,"id":"fixture-session","timestamp":"2026-08-25T00:00:00.000Z","cwd":"/fixture"}
+{"type":"agent_start"}
+{"type":"turn_start"}
+{"type":"tool_execution_start","toolCallId":"write-1","toolName":"write","args":{}}
