@@ -1,0 +1,3 @@
+{"event":"init","conversation_id":"fixture-conversation","init":{"cwd":"/private/fake/workspace","tools":["read_file","find","grep"],"permission_mode":"request-review","model":"pro"}}
+{"event":"step_update","step_update":{"step_type":"agent_response","state":"DONE","text_delta":"AGY_OK"}}
+{"event":"result","result":{"conversation_id":"fixture-conversation","status":"SUCCESS","response":"AGY_OK","num_turns":1,"usage":{"input_tokens":1,"output_tokens":1}}}

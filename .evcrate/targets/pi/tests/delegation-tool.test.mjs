@@ -99,6 +99,20 @@ test("pre-start completed, mismatched, and duplicate terminals reject", async ()
   }
 });
 
+test("duplicate started remains the authoritative protocol error", async () => {
+  const events = eventBus();
+  events.on(DELEGATION_EVENTS.request, (request) => {
+    events.emit(DELEGATION_EVENTS.started, request);
+    events.emit(DELEGATION_EVENTS.started, request);
+    events.emit(DELEGATION_EVENTS.response, { ...request, status: "completed", result: { kind: "text", text: "late success" } });
+  });
+  const delegate = createDelegationRunner({ events });
+  await assert.rejects(
+    delegate({ agent: "a", task: "x" }, { cwd: "/repo" }),
+    /emitted duplicate started/,
+  );
+});
+
 test("post-start duplicate, partial, and cancelled terminal paths reject", async () => {
   for (const scenario of ["duplicate", "partial", "cancel"]) {
     const events = eventBus();
@@ -125,6 +139,53 @@ test("explicit invalid model is rejected while role routing preserves valid over
   await assert.rejects(delegate({ agent: "planner", task: "x", model: "malformed" }, { cwd: "/repo", modelRegistry: registry }), /provider\/model/);
   const routed = await delegate({ agent: "planner", task: "x", provider: "openai-codex" }, { cwd: "/repo", modelRegistry: registry });
   assert.equal(routed.results[0].request.model, "openai-codex/gpt-5.6-sol");
+});
+
+test("advisor native preflight rejects inherited, unavailable, and cross-provider routes before child emission", async () => {
+  const registry = [{ provider: "openai-codex", id: "gpt-5.6-sol" }];
+  for (const node of [
+    { agent: "advisor", task: "review" },
+    { agent: "advisor", task: "review", provider: "openai-codex", model: "openai-codex/gpt-5.6-sol" },
+    { agent: "advisor", task: "review", provider: "openai-codex", model: "openai-codex/missing", thinking: "high" },
+    { agent: "advisor", task: "review", provider: "anthropic", model: "anthropic/claude-sonnet", thinking: "high" },
+  ]) {
+    const events = eventBus();
+    let childStarts = 0;
+    let requests = 0;
+    events.on(DELEGATION_EVENTS.request, () => { requests += 1; });
+    const delegate = createDelegationRunner({
+      events,
+      childStartRunner: async () => { childStarts += 1; return undefined; },
+    });
+    await assert.rejects(
+      delegate(node, {
+        cwd: "/repo",
+        model: { provider: "openai-codex" },
+        modelRegistry: registry,
+      }),
+      /NATIVE_CAPABILITY_UNSUPPORTED/,
+    );
+    assert.equal(childStarts, 0);
+    assert.equal(requests, 0);
+  }
+});
+
+test("valid advisor native preflight emits one exact request while generic roles still work", async () => {
+  const events = eventBus();
+  const requests = [];
+  events.on(DELEGATION_EVENTS.request, (request) => { requests.push(request); complete(events, request, "advice"); });
+  const delegate = createDelegationRunner({ events });
+  const result = await delegate({
+    agent: "advisor", task: "review", provider: "openai-codex",
+    model: "openai-codex/gpt-5.6-sol", thinking: "high",
+  }, {
+    cwd: "/repo",
+    model: { provider: "openai-codex" },
+    modelRegistry: [{ provider: "openai-codex", id: "gpt-5.6-sol" }],
+  });
+  assert.equal(result.results[0].request.model, "openai-codex/gpt-5.6-sol");
+  assert.equal(result.results[0].request.thinking, "high");
+  assert.equal(requests.length, 1);
 });
 
 test("Pi registration exposes evcrate_subagent without workflowScript", async () => {

@@ -117,6 +117,9 @@ async function dispatchExternal({ descriptor, brief }, dependencies = {}) {
   if (!descriptor || descriptor.action !== 'external' || typeof descriptor.adapter !== 'string') {
     throw createRoutingError('NATIVE_DISPATCH_UNSUPPORTED');
   }
+  if (descriptor.activeHost === descriptor.route?.backend) {
+    throw createRoutingError('NATIVE_DISPATCH_UNSUPPORTED');
+  }
   const registry = dependencies.registry || { getAdapter };
   const adapter = registry.getAdapter(descriptor.adapter);
   validateAdapter(adapter);
@@ -136,7 +139,8 @@ async function dispatchExternal({ descriptor, brief }, dependencies = {}) {
     descriptor,
     brief,
     environment: probeEnvironment,
-    runner
+    runner,
+    signal: dependencies.signal
   };
   try {
     await adapter.probeVersion(context);

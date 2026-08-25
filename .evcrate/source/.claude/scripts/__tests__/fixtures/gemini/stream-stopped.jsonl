@@ -1,0 +1,2 @@
+{"event":"init","init":{"session_id":"fixture-session","model":"pro"}}
+{"event":"result","result":{"response":"","error":{"message":"AgentExecutionStopped"}}}

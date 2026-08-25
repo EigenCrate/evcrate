@@ -1,7 +1,7 @@
 # Advisor Mentoring and Target Distribution Architecture
 
-**Status**: Phase 02 routing contract implemented; production adapters and
-Phase 07 projection/manifest integration deferred
+**Status**: Phase 04 adapter contracts implemented; Phase 07
+projection/manifest integration deferred
 **Last Updated**: 2026-08-25
 **Parent**: [System Architecture](./system-architecture.md)
 
@@ -10,9 +10,10 @@ dispatcher. Each host owns an independent route to a native advisor or a
 declared built-in installed-CLI adapter. One global
 `$HOME/.evcrate/advisor-routing.json` owns all host entries; same-host routes
 remain native and cross-host routes resolve to one of five named adapter slots.
-Phase 02 validates the resolver/runner contract and fail-closed adapter
-placeholders; production adapter execution and Phase 07 projection/manifest
-integration remain deferred. This intentionally supersedes the former blanket
+Phase 02 validates the resolver/runner contract and Phase 04 adds concrete
+adapter contracts with capability gates; Gemini and Antigravity remain
+fail-closed where a deny-write boundary is not evidenced. Phase 07
+projection/manifest integration remains deferred. This intentionally supersedes the former blanket
 ban on launchers/provider selection while retaining the bans on arbitrary
 command templates, direct provider APIs, credential storage, background broker
 services, and approval bypasses.
@@ -171,16 +172,17 @@ Resolver/dispatcher JSON exposes only the stable sanitized fields
 filesystem paths, credentials, causes, or raw process diagnostics. Unknown
 failures normalize to the stable process error rather than leaking details.
 
-The Phase 02 registry declares adapter slots for Claude, Codex, Gemini,
-Antigravity, and Pi, but its current entries are fail-closed placeholders that
-return `ADAPTER_UNSUPPORTED`; no authenticated external CLI is production-
-enabled. Each eventual adapter owns its exact executable/version,
-model, effort/thinking, headless, structured-output, read-only, session, auth,
-and cancellation contract. Capability gaps fail at route validation: for
-example, Gemini CLI 0.47.0 exposes no exact effort flag, so an exact-effort
-Gemini route cannot run until a verified equivalent is advertised. Deterministic
-fake-CLI tests define the adapter contract; concrete adapter implementation and
-authenticated live calls remain separately approved work. Antigravity's
+The registry declares adapter slots for Claude, Codex, Gemini, Antigravity,
+and Pi. Claude and Codex have concrete adapter contracts; Gemini and
+Antigravity are registered but fail closed when their exact effort/read-only
+boundary is not evidenced, and Pi remains a placeholder. No authenticated
+external CLI is production-enabled. Each adapter owns its exact
+executable/version, model, effort/thinking, headless, structured-output,
+read-only, session, auth, and cancellation contract. Capability gaps fail at
+route validation: for example, Gemini CLI 0.47.0 exposes no exact effort flag,
+and the reviewed future fixture lacks a verified deny-write boundary.
+Deterministic fake-CLI tests define the adapter contract; authenticated live
+calls remain separately approved work. Antigravity's
 `.antigravity` path stays a logical generated target; its physical
 Gemini-compatible publication mapping remains isolated in the existing
 publisher.
@@ -247,19 +249,21 @@ No migration or overlay logic runs during publication.
 
 ### Routing runtime closure and Phase 02 boundary
 
-The validated production routing closure is ten files: `advisor-dispatch.cjs`
-plus these nine files under `advisor-routing/`:
+The validated production routing closure is fourteen files:
+`advisor-dispatch.cjs`, these nine files under `advisor-routing/`, and four
+adapter modules under `advisor-routing/adapters/`:
 
 - `adapter-contract.cjs`, `adapter-registry.cjs`, `errors.cjs`,
   `json-document.cjs`
 - `native-capabilities.json`, `policy-schema.cjs`, `profile.cjs`,
   `resolve-route.cjs`, `runner.cjs`
+- `adapters/antigravity.cjs`, `adapters/claude.cjs`,
+  `adapters/codex.cjs`, `adapters/gemini.cjs`
 
 The reviewer’s “seven runtime files” wording counted the dispatcher plus an
 earlier six-file subset. It is historical shorthand, not the current closure.
-Projection parity tests compare all ten byte-for-byte in Claude, Codex,
-Gemini, Antigravity, and Pi runtime roots and run the same cross-host resolver
-request; generated target presence alone is not evidence. Phase 02 keeps the
+Distribution inventory tests resolve all fourteen imports and keep generated
+target presence separate from runtime capability evidence. Phase 04 keeps the
 canonical closure and focused tests as the boundary. It does not regenerate
 production projections or update build-manifest integration; Phase 07 owns
 that projection/manifest delivery.

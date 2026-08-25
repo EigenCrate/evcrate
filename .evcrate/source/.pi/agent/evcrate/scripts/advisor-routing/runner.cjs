@@ -125,10 +125,11 @@ function buildProbeEnvironment(options = {}) {
   return buildAllowlistedEnvironment({ ...options, includeRecursionMarker: false });
 }
 
-function assertSafeArgv(argv, prompt) {
-  for (const argument of argv) {
+function assertSafeArgv(argv, prompt, adapter) {
+  for (const [index, argument] of argv.entries()) {
+    const fixedCodexSubcommand = adapter === 'codex' && index === 0 && argument === 'exec';
     if (typeof argument !== 'string' || argument.includes('\0')
-      || /(?:^|-)(?:c|e|command|exec)$/u.test(argument)
+      || (!fixedCodexSubcommand && /(?:^|-)(?:c|e|command|exec)$/u.test(argument))
       || /(?:\$\(|\$\{|`|;|&&|\|\||\beval\b|[<>])/u.test(argument)) fail('INVOCATION_INVALID');
     if (prompt && argument.includes(prompt)) fail('INVOCATION_INVALID');
   }
@@ -139,7 +140,7 @@ function createInvocation(specification) {
   assertAdapterAuthKeys(specification.adapter, specification.authKeys);
   const limits = normalizeLimits(specification.limits);
   if (Buffer.byteLength(specification.prompt, 'utf8') > limits.maxPromptBytes) fail('PROMPT_OVERSIZED');
-  assertSafeArgv(specification.argv, specification.prompt);
+  assertSafeArgv(specification.argv, specification.prompt, specification.adapter);
   const cwd = validateContainedCwd(specification.cwd, specification.workspaceRoot);
   const invocation = {
     adapter: specification.adapter,
@@ -175,7 +176,7 @@ function truncateUtf8(value, maxBytes) {
 function redactDiagnostics(value, secrets = [], maxBytes = DEFAULT_LIMITS.maxStderrBytes) {
   const limit = Number.isSafeInteger(maxBytes) && maxBytes > 0
     ? maxBytes : DEFAULT_LIMITS.maxStderrBytes;
-  let redacted = truncateUtf8(typeof value === 'string' ? value : '', limit);
+  let redacted = typeof value === 'string' ? value : '';
   for (const secret of secrets) {
     if (typeof secret !== 'string' || secret.length === 0) continue;
     redacted = redacted.replace(new RegExp(escapeRegex(secret), 'gu'), '[REDACTED]');
@@ -190,11 +191,12 @@ function redactDiagnostics(value, secrets = [], maxBytes = DEFAULT_LIMITS.maxStd
   return truncateUtf8(redacted, limit);
 }
 
-function createRunnerFailure({ reason, stderr = '', exitCode = null, signal = null }) {
+function createRunnerFailure({ reason, stdout = '', stderr = '', exitCode = null, signal = null }) {
   const failure = {
     error: createRoutingError('PROCESS_FAILED'),
     diagnostics: Object.freeze({
       reason,
+      stdout: typeof stdout === 'string' ? stdout : '',
       stderr: typeof stderr === 'string' ? stderr : '',
       exitCode: Number.isInteger(exitCode) ? exitCode : null,
       signal: typeof signal === 'string' && signal ? signal : null
@@ -346,11 +348,15 @@ function runInvocation(invocation, options = {}) {
         closeResolve();
         if (terminating || settled) return;
         if (code !== 0 || childSignal) {
+          let stdoutText = '';
           let stderrText = '';
+          try { stdoutText = redactDiagnostics(stdout.value(), authSecrets, limits.maxStdoutBytes); }
+          catch { stdoutText = '[unreadable output]'; }
           try { stderrText = redactDiagnostics(stderr.value(), authSecrets, limits.maxStderrBytes); }
           catch { stderrText = '[unreadable diagnostics]'; }
           const failure = createRunnerFailure({
             reason: childSignal ? 'signal' : 'nonzero-exit',
+            stdout: stdoutText,
             stderr: stderrText,
             exitCode: code,
             signal: childSignal
@@ -377,6 +383,10 @@ function runInvocation(invocation, options = {}) {
       timeoutHandle = setTimeoutImpl(() => void failProcess('TIMEOUT'), limits.timeoutMs);
       abortHandler = () => void failProcess('CANCELLED');
       signal?.addEventListener('abort', abortHandler, { once: true });
+      if (signal?.aborted) {
+        void failProcess('CANCELLED');
+        return;
+      }
       const stdin = child.stdin;
       if (!stdin || typeof stdin.on !== 'function' || typeof stdin.end !== 'function') {
         void failProcess('PROCESS_FAILED');

@@ -1,0 +1,3 @@
+{"event":"init","init":{"session_id":"fixture-session","model":"pro","approval_mode":"plan"}}
+{"event":"tool_use","tool_use":{"name":"write_file"}}
+{"event":"result","result":{"response":"must-not-succeed","stats":{}}}

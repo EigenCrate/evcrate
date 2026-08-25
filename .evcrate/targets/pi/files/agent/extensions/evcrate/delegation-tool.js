@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { Type } from "typebox";
 import { runChildStart } from "./child-context.js";
 import { normalizeAgentRoot } from "./paths.js";
-import { registerModelRoles, resolveModelRole, validateExplicitModel, validateExplicitThinking } from "./model-roles.js";
+import { registerModelRoles, resolveExactAdvisorModel, resolveModelRole, validateExplicitModel, validateExplicitThinking } from "./model-roles.js";
 
 export const DELEGATION_EVENTS = Object.freeze({
   request: "prompt-template:subagent:request",
@@ -95,11 +95,15 @@ function waitForTerminal(events, request, signal, timeoutMs, onUpdate) {
       error ? reject(new Error(error)) : resolve(terminal);
     };
     const queueFinish = () => queueMicrotask(finish);
-    const rejectCorrelation = (value) => { error = `delegation response correlation failed for '${request.nodeId}'`; terminal = value; queueFinish(); };
+    const fail = (message, value) => {
+      if (done || error) return;
+      error = message; terminal = value; queueFinish();
+    };
+    const rejectCorrelation = (value) => fail(`delegation response correlation failed for '${request.nodeId}'`, value);
     cleanup.push(events.on(DELEGATION_EVENTS.started, (value) => {
       if (value?.requestId !== request.requestId) return;
       if (!sameId(value, request)) return rejectCorrelation(value);
-      if (started) { error = `delegation '${request.nodeId}' emitted duplicate started`; queueFinish(); }
+      if (started) fail(`delegation '${request.nodeId}' emitted duplicate started`);
       started = true;
     }));
     cleanup.push(events.on(DELEGATION_EVENTS.update, (value) => {
@@ -111,17 +115,18 @@ function waitForTerminal(events, request, signal, timeoutMs, onUpdate) {
       if (value?.requestId !== request.requestId) return;
       if (!sameId(value, request)) return rejectCorrelation(value);
       if (terminal) {
-        error = `delegation '${request.nodeId}' emitted a duplicate or partial response`;
+        fail(`delegation '${request.nodeId}' emitted a duplicate or partial response`, value);
       } else if (!started && !TERMINAL_FAILURE_STATUSES.has(value?.status)) {
-        error = `delegation '${request.nodeId}' responded before started`;
+        fail(`delegation '${request.nodeId}' responded before started`, value);
       } else {
-        terminal = value; error = validResult(value, request);
+        const resultError = validResult(value, request);
+        if (resultError) fail(resultError, value);
+        else { terminal = value; queueFinish(); }
       }
-      queueFinish();
     }));
     const cancel = (message) => {
       events.emit(DELEGATION_EVENTS.cancel, { requestId: request.requestId, ownerRunId: request.ownerRunId, nodeId: request.nodeId });
-      error = message; queueFinish();
+      fail(message);
     };
     const timer = setTimeout(() => cancel(`delegation '${request.nodeId}' timed out`), timeoutMs);
     cleanup.push(() => clearTimeout(timer));
@@ -143,9 +148,22 @@ export function createDelegationRunner(options) {
     const ownerRunId = `evcrate-owner-${ids()}`;
     const restoreAgentRoot = normalizeChildAgentRoot();
     const runNode = async (node, index) => {
-      const explicitError = validateExplicitModel(node.model, context.modelRegistry) ?? validateExplicitThinking(node.thinking);
-      if (explicitError) fail(explicitError);
-      const route = options.resolveModel?.({ ...node, registry: context.modelRegistry }, context)
+      const advisorRoute = node.agent === "advisor"
+        ? resolveExactAdvisorModel({
+          provider: node.provider,
+          model: node.model,
+          thinking: node.thinking,
+          activeProvider: context.model?.provider,
+          registry: context.modelRegistry,
+        })
+        : undefined;
+      if (advisorRoute) {
+        if (advisorRoute.error) fail(advisorRoute.error);
+      } else {
+        const explicitError = validateExplicitModel(node.model, context.modelRegistry) ?? validateExplicitThinking(node.thinking);
+        if (explicitError) fail(explicitError);
+      }
+      const route = advisorRoute ?? options.resolveModel?.({ ...node, registry: context.modelRegistry }, context)
         ?? resolveModelRole({ ...options, ...node, registry: context.modelRegistry });
       if (route.error) fail(route.error);
       const request = {

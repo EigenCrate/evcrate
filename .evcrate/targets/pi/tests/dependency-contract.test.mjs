@@ -121,3 +121,16 @@ test("installed pi-subagents bridge accepts EVCrate structured delegation", asyn
     bridge.dispose();
   }
 });
+
+test("Pi delegation stays provider-neutral and never owns external CLI execution", () => {
+  const source = readFileSync(new URL(
+    "../files/agent/extensions/evcrate/delegation-tool.js",
+    import.meta.url,
+  ), "utf8");
+  const externalImports = [...source.matchAll(/from\s+["']([^"']+)["']/gu)]
+    .map((match) => match[1])
+    .filter((specifier) => !specifier.startsWith("node:") && !specifier.startsWith("."));
+  assert.deepEqual(externalImports, ["typebox"]);
+  assert.doesNotMatch(source, /node:child_process|\b(?:spawn|execFile|exec)\s*\(/u);
+  assert.doesNotMatch(source, /(?:openai|anthropic|gemini|google|provider-api|fetch\s*\()/iu);
+});
