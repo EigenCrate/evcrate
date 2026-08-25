@@ -151,7 +151,12 @@ def inventory(source: Path) -> ResourceInventory:
 
     skills = [str(package) for package in _skill_packages(source / "skills")]
 
-    scripts = tuple(str(_relative(source / "scripts", item)) for item in _walk_files(source / "scripts"))
+    scripts = tuple(
+        str(_relative(source / "scripts", item))
+        for item in _walk_files(source / "scripts")
+        if not any(part in {"__tests__", "tests", "fixtures", "helpers"}
+                   for part in _relative(source / "scripts", item).parts)
+    )
     hooks = tuple(str(_relative(source / "hooks", item)) for item in _walk_files(source / "hooks"))
     return ResourceInventory(commands, workflows, agents, tuple(sorted(skills)), scripts, hooks)
 
@@ -287,8 +292,11 @@ def copy_hooks_and_scripts(source: Path, output: Path) -> None:
     copy_tree(source / "hooks", root / "hooks", output)
     scripts = source / "scripts"
     for item in _walk_files(scripts):
-        if "advise-state" not in item.name:
-            _copy_file(item, root / "scripts" / _relative(scripts, item), output)
+        relative = _relative(scripts, item)
+        if "advise-state" not in item.name and not any(
+            part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts
+        ):
+            _copy_file(item, root / "scripts" / relative, output)
     _copy_file(source / ".evcrateignore", root / ".evcrateignore", output)
     write_json(root / "hook-map.json", output, hook_map(source))
 

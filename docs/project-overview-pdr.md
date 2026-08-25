@@ -230,9 +230,17 @@ Provide a production-ready template that:
 - Add one non-invoking strategy pointer to every generated command skill. Scoped
   implementation commands recognize final standalone `--advice`, preserve
   ordinary `@advisor` work input, and retain deterministic stuck escalation.
-- Keep generated targets free of advisor MCP/broker wiring, provider selectors,
-  admission hooks, runtime launchers, quota ledgers, and audit claims. Normal
-  target model-policy mapping for the advisor subagent is allowed.
+- Distribute one host-aware checkpoint dispatcher with built-in installed-CLI
+  adapters for Claude, Codex, Gemini, Antigravity, and Pi. Same-host routes use
+  native delegation only; cross-host routes use the named adapter only after
+  exact capability validation.
+- Resolve routes only from `$HOME/.evcrate/advisor-routing.json`, then built-in
+  same-host defaults; resolve the path through the platform home API and ignore
+  repository-local policy files. Do not publish, overwrite, or store credentials
+  in this user-owned file.
+- Keep generated targets free of advisor MCP/broker wiring, arbitrary command
+  templates, direct provider APIs, admission hooks, background services, quota
+  ledgers, audit claims, and approval bypasses.
 
 **FR8: Native Pi Phase 01 Distribution Contract**
 - Register `.pi` as one manifest-owned target rooted at `.evcrate/source/.pi` with one `EVCRATE_HOME/.pi` HOME binding.
@@ -267,9 +275,28 @@ Provide a production-ready template that:
 - Review execution stops at three reviewer/advisor cycles and keeps the user
   approval gate. Generated target evidence comes from deterministic build/check
   and target-aware help tests, never from hand-edited projections.
-- The unshipped `advisor_consult` interface remains removed. Integrations must not
-  depend on a broker, provider selector, admission hook, runtime launcher,
-  registry, quota ledger, audit transport, or approval bypass.
+- Advisor-routing Phase 01 uses a strict same-host-native/cross-host-external
+  truth table. Exact native model and effort gaps fail closed; Gemini's bundled
+  `efforts: []` capability returns `EFFORT_UNSUPPORTED`, with no downgrade or
+  inheritance. Route descriptors and errors are frozen, and serialized errors
+  expose only `code`, `category`, `action`, and `message`.
+- The validated Phase 02 advisor routing closure is ten runtime files. The
+  reviewer’s “seven runtime files” wording covered an earlier subset; the
+  canonical closure and projection parity fixture include all ten across the
+  five harnesses. Production projection and build-manifest integration remain
+  deferred to Phase 07.
+- Phase 02 keeps all five registry entries as fail-closed adapter placeholders;
+  concrete installed-CLI adapter execution is not production-enabled. Its
+  input limits are 16 KiB policy/request, 256-byte model, 64-byte effort, and
+  32 KiB brief; runner defaults are 64/16 KiB stdout/stderr, 2,048 lines, 48
+  KiB result, 30-second timeout, and 250 ms termination grace. POSIX descendant cleanup is tested;
+  Windows process-tree validation remains deferred.
+- The unshipped `advisor_consult` interface remains removed. Integrations may use
+  only the declared per-host route resolver, ordinary native delegation, or one
+  of the five declared cross-host adapter slots. Concrete adapter execution
+  must not depend on a broker,
+  arbitrary launcher, direct provider API, admission hook, background service,
+  quota ledger, audit transport, or approval bypass.
 
 ### Non-Functional Requirements
 

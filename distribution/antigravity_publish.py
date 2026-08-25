@@ -19,13 +19,21 @@ from .context import DistributionContext
 from .hashing import ignore_artifacts
 
 
+def _ignore_runtime_tests(_: str, names: list[str]) -> set[str]:
+    """Keep source-only test fixtures out of the generated Antigravity runtime."""
+
+    return ignore_artifacts(_, names) | {
+        name for name in names if name in {"__tests__", "tests", "fixtures", "helpers"}
+    }
+
+
 def build_antigravity_config(claude_source: Path, output_root: Path) -> None:
     """Generate the legacy config during Gate 1, never while publishing HOME."""
 
     target = output_root
     if not claude_source.is_dir() or claude_source.is_symlink():
         raise RuntimeError("Local .claude source is missing or unsafe")
-    shutil.copytree(claude_source, target, symlinks=False, ignore=ignore_artifacts)
+    shutil.copytree(claude_source, target, symlinks=False, ignore=_ignore_runtime_tests)
     _extract_hooks(target)
     _replace_legacy_assets(claude_source, target)
     _project_advisory_workflow(claude_source, target)
