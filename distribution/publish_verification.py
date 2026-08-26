@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from .context import DistributionContext
-from .contracts import PublishError, VerifiedArtifact
-from .hashing import hash_file, tree_hash
+from .contracts import BuildError, PublishError, VerifiedArtifact
+from .hashing import HashingError, hash_file, tree_hash
+from .manifest import advisor_runtime_hashes
 from .staging import build_input_hashes, build_manifest_path
 
 
@@ -51,6 +52,24 @@ def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifa
     actual_sources = {**manifest.get("source_hashes", {}), **manifest.get("adapter_hashes", {})}
     if actual_sources != expected_sources:
         raise PublishError("Build manifest is stale; run --build before publishing")
+    try:
+        selected_manifests = context.selected_manifests
+    except BuildError:
+        if "runtime_hashes" in manifest:
+            raise PublishError("Build manifest is stale; run --build before publishing") from None
+        selected_manifests = ()
+    requires_runtime_hashes = any(item.advisor_runtime is not None for item in selected_manifests)
+    if requires_runtime_hashes and "runtime_hashes" not in manifest:
+        raise PublishError("Build manifest is stale; run --build before publishing")
+    if "runtime_hashes" in manifest:
+        try:
+            expected_runtime_hashes = advisor_runtime_hashes(
+                selected_manifests, context.repository
+            )
+        except (BuildError, HashingError, OSError):
+            raise PublishError("Build manifest is stale; run --build before publishing") from None
+        if manifest.get("runtime_hashes") != expected_runtime_hashes:
+            raise PublishError("Build manifest is stale; run --build before publishing")
     output_hashes = manifest.get("output_hashes")
     if not isinstance(output_hashes, dict):
         raise PublishError("Build manifest has no output hashes")

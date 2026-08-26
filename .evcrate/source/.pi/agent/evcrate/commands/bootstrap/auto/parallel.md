@@ -5,6 +5,12 @@ argument-hint: [user-requirements] [--advice]
 
 **Ultrathink parallel** raw input: <raw-user-requirements>$ARGUMENTS</raw-user-requirements>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`{{evcrate:workflows/advisor-mentoring.md}}`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
@@ -43,10 +49,11 @@ user requirements and apply the shared default stuck-escalation contract.
 
 - At each existing bootstrap approval/action site, branch explicitly: if the
   decision is irreversible, security-sensitive, or go/no-go and is not covered
-  by terminal review, call exactly one `advisor` at `decision:<workflow-step>`
-  with bounded evidence from `advisor-mentoring.md`, forward prior counsel and
-  owner disposition, and wait for the terminal report before approval or action;
-  otherwise continue the existing approval/action without an advisor checkpoint.
+  by terminal review, enter the canonical checkpoint dispatcher exactly once at
+  `decision:<workflow-step>` with bounded evidence from
+  `advisor-mentoring.md`, forward prior counsel and owner disposition, and wait
+  for the terminal result before approval or action; otherwise continue the
+  existing approval/action without a dispatcher checkpoint.
   Routine stack, plan, and design approvals are excluded unless explicitly
   classified as such.
 
@@ -66,10 +73,10 @@ user requirements and apply the shared default stuck-escalation contract.
 ### 7. Code Review
 - Use `code-reviewer`
 - In explicit advice mode, after every terminal reviewer result and before any
-  fix or approval, synchronously call exactly one `advisor` at
+  fix or approval, enter the canonical checkpoint dispatcher exactly once at
   `review:<workflow-step>` with the bounded evidence, relevant prior counsel,
-  and owner disposition required by the shared mentoring contract. Advisor
-  failure fails the review gate.
+  and owner disposition required by the shared mentoring contract. Dispatcher
+  failure leaves the review gate incomplete.
 - Review/advisor cycle cap: at most three terminal reviewer/advisor cycles. At
   the cap, stop without another reviewer/advisor call or cycle reset and ask the
   user if issues remain.

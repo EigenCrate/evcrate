@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import distribute
 from distribution.context import create_context
-from distribution.contracts import BuildError, DistributionAction, PublishError, VerifiedArtifact
+from distribution.contracts import ADVISOR_RUNTIME_FILES, BuildError, DistributionAction, PublishError, VerifiedArtifact
 from distribution import gates
 
 
@@ -54,9 +54,20 @@ class DistributionCliTest(unittest.TestCase):
                         return
                     env = kwargs["env"]
                     script = str(command[1])
+                    def write_runtime(output: Path, relative_root: str) -> None:
+                        source = context.local_claude / "scripts"
+                        for relative in ADVISOR_RUNTIME_FILES:
+                            destination = output / relative_root / relative
+                            destination.parent.mkdir(parents=True, exist_ok=True)
+                            destination.write_bytes((source / relative).read_bytes())
+
                     if script.endswith("migrate_claude_to_codex.py"):
+                        write_runtime(Path(env["CODEX_OUTPUT_DIR"]), "scripts")
                         Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
+                    elif script.endswith("migrate_claude_to_pi.py"):
+                        write_runtime(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate/scripts")
                     else:
+                        write_runtime(Path(env["GEMINI_OUTPUT_DIR"]), "scripts")
                         Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
 
                 run.side_effect = write_required_docs

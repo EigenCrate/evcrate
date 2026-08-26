@@ -34,6 +34,12 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 <raw-user-requirements>{{args}}</raw-user-requirements>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
@@ -118,12 +124,13 @@ Follow strictly these following steps:
 
 At each existing bootstrap approval/action site, branch explicitly: if the
 decision is irreversible, security-sensitive, or go/no-go and is not covered by
-terminal review, call exactly one `advisor` at `decision:<workflow-step>` with
-bounded evidence from `advisor-mentoring.md`, forward prior counsel and owner
-disposition, and wait for its terminal report before asking for approval or
-acting; otherwise continue the existing approval/action without an advisor
-checkpoint. Routine tech-stack, plan, and design approvals are not decision
-checkpoints unless explicitly classified that way.
+terminal review, enter the canonical checkpoint dispatcher exactly once at
+`decision:<workflow-step>` with bounded evidence from `advisor-mentoring.md`,
+forward prior counsel and owner disposition, and wait for its terminal result
+before asking for approval or acting; otherwise continue the existing
+approval/action without a dispatcher checkpoint. Routine tech-stack, plan, and
+design approvals are not decision checkpoints unless explicitly classified that
+way.
 
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.

@@ -6,6 +6,12 @@ argument-hint: [issues] [--advice]
 **Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <raw-issues>$ARGUMENTS</raw-issues>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`{{evcrate:workflows/advisor-mentoring.md}}`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/code`.

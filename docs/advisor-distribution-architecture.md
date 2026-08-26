@@ -1,22 +1,22 @@
 # Advisor Mentoring and Target Distribution Architecture
 
-**Status**: Phase 04 adapter contracts implemented; Phase 07
-projection/manifest integration deferred
-**Last Updated**: 2026-08-25
+**Status**: Advisor routing and Phase 07 projection/manifest gates implemented;
+authenticated live CLI calls and HOME publication were not performed
+**Last Updated**: 2026-08-26
 **Parent**: [System Architecture](./system-architecture.md)
 
-**Design revision (2026-08-25)**: Checkpoint advice gains one host-aware
-dispatcher. Each host owns an independent route to a native advisor or a
-declared built-in installed-CLI adapter. One global
-`$HOME/.evcrate/advisor-routing.json` owns all host entries; same-host routes
-remain native and cross-host routes resolve to one of five named adapter slots.
-Phase 02 validates the resolver/runner contract and Phase 04 adds concrete
-adapter contracts with capability gates; Gemini and Antigravity remain
-fail-closed where a deny-write boundary is not evidenced. Phase 07
-projection/manifest integration remains deferred. This intentionally supersedes the former blanket
-ban on launchers/provider selection while retaining the bans on arbitrary
-command templates, direct provider APIs, credential storage, background broker
-services, and approval bypasses.
+**Design revision (2026-08-25; implementation completed 2026-08-26)**:
+Checkpoint advice uses one host-aware dispatcher. Each host owns an independent
+route to a native advisor or a declared built-in installed-CLI adapter. One
+global `<home>/.evcrate/advisor-routing.json` owns all host entries; same-host
+routes remain native and cross-host routes resolve to one of five fixed adapter
+slots. The resolver, runner, adapter contracts, checkpoint envelopes, target
+projections, and build-manifest authorization are implemented and verified.
+Gemini 0.47.0 and the reviewed Antigravity boundary remain fail-closed where
+exact effort or deny-write capability is not evidenced. This intentionally
+supersedes the former blanket ban on launchers/provider selection while
+retaining the bans on arbitrary command templates, direct provider APIs,
+credential storage, background broker services, and approval bypasses.
 
 **Release note (2026-08-24)**: The canonical source, generated Codex, Gemini,
 Antigravity, Pi, and `.agents` projections now define final standalone
@@ -118,15 +118,24 @@ One logical profile contains independent entries for `claude`, `codex`,
 }
 ```
 
+`hosts` may contain any subset of those five names, but every present entry is
+complete and contains exactly `backend`, `model`, `effort`, and `execution`.
+`backend` must name one supported host; `model` and `effort` are non-empty
+strings bounded at 256 and 64 UTF-8 bytes; `execution` is `auto`, `native`, or
+`external`. Credential-shaped fields are rejected.
+
 Resolve the platform user-home directory through the user-home API, never shell
 expansion or the repository working directory, and read exactly
 `<home>/.evcrate/advisor-routing.json`. A repository-local policy is ignored.
-Route precedence is the complete active-host entry in that global file, then
-the built-in same-host default. V1 has no host-native-config or per-invocation
-override; missing host entries do not inherit from another host. The file is
+If the global policy file is missing, or the active-host entry is missing, the
+resolver selects only that host's built-in same-host default. A present file is
+validated as a whole: malformed JSON, duplicate keys, an oversized document,
+unknown/missing fields, invalid hosts or entries, credential fields, and unsafe
+path state fail closed; none selects the default or merges fields from another
+host. V1 has no host-native-config or per-invocation override. The file is
 user-owned, is never published or generated, and contains no authentication
-material. Implementations must reject unsafe/symlinked files where the platform
-can prove that property, use owner-only POSIX modes for EVCrate-created
+material. Implementations reject unsafe/symlinked files where the platform can
+prove that property, use owner-only POSIX modes for EVCrate-created
 directories/files, and document Windows ACL limits without claiming POSIX
 guarantees.
 
@@ -172,21 +181,37 @@ Resolver/dispatcher JSON exposes only the stable sanitized fields
 filesystem paths, credentials, causes, or raw process diagnostics. Unknown
 failures normalize to the stable process error rather than leaking details.
 
-The registry declares concrete adapter contracts for Claude, Codex, Gemini,
-Antigravity, and Pi. Exact capability gates still fail closed when a selected
-CLI cannot evidence the requested effort/read-only boundary; Gemini's bundled
-native route therefore reports `EFFORT_UNSUPPORTED`, and the reviewed
-Antigravity boundary remains explicitly gated. No authenticated external CLI
-is production-enabled. Each adapter owns its exact
-executable/version, model, effort/thinking, headless, structured-output,
-read-only, session, auth, and cancellation contract. Capability gaps fail at
-route validation: for example, Gemini CLI 0.47.0 exposes no exact effort flag,
-and the reviewed future fixture lacks a verified deny-write boundary.
-Deterministic fake-CLI tests define the adapter contract; authenticated live
-calls remain separately approved work. Antigravity's
-`.antigravity` path stays a logical generated target; its physical
-Gemini-compatible publication mapping remains isolated in the existing
-publisher.
+The registry declares exactly five fixed adapter contracts. Each adapter owns
+its executable/version, model, effort/thinking, headless, structured-output,
+read-only, session, authentication, and cancellation checks; every adapter's
+auth-key allowlist is empty, so EVCrate stores no credentials and installed
+CLIs retain authentication ownership.
+
+| Adapter slot | Executable / reviewed version | Exact route and current boundary |
+| --- | --- | --- |
+| Claude | `claude` 2.1.207 | `opus` / `high`; plan mode, JSON output, and no session persistence |
+| Codex | `codex` 0.149.1 | `gpt-5.6-sol` / `high`; read-only sandbox, ephemeral execution, JSONL output |
+| Gemini | `gemini` 0.47.0 | `pro`; no exact effort flag, so `EFFORT_UNSUPPORTED` (future 0.48 remains gated) |
+| Antigravity | `agy` 1.0.0 | `pro` / `low`, `medium`, or `high`; reviewed `--sandbox` is not verified deny-write, so external use fails `READ_ONLY_UNSUPPORTED` |
+| Pi | `pi` 0.84.1 | `openai-codex/gpt-5.6-sol` / `high` by default; provider/model and thinking level are attested exactly |
+
+Capability gaps fail closed: `NATIVE_CAPABILITY_UNSUPPORTED` covers an invalid
+bundled native capability document, `MODEL_UNSUPPORTED` covers an exact model
+mismatch, and `EFFORT_UNSUPPORTED` covers an exact effort mismatch. Other
+adapter gates produce distinct `EXECUTABLE_UNAVAILABLE`,
+`CLI_VERSION_UNSUPPORTED`, `AUTH_UNAVAILABLE`, `READ_ONLY_UNSUPPORTED`,
+`SESSION_UNSUPPORTED`, or `OUTPUT_UNSUPPORTED` failures; invocation, protocol,
+timeout, cancellation, process, and recursion failures are not converted into
+alternate work. Gemini 0.47.0's bundled native record is `model: "pro"` with
+`efforts: []`; its built-in `pro`/`high` route therefore fails with
+`EFFORT_UNSUPPORTED` before execution, never by downgrading effort.
+
+Deterministic fake-CLI tests define the adapter contract. Antigravity's
+official-contract fixtures intentionally preserve the unverified deny-write
+gate; live AGY probing and all authenticated provider calls are optional,
+separately approved work outside this handoff. Antigravity's `.antigravity`
+path stays a logical generated target; its physical Gemini-compatible
+publication mapping remains isolated in the existing publisher.
 
 ```mermaid
 flowchart LR
@@ -248,7 +273,7 @@ skill's `.agents` publication does not create or modify `~/.pi/agent/settings.js
 
 No migration or overlay logic runs during publication.
 
-### Routing runtime closure and Phase 02 boundary
+### Routing runtime closure and Phase 07 release boundary
 
 The validated production routing closure is sixteen files:
 `advisor-dispatch.cjs`, ten shared files under `advisor-routing/`, and five
@@ -263,11 +288,21 @@ adapter modules under `advisor-routing/adapters/`:
 
 The reviewer’s “seven runtime files” wording counted the dispatcher plus an
 earlier six-file subset. It is historical shorthand, not the current closure.
-Distribution inventory tests resolve all sixteen imports and keep generated
-target presence separate from runtime capability evidence. Phase 04 keeps the
-canonical closure and focused tests as the boundary. It does not regenerate
-production projections or update build-manifest integration; Phase 07 owns
-that projection/manifest delivery.
+The Phase 07 implementation now projects this exact closure into all five
+targets: `scripts/` for Claude, Codex, Gemini, and Antigravity, and
+`agent/evcrate/scripts/` for Pi. Every projected file is compared byte-for-byte
+with the canonical Claude runtime; test, fixture, helper, ignored, and symlinked
+artifacts are rejected. The full build manifest records 16 runtime hashes for
+each host (80 total); the Pi-only manifest records its 16 hashes.
+
+Build authorization includes the runtime inputs and adapter/helper sources, as
+well as ordinary source and output hashes. `--build` creates the projections in
+isolated staging and atomically promotes them; `--check` regenerates and compares
+bytes/manifests without writing. Publication verification recomputes the source,
+runtime, adapter/helper, and output boundaries and rejects stale or mismatched
+artifacts. Repeated full and Pi builds are deterministic. Generated projections
+remain derived artifacts: change canonical source or a declared overlay and
+rebuild; do not hand-edit them.
 
 The implemented numeric bounds are 16 KiB for policy/request documents, 256
 bytes for model names, 64 bytes for effort names, and 32 KiB for a checkpoint
@@ -275,6 +310,26 @@ brief. Runner defaults are 64 KiB stdout, 16 KiB stderr, 2,048 lines, 48 KiB
 result, 30 seconds, and 250 ms of termination grace. POSIX descendant cleanup
 is covered by focused tests; Windows uses direct-child termination and its
 process-tree behavior remains unvalidated and deferred.
+
+### Checkpoint evidence and path safety
+
+The dispatcher accepts the strict `evcrate-advisor-checkpoint/v1` envelope with
+exact keys: `protocol`, `version`, `active_host`, `checkpoint`, `question`,
+`kind`, `task_or_phase`, `evidence`, `changed_paths`, `prior_counsel`, and
+`owner_disposition`. Checkpoint ids are `review:`, `stuck:`, or `decision:`
+ids; kinds are `architecture`, `debugging`, `security`, or `review`. Evidence
+contains bounded terminal text and file paths. The active host must match the
+envelope, and the envelope cannot carry route overrides. Terminal results are
+normalized to `evcrate-advisor-result/v1` and must retain the requested
+checkpoint.
+
+The validator allows at most four evidence files and 16 changed paths, keeps
+the complete envelope within 32 KiB and terminal evidence within 16 KiB, and
+rejects control characters, credentials, raw stderr, and stack traces. File
+paths must be unique normalized relative POSIX paths: absolute paths, drive
+prefixes, backslashes, empty/dot/dot-dot segments, `.env`, secret-like names,
+and `.git`, `.github`, `.gitlab`, `.hg`, `.svn`, `.gitignore`, `.gitmodules`, or
+`.gitattributes` metadata paths fail as `PROTOCOL_INVALID`.
 
 ## Ownership and Collision Invariants
 

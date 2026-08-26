@@ -83,6 +83,7 @@ function validateCapabilities(value) {
     validateText(capability.model, MAX_MODEL_BYTES, 'NATIVE_CAPABILITY_UNSUPPORTED');
     if (!Array.isArray(capability.efforts) || capability.efforts.length > 8
       || (host !== 'gemini' && capability.efforts.length === 0)
+      || (host === 'gemini' && capability.efforts.length !== 0)
     ) fail('NATIVE_CAPABILITY_UNSUPPORTED');
     for (const effort of capability.efforts) {
       validateText(effort, MAX_EFFORT_BYTES, 'NATIVE_CAPABILITY_UNSUPPORTED');

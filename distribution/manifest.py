@@ -7,6 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from .advisor_runtime import (
+    ADVISOR_HOSTS,
+    ADVISOR_RUNTIME_AUTHORIZATION_SOURCE,
+    ADVISOR_RUNTIME_FILES,
+    ADVISOR_RUNTIME_OUTPUT_PATHS,
+    NATIVE_CAPABILITIES_FILE,
+)
 from .contracts import BuildError
 from .hashing import HashingError, canonical_json_bytes, contained_path, hash_bytes, hash_file, normalize_relative_path, tree_hash
 from .runtime import RuntimeSpec, load_runtime_spec
@@ -31,6 +38,15 @@ class SharedJsonSpec:
 
 
 @dataclass(frozen=True)
+class AdvisorRuntimeSpec:
+    host: str
+    source_root: str
+    output_root: str
+    native_capabilities: str
+    files: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class TargetManifest:
     name: str
     adapter: str | None
@@ -44,6 +60,7 @@ class TargetManifest:
     runtime: RuntimeSpec | None = None
     adapter_sources: tuple[str, ...] = ()
     shared_json: SharedJsonSpec | None = None
+    advisor_runtime: AdvisorRuntimeSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +93,53 @@ def _load_json(path: Path) -> dict[str, Any]:
         return _expect_object(json.loads(path.read_text(encoding="utf-8")), str(path))
     except (OSError, json.JSONDecodeError) as error:
         raise BuildError(f"Could not read manifest {path}: {error}") from error
+
+
+def _load_advisor_runtime(
+    value: Any,
+    name: str,
+    roots: tuple[str, ...],
+    repository: Path,
+) -> AdvisorRuntimeSpec | None:
+    if value is None:
+        return None
+    runtime = _expect_object(value, "advisor_runtime")
+    expected_keys = {"host", "source_root", "output_root", "native_capabilities", "files"}
+    if set(runtime) != expected_keys:
+        raise BuildError("advisor_runtime requires host, source_root, output_root, native_capabilities, and files")
+    host = runtime["host"]
+    if host not in ADVISOR_HOSTS or host != name:
+        raise BuildError(f"advisor_runtime host must match target name: {name}")
+    if not all(isinstance(runtime[key], str) for key in ("source_root", "output_root", "native_capabilities")):
+        raise BuildError("advisor_runtime paths must be strings")
+    try:
+        source_root = normalize_relative_path(runtime["source_root"])
+        output_root = normalize_relative_path(runtime["output_root"])
+        native_capabilities = normalize_relative_path(runtime["native_capabilities"])
+    except HashingError as error:
+        raise BuildError(f"Invalid advisor_runtime path: {error}") from error
+    files_value = runtime["files"]
+    if not isinstance(files_value, list) or not all(isinstance(item, str) for item in files_value):
+        raise BuildError("advisor_runtime.files must be a list of paths")
+    try:
+        files = tuple(normalize_relative_path(item) for item in files_value)
+    except HashingError as error:
+        raise BuildError(f"Invalid advisor_runtime file: {error}") from error
+    if files != ADVISOR_RUNTIME_FILES:
+        raise BuildError("advisor_runtime.files must match the canonical production closure")
+    if output_root != ADVISOR_RUNTIME_OUTPUT_PATHS[host]:
+        raise BuildError(f"advisor_runtime output path is not owned by {name}")
+    if native_capabilities != NATIVE_CAPABILITIES_FILE:
+        raise BuildError("advisor_runtime.native_capabilities must use the bundled capability document")
+    source = contained_path(repository, source_root)
+    if source.exists():
+        if source.is_symlink() or not source.is_dir():
+            raise BuildError("advisor_runtime source_root must be a regular directory")
+        for relative in files:
+            path = contained_path(source, relative, must_exist=True)
+            if path.is_symlink() or not path.is_file():
+                raise BuildError(f"advisor_runtime source file is missing or unsafe: {relative}")
+    return AdvisorRuntimeSpec(host, source_root, output_root, native_capabilities, files)
 
 
 def load_target_manifest(path: Path) -> TargetManifest:
@@ -209,9 +273,15 @@ def load_target_manifest(path: Path) -> TargetManifest:
         if not managed_key or any(part == "" for part in managed_key.split(".")):
             raise BuildError("shared_json managed_key must be a non-empty dotted path")
         shared_json = SharedJsonSpec(schema, destination, fragment, managed_key)
+    advisor_runtime = _load_advisor_runtime(data.get("advisor_runtime"), name, roots, repository)
+    if advisor_runtime is not None and ADVISOR_RUNTIME_AUTHORIZATION_SOURCE not in adapter_sources:
+        raise BuildError(
+            f"advisor_runtime targets must authorize {ADVISOR_RUNTIME_AUTHORIZATION_SOURCE}"
+        )
     return TargetManifest(
         name, adapter, roots, owned, tuple(patches), docs, policy, source_root,
         overlay_root, load_runtime_spec(data.get("runtime")), adapter_sources, shared_json,
+        advisor_runtime,
     )
 
 
@@ -256,6 +326,21 @@ def adapter_hashes(manifests: tuple[TargetManifest, ...], repository: Path) -> d
     return dict(sorted(hashes.items()))
 
 
+def advisor_runtime_hashes(manifests: tuple[TargetManifest, ...], repository: Path) -> dict[str, str]:
+    """Hash every declared production runtime input for the selected hosts."""
+
+    hashes: dict[str, str] = {}
+    for manifest in manifests:
+        if manifest.advisor_runtime is None:
+            continue
+        runtime = manifest.advisor_runtime
+        source = contained_path(repository, runtime.source_root, must_exist=True)
+        for relative in runtime.files:
+            path = contained_path(source, relative, must_exist=True)
+            hashes[f"{manifest.name}/{relative}"] = hash_file(path)
+    return dict(sorted(hashes.items()))
+
+
 def source_hashes(manifests: tuple[TargetManifest, ...]) -> dict[str, str]:
     """Hash declared overlay sources only; never include environment values."""
 
@@ -274,7 +359,7 @@ def source_hashes(manifests: tuple[TargetManifest, ...]) -> dict[str, str]:
     return dict(sorted(hashes.items()))
 
 
-def build_manifest_bytes(*, source_hashes: Mapping[str, str], adapter_hashes: Mapping[str, str], owners: Mapping[str, str], output_roots: Mapping[str, Path], home_policy: Mapping[str, Any], validation: Mapping[str, Any]) -> bytes:
+def build_manifest_bytes(*, source_hashes: Mapping[str, str], adapter_hashes: Mapping[str, str], owners: Mapping[str, str], output_roots: Mapping[str, Path], home_policy: Mapping[str, Any], validation: Mapping[str, Any], runtime_hashes: Mapping[str, str] | None = None) -> bytes:
     """Return canonical, timestamp-free authorization bytes for a completed build."""
 
     outputs = {
@@ -290,4 +375,6 @@ def build_manifest_bytes(*, source_hashes: Mapping[str, str], adapter_hashes: Ma
         "validation": dict(sorted(validation.items())),
         "home_policy": home_policy,
     }
+    if runtime_hashes is not None:
+        payload["runtime_hashes"] = dict(sorted(runtime_hashes.items()))
     return canonical_json_bytes(payload)

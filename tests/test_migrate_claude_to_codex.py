@@ -99,7 +99,7 @@ class ApplyReplacementsTest(unittest.TestCase):
                 migrate_help_scripts()
 
             self.assertEqual((target_dir / "scripts/ev-help.py").read_bytes(), b"help")
-            self.assertEqual((target_dir / "scripts/test-evcrate-help.py").read_bytes(), b"test")
+            self.assertFalse((target_dir / "scripts/test-evcrate-help.py").exists())
             self.assertFalse((target_dir / "scripts/ignored.pyc").exists())
 
     def test_nested_command_tokens_use_colon_presentation(self) -> None:

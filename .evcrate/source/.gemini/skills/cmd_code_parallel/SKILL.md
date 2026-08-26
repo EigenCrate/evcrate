@@ -10,6 +10,12 @@ Description: Execute parallel or sequential phases based on plan structure
 
 Raw implementation input: <raw-plan>{{args}}</raw-plan>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
@@ -72,7 +78,7 @@ LOOP:
   3. IF the reviewer result is missing, partial, interrupted, cancelled,
      timed-out, or failed: STOP the gate; do not increment review_cycles.
 
-  4. IF explicit advice mode: run advisor → wait for its terminal mentorship report
+  4. IF explicit advice mode: enter the canonical dispatcher → wait for its terminal result
 
   5. IF explicit advice mode and the advisor result is missing, partial,
      interrupted, cancelled, timed-out, or failed: STOP the gate; do not

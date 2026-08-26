@@ -69,6 +69,7 @@ class NativePiDistributionTest(unittest.TestCase):
                 "migrate_claude_to_pi.py",
                 "pi_adapter",
                 "distribution/antigravity_publish.py",
+                "distribution/advisor_runtime.py",
                 "distribution/contracts.py",
             ):
                 source, destination = REPOSITORY / relative, repository / relative
@@ -88,7 +89,7 @@ class NativePiDistributionTest(unittest.TestCase):
             default_manifest.parent.mkdir(parents=True, exist_ok=True)
             default_manifest.write_bytes(build_manifest_bytes(
                 source_hashes={}, adapter_hashes={}, owners={}, output_roots=outputs,
-                home_policy={}, validation={"complete": True},
+                home_policy={}, validation={"complete": True}, runtime_hashes={},
             ))
             pi_root = pi_stage / ".pi"
             shutil.copytree(outputs[".pi"], pi_root)
@@ -102,10 +103,12 @@ class NativePiDistributionTest(unittest.TestCase):
 
             self.assertEqual(default_manifest.read_bytes(), build_manifest_bytes(
                 source_hashes={}, adapter_hashes={}, owners={}, output_roots=outputs,
-                home_policy={}, validation={"complete": True},
+                home_policy={}, validation={"complete": True}, runtime_hashes={},
             ))
             self.assertEqual((repository / build_manifest_path(pi_context)).read_text(encoding="utf-8"), "pi authorization")
-            with patch("distribution.publish_verification._current_source_hashes", return_value={}):
+            with patch("distribution.publish_verification._current_source_hashes", return_value={}), patch(
+                "distribution.publish_verification.advisor_runtime_hashes", return_value={}
+            ):
                 verify_local_artifact(
                     all_context,
                     VerifiedArtifact(repository, all_context.local_roots),

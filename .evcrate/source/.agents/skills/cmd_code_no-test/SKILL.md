@@ -29,6 +29,12 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 **MUST READ** `AGENTS.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>{{args}}</raw-plan>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
@@ -121,7 +127,7 @@ and do not start another review or advisor call.
 ```
 1. Run code-reviewer → get score, critical_count, warnings, suggestions
 
-2. IF explicit advice mode: run advisor → get terminal mentorship report
+2. IF explicit advice mode: enter the canonical dispatcher → get its terminal result
 
 3. DISPLAY FULL REVIEWER + ADVISOR FINDINGS AND SUMMARY TO USER:
    ┌─────────────────────────────────────────┐

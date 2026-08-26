@@ -11,6 +11,12 @@ Description: Use subagents to plan and fix hard issues
 **Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <raw-issues>{{args}}</raw-issues>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/code`.

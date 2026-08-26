@@ -16,6 +16,12 @@ Description: Quickly bootstrap a new project automatically
 
 <raw-user-requirements>{{args}}</raw-user-requirements>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
@@ -77,10 +83,11 @@ Follow strictly these following steps:
 
 At each existing bootstrap approval/action site, branch explicitly: if the
 decision is irreversible, security-sensitive, or go/no-go and is not covered by
-terminal review, call exactly one `advisor` at `decision:<workflow-step>` with
-bounded evidence from `advisor-mentoring.md`, forward prior counsel and owner
-disposition, and wait for its terminal report before approval or action;
-otherwise continue the existing approval/action without an advisor checkpoint.
+terminal review, enter the canonical checkpoint dispatcher exactly once at
+`decision:<workflow-step>` with bounded evidence from `advisor-mentoring.md`,
+forward prior counsel and owner disposition, and wait for its terminal result
+before approval or action; otherwise continue the existing approval/action
+without a dispatcher checkpoint.
 Routine stack, plan, and design preferences are excluded unless explicitly
 classified as such.
 

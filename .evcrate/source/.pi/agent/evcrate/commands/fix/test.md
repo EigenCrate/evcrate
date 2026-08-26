@@ -8,6 +8,12 @@ Analyze the skills catalog and activate the skills that are needed for the task 
 ## Reported Issues:
 <raw-issues>$ARGUMENTS</raw-issues>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`{{evcrate:workflows/advisor-mentoring.md}}`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.

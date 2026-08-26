@@ -701,6 +701,9 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             for host, runtime in runtimes.items():
                 with self.subTest(host=host):
                     self.assert_runtime_projection(runtime)
+                    if host != "claude":
+                        self.assertFalse((runtime / "test-evcrate-help.py").exists())
+                        self.assertFalse((runtime / "worktree.test.cjs").exists())
                     self.assert_dispatcher_resolves_cross_host_route(
                         runtime / "advisor-dispatch.cjs", root / host
                     )

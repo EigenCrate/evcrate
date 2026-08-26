@@ -9,9 +9,16 @@ from typing import Callable
 
 from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
-from .contracts import BuildError, VerifiedArtifact
-from .hashing import hash_file, ignore_artifacts, source_tree_hash, tree_hash
-from .manifest import adapter_hashes, TargetManifest, build_manifest_bytes, load_target_registry, source_hashes
+from .contracts import BuildError, VerifiedArtifact, validate_advisor_runtime_projection
+from .hashing import HashingError, hash_file, ignore_artifacts, source_tree_hash, tree_hash
+from .manifest import (
+    adapter_hashes,
+    advisor_runtime_hashes,
+    TargetManifest,
+    build_manifest_bytes,
+    load_target_registry,
+    source_hashes,
+)
 from .overlay import apply_patch_file, copy_overlay_files
 from .runtime import stage_runtime
 
@@ -189,13 +196,39 @@ def generate_stage(
             raise BuildError(f"Required generated project document is missing or unsafe: {document}")
         owners[document] = "baseline"
         outputs[document] = document_path
+    try:
+        runtime_hashes = advisor_runtime_hashes(manifests, context.repository)
+    except (HashingError, OSError) as error:
+        raise BuildError(f"Unable to hash advisor runtime inputs: {error}") from error
+    runtime_metadata: dict[str, object] = {}
+    for manifest in manifests:
+        runtime = manifest.advisor_runtime
+        if runtime is None:
+            continue
+        primary = roots[manifest.output_roots[0]]
+        try:
+            runtime_metadata[manifest.name] = validate_advisor_runtime_projection(
+                context.repository / runtime.source_root,
+                primary / runtime.output_root,
+                runtime.host,
+                runtime.output_root,
+                runtime.files,
+            )
+        except ValueError as error:
+            raise BuildError(f"Invalid {manifest.name} advisor runtime projection: {error}") from error
     manifest = build_manifest_bytes(
         source_hashes=source_values,
         adapter_hashes=adapter_values,
         owners=owners,
         output_roots=outputs,
         home_policy=policies,
-        validation={"complete": True, "symlinks": "rejected", "target_registry": "validated"},
+        validation={
+            "complete": True,
+            "symlinks": "rejected",
+            "target_registry": "validated",
+            "advisor_runtime": runtime_metadata,
+        },
+        runtime_hashes=runtime_hashes,
     )
     staged_manifest = context.stage / build_manifest_path(context)
     staged_manifest.parent.mkdir(parents=True, exist_ok=True)

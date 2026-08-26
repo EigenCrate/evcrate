@@ -11,6 +11,7 @@ from distribute_hooks import rewrite_agy_global_paths
 
 from .contracts import (
     add_global_workflow_fallback,
+    is_production_runtime_artifact,
     project_advisor_contract,
     render_advisory_interview_workflow,
     render_inline_advise_command,
@@ -23,7 +24,9 @@ def _ignore_runtime_tests(_: str, names: list[str]) -> set[str]:
     """Keep source-only test fixtures out of the generated Antigravity runtime."""
 
     return ignore_artifacts(_, names) | {
-        name for name in names if name in {"__tests__", "tests", "fixtures", "helpers"}
+        name for name in names
+        if name in {"__tests__", "tests", "fixtures", "helpers"}
+        or is_production_runtime_artifact(name)
     }
 
 

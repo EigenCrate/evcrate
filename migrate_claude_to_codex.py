@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from distribution.contracts import (
+    ADVISOR_RUNTIME_FILES,
     add_global_workflow_fallback,
     advisory_relay_error,
     project_advisor_contract,
@@ -56,24 +57,6 @@ for arg in sys.argv[1:]:
 
 SKILLS_TO_SKIP = {"claude-code", "skill-creator"}
 MCP_SERVERS_TO_SKIP = {"human-mcp"}
-ADVISOR_RUNTIME_FILES = (
-    "advisor-dispatch.cjs",
-    "advisor-routing/adapter-contract.cjs",
-    "advisor-routing/adapter-registry.cjs",
-    "advisor-routing/adapters/antigravity.cjs",
-    "advisor-routing/adapters/claude.cjs",
-    "advisor-routing/adapters/codex.cjs",
-    "advisor-routing/adapters/gemini.cjs",
-    "advisor-routing/adapters/pi.cjs",
-    "advisor-routing/checkpoint-contract.cjs",
-    "advisor-routing/errors.cjs",
-    "advisor-routing/json-document.cjs",
-    "advisor-routing/native-capabilities.json",
-    "advisor-routing/policy-schema.cjs",
-    "advisor-routing/profile.cjs",
-    "advisor-routing/resolve-route.cjs",
-    "advisor-routing/runner.cjs",
-)
 CODEX_FALLBACK_DOCS = ["CLAUDE.md", "GEMINI.md"]
 ADVISOR_RUBRIC_POINTER = (
     "For high-impact architecture, security, debugging, or review decisions, consider explicit "
@@ -681,7 +664,7 @@ def migrate_help_scripts() -> None:
         return
 
     dest_dir.mkdir(parents=True, exist_ok=True)
-    for name in ("ev-help.py", "test-evcrate-help.py"):
+    for name in ("ev-help.py",):
         source = source_dir / name
         if not source.is_file() or source.is_symlink() or source.suffix in {".pyc", ".pyo"}:
             continue

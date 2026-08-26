@@ -27,11 +27,17 @@
 
 #### 3. Code Quality
 - After finishing implementation, delegate to `code-reviewer` agent and wait for its complete review before deciding whether work is acceptable. Scoped commands then use the named `review:<workflow-step>` checkpoint from `advisor-mentoring.md` when explicit `--advice` is active.
-- Follow `advisor-mentoring.md`. When explicit advice mode is active, delegate
-  to `advisor` exactly once after every terminal reviewer report and before any
-  fix or approval decision. Without explicit mode, use its two-occurrence stuck
-  threshold and once-per-episode escalation. Each later consultation forwards
-  relevant prior counsel and owner disposition explicitly.
+- Follow `advisor-mentoring.md`. When explicit advice mode is active, enter its
+  canonical dispatcher exactly once after every terminal reviewer report and
+  before any fix or approval decision. The native branch delegates to one fresh
+  `advisor`; the external branch uses one adapter. Without explicit mode, use
+  its two-occurrence stuck threshold and once-per-episode escalation. Each later
+  consultation forwards relevant prior counsel and owner disposition explicitly.
+- At every named checkpoint, construct one bounded
+  `evcrate-advisor-checkpoint/v1` envelope and follow the canonical dispatcher
+  marker in `advisor-mentoring.md`. The primary workflow does not resolve
+  routes, choose providers/models/effort, invoke CLIs, or run native and
+  external branches together.
 - Before an existing irreversible, security-sensitive, or go/no-go decision that
   has no review coverage, use exactly one `decision:<workflow-step>` checkpoint;
   routine user preferences are not new checkpoints.

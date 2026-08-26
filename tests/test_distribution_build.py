@@ -14,10 +14,13 @@ from unittest.mock import patch
 
 from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
 from distribution.antigravity_publish import build_antigravity_config
+from distribution.advisor_runtime import _validate_capabilities
+from distribution.advisor_runtime import ADVISOR_RUNTIME_AUTHORIZATION_SOURCE
 from distribution.context import DistributionContext, create_context
 from distribution.contracts import (
     ADVISORY_CAPABILITY_BLOCK_END,
     ADVISORY_CAPABILITY_BLOCK_START,
+    ADVISOR_RUNTIME_FILES,
     BuildError,
     DistributionAction,
     add_global_workflow_fallback,
@@ -83,6 +86,36 @@ class DistributionBuildTest(unittest.TestCase):
                 "codex",
                 "request_user_input",
             )
+
+    def test_capability_validation_rejects_non_string_selectors(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source = (
+            repository
+            / ".evcrate/source/.claude/scripts/advisor-routing/native-capabilities.json"
+        )
+        document = json.loads(source.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp:
+            for selector in ([], {}):
+                with self.subTest(selector=selector):
+                    invalid = json.loads(json.dumps(document))
+                    invalid["hosts"]["claude"]["selector"] = selector
+                    path = Path(temp) / "native-capabilities.json"
+                    path.write_text(json.dumps(invalid), encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "selector"):
+                        _validate_capabilities(path)
+
+    def test_capability_validation_rejects_oversized_documents(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source = (
+            repository
+            / ".evcrate/source/.claude/scripts/advisor-routing/native-capabilities.json"
+        )
+        document = json.loads(source.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "native-capabilities.json"
+            path.write_text(json.dumps(document) + (" " * (16 * 1024)), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "16 KiB"):
+                _validate_capabilities(path)
 
     def test_all_advisory_adapters_hash_the_shared_contract(self) -> None:
         repository = Path(__file__).resolve().parents[1]
@@ -274,13 +307,19 @@ class DistributionBuildTest(unittest.TestCase):
         self.assertEqual(codex.output_roots, (".codex", ".agents"))
         self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
         self.assertIsNone(codex.runtime)
+        self.assertIsNotNone(codex.advisor_runtime)
+        self.assertEqual(codex.advisor_runtime.host, "codex")
+        self.assertEqual(codex.advisor_runtime.output_root, "scripts")
+        self.assertEqual(codex.advisor_runtime.files, ADVISOR_RUNTIME_FILES)
+        self.assertIn(ADVISOR_RUNTIME_AUTHORIZATION_SOURCE, codex.adapter_sources)
         manifest_text = registry.targets["codex"].read_text(encoding="utf-8")
-        self.assertNotIn("advisor", manifest_text.lower())
+        self.assertIn('"advisor_runtime"', manifest_text)
         self.assertFalse((registry.targets["codex"].parent / "runtime").exists())
         self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "pi"})
         pi = load_target_manifest(registry.targets["pi"])
         self.assertEqual(pi.output_roots, (".pi",))
         self.assertEqual(pi.adapter_sources, (
+            ADVISOR_RUNTIME_AUTHORIZATION_SOURCE,
             "distribution/contracts.py",
             "pi_adapter/__init__.py",
             "pi_adapter/agents.py",
@@ -476,10 +515,22 @@ class DistributionBuildTest(unittest.TestCase):
             context = create_context(DistributionAction.BUILD, stage=stage)
 
             def fake_migrator(_: object, script: str, env: dict[str, str]) -> None:
+                def copy_runtime(output: str, relative_root: str) -> None:
+                    source_root = context.local_claude / "scripts"
+                    destination_root = Path(output) / relative_root
+                    for relative in ADVISOR_RUNTIME_FILES:
+                        destination = destination_root / relative
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(source_root / relative, destination)
+
                 if script == "migrate_claude_to_gemini.py":
+                    copy_runtime(env["GEMINI_OUTPUT_DIR"], "scripts")
                     Path(env["GEMINI_OUTPUT_DIR"]).joinpath("artifact").write_text("gemini", encoding="utf-8")
                     Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
+                elif script == "migrate_claude_to_pi.py":
+                    copy_runtime(env["PI_OUTPUT_DIR"], "agent/evcrate/scripts")
                 else:
+                    copy_runtime(env["CODEX_OUTPUT_DIR"], "scripts")
                     Path(env["CODEX_OUTPUT_DIR"]).joinpath("artifact").write_text("codex", encoding="utf-8")
                     Path(env["AGENTS_OUTPUT_DIR"]).joinpath("artifact").write_text("agents", encoding="utf-8")
                     Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
@@ -501,6 +552,14 @@ class DistributionBuildTest(unittest.TestCase):
             self.assertEqual(
                 manifest_data["home_policy"]["claude"],
                 {"bindings": {".claude": ".claude"}, "preserve_paths": {}, "promotion_order": 40},
+            )
+            self.assertEqual(
+                len(manifest_data["runtime_hashes"]),
+                len(ADVISOR_RUNTIME_FILES) * 5,
+            )
+            self.assertEqual(
+                set(manifest_data["validation"]["advisor_runtime"]),
+                {"antigravity", "claude", "codex", "gemini", "pi"},
             )
             for marker in (
                 "advisor_consult",

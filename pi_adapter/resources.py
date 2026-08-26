@@ -10,7 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Callable, Collection
 
-from distribution.contracts import render_advisory_interview_workflow, render_inline_advise_command
+from distribution.contracts import (
+    ADVISOR_RUNTIME_FILES,
+    is_production_runtime_artifact,
+    render_advisory_interview_workflow,
+    render_advisor_runtime_metadata,
+    render_inline_advise_command,
+)
+from distribution.hashing import is_ignored_artifact
 from .frontmatter import FrontmatterError, normalize_lf, split_frontmatter, validate_skill_frontmatter
 
 
@@ -26,6 +33,7 @@ class ResourceInventory:
     skills: tuple[str, ...]
     scripts: tuple[str, ...]
     hooks: tuple[str, ...]
+    advisor_runtime: tuple[str, ...] = ()
 
 
 LEGACY_SKILL = Path("claude-code/skill.md")
@@ -118,8 +126,14 @@ def _walk_files(root: Path) -> list[Path]:
     files: list[Path] = []
     for current, directories, filenames in os.walk(root, followlinks=False):
         directory = Path(current)
-        directories.sort()
-        filenames.sort()
+        directories[:] = sorted(
+            name for name in directories
+            if not is_ignored_artifact(Path(current).relative_to(root) / name)
+        )
+        filenames[:] = sorted(
+            name for name in filenames
+            if not is_ignored_artifact(Path(current).relative_to(root) / name)
+        )
         for name in directories + filenames:
             candidate = directory / name
             if candidate.is_symlink():
@@ -154,11 +168,18 @@ def inventory(source: Path) -> ResourceInventory:
     scripts = tuple(
         str(_relative(source / "scripts", item))
         for item in _walk_files(source / "scripts")
-        if not any(part in {"__tests__", "tests", "fixtures", "helpers"}
-                   for part in _relative(source / "scripts", item).parts)
+        if not is_production_runtime_artifact(_relative(source / "scripts", item))
     )
-    hooks = tuple(str(_relative(source / "hooks", item)) for item in _walk_files(source / "hooks"))
-    return ResourceInventory(commands, workflows, agents, tuple(sorted(skills)), scripts, hooks)
+    advisor_runtime = tuple(item for item in ADVISOR_RUNTIME_FILES if item in scripts)
+    if advisor_runtime and advisor_runtime != ADVISOR_RUNTIME_FILES:
+        raise ResourceError("Canonical advisor runtime inventory is incomplete or reordered")
+    hooks = tuple(
+        str(_relative(source / "hooks", item))
+        for item in _walk_files(source / "hooks")
+        if not any(part in {"__tests__", "tests", "fixtures", "helpers"}
+                   for part in _relative(source / "hooks", item).parts)
+    )
+    return ResourceInventory(commands, workflows, agents, tuple(sorted(skills)), scripts, hooks, advisor_runtime)
 
 
 def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
@@ -289,13 +310,15 @@ def copy_hooks_and_scripts(source: Path, output: Path) -> None:
     """Copy complete canonical closures; scout needs a colocated ignore file."""
 
     root = output / "agent" / "evcrate"
-    copy_tree(source / "hooks", root / "hooks", output)
+    for item in _walk_files(source / "hooks"):
+        relative = _relative(source / "hooks", item)
+        if any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts):
+            continue
+        _copy_file(item, root / "hooks" / relative, output)
     scripts = source / "scripts"
     for item in _walk_files(scripts):
         relative = _relative(scripts, item)
-        if "advise-state" not in item.name and not any(
-            part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts
-        ):
+        if "advise-state" not in item.name and not is_production_runtime_artifact(relative):
             _copy_file(item, root / "scripts" / relative, output)
     _copy_file(source / ".evcrateignore", root / ".evcrateignore", output)
     write_json(root / "hook-map.json", output, hook_map(source))
@@ -370,7 +393,7 @@ def write_inventory(destination: Path, output: Path, resources: ResourceInventor
     """Write auditable source/output logical inventories in deterministic order."""
 
     generated_scripts = tuple(item for item in resources.scripts if "advise-state" not in Path(item).name)
-    write_json(destination, output, {
+    inventory = {
         "agents": list(resources.agents),
         "advisoryCapabilities": {
             "checkpoint": "supported",
@@ -384,4 +407,7 @@ def write_inventory(destination: Path, output: Path, resources: ResourceInventor
         "scripts": list(generated_scripts),
         "skills": list(resources.skills),
         "workflows": list(resources.workflows),
-    })
+    }
+    if resources.advisor_runtime:
+        inventory["advisorRuntime"] = render_advisor_runtime_metadata("pi", "agent/evcrate/scripts")
+    write_json(destination, output, inventory)
