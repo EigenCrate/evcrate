@@ -2,6 +2,7 @@
 
 ### Features
 
+* **advisor:** ship global checkpoint routing with exact native/cross-host semantics, five fixed CLI adapters, strict evidence/path validation, and deterministic 16-file projections authorized by runtime/helper hashes; authenticated live calls and HOME publication remain separate operations.
 * **scout:** unify external CLI strategy rendering behind one canonical read-only source, with deterministic Codex/Gemini projections and exact fallback contracts.
 * **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
 

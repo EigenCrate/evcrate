@@ -7,7 +7,9 @@ import sys
 from pathlib import Path
 
 from distribution.contracts import (
+    ADVISOR_RUNTIME_FILES,
     advisory_relay_error,
+    is_production_runtime_artifact,
     project_advisor_contract,
     render_advisory_interview_workflow,
     render_inline_advise_command,
@@ -906,6 +908,8 @@ def migrate_scripts():
             continue
         if any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in rel_path.parts):
             continue
+        if is_production_runtime_artifact(rel_path):
+            continue
         dest_path = dest_dir / rel_path
         if source.is_dir():
             dest_path.mkdir(parents=True, exist_ok=True)
@@ -930,6 +934,11 @@ def migrate_scripts():
                 )
             with open(dest_path, "w", encoding="utf-8") as f: f.write(content)
         print(f"Migrated script: {rel_path}")
+    if any((src_dir / relative).is_file() for relative in ADVISOR_RUNTIME_FILES):
+        for relative in ADVISOR_RUNTIME_FILES:
+            generated = dest_dir / relative
+            if not generated.is_file() or generated.is_symlink():
+                raise RuntimeError(f"Canonical advisor runtime file is missing or unsafe: {generated}")
 
 def migrate_mcp():
     settings_file = Path(GEMINI_DIR) / "settings.json"

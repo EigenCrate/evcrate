@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: 2026-08-23
+**Last Updated**: 2026-08-26
 **Version**: 1.10.0
 **Project**: EVCrate
 
@@ -94,30 +94,57 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - `advisor-strategy` is a static, portable skill distributed from `.evcrate/source/.claude/skills` to the managed skill roots.
 - Every supported host (`claude`, `codex`, `gemini`, `antigravity`, and `pi`) owns an independent advisor route containing `backend`, exact `model`, `effort`, and `execution`. Missing host entries never inherit another host's route.
 - Route precedence is the active-host entry in the platform-home path `<home>/.evcrate/advisor-routing.json`, then a built-in same-host default that preserves current behavior. Repository-local policy files are ignored; V1 has no host-native-config or per-invocation route override. The file contains no credentials; installed CLIs retain authentication ownership.
+- The user-visible policy has exactly `version` and `hosts` at the top level and exactly `backend`, `model`, `effort`, and `execution` per host. A minimal cross-host entry is:
+
+  ```json
+  {
+    "version": 1,
+    "hosts": {
+      "codex": {
+        "backend": "claude",
+        "model": "opus",
+        "effort": "high",
+        "execution": "external"
+      }
+    }
+  }
+  ```
+
+  A missing policy file or active-host entry selects the built-in same-host
+  default. A present malformed, oversized, duplicate-key, credential-bearing,
+  unsafe-path, or schema-invalid policy fails closed rather than partially
+  merging with a default or another host.
 - `execution: auto` is deterministic: when `backend == host`, validate the requested model/effort against native subagent metadata and use one fresh ordinary `advisor` subagent; when `backend != host`, use the shared EVCrate runner and the selected declared adapter slot. `execution: native` requires `backend == host`; `execution: external` requires `backend != host`. Same-host external execution is invalid even when native metadata cannot express the requested selector.
 - The dispatcher never substitutes a model, downgrades effort, inherits another host profile, changes execution mode, or falls back to a different backend. Capability, executable, authentication, timeout, cancellation, malformed-output, and recursion failures remain distinct actionable errors.
-- Phase 01's exact route truth table is documented in [Advisor Mentoring and Target Distribution Architecture](./advisor-distribution-architecture.md#advisor-route-and-dispatcher-contract). Gemini's bundled native capability advertises no effort values, so its default exact-effort route fails with `EFFORT_UNSUPPORTED` rather than downgrading.
+- The exact route truth table is documented in [Advisor Mentoring and Target Distribution Architecture](./advisor-distribution-architecture.md#advisor-route-and-dispatcher-contract). Gemini 0.47.0 advertises native model `pro` with `efforts: []`, so its exact-effort route, including the built-in `high` default, fails with `EFFORT_UNSUPPORTED` rather than downgrading or executing.
 - Route descriptors, capability/policy documents, and typed errors are frozen. The dispatcher serializes only `code`, `category`, `action`, and `message`, excluding paths, policy bytes, credentials, causes, and raw diagnostics.
 - The validated advisor routing closure is sixteen runtime files: the dispatcher,
   ten shared `advisor-routing/` files, and five adapter modules. The reviewer’s
   “seven runtime files” wording covered an earlier subset; the parity fixture compares all sixteen across
   Claude, Codex, Gemini, Antigravity, and Pi and runs the same cross-host
   resolution request.
+- The five projections place the same closure under `scripts/` for Claude,
+  Codex, Gemini, and Antigravity, and under `.pi/agent/evcrate/` for Pi. The
+  build manifest authorizes the runtime, adapter/helper, source, and output
+  hashes; isolated full and Pi-only builds and checks are deterministic, and
+  `--check` verifies without writing.
 - External adapters use argument-vector process spawning without a shell, deliver a bounded checkpoint brief through stdin, parse machine-readable output, enforce read-only/no-approval defaults, bound output and process lifetime, terminate descendants on cancellation, and sanitize diagnostics. Nested dispatch is rejected through an invocation marker and request budget.
-- The five registry entries have concrete bounded adapter contracts; capability
-  and authentication gates still fail closed, so authenticated installed-CLI
-  execution is not production-enabled. Checkpoint envelopes are validated as
-  `evcrate-advisor-checkpoint/v1` and terminal results normalize to
-  `evcrate-advisor-result/v1`. Implemented input limits are 16 KiB policy/request,
-  256-byte model, 64-byte effort, and 32 KiB brief; runner defaults are 64/16
-  KiB stdout/stderr, 2,048 lines, 48 KiB result, 30-second timeout, and 250 ms
-  termination grace. POSIX descendant cleanup is tested;
-  Windows process-tree validation remains deferred.
-- Every eventual adapter requires versioned non-interactive capability
-  validation; absent executables, unknown contracts, or exact model/effort
-  controls the installed CLI cannot express fail closed. Deterministic fake-CLI
-  contracts are mandatory; authenticated live calls remain optional and
-  separately approved.
+- The five fixed adapters are Claude, Codex, Gemini, Antigravity, and Pi. Their
+  installed CLIs own authentication and EVCrate has no provider credential
+  store. Version, executable, authentication, model, effort, read-only,
+  session, output, timeout, cancellation, and recursion gates fail closed when
+  the CLI cannot express the required contract. Antigravity's current `agy`
+  contract cannot verify deny-write sandboxing, so its external capability gate
+  returns `READ_ONLY_UNSUPPORTED`.
+- Checkpoint envelopes are validated as `evcrate-advisor-checkpoint/v1` and
+  terminal results normalize to `evcrate-advisor-result/v1`. Implemented input
+  limits are 16 KiB policy/request, 256-byte model, 64-byte effort, and 32 KiB
+  brief; runner defaults are 64/16 KiB stdout/stderr, 2,048 lines, 48 KiB
+  result, 30-second timeout, and 250 ms termination grace. POSIX descendant
+  cleanup is tested; Windows process-tree validation remains deferred.
+- Deterministic fake-CLI contracts are mandatory. Antigravity official contract
+  fixtures cover the adapter boundary, while authenticated live calls and live
+  Antigravity evidence are optional and out of scope for this handoff.
 - Phase 02-scoped `/code`, `/cook`, `/fix`, and `/bootstrap` commands accept exactly one case-sensitive, whitespace-delimited final standalone `--advice` (trailing whitespace allowed). They strip only that token into `WORK_ARGUMENTS`, reject duplicate standalone tokens, and leave non-final, quoted, embedded, suffixed, or differently cased forms unchanged. `--advice` alone follows normal empty-input behavior.
 - Every `@advisor` occurrence, including an exact final token, is ordinary unchanged work input. The final `@advisor` mode is historical Phase 01 behavior, not an active alias in the Phase 02 canonical source.
 - Named counsel is limited to `review:<workflow-step>` after terminal review evidence, `stuck:<blocker-signature>` on the second matching no-progress blocker, and `decision:<workflow-step>` before an existing uncovered irreversible, security-sensitive, or go/no-go decision. Each call is fresh, blocking, non-binding, and explicitly receives relevant prior counsel and owner disposition.
@@ -125,10 +152,12 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - The strategy skill itself never dispatches. Checkpoint workflows call the dispatcher after prerequisite evidence exists; the selected advisor remains read-only and non-binding. Normal host approvals, sandbox policy, tests, review, and human approval remain authoritative.
 - Generated `.evcrate/source/.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
 - The completed canonical review contract has an explicit hard cap and still
-  requires explicit user approval before finalization. Command/interview target
-  projections were not regenerated in Phase 02; Phase 04 completed that earlier
-  rollout and parity validation. Routing projections and build-manifest
-  integration are separate Phase 07 deferrals.
+  requires explicit user approval before finalization. The formerly deferred
+  Phase 07 routing projections and build-manifest boundary are implemented:
+  all five host projections contain the byte-identical sixteen-file runtime
+  closure, and deterministic build/check gates verify the declared hashes.
+  HOME publication and authenticated provider calls remain separate optional
+  operations and were not performed in this handoff.
 
 ```mermaid
 flowchart TD
@@ -994,14 +1023,15 @@ User Project
 - Native Pi commands are registered recursively from the managed local extension using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. A bounded `evcrate_command` tool dispatches model-initiated nested commands with cycle/depth controls. An authoritative operation-policy `tool_call` gate enforces temporary tool restrictions even if later extensions alter active tools; dispatcher calls mixed with parallel siblings are rejected and retried alone. Static workflow Markdown remains referenced data; it is not silently converted into dynamic executable orchestration.
 - Native Pi agents run through the structured `pi-subagents` delegation API exposed by an EVCrate-owned tool; the package's public `workflowScript` tool is not parsed or rewritten. Semantic model roles are resolved against the active provider immediately before delegation; concrete models are never baked into command, workflow, or agent prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
 - Existing Codex, Gemini, Antigravity, and Pi outputs include the portable
-  `advisor-strategy` skill and current native mentoring contract. Phase 07
-  projection work will publish independent host route resolution and the
+  `advisor-strategy` skill and current native mentoring contract. The completed
+  routing projection publishes independent host route resolution and the
   native-or-external dispatcher while retaining target-specific capability
-  validation. Phase 04 also projected
-  strict advisory capability markers and target-native inline `/advise`
-  behavior; only canonical Claude retains the relay path. Non-Claude targets
-  reject an exact final standalone `--agent` with their target-specific
-  unsupported capability code before delegation or relay-state handling.
+  validation. Phase 04 also projected strict advisory capability markers and
+  target-native inline `/advise` behavior; only canonical Claude retains the
+  relay path. Non-Claude targets reject an exact final standalone `--agent`
+  with their target-specific unsupported capability code before delegation or
+  relay-state handling. Runtime/helper/source/output hashes are part of the
+  build authorization, and generated projections remain derived artifacts.
 - The canonical Claude command guides preserve final standalone `--advice`,
   ordinary `@advisor` input, named checkpoint ordering, the hard review-cycle
   cap, default stuck escalation, and cook/`/fix:hard` fallback handoffs. The

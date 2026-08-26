@@ -59,6 +59,15 @@ class PiResourceMigrationTest(unittest.TestCase):
 
             agent_root = output / "agent"
             inventory = json.loads((agent_root / "evcrate/inventory.json").read_text())
+            ignored_runtime_dir = "_" + "_" + "pycache" + "_" + "_"
+            self.assertEqual(inventory["advisorRuntime"]["active_host"], "pi")
+            self.assertEqual(len(inventory["advisorRuntime"]["files"]), 16)
+            self.assertFalse(any(
+                ignored_runtime_dir in item
+                or item.endswith((".pyc", ".pyo", ".test.cjs", ".test.js", ".test.mjs"))
+                or item == "test-evcrate-help.py"
+                for item in inventory["scripts"]
+            ))
             self.assertEqual({key: len(inventory[key]) for key in ("commands", "workflows", "agents", "skills")}, {
                 "commands": 73, "workflows": 6, "agents": 18, "skills": 50,
             })

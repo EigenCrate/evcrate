@@ -89,6 +89,10 @@ test('checkpoint validation rejects route overrides, host mismatches, unsafe pat
   assert.throws(() => validateCheckpoint({ ...base, backend: 'claude' }), (error) => error?.code === 'PROTOCOL_INVALID');
   assert.throws(() => validateCheckpoint({ ...base, active_host: 'pi' }, 'codex'), (error) => error?.code === 'PROTOCOL_INVALID');
   assert.throws(() => validateCheckpoint({ ...base, changed_paths: ['../secret.txt'] }), (error) => error?.code === 'PROTOCOL_INVALID');
+  for (const path of ['.', 'nested/./evidence.txt']) {
+    assert.throws(() => validateCheckpoint({ ...base, evidence: { ...base.evidence, files: [path] } }),
+      (error) => error?.code === 'PROTOCOL_INVALID');
+  }
   assert.throws(() => validateCheckpoint({ ...base, evidence: { ...base.evidence, files: ['.github/config'] } }),
     (error) => error?.code === 'PROTOCOL_INVALID');
   for (const metadata of ['modules', 'attributes']) {

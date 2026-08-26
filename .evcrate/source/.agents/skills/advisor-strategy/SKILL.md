@@ -21,6 +21,14 @@ The brief contains the task or phase, one precise question, terminal review/test
 evidence, changed paths, constraints, and at most four relevant repository text
 files. Exclude secrets, credentials, broad repository dumps, and unrelated logs.
 
+For named checkpoint work, the caller supplies the bounded
+`evcrate-advisor-checkpoint/v1` envelope from the shared mentoring workflow.
+The envelope is provider-neutral and contains no backend, model, effort,
+execution, adapter, executable, argv, fallback, or provider-template override.
+The dispatcher, never this skill, resolves the active-host route and chooses
+the native or external branch. The skill must not recurse, delegate, launch a
+CLI, or infer a route from hidden context.
+
 Return a complete terminal report with recommendation, must-fix items, cautions,
 assumptions or evidence gaps, success checks, and unresolved questions. Advice
 is non-binding. The main workflow owns edits, tests, approvals, and decisions.

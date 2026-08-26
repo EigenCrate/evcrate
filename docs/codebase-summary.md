@@ -1,12 +1,12 @@
 # Codebase Summary
 
-**Last Updated**: 2026-08-23
+**Last Updated**: 2026-08-26
 **Version**: 1.15.0
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Overview
 
-evcrate is a comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code and Open Code). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
+evcrate is a comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code, Open Code, Codex, Gemini, Antigravity, and Pi). It provides a complete development environment with AI-powered agent orchestration, automated workflows, deterministic target distribution, and intelligent project management.
 
 ## Project Structure
 
@@ -42,7 +42,29 @@ evcrate/
 
 The distribution entrypoint separates local generation from HOME publication. `.evcrate/source/.claude` is a source-backed target: the build gate copies the complete source tree into the finalized nested `.evcrate/source/.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` consumes that complete artifact for `HOME/.claude`, excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources; stale managed copies absent from the current source are removed. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
 
-Phase 2–4 support creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. Generated targets include the portable `advisor-strategy` skill, its brief contract, and a normal high-tier/strong `advisor` subagent. Scoped implementation commands recognize final standalone `--advice`, retain ordinary `@advisor` task text, and preserve deterministic stuck escalation; every generated command skill also retains one non-executing strategy pointer. Inline `/advise` is first-class on Claude, Codex, Pi, Gemini, and Antigravity; Claude alone supports relay v1, while the others reject exact final `--agent` with target-specific capability codes. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.evcrate/source/.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
+The distribution gate creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. Generated targets include the portable `advisor-strategy` skill, its brief contract, and a normal high-tier/strong `advisor` subagent. Scoped implementation commands recognize final standalone `--advice`, retain ordinary `@advisor` task text, and preserve deterministic stuck escalation; every generated command skill also retains one non-executing strategy pointer. Inline `/advise` is first-class on Claude, Codex, Pi, Gemini, and Antigravity; Claude alone supports relay v1, while the others reject exact final `--agent` with target-specific capability codes. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.evcrate/source/.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
+
+### Advisor routing and runtime projection
+
+The user-visible global policy is `$HOME/.evcrate/advisor-routing.json` (resolved through the platform home API), for example:
+
+```json
+{
+  "version": 1,
+  "hosts": {
+    "codex": {
+      "backend": "claude",
+      "model": "opus",
+      "effort": "high",
+      "execution": "external"
+    }
+  }
+}
+```
+
+The supported hosts are `claude`, `codex`, `gemini`, `antigravity`, and `pi`; each entry must contain exactly `backend`, `model`, `effort`, and `execution`. A missing policy file or active-host entry selects that host's built-in same-host default. A present malformed, oversized, duplicate-key, credential-bearing, unsafe-path, or schema-invalid policy fails closed; it is never partially merged with defaults, another host, a repository file, or a per-invocation override. `auto` selects native execution only when `backend` equals the active host and external execution otherwise; `native` requires equality and `external` requires inequality. Same-host external execution is invalid. Exact capability gaps return typed failures such as `NATIVE_CAPABILITY_UNSUPPORTED`, `MODEL_UNSUPPORTED`, or `EFFORT_UNSUPPORTED`; Gemini 0.47.0 advertises `pro` with `efforts: []`, so an exact effort request (including the built-in `high` default) fails with `EFFORT_UNSUPPORTED`. The five fixed adapters are Claude, Codex, Gemini, Antigravity, and Pi; their installed CLIs own authentication, and EVCrate stores no provider credentials. There is no fallback, model substitution, effort downgrade, arbitrary template, direct provider API, broker, background service, or approval bypass.
+
+Checkpoint briefs use the strict `evcrate-advisor-checkpoint/v1` envelope and normalize terminal responses to `evcrate-advisor-result/v1`. Evidence and changed paths are bounded and use safe normalized POSIX paths; traversal, dot segments, `.env`, metadata paths, and sensitive evidence are rejected. The canonical advisor runtime is a 16-file closure projected byte-for-byte to the five host roots (`scripts/` for Claude, Codex, Gemini, and Antigravity; `.pi/agent/evcrate/` for Pi). Build and check are isolated and deterministic: runtime, adapter/helper, source, and output hashes authorize the manifest, and `--check` verifies without writes. `--target pi` narrows the candidate to Pi; `PI_CODING_AGENT_DIR` selects the runtime resource root and is not a HOME publication destination. Any live HOME publication requires manual Pi quiescence and separate authorization; authenticated live CLI calls and Antigravity live evidence were out of scope for this handoff.
 
 `EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime state uses the `${TMPDIR:-/tmp}/evcrate/` namespace (with session snapshots kept as `${TMPDIR:-/tmp}/evcrate-session-*`); session variables use the `EVCRATE_*` prefix.
 

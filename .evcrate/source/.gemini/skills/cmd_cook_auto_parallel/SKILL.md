@@ -10,6 +10,12 @@ Description: ⚡⚡⚡ Plan parallel phases & execute with fullstack-developer a
 
 **Ultrathink parallel** raw input: <raw-tasks>{{args}}</raw-tasks>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
@@ -60,10 +66,9 @@ Use this only when work can be split into independent phases with clear dependen
 ### 5. Code Review
 - Use `code-reviewer` for all changes
 - In explicit advice mode, after every terminal reviewer result and before any
-  fix or approval, synchronously call exactly one `advisor` at
-  `review:<workflow-step>` with the bounded
-  evidence required by the shared mentoring contract. Advisor failure fails the
-  review gate.
+  fix or approval, enter the canonical checkpoint dispatcher exactly once at
+  `review:<workflow-step>` with the bounded evidence required by the shared
+  mentoring contract. Dispatcher failure leaves the review gate incomplete.
 - Review/advisor cycle cap: at most three terminal reviewer/advisor cycles. At
   the cap, stop without another reviewer/advisor call or cycle reset and ask the
   user if issues remain.

@@ -2,7 +2,7 @@
 
 **Project Name**: EVCrate
 **Version**: 1.8.0
-**Last Updated**: 2026-08-02
+**Last Updated**: 2026-08-26
 **Status**: Active Development
 **Repository**: https://github.com/NEBULEA-M/evcrate
 
@@ -238,6 +238,40 @@ Provide a production-ready template that:
   same-host defaults; resolve the path through the platform home API and ignore
   repository-local policy files. Do not publish, overwrite, or store credentials
   in this user-owned file.
+- The version-1 policy has exactly `version` and `hosts` at the top level, and
+  each host entry has exactly `backend`, `model`, `effort`, and `execution`.
+  For example:
+
+  ```json
+  {
+    "version": 1,
+    "hosts": {
+      "codex": {
+        "backend": "claude",
+        "model": "opus",
+        "effort": "high",
+        "execution": "external"
+      }
+    }
+  }
+  ```
+
+  A missing policy file or active-host entry uses that host's built-in default.
+  A present malformed, oversized, duplicate-key, credential-bearing, unsafe,
+  or schema-invalid policy fails closed; no policy/default/host/per-invocation
+  values are merged.
+- `execution: auto` selects native execution when `backend == activeHost` and
+  the named external adapter otherwise. `native` requires equality and
+  `external` requires inequality; same-host external execution is invalid.
+  Exact capability failures remain typed (`NATIVE_CAPABILITY_UNSUPPORTED`,
+  `MODEL_UNSUPPORTED`, and `EFFORT_UNSUPPORTED`). Gemini 0.47.0 advertises
+  `pro` and `efforts: []`, so an exact effort request, including its built-in
+  `high` default, returns `EFFORT_UNSUPPORTED` without downgrade or execution.
+- The fixed adapter set is Claude, Codex, Gemini, Antigravity, and Pi. The
+  installed CLIs own authentication and EVCrate has no provider credential
+  store. There is no fallback, model substitution, effort downgrade, arbitrary
+  template, direct provider API, broker, background service, quota ledger, or
+  approval bypass.
 - Keep generated targets free of advisor MCP/broker wiring, arbitrary command
   templates, direct provider APIs, admission hooks, background services, quota
   ledgers, audit claims, and approval bypasses.
@@ -251,14 +285,17 @@ Provide a production-ready template that:
 - Detect `pi-code` conflicts without removing them. Require manual Pi quiescence and abort on concurrent HOME changes before promotion.
 - Limit Phase 01 to deterministic target/build/publish contracts. Later runtime delivery does not authorize a live cutover.
 
-**FR9: Native Pi Phase 03 Runtime (implemented; release blocked)**
+**FR9: Native Pi Phase 03 Runtime (implemented; live cutover user-controlled)**
 - Register native Markdown commands recursively and preserve provider-neutral command/workflow content.
 - Bound model-initiated nested command dispatch by depth, invocation count, and cycle detection; reject dispatcher calls mixed with sibling tool calls.
 - Enforce command `allowed-tools` with an authoritative `tool_call` policy gate and restore the active tool set after settlement or shutdown.
 - Resolve `strong`, `standard`, `fast`, and `parent` roles against the active provider and Pi model registry only at delegation time; never silently cross provider boundaries.
 - Delegate only through the structured `pi-subagents` transport, preserving its public `workflowScript` tool, and invoke the child-start seam before each request.
 - Keep the Node.js baseline at `>=22.19.0` and the managed package identities pinned exactly to `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`.
-- Block release/cutover acceptance until XML closing-tag marker corruption and the shell descendant timeout/process-tree leak are corrected and regression-tested.
+- Regression coverage includes the XML closing-tag marker corruption and shell
+  descendant timeout/process-tree defects. Deterministic build/check and
+  publication-hash gates are complete; live Pi cutover remains separately
+  user-controlled and requires manual quiescence.
 
 **Advisor compatibility boundary**
 - `advisor-strategy` remains a static decision rubric. The normal `advisor`
@@ -280,17 +317,26 @@ Provide a production-ready template that:
   `efforts: []` capability returns `EFFORT_UNSUPPORTED`, with no downgrade or
   inheritance. Route descriptors and errors are frozen, and serialized errors
   expose only `code`, `category`, `action`, and `message`.
-- The validated Phase 02 advisor routing closure is ten runtime files. The
-  reviewer’s “seven runtime files” wording covered an earlier subset; the
-  canonical closure and projection parity fixture include all ten across the
-  five harnesses. Production projection and build-manifest integration remain
-  deferred to Phase 07.
-- Phase 02 keeps all five registry entries as fail-closed adapter placeholders;
-  concrete installed-CLI adapter execution is not production-enabled. Its
-  input limits are 16 KiB policy/request, 256-byte model, 64-byte effort, and
-  32 KiB brief; runner defaults are 64/16 KiB stdout/stderr, 2,048 lines, 48
-  KiB result, 30-second timeout, and 250 ms termination grace. POSIX descendant cleanup is tested;
-  Windows process-tree validation remains deferred.
+- The canonical advisor routing runtime is a sixteen-file closure: the
+  dispatcher, ten shared `advisor-routing/` files, and five adapter modules.
+  The parity fixture compares the byte-identical closure in Claude, Codex,
+  Gemini, Antigravity, and Pi projections. The build manifest authorizes
+  runtime, adapter/helper, source, and output hashes; full and Pi-only builds
+  and checks are deterministic, and check does not write.
+- All five registry entries have bounded adapter contracts. Deterministic
+  fake-CLI contracts are mandatory; authenticated installed-CLI calls and
+  Antigravity live evidence are optional and out of scope for this handoff.
+  Antigravity's current `agy` contract cannot verify deny-write sandboxing, so
+  its external capability gate returns `READ_ONLY_UNSUPPORTED`. Input limits
+  are 16 KiB policy/request, 256-byte model, 64-byte effort, and 32 KiB brief;
+  runner defaults are 64/16 KiB stdout/stderr, 2,048 lines, 48 KiB result,
+  30-second timeout, and 250 ms termination grace. POSIX descendant cleanup is
+  tested; Windows process-tree validation remains deferred.
+- Checkpoint envelopes use `evcrate-advisor-checkpoint/v1` with bounded
+  terminal/question/task/evidence fields and normalized POSIX paths. Traversal,
+  dot segments, metadata paths, sensitive evidence, active-host mismatches, and
+  route overrides are rejected; terminal results normalize to
+  `evcrate-advisor-result/v1`.
 - The unshipped `advisor_consult` interface remains removed. Integrations may use
   only the declared per-host route resolver, ordinary native delegation, or one
   of the five declared cross-host adapter slots. Concrete adapter execution

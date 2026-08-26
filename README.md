@@ -1,6 +1,6 @@
 # EVCrate
 
-EVCrate is a comprehensive boilerplate template for building professional software projects with **CLI Coding Agents** (**Claude Code**, **OpenCode**, and the staged native **Pi** target). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
+EVCrate is a comprehensive boilerplate template for building professional software projects with **CLI Coding Agents** (**Claude Code**, **OpenCode**, and the native **Pi** target). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
 
 ## What is Claude Code?
 
@@ -58,6 +58,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - **[Codebase Summary](./docs/codebase-summary.md)** - High-level overview of project structure, technologies, and components
 - **[Code Standards](./docs/code-standards.md)** - Coding standards, naming conventions, and best practices
 - **[System Architecture](./docs/system-architecture.md)** - Detailed architecture documentation, component interactions, and data flow
+- **[Advisor Distribution Architecture](./docs/advisor-distribution-architecture.md)** - Global checkpoint routing, native/external adapter contracts, and deterministic projection gates
 - **[Advisor Supervision Migration](./docs/advisor-supervision-migration.md)** - Breaking `@advisor` to `--advice` migration, `/advise` capability matrix, and validation guidance
 - **[Commands Reference](./guide/COMMANDS.md)** - Complete guide to all available slash commands
 
@@ -115,7 +116,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 │   ├── .claude/            # Canonical Claude Code source
 │   ├── .codex/             # Generated Codex artifact
 │   ├── .agents/            # Codex-owned, Pi-compatible shared skill artifact
-│   ├── .pi/                # Generated native Pi Phase 03 resources and extension
+│   ├── .pi/                # Generated native Pi resources and extension
 │   ├── .gemini/            # Generated Gemini artifact
 │   ├── .antigravity/       # Generated Antigravity artifact
 │   ├── .opencode/          # OpenCode compatibility source
@@ -293,6 +294,47 @@ Reusable templates for:
 ### .evcrate.json
 Documented project config filename for EVCrate settings. The runtime resolves the local project config from the discovered project root.
 
+### Advisor routing policy
+
+Checkpoint advice (`--advice`) reads one user-owned policy from the platform home
+directory: `<home>/.evcrate/advisor-routing.json`. The version-1 shape is a
+`version` plus a `hosts` object; each present host entry must contain exactly
+`backend`, `model`, `effort`, and `execution`:
+
+```json
+{
+  "version": 1,
+  "hosts": {
+    "codex": {
+      "backend": "claude",
+      "model": "opus",
+      "effort": "high",
+      "execution": "external"
+    }
+  }
+}
+```
+
+Supported hosts/backends are `claude`, `codex`, `gemini`, `antigravity`, and
+`pi`. `execution` is `auto`, `native`, or `external`. `auto` is native for a
+same-host backend and external for a different host; `native` requires a
+same-host backend, and `external` requires a different backend. Missing policy
+files and missing active-host entries select only that host's built-in default.
+A present malformed policy fails closed—there is no field merge, host-profile
+inheritance, model substitution, effort downgrade, backend switch, or execution
+fallback. Repository-local policy files and credentials are ignored; installed
+CLIs own authentication.
+
+Native routing checks the exact model and effort advertised by the active host.
+For Gemini CLI 0.47.0 the bundled capability record is `model: "pro"` with no
+effort values, so its default `pro`/`high` route fails as
+`EFFORT_UNSUPPORTED`; it is not downgraded. Cross-host routing uses only the
+five fixed adapters: Claude, Codex, Gemini, Antigravity, and Pi. Their
+executable/version, authentication, read-only, session, output, and cancellation
+contracts fail closed when not evidenced. Antigravity live probing and all
+authenticated provider calls are optional, separately approved work outside the
+deterministic fake-CLI contract.
+
 ## Gemini Skills Configuration
 
 This project includes several Gemini-powered skills that require a Google Gemini API key:
@@ -448,6 +490,8 @@ Then add your MCP servers, below are some examples:
 - **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
 - **Pi runtime and settings**: The native extension registers commands, bounded nested dispatch, policy-gated tool restrictions, semantic provider roles, structured `pi-subagents` delegation, and the sole canonical lifecycle/tool-hook adapter. The target merges only the exact pins `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0` into `~/.pi/agent/settings.json`; unknown keys, packages, provider/model settings, and sessions remain user-owned. See [Native Pi migration](docs/pi-native-migration.md).
 - **Pi publication safety**: Stop Pi manually before live publication. Concurrent HOME changes abort promotion; `pi-code` is never removed automatically and live cutover remains user-controlled after isolated validation.
+- **Advisor runtime projection**: The canonical production closure is exactly 16 files and is copied byte-for-byte into each of the five host projections (`scripts/` for Claude/Codex/Gemini/Antigravity and `agent/evcrate/scripts/` for Pi). Runtime, helper, source, and output hashes authorize build/check/publication; regenerate from canonical source and overlays rather than editing projections.
+- **Pi advisor caveat**: `--target pi` narrows local build/check and publication bindings to `.pi`; `PI_CODING_AGENT_DIR` changes the runtime resource root, not the HOME publication destination. Pi must be manually quiescent for any live HOME publication, which is a separate user-authorized operation.
 - **No Direct Downstream Edits**: Do not edit `.evcrate/source/.gemini/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, or `.evcrate/source/.pi/` directly. They are generated automatically by the local build gate.
 - **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
 - **HOME Cleanup**: Managed publication uses manifest-scoped deletion and preservation while keeping unrelated user-owned HOME paths intact.

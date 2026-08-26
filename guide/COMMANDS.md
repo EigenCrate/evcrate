@@ -116,6 +116,75 @@ counsel; `@advisor` is ordinary input and does not activate supervision. See
 [Advisor Supervision Migration](../docs/advisor-supervision-migration.md) for
 syntax, state, troubleshooting, and capability details.
 
+#### Checkpoint advisor routing
+
+`--advice` reaches a named `review`, `stuck`, or `decision` checkpoint after
+its prerequisite evidence is available. The dispatcher resolves the active
+host from the platform home path `<home>/.evcrate/advisor-routing.json` and
+accepts this version-1 policy shape:
+
+```json
+{
+  "version": 1,
+  "hosts": {
+    "codex": {
+      "backend": "claude",
+      "model": "opus",
+      "effort": "high",
+      "execution": "external"
+    }
+  }
+}
+```
+
+Host entries are independent and must contain exactly `backend`, `model`,
+`effort`, and `execution`. Supported host/backend names are `claude`, `codex`,
+`gemini`, `antigravity`, and `pi`; `execution` is `auto`, `native`, or
+`external`.
+
+| Backend relation | `auto` | `native` | `external` |
+| --- | --- | --- | --- |
+| Same as active host | Native, exact capability check | Native, exact capability check | Reject: `ROUTE_EXECUTION_INVALID` |
+| Different supported host | External, selected adapter | Reject: `ROUTE_EXECUTION_INVALID` | External, selected adapter |
+
+If the policy file or the active-host entry is missing, only that host's
+built-in same-host default is used. A present malformed, oversized, duplicate-
+key, credential-bearing, unsafe-path, or schema-invalid policy fails closed; it
+does not fall back to defaults or merge fields from another host. Repository
+policy files and per-invocation route overrides are not read. The policy stores
+no credentials; the installed CLI owns authentication.
+
+Native routing requires an exact advertised model and effort. The relevant
+failures are `NATIVE_CAPABILITY_UNSUPPORTED`, `MODEL_UNSUPPORTED`, and
+`EFFORT_UNSUPPORTED`. Gemini CLI 0.47.0 advertises `pro` but no exact effort
+control (`efforts: []`), so its built-in `pro`/`high` route fails with
+`EFFORT_UNSUPPORTED` before execution; there is no effort downgrade. The five
+fixed external adapter slots are Claude, Codex, Gemini, Antigravity, and Pi.
+Executable/version, authentication, read-only, session, output, timeout,
+cancellation, protocol, process, and recursion failures remain distinct and
+fail closed. No model substitution, backend switch, arbitrary launch template,
+direct provider API, broker/service, or approval bypass is used.
+
+The checkpoint envelope is `evcrate-advisor-checkpoint/v1`. It carries the
+active host, checkpoint id, question, kind, task/phase, terminal evidence,
+evidence file paths, changed paths, prior counsel, and owner disposition; the
+normalized result is `evcrate-advisor-result/v1`. The envelope is bounded at
+32 KiB, terminal evidence at 16 KiB, with at most four evidence files and 16
+changed paths. Paths must be normalized relative POSIX paths: absolute paths,
+Windows separators, `.`/`..` segments, secret-like names (including `.env`),
+and VCS metadata paths are rejected. Route overrides and active-host mismatches
+are rejected.
+
+Fake-CLI contract tests are the required evidence. Antigravity's reviewed
+`agy` boundary does not yet evidence a deny-write mode, so that external route
+fails as `READ_ONLY_UNSUPPORTED`; Antigravity live probing and authenticated
+provider calls are optional, separately approved, and outside this handoff.
+The routing runtime is generated with the distribution gate, not hand-edited:
+the canonical 16-file production closure is byte-identical in all five host
+projections, and runtime/helper hashes are part of build and publication
+authorization. See [Advisor Distribution Architecture](../docs/advisor-distribution-architecture.md)
+for the full contract and Pi publication caveats.
+
 ---
 
 ### `/bootstrap`

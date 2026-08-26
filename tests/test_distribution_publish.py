@@ -159,6 +159,27 @@ class DistributionPublishTest(unittest.TestCase):
                     verify_local_artifact(context, VerifiedArtifact(context.repository, context.local_roots))
             self.assertFalse(context.home.exists())
 
+    def test_stale_runtime_hash_blocks_before_home_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            context = self._context(root)
+            manifest = {
+                "source_hashes": {},
+                "adapter_hashes": {},
+                "runtime_hashes": {"codex/advisor-dispatch.cjs": "old"},
+                "output_hashes": {},
+                "validation": {"complete": True},
+            }
+            with patch("distribution.publish_verification._load_build_manifest", return_value=manifest), patch(
+                "distribution.publish_verification._current_source_hashes", return_value={}
+            ), patch(
+                "distribution.publish_verification.advisor_runtime_hashes",
+                return_value={"codex/advisor-dispatch.cjs": "new"},
+            ):
+                with self.assertRaisesRegex(PublishError, "stale"):
+                    verify_local_artifact(context, VerifiedArtifact(context.repository, context.local_roots))
+            self.assertFalse(context.home.exists())
+
     def test_expected_output_names_include_roots_and_project_docs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             context = create_context(DistributionAction.PUBLISH, environ={"EVCRATE_HOME": str(Path(temp) / "home")})

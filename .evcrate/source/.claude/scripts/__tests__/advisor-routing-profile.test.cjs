@@ -331,6 +331,14 @@ test('validates the complete built-in capability document before route use', () 
   const invalid = JSON.parse(JSON.stringify(BUILTIN_CAPABILITIES));
   delete invalid.hosts.pi;
   expectCode(() => profile.validateCapabilities(invalid), 'NATIVE_CAPABILITY_UNSUPPORTED');
+  const invalidGeminiEfforts = JSON.parse(JSON.stringify(BUILTIN_CAPABILITIES));
+  invalidGeminiEfforts.hosts.gemini.efforts = ['high'];
+  expectCode(() => profile.validateCapabilities(invalidGeminiEfforts), 'NATIVE_CAPABILITY_UNSUPPORTED');
+  for (const selector of [[], {}]) {
+    const invalidSelector = JSON.parse(JSON.stringify(BUILTIN_CAPABILITIES));
+    invalidSelector.hosts.claude.selector = selector;
+    expectCode(() => profile.validateCapabilities(invalidSelector), 'NATIVE_CAPABILITY_UNSUPPORTED');
+  }
   assert.ok(Object.isFrozen(BUILTIN_CAPABILITIES.hosts.pi));
 });
 
@@ -343,6 +351,27 @@ test('normalizes malformed bundled capabilities through the dispatcher contract'
       path.join(runtime, 'advisor-routing/native-capabilities.json'),
       '{"schema":"evcrate-advisor-native-capabilities/v1","schema":"duplicate"}'
     );
+    const child = spawnSync(process.execPath, [path.join(runtime, 'advisor-dispatch.cjs')], {
+      input: JSON.stringify({ activeHost: 'codex' }),
+      env: testEnvironment(fixture.home),
+      encoding: 'utf8'
+    });
+    assert.equal(child.status, 1);
+    assert.equal(child.stderr, '');
+    assert.equal(JSON.parse(child.stdout).error.code, 'NATIVE_CAPABILITY_UNSUPPORTED');
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test('rejects oversized bundled capabilities before route use', () => {
+  const fixture = fixtureHome();
+  try {
+    const runtime = path.join(fixture.root, 'scripts');
+    fs.cpSync(path.join(__dirname, '..'), runtime, { recursive: true });
+    const capabilitiesPath = path.join(runtime, 'advisor-routing/native-capabilities.json');
+    const capabilities = fs.readFileSync(capabilitiesPath, 'utf8');
+    fs.writeFileSync(capabilitiesPath, `${capabilities}${' '.repeat(16 * 1024)}`);
     const child = spawnSync(process.execPath, [path.join(runtime, 'advisor-dispatch.cjs')], {
       input: JSON.stringify({ activeHost: 'codex' }),
       env: testEnvironment(fixture.home),
