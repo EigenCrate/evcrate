@@ -12,7 +12,10 @@ from .hashing import is_ignored_artifact
 ADVISOR_HOSTS = ("claude", "codex", "gemini", "antigravity", "pi")
 ADVISOR_ADAPTERS = ("claude", "codex", "gemini", "antigravity", "pi")
 ADVISOR_RUNTIME_FILES = (
+    "advisor-bridge.cjs",
+    "advisor-coordinator.cjs",
     "advisor-dispatch.cjs",
+    "advisor-handoff.cjs",
     "advisor-routing/adapter-contract.cjs",
     "advisor-routing/adapter-registry.cjs",
     "advisor-routing/adapters/antigravity.cjs",

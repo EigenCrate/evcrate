@@ -5,7 +5,8 @@
   "adapter_sources": [
     "distribution/advisor_runtime.py",
     "distribution/antigravity_publish.py",
-    "distribution/contracts.py"
+    "distribution/contracts.py",
+    "distribute_hooks.py"
   ],
   "output_root": ".antigravity",
   "additional_roots": [],
@@ -15,7 +16,10 @@
     "output_root": "scripts",
     "native_capabilities": "advisor-routing/native-capabilities.json",
     "files": [
+      "advisor-bridge.cjs",
+      "advisor-coordinator.cjs",
       "advisor-dispatch.cjs",
+      "advisor-handoff.cjs",
       "advisor-routing/adapter-contract.cjs",
       "advisor-routing/adapter-registry.cjs",
       "advisor-routing/adapters/antigravity.cjs",
