@@ -14,7 +14,11 @@ from unittest.mock import patch
 
 from distribution.context import DistributionContext
 from distribution.antigravity_publish import build_antigravity_config
-from distribution.contracts import DistributionAction, VerifiedArtifact
+from distribution.contracts import (
+    ADVISOR_BRIDGE_FALLBACK_BLOCK,
+    DistributionAction,
+    VerifiedArtifact,
+)
 from distribution.publish import publish_diff
 from migrate_claude_to_codex import SUBAGENT_WAIT_CONTRACT, parse_markdown_with_frontmatter
 
@@ -39,7 +43,10 @@ DISPATCHER_RUNTIME_PATHS = (
 CHECKPOINT_DISPATCH_START = "<!-- EVCRATE_ADVISOR_CHECKPOINT_DISPATCH_START -->"
 CHECKPOINT_DISPATCH_END = "<!-- EVCRATE_ADVISOR_CHECKPOINT_DISPATCH_END -->"
 ADVISOR_RUNTIME_FILES = (
+    "advisor-bridge.cjs",
+    "advisor-coordinator.cjs",
     "advisor-dispatch.cjs",
+    "advisor-handoff.cjs",
     "advisor-routing/adapter-contract.cjs",
     "advisor-routing/adapter-registry.cjs",
     "advisor-routing/adapters/antigravity.cjs",
@@ -515,7 +522,10 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertEqual(advisor["model"], "gpt-5.6-sol")
             self.assertEqual(advisor["model_reasoning_effort"], "high")
             self.assertIn("advisor-strategy", advisor["developer_instructions"])
-            self.assertTrue((root / ".codex/workflows/advisor-mentoring.md").is_file())
+            codex_workflow = (root / ".codex/workflows/advisor-mentoring.md").read_text(encoding="utf-8")
+            self.assertIn("node .codex/scripts/advisor-bridge.cjs", codex_workflow)
+            self.assertIn("require('./.codex/scripts/advisor-bridge.cjs')", codex_workflow)
+            self.assertIn(ADVISOR_BRIDGE_FALLBACK_BLOCK, codex_workflow)
 
             for relative in SCOPED_COMMANDS:
                 skill_name = "cmd_" + relative.removesuffix(".md").replace("/", "_")
@@ -528,6 +538,10 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertIn("the published install", content)
 
             gemini_commands = root / ".gemini/commands"
+            gemini_workflow = (root / ".gemini/workflows/advisor-mentoring.md").read_text(encoding="utf-8")
+            self.assertIn("node .gemini/scripts/advisor-bridge.cjs", gemini_workflow)
+            self.assertIn("require('./.gemini/scripts/advisor-bridge.cjs')", gemini_workflow)
+            self.assertIn(ADVISOR_BRIDGE_FALLBACK_BLOCK, gemini_workflow)
             for relative in SCOPED_COMMANDS:
                 generated = gemini_commands / relative.replace(".md", ".toml")
                 content = generated.read_text(encoding="utf-8")
@@ -681,6 +695,21 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)["descriptor"]["action"], "external")
 
+    def assert_bridge_imports_from_repository_root(self, host: str, root: Path) -> None:
+        if host == "pi":
+            return
+        cwd = REPOSITORY / ".evcrate/source" if host == "claude" else root
+        bridge = f"./.{host}/scripts/advisor-bridge.cjs"
+        completed = subprocess.run(
+            ["node", "-e", "require(process.argv[1])", bridge],
+            cwd=cwd,
+            env=self.clean_environment(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_all_five_harnesses_project_the_same_routing_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -691,6 +720,15 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 REPOSITORY / ".evcrate/source/.claude",
                 root / ".antigravity",
             )
+            for host, target in {
+                "codex": root / ".codex",
+                "gemini": root / ".gemini",
+                "antigravity": root / ".antigravity",
+                "pi": root / ".pi",
+            }.items():
+                for shell_script in target.rglob("*.sh"):
+                    with self.subTest(host=host, shell_script=shell_script.relative_to(target)):
+                        self.assertNotIn(b"\r", shell_script.read_bytes())
             runtimes = {
                 "claude": REPOSITORY / ".evcrate/source/.claude/scripts",
                 "codex": root / ".codex/scripts",
@@ -701,12 +739,103 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             for host, runtime in runtimes.items():
                 with self.subTest(host=host):
                     self.assert_runtime_projection(runtime)
+                    workflow = {
+                        "claude": REPOSITORY / ".evcrate/source/.claude/workflows/advisor-mentoring.md",
+                        "codex": root / ".codex/workflows/advisor-mentoring.md",
+                        "gemini": root / ".gemini/workflows/advisor-mentoring.md",
+                        "antigravity": root / ".antigravity/workflows/advisor-mentoring.md",
+                        "pi": root / ".pi/agent/evcrate/workflows/advisor-mentoring.md",
+                    }[host].read_text(encoding="utf-8")
+                    local_bridge = {
+                        "claude": ".claude/scripts",
+                        "codex": ".codex/scripts",
+                        "gemini": ".gemini/scripts",
+                        "antigravity": ".antigravity/scripts",
+                        "pi": "{{evcrate:scripts",
+                    }[host]
+                    self.assertIn(f"{local_bridge}/advisor-bridge.cjs", workflow)
+                    self.assertIn(ADVISOR_BRIDGE_FALLBACK_BLOCK, workflow)
+                    self.assert_bridge_imports_from_repository_root(host, root)
                     if host != "claude":
                         self.assertFalse((runtime / "test-evcrate-help.py").exists())
                         self.assertFalse((runtime / "worktree.test.cjs").exists())
                     self.assert_dispatcher_resolves_cross_host_route(
                         runtime / "advisor-dispatch.cjs", root / host
                     )
+
+            for host, script_root, names in (
+                (
+                    "codex",
+                    root / ".codex/scripts",
+                    ("ev-help.py", "generate_catalogs.py", "resolve_env.py", "set-active-plan.cjs", "validate-docs.cjs", "worktree.cjs"),
+                ),
+                (
+                    "gemini",
+                    root / ".gemini/scripts",
+                    ("ev-help.py", "generate_catalogs.py", "resolve_env.py", "set-active-plan.cjs", "validate-docs.cjs", "worktree.cjs"),
+                ),
+                ("antigravity", root / ".antigravity/scripts", ("ev-help.py", "resolve_env.py", "set-active-plan.cjs")),
+                ("pi", root / ".pi/agent/evcrate/scripts", ("ev-help.py", "resolve_env.py", "set-active-plan.cjs")),
+            ):
+                for name in names:
+                    content = (script_root / name).read_text(encoding="utf-8")
+                    with self.subTest(host=host, script=name):
+                        self.assertNotRegex(content, r"(?<!~/)\.claude(?:/|['\"`])")
+
+            runtime_roots = {
+                "gemini": root / ".gemini/scripts",
+                "antigravity": root / ".antigravity/scripts",
+                "pi": root / ".pi/agent/evcrate/scripts",
+            }
+            for host, target in (
+                ("gemini", root / ".gemini"),
+                ("antigravity", root / ".antigravity"),
+                ("pi", root / ".pi"),
+            ):
+                runtime_root = runtime_roots[host]
+                for generated_file in sorted(target.rglob("*")):
+                    if not generated_file.is_file():
+                        continue
+                    if generated_file.is_relative_to(runtime_root):
+                        relative = generated_file.relative_to(runtime_root)
+                        if relative.as_posix() in ADVISOR_RUNTIME_FILES:
+                            continue
+                    raw = generated_file.read_bytes()
+                    if b"\0" in raw[:1024]:
+                        continue
+                    try:
+                        content = raw.decode("utf-8")
+                    except UnicodeDecodeError:
+                        continue
+                    content = content.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, "")
+                    with self.subTest(host=host, path=generated_file.relative_to(target)):
+                        self.assertNotIn(".claude/scripts/", content)
+                        if generated_file.name != "migration-behavior-matrix.json":
+                            self.assertNotIn(".claude/hooks/", content)
+
+            for host, hooks in (
+                ("codex", root / ".codex/hooks"),
+                ("gemini", root / ".gemini/hooks"),
+                ("antigravity", root / ".antigravity/hooks"),
+            ):
+                for relative in ("lib/evcrate-config-utils.cjs", "scout-block/pattern-matcher.cjs"):
+                    with self.subTest(host=host, hook=relative):
+                        self.assertTrue((hooks / relative).is_file())
+                for wrapper in ("pretool-scout-block.cjs", "pretool-privacy-block.cjs"):
+                    wrapper_path = hooks / wrapper
+                    if wrapper_path.is_file():
+                        content = wrapper_path.read_text(encoding="utf-8")
+                        self.assertNotIn(".claude/hooks/", content)
+                        self.assertIn("EVCREATE_HOOK_UNAVAILABLE", content)
+
+            self.assertTrue((root / ".codex/.evcrate.json").is_file())
+            self.assertTrue((root / ".codex/.evcrateignore").is_file())
+            self.assertTrue((root / ".gemini/.evcrate.json").is_file())
+            self.assertTrue((root / ".gemini/.evcrateignore").is_file())
+            self.assertTrue((root / ".antigravity/.evcrate.json").is_file())
+            self.assertTrue((root / ".antigravity/.evcrateignore").is_file())
+            self.assertTrue((root / ".pi/.evcrateignore").is_file())
+            self.assertTrue((root / ".pi/agent/evcrate/.evcrateignore").is_file())
 
     def test_repeated_migration_is_byte_identical(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -717,6 +846,10 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             stale = root / ".codex/scripts/advisor-routing/stale.cjs"
             stale.parent.mkdir(parents=True, exist_ok=True)
             stale.write_text("stale", encoding="utf-8")
+            retired = root / ".codex/scripts/advise-state.cjs"
+            retired.write_text("retired", encoding="utf-8")
+            bridge = root / ".codex/scripts/advisor-bridge.cjs"
+            bridge.write_text("stale", encoding="utf-8")
 
             self.run_migrator(root)
             second = tree_snapshot(root / ".agents")
@@ -724,6 +857,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             self.assertEqual(first, second)
             self.assertEqual(first_codex, second_codex)
             self.assertFalse(stale.exists())
+            self.assertFalse(retired.exists())
 
     def test_publish_dry_run_preserves_user_owned_config_without_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

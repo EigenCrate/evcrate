@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+import re
 
 from .advisor_runtime import (
     ADVISOR_ADAPTERS,
@@ -17,6 +18,7 @@ from .advisor_runtime import (
     render_advisor_runtime_metadata,
     validate_advisor_runtime_projection,
 )
+from .hashing import is_ignored_artifact
 
 
 ADVISORY_CAPABILITY_BLOCK_START = "<!-- EVCRATE_ADVISORY_CAPABILITIES_START -->"
@@ -36,6 +38,22 @@ _WORKFLOW_ROOTS = {
     "antigravity": (".antigravity/workflows", "~/.gemini/config/workflows"),
 }
 _ADVISORY_WORKFLOW_NAMES = ("advisor-mentoring.md", "advisory-interview.md")
+_ADVISOR_BRIDGE_PATHS = {
+    "claude": "./.claude/scripts/advisor-bridge.cjs",
+    "codex": "./.codex/scripts/advisor-bridge.cjs",
+    "gemini": "./.gemini/scripts/advisor-bridge.cjs",
+    "antigravity": "./.antigravity/scripts/advisor-bridge.cjs",
+    "pi": "{{evcrate:scripts/advisor-bridge.cjs}}",
+}
+ADVISOR_BRIDGE_FALLBACK_BLOCK = """If the project does not contain a local harness runtime, use the published
+bridge for the active harness instead:
+
+- Claude: `node ~/.claude/scripts/advisor-bridge.cjs`
+- Codex: `node ~/.codex/scripts/advisor-bridge.cjs`
+- Gemini: `node ~/.gemini/scripts/advisor-bridge.cjs`
+- Antigravity: `node ~/.gemini/config/scripts/advisor-bridge.cjs`
+- Pi: `node ~/.pi/agent/evcrate/scripts/advisor-bridge.cjs`
+"""
 
 
 class DistributionAction(str, Enum):
@@ -84,6 +102,280 @@ def add_global_workflow_fallback(text: str, target: str) -> str:
         if fallback not in text:
             text = text.replace(local_ref, fallback)
     return text
+
+
+def render_advisor_bridge_reference(text: str, target: str) -> str:
+    """Point generated instructions at the bridge in their own harness tree."""
+
+    try:
+        bridge = _ADVISOR_BRIDGE_PATHS[target]
+    except KeyError as error:
+        raise ValueError(f"Unknown advisor bridge target: {target}") from error
+    return re.sub(
+        r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/scripts/advisor-bridge\.cjs",
+        bridge,
+        text,
+    )
+
+
+_SCRIPT_RESOURCE_SUFFIXES = (
+    "output-styles",
+    "workflows",
+    "scripts",
+    "hooks",
+    "skills",
+    ".evcrate.json",
+    ".mcp.json",
+    ".env",
+)
+_SCRIPT_RESOURCE_ROOTS = {
+    "claude": ".claude",
+    "codex": ".codex",
+    "gemini": ".gemini",
+    "antigravity": ".antigravity",
+    "pi": ".pi",
+}
+_CLAUDE_PATH_REFERENCE = re.compile(
+    r"(?<![A-Za-z0-9_])\.claude(?=[/\\])"
+)
+_URL_REFERENCE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+
+
+def _script_resource_path(target: str, scope: str, suffix: str) -> str:
+    """Return the target path for one ordinary-script resource suffix."""
+
+    root = _SCRIPT_RESOURCE_ROOTS[target]
+    if target == "codex" and suffix == "skills":
+        return ".agents/skills"
+    if target == "pi":
+        if suffix == "skills":
+            return ".pi/agent/skills"
+        if suffix in {"scripts", "hooks", "workflows", "output-styles"}:
+            return f".pi/agent/evcrate/{suffix}"
+        return f".pi/{suffix}"
+    if target == "antigravity" and scope == "global":
+        return f".gemini/config/{suffix}"
+    return f"{root}/{suffix}"
+
+
+def render_harness_script_references(text: str, target: str) -> str:
+    """Translate Claude resource paths in ordinary harness script text.
+
+    Advisor runtime files are deliberately excluded by each caller because
+    their cross-harness protocol is byte-identical. This helper handles the
+    surrounding utility scripts, including literal HOME paths and the common
+    ``Path.home() / '.claude' / ...`` form used by the environment resolver.
+    """
+
+    if target not in _SCRIPT_RESOURCE_ROOTS:
+        raise ValueError(f"Unknown harness script target: {target}")
+    fallback_token = "__EVCRATE_HARNESS_ADVISOR_FALLBACK__"
+    rendered = text.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
+    protected_urls: list[tuple[str, str]] = []
+
+    def protect_url(match: re.Match[str]) -> str:
+        token = f"__EVCRATE_HARNESS_URL_{len(protected_urls)}__"
+        protected_urls.append((token, match.group(0)))
+        return token
+
+    rendered = _URL_REFERENCE.sub(protect_url, rendered)
+
+    for prefix in ("~", "$HOME", "${HOME}"):
+        for suffix in sorted(_SCRIPT_RESOURCE_SUFFIXES, key=len, reverse=True):
+            rendered = rendered.replace(
+                f"{prefix}/.claude/{suffix}",
+                f"{prefix}/{_script_resource_path(target, 'global', suffix)}",
+            )
+        rendered = rendered.replace(
+            f"{prefix}/.claude",
+            f"{prefix}/{_SCRIPT_RESOURCE_ROOTS[target] if target != 'antigravity' else '.gemini/config'}",
+        )
+
+    for suffix in sorted(_SCRIPT_RESOURCE_SUFFIXES, key=len, reverse=True):
+        rendered = rendered.replace(
+            f".claude/{suffix}",
+            _script_resource_path(target, "local", suffix),
+        )
+
+    join_pattern = re.compile(
+        r"path\.join\(\s*(?P<base>os\.homedir\(\)|process\.cwd\(\))\s*,\s*"
+        r"(?P<quote>['\"])\.claude(?P=quote)\s*,\s*(?P=quote)(?P<suffix>"
+        + "|".join(re.escape(item) for item in _SCRIPT_RESOURCE_SUFFIXES)
+        + r")(?P=quote)"
+    )
+
+    def render_join(match: re.Match[str]) -> str:
+        scope = "global" if match.group("base") == "os.homedir()" else "local"
+        quote = match.group("quote")
+        components = _script_resource_path(target, scope, match.group("suffix")).split("/")
+        return (
+            f"path.join({match.group('base')}"
+            + "".join(f", {quote}{part}{quote}" for part in components)
+        )
+
+    rendered = join_pattern.sub(render_join, rendered)
+
+    component_pattern = re.compile(
+        r"(?P<base>home|Path\.home\(\)|os\.homedir\(\)|process\.cwd\(\)|project_root|directory|current|"
+        r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)"
+        r"\s*/\s*(?P<quote>['\"])\.claude(?P=quote)"
+        r"\s*/\s*(?P=quote)(?P<suffix>"
+        + "|".join(re.escape(item) for item in _SCRIPT_RESOURCE_SUFFIXES)
+        + r")(?P=quote)"
+    )
+
+    def render_components(match: re.Match[str]) -> str:
+        scope = "global" if match.group("base") in {"home", "Path.home()", "os.homedir()"} else "local"
+        quote = match.group("quote")
+        components = _script_resource_path(target, scope, match.group("suffix")).split("/")
+        return match.group("base") + "".join(f" / {quote}{part}{quote}" for part in components)
+
+    rendered = component_pattern.sub(render_components, rendered)
+    local_root = _SCRIPT_RESOURCE_ROOTS[target]
+    rendered = re.sub(
+        r"(?<![A-Za-z0-9_])\.claude(?=(?:[/\\]|['\"`\)\]\}]|\s|$))",
+        local_root,
+        rendered,
+    )
+    if target in {"codex", "gemini"}:
+        # Codex and Gemini keep skills in a sibling native root while their
+        # harness-global env file remains under the primary runtime directory.
+        # Translate parent-derived paths as well as literal `.claude` paths.
+        target_root = _SCRIPT_RESOURCE_ROOTS[target]
+        env_name = "." + "env"
+        rendered = re.sub(
+            r"(?m)^(?P<indent>\s*)claude_dir\s*=\s*skills_dir\.parent(?P<comment>\s*#.*)?$",
+            lambda match: (
+                f"{match.group('indent')}harness_dir = skills_dir.parent.parent / \"{target_root}\""
+                f"{match.group('comment') or ''}"
+            ),
+            rendered,
+        )
+        rendered = rendered.replace("claude_dir", "harness_dir")
+        rendered = re.sub(
+            r"(?m)^(?P<indent>\s*)const\s+claudeDir\s*=\s*"
+            r"path\.resolve\(skillsDir,\s*['\"]\.\.['\"]\);(?P<comment>.*)$",
+            lambda match: (
+                f"{match.group('indent')}const harnessDir = path.resolve("
+                f"skillsDir, '..', '..', '{target_root}');{match.group('comment')}"
+            ),
+            rendered,
+        )
+        rendered = rendered.replace("claudeDir", "harnessDir")
+        rendered = re.sub(
+            r"script_dir\.parent\.parent\.parent\s*/\s*(?P<quote>['\"])(?P<env>[^'\"]+)(?P=quote)",
+            lambda match: (
+                "script_dir.parent.parent.parent.parent / "
+                f"{match.group('quote')}{target_root}{match.group('quote')} / "
+                f"{match.group('quote')}{match.group('env')}{match.group('quote')}"
+                if match.group('env') == env_name
+                else match.group(0)
+            ),
+            rendered,
+        )
+    rendered = rendered.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
+    for token, url in protected_urls:
+        rendered = rendered.replace(token, url)
+    return rendered
+
+
+def validate_harness_resource_projection(
+    source_root: Path,
+    output_root: Path,
+    target: str,
+    *,
+    check_resource_closure: bool = True,
+) -> None:
+    """Verify that generated target files do not retain central Claude paths.
+
+    The primary root also carries the copied script/hook/config closure. A
+    target may have secondary roots containing only native resources (Codex's
+    ``.agents`` skill tree), so callers can validate those roots without
+    incorrectly requiring a duplicate closure or config file.
+    """
+
+    if target not in _SCRIPT_RESOURCE_ROOTS:
+        raise ValueError(f"Unknown harness script target: {target}")
+    if output_root.is_symlink() or not output_root.is_dir():
+        raise ValueError(f"Generated {target} output root is missing or unsafe: {output_root}")
+
+    def production_files(root: Path) -> tuple[Path, ...]:
+        if not root.exists():
+            return ()
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError(f"Canonical {target} resource root is missing or unsafe: {root}")
+        files: list[Path] = []
+        for path in sorted(root.rglob("*")):
+            if path.is_symlink():
+                raise ValueError(f"Canonical {target} resource is symlinked: {path}")
+            if not path.is_file():
+                continue
+            relative = path.relative_to(root)
+            if (
+                is_ignored_artifact(relative)
+                or is_production_runtime_artifact(relative)
+                or "advise-state" in relative.name
+                or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
+                or (root.name == "scripts" and relative.as_posix() in ADVISOR_RUNTIME_FILES)
+            ):
+                continue
+            files.append(relative)
+        return tuple(files)
+
+    def target_resource_root(kind: str) -> Path:
+        if target == "pi":
+            return output_root / "agent" / "evcrate" / kind
+        return output_root / kind
+
+    if check_resource_closure:
+        for kind in ("scripts", "hooks"):
+            source_dir = source_root / kind
+            target_dir = target_resource_root(kind)
+            for relative in production_files(source_dir):
+                target_relative = relative
+                if target == "gemini" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
+                    target_relative = Path("claude-session-end.cjs")
+                destination = target_dir / target_relative
+                if destination.is_symlink() or not destination.is_file():
+                    raise ValueError(f"{target} resource closure is incomplete: {destination}")
+
+        for name in (".evcrate.json", ".evcrateignore"):
+            config = source_root / name
+            if config.is_file() and not config.is_symlink():
+                destination = output_root / name
+                if destination.is_symlink() or not destination.is_file():
+                    raise ValueError(f"{target} target-local config input is missing or unsafe: {destination}")
+
+        if target == "pi":
+            nested_ignore = target_resource_root("hooks").parent / ".evcrateignore"
+            if nested_ignore.is_symlink() or not nested_ignore.is_file():
+                raise ValueError(f"{target} hook-local ignore file is missing or unsafe: {nested_ignore}")
+
+    for path in sorted(output_root.rglob("*")):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(output_root)
+        # The top-level matrix records source commands for audit purposes;
+        # nested files must still participate in the central-path scan.
+        if relative == Path("migration-behavior-matrix.json"):
+            continue
+        runtime_root = Path(ADVISOR_RUNTIME_OUTPUT_PATHS[target])
+        if target == "pi":
+            runtime_root = Path("agent/evcrate/scripts")
+        if relative.parts[:len(runtime_root.parts)] == runtime_root.parts:
+            runtime_relative = relative.relative_to(runtime_root)
+            if runtime_relative.as_posix() in ADVISOR_RUNTIME_FILES:
+                continue
+        try:
+            raw = path.read_bytes()
+            if b"\0" in raw[:1024]:
+                continue
+            content = raw.decode("utf-8").replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, "")
+        except (OSError, UnicodeDecodeError):
+            continue
+        content_without_urls = _URL_REFERENCE.sub("", content)
+        if _CLAUDE_PATH_REFERENCE.search(content_without_urls):
+            raise ValueError(f"{target} output retains a central Claude resource path: {relative}")
 
 
 def render_advisory_capabilities(text: str, target: str) -> str:

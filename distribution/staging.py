@@ -9,7 +9,12 @@ from typing import Callable
 
 from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
-from .contracts import BuildError, VerifiedArtifact, validate_advisor_runtime_projection
+from .contracts import (
+    BuildError,
+    VerifiedArtifact,
+    validate_advisor_runtime_projection,
+    validate_harness_resource_projection,
+)
 from .hashing import HashingError, hash_file, ignore_artifacts, source_tree_hash, tree_hash
 from .manifest import (
     adapter_hashes,
@@ -196,6 +201,20 @@ def generate_stage(
             raise BuildError(f"Required generated project document is missing or unsafe: {document}")
         owners[document] = "baseline"
         outputs[document] = document_path
+    for manifest in manifests:
+        if manifest.name == "claude":
+            continue
+        for index, root_name in enumerate(manifest.output_roots):
+            output_root = roots[root_name]
+            try:
+                validate_harness_resource_projection(
+                    context.local_claude,
+                    output_root,
+                    manifest.name,
+                    check_resource_closure=index == 0,
+                )
+            except ValueError as error:
+                raise BuildError(f"Invalid {manifest.name} ordinary resource projection: {error}") from error
     try:
         runtime_hashes = advisor_runtime_hashes(manifests, context.repository)
     except (HashingError, OSError) as error:

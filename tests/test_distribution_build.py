@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import types
@@ -15,7 +16,7 @@ from unittest.mock import patch
 from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
 from distribution.antigravity_publish import build_antigravity_config
 from distribution.advisor_runtime import _validate_capabilities
-from distribution.advisor_runtime import ADVISOR_RUNTIME_AUTHORIZATION_SOURCE
+from distribution.advisor_runtime import ADVISOR_RUNTIME_AUTHORIZATION_SOURCE, is_production_runtime_artifact
 from distribution.context import DistributionContext, create_context
 from distribution.contracts import (
     ADVISORY_CAPABILITY_BLOCK_END,
@@ -25,12 +26,15 @@ from distribution.contracts import (
     DistributionAction,
     add_global_workflow_fallback,
     render_advisory_interview_workflow,
+    render_harness_script_references,
     render_inline_advise_command,
+    validate_harness_resource_projection,
 )
 from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
 from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
 from distribution.overlay import OverlayError, apply_exact_patch, apply_patch_file, copy_overlay_files
 from distribution.staging import BUILD_MANIFEST_PATH, _baseline_owners, _copy_source_root, _load_targets, generate_stage
+from distribute_hooks import get_agy_js_wrapper, rewrite_agy_global_paths, rewrite_codex_global_paths
 from tests.test_advisor_skill_distribution import SCOPED_COMMANDS
 
 
@@ -46,6 +50,29 @@ class DistributionBuildTest(unittest.TestCase):
             "Read `.antigravity/workflows/advisor-mentoring.md`.", "antigravity"
         )
         self.assertIn("~/.gemini/config/workflows/advisor-mentoring.md", antigravity)
+
+    def test_harness_resource_translation_preserves_url_literals(self) -> None:
+        source = "See https://example.com/.claude/path?next=/.claude/item and .claude/scripts/tool.cjs."
+        self.assertEqual(
+            render_harness_script_references(source, "codex"),
+            "See https://example.com/.claude/path?next=/.claude/item and .codex/scripts/tool.cjs.",
+        )
+        self.assertEqual(
+            render_harness_script_references(source, "gemini"),
+            "See https://example.com/.claude/path?next=/.claude/item and .gemini/scripts/tool.cjs.",
+        )
+        self.assertEqual(
+            render_harness_script_references(
+                "self.project_root / '.claude' / 'skills' / '.env'", "codex"
+            ),
+            "self.project_root / '.agents' / 'skills' / '.env'",
+        )
+        self.assertEqual(
+            render_harness_script_references(
+                "project_dir / '.claude' / 'skills' / '.env'", "codex"
+            ),
+            "project_dir / '.agents' / 'skills' / '.env'",
+        )
 
     def test_advisory_capability_projection_is_strict_and_removes_relay_state(self) -> None:
         canonical = (
@@ -420,6 +447,7 @@ class DistributionBuildTest(unittest.TestCase):
             advisor = (target / "agents/advisor.md").read_text(encoding="utf-8")
             advise = (target / "skills/cmd_advise/SKILL.md").read_text(encoding="utf-8")
             workflow = (target / "workflows/advisory-interview.md").read_text(encoding="utf-8")
+            self.assertFalse((target / "settings.local.json").exists())
             self.assertIn("model: pro", advisor)
             self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", advise)
             self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", workflow)
@@ -431,6 +459,156 @@ class DistributionBuildTest(unittest.TestCase):
                 self.assertIn(".antigravity/workflows/advisor-mentoring.md", content)
                 self.assertIn("~/.gemini/config/workflows/advisor-mentoring.md", content)
                 self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
+
+    def test_antigravity_wrapper_fails_closed_without_local_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            wrapper = Path(temp) / "hooks/scout-block.cjs"
+            wrapper.parent.mkdir(parents=True)
+            wrapper.write_text(get_agy_js_wrapper("scout-block.cjs"), encoding="utf-8")
+            completed = subprocess.run(
+                ["node", str(wrapper)],
+                input="{}\n",
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["decision"], "deny")
+            self.assertEqual(payload["reason"], "EVCREATE_HOOK_UNAVAILABLE")
+
+    def test_legacy_hook_rewriters_reject_symlinked_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for filename in ("hooks.json", "config.toml"):
+                codex_root = root / f"codex-{filename.replace('.', '-')}"
+                codex_root.mkdir()
+                outside = root / f"outside-{filename}"
+                outside.write_text("preserve", encoding="utf-8")
+                (codex_root / filename).symlink_to(outside)
+                with self.assertRaisesRegex(RuntimeError, "regular file"):
+                    rewrite_codex_global_paths(codex_root)
+                self.assertEqual(outside.read_text(encoding="utf-8"), "preserve")
+
+            antigravity_root = root / "antigravity"
+            antigravity_root.mkdir()
+            outside_hooks = root / "outside-hooks.json"
+            outside_hooks.write_text("preserve", encoding="utf-8")
+            (antigravity_root / "hooks.json").symlink_to(outside_hooks)
+            with self.assertRaisesRegex(RuntimeError, "regular file"):
+                rewrite_agy_global_paths(antigravity_root)
+            self.assertEqual(outside_hooks.read_text(encoding="utf-8"), "preserve")
+
+            antigravity_hooks = root / "antigravity-hooks"
+            (antigravity_hooks / "hooks").mkdir(parents=True)
+            outside_hook = root / "outside-hook.cjs"
+            outside_hook.write_text("preserve", encoding="utf-8")
+            (antigravity_hooks / "hooks/scout-block.cjs").symlink_to(outside_hook)
+            with self.assertRaisesRegex(RuntimeError, "regular file"):
+                rewrite_agy_global_paths(antigravity_hooks)
+            self.assertEqual(outside_hook.read_text(encoding="utf-8"), "preserve")
+
+            outside_root = root / "outside-root"
+            outside_root.mkdir()
+            linked_root = root / "linked-codex"
+            linked_root.symlink_to(outside_root, target_is_directory=True)
+            with self.assertRaisesRegex(RuntimeError, "real directory"):
+                rewrite_codex_global_paths(linked_root)
+
+    def test_legacy_hook_rewriters_preflight_before_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+
+            codex = root / "codex"
+            codex.mkdir()
+            codex_hooks = {
+                "hooks": {
+                    "SessionStart": [{"hooks": [{
+                        "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/session-start.cjs"
+                    }]}]
+                }
+            }
+            codex_hooks_path = codex / "hooks.json"
+            codex_hooks_path.write_text(json.dumps(codex_hooks), encoding="utf-8")
+            codex_hooks_before = codex_hooks_path.read_bytes()
+            outside_config = root / "outside-config.toml"
+            outside_config.write_text('command = "preserve"\n', encoding="utf-8")
+            (codex / "config.toml").symlink_to(outside_config)
+            with self.assertRaisesRegex(RuntimeError, "regular file"):
+                rewrite_codex_global_paths(codex)
+            self.assertEqual(codex_hooks_path.read_bytes(), codex_hooks_before)
+            self.assertEqual(outside_config.read_text(encoding="utf-8"), 'command = "preserve"\n')
+
+            antigravity = root / "antigravity"
+            hooks_dir = antigravity / "hooks"
+            hooks_dir.mkdir(parents=True)
+            antigravity_hooks = {
+                "hooks": {
+                    "PreToolUse": [{"hooks": [{
+                        "command": "node \"$CLAUDE_PROJECT_DIR\"/.antigravity/hooks/scout-block.cjs"
+                    }]}]
+                }
+            }
+            antigravity_hooks_path = antigravity / "hooks.json"
+            antigravity_hooks_path.write_text(json.dumps(antigravity_hooks), encoding="utf-8")
+            antigravity_hooks_before = antigravity_hooks_path.read_bytes()
+            hook_path = hooks_dir / "scout-block.cjs"
+            hook_path.write_text("preserve hook", encoding="utf-8")
+            hook_before = hook_path.read_bytes()
+            outside_backup = root / "outside-backup.cjs"
+            outside_backup.write_text("preserve backup", encoding="utf-8")
+            (hooks_dir / "scout-block.cjs.original.cjs").symlink_to(outside_backup)
+            with self.assertRaisesRegex(RuntimeError, "regular file"):
+                rewrite_agy_global_paths(antigravity)
+            self.assertEqual(antigravity_hooks_path.read_bytes(), antigravity_hooks_before)
+            self.assertEqual(hook_path.read_bytes(), hook_before)
+            self.assertEqual(outside_backup.read_text(encoding="utf-8"), "preserve backup")
+
+    def test_antigravity_rejects_symlinked_source_before_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            outside = root / "outside"
+            outside.mkdir()
+            source = root / "source/.claude"
+            source.parent.mkdir()
+            source.symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(RuntimeError, "real directory"):
+                build_antigravity_config(source, root / "stage/.antigravity")
+            self.assertFalse((root / "stage/.antigravity").exists())
+
+    def test_antigravity_global_hooks_rewrite_every_local_harness_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / ".antigravity"
+            root.mkdir()
+            (root / "hooks.json").write_text(json.dumps({
+                "hooks": {
+                    "PreToolUse": [{"hooks": [{
+                        "command": "node \"$CLAUDE_PROJECT_DIR\"/.antigravity/hooks/scout-block.cjs"
+                    }]}]
+                }
+            }), encoding="utf-8")
+            rewrite_agy_global_paths(root, '"$HOME"/.gemini/config/hooks')
+            command = json.loads((root / "hooks.json").read_text(encoding="utf-8"))["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+            self.assertIn('"$HOME"/.gemini/config/hooks/scout-block.cjs', command)
+            self.assertNotIn('"$CLAUDE_PROJECT_DIR"/.antigravity/hooks', command)
+
+    def test_resource_validator_scans_nested_behavior_matrix_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source"
+            output = root / "output"
+            source.mkdir()
+            output.mkdir()
+            (output / "migration-behavior-matrix.json").write_text("{}", encoding="utf-8")
+            (output / "nested").mkdir()
+            (output / "nested/migration-behavior-matrix.json").write_text(
+                '{"source_command": "node .claude/hooks/outside.cjs"}',
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "central Claude resource path"):
+                validate_harness_resource_projection(
+                    source, output, "gemini", check_resource_closure=False
+                )
 
     def test_source_copy_omits_compiler_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -523,14 +701,59 @@ class DistributionBuildTest(unittest.TestCase):
                         destination.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copyfile(source_root / relative, destination)
 
+                def copy_resources(output: str, relative_root: str) -> None:
+                    source_root = context.local_claude
+                    destination_root = Path(output) / relative_root
+                    for kind in ("scripts", "hooks"):
+                        source_kind = source_root / kind
+                        if not source_kind.is_dir():
+                            continue
+                        for source in sorted(source_kind.rglob("*")):
+                            if not source.is_file() or source.is_symlink():
+                                continue
+                            relative = source.relative_to(source_kind)
+                            if (
+                                relative.as_posix() in ADVISOR_RUNTIME_FILES
+                                or "advise-state" in relative.name
+                                or relative.suffix.lower() in {".pyc", ".pyo"}
+                                or is_production_runtime_artifact(relative)
+                            ):
+                                continue
+                            target_relative = relative
+                            if script == "migrate_claude_to_gemini.py" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
+                                target_relative = Path("claude-session-end.cjs")
+                            destination = destination_root / kind / target_relative
+                            destination.parent.mkdir(parents=True, exist_ok=True)
+                            raw = source.read_bytes()
+                            if b"\0" in raw[:1024]:
+                                destination.write_bytes(raw)
+                            else:
+                                target_name = {
+                                    "migrate_claude_to_gemini.py": "gemini",
+                                    "migrate_claude_to_pi.py": "pi",
+                                }.get(script, "codex")
+                                destination.write_text(
+                                    render_harness_script_references(raw.decode("utf-8"), target_name),
+                                    encoding="utf-8",
+                                )
+                    for name in (".evcrate.json", ".evcrateignore"):
+                        config = source_root / name
+                        if config.is_file():
+                            shutil.copyfile(config, Path(output) / name)
+                            if name == ".evcrateignore" and relative_root:
+                                shutil.copyfile(config, destination_root / name)
+
                 if script == "migrate_claude_to_gemini.py":
                     copy_runtime(env["GEMINI_OUTPUT_DIR"], "scripts")
+                    copy_resources(env["GEMINI_OUTPUT_DIR"], "")
                     Path(env["GEMINI_OUTPUT_DIR"]).joinpath("artifact").write_text("gemini", encoding="utf-8")
                     Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
                 elif script == "migrate_claude_to_pi.py":
                     copy_runtime(env["PI_OUTPUT_DIR"], "agent/evcrate/scripts")
+                    copy_resources(env["PI_OUTPUT_DIR"], "agent/evcrate")
                 else:
                     copy_runtime(env["CODEX_OUTPUT_DIR"], "scripts")
+                    copy_resources(env["CODEX_OUTPUT_DIR"], "")
                     Path(env["CODEX_OUTPUT_DIR"]).joinpath("artifact").write_text("codex", encoding="utf-8")
                     Path(env["AGENTS_OUTPUT_DIR"]).joinpath("artifact").write_text("agents", encoding="utf-8")
                     Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
