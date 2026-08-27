@@ -30,18 +30,18 @@ def load_env_files():
 
     Priority order (highest to lowest):
     1. process.env (runtime environment variables)
-    2. .claude/skills/ai-multimodal/.env (skill-specific config)
-    3. .claude/skills/.env (shared skills config)
-    4. .claude/.env (gemini global config)
+    2. .gemini/skills/ai-multimodal/.env (skill-specific config)
+    3. .gemini/skills/.env (shared skills config)
+    4. .gemini/.env (gemini global config)
     """
     if not load_dotenv:
         return
 
     # Determine base paths
     script_dir = Path(__file__).parent
-    skill_dir = script_dir.parent  # .claude/skills/ai-multimodal
-    skills_dir = skill_dir.parent   # .claude/skills
-    claude_dir = skills_dir.parent  # .claude
+    skill_dir = script_dir.parent  # .gemini/skills/ai-multimodal
+    skills_dir = skill_dir.parent   # .gemini/skills
+    harness_dir = skills_dir.parent.parent / ".gemini"  # .gemini
 
     # Priority 2: Skill-specific .env
     env_file = skill_dir / '.env'
@@ -54,7 +54,7 @@ def load_env_files():
         load_dotenv(env_file)
 
     # Priority 4: gemini global .env
-    env_file = claude_dir / '.env'
+    env_file = harness_dir / '.env'
     if env_file.exists():
         load_dotenv(env_file)
 

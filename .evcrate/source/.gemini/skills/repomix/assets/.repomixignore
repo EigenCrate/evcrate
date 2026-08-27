@@ -1,5 +1,5 @@
 # Dot-folders (not covered by .gitignore defaults)
-.claude/
+.gemini/
 .git/
 .idea/
 .vscode/

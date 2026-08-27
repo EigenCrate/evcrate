@@ -134,7 +134,7 @@ Before documenting any code reference:
 #### Self-Validation
 After completing documentation updates, run validation:
 ```bash
-node .claude/scripts/validate-docs.cjs docs/
+node .gemini/scripts/validate-docs.cjs docs/
 ```
 Review warnings and fix before considering task complete.
 

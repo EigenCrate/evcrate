@@ -17,7 +17,7 @@ SKILL: $1 (default: `*`)
 PROMPT: $2 (default: empty)
 
 ## Your mission
-Propose a plan to optimize an existing skill in `.claude/skills/${SKILL}` directory. 
+Propose a plan to optimize an existing skill in `.gemini/skills/${SKILL}` directory. 
 When you finish, ask user to review your plan:
 - If the user approve: Write down a plan follow "Output Requirements", then ask user if they want to start implementing.
 - If the user reject: Revise the plan or ask more questions to clarify more about the user's request (ask one question at the time), then repeat the review process.

@@ -6,6 +6,39 @@ const { spawnSync } = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
 
+function hasSymlinkedPathComponent(candidate) {
+  let current = path.resolve(candidate);
+  while (true) {
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch {
+      return true;
+    }
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }
+}
+
+function isUsableHook(candidate) {
+  try {
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  } catch {
+    return false;
+  }
+}
+
+function isGlobalHookDirectory(candidate) {
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}
+
+function isPublishedHomeHook(candidate) {
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), ".gemini/hooks/scout-block.cjs"));
+}
+
 let workspacePaths = [];
 let payloadCwd = null;
 try {
@@ -29,16 +62,16 @@ function resolveHookSource() {
     if (!start) continue;
     let current = path.resolve(start);
     while (true) {
-      const probe = path.join(current, ".claude/hooks/scout-block.cjs");
-      if (fs.existsSync(probe)) return { projectDir: current, sourceHook: probe };
+      const probe = path.join(current, ".gemini/hooks/scout-block.cjs");
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return { projectDir: current, sourceHook: probe };
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
     }
   }
 
-  const homeHook = path.join(os.homedir(), ".claude/hooks/scout-block.cjs");
-  if (fs.existsSync(homeHook)) {
+  const homeHook = path.join(os.homedir(), ".gemini/hooks/scout-block.cjs");
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {
     const fallbackDir = (workspacePaths && workspacePaths.length > 0) ? workspacePaths[0] : (payloadCwd || process.env.GEMINI_PROJECT_DIR || process.cwd());
     return { projectDir: fallbackDir, sourceHook: homeHook };
   }
@@ -46,7 +79,7 @@ function resolveHookSource() {
   const fallbackDir = (workspacePaths && workspacePaths.length > 0) ? workspacePaths[0] : (payloadCwd || process.env.GEMINI_PROJECT_DIR || process.cwd());
   return {
     projectDir: fallbackDir,
-    sourceHook: path.join(process.cwd(), ".claude/hooks/scout-block.cjs"),
+    sourceHook: path.join(process.cwd(), ".gemini/hooks/scout-block.cjs"),
   };
 }
 
@@ -104,13 +137,14 @@ try {
 } catch(e) {}
 
 let activeHook = sourceHook;
-if (!fs.existsSync(activeHook)) {
-  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/before-tool-scout-block.cjs");
-  if (fs.existsSync(globalHook)) {
+if (!isUsableHook(activeHook)) {
+  const globalHook = path.join(os.homedir(), ".gemini/hooks/scout-block.cjs");
+  if (isGlobalHookDirectory(globalHook) && isUsableHook(globalHook)) {
     activeHook = globalHook;
   } else {
     process.stdout.write(JSON.stringify({
-      decision: 'allow',
+      decision: 'deny',
+      reason: 'EVCREATE_HOOK_UNAVAILABLE',
       hookSpecificOutput: {
         hookEventName: "BeforeTool",
       },
@@ -126,6 +160,7 @@ const result = spawnSync(process.execPath, [activeHook], {
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     GEMINI_PROJECT_DIR: projectDir,
+    EVCRATE_CONFIG_DIR: '.gemini',
   },
 });
 

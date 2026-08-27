@@ -6,6 +6,39 @@ const { spawnSync } = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
 
+function hasSymlinkedPathComponent(candidate) {
+  let current = path.resolve(candidate);
+  while (true) {
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch {
+      return true;
+    }
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }
+}
+
+function isUsableHook(candidate) {
+  try {
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  } catch {
+    return false;
+  }
+}
+
+function isGlobalHookDirectory(candidate) {
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}
+
+function isPublishedHomeHook(candidate) {
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), ".gemini/hooks/claude-session-end.cjs"));
+}
+
 function resolveHookSource() {
   const candidates = [];
   if (process.env.GEMINI_PROJECT_DIR) candidates.push(process.env.GEMINI_PROJECT_DIR);
@@ -15,26 +48,31 @@ function resolveHookSource() {
     if (!start) continue;
     let current = path.resolve(start);
     while (true) {
-      const probe = path.join(current, ".claude/hooks/session-end.cjs");
-      if (fs.existsSync(probe)) return { projectDir: current, sourceHook: probe };
+      const probe = path.join(current, ".gemini/hooks/claude-session-end.cjs");
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return { projectDir: current, sourceHook: probe };
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
     }
   }
 
-  const homeHook = path.join(os.homedir(), ".claude/hooks/session-end.cjs");
-  if (fs.existsSync(homeHook)) {
+  const homeHook = path.join(os.homedir(), ".gemini/hooks/claude-session-end.cjs");
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {
     return { projectDir: process.env.GEMINI_PROJECT_DIR || process.cwd(), sourceHook: homeHook };
   }
 
   return {
     projectDir: process.env.GEMINI_PROJECT_DIR || process.cwd(),
-    sourceHook: path.join(process.cwd(), ".claude/hooks/session-end.cjs"),
+    sourceHook: path.join(process.cwd(), ".gemini/hooks/claude-session-end.cjs"),
   };
 }
 
 const { projectDir, sourceHook } = resolveHookSource();
+if (!isUsableHook(sourceHook)) {
+  process.stderr.write('EVCREATE_HOOK_UNAVAILABLE\n');
+  process.stdout.write(JSON.stringify({}));
+  process.exit(0);
+}
 spawnSync(process.execPath, [sourceHook], {
   input,
   encoding: 'utf-8',
@@ -42,6 +80,7 @@ spawnSync(process.execPath, [sourceHook], {
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     GEMINI_PROJECT_DIR: projectDir,
+    EVCRATE_CONFIG_DIR: '.gemini',
   },
 });
 process.stdout.write(JSON.stringify({}));

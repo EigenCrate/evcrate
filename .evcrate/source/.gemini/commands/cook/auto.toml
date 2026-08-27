@@ -17,7 +17,7 @@ tasks input. Apply the shared default stuck-escalation contract.
 For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
 `--advice` in explicit mode and otherwise pass no `--advice` token.
 
-**IMPORTANT:** Analyze the list of skills  at `.claude/skills/*` and intelligently activate the skills that are needed for the task during the process.
+**IMPORTANT:** Analyze the list of skills  at `.gemini/skills/*` and intelligently activate the skills that are needed for the task during the process.
 **Ensure token efficiency while maintaining high quality.**
 
 ## Workflow

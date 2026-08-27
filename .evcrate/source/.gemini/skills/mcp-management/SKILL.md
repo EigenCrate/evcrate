@@ -31,11 +31,11 @@ Use this skill when:
 
 ### 1. Configuration Management
 
-MCP servers configured in `.claude/.mcp.json`.
+MCP servers configured in `.gemini/.mcp.json`.
 
 **Gemini CLI Integration** (recommended): Create symlink to `.gemini/settings.json`:
 ```bash
-mkdir -p .gemini && ln -sf .claude/.mcp.json .gemini/settings.json
+mkdir -p .gemini && ln -sf .gemini/.mcp.json .gemini/settings.json
 ```
 
 See [references/configuration.md](references/configuration.md) and [references/gemini-cli-integration.md](references/gemini-cli-integration.md).
@@ -130,7 +130,7 @@ Coordinate tools across multiple servers. Each tool knows its source server for 
 ### scripts/mcp-client.ts
 
 Core MCP client manager class. Handles:
-- Config loading from `.claude/.mcp.json`
+- Config loading from `.gemini/.mcp.json`
 - Connecting to multiple MCP servers
 - Listing tools/prompts/resources across all servers
 - Executing tools with proper error handling
@@ -151,7 +151,7 @@ Command-line interface for MCP operations. Commands:
 **Method 1: Gemini CLI** (recommended)
 ```bash
 npm install -g gemini-cli
-mkdir -p .gemini && ln -sf .claude/.mcp.json .gemini/settings.json
+mkdir -p .gemini && ln -sf .gemini/.mcp.json .gemini/settings.json
 # IMPORTANT: Use stdin piping, NOT -p flag (deprecated, skips MCP init)
 # GEMINI.md auto-loads to enforce JSON responses
 echo "Take a screenshot of https://example.com. Return JSON only per GEMINI.md instructions." | gemini -y -m gemini-2.5-flash
@@ -161,7 +161,7 @@ Returns structured JSON: `{"server":"puppeteer","tool":"screenshot","success":tr
 
 **Method 2: Scripts**
 ```bash
-cd .claude/skills/mcp-management/scripts && npm install
+cd .gemini/skills/mcp-management/scripts && npm install
 npx tsx cli.ts list-tools  # Saves to assets/tools.json
 npx tsx cli.ts call-tool memory create_entities '{"entities":[...]}'
 ```

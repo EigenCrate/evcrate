@@ -43,7 +43,7 @@ Check the `## Plan Context` section injected by hooks:
 **After Creating Plan:**
 ```bash
 # Update session state so subagents get the new plan context:
-node .claude/scripts/set-active-plan.cjs {plan-dir}
+node .gemini/scripts/set-active-plan.cjs {plan-dir}
 ```
 
 **Report Output Rules:**
