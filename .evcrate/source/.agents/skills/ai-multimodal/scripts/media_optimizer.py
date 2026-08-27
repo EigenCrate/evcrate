@@ -41,7 +41,7 @@ def load_env_files():
     script_dir = Path(__file__).parent
     skill_dir = script_dir.parent  # .agents/skills/ai-multimodal
     skills_dir = skill_dir.parent   # .agents/skills
-    claude_dir = skills_dir.parent  # .codex
+    harness_dir = skills_dir.parent.parent / ".codex"  # .codex
 
     # Priority 2: Skill-specific .env
     env_file = skill_dir / '.env'
@@ -54,7 +54,7 @@ def load_env_files():
         load_dotenv(env_file)
 
     # Priority 4: Codex global .env
-    env_file = claude_dir / '.env'
+    env_file = harness_dir / '.env'
     if env_file.exists():
         load_dotenv(env_file)
 

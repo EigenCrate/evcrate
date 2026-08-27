@@ -100,7 +100,7 @@ KEY4=value=with=equals
         claude_env.parent.mkdir(parents=True, exist_ok=True)
         claude_env.write_text("BASE_VAR=base\nOVERRIDE=Codex")
 
-        skills_env = mock_project_root / ".codex" / "skills" / ".env"
+        skills_env = mock_project_root / ".agents" / "skills" / ".env"
         skills_env.parent.mkdir(parents=True, exist_ok=True)
         skills_env.write_text("OVERRIDE=skills\nSKILLS_VAR=skills")
 

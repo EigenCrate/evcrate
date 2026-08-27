@@ -12,11 +12,14 @@ from pathlib import Path
 from typing import Any
 
 from distribution.contracts import (
+    ADVISOR_BRIDGE_FALLBACK_BLOCK,
     ADVISOR_RUNTIME_FILES,
     add_global_workflow_fallback,
     advisory_relay_error,
+    is_production_runtime_artifact,
     project_advisor_contract,
     render_advisory_interview_workflow,
+    render_harness_script_references,
     render_inline_advise_command,
 )
 
@@ -165,12 +168,40 @@ agy -p "[prompt]" --model gemini-3.7-flash-high
 Run focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command. The number of parallel searches follows the search scope and available directories, not provider selection."""
 
 COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
+GLOBAL_ADVISOR_BRIDGE_PATHS = (
+    "~/.claude/scripts/advisor-bridge.cjs",
+    "~/.codex/scripts/advisor-bridge.cjs",
+    "~/.gemini/scripts/advisor-bridge.cjs",
+    "~/.gemini/config/scripts/advisor-bridge.cjs",
+    "~/.pi/agent/evcrate/scripts/advisor-bridge.cjs",
+)
+URL_REFERENCE = re.compile(r"https?://[^\s<>()]+", re.IGNORECASE)
 
 def apply_replacements(text: str) -> str:
+    fallback_token = "__EVCRATE_GLOBAL_ADVISOR_FALLBACK__"
+    text = text.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
+    protected_urls = []
+
+    def protect_url(match: re.Match[str]) -> str:
+        token = f"__EVCRATE_GLOBAL_URL_{len(protected_urls)}__"
+        protected_urls.append((token, match.group(0)))
+        return token
+
+    text = URL_REFERENCE.sub(protect_url, text)
+    protected = []
+    for index, path in enumerate(GLOBAL_ADVISOR_BRIDGE_PATHS):
+        token = f"__EVCRATE_GLOBAL_ADVISOR_BRIDGE_{index}__"
+        text = text.replace(path, token)
+        protected.append((token, path))
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     text = text.replace(".Codex", ".codex")
     text = re.sub(r"codexkit", "codexkit", text, flags=re.IGNORECASE)
+    for token, path in protected:
+        text = text.replace(token, path)
+    text = text.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
+    for token, url in protected_urls:
+        text = text.replace(token, url)
     return text
 
 
@@ -294,40 +325,184 @@ def is_text_file(path: Path) -> bool:
         raise RuntimeError(f"Could not inspect source file {path}") from error
 
 
+def _assert_safe_output_root(root: Path, label: str) -> None:
+    """Reject output roots or ancestors that could redirect cleanup writes."""
+
+    if os.path.lexists(root) and (root.is_symlink() or not root.is_dir()):
+        raise RuntimeError(f"{label} must be a real directory: {root}")
+    current = root.parent
+    while True:
+        if current.is_symlink():
+            raise RuntimeError(f"{label} has a symlinked ancestor: {root}")
+        if current.parent == current:
+            break
+        current = current.parent
+
+
+def _assert_no_symlink_ancestors(path: Path, label: str) -> None:
+    current = path.parent
+    while True:
+        if current.is_symlink():
+            raise RuntimeError(f"{label} has a symlinked ancestor: {path}")
+        if current.parent == current:
+            break
+        current = current.parent
+
+
+def _assert_safe_file_target(path: Path, label: str) -> None:
+    """Reject unmanaged file destinations that could follow a symlink."""
+
+    _assert_no_symlink_ancestors(path, label)
+    if os.path.lexists(path) and (path.is_symlink() or not path.is_file()):
+        raise RuntimeError(f"{label} must be a regular file: {path}")
+
+
+def _assert_safe_source_tree(root: Path, label: str) -> None:
+    if root.is_symlink() or not root.is_dir():
+        raise RuntimeError(f"{label} must be a real directory: {root}")
+    current = root
+    while True:
+        if current.is_symlink():
+            raise RuntimeError(f"{label} has a symlinked ancestor: {root}")
+        if current.parent == current:
+            break
+        current = current.parent
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise RuntimeError(f"{label} contains a symlink: {path}")
+
+
+def _assert_managed_directory(path: Path) -> None:
+    _assert_no_symlink_ancestors(path, "Managed Codex path")
+    if os.path.lexists(path) and (path.is_symlink() or not path.is_dir()):
+        raise RuntimeError(f"Managed Codex directory is unsafe: {path}")
+
+
+def _assert_managed_tree(path: Path) -> None:
+    """Reject symlinked or non-regular entries before clearing a managed tree."""
+
+    _assert_managed_directory(path)
+    if not os.path.lexists(path):
+        return
+    pending = [path]
+    while pending:
+        current = pending.pop()
+        for child in sorted(current.iterdir(), key=lambda item: item.name):
+            if child.is_symlink():
+                raise RuntimeError(f"Managed Codex tree contains a symlink: {child}")
+            if child.is_dir():
+                pending.append(child)
+            elif not child.is_file():
+                raise RuntimeError(f"Managed Codex tree contains a non-regular entry: {child}")
+
+
+def _clear_managed_path(path: Path) -> None:
+    """Clear a managed path without following symlinks or deleting their targets."""
+
+    _assert_no_symlink_ancestors(path, "Managed Codex path")
+    if not os.path.lexists(path):
+        return
+    if path.is_symlink() or not path.is_dir():
+        path.unlink()
+        return
+    for child in path.iterdir():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
+def _ordinary_script_relatives() -> list[Path]:
+    """Return canonical non-test scripts whose target-local paths are managed."""
+
+    source_dir = CLAUDE_DIR / "scripts"
+    if source_dir.is_symlink():
+        raise RuntimeError(f"Canonical script directory is symlinked: {source_dir}")
+    if not source_dir.is_dir():
+        return []
+    relatives: list[Path] = []
+    for source in sorted(source_dir.rglob("*")):
+        if source.is_symlink():
+            raise RuntimeError(f"Canonical script is symlinked: {source}")
+        if not source.is_file():
+            continue
+        relative = source.relative_to(source_dir)
+        if (
+            "advise-state" in relative.name
+            or "__pycache__" in relative.parts
+            or relative.suffix.lower() in {".pyc", ".pyo"}
+            or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
+            or relative.as_posix() in ADVISOR_RUNTIME_FILES
+            or is_production_runtime_artifact(relative)
+        ):
+            continue
+        relatives.append(relative)
+    return relatives
+
+
 def clean_destination() -> None:
-    def clear_path(path: Path) -> None:
-        if not path.exists():
-            return
-        if path.is_symlink() or path.is_file():
-            path.unlink()
-            return
-        for child in path.iterdir():
-            if child.is_dir() and not child.is_symlink():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
+    _assert_safe_output_root(CODEX_DIR, "Codex output root")
+    _assert_safe_output_root(AGENTS_DIR, "Codex skills output root")
+    for path in [
+        *(CODEX_DIR / name for name in ("agents", "bin", "hooks", "scripts", "workflows")),
+        AGENTS_DIR / "skills",
+    ]:
+        _assert_managed_tree(path)
+    ordinary_scripts = _ordinary_script_relatives()
 
     for path in [
         CODEX_DIR / "agents",
         CODEX_DIR / "bin",
         CODEX_DIR / "hooks",
-        CODEX_DIR / "scripts" / "advisor-dispatch.cjs",
+        *[CODEX_DIR / "scripts" / relative for relative in ADVISOR_RUNTIME_FILES],
         CODEX_DIR / "scripts" / "advisor-routing",
+        # Removed before the byte-identical runtime closure was introduced.
+        CODEX_DIR / "scripts" / "advise-state.cjs",
         CODEX_DIR / "workflows",
         AGENTS_DIR / "skills",
     ]:
-        clear_path(path)
+        _clear_managed_path(path)
+    for relative in ordinary_scripts:
+        _clear_managed_path(CODEX_DIR / "scripts" / relative)
     hooks_json = CODEX_DIR / "hooks.json"
-    if hooks_json.exists():
-        hooks_json.unlink()
+    _clear_managed_path(hooks_json)
     matrix_file = CODEX_DIR / "migration-behavior-matrix.json"
-    if matrix_file.exists():
-        matrix_file.unlink()
-    config_file = CODEX_DIR / EVCRATE_CONFIG_FILE
-    if config_file.exists():
-        config_file.unlink()
+    _clear_managed_path(matrix_file)
+    for name in (EVCRATE_CONFIG_FILE, ".evcrateignore"):
+        _clear_managed_path(CODEX_DIR / name)
     CODEX_DIR.mkdir(parents=True, exist_ok=True)
     AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def preflight_destination() -> None:
+    """Validate every unmanaged destination before cleanup can mutate output."""
+
+    _assert_safe_output_root(CODEX_DIR, "Codex output root")
+    _assert_safe_output_root(AGENTS_DIR, "Codex skills output root")
+    managed_directories = [
+        *(CODEX_DIR / name for name in ("agents", "bin", "hooks", "scripts", "workflows")),
+        AGENTS_DIR / "skills",
+        CODEX_DIR / "scripts" / "advisor-routing",
+    ]
+    for path in managed_directories:
+        _assert_managed_tree(path)
+    managed_files = [
+        CODEX_DIR / "hooks.json",
+        CODEX_DIR / "migration-behavior-matrix.json",
+        CODEX_DIR / EVCRATE_CONFIG_FILE,
+        CODEX_DIR / ".evcrateignore",
+        CODEX_DIR / "scripts" / "advise-state.cjs",
+        *(CODEX_DIR / "scripts" / relative for relative in ADVISOR_RUNTIME_FILES),
+        *(CODEX_DIR / "scripts" / relative for relative in _ordinary_script_relatives()),
+    ]
+    for path in managed_files:
+        _assert_safe_file_target(path, "Codex managed file")
+    for path, label in (
+        (PROJECT_DOCS_DIR / "AGENTS.md", "Project AGENTS.md"),
+        (CODEX_DIR / "global-guidance.md", "Codex global guidance"),
+        (CODEX_DIR / "config.toml", "Codex config.toml"),
+    ):
+        _assert_safe_file_target(path, label)
 
 
 def parse_markdown_with_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
@@ -440,14 +615,23 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def migrate_evcrate_config() -> None:
-    """Materialize the checked-in Claude config as the local Codex baseline."""
-    source = CLAUDE_DIR / EVCRATE_CONFIG_FILE
-    target = CODEX_DIR / EVCRATE_CONFIG_FILE
-    if not source.exists():
-        print(f"Warning: canonical config not found: {source}")
-        return
-    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-    print(f"Migrated config: {source} -> {target}")
+    """Materialize target-local config inputs used by migrated Codex hooks."""
+
+    for name in (EVCRATE_CONFIG_FILE, ".evcrateignore"):
+        source = CLAUDE_DIR / name
+        target = CODEX_DIR / name
+        if not os.path.lexists(source):
+            if name == EVCRATE_CONFIG_FILE:
+                print(f"Warning: canonical config not found: {source}")
+            continue
+        if source.is_symlink() or not source.is_file():
+            raise RuntimeError(f"Canonical config input is missing or unsafe: {source}")
+        _assert_safe_file_target(target, "Codex config input")
+        _clear_managed_path(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        shutil.copymode(source, target)
+        print(f"Migrated config input: {source} -> {target}")
 
 
 def build_hook_behavior_entries() -> list[dict[str, Any]]:
@@ -610,6 +794,7 @@ def write_project_agents_md() -> None:
     if not claude_md.exists():
         return
     target = PROJECT_DOCS_DIR / "AGENTS.md"
+    _assert_safe_file_target(target, "Project AGENTS.md")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(apply_replacements(claude_md.read_text(encoding="utf-8")), encoding="utf-8")
     print(f"Generated project AGENTS.md: {target}")
@@ -644,6 +829,7 @@ def migrate_skills() -> None:
                 path = new_path
             if is_text_file(path):
                 content = path.read_text(encoding="utf-8", errors="ignore")
+                content = render_harness_script_references(content, "codex")
                 path.write_text(
                     add_global_workflow_fallback(
                         rewrite_command_execution_guidance(apply_replacements(content), known_commands),
@@ -656,21 +842,76 @@ def migrate_skills() -> None:
         print(f"Migrated skill: {source.name} -> {target_name}")
 
 
-def migrate_help_scripts() -> None:
-    """Copy the portable help pair into the Codex runtime layout."""
+def migrate_scripts() -> None:
+    """Copy the complete ordinary script closure into Codex's own runtime."""
+
     source_dir = CLAUDE_DIR / "scripts"
     dest_dir = CODEX_DIR / "scripts"
     if not source_dir.is_dir():
         return
 
     dest_dir.mkdir(parents=True, exist_ok=True)
-    for name in ("ev-help.py",):
-        source = source_dir / name
-        if not source.is_file() or source.is_symlink() or source.suffix in {".pyc", ".pyo"}:
+    for relative in _ordinary_script_relatives():
+        source = source_dir / relative
+        destination = dest_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if is_text_file(source):
+            content = source.read_text(encoding="utf-8")
+            content = apply_replacements(render_harness_script_references(content, "codex"))
+            if relative.as_posix() == "ev-help.py":
+                # Keep the portable discovery tuple aware of the canonical
+                # source environment as well as the generated Codex one.
+                content = content.replace(
+                    '("CODEX_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")',
+                    '("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")',
+                    1,
+                )
+            destination.write_text(content, encoding="utf-8", newline="\n")
+        else:
+            destination.write_bytes(source.read_bytes())
+        shutil.copymode(source, destination)
+        print(f"Migrated script: {relative}")
+
+
+def migrate_help_scripts() -> None:
+    """Backward-compatible entrypoint for the complete script migration."""
+
+    migrate_scripts()
+
+
+def migrate_hook_sources() -> None:
+    """Copy target-local hook sources and their relative helper closure."""
+
+    source_dir = CLAUDE_DIR / "hooks"
+    dest_dir = CODEX_DIR / "hooks"
+    if source_dir.is_symlink():
+        raise RuntimeError(f"Canonical hook directory is symlinked: {source_dir}")
+    if not source_dir.is_dir():
+        return
+    for source in sorted(source_dir.rglob("*")):
+        if source.is_symlink():
+            raise RuntimeError(f"Canonical hook is symlinked: {source}")
+        if not source.is_file():
             continue
-        destination = dest_dir / name
-        shutil.copyfile(source, destination)
-        print(f"Migrated help script: {name}")
+        relative = source.relative_to(source_dir)
+        if (
+            "__pycache__" in relative.parts
+            or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
+            or is_production_runtime_artifact(relative)
+        ):
+            continue
+        destination = dest_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if is_text_file(source):
+            content = render_harness_script_references(
+                source.read_text(encoding="utf-8"), "codex"
+            )
+            content = apply_replacements(content)
+            destination.write_text(content, encoding="utf-8", newline="\n")
+        else:
+            destination.write_bytes(source.read_bytes())
+        shutil.copymode(source, destination)
+        print(f"Migrated hook source: {relative}")
 
 
 def migrate_advisor_routing_runtime() -> None:
@@ -678,6 +919,8 @@ def migrate_advisor_routing_runtime() -> None:
 
     source_dir = CLAUDE_DIR / "scripts"
     destination_dir = CODEX_DIR / "scripts"
+    if source_dir.is_symlink():
+        raise RuntimeError(f"Canonical script directory is symlinked: {source_dir}")
     if not (source_dir / ADVISOR_RUNTIME_FILES[0]).is_file():
         return
     for relative in ADVISOR_RUNTIME_FILES:
@@ -727,7 +970,7 @@ def migrate_commands_as_native_skills() -> None:
             body = body.replace(
                 "1. Set `codingLevel` in `.codex/.evcrate.json`",
                 "1. Set `codingLevel` in `.codex/.evcrate.json`.\n"
-                "   This file is materialized from canonical `.claude/.evcrate.json`; "
+                "   This file is materialized from the canonical EVCrate source; "
                 "update that source before regenerating to persist changes.",
             )
 
@@ -770,6 +1013,39 @@ const {{ spawnSync }} = require('child_process');
 const input = fs.readFileSync(0, 'utf-8');
 {guidance_bootstrap}
 
+function hasSymlinkedPathComponent(candidate) {{
+  let current = path.resolve(candidate);
+  while (true) {{
+    let stat;
+    try {{
+      stat = fs.lstatSync(current);
+    }} catch {{
+      return true;
+    }}
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }}
+}}
+
+function isUsableHook(candidate) {{
+  try {{
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  }} catch {{
+    return false;
+  }}
+}}
+
+function isGlobalHookDirectory(candidate) {{
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}}
+
+function isPublishedHomeHook(candidate) {{
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), {source_rel_path_json}));
+}}
+
 function resolveHookSource() {{
   const candidates = [];
   if (process.env.{project_env_var}) candidates.push(process.env.{project_env_var});
@@ -780,7 +1056,7 @@ function resolveHookSource() {{
     let current = path.resolve(start);
     while (true) {{
       const probe = path.join(current, {source_rel_path_json});
-      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return {{ projectDir: current, sourceHook: probe }};
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
@@ -788,7 +1064,7 @@ function resolveHookSource() {{
   }}
 
   const homeHook = path.join(os.homedir(), {source_rel_path_json});
-  if (fs.existsSync(homeHook)) {{
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {{
     return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
   }}
 
@@ -799,6 +1075,10 @@ function resolveHookSource() {{
 }}
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
+if (!isUsableHook(sourceHook)) {{
+  process.stdout.write(JSON.stringify({{}}));
+  process.exit(0);
+}}
 const result = spawnSync(process.execPath, [sourceHook], {{
   cwd: projectDir,
   input,
@@ -853,6 +1133,39 @@ const {{ spawnSync }} = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
 
+function hasSymlinkedPathComponent(candidate) {{
+  let current = path.resolve(candidate);
+  while (true) {{
+    let stat;
+    try {{
+      stat = fs.lstatSync(current);
+    }} catch {{
+      return true;
+    }}
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }}
+}}
+
+function isUsableHook(candidate) {{
+  try {{
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  }} catch {{
+    return false;
+  }}
+}}
+
+function isGlobalHookDirectory(candidate) {{
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}}
+
+function isPublishedHomeHook(candidate) {{
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), {source_rel_path_json}));
+}}
+
 function resolveHookSource() {{
   const candidates = [];
   if (process.env.{project_env_var}) candidates.push(process.env.{project_env_var});
@@ -863,7 +1176,7 @@ function resolveHookSource() {{
     let current = path.resolve(start);
     while (true) {{
       const probe = path.join(current, {source_rel_path_json});
-      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return {{ projectDir: current, sourceHook: probe }};
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
@@ -871,7 +1184,7 @@ function resolveHookSource() {{
   }}
 
   const homeHook = path.join(os.homedir(), {source_rel_path_json});
-  if (fs.existsSync(homeHook)) {{
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {{
     return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
   }}
 
@@ -883,8 +1196,14 @@ function resolveHookSource() {{
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
 
-if (!fs.existsSync(sourceHook)) {{
-  process.stdout.write(JSON.stringify({{}}));
+if (!isUsableHook(sourceHook)) {{
+  process.stdout.write(JSON.stringify({{
+    hookSpecificOutput: {{
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: 'EVCREATE_HOOK_UNAVAILABLE',
+    }},
+  }}));
   process.exit(0);
 }}
 
@@ -1074,7 +1393,9 @@ def write_codex_global_guidance() -> None:
         "- If `docker` resolves to the Podman compatibility CLI, that is acceptable. The common failure mode is missing runtime environment, not missing Docker Engine.",
     ]
     guidance = "\n".join(lines) + "\n\n" + SUBAGENT_WAIT_CONTRACT
-    (CODEX_DIR / "global-guidance.md").write_text(guidance.rstrip() + "\n", encoding="utf-8")
+    target = CODEX_DIR / "global-guidance.md"
+    _assert_safe_file_target(target, "Codex global guidance")
+    target.write_text(guidance.rstrip() + "\n", encoding="utf-8")
     print(f"Generated Codex global guidance: {CODEX_DIR / 'global-guidance.md'}")
 
 
@@ -1087,13 +1408,13 @@ def write_codex_hooks() -> None:
         "session-start.cjs": create_context_bridge(
             "CODEX_PROJECT_DIR",
             "SessionStart",
-            ".claude/hooks/session-init.cjs",
+            ".codex/hooks/session-init.cjs",
             ".codex",
             "../global-guidance.md",
         ),
-        "user-prompt-submit.cjs": create_context_bridge("CODEX_PROJECT_DIR", "UserPromptSubmit", ".claude/hooks/dev-rules-reminder.cjs", ".codex"),
-        "pretool-scout-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/scout-block.cjs", ".codex"),
-        "pretool-privacy-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".claude/hooks/privacy-block.cjs", ".codex"),
+        "user-prompt-submit.cjs": create_context_bridge("CODEX_PROJECT_DIR", "UserPromptSubmit", ".codex/hooks/dev-rules-reminder.cjs", ".codex"),
+        "pretool-scout-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".codex/hooks/scout-block.cjs", ".codex"),
+        "pretool-privacy-block.cjs": create_pretool_bridge("CODEX_PROJECT_DIR", ".codex/hooks/privacy-block.cjs", ".codex"),
         "permission-request.cjs": create_permission_request_hook(),
         "run-node-hook.sh": create_run_node_hook_script(),
     }
@@ -1170,13 +1491,18 @@ def migrate_mcp_and_config() -> None:
 
     # Claude MCP servers do not cross the target boundary.
 
-    (CODEX_DIR / "config.toml").write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    print(f"Generated Codex config: {CODEX_DIR / 'config.toml'}")
+    target = CODEX_DIR / "config.toml"
+    _assert_safe_file_target(target, "Codex config.toml")
+    target.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    print(f"Generated Codex config: {target}")
 
 
 def main() -> None:
-    if not CLAUDE_DIR.exists():
-        raise SystemExit("Error: .claude directory not found")
+    try:
+        _assert_safe_source_tree(CLAUDE_DIR, "Canonical Claude source")
+    except RuntimeError as error:
+        raise SystemExit(str(error)) from error
+    preflight_destination()
     clean_destination()
     migrate_evcrate_config()
     migrate_workflows()
@@ -1185,6 +1511,7 @@ def main() -> None:
     migrate_skills()
     migrate_help_scripts()
     migrate_advisor_routing_runtime()
+    migrate_hook_sources()
     migrate_commands_as_native_skills()
     write_codex_global_guidance()
     write_codex_hooks()

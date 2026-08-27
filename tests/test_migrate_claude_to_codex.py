@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import shutil
 import subprocess
@@ -12,6 +13,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import migrate_claude_to_codex as migrator
 from migrate_claude_to_codex import (
     EXTERNAL_SCOUT_STRATEGY_END,
     EXTERNAL_SCOUT_STRATEGY_START,
@@ -19,9 +21,13 @@ from migrate_claude_to_codex import (
     apply_replacements,
     apply_subagent_wait_contract,
     canonicalize_command_tokens,
+    create_context_bridge,
     migrate_agents,
     migrate_commands_as_native_skills,
     migrate_help_scripts,
+    migrate_mcp_and_config,
+    write_codex_global_guidance,
+    write_project_agents_md,
 )
 
 
@@ -48,6 +54,251 @@ class ApplyReplacementsTest(unittest.TestCase):
             for name in (".codex", ".agents"):
                 self.assertFalse((root / name).exists())
 
+    def test_rejects_symlinked_source_tree_before_writing(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            source_root.mkdir(parents=True)
+            outside = root / "outside"
+            outside.mkdir()
+            (source_root / ".claude").symlink_to(outside, target_is_directory=True)
+            env = os.environ.copy()
+            env["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_codex.py"), "--local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("Canonical Claude source", completed.stderr)
+            self.assertFalse((source_root / ".codex").exists())
+
+    def test_rejects_symlinked_managed_ancestor_before_cleanup(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            source = source_root / ".claude"
+            (source / "scripts/nested").mkdir(parents=True)
+            (source / "scripts/nested/helper.cjs").write_text("helper", encoding="utf-8")
+            outside = root / "outside"
+            outside.mkdir()
+            sentinel = outside / "sentinel.txt"
+            sentinel.write_text("preserve", encoding="utf-8")
+            output = source_root / ".codex/scripts"
+            output.mkdir(parents=True)
+            (output / "nested").symlink_to(outside, target_is_directory=True)
+            env = os.environ.copy()
+            env["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_codex.py"), "--local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("symlink", completed.stderr)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve")
+
+    def test_replaces_target_ignore_symlink_without_following_it(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            source = source_root / ".claude"
+            source.mkdir(parents=True)
+            (source / ".evcrateignore").write_text("ignored\n", encoding="utf-8")
+            outside = root / "outside.txt"
+            outside.write_text("preserve", encoding="utf-8")
+            output = source_root / ".codex"
+            output.mkdir(parents=True)
+            (output / ".evcrateignore").symlink_to(outside)
+            env = os.environ.copy()
+            env["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_codex.py"), "--local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("regular file", completed.stderr)
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve")
+            self.assertTrue((output / ".evcrateignore").is_symlink())
+
+    def test_rejects_nested_managed_symlink_before_cleanup(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            output = source_root / ".codex"
+            sentinel = output / "agents/sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("preserve\n", encoding="utf-8")
+            outside = root / "outside.txt"
+            outside.write_text("preserve\n", encoding="utf-8")
+            (output / "agents/unlisted.md").symlink_to(outside)
+
+            environment = os.environ.copy()
+            environment["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_codex.py"), "--local"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("contains a symlink", completed.stderr)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve\n")
+
+    def test_context_bridge_does_not_execute_local_symlink(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = root / "project"
+            hook_dir = project / ".codex/hooks"
+            outside = root / "outside-hook.cjs"
+            marker = root / "executed.txt"
+            hook_dir.mkdir(parents=True)
+            project.mkdir(exist_ok=True)
+            outside.write_text(
+                f"require('fs').writeFileSync({json.dumps(str(marker))}, 'executed');\n",
+                encoding="utf-8",
+            )
+            (hook_dir / "session-init.cjs").symlink_to(outside)
+            wrapper = hook_dir / "session-start.cjs"
+            wrapper.write_text(
+                create_context_bridge(
+                    "CODEX_PROJECT_DIR",
+                    "SessionStart",
+                    ".codex/hooks/session-init.cjs",
+                    ".codex",
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment.update({"HOME": str(root / "home"), "CODEX_PROJECT_DIR": str(project)})
+            completed = subprocess.run(
+                ["node", str(wrapper)],
+                cwd=project,
+                input="{}",
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout), {})
+            self.assertFalse(marker.exists())
+
+    def test_generated_context_bridge_rejects_symlinked_ancestor(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = root / "project"
+            outside = root / "outside"
+            wrapper_dir = root / "wrapper"
+            marker = root / "executed.txt"
+            outside.mkdir()
+            project.mkdir()
+            wrapper_dir.mkdir()
+            (outside / "hooks").mkdir()
+            (outside / "hooks/session-init.cjs").write_text(
+                f"require('fs').writeFileSync({json.dumps(str(marker))}, 'executed');\n",
+                encoding="utf-8",
+            )
+            (project / ".codex").symlink_to(outside, target_is_directory=True)
+            wrapper = wrapper_dir / "session-start.cjs"
+            wrapper.write_text(
+                create_context_bridge(
+                    "CODEX_PROJECT_DIR",
+                    "SessionStart",
+                    ".codex/hooks/session-init.cjs",
+                    ".codex",
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment.update({"HOME": str(root / "home"), "CODEX_PROJECT_DIR": str(project)})
+            completed = subprocess.run(
+                ["node", str(wrapper)],
+                cwd=project,
+                input="{}",
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout), {})
+            self.assertFalse(marker.exists())
+
+    def test_global_context_bridge_preserves_project_dir_under_home(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            home = root / "home"
+            project = home / "project"
+            hook_dir = home / ".codex/hooks"
+            marker = root / "project-dir.txt"
+            hook_dir.mkdir(parents=True)
+            project.mkdir(parents=True)
+            (hook_dir / "session-init.cjs").write_text(
+                f"require('fs').writeFileSync({json.dumps(str(marker))}, process[\"env\"][\"CODEX_PROJECT_DIR\"]);\n",
+                encoding="utf-8",
+            )
+            wrapper = hook_dir / "session-start.cjs"
+            wrapper.write_text(
+                create_context_bridge(
+                    "CODEX_PROJECT_DIR",
+                    "SessionStart",
+                    ".codex/hooks/session-init.cjs",
+                    ".codex",
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment.update({"HOME": str(home), "CODEX_PROJECT_DIR": str(project)})
+            completed = subprocess.run(
+                ["node", str(wrapper)],
+                cwd=project,
+                input="{}",
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(marker.read_text(encoding="utf-8"), str(project))
+
+    def test_unmanaged_codex_file_targets_reject_symlinks(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / ".claude"
+            output = root / ".codex"
+            source.mkdir()
+            output.mkdir()
+            (root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            writers = (
+                (output / "config.toml", migrate_mcp_and_config),
+                (output / "global-guidance.md", write_codex_global_guidance),
+                (root / "AGENTS.md", write_project_agents_md),
+            )
+            for index, (target, writer) in enumerate(writers):
+                with self.subTest(target=target.name):
+                    outside = root / f"outside-{index}.txt"
+                    outside.write_text("preserve", encoding="utf-8")
+                    target.symlink_to(outside)
+                    with patch.object(migrator, "CLAUDE_DIR", source), patch.object(
+                        migrator, "CODEX_DIR", output
+                    ), patch.object(migrator, "PROJECT_DOCS_DIR", root):
+                        with self.assertRaisesRegex(RuntimeError, "regular file"):
+                            writer()
+                    self.assertEqual(outside.read_text(encoding="utf-8"), "preserve")
+
     def test_claude_markdown_filename_uses_canonical_agents_name(self) -> None:
         for source in ("CLAUDE.md", "Claude.md", "claude.md"):
             with self.subTest(source=source):
@@ -69,6 +320,13 @@ class ApplyReplacementsTest(unittest.TestCase):
         self.assertEqual(
             apply_replacements("Claude Code and Claude"),
             "Codex CLI and Codex",
+        )
+
+    def test_urls_are_not_rewritten_with_harness_paths(self) -> None:
+        source = "See https://example.com/.claude/path?next=/.claude/item and .claude/scripts/tool.cjs."
+        self.assertEqual(
+            apply_replacements(source),
+            "See https://example.com/.claude/path?next=/.claude/item and .codex/scripts/tool.cjs.",
         )
 
     def test_subagent_wait_contract_is_idempotent_and_fail_closed(self) -> None:
@@ -101,6 +359,187 @@ class ApplyReplacementsTest(unittest.TestCase):
             self.assertEqual((target_dir / "scripts/ev-help.py").read_bytes(), b"help")
             self.assertFalse((target_dir / "scripts/test-evcrate-help.py").exists())
             self.assertFalse((target_dir / "scripts/ignored.pyc").exists())
+
+    def test_codex_environment_resolver_uses_agents_skill_projection(self) -> None:
+        source_script = Path(".evcrate/source/.claude/scripts/resolve_env.py").read_text(encoding="utf-8")
+
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude"
+            target_dir = root / ".codex"
+            (source_dir / "scripts").mkdir(parents=True)
+            (source_dir / "scripts/resolve_env.py").write_text(source_script, encoding="utf-8")
+
+            with patch.object(migrator, "CLAUDE_DIR", source_dir), patch.object(
+                migrator, "CODEX_DIR", target_dir
+            ):
+                migrate_help_scripts()
+
+            generated = (target_dir / "scripts/resolve_env.py").read_text(encoding="utf-8")
+            self.assertIn("project_root / '.agents' / 'skills'", generated)
+            self.assertIn("home / '.agents' / 'skills'", generated)
+            self.assertNotIn("project_root / '.codex' / 'skills'", generated)
+            self.assertNotIn("home / '.codex' / 'skills'", generated)
+
+            (root / ".git").mkdir()
+            (root / ".agents/skills/demo").mkdir(parents=True)
+            (root / ".agents/skills/demo/.env").write_text(
+                "EVCRATE_RESOLVER_PROJECTION_TEST=agents\n", encoding="utf-8"
+            )
+            environment = os.environ.copy()
+            environment.pop("EVCRATE_RESOLVER_PROJECTION_TEST", None)
+            environment["HOME"] = str(root / "home")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(target_dir / "scripts/resolve_env.py"),
+                    "EVCRATE_RESOLVER_PROJECTION_TEST",
+                    "--skill",
+                    "demo",
+                ],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(completed.stdout.strip(), "agents")
+
+    def test_skill_scripts_use_agents_skill_projection(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source_script = repository / ".evcrate/source/.claude/skills/better-auth/scripts/better_auth_init.py"
+
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_dir = root / ".claude/skills/better-auth/scripts"
+            agents_dir = root / ".agents"
+            source_dir.mkdir(parents=True)
+            (source_dir / "better_auth_init.py").write_bytes(source_script.read_bytes())
+
+            with patch.object(migrator, "CLAUDE_DIR", root / ".claude"), patch.object(
+                migrator, "AGENTS_DIR", agents_dir
+            ):
+                migrator.migrate_skills()
+
+            generated_path = agents_dir / "skills/better-auth/scripts/better_auth_init.py"
+            generated = generated_path.read_text(encoding="utf-8")
+            self.assertIn("self.project_root / \".agents\" / \"skills\" / \".env\"", generated)
+            self.assertNotIn("self.project_root / \".codex\" / \"skills\"", generated)
+
+            wrong = root / ".codex/skills/.env"
+            correct = root / ".agents/skills/.env"
+            wrong.parent.mkdir(parents=True)
+            correct.parent.mkdir(parents=True, exist_ok=True)
+            wrong.write_text("EVCRATE_SKILL_PROJECTION=wrong\n", encoding="utf-8")
+            correct.write_text("EVCRATE_SKILL_PROJECTION=agents\n", encoding="utf-8")
+            module_spec = spec_from_file_location("generated_better_auth", generated_path)
+            self.assertIsNotNone(module_spec)
+            self.assertIsNotNone(module_spec.loader)
+            generated_module = module_from_spec(module_spec)
+            module_spec.loader.exec_module(generated_module)
+            resolved = generated_module.BetterAuthInit(project_root=root)._load_env_files()
+            self.assertEqual(resolved["EVCRATE_SKILL_PROJECTION"], "agents")
+
+    def test_skill_env_helpers_use_codex_primary_root(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        source_files = (
+            "ai-multimodal/scripts/media_optimizer.py",
+            "repomix/scripts/repomix_batch.py",
+            "docs-seeker/scripts/utils/env-loader.js",
+        )
+
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".claude/skills"
+            agents_dir = root / ".agents"
+            for relative in source_files:
+                source = repository / ".evcrate/source/.claude/skills" / relative
+                destination = source_root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(source.read_bytes())
+
+            with patch.object(migrator, "CLAUDE_DIR", root / ".claude"), patch.object(
+                migrator, "AGENTS_DIR", agents_dir
+            ):
+                migrator.migrate_skills()
+
+            env_name = "." + "env"
+            media = (
+                agents_dir / "skills/ai-multimodal/scripts/media_optimizer.py"
+            ).read_text(encoding="utf-8")
+            self.assertIn(
+                'harness_dir = skills_dir.parent.parent / ".codex"', media
+            )
+            self.assertIn(f"env_file = harness_dir / '{env_name}'", media)
+            self.assertNotIn("claude_dir = skills_dir.parent", media)
+
+            repomix_path = agents_dir / "skills/repomix/scripts/repomix_batch.py"
+            repomix = repomix_path.read_text(encoding="utf-8")
+            self.assertIn(
+                f'script_dir.parent.parent.parent.parent / ".codex" / "{env_name}"',
+                repomix,
+            )
+            self.assertNotIn(
+                f'script_dir.parent.parent.parent / "{env_name}"', repomix
+            )
+
+            (root / ".agents" / env_name).write_text(
+                "EVCRATE_REPOMIX_PRIMARY_ROOT=wrong\n", encoding="utf-8"
+            )
+            (root / ".codex" / env_name).parent.mkdir(parents=True)
+            (root / ".codex" / env_name).write_text(
+                "EVCRATE_REPOMIX_PRIMARY_ROOT=codex\n", encoding="utf-8"
+            )
+            module_spec = spec_from_file_location("generated_repomix", repomix_path)
+            self.assertIsNotNone(module_spec)
+            self.assertIsNotNone(module_spec.loader)
+            repomix_module = module_from_spec(module_spec)
+            module_spec.loader.exec_module(repomix_module)
+            self.assertEqual(
+                repomix_module.EnvLoader.load_env_files()["EVCRATE_REPOMIX_PRIMARY_ROOT"],
+                "codex",
+            )
+
+            media_path = agents_dir / "skills/ai-multimodal/scripts/media_optimizer.py"
+            media_spec = spec_from_file_location("generated_media_optimizer", media_path)
+            self.assertIsNotNone(media_spec)
+            self.assertIsNotNone(media_spec.loader)
+            media_module = module_from_spec(media_spec)
+            media_spec.loader.exec_module(media_module)
+            loaded_paths = []
+            media_module.load_dotenv = lambda path: loaded_paths.append(Path(path))
+            media_module.load_env_files()
+            self.assertIn(root / ".codex" / env_name, loaded_paths)
+            self.assertNotIn(root / ".agents" / env_name, loaded_paths)
+
+    def test_full_migration_preflights_before_cleanup(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            output = source_root / ".codex"
+            sentinel = output / "agents/sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("preserve\n", encoding="utf-8")
+            outside = root / "outside-config.toml"
+            outside.write_text("preserve\n", encoding="utf-8")
+            (output / "config.toml").symlink_to(outside)
+
+            environment = os.environ.copy()
+            environment["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_codex.py"), "--local"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("regular file", completed.stderr)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve\n")
 
     def test_nested_command_tokens_use_colon_presentation(self) -> None:
         known_commands = {"/fix:logs"}

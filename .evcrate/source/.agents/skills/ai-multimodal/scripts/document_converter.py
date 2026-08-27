@@ -57,7 +57,7 @@ def find_api_key() -> Optional[str]:
         script_dir = Path(__file__).parent
         skill_dir = script_dir.parent  # .agents/skills/ai-multimodal
         skills_dir = skill_dir.parent   # .agents/skills
-        claude_dir = skills_dir.parent  # .codex
+        harness_dir = skills_dir.parent.parent / ".codex"  # .codex
 
         # Priority 2: Skill-specific .env
         env_file = skill_dir / '.env'
@@ -76,7 +76,7 @@ def find_api_key() -> Optional[str]:
                 return api_key
 
         # Priority 4: Codex global .env
-        env_file = claude_dir / '.env'
+        env_file = harness_dir / '.env'
         if env_file.exists():
             load_dotenv(env_file)
             api_key = os.getenv('GEMINI_API_KEY')
