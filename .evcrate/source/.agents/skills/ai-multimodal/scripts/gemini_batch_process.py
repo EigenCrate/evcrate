@@ -99,10 +99,10 @@ def find_api_key() -> Optional[str]:
         script_dir = Path(__file__).parent
         skill_dir = script_dir.parent
         skills_dir = skill_dir.parent
-        claude_dir = skills_dir.parent
+        harness_dir = skills_dir.parent.parent / ".codex"
 
         env_files = [
-            claude_dir / '.env',
+            harness_dir / '.env',
             skills_dir / '.env',
             skill_dir / '.env',
         ]
