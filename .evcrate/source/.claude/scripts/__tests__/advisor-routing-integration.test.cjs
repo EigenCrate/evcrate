@@ -7,6 +7,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const dispatcher = require('../advisor-dispatch.cjs');
+const { EXTERNAL_ADVISOR_TIMEOUT_MS } = dispatcher;
 const { createRoutingError } = require('../advisor-routing/errors.cjs');
 const { resolveRoute } = require('../advisor-routing/resolve-route.cjs');
 const { HOSTS } = require('../advisor-routing/policy-schema.cjs');
@@ -100,8 +101,9 @@ test('every valid cross-host pair invokes only its configured adapter with exact
             }
           },
           runner: {
-            run: async () => {
+            run: async (invocation) => {
               calls.push('run');
+              assert.equal(invocation.limits.timeoutMs, EXTERNAL_ADVISOR_TIMEOUT_MS);
               return { result: { stdout: '{}', stderr: '' } };
             }
           },
@@ -149,6 +151,48 @@ test('same-host exact native defaults remain capability-gated, including Gemini 
     }),
     'EFFORT_UNSUPPORTED'
   );
+});
+
+test('external dispatch emits phase-scoped lifecycle diagnostics when requested', async () => {
+  const descriptor = resolveRoute({
+    activeHost: 'antigravity',
+    policy: policyFor('antigravity', 'codex')
+  });
+  const calls = [];
+  const events = [];
+  const adapter = fakeAdapter('codex', calls);
+  const response = await dispatcher.dispatchExternal(
+    { descriptor, brief: 'phase diagnostics' },
+    {
+      registry: { getAdapter: () => adapter },
+      runner: {
+        run: async (invocation, options) => {
+          assert.equal(invocation.limits.timeoutMs, EXTERNAL_ADVISOR_TIMEOUT_MS);
+          options.onLifecycle?.({
+            status: 'completed',
+            pid: 8123,
+            elapsed_ms: 17,
+            termination_wait_ms: 0
+          });
+          return { result: { stdout: '{}', stderr: '' } };
+        }
+      },
+      debugSink: (event) => events.push(event),
+      environment: { PATH: '/bin' }
+    }
+  );
+  assert.equal(response.ok, true);
+  assert.deepEqual(events.map(({ phase }) => phase), [
+    'probe-version', 'probe-auth', 'probe-capabilities', 'build-invocation',
+    'final-run', 'parse-result'
+  ]);
+  assert.deepEqual(events.find(({ phase }) => phase === 'final-run'), {
+    phase: 'final-run',
+    status: 'completed',
+    pid: 8123,
+    elapsed_ms: 17,
+    termination_wait_ms: 0
+  });
 });
 
 test('recursion and adapter failure stop before alternate work', async () => {

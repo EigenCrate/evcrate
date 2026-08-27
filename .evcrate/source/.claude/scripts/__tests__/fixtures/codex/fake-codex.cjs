@@ -4,7 +4,19 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const ROOT = path.join(__dirname, 'v0.149.1');
+const FIXTURE_VERSION = '0.150.1';
+const fixtureDirectories = fs.readdirSync(__dirname, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && /^v[0-9]+\.[0-9]+\.[0-9]+$/u.test(entry.name))
+  .filter((entry) => {
+    try {
+      return fs.readFileSync(path.join(__dirname, entry.name, 'version.txt'), 'utf8').trim()
+        === `codex-cli ${FIXTURE_VERSION}`;
+    } catch {
+      return false;
+    }
+  });
+if (fixtureDirectories.length !== 1) throw new Error('Codex fixture version is ambiguous');
+const ROOT = path.join(__dirname, fixtureDirectories[0].name);
 const CONFIG_FILE = path.join(process.cwd(), 'codex-fixture.json');
 
 function readConfig() {
@@ -68,6 +80,10 @@ process.stdin.on('end', () => {
       process.exitCode = 1;
       return;
     }
+    if (config.mode === 'auth-stderr') {
+      process.stderr.write(readFixture('login-status.txt'));
+      return;
+    }
     output(readFixture('login-status.txt'));
     return;
   }
@@ -82,6 +98,12 @@ process.stdin.on('end', () => {
   }
   if (execCommand) {
     capture(input, args);
+    if (config.mode === 'tool') {
+      output(JSON.stringify({ type: 'item.started', item: {
+        id: 'command-fixture', type: 'command_execution'
+      }}));
+      return;
+    }
     if (config.mode === 'nonzero') {
       process.stderr.write('token=fixture-secret authorization=Bearer fixture-token\n');
       process.exitCode = 17;

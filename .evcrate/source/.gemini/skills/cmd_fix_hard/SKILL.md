@@ -24,6 +24,36 @@ Before analysis, read `.gemini/workflows/advisor-mentoring.md` and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issue input and apply the shared default stuck-escalation contract.
 
+When explicit advice mode is active, the advice gate is an executable step, not
+a writing exercise. After the required terminal review or test evidence exists
+and before displaying any advisor findings, invoke the bridge with the command
+tool from the repository root:
+
+```bash
+node .gemini/scripts/advisor-bridge.cjs <<'JSON'
+<the bounded evcrate-advisor-checkpoint/v1 request from the workflow contract>
+JSON
+```
+
+For generated Antigravity instructions, use
+`node ./.antigravity/scripts/advisor-bridge.cjs` only when that project-local
+file exists. Otherwise use the published Antigravity bridge instead:
+`node ~/.gemini/config/scripts/advisor-bridge.cjs`. The command must still run
+from the repository root and receive the same JSON request on stdin.
+
+Use the bridge result as the only advisor result. Do not substitute your own
+reasoning, a subagent summary, or a report titled “Advisor Review Checkpoint”.
+Only a successful terminal `ADVICE_READY` result completes the gate. The
+standalone bridge has no host-native callback transport: a same-host route
+returns typed `NATIVE_DISPATCH_UNSUPPORTED` and creates no handoff. Do not wait
+for that result, treat it as advice, or fall back to an external CLI. A host
+integration must call the bridge in-process with its ordinary native `advisor`
+callback; only that callback's validated terminal result can complete the gate.
+If the command is denied, fails, returns `NATIVE_DISPATCH_UNSUPPORTED`,
+`NATIVE_HANDOFF_PENDING`, or malformed output, report the gate as incomplete and
+do not claim that an advisor/model was called. Never invoke
+`advisor-dispatch.cjs` directly.
+
 ## Workflow:
 
 If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.

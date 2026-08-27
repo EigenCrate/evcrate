@@ -210,6 +210,25 @@ test('terminates timeout and cancellation paths with typed failures', async () =
   }
 });
 
+test('reports process lifecycle details without exposing command or stream data', async () => {
+  const events = [];
+  let clock = 0;
+  const timedOut = await runFakeMode('timeout', {
+    limits: { timeoutMs: 40, killGraceMs: 20 },
+    now: () => { clock += 1; return clock; },
+    onLifecycle: (event) => events.push(event)
+  });
+  assert.equal(timedOut.error.code, 'TIMEOUT');
+  assert.equal(events.length, 1);
+  assert.equal(events[0].status, 'timeout');
+  assert.ok(Number.isInteger(events[0].pid) && events[0].pid > 0);
+  assert.ok(Number.isSafeInteger(events[0].elapsed_ms) && events[0].elapsed_ms >= 0);
+  assert.ok(Number.isSafeInteger(events[0].termination_wait_ms) && events[0].termination_wait_ms >= 0);
+  assert.deepEqual(Object.keys(events[0]).sort(), [
+    'elapsed_ms', 'pid', 'status', 'termination_wait_ms'
+  ]);
+});
+
 test('cancels synchronously after spawn before stdin delivery', async () => {
   const fixture = createFakeInvocation({ limits: { killGraceMs: 0 } });
   const controller = new AbortController();

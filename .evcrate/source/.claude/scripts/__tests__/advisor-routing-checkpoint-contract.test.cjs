@@ -35,6 +35,21 @@ function checkpoint(activeHost = 'codex') {
   };
 }
 
+function nativeResult(envelope, recommendation) {
+  return {
+    protocol: 'evcrate-advisor-result',
+    version: 1,
+    checkpoint: envelope.checkpoint,
+    status: 'ADVICE_READY',
+    recommendation,
+    must_fix: [],
+    cautions: [],
+    assumptions: [],
+    success_checks: [],
+    unresolved_questions: []
+  };
+}
+
 async function dispatchStrict(adapter, calls, envelope = checkpoint(), options = {}) {
   const home = temporaryHome(true);
   const policyPath = path.join(home, '.evcrate', 'advisor-routing.json');
@@ -120,7 +135,7 @@ test('native dispatch invokes one host callback, normalizes it, and never falls 
       pending = dispatcher.dispatchRequest({ operation: 'dispatch', activeHost: 'codex', checkpoint: checkpoint() }, {
         nativeAdvisor: ({ checkpoint: envelope }) => {
           calls.push(`native:${envelope.checkpoint}`);
-          return { response: 'native advice' };
+          return nativeResult(envelope, 'native advice');
         },
         registry: { getAdapter: () => { calls.push('external'); throw new Error('must not run'); } },
         runner: { run: async () => { calls.push('cli'); return {}; } },
@@ -138,7 +153,7 @@ test('native dispatch invokes one host callback, normalizes it, and never falls 
       }, {
         nativeAdvisor: ({ checkpoint: envelope }) => {
           calls.push(`native:${envelope.checkpoint}`);
-          return { response: 'native JSON advice' };
+          return nativeResult(envelope, 'native JSON advice');
         },
         registry: { getAdapter: () => { calls.push('external'); throw new Error('must not run'); } },
         runner: { run: async () => { calls.push('cli'); return {}; } },
@@ -148,6 +163,22 @@ test('native dispatch invokes one host callback, normalizes it, and never falls 
     const jsonResponse = await pending;
     assert.equal(jsonResponse.result.recommendation, 'native JSON advice');
     assert.deepEqual(calls, ['native:review:step-4']);
+    calls.length = 0;
+    withHome(home, () => {
+      pending = dispatcher.dispatchRequest({
+        operation: 'dispatch', activeHost: 'codex', checkpoint: checkpoint()
+      }, {
+        nativeAdvisor: () => {
+          calls.push('legacy-native');
+          return { response: 'legacy native prose' };
+        },
+        registry: { getAdapter: () => { calls.push('external'); throw new Error('must not run'); } },
+        runner: { run: async () => { calls.push('cli'); return {}; } },
+        environment: { PATH: '/bin' }
+      });
+    });
+    await assert.rejects(pending, (error) => error?.code === 'PROTOCOL_INVALID');
+    assert.deepEqual(calls, ['legacy-native']);
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }

@@ -185,6 +185,11 @@ const CATALOG = {
     category: 'dispatch',
     action: 'Use the host-native advisor delegation path for a same-host route.',
     message: 'Native advisor dispatch is owned by the active host'
+  },
+  NATIVE_HANDOFF_INVALID: {
+    category: 'native-handoff',
+    action: 'Start one fresh native advisor handoff and resume it with its unexpired token.',
+    message: 'Native advisor handoff is invalid, expired, or already consumed'
   }
 };
 
