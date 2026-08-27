@@ -71,6 +71,7 @@ class NativePiDistributionTest(unittest.TestCase):
                 "distribution/antigravity_publish.py",
                 "distribution/advisor_runtime.py",
                 "distribution/contracts.py",
+                "distribute_hooks.py",
             ):
                 source, destination = REPOSITORY / relative, repository / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
