@@ -43,7 +43,7 @@ Before diving into implementation, understand how to design tools for AI agents 
 - Make errors educational, not just diagnostic
 - Help agents learn proper tool usage through clear feedback
 
-**Follow Natural Task Subdivisions:**
+**Follow Natural evcrate_subagent Subdivisions:**
 - Tool names should reflect how humans think about tasks
 - Group related tools with consistent prefixes for discoverability
 - Design tools around natural workflows, not just API structure
@@ -57,7 +57,7 @@ Before diving into implementation, understand how to design tools for AI agents 
 
 **Fetch the latest MCP protocol documentation:**
 
-Use WebFetch to load: `https://modelcontextprotocol.io/llms-full.txt`
+Use web research to load: `https://modelcontextprotocol.io/llms-full.txt`
 
 This comprehensive document contains the complete MCP specification and guidelines.
 
@@ -68,11 +68,11 @@ This comprehensive document contains the complete MCP specification and guidelin
 - **MCP Best Practices**: [📋 View Best Practices](./reference/mcp_best_practices.md) - Core guidelines for all MCP servers
 
 **For Python implementations, also load:**
-- **Python SDK Documentation**: Use WebFetch to load `https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md`
+- **Python SDK Documentation**: Use web research to load `https://raw.githubusercontent.com/modelcontextprotocol/python-sdk/main/README.md`
 - [🐍 Python Implementation Guide](./reference/python_mcp_server.md) - Python-specific best practices and examples
 
 **For Node/TypeScript implementations, also load:**
-- **TypeScript SDK Documentation**: Use WebFetch to load `https://raw.githubusercontent.com/modelcontextprotocol/typescript-sdk/main/README.md`
+- **TypeScript SDK Documentation**: Use web research to load `https://raw.githubusercontent.com/modelcontextprotocol/typescript-sdk/main/README.md`
 - [⚡ TypeScript Implementation Guide](./reference/node_mcp_server.md) - Node/TypeScript-specific best practices and examples
 
 #### 1.5 Exhaustively Study API Documentation
@@ -85,7 +85,7 @@ To integrate a service, read through **ALL** available API documentation:
 - Available endpoints and their parameters
 - Data models and schemas
 
-**To gather comprehensive information, use web search and the WebFetch tool as needed.**
+**To gather comprehensive information, use web search and the web research tool as needed.**
 
 #### 1.6 Create a Comprehensive Implementation Plan
 

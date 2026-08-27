@@ -2,7 +2,7 @@
 
 ## Configuration File Structure
 
-MCP servers are configured in `.claude/.mcp.json`:
+MCP servers are configured in `.pi/.mcp.json`:
 
 ```json
 {
@@ -101,9 +101,9 @@ Reference env vars with `${VAR_NAME}` syntax:
 Scripts check for config in this order:
 
 1. `process.env` (runtime environment)
-2. `.claude/skills/mcp-management/.env`
-3. `.claude/skills/.env`
-4. `.claude/.env`
+2. `.pi/agent/skills/mcp-management/.env`
+3. `.pi/agent/skills/.env`
+4. `.pi/.env`
 
 ## Validation
 

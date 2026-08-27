@@ -27,7 +27,7 @@ Search pattern: "Figma Design System + [style name]"
 
 ### Prompt Structure
 Include in prompts:
-- Task description
+- evcrate_subagent description
 - Preferred design style
 - Color palette
 - Typography preferences

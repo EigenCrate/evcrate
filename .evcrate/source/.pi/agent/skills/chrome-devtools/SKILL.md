@@ -16,10 +16,10 @@ Skills can exist in **project-scope** or **user-scope**. Priority: project-scope
 ```bash
 # Detect skill location (no cd needed - scripts use __dirname for paths)
 SKILL_DIR=""
-if [ -d ".claude/skills/chrome-devtools/scripts" ]; then
-  SKILL_DIR=".claude/skills/chrome-devtools/scripts"
-elif [ -d "$HOME/.claude/skills/chrome-devtools/scripts" ]; then
-  SKILL_DIR="$HOME/.claude/skills/chrome-devtools/scripts"
+if [ -d ".pi/agent/skills/chrome-devtools/scripts" ]; then
+  SKILL_DIR=".pi/agent/skills/chrome-devtools/scripts"
+elif [ -d "$HOME/.pi/agent/skills/chrome-devtools/scripts" ]; then
+  SKILL_DIR="$HOME/.pi/agent/skills/chrome-devtools/scripts"
 fi
 # Run scripts with full path: node "$SKILL_DIR/script.js" --args
 ```
@@ -53,7 +53,7 @@ When page structure is unknown, use `aria-snapshot.js` to get a YAML-formatted a
 node "$SKILL_DIR/aria-snapshot.js" --url https://example.com
 
 # Save to file in snapshots directory
-node "$SKILL_DIR/aria-snapshot.js" --url https://example.com --output ./.claude/chrome-devtools/snapshots/page.yaml
+node "$SKILL_DIR/aria-snapshot.js" --url https://example.com --output ./.pi/chrome-devtools/snapshots/page.yaml
 ```
 
 ### Example YAML Output
@@ -117,15 +117,15 @@ node "$SKILL_DIR/select-ref.js" --ref e5 --action hover
 ### Store Snapshots
 
 Skills can exist in **project-scope** or **user-scope**. Priority: project-scope > user-scope.
-Store snapshots for analysis in `<project>/.claude/chrome-devtools/snapshots/`:
+Store snapshots for analysis in `<project>/.pi/chrome-devtools/snapshots/`:
 
 ```bash
 # Create snapshots directory
-mkdir -p .claude/chrome-devtools/snapshots
+mkdir -p .pi/chrome-devtools/snapshots
 
 # Capture and store with timestamp
 SESSION="$(date +%Y%m%d-%H%M%S)"
-node "$SKILL_DIR/aria-snapshot.js" --url https://example.com --output .claude/chrome-devtools/snapshots/$SESSION.yaml
+node "$SKILL_DIR/aria-snapshot.js" --url https://example.com --output .pi/chrome-devtools/snapshots/$SESSION.yaml
 ```
 
 ### Workflow: Unknown Page Structure
@@ -204,7 +204,7 @@ node "$SKILL_DIR/navigate.js" --url about:blank --close true
 ## Available Scripts
 
 Skills can exist in **project-scope** or **user-scope**. Priority: project-scope > user-scope.
-All in `.claude/skills/chrome-devtools/scripts/`:
+All in `.pi/agent/skills/chrome-devtools/scripts/`:
 
 | Script | Purpose |
 |--------|---------|
@@ -233,14 +233,14 @@ All in `.claude/skills/chrome-devtools/scripts/`:
 ## Writing Custom Test Scripts
 
 Skills can exist in **project-scope** or **user-scope**. Priority: project-scope > user-scope.
-For complex automation, write scripts to `<project>/.claude/chrome-devtools/tmp/`:
+For complex automation, write scripts to `<project>/.pi/chrome-devtools/tmp/`:
 
 ```bash
 # Create tmp directory for test scripts
-mkdir -p $SKILL_DIR/.claude/chrome-devtools/tmp
+mkdir -p $SKILL_DIR/.pi/chrome-devtools/tmp
 
 # Write a test script
-cat > $SKILL_DIR/.claude/chrome-devtools/tmp/login-test.js << 'EOF'
+cat > $SKILL_DIR/.pi/chrome-devtools/tmp/login-test.js << 'EOF'
 import { getBrowser, getPage, disconnectBrowser, outputJSON } from '../scripts/lib/browser.js';
 
 async function loginTest() {
@@ -266,7 +266,7 @@ loginTest();
 EOF
 
 # Run the test
-node $SKILL_DIR/.claude/chrome-devtools/tmp/login-test.js
+node $SKILL_DIR/.pi/chrome-devtools/tmp/login-test.js
 ```
 
 **Key principles for custom scripts**:
@@ -279,17 +279,17 @@ node $SKILL_DIR/.claude/chrome-devtools/tmp/login-test.js
 ## Screenshots
 
 Skills can exist in **project-scope** or **user-scope**. Priority: project-scope > user-scope.
-Store screenshots for analysis in `<project>/.claude/chrome-devtools/screenshots/`:
+Store screenshots for analysis in `<project>/.pi/chrome-devtools/screenshots/`:
 
 ```bash
 # Basic screenshot
-node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.claude/chrome-devtools/screenshots/page.png
+node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.pi/chrome-devtools/screenshots/page.png
 
 # Full page
-node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.claude/chrome-devtools/screenshots/page.png --full-page true
+node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.pi/chrome-devtools/screenshots/page.png --full-page true
 
 # Specific element
-node "$SKILL_DIR/screenshot.js" --url https://example.com --selector ".main-content" --output ./.claude/chrome-devtools/screenshots/element.png
+node "$SKILL_DIR/screenshot.js" --url https://example.com --selector ".main-content" --output ./.pi/chrome-devtools/screenshots/element.png
 ```
 
 ### Auto-Compression (Sharp)
@@ -298,16 +298,16 @@ Screenshots >5MB auto-compress using Sharp (4-5x faster than ImageMagick):
 
 ```bash
 # Default: compress if >5MB
-node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.claude/chrome-devtools/screenshots/page.png
+node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.pi/chrome-devtools/screenshots/page.png
 
 # Custom threshold (3MB)
-node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.claude/chrome-devtools/screenshots/page.png --max-size 3
+node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.pi/chrome-devtools/screenshots/page.png --max-size 3
 
 # Disable compression
-node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.claude/chrome-devtools/screenshots/page.png --no-compress
+node "$SKILL_DIR/screenshot.js" --url https://example.com --output ./.pi/chrome-devtools/screenshots/page.png --no-compress
 ```
 
-Store screenshots for analysis in `<project>/.claude/chrome-devtools/screenshots/`.
+Store screenshots for analysis in `<project>/.pi/chrome-devtools/screenshots/`.
 
 ## Console Log Collection & Analysis
 
@@ -325,19 +325,19 @@ node "$SKILL_DIR/console.js" --url https://example.com --types error,warn --dura
 
 ### Session Storage Pattern
 
-Store logs for analysis in `<project>/.claude/chrome-devtools/logs/<session>/`:
+Store logs for analysis in `<project>/.pi/chrome-devtools/logs/<session>/`:
 
 ```bash
 # Create session directory
 SESSION="$(date +%Y%m%d-%H%M%S)"
-mkdir -p .claude/chrome-devtools/logs/$SESSION
+mkdir -p .pi/chrome-devtools/logs/$SESSION
 
 # Capture and store
-node "$SKILL_DIR/console.js" --url https://example.com --duration 10000 > .claude/chrome-devtools/logs/$SESSION/console.json
-node "$SKILL_DIR/network.js" --url https://example.com > .claude/chrome-devtools/logs/$SESSION/network.json
+node "$SKILL_DIR/console.js" --url https://example.com --duration 10000 > .pi/chrome-devtools/logs/$SESSION/console.json
+node "$SKILL_DIR/network.js" --url https://example.com > .pi/chrome-devtools/logs/$SESSION/network.json
 
 # View errors
-jq '.messages[] | select(.type=="error")' .claude/chrome-devtools/logs/$SESSION/console.json
+jq '.messages[] | select(.type=="error")' .pi/chrome-devtools/logs/$SESSION/console.json
 ```
 
 ### Root Cause Analysis
@@ -376,7 +376,7 @@ If script fails:
 
 ```bash
 # 1. Capture current state (without navigating to preserve state)
-node "$SKILL_DIR/screenshot.js" --output ./.claude/skills/chrome-devtools/screenshots/debug.png
+node "$SKILL_DIR/screenshot.js" --output ./.pi/agent/skills/chrome-devtools/screenshots/debug.png
 
 # 2. Get console errors
 node "$SKILL_DIR/console.js" --url about:blank --types error --duration 1000

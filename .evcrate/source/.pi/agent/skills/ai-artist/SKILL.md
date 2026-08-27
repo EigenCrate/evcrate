@@ -23,7 +23,7 @@ Craft effective prompts for AI text and image generation models.
 ```
 [Role] You are a {expert type} specializing in {domain}.
 [Context] {Background information and constraints}
-[Task] {Specific action to perform}
+[evcrate_subagent] {Specific action to perform}
 [Format] {Output structure - JSON, markdown, list, etc.}
 [Examples] {1-3 few-shot examples if needed}
 ```

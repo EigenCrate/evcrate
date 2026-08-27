@@ -17,7 +17,7 @@
 
 ```
 1. Find repository
-   → WebSearch: "[library] github repository"
+   → web research: "[library] github repository"
    → Verify: Official, active, has docs/
 
 2. Clone repository
@@ -51,7 +51,7 @@
 **Obscure library without llms.txt:**
 ```bash
 # 1. Find
-WebSearch: "MyLibrary github repository"
+web research: "MyLibrary github repository"
 # Found: https://github.com/org/mylibrary
 
 # 2. Clone

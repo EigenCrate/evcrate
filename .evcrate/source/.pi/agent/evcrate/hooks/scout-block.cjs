@@ -2,7 +2,7 @@
 /**
  * scout-block.cjs - Cross-platform hook for blocking directory access
  *
- * Blocks access to directories listed in .claude/.evcrateignore
+ * Blocks access to directories listed in .pi/.evcrateignore
  * Uses gitignore-spec compliant pattern matching via 'ignore' package
  *
  * Blocking Rules:
@@ -12,7 +12,7 @@
  *   - Allowed: npm build, go build, cargo build, make, mvn, gradle, docker build, kubectl, terraform
  *
  * Configuration:
- * - Edit .claude/.evcrateignore to customize blocked patterns (one per line, # for comments)
+ * - Edit .pi/.evcrateignore to customize blocked patterns (one per line, # for comments)
  * - Supports negation patterns (!) to allow specific paths
  *
  * Exit Codes:
@@ -53,7 +53,7 @@ function isBuildCommand(command) {
 
 /**
  * Check if command executes from a .venv bin directory
- * Allows: ~/.claude/skills/.venv/bin/python3 script.py
+ * Allows: ~/.pi/agent/skills/.venv/bin/python3 script.py
  * Allows: .venv/Scripts/python.exe script.py
  *
  * @param {string} command - The command to check
@@ -114,7 +114,7 @@ try {
 
   // Load patterns from the project ignore configuration.
   const scriptDir = __dirname;
-  const claudeDir = path.dirname(scriptDir); // Go up from hooks/ to .claude/
+  const claudeDir = path.dirname(scriptDir); // Go up from hooks/ to .pi/
   const evcrateIgnorePath = path.join(claudeDir, '.evcrateignore');
   const patterns = loadPatterns(evcrateIgnorePath);
   const matcher = createMatcher(patterns);

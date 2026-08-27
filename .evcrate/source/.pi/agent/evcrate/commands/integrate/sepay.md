@@ -18,7 +18,7 @@ Plan & start implementing payment integration with [https://developer.sepay.vn/v
 
 ---
 
-**IMPORTANT**: Analyze the list of skills  at `.pi/skills/*` and intelligently activate the skills that are needed for the task during the process.
+**IMPORTANT**: Analyze the list of skills  at `.pi/agent/skills/*` and intelligently activate the skills that are needed for the task during the process.
 **Ensure token efficiency while maintaining high quality.**
 
 ## Workflow:

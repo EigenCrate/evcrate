@@ -4,12 +4,12 @@ Centralized environment variable resolver for Claude Code skills.
 
 Resolves environment variables following the Claude Code hierarchy:
 1. process.env                    - Runtime environment (HIGHEST)
-2. .claude/skills/<skill>/.env    - Project skill-specific
-3. .claude/skills/.env            - Project shared
-4. .claude/.env                   - Project global
-5. ~/.claude/skills/<skill>/.env  - User skill-specific
-6. ~/.claude/skills/.env          - User shared
-7. ~/.claude/.env                 - User global (LOWEST)
+2. .pi/agent/skills/<skill>/.env    - Project skill-specific
+3. .pi/agent/skills/.env            - Project shared
+4. .pi/.env                   - Project global
+5. ~/.pi/agent/skills/<skill>/.env  - User skill-specific
+6. ~/.pi/agent/skills/.env          - User shared
+7. ~/.pi/.env                 - User global (LOWEST)
 
 Usage:
     from resolve_env import resolve_env
@@ -71,12 +71,12 @@ except ImportError:
 
 
 def find_project_root() -> Optional[Path]:
-    """Find project root by looking for .git or .claude directory."""
+    """Find project root by looking for .git or .pi directory."""
     current = Path.cwd()
 
     # Check current directory and all parents
     for directory in [current] + list(current.parents):
-        if (directory / '.git').exists() or (directory / '.claude').exists():
+        if (directory / '.git').exists() or (directory / '.pi').exists():
             return directory
 
     return None
@@ -105,34 +105,34 @@ def get_env_file_paths(skill: Optional[str] = None) -> List[Tuple[str, Path]]:
         if skill:
             paths.append((
                 f"Project skill-specific ({skill})",
-                project_root / '.claude' / 'skills' / skill / '.env'
+                project_root / '.pi' / 'agent' / 'skills' / skill / '.env'
             ))
 
         paths.append((
             "Project skills shared",
-            project_root / '.claude' / 'skills' / '.env'
+            project_root / '.pi' / 'agent' / 'skills' / '.env'
         ))
 
         paths.append((
             "Project global",
-            project_root / '.claude' / '.env'
+            project_root / '.pi' / '.env'
         ))
 
     # Priority 5-7: User-level configs
     if skill:
         paths.append((
             f"User skill-specific ({skill})",
-            home / '.claude' / 'skills' / skill / '.env'
+            home / '.pi' / 'agent' / 'skills' / skill / '.env'
         ))
 
     paths.append((
         "User skills shared",
-        home / '.claude' / 'skills' / '.env'
+        home / '.pi' / 'agent' / 'skills' / '.env'
     ))
 
     paths.append((
         "User global",
-        home / '.claude' / '.env'
+        home / '.pi' / '.env'
     ))
 
     return paths

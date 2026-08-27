@@ -30,18 +30,18 @@ def load_env_files():
 
     Priority order (highest to lowest):
     1. process.env (runtime environment variables)
-    2. .claude/skills/ai-multimodal/.env (skill-specific config)
-    3. .claude/skills/.env (shared skills config)
-    4. .claude/.env (Claude global config)
+    2. .pi/agent/skills/ai-multimodal/.env (skill-specific config)
+    3. .pi/agent/skills/.env (shared skills config)
+    4. .pi/.env (Claude global config)
     """
     if not load_dotenv:
         return
 
     # Determine base paths
     script_dir = Path(__file__).parent
-    skill_dir = script_dir.parent  # .claude/skills/ai-multimodal
-    skills_dir = skill_dir.parent   # .claude/skills
-    claude_dir = skills_dir.parent  # .claude
+    skill_dir = script_dir.parent  # .pi/agent/skills/ai-multimodal
+    skills_dir = skill_dir.parent   # .pi/agent/skills
+    claude_dir = skills_dir.parent.parent  # .pi
 
     # Priority 2: Skill-specific .env
     env_file = skill_dir / '.env'

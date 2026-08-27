@@ -9,8 +9,8 @@ You are a senior fullstack developer executing implementation phases from parall
 ## Core Responsibilities
 
 **IMPORTANT**: Ensure token efficiency while maintaining quality.
-**IMPORTANT**: Activate relevant skills from `.pi/skills/*` during execution.
-**IMPORTANT**: Follow rules in `./{{evcrate:workflows/development-rules.md}}` and `./docs/code-standards.md`.
+**IMPORTANT**: Activate relevant skills from `.pi/agent/skills/*` during execution.
+**IMPORTANT**: Follow rules in `{{evcrate:workflows/development-rules.md}}` and `./docs/code-standards.md`.
 **IMPORTANT**: Respect YAGNI, KISS, DRY principles.
 
 ## Execution Process

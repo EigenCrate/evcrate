@@ -24,7 +24,7 @@ import csv
 import shutil
 
 # Import centralized environment resolver
-sys.path.insert(0, str(Path.home() / '.claude' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.pi' / 'agent' / 'evcrate' / 'scripts'))
 try:
     from resolve_env import resolve_env
     CENTRALIZED_RESOLVER_AVAILABLE = True
@@ -74,17 +74,17 @@ IMAGEN_MODELS = {
 def find_api_key() -> Optional[str]:
     """Find Gemini API key using centralized resolver or fallback.
 
-    Uses ~/.claude/scripts/resolve_env.py for consistent resolution across all skills.
+    Uses ~/.pi/agent/evcrate/scripts/resolve_env.py for consistent resolution across all skills.
     Falls back to local resolution if centralized resolver not available.
 
     Priority order (highest to lowest):
     1. process.env (runtime environment variables)
-    2. PROJECT/.claude/skills/ai-multimodal/.env (skill-specific)
-    3. PROJECT/.claude/skills/.env (shared skills)
-    4. PROJECT/.claude/.env (project global)
-    5. ~/.claude/skills/ai-multimodal/.env (user skill-specific)
-    6. ~/.claude/skills/.env (user shared)
-    7. ~/.claude/.env (user global)
+    2. PROJECT/.pi/agent/skills/ai-multimodal/.env (skill-specific)
+    3. PROJECT/.pi/agent/skills/.env (shared skills)
+    4. PROJECT/.pi/.env (project global)
+    5. ~/.pi/agent/skills/ai-multimodal/.env (user skill-specific)
+    6. ~/.pi/agent/skills/.env (user shared)
+    7. ~/.pi/.env (user global)
     """
     if CENTRALIZED_RESOLVER_AVAILABLE:
         # Use centralized resolver (recommended)
@@ -99,7 +99,7 @@ def find_api_key() -> Optional[str]:
         script_dir = Path(__file__).parent
         skill_dir = script_dir.parent
         skills_dir = skill_dir.parent
-        claude_dir = skills_dir.parent
+        claude_dir = skills_dir.parent.parent
 
         env_files = [
             claude_dir / '.env',
@@ -380,7 +380,7 @@ def generate_image_imagen4(
             script_dir = Path(__file__).parent
             project_root = script_dir
             for parent in [script_dir] + list(script_dir.parents):
-                if (parent / '.git').exists() or (parent / '.claude').exists():
+                if (parent / '.git').exists() or (parent / '.pi').exists():
                     project_root = parent
                     break
 
@@ -516,7 +516,7 @@ def generate_video_veo(
         script_dir = Path(__file__).parent
         project_root = script_dir
         for parent in [script_dir] + list(script_dir.parents):
-            if (parent / '.git').exists() or (parent / '.claude').exists():
+            if (parent / '.git').exists() or (parent / '.pi').exists():
                 project_root = parent
                 break
 
@@ -642,11 +642,11 @@ def process_file(
                             output_dir = Path(file_path).parent
                             base_name = Path(file_path).stem
                         else:
-                            # Find project root (look for .git or .claude directory)
+                            # Find project root (look for .git or .pi directory)
                             script_dir = Path(__file__).parent
                             project_root = script_dir
                             for parent in [script_dir] + list(script_dir.parents):
-                                if (parent / '.git').exists() or (parent / '.claude').exists():
+                                if (parent / '.git').exists() or (parent / '.pi').exists():
                                     project_root = parent
                                     break
 
@@ -735,9 +735,9 @@ def batch_process(
         print("Error: GEMINI_API_KEY not found")
         print("\nSetup options:")
         print("1. Run setup checker: python scripts/check_setup.py")
-        print("2. Show hierarchy: python ~/.claude/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
+        print("2. Show hierarchy: python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
         print("3. Quick setup: export GEMINI_API_KEY='your-key'")
-        print("4. Create .env: cd ~/.claude/skills/ai-multimodal && cp .env.example .env")
+        print("4. Create .env: cd ~/.pi/agent/skills/ai-multimodal && cp .env.example .env")
         print("\nFor key rotation, add multiple keys:")
         print("   GEMINI_API_KEY=key1")
         print("   GEMINI_API_KEY_2=key2")
@@ -748,7 +748,7 @@ def batch_process(
         print("DRY RUN MODE - No API calls will be made")
         print(f"Files to process: {len(files)}")
         print(f"Model: {model}")
-        print(f"Task: {task}")
+        print(f"evcrate_subagent: {task}")
         print(f"Prompt: {prompt}")
         if rotator:
             print(f"API keys available: {rotator.key_count}")
@@ -1077,7 +1077,7 @@ Examples:
     parser.add_argument('--files', nargs='*', help='Input files to process')
     parser.add_argument('--task',
                        choices=['transcribe', 'analyze', 'extract', 'generate', 'generate-video'],
-                       help='Task to perform (auto-detected from file type if not specified)')
+                       help='evcrate_subagent to perform (auto-detected from file type if not specified)')
     parser.add_argument('--prompt', help='Prompt for analysis/generation')
     parser.add_argument('--model',
                        help='Model to use (default: auto-detected from task and env vars)')

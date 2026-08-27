@@ -10,7 +10,7 @@ Process video, audio, and images using FFmpeg, ImageMagick, and RMBG CLI tools.
 
 ## Tool Selection
 
-| Task | Tool | Reason |
+| evcrate_subagent | Tool | Reason |
 |------|------|--------|
 | Video encoding/conversion | FFmpeg | Native codec support, streaming |
 | Audio extraction/conversion | FFmpeg | Direct stream manipulation |

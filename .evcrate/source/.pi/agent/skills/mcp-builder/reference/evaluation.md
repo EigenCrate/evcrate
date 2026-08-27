@@ -211,7 +211,7 @@ After understanding the API and tools, USE the MCP server tools:
 - In all tool call requests, use the `limit` parameter to limit results (<10)
 - Use pagination
 
-### Step 5: Task Generation
+### Step 5: evcrate_subagent Generation
 
 After inspecting the content, create 10 human-readable questions:
 - An LLM should be able to answer these with the MCP server
@@ -508,7 +508,7 @@ The evaluation script generates a detailed report including:
   - Average tool calls per task
   - Total tool calls
 
-- **Per-Task Results**:
+- **Per-evcrate_subagent Results**:
   - Prompt and expected response
   - Actual response from the agent
   - Whether the answer was correct (✅/❌)

@@ -275,7 +275,7 @@ with open("encrypted.pdf", "wb") as output:
 
 ## Quick Reference
 
-| Task | Best Tool | Command/Code |
+| evcrate_subagent | Best Tool | Command/Code |
 |------|-----------|--------------|
 | Merge PDFs | pypdf | `writer.add_page(page)` |
 | Split PDFs | pypdf | One page per file |

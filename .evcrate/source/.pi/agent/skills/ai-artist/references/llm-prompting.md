@@ -77,7 +77,7 @@ Solve easiest first, build up.
 - **Constraint persona**: "You only respond with..."
 - **Teaching persona**: "Explain as if to a..."
 
-### Task Decomposition
+### evcrate_subagent Decomposition
 ```
 <subtasks>
 1. [First step - output X]

@@ -267,7 +267,7 @@ gcloud init
 
 ## Quick Reference
 
-| Task | Command |
+| evcrate_subagent | Command |
 |------|---------|
 | Initialize | `gcloud init` |
 | Login | `gcloud auth login` |

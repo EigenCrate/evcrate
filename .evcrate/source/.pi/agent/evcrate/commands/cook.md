@@ -66,7 +66,7 @@ otherwise pass no `--advice` token.
 * Ask 1 question at a time, wait for the user to answer before moving to the next question.
 * If the task is tiny and low risk, state assumptions explicitly and continue.
 
-**IMPORTANT:** Analyze the list of skills  at `.pi/skills/*` and intelligently activate the skills that are needed for the task during the process.
+**IMPORTANT:** Analyze the list of skills  at `.pi/agent/skills/*` and intelligently activate the skills that are needed for the task during the process.
 
 ### 2. Scout First
 

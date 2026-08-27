@@ -42,7 +42,7 @@ Progress summary
 |----------|---------|----------|
 | Fixed threshold | 70-80% utilization | General purpose |
 | Sliding window | Keep last N turns + summary | Conversations |
-| Task-boundary | At logical completion | Multi-step workflows |
+| evcrate_subagent-boundary | At logical completion | Multi-step workflows |
 
 ## Artifact Trail Problem
 
@@ -58,7 +58,7 @@ Weakest dimension (2.2-2.5/5.0). Coding agents need explicit tracking of:
 |------------|-------|---------|
 | Recall | Factual retention | "What was the error?" |
 | Artifact | File tracking | "Which files modified?" |
-| Continuation | Task planning | "What next?" |
+| Continuation | evcrate_subagent planning | "What next?" |
 | Decision | Reasoning chains | "Why chose X?" |
 
 ## Six Evaluation Dimensions

@@ -40,7 +40,7 @@ Use these predefined tags for consistency:
 - **Domain**: `frontend`, `backend`, `database`, `api`, `auth`
 - **Scope**: `critical`, `tech-debt`, `experimental`
 
-## Task Breakdown
+## evcrate_subagent Breakdown
 
 - Transform complex requirements into manageable, actionable tasks
 - Each task independently executable with clear dependencies

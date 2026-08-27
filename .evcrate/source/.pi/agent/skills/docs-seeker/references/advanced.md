@@ -19,7 +19,7 @@
 
 **Specific version:**
 ```
-WebSearch: "[library] v[version] llms.txt"
+web research: "[library] v[version] llms.txt"
 Check paths:
 - /v2/llms.txt
 - /docs/v2/llms.txt

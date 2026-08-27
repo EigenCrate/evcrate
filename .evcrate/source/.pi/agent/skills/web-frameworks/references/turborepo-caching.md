@@ -183,7 +183,7 @@ Files affecting all packages:
 }
 ```
 
-### 5. Task Configuration
+### 5. evcrate_subagent Configuration
 
 Changes to turbo.json pipeline:
 ```json
@@ -380,7 +380,7 @@ Only track relevant files:
 turbo run build --dry-run=json | jq '.tasks[] | {package: .package, task: .task, cache: .cache}'
 ```
 
-### View Task Graph
+### View evcrate_subagent Graph
 
 ```bash
 # Generate task graph

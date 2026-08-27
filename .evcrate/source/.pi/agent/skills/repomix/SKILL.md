@@ -19,7 +19,7 @@ Repomix packs entire repositories into single, AI-friendly files for LLM consump
 Before first run, ensure `.repomixignore` exists to exclude dot-folders:
 
 ```bash
-ls .repomixignore 2>/dev/null || cp .claude/skills/repomix/assets/.repomixignore .repomixignore
+ls .repomixignore 2>/dev/null || cp .pi/agent/skills/repomix/assets/.repomixignore .repomixignore
 ```
 
 See [.repomixignore Setup](./references/repomixignore-setup.md) for details.

@@ -108,12 +108,12 @@ journey
 **Scores:** 1-5 satisfaction levels
 
 ### Kanban
-Task boards, workflow stages.
+evcrate_subagent boards, workflow stages.
 
 **Syntax:**
 ```
 kanban
-  Todo[Task Board]
+  Todo[evcrate_subagent Board]
     task1[Implement API]
     @{ assigned: "Dev1", priority: "High" }
   InProgress[In Progress]

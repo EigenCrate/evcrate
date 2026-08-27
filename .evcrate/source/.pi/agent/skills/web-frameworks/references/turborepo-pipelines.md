@@ -1,6 +1,6 @@
-# Turborepo Task Pipelines
+# Turborepo evcrate_subagent Pipelines
 
-Task orchestration, dependencies, and parallel execution strategies.
+evcrate_subagent orchestration, dependencies, and parallel execution strategies.
 
 ## Pipeline Configuration
 
@@ -27,7 +27,7 @@ Define tasks in `turbo.json`:
 }
 ```
 
-## Task Dependencies
+## evcrate_subagent Dependencies
 
 ### Topological Dependencies (^)
 
@@ -89,7 +89,7 @@ Execution order:
 2. Lint current package (`lint`)
 3. Run tests (`test`)
 
-## Task Configuration Options
+## evcrate_subagent Configuration Options
 
 ### outputs
 
@@ -304,7 +304,7 @@ turbo run build --concurrency=1
 turbo run test --continue
 ```
 
-## Task Execution Order
+## evcrate_subagent Execution Order
 
 Example monorepo:
 ```

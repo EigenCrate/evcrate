@@ -17,30 +17,30 @@ Centralized environment variable resolver that follows Claude Code's hierarchy.
 ### Priority Order (Highest to Lowest)
 
 1. **process.env** - Runtime environment variables (HIGHEST)
-2. **PROJECT/.claude/skills/\<skill\>/.env** - Project skill-specific
-3. **PROJECT/.claude/skills/.env** - Project shared across skills
-4. **PROJECT/.claude/.env** - Project global defaults
-5. **~/.claude/skills/\<skill\>/.env** - User skill-specific
-6. **~/.claude/skills/.env** - User shared across skills
-7. **~/.claude/.env** - User global defaults (LOWEST)
+2. **PROJECT/.pi/agent/skills/\<skill\>/.env** - Project skill-specific
+3. **PROJECT/.pi/agent/skills/.env** - Project shared across skills
+4. **PROJECT/.pi/.env** - Project global defaults
+5. **~/.pi/agent/skills/\<skill\>/.env** - User skill-specific
+6. **~/.pi/agent/skills/.env** - User shared across skills
+7. **~/.pi/.env** - User global defaults (LOWEST)
 
 ### CLI Usage
 
 ```bash
 # Resolve a variable for a specific skill
-python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal
+python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal
 
 # With verbose output
-python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose
+python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose
 
 # Find all locations where variable is defined
-python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --find-all
+python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --find-all
 
 # Show hierarchy for a skill
-python ~/.claude/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal
+python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal
 
 # Export format for shell sourcing
-eval $(python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --export)
+eval $(python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --export)
 ```
 
 ### Python API Usage
@@ -49,7 +49,7 @@ eval $(python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --export)
 # Add to sys.path if needed
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / '.claude' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.pi' / 'agent' / 'evcrate' / 'scripts'))
 
 from resolve_env import resolve_env, find_all, show_hierarchy
 
@@ -81,7 +81,7 @@ import sys
 from pathlib import Path
 
 # Import centralized resolver
-sys.path.insert(0, str(Path.home() / '.claude' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.pi' / 'agent' / 'evcrate' / 'scripts'))
 from resolve_env import resolve_env
 
 # Resolve API key
@@ -89,7 +89,7 @@ api_key = resolve_env('GEMINI_API_KEY', skill='ai-multimodal')
 
 if not api_key:
     print("Error: GEMINI_API_KEY not found")
-    print("Run: python ~/.claude/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
+    print("Run: python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
     sys.exit(1)
 
 # Use api_key...
@@ -107,14 +107,14 @@ if not api_key:
 
 ```bash
 # Test without any config files
-python ~/.claude/scripts/resolve_env.py TEST_VAR --verbose
+python ~/.pi/agent/evcrate/scripts/resolve_env.py TEST_VAR --verbose
 
 # Test with environment variable
 export TEST_VAR=from-runtime
-python ~/.claude/scripts/resolve_env.py TEST_VAR --verbose
+python ~/.pi/agent/evcrate/scripts/resolve_env.py TEST_VAR --verbose
 
 # Test with skill context
-python ~/.claude/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --find-all
+python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --find-all
 ```
 
 ## generate_catalogs.py
@@ -125,19 +125,19 @@ Generate YAML catalogs from command and skill data files. Outputs to stdout by d
 
 ```bash
 # Generate skills catalog (outputs to stdout)
-python .claude/scripts/generate_catalogs.py --skills
+python .pi/agent/evcrate/scripts/generate_catalogs.py --skills
 
 # Generate commands catalog (outputs to stdout)
-python .claude/scripts/generate_catalogs.py --commands
+python .pi/agent/evcrate/scripts/generate_catalogs.py --commands
 
 # Generate both catalogs (outputs to stdout)
-python .claude/scripts/generate_catalogs.py
+python .pi/agent/evcrate/scripts/generate_catalogs.py
 
 # Write to file instead of stdout
-python .claude/scripts/generate_catalogs.py --skills --output guide/SKILLS.yaml
+python .pi/agent/evcrate/scripts/generate_catalogs.py --skills --output guide/SKILLS.yaml
 
 # View help
-python .claude/scripts/generate_catalogs.py --help
+python .pi/agent/evcrate/scripts/generate_catalogs.py --help
 ```
 
 ### Input Files
