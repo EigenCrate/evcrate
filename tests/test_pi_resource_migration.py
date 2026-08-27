@@ -10,8 +10,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import migrate_claude_to_pi
+from distribution.contracts import ADVISOR_BRIDGE_FALLBACK_BLOCK
 from pi_adapter.frontmatter import FrontmatterError, validate_skill_frontmatter
-from pi_adapter.resources import ResourceError, hook_map, translate_prompt
+from pi_adapter.resources import ResourceError, _copy_file, hook_map, translate_prompt
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -61,7 +62,7 @@ class PiResourceMigrationTest(unittest.TestCase):
             inventory = json.loads((agent_root / "evcrate/inventory.json").read_text())
             ignored_runtime_dir = "_" + "_" + "pycache" + "_" + "_"
             self.assertEqual(inventory["advisorRuntime"]["active_host"], "pi")
-            self.assertEqual(len(inventory["advisorRuntime"]["files"]), 16)
+            self.assertEqual(len(inventory["advisorRuntime"]["files"]), 19)
             self.assertFalse(any(
                 ignored_runtime_dir in item
                 or item.endswith((".pyc", ".pyo", ".test.cjs", ".test.js", ".test.mjs"))
@@ -100,9 +101,29 @@ class PiResourceMigrationTest(unittest.TestCase):
             content = "\n".join(path.read_text(encoding="utf-8") for path in prompts)
             self.assertNotIn("AskUserQuestion", content)
             self.assertNotIn(".claude/workflows/", content)
-            self.assertNotIn(".claude/scripts/", content)
+            self.assertNotRegex(content, r"(?<!~/)\.claude/scripts/")
             self.assertNotIn(".evcrate/source", content)
             self.assertNotRegex(content, r"/home/[^\s]+")
+
+    def test_generated_resources_do_not_retain_project_claude_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            stage = Path(temp) / "stage"
+            output = stage / ".pi"
+            output.mkdir(parents=True)
+            self._migrate_canonical(output, stage)
+            for generated in output.rglob("*"):
+                if not generated.is_file() or "agent/evcrate/scripts" in generated.relative_to(output).as_posix():
+                    continue
+                try:
+                    content = generated.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    continue
+                content = content.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, "")
+                self.assertNotRegex(
+                    content,
+                    r"(?<![A-Za-z0-9_])\.claude(?=[/\\])",
+                    generated.as_posix(),
+                )
 
     def test_translate_prompt_marks_only_known_model_directed_commands(self) -> None:
         commands = ("plan/fast", "plan/hard", "plan/validate", "code", "git/cm", "scout/ext")
@@ -131,7 +152,18 @@ class PiResourceMigrationTest(unittest.TestCase):
             ("$HOME/.claude/skills/debugging/SKILL.md", "$HOME/.pi/agent/skills/debugging/SKILL.md"),
             ("${HOME}/.claude/skills/debugging/SKILL.md", "${HOME}/.pi/agent/skills/debugging/SKILL.md"),
             ("~/.claude/skills/debugging/SKILL.md", "~/.pi/agent/skills/debugging/SKILL.md"),
-            (".claude/skills/debugging/SKILL.md", ".pi/skills/debugging/SKILL.md"),
+            ("~/.claude/scripts/resolve_env.py", "~/.pi/agent/evcrate/scripts/resolve_env.py"),
+            ("~/.claude\\scripts\\resolve_env.py", "~/.pi\\agent\\evcrate\\scripts\\resolve_env.py"),
+            ("~\\.claude\\scripts\\resolve_env.py", "~\\.pi\\agent\\evcrate\\scripts\\resolve_env.py"),
+            ("os.homedir() / \".claude\" / \"scripts\" / \"resolve_env.py\"", "os.homedir() / \".pi\" / \"agent\" / \"evcrate\" / \"scripts\" / \"resolve_env.py\""),
+            ("~/.claude/.mcp.json", "~/.pi/.mcp.json"),
+            ("~/.claude/scripts/advisor-bridge.cjs", "~/.claude/scripts/advisor-bridge.cjs"),
+            (".claude/skills/debugging/SKILL.md", ".pi/agent/skills/debugging/SKILL.md"),
+            (".claude/.mcp.json", ".pi/.mcp.json"),
+            ("./.claude/commands/scout.md", "./.pi/agent/evcrate/commands/scout.md"),
+            ("mklink .gemini\\settings.json .claude\\.mcp.json", "mklink .gemini\\settings.json .pi\\.mcp.json"),
+            (".claude/chrome-devtools/snapshots/page.yaml", ".pi/chrome-devtools/snapshots/page.yaml"),
+            ("https://example.com/.claude/path", "https://example.com/.claude/path"),
         )
         for source, expected in cases:
             with self.subTest(source=source):
@@ -209,6 +241,28 @@ class PiResourceMigrationTest(unittest.TestCase):
             finally:
                 os.umask(original_umask)
             self.assertEqual(results[0], results[1])
+
+    def test_untransformed_copy_preserves_source_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source.bin"
+            output = root / "output"
+            output.mkdir()
+            payload = b"first\r\nsecond\rthird\x00"
+            source.write_bytes(payload)
+            _copy_file(source, output / "nested/source.bin", output)
+            self.assertEqual((output / "nested/source.bin").read_bytes(), payload)
+
+    def test_transformed_shell_copy_normalizes_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source.sh"
+            output = root / "output"
+            output.mkdir()
+            source.write_bytes(b"#!/usr/bin/env bash\r\nif true; then\r\n  :\r\nfi\r\n")
+            _copy_file(source, output / "source.sh", output, lambda value: value)
+            generated = (output / "source.sh").read_bytes()
+            self.assertNotIn(b"\r", generated)
 
     def test_frontmatter_and_translation_reject_or_transform_expected_tokens(self) -> None:
         with self.assertRaises(FrontmatterError):

@@ -11,8 +11,10 @@ from pathlib import Path, PurePosixPath
 from typing import Callable, Collection
 
 from distribution.contracts import (
+    ADVISOR_BRIDGE_FALLBACK_BLOCK,
     ADVISOR_RUNTIME_FILES,
     is_production_runtime_artifact,
+    render_harness_script_references,
     render_advisory_interview_workflow,
     render_advisor_runtime_metadata,
     render_inline_advise_command,
@@ -38,9 +40,32 @@ class ResourceInventory:
 
 LEGACY_SKILL = Path("claude-code/skill.md")
 _PATH_TRANSLATIONS = (
-    (re.compile(r"\.claude/workflows/([^\s)`\]\"']+)"), r"{{evcrate:workflows/\1}}"),
-    (re.compile(r"\.claude/scripts/([^\s)`\]\"']+)"), r"{{evcrate:scripts/\1}}"),
-    (re.compile(r"\.claude/hooks/([^\s)`\]\"']+)"), r"{{evcrate:hooks/\1}}"),
+    (re.compile(r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/workflows/([^\s)`\]\"']+)"), r"{{evcrate:workflows/\1}}"),
+    (re.compile(r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/scripts/([^\s)`\]\"']+)"), r"{{evcrate:scripts/\1}}"),
+    (re.compile(r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/hooks/([^\s)`\]\"']+)"), r"{{evcrate:hooks/\1}}"),
+)
+_GLOBAL_ADVISOR_BRIDGE_PATHS = (
+    "~/.claude/scripts/advisor-bridge.cjs",
+    "~/.codex/scripts/advisor-bridge.cjs",
+    "~/.gemini/scripts/advisor-bridge.cjs",
+    "~/.gemini/config/scripts/advisor-bridge.cjs",
+    "~/.pi/agent/evcrate/scripts/advisor-bridge.cjs",
+)
+# These are project-local paths that can appear in portable command, agent,
+# and skill prose. Pi's generated resources live below its own agent tree, so
+# retaining a literal ``.claude`` path would send the user back to the
+# canonical source tree instead of the installed target.
+_PI_LOCAL_PATH_TRANSLATIONS = (
+    (".claude/commands", ".pi/agent/evcrate/commands"),
+    (".claude/agents", ".pi/agent/agents"),
+    (".claude/skills", ".pi/agent/skills"),
+    (".claude/workflows", ".pi/agent/evcrate/workflows"),
+    (".claude/scripts", ".pi/agent/evcrate/scripts"),
+    (".claude/hooks", ".pi/agent/evcrate/hooks"),
+    (".claude/output-styles", ".pi/agent/evcrate/output-styles"),
+    (".claude/.evcrate.json", ".pi/.evcrate.json"),
+    (".claude/.mcp.json", ".pi/.mcp.json"),
+    (".claude/.env", ".pi/.env"),
 )
 _TOOL_TRANSLATIONS = (
     (re.compile(r"\bAskUserQuestion\b"), "ask_user_question"),
@@ -62,6 +87,7 @@ _NON_DIRECTIVE_COMMAND_PROSE = re.compile(
     r"\b(?:command\s*[- ]?path|discover(?:y|ing)?|available|examples?)\b", re.IGNORECASE
 )
 _FENCE = re.compile(r"^\s*(?:`{3,}|~{3,})")
+_URL = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 
 
 def _command_names(commands: Collection[str]) -> frozenset[str]:
@@ -186,19 +212,141 @@ def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
     """Translate only named compatibility tokens, never broad product prose."""
 
     translated = normalize_lf(value)
+    fallback_token = "__PI_GLOBAL_ADVISOR_FALLBACK__"
+    translated = translated.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
+    protected_urls: list[tuple[str, str]] = []
+
+    def protect_url(match: re.Match[str]) -> str:
+        token = f"__PI_URL_{len(protected_urls)}__"
+        protected_urls.append((token, match[0]))
+        return token
+
+    translated = _URL.sub(protect_url, translated)
+    protected_paths = []
+    for index, path in enumerate(_GLOBAL_ADVISOR_BRIDGE_PATHS):
+        token = f"__PI_GLOBAL_ADVISOR_BRIDGE_{index}__"
+        translated = translated.replace(path, token)
+        protected_paths.append((token, path))
     for pattern, replacement in _PATH_TRANSLATIONS:
         translated = pattern.sub(replacement, translated)
-    # Project skill references live under .pi/skills; global references live
-    # under Pi's agent root. Handle global prefixes before the project form.
+    # Ordinary global helper resources are installed below Pi's agent root.
+    # Keep the advisor bridge paths protected above: the fallback table is a
+    # deliberate cross-harness list, while these mappings cover executable
+    # helpers such as resolve_env.py.
+    for prefix in ("$HOME", "${HOME}", "~"):
+        for separator in ("/", "\\"):
+            for suffix in ("scripts", "hooks", "workflows", "output-styles", ".env", ".mcp.json"):
+                target_suffix = (
+                    f".pi/{suffix}"
+                    if suffix in {".env", ".mcp.json"}
+                    else f".pi/agent/evcrate/{suffix}"
+                )
+                translated = translated.replace(
+                    f"{prefix}{separator}.claude{separator}{suffix}",
+                    f"{prefix}{separator}{target_suffix.replace('/', separator)}",
+                )
+
+    def translate_global_components(match: re.Match[str]) -> str:
+        base = match.group("base")
+        quote = match.group("quote")
+        suffix = match.group("suffix")
+        if suffix == "skills":
+            parts = (".pi", "agent", "skills")
+        elif suffix in {"scripts", "hooks", "workflows", "output-styles"}:
+            parts = (".pi", "agent", "evcrate", suffix)
+        else:
+            parts = (".pi", suffix)
+        return base + "".join(f" / {quote}{part}{quote}" for part in parts)
+
+    translated = re.sub(
+        r"(?P<base>home|Path\.home\(\)|os\.homedir\(\))"
+        r"\s*/\s*(?P<quote>['\"])\.claude(?P=quote)"
+        r"\s*/\s*(?P=quote)(?P<suffix>skills|scripts|hooks|workflows|output-styles|\.env|\.evcrate\.json|\.mcp\.json)(?P=quote)",
+        translate_global_components,
+        translated,
+    )
+    # Both project and global skill references live below Pi's agent root.
+    # Handle global prefixes before the project form.
     for prefix in ("$HOME", "${HOME}", "~"):
         translated = translated.replace(
             f"{prefix}/.claude/skills", f"{prefix}/.pi/agent/skills"
         )
-    translated = translated.replace(".claude/skills", ".pi/skills")
+    translated = translated.replace(".claude/skills", ".pi/agent/skills")
     translated = translated.replace(".claude/.evcrate.json", ".pi/.evcrate.json")
+    translated = translated.replace(".claude/.mcp.json", ".pi/.mcp.json")
+    translated = translated.replace(".claude/.env", ".pi/.env")
+    # Rewrite direct project paths that are not one of the command markers
+    # above (for example ``./.claude/commands/scout.md`` in agent guidance).
+    # Preserve Windows separators for Windows-authored snippets, then replace
+    # any remaining harness-root token.  The advisor fallback block and every
+    # known global bridge path are protected above and restored below.
+    for source, replacement in _PI_LOCAL_PATH_TRANSLATIONS:
+        translated = translated.replace(source, replacement)
+        translated = translated.replace(
+            source.replace("/", "\\"), replacement.replace("/", "\\")
+        )
+    translated = re.sub(
+        r"(?<![A-Za-z0-9_])\.claude(?=(?:[/\\]|['\"`\)\]\}]|\s|$))",
+        ".pi",
+        translated,
+    )
     translated = _translate_nested_commands(translated, commands)
     for pattern, replacement in _TOOL_TRANSLATIONS:
         translated = pattern.sub(replacement, translated)
+    for token, path in protected_paths:
+        translated = translated.replace(token, path)
+    for token, url in protected_urls:
+        translated = translated.replace(token, url)
+    translated = translated.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
+    return translated
+
+
+def _translate_pi_skill(value: str) -> str:
+    """Translate skill text and preserve Pi's project-level environment root."""
+
+    component_pattern = re.compile(
+        r"(?P<base>[A-Za-z_][A-Za-z0-9_.]*)\s*/\s*"
+        r"(?P<quote>['\"])\.claude(?P=quote)\s*/\s*"
+        r"(?P=quote)(?P<suffix>skills|scripts|hooks|workflows|output-styles|\.env|\.evcrate\.json|\.mcp\.json)(?P=quote)"
+    )
+
+    def render_components(match: re.Match[str]) -> str:
+        suffix = match["suffix"]
+        if suffix == "skills":
+            components = (".pi", "agent", "skills")
+        elif suffix in {"scripts", "hooks", "workflows", "output-styles"}:
+            components = (".pi", "agent", "evcrate", suffix)
+        else:
+            components = (".pi", suffix)
+        quote = match["quote"]
+        return match["base"] + "".join(f" / {quote}{part}{quote}" for part in components)
+
+    translated = component_pattern.sub(render_components, value)
+    translated = translate_prompt(translated)
+    # These two skills derive the harness root from their emitted package
+    # depth. Pi puts packages below ``.pi/agent/skills`` while project-level
+    # configuration remains in ``.pi``.
+    translated = translated.replace(
+        "path.resolve(skillsDir, '..')",
+        "path.resolve(skillsDir, '../..')",
+    ).replace(
+        'path.resolve(skillsDir, "..")',
+        'path.resolve(skillsDir, "../..")',
+    )
+    translated = translated.replace(
+        'script_dir.parent.parent.parent / ".env"',
+        'script_dir.parent.parent.parent.parent / ".env"',
+    ).replace(
+        "script_dir.parent.parent.parent / '.env'",
+        "script_dir.parent.parent.parent.parent / '.env'",
+    )
+    # The canonical skill scripts derive the global config directory as the
+    # parent of ``.claude/skills``. Pi inserts an additional ``agent`` level,
+    # so the equivalent ``.pi`` directory is one parent farther away.
+    translated = translated.replace(
+        "claude_dir = skills_dir.parent",
+        "claude_dir = skills_dir.parent.parent",
+    )
     return translated
 
 
@@ -222,14 +370,20 @@ def _ensure_parent(output: Path, destination: Path) -> None:
 def _copy_file(source: Path, destination: Path, output: Path, transform: Callable[[str], str] | None = None) -> None:
     _ensure_parent(output, destination)
     if transform is None:
-        contents = source.read_bytes()
-        try:
-            contents = normalize_lf(contents.decode("utf-8")).encode("utf-8")
-        except UnicodeDecodeError:
-            pass
-        destination.write_bytes(contents)
+        destination.write_bytes(source.read_bytes())
     else:
-        destination.write_text(transform(source.read_text(encoding="utf-8")), encoding="utf-8", newline="\n")
+        raw = source.read_bytes()
+        if b"\0" in raw[:1024]:
+            # A transformed tree can still contain binary skill assets (for
+            # example fonts and images). Preserve those bytes exactly.
+            destination.write_bytes(raw)
+        else:
+            try:
+                value = normalize_lf(raw.decode("utf-8"))
+            except UnicodeDecodeError:
+                destination.write_bytes(raw)
+            else:
+                destination.write_text(transform(value), encoding="utf-8", newline="\n")
     destination.chmod(stat.S_IMODE(source.stat().st_mode))
 
 
@@ -303,7 +457,12 @@ def copy_skills(source: Path, output: Path) -> None:
     for item in _walk_files(source_root):
         relative = _relative(source_root, item)
         if _in_skill_package(relative, packages):
-            _copy_file(item, destination / relative, output)
+            _copy_file(
+                item,
+                destination / relative,
+                output,
+                lambda value: _translate_pi_skill(value),
+            )
 
 
 def copy_hooks_and_scripts(source: Path, output: Path) -> None:
@@ -314,12 +473,27 @@ def copy_hooks_and_scripts(source: Path, output: Path) -> None:
         relative = _relative(source / "hooks", item)
         if any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts):
             continue
-        _copy_file(item, root / "hooks" / relative, output)
+        _copy_file(
+            item,
+            root / "hooks" / relative,
+            output,
+            lambda value: render_harness_script_references(value, "pi"),
+        )
     scripts = source / "scripts"
     for item in _walk_files(scripts):
         relative = _relative(scripts, item)
-        if "advise-state" not in item.name and not is_production_runtime_artifact(relative):
+        if relative.as_posix() in ADVISOR_RUNTIME_FILES:
+            # The resolver/coordinator/dispatcher closure is a cross-harness
+            # protocol; preserve it byte-for-byte and translate only ordinary
+            # Pi helper scripts around it.
             _copy_file(item, root / "scripts" / relative, output)
+        elif "advise-state" not in item.name and not is_production_runtime_artifact(relative):
+            _copy_file(
+                item,
+                root / "scripts" / relative,
+                output,
+                lambda value: render_harness_script_references(value, "pi"),
+            )
     _copy_file(source / ".evcrateignore", root / ".evcrateignore", output)
     write_json(root / "hook-map.json", output, hook_map(source))
 
