@@ -31,9 +31,35 @@ const DEFAULT_LIMITS = Object.freeze({
   timeoutMs: 30_000,
   killGraceMs: 250
 });
+const LIFECYCLE_STATUS_BY_CODE = Object.freeze({
+  CANCELLED: 'cancelled',
+  EXECUTABLE_UNAVAILABLE: 'spawn-failed',
+  LINE_LIMIT: 'line-limit',
+  OUTPUT_INVALID: 'output-invalid',
+  OUTPUT_LIMIT: 'output-limit',
+  PROCESS_FAILED: 'process-failed',
+  TIMEOUT: 'timeout'
+});
+const CODEX_DISALLOWED_ITEM_TYPES = new Set([
+  'command_execution', 'file_change', 'mcp_tool_call', 'web_search', 'todo_list'
+]);
 
 function fail(code) {
   throw createRoutingError(code);
+}
+
+function monotonicMilliseconds() {
+  return Number(process.hrtime.bigint()) / 1_000_000;
+}
+
+function lifecycleStatus(code, completed = false) {
+  if (completed) return 'completed';
+  return LIFECYCLE_STATUS_BY_CODE[code] || 'failed';
+}
+
+function lifecycleInteger(value) {
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.round(value));
 }
 
 function deepFreeze(value, seen = new Set()) {
@@ -210,6 +236,25 @@ function isRunnerFailure(value) {
   return Boolean(value && typeof value === 'object' && value[RUNNER_FAILURE_BRAND] === true);
 }
 
+function createCodexToolGuard() {
+  let pending = '';
+  return (chunk) => {
+    pending += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
+    for (;;) {
+      const newline = pending.indexOf('\n');
+      if (newline < 0) return null;
+      const line = pending.slice(0, newline).replace(/\r$/u, '');
+      pending = pending.slice(newline + 1);
+      if (!line) continue;
+      let event;
+      try { event = JSON.parse(line); } catch { continue; }
+      if (CODEX_DISALLOWED_ITEM_TYPES.has(event?.item?.type)) {
+        return 'READ_ONLY_UNSUPPORTED';
+      }
+    }
+  };
+}
+
 class BoundedOutput {
   constructor(byteLimit, lineLimit) {
     this.byteLimit = byteLimit;
@@ -271,6 +316,25 @@ function runInvocation(invocation, options = {}) {
   if (!invocation || invocation[INVOCATION_BRAND] !== true) {
     return Promise.reject(createRoutingError('INVOCATION_INVALID'));
   }
+  const onLifecycle = typeof options.onLifecycle === 'function' ? options.onLifecycle : null;
+  const now = typeof options.now === 'function' ? options.now : monotonicMilliseconds;
+  let startedAt;
+  let childPid = null;
+  let lifecycleReported = false;
+  const reportLifecycle = (status, terminationWaitMs = 0) => {
+    if (!onLifecycle || lifecycleReported || startedAt === undefined) return;
+    lifecycleReported = true;
+    const elapsedAt = (() => {
+      try { return now(); } catch { return startedAt; }
+    })();
+    const event = Object.freeze({
+      status,
+      pid: childPid,
+      elapsed_ms: lifecycleInteger(elapsedAt - startedAt),
+      termination_wait_ms: lifecycleInteger(terminationWaitMs)
+    });
+    try { onLifecycle(event); } catch { /* diagnostics must not affect the result */ }
+  };
   try {
     const environment = options.environment || process.env;
     assertNoRecursion({
@@ -293,6 +357,7 @@ function runInvocation(invocation, options = {}) {
     const setTimeoutImpl = options.setTimeout || setTimeout;
     const clearTimeoutImpl = options.clearTimeout || clearTimeout;
     const kill = options.kill || process.kill.bind(process);
+    try { startedAt = now(); } catch { startedAt = monotonicMilliseconds(); }
     const child = spawnImpl(invocation.executable, [...invocation.argv], {
       cwd,
       env,
@@ -301,7 +366,11 @@ function runInvocation(invocation, options = {}) {
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe']
     });
+    childPid = Number.isInteger(child?.pid) && child.pid > 0 ? child.pid : null;
     if (!child || typeof child.on !== 'function') fail('PROCESS_FAILED');
+    const stdoutGuard = invocation.adapter === 'codex'
+      && invocation.argv[0] === 'exec' && invocation.argv.includes('--json')
+      ? createCodexToolGuard() : null;
     return new Promise((resolve) => {
       let settled = false;
       let terminating = false;
@@ -323,18 +392,31 @@ function runInvocation(invocation, options = {}) {
       const failProcess = async (code, failure = null, forceGroupOnClose = false) => {
         if (settled || terminating) return;
         terminating = true;
-        await terminateChild(child, {
-          kill,
-          setTimeoutImpl,
-          graceMs: limits.killGraceMs,
-          closed: () => closeSeen,
-          forceGroupOnClose
-        });
+        let terminationStartedAt;
+        try { terminationStartedAt = now(); } catch { terminationStartedAt = startedAt; }
+        try {
+          await terminateChild(child, {
+            kill,
+            setTimeoutImpl,
+            graceMs: limits.killGraceMs,
+            closed: () => closeSeen,
+            forceGroupOnClose
+          });
+        } catch { /* cleanup is best effort; the typed failure still returns */ }
+        let terminationFinishedAt;
+        try { terminationFinishedAt = now(); } catch { terminationFinishedAt = terminationStartedAt; }
+        reportLifecycle(lifecycleStatus(code), terminationFinishedAt - terminationStartedAt);
         finish(failure ? { error: failure.error, failure } : { error: createRoutingError(code) });
       };
       child.stdout?.on('data', (chunk) => {
         const code = stdout.append(chunk);
         if (code) void failProcess(code);
+        else if (stdoutGuard) {
+          let guardCode;
+          try { guardCode = stdoutGuard(chunk); }
+          catch { guardCode = 'OUTPUT_INVALID'; }
+          if (guardCode) void failProcess(guardCode);
+        }
       });
       child.stderr?.on('data', (chunk) => {
         const code = stderr.append(chunk);
@@ -369,14 +451,16 @@ function runInvocation(invocation, options = {}) {
           return;
         }
         try {
-            const result = {
+          const result = {
             stdout: stdout.value(),
             stderr: redactDiagnostics(stderr.value(), authSecrets, limits.maxStderrBytes),
             exitCode: code,
             signal: childSignal || null
           };
+          reportLifecycle(lifecycleStatus(null, true));
           finish({ result: Object.freeze(result) });
         } catch (error) {
+          reportLifecycle(lifecycleStatus(error?.code || 'OUTPUT_INVALID'));
           finish({ error: error?.code ? error : createRoutingError('OUTPUT_INVALID') });
         }
       });
@@ -397,10 +481,15 @@ function runInvocation(invocation, options = {}) {
       }
     });
   } catch (error) {
-    if (isRoutingError(error)) return Promise.reject(error);
-    return Promise.reject(createRoutingError(error?.code === 'ENOENT'
+    if (isRoutingError(error)) {
+      reportLifecycle(lifecycleStatus(error.code));
+      return Promise.reject(error);
+    }
+    const normalized = createRoutingError(error?.code === 'ENOENT'
       ? 'EXECUTABLE_UNAVAILABLE'
-      : 'PROCESS_FAILED'));
+      : 'PROCESS_FAILED');
+    reportLifecycle(lifecycleStatus(normalized.code));
+    return Promise.reject(normalized);
   }
 }
 

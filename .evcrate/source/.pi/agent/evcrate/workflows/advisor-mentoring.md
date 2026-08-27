@@ -156,6 +156,90 @@ The dispatcher entry point receives this envelope as its structured
 available only to the adapter-level compatibility API; malformed or
 wrong-protocol JSON-like briefs fail with a typed protocol error before lookup.
 
+The `codex` value in the dispatcher-level example above is illustrative; it is
+not a value to copy into another harness. The executable bridge below binds the
+actual host from its installed directory.
+
+### Executable harness bridge
+
+Do not satisfy this gate by writing that an advisor was consulted. Invoke the
+bridge installed beside the current harness runtime exactly once, from the
+repository root:
+
+```bash
+node {{evcrate:scripts/advisor-bridge.cjs}} <<'JSON'
+{
+  "operation": "dispatch",
+  "checkpoint": {
+    "protocol": "evcrate-advisor-checkpoint",
+    "version": 1,
+    "checkpoint": "review:step-4",
+    "question": "Which safe action should follow this terminal review?",
+    "kind": "review",
+    "task_or_phase": "Current workflow checkpoint",
+    "evidence": {"terminal": "Terminal reviewer completed successfully.", "files": []},
+    "changed_paths": [],
+    "prior_counsel": "none",
+    "owner_disposition": "none"
+  }
+}
+JSON
+```
+
+If the project does not contain a local harness runtime, use the published
+bridge for the active harness instead:
+
+- Claude: `node ~/.claude/scripts/advisor-bridge.cjs`
+- Codex: `node ~/.codex/scripts/advisor-bridge.cjs`
+- Gemini: `node ~/.gemini/scripts/advisor-bridge.cjs`
+- Antigravity: `node ~/.gemini/config/scripts/advisor-bridge.cjs`
+- Pi: `node ~/.pi/agent/evcrate/scripts/advisor-bridge.cjs`
+
+The bridge binds `active_host` from its physical harness directory, so the
+checkpoint above intentionally omits that field. A caller-supplied host must
+match the directory or the bridge fails closed. Generated projections replace
+`{{evcrate:scripts/advisor-bridge.cjs}}` with their local path (`.codex`, `.gemini`,
+`.antigravity`, or Pi's `{{evcrate:scripts/...}}` resource path). The bridge
+then maps the protocol's `active_host` to the dispatcher's `activeHost` field
+and invokes the projected shared runtime.
+
+For an external-run diagnosis, the coordinator request may add the optional
+boolean `debug: true`. The bridge then returns a bounded
+`evcrate-advisor-debug/v1` sibling with one fixed record per phase containing
+only status, PID, elapsed milliseconds, and termination-wait milliseconds;
+normal requests omit it, and native requests cannot enable it.
+
+An external route returns one terminal `result` with `status` equal to
+`ADVICE_READY`. An in-process native route invokes the host-owned callback and
+returns the same terminal result. The standalone CLI has no callback transport;
+it fails closed with `NATIVE_DISPATCH_UNSUPPORTED` before creating a handoff.
+The CLI intentionally does not accept a caller-supplied result for resume:
+doing so would let the main agent attest its own advice. A library caller that
+explicitly enables the two-phase handoff receives
+`status: "NATIVE_HANDOFF_PENDING"` and a short-lived token. The handoff record
+is owner-only and carries a runtime-keyed integrity tag; changing its
+checkpoint or descriptor invalidates the token. A host integration must import
+the local bridge and provide the harness-owned callback:
+
+```javascript
+const { main, resumeNative } = require('{{evcrate:scripts/advisor-bridge.cjs}}');
+const result = await main(requestJson, {
+  nativeAdvisor: async ({ checkpoint, descriptor }) => {
+    return hostNativeAdvisor({ checkpoint, descriptor });
+  }
+});
+```
+
+`hostNativeAdvisor` must be the current harness's ordinary native subagent
+mechanism and must return its terminal structured result; it is not a callback
+that the main agent may implement with prose. `resumeNative(token,
+hostNativeAdvisor)` is reserved for a real host-owned two-phase integration.
+Only an `ADVICE_READY` result completes the gate. Missing JSON, bridge errors,
+standalone `NATIVE_DISPATCH_UNSUPPORTED`, a pending handoff without a host
+callback, or a result invented by the main agent leaves the gate incomplete.
+Never call `advisor-dispatch.cjs` directly for a named checkpoint; it has no
+host-native callback boundary.
+
 ### Resolve once and choose one branch
 
 Resolve the active host exactly once after the terminal prerequisite exists. A
@@ -173,7 +257,8 @@ branches.
 - **External descriptor:** require an exact cross-host route. Invoke the
   bounded dispatcher/selected built-in adapter exactly once with the validated
   descriptor and request as its brief, then use exactly one validated terminal
-  result. Do not invoke a native advisor in this branch.
+  result. The final external process has a shared 15-minute wall-clock limit
+  across all five adapters; preflight probes remain adapter-bounded. Do not invoke a native advisor in this branch.
 
 Before either child action, reject recursion and invalid exact capability. Any
 resolver, adapter, native, timeout, cancellation, process, protocol, or output

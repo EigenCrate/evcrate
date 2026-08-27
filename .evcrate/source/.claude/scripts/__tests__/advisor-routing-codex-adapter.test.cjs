@@ -112,7 +112,7 @@ test('probes the version, auth, capability controls, exact model/effort, and bui
     assert.deepEqual(invocation.authKeys, []);
     assert.deepEqual(invocation.argv, [
       'exec', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
-      '--ask-for-approval', 'never', '--model', 'gpt-5.6-sol', '--config',
+      '--model', 'gpt-5.6-sol', '--config',
       'model_reasoning_effort="high"', '--json', '-'
     ]);
     assert.ok(fixture.context.created.every(({ executable, authKeys }) =>
@@ -123,7 +123,7 @@ test('probes the version, auth, capability controls, exact model/effort, and bui
   }
 });
 
-test('delivers the brief only on stdin and parses one bounded assistant result', async () => {
+test('delivers a bounded advisor prompt on stdin and parses one assistant result', async () => {
   const fixture = workspaceFor('success');
   try {
     const result = await executeFixture(fixture);
@@ -131,11 +131,43 @@ test('delivers the brief only on stdin and parses one bounded assistant result',
     assert.deepEqual(result.parsed, { response: 'FAKE_CODEX_OK' });
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(fixture.cwd, 'codex-argv.json'), 'utf8')),
       result.invocation.argv);
-    assert.equal(fs.readFileSync(path.join(fixture.cwd, 'codex-stdin.txt'), 'utf8'), fixture.context.brief);
+    const stdin = fs.readFileSync(path.join(fixture.cwd, 'codex-stdin.txt'), 'utf8');
+    assert.match(stdin, /^Act only as a bounded, read-only advisor\./u);
+    assert.ok(stdin.endsWith(fixture.context.brief));
+    assert.notEqual(stdin, fixture.context.brief);
     assert.ok(!result.invocation.argv.includes(fixture.context.brief));
   } finally {
     cleanup(fixture);
   }
+});
+
+test('accepts a successful login status emitted on stderr by the installed CLI', async () => {
+  const fixture = workspaceFor('auth-stderr');
+  try {
+    await probeAll(fixture.context);
+    const invocation = codex.buildInvocation(fixture.context);
+    assert.equal(invocation.argv.at(-1), '-');
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test('rejects tool-bearing Codex events even when a final message is present', () => {
+  const stdout = [
+    { type: 'thread.started', thread_id: 'thread-fixture' },
+    { type: 'turn.started', turn_id: 'turn-fixture' },
+    { type: 'item.completed', item: {
+      id: 'command-fixture', type: 'command_execution', command: 'cat README.md'
+    }},
+    { type: 'item.completed', item: {
+      id: 'message-fixture', type: 'agent_message', text: 'unsafe result'
+    }},
+    { type: 'turn.completed', usage: { input_tokens: 1, output_tokens: 1 } }
+  ].map((event) => JSON.stringify(event)).join('\n');
+  assert.throws(
+    () => codex.parseResult({ execution: { stdout } }),
+    (error) => error?.code === 'READ_ONLY_UNSUPPORTED'
+  );
 });
 
 test('covers every required fail-closed conformance category with the independent fake CLI', async () => {
@@ -179,6 +211,7 @@ test('rejects nonzero execution, malformed/duplicate/missing/unexpected JSONL, a
     ['between-terminal', 'PROTOCOL_INVALID'],
     ['trailing', 'PROTOCOL_INVALID'],
     ['unexpected', 'PROTOCOL_INVALID'],
+    ['tool', 'READ_ONLY_UNSUPPORTED'],
     ['oversized', 'OUTPUT_LIMIT']
   ];
   for (const [mode, expected] of cases) {

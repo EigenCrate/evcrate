@@ -14,6 +14,7 @@ const {
   DEFAULT_LIMITS,
   assertNoRecursion,
   buildProbeEnvironment,
+  createInvocation,
   createRunner,
   isRunnerFailure,
   normalizeLimits
@@ -38,7 +39,38 @@ const {
 
 const MAX_REQUEST_BYTES = MAX_POLICY_BYTES;
 const MAX_BRIEF_BYTES = DEFAULT_LIMITS.maxPromptBytes;
+const EXTERNAL_ADVISOR_TIMEOUT_MS = 15 * 60 * 1000;
+const DEBUG_PHASES = Object.freeze([
+  'probe-version',
+  'probe-auth',
+  'probe-capabilities',
+  'build-invocation',
+  'final-run',
+  'parse-result'
+]);
 const REQUEST_KEYS = new Set(['operation', 'activeHost', 'brief', 'checkpoint']);
+
+function monotonicMilliseconds() {
+  return Number(process.hrtime.bigint()) / 1_000_000;
+}
+
+function debugStatus(error) {
+  const code = error?.code || error?.error?.code;
+  return {
+    CANCELLED: 'cancelled',
+    EXECUTABLE_UNAVAILABLE: 'spawn-failed',
+    LINE_LIMIT: 'line-limit',
+    OUTPUT_INVALID: 'output-invalid',
+    OUTPUT_LIMIT: 'output-limit',
+    PROCESS_FAILED: 'process-failed',
+    TIMEOUT: 'timeout'
+  }[code] || 'failed';
+}
+
+function emitDebug(debugSink, event) {
+  if (typeof debugSink !== 'function') return;
+  try { debugSink(Object.freeze(event)); } catch { /* diagnostics must not affect dispatch */ }
+}
 
 function validateRequest(request) {
   if (!request || typeof request !== 'object' || Array.isArray(request)) {
@@ -137,6 +169,18 @@ function assertBoundedResult(result, maxBytes) {
   return result;
 }
 
+function normalizeNativeResult(result, checkpoint) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)
+    || result.protocol !== 'evcrate-advisor-result' || result.version !== 1
+    || result.status !== 'ADVICE_READY') {
+    throw createRoutingError('PROTOCOL_INVALID');
+  }
+  return normalizeResult(result, {
+    checkpoint,
+    maxBytes: DEFAULT_LIMITS.maxResultBytes
+  });
+}
+
 async function dispatchExternal({ descriptor, brief, checkpoint }, dependencies = {}) {
   if (checkpoint !== undefined && brief !== undefined) throw createRoutingError('REQUEST_INVALID');
   const validatedCheckpoint = checkpoint === undefined
@@ -170,39 +214,104 @@ async function dispatchExternal({ descriptor, brief, checkpoint }, dependencies 
     setTimeout: dependencies.setTimeout,
     clearTimeout: dependencies.clearTimeout
   });
+  const debugSink = typeof dependencies.debugSink === 'function' ? dependencies.debugSink : null;
+  let activePhase = null;
+  let phaseObserved = false;
+  const observedRunner = debugSink ? {
+    run(invocation, options = {}) {
+      return runner.run(invocation, {
+        ...options,
+        onLifecycle(event) {
+          if (activePhase) {
+            phaseObserved = true;
+            emitDebug(debugSink, { phase: activePhase, ...event });
+          }
+          if (typeof options.onLifecycle === 'function') {
+            try { options.onLifecycle(event); } catch { /* observer isolation */ }
+          }
+        }
+      });
+    }
+  } : runner;
+  const runPhase = async (name, operation) => {
+    if (!debugSink) return operation();
+    const startedAt = monotonicMilliseconds();
+    const previousPhase = activePhase;
+    activePhase = name;
+    phaseObserved = false;
+    try {
+      const result = await operation();
+      if (!phaseObserved) {
+        emitDebug(debugSink, {
+          phase: name,
+          status: 'completed',
+          pid: null,
+          elapsed_ms: Math.max(0, Math.round(monotonicMilliseconds() - startedAt)),
+          termination_wait_ms: 0
+        });
+      }
+      return result;
+    } catch (error) {
+      if (!phaseObserved) {
+        emitDebug(debugSink, {
+          phase: name,
+          status: debugStatus(error),
+          pid: null,
+          elapsed_ms: Math.max(0, Math.round(monotonicMilliseconds() - startedAt)),
+          termination_wait_ms: 0
+        });
+      }
+      throw error;
+    } finally {
+      activePhase = previousPhase;
+      phaseObserved = false;
+    }
+  };
   const context = {
     descriptor,
     brief: validatedBrief,
     checkpoint: validatedCheckpoint || undefined,
     environment: probeEnvironment,
-    runner,
+    runner: observedRunner,
     signal: dependencies.signal
   };
   try {
-    await adapter.probeVersion(context);
-    await adapter.probeAuth(context);
-    await adapter.probeCapabilities(context);
-    const invocation = await adapter.buildInvocation(context);
-    validateInvocationShape(invocation);
-    if (invocation.adapter !== adapter.name) {
-      throw createRoutingError('ADAPTER_CONTRACT_INVALID');
-    }
-    assertAdapterAuthKeys(adapter.name, invocation.authKeys);
-    if (!sameStringSet(adapter.authKeys, invocation.authKeys)) {
-      throw createRoutingError('ADAPTER_CONTRACT_INVALID');
-    }
-    const limits = normalizeLimits(invocation.limits);
-    const execution = await runner.run(invocation, {
-      environment: context.environment,
-      requestDepth: 0,
-      signal: dependencies.signal
+    await runPhase('probe-version', () => adapter.probeVersion(context));
+    await runPhase('probe-auth', () => adapter.probeAuth(context));
+    await runPhase('probe-capabilities', () => adapter.probeCapabilities(context));
+    const invocation = await runPhase('build-invocation', async () => {
+      const built = await adapter.buildInvocation(context);
+      validateInvocationShape(built);
+      if (built.adapter !== adapter.name) {
+        throw createRoutingError('ADAPTER_CONTRACT_INVALID');
+      }
+      assertAdapterAuthKeys(adapter.name, built.authKeys);
+      if (!sameStringSet(adapter.authKeys, built.authKeys)) {
+        throw createRoutingError('ADAPTER_CONTRACT_INVALID');
+      }
+      return built;
     });
-    if (execution?.error) throw execution.failure || execution.error;
-    const parsed = await adapter.parseResult({ ...context, execution: execution?.result || execution });
-    const bounded = assertBoundedResult(parsed, limits.maxResultBytes);
-    const normalized = normalizeResult(bounded, {
-      checkpoint: validatedCheckpoint || undefined,
-      maxBytes: limits.maxResultBytes
+    const limits = normalizeLimits(invocation.limits);
+    const execution = await runPhase('final-run', async () => {
+      const finalInvocation = createInvocation({
+        ...invocation,
+        limits: { ...limits, timeoutMs: EXTERNAL_ADVISOR_TIMEOUT_MS }
+      });
+      const result = await observedRunner.run(finalInvocation, {
+        environment: context.environment,
+        requestDepth: 0,
+        signal: dependencies.signal
+      });
+      if (result?.error) throw result.failure || result.error;
+      return result;
+    });
+    const normalized = await runPhase('parse-result', async () => {
+      const parsed = await adapter.parseResult({ ...context, execution: execution?.result || execution });
+      const bounded = assertBoundedResult(parsed, limits.maxResultBytes);
+      return normalizeResult(bounded, {
+        checkpoint: validatedCheckpoint || undefined,
+        maxBytes: limits.maxResultBytes
+      });
     });
     return Object.freeze({
       ok: true,
@@ -226,16 +335,13 @@ async function dispatchNative({ descriptor, checkpoint }, dependencies = {}) {
   });
   let result;
   try {
-    result = await dependencies.nativeAdvisor({ checkpoint });
+    result = await dependencies.nativeAdvisor({ checkpoint, descriptor });
   } catch (error) {
     if (isRoutingError(error)) throw error;
     throw createRoutingError('PROCESS_FAILED');
   }
   const bounded = assertBoundedResult(result, DEFAULT_LIMITS.maxResultBytes);
-  const normalized = normalizeResult(bounded, {
-    checkpoint,
-    maxBytes: DEFAULT_LIMITS.maxResultBytes
-  });
+  const normalized = normalizeNativeResult(bounded, checkpoint);
   return Object.freeze({
     ok: true,
     descriptor,
@@ -316,6 +422,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEBUG_PHASES,
+  EXTERNAL_ADVISOR_TIMEOUT_MS,
   MAX_REQUEST_BYTES,
   MAX_BRIEF_BYTES,
   dispatchExternal,

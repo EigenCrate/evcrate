@@ -15,7 +15,7 @@ Options:
           Allow running outside a Git repository.
   -s, --sandbox <SANDBOX_MODE>
           Select the sandbox policy. Possible values: read-only, workspace-write.
-      --ask-for-approval <APPROVAL_POLICY>
-          Possible values: never, on-request.
+      --approve-for-me
+          Route approval requests through automatic review using the workspace-write sandbox.
       --json
           Print events to stdout as JSONL.

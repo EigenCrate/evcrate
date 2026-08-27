@@ -11,10 +11,17 @@ const {
 const { freezeAdapter } = require('../adapter-contract.cjs');
 
 const EXECUTABLE = 'codex';
-const REVIEWED_VERSION = '0.149.1';
+const REVIEWED_VERSION = '0.150.1';
 const REVIEWED_MODEL = 'gpt-5.6-sol';
 const REVIEWED_EFFORT = 'high';
 const EFFORT_CONFIG = 'model_reasoning_effort="high"';
+const ADVISOR_PROMPT_PREFIX = [
+  'Act only as a bounded, read-only advisor.',
+  'Do not call tools, inspect files, run commands, or modify anything.',
+  'Return one concise plain-text recommendation only (maximum 2,000 characters).',
+  'Do not include hidden reasoning, markdown, or a JSON wrapper.',
+  'Checkpoint:'
+].join('\n') + '\n';
 const MAX_RESULT_BYTES = 32 * 1024;
 const MAX_TEXT_BYTES = 16 * 1024;
 const MAX_PROBE_STDOUT_BYTES = 512 * 1024;
@@ -25,6 +32,11 @@ const PROBE_LIMITS = Object.freeze({
   maxResultBytes: MAX_PROBE_STDOUT_BYTES,
   maxLines: 256,
   timeoutMs: 5_000
+});
+const FINAL_LIMITS = Object.freeze({
+  ...DEFAULT_LIMITS,
+  maxPromptBytes: DEFAULT_LIMITS.maxPromptBytes
+    + Buffer.byteLength(ADVISOR_PROMPT_PREFIX, 'utf8')
 });
 const STATES = new WeakMap();
 const EVENT_TYPES = new Set([
@@ -37,6 +49,9 @@ const EVENT_TYPES = new Set([
 const ITEM_TYPES = new Set([
   'agent_message', 'reasoning', 'command_execution', 'file_change',
   'mcp_tool_call', 'web_search', 'todo_list', 'context_compaction'
+]);
+const DISALLOWED_ITEM_TYPES = new Set([
+  'command_execution', 'file_change', 'mcp_tool_call', 'web_search', 'todo_list'
 ]);
 
 function fail(code) {
@@ -115,7 +130,7 @@ function preserveLifecycleFailure(error) {
   return null;
 }
 
-async function runProbe(context, argv) {
+async function runProbe(context, argv, { includeStderr = false } = {}) {
   assertContext(context);
   let execution;
   try {
@@ -133,7 +148,10 @@ async function runProbe(context, argv) {
   const result = execution?.result || execution;
   if (!result || typeof result.stdout !== 'string') fail('OUTPUT_INVALID');
   if (Buffer.byteLength(result.stdout, 'utf8') > MAX_PROBE_STDOUT_BYTES) fail('OUTPUT_LIMIT');
-  return result.stdout;
+  if (!includeStderr) return result.stdout;
+  const stderr = typeof result.stderr === 'string' ? result.stderr : '';
+  if (Buffer.byteLength(stderr, 'utf8') > MAX_PROBE_STDOUT_BYTES) fail('OUTPUT_LIMIT');
+  return Object.freeze({ stdout: result.stdout, stderr });
 }
 
 function probeFailure(error, fallback) {
@@ -151,10 +169,12 @@ function parseVersion(stdout) {
   return match[1];
 }
 
-function parseAuth(stdout) {
-  const status = stdout.trim();
-  if (!/^Logged in using (?:ChatGPT|API key)$/u.test(status)) fail('AUTH_UNAVAILABLE');
-  return true;
+function parseAuth(...outputs) {
+  for (const output of outputs) {
+    if (typeof output === 'string'
+      && /^Logged in using (?:ChatGPT|API key)$/u.test(output.trim())) return true;
+  }
+  fail('AUTH_UNAVAILABLE');
 }
 
 function requireHelpMarker(help, marker, code) {
@@ -165,8 +185,9 @@ function validateHelp(help) {
   requireHelpMarker(help, '--model', 'MODEL_UNSUPPORTED');
   requireHelpMarker(help, '--config', 'EFFORT_UNSUPPORTED');
   requireHelpMarker(help, '--ephemeral', 'SESSION_UNSUPPORTED');
-  for (const marker of ['--sandbox', 'read-only', '--skip-git-repo-check',
-    '--ask-for-approval', 'never']) requireHelpMarker(help, marker, 'READ_ONLY_UNSUPPORTED');
+  for (const marker of ['--sandbox', 'read-only', '--skip-git-repo-check']) {
+    requireHelpMarker(help, marker, 'READ_ONLY_UNSUPPORTED');
+  }
   for (const marker of ['--json', 'JSONL', 'stdin', 'or if `-` is used']) {
     requireHelpMarker(help, marker, 'OUTPUT_UNSUPPORTED');
   }
@@ -200,9 +221,9 @@ async function probeAuth(context) {
   const state = contextState(context);
   if (state.version !== REVIEWED_VERSION) fail('CLI_VERSION_UNSUPPORTED');
   let stdout;
-  try { stdout = await runProbe(context, ['login', 'status']); }
+  try { stdout = await runProbe(context, ['login', 'status'], { includeStderr: true }); }
   catch (error) { probeFailure(error, 'AUTH_UNAVAILABLE'); }
-  state.authenticated = parseAuth(stdout);
+  state.authenticated = parseAuth(stdout.stdout, stdout.stderr);
   return true;
 }
 
@@ -240,18 +261,19 @@ function buildInvocation(context) {
     '--ephemeral',
     '--skip-git-repo-check',
     '--sandbox', 'read-only',
-    '--ask-for-approval', 'never',
     '--model', route.model,
     '--config', EFFORT_CONFIG,
     '--json', '-'
   ];
-  return makeInvocation(context, argv, context.brief, DEFAULT_LIMITS);
+  return makeInvocation(context, argv,
+    `${ADVISOR_PROMPT_PREFIX}${context.brief}`, FINAL_LIMITS);
 }
 
 function validateItem(item, terminal = false) {
   if (!isObject(item) || typeof item.type !== 'string' || !ITEM_TYPES.has(item.type)) {
     fail('PROTOCOL_INVALID');
   }
+  if (DISALLOWED_ITEM_TYPES.has(item.type)) fail('READ_ONLY_UNSUPPORTED');
   if (item.id !== undefined && typeof item.id !== 'string') fail('PROTOCOL_INVALID');
   if (terminal && Object.keys(item).some((key) => !['id', 'type', 'text'].includes(key))) {
     fail('PROTOCOL_INVALID');
