@@ -7,12 +7,14 @@ import sys
 from pathlib import Path
 
 from distribution.contracts import (
+    ADVISOR_BRIDGE_FALLBACK_BLOCK,
     ADVISOR_RUNTIME_FILES,
     advisory_relay_error,
     is_production_runtime_artifact,
     project_advisor_contract,
     render_advisory_interview_workflow,
     render_inline_advise_command,
+    render_harness_script_references,
 )
 
 DEFAULT_SOURCE_ROOT = Path(__file__).resolve().parent / ".evcrate" / "source"
@@ -135,6 +137,7 @@ REPLACEMENTS = {
     r"\$ARGUMENTS": "{{args}}",
     r"\"\$CLAUDE_PROJECT_DIR\"": "\"$GEMINI_PROJECT_DIR\"",
     r"\.claude/workflows/": ".gemini/workflows/",
+    r"\.claude/scripts/advisor-bridge\.cjs\b": ".gemini/scripts/advisor-bridge.cjs",
     r"python \.claude/scripts/ev-help\.py\b": "python .gemini/scripts/ev-help.py",
     r"gemini-sonnet": "gemini-3-flash-preview",
     r"gemini-haiku": "gemini-3.1-flash-lite-preview",
@@ -196,10 +199,25 @@ GEMINI_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped.",
     "PreCompact": "No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.",
 }
+GLOBAL_ADVISOR_BRIDGE_PATHS = (
+    "~/.claude/scripts/advisor-bridge.cjs",
+    "~/.codex/scripts/advisor-bridge.cjs",
+    "~/.gemini/scripts/advisor-bridge.cjs",
+    "~/.gemini/config/scripts/advisor-bridge.cjs",
+    "~/.pi/agent/evcrate/scripts/advisor-bridge.cjs",
+)
+
+
+def apply_target_replacements(text):
+    """Apply Gemini naming and migrate ordinary Claude resource references."""
+
+    return apply_replacements(render_harness_script_references(text, "gemini"))
 
 def apply_replacements(text):
     if not isinstance(text, str):
         return text
+    fallback_token = "__GEMINI_GLOBAL_ADVISOR_FALLBACK__"
+    text = text.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
     protected_values = []
 
     def protect(match):
@@ -211,11 +229,19 @@ def apply_replacements(text):
     text = re.sub(r"https?://[^\s<>()]+", protect, text, flags=re.IGNORECASE)
     claude_md_token = "__SOURCE_MEMORY_DOC__"
     text = re.sub(r"\bCLAUDE\.md\b", claude_md_token, text, flags=re.IGNORECASE)
+    protected_paths = []
+    for index, path in enumerate(GLOBAL_ADVISOR_BRIDGE_PATHS):
+        token = f"__GEMINI_GLOBAL_ADVISOR_BRIDGE_{index}__"
+        text = text.replace(path, token)
+        protected_paths.append((token, path))
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     text = text.replace(claude_md_token, "CLAUDE.md")
+    for token, path in protected_paths:
+        text = text.replace(token, path)
     for index, value in enumerate(protected_values):
         text = text.replace(f"__GEMINI_PROTECTED_{index}__", value)
+    text = text.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
     return text
 
 def render_external_scout_strategy(body, strategy):
@@ -238,15 +264,129 @@ def render_external_scout_strategy(body, strategy):
     return body[:start_index] + rendered + body[block_end:]
 
 
+def _assert_safe_output_root(root, label):
+    """Reject output roots or ancestors that could redirect cleanup writes."""
+
+    root = Path(root)
+    if os.path.lexists(root) and (root.is_symlink() or not root.is_dir()):
+        raise RuntimeError(f"{label} must be a real directory: {root}")
+    current = root.parent
+    while True:
+        if current.is_symlink():
+            raise RuntimeError(f"{label} has a symlinked ancestor: {root}")
+        if current.parent == current:
+            break
+        current = current.parent
+
+
+def _assert_no_symlink_ancestors(path, label):
+    current = Path(path).parent
+    while True:
+        if current.is_symlink():
+            raise RuntimeError(f"{label} has a symlinked ancestor: {path}")
+        if current.parent == current:
+            break
+        current = current.parent
+
+
+def _assert_safe_file_target(path, label):
+    """Reject unmanaged file destinations that could follow a symlink."""
+
+    path = Path(path)
+    _assert_no_symlink_ancestors(path, label)
+    if os.path.lexists(path) and (path.is_symlink() or not path.is_file()):
+        raise RuntimeError(f"{label} must be a regular file: {path}")
+
+
+def _assert_safe_source_tree(root, label):
+    root = Path(root)
+    if root.is_symlink() or not root.is_dir():
+        raise RuntimeError(f"{label} must be a real directory: {root}")
+    current = root
+    while True:
+        if current.is_symlink():
+            raise RuntimeError(f"{label} has a symlinked ancestor: {root}")
+        if current.parent == current:
+            break
+        current = current.parent
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise RuntimeError(f"{label} contains a symlink: {path}")
+
+
+def _assert_managed_directory(path):
+    path = Path(path)
+    _assert_no_symlink_ancestors(path, "Managed Gemini path")
+    if os.path.lexists(path) and (path.is_symlink() or not path.is_dir()):
+        raise RuntimeError(f"Managed Gemini directory is unsafe: {path}")
+
+
+def _assert_managed_tree(path):
+    """Reject symlinked or non-regular entries before clearing a managed tree."""
+
+    path = Path(path)
+    _assert_managed_directory(path)
+    if not os.path.lexists(path):
+        return
+    pending = [path]
+    while pending:
+        current = pending.pop()
+        for child in sorted(current.iterdir(), key=lambda item: item.name):
+            if child.is_symlink():
+                raise RuntimeError(f"Managed Gemini tree contains a symlink: {child}")
+            if child.is_dir():
+                pending.append(child)
+            elif not child.is_file():
+                raise RuntimeError(f"Managed Gemini tree contains a non-regular entry: {child}")
+
+
+def _clear_managed_path(path):
+    """Clear a managed path without following symlinks or their targets."""
+
+    path = Path(path)
+    _assert_no_symlink_ancestors(path, "Managed Gemini path")
+    if not os.path.lexists(path):
+        return
+    if path.is_symlink() or not path.is_dir():
+        path.unlink()
+        return
+    for child in path.iterdir():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
 def clean_destination():
-    for subdir in ["agents", "commands", "hooks", "scripts", "skills", "workflows"]:
-        dest_dir = Path(GEMINI_DIR) / subdir
-        if dest_dir.exists():
+    gemini_dir = Path(GEMINI_DIR)
+    _assert_safe_output_root(gemini_dir, "Gemini output root")
+    managed_dirs = [gemini_dir / subdir for subdir in ["agents", "commands", "hooks", "scripts", "skills", "workflows"]]
+    for dest_dir in managed_dirs:
+        _assert_managed_tree(dest_dir)
+    for name in ["migration-behavior-matrix.json", ".evcrate.json", ".evcrateignore"]:
+        _assert_safe_file_target(gemini_dir / name, "Gemini managed file")
+    for dest_dir in managed_dirs:
+        if os.path.lexists(dest_dir):
             print(f"Cleaning destination: {dest_dir}")
-            shutil.rmtree(dest_dir)
-    matrix_file = Path(GEMINI_DIR) / "migration-behavior-matrix.json"
-    if matrix_file.exists():
-        matrix_file.unlink()
+        _clear_managed_path(dest_dir)
+    for name in ["migration-behavior-matrix.json", ".evcrate.json", ".evcrateignore"]:
+        _clear_managed_path(gemini_dir / name)
+
+
+def preflight_destination():
+    """Validate every unmanaged destination before cleanup can mutate output."""
+
+    gemini_dir = Path(GEMINI_DIR)
+    _assert_safe_output_root(gemini_dir, "Gemini output root")
+    for subdir in ["agents", "commands", "hooks", "scripts", "skills", "workflows"]:
+        _assert_managed_tree(gemini_dir / subdir)
+    for name in ["migration-behavior-matrix.json", ".evcrate.json", ".evcrateignore"]:
+        _assert_safe_file_target(gemini_dir / name, "Gemini managed file")
+    for path, label in (
+        (PROJECT_DOCS_DIR / "GEMINI.md", "Project GEMINI.md"),
+        (gemini_dir / "settings.json", "Gemini settings.json"),
+    ):
+        _assert_safe_file_target(path, label)
 
 def parse_markdown_with_frontmatter(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -433,6 +573,7 @@ def write_gemini_memory_wrapper():
         "",
     ]
     target = PROJECT_DOCS_DIR / "GEMINI.md"
+    _assert_safe_file_target(target, "Project GEMINI.md")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("\n".join(wrapper), encoding="utf-8")
 
@@ -440,16 +581,17 @@ def write_gemini_hook_assets():
     hooks_dir = Path(GEMINI_DIR) / "hooks"
     hooks_dir.mkdir(parents=True, exist_ok=True)
     hook_files = {
-        "session-start.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "SessionStart", ".claude/hooks/session-init.cjs"),
-        "before-agent.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "BeforeAgent", ".claude/hooks/dev-rules-reminder.cjs"),
-        "before-tool-scout-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/scout-block.cjs", "before-tool-scout-block.cjs"),
-        "before-tool-privacy-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".claude/hooks/privacy-block.cjs", "before-tool-privacy-block.cjs"),
-        "session-end.cjs": create_passthrough_bridge("GEMINI_PROJECT_DIR", ".claude/hooks/session-end.cjs"),
+        "session-start.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "SessionStart", ".gemini/hooks/session-init.cjs"),
+        "before-agent.cjs": create_context_bridge("GEMINI_PROJECT_DIR", "BeforeAgent", ".gemini/hooks/dev-rules-reminder.cjs"),
+        "before-tool-scout-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".gemini/hooks/scout-block.cjs", "before-tool-scout-block.cjs"),
+        "before-tool-privacy-block.cjs": create_block_bridge("GEMINI_PROJECT_DIR", "BeforeTool", ".gemini/hooks/privacy-block.cjs", "before-tool-privacy-block.cjs"),
+        "session-end.cjs": create_passthrough_bridge("GEMINI_PROJECT_DIR", ".gemini/hooks/claude-session-end.cjs"),
     }
     for name, content in hook_files.items():
         (hooks_dir / name).write_text(content, encoding="utf-8")
 
-def create_context_bridge(project_env_var, hook_event_name, source_rel_path):
+def create_context_bridge(project_env_var, hook_event_name, source_rel_path, global_source_rel_path=None):
+    global_source_rel_path = global_source_rel_path or source_rel_path
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -457,6 +599,39 @@ const path = require('path');
 const {{ spawnSync }} = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
+
+function hasSymlinkedPathComponent(candidate) {{
+  let current = path.resolve(candidate);
+  while (true) {{
+    let stat;
+    try {{
+      stat = fs.lstatSync(current);
+    }} catch {{
+      return true;
+    }}
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }}
+}}
+
+function isUsableHook(candidate) {{
+  try {{
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  }} catch {{
+    return false;
+  }}
+}}
+
+function isGlobalHookDirectory(candidate) {{
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}}
+
+function isPublishedHomeHook(candidate) {{
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), {source_rel_path_json}));
+}}
 
 function resolveHookSource() {{
   const candidates = [];
@@ -468,15 +643,15 @@ function resolveHookSource() {{
     let current = path.resolve(start);
     while (true) {{
       const probe = path.join(current, {source_rel_path_json});
-      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return {{ projectDir: current, sourceHook: probe }};
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
     }}
   }}
 
-  const homeHook = path.join(os.homedir(), {source_rel_path_json});
-  if (fs.existsSync(homeHook)) {{
+  const homeHook = path.join(os.homedir(), {global_source_rel_path_json});
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {{
     return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
   }}
 
@@ -487,6 +662,15 @@ function resolveHookSource() {{
 }}
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
+if (!isUsableHook(sourceHook)) {{
+  process.stdout.write(JSON.stringify({{
+    hookSpecificOutput: {{
+      hookEventName: {hook_event_name_json},
+      additionalContext: '',
+    }},
+  }}));
+  process.exit(0);
+}}
 const result = spawnSync(process.execPath, [sourceHook], {{
   input,
   encoding: 'utf-8',
@@ -494,6 +678,7 @@ const result = spawnSync(process.execPath, [sourceHook], {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     GEMINI_PROJECT_DIR: projectDir,
+    EVCRATE_CONFIG_DIR: '.gemini',
   }},
 }});
 
@@ -514,12 +699,14 @@ process.stdout.write(JSON.stringify(payload));
 """.format(
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
+        global_source_rel_path_json=json.dumps(global_source_rel_path),
         hook_event_name_json=json.dumps(hook_event_name),
     )
 
 
 def create_block_bridge(project_env_var, hook_event_name, source_rel_path, wrapper_name):
     hook_name = wrapper_name
+    global_source_rel_path = source_rel_path
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -527,6 +714,39 @@ const path = require('path');
 const {{ spawnSync }} = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
+
+function hasSymlinkedPathComponent(candidate) {{
+  let current = path.resolve(candidate);
+  while (true) {{
+    let stat;
+    try {{
+      stat = fs.lstatSync(current);
+    }} catch {{
+      return true;
+    }}
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }}
+}}
+
+function isUsableHook(candidate) {{
+  try {{
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  }} catch {{
+    return false;
+  }}
+}}
+
+function isGlobalHookDirectory(candidate) {{
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}}
+
+function isPublishedHomeHook(candidate) {{
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), {source_rel_path_json}));
+}}
 
 let workspacePaths = [];
 let payloadCwd = null;
@@ -552,15 +772,15 @@ function resolveHookSource() {{
     let current = path.resolve(start);
     while (true) {{
       const probe = path.join(current, {source_rel_path_json});
-      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return {{ projectDir: current, sourceHook: probe }};
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
     }}
   }}
 
-  const homeHook = path.join(os.homedir(), {source_rel_path_json});
-  if (fs.existsSync(homeHook)) {{
+  const homeHook = path.join(os.homedir(), {global_source_rel_path_json});
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {{
     const fallbackDir = (workspacePaths && workspacePaths.length > 0) ? workspacePaths[0] : (payloadCwd || process.env.{project_env_var} || process.cwd());
     return {{ projectDir: fallbackDir, sourceHook: homeHook }};
   }}
@@ -626,13 +846,14 @@ try {{
 }} catch(e) {{}}
 
 let activeHook = sourceHook;
-if (!fs.existsSync(activeHook)) {{
-  const globalHook = path.join(os.homedir(), ".gemini/config/hooks/{hook_name}");
-  if (fs.existsSync(globalHook)) {{
+if (!isUsableHook(activeHook)) {{
+  const globalHook = path.join(os.homedir(), {global_source_rel_path_json});
+  if (isGlobalHookDirectory(globalHook) && isUsableHook(globalHook)) {{
     activeHook = globalHook;
   }} else {{
     process.stdout.write(JSON.stringify({{
-      decision: 'allow',
+      decision: 'deny',
+      reason: 'EVCREATE_HOOK_UNAVAILABLE',
       hookSpecificOutput: {{
         hookEventName: {hook_event_name_json},
       }},
@@ -648,6 +869,7 @@ const result = spawnSync(process.execPath, [activeHook], {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     GEMINI_PROJECT_DIR: projectDir,
+    EVCRATE_CONFIG_DIR: '.gemini',
   }},
 }});
 
@@ -671,12 +893,14 @@ if (result.status === 0 && !result.error) {{
 """.format(
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
+        global_source_rel_path_json=json.dumps(global_source_rel_path),
         hook_event_name_json=json.dumps(hook_event_name),
         hook_name=hook_name,
     )
 
 
-def create_passthrough_bridge(project_env_var, source_rel_path):
+def create_passthrough_bridge(project_env_var, source_rel_path, global_source_rel_path=None):
+    global_source_rel_path = global_source_rel_path or source_rel_path
     return """#!/usr/bin/env node
 const fs = require('fs');
 const os = require('os');
@@ -684,6 +908,39 @@ const path = require('path');
 const {{ spawnSync }} = require('child_process');
 
 const input = fs.readFileSync(0, 'utf-8');
+
+function hasSymlinkedPathComponent(candidate) {{
+  let current = path.resolve(candidate);
+  while (true) {{
+    let stat;
+    try {{
+      stat = fs.lstatSync(current);
+    }} catch {{
+      return true;
+    }}
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }}
+}}
+
+function isUsableHook(candidate) {{
+  try {{
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  }} catch {{
+    return false;
+  }}
+}}
+
+function isGlobalHookDirectory(candidate) {{
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}}
+
+function isPublishedHomeHook(candidate) {{
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), {source_rel_path_json}));
+}}
 
 function resolveHookSource() {{
   const candidates = [];
@@ -695,15 +952,15 @@ function resolveHookSource() {{
     let current = path.resolve(start);
     while (true) {{
       const probe = path.join(current, {source_rel_path_json});
-      if (fs.existsSync(probe)) return {{ projectDir: current, sourceHook: probe }};
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return {{ projectDir: current, sourceHook: probe }};
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
     }}
   }}
 
-  const homeHook = path.join(os.homedir(), {source_rel_path_json});
-  if (fs.existsSync(homeHook)) {{
+  const homeHook = path.join(os.homedir(), {global_source_rel_path_json});
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {{
     return {{ projectDir: process.env.{project_env_var} || process.cwd(), sourceHook: homeHook }};
   }}
 
@@ -714,6 +971,11 @@ function resolveHookSource() {{
 }}
 
 const {{ projectDir, sourceHook }} = resolveHookSource();
+if (!isUsableHook(sourceHook)) {{
+  process.stderr.write('EVCREATE_HOOK_UNAVAILABLE\\n');
+  process.stdout.write(JSON.stringify({{}}));
+  process.exit(0);
+}}
 spawnSync(process.execPath, [sourceHook], {{
   input,
   encoding: 'utf-8',
@@ -721,12 +983,14 @@ spawnSync(process.execPath, [sourceHook], {{
     ...process.env,
     CLAUDE_PROJECT_DIR: projectDir,
     GEMINI_PROJECT_DIR: projectDir,
+    EVCRATE_CONFIG_DIR: '.gemini',
   }},
 }});
 process.stdout.write(JSON.stringify({{}}));
 """.format(
         project_env_var=project_env_var,
         source_rel_path_json=json.dumps(source_rel_path),
+        global_source_rel_path_json=json.dumps(global_source_rel_path),
     )
 
 def migrate_agents():
@@ -736,7 +1000,7 @@ def migrate_agents():
     if not src_dir.exists(): return
     for file in src_dir.glob("*.md"):
         frontmatter, body = parse_markdown_with_frontmatter(file)
-        body = apply_replacements(body)
+        body = apply_target_replacements(body)
         if file.name == "scout-external.md":
             # Render after generic replacements so the literal fallback is not rewritten.
             body = render_external_scout_strategy(body, GEMINI_EXTERNAL_SCOUT_STRATEGY)
@@ -773,9 +1037,9 @@ def migrate_agents():
         for key in list(frontmatter.keys()):
             val = frontmatter[key]
             if isinstance(val, str):
-                frontmatter[key] = apply_replacements(val)
+                frontmatter[key] = apply_target_replacements(val)
             elif isinstance(val, list):
-                frontmatter[key] = [apply_replacements(item) if isinstance(item, str) else item for item in val]
+                frontmatter[key] = [apply_target_replacements(item) if isinstance(item, str) else item for item in val]
             
             if key in ["Examples", "Context", "user", "assistant"]:
                 del frontmatter[key]
@@ -801,8 +1065,8 @@ def migrate_commands():
         if file.name == "advise.md":
             body = render_inline_advise_command(body, "gemini", "ask_user").strip()
         else:
-            body = apply_replacements(body)
-        description = apply_replacements(str(frontmatter.get("description", "")))
+            body = apply_target_replacements(body)
+        description = apply_target_replacements(str(frontmatter.get("description", "")))
         if file.name == "advise.md":
             description = "Interview-first technical advice with native inline questioning and explicit relay rejection."
         with open(dest_path, "w", encoding="utf-8") as f:
@@ -831,7 +1095,7 @@ def migrate_commands_as_native_skills():
             body = render_inline_advise_command(body, "gemini", "ask_user").strip()
             desc = "Interview-first technical advice with native inline questioning and explicit relay rejection."
         else:
-            body = apply_replacements(body)
+            body = apply_target_replacements(body)
         
         content = (
             f"---\nname: {skill_dir_name}\ndescription: {desc}\n---\n"
@@ -876,9 +1140,9 @@ def migrate_skills():
                         target_file.rename(new_md_file)
                         target_file = new_md_file
                     with open(target_file, "r", encoding="utf-8") as f: content = f.read()
-                    new_content = apply_replacements(content)
-                    if new_content != content:
-                        with open(target_file, "w", encoding="utf-8") as f: f.write(new_content)
+                    new_content = apply_target_replacements(content)
+                    if new_content != content or target_file.suffix.lower() == ".sh":
+                        with open(target_file, "w", encoding="utf-8", newline="\n") as f: f.write(new_content)
             print(f"Migrated skill: {skill_dir.name} -> {skill_name}")
 
 def migrate_workflows():
@@ -891,18 +1155,83 @@ def migrate_workflows():
         if file.name == "advisory-interview.md":
             content = render_advisory_interview_workflow(content, "gemini")
         dest_file = dest_dir / file.name
-        content = apply_replacements(content)
+        content = apply_target_replacements(content)
         with open(dest_file, "w", encoding="utf-8") as f: f.write(content)
         print(f"Migrated workflow: {file.name}")
+
+
+def migrate_evcrate_config():
+    """Copy target-local config inputs used by migrated Gemini hooks."""
+
+    for name in (".evcrate.json", ".evcrateignore"):
+        source = Path(CLAUDE_DIR) / name
+        if not os.path.lexists(source):
+            continue
+        if source.is_symlink() or not source.is_file():
+            raise RuntimeError(f"Canonical EVCrate config input is missing or unsafe: {source}")
+        destination = Path(GEMINI_DIR) / name
+        _assert_safe_file_target(destination, "Gemini config input")
+        _clear_managed_path(destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        shutil.copymode(source, destination)
+
+
+def migrate_hook_sources():
+    """Copy target-local hook sources and their relative helper closure."""
+
+    source_dir = Path(CLAUDE_DIR) / "hooks"
+    dest_dir = Path(GEMINI_DIR) / "hooks"
+    if not os.path.lexists(source_dir):
+        return
+    if source_dir.is_symlink() or not source_dir.is_dir():
+        raise RuntimeError(f"Canonical hook directory is missing or unsafe: {source_dir}")
+    for source in sorted(source_dir.rglob("*")):
+        if source.is_symlink():
+            raise RuntimeError(f"Canonical hook is symlinked: {source}")
+        if not source.is_file():
+            continue
+        relative = source.relative_to(source_dir)
+        if (
+            "__pycache__" in relative.parts
+            or relative.suffix.lower() in {".pyc", ".pyo"}
+            or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
+            or is_production_runtime_artifact(relative)
+        ):
+            continue
+        # Gemini generates a wrapper with the canonical session-end filename;
+        # keep the source implementation beside it instead of overwriting it.
+        destination_relative = (
+            Path("claude-session-end.cjs")
+            if relative.as_posix() == "session-end.cjs"
+            else relative
+        )
+        destination = dest_dir / destination_relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if is_text_file(source):
+            destination.write_text(
+                apply_target_replacements(source.read_text(encoding="utf-8")),
+                encoding="utf-8",
+                newline="\n",
+            )
+        else:
+            destination.write_bytes(source.read_bytes())
+        shutil.copymode(source, destination)
+        print(f"Migrated hook source: {relative}")
+
 
 def migrate_scripts():
     src_dir = Path(CLAUDE_DIR) / "scripts"
     dest_dir = Path(GEMINI_DIR) / "scripts"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    if not src_dir.exists(): return
+    if src_dir.is_symlink():
+        raise RuntimeError(f"Canonical script directory is symlinked: {src_dir}")
+    if not src_dir.is_dir(): return
     for source in src_dir.rglob("*"):
         rel_path = source.relative_to(src_dir)
         if "advise-state" in rel_path.name:
+            continue
+        if rel_path.suffix.lower() in {".pyc", ".pyo"}:
             continue
         if "__pycache__" in rel_path.parts:
             continue
@@ -911,19 +1240,22 @@ def migrate_scripts():
         if is_production_runtime_artifact(rel_path):
             continue
         dest_path = dest_dir / rel_path
+        if source.is_symlink():
+            raise RuntimeError(f"Canonical script is symlinked: {source}")
         if source.is_dir():
             dest_path.mkdir(parents=True, exist_ok=True)
             continue
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest_path)
-        if rel_path.as_posix() == "advisor-dispatch.cjs" or rel_path.parts[0] == "advisor-routing":
+        if rel_path.as_posix() in ADVISOR_RUNTIME_FILES:
             # The resolver is one cross-harness contract; product-name rewrites
-            # would corrupt its host table and its static capability document.
+            # would corrupt its host table, bridge detection, or its static
+            # capability document.
             print(f"Migrated advisor runtime: {rel_path}")
             continue
         if is_text_file(dest_path):
             with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
-            content = apply_replacements(content)
+            content = apply_target_replacements(content)
             if rel_path.as_posix() == "ev-help.py":
                 # Keep both source and target project variables in the
                 # portable discovery tuple for migrated help scripts.
@@ -943,6 +1275,7 @@ def migrate_scripts():
 def migrate_mcp():
     settings_file = Path(GEMINI_DIR) / "settings.json"
     claude_settings_file = Path(CLAUDE_DIR) / "settings.json"
+    _assert_safe_file_target(settings_file, "Gemini settings.json")
     
     # Start with existing Gemini settings or empty
     settings = read_json(settings_file)
@@ -952,7 +1285,7 @@ def migrate_mcp():
         claude_settings = read_json(claude_settings_file)
         # Apply replacements to the whole Claude settings dict
         claude_settings_str = json.dumps(claude_settings)
-        claude_settings_str = apply_replacements(claude_settings_str)
+        claude_settings_str = apply_target_replacements(claude_settings_str)
         # Fix the node "..." command patterns that apply_replacements might have missed or partially changed
         claude_settings_str = re.sub(
             r'node\s+\"(\$GEMINI_PROJECT_DIR)\"/\.gemini/hooks/',
@@ -1074,13 +1407,17 @@ def migrate_mcp():
 
 
 if __name__ == "__main__":
+    _assert_safe_source_tree(CLAUDE_DIR, "Canonical Claude source")
+    preflight_destination()
     clean_destination()
+    migrate_evcrate_config()
     migrate_agents()
     migrate_commands()
     migrate_commands_as_native_skills()
     migrate_scripts()
     migrate_skills()
     migrate_workflows()
+    migrate_hook_sources()
     write_gemini_memory_wrapper()
     write_gemini_hook_assets()
     migrate_mcp()

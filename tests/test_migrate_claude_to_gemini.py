@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import shutil
 import subprocess
@@ -37,6 +38,28 @@ class ApplyReplacementsTest(unittest.TestCase):
             self.assertTrue((source_root / ".gemini/settings.json").is_file())
             for name in (".gemini",):
                 self.assertFalse((root / name).exists())
+
+    def test_rejects_symlinked_source_tree_before_writing(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            source_root.mkdir(parents=True)
+            outside = root / "outside"
+            outside.mkdir()
+            (source_root / ".claude").symlink_to(outside, target_is_directory=True)
+            env = os.environ.copy()
+            env["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_gemini.py"), "--local"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("Canonical Claude source", completed.stderr)
+            self.assertFalse((source_root / ".gemini").exists())
 
     def test_standalone_claude_platform_prose_is_migrated(self) -> None:
         self.assertEqual(
@@ -108,6 +131,193 @@ class MigrateScriptsTest(unittest.TestCase):
 
 
 class AdvisorGeminiGenerationTest(unittest.TestCase):
+    def test_context_bridge_can_use_matching_global_hook(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            home = root / "home"
+            project = home / "project"
+            hook_dir = home / ".gemini/hooks"
+            hook_dir.mkdir(parents=True)
+            project.mkdir()
+            (hook_dir / "session-init.cjs").write_text(
+                "process.stdout.write('global context');\n", encoding="utf-8"
+            )
+            wrapper = hook_dir / "session-start.cjs"
+            wrapper.write_text(
+                migrator.create_context_bridge(
+                    "GEMINI_PROJECT_DIR", "SessionStart", ".gemini/hooks/session-init.cjs"
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment.update({"HOME": str(home), "GEMINI_PROJECT_DIR": str(project)})
+            completed = subprocess.run(
+                ["node", str(wrapper)],
+                cwd=project,
+                input="{}",
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(
+                json.loads(completed.stdout)["hookSpecificOutput"]["additionalContext"],
+                "global context",
+            )
+
+    def test_passthrough_bridge_does_not_execute_symlinked_hook(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            project = root / "project"
+            hook_dir = project / ".gemini/hooks"
+            outside = root / "outside-hook.cjs"
+            marker = root / "executed.txt"
+            hook_dir.mkdir(parents=True)
+            project.mkdir(exist_ok=True)
+            outside.write_text(
+                f"require('fs').writeFileSync({json.dumps(str(marker))}, 'executed');\n",
+                encoding="utf-8",
+            )
+            (hook_dir / "claude-session-end.cjs").symlink_to(outside)
+            wrapper = hook_dir / "session-end.cjs"
+            wrapper.write_text(
+                migrator.create_passthrough_bridge(
+                    "GEMINI_PROJECT_DIR", ".gemini/hooks/claude-session-end.cjs"
+                ),
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment.update({"HOME": str(root / "home"), "GEMINI_PROJECT_DIR": str(project)})
+            completed = subprocess.run(
+                ["node", str(wrapper)],
+                cwd=project,
+                input="{}",
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout), {})
+            self.assertIn("EVCREATE_HOOK_UNAVAILABLE", completed.stderr)
+            self.assertFalse(marker.exists())
+
+    def test_gemini_unmanaged_file_targets_reject_symlinks(self) -> None:
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / ".claude"
+            output = root / ".gemini"
+            source.mkdir()
+            output.mkdir()
+            (root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            outside_settings = root / "outside-settings.json"
+            outside_settings.write_text("{}", encoding="utf-8")
+            (output / "settings.json").symlink_to(outside_settings)
+            with patch.object(migrator, "CLAUDE_DIR", source), patch.object(
+                migrator, "GEMINI_DIR", output
+            ), patch.object(migrator, "PROJECT_DOCS_DIR", root):
+                with self.assertRaisesRegex(RuntimeError, "regular file"):
+                    migrator.migrate_mcp()
+            self.assertEqual(outside_settings.read_text(encoding="utf-8"), "{}")
+
+            outside_docs = root / "outside-gemini.md"
+            outside_docs.write_text("preserve", encoding="utf-8")
+            (root / "GEMINI.md").symlink_to(outside_docs)
+            with patch.object(migrator, "CLAUDE_DIR", source), patch.object(
+                migrator, "PROJECT_DOCS_DIR", root
+            ):
+                with self.assertRaisesRegex(RuntimeError, "regular file"):
+                    migrator.write_gemini_memory_wrapper()
+            self.assertEqual(outside_docs.read_text(encoding="utf-8"), "preserve")
+
+    def test_full_migration_preflights_before_cleanup(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            output = source_root / ".gemini"
+            sentinel = output / "agents/sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("preserve\n", encoding="utf-8")
+            outside = root / "outside-settings.json"
+            outside.write_text("{}\n", encoding="utf-8")
+            (output / "settings.json").symlink_to(outside)
+
+            environment = os.environ.copy()
+            environment["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_gemini.py"), "--local"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("regular file", completed.stderr)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "{}\n")
+
+    def test_full_migration_rejects_managed_config_symlink_before_cleanup(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            source = source_root / ".claude"
+            source.mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            (source / ".evcrate.json").write_text("{}\n", encoding="utf-8")
+            output = source_root / ".gemini"
+            sentinel = output / "agents/sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("preserve\n", encoding="utf-8")
+            outside = root / "outside-evcrate.json"
+            outside.write_text("preserve\n", encoding="utf-8")
+            (output / ".evcrate.json").symlink_to(outside)
+
+            environment = os.environ.copy()
+            environment["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_gemini.py"), "--local"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("regular file", completed.stderr)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve\n")
+
+    def test_full_migration_rejects_nested_managed_symlink_before_cleanup(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / ".evcrate/source"
+            (source_root / ".claude").mkdir(parents=True)
+            (source_root / "CLAUDE.md").write_text("context\n", encoding="utf-8")
+            output = source_root / ".gemini"
+            sentinel = output / "agents/sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("preserve\n", encoding="utf-8")
+            outside = root / "outside.txt"
+            outside.write_text("preserve\n", encoding="utf-8")
+            (output / "agents/unlisted.md").symlink_to(outside)
+
+            environment = os.environ.copy()
+            environment["EVCRATE_SOURCE_DIR"] = str(source_root)
+            completed = subprocess.run(
+                [sys.executable, str(repository / "migrate_claude_to_gemini.py"), "--local"],
+                cwd=root,
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("contains a symlink", completed.stderr)
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve\n")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve\n")
+
     def test_advise_command_uses_native_questioning_and_rejects_relay(self) -> None:
         repository = Path(__file__).resolve().parents[1]
         with TemporaryDirectory() as temp:
