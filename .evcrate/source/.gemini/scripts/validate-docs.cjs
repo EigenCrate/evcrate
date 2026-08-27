@@ -4,7 +4,7 @@
  * Detects potential hallucinations: invented APIs, broken links, missing env vars.
  *
  * Usage:
- *   node .claude/scripts/validate-docs.cjs [docs-dir] [--src dir1,dir2]
+ *   node .gemini/scripts/validate-docs.cjs [docs-dir] [--src dir1,dir2]
  *
  * Checks:
  *   1. Code references - verify `functionName()` and `ClassName` exist
@@ -315,7 +315,7 @@ function validate(docsDir, srcDirs, projectRoot) {
 function parseArgs(args) {
   const result = {
     docsDir: 'docs',
-    srcDirs: ['src', 'lib', 'app', 'scripts', '.claude']
+    srcDirs: ['src', 'lib', 'app', 'scripts', '.gemini']
   };
 
   for (let i = 0; i < args.length; i++) {

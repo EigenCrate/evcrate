@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fix executable permissions based on shebang presence in .claude folder
+# Fix executable permissions based on shebang presence in .gemini folder
 # - No shebang + executable → remove exec
 # - Has shebang + not executable → add exec
 
@@ -7,7 +7,7 @@ set -uo pipefail
 
 changed=0
 skipped=0
-target_dir="${1:-.claude}"
+target_dir="${1:-.gemini}"
 
 # Validate target exists
 [[ -e "$target_dir" ]] || { echo "Error: '$target_dir' not found" >&2; exit 1; }

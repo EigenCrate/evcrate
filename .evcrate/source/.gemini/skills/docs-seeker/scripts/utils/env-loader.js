@@ -2,7 +2,7 @@
 
 /**
  * Environment variable loader for docs-seeker skill
- * Respects order: process.env > skill/.env > skills/.env > .claude/.env
+ * Respects order: process.env > skill/.env > skills/.env > .gemini/.env
  */
 
 const fs = require('fs');
@@ -41,16 +41,16 @@ function parseEnvFile(content) {
 
 /**
  * Load environment variables from .env files in priority order
- * Priority: process.env > skill/.env > skills/.env > .claude/.env
+ * Priority: process.env > skill/.env > skills/.env > .gemini/.env
  * @returns {Object} Merged environment variables
  */
 function loadEnv() {
   const skillDir = path.resolve(__dirname, '../..');
   const skillsDir = path.resolve(skillDir, '..');
-  const claudeDir = path.resolve(skillsDir, '..');
+  const harnessDir = path.resolve(skillsDir, '..', '..', '.gemini');
 
   const envPaths = [
-    path.join(claudeDir, '.env'),      // Lowest priority
+    path.join(harnessDir, '.env'),      // Lowest priority
     path.join(skillsDir, '.env'),
     path.join(skillDir, '.env'),       // Highest priority (file)
   ];

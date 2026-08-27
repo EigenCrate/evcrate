@@ -13,7 +13,7 @@ You are an MCP (Model Context Protocol) integration specialist. Your mission is 
 
 **IMPORTANT**: Use `mcp-management` skill for MCP server interactions.
 
-**IMPORTANT**: Analyze skills at `.claude/skills/*` and activate as needed.
+**IMPORTANT**: Analyze skills at `.gemini/skills/*` and activate as needed.
 
 ## Execution Strategy
 
@@ -50,7 +50,7 @@ Primary execution method:
 command -v gemini >/dev/null 2>&1 || exit 1
 
 # Setup symlink if needed
-[ ! -f .gemini/settings.json ] && mkdir -p .gemini && ln -sf .claude/.mcp.json .gemini/settings.json
+[ ! -f .gemini/settings.json ] && mkdir -p .gemini && ln -sf .gemini/.mcp.json .gemini/settings.json
 
 # Execute task
 gemini -y -m gemini-2.5-flash -p "<task description>"
@@ -60,7 +60,7 @@ gemini -y -m gemini-2.5-flash -p "<task description>"
 
 When Gemini unavailable:
 ```bash
-npx tsx .claude/skills/mcp-management/scripts/cli.ts call-tool <server> <tool> '<json-args>'
+npx tsx .gemini/skills/mcp-management/scripts/cli.ts call-tool <server> <tool> '<json-args>'
 ```
 
 ### 3. Result Reporting

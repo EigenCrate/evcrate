@@ -21,9 +21,9 @@ Think hard to plan & start working on these tasks follow the Orchestration Proto
 ## Workflow:
 0. **FIRST**: Run `ui-ux-pro-max` searches for 3D design context:
    ```bash
-   python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "<product-type>" --domain product
-   python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "immersive 3d" --domain style
-   python3 $HOME/.claude/skills/ui-ux-pro-max/scripts/search.py "animation" --domain ux
+   python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "<product-type>" --domain product
+   python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "immersive 3d" --domain style
+   python3 $HOME/.gemini/skills/ui-ux-pro-max/scripts/search.py "animation" --domain ux
    ```
 1. Use `ui-ux-designer` subagent and `researcher` subagent to create a comprehensive 3D design plan following the progressive disclosure structure:
    - Create a directory using naming pattern from `## Naming` section.

@@ -19,13 +19,13 @@ This skill enables gemini to discover, analyze, and execute MCP server capabilit
 ### 1. Install Dependencies
 
 ```bash
-cd .claude/skills/mcp-management/scripts
+cd .gemini/skills/mcp-management/scripts
 npm install
 ```
 
 ### 2. Configure MCP Servers
 
-Create `.claude/.mcp.json`:
+Create `.gemini/.mcp.json`:
 
 ```json
 {
@@ -42,12 +42,12 @@ Create `.claude/.mcp.json`:
 }
 ```
 
-See `.claude/.mcp.json.example` for more examples.
+See `.gemini/.mcp.json.example` for more examples.
 
 ### 3. Test Connection
 
 ```bash
-cd .claude/skills/mcp-management/scripts
+cd .gemini/skills/mcp-management/scripts
 npx ts-node cli.ts list-tools
 ```
 
@@ -123,7 +123,7 @@ mcp-management/
 ### mcp-client.ts
 
 Core client manager class:
-- Load config from `.claude/.mcp.json`
+- Load config from `.gemini/.mcp.json`
 - Connect to multiple MCP servers
 - List/execute tools, prompts, resources
 - Lifecycle management
@@ -145,9 +145,9 @@ Command-line interface:
 Scripts check for variables in this order:
 
 1. `process.env` (runtime)
-2. `.claude/skills/mcp-management/.env`
-3. `.claude/skills/.env`
-4. `.claude/.env`
+2. `.gemini/skills/mcp-management/.env`
+3. `.gemini/skills/.env`
+4. `.gemini/.env`
 
 ### MCP Config Format
 
@@ -178,7 +178,7 @@ Install with `npx`:
 
 ## Integration with mcp-manager Agent
 
-The `mcp-manager` agent (`.claude/agents/mcp-manager.md`) uses this skill to:
+The `mcp-manager` agent (`.gemini/agents/mcp-manager.md`) uses this skill to:
 
 1. **Discover**: Connect to MCP servers, list capabilities
 2. **Analyze**: Filter relevant tools for tasks
@@ -191,7 +191,7 @@ This architecture keeps main context clean and enables efficient MCP integration
 
 ### "Config not found"
 
-Ensure `.claude/.mcp.json` exists and is valid JSON.
+Ensure `.gemini/.mcp.json` exists and is valid JSON.
 
 ### "Server connection failed"
 

@@ -9,7 +9,7 @@ import { resolve } from 'path';
 export class MCPClientManager {
     config = null;
     clients = new Map();
-    async loadConfig(configPath = '.claude/.mcp.json') {
+    async loadConfig(configPath = '.gemini/.mcp.json') {
         const fullPath = resolve(process.cwd(), configPath);
         const content = await readFile(fullPath, 'utf-8');
         const config = JSON.parse(content);
