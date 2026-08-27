@@ -66,19 +66,15 @@ TASK_MAPPINGS = {
     "design": ["ui", "ux", "style", "layout", "visual", "css", "component", "page", "responsive"],
     "review": ["review", "audit", "inspect", "quality", "refactor", "clean"],
     "content": ["copy", "text", "marketing", "content", "blog", "seo"],
-    "integrate": ["integrate", "payment", "api", "connect", "webhook", "third-party"],
     "skill": ["skill", "agent", "automate", "workflow"],
     "scout": ["find", "search", "locate", "explore", "scan", "where"],
     "config": ["config", "configure", "settings", "evcrate.json", ".evcrate.json", "setup", "locale", "language", "paths"],
     "coding-level": ["coding", "level", "eli5", "junior", "senior", "lead", "god", "beginner", "expert", "teach", "learn", "explain"],
     # New categories
     "worktree": ["worktree", "parallel", "isolate", "isolation", "concurrent", "multiple branches"],
-    "kanban": ["kanban", "board", "dashboard", "progress", "track", "orchestration", "visualize"],
-    "preview": ["preview", "view", "render", "markdown", "reader", "novel"],
     "journal": ["journal", "diary", "log", "entry", "reflect", "failure", "lesson"],
     "brainstorm": ["brainstorm", "idea", "ideate", "creative", "explore ideas", "think through"],
     "watzup": ["watzup", "status", "summary", "wrap up", "what's up", "recent", "changes"],
-    "notifications": ["notification", "notify", "discord", "telegram", "slack", "alert", "webhook", "stop hook", "session end"],
 }
 
 # Category workflows and tips
@@ -169,14 +165,6 @@ CATEGORY_GUIDES = {
         ],
         "tip": "Know your audience before writing",
     },
-    "integrate": {
-        "title": "Integration",
-        "workflow": [
-            ("Polar.sh", "`/integrate:polar`"),
-            ("SePay", "`/integrate:sepay`"),
-        ],
-        "tip": "Read API docs before integrating",
-    },
     "skill": {
         "title": "Skill Management",
         "workflow": [
@@ -227,25 +215,6 @@ CATEGORY_GUIDES = {
         ],
         "tip": "Use worktrees for parallel features without stashing. Each worktree = isolated branch + clean working directory",
     },
-    "kanban": {
-        "title": "AI Orchestration Board",
-        "workflow": [
-            ("View dashboard", "`/kanban` (opens browser)"),
-            ("Specific plans", "`/kanban plans/my-feature/`"),
-            ("Track progress", "View phase completion, timeline, activity"),
-            ("Stop server", "`/kanban --stop`"),
-        ],
-        "tip": "Dashboard shows plan phases, progress bars, and agent activity. Future: worktree + agent orchestration",
-    },
-    "preview": {
-        "title": "Content Preview (Novel Reader UI)",
-        "workflow": [
-            ("View markdown", "`/preview plans/plan.md`"),
-            ("Browse directory", "`/preview docs/`"),
-            ("Stop server", "`/preview --stop`"),
-        ],
-        "tip": "Beautiful novel-reader UI for markdown. Great for reviewing plans before execution",
-    },
     "journal": {
         "title": "Technical Journaling",
         "workflow": [
@@ -272,20 +241,7 @@ CATEGORY_GUIDES = {
             ("Next steps", "Receive suggestions for what to do next"),
         ],
         "tip": "Run before ending session to capture progress and plan next steps",
-    },
-    "notifications": {
-        "title": "Session Notifications (Discord/Telegram/Slack)",
-        "workflow": [
-            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.claude/.env`"),
-            ("2. Add hook", "Add Stop hook to `.claude/settings.json` (see below)"),
-            ("3. Test", "`echo '{\"hook_event_name\":\"Stop\"}' | node .claude/hooks/notifications/notify.cjs`"),
-        ],
-        "tip": """Add to settings.json:
-```json
-"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "node .claude/hooks/notifications/notify.cjs"}]}]
-```
-Docs: `.claude/hooks/notifications/docs/`""",
-    },
+    }
 }
 
 
@@ -592,7 +548,7 @@ def show_category_guide(data: dict, category: str, prefix: str) -> None:
             cat_key = key
             break
 
-    # Also check CATEGORY_GUIDES for categories without discovered commands (worktree, kanban, etc.)
+    # Also check CATEGORY_GUIDES for categories without discovered commands (worktree, etc.)
     if not cat_key:
         for key in CATEGORY_GUIDES.keys():
             if key.lower() == category.lower():

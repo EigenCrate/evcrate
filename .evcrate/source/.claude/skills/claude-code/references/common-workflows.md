@@ -106,12 +106,6 @@ claude "analyze the changes in PR #42"
 /brainstorm improve onboarding UX
 ```
 
-**Payment integrations:**
-```bash
-/integrate:sepay add Vietnamese payment gateway
-/integrate:polar implement subscription billing
-```
-
 **Skill management:**
 ```bash
 /skill:create payment-processing  # Create new skill
