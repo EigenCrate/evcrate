@@ -13,6 +13,39 @@ function readManagedGuidance() {
   return fs.readFileSync(guidancePath, 'utf-8').trim();
 }
 
+function hasSymlinkedPathComponent(candidate) {
+  let current = path.resolve(candidate);
+  while (true) {
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch {
+      return true;
+    }
+    if (stat.isSymbolicLink()) return true;
+    const parent = path.dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }
+}
+
+function isUsableHook(candidate) {
+  try {
+    const stat = fs.lstatSync(candidate);
+    return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate);
+  } catch {
+    return false;
+  }
+}
+
+function isGlobalHookDirectory(candidate) {
+  return path.resolve(__dirname) === path.resolve(path.dirname(candidate));
+}
+
+function isPublishedHomeHook(candidate) {
+  return path.resolve(candidate) === path.resolve(path.join(os.homedir(), ".codex/hooks/session-init.cjs"));
+}
+
 function resolveHookSource() {
   const candidates = [];
   if (process.env.CODEX_PROJECT_DIR) candidates.push(process.env.CODEX_PROJECT_DIR);
@@ -22,26 +55,30 @@ function resolveHookSource() {
     if (!start) continue;
     let current = path.resolve(start);
     while (true) {
-      const probe = path.join(current, ".claude/hooks/session-init.cjs");
-      if (fs.existsSync(probe)) return { projectDir: current, sourceHook: probe };
+      const probe = path.join(current, ".codex/hooks/session-init.cjs");
+      if (isUsableHook(probe) && !isPublishedHomeHook(probe)) return { projectDir: current, sourceHook: probe };
       const parent = path.dirname(current);
       if (parent === current) break;
       current = parent;
     }
   }
 
-  const homeHook = path.join(os.homedir(), ".claude/hooks/session-init.cjs");
-  if (fs.existsSync(homeHook)) {
+  const homeHook = path.join(os.homedir(), ".codex/hooks/session-init.cjs");
+  if (isGlobalHookDirectory(homeHook) && isUsableHook(homeHook)) {
     return { projectDir: process.env.CODEX_PROJECT_DIR || process.cwd(), sourceHook: homeHook };
   }
 
   return {
     projectDir: process.env.CODEX_PROJECT_DIR || process.cwd(),
-    sourceHook: path.join(process.cwd(), ".claude/hooks/session-init.cjs"),
+    sourceHook: path.join(process.cwd(), ".codex/hooks/session-init.cjs"),
   };
 }
 
 const { projectDir, sourceHook } = resolveHookSource();
+if (!isUsableHook(sourceHook)) {
+  process.stdout.write(JSON.stringify({}));
+  process.exit(0);
+}
 const result = spawnSync(process.execPath, [sourceHook], {
   cwd: projectDir,
   input,

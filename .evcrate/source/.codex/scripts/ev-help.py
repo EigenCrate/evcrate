@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
     EVCrate Help Command - All-in-one guide with dynamic command discovery.
-Scans .claude/commands/ directory to build catalog at runtime.
+Scans .codex/commands/ directory to build catalog at runtime.
 
 Usage:
     python ev-help.py                    # Overview with quick start
@@ -209,8 +209,8 @@ CATEGORY_GUIDES = {
     "config": {
         "title": "EVCrate Configuration (.evcrate.json)",
         "workflow": [
-            ("Global", "Set user prefs in `~/.claude/.evcrate.json`"),
-            ("Local", "Override per-project in `./.claude/.evcrate.json`"),
+            ("Global", "Set user prefs in `~/.codex/.evcrate.json`"),
+            ("Local", "Override per-project in `./.codex/.evcrate.json`"),
             ("Resolution", "DEFAULT → global → local (deep merge)"),
         ],
         "tip": "Global config works in fresh dirs; local overrides for projects",
@@ -276,15 +276,15 @@ CATEGORY_GUIDES = {
     "notifications": {
         "title": "Session Notifications (Discord/Telegram/Slack)",
         "workflow": [
-            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.claude/.env`"),
-            ("2. Add hook", "Add Stop hook to `.claude/settings.json` (see below)"),
-            ("3. Test", "`echo '{\"hook_event_name\":\"Stop\"}' | node .claude/hooks/notifications/notify.cjs`"),
+            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.codex/.env`"),
+            ("2. Add hook", "Add Stop hook to `.codex/settings.json` (see below)"),
+            ("3. Test", "`echo '{\"hook_event_name\":\"Stop\"}' | node .codex/hooks/notifications/notify.cjs`"),
         ],
         "tip": """Add to settings.json:
 ```json
-"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "node .claude/hooks/notifications/notify.cjs"}]}]
+"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "node .codex/hooks/notifications/notify.cjs"}]}]
 ```
-Docs: `.claude/hooks/notifications/docs/`""",
+Docs: `.codex/hooks/notifications/docs/`""",
     },
 }
 
@@ -323,7 +323,7 @@ def parse_frontmatter(file_path: Path) -> dict:
 
 
 def parse_command_metadata(file_path: Path) -> dict:
-    """Read command metadata from Claude Markdown or migrated TOML files."""
+    """Read command metadata from Codex Markdown or migrated TOML files."""
     if file_path.suffix == ".toml":
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -430,7 +430,7 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
     ]
     project_roots.extend((target_root.parent, Path.cwd()))
     for project_root in _candidate_roots(*project_roots):
-        commands_dir = project_root / ".claude" / "commands"
+        commands_dir = project_root / ".codex" / "commands"
         if commands_dir.is_dir():
             return "commands", commands_dir
 
@@ -817,8 +817,8 @@ def show_config_guide() -> None:
     print("# EVCrate Configuration (.evcrate.json)")
     print()
     print("**Locations (cascading resolution):**")
-    print("- Global: `~/.claude/.evcrate.json` (user preferences)")
-    print("- Local: `./.claude/.evcrate.json` (project overrides)")
+    print("- Global: `~/.codex/.evcrate.json` (user preferences)")
+    print("- Local: `./.codex/.evcrate.json` (project overrides)")
     print()
     print("**Resolution Order:** `DEFAULT → global → local`")
     print("- Global config sets user defaults")
@@ -831,7 +831,7 @@ def show_config_guide() -> None:
     print()
     print("## Quick Start")
     print()
-    print("**Global config** (`~/.claude/.evcrate.json`) - your preferences:")
+    print("**Global config** (`~/.codex/.evcrate.json`) - your preferences:")
     print("```json")
     print('{')
     print('  "locale": {')
@@ -842,7 +842,7 @@ def show_config_guide() -> None:
     print('}')
     print("```")
     print()
-    print("**Local override** (`./.claude/.evcrate.json`) - project-specific:")
+    print("**Local override** (`./.codex/.evcrate.json`) - project-specific:")
     print("```json")
     print('{')
     print('  "plan": { "issuePrefix": "JIRA-" },')
@@ -910,7 +910,7 @@ def show_config_guide() -> None:
     print("- `thinkingLanguage` - Language for internal reasoning (\"en\" recommended)")
     print("- `responseLanguage` - Language for user-facing output (\"vi\", \"fr\", etc.)")
     print()
-    print("When both are set, Claude thinks in one language but responds in another.")
+    print("When both are set, Codex thinks in one language but responds in another.")
     print("This improves precision (English) while maintaining natural output (your language).")
     print()
     print("**Plan Validation:**")
@@ -972,14 +972,14 @@ def show_config_guide() -> None:
     print()
     print("**Global install user (fresh directories work):**")
     print("```bash")
-    print("# ~/.claude/.evcrate.json - applies everywhere")
-    print("cd /tmp/new-project && claude  # Uses global config")
+    print("# ~/.codex/.evcrate.json - applies everywhere")
+    print("cd /tmp/new-project && Codex  # Uses global config")
     print("```")
     print()
     print("**Project with local override:**")
     print("```bash")
     print("# Global: issuePrefix = \"GH-\"")
-    print("# Local (.claude/.evcrate.json): issuePrefix = \"JIRA-\"")
+    print("# Local (.codex/.evcrate.json): issuePrefix = \"JIRA-\"")
     print("# Result: issuePrefix = \"JIRA-\" (local wins)")
     print("```")
     print()
@@ -1028,15 +1028,15 @@ def show_coding_level_guide() -> None:
     print("```")
     print()
     print("**Location (cascading):**")
-    print("- Global: `~/.claude/.evcrate.json` - personal preference")
-    print("- Local: `./.claude/.evcrate.json` - project override")
+    print("- Global: `~/.codex/.evcrate.json` - personal preference")
+    print("- Local: `./.codex/.evcrate.json` - project override")
     print()
     print("---")
     print()
     print("## How It Works")
     print()
     print("1. SessionStart hook reads `codingLevel` from `.evcrate.json`")
-    print("2. If 0-5, injects guidelines from `.claude/output-styles/coding-level-*.md`")
+    print("2. If 0-5, injects guidelines from `.codex/output-styles/coding-level-*.md`")
     print("3. Commands like `/brainstorm` follow the injected guidelines")
     print()
     print("**Token Efficiency:**")
@@ -1096,7 +1096,7 @@ def show_coding_level_guide() -> None:
     print()
     print("## Customization")
     print()
-    print("Guidelines live in `.claude/output-styles/coding-level-*.md`")
+    print("Guidelines live in `.codex/output-styles/coding-level-*.md`")
     print("Edit these files directly to customize behavior per level.")
     print()
     print("*Tip: Use `-1` (disabled) unless you're teaching or want guided explanations.*")
@@ -1106,7 +1106,7 @@ def main():
     script_path = Path(__file__).resolve()
     source_kind, source_dir = resolve_command_source(script_path)
     if not source_dir.is_dir():
-        print("Error: no .claude/commands or generated command skills directory found.")
+        print("Error: no .codex/commands or generated command skills directory found.")
         sys.exit(1)
 
     if source_kind == "skills":
