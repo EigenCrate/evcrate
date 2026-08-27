@@ -79,7 +79,7 @@ Scripts handle URL construction, fallback chains, and error handling automatical
 ```bash
 node scripts/detect-topic.js "<query>"  # → {topic, library, isTopicSpecific}
 node scripts/fetch-docs.js "<query>"    # → 2-3 URLs
-# Read URLs with WebFetch
+# Read URLs with web research
 ```
 
 **General query:** "Documentation for Next.js"
@@ -92,6 +92,6 @@ cat llms.txt | node scripts/analyze-llms-txt.js -  # → {totalUrls, distributio
 
 ## Environment
 
-Scripts load `.env`: `process.env` > `.claude/skills/docs-seeker/.env` > `.claude/skills/.env` > `.claude/.env`
+Scripts load `.env`: `process.env` > `.pi/agent/skills/docs-seeker/.env` > `.pi/agent/skills/.env` > `.pi/.env`
 
 See `.env.example` for configuration options.

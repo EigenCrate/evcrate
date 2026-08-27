@@ -100,7 +100,7 @@ Wait for result before continuing.
 
 ### Planning Prompt
 ```
-Task: [Complex goal]
+evcrate_subagent: [Complex goal]
 
 Before acting:
 1. Break into subtasks

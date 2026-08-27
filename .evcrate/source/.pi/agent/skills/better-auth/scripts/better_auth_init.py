@@ -5,7 +5,7 @@ Better Auth Initialization Script
 Interactive script to initialize Better Auth configuration.
 Supports multiple databases, ORMs, and authentication methods.
 
-.env loading order: process.env > skill/.env > skills/.env > .claude/.env
+.env loading order: process.env > skill/.env > skills/.env > .pi/.env
 """
 
 import os
@@ -65,7 +65,7 @@ class BetterAuthInit:
         """
         Load environment variables from .env files in order.
 
-        Loading order: process.env > skill/.env > skills/.env > .claude/.env
+        Loading order: process.env > skill/.env > skills/.env > .pi/.env
 
         Returns:
             Dictionary of environment variables.
@@ -75,8 +75,8 @@ class BetterAuthInit:
         # Define search paths in reverse priority order
         skill_dir = Path(__file__).parent.parent
         env_paths = [
-            self.project_root / ".claude" / ".env",
-            self.project_root / ".claude" / "skills" / ".env",
+            self.project_root / ".pi" / ".env",
+            self.project_root / ".pi" / "agent" / "skills" / ".env",
             skill_dir / ".env",
         ]
 

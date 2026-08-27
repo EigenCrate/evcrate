@@ -134,7 +134,7 @@ import { RiHomeLine, RiSearchFill } from "@remixicon/react"
 
 **Turborepo References:**
 - [Setup & Configuration](./references/turborepo-setup.md) - Installation, workspace config, package structure
-- [Task Pipelines](./references/turborepo-pipelines.md) - Dependencies, parallel execution, task ordering
+- [evcrate_subagent Pipelines](./references/turborepo-pipelines.md) - Dependencies, parallel execution, task ordering
 - [Caching Strategies](./references/turborepo-caching.md) - Local cache, remote cache, cache invalidation
 
 **RemixIcon References:**

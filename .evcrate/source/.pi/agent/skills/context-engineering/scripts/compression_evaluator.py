@@ -18,7 +18,7 @@ from typing import Optional
 class ProbeType(Enum):
     RECALL = "recall"           # Factual retention
     ARTIFACT = "artifact"       # File tracking
-    CONTINUATION = "continuation"  # Task planning
+    CONTINUATION = "continuation"  # evcrate_subagent planning
     DECISION = "decision"       # Reasoning chains
 
 

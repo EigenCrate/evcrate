@@ -41,7 +41,7 @@ git diff --cached --name-only > staged-files.txt
 repomix --include "$(cat staged-files.txt | tr '\n' ',')" -o .context/latest.xml
 ```
 
-### VS Code Task
+### VS Code evcrate_subagent
 ```json
 {"version": "2.0.0", "tasks": [{"label": "Package for AI", "type": "shell", "command": "repomix --include 'src/**' --remove-comments --copy"}]}
 ```

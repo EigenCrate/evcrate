@@ -27,7 +27,7 @@ node scripts/fetch-docs.js "<user query>"
 # Returns: llms.txt content with 1-5 URLs
 
 # STEP 3: Process results based on URL count
-# - 1-3 URLs: Read directly with WebFetch tool
+# - 1-3 URLs: Read directly with web research tool
 # - 4-5 URLs: Deploy 2-3 Explorer agents in parallel
 
 # STEP 4: Present findings
@@ -46,7 +46,7 @@ node scripts/fetch-docs.js "How do I use date picker in shadcn?"
 # Script fetches: context7.com/shadcn-ui/ui/llms.txt?topic=date
 # Returns: 2-3 date-specific URLs
 
-# Read URLs directly with WebFetch
+# Read URLs directly with web research
 # Present date picker documentation
 ```
 

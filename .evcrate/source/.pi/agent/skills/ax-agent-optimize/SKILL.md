@@ -268,7 +268,7 @@ import { AxGen, s } from '@ax-llm/ax';
 
 const judgeGen = new AxGen(
   s(`
-    taskInput:json "Task input",
+    taskInput:json "evcrate_subagent input",
     candidateOutput:json "Candidate output",
     expectedOutput?:json "Optional reference output"
     ->

@@ -2,7 +2,7 @@
 
 Design and build LLM-powered projects from ideation to deployment.
 
-## Task-Model Fit
+## evcrate_subagent-Model Fit
 
 **LLM-Suited**: Synthesis, subjective judgment, NL output, error-tolerant batches
 **LLM-Unsuited**: Precise computation, real-time, perfect accuracy, deterministic output

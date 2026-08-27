@@ -337,7 +337,7 @@ radar-beta
 flowchart TD
   classDef important fill:#f96,stroke:#333,stroke-width:4px
   A[Critical Path]:::important
-  B[Regular Task]
+  B[Regular evcrate_subagent]
 ```
 
 **Security:**

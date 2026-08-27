@@ -3,19 +3,19 @@
 # Usage: ./send-discord.sh 'Your message here'
 # Note: Remember to escape the string
 
-# Load environment variables with priority: process.env > .claude/.env > .claude/hooks/.env
+# Load environment variables with priority: process.env > .pi/.env > .pi/agent/evcrate/hooks/.env
 load_env() {
-    # 1. Start with lowest priority: .claude/hooks/.env
+    # 1. Start with lowest priority: .pi/agent/evcrate/hooks/.env
     if [[ -f "$(dirname "$0")/.env" ]]; then
         set -a
         source "$(dirname "$0")/.env"
         set +a
     fi
 
-    # 2. Override with .claude/.env
-    if [[ -f .claude/.env ]]; then
+    # 2. Override with .pi/.env
+    if [[ -f .pi/.env ]]; then
         set -a
-        source .claude/.env
+        source .pi/.env
         set +a
     fi
 

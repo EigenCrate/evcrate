@@ -36,7 +36,7 @@ derive `WORK_ARGUMENTS` plus explicit/default advice mode. Execute the plan from
 5. Proceed to Step 3
 
 ### 2B. Sequential Execution
-Follow `./{{evcrate:workflows/primary-workflow.md}}`:
+Follow `{{evcrate:workflows/primary-workflow.md}}`:
 1. Use main agent step by step
 2. Read `plan.md`, implement phases one by one
 3. Use `project-manager` for progress updates

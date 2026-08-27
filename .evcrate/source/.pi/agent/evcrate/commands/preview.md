@@ -29,7 +29,7 @@ Universal viewer using `markdown-novel-viewer` skill - pass ANY path and see it 
 **IMPORTANT:** Run server as Claude Code background task using `run_in_background: true` with the Bash tool. This makes the server visible in `/tasks` and manageable via `KillShell`.
 
 Check if this script is located in the current workspace or in `$HOME/.pi/agent/skills/markdown-novel-viewer` directory:
-- If in current workspace: `$SKILL_DIR_PATH` = `./.pi/skills/markdown-novel-viewer/`
+- If in current workspace: `$SKILL_DIR_PATH` = `./.pi/agent/skills/markdown-novel-viewer/`
 - If in home directory: `$SKILL_DIR_PATH` = `$HOME/.pi/agent/skills/markdown-novel-viewer/`
 
 ### Stop Server
@@ -72,7 +72,7 @@ fi
 Example Bash tool call:
 ```json
 {
-  "command": "node .pi/skills/markdown-novel-viewer/scripts/server.cjs --dir \"path\" --host 0.0.0.0 --open --foreground",
+  "command": "node .pi/agent/skills/markdown-novel-viewer/scripts/server.cjs --dir \"path\" --host 0.0.0.0 --open --foreground",
   "run_in_background": true,
   "timeout": 300000,
   "description": "Start preview server in background"

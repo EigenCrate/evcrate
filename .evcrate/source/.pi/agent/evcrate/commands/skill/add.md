@@ -13,7 +13,7 @@ $2: reference or script prompt (required, default: "")
 If $1 or $2 is not provided, ask the user to provide it.
 
 ## Your mission
-Add new reference files or scripts to a skill at `.pi/skills/$1` directory.
+Add new reference files or scripts to a skill at `.pi/agent/skills/$1` directory.
 
 ## Requirements
 <reference-or-script-prompt>

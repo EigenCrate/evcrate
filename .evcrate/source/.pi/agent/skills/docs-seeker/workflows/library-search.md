@@ -33,7 +33,7 @@ cat llms.txt | node scripts/analyze-llms-txt.js -
 # Returns: {totalUrls, grouped, distribution}
 
 # STEP 4: Deploy agents based on script recommendation
-# - 1-3 URLs: Single agent or direct WebFetch
+# - 1-3 URLs: Single agent or direct web research
 # - 4-10 URLs: Deploy 3-5 Explorer agents
 # - 11+ URLs: Deploy 7 agents or phased approach
 
@@ -83,5 +83,5 @@ node scripts/analyze-llms-txt.js < llms.txt
 
 Scripts handle fallback automatically:
 1. `fetch-docs.js` tries context7.com
-2. If 404, script suggests WebSearch for llms.txt
+2. If 404, script suggests web research for llms.txt
 3. If still unavailable: [Repository Analysis](./repo-analysis.md)

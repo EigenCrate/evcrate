@@ -43,21 +43,21 @@ function resolvePiResourcePath(group, filename) {
 
 function resolveWorkflowPath(filename) {
   const piPath = resolvePiResourcePath('workflows', filename);
-  const localPath = path.join(process.cwd(), '.claude', 'workflows', filename);
-  const globalPath = path.join(os.homedir(), '.claude', 'workflows', filename);
+  const localPath = path.join(process.cwd(), '.pi', 'agent', 'evcrate', 'workflows', filename);
+  const globalPath = path.join(os.homedir(), '.pi', 'agent', 'evcrate', 'workflows', filename);
   if (piPath) return piPath;
-  if (fs.existsSync(localPath)) return `.claude/workflows/${filename}`;
-  if (fs.existsSync(globalPath)) return `~/.claude/workflows/${filename}`;
+  if (fs.existsSync(localPath)) return `.pi/agent/evcrate/workflows/${filename}`;
+  if (fs.existsSync(globalPath)) return `~/.pi/agent/evcrate/workflows/${filename}`;
   return null;
 }
 
 function resolveScriptPath(filename) {
   const piPath = resolvePiResourcePath('scripts', filename);
-  const localPath = path.join(process.cwd(), '.claude', 'scripts', filename);
-  const globalPath = path.join(os.homedir(), '.claude', 'scripts', filename);
+  const localPath = path.join(process.cwd(), '.pi', 'agent', 'evcrate', 'scripts', filename);
+  const globalPath = path.join(os.homedir(), '.pi', 'agent', 'evcrate', 'scripts', filename);
   if (piPath) return piPath;
-  if (fs.existsSync(localPath)) return `.claude/scripts/${filename}`;
-  if (fs.existsSync(globalPath)) return `~/.claude/scripts/${filename}`;
+  if (fs.existsSync(localPath)) return `.pi/agent/evcrate/scripts/${filename}`;
+  if (fs.existsSync(globalPath)) return `~/.pi/agent/evcrate/scripts/${filename}`;
   return null;
 }
 
@@ -69,19 +69,19 @@ function resolveSkillsVenv() {
   const piVenv = resourceRoot
     ? path.join(path.dirname(resourceRoot), 'skills', '.venv', venvBin, pythonExe)
     : null;
-  const localVenv = path.join(process.cwd(), '.claude', 'skills', '.venv', venvBin, pythonExe);
-  const globalVenv = path.join(os.homedir(), '.claude', 'skills', '.venv', venvBin, pythonExe);
+  const localVenv = path.join(process.cwd(), '.pi', 'agent', 'skills', '.venv', venvBin, pythonExe);
+  const globalVenv = path.join(os.homedir(), '.pi', 'agent', 'skills', '.venv', venvBin, pythonExe);
 
   if (piVenv && fs.existsSync(piVenv)) return piVenv;
   if (fs.existsSync(localVenv)) {
     return isWindows
-      ? '.claude\\skills\\.venv\\Scripts\\python.exe'
-      : '.claude/skills/.venv/bin/python3';
+      ? '.pi\\skills\\.venv\\Scripts\\python.exe'
+      : '.pi/agent/skills/.venv/bin/python3';
   }
   if (fs.existsSync(globalVenv)) {
     return isWindows
-      ? '~\\.claude\\skills\\.venv\\Scripts\\python.exe'
-      : '~/.claude/skills/.venv/bin/python3';
+      ? '~\\.pi\\skills\\.venv\\Scripts\\python.exe'
+      : '~/.pi/agent/skills/.venv/bin/python3';
   }
   return null;
 }
@@ -186,7 +186,7 @@ function buildReminder({ thinkingLanguage, responseLanguage, devRulesPath, catal
       `- Activate skills: Run \`python ${catalogScript} --skills\` to generate a skills catalog and analyze it, then activate the relevant skills that are needed for the task during the process.`,
       `- Execute commands: Run \`python ${catalogScript} --commands\` to generate a commands catalog and analyze it, then execute the relevant SlashCommands that are needed for the task during the process.`
     ] : []),
-    ...(skillsVenv ? [`- Python scripts in .claude/skills/: Use \`${skillsVenv}\``] : []),
+    ...(skillsVenv ? [`- Python scripts in .pi/agent/skills/: Use \`${skillsVenv}\``] : []),
     `- When skills' scripts are failed to execute, always fix them and run again, repeat until success.`,
     `- Follow **YAGNI (You Aren't Gonna Need It) - KISS (Keep It Simple, Stupid) - DRY (Don't Repeat Yourself)** principles`,
     `- Sacrifice grammar for the sake of concision when writing reports.`,

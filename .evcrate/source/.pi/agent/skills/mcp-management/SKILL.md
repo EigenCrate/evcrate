@@ -22,7 +22,7 @@ MCP is an open protocol enabling AI agents to connect to external tools and data
 
 Use this skill when:
 1. **Discovering MCP Capabilities**: Need to list available tools/prompts/resources from configured servers
-2. **Task-Based Tool Selection**: Analyzing which MCP tools are relevant for a specific task
+2. **evcrate_subagent-Based Tool Selection**: Analyzing which MCP tools are relevant for a specific task
 3. **Executing MCP Tools**: Calling MCP tools programmatically with proper parameter handling
 4. **MCP Integration**: Building or debugging MCP client implementations
 5. **Context Management**: Avoiding context pollution by delegating MCP operations to subagents
@@ -31,11 +31,11 @@ Use this skill when:
 
 ### 1. Configuration Management
 
-MCP servers configured in `.claude/.mcp.json`.
+MCP servers configured in `.pi/.mcp.json`.
 
 **Gemini CLI Integration** (recommended): Create symlink to `.gemini/settings.json`:
 ```bash
-mkdir -p .gemini && ln -sf .claude/.mcp.json .gemini/settings.json
+mkdir -p .gemini && ln -sf .pi/.mcp.json .gemini/settings.json
 ```
 
 See [references/configuration.md](references/configuration.md) and [references/gemini-cli-integration.md](references/gemini-cli-integration.md).
@@ -130,7 +130,7 @@ Coordinate tools across multiple servers. Each tool knows its source server for 
 ### scripts/mcp-client.ts
 
 Core MCP client manager class. Handles:
-- Config loading from `.claude/.mcp.json`
+- Config loading from `.pi/.mcp.json`
 - Connecting to multiple MCP servers
 - Listing tools/prompts/resources across all servers
 - Executing tools with proper error handling
@@ -151,7 +151,7 @@ Command-line interface for MCP operations. Commands:
 **Method 1: Gemini CLI** (recommended)
 ```bash
 npm install -g gemini-cli
-mkdir -p .gemini && ln -sf .claude/.mcp.json .gemini/settings.json
+mkdir -p .gemini && ln -sf .pi/.mcp.json .gemini/settings.json
 # IMPORTANT: Use stdin piping, NOT -p flag (deprecated, skips MCP init)
 # GEMINI.md auto-loads to enforce JSON responses
 echo "Take a screenshot of https://example.com. Return JSON only per GEMINI.md instructions." | gemini -y -m gemini-2.5-flash
@@ -161,7 +161,7 @@ Returns structured JSON: `{"server":"puppeteer","tool":"screenshot","success":tr
 
 **Method 2: Scripts**
 ```bash
-cd .claude/skills/mcp-management/scripts && npm install
+cd .pi/agent/skills/mcp-management/scripts && npm install
 npx tsx cli.ts list-tools  # Saves to assets/tools.json
 npx tsx cli.ts call-tool memory create_entities '{"entities":[...]}'
 ```

@@ -224,7 +224,7 @@ function detectBroadPatternIssue(toolInput) {
  * Format error message for broad pattern detection
  *
  * @param {Object} result - Result from detectBroadPatternIssue
- * @param {string} claudeDir - Path to .claude directory
+ * @param {string} claudeDir - Path to .pi directory
  * @returns {string}
  */
 function formatBroadPatternError(result, claudeDir) {

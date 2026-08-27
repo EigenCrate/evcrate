@@ -170,7 +170,7 @@ async def evaluate_single_task(
     """Evaluate a single QA pair with the given tools."""
     start_time = time.time()
 
-    print(f"Task {task_index + 1}: Running task with question: {qa_pair['question']}")
+    print(f"evcrate_subagent {task_index + 1}: Running task with question: {qa_pair['question']}")
     response, tool_metrics = await agent_loop(client, model, qa_pair["question"], tools, connection)
 
     response_value = extract_xml_content(response, "response")
@@ -198,15 +198,15 @@ REPORT_HEADER = """
 ## Summary
 
 - **Accuracy**: {correct}/{total} ({accuracy:.1f}%)
-- **Average Task Duration**: {average_duration_s:.2f}s
-- **Average Tool Calls per Task**: {average_tool_calls:.2f}
+- **Average evcrate_subagent Duration**: {average_duration_s:.2f}s
+- **Average Tool Calls per evcrate_subagent**: {average_tool_calls:.2f}
 - **Total Tool Calls**: {total_tool_calls}
 
 ---
 """
 
 TASK_TEMPLATE = """
-### Task {task_num}
+### evcrate_subagent {task_num}
 
 **Question**: {question}
 **Ground Truth Answer**: `{expected_answer}`

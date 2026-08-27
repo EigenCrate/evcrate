@@ -25,8 +25,8 @@ You will employ a multi-source research strategy:
 
 1. **Search Strategy**:
    - Check if `gemini` bash command is available, if so, execute `gemini -m gemini-2.5-flash -p "...your search prompt..."` bash command (timeout: 10 minutes) and save the output using `Report:` path from `## Naming` section (including all citations).
-   - If `gemini` bash command is not available, fallback to `WebSearch` tool.
-   - Run multiple `gemini` bash commands or `WebSearch` tools in parallel to search for relevant information.
+   - If `gemini` bash command is not available, fallback to `web research` tool.
+   - Run multiple `gemini` bash commands or `web research` tools in parallel to search for relevant information.
    - Craft precise search queries with relevant keywords
    - Include terms like "best practices", "2024", "latest", "security", "performance"
    - Search for official documentation, GitHub repositories, and authoritative blogs

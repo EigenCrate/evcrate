@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
     EVCrate Help Command - All-in-one guide with dynamic command discovery.
-Scans .claude/commands/ directory to build catalog at runtime.
+Scans .pi/commands/ directory to build catalog at runtime.
 
 Usage:
     python ev-help.py                    # Overview with quick start
@@ -197,8 +197,8 @@ CATEGORY_GUIDES = {
     "config": {
         "title": "EVCrate Configuration (.evcrate.json)",
         "workflow": [
-            ("Global", "Set user prefs in `~/.claude/.evcrate.json`"),
-            ("Local", "Override per-project in `./.claude/.evcrate.json`"),
+            ("Global", "Set user prefs in `~/.pi/.evcrate.json`"),
+            ("Local", "Override per-project in `./.pi/.evcrate.json`"),
             ("Resolution", "DEFAULT → global → local (deep merge)"),
         ],
         "tip": "Global config works in fresh dirs; local overrides for projects",
@@ -386,7 +386,7 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
     ]
     project_roots.extend((target_root.parent, Path.cwd()))
     for project_root in _candidate_roots(*project_roots):
-        commands_dir = project_root / ".claude" / "commands"
+        commands_dir = project_root / ".pi" / "commands"
         if commands_dir.is_dir():
             return "commands", commands_dir
 
@@ -773,8 +773,8 @@ def show_config_guide() -> None:
     print("# EVCrate Configuration (.evcrate.json)")
     print()
     print("**Locations (cascading resolution):**")
-    print("- Global: `~/.claude/.evcrate.json` (user preferences)")
-    print("- Local: `./.claude/.evcrate.json` (project overrides)")
+    print("- Global: `~/.pi/.evcrate.json` (user preferences)")
+    print("- Local: `./.pi/.evcrate.json` (project overrides)")
     print()
     print("**Resolution Order:** `DEFAULT → global → local`")
     print("- Global config sets user defaults")
@@ -787,7 +787,7 @@ def show_config_guide() -> None:
     print()
     print("## Quick Start")
     print()
-    print("**Global config** (`~/.claude/.evcrate.json`) - your preferences:")
+    print("**Global config** (`~/.pi/.evcrate.json`) - your preferences:")
     print("```json")
     print('{')
     print('  "locale": {')
@@ -798,7 +798,7 @@ def show_config_guide() -> None:
     print('}')
     print("```")
     print()
-    print("**Local override** (`./.claude/.evcrate.json`) - project-specific:")
+    print("**Local override** (`./.pi/.evcrate.json`) - project-specific:")
     print("```json")
     print('{')
     print('  "plan": { "issuePrefix": "JIRA-" },')
@@ -928,14 +928,14 @@ def show_config_guide() -> None:
     print()
     print("**Global install user (fresh directories work):**")
     print("```bash")
-    print("# ~/.claude/.evcrate.json - applies everywhere")
+    print("# ~/.pi/.evcrate.json - applies everywhere")
     print("cd /tmp/new-project && claude  # Uses global config")
     print("```")
     print()
     print("**Project with local override:**")
     print("```bash")
     print("# Global: issuePrefix = \"GH-\"")
-    print("# Local (.claude/.evcrate.json): issuePrefix = \"JIRA-\"")
+    print("# Local (.pi/.evcrate.json): issuePrefix = \"JIRA-\"")
     print("# Result: issuePrefix = \"JIRA-\" (local wins)")
     print("```")
     print()
@@ -984,15 +984,15 @@ def show_coding_level_guide() -> None:
     print("```")
     print()
     print("**Location (cascading):**")
-    print("- Global: `~/.claude/.evcrate.json` - personal preference")
-    print("- Local: `./.claude/.evcrate.json` - project override")
+    print("- Global: `~/.pi/.evcrate.json` - personal preference")
+    print("- Local: `./.pi/.evcrate.json` - project override")
     print()
     print("---")
     print()
     print("## How It Works")
     print()
     print("1. SessionStart hook reads `codingLevel` from `.evcrate.json`")
-    print("2. If 0-5, injects guidelines from `.claude/output-styles/coding-level-*.md`")
+    print("2. If 0-5, injects guidelines from `.pi/agent/evcrate/output-styles/coding-level-*.md`")
     print("3. Commands like `/brainstorm` follow the injected guidelines")
     print()
     print("**Token Efficiency:**")
@@ -1052,7 +1052,7 @@ def show_coding_level_guide() -> None:
     print()
     print("## Customization")
     print()
-    print("Guidelines live in `.claude/output-styles/coding-level-*.md`")
+    print("Guidelines live in `.pi/agent/evcrate/output-styles/coding-level-*.md`")
     print("Edit these files directly to customize behavior per level.")
     print()
     print("*Tip: Use `-1` (disabled) unless you're teaching or want guided explanations.*")
@@ -1062,7 +1062,7 @@ def main():
     script_path = Path(__file__).resolve()
     source_kind, source_dir = resolve_command_source(script_path)
     if not source_dir.is_dir():
-        print("Error: no .claude/commands or generated command skills directory found.")
+        print("Error: no .pi/commands or generated command skills directory found.")
         sys.exit(1)
 
     if source_kind == "skills":

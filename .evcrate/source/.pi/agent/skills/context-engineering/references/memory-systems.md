@@ -7,7 +7,7 @@ Architectures for persistent context beyond the window.
 | Layer | Scope | Persistence | Use Case |
 |-------|-------|-------------|----------|
 | L1: Working | Current window | None | Active reasoning |
-| L2: Short-Term | Session | Session | Task continuity |
+| L2: Short-Term | Session | Session | evcrate_subagent continuity |
 | L3: Long-Term | Cross-session | Persistent | User preferences |
 | L4: Entity | Per-entity | Persistent | Consistency |
 | L5: Temporal Graph | Time-aware | Persistent | Evolving facts |

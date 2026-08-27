@@ -28,7 +28,7 @@
 2. Try general library URL
    https://context7.com/{library}/llms.txt
    ↓ 404
-3. WebSearch for llms.txt
+3. web research for llms.txt
    "[library] llms.txt site:[official domain]"
    ↓ Not found
 4. Repository analysis
@@ -41,7 +41,7 @@
 1. Try context7.com
    https://context7.com/{library}/llms.txt
    ↓ 404
-2. WebSearch for llms.txt
+2. web research for llms.txt
    "[library] llms.txt"
    ↓ Not found
 3. Repository analysis
@@ -54,7 +54,7 @@
 ## Timeout Handling
 
 **Set limits:**
-- WebFetch: 60s
+- web research: 60s
 - Repository clone: 5min
 - Repomix: 10min
 

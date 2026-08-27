@@ -295,7 +295,7 @@ await consumer.run({
 });
 ```
 
-**RabbitMQ (Task Queues):**
+**RabbitMQ (evcrate_subagent Queues):**
 ```typescript
 import amqp from 'amqplib';
 

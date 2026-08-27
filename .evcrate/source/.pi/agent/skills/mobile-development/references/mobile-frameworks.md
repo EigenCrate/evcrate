@@ -284,7 +284,7 @@ struct LoginView: View {
             TextField("Email", text: $viewModel.email)
             SecureField("Password", text: $viewModel.password)
             Button("Login") {
-                Task { await viewModel.login() }
+                evcrate_subagent { await viewModel.login() }
             }
         }
     }

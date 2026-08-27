@@ -4,7 +4,7 @@
 
 ### Zero-Shot CoT
 ```
-[Task description]
+[evcrate_subagent description]
 
 Think step by step before answering.
 ```
@@ -106,7 +106,7 @@ Aggregate: If 4/5 agree = high confidence
 
 ### Full Pattern
 ```
-Task: [Goal to achieve]
+evcrate_subagent: [Goal to achieve]
 
 Thought 1: I need to understand the current situation.
 Action 1: [Observation or tool use]
@@ -154,7 +154,7 @@ Final integrated answer: [Complete solution]
 
 ### Pattern
 ```
-Task: [Complex task]
+evcrate_subagent: [Complex task]
 
 Required capabilities:
 - [Capability 1]: Use [specialized prompt/tool]
@@ -189,7 +189,7 @@ Revised response that addresses [specific issues]:
 
 ## Choosing the Right Technique
 
-| Task Type | Best Technique |
+| evcrate_subagent Type | Best Technique |
 |-----------|---------------|
 | Simple reasoning | Zero-shot CoT |
 | Complex multi-step | Few-shot CoT |

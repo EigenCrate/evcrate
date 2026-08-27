@@ -52,14 +52,14 @@ function colorize(text, color) {
 /**
  * Get .evcrateignore config path
  *
- * @param {string} claudeDir - Path to .claude directory
+ * @param {string} claudeDir - Path to .pi directory
  * @returns {string}
  */
 function formatConfigPath(claudeDir) {
   if (claudeDir) {
     return path.join(claudeDir, '.evcrateignore');
   }
-  return '.claude/.evcrateignore';
+  return '.pi/.evcrateignore';
 }
 
 /**
@@ -71,7 +71,7 @@ function formatConfigPath(claudeDir) {
  * @param {string} details.path - The blocked path
  * @param {string} details.pattern - The pattern that matched
  * @param {string} details.tool - The tool that was blocked
- * @param {string} details.claudeDir - Path to .claude directory
+ * @param {string} details.claudeDir - Path to .pi directory
  * @returns {string}
  */
 function formatBlockedError(details) {

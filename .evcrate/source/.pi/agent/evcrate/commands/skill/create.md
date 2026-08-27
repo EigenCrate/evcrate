@@ -8,7 +8,7 @@ Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.
 
 ## Your mission
-Create a new skill in `.pi/skills/` directory.
+Create a new skill in `.pi/agent/skills/` directory.
 
 ## Requirements
 <user-prompt>$ARGUMENTS</user-prompt>

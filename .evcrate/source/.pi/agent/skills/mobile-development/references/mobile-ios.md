@@ -21,7 +21,7 @@ func fetchUser(id: String) async throws -> User {
 }
 
 // Usage
-Task {
+evcrate_subagent {
     do {
         let user = try await fetchUser(id: "123")
         self.user = user

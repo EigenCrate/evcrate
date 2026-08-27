@@ -280,7 +280,7 @@ docker builder prune
 
 ## Quick Reference
 
-| Task | Command |
+| evcrate_subagent | Command |
 |------|---------|
 | Build | `docker build -t myapp:1.0 .` |
 | Run | `docker run -d -p 8080:3000 myapp:1.0` |

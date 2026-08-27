@@ -10,14 +10,14 @@ const path = require('path');
 const os = require('os');
 
 const CONFIG_FILE_NAME = '.evcrate.json';
-const VALID_CONFIG_DIRS = new Set(['.claude', '.codex', '.pi']);
+const VALID_CONFIG_DIRS = new Set(['.pi', '.codex', '.pi']);
 
 function getEVCrateConfigDirEnv() {
   return process['env'].EVCRATE_CONFIG_DIR;
 }
 
 function resolveEVCrateConfigDir(value = getEVCrateConfigDirEnv()) {
-  return VALID_CONFIG_DIRS.has(value) ? value : '.claude';
+  return VALID_CONFIG_DIRS.has(value) ? value : '.pi';
 }
 
 function absoluteDirectory(value) {
@@ -470,8 +470,8 @@ function sanitizeConfig(config, projectRoot) {
  *
  * Resolution order (each layer overrides the previous):
  *   1. DEFAULT_CONFIG (hardcoded defaults)
- *   2. Global config (~/.claude/.evcrate.json) - user preferences
- *   3. Local config (./.claude/.evcrate.json) - project-specific overrides
+ *   2. Global config (~/.pi/.evcrate.json) - user preferences
+ *   3. Local config (./.pi/.evcrate.json) - project-specific overrides
  *      Set EVCRATE_CONFIG_DIR=.codex to use .codex/.evcrate.json instead.
  *
  * @param {Object} options - Options for config loading

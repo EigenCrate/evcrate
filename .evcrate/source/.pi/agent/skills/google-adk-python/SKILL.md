@@ -210,7 +210,7 @@ gcloud run deploy my-agent --image my-agent
 - **Customer Support**: Query routing + knowledge base + escalation
 - **Content Creation**: Research + writing + editing pipelines
 - **Data Analysis**: Data fetching + processing + visualization
-- **Task Automation**: Multi-step workflows with conditional logic
+- **evcrate_subagent Automation**: Multi-step workflows with conditional logic
 
 ## Development UI
 

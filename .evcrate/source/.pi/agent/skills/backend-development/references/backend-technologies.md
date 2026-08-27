@@ -162,7 +162,7 @@ Core technologies, frameworks, databases, and message queues for modern backend 
 ## Message Queues & Event Streaming
 
 ### RabbitMQ
-**Best For:** Task queues, request/reply patterns
+**Best For:** evcrate_subagent queues, request/reply patterns
 
 **Strengths:**
 - Flexible routing (direct, topic, fanout, headers)

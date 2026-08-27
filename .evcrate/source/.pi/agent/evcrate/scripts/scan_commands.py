@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scan .claude/commands directory and extract command metadata.
+Scan .pi/commands directory and extract command metadata.
 """
 
 import re
@@ -38,6 +38,7 @@ def scan_commands(base_path: Path) -> List[Dict]:
         # Get relative path from commands directory
         rel_path = cmd_file.relative_to(base_path)
 
+        # Build command name from path
         # Build default command name from path
         parts = list(rel_path.parts[:-1]) + [rel_path.stem]
 
@@ -79,7 +80,7 @@ def group_by_category(commands: List[Dict]) -> Dict[str, List[Dict]]:
 
 def main():
     """Main execution."""
-    base_path = Path('.claude/commands')
+    base_path = Path('.pi/commands')
 
     if not base_path.exists():
         print(f"Error: {base_path} not found")
@@ -97,7 +98,7 @@ def main():
         print(f"\n{category.upper()}:")
 
     # Output YAML for processing (generate_catalogs.py expects YAML format)
-    output_path = Path('.claude/scripts/commands_data.yaml')
+    output_path = Path('.pi/agent/evcrate/scripts/commands_data.yaml')
     output_path.write_text(yaml.dump(commands, allow_unicode=True, default_flow_style=False))
     print(f"\n✓ Saved metadata to {output_path}")
 
