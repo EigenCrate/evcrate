@@ -29,10 +29,24 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 **Analyze issues and route to specialized fix command:**
 <issues>{{args}}</issues>
 
+## Advice Mode
+
+Parse the raw arguments for one exact, case-sensitive, whitespace-delimited
+`--advice` token. It is explicit only when it is the final token after trailing
+whitespace; reject duplicates and leave quoted, embedded, suffixed, non-final,
+or differently cased text unchanged. Strip the final token into
+`WORK_ARGUMENTS` before routing. Preserve explicit mode by appending exactly one
+trailing `--advice` to the delegated command. If the selected specialist does
+not declare `--advice`, route to `/fix:hard` with the same `WORK_ARGUMENTS` so
+the requested advice gate is not silently dropped. Otherwise pass no mode token.
+Read `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) before routing and require its
+executable local bridge for the eventual named checkpoint.
+
 ## Decision Tree
 
 **1. Check for existing plan:**
-- If markdown plan exists → Use the matching `cmd_*` skill to run `/code <path-to-plan>`
+- If markdown plan exists → Use the matching `cmd_*` skill to run `/code <path-to-plan>` plus one trailing `--advice`
+  when explicit mode is active
 
 **2. Route by issue type:**
 
@@ -59,6 +73,11 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 
 **H) Simple/Quick Fixes** (default: small bug, single file, straightforward)
 → Use the matching `cmd_*` skill to run `/fix:fast <detailed-description>`
+
+When explicit advice mode is active, apply the Advice Mode routing rule above
+before emitting any of these handoffs; never report an advisor result before
+the delegated command returns a terminal `ADVICE_READY` result from the local
+bridge.
 
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail

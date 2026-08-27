@@ -1,15 +1,29 @@
 ---
 description: Analyze and fix issues [INTELLIGENT ROUTING]
-argument-hint: [issues]
+argument-hint: [issues] [--advice]
 ---
 
 **Analyze issues and route to specialized fix command:**
 <issues>$ARGUMENTS</issues>
 
+## Advice Mode
+
+Parse the raw arguments for one exact, case-sensitive, whitespace-delimited
+`--advice` token. It is explicit only when it is the final token after trailing
+whitespace; reject duplicates and leave quoted, embedded, suffixed, non-final,
+or differently cased text unchanged. Strip the final token into
+`WORK_ARGUMENTS` before routing. Preserve explicit mode by appending exactly one
+trailing `--advice` to the delegated command. If the selected specialist does
+not declare `--advice`, route to `/fix:hard` with the same `WORK_ARGUMENTS` so
+the requested advice gate is not silently dropped. Otherwise pass no mode token.
+Read `{{evcrate:workflows/advisor-mentoring.md}}` before routing and require its
+executable local bridge for the eventual named checkpoint.
+
 ## Decision Tree
 
 **1. Check for existing plan:**
-- If markdown plan exists → `/code <path-to-plan>`
+- If markdown plan exists → `/code <path-to-plan>` plus one trailing `--advice`
+  when explicit mode is active
 
 **2. Route by issue type:**
 
@@ -36,6 +50,11 @@ argument-hint: [issues]
 
 **H) Simple/Quick Fixes** (default: small bug, single file, straightforward)
 → `/fix:fast <detailed-description>`
+
+When explicit advice mode is active, apply the Advice Mode routing rule above
+before emitting any of these handoffs; never report an advisor result before
+the delegated command returns a terminal `ADVICE_READY` result from the local
+bridge.
 
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail
