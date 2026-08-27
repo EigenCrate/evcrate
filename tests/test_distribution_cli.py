@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import io
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,15 @@ from unittest.mock import patch
 
 import distribute
 from distribution.context import create_context
-from distribution.contracts import ADVISOR_RUNTIME_FILES, BuildError, DistributionAction, PublishError, VerifiedArtifact
+from distribution.contracts import (
+    ADVISOR_RUNTIME_FILES,
+    BuildError,
+    DistributionAction,
+    PublishError,
+    VerifiedArtifact,
+    render_harness_script_references,
+)
+from distribution.advisor_runtime import is_production_runtime_artifact
 from distribution import gates
 
 
@@ -61,13 +70,50 @@ class DistributionCliTest(unittest.TestCase):
                             destination.parent.mkdir(parents=True, exist_ok=True)
                             destination.write_bytes((source / relative).read_bytes())
 
+                    def write_resources(output: Path, relative_root: str, target: str) -> None:
+                        source_root = context.local_claude
+                        destination_root = output / relative_root
+                        for kind in ("scripts", "hooks"):
+                            source_kind = source_root / kind
+                            for source in sorted(source_kind.rglob("*")):
+                                if not source.is_file() or source.is_symlink():
+                                    continue
+                                relative = source.relative_to(source_kind)
+                                if (
+                                    relative.as_posix() in ADVISOR_RUNTIME_FILES
+                                    or "advise-state" in relative.name
+                                    or relative.suffix.lower() in {".pyc", ".pyo"}
+                                    or is_production_runtime_artifact(relative)
+                                ):
+                                    continue
+                                target_relative = relative
+                                if target == "gemini" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
+                                    target_relative = Path("claude-session-end.cjs")
+                                destination = destination_root / kind / target_relative
+                                destination.parent.mkdir(parents=True, exist_ok=True)
+                                raw = source.read_bytes()
+                                if b"\0" in raw[:1024]:
+                                    destination.write_bytes(raw)
+                                else:
+                                    destination.write_text(
+                                        render_harness_script_references(raw.decode("utf-8"), target),
+                                        encoding="utf-8",
+                                    )
+                        for name in (".evcrate.json", ".evcrateignore"):
+                            shutil.copyfile(source_root / name, output / name)
+                            if name == ".evcrateignore" and relative_root:
+                                shutil.copyfile(source_root / name, destination_root / name)
+
                     if script.endswith("migrate_claude_to_codex.py"):
                         write_runtime(Path(env["CODEX_OUTPUT_DIR"]), "scripts")
+                        write_resources(Path(env["CODEX_OUTPUT_DIR"]), "", "codex")
                         Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
                     elif script.endswith("migrate_claude_to_pi.py"):
                         write_runtime(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate/scripts")
+                        write_resources(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate", "pi")
                     else:
                         write_runtime(Path(env["GEMINI_OUTPUT_DIR"]), "scripts")
+                        write_resources(Path(env["GEMINI_OUTPUT_DIR"]), "", "gemini")
                         Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
 
                 run.side_effect = write_required_docs
