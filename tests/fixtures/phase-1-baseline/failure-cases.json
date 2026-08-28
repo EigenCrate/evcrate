@@ -1,0 +1,108 @@
+{
+  "schema": "evcrate-phase1-failure-cases/v1",
+  "baseline_commit": "61d90b49346e1d01a30a42a76952a3d49a3998c8",
+  "cases": [
+    {
+      "id": "normalized-path-traversal",
+      "invariant": "Repository-relative paths reject traversal and platform separators.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_normalized_paths_reject_traversal_and_windows_separators",
+      "expected_error": "HashingError"
+    },
+    {
+      "id": "overlay-baseline-file-collision",
+      "invariant": "An overlay cannot replace a baseline-owned file.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_overlay_rejects_baseline_file_collision",
+      "expected_error": "OverlayError"
+    },
+    {
+      "id": "overlay-file-directory-collision",
+      "invariant": "An overlay cannot cross a file/directory boundary.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_overlay_rejects_file_directory_collision",
+      "expected_error": "OverlayError"
+    },
+    {
+      "id": "overlay-symlink-escape",
+      "invariant": "Overlay inputs cannot escape through symlinks.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_overlay_rejects_symlink_escape",
+      "expected_error": "OverlayError"
+    },
+    {
+      "id": "source-symlink-rejection",
+      "invariant": "Generated source trees reject symlinks before promotion.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_source_symlink_is_not_followed_and_baseline_rejects_it",
+      "expected_error": "BuildError"
+    },
+    {
+      "id": "stale-build-lock",
+      "invariant": "Concurrent repository operations fail closed.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_repository_lock_rejects_concurrent_operation",
+      "expected_error": "BuildError"
+    },
+    {
+      "id": "interrupted-build-recovery",
+      "invariant": "Interrupted local promotion restores the prior artifact and clears its journal.",
+      "test": "tests/test_distribution_build.py::DistributionBuildTest.test_recovery_restores_outputs_after_interruption",
+      "expected_result": "prior output restored; recovery journal removed"
+    },
+    {
+      "id": "stale-publication-hash",
+      "invariant": "Stale source/runtime authorization blocks HOME mutation.",
+      "test": "tests/test_distribution_publish.py::DistributionPublishTest.test_stale_source_hash_blocks_before_home_mutation",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "stale-runtime-hash",
+      "invariant": "A changed advisor runtime blocks HOME mutation.",
+      "test": "tests/test_distribution_publish.py::DistributionPublishTest.test_stale_runtime_hash_blocks_before_home_mutation",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "stale-output-hash",
+      "invariant": "A changed generated output blocks HOME mutation.",
+      "test": "tests/test_distribution_publish.py::DistributionPublishTest.test_changed_claude_output_hash_blocks_before_home_mutation",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "missing-output-hash",
+      "invariant": "Missing output authorization blocks HOME mutation.",
+      "test": "tests/test_distribution_publish.py::DistributionPublishTest.test_missing_claude_output_authorization_blocks_before_home_mutation",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "home-symlink-rejection",
+      "invariant": "Managed HOME paths and ancestors cannot be symlinked.",
+      "test": "tests/test_distribution_publish_symlinks.py::DistributionPublishSymlinkTest.test_managed_destination_symlink_is_rejected_without_mutation",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "interrupted-home-recovery",
+      "invariant": "Interrupted HOME publication restores completed roots before resuming.",
+      "test": "tests/test_distribution_publish.py::DistributionPublishTest.test_recovery_restores_marker_recorded_backup",
+      "expected_result": "backup restored; release marker consumed"
+    },
+    {
+      "id": "pi-settings-merge",
+      "invariant": "Pi settings preserve user keys and merge only managed package identities.",
+      "test": "tests/test_distribution_pi_settings.py::PiSettingsPublicationTest.test_publish_merges_only_packages_and_keeps_settings_out_of_managed_paths",
+      "expected_result": "merge-update; user settings preserved"
+    },
+    {
+      "id": "pi-settings-conflict",
+      "invariant": "A conflicting pi-code package is non-destructive and fails closed.",
+      "test": "tests/test_distribution_pi_settings.py::PiSettingsPublicationTest.test_pi_code_conflict_is_dry_run_only_and_non_destructive",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "pi-settings-symlink",
+      "invariant": "Pi settings symlinks are rejected before mutation.",
+      "test": "tests/test_distribution_pi_settings.py::PiSettingsPublicationTest.test_symlinked_settings_are_rejected_before_mutation",
+      "expected_error": "PublishError"
+    },
+    {
+      "id": "pi-settings-concurrent-change",
+      "invariant": "Concurrent Pi HOME changes abort before promotion.",
+      "test": "tests/test_distribution_pi_settings.py::PiSettingsPublicationTest.test_concurrent_pi_home_change_aborts_before_promotion",
+      "expected_error": "PublishError"
+    }
+  ]
+}

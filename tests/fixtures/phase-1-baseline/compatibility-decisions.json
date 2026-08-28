@@ -1,0 +1,24 @@
+{
+  "schema": "evcrate-phase1-compatibility-decisions/v1",
+  "baseline_commit": "61d90b49346e1d01a30a42a76952a3d49a3998c8",
+  "preserved": [
+    "The canonical .claude source tree remains the source of truth for all five published targets.",
+    "Target identifiers and output roots remain claude/.claude, codex/.codex plus .agents, gemini/.gemini, antigravity/.antigravity, and pi/.pi.",
+    "Staging remains deterministic and rejects path traversal, collisions, source symlinks, stale locks, and incomplete publication state.",
+    "HOME publication preserves unmanaged user files and applies declared bindings only.",
+    "Pi settings continue to merge managed package identities while preserving unrelated user settings and rejecting conflicts or symlinks.",
+    "The shared advisor runtime is a 19-file closure emitted for each target, with target-specific routing adapters.",
+    "A local generation/check gate remains required before publication and future control-plane migration."
+  ],
+  "deprecated_after_parity": [
+    "Direct use of Python migrators as the long-term control-plane entry point.",
+    "Implicit publication side effects outside the declared staging and promotion gates."
+  ],
+  "unresolved": [
+    "The eight live advisor-routing failures require controlled host CLI and authentication fixtures; they are not a Phase 1 parity gate.",
+    "The dependency install reports 21 audit findings (3 moderate, 17 high, 1 critical); dependency remediation is outside this baseline freeze.",
+    "Future Codex sibling-resource precedence requires a dedicated fixture before control-plane parity is claimed.",
+    "Windows process-tree and host-specific CLI behavior remain follow-up validation work.",
+    "The ignored plan directory is not present in a clean archived checkout; plan status is tracked by the active workflow checkout."
+  ]
+}
