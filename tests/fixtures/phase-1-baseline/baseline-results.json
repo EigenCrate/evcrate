@@ -1,0 +1,88 @@
+{
+  "schema": "evcrate-phase1-results/v1",
+  "baseline_commit": "61d90b49346e1d01a30a42a76952a3d49a3998c8",
+  "environment": {
+    "cwd": "disposable archived checkout of baseline commit",
+    "home": "disposable empty HOME and EVCRATE_HOME",
+    "python": "3.14.7",
+    "node": "24.16.0",
+    "npm": "11.13.0",
+    "network": "not required for Python, local artifact, or advisor tests; npm dependencies installed from lockfile"
+  },
+  "commands": [
+    {
+      "id": "local-generation",
+      "command": "python3 distribute.py --build",
+      "exit_code": 0,
+      "result": "verified local artifacts generated"
+    },
+    {
+      "id": "local-check",
+      "command": "python3 distribute.py --check",
+      "exit_code": 0,
+      "result": "generated artifacts are deterministic and current"
+    },
+    {
+      "id": "python-regression-suite",
+      "command": "python -m unittest discover -s tests -p 'test_*.py' -q",
+      "exit_code": 0,
+      "tests": 193,
+      "passed": 193,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "id": "npm-dependencies",
+      "command": "npm ci --ignore-scripts",
+      "exit_code": 0,
+      "packages_added": 429,
+      "audit_vulnerabilities": {
+        "total": 21,
+        "moderate": 3,
+        "high": 17,
+        "critical": 1
+      }
+    },
+    {
+      "id": "pi-regression-suite",
+      "command": "node --test .evcrate/targets/pi/tests/*.test.mjs",
+      "exit_code": 0,
+      "test_files": 51,
+      "passed": 51,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "id": "advisor-routing-suite",
+      "command": "npm run test:advisor-routing",
+      "exit_code": 1,
+      "tests": 105,
+      "passed": 97,
+      "failed": 8,
+      "required_for_phase_gate": false,
+      "classification": "host-dependent live CLI capability/authentication gates",
+      "expected_error_classes": {
+        "AUTH_UNAVAILABLE": 6,
+        "CLI_VERSION_UNSUPPORTED": 1,
+        "EFFORT_UNSUPPORTED": 1
+      }
+    }
+  ],
+  "precondition_diagnostics": [
+    {
+      "condition": "publish before local generation",
+      "observed": "two publication tests reject missing .antigravity artifact",
+      "resolution": "run local generation before publication tests"
+    },
+    {
+      "condition": "tests run beneath a real user checkout",
+      "observed": "Codex help resolver selects ancestor .claude/commands",
+      "resolution": "run from a disposable archived checkout, not only with HOME overridden"
+    },
+    {
+      "condition": "Pi tests before npm dependency preparation",
+      "observed": "27 of 31 test files pass; four cannot import typebox",
+      "resolution": "run npm ci --ignore-scripts in the disposable checkout"
+    }
+  ]
+}
