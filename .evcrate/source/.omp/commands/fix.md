@@ -1,0 +1,62 @@
+---
+argument-hint: "[issues] [--advice]"
+description: "⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]"
+---
+
+
+**Analyze issues and route to specialized fix command:**
+<issues>$ARGUMENTS</issues>
+
+## Advice Mode
+
+Parse the raw arguments for one exact, case-sensitive, whitespace-delimited
+`--advice` token. It is explicit only when it is the final token after trailing
+whitespace; reject duplicates and leave quoted, embedded, suffixed, non-final,
+or differently cased text unchanged. Strip the final token into
+`WORK_ARGUMENTS` before routing. Preserve explicit mode by appending exactly one
+trailing `--advice` to the delegated command. If the selected specialist does
+not declare `--advice`, route to `/fix__hard` with the same `WORK_ARGUMENTS` so
+the requested advice gate is not silently dropped. Otherwise pass no mode token.
+Read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` before routing and dispatch exactly one blocking native OMP `advisor` subagent for the eventual
+named checkpoint.
+
+## Decision Tree
+
+**1. Check for existing plan:**
+- If markdown plan exists → `/code <path-to-plan>` plus one trailing `--advice`
+  when explicit mode is active
+
+**2. Route by issue type:**
+
+**A) Type Errors** (keywords: type, typescript, tsc, type error)
+→ `/fix__types`
+
+**B) UI/UX Issues** (keywords: ui, ux, design, layout, style, visual, button, component, css, responsive)
+→ `/fix__ui <detailed-description>`
+
+**C) CI/CD Issues** (keywords: github actions, pipeline, ci/cd, workflow, deployment, build failed)
+→ `/fix__ci <github-actions-url-or-description>`
+
+**D) Test Failures** (keywords: test, spec, jest, vitest, failing test, test suite)
+→ `/fix__test <detailed-description>`
+
+**E) Log Analysis** (keywords: logs, error logs, log file, stack trace)
+→ `/fix__logs <detailed-description>`
+
+**F) Multiple Independent Issues** (2+ unrelated issues in different areas)
+→ `/fix__parallel <detailed-description>`
+
+**G) Complex Issues** (keywords: complex, architecture, refactor, major, system-wide, multiple components)
+→ `/fix__hard <detailed-description>`
+
+**H) Simple/Quick Fixes** (default: small bug, single file, straightforward)
+→ `/fix__fast <detailed-description>`
+
+When explicit advice mode is active, apply the Advice Mode routing rule above
+before emitting any of these handoffs; never report an advisor result before
+the delegated command returns a terminal structured result from the native OMP `advisor` subagent.
+
+## Notes
+- `detailed-description` = enhanced prompt describing issue in detail
+- If unclear, ask user for clarification before routing
+- Can combine routes: e.g., multiple type errors + UI issue → `/fix__parallel`

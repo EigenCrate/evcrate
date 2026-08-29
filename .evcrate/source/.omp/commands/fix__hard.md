@@ -1,0 +1,63 @@
+---
+argument-hint: "[issues] [--advice]"
+description: "⚡⚡⚡ Use subagents to plan and fix hard issues"
+---
+
+
+**Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
+<raw-issues>$ARGUMENTS</raw-issues>
+
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
+## Advice Mode
+
+A final standalone `--advice` activates explicit review mentoring in `/code`.
+Before analysis, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
+issue input and apply the shared default stuck-escalation contract.
+
+When explicit advice mode is active, the advice gate is an executable step, not
+a writing exercise. After the required terminal review or test evidence exists
+and before displaying advisor findings, dispatch exactly one blocking native OMP
+`advisor` subagent with the bounded checkpoint request from the workflow. Do not
+invoke an executable bridge, external adapter, or fallback route. If a caller
+requests advisor relay with `--agent`, return
+`ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` and leave the gate incomplete.
+
+## Workflow:
+
+If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.
+
+### Fullfill the request
+**Question Everything**: Use `ask the user` tool to ask probing questions to fully understand the user's request, constraints, and true objectives. Don't assume - clarify until you're 100% certain.
+
+* If you have any questions, use `ask the user` tool to ask the user to clarify them.
+* Ask 1 question at a time, wait for the user to answer before moving to the next question.
+* If you don't have any questions, start the next step.
+
+### Fix the issue
+
+Use `sequential-thinking` skill to break complex problems into sequential thought steps.
+Use `problem-solving` skills to tackle the issues.
+Analyze the skills catalog and activate other skills that are needed for the task during the process.
+
+1. Use `debugger` subagent to find the root cause of the issues and report back to main agent.
+2. Use `researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
+3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
+4. Then use `/code` OMP command to implement the plan step by step. This fallback
+   handoff uses `WORK_ARGUMENTS`; append exactly one trailing `--advice` in explicit
+   mode and otherwise pass no `--advice` token.
+5. Final Report:
+  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
+  * Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.
+  - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
+  - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
+
+**REMEMBER**:
+- You can always generate images with `ai-multimodal` skills on the fly for visual assets.
+- You always read and analyze the generated assets with `ai-multimodal` skills to verify they meet requirements.
+- For image editing (removing background, adjusting, cropping), use `ImageMagick` skill or similar tools as needed.

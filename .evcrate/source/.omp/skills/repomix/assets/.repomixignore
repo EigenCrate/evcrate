@@ -1,0 +1,54 @@
+# Dot-folders (not covered by .gitignore defaults)
+.omp/
+.git/
+.idea/
+.vscode/
+.cursor/
+.next/
+.nuxt/
+.svelte-kit/
+.expo/
+.gradle/
+
+# Build artifacts
+dist/
+build/
+out/
+.output/
+*.min.js
+*.min.css
+
+# Dependencies
+node_modules/
+vendor/
+packages/*/node_modules/
+
+# Runtime/cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.eslintcache
+.turbo/
+.vercel/
+
+# Large files
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+*.iso
+*.dmg
+*.exe
+*.bin
+
+# Lock files (often noisy)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+Cargo.lock
+
+# Repomix output
+repomix-output.*
