@@ -31,11 +31,13 @@ _RELAY_ERRORS = {
     "antigravity": "ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY",
     "codex": "ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX",
     "gemini": "ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI",
+    "omp": "ADVISE_AGENT_RELAY_UNSUPPORTED_OMP",
     "pi": "ADVISE_AGENT_RELAY_UNSUPPORTED_PI",
 }
 _WORKFLOW_ROOTS = {
     "codex": (".codex/workflows", "~/.codex/workflows"),
     "antigravity": (".antigravity/workflows", "~/.gemini/config/workflows"),
+    "omp": (".omp/evcrate/workflows", "~/.omp/agent/evcrate/workflows"),
 }
 _ADVISORY_WORKFLOW_NAMES = ("advisor-mentoring.md", "advisory-interview.md")
 _ADVISOR_BRIDGE_PATHS = {
@@ -43,6 +45,7 @@ _ADVISOR_BRIDGE_PATHS = {
     "codex": "./.codex/scripts/advisor-bridge.cjs",
     "gemini": "./.gemini/scripts/advisor-bridge.cjs",
     "antigravity": "./.antigravity/scripts/advisor-bridge.cjs",
+    "omp": "./.omp/evcrate/scripts/advisor-bridge.cjs",
     "pi": "{{evcrate:scripts/advisor-bridge.cjs}}",
 }
 ADVISOR_BRIDGE_FALLBACK_BLOCK = """If the project does not contain a local harness runtime, use the published
@@ -133,6 +136,7 @@ _SCRIPT_RESOURCE_ROOTS = {
     "codex": ".codex",
     "gemini": ".gemini",
     "antigravity": ".antigravity",
+    "omp": ".omp",
     "pi": ".pi",
 }
 _CLAUDE_PATH_REFERENCE = re.compile(
@@ -153,6 +157,13 @@ def _script_resource_path(target: str, scope: str, suffix: str) -> str:
         if suffix in {"scripts", "hooks", "workflows", "output-styles"}:
             return f".pi/agent/evcrate/{suffix}"
         return f".pi/{suffix}"
+    if target == "omp":
+        global_prefix = ".omp/agent" if scope == "global" else ".omp"
+        if suffix == "skills":
+            return f"{global_prefix}/skills"
+        if suffix in {"scripts", "hooks", "workflows", "output-styles"}:
+            return f"{global_prefix}/evcrate/{suffix}"
+        return f"{global_prefix}/{suffix}"
     if target == "antigravity" and scope == "global":
         return f".gemini/config/{suffix}"
     return f"{root}/{suffix}"
@@ -186,9 +197,14 @@ def render_harness_script_references(text: str, target: str) -> str:
                 f"{prefix}/.claude/{suffix}",
                 f"{prefix}/{_script_resource_path(target, 'global', suffix)}",
             )
+        global_root = (
+            ".omp/agent"
+            if target == "omp"
+            else (_SCRIPT_RESOURCE_ROOTS[target] if target != "antigravity" else ".gemini/config")
+        )
         rendered = rendered.replace(
             f"{prefix}/.claude",
-            f"{prefix}/{_SCRIPT_RESOURCE_ROOTS[target] if target != 'antigravity' else '.gemini/config'}",
+            f"{prefix}/{global_root}",
         )
 
     for suffix in sorted(_SCRIPT_RESOURCE_SUFFIXES, key=len, reverse=True):
@@ -277,8 +293,6 @@ def render_harness_script_references(text: str, target: str) -> str:
     for token, url in protected_urls:
         rendered = rendered.replace(token, url)
     return rendered
-
-
 def validate_harness_resource_projection(
     source_root: Path,
     output_root: Path,
@@ -286,13 +300,7 @@ def validate_harness_resource_projection(
     *,
     check_resource_closure: bool = True,
 ) -> None:
-    """Verify that generated target files do not retain central Claude paths.
-
-    The primary root also carries the copied script/hook/config closure. A
-    target may have secondary roots containing only native resources (Codex's
-    ``.agents`` skill tree), so callers can validate those roots without
-    incorrectly requiring a duplicate closure or config file.
-    """
+    """Verify that generated target files do not retain central Claude paths."""
 
     if target not in _SCRIPT_RESOURCE_ROOTS:
         raise ValueError(f"Unknown harness script target: {target}")
@@ -325,6 +333,8 @@ def validate_harness_resource_projection(
     def target_resource_root(kind: str) -> Path:
         if target == "pi":
             return output_root / "agent" / "evcrate" / kind
+        if target == "omp":
+            return output_root / "evcrate" / kind
         return output_root / kind
 
     if check_resource_closure:
@@ -351,18 +361,17 @@ def validate_harness_resource_projection(
             if nested_ignore.is_symlink() or not nested_ignore.is_file():
                 raise ValueError(f"{target} hook-local ignore file is missing or unsafe: {nested_ignore}")
 
+    runtime_root_value = ADVISOR_RUNTIME_OUTPUT_PATHS.get(target)
+    runtime_root = Path(runtime_root_value) if runtime_root_value else None
+    if target == "pi":
+        runtime_root = Path("agent/evcrate/scripts")
     for path in sorted(output_root.rglob("*")):
         if not path.is_file():
             continue
         relative = path.relative_to(output_root)
-        # The top-level matrix records source commands for audit purposes;
-        # nested files must still participate in the central-path scan.
         if relative == Path("migration-behavior-matrix.json"):
             continue
-        runtime_root = Path(ADVISOR_RUNTIME_OUTPUT_PATHS[target])
-        if target == "pi":
-            runtime_root = Path("agent/evcrate/scripts")
-        if relative.parts[:len(runtime_root.parts)] == runtime_root.parts:
+        if runtime_root is not None and relative.parts[:len(runtime_root.parts)] == runtime_root.parts:
             runtime_relative = relative.relative_to(runtime_root)
             if runtime_relative.as_posix() in ADVISOR_RUNTIME_FILES:
                 continue
@@ -376,8 +385,6 @@ def validate_harness_resource_projection(
         content_without_urls = _URL_REFERENCE.sub("", content)
         if _CLAUDE_PATH_REFERENCE.search(content_without_urls):
             raise ValueError(f"{target} output retains a central Claude resource path: {relative}")
-
-
 def render_advisory_capabilities(text: str, target: str) -> str:
     """Replace one canonical advisory marker block with a target-specific block.
 

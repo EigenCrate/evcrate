@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "omp",
+  "adapter": "migrate_claude_to_omp.py",
+  "adapter_sources": [
+    "distribution/advisor_runtime.py",
+    "distribution/contracts.py",
+    "distribution/hashing.py",
+    "omp_adapter/__init__.py",
+    "omp_adapter/agents.py",
+    "omp_adapter/commands.py",
+    "omp_adapter/hooks.py",
+    "omp_adapter/resources.py",
+    "omp_adapter/skills.py",
+    "pi_adapter/__init__.py",
+    "pi_adapter/frontmatter.py"
+  ],
+  "output_root": ".omp",
+  "additional_roots": [],
+  "project_docs": [],
+  "patches": [],
+  "home_policy": {
+    "bindings": {".omp": ".omp"},
+    "preserve_paths": {},
+    "promotion_order": 30
+  }
+}

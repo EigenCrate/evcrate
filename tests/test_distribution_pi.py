@@ -66,11 +66,14 @@ class NativePiDistributionTest(unittest.TestCase):
             for relative in (
                 "migrate_claude_to_gemini.py",
                 "migrate_claude_to_codex.py",
+                "migrate_claude_to_omp.py",
                 "migrate_claude_to_pi.py",
+                "omp_adapter",
                 "pi_adapter",
                 "distribution/antigravity_publish.py",
                 "distribution/advisor_runtime.py",
                 "distribution/contracts.py",
+                "distribution/hashing.py",
                 "distribute_hooks.py",
             ):
                 source, destination = REPOSITORY / relative, repository / relative
