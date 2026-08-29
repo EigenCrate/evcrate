@@ -22,6 +22,30 @@ class DistributionPublishTest(unittest.TestCase):
     def _policy(self, context: DistributionContext, source: Path, home: Path) -> list[tuple[str, Path, Path, set[str]]]:
         return [(".codex", source, home, {".evcrate.json"})]
 
+    def test_omp_publication_places_project_artifact_under_home_agent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            context = self._context(root)
+            source, home = context.local_omp, context.target_omp
+            source.mkdir(parents=True)
+            home.mkdir(parents=True)
+            (source / "agents/example.md").parent.mkdir(parents=True)
+            (source / "agents/example.md").write_text("agent", encoding="utf-8")
+            (source / "evcrate/.evcrate.json").parent.mkdir(parents=True)
+            (source / "evcrate/.evcrate.json").write_text("config", encoding="utf-8")
+            (home / "config.yml").write_text("user-owned", encoding="utf-8")
+            artifact = VerifiedArtifact(context.repository, context.local_roots)
+            policy = [(".omp", source, home, set())]
+            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=policy):
+                changes = publish_local_artifacts(context, artifact)
+            paths = {(change.root, change.path, change.action) for change in changes}
+            self.assertIn((".omp", "agent/agents/example.md", "create"), paths)
+            self.assertIn((".omp", "agent/evcrate/.evcrate.json", "create"), paths)
+            self.assertEqual((home / "agent/agents/example.md").read_text(encoding="utf-8"), "agent")
+            self.assertEqual((home / "agent/evcrate/.evcrate.json").read_text(encoding="utf-8"), "config")
+            self.assertFalse((home / "agents/example.md").exists())
+            self.assertEqual((home / "config.yml").read_text(encoding="utf-8"), "user-owned")
+
     def test_publish_preserves_unknown_and_user_owned_config(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -185,7 +209,7 @@ class DistributionPublishTest(unittest.TestCase):
             context = create_context(DistributionAction.PUBLISH, environ={"EVCRATE_HOME": str(Path(temp) / "home")})
             self.assertEqual(
                 _expected_output_names(context),
-                {".gemini", ".codex", ".agents", ".antigravity", ".claude", ".pi", "AGENTS.md", "GEMINI.md"},
+                {".gemini", ".codex", ".agents", ".antigravity", ".omp", ".claude", ".pi", "AGENTS.md", "GEMINI.md"},
             )
 
     def test_changed_claude_output_hash_blocks_before_home_mutation(self) -> None:
@@ -328,10 +352,37 @@ class DistributionPublishTest(unittest.TestCase):
             backup = home.with_name(f".{home.name}.evcrate-backup-test")
             backup.mkdir()
             (backup / "value").write_text("old", encoding="utf-8")
-            write_release_marker(context.state_dir, {"schema_version": 1, "status": "in_progress", "roots": {".codex": {"backup": backup.name}}})
+            previous_managed_paths = {".codex": ["agent/previous.json"]}
+            write_release_marker(context.state_dir, {
+                "schema_version": 1,
+                "status": "in_progress",
+                "roots": {".codex": {"backup": backup.name}},
+                "previous_managed_paths": previous_managed_paths,
+            })
             with patch("distribution.publish._policies", return_value=self._policy(context, source, home)):
                 recover_interrupted_publish(context)
-            self.assertEqual((home / "value").read_text(encoding="utf-8"), "old")
+                self.assertEqual((home / "value").read_text(encoding="utf-8"), "old")
+                self.assertFalse(backup.exists())
+                marker = json.loads((context.state_dir / "release-marker.json").read_text(encoding="utf-8"))
+                self.assertEqual(marker, {
+                    "managed_paths": previous_managed_paths,
+                    "previous_managed_paths": previous_managed_paths,
+                    "recovery_action": "restored-interrupted-roots",
+                    "roots": {".codex": {"backup": backup.name}},
+                    "schema_version": 1,
+                    "status": "recovered",
+                })
+                self.assertEqual(marker["schema_version"], 1)
+                self.assertEqual(marker["status"], "recovered")
+                self.assertEqual(marker["recovery_action"], "restored-interrupted-roots")
+                self.assertEqual(marker["managed_paths"], marker["previous_managed_paths"])
+                recover_interrupted_publish(context)
+                self.assertEqual((home / "value").read_text(encoding="utf-8"), "old")
+                self.assertEqual(
+                    json.loads((context.state_dir / "release-marker.json").read_text(encoding="utf-8")),
+                    marker,
+                )
+                self.assertFalse(backup.exists())
 
     def test_publish_lock_rejects_second_publisher(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

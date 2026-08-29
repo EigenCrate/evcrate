@@ -159,6 +159,13 @@ def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[s
                 raise PublishError("Nested HOME binding must promote after its parent")
     return [(name, local, home, preserve) for name, local, home, preserve, _ in ordered]
 
+def _published_relative(context: DistributionContext, local: Path, home: Path, relative: str) -> str:
+    """Map local OMP files into the HOME agent namespace."""
+
+    if home == context.target_omp:
+        return (PurePosixPath("agent") / normalize_relative_path(relative)).as_posix()
+    return relative
+
 
 def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> list[PublishChange]:
     verify_local_artifact(context, artifact)
@@ -168,10 +175,14 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     for name, local, home, preserved in _policies(context):
         _validate_home_ancestors(context, home)
         source = _publication_files(context, local, home)
+        preserved_paths = {
+            _published_relative(context, local, home, relative)
+            for relative in preserved
+        }
         shared_paths = {spec.destination for _, spec in _shared_for_root(context, local, home)}
         prior_paths = prior_managed_paths(prior, name)
         for relative, content in source.items():
-            if relative in preserved:
+            if relative in preserved_paths:
                 changes.append(PublishChange(name, relative, "preserve"))
                 continue
             destination = _managed_destination(home, relative)
@@ -182,7 +193,7 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
         for relative in prior_paths:
             if (
                 relative not in source
-                and relative not in preserved
+                and relative not in preserved_paths
                 and relative not in shared_paths
                 and _managed_destination(home, relative).exists()
             ):
@@ -204,6 +215,11 @@ def _publication_files(context: DistributionContext, local: Path, home: Path) ->
             relative: content
             for relative, content in source.items()
             if not _is_claude_skill_root_file(relative)
+        }
+    if home == context.target_omp:
+        source = {
+            _published_relative(context, local, home, relative): content
+            for relative, content in source.items()
         }
     if home != context.target_codex:
         return source
@@ -325,13 +341,17 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
                 if name in shared_snapshots and _home_snapshot(home) != shared_snapshots[name]:
                     raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
                 source = _publication_files(context, local, home)
+                preserved_paths = {
+                    _published_relative(context, local, home, relative)
+                    for relative in preserved
+                }
                 shared_specs = _shared_for_root(context, local, home)
                 shared_paths = {spec.destination for _, spec in shared_specs}
                 prior = prior_managed_paths(prior_paths, name)
-                managed = sorted(set(source) - preserved)
+                managed = sorted(set(source) - preserved_paths)
                 for relative in managed:
                     apply(_managed_destination(home, relative), source[relative], name, relative)
-                for relative in prior - set(source) - preserved - shared_paths:
+                for relative in prior - set(source) - preserved_paths - shared_paths:
                     destination = _managed_destination(home, relative)
                     if destination.exists():
                         apply(destination, None, name, relative)

@@ -174,7 +174,9 @@ def generate_stage(
         "CODEX_OUTPUT_DIR": str(roots.get(".codex", context.stage / ".codex")),
         "AGENTS_OUTPUT_DIR": str(roots.get(".agents", context.stage / ".agents")),
         "PI_OUTPUT_DIR": str(roots.get(".pi", context.stage / ".pi")),
+        "OMP_OUTPUT_DIR": str(roots.get(".omp", context.stage / ".omp")),
         "PI_STAGE_ROOT": str(context.stage),
+        "OMP_STAGE_ROOT": str(context.stage),
         "PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
         "GEMINI_PROJECT_DOCS_OUTPUT_DIR": str(context.stage_project_docs),
     })

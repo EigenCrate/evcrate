@@ -5,6 +5,7 @@
     "claude": "claude/manifest.json",
     "codex": "codex/manifest.json",
     "gemini": "gemini/manifest.json",
+    "omp": "omp/manifest.json",
     "pi": "pi/manifest.json"
   }
 }

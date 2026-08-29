@@ -342,7 +342,12 @@ class DistributionBuildTest(unittest.TestCase):
         manifest_text = registry.targets["codex"].read_text(encoding="utf-8")
         self.assertIn('"advisor_runtime"', manifest_text)
         self.assertFalse((registry.targets["codex"].parent / "runtime").exists())
-        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "pi"})
+        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "omp", "pi"})
+        omp = load_target_manifest(registry.targets["omp"])
+        self.assertEqual(omp.output_roots, (".omp",))
+        self.assertIsNone(omp.advisor_runtime)
+        self.assertEqual(omp.adapter, "migrate_claude_to_omp.py")
+        self.assertEqual(omp.home_policy["bindings"][".omp"], ".omp")
         pi = load_target_manifest(registry.targets["pi"])
         self.assertEqual(pi.output_roots, (".pi",))
         self.assertEqual(pi.adapter_sources, (
@@ -657,6 +662,7 @@ class DistributionBuildTest(unittest.TestCase):
                 "claude": [".claude"],
                 "codex": [".codex", ".agents"],
                 "gemini": [".gemini"],
+                "omp": [".omp"],
                 "pi": [".pi"],
             }
             registry = {name: f"{name}/manifest.json" for name in target_roots}
@@ -722,7 +728,11 @@ class DistributionBuildTest(unittest.TestCase):
                             target_relative = relative
                             if script == "migrate_claude_to_gemini.py" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
                                 target_relative = Path("claude-session-end.cjs")
-                            destination = destination_root / kind / target_relative
+                            if script == "migrate_claude_to_omp.py" and kind == "hooks":
+                                target_kind = "hooks"
+                            else:
+                                target_kind = kind
+                            destination = destination_root / target_kind / target_relative
                             destination.parent.mkdir(parents=True, exist_ok=True)
                             raw = source.read_bytes()
                             if b"\0" in raw[:1024]:
@@ -730,6 +740,7 @@ class DistributionBuildTest(unittest.TestCase):
                             else:
                                 target_name = {
                                     "migrate_claude_to_gemini.py": "gemini",
+                                    "migrate_claude_to_omp.py": "omp",
                                     "migrate_claude_to_pi.py": "pi",
                                 }.get(script, "codex")
                                 destination.write_text(
@@ -748,6 +759,9 @@ class DistributionBuildTest(unittest.TestCase):
                     copy_resources(env["GEMINI_OUTPUT_DIR"], "")
                     Path(env["GEMINI_OUTPUT_DIR"]).joinpath("artifact").write_text("gemini", encoding="utf-8")
                     Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
+                elif script == "migrate_claude_to_omp.py":
+                    copy_resources(env["OMP_OUTPUT_DIR"], "evcrate")
+                    Path(env["OMP_OUTPUT_DIR"]).joinpath("artifact").write_text("omp", encoding="utf-8")
                 elif script == "migrate_claude_to_pi.py":
                     copy_runtime(env["PI_OUTPUT_DIR"], "agent/evcrate/scripts")
                     copy_resources(env["PI_OUTPUT_DIR"], "agent/evcrate")
@@ -836,6 +850,11 @@ class DistributionBuildTest(unittest.TestCase):
             recover_interrupted_promotion(root)
             self.assertEqual(destination.read_text(encoding="utf-8"), "old")
             self.assertFalse((root / JOURNAL_NAME).exists())
+            self.assertFalse(backup_root.exists())
+            recover_interrupted_promotion(root)
+            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
+            self.assertFalse((root / JOURNAL_NAME).exists())
+            self.assertFalse(backup_root.exists())
 
     def test_repository_lock_rejects_concurrent_operation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -42,10 +42,12 @@ class DistributionCliTest(unittest.TestCase):
             with patch("sys.stderr", new_callable=io.StringIO):
                 distribute.parse_args(["--dry-run"])
 
-    def test_target_selector_accepts_pi_and_rejects_duplicate_or_unknown_values(self) -> None:
+    def test_target_selector_accepts_pi_and_omp_and_rejects_duplicate_or_unknown_values(self) -> None:
         invocation = distribute.parse_invocation(["--all", "--target", "pi"])
         self.assertEqual(invocation.action, DistributionAction.ALL)
         self.assertEqual(invocation.selected_targets, ("pi",))
+        omp_invocation = distribute.parse_invocation(["--all", "--target", "omp"])
+        self.assertEqual(omp_invocation.selected_targets, ("omp",))
         for arguments in (["--all", "--target", "pi", "--target", "pi"], ["--all", "--target", "unknown"]):
             with self.assertRaises(SystemExit), patch("sys.stderr", new_callable=io.StringIO):
                 distribute.parse_invocation(arguments)
@@ -89,7 +91,8 @@ class DistributionCliTest(unittest.TestCase):
                                 target_relative = relative
                                 if target == "gemini" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
                                     target_relative = Path("claude-session-end.cjs")
-                                destination = destination_root / kind / target_relative
+                                target_kind = kind
+                                destination = destination_root / target_kind / target_relative
                                 destination.parent.mkdir(parents=True, exist_ok=True)
                                 raw = source.read_bytes()
                                 if b"\0" in raw[:1024]:
@@ -108,6 +111,8 @@ class DistributionCliTest(unittest.TestCase):
                         write_runtime(Path(env["CODEX_OUTPUT_DIR"]), "scripts")
                         write_resources(Path(env["CODEX_OUTPUT_DIR"]), "", "codex")
                         Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
+                    elif script.endswith("migrate_claude_to_omp.py"):
+                        write_resources(Path(env["OMP_OUTPUT_DIR"]), "evcrate", "omp")
                     elif script.endswith("migrate_claude_to_pi.py"):
                         write_runtime(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate/scripts")
                         write_resources(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate", "pi")
@@ -119,7 +124,7 @@ class DistributionCliTest(unittest.TestCase):
                 run.side_effect = write_required_docs
                 gates._generate_stage(context)
             migrator_calls = [call for call in run.call_args_list if call.args[0][0] != "npm"]
-            self.assertEqual(len(migrator_calls), 3)
+            self.assertEqual(len(migrator_calls), 4)
             for call in migrator_calls:
                 self.assertEqual(call.kwargs["cwd"], context.repository)
                 self.assertTrue(call.kwargs["check"])
@@ -128,6 +133,9 @@ class DistributionCliTest(unittest.TestCase):
             pi_call = next(call for call in migrator_calls if str(call.args[0][1]).endswith("migrate_claude_to_pi.py"))
             self.assertEqual(pi_call.kwargs["env"]["PI_OUTPUT_DIR"], str(context.stage / ".pi"))
             self.assertEqual(pi_call.kwargs["env"]["PI_STAGE_ROOT"], str(context.stage))
+            omp_call = next(call for call in migrator_calls if str(call.args[0][1]).endswith("migrate_claude_to_omp.py"))
+            self.assertEqual(omp_call.kwargs["env"]["OMP_OUTPUT_DIR"], str(context.stage / ".omp"))
+            self.assertEqual(omp_call.kwargs["env"]["OMP_STAGE_ROOT"], str(context.stage))
 
     def test_failed_build_never_calls_publisher(self) -> None:
         with patch("distribution.gates.run_local_build", side_effect=BuildError("generator failed")), patch(
