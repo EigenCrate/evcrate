@@ -22,6 +22,13 @@ suffixed, differently cased, and non-final forms remain ordinary task text.
 | `/code` | `/code add caching --advice` | `/code read @advisor.md` |
 | `/cook` | `/cook add caching --advice` | `/cook annotate @advisor input` |
 | `/fix` | `/fix repair cache --advice` | `/fix path/@advisor/config` |
+When using the OMP target, apply the canonical mapping before invoking a
+command: `/code` becomes `/cmd-code`, and nested paths use `__` (for example,
+`/fix:hard` becomes `/cmd-fix__hard`). The generated
+`evcrate/command-name-map.json` is authoritative for this translation; do not
+invent a parallel alias. This namespace change does not alter `--advice`
+parsing or checkpoint semantics.
+
 
 Fallback command handoffs preserve `WORK_ARGUMENTS`: explicit mode forwards one
 final `--advice`; default mode forwards no mode token. No handoff recreates an

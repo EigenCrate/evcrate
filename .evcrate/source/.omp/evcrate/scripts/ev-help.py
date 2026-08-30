@@ -15,6 +15,7 @@ import sys
 import re
 import io
 import ast
+import json
 import os
 from pathlib import Path
 
@@ -86,110 +87,110 @@ CATEGORY_GUIDES = {
     "fix": {
         "title": "Fixing Issues",
         "workflow": [
-            ("Start", "`/fix` \"describe your issue\""),
-            ("If stuck", "`/debug` \"more details\""),
-            ("Verify", "`/test`"),
+            ("Start", "`/cmd-fix` \"describe your issue\""),
+            ("If stuck", "`/cmd-debug` \"more details\""),
+            ("Verify", "`/cmd-test`"),
         ],
         "tip": "Include error messages for better results",
     },
     "plan": {
         "title": "Planning",
         "workflow": [
-            ("Quick plan", "`/plan:fast` \"your task\""),
-            ("Deep research", "`/plan:hard` \"complex task\""),
-            ("Validate", "`/plan:validate` (interview to confirm decisions)"),
-            ("Execute plan", "`/code` (runs the plan)"),
+            ("Quick plan", "`/cmd-plan__fast` \"your task\""),
+            ("Deep research", "`/cmd-plan__hard` \"complex task\""),
+            ("Validate", "`/cmd-plan__validate` (interview to confirm decisions)"),
+            ("Execute plan", "`/cmd-code` (runs the plan)"),
         ],
-        "tip": "Use /plan:validate to confirm assumptions before coding",
+        "tip": "Use /cmd-plan__validate to confirm assumptions before coding",
     },
     "cook": {
         "title": "Implementation",
         "workflow": [
-            ("Quick impl", "`/cook` \"your feature\""),
-            ("Auto mode", "`/cook:auto` \"trust me bro\""),
-            ("Test", "`/test`"),
+            ("Quick impl", "`/cmd-cook` \"your feature\""),
+            ("Auto mode", "`/cmd-cook__auto` \"trust me bro\""),
+            ("Test", "`/cmd-test`"),
         ],
-        "tip": "Cook is standalone - it plans internally. Use /plan → /code for explicit planning",
+        "tip": "Cook is standalone - it plans internally. Use /cmd-plan → /cmd-code for explicit planning",
     },
     "bootstrap": {
         "title": "Project Setup",
         "workflow": [
-            ("Quick start", "`/bootstrap:auto:fast` \"requirements\""),
-            ("Full setup", "`/bootstrap` \"detailed requirements\""),
+            ("Quick start", "`/cmd-bootstrap__auto__fast` \"requirements\""),
+            ("Full setup", "`/cmd-bootstrap` \"detailed requirements\""),
         ],
         "tip": "Include tech stack preferences in description",
     },
     "test": {
         "title": "Testing",
         "workflow": [
-            ("Run tests", "`/test`"),
-            ("Fix failures", "`/fix:test`"),
+            ("Run tests", "`/cmd-test`"),
+            ("Fix failures", "`/cmd-fix__test`"),
         ],
         "tip": "Run tests frequently during development",
     },
     "docs": {
         "title": "Documentation",
         "workflow": [
-            ("Initialize", "`/docs:init`"),
-            ("Update", "`/docs:update`"),
+            ("Initialize", "`/cmd-docs__init`"),
+            ("Update", "`/cmd-docs__update`"),
         ],
         "tip": "Keep docs close to code for accuracy",
     },
     "git": {
         "title": "Git Workflow",
         "workflow": [
-            ("Commit", "`/git:cm`"),
-            ("Push", "`/git:cp`"),
-            ("PR", "`/git:pr`"),
+            ("Commit", "`/cmd-git__cm`"),
+            ("Push", "`/cmd-git__cp`"),
+            ("PR", "`/cmd-git__pr`"),
         ],
         "tip": "Commit often with clear messages",
     },
     "design": {
         "title": "Design",
         "workflow": [
-            ("Quick design", "`/design:fast` \"description\""),
-            ("From screenshot", "`/design:screenshot` <path>"),
-            ("3D design", "`/design:3d` \"description\""),
+            ("Quick design", "`/cmd-design__fast` \"description\""),
+            ("From screenshot", "`/cmd-design__screenshot` <path>"),
+            ("3D design", "`/cmd-design__3d` \"description\""),
         ],
         "tip": "Reference existing designs for consistency",
     },
     "review": {
         "title": "Code Review",
         "workflow": [
-            ("Full review", "`/review:codebase`"),
+            ("Full review", "`/cmd-review__codebase`"),
         ],
         "tip": "Review before merging to main",
     },
     "content": {
         "title": "Content Creation",
         "workflow": [
-            ("Quick copy", "`/content:fast` \"requirements\""),
-            ("Quality copy", "`/content:good` \"requirements\""),
-            ("Optimize", "`/content:cro`"),
+            ("Quick copy", "`/cmd-content__fast` \"requirements\""),
+            ("Quality copy", "`/cmd-content__good` \"requirements\""),
+            ("Optimize", "`/cmd-content__cro`"),
         ],
         "tip": "Know your audience before writing",
     },
     "integrate": {
         "title": "Integration",
         "workflow": [
-            ("Polar.sh", "`/integrate:polar`"),
-            ("SePay", "`/integrate:sepay`"),
+            ("Polar.sh", "`/cmd-integrate__polar`"),
+            ("SePay", "`/cmd-integrate__sepay`"),
         ],
         "tip": "Read API docs before integrating",
     },
     "skill": {
         "title": "Skill Management",
         "workflow": [
-            ("Create", "`/skill:create`"),
-            ("Optimize", "`/skill:optimize`"),
+            ("Create", "`/cmd-skill__create`"),
+            ("Optimize", "`/cmd-skill__optimize`"),
         ],
         "tip": "Skills extend agent capabilities",
     },
     "scout": {
         "title": "Codebase Exploration",
         "workflow": [
-            ("Find files", "`/scout` \"what to find\""),
-            ("External tools", "`/scout:ext` \"query\""),
+            ("Find files", "`/cmd-scout` \"what to find\""),
+            ("External tools", "`/cmd-scout__ext` \"query\""),
         ],
         "tip": "Be specific about what you're looking for",
     },
@@ -219,11 +220,11 @@ CATEGORY_GUIDES = {
     "worktree": {
         "title": "Git Worktrees (Parallel Development)",
         "workflow": [
-            ("Create worktree", "`/worktree` \"feature description\""),
+            ("Create worktree", "`/cmd-worktree` \"feature description\""),
             ("Work in isolation", "cd to worktree, implement, test"),
-            ("Review & merge", "`/git:pr` from worktree → merge → cleanup"),
-            ("List worktrees", "`/worktree list`"),
-            ("Remove worktree", "`/worktree remove <name>`"),
+            ("Review & merge", "`/cmd-git__pr` from worktree → merge → cleanup"),
+            ("List worktrees", "`/cmd-worktree list`"),
+            ("Remove worktree", "`/cmd-worktree remove <name>`"),
         ],
         "tip": "Use worktrees for parallel features without stashing. Each worktree = isolated branch + clean working directory",
     },
@@ -240,16 +241,16 @@ CATEGORY_GUIDES = {
     "preview": {
         "title": "Content Preview (Novel Reader UI)",
         "workflow": [
-            ("View markdown", "`/preview plans/plan.md`"),
-            ("Browse directory", "`/preview docs/`"),
-            ("Stop server", "`/preview --stop`"),
+            ("View markdown", "`/cmd-preview plans/plan.md`"),
+            ("Browse directory", "`/cmd-preview docs/`"),
+            ("Stop server", "`/cmd-preview --stop`"),
         ],
         "tip": "Beautiful novel-reader UI for markdown. Great for reviewing plans before execution",
     },
     "journal": {
         "title": "Technical Journaling",
         "workflow": [
-            ("Write entry", "`/journal`"),
+            ("Write entry", "`/cmd-journal`"),
             ("Document failures", "Capture what went wrong with emotional honesty"),
             ("Lessons learned", "Turn setbacks into future guidance"),
         ],
@@ -258,7 +259,7 @@ CATEGORY_GUIDES = {
     "brainstorm": {
         "title": "Brainstorming & Ideation",
         "workflow": [
-            ("Quick brainstorm", "`/brainstorm \"your question\"`"),
+            ("Quick brainstorm", "`/cmd-brainstorm \"your question\"`"),
             ("Explore approaches", "Get 2-3 viable solutions with trade-offs"),
             ("Challenge assumptions", "Receive brutally honest feedback"),
         ],
@@ -267,7 +268,7 @@ CATEGORY_GUIDES = {
     "watzup": {
         "title": "Session Review & Wrap-up",
         "workflow": [
-            ("Review changes", "`/watzup`"),
+            ("Review changes", "`/cmd-watzup`"),
             ("Get summary", "See what was done, what files changed"),
             ("Next steps", "Receive suggestions for what to do next"),
         ],
@@ -288,6 +289,87 @@ Docs: `.omp/evcrate/hooks/notifications/docs/`""",
     },
 }
 
+
+def _load_omp_command_map(commands_dir: Path) -> dict[str, dict]:
+    """Load the generated OMP map and prove it matches command files."""
+    map_path = commands_dir.parent / "evcrate" / "command-name-map.json"
+
+    def reject_duplicate_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate key: {key}")
+            result[key] = value
+        return result
+
+    try:
+        payload = json.loads(
+            map_path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (OSError, UnicodeError, ValueError) as error:
+        raise RuntimeError(f"Invalid or missing OMP command map: {map_path}") from error
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != {"schema", "commands"}
+        or payload["schema"] != "evcrate-omp-command-map-v1"
+    ):
+        raise RuntimeError(f"Invalid OMP command map schema: {map_path}")
+    records = payload["commands"]
+    if not isinstance(records, list):
+        raise RuntimeError(f"Invalid OMP command map records: {map_path}")
+
+    by_target = {}
+    seen_sources = set()
+    seen_source_names = set()
+    seen_target_names = set()
+    for record in records:
+        fields = ("source", "sourceName", "target", "targetName")
+        if (
+            not isinstance(record, dict)
+            or set(record) != set(fields)
+            or any(not isinstance(record[field], str) for field in fields)
+        ):
+            raise RuntimeError(f"Invalid OMP command map record: {map_path}")
+        source = record["source"]
+        source_name = record["sourceName"]
+        target = record["target"]
+        target_name = record["targetName"]
+        source_path = Path(source)
+        target_path = Path(target)
+        if (
+            source != source_name.replace(":", "/") + ".md"
+            or not re.fullmatch(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*", source_name)
+            or source_path.is_absolute()
+            or source_path.as_posix() != source
+            or ".." in source_path.parts
+            or target != f"{target_name}.md"
+            or not re.fullmatch(r"cmd-[A-Za-z0-9][A-Za-z0-9_-]*", target_name)
+            or target_path.is_absolute()
+            or target_path.as_posix() != target
+            or ".." in target_path.parts
+            or source_name.casefold() in seen_source_names
+            or target_name.casefold() in seen_target_names
+        ):
+            raise RuntimeError(f"Invalid or duplicate OMP command map record: {map_path}")
+        candidate = commands_dir / target_path
+        try:
+            candidate.relative_to(commands_dir)
+        except ValueError as error:
+            raise RuntimeError(f"OMP command map target escapes command root: {map_path}") from error
+        if candidate.is_symlink() or not candidate.is_file():
+            raise RuntimeError(f"OMP command map target is missing or unsafe: {target}")
+        by_target[target] = record
+        seen_source_names.add(source_name.casefold())
+        seen_target_names.add(target_name.casefold())
+
+    command_targets = {
+        path.relative_to(commands_dir).as_posix()
+        for path in commands_dir.rglob("*.md")
+    }
+    if command_targets != set(by_target):
+        raise RuntimeError(f"OMP command map does not match command files: {map_path}")
+    return by_target
 
 def detect_prefix(commands_dir: Path) -> str:
     """Detect if commands use /evcrate: prefix based on directory structure."""
@@ -448,10 +530,11 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
     return "", target_root / "commands"
 
 
-def discover_commands(commands_dir: Path, prefix: str) -> dict:
+def discover_commands(commands_dir: Path, prefix: str, command_map: dict | None = None) -> dict:
     """Scan command files and build the command catalog."""
     commands = {}
     categories = {}
+    mapped_targets = set()
 
     if not commands_dir.exists():
         return {"commands": commands, "categories": categories}
@@ -464,16 +547,25 @@ def discover_commands(commands_dir: Path, prefix: str) -> dict:
         rel_path = command_file.relative_to(commands_dir)
         parts = rel_path.parts
 
-        # Get command name from path
-        # e.g., fix/fast.md -> fix:fast, plan.md -> plan
-        if len(parts) == 1:
-            # Root command: plan.md or plan.toml -> plan
-            cmd_name = command_file.stem
-            category = "core"
+        if command_map is not None:
+            target = rel_path.as_posix()
+            record = command_map.get(target)
+            if record is None:
+                raise RuntimeError(f"OMP command map has no record for {target}")
+            mapped_targets.add(target)
+            cmd_name = record["targetName"]
+            category = _skill_category("/" + record["sourceName"])
         else:
-            # Nested command: fix/fast.md -> fix:fast
-            category = parts[0]
-            cmd_name = ':'.join([*parts[:-1], command_file.stem])
+            # Get command name from path
+            # e.g., fix/fast.md -> fix:fast, plan.md -> plan
+            if len(parts) == 1:
+                # Root command: plan.md or plan.toml -> plan
+                cmd_name = command_file.stem
+                category = "core"
+            else:
+                # Nested command: fix/fast.md -> fix:fast
+                category = parts[0]
+                cmd_name = ':'.join([*parts[:-1], command_file.stem])
 
         # Parse frontmatter
         fm = parse_command_metadata(command_file)
@@ -487,7 +579,7 @@ def discover_commands(commands_dir: Path, prefix: str) -> dict:
         clean_desc = re.sub(r'^[^\w\s]+\s*', '', description).strip()
 
         # Format command name with prefix
-        formatted_name = f"/{prefix}{cmd_name}" if prefix else f"/{cmd_name}"
+        formatted_name = f"/{cmd_name}" if command_map is not None else (f"/{prefix}{cmd_name}" if prefix else f"/{cmd_name}")
 
         # Add to commands
         if category not in commands:
@@ -502,6 +594,9 @@ def discover_commands(commands_dir: Path, prefix: str) -> dict:
         # Track categories
         if category not in categories:
             categories[category] = category.title()
+
+    if command_map is not None and mapped_targets != set(command_map):
+        raise RuntimeError("OMP command map does not match discovered commands")
 
     # Sort commands within each category
     for cat in commands:
@@ -548,7 +643,7 @@ def show_overview(data: dict, prefix: str) -> None:
     commands = data["commands"]
     categories = data["categories"]
     total = sum(len(cmds) for cmds in commands.values())
-    help_cmd = f"/{prefix}evcrate-help" if prefix else "/evcrate-help"
+    help_cmd = f"/{prefix}evcrate-help" if prefix else "/cmd-evcrate-help"
 
     print("# EVCrate Commands")
     print()
@@ -579,7 +674,7 @@ def show_overview(data: dict, prefix: str) -> None:
     print(f"- Unclear about approach? → `/{prefix}brainstorm` first")
     print(f"- Agent generated report? → `/{prefix}preview` to view")
     print("- Add `ultrathink` for deep analysis (more tokens)")
-    print("- `:parallel` variants (e.g., `/code:parallel`) = faster but more tokens, check quota")
+    print("- `:parallel` variants (e.g., `/cmd-code__parallel`) = faster but more tokens, check quota")
 
 
 def show_category_guide(data: dict, category: str, prefix: str) -> None:
@@ -693,7 +788,7 @@ def show_advisory_guide(prefix: str, target: str) -> None:
     relay_target = "cla" + "ude"
     supports_relay = target == relay_target
     emit_output_type("command-details")
-    command = f"/{prefix}advise" if prefix else "/advise"
+    command = f"/{prefix}advise" if prefix else "/cmd-advise"
     print(f"# `{command}`")
     print()
     if supports_relay:
@@ -920,7 +1015,7 @@ def show_config_guide() -> None:
     print("**Plan Validation:**")
     print("- `mode: \"prompt\"` - Ask user after plan creation (default)")
     print("- `mode: \"auto\"` - Always run validation interview")
-    print("- `mode: \"off\"` - Skip; user runs `/plan:validate` manually")
+    print("- `mode: \"off\"` - Skip; user runs `/cmd-plan__validate` manually")
     print()
     print("Validation interviews the user with critical questions to confirm")
     print("assumptions, risks, and architectural decisions before implementation.")
@@ -934,7 +1029,7 @@ def show_config_guide() -> None:
     print("- `4` = Tech Lead - executive summary, risk matrix, business impact")
     print("- `5` = God Mode - code first, minimal prose, no hand-holding")
     print()
-    print("Guidelines auto-inject on session start. Commands like `/brainstorm` respect them.")
+    print("Guidelines auto-inject on session start. Commands like `/cmd-brainstorm` respect them.")
     print()
     print("---")
     print()
@@ -1041,7 +1136,7 @@ def show_coding_level_guide() -> None:
     print()
     print("1. SessionStart hook reads `codingLevel` from `.evcrate.json`")
     print("2. If 0-5, injects guidelines from `.omp/evcrate/output-styles/coding-level-*.md`")
-    print("3. Commands like `/brainstorm` follow the injected guidelines")
+    print("3. Commands like `/cmd-brainstorm` follow the injected guidelines")
     print()
     print("**Token Efficiency:**")
     print("- `-1` (default): Zero injection, zero overhead")
@@ -1108,6 +1203,7 @@ def show_coding_level_guide() -> None:
 
 def main():
     script_path = Path(__file__).resolve()
+    target = advisory_target(script_path)
     source_kind, source_dir = resolve_command_source(script_path)
     if not source_dir.is_dir():
         print("Error: no .omp/commands or generated command skills directory found.")
@@ -1118,7 +1214,12 @@ def main():
         data = discover_skill_commands(source_dir)
     else:
         prefix = detect_prefix(source_dir)
-        data = discover_commands(source_dir, prefix)
+        try:
+            command_map = _load_omp_command_map(source_dir) if target == "omp" else None
+        except RuntimeError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            sys.exit(1)
+        data = discover_commands(source_dir, prefix, command_map)
 
     if not data["commands"]:
         print(f"No commands found in {source_dir}.")
@@ -1139,12 +1240,22 @@ def main():
         return
 
     # Advisory surfaces need capability and migration guidance beyond metadata.
-    if input_str.lower() in ["advise", "/advise", "advice", "/advice"]:
-        show_advisory_guide(prefix, advisory_target(script_path))
+    if input_str.lower() in ["advise", "/cmd-advise", "advice", "/advice"]:
+        show_advisory_guide(prefix, target)
         return
 
     # Detect intent and route
-    intent = detect_intent(input_str, list(data["categories"].keys()))
+    command_names = {
+        command["name"].lstrip("/").casefold()
+        for commands in data["commands"].values()
+        for command in commands
+    }
+    normalized_input = input_str.lstrip("/").casefold()
+    intent = (
+        "command"
+        if target == "omp" and normalized_input in command_names
+        else detect_intent(input_str, list(data["categories"].keys()))
+    )
 
     if intent == "overview":
         show_overview(data, prefix)

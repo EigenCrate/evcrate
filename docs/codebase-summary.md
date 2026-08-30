@@ -107,6 +107,24 @@ deterministic contracts; each enabled installed CLI requires a separate
 credential-safe operator qualification and requalification after upgrades.
 `advisor-strategy` remains static, non-binding guidance, and `/advise` remains a
 separate inline-first feature rather than a checkpoint execution path.
+### OMP command projection
+
+The OMP adapter is a staging-only projection from the canonical Claude command
+tree (`.evcrate/source/.claude/commands/`). A relative Markdown path is mapped
+deterministically: components are joined with `:` for `sourceName` and with
+`__` after a required `cmd-` prefix for `targetName`. Thus
+`fix/hard.md` becomes `cmd-fix__hard.md` and `/fix:hard` (including the
+`/evcrate:` spelling) becomes `/cmd-fix__hard`.
+
+`evcrate/command-name-map.json` is generated with schema
+`evcrate-omp-command-map-v1` and is the sole authority for `source`,
+`sourceName`, `target`, and `targetName` entries. Command-file references,
+slash references, generated help, scanner output, and catalogs use that map;
+URI references are protected during translation. Unsafe names, non-Markdown
+canonical commands, and flattening collisions fail closed. The adapter requires
+`OMP_STAGE_ROOT` and never publishes the command projection or map to HOME;
+verified distribution gates own publication.
+
 
 ## Core Technologies
 

@@ -77,6 +77,11 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 
 **Canonical Help Command**:
 - `/evcrate-help` is the canonical command for command discovery and usage guidance. The legacy `ck-help` command/path is not a first-party interface.
+**OMP command namespace contract**:
+- Claude command files are authoritative under `.evcrate/source/.claude/commands/`; each Markdown path becomes a case-preserving `sourceName` joined by `:` and a flattened OMP target `cmd-` + path components joined by `__` (for example, `fix/hard.md` → `sourceName: fix:hard`, `targetName: cmd-fix__hard`, `target: cmd-fix__hard.md`).
+- The generated `.omp/evcrate/command-name-map.json` is the sole mapping authority. Its `schema` is `evcrate-omp-command-map-v1`, and each `commands[]` entry contains `source`, `sourceName`, `target`, and `targetName`; consumers MUST NOT maintain a second mapping table.
+- Migration translates slash invocations (`/fix:hard` and `/evcrate:fix:hard` → `/cmd-fix__hard`) and command-file references while protecting URI references. Generated OMP help, scanner output, and catalogs MUST be derived from the flattened command files/map; stale or ambiguous mappings fail closed during build rather than being guessed.
+- OMP is a staging/build projection only. The adapter requires `OMP_STAGE_ROOT`, publishes no command tree or map into `$HOME`, and does not support direct/global migration. HOME publication is handled by the distribution gate from verified generated output.
 
 **Codex Model Migration**:
 - `migrate_claude_to_codex.py` is the Codex model-policy source of truth; `distribute.py` runs it and synchronizes the generated `.evcrate/source/.codex/` and `.evcrate/source/.agents/` artifacts. Native Pi generates a separate `.pi/agent/skills` projection from canonical source and does not use Codex's model policy.

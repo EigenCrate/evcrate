@@ -528,7 +528,7 @@ func main() {
 // Take heap snapshot programmatically
 import { writeHeapSnapshot } from 'v8';
 
-app.get('/debug/heap', (req, res) => {
+app.get('/cmd-debug/heap', (req, res) => {
     const filename = writeHeapSnapshot();
     res.send(`Heap snapshot written to ${filename}`);
 });

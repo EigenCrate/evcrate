@@ -18,7 +18,7 @@ _OMP_WORKFLOW_REFERENCE = re.compile(
 )
 
 _URI_REFERENCE = re.compile(
-    r"(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|//)[^\s<>\"']+",
+    r"(?<![A-Za-z0-9_./:])(?:[A-Za-z][A-Za-z0-9+.-]*:|//)[^\s<>\"']+",
     re.IGNORECASE,
 )
 _OMP_NO_SKILLS_GUIDANCE = (
@@ -112,7 +112,7 @@ def build_command_map(source: Path) -> dict[str, dict[str, str]]:
             raise ResourceError(f"Canonical command must be Markdown: {command}")
         parts = relative.with_suffix("").parts
         source_name = ":".join(parts)
-        target_name = "__".join(parts)
+        target_name = f"cmd-{'__'.join(parts)}"
         if not _COMMAND_NAME.fullmatch(target_name):
             raise ResourceError(f"Canonical command has an unsafe OMP name: {relative}")
         folded = target_name.casefold()
@@ -143,22 +143,29 @@ def _replace_command_references(value: str, command_map: dict[str, dict[str, str
     for item in sorted(command_map.values(), key=lambda entry: len(entry["sourceName"]), reverse=True):
         source_name = item["sourceName"]
         target_name = item["targetName"]
-        pattern = re.compile(
-            rf"(?<![A-Za-z0-9_/:])/{re.escape(source_name)}(?![A-Za-z0-9_-])",
-            flags=re.IGNORECASE,
-        )
-        rendered = pattern.sub(f"/{target_name}", rendered)
+        for command_prefix in ("", "evcrate:"):
+            pattern = re.compile(
+                rf"(?<![A-Za-z0-9_/:])/{command_prefix}{re.escape(source_name)}(?![A-Za-z0-9_-])",
+                flags=re.IGNORECASE,
+            )
+            rendered = pattern.sub(f"/{target_name}", rendered)
     for index, original in enumerate(protected):
         rendered = rendered.replace(f"__OMP_COMMAND_URI_{index}__", original)
     return rendered
 
 
+def render_command_references(value: str, command_map: dict[str, dict[str, str]]) -> str:
+    """Rewrite mapped command paths and slash invocations in one pass."""
+
+    rendered = _replace_command_file_references(value, command_map)
+    return _replace_command_references(rendered, command_map)
+
+
 def translate_prompt(value: str, command_map: dict[str, dict[str, str]]) -> str:
     """Translate OMP resource paths, command names, and Claude-only tool prose."""
 
-    rendered = _replace_command_file_references(value, command_map)
+    rendered = render_command_references(value, command_map)
     rendered = render_harness_script_references(rendered, "omp")
-    rendered = _replace_command_references(rendered, command_map)
     rendered = _add_omp_global_workflow_fallback(rendered)
     rendered = _add_omp_skill_runtime_guidance(rendered)
     rendered = rendered.replace("Skill tool", "OMP command mechanism")
@@ -180,6 +187,8 @@ def _command_frontmatter(source_path: Path, command_map: dict[str, dict[str, str
     else:
         fields = {}
         body = source
+    if isinstance(fields.get("name"), str):
+        fields["name"] = render_command_references(fields["name"], command_map)
     transformed_body = translate_prompt(body, command_map)
     if source_path.name == "advise.md" and source_path.parent.name == "commands":
         fields["description"] = "Interview-first technical advice; advisor relay is unsupported by OMP."
@@ -237,6 +246,7 @@ def convert_workflows(source: Path, output: Path, command_map: dict[str, dict[st
             relative_name = relative_path(workflows_root, workflow).as_posix()
             if relative_name == "advisory-interview.md":
                 rendered = render_advisory_interview_workflow(rendered, "omp")
+                rendered = render_command_references(rendered, command_map)
             return rendered
         copy_file(workflow, destination / relative, output, transform)
         copied.append(relative.as_posix())

@@ -20,7 +20,7 @@ jobs:
 
       - uses: anthropic/claude-code-action@v1
         with:
-          command: '/fix__types && /test'
+          command: '/cmd-fix__types && /cmd-test'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
@@ -88,7 +88,7 @@ jobs:
         if: steps.test.outcome == 'failure'
         uses: anthropic/claude-code-action@v1
         with:
-          command: '/fix__test check test output and fix failures'
+          command: '/cmd-fix__test check test output and fix failures'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
@@ -120,7 +120,7 @@ jobs:
       - name: Update Documentation
         uses: anthropic/claude-code-action@v1
         with:
-          command: '/docs__update'
+          command: '/cmd-docs__update'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
@@ -150,7 +150,7 @@ claude-review:
   script:
     - npm install -g @anthropic-ai/claude-code
     - claude login --api-key $ANTHROPIC_API_KEY
-    - claude '/fix__types && /test'
+    - claude '/cmd-fix__types && /cmd-test'
   only:
     - merge_requests
 ```
@@ -174,7 +174,7 @@ before_script:
 lint:
   stage: lint
   script:
-    - claude '/fix__types'
+    - claude '/cmd-fix__types'
   artifacts:
     paths:
       - src/
@@ -183,7 +183,7 @@ lint:
 test:
   stage: test
   script:
-    - npm test || claude '/fix__test analyze failures and fix'
+    - npm test || claude '/cmd-fix__test analyze failures and fix'
   coverage: '/Coverage: \d+\.\d+%/'
 
 review:
@@ -224,7 +224,7 @@ fix-on-failure:
   after_script:
     - |
       if [ $CI_JOB_STATUS == 'failed' ]; then
-        claude '/fix__test analyze CI logs and fix issues'
+        claude '/cmd-fix__test analyze CI logs and fix issues'
         git add .
         git commit -m "fix: auto-fix from CI"
         git push origin HEAD:$CI_COMMIT_REF_NAME
@@ -263,7 +263,7 @@ Run Claude only on certain conditions:
   if: ${{ github.event.pull_request.changed_files > 10 }}
   uses: anthropic/claude-code-action@v1
   with:
-    command: '/review__codebase analyze changes'
+    command: '/cmd-review__codebase analyze changes'
 ```
 
 ### Cost Control
@@ -417,7 +417,7 @@ steps:
 test:
   parallel: 3
   script:
-    - claude "/test --shard $CI_NODE_INDEX/$CI_NODE_TOTAL"
+    - claude "/cmd-test --shard $CI_NODE_INDEX/$CI_NODE_TOTAL"
 ```
 
 ## See Also

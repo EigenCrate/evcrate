@@ -80,6 +80,7 @@ def convert_agents(
     output: Path,
     transform: Callable[[str], str],
     *,
+    description_transform: Callable[[str], str] | None = None,
     thinking_level: str | None = None,
 ) -> dict[str, object]:
     """Generate OMP agents and auditable model/tool translation metadata."""
@@ -120,7 +121,12 @@ def convert_agents(
         if name == "advisor":
             body = project_advisor_contract(body, "omp")
 
-        fields: dict[str, object] = {"name": name, "description": description}
+        generated_description = (
+            description_transform(description)
+            if description_transform is not None
+            else description
+        )
+        fields: dict[str, object] = {"name": name, "description": generated_description}
         if tools:
             fields["tools"] = tools
         if model:

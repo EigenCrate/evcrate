@@ -8,6 +8,345 @@ from distribution.contracts import render_harness_script_references
 
 from .resources import ResourceError, copy_file, ensure_parent, relative_path, read_json, production_files, write_json
 
+import yaml
+
+from .commands import render_command_references
+
+
+_OMP_COMMAND_MAP_LOADER = r'''
+def _load_omp_command_map(commands_dir: Path) -> dict[str, dict]:
+    """Load the generated OMP map and prove it matches command files."""
+    map_path = commands_dir.parent / "evcrate" / "command-name-map.json"
+
+    def reject_duplicate_keys(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate key: {key}")
+            result[key] = value
+        return result
+
+    try:
+        payload = json.loads(
+            map_path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (OSError, UnicodeError, ValueError) as error:
+        raise RuntimeError(f"Invalid or missing OMP command map: {map_path}") from error
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != {"schema", "commands"}
+        or payload["schema"] != "evcrate-omp-command-map-v1"
+    ):
+        raise RuntimeError(f"Invalid OMP command map schema: {map_path}")
+    records = payload["commands"]
+    if not isinstance(records, list):
+        raise RuntimeError(f"Invalid OMP command map records: {map_path}")
+
+    by_target = {}
+    seen_sources = set()
+    seen_source_names = set()
+    seen_target_names = set()
+    for record in records:
+        fields = ("source", "sourceName", "target", "targetName")
+        if (
+            not isinstance(record, dict)
+            or set(record) != set(fields)
+            or any(not isinstance(record[field], str) for field in fields)
+        ):
+            raise RuntimeError(f"Invalid OMP command map record: {map_path}")
+        source = record["source"]
+        source_name = record["sourceName"]
+        target = record["target"]
+        target_name = record["targetName"]
+        source_path = Path(source)
+        target_path = Path(target)
+        if (
+            source != source_name.replace(":", "/") + ".md"
+            or not re.fullmatch(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*", source_name)
+            or source_path.is_absolute()
+            or source_path.as_posix() != source
+            or ".." in source_path.parts
+            or target != f"{target_name}.md"
+            or not re.fullmatch(r"cmd-[A-Za-z0-9][A-Za-z0-9_-]*", target_name)
+            or target_path.is_absolute()
+            or target_path.as_posix() != target
+            or ".." in target_path.parts
+            or source_name.casefold() in seen_source_names
+            or target_name.casefold() in seen_target_names
+        ):
+            raise RuntimeError(f"Invalid or duplicate OMP command map record: {map_path}")
+        candidate = commands_dir / target_path
+        try:
+            candidate.relative_to(commands_dir)
+        except ValueError as error:
+            raise RuntimeError(f"OMP command map target escapes command root: {map_path}") from error
+        if candidate.is_symlink() or not candidate.is_file():
+            raise RuntimeError(f"OMP command map target is missing or unsafe: {target}")
+        by_target[target] = record
+        seen_source_names.add(source_name.casefold())
+        seen_target_names.add(target_name.casefold())
+
+    command_targets = {
+        path.relative_to(commands_dir).as_posix()
+        for path in commands_dir.rglob("*.md")
+    }
+    if command_targets != set(by_target):
+        raise RuntimeError(f"OMP command map does not match command files: {map_path}")
+    return by_target
+'''
+
+
+def _replace_required_script_marker(value: str, marker: str, replacement: str, label: str) -> str:
+    if marker not in value:
+        raise ResourceError(f"OMP static transform marker missing: {label}")
+    return value.replace(marker, replacement, 1)
+
+
+def _render_omp_help_source(value: str) -> str:
+    rendered = _replace_required_script_marker(
+        value,
+        "import ast\n",
+        "import ast\nimport json\n",
+        "ev-help JSON import",
+    )
+    loader_marker = "def detect_prefix(commands_dir: Path) -> str:\n"
+    rendered = _replace_required_script_marker(
+        rendered,
+        loader_marker,
+        _OMP_COMMAND_MAP_LOADER.strip("\n") + "\n\n" + loader_marker,
+        "ev-help map loader",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "def discover_commands(commands_dir: Path, prefix: str) -> dict:\n",
+        "def discover_commands(commands_dir: Path, prefix: str, command_map: dict | None = None) -> dict:\n",
+        "ev-help discovery signature",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    commands = {}\n    categories = {}\n\n    if not commands_dir.exists():",
+        "    commands = {}\n    categories = {}\n    mapped_targets = set()\n\n    if not commands_dir.exists():",
+        "ev-help discovery state",
+    )
+    path_block = """        # Get command name from path
+        # e.g., fix/fast.md -> fix:fast, plan.md -> plan
+        if len(parts) == 1:
+            # Root command: plan.md or plan.toml -> plan
+            cmd_name = command_file.stem
+            category = "core"
+        else:
+            # Nested command: fix/fast.md -> fix:fast
+            category = parts[0]
+            cmd_name = ':'.join([*parts[:-1], command_file.stem])
+"""
+    mapped_path_block = """        if command_map is not None:
+            target = rel_path.as_posix()
+            record = command_map.get(target)
+            if record is None:
+                raise RuntimeError(f"OMP command map has no record for {target}")
+            mapped_targets.add(target)
+            cmd_name = record["targetName"]
+            category = _skill_category("/" + record["sourceName"])
+        else:
+            # Get command name from path
+            # e.g., fix/fast.md -> fix:fast, plan.md -> plan
+            if len(parts) == 1:
+                # Root command: plan.md or plan.toml -> plan
+                cmd_name = command_file.stem
+                category = "core"
+            else:
+                # Nested command: fix/fast.md -> fix:fast
+                category = parts[0]
+                cmd_name = ':'.join([*parts[:-1], command_file.stem])
+"""
+    rendered = _replace_required_script_marker(
+        rendered,
+        path_block,
+        mapped_path_block,
+        "ev-help mapped path",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    # Sort commands within each category\n",
+        "    if command_map is not None and mapped_targets != set(command_map):\n"
+        "        raise RuntimeError(\"OMP command map does not match discovered commands\")\n\n"
+        "    # Sort commands within each category\n",
+        "ev-help mapped inventory",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "        formatted_name = f\"/{prefix}{cmd_name}\" if prefix else f\"/{cmd_name}\"\n",
+        "        formatted_name = f\"/{cmd_name}\" if command_map is not None else ("
+        "f\"/{prefix}{cmd_name}\" if prefix else f\"/{cmd_name}\")\n",
+        "ev-help mapped invocation",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    script_path = Path(__file__).resolve()\n    source_kind, source_dir = resolve_command_source(script_path)\n",
+        "    script_path = Path(__file__).resolve()\n"
+        "    target = advisory_target(script_path)\n"
+        "    source_kind, source_dir = resolve_command_source(script_path)\n",
+        "ev-help target detection",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    else:\n        prefix = detect_prefix(source_dir)\n        data = discover_commands(source_dir, prefix)\n",
+        "    else:\n"
+        "        prefix = detect_prefix(source_dir)\n"
+        "        try:\n"
+        "            command_map = _load_omp_command_map(source_dir) if target == \"omp\" else None\n"
+        "        except RuntimeError as error:\n"
+        "            print(f\"Error: {error}\", file=sys.stderr)\n"
+        "            sys.exit(1)\n"
+        "        data = discover_commands(source_dir, prefix, command_map)\n",
+        "ev-help map dispatch",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "        show_advisory_guide(prefix, advisory_target(script_path))\n",
+        "        show_advisory_guide(prefix, target)\n",
+        "ev-help advisory target",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    intent = detect_intent(input_str, list(data[\"categories\"].keys()))\n",
+        "    command_names = {\n"
+        "        command[\"name\"].lstrip(\"/\").casefold()\n"
+        "        for commands in data[\"commands\"].values()\n"
+        "        for command in commands\n"
+        "    }\n"
+        "    normalized_input = input_str.lstrip(\"/\").casefold()\n"
+        "    intent = (\n"
+        "        \"command\"\n"
+        "        if target == \"omp\" and normalized_input in command_names\n"
+        "        else detect_intent(input_str, list(data[\"categories\"].keys()))\n"
+        "    )\n",
+        "ev-help mapped exact lookup",
+    )
+    return rendered
+
+
+def _render_omp_scanner_source(value: str) -> str:
+    rendered = _replace_required_script_marker(
+        value,
+        "import re\n",
+        "import re\nimport json\nimport sys\n",
+        "scan_commands JSON import",
+    )
+    loader_marker = "def scan_commands(base_path: Path) -> List[Dict]:\n"
+    rendered = _replace_required_script_marker(
+        rendered,
+        loader_marker,
+        _OMP_COMMAND_MAP_LOADER.strip("\n") + "\n\n" + loader_marker,
+        "scan_commands map loader",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "def scan_commands(base_path: Path) -> List[Dict]:\n",
+        "def scan_commands(base_path: Path, command_map: Dict[str, Dict]) -> List[Dict]:\n",
+        "scan_commands signature",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    commands = []\n\n    for cmd_file in sorted(base_path.rglob('*.md')):\n",
+        "    commands = []\n    mapped_targets = set()\n\n    for cmd_file in sorted(base_path.rglob('*.md')):\n",
+        "scan_commands state",
+    )
+    path_block = """        # Build command name from path
+        parts = list(rel_path.parts[:-1]) + [rel_path.stem]
+        command_name = '/ck:' + ':'.join(parts)
+"""
+    mapped_path_block = """        record = command_map.get(rel_path.as_posix())
+        if record is None:
+            raise RuntimeError(f"OMP command map has no record for {rel_path.as_posix()}")
+        mapped_targets.add(rel_path.as_posix())
+        command_name = '/' + record['targetName']
+        source_parts = record['sourceName'].split(':')
+        category = source_parts[0] if len(source_parts) > 1 else 'core'
+"""
+    rendered = _replace_required_script_marker(
+        rendered,
+        path_block,
+        mapped_path_block,
+        "scan_commands mapped path",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "                'category': parts[0] if len(parts) > 1 else 'core'\n",
+        "                'category': category\n",
+        "scan_commands mapped category",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    return commands\n",
+        "    if mapped_targets != set(command_map):\n"
+        "        raise RuntimeError('OMP command map does not match discovered commands')\n\n"
+        "    return commands\n",
+        "scan_commands mapped inventory",
+    )
+    rendered = _replace_required_script_marker(
+        rendered,
+        "    if not base_path.exists():\n        print(f\"Error: {base_path} not found\")\n        return\n",
+        "    if base_path.is_symlink() or not base_path.is_dir():\n"
+        "        print(f\"Error: {base_path} not found\", file=sys.stderr)\n"
+        "        raise SystemExit(1)\n",
+        "scan_commands base path",
+    )
+    return _replace_required_script_marker(
+        rendered,
+        "    commands = scan_commands(base_path)\n",
+        "    try:\n"
+        "        command_map = _load_omp_command_map(base_path)\n"
+        "        commands = scan_commands(base_path, command_map)\n"
+        "    except RuntimeError as error:\n"
+        "        print(f\"Error: {error}\", file=sys.stderr)\n"
+        "        raise SystemExit(1)\n",
+        "scan_commands map dispatch",
+    )
+
+
+def _render_omp_command_catalog(value: str, command_map: dict[str, dict[str, str]]) -> str:
+    try:
+        records = yaml.safe_load(value)
+    except yaml.YAMLError as error:
+        raise ResourceError("Canonical command catalog is invalid YAML") from error
+    if not isinstance(records, list):
+        raise ResourceError("Canonical command catalog must be a list")
+
+    by_source = {
+        (item["source"], item["sourceName"]): item
+        for item in command_map.values()
+    }
+    transformed = []
+    seen = set()
+    for record in records:
+        if not isinstance(record, dict):
+            raise ResourceError("Canonical command catalog contains an invalid record")
+        source = record.get("path")
+        name = record.get("name")
+        if (
+            not isinstance(source, str)
+            or not isinstance(name, str)
+            or not name.startswith("/evcrate:")
+        ):
+            raise ResourceError("Canonical command catalog record has no exact source identity")
+        source_name = name.removeprefix("/evcrate:")
+        item = by_source.get((source, source_name))
+        if item is None or (source, source_name) in seen:
+            raise ResourceError("Canonical command catalog has an unmatched or duplicate command")
+        mapped = dict(record)
+        mapped["name"] = "/" + item["targetName"]
+        mapped["path"] = item["target"]
+        transformed.append(mapped)
+        seen.add((source, source_name))
+    return yaml.safe_dump(
+        transformed,
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+    )
+
 
 OMP_RUNTIME_HELPER = r'''import { spawn } from "node:child_process";
 import { lstatSync } from "node:fs";
@@ -278,10 +617,16 @@ export default function (pi: any) {
 '''
 
 
-def _translate_hook_source(value: str) -> str:
-    """Translate runtime paths and make the EVCrate helper select ``.omp``."""
+def _translate_hook_source(
+    value: str,
+    command_map: dict[str, dict[str, str]],
+) -> str:
+    """Translate runtime paths and command references for OMP."""
 
-    rendered = render_harness_script_references(value, "omp")
+    rendered = render_command_references(
+        render_harness_script_references(value, "omp"),
+        command_map,
+    )
     rendered = rendered.replace(
         "const VALID_CONFIG_DIRS = new Set(['.claude', '.codex', '.pi']);",
         "const VALID_CONFIG_DIRS = new Set(['.claude', '.codex', '.pi', '.omp']);",
@@ -299,10 +644,19 @@ def _translate_hook_source(value: str) -> str:
         "const globalRoot = configDir === '.pi' || configDir === '.omp'\n    ? absoluteDirectory(process['env'].EVCRATE_GLOBAL_CONFIG_ROOT)\n    : null;",
     )
     return rendered
-def _translate_script_source(value: str) -> str:
-    """Translate helper scripts for both project and global OMP roots."""
+
+def _translate_script_source(
+    value: str,
+    relative: Path,
+    command_map: dict[str, dict[str, str]],
+) -> str:
+    """Translate helper scripts and catalogs for the generated OMP target."""
 
     rendered = render_harness_script_references(value, "omp")
+    if relative.as_posix() == "commands_data.yaml":
+        return _render_omp_command_catalog(rendered, command_map)
+
+    rendered = render_command_references(rendered, command_map)
     rendered = rendered.replace(
         'if parent.name in {".antigravity", ".codex", ".gemini", ".pi"}:',
         'if parent.name in {".antigravity", ".codex", ".gemini", ".omp", ".pi"}:',
@@ -335,6 +689,10 @@ def _translate_script_source(value: str) -> str:
             "output_path = Path('.omp/evcrate/scripts/skills_data.yaml')",
             "output_path = _omp_root() / 'evcrate' / 'scripts' / 'skills_data.yaml'",
         )
+    if relative.as_posix() == "ev-help.py":
+        rendered = _render_omp_help_source(rendered)
+    elif relative.as_posix() == "scan_commands.py":
+        rendered = _render_omp_scanner_source(rendered)
     return rendered
 
 
@@ -344,7 +702,11 @@ def _copy_support_file(source: Path, output: Path, relative: str, transform) -> 
     copy_file(source, output / "evcrate" / "source-metadata" / relative, output, transform)
 
 
-def convert_hooks_and_scripts(source: Path, output: Path) -> dict[str, object]:
+def convert_hooks_and_scripts(
+    source: Path,
+    output: Path,
+    command_map: dict[str, dict[str, str]],
+) -> dict[str, object]:
     """Copy non-native closures and generate OMP hook factories."""
 
     hook_source = source / "hooks"
@@ -354,7 +716,12 @@ def convert_hooks_and_scripts(source: Path, output: Path) -> dict[str, object]:
     copied_hooks: list[str] = []
     for source_file in production_files(hook_source):
         relative = relative_path(hook_source, source_file)
-        copy_file(source_file, hook_destination / relative, output, _translate_hook_source)
+        copy_file(
+            source_file,
+            hook_destination / relative,
+            output,
+            lambda value: _translate_hook_source(value, command_map),
+        )
         copied_hooks.append(relative.as_posix())
 
     copied_scripts: list[str] = []
@@ -362,7 +729,12 @@ def convert_hooks_and_scripts(source: Path, output: Path) -> dict[str, object]:
         relative = relative_path(script_source, source_file)
         if "advise-state" in relative.name:
             continue
-        copy_file(source_file, script_destination / relative, output, _translate_script_source)
+        copy_file(
+            source_file,
+            script_destination / relative,
+            output,
+            lambda value, relative=relative: _translate_script_source(value, relative, command_map),
+        )
         copied_scripts.append(relative.as_posix())
 
     ignore = source / ".evcrateignore"
@@ -376,10 +748,26 @@ def convert_hooks_and_scripts(source: Path, output: Path) -> dict[str, object]:
     )
     for support, relative in metadata_files:
         if support.is_file() and not support.is_symlink():
-            _copy_support_file(support, output, relative, lambda value: render_harness_script_references(value, "omp"))
+            _copy_support_file(
+                support,
+                output,
+                relative,
+                lambda value: render_command_references(
+                    render_harness_script_references(value, "omp"),
+                    command_map,
+                ),
+            )
     for statusline in sorted(source.glob("statusline.*")):
         if statusline.is_file() and not statusline.is_symlink():
-            _copy_support_file(statusline, output, f"statusline/{statusline.name}", lambda value: render_harness_script_references(value, "omp"))
+            _copy_support_file(
+                statusline,
+                output,
+                f"statusline/{statusline.name}",
+                lambda value: render_command_references(
+                    render_harness_script_references(value, "omp"),
+                    command_map,
+                ),
+            )
 
     ensure_parent(output, output / "evcrate" / "omp-hook-runtime.ts")
     (output / "evcrate" / "omp-hook-runtime.ts").write_text(OMP_RUNTIME_HELPER, encoding="utf-8", newline="\n")

@@ -1,362 +1,362 @@
-- name: /evcrate:ask
-  path: ask.md
+- name: /cmd-ask
+  path: cmd-ask.md
   description: Answer technical and architectural questions.
   argument_hint:
   - technical-question
   power_level: 1
   category: core
-- name: /evcrate:bootstrap:auto:fast
-  path: bootstrap/auto/fast.md
+- name: /cmd-bootstrap__auto__fast
+  path: cmd-bootstrap__auto__fast.md
   description: Quickly bootstrap a new project automatically
   argument_hint:
   - user-requirements
   power_level: 3
   category: bootstrap
-- name: /evcrate:bootstrap:auto
-  path: bootstrap/auto.md
+- name: /cmd-bootstrap__auto
+  path: cmd-bootstrap__auto.md
   description: Bootstrap a new project automatically
   argument_hint:
   - user-requirements
   power_level: 4
   category: bootstrap
-- name: /evcrate:bootstrap
-  path: bootstrap.md
+- name: /cmd-bootstrap
+  path: cmd-bootstrap.md
   description: Bootstrap a new project step by step
   argument_hint:
   - user-requirements
   power_level: 5
   category: core
-- name: /evcrate:brainstorm
-  path: brainstorm.md
+- name: /cmd-brainstorm
+  path: cmd-brainstorm.md
   description: Brainstorm a feature
   argument_hint:
   - question
   power_level: 2
   category: core
-- name: /evcrate:code
-  path: code.md
+- name: /cmd-code
+  path: cmd-code.md
   description: Start coding & testing an existing plan
   argument_hint:
   - plan
   power_level: 1
   category: core
-- name: /evcrate:content:cro
-  path: content/cro.md
+- name: /cmd-content__cro
+  path: cmd-content__cro.md
   description: Analyze the current content and optimize for conversion
   argument_hint:
   - issues
   power_level: 0
   category: content
-- name: /evcrate:content:enhance
-  path: content/enhance.md
+- name: /cmd-content__enhance
+  path: cmd-content__enhance.md
   description: Analyze the current copy issues and enhance it
   argument_hint:
   - issues
   power_level: 0
   category: content
-- name: /evcrate:content:fast
-  path: content/fast.md
+- name: /cmd-content__fast
+  path: cmd-content__fast.md
   description: Write creative & smart copy [FAST]
   argument_hint:
   - user-request
   power_level: 0
   category: content
-- name: /evcrate:content:good
-  path: content/good.md
+- name: /cmd-content__good
+  path: cmd-content__good.md
   description: Write good creative & smart copy [GOOD]
   argument_hint:
   - user-request
   power_level: 0
   category: content
-- name: /evcrate:cook:auto:fast
-  path: cook/auto/fast.md
+- name: /cmd-cook__auto__fast
+  path: cmd-cook__auto__fast.md
   description: No research. Only scout, plan & implement ["trust me bro"]
   argument_hint:
   - tasks-or-prompt
   power_level: 1
   category: cook
-- name: /evcrate:cook:auto
-  path: cook/auto.md
+- name: /cmd-cook__auto
+  path: cmd-cook__auto.md
   description: Implement a feature automatically ("trust me bro")
   argument_hint:
   - tasks
   power_level: 2
   category: cook
-- name: /evcrate:cook
-  path: cook.md
+- name: /cmd-cook
+  path: cmd-cook.md
   description: Implement a feature [step by step]
   argument_hint:
   - tasks
   power_level: 3
   category: core
-- name: /evcrate:debug
-  path: debug.md
+- name: /cmd-debug
+  path: cmd-debug.md
   description: Debugging technical issues and providing solutions.
   argument_hint:
   - issues
   power_level: 2
   category: core
-- name: /evcrate:design:3d
-  path: design/3d.md
+- name: /cmd-design__3d
+  path: cmd-design__3d.md
   description: Create immersive interactive 3D designs with Three.js
   argument_hint:
   - tasks
   power_level: 0
   category: design
-- name: /evcrate:design:describe
-  path: design/describe.md
+- name: /cmd-design__describe
+  path: cmd-design__describe.md
   description: Describe a design based on screenshot/video
   argument_hint:
   - screenshot
   power_level: 0
   category: design
-- name: /evcrate:design:fast
-  path: design/fast.md
+- name: /cmd-design__fast
+  path: cmd-design__fast.md
   description: Create a quick design
   argument_hint:
   - tasks
   power_level: 0
   category: design
-- name: /evcrate:design:good
-  path: design/good.md
+- name: /cmd-design__good
+  path: cmd-design__good.md
   description: Create an immersive design
   argument_hint:
   - tasks
   power_level: 0
   category: design
-- name: /evcrate:design:screenshot
-  path: design/screenshot.md
+- name: /cmd-design__screenshot
+  path: cmd-design__screenshot.md
   description: Create a design based on screenshot
   argument_hint:
   - screenshot
   power_level: 0
   category: design
-- name: /evcrate:design:video
-  path: design/video.md
+- name: /cmd-design__video
+  path: cmd-design__video.md
   description: Create a design based on video
   argument_hint:
   - video
   power_level: 0
   category: design
-- name: /evcrate:docs:init
-  path: docs/init.md
+- name: /cmd-docs__init
+  path: cmd-docs__init.md
   description: Analyze the codebase and create initial documentation
   argument_hint: ''
   power_level: 4
   category: docs
-- name: /evcrate:docs:summarize
-  path: docs/summarize.md
+- name: /cmd-docs__summarize
+  path: cmd-docs__summarize.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: docs
-- name: /evcrate:docs:update
-  path: docs/update.md
+- name: /cmd-docs__update
+  path: cmd-docs__update.md
   description: Analyze the codebase and update documentation
   argument_hint: ''
   power_level: 3
   category: docs
-- name: /evcrate:fix:ci
-  path: fix/ci.md
+- name: /cmd-fix__ci
+  path: cmd-fix__ci.md
   description: Analyze Github Actions logs and fix issues
   argument_hint:
   - github-actions-url
   power_level: 1
   category: fix
-- name: /evcrate:fix:fast
-  path: fix/fast.md
+- name: /cmd-fix__fast
+  path: cmd-fix__fast.md
   description: Analyze and fix small issues [FAST]
   argument_hint:
   - issues
   power_level: 1
   category: fix
-- name: /evcrate:fix:hard
-  path: fix/hard.md
+- name: /cmd-fix__hard
+  path: cmd-fix__hard.md
   description: Use subagents to plan and fix hard issues
   argument_hint:
   - issues
   power_level: 3
   category: fix
-- name: /evcrate:fix:logs
-  path: fix/logs.md
+- name: /cmd-fix__logs
+  path: cmd-fix__logs.md
   description: Analyze logs and fix issues
   argument_hint:
   - issue
   power_level: 1
   category: fix
-- name: /evcrate:fix:test
-  path: fix/test.md
+- name: /cmd-fix__test
+  path: cmd-fix__test.md
   description: Run test suite and fix issues
   argument_hint:
   - issues
   power_level: 2
   category: fix
-- name: /evcrate:fix:types
-  path: fix/types.md
+- name: /cmd-fix__types
+  path: cmd-fix__types.md
   description: Fix type errors
   argument_hint: ''
   power_level: 1
   category: fix
-- name: /evcrate:fix:ui
-  path: fix/ui.md
+- name: /cmd-fix__ui
+  path: cmd-fix__ui.md
   description: Analyze and fix UI issues
   argument_hint:
   - issue
   power_level: 2
   category: fix
-- name: /evcrate:fix
-  path: fix.md
+- name: /cmd-fix
+  path: cmd-fix.md
   description: Analyze and fix small issues [AUTO DETECT COMPLEXITY]
   argument_hint:
   - issues
   power_level: 2
   category: core
-- name: /evcrate:git:cm
-  path: git/cm.md
+- name: /cmd-git__cm
+  path: cmd-git__cm.md
   description: Stage all files and create a commit.
   argument_hint: ''
   power_level: 0
   category: git
-- name: /evcrate:git:cp
-  path: git/cp.md
+- name: /cmd-git__cp
+  path: cmd-git__cp.md
   description: Stage, commit and push all code in the current branch
   argument_hint: ''
   power_level: 0
   category: git
-- name: /evcrate:git:pr
-  path: git/pr.md
+- name: /cmd-git__pr
+  path: cmd-git__pr.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: git
-- name: /evcrate:integrate:polar
-  path: integrate/polar.md
+- name: /cmd-integrate__polar
+  path: cmd-integrate__polar.md
   description: Implement payment integration with Polar.sh
   argument_hint:
   - tasks
   power_level: 2
   category: integrate
-- name: /evcrate:integrate:sepay
-  path: integrate/sepay.md
+- name: /cmd-integrate__sepay
+  path: cmd-integrate__sepay.md
   description: Implement payment integration with SePay.vn
   argument_hint:
   - tasks
   power_level: 2
   category: integrate
-- name: /evcrate:journal
-  path: journal.md
+- name: /cmd-journal
+  path: cmd-journal.md
   description: Write some journal entries.
   argument_hint: ''
   power_level: 1
   category: core
-- name: /evcrate:plan:ci
-  path: plan/ci.md
+- name: /cmd-plan__ci
+  path: cmd-plan__ci.md
   description: Analyze Github Actions logs and provide a plan to fix the issues
   argument_hint:
   - github-actions-url
   power_level: 0
   category: plan
-- name: /evcrate:plan:cro
-  path: plan/cro.md
+- name: /cmd-plan__cro
+  path: cmd-plan__cro.md
   description: Create a CRO plan for the given content
   argument_hint:
   - issues
   power_level: 0
   category: plan
-- name: /evcrate:plan:fast
-  path: plan/fast.md
+- name: /cmd-plan__fast
+  path: cmd-plan__fast.md
   description: No research. Only analyze and create an implementation plan
   argument_hint:
   - task
   power_level: 2
   category: plan
-- name: /evcrate:plan:hard
-  path: plan/hard.md
+- name: /cmd-plan__hard
+  path: cmd-plan__hard.md
   description: Research, analyze, and create an implementation plan
   argument_hint:
   - task
   power_level: 3
   category: plan
-- name: /evcrate:plan:two
-  path: plan/two.md
+- name: /cmd-plan__two
+  path: cmd-plan__two.md
   description: Research & create an implementation plan with 2 approaches
   argument_hint:
   - task
   power_level: 4
   category: plan
-- name: /evcrate:plan
-  path: plan.md
+- name: /cmd-plan
+  path: cmd-plan.md
   description: Intelligent plan creation with prompt enhancement
   argument_hint:
   - task
   power_level: 3
   category: core
-- name: /evcrate:review:codebase
-  path: review/codebase.md
+- name: /cmd-review__codebase
+  path: cmd-review__codebase.md
   description: Scan & analyze the codebase.
   argument_hint:
   - tasks-or-prompt
   power_level: 3
   category: review
-- name: /evcrate:scout:ext
-  path: scout/ext.md
+- name: /cmd-scout__ext
+  path: cmd-scout__ext.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: scout
-- name: /evcrate:scout
-  path: scout.md
+- name: /cmd-scout
+  path: cmd-scout.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: core
-- name: /evcrate:skill:add
-  path: skill/add.md
+- name: /cmd-skill__add
+  path: cmd-skill__add.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: skill
-- name: /evcrate:skill:create
-  path: skill/create.md
+- name: /cmd-skill__create
+  path: cmd-skill__create.md
   description: Create a new agent skill
   argument_hint:
   - prompt-or-llms-or-github-url
   power_level: 0
   category: skill
-- name: /evcrate:skill:fix-logs
-  path: skill/fix-logs.md
+- name: /cmd-skill__fix-logs
+  path: cmd-skill__fix-logs.md
   description: Fix the agent skill based on `logs.txt` file.
   argument_hint:
   - prompt-or-path-to-skill
   power_level: 0
   category: skill
-- name: /evcrate:skill:optimize:auto
-  path: skill/optimize/auto.md
+- name: /cmd-skill__optimize__auto
+  path: cmd-skill__optimize__auto.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: skill
-- name: /evcrate:skill:optimize
-  path: skill/optimize.md
+- name: /cmd-skill__optimize
+  path: cmd-skill__optimize.md
   description: ''
   argument_hint: ''
   power_level: 0
   category: skill
-- name: /evcrate:test
-  path: test.md
+- name: /cmd-test
+  path: cmd-test.md
   description: Run tests locally and analyze the summary report.
   argument_hint: ''
   power_level: 1
   category: core
-- name: /evcrate:use-mcp
-  path: use-mcp.md
+- name: /cmd-use-mcp
+  path: cmd-use-mcp.md
   description: Utilize tools of Model Context Protocol (MCP) servers
   argument_hint:
   - task
   power_level: 0
   category: core
-- name: /evcrate:watzup
-  path: watzup.md
+- name: /cmd-watzup
+  path: cmd-watzup.md
   description: Review recent changes and wrap up the work
   argument_hint: ''
   power_level: 1

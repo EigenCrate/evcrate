@@ -125,6 +125,18 @@ Provide a production-ready template that:
 - `/watzup` - Review recent changes and status
 - `/journal` - Development journal entries
 - `/scout [prompt] [scale]` - Parallel codebase exploration
+**OMP namespace requirement**:
+- Canonical Claude command paths remain the authoring contract. OMP MUST flatten
+  each Markdown path to a unique `cmd-` target with `__` separators (for
+  example, `/fix:hard` → `/cmd-fix__hard`).
+- OMP MUST emit `evcrate/command-name-map.json` with schema
+  `evcrate-omp-command-map-v1`; this generated map is authoritative for slash
+  and command-file translation and for generated help, scanner, and catalog
+  outputs.
+- Unsafe command names and flattening collisions MUST fail closed. OMP
+  migration is staging-only and MUST NOT publish its command files or map into
+  HOME; publication consumes only verified distribution output.
+
 
 ### 3. Extensive Skills Library (20+ Skills)
 

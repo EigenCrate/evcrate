@@ -19,6 +19,9 @@ python3 distribute.py --check --target pi
 - `evcrate_command` performs bounded nested command expansion; static workflows remain Markdown documents, not executable JavaScript workflows.
 - Generated agents retain semantic roles (`strong`, `standard`, `fast`, `parent`) rather than model IDs. For `openai-codex`, implicit routes are Sol/high, Terra/high, and Luna/low respectively. Unknown providers inherit the parent model; EVCrate never guesses a cross-provider route.
 - `evcrate_subagent` uses the structured `pi-subagents` transport. A terminal response proves execution completed, not that the parent accepted the result. The parent must still inspect artifacts and run requested tests or review gates.
+Pi retains recursive colon command names; the `cmd-`/`__` flattening contract
+belongs only to the OMP projection and must not be copied into Pi resources.
+
 - The extension is the sole Pi lifecycle/tool-hook owner. Session starts map Pi `startup`, `new`, `resume`, `fork`, and `reload` reasons to canonical SessionStart context. Manual compaction maps to `manual`; threshold and overflow compaction map to `auto`; post-compaction reapplies compact SessionStart context. Shutdown runs canonical cleanup only—Pi has no `clear` shutdown reason, so EVCrate never fabricates Claude's `SessionEnd: clear` hook. Prompt submission, tool pre/post events, and child delegation are derived from the generated hook map.
 
 ## Managed packages and settings
