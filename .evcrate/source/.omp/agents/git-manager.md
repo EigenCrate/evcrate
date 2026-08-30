@@ -26,7 +26,7 @@ git diff --cached | grep -c -iE "(api[_-]?key|token|password|secret|private[_-]?
 echo "=== FILE GROUPS ===" && \
 git diff --cached --name-only | awk -F'/' '{
   if ($0 ~ /\.(md|txt)$/) print "docs:"$0
-  else if ($0 ~ /test|spec/) print "test:"$0
+  else if ($0 ~ /cmd-test|spec/) print "test:"$0
   else if ($0 ~ /\.omp\/(skills|agents|commands|workflows)/) print "config:"$0
   else if ($0 ~ /package\.json|yarn\.lock|pnpm-lock/) print "deps:"$0
   else if ($0 ~ /\.github|\.gitlab|ci\.yml/) print "ci:"$0

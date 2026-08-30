@@ -5,7 +5,7 @@ Comprehensive catalog of Claude Code slash commands for development workflows.
 ## What Are Slash Commands?
 
 Slash commands are user-defined operations that:
-- Start with `/` (e.g., `/cook`, `/test`)
+- Start with `/` (e.g., `/cmd-cook`, `/cmd-test`)
 - Expand to full prompts when executed
 - Accept arguments
 - Located in `.omp/commands/`
@@ -13,41 +13,41 @@ Slash commands are user-defined operations that:
 
 ## Development Commands
 
-### /cook [task]
+### /cmd-cook [task]
 Implement features step by step.
 
 ```bash
-/cook implement user authentication with JWT
-/cook add payment integration with Stripe
+/cmd-cook implement user authentication with JWT
+/cmd-cook add payment integration with Stripe
 ```
 
 **When to use**: Feature implementation with iterative development
 
-### /plan [task]
+### /cmd-plan [task]
 Research, analyze, and create implementation plans.
 
 ```bash
-/plan implement OAuth2 authentication
-/plan migrate from SQLite to PostgreSQL
+/cmd-plan implement OAuth2 authentication
+/cmd-plan migrate from SQLite to PostgreSQL
 ```
 
 **When to use**: Before starting complex implementations
 
-### /debug [issue]
+### /cmd-debug [issue]
 Debug technical issues and provide solutions.
 
 ```bash
-/debug the API returns 500 errors intermittently
-/debug authentication flow not working
+/cmd-debug the API returns 500 errors intermittently
+/cmd-debug authentication flow not working
 ```
 
 **When to use**: Investigating and diagnosing problems
 
-### /test
+### /cmd-test
 Run test suite.
 
 ```bash
-/test
+/cmd-test
 ```
 
 **When to use**: Validate implementations, check for regressions
@@ -64,242 +64,242 @@ Improve code quality.
 
 ## Fix Commands
 
-### /fix__fast [issue]
+### /cmd-fix__fast [issue]
 Quick fixes for small issues.
 
 ```bash
-/fix__fast the login button is not working
-/fix__fast typo in error message
+/cmd-fix__fast the login button is not working
+/cmd-fix__fast typo in error message
 ```
 
 **When to use**: Simple, straightforward fixes
 
-### /fix__hard [issue]
+### /cmd-fix__hard [issue]
 Complex issues requiring planning and subagents.
 
 ```bash
-/fix__hard database connection pooling issues
-/fix__hard race condition in payment processing
+/cmd-fix__hard database connection pooling issues
+/cmd-fix__hard race condition in payment processing
 ```
 
 **When to use**: Complex bugs requiring deep investigation
 
-### /fix__types
+### /cmd-fix__types
 Fix TypeScript type errors.
 
 ```bash
-/fix__types
+/cmd-fix__types
 ```
 
 **When to use**: TypeScript compilation errors
 
-### /fix__test [issue]
+### /cmd-fix__test [issue]
 Fix test failures.
 
 ```bash
-/fix__test the user service tests are failing
-/fix__test integration tests timing out
+/cmd-fix__test the user service tests are failing
+/cmd-fix__test integration tests timing out
 ```
 
 **When to use**: Test suite failures
 
-### /fix__ui [issue]
+### /cmd-fix__ui [issue]
 Fix UI issues.
 
 ```bash
-/fix__ui button alignment on mobile
-/fix__ui dark mode colors inconsistent
+/cmd-fix__ui button alignment on mobile
+/cmd-fix__ui dark mode colors inconsistent
 ```
 
 **When to use**: Visual or interaction issues
 
-### /fix__ci [url]
+### /cmd-fix__ci [url]
 Analyze GitHub Actions logs and fix CI/CD issues.
 
 ```bash
-/fix__ci https://github.com/owner/repo/actions/runs/123456
+/cmd-fix__ci https://github.com/owner/repo/actions/runs/123456
 ```
 
 **When to use**: Build or deployment failures
 
-### /fix__logs [issue]
+### /cmd-fix__logs [issue]
 Analyze logs and fix issues.
 
 ```bash
-/fix__logs server error logs showing memory leaks
+/cmd-fix__logs server error logs showing memory leaks
 ```
 
 **When to use**: Production issues with log evidence
 
 ## Documentation Commands
 
-### /docs__init
+### /cmd-docs__init
 Create initial documentation structure.
 
 ```bash
-/docs__init
+/cmd-docs__init
 ```
 
 **When to use**: New projects needing documentation
 
-### /docs__update
+### /cmd-docs__update
 Update existing documentation based on code changes.
 
 ```bash
-/docs__update
+/cmd-docs__update
 ```
 
 **When to use**: After significant code changes
 
-### /docs__summarize
+### /cmd-docs__summarize
 Summarize codebase and create overview.
 
 ```bash
-/docs__summarize
+/cmd-docs__summarize
 ```
 
 **When to use**: Generate project summaries
 
 ## Git Commands
 
-### /git__cm
+### /cmd-git__cm
 Stage all files and create commit.
 
 ```bash
-/git__cm
+/cmd-git__cm
 ```
 
 **When to use**: Commit changes with automatic message
 
-### /git__cp
+### /cmd-git__cp
 Stage, commit, and push all code in current branch.
 
 ```bash
-/git__cp
+/cmd-git__cp
 ```
 
 **When to use**: Commit and push in one command
 
-### /git__pr [branch] [from-branch]
+### /cmd-git__pr [branch] [from-branch]
 Create pull request.
 
 ```bash
-/git__pr feature-branch main
-/git__pr bugfix-auth develop
+/cmd-git__pr feature-branch main
+/cmd-git__pr bugfix-auth develop
 ```
 
 **When to use**: Creating PRs with automatic descriptions
 
 ## Planning Commands
 
-### /plan__two [task]
+### /cmd-plan__two [task]
 Create implementation plan with 2 alternative approaches.
 
 ```bash
-/plan__two implement caching layer
+/cmd-plan__two implement caching layer
 ```
 
 **When to use**: Need to evaluate multiple approaches
 
-### /plan__ci [url]
+### /cmd-plan__ci [url]
 Analyze GitHub Actions logs and create fix plan.
 
 ```bash
-/plan__ci https://github.com/owner/repo/actions/runs/123456
+/cmd-plan__ci https://github.com/owner/repo/actions/runs/123456
 ```
 
 **When to use**: CI/CD failure analysis
 
-### /plan__cro [issue]
+### /cmd-plan__cro [issue]
 Create conversion rate optimization plan.
 
 ```bash
-/plan__cro landing page conversion improvement
+/cmd-plan__cro landing page conversion improvement
 ```
 
 **When to use**: Marketing/conversion optimization
 
 ## Content Commands
 
-### /content__fast [request]
+### /cmd-content__fast [request]
 Quick copy writing.
 
 ```bash
-/content__fast write product description for new feature
+/cmd-content__fast write product description for new feature
 ```
 
 **When to use**: Fast content generation
 
-### /content__good [request]
+### /cmd-content__good [request]
 High-quality, conversion-focused copy.
 
 ```bash
-/content__good write landing page hero section
+/cmd-content__good write landing page hero section
 ```
 
 **When to use**: Marketing copy requiring polish
 
-### /content__enhance [issue]
+### /cmd-content__enhance [issue]
 Enhance existing content.
 
 ```bash
-/content__enhance improve clarity of pricing page
+/cmd-content__enhance improve clarity of pricing page
 ```
 
 **When to use**: Improving existing copy
 
-### /content__cro [issue]
+### /cmd-content__cro [issue]
 Conversion rate optimization for content.
 
 ```bash
-/content__cro optimize email campaign copy
+/cmd-content__cro optimize email campaign copy
 ```
 
 **When to use**: Conversion-focused content improvements
 
 ## Design Commands
 
-### /design__fast [task]
+### /cmd-design__fast [task]
 Quick design implementation.
 
 ```bash
-/design__fast create dashboard layout
+/cmd-design__fast create dashboard layout
 ```
 
 **When to use**: Rapid prototyping
 
-### /design__good [task]
+### /cmd-design__good [task]
 High-quality, polished design.
 
 ```bash
-/design__good create landing page for SaaS product
+/cmd-design__good create landing page for SaaS product
 ```
 
 **When to use**: Production-ready designs
 
-### /design__3d [task]
+### /cmd-design__3d [task]
 Create 3D designs with Three.js.
 
 ```bash
-/design__3d create interactive 3D product viewer
+/cmd-design__3d create interactive 3D product viewer
 ```
 
 **When to use**: 3D visualization needs
 
-### /design__screenshot [path]
+### /cmd-design__screenshot [path]
 Create design based on screenshot.
 
 ```bash
-/design__screenshot screenshot.png
+/cmd-design__screenshot screenshot.png
 ```
 
 **When to use**: Recreating designs from images
 
-### /design__video [path]
+### /cmd-design__video [path]
 Create design based on video.
 
 ```bash
-/design__video demo-video.mp4
+/cmd-design__video demo-video.mp4
 ```
 
 **When to use**: Implementing designs from video demos
@@ -326,103 +326,103 @@ Check deployment readiness.
 
 ## Integration Commands
 
-### /integrate__polar [tasks]
+### /cmd-integrate__polar [tasks]
 Implement payment integration with Polar.sh.
 
 ```bash
-/integrate__polar add subscription payments
+/cmd-integrate__polar add subscription payments
 ```
 
 **When to use**: Polar payment integration
 
-### /integrate__sepay [tasks]
+### /cmd-integrate__sepay [tasks]
 Implement payment integration with SePay.vn.
 
 ```bash
-/integrate__sepay add Vietnamese payment gateway
+/cmd-integrate__sepay add Vietnamese payment gateway
 ```
 
 **When to use**: SePay payment integration
 
 ## Other Commands
 
-### /brainstorm [question]
+### /cmd-brainstorm [question]
 Brainstorm features and ideas.
 
 ```bash
-/brainstorm how to improve user onboarding
+/cmd-brainstorm how to improve user onboarding
 ```
 
 **When to use**: Ideation and exploration
 
-### /ask [question]
+### /cmd-ask [question]
 Answer technical and architectural questions.
 
 ```bash
-/ask what's the best way to handle websocket connections
+/cmd-ask what's the best way to handle websocket connections
 ```
 
 **When to use**: Technical guidance
 
-### /scout [prompt] [scale]
+### /cmd-scout [prompt] [scale]
 Scout directories to respond to requests.
 
 ```bash
-/scout find authentication code
+/cmd-scout find authentication code
 ```
 
 **When to use**: Code exploration
 
-### /watzup
+### /cmd-watzup
 Review recent changes and wrap up work.
 
 ```bash
-/watzup
+/cmd-watzup
 ```
 
 **When to use**: End of session summary
 
-### /bootstrap [requirements]
+### /cmd-bootstrap [requirements]
 Bootstrap new project step by step.
 
 ```bash
-/bootstrap create React app with TypeScript and Tailwind
+/cmd-bootstrap create React app with TypeScript and Tailwind
 ```
 
 **When to use**: New project setup
 
-### /bootstrap__auto [requirements]
+### /cmd-bootstrap__auto [requirements]
 Bootstrap new project automatically.
 
 ```bash
-/bootstrap__auto create Next.js app
+/cmd-bootstrap__auto create Next.js app
 ```
 
 **When to use**: Automated project setup
 
-### /journal
+### /cmd-journal
 Write journal entries for development log.
 
 ```bash
-/journal
+/cmd-journal
 ```
 
 **When to use**: Development documentation
 
-### /review__codebase [prompt]
+### /cmd-review__codebase [prompt]
 Scan and analyze codebase.
 
 ```bash
-/review__codebase analyze architecture patterns
+/cmd-review__codebase analyze architecture patterns
 ```
 
 **When to use**: Codebase analysis
 
-### /skill__create [prompt]
+### /cmd-skill__create [prompt]
 Create new agent skill.
 
 ```bash
-/skill__create create skill for API testing
+/cmd-skill__create create skill for API testing
 ```
 
 **When to use**: Extending Claude with custom skills
@@ -465,21 +465,21 @@ Include:
 
 ### Single Argument
 ```bash
-/cook implement user auth
+/cmd-cook implement user auth
 # Argument: "implement user auth"
 ```
 
 ### Multiple Arguments
 ```bash
-/git__pr feature-branch main
+/cmd-git__pr feature-branch main
 # Arguments: "feature-branch", "main"
 ```
 
 ### Optional Arguments
 Some commands work with or without arguments:
 ```bash
-/test              # Run all tests
-/test user.test.js # Run specific test
+/cmd-test              # Run all tests
+/cmd-test user.test.js # Run specific test
 ```
 
 ## See Also

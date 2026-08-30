@@ -9,7 +9,12 @@ from pathlib import Path
 
 from omp_adapter import contained_omp_output, contained_source
 from omp_adapter.agents import convert_agents
-from omp_adapter.commands import convert_commands, convert_workflows, translate_prompt
+from omp_adapter.commands import (
+    convert_commands,
+    convert_workflows,
+    render_command_references,
+    translate_prompt,
+)
 from omp_adapter.hooks import convert_hooks_and_scripts
 from omp_adapter.resources import ResourceError, copy_tree, ensure_parent, read_json, write_json
 from omp_adapter.skills import convert_skills
@@ -71,11 +76,12 @@ def main(argv: list[str] | None = None) -> int:
         source,
         output,
         lambda value: _transform(value, command_map),
+        description_transform=lambda value: render_command_references(value, command_map),
         thinking_level=thinking_level,
     )
     skill_audit = convert_skills(source, output, lambda value: _transform(value, command_map))
     workflow_audit = convert_workflows(source, output, command_map)
-    static_audit = convert_hooks_and_scripts(source, output)
+    static_audit = convert_hooks_and_scripts(source, output, command_map)
     copy_tree(
         source / "output-styles",
         output / "evcrate" / "output-styles",

@@ -28,7 +28,7 @@ def advisory_test_patterns():
         "cla" + "ude",
     )
     common = [
-        "/advise",
+        "/cmd-advise",
         "--agent",
         "--advice",
         "@advisor",
@@ -97,7 +97,7 @@ def main():
     tests.append(test_case(
         "worktree category",
         ["worktree"],
-        ["Git Worktrees", "Parallel Development", "/worktree", "isolated branch"]
+        ["Git Worktrees", "Parallel Development", "/cmd-worktree", "isolated branch"]
     ))
 
     tests.append(test_case(
@@ -109,25 +109,25 @@ def main():
     tests.append(test_case(
         "preview category",
         ["preview"],
-        ["Content Preview", "Novel Reader", "/preview", "markdown"]
+        ["Content Preview", "Novel Reader", "/cmd-preview", "markdown"]
     ))
 
     tests.append(test_case(
         "journal category",
         ["journal"],
-        ["Technical Journaling", "/journal", "failure", "Lessons"]
+        ["Technical Journaling", "/cmd-journal", "failure", "Lessons"]
     ))
 
     tests.append(test_case(
         "brainstorm category",
         ["brainstorm"],
-        ["Brainstorming", "Ideation", "/brainstorm", "codingLevel"]
+        ["Brainstorming", "Ideation", "/cmd-brainstorm", "codingLevel"]
     ))
 
     tests.append(test_case(
         "watzup category",
         ["watzup"],
-        ["Session Review", "Wrap-up", "/watzup", "summary"]
+        ["Session Review", "Wrap-up", "/cmd-watzup", "summary"]
     ))
 
     # ========== Existing Categories ==========
@@ -136,19 +136,19 @@ def main():
     tests.append(test_case(
         "plan category",
         ["plan"],
-        ["Planning", "/plan:fast", "/plan:hard", "/plan:validate", "Commands:"]
+        ["Planning", "/cmd-plan__fast", "/cmd-plan__hard", "/cmd-plan__validate", "Commands:"]
     ))
 
     tests.append(test_case(
         "fix category",
         ["fix"],
-        ["Fixing Issues", "/fix", "/debug"]
+        ["Fixing Issues", "/cmd-fix", "/cmd-debug"]
     ))
 
     tests.append(test_case(
         "cook category",
         ["cook"],
-        ["Implementation", "/cook"]
+        ["Implementation", "/cmd-cook"]
     ))
 
     # ========== Overview ==========
@@ -157,13 +157,13 @@ def main():
     tests.append(test_case(
         "overview shows workflow sequences",
         [],
-        ["Common Workflows:", "/plan", "/code", "/test", "/git:pr", "→"]
+        ["Common Workflows:", "/cmd-plan", "/cmd-code", "/cmd-test", "/cmd-git__pr", "→"]
     ))
 
     tests.append(test_case(
         "overview shows tips",
         [],
-        ["Tips:", "/brainstorm", "ultrathink", "tokens", "/preview", ":parallel", "quota"]
+        ["Tips:", "/cmd-brainstorm", "ultrathink", "tokens", "/cmd-preview", ":parallel", "quota"]
     ))
 
     tests.append(test_case(
@@ -194,7 +194,7 @@ def main():
     tests.append(test_case(
         "git matches git commands",
         ["git", "commit"],
-        ["Recommended for:", "/git:cm"]
+        ["Recommended for:", "/cmd-git__cm"]
     ))
 
     tests.append(test_case(

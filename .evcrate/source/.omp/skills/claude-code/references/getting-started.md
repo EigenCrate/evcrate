@@ -185,9 +185,9 @@ project/
 /help
 
 # Try common workflows
-/cook implement feature X
-/fix__fast bug in Y
-/test
+/cmd-cook implement feature X
+/cmd-fix__fast bug in Y
+/cmd-test
 ```
 
 ### Create Custom Skills

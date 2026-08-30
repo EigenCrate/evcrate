@@ -235,6 +235,16 @@ python3 distribute.py --check
 EVCRATE_HOME="$TEMP_HOME" python3 distribute.py --publish --dry-run --json
 ```
 
+### OMP command projection boundary
+
+The OMP adapter consumes canonical Claude commands only in isolated
+`OMP_STAGE_ROOT` staging. It writes the authoritative
+`evcrate/command-name-map.json` (`evcrate-omp-command-map-v1`) alongside
+flattened `cmd-` command files. Help, scanner, and catalog generation consume
+that map; command-file and slash references are translated from it, and unsafe
+names or flattening collisions fail closed. The adapter never publishes these
+resources directly to HOME; only verified distribution output is publishable.
+
 Generated target workflows and direct hard-fix commands all carry the same
 literal `~/.evcrate/bin/evcrate-advisor` path. Change canonical sources or
 manifest overlays, rebuild, verify, and publish; do not hand-edit projections.

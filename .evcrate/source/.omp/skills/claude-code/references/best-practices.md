@@ -243,7 +243,7 @@ claude analytics cost --group-by project
 Create consistent slash commands:
 
 ```markdown
-# .omp/commands/test.md
+# .omp/commands/cmd-test.md
 Run test suite with coverage report.
 
 Options:
@@ -252,9 +252,9 @@ Options:
 
 **Usage:**
 ```bash
-/test
-/test unit
-/test integration
+/cmd-test
+/cmd-test unit
+/cmd-test integration
 ```
 
 ### Share Skills
@@ -392,38 +392,38 @@ claude analytics cost --project my-project
 
 ```bash
 # 1. Plan feature
-claude /plan "implement user authentication"
+claude /cmd-plan "implement user authentication"
 
 # 2. Create checkpoint
 claude checkpoint create "before auth implementation"
 
 # 3. Implement
-claude /cook "implement user authentication"
+claude /cmd-cook "implement user authentication"
 
 # 4. Test
-claude /test
+claude /cmd-test
 
 # 5. Review
 claude "review authentication implementation"
 
 # 6. Commit
-claude /git__cm
+claude /cmd-git__cm
 ```
 
 ### Bug Fixing
 
 ```bash
 # 1. Debug
-claude /debug "login button not working"
+claude /cmd-debug "login button not working"
 
 # 2. Fix
-claude /fix__fast "fix login button issue"
+claude /cmd-fix__fast "fix login button issue"
 
 # 3. Test
-claude /test
+claude /cmd-test
 
 # 4. Commit
-claude /git__cm
+claude /cmd-git__cm
 ```
 
 ### Code Review

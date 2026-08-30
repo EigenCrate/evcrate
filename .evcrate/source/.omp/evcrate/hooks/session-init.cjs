@@ -431,7 +431,7 @@ async function main() {
         writeEnv(envFile, 'EVCRATE_RESPONSE_LANGUAGE', config.locale.responseLanguage);
       }
 
-      // Plan validation config (for /plan:validate, /plan:hard, /plan:parallel)
+      // Plan validation config (for /cmd-plan__validate, /cmd-plan__hard, /cmd-plan__parallel)
       const validation = config.plan?.validation || {};
       writeEnv(envFile, 'EVCRATE_VALIDATION_MODE', validation.mode || 'prompt');
       writeEnv(envFile, 'EVCRATE_VALIDATION_MIN_QUESTIONS', validation.minQuestions || 3);

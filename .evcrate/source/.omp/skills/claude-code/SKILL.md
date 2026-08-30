@@ -1,6 +1,6 @@
 ---
 name: claude-code
-description: Activate when users ask about Claude Code installation, slash commands (/cook, /plan, /fix, /test, /docs, /design, /git), creating/managing Agent Skills, configuring MCP servers, setting up hooks/plugins, IDE integration (VS Code, JetBrains), CI/CD workflows, enterprise deployment (SSO, RBAC, sandboxing), troubleshooting authentication/performance issues, or advanced features (extended thinking, caching, checkpointing).
+description: Activate when users ask about Claude Code installation, slash commands (/cmd-cook, /cmd-plan, /cmd-fix, /cmd-test, /docs, /design, /git), creating/managing Agent Skills, configuring MCP servers, setting up hooks/plugins, IDE integration (VS Code, JetBrains), CI/CD workflows, enterprise deployment (SSO, RBAC, sandboxing), troubleshooting authentication/performance issues, or advanced features (extended thinking, caching, checkpointing).
 ---
 
 # Claude Code
@@ -28,7 +28,7 @@ Load references as needed for specific topics:
 | Topic | Reference File | Contents |
 |-------|----------------|----------|
 | Installation & setup | `references/getting-started.md` | Prerequisites, installation methods, authentication |
-| Slash commands | `references/slash-commands.md` | Full catalog: /cook, /plan, /fix, /test, /docs, /git, /design |
+| Slash commands | `references/slash-commands.md` | Full catalog: /cmd-cook, /cmd-plan, /cmd-fix, /cmd-test, /docs, /git, /design |
 | Workflow examples | `references/common-workflows.md` | Feature implementation, bug fixing, testing, git ops |
 | Creating skills | `references/agent-skills.md` | Skill structure, metadata, bundled resources |
 | MCP servers | `references/mcp-integration.md` | Configuration, common servers, authentication |
