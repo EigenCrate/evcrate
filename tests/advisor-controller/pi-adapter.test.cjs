@@ -19,6 +19,35 @@ const ASSISTANT = {
   stopReason: 'stop', timestamp: 2,
 };
 const ASSISTANT_START = { ...ASSISTANT, content: [], stopReason: 'pending' };
+const PROBE_TARGET = { model: 'openai-codex/gpt-5.6-sol', effort: 'high' };
+const PI_HELP = [
+  '-p --mode json --provider --model --list-models --offline --thinking high',
+  '--no-session --no-extensions --no-skills --no-prompt-templates --no-context-files',
+  '--no-themes --no-approve --no-tools',
+].join('\n');
+function probeContext({ models = 'openai-codex  gpt-5.6-sol  272K  128K  yes  yes' } = {}) {
+  const calls = [];
+  const context = {
+    target: PROBE_TARGET,
+    environment: {},
+    requestDepth: 0,
+    createInvocation: ({ argv, prompt }) => ({ argv, prompt }),
+    runner: {
+      run: async (invocation) => {
+        calls.push(invocation.argv);
+        const key = invocation.argv.join(' ');
+        if (key === '--version') return { stdout: '0.84.4', stderr: '' };
+        if (key === 'auth check --provider openai-codex --model gpt-5.6-sol --json --no-refresh') {
+          return { stdout: JSON.stringify({ status: 'ready', provider: 'openai-codex', authType: 'oauth' }), stderr: '' };
+        }
+        if (key === '--offline --help') return { stdout: PI_HELP, stderr: '' };
+        if (key === '--offline --list-models openai-codex/gpt-5.6-sol') return { stdout: models, stderr: '' };
+        throw new Error(`Unexpected probe: ${key}`);
+      },
+    },
+  };
+  return { context, calls };
+}
 
 function stream({ eventExtra, cwd = CWD, messageExtra, willRetry = false } = {}) {
   const assistantEnd = messageExtra ? { ...ASSISTANT, ...messageExtra } : ASSISTANT;
@@ -56,4 +85,26 @@ test('Pi parser rejects unknown lifecycle fields and message metadata', () => {
 test('Pi parser attests the exact controller workspace and settled non-retry lifecycle', () => {
   assert.throws(() => parse(stream({ cwd: '/tmp/other-workspace' })), { code: 'CWD_UNSAFE' });
   assert.throws(() => parse(stream({ willRetry: true })), { code: 'PROTOCOL_INVALID' });
+});
+
+test('Pi probes current auth shape and exact cached model', async () => {
+  const { context, calls } = probeContext();
+  assert.equal(await PI.probeVersion(context), '0.84.4');
+  assert.deepEqual(await PI.probeAuth(context), { authenticated: true });
+  const capabilities = await PI.probeCapabilities(context);
+  assert.equal(capabilities.model, PROBE_TARGET.model);
+  assert.equal(capabilities.effort, PROBE_TARGET.effort);
+  assert.deepEqual(calls, [
+    ['--version'],
+    ['auth', 'check', '--provider', 'openai-codex', '--model', 'gpt-5.6-sol', '--json', '--no-refresh'],
+    ['--offline', '--help'],
+    ['--offline', '--list-models', 'openai-codex/gpt-5.6-sol'],
+  ]);
+});
+
+test('Pi rejects a model absent from the cached catalog', async () => {
+  const { context } = probeContext({ models: 'openai-codex  gpt-5.6-luna  272K  128K  yes  yes' });
+  await PI.probeVersion(context);
+  await PI.probeAuth(context);
+  await assert.rejects(PI.probeCapabilities(context), { code: 'MODEL_UNSUPPORTED' });
 });
