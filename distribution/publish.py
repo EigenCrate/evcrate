@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ctypes
 import os
 import shutil
+import stat
 import tempfile
 import uuid
 from dataclasses import dataclass
@@ -107,8 +109,15 @@ def _reject_symlinked_ancestors(path: Path, message: str) -> None:
 def _validate_home_ancestors(context: DistributionContext, home: Path) -> None:
     _reject_symlinked_ancestors(context.home, "HOME root must not contain symlinked ancestors")
     _reject_symlinked_ancestors(home, f"HOME binding has an unsafe ancestor: {home}")
-    if context.home.exists() and not context.home.is_dir():
-        raise PublishError("HOME root must be a real directory")
+    try:
+        home_metadata = context.home.stat()
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError) as error:
+        raise PublishError("HOME root could not be verified") from error
+    else:
+        if not stat.S_ISDIR(home_metadata.st_mode):
+            raise PublishError("HOME root must be a real directory")
     try:
         home.relative_to(context.home)
     except ValueError as error:
@@ -122,13 +131,148 @@ def _validate_state_ancestors(context: DistributionContext) -> None:
     )
 
 
+def _windows_owner_controlled_directory(path: Path, label: str) -> None:
+    """Verify Windows ACL control without applying POSIX UID/mode rules."""
+
+    from ctypes import wintypes
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    get_named_security_info = advapi32.GetNamedSecurityInfoW
+    get_named_security_info.argtypes = [
+        ctypes.c_wchar_p,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    get_named_security_info.restype = wintypes.DWORD
+
+    access_check = advapi32.AccessCheck
+    access_check.argtypes = [
+        ctypes.c_void_p,
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(wintypes.BOOL),
+    ]
+    access_check.restype = wintypes.BOOL
+
+    open_process_token = advapi32.OpenProcessToken
+    open_process_token.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.HANDLE),
+    ]
+    open_process_token.restype = wintypes.BOOL
+    duplicate_token = advapi32.DuplicateToken
+    duplicate_token.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.HANDLE),
+    ]
+    duplicate_token.restype = wintypes.BOOL
+
+    get_current_process = kernel32.GetCurrentProcess
+    get_current_process.restype = wintypes.HANDLE
+    close_handle = kernel32.CloseHandle
+    close_handle.argtypes = [wintypes.HANDLE]
+    close_handle.restype = wintypes.BOOL
+    local_free = kernel32.LocalFree
+    local_free.argtypes = [ctypes.c_void_p]
+    local_free.restype = ctypes.c_void_p
+
+    class GenericMapping(ctypes.Structure):
+        _fields_ = [
+            ("generic_read", wintypes.DWORD),
+            ("generic_write", wintypes.DWORD),
+            ("generic_execute", wintypes.DWORD),
+            ("generic_all", wintypes.DWORD),
+        ]
+
+    token = wintypes.HANDLE()
+    if not open_process_token(get_current_process(), 0x000A, ctypes.byref(token)):
+        raise OSError(ctypes.get_last_error(), "OpenProcessToken failed")
+    impersonation_token = wintypes.HANDLE()
+    descriptor = ctypes.c_void_p()
+    try:
+        if not duplicate_token(token, 2, ctypes.byref(impersonation_token)):
+            raise OSError(ctypes.get_last_error(), "DuplicateToken failed")
+        result = get_named_security_info(
+            str(path),
+            1,
+            0x00000007,
+            None,
+            None,
+            None,
+            None,
+            ctypes.byref(descriptor),
+        )
+        if result:
+            raise OSError(result, "GetNamedSecurityInfoW failed")
+        mapping = GenericMapping(
+            0x00120089,
+            0x00120116,
+            0x001200A0,
+            0x001F01FF,
+        )
+        privileges = ctypes.create_string_buffer(1024)
+        privilege_length = wintypes.DWORD(ctypes.sizeof(privileges))
+        granted = wintypes.DWORD()
+        access_status = wintypes.BOOL()
+        file_generic_write = 0x00120116
+        delete = 0x00010000
+        file_delete_child = 0x00000040
+        desired_access = file_generic_write | delete | file_delete_child
+        if not access_check(
+            descriptor,
+            impersonation_token,
+            desired_access,
+            ctypes.byref(mapping),
+            privileges,
+            ctypes.byref(privilege_length),
+            ctypes.byref(granted),
+            ctypes.byref(access_status),
+        ):
+            raise OSError(ctypes.get_last_error(), "AccessCheck failed")
+        if not access_status.value:
+            raise PublishError(f"{label} must be owner-controlled")
+    finally:
+        if descriptor.value:
+            local_free(descriptor)
+        if impersonation_token.value:
+            close_handle(impersonation_token)
+        if token.value:
+            close_handle(token)
+
+
 def _owner_controlled_directory(path: Path, label: str) -> None:
-    if _is_reparse_point(path) or (path.exists() and not path.is_dir()):
+    if _is_reparse_point(path):
         raise PublishError(f"{label} must be a real directory")
-    if not path.exists():
-        return
     try:
         metadata = path.stat()
+    except FileNotFoundError:
+        return
+    except (OSError, ValueError) as error:
+        raise PublishError(f"{label} ownership could not be verified") from error
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise PublishError(f"{label} must be a real directory")
+    if os.name == "nt":
+        try:
+            _windows_owner_controlled_directory(path, label)
+        except PublishError:
+            raise
+        except (AttributeError, OSError, TypeError, ValueError, ctypes.ArgumentError) as error:
+            raise PublishError(f"{label} ownership could not be verified") from error
+        return
+    try:
         uid = os.getuid()
     except (AttributeError, OSError) as error:
         raise PublishError(f"{label} ownership could not be verified") from error
@@ -158,10 +302,10 @@ def _remove_path(path: Path) -> None:
 def _controller_files_equal(source: Path, destination: Path) -> bool:
     if destination.is_symlink() or not destination.is_dir():
         raise PublishError(f"Advisor controller HOME path is not a real directory: {destination}")
-    if destination.stat().st_mode & 0o777 != 0o700:
+    if os.name != "nt" and destination.stat().st_mode & 0o777 != 0o700:
         return False
     entrypoint = destination / "evcrate-advisor"
-    if entrypoint.is_file() and entrypoint.stat().st_mode & 0o777 != 0o755:
+    if os.name != "nt" and entrypoint.is_file() and entrypoint.stat().st_mode & 0o777 != 0o755:
         return False
     source_files = _files(source)
     destination_files: dict[str, bytes] = {}

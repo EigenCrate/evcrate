@@ -29,7 +29,7 @@ issues input and apply the shared default stuck-escalation contract.
 - Identify dependencies between issues
 
 ### 2. Parallel Fix Planning
-- Trigger {{evcrate:commands/plan:parallel}} <detailed-fix-instructions> for parallel-executable fix plan
+- Trigger `/plan:parallel <detailed-fix-instructions>` for parallel-executable fix plan
 - Wait for plan with dependency graph, execution strategy, file ownership matrix
 - Group independent fixes for parallel execution
 - Sequential fixes for dependent issues

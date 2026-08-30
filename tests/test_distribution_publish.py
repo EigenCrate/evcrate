@@ -11,7 +11,7 @@ from unittest.mock import patch
 from distribution.context import DistributionContext, create_context
 from distribution.contracts import DistributionAction, PublishError, VerifiedArtifact
 from distribution.gates import run_home_publish
-from distribution.publish import publish_diff, publish_local_artifacts
+from distribution.publish import _owner_controlled_directory, publish_diff, publish_local_artifacts
 from distribution.publish_recovery import recover_interrupted_publish
 from distribution.publish_verification import verify_local_artifact
 from distribution.locking import write_release_marker
@@ -32,6 +32,28 @@ class DistributionPublishTest(unittest.TestCase):
             self.assertFalse((context.home / ".evcrate/bin").exists())
             self.assertFalse((context.home / ".evcrate/advisor-routing.json").exists())
 
+    def test_owner_controlled_directory_uses_platform_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = context_for(Path(temp), ("pi",))
+            _owner_controlled_directory(context.home, "HOME root")
+
+    def test_windows_ownership_verification_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = context_for(Path(temp), ("pi",))
+            with patch("distribution.publish.os.name", "nt"), patch(
+                "distribution.publish._windows_owner_controlled_directory",
+                side_effect=OSError("AccessCheck failed"),
+            ):
+                with self.assertRaisesRegex(PublishError, "ownership could not be verified"):
+                    _owner_controlled_directory(context.home, "HOME root")
+
+    def test_inaccessible_ownership_path_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = context_for(Path(temp), ("pi",))
+            with patch.object(Path, "stat", side_effect=PermissionError("denied")):
+                with self.assertRaisesRegex(PublishError, "ownership could not be verified"):
+                    _owner_controlled_directory(context.home, "HOME root")
+
     def test_publish_replaces_complete_controller_and_preserves_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             context = context_for(Path(temp), ("pi",))
@@ -44,13 +66,21 @@ class DistributionPublishTest(unittest.TestCase):
             artifact = artifact_for(context)
             with patch("distribution.publish.verify_local_artifact"):
                 changes = publish_local_artifacts(context, artifact)
+            with patch("distribution.publish.verify_local_artifact"):
+                repeated_changes = publish_diff(context, artifact)
+            self.assertNotIn(
+                (".evcrate/bin", ".evcrate/bin", "update"),
+                {(item.root, item.path, item.action) for item in repeated_changes},
+            )
             controller = context.home / ".evcrate/bin"
             self.assertTrue(controller.is_dir())
-            self.assertEqual(controller.stat().st_mode & 0o777, 0o700)
-            self.assertEqual((controller / "evcrate-advisor").stat().st_mode & 0o777, 0o755)
+            if os.name != "nt":
+                self.assertEqual(controller.stat().st_mode & 0o777, 0o700)
+                self.assertEqual((controller / "evcrate-advisor").stat().st_mode & 0o777, 0o755)
             self.assertEqual((controller / "evcrate-advisor").read_bytes(), (REPOSITORY / ".evcrate/source/.evcrate/bin/evcrate-advisor").read_bytes())
             self.assertEqual(policy.read_bytes(), original)
-            self.assertEqual(policy.stat().st_mode & 0o777, 0o600)
+            if os.name != "nt":
+                self.assertEqual(policy.stat().st_mode & 0o777, 0o600)
             self.assertIn((".evcrate/bin", ".evcrate/bin", "create"), {(item.root, item.path, item.action) for item in changes})
 
     def test_controller_recovery_restores_the_prior_complete_directory(self) -> None:

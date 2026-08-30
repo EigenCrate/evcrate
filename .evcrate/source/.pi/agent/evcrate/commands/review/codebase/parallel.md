@@ -88,7 +88,7 @@ Collect all verification reports:
 
 **IF** unhandled/partial edge cases found:
 - Ask: "Found N unhandled edge cases. Fix with /fix:parallel? [Y/n]"
-- **IF yes:** Trigger {{evcrate:commands/fix:parallel}} with unhandled list
+- **IF yes:** Trigger `/fix:parallel` with unhandled list
 
 ### 6. Final Report
 

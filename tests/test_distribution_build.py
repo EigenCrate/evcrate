@@ -18,7 +18,12 @@ from distribution.build import promote_transaction, recover_interrupted_promotio
 from distribution.context import create_context
 from distribution.contracts import BuildError, DistributionAction, VerifiedArtifact, validate_harness_resource_projection
 from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
-from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry
+from distribution.manifest import (
+    build_manifest_bytes,
+    controller_hashes as manifest_controller_hashes,
+    load_target_manifest,
+    load_target_registry,
+)
 from distribution.overlay import OverlayError, copy_overlay_files
 from distribution.staging import BUILD_MANIFEST_PATH, build_manifest_path
 
@@ -39,6 +44,13 @@ class DistributionBuildTest(unittest.TestCase):
         self.assertIn("advisor-controller", manifest["home_policy"])
         self.assertEqual(manifest["home_policy"]["advisor-controller"]["bindings"], {".evcrate/bin": ".evcrate/bin"})
         self.assertNotIn("runtime_hashes", manifest)
+
+    def test_repository_controller_hashes_emit_portable_paths(self) -> None:
+        hashes = manifest_controller_hashes(REPOSITORY)
+        self.assertEqual(
+            set(hashes),
+            {f".evcrate/bin/{relative}" for relative in ADVISOR_CONTROLLER_FILES},
+        )
 
     def test_target_registry_and_manifests_have_schema_two_without_runtime(self) -> None:
         registry = load_target_registry(REPOSITORY / ".evcrate/targets/manifest.json")
