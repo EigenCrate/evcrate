@@ -58,7 +58,7 @@ user requirements and apply the shared default stuck-escalation contract.
   classified as such.
 
 ### 5. Parallel Planning & Implementation
-- Trigger {{evcrate:commands/plan:parallel}} <detailed-instruction> for parallel-executable plan
+- Trigger `/plan:parallel <detailed-instruction>` for parallel-executable plan
 - Read `plan.md` for dependency graph and execution strategy
 - Launch multiple `fullstack-developer` agents in PARALLEL for concurrent phases
   - Pass: phase file path, environment info

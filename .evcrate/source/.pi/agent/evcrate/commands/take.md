@@ -238,7 +238,7 @@ Build one concise prompt for the selected `/plan:*` command containing the prefl
 - rollback and onboarding steps;
 - no implementation before validation.
 
-Run the existing {{evcrate:commands/plan:validate}} <plan-path> before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/plan:*` command and re-plan before coding.
+Run the existing `/plan:validate <plan-path>` before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/plan:*` command and re-plan before coding.
 
 Required side-effect checklist:
 

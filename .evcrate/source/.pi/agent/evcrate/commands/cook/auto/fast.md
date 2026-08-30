@@ -42,6 +42,6 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 
 - **Scout**: Use `scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
 - **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cook` with `WORK_ARGUMENTS` and the same explicit advice mode.
-- **Plan**: Trigger slash command {{evcrate:commands/plan:fast}} <detailed-instruction-prompt> to create an implementation plan based on scout findings and fast preflight.
+- **Plan**: Trigger slash command `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight.
 - **Implementation**: Trigger slash command {{evcrate:commands/code}} <plan-path-name> to implement the plan with compile/typecheck, tests, and code review gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none.
 - **Fallback handoff**: If `/code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cook` or `/fix:hard` using `WORK_ARGUMENTS`; append exactly one trailing `--advice` in explicit mode and otherwise pass no `--advice` token.

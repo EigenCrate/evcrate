@@ -38,8 +38,8 @@ Start archiving the plans based on the user's choice:
 
 ### Step 5: Ask if user wants to commit the changes
 Use `ask_user_question` tool to ask if user wants to commit the changes with these options:
-- Stage and commit the changes (Use {{evcrate:commands/git:cm}} slash command)
-- Commit and push the changes (Use {{evcrate:commands/git:cp}} slash command)
+- Stage and commit the changes (Use `/git:cm` slash command)
+- Commit and push the changes (Use `/git:cp` slash command)
 - Nah, I'll do it later
 
 ## Output

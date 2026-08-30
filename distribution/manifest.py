@@ -171,7 +171,7 @@ def adapter_hashes(manifests: tuple[TargetManifest, ...], repository: Path) -> d
     return dict(sorted(values.items()))
 
 def controller_hashes(repository: Path) -> dict[str, str]:
-    source = contained_path(repository, ADVISOR_CONTROLLER_ROOT, must_exist=True)
+    source = contained_path(repository, ADVISOR_CONTROLLER_ROOT.as_posix(), must_exist=True)
     validate_advisor_controller_source(source)
     return {f".evcrate/bin/{relative}": hash_file(source / relative) for relative in ADVISOR_CONTROLLER_FILES}
 

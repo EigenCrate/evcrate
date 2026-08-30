@@ -39,7 +39,7 @@ This is the lower-friction `/cook` variant. It can reduce user checkpoints, but 
 2. If unresolved questions can cause incorrect implementation, use `ask_user_question` before continuing.
 3. Trigger slash command {{evcrate:commands/plan}} <detailed-instruction-prompt> to create an implementation plan based on the preflight contract and tasks.
 4. Trigger slash command {{evcrate:commands/code}} <plan> to implement the plan with compile/typecheck, tests, code review, and approval gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none.
-5. Finally use `ask_user_question` tool to ask user if he wants to commit to git repository, if yes trigger {{evcrate:commands/git:cm}} slash command to create a commit.
+5. Finally use `ask_user_question` tool to ask user if he wants to commit to git repository, if yes trigger `/git:cm` slash command to create a commit.
 
 **Fallback handoff:** If requirements, risk, or scope require base {{evcrate:commands/cook}}, invoke
 it with `WORK_ARGUMENTS` and preserve the same explicit advice mode exactly once.

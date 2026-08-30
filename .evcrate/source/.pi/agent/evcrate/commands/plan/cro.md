@@ -44,7 +44,7 @@ Activate `planning` skill.
 - If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure copywriter can fully understand the issue easily based on the description.
 - If the user provides a URL, use `web_fetch` tool to fetch the content of the URL and analyze the current issues.
 - You can use screenshot capture tools along with `ai-multimodal` skill to capture screenshots of the exact parent container and analyze the current issues with the appropriate Gemini analysis skills (`ai-multimodal`, `gemini-video-understanding`, or `gemini-document-processing`).
-- Use {{evcrate:commands/scout:ext}} (preferred) or {{evcrate:commands/scout}} (fallback) slash command to search the codebase for files needed to complete the task
+- Use `/scout:ext` (preferred) or {{evcrate:commands/scout}} (fallback) slash command to search the codebase for files needed to complete the task
 - Use `planner` agent to create a comprehensive CRO plan following the progressive disclosure structure:
   - Create a directory using naming pattern from `## Naming` section.
   - Every `plan.md` MUST start with YAML frontmatter:
