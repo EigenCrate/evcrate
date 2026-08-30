@@ -310,9 +310,9 @@ const client = new AxMCPClient(transport);
 Fetch these for full working code:
 
 - [Embeddings](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/embed.ts) — embedding generation
-- [OpenAI Thinking](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/OpenAI-thinking-function.ts) — extended thinking with functions
-- [OpenAI Thinking Separation](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/OpenAI-thinking-separation.ts) — thinking separation
-- [OpenAI Web Search](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/OpenAI-web-search.ts) — OpenAI web search
+- [OpenAI Thinking](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/anthropic-thinking-function.ts) — extended thinking with functions
+- [OpenAI Thinking Separation](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/anthropic-thinking-separation.ts) — thinking separation
+- [OpenAI Web Search](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/anthropic-web-search.ts) — OpenAI web search
 - [OpenAI Web Search](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/openai-web-search.ts) — OpenAI web search
 - [OpenAI Responses](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/openai-responses.ts) — OpenAI responses API
 - [o3 Reasoning](https://raw.githubusercontent.com/ax-llm/ax/refs/heads/main/src/examples/reasoning-o3-example.ts) — o3 reasoning

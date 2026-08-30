@@ -116,74 +116,94 @@ counsel; `@advisor` is ordinary input and does not activate supervision. See
 [Advisor Supervision Migration](../docs/advisor-supervision-migration.md) for
 syntax, state, troubleshooting, and capability details.
 
-#### Checkpoint advisor routing
+#### Checkpoint advisor controller
 
-`--advice` reaches a named `review`, `stuck`, or `decision` checkpoint after
-its prerequisite evidence is available. The dispatcher resolves the active
-host from the platform home path `<home>/.evcrate/advisor-routing.json` and
-accepts this version-1 policy shape:
+`--advice` reaches a named `review:<workflow-step>`,
+`stuck:<blocker-signature>`, or `decision:<workflow-step>` checkpoint after its
+prerequisite evidence exists. Every target sends one direct request to the same
+managed executable:
+
+```text
+~/.evcrate/bin/evcrate-advisor
+```
+
+The required policy is read once from the platform-home path
+`<home>/.evcrate/advisor-routing.json` and has exactly this shape:
 
 ```json
 {
   "version": 1,
-  "hosts": {
-    "codex": {
-      "backend": "claude",
-      "model": "opus",
-      "effort": "high",
-      "execution": "external"
-    }
+  "advisor": {
+    "backend": "codex",
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+    "timeout_ms": 900000
   }
 }
 ```
 
-Host entries are independent and must contain exactly `backend`, `model`,
-`effort`, and `execution`. Supported host/backend names are `claude`, `codex`,
-`gemini`, `antigravity`, and `pi`; `execution` is `auto`, `native`, or
-`external`.
+`timeout_ms` is an integer from 60000 through 900000 inclusive. The policy is
+required; a missing file fails as `ROUTE_POLICY_REQUIRED`. A version-1 top-level
+`hosts` object fails as `ROUTE_SCHEMA_MIGRATION_REQUIRED` with the action to
+replace it with one `advisor` object. Malformed, oversized, duplicate-key,
+credential-bearing, unsafe, and unknown-field policies fail closed without
+defaults or partial merges.
 
-| Backend relation | `auto` | `native` | `external` |
-| --- | --- | --- | --- |
-| Same as active host | Native, exact capability check | Native, exact capability check | Reject: `ROUTE_EXECUTION_INVALID` |
-| Different supported host | External, selected adapter | Reject: `ROUTE_EXECUTION_INVALID` | External, selected adapter |
+The executable accepts the checkpoint object directly, with exactly these ten
+keys:
 
-If the policy file or the active-host entry is missing, only that host's
-built-in same-host default is used. A present malformed, oversized, duplicate-
-key, credential-bearing, unsafe-path, or schema-invalid policy fails closed; it
-does not fall back to defaults or merge fields from another host. Repository
-policy files and per-invocation route overrides are not read. The policy stores
-no credentials; the installed CLI owns authentication.
+```json
+{
+  "protocol": "evcrate-advisor-checkpoint",
+  "version": 1,
+  "checkpoint": "review:implementation-step",
+  "question": "What is the smallest safe next change?",
+  "kind": "review",
+  "task_or_phase": "Implementation",
+  "evidence": {"terminal": "Bounded review evidence.", "files": []},
+  "changed_paths": [],
+  "prior_counsel": [],
+  "owner_disposition": "Proceed after validation."
+}
+```
 
-Native routing requires an exact advertised model and effort. The relevant
-failures are `NATIVE_CAPABILITY_UNSUPPORTED`, `MODEL_UNSUPPORTED`, and
-`EFFORT_UNSUPPORTED`. Gemini CLI 0.47.0 advertises `pro` but no exact effort
-control (`efforts: []`), so its built-in `pro`/`high` route fails with
-`EFFORT_UNSUPPORTED` before execution; there is no effort downgrade. The five
-fixed external adapter slots are Claude, Codex, Gemini, Antigravity, and Pi.
-Executable/version, authentication, read-only, session, output, timeout,
-cancellation, protocol, process, and recursion failures remain distinct and
-fail closed. No model substitution, backend switch, arbitrary launch template,
-direct provider API, broker/service, or approval bypass is used.
+The request is limited to 32 KiB; question, task/phase, and terminal evidence
+are limited to 4 KiB, 8 KiB, and 16 KiB. At most four evidence files and sixteen
+changed paths are accepted. Paths must be safe normalized relative POSIX paths.
+There is no active-host field, route override, executable, argv, credential,
+debug, or fallback field. Evidence paths are metadata only and are not read by
+the controller.
 
-The checkpoint envelope is `evcrate-advisor-checkpoint/v1`. It carries the
-active host, checkpoint id, question, kind, task/phase, terminal evidence,
-evidence file paths, changed paths, prior counsel, and owner disposition; the
-normalized result is `evcrate-advisor-result/v1`. The envelope is bounded at
-32 KiB, terminal evidence at 16 KiB, with at most four evidence files and 16
-changed paths. Paths must be normalized relative POSIX paths: absolute paths,
-Windows separators, `.`/`..` segments, secret-like names (including `.env`),
-and VCS metadata paths are rejected. Route overrides and active-host mismatches
-are rejected.
+Candidate backends are exactly `claude`, `codex`, `antigravity`, `pi`, and
+`omp`. `claude`, `codex`, `pi`, and `omp` are enabled. `antigravity` remains a
+disabled candidate slot whose first probe returns
+`CLI_CAPABILITY_UNSUPPORTED` before any final model process. `gemini` is not a
+candidate or registry member and returns `ADAPTER_UNSUPPORTED`. OMP requires an
+exact `provider/model` selector.
 
-Fake-CLI contract tests are the required evidence. Antigravity's reviewed
-`agy` boundary does not yet evidence a deny-write mode, so that external route
-fails as `READ_ONLY_UNSUPPORTED`; Antigravity live probing and authenticated
-provider calls are optional, separately approved, and outside this handoff.
-The routing runtime is generated with the distribution gate, not hand-edited:
-the canonical 16-file production closure is byte-identical in all five host
-projections, and runtime/helper hashes are part of build and publication
-authorization. See [Advisor Distribution Architecture](../docs/advisor-distribution-architecture.md)
-for the full contract and Pi publication caveats.
+The controller validates the request, loads policy once, selects one backend,
+qualifies it, creates one empty owner-only workspace, runs one final process,
+and emits one controller-authored result. It never retries, changes model or
+effort, switches backend, invokes a local fallback, or enters a native callback
+branch. Only outer status `ADVICE_READY` completes the checkpoint. Any nonzero
+exit, `FAILED` envelope, unavailable executable, malformed output, timeout, or
+cancellation leaves the checkpoint incomplete.
+
+The outer protocol is `evcrate-advisor-controller/v1`. It always contains
+`correlation_id` generated by the controller and a receipt with exactly
+`backend`, `model`, `effort`, `controller_version`, `adapter_version`, and
+`elapsed_ms`. Success adds normalized `evcrate-advisor-result/v1`; failure adds
+only sanitized `code`, `category`, `action`, and `message`. Stdout contains one
+JSON line and stderr is empty. Installed CLIs own authentication; EVCrate stores
+no provider credentials.
+
+The shared controller is authored at `.evcrate/source/.evcrate/bin`, published
+once to `$HOME/.evcrate/bin`, and authorized by schema-2
+`controller_hashes`. Generated target trees do not contain runnable controller
+copies. Fake-CLI tests cover deterministic contracts; real enabled-CLI
+qualification is Linux-only and must be repeated after CLI upgrades. See
+[Advisor Controller and Target Distribution Architecture](../docs/advisor-distribution-architecture.md)
+for publication, recovery, adapter, and isolation details.
 
 ---
 

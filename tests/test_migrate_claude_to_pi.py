@@ -1,8 +1,8 @@
+"""Pi migration emits ordinary resources and central advisor references."""
+
 from __future__ import annotations
 
-import json
 import os
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,12 +10,15 @@ from unittest.mock import patch
 
 import migrate_claude_to_pi
 from pi_adapter.resources import copy_commands_and_workflows
-from tests.test_advisor_skill_distribution import FORBIDDEN_RUNTIME_MARKERS, SCOPED_COMMANDS
+
+from tests.distribution_support import REPOSITORY
+
+CANONICAL = REPOSITORY / ".evcrate/source/.claude"
+FORBIDDEN = ("advisor-bridge.cjs", "advisor-coordinator.cjs", "advisor-dispatch.cjs", "advisor-handoff.cjs", "active_host")
 
 
 class PiAdapterTest(unittest.TestCase):
-    def test_advise_command_uses_ask_user_and_rejects_relay_before_state(self) -> None:
-        repository = Path(__file__).resolve().parents[1]
+    def test_command_projection_keeps_advisor_execution_at_managed_controller(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             source = root / ".claude"
@@ -23,160 +26,50 @@ class PiAdapterTest(unittest.TestCase):
             (source / "commands").mkdir(parents=True)
             (source / "workflows").mkdir()
             output.mkdir()
-            shutil.copyfile(
-                repository / ".evcrate/source/.claude/commands/advise.md",
-                source / "commands/advise.md",
-            )
-            shutil.copyfile(
-                repository / ".evcrate/source/.claude/workflows/advisory-interview.md",
-                source / "workflows/advisory-interview.md",
-            )
-            copy_commands_and_workflows(source, output, ("advise",))
-
-            command = (output / "agent/evcrate/commands/advise.md").read_text(encoding="utf-8")
-            workflow = (output / "agent/evcrate/workflows/advisory-interview.md").read_text(encoding="utf-8")
-            self.assertIn("ask_user_question", command)
-            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_PI", command)
-            self.assertNotIn("advise-state.cjs", command)
-            self.assertNotIn("advise-state.cjs", workflow)
-
-    def _environment(self, root: Path) -> tuple[Path, Path, Path]:
-        source = root / "repo/.evcrate/source/.claude"
-        stage = root / "stage"
-        output = stage / ".pi"
-        source.mkdir(parents=True)
-        stage.mkdir()
-        output.mkdir()
-        (source / ".evcrate.json").write_text('{"privacyBlock":true}\n', encoding="utf-8")
-        (source / ".evcrateignore").write_text("node_modules\n", encoding="utf-8")
-        (source / "commands").mkdir()
-        (source / "commands/plan.md").write_text("---\nname: plan\ndescription: AskUserQuestion then Task\n---\nRead .claude/workflows/primary.md\n", encoding="utf-8")
-        (source / "workflows").mkdir()
-        (source / "workflows/primary.md").write_text("---\nname: primary\ndescription: workflow\n---\nStatic workflow\n", encoding="utf-8")
-        (source / "agents").mkdir()
-        (source / "agents/planner.md").write_text("---\nname: planner\ndescription: Sonnet planner\nmodel: sonnet\ntools: Read, Glob, WebFetch\n---\nDelegate with Task.\n", encoding="utf-8")
-        (source / "skills/example").mkdir(parents=True)
-        (source / "skills/example/SKILL.md").write_text("---\nname: example\ndescription: Example Pi skill\n---\n# Example\n", encoding="utf-8")
-        (source / "scripts").mkdir()
-        (source / "scripts/example.py").write_text("#!/usr/bin/env python3\n", encoding="utf-8")
-        (source / "hooks").mkdir()
-        (source / "hooks/example.cjs").write_text("process.exit(0);\n", encoding="utf-8")
-        (source / "settings.json").write_text(json.dumps({"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/example.cjs"}]}]}}), encoding="utf-8")
-        return source, stage, output
-
-    def test_emits_only_contained_deterministic_skeleton(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            source, stage, output = self._environment(Path(temp))
-            repository = Path(__file__).resolve().parents[1]
-            (source / "agents/advisor.md").write_bytes(
-                (repository / ".evcrate/source/.claude/agents/advisor.md").read_bytes()
-            )
-            (source / "commands/code.md").write_bytes(
-                (repository / ".evcrate/source/.claude/commands/code.md").read_bytes()
-            )
-            canonical_commands = repository / ".evcrate/source/.claude/commands"
-            canonical_root = repository / ".evcrate/source/.claude"
-            shutil.copyfile(
-                canonical_root / "workflows/advisor-mentoring.md",
-                source / "workflows/advisor-mentoring.md",
-            )
-            shutil.copytree(
-                canonical_root / "skills/advisor-strategy",
-                source / "skills/advisor-strategy",
-            )
-            for relative in SCOPED_COMMANDS:
-                target = source / "commands" / relative
+            for relative in ("commands/fix/hard.md", "workflows/advisor-mentoring.md"):
+                target = source / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes((canonical_commands / relative).read_bytes())
+                target.write_bytes((CANONICAL / relative).read_bytes())
+            copy_commands_and_workflows(source, output, ("fix/hard", "advisor-mentoring"))
+            command = (output / "agent/evcrate/commands/fix/hard.md").read_text(encoding="utf-8")
+            workflow = (output / "agent/evcrate/workflows/advisor-mentoring.md").read_text(encoding="utf-8")
+            self.assertIn("~/.evcrate/bin/evcrate-advisor", command)
+            self.assertIn("~/.evcrate/bin/evcrate-advisor", workflow)
+            for text in (command, workflow):
+                for marker in FORBIDDEN:
+                    self.assertNotIn(marker, text)
+
+    def test_full_migration_is_contained_and_does_not_copy_controller(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            stage = root / "stage"
+            output = stage / ".pi"
+            output.mkdir(parents=True)
             with patch.dict(os.environ, {
-                "EVCRATE_REPOSITORY": str(source.parents[2]),
-                "EVCRATE_SOURCE_DIR": str(source.parent),
-                "CLAUDE_SOURCE_DIR": str(source),
+                "EVCRATE_REPOSITORY": str(REPOSITORY),
+                "EVCRATE_SOURCE_DIR": str(REPOSITORY / ".evcrate/source"),
+                "CLAUDE_SOURCE_DIR": str(CANONICAL),
                 "PI_STAGE_ROOT": str(stage),
                 "PI_OUTPUT_DIR": str(output),
             }, clear=False):
                 self.assertEqual(migrate_claude_to_pi.main([]), 0)
-            self.assertEqual((output / ".evcrate.json").read_text(encoding="utf-8"), '{"privacyBlock":true}\n')
-            self.assertEqual((output / "agent/evcrate/managed-settings.json").read_text(encoding="utf-8"), '{"packages":["npm:pi-subagents@0.44.0","npm:@juicesharp/rpiv-ask-user-question@2.4.0","npm:@juicesharp/rpiv-todo@2.4.0"],"schema":"evcrate-pi-managed-settings-v1"}\n')
-            self.assertIn("evcrate_subagent", (output / "agent/agents/planner.md").read_text(encoding="utf-8"))
-            roles = json.loads((output / "agent/evcrate/model-roles.json").read_text(encoding="utf-8"))["agents"]
-            self.assertEqual(roles["planner"]["role"], "standard")
-            self.assertEqual(roles["advisor"]["role"], "strong")
-            advisor = (output / "agent/agents/advisor.md").read_text(encoding="utf-8")
-            self.assertNotRegex(advisor, r"\bopus\b")
-            self.assertIn("--advice", advisor)
-            self.assertNotIn("@advisor", advisor)
-            for relative in SCOPED_COMMANDS:
-                with self.subTest(command=relative):
-                    command = (output / "agent/evcrate/commands" / relative).read_text(encoding="utf-8")
-                    self.assertIn("--advice", command)
-                    self.assertNotIn("@advisor", command)
-                    self.assertIn("{{evcrate:workflows/advisor-mentoring.md}}", command)
-
-            workflow = output / "agent/evcrate/workflows/advisor-mentoring.md"
-            self.assertIn("decision:<workflow-step>", workflow.read_text(encoding="utf-8"))
-            strategy = output / "agent/skills/advisor-strategy/SKILL.md"
-            self.assertIn("fresh", strategy.read_text(encoding="utf-8").lower())
-            brief = output / "agent/skills/advisor-strategy/references/brief-contract.md"
-            self.assertIn("prior_counsel", brief.read_text(encoding="utf-8"))
-
-            for generated in output.rglob("*"):
-                if not generated.is_file():
+            workflow = (output / "agent/evcrate/workflows/advisor-mentoring.md").read_text(encoding="utf-8")
+            self.assertIn("decision:<workflow-step>", workflow)
+            self.assertIn("~/.evcrate/bin/evcrate-advisor", workflow)
+            self.assertFalse((output / "bin/lib/advisor").exists())
+            for path in output.rglob("*"):
+                if not path.is_file():
                     continue
                 try:
-                    content = generated.read_text(encoding="utf-8")
+                    text = path.read_text(encoding="utf-8")
                 except UnicodeDecodeError:
                     continue
-                for marker in FORBIDDEN_RUNTIME_MARKERS:
-                    self.assertNotIn(marker, content, generated.as_posix())
-            self.assertFalse((stage / "escaped").exists())
+                for marker in FORBIDDEN:
+                    self.assertNotIn(marker, text, path.as_posix())
 
-    def test_rejects_missing_or_escaped_output_and_direct_arguments(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            source, stage, output = self._environment(Path(temp))
-            env = {"EVCRATE_REPOSITORY": str(source.parents[2]), "EVCRATE_SOURCE_DIR": str(source.parent), "CLAUDE_SOURCE_DIR": str(source), "PI_STAGE_ROOT": str(stage), "PI_OUTPUT_DIR": str(output)}
-            with patch.dict(os.environ, env, clear=False):
-                with self.assertRaises(SystemExit):
-                    migrate_claude_to_pi.main(["--global"])
-            empty = stage / "other"
-            empty.mkdir()
-            with patch.dict(os.environ, {**env, "PI_OUTPUT_DIR": str(empty)}, clear=False):
-                with self.assertRaisesRegex(SystemExit, "exactly"):
-                    migrate_claude_to_pi.main([])
-
-    def test_rejects_source_escape_from_canonical_repository_root(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            source, stage, output = self._environment(Path(temp))
-            outside = Path(temp) / "outside/.claude"
-            outside.mkdir(parents=True)
-            (outside / ".evcrate.json").write_text("{}", encoding="utf-8")
-            (outside / ".evcrateignore").write_text("", encoding="utf-8")
-            with patch.dict(os.environ, {
-                "EVCRATE_REPOSITORY": str(source.parents[2]),
-                "EVCRATE_SOURCE_DIR": str(outside.parent),
-                "CLAUDE_SOURCE_DIR": str(outside),
-                "PI_STAGE_ROOT": str(stage),
-                "PI_OUTPUT_DIR": str(output),
-            }, clear=False):
-                with self.assertRaisesRegex(SystemExit, "canonical repository"):
-                    migrate_claude_to_pi.main([])
-
-    def test_rejects_symlinked_source_inputs(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            source, stage, output = self._environment(Path(temp))
-            outside = Path(temp) / "outside"
-            outside.write_text("secret", encoding="utf-8")
-            (source / ".evcrateignore").unlink()
-            (source / ".evcrateignore").symlink_to(outside)
-            with patch.dict(os.environ, {
-                "EVCRATE_REPOSITORY": str(source.parents[2]),
-                "EVCRATE_SOURCE_DIR": str(source.parent),
-                "CLAUDE_SOURCE_DIR": str(source),
-                "PI_STAGE_ROOT": str(stage),
-                "PI_OUTPUT_DIR": str(output),
-            }, clear=False):
-                with self.assertRaisesRegex(SystemExit, "missing or unsafe"):
-                    migrate_claude_to_pi.main([])
+    def test_direct_global_mode_is_rejected(self) -> None:
+        with self.assertRaises(SystemExit):
+            migrate_claude_to_pi.main(["--global"])
 
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from distribution.advisor_runtime import ADVISOR_RUNTIME_FILES
 from distribution.contracts import render_harness_script_references
 
 from .resources import ResourceError, copy_file, ensure_parent, relative_path, read_json, production_files, write_json
@@ -359,7 +358,7 @@ def convert_hooks_and_scripts(source: Path, output: Path) -> dict[str, object]:
         copied_hooks.append(relative.as_posix())
 
     copied_scripts: list[str] = []
-    for source_file in production_files(script_source, exclude_runtime=True):
+    for source_file in production_files(script_source):
         relative = relative_path(script_source, source_file)
         if "advise-state" in relative.name:
             continue

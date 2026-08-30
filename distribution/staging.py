@@ -9,23 +9,21 @@ from typing import Callable
 
 from .context import DistributionContext
 from .antigravity_publish import build_antigravity_config
-from .contracts import (
-    BuildError,
-    VerifiedArtifact,
-    validate_advisor_runtime_projection,
-    validate_harness_resource_projection,
+from .advisor_controller import (
+    validate_advisor_controller_projection,
+    render_advisor_controller_metadata,
 )
+from .contracts import BuildError, VerifiedArtifact, validate_harness_resource_projection
 from .hashing import HashingError, hash_file, ignore_artifacts, source_tree_hash, tree_hash
 from .manifest import (
     adapter_hashes,
-    advisor_runtime_hashes,
+    controller_hashes as advisor_controller_hashes,
     TargetManifest,
     build_manifest_bytes,
     load_target_registry,
     source_hashes,
 )
 from .overlay import apply_patch_file, copy_overlay_files
-from .runtime import stage_runtime
 
 
 BUILD_MANIFEST_PATH = Path(".evcrate/build-manifest.json")
@@ -82,6 +80,17 @@ def _copy_source_root(source: Path, destination: Path) -> None:
     if source.is_symlink() or not source.is_dir():
         raise BuildError(f"Source root is missing or unsafe: {source.name}")
     shutil.copytree(source, destination, symlinks=True, ignore=ignore_artifacts)
+def _stage_controller(context: DistributionContext, destination_root: Path) -> dict[str, object]:
+    source = context.repository / ".evcrate/source/.evcrate/bin"
+    destination = destination_root / "bin"
+    if destination.exists() or destination.is_symlink():
+        raise BuildError("Shared controller stage destination already exists")
+    try:
+        shutil.copytree(source, destination, symlinks=True, ignore=ignore_artifacts)
+        metadata = validate_advisor_controller_projection(source, destination)
+    except (OSError, ValueError) as error:
+        raise BuildError(f"Invalid shared advisor controller: {error}") from error
+    return metadata
 
 
 def _load_targets(context: DistributionContext, roots: dict[str, Path]) -> tuple[TargetManifest, ...]:
@@ -89,18 +98,19 @@ def _load_targets(context: DistributionContext, roots: dict[str, Path]) -> tuple
     if len({manifest.name for manifest in manifests}) != len(manifests):
         raise BuildError("Target registry contains duplicate manifest names")
     claimed_roots: set[str] = set()
+    target_roots = set(roots).difference({".evcrate"})
     for manifest in manifests:
         source_backed = (manifest.name, manifest.output_roots) == SOURCE_BACKED_TARGET
         if manifest.adapter is None and not source_backed:
             raise BuildError(f"Target {manifest.name} has no build adapter")
         if manifest.adapter is not None and not (context.repository / manifest.adapter).is_file():
             raise BuildError(f"Target {manifest.name} adapter is missing: {manifest.adapter}")
-        if not set(manifest.output_roots).issubset(roots):
+        if not set(manifest.output_roots).issubset(target_roots):
             raise BuildError(f"Target {manifest.name} declares an unsupported output root")
         if claimed_roots.intersection(manifest.output_roots):
             raise BuildError("Each staged output root must have one target owner")
         claimed_roots.update(manifest.output_roots)
-    if claimed_roots != set(roots):
+    if claimed_roots != target_roots:
         raise BuildError("Target registry does not completely own staged output roots")
     return manifests
 
@@ -134,9 +144,6 @@ def _apply_targets(
             )
             for relative, owner in local_owners.items():
                 owners[f"{active_roots[0]}/{relative}"] = owner
-        if manifest.runtime is not None:
-            for relative in stage_runtime(context.repository, manifest.source_root, primary, manifest.runtime):
-                owners[f"{active_roots[0]}/{relative}"] = manifest.name
         for patch in manifest.patches:
             destination = context.stage / patch.destination
             if not destination.is_file() or destination.is_symlink():
@@ -191,6 +198,7 @@ def generate_stage(
         run_migrator(context, script, env)
     if ".antigravity" in roots:
         build_antigravity_config(context.local_claude, roots[".antigravity"])
+    controller_metadata = _stage_controller(context, roots[".evcrate"])
 
     owners, sources_and_adapters, policies, required_docs = _apply_targets(context, roots, manifests)
     adapter_names = set(adapter_hashes(manifests, context.repository))
@@ -218,38 +226,31 @@ def generate_stage(
             except ValueError as error:
                 raise BuildError(f"Invalid {manifest.name} ordinary resource projection: {error}") from error
     try:
-        runtime_hashes = advisor_runtime_hashes(manifests, context.repository)
-    except (HashingError, OSError) as error:
-        raise BuildError(f"Unable to hash advisor runtime inputs: {error}") from error
-    runtime_metadata: dict[str, object] = {}
-    for manifest in manifests:
-        runtime = manifest.advisor_runtime
-        if runtime is None:
-            continue
-        primary = roots[manifest.output_roots[0]]
-        try:
-            runtime_metadata[manifest.name] = validate_advisor_runtime_projection(
-                context.repository / runtime.source_root,
-                primary / runtime.output_root,
-                runtime.host,
-                runtime.output_root,
-                runtime.files,
-            )
-        except ValueError as error:
-            raise BuildError(f"Invalid {manifest.name} advisor runtime projection: {error}") from error
+        controller_values = advisor_controller_hashes(context.repository)
+    except (HashingError, OSError, ValueError) as error:
+        raise BuildError(f"Unable to hash shared advisor controller inputs: {error}") from error
+    for relative in controller_values:
+        owners[relative] = "advisor-controller"
     manifest = build_manifest_bytes(
         source_hashes=source_values,
         adapter_hashes=adapter_values,
+        controller_hashes=controller_values,
         owners=owners,
         output_roots=outputs,
-        home_policy=policies,
+        home_policy={
+            **policies,
+            "advisor-controller": {
+                "bindings": {".evcrate/bin": ".evcrate/bin"},
+                "preserve_paths": {},
+                "promotion_order": 5,
+            },
+        },
         validation={
             "complete": True,
             "symlinks": "rejected",
             "target_registry": "validated",
-            "advisor_runtime": runtime_metadata,
+            "advisor_controller": controller_metadata,
         },
-        runtime_hashes=runtime_hashes,
     )
     staged_manifest = context.stage / build_manifest_path(context)
     staged_manifest.parent.mkdir(parents=True, exist_ok=True)

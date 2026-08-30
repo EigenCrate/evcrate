@@ -91,87 +91,95 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - Commands, static workflow documents, and generated agent definitions remain provider-neutral. The EVCrate delegation tool resolves a semantic role immediately before emitting a structured `pi-subagents` delegation request; concrete provider/model IDs exist only in that runtime request.
 
 **Advisor Guidance**:
-- `advisor-strategy` is a static, portable skill distributed from `.evcrate/source/.claude/skills` to the managed skill roots.
-- Every supported host (`claude`, `codex`, `gemini`, `antigravity`, and `pi`) owns an independent advisor route containing `backend`, exact `model`, `effort`, and `execution`. Missing host entries never inherit another host's route.
-- Route precedence is the active-host entry in the platform-home path `<home>/.evcrate/advisor-routing.json`, then a built-in same-host default that preserves current behavior. Repository-local policy files are ignored; V1 has no host-native-config or per-invocation route override. The file contains no credentials; installed CLIs retain authentication ownership.
-- The user-visible policy has exactly `version` and `hosts` at the top level and exactly `backend`, `model`, `effort`, and `execution` per host. A minimal cross-host entry is:
+- `advisor-strategy` is a static, portable rubric distributed from
+  `.evcrate/source/.claude/skills` to generated target skill roots.
+- Every checkpoint workflow sends one direct ten-key
+  `evcrate-advisor-checkpoint/v1` object to `~/.evcrate/bin/evcrate-advisor`.
+  The request has no caller identity, active host, route override, executable,
+  argv, credential, debug, or fallback field.
+- The required policy is the single platform-home file
+  `<home>/.evcrate/advisor-routing.json`:
 
   ```json
   {
     "version": 1,
-    "hosts": {
-      "codex": {
-        "backend": "claude",
-        "model": "opus",
-        "effort": "high",
-        "execution": "external"
-      }
+    "advisor": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "timeout_ms": 900000
     }
   }
   ```
 
-  A missing policy file or active-host entry selects the built-in same-host
-  default. A present malformed, oversized, duplicate-key, credential-bearing,
-  unsafe-path, or schema-invalid policy fails closed rather than partially
-  merging with a default or another host.
-- `execution: auto` is deterministic: when `backend == host`, validate the requested model/effort against native subagent metadata and use one fresh ordinary `advisor` subagent; when `backend != host`, use the shared EVCrate runner and the selected declared adapter slot. `execution: native` requires `backend == host`; `execution: external` requires `backend != host`. Same-host external execution is invalid even when native metadata cannot express the requested selector.
-- The dispatcher never substitutes a model, downgrades effort, inherits another host profile, changes execution mode, or falls back to a different backend. Capability, executable, authentication, timeout, cancellation, malformed-output, and recursion failures remain distinct actionable errors.
-- The exact route truth table is documented in [Advisor Mentoring and Target Distribution Architecture](./advisor-distribution-architecture.md#advisor-route-and-dispatcher-contract). Gemini 0.47.0 advertises native model `pro` with `efforts: []`, so its exact-effort route, including the built-in `high` default, fails with `EFFORT_UNSUPPORTED` rather than downgrading or executing.
-- Route descriptors, capability/policy documents, and typed errors are frozen. The dispatcher serializes only `code`, `category`, `action`, and `message`, excluding paths, policy bytes, credentials, causes, and raw diagnostics.
-- The validated advisor routing closure is sixteen runtime files: the dispatcher,
-  ten shared `advisor-routing/` files, and five adapter modules. The reviewer’s
-  “seven runtime files” wording covered an earlier subset; the parity fixture compares all sixteen across
-  Claude, Codex, Gemini, Antigravity, and Pi and runs the same cross-host
-  resolution request.
-- The five projections place the same closure under `scripts/` for Claude,
-  Codex, Gemini, and Antigravity, and under `.pi/agent/evcrate/` for Pi. The
-  build manifest authorizes the runtime, adapter/helper, source, and output
-  hashes; isolated full and Pi-only builds and checks are deterministic, and
-  `--check` verifies without writing.
-- External adapters use argument-vector process spawning without a shell, deliver a bounded checkpoint brief through stdin, parse machine-readable output, enforce read-only/no-approval defaults, bound output and process lifetime, terminate descendants on cancellation, and sanitize diagnostics. Nested dispatch is rejected through an invocation marker and request budget.
-- The five fixed adapters are Claude, Codex, Gemini, Antigravity, and Pi. Their
-  installed CLIs own authentication and EVCrate has no provider credential
-  store. Version, executable, authentication, model, effort, read-only,
-  session, output, timeout, cancellation, and recursion gates fail closed when
-  the CLI cannot express the required contract. Antigravity's current `agy`
-  contract cannot verify deny-write sandboxing, so its external capability gate
-  returns `READ_ONLY_UNSUPPORTED`.
-- Checkpoint envelopes are validated as `evcrate-advisor-checkpoint/v1` and
-  terminal results normalize to `evcrate-advisor-result/v1`. Implemented input
-  limits are 16 KiB policy/request, 256-byte model, 64-byte effort, and 32 KiB
-  brief; runner defaults are 64/16 KiB stdout/stderr, 2,048 lines, 48 KiB
-  result, 30-second timeout, and 250 ms termination grace. POSIX descendant
-  cleanup is tested; Windows process-tree validation remains deferred.
-- Deterministic fake-CLI contracts are mandatory. Antigravity official contract
-  fixtures cover the adapter boundary, while authenticated live calls and live
-  Antigravity evidence are optional and out of scope for this handoff.
-- Phase 02-scoped `/code`, `/cook`, `/fix`, and `/bootstrap` commands accept exactly one case-sensitive, whitespace-delimited final standalone `--advice` (trailing whitespace allowed). They strip only that token into `WORK_ARGUMENTS`, reject duplicate standalone tokens, and leave non-final, quoted, embedded, suffixed, or differently cased forms unchanged. `--advice` alone follows normal empty-input behavior.
-- Every `@advisor` occurrence, including an exact final token, is ordinary unchanged work input. The final `@advisor` mode is historical Phase 01 behavior, not an active alias in the Phase 02 canonical source.
-- Named counsel is limited to `review:<workflow-step>` after terminal review evidence, `stuck:<blocker-signature>` on the second matching no-progress blocker, and `decision:<workflow-step>` before an existing uncovered irreversible, security-sensitive, or go/no-go decision. Each call is fresh, blocking, non-binding, and explicitly receives relevant prior counsel and owner disposition.
-- `/code:auto` applies every explicit advisor must-fix item before approval and does not invent advisor guidance in default mode. Cook variants and `/fix:hard` use `WORK_ARGUMENTS` in fallback handoffs, preserving exactly one trailing `--advice` in explicit mode and no mode token otherwise.
-- The strategy skill itself never dispatches. Checkpoint workflows call the dispatcher after prerequisite evidence exists; the selected advisor remains read-only and non-binding. Normal host approvals, sandbox policy, tests, review, and human approval remain authoritative.
-- Generated `.evcrate/source/.agents/skills/cmd_*` command guides include a short pointer to this advisory rubric for high-impact architecture, security, debugging, and review decisions. The pointer does not invoke it automatically or add a tool/model capability.
-- The completed canonical review contract has an explicit hard cap and still
-  requires explicit user approval before finalization. The formerly deferred
-  Phase 07 routing projections and build-manifest boundary are implemented:
-  all five host projections contain the byte-identical sixteen-file runtime
-  closure, and deterministic build/check gates verify the declared hashes.
-  HOME publication and authenticated provider calls remain separate optional
-  operations and were not performed in this handoff.
+  The exact top-level keys are `version` and `advisor`; the exact advisor keys
+  are `backend`, `model`, `effort`, and `timeout_ms`. The policy is required,
+  `timeout_ms` is inclusive 60000..900000, and malformed, duplicate-key,
+  credential-bearing, unsafe, oversized, or extra-field documents fail closed.
+  A legacy top-level `hosts` object returns
+  `ROUTE_SCHEMA_MIGRATION_REQUIRED`; a missing file returns
+  `ROUTE_POLICY_REQUIRED`.
+- Candidate backends are exactly `claude`, `codex`, `antigravity`, `pi`, and
+  `omp`. Claude, Codex, Pi, and OMP are enabled. Antigravity is a disabled
+  candidate whose first probe returns `CLI_CAPABILITY_UNSUPPORTED`; Gemini is
+  not a candidate and returns `ADAPTER_UNSUPPORTED`.
+- The controller validates the request, loads policy once, selects one adapter,
+  qualifies it, creates one empty owner-only workspace, invokes one final model
+  process, parses once, and emits one normalized result. It never retries,
+  substitutes a model or effort, switches backend, invokes a native callback,
+  or uses a local fallback.
+- Input is fatal-UTF-8 and bounded at 32 KiB. Question, task/phase, and terminal
+  evidence are bounded at 4 KiB, 8 KiB, and 16 KiB; evidence has at most four
+  files and changed paths at most sixteen. Safe normalized relative POSIX paths,
+  duplicate keys, control characters, credentials, traversal, and metadata paths
+  are rejected. Evidence paths are metadata only and are never read.
+- The controller emits one frozen `evcrate-advisor-controller/v1` envelope.
+  Every envelope has a controller UUID, status, and a receipt with exactly
+  `backend`, `model`, `effort`, `controller_version`, `adapter_version`, and
+  `elapsed_ms`. Success adds `evcrate-advisor-result/v1`; failure adds only
+  sanitized `code`, `category`, `action`, and `message`. Stdout has one JSON
+  line; stderr is empty.
+- The shared runner uses fixed argv and `shell:false`, an allowlisted
+  environment, stdin-only evidence, bounded streams, detached POSIX process
+  groups, TERM/KILL cancellation, descendant reaping, and an empty temporary
+  workspace. Every probe and the final invocation share the remaining policy
+  deadline. Workspace cleanup follows process termination.
+- The enabled adapters use credential-safe probes and fixed no-tool/session
+  contracts. Installed CLIs retain authentication; EVCrate auth-key allowlists
+  are empty. A diagnostic CLI version is recorded, but version equality alone
+  does not qualify a changed CLI.
+- The controller is authored only at `.evcrate/source/.evcrate/bin`, published
+  once to `$HOME/.evcrate/bin`, and authorized by schema-2
+  `controller_hashes`. Generated harness roots contain no controller copies.
+- The first-release controller claim is Linux-only. Deterministic fake-CLI
+  tests cover contracts; authenticated qualification of each enabled CLI is a
+  separate operator check and must be repeated after CLI upgrades.
+- Phase 02-scoped `/code`, `/cook`, `/fix`, and `/bootstrap` commands accept
+  exactly one case-sensitive, whitespace-delimited final standalone `--advice`.
+  They strip only that token into `WORK_ARGUMENTS`, reject duplicate standalone
+  tokens, and leave non-final, quoted, embedded, suffixed, or differently cased
+  forms unchanged. `--advice` alone follows normal empty-input behavior.
+- Every `@advisor` occurrence, including an exact final token, is ordinary
+  unchanged work input. Named counsel is limited to `review:<workflow-step>`,
+  `stuck:<blocker-signature>`, and `decision:<workflow-step>` checkpoints.
+- The strategy skill never dispatches. Checkpoint workflows call the central
+  executable after prerequisite evidence exists; advice is fresh, blocking, and
+  non-binding. Normal host approvals, sandbox policy, tests, review, and human
+  approval remain authoritative.
+- Generated command skills contain one static pointer to the strategy rubric.
+  The pointer does not activate a provider or model capability.
 
 ```mermaid
 flowchart TD
-  Checkpoint[Named advisor checkpoint] --> Resolve[Resolve active host route]
-  Global[HOME .evcrate global profile] --> Resolve
-  Defaults[Built-in host default] --> Resolve
-  Resolve --> Validate{Route and capability valid?}
-  Validate -->|No| Error[Typed fail-closed error]
-  Validate -->|Yes| Same{Backend equals host?}
-  Same -->|Yes| Native[Fresh native advisor subagent]
-  Same -->|No| External[Shared runner and declared adapter slot]
-  Native --> Result[Bounded non-binding counsel]
-  External --> Result
+  Checkpoint[Direct ten-key checkpoint] --> Controller[Managed advisor CLI]
+  Policy[Required HOME policy] --> Controller
+  Controller --> Preflight[Ordered adapter qualification]
+  Preflight -->|failure| Failed[One FAILED envelope]
+  Preflight -->|success| Final[One final model process]
+  Final --> Normalize[Normalize one result]
+  Normalize --> Ready[One ADVICE_READY envelope]
 ```
+
 
 **Phase 03 inline interview and Claude relay:**
 - Canonical `/advise [prompt-or-url]` is implemented as an inline-first main-session interview: one question at a time, explicit reframe confirmation, bounded discovery, and a sanitized linked report.
@@ -181,8 +189,9 @@ flowchart TD
 - Inline `/advise` and Claude relay remain separate from checkpoint advisor
   routing. They retain the no-broker/no-MCP/no-approval-bypass boundary.
 - The main workflow retains execution ownership. Advisor routes may select only
-  built-in backends and adapters; arbitrary launch templates and direct provider
-  APIs remain outside the architecture.
+  built-in advisory features; checkpoint supervision uses only the central
+  controller described above. Arbitrary launch templates and direct provider APIs
+  remain outside the architecture.
 
 ### 2. Agent Layer
 
@@ -1013,49 +1022,53 @@ User Project
 - Cleanup of temporary files
 - Optimized git operations
 
-## Distribution Architecture (native Pi and advisor mentoring)
+## Distribution Architecture (central advisor controller and native Pi)
 
-[Distribution and advisor guidance](./advisor-distribution-architecture.md) documents the skill, host-aware advisor dispatcher, built-in CLI adapter boundary, and forbidden arbitrary broker boundary. Distribution verification covers generated artifacts and publication; the contract reserves any enabled external execution for an invocation-scoped child process rather than a service:
+[Distribution and advisor guidance](./advisor-distribution-architecture.md)
+documents the single managed checkpoint controller and the independent native
+Pi publication boundary. The controller is authored only at
+`.evcrate/source/.evcrate/bin` and is published once to `$HOME/.evcrate/bin`.
+Generated harnesses do not own or copy its runtime.
 
-- `.evcrate/source/.claude` is the only authored agent-config target. Build/check validate the complete source tree and deterministically generate `.pi`, `.agents`, `.codex`, `.gemini`, and `.antigravity` outputs before promotion.
-- Generic manifest bindings preserve unmanaged files already present under HOME targets. The `.claude` binding removes stale managed copies absent from the current source and excludes regular files directly under its `skills/` root; skill package directories and nested resources remain. Publication rejects stale or incomplete build manifests, output drift, managed symlinks, and unsafe HOME symlink paths.
-- Shared JSON files use entry-level ownership. The Pi publisher may upsert pinned EVCrate package identities in `HOME/.pi/agent/settings.json`, but it must preserve unknown keys/entries, user hooks, and user model routes; reject malformed or symlinked settings; and remove only known EVCrate package identities.
-- Native Pi commands are registered recursively from the managed local extension using Claude-compatible names (`dir:file → /dir:file`) and argument substitution. A bounded `evcrate_command` tool dispatches model-initiated nested commands with cycle/depth controls. An authoritative operation-policy `tool_call` gate enforces temporary tool restrictions even if later extensions alter active tools; dispatcher calls mixed with parallel siblings are rejected and retried alone. Static workflow Markdown remains referenced data; it is not silently converted into dynamic executable orchestration.
-- Native Pi agents run through the structured `pi-subagents` delegation API exposed by an EVCrate-owned tool; the package's public `workflowScript` tool is not parsed or rewritten. Semantic model roles are resolved against the active provider immediately before delegation; concrete models are never baked into command, workflow, or agent prose. Unknown providers inherit the parent model rather than crossing provider boundaries.
-- Existing Codex, Gemini, Antigravity, and Pi outputs include the portable
-  `advisor-strategy` skill and current native mentoring contract. The completed
-  routing projection publishes independent host route resolution and the
-  native-or-external dispatcher while retaining target-specific capability
-  validation. Phase 04 also projected strict advisory capability markers and
-  target-native inline `/advise` behavior; only canonical Claude retains the
-  relay path. Non-Claude targets reject an exact final standalone `--agent`
-  with their target-specific unsupported capability code before delegation or
-  relay-state handling. Runtime/helper/source/output hashes are part of the
-  build authorization, and generated projections remain derived artifacts.
-- The canonical Claude command guides preserve final standalone `--advice`,
-  ordinary `@advisor` input, named checkpoint ordering, the hard review-cycle
-  cap, default stuck escalation, and cook/`/fix:hard` fallback handoffs. The
-  skill remains static; checkpoint workflows invoke the dispatcher, which uses
-  ordinary host delegation for same-host routes and a declared adapter slot for
-  cross-host routes. Same-host external subprocesses are rejected.
-- Generated targets are projections, not authored sources. Their capability
-  marker blocks are validated for presence, order, uniqueness, and exact
-  contents during build/check. Do not hand-edit `.codex`, `.agents`, `.pi`,
-  `.gemini`, or `.antigravity`; regenerate from canonical source and overlays.
-- The former `advisor_consult` broker contract remains superseded. The dispatcher
-  is not an MCP service, provider API, arbitrary command launcher, credential
-  store, quota ledger, or approval bypass; host permissions, sandboxing, and
-  human review remain authoritative.
+- `.evcrate/source/.claude` remains the canonical harness source. Build/check
+  validate the complete source tree and deterministically generate `.pi`,
+  `.agents`, `.codex`, `.gemini`, `.antigravity`, and `.omp` outputs.
+- The required policy is `$HOME/.evcrate/advisor-routing.json` with one exact
+  `advisor` object. Missing, legacy-host, malformed, oversized, duplicate-key,
+  credential-bearing, unsafe, and schema-invalid policies fail closed.
+- Every checkpoint workflow sends one direct ten-key
+  `evcrate-advisor-checkpoint/v1` object to `~/.evcrate/bin/evcrate-advisor`.
+  No request carries caller identity, active host, route override, executable,
+  argv, credential, debug, or fallback controls.
+- The controller selects one configured adapter, runs ordered probes, creates an
+  empty owner-only workspace, executes one final model process, and emits one
+  frozen `evcrate-advisor-controller/v1` envelope. It has no retry, backend
+  switch, model substitution, effort downgrade, callback, or local fallback.
+- Candidate backends are Claude, Codex, Pi, Antigravity, and OMP. Claude,
+  Codex, Pi, and OMP are enabled; Antigravity returns
+  `CLI_CAPABILITY_UNSUPPORTED`; Gemini is unsupported and unregistered.
+- The runner uses fixed argv, `shell:false`, allowlisted environment, bounded
+  streams, stdin-only evidence, POSIX process groups, TERM/KILL cancellation,
+  descendant reaping, and a deadline shared across probes and final execution.
+- Build manifests use schema 2 and `controller_hashes`. Publication validates
+  the complete controller closure, atomically promotes `.evcrate/bin`, preserves
+  unmanaged HOME files and the policy file, and recovers an interrupted
+  directory promotion.
+- The first-release controller claim is Linux-only. Fake-CLI tests cover
+  deterministic behavior; authenticated qualification of enabled installed CLIs
+  is a separate operator check repeated after CLI upgrades.
+- Generic manifest bindings preserve unmanaged files under target HOME roots.
+  The Pi publisher may merge its declared package identities into the shared
+  settings file while preserving unknown keys, packages, providers, hooks, and
+  sessions; its native extension remains a separate target concern.
+- Generated targets are projections, not authored sources. Do not hand-edit
+  `.codex`, `.agents`, `.pi`, `.gemini`, `.antigravity`, or `.omp`; regenerate
+  from canonical source and declared overlays.
 
-Phase 03 `/advise` is implemented in canonical Claude source, and Phase 04
-projected its inline-first behavior to generated targets. Generated help is
-target-aware and tested for the matching unsupported relay code. The release
-boundary remains the verified build/check artifact, not generated-file presence
-alone.
-
-Gemini migration rewrites authored advisor workflow references to the generated
-`.gemini/workflows/` path. Its fallback scout command is deliberately retained as
-literal Claude CLI syntax and is not target-rewritten.
+Phase 03 `/advise` remains a separate inline-first main-session feature. It does
+not provide an alternate checkpoint-controller execution path. The release
+boundary is verified build/check and publication authorization, not generated
+file presence alone.
 
 ### Native Pi runtime boundary (Phases 03–04 implemented; live cutover user-controlled)
 

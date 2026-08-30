@@ -7,10 +7,8 @@ import sys
 from pathlib import Path
 
 from distribution.contracts import (
-    ADVISOR_BRIDGE_FALLBACK_BLOCK,
-    ADVISOR_RUNTIME_FILES,
     advisory_relay_error,
-    is_production_runtime_artifact,
+    is_production_controller_artifact,
     project_advisor_contract,
     render_advisory_interview_workflow,
     render_inline_advise_command,
@@ -137,7 +135,6 @@ REPLACEMENTS = {
     r"\$ARGUMENTS": "{{args}}",
     r"\"\$CLAUDE_PROJECT_DIR\"": "\"$GEMINI_PROJECT_DIR\"",
     r"\.claude/workflows/": ".gemini/workflows/",
-    r"\.claude/scripts/advisor-bridge\.cjs\b": ".gemini/scripts/advisor-bridge.cjs",
     r"python \.claude/scripts/ev-help\.py\b": "python .gemini/scripts/ev-help.py",
     r"gemini-sonnet": "gemini-3-flash-preview",
     r"gemini-haiku": "gemini-3.1-flash-lite-preview",
@@ -199,13 +196,6 @@ GEMINI_UNSUPPORTED_EVENTS = {
     "SubagentStart": "No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped.",
     "PreCompact": "No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.",
 }
-GLOBAL_ADVISOR_BRIDGE_PATHS = (
-    "~/.claude/scripts/advisor-bridge.cjs",
-    "~/.codex/scripts/advisor-bridge.cjs",
-    "~/.gemini/scripts/advisor-bridge.cjs",
-    "~/.gemini/config/scripts/advisor-bridge.cjs",
-    "~/.pi/agent/evcrate/scripts/advisor-bridge.cjs",
-)
 
 
 def apply_target_replacements(text):
@@ -216,32 +206,20 @@ def apply_target_replacements(text):
 def apply_replacements(text):
     if not isinstance(text, str):
         return text
-    fallback_token = "__GEMINI_GLOBAL_ADVISOR_FALLBACK__"
-    text = text.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
     protected_values = []
 
     def protect(match):
         protected_values.append(match.group(0))
         return f"__GEMINI_PROTECTED_{len(protected_values) - 1}__"
 
-    # Protect URL literals before adapting nearby platform prose. URL-specific
-    # rules are intentionally absent from REPLACEMENTS.
     text = re.sub(r"https?://[^\s<>()]+", protect, text, flags=re.IGNORECASE)
     claude_md_token = "__SOURCE_MEMORY_DOC__"
     text = re.sub(r"\bCLAUDE\.md\b", claude_md_token, text, flags=re.IGNORECASE)
-    protected_paths = []
-    for index, path in enumerate(GLOBAL_ADVISOR_BRIDGE_PATHS):
-        token = f"__GEMINI_GLOBAL_ADVISOR_BRIDGE_{index}__"
-        text = text.replace(path, token)
-        protected_paths.append((token, path))
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     text = text.replace(claude_md_token, "CLAUDE.md")
-    for token, path in protected_paths:
-        text = text.replace(token, path)
     for index, value in enumerate(protected_values):
         text = text.replace(f"__GEMINI_PROTECTED_{index}__", value)
-    text = text.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
     return text
 
 def render_external_scout_strategy(body, strategy):
@@ -1196,7 +1174,7 @@ def migrate_hook_sources():
             "__pycache__" in relative.parts
             or relative.suffix.lower() in {".pyc", ".pyo"}
             or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
-            or is_production_runtime_artifact(relative)
+            or is_production_controller_artifact(relative)
         ):
             continue
         # Gemini generates a wrapper with the canonical session-end filename;
@@ -1237,7 +1215,7 @@ def migrate_scripts():
             continue
         if any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in rel_path.parts):
             continue
-        if is_production_runtime_artifact(rel_path):
+        if is_production_controller_artifact(rel_path):
             continue
         dest_path = dest_dir / rel_path
         if source.is_symlink():
@@ -1247,12 +1225,6 @@ def migrate_scripts():
             continue
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest_path)
-        if rel_path.as_posix() in ADVISOR_RUNTIME_FILES:
-            # The resolver is one cross-harness contract; product-name rewrites
-            # would corrupt its host table, bridge detection, or its static
-            # capability document.
-            print(f"Migrated advisor runtime: {rel_path}")
-            continue
         if is_text_file(dest_path):
             with open(dest_path, "r", encoding="utf-8") as f: content = f.read()
             content = apply_target_replacements(content)
@@ -1266,11 +1238,6 @@ def migrate_scripts():
                 )
             with open(dest_path, "w", encoding="utf-8") as f: f.write(content)
         print(f"Migrated script: {rel_path}")
-    if any((src_dir / relative).is_file() for relative in ADVISOR_RUNTIME_FILES):
-        for relative in ADVISOR_RUNTIME_FILES:
-            generated = dest_dir / relative
-            if not generated.is_file() or generated.is_symlink():
-                raise RuntimeError(f"Canonical advisor runtime file is missing or unsafe: {generated}")
 
 def migrate_mcp():
     settings_file = Path(GEMINI_DIR) / "settings.json"

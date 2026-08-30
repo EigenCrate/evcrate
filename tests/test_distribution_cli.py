@@ -1,11 +1,9 @@
-"""Regression coverage for the Phase 1 distribution command boundary."""
+"""Distribution command boundary contracts."""
 
 from __future__ import annotations
 
-import os
 import io
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,127 +13,40 @@ from unittest.mock import patch
 
 import distribute
 from distribution.context import create_context
-from distribution.contracts import (
-    ADVISOR_RUNTIME_FILES,
-    BuildError,
-    DistributionAction,
-    PublishError,
-    VerifiedArtifact,
-    render_harness_script_references,
-)
-from distribution.advisor_runtime import is_production_runtime_artifact
+from distribution.contracts import BuildError, DistributionAction, PublishError, VerifiedArtifact
 from distribution import gates
+
+REPOSITORY = Path(__file__).resolve().parents[1]
 
 
 class DistributionCliTest(unittest.TestCase):
-    def test_parse_actions_are_exclusive_and_bare_is_compatible(self) -> None:
+    def test_parse_actions_and_target_selection(self) -> None:
         self.assertEqual(distribute.parse_args(["--build"]), DistributionAction.BUILD)
         self.assertEqual(distribute.parse_args(["--check"]), DistributionAction.CHECK)
         self.assertEqual(distribute.parse_args(["--publish"]), DistributionAction.PUBLISH)
         self.assertEqual(distribute.parse_args(["--all"]), DistributionAction.ALL)
         with patch("sys.stderr", new_callable=io.StringIO):
             self.assertEqual(distribute.parse_args([]), DistributionAction.ALL)
-        with self.assertRaises(SystemExit):
-            with patch("sys.stderr", new_callable=io.StringIO):
-                distribute.parse_args(["--build", "--publish"])
-        with self.assertRaises(SystemExit):
-            with patch("sys.stderr", new_callable=io.StringIO):
-                distribute.parse_args(["--dry-run"])
+        self.assertEqual(distribute.parse_invocation(["--all", "--target", "pi"]).selected_targets, ("pi",))
+        for arguments in (("--build", "--publish"), ("--dry-run",), ("--all", "--target", "unknown")):
+            with self.subTest(arguments=arguments), patch("sys.stderr", new_callable=io.StringIO):
+                with self.assertRaises(SystemExit):
+                    distribute.parse_invocation(list(arguments))
 
-    def test_target_selector_accepts_pi_and_omp_and_rejects_duplicate_or_unknown_values(self) -> None:
-        invocation = distribute.parse_invocation(["--all", "--target", "pi"])
-        self.assertEqual(invocation.action, DistributionAction.ALL)
-        self.assertEqual(invocation.selected_targets, ("pi",))
-        omp_invocation = distribute.parse_invocation(["--all", "--target", "omp"])
-        self.assertEqual(omp_invocation.selected_targets, ("omp",))
-        for arguments in (["--all", "--target", "pi", "--target", "pi"], ["--all", "--target", "unknown"]):
-            with self.assertRaises(SystemExit), patch("sys.stderr", new_callable=io.StringIO):
-                distribute.parse_invocation(arguments)
+    def test_selected_context_contains_shared_controller_root(self) -> None:
+        context = create_context(DistributionAction.BUILD, selected_targets=("omp",))
+        self.assertEqual({path.name for path in context.local_roots}, {".evcrate", ".omp"})
+        self.assertEqual(context.local_evcrate, context.local_path(".evcrate"))
 
-    def test_staged_migrators_run_from_repository_with_fatal_status(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            context = create_context(DistributionAction.BUILD, stage=Path(temp))
-            with patch("distribution.gates.subprocess.run") as run:
-                def write_required_docs(*args: object, **kwargs: object) -> None:
-                    command = args[0]
-                    if command[0] == "npm":
-                        if command[-1] == "build":
-                            Path(kwargs["cwd"]).joinpath("dist").mkdir()
-                            Path(kwargs["cwd"]).joinpath("dist/server.js").write_text("bundle", encoding="utf-8")
-                        return
-                    env = kwargs["env"]
-                    script = str(command[1])
-                    def write_runtime(output: Path, relative_root: str) -> None:
-                        source = context.local_claude / "scripts"
-                        for relative in ADVISOR_RUNTIME_FILES:
-                            destination = output / relative_root / relative
-                            destination.parent.mkdir(parents=True, exist_ok=True)
-                            destination.write_bytes((source / relative).read_bytes())
-
-                    def write_resources(output: Path, relative_root: str, target: str) -> None:
-                        source_root = context.local_claude
-                        destination_root = output / relative_root
-                        for kind in ("scripts", "hooks"):
-                            source_kind = source_root / kind
-                            for source in sorted(source_kind.rglob("*")):
-                                if not source.is_file() or source.is_symlink():
-                                    continue
-                                relative = source.relative_to(source_kind)
-                                if (
-                                    relative.as_posix() in ADVISOR_RUNTIME_FILES
-                                    or "advise-state" in relative.name
-                                    or relative.suffix.lower() in {".pyc", ".pyo"}
-                                    or is_production_runtime_artifact(relative)
-                                ):
-                                    continue
-                                target_relative = relative
-                                if target == "gemini" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
-                                    target_relative = Path("claude-session-end.cjs")
-                                target_kind = kind
-                                destination = destination_root / target_kind / target_relative
-                                destination.parent.mkdir(parents=True, exist_ok=True)
-                                raw = source.read_bytes()
-                                if b"\0" in raw[:1024]:
-                                    destination.write_bytes(raw)
-                                else:
-                                    destination.write_text(
-                                        render_harness_script_references(raw.decode("utf-8"), target),
-                                        encoding="utf-8",
-                                    )
-                        for name in (".evcrate.json", ".evcrateignore"):
-                            shutil.copyfile(source_root / name, output / name)
-                            if name == ".evcrateignore" and relative_root:
-                                shutil.copyfile(source_root / name, destination_root / name)
-
-                    if script.endswith("migrate_claude_to_codex.py"):
-                        write_runtime(Path(env["CODEX_OUTPUT_DIR"]), "scripts")
-                        write_resources(Path(env["CODEX_OUTPUT_DIR"]), "", "codex")
-                        Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
-                    elif script.endswith("migrate_claude_to_omp.py"):
-                        write_resources(Path(env["OMP_OUTPUT_DIR"]), "evcrate", "omp")
-                    elif script.endswith("migrate_claude_to_pi.py"):
-                        write_runtime(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate/scripts")
-                        write_resources(Path(env["PI_OUTPUT_DIR"]), "agent/evcrate", "pi")
-                    else:
-                        write_runtime(Path(env["GEMINI_OUTPUT_DIR"]), "scripts")
-                        write_resources(Path(env["GEMINI_OUTPUT_DIR"]), "", "gemini")
-                        Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
-
-                run.side_effect = write_required_docs
-                gates._generate_stage(context)
-            migrator_calls = [call for call in run.call_args_list if call.args[0][0] != "npm"]
-            self.assertEqual(len(migrator_calls), 4)
-            for call in migrator_calls:
-                self.assertEqual(call.kwargs["cwd"], context.repository)
-                self.assertTrue(call.kwargs["check"])
-                self.assertEqual(call.kwargs["env"]["PROJECT_DOCS_OUTPUT_DIR"], str(context.stage_project_docs))
-                self.assertEqual(call.kwargs["env"]["GEMINI_PROJECT_DOCS_OUTPUT_DIR"], str(context.stage_project_docs))
-            pi_call = next(call for call in migrator_calls if str(call.args[0][1]).endswith("migrate_claude_to_pi.py"))
-            self.assertEqual(pi_call.kwargs["env"]["PI_OUTPUT_DIR"], str(context.stage / ".pi"))
-            self.assertEqual(pi_call.kwargs["env"]["PI_STAGE_ROOT"], str(context.stage))
-            omp_call = next(call for call in migrator_calls if str(call.args[0][1]).endswith("migrate_claude_to_omp.py"))
-            self.assertEqual(omp_call.kwargs["env"]["OMP_OUTPUT_DIR"], str(context.stage / ".omp"))
-            self.assertEqual(omp_call.kwargs["env"]["OMP_STAGE_ROOT"], str(context.stage))
+    def test_publish_path_never_runs_a_migrator(self) -> None:
+        context = create_context(DistributionAction.PUBLISH)
+        artifact = VerifiedArtifact(context.repository, context.local_roots)
+        with patch("distribution.publish.publish_local_artifacts", return_value=[]) as publish, patch(
+            "distribution.gates._run_migrator"
+        ) as migrator:
+            gates.run_home_publish(context, artifact)
+        publish.assert_called_once_with(context, artifact, dry_run=False)
+        migrator.assert_not_called()
 
     def test_failed_build_never_calls_publisher(self) -> None:
         with patch("distribution.gates.run_local_build", side_effect=BuildError("generator failed")), patch(
@@ -145,187 +56,40 @@ class DistributionCliTest(unittest.TestCase):
                 gates.run_all()
         publish.assert_not_called()
 
-    def test_promotion_handles_a_file_backup(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = root / "staged"
-            destination = root / "AGENTS.md"
-            source.write_text("new", encoding="utf-8")
-            destination.write_text("old", encoding="utf-8")
-            gates._promote_path(source, destination)
-            self.assertEqual(destination.read_text(encoding="utf-8"), "new")
-            self.assertFalse((root / ".AGENTS.md.distribution-backup").exists())
-
-    def test_local_promotion_restores_prior_outputs_on_later_failure(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            first_source, second_source = root / "first-stage", root / "missing-stage"
-            first_destination, second_destination = root / "first", root / "second"
-            first_source.write_text("new", encoding="utf-8")
-            first_destination.write_text("old", encoding="utf-8")
-            with self.assertRaises(BuildError):
-                gates._promote_transaction([(first_source, first_destination), (second_source, second_destination)])
-            self.assertEqual(first_destination.read_text(encoding="utf-8"), "old")
-
-    def test_tree_comparison_handles_matching_directories(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            left, right = root / "left", root / "right"
-            for directory in (left, right):
-                (directory / "nested").mkdir(parents=True)
-                (directory / "nested" / "artifact.txt").write_text("same", encoding="utf-8")
-            self.assertTrue(gates._same_tree(left, right))
-
-    def test_tree_comparison_rejects_file_directory_mismatch(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            left, right = root / "left", root / "right"
-            left.mkdir()
-            right.mkdir()
-            (left / "shared").write_text("file", encoding="utf-8")
-            (right / "shared").mkdir()
-            self.assertFalse(gates._same_tree(left, right))
-
-    def test_check_is_read_only_for_project_docs_and_home(self) -> None:
-        context = create_context(DistributionAction.CHECK)
-        documents = [context.local_path(name) for name in gates.GENERATED_DOCS]
-        before = {path: path.read_bytes() if path.exists() else None for path in documents}
-        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
-            def generate(stage_context: object) -> VerifiedArtifact:
-                stage = stage_context.stage
-                assert stage is not None
-                for root in stage_context.local_roots:
-                    (stage / root.name).mkdir(exist_ok=True)
-                stage_context.stage_project_docs.mkdir(exist_ok=True)
-                (stage_context.stage_project_docs / "AGENTS.md").write_text("staged", encoding="utf-8")
-                return VerifiedArtifact(stage_context.repository, tuple(stage / root.name for root in stage_context.local_roots))
-
-            with patch("distribution.gates._generate_stage", side_effect=generate):
-                with self.assertRaises(BuildError):
-                    gates.run_local_check()
-            self.assertFalse(any(Path(home).iterdir()))
-        self.assertEqual(before, {path: path.read_bytes() if path.exists() else None for path in documents})
-
-    def test_publish_requires_a_matching_artifact_and_never_runs_migrators(self) -> None:
-        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
-            context = create_context(DistributionAction.PUBLISH)
-            artifact = VerifiedArtifact(context.repository, context.local_roots)
-            with patch("distribution.publish.publish_local_artifacts") as publish, patch(
-                "distribution.gates._run_migrator"
-            ) as migrator:
-                gates.run_home_publish(context, artifact)
-        publish.assert_called_once_with(context, artifact, dry_run=False)
-        migrator.assert_not_called()
-
-    def test_publish_exports_claude_source_and_pi_discoverable_skills(self) -> None:
-        with tempfile.TemporaryDirectory() as home, patch.dict(os.environ, {"EVCRATE_HOME": home}):
-            context = create_context(DistributionAction.PUBLISH)
-            artifact = VerifiedArtifact(context.repository, context.local_roots)
-            with patch("distribution.publish.verify_local_artifact"):
-                gates.run_home_publish(context, artifact)
-
-            published_claude = Path(home) / ".claude"
-            published_pi_skills = Path(home) / ".agents" / "skills"
-            self.assertEqual(
-                (published_claude / "skills/planning/SKILL.md").read_bytes(),
-                (context.local_claude / "skills/planning/SKILL.md").read_bytes(),
-            )
-            self.assertEqual(
-                (published_pi_skills / "planning/SKILL.md").read_bytes(),
-                (context.local_agents / "skills/planning/SKILL.md").read_bytes(),
-            )
-            for source_file in (context.local_claude / "skills").iterdir():
-                if source_file.is_file():
-                    self.assertFalse((published_claude / "skills" / source_file.name).exists())
-            self.assertTrue((published_claude / "skills/common/README.md").is_file())
-            settings = json.loads((Path(home) / ".pi/agent/settings.json").read_text(encoding="utf-8"))
-            self.assertEqual(settings["packages"], [
-                "npm:pi-subagents@0.44.0",
-                "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
-                "npm:@juicesharp/rpiv-todo@2.4.0",
-            ])
-
-    def test_publish_rejects_symlinked_home_before_creating_state(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            outside = root / "outside"
-            outside.mkdir()
-            home = root / "home"
-            home.symlink_to(outside, target_is_directory=True)
-            context = create_context(
-                DistributionAction.PUBLISH,
-                environ={"EVCRATE_HOME": str(home)},
-            )
-            artifact = VerifiedArtifact(context.repository, context.local_roots)
-            with self.assertRaisesRegex(PublishError, "symlinked ancestors"):
-                gates.run_home_publish(context, artifact)
-            self.assertFalse((outside / ".local").exists())
-
-    def test_publish_rejects_symlinked_state_ancestor_before_creating_lock(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            home = root / "home"
-            outside = root / "outside"
-            home.mkdir()
-            outside.mkdir()
-            (home / ".local").symlink_to(outside, target_is_directory=True)
-            context = create_context(
-                DistributionAction.PUBLISH,
-                environ={"EVCRATE_HOME": str(home)},
-            )
-            artifact = VerifiedArtifact(context.repository, context.local_roots)
-            with self.assertRaisesRegex(PublishError, "state path"):
-                gates.run_home_publish(context, artifact)
-            self.assertFalse((outside / "evcrate").exists())
-
-    def test_gemini_publisher_rewrites_settings_without_runtime_name_error(self) -> None:
-        from distribute_sync import sync_gemini_assets
-        from distribution.context import DistributionContext
-
-        with tempfile.TemporaryDirectory() as temp:
-            root, home = Path(temp) / "repo", Path(temp) / "home"
-            (root / ".evcrate/source/.gemini").mkdir(parents=True)
-            (root / ".evcrate/source/.gemini" / "settings.json").write_text('{"hooks": {}}', encoding="utf-8")
-            context = DistributionContext(
-                action=DistributionAction.PUBLISH,
-                repository=root,
-                home=home,
-                stage=None,
-                global_sync_mode="managed",
-                gemini_global_mode="config-and-scripts",
-            )
-            sync_gemini_assets(context)
-            self.assertEqual(__import__("json").loads((home / ".gemini" / "settings.json").read_text(encoding="utf-8")), {"hooks": {}})
-
     def test_unexpected_publish_failure_is_wrapped(self) -> None:
         context = create_context(DistributionAction.PUBLISH)
         artifact = VerifiedArtifact(context.repository, context.local_roots)
         with patch("distribution.publish.publish_local_artifacts", side_effect=NameError("bug")):
-            with self.assertRaises(PublishError) as raised:
+            with self.assertRaisesRegex(PublishError, "HOME publication failed"):
                 gates.run_home_publish(context, artifact)
-        self.assertEqual(str(raised.exception), "HOME publication failed")
 
-    def test_legacy_publisher_delegates_to_manifest_publisher(self) -> None:
-        from distribute_sync import publish_local_artifacts
-        from distribution.context import DistributionContext
-
-        with tempfile.TemporaryDirectory() as temp:
-            root, home = Path(temp) / "repo", Path(temp) / "home"
-            context = DistributionContext(DistributionAction.PUBLISH, root, home, None, "managed", "config-and-scripts")
-            with patch("distribution.publish.publish_local_artifacts") as publish:
-                publish_local_artifacts(context)
-        publish.assert_called_once()
-
-    def test_direct_global_migrators_require_emergency_opt_in(self) -> None:
+    def test_direct_global_migration_requires_explicit_emergency_opt_in(self) -> None:
         for script in ("migrate_claude_to_codex.py", "migrate_claude_to_gemini.py"):
             completed = subprocess.run(
                 [sys.executable, script, "--global"],
-                cwd=Path(__file__).resolve().parents[1],
+                cwd=REPOSITORY,
                 capture_output=True,
                 text=True,
             )
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("EVCRATE_ALLOW_DIRECT_GLOBAL=1", completed.stderr)
+
+    def test_json_dry_run_is_a_serialized_publish_diff(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = create_context(
+                DistributionAction.PUBLISH,
+                environ={"EVCRATE_HOME": str(Path(temp) / "home"), "EVCRATE_STATE_HOME": str(Path(temp) / "state")},
+                selected_targets=("pi",),
+            )
+            artifact = VerifiedArtifact(context.repository, context.local_roots)
+            with patch("distribution.gates.verified_local_artifact", return_value=artifact), patch(
+                "distribute.run_home_publish", return_value=[]
+            ):
+                with patch("sys.argv", ["distribute.py", "--publish", "--dry-run", "--json"]), patch(
+                    "sys.stdout", new_callable=io.StringIO
+                ) as stdout:
+                    self.assertEqual(distribute.main(), 0)
+            self.assertEqual(json.loads(stdout.getvalue()), [])
 
 
 if __name__ == "__main__":

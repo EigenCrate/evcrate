@@ -5,8 +5,8 @@ and other components of this Skill) is governed by your agreement with
 OpenAI regarding use of OpenAI's services. If no separate agreement
 exists, use is governed by OpenAI's Consumer Terms of Service or
 Commercial Terms of Service, as applicable:
-https://www.OpenAI.com/legal/consumer-terms
-https://www.OpenAI.com/legal/commercial-terms
+https://www.anthropic.com/legal/consumer-terms
+https://www.anthropic.com/legal/commercial-terms
 Your applicable agreement is referred to as the "Agreement." "Services" are
 as defined in the Agreement.
 

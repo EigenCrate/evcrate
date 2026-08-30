@@ -141,49 +141,26 @@ test("explicit invalid model is rejected while role routing preserves valid over
   assert.equal(routed.results[0].request.model, "openai-codex/gpt-5.6-sol");
 });
 
-test("advisor native preflight rejects inherited, unavailable, and cross-provider routes before child emission", async () => {
-  const registry = [{ provider: "openai-codex", id: "gpt-5.6-sol" }];
-  for (const node of [
-    { agent: "advisor", task: "review" },
-    { agent: "advisor", task: "review", provider: "openai-codex", model: "openai-codex/gpt-5.6-sol" },
-    { agent: "advisor", task: "review", provider: "openai-codex", model: "openai-codex/missing", thinking: "high" },
-    { agent: "advisor", task: "review", provider: "anthropic", model: "anthropic/claude-sonnet", thinking: "high" },
-  ]) {
-    const events = eventBus();
-    let childStarts = 0;
-    let requests = 0;
-    events.on(DELEGATION_EVENTS.request, () => { requests += 1; });
-    const delegate = createDelegationRunner({
-      events,
-      childStartRunner: async () => { childStarts += 1; return undefined; },
-    });
-    await assert.rejects(
-      delegate(node, {
-        cwd: "/repo",
-        model: { provider: "openai-codex" },
-        modelRegistry: registry,
-      }),
-      /NATIVE_CAPABILITY_UNSUPPORTED/,
-    );
-    assert.equal(childStarts, 0);
-    assert.equal(requests, 0);
-  }
-});
-
-test("valid advisor native preflight emits one exact request while generic roles still work", async () => {
+test("advisor delegation uses the generic validated model path", async () => {
   const events = eventBus();
   const requests = [];
-  events.on(DELEGATION_EVENTS.request, (request) => { requests.push(request); complete(events, request, "advice"); });
+  events.on(DELEGATION_EVENTS.request, (request) => {
+    requests.push(request);
+    complete(events, request, "advice");
+  });
   const delegate = createDelegationRunner({ events });
   const result = await delegate({
-    agent: "advisor", task: "review", provider: "openai-codex",
-    model: "openai-codex/gpt-5.6-sol", thinking: "high",
+    agent: "advisor",
+    task: "review",
+    provider: "anthropic",
+    model: "anthropic/claude-sonnet",
+    thinking: "high",
   }, {
     cwd: "/repo",
     model: { provider: "openai-codex" },
-    modelRegistry: [{ provider: "openai-codex", id: "gpt-5.6-sol" }],
+    modelRegistry: [{ provider: "anthropic", id: "claude-sonnet" }],
   });
-  assert.equal(result.results[0].request.model, "openai-codex/gpt-5.6-sol");
+  assert.equal(result.results[0].request.model, "anthropic/claude-sonnet");
   assert.equal(result.results[0].request.thinking, "high");
   assert.equal(requests.length, 1);
 });

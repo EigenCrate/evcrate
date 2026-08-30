@@ -4,7 +4,6 @@ import {
   CODEX_ROLE_DEFAULTS,
   parseModelRoles,
   registerModelRoles,
-  resolveExactAdvisorModel,
   resolveModelRole,
 } from "../files/agent/extensions/evcrate/model-roles.js";
 
@@ -54,28 +53,6 @@ test("explicit unavailable or malformed models and thinking fail instead of inhe
   assert.deepEqual(resolveModelRole({ thinking: "high", provider: "openai-codex", agent: "planner", agentRoles: roles, registry }), { model: "openai-codex/gpt-5.6-sol", thinking: "high" });
 });
 
-test("advisor routes require exact active-provider model and thinking with no inheritance", () => {
-  const advisorRegistry = [{ provider: "openai-codex", id: "gpt-5.6-sol" }];
-  assert.deepEqual(resolveExactAdvisorModel({
-    provider: "openai-codex", activeProvider: "openai-codex",
-    model: "openai-codex/gpt-5.6-sol", thinking: "high", registry: advisorRegistry,
-  }), {
-    provider: "openai-codex", model: "openai-codex/gpt-5.6-sol", thinking: "high",
-  });
-  for (const route of [
-    {},
-    { provider: "openai-codex", thinking: "high" },
-    { provider: "openai-codex", model: "openai-codex/gpt-5.6-sol" },
-    { provider: "openai-codex", model: "openai-codex/missing", thinking: "high" },
-    { provider: "anthropic", model: "openai-codex/gpt-5.6-sol", thinking: "high" },
-    { provider: "openai-codex", model: "gpt-5.6-sol", thinking: "high" },
-    { provider: "openai-codex", model: "openai-codex/gpt-5.6-sol", thinking: "nope" },
-  ]) {
-    assert.deepEqual(resolveExactAdvisorModel({
-      ...route, activeProvider: "openai-codex", registry: advisorRegistry,
-    }), { error: "NATIVE_CAPABILITY_UNSUPPORTED" });
-  }
-});
 
 test("registration resets warning de-duplication per session", () => {
   const handlers = new Map();

@@ -58,8 +58,8 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - **[Codebase Summary](./docs/codebase-summary.md)** - High-level overview of project structure, technologies, and components
 - **[Code Standards](./docs/code-standards.md)** - Coding standards, naming conventions, and best practices
 - **[System Architecture](./docs/system-architecture.md)** - Detailed architecture documentation, component interactions, and data flow
-- **[Advisor Distribution Architecture](./docs/advisor-distribution-architecture.md)** - Global checkpoint routing, native/external adapter contracts, and deterministic projection gates
-- **[Advisor Supervision Migration](./docs/advisor-supervision-migration.md)** - Breaking `@advisor` to `--advice` migration, `/advise` capability matrix, and validation guidance
+- **[Advisor Distribution Architecture](./docs/advisor-distribution-architecture.md)** - Central checkpoint controller, policy, adapter qualification, and deterministic publication gates
+- **[Advisor Supervision Migration](./docs/advisor-supervision-migration.md)** - Breaking `@advisor` to `--advice` migration, direct checkpoint contract, and validation guidance
 - **[Commands Reference](./guide/COMMANDS.md)** - Complete guide to all available slash commands
 
 ### 📖 Additional Resources
@@ -123,6 +123,7 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 │   ├── CLAUDE.md           # Canonical instructions
 │   ├── AGENTS.md           # Generated Codex instructions
 │   └── GEMINI.md           # Generated Gemini instructions
+├── .evcrate/bin/          # Central managed advisor controller source
 ├── .evcrate/targets/       # Logical target manifests and overlays
 ├── distribution/           # Build, check, and HOME publication code
 ├── docs/                   # Project documentation
@@ -294,46 +295,89 @@ Reusable templates for:
 ### .evcrate.json
 Documented project config filename for EVCrate settings. The runtime resolves the local project config from the discovered project root.
 
-### Advisor routing policy
+### Advisor controller policy
 
-Checkpoint advice (`--advice`) reads one user-owned policy from the platform home
-directory: `<home>/.evcrate/advisor-routing.json`. The version-1 shape is a
-`version` plus a `hosts` object; each present host entry must contain exactly
-`backend`, `model`, `effort`, and `execution`:
+Checkpoint advice (`--advice`) uses one managed executable at
+`~/.evcrate/bin/evcrate-advisor`. It reads one required user-owned policy from
+the platform home directory: `<home>/.evcrate/advisor-routing.json`.
+
+The exact version-1 policy shape is:
 
 ```json
 {
   "version": 1,
-  "hosts": {
-    "codex": {
-      "backend": "claude",
-      "model": "opus",
-      "effort": "high",
-      "execution": "external"
-    }
+  "advisor": {
+    "backend": "codex",
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+    "timeout_ms": 900000
   }
 }
 ```
 
-Supported hosts/backends are `claude`, `codex`, `gemini`, `antigravity`, and
-`pi`. `execution` is `auto`, `native`, or `external`. `auto` is native for a
-same-host backend and external for a different host; `native` requires a
-same-host backend, and `external` requires a different backend. Missing policy
-files and missing active-host entries select only that host's built-in default.
-A present malformed policy fails closed—there is no field merge, host-profile
-inheritance, model substitution, effort downgrade, backend switch, or execution
-fallback. Repository-local policy files and credentials are ignored; installed
-CLIs own authentication.
+The top level contains exactly `version` and `advisor`; the advisor object
+contains exactly `backend`, `model`, `effort`, and `timeout_ms`. The timeout is
+an integer from 60000 through 900000 inclusive. Missing policy fails as
+`ROUTE_POLICY_REQUIRED`. A legacy top-level `hosts` object fails as
+`ROUTE_SCHEMA_MIGRATION_REQUIRED` with the action to replace it with one
+`advisor` object. Duplicate keys, extra or missing fields, invalid UTF-8,
+oversized documents, credentials, unsafe paths, and invalid values fail closed.
+There is no default, merge, inheritance, substitution, retry, fallback, or
+repository-local policy.
 
-Native routing checks the exact model and effort advertised by the active host.
-For Gemini CLI 0.47.0 the bundled capability record is `model: "pro"` with no
-effort values, so its default `pro`/`high` route fails as
-`EFFORT_UNSUPPORTED`; it is not downgraded. Cross-host routing uses only the
-five fixed adapters: Claude, Codex, Gemini, Antigravity, and Pi. Their
-executable/version, authentication, read-only, session, output, and cancellation
-contracts fail closed when not evidenced. Antigravity live probing and all
-authenticated provider calls are optional, separately approved work outside the
-deterministic fake-CLI contract.
+Candidate names are exactly `claude`, `codex`, `antigravity`, `pi`, and `omp`.
+The enabled adapters are `claude`, `codex`, `pi`, and `omp`.
+`antigravity` remains a disabled candidate slot and returns
+`CLI_CAPABILITY_UNSUPPORTED` before any final model process. `gemini` is not a
+candidate or registry member and returns `ADAPTER_UNSUPPORTED`. OMP policies
+use an exact `provider/model` selector such as `openai-codex/gpt-5.6-sol`.
+
+The executable accepts the checkpoint object directly, with exactly these ten
+keys:
+
+```json
+{
+  "protocol": "evcrate-advisor-checkpoint",
+  "version": 1,
+  "checkpoint": "review:implementation-step",
+  "question": "What is the smallest safe next change?",
+  "kind": "review",
+  "task_or_phase": "Implementation",
+  "evidence": {"terminal": "Bounded review evidence.", "files": []},
+  "changed_paths": [],
+  "prior_counsel": [],
+  "owner_disposition": "Proceed after validation."
+}
+```
+
+The request is bounded to 32 KiB, with 4 KiB question, 8 KiB task/phase, 16 KiB
+terminal evidence, four evidence files, and sixteen changed paths. Paths are
+safe normalized relative POSIX paths. Evidence is metadata only; the controller
+does not read request paths.
+Idle or partial stdin has a finite two-second pre-policy deadline; expiry emits
+one `FAILED` envelope with `TIMEOUT`.
+
+The controller selects one configured backend, qualifies it, creates one empty
+owner-only workspace, runs one final process, and emits one controller-authored
+terminal envelope. It never invokes a native callback, changes model or effort,
+switches backend, retries, or uses a local fallback. Only outer
+`ADVICE_READY` completes the checkpoint; failures and nonzero exit leave it
+incomplete.
+
+The outer envelope is `evcrate-advisor-controller/v1` with a controller-generated
+UUID and a receipt containing exactly `backend`, `model`, `effort`,
+`controller_version`, `adapter_version`, and `elapsed_ms`. Success adds the
+normalized `evcrate-advisor-result/v1`; failure adds only sanitized
+`code`, `category`, `action`, and `message`. Stdout contains one JSON line and
+stderr is empty. Installed CLIs own authentication; EVCrate stores no
+credentials.
+
+The first controller release is Linux-only. Fake-CLI tests prove deterministic
+contracts; each enabled installed CLI requires separate bounded qualification
+and requalification after CLI upgrades. Build manifests use schema 2 and
+`controller_hashes`; the central source is `.evcrate/source/.evcrate/bin` and
+the publisher atomically owns `$HOME/.evcrate/bin` without replacing the
+policy file.
 
 ## Gemini Skills Configuration
 
@@ -490,7 +534,7 @@ Then add your MCP servers, below are some examples:
 - **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
 - **Pi runtime and settings**: The native extension registers commands, bounded nested dispatch, policy-gated tool restrictions, semantic provider roles, structured `pi-subagents` delegation, and the sole canonical lifecycle/tool-hook adapter. The target merges only the exact pins `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0` into `~/.pi/agent/settings.json`; unknown keys, packages, provider/model settings, and sessions remain user-owned. See [Native Pi migration](docs/pi-native-migration.md).
 - **Pi publication safety**: Stop Pi manually before live publication. Concurrent HOME changes abort promotion; `pi-code` is never removed automatically and live cutover remains user-controlled after isolated validation.
-- **Advisor runtime projection**: The canonical production closure is exactly 19 files, including a local `advisor-bridge.cjs` and coordinator, and is copied byte-for-byte into each of the five host projections (`scripts/` for Claude/Codex/Gemini/Antigravity and `agent/evcrate/scripts/` for Pi). Runtime, helper, source, and output hashes authorize build/check/publication; regenerate from canonical source and overlays rather than editing projections.
+- **Shared advisor controller**: `.evcrate/source/.evcrate/bin` is the sole authored controller closure. Build manifests record `controller_hashes`, and publication atomically installs one `$HOME/.evcrate/bin` while preserving `advisor-routing.json`; generated harnesses contain no controller copy.
 - **Pi advisor caveat**: `--target pi` narrows local build/check and publication bindings to `.pi`; `PI_CODING_AGENT_DIR` changes the runtime resource root, not the HOME publication destination. Pi must be manually quiescent for any live HOME publication, which is a separate user-authorized operation.
 - **No Direct Downstream Edits**: Do not edit `.evcrate/source/.gemini/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, or `.evcrate/source/.pi/` directly. They are generated automatically by the local build gate.
 - **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.

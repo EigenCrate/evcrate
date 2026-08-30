@@ -22,13 +22,16 @@ JOURNAL_NAME = ".evcrate-promotion-journal.json"
 def repository_lock(repository: Path) -> Iterator[None]:
     """Acquire a non-blocking exclusive lock without writing the repository."""
 
+    lock_root = repository if repository.is_dir() else repository.parent
+    if not lock_root.is_dir():
+        raise BuildError("Distribution repository lock parent is missing")
     try:
         import fcntl
     except ImportError:
-        with _windows_repository_lock(repository):
+        with _windows_repository_lock(lock_root):
             yield
         return
-    descriptor = os.open(repository, os.O_RDONLY)
+    descriptor = os.open(lock_root, os.O_RDONLY)
     try:
         try:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)

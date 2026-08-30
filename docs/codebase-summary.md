@@ -40,48 +40,73 @@ evcrate/
 
 ### Distribution gates
 
-The distribution entrypoint separates local generation from HOME publication. `.evcrate/source/.claude` is a source-backed target: the build gate copies the complete source tree into the finalized nested `.evcrate/source/.claude` artifact, and `--check` verifies that tree and all other generated outputs without writes. `--publish` consumes that complete artifact for `HOME/.claude`, excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives) while retaining skill package directories and nested resources; stale managed copies absent from the current source are removed. `--publish --dry-run` reports the diff (with optional `--json`); `--recover` restores an interrupted release; and `--all` runs both gates. A bare invocation is retained as a deprecated `--all` alias. Direct migrator `--global` modes are blocked by default and require the explicit `EVCRATE_ALLOW_DIRECT_GLOBAL=1` emergency escape hatch.
+The distribution entrypoint separates local generation from HOME publication.
+`.evcrate/source/.claude` is the canonical harness source; `--build` creates
+finalized target artifacts in isolated same-volume staging and `--check`
+verifies them without writes. `--publish` consumes only a current verified
+schema-2 build, preserves unmanaged HOME files, reports diffs with
+`--publish --dry-run [--json]`, and restores an interrupted release with
+`--recover`. `--all` runs the build and publication gates.
 
-The distribution gate creates generated targets in an empty same-volume staging root, applies declared overlays and parser-backed JSON/TOML patches, validates ownership and path safety, computes deterministic source/output hashes, and writes `.evcrate/build-manifest.json`. Generated targets include the portable `advisor-strategy` skill, its brief contract, and a normal high-tier/strong `advisor` subagent. Scoped implementation commands recognize final standalone `--advice`, retain ordinary `@advisor` task text, and preserve deterministic stuck escalation; every generated command skill also retains one non-executing strategy pointer. Inline `/advise` is first-class on Claude, Codex, Pi, Gemini, and Antigravity; Claude alone supports relay v1, while the others reject exact final `--agent` with target-specific capability codes. Publication rejects stale manifests or changed outputs, rejects symlinks in managed artifacts and unsafe HOME paths, applies generic manifest bindings while preserving unmanaged HOME files, and records owner-only release state/locking. The `.evcrate/source/.agents/skills/` binding continues to publish the Pi-compatible tree to `$HOME/.agents/skills`; authored and generated `SKILL.md` descriptions are capped at 1,024 characters.
+The build validates manifests, overlays, ownership, safe paths, parser-backed
+configuration patches, generated outputs, and deterministic hashes. It records
+ordinary source/output hashes plus `controller_hashes` for the shared advisor
+closure. A failed build does not replace the last valid local artifacts or
+HOME.
 
-### Advisor routing and runtime projection
+### Central advisor controller
 
-The user-visible global policy is `$HOME/.evcrate/advisor-routing.json` (resolved through the platform home API), for example:
+Checkpoint advice uses the single managed executable
+`$HOME/.evcrate/bin/evcrate-advisor`. Its only authored source is
+`.evcrate/source/.evcrate/bin`; generated harness trees do not contain
+controller copies. The required user-owned policy is
+`$HOME/.evcrate/advisor-routing.json`:
 
 ```json
 {
   "version": 1,
-  "hosts": {
-    "codex": {
-      "backend": "claude",
-      "model": "opus",
-      "effort": "high",
-      "execution": "external"
-    }
+  "advisor": {
+    "backend": "codex",
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+    "timeout_ms": 900000
   }
 }
 ```
 
-The supported hosts are `claude`, `codex`, `gemini`, `antigravity`, and `pi`; each entry must contain exactly `backend`, `model`, `effort`, and `execution`. A missing policy file or active-host entry selects that host's built-in same-host default. A present malformed, oversized, duplicate-key, credential-bearing, unsafe-path, or schema-invalid policy fails closed; it is never partially merged with defaults, another host, a repository file, or a per-invocation override. `auto` selects native execution only when `backend` equals the active host and external execution otherwise; `native` requires equality and `external` requires inequality. Same-host external execution is invalid. Exact capability gaps return typed failures such as `NATIVE_CAPABILITY_UNSUPPORTED`, `MODEL_UNSUPPORTED`, or `EFFORT_UNSUPPORTED`; Gemini 0.47.0 advertises `pro` with `efforts: []`, so an exact effort request (including the built-in `high` default) fails with `EFFORT_UNSUPPORTED`. The five fixed adapters are Claude, Codex, Gemini, Antigravity, and Pi; their installed CLIs own authentication, and EVCrate stores no provider credentials. There is no fallback, model substitution, effort downgrade, arbitrary template, direct provider API, broker, background service, or approval bypass.
+The policy has exact keys, a 60000..900000 inclusive timeout, and no default or
+partial merge. Missing policy, legacy `hosts`, malformed JSON, duplicate keys,
+unsafe paths, credentials, extra fields, and bounds violations fail closed.
+Candidate backends are `claude`, `codex`, `antigravity`, `pi`, and `omp`;
+Claude/Codex/Pi/OMP are enabled, Antigravity returns
+`CLI_CAPABILITY_UNSUPPORTED`, and Gemini is `ADAPTER_UNSUPPORTED`.
 
-Checkpoint briefs use the strict `evcrate-advisor-checkpoint/v1` envelope and normalize terminal responses to `evcrate-advisor-result/v1`. Evidence and changed paths are bounded and use safe normalized POSIX paths; traversal, dot segments, `.env`, metadata paths, and sensitive evidence are rejected. The canonical advisor runtime is a 16-file closure projected byte-for-byte to the five host roots (`scripts/` for Claude, Codex, Gemini, and Antigravity; `.pi/agent/evcrate/` for Pi). Build and check are isolated and deterministic: runtime, adapter/helper, source, and output hashes authorize the manifest, and `--check` verifies without writes. `--target pi` narrows the candidate to Pi; `PI_CODING_AGENT_DIR` selects the runtime resource root and is not a HOME publication destination. Any live HOME publication requires manual Pi quiescence and separate authorization; authenticated live CLI calls and Antigravity live evidence were out of scope for this handoff.
+The executable accepts one direct ten-field
+`evcrate-advisor-checkpoint/v1` request: `protocol`, `version`, `checkpoint`,
+`question`, `kind`, `task_or_phase`, `evidence`, `changed_paths`,
+`prior_counsel`, and `owner_disposition`. The request is bounded at 32 KiB,
+with bounded question/task/terminal evidence, four evidence files, and sixteen
+changed paths. Paths are safe normalized relative POSIX metadata and are never
+read by the controller.
 
-`EVCRATE_HOME` selects the HOME root used by publish and verification; it defaults to the platform HOME directory. Runtime state uses the `${TMPDIR:-/tmp}/evcrate/` namespace (with session snapshots kept as `${TMPDIR:-/tmp}/evcrate-session-*`); session variables use the `EVCRATE_*` prefix.
+The controller generates the correlation UUID, validates input, selects and
+qualifies one adapter, creates one empty owner-only workspace, runs one final
+process, and normalizes one result. It uses fixed argv, `shell:false`, an
+allowlisted environment, stdin-only evidence, bounded streams, POSIX process
+groups, TERM/KILL cancellation, descendant reaping, and a deadline shared by
+probes and final execution. It never retries, switches backend, substitutes
+model/effort, calls a native callback, or uses a local fallback.
 
-Native Pi Phases 02–04 extend the manifest-backed, staging-only `.pi` adapter with a deterministic `agent/` projection, native runtime, and canonical hook adapter. The projection contains 72 commands, 5 static workflows, 18 provider-neutral agent definitions, 50 validated skill packages, copied canonical hooks/scripts, and the `agent/evcrate/inventory.json` inventory; it excludes legacy `claude-code/skill.md`. The managed extension recursively registers native commands, provides bounded `evcrate_command` nested dispatch, applies an authoritative operation-policy gate, resolves semantic model roles at delegation time, and delegates through the structured `pi-subagents` protocol without rewriting its public `workflowScript` tool. The child-start seam invokes generated child-start hooks before a request is emitted. The sole lifecycle/tool adapter maps generated canonical hooks, blocks safety-hook failures, injects parsed context only, and scopes `EVCRATE_*` session values to the Pi runtime. `model-roles.json` retains only `strong`, `standard`, `fast`, and `parent`; provider/model IDs remain runtime-only. The `evcrate-pi-managed-settings-v1` fragment pins exactly `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`; the Node.js baseline is `>=22.19.0` and extension smoke coverage targets Pi `0.84.1`. `agent/settings.json` stays user-owned; manual quiescence is required, `pi-code` is never removed automatically, and live cutover remains user-controlled after isolated validation. `/evcrate-help` is the canonical command-discovery interface; `ck-help` is not a first-party command.
+The frozen `evcrate-advisor-controller/v1` envelope has one controller UUID and
+a fixed receipt. Success adds `evcrate-advisor-result/v1`; failure adds only
+sanitized `code`, `category`, `action`, and `message`. Stdout has one JSON line
+and stderr is empty. Only `ADVICE_READY` completes the checkpoint.
 
-The strategy skill remains static guidance. The normal read-only `advisor` subagent
-uses that rubric after explicit implementation reviews or repeated blockers and
-maps through each target's existing model policy. It cannot implement, approve,
-select providers, or bypass host policy. The former `advisor_consult` broker
-contract remains removed; distribution behavior is covered by Python and Pi
-regression suites.
-
-The shipped review contract targets at most three reviewer/advisor cycles with a
-human approval gate. Gemini workflow references are rewritten to `.gemini` paths;
-the fallback scout command intentionally remains literal Claude syntax. The
-advisory migration, target capability matrix, state retention, and validation
-workflow are documented in [Advisor Supervision Migration](./advisor-supervision-migration.md).
+The first-release controller claim is Linux-only. Fake-CLI tests cover
+deterministic contracts; each enabled installed CLI requires a separate
+credential-safe operator qualification and requalification after upgrades.
+`advisor-strategy` remains static, non-binding guidance, and `/advise` remains a
+separate inline-first feature rather than a checkpoint execution path.
 
 ## Core Technologies
 

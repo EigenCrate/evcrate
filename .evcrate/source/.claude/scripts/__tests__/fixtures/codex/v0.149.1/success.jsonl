@@ -1,5 +1,0 @@
-{"type":"thread.started","thread_id":"fixture-thread"}
-{"type":"turn.started","turn_id":"fixture-turn"}
-{"type":"item.started","item":{"id":"fixture-message","type":"agent_message"}}
-{"type":"item.completed","item":{"id":"fixture-message","type":"agent_message","text":"FAKE_CODEX_OK"}}
-{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}}

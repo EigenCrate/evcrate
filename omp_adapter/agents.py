@@ -119,7 +119,6 @@ def convert_agents(
         body = transform(parsed.body)
         if name == "advisor":
             body = project_advisor_contract(body, "omp")
-            description = "Use this high-tier mentor for fresh named checkpoints; OMP advisor relay is unsupported."
 
         fields: dict[str, object] = {"name": name, "description": description}
         if tools:

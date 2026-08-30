@@ -1,3 +1,0 @@
-{"event":"init","init":{"session_id":"fixture-session","model":"pro"}}
-{"event":"message","message":{"role":"assistant","content":"GEMINI_OK"}}
-{"event":"result","result":{"response":"GEMINI_OK","stats":{"input_tokens":1,"output_tokens":1}}}

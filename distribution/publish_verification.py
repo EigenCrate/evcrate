@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from .context import DistributionContext
-from .contracts import BuildError, PublishError, VerifiedArtifact
-from .hashing import HashingError, hash_file, tree_hash
-from .manifest import advisor_runtime_hashes
+from .contracts import PublishError, VerifiedArtifact
+from .hashing import hash_file, tree_hash
+from .manifest import controller_hashes
 from .staging import build_input_hashes, build_manifest_path
 
 
@@ -21,7 +21,7 @@ def _load_build_manifest(context: DistributionContext) -> dict[str, Any]:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise PublishError(f"Could not read build manifest: {error}") from error
-    if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != 2:
         raise PublishError("Build manifest has an unsupported schema")
     if manifest.get("validation", {}).get("complete") is not True:
         raise PublishError("Build manifest does not authorize publication")
@@ -39,7 +39,7 @@ def _expected_output_names(context: DistributionContext) -> set[str]:
 
 
 def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifact) -> dict[str, Any]:
-    """Verify source and output hashes without executing a generator."""
+    """Verify source, controller, and output hashes without executing a generator."""
 
     legacy = [path for path in context.legacy_local_paths if path.exists() or path.is_symlink()]
     if legacy:
@@ -53,23 +53,11 @@ def verify_local_artifact(context: DistributionContext, artifact: VerifiedArtifa
     if actual_sources != expected_sources:
         raise PublishError("Build manifest is stale; run --build before publishing")
     try:
-        selected_manifests = context.selected_manifests
-    except BuildError:
-        if "runtime_hashes" in manifest:
-            raise PublishError("Build manifest is stale; run --build before publishing") from None
-        selected_manifests = ()
-    requires_runtime_hashes = any(item.advisor_runtime is not None for item in selected_manifests)
-    if requires_runtime_hashes and "runtime_hashes" not in manifest:
+        expected_controller = controller_hashes(context.repository)
+    except (OSError, ValueError):
+        raise PublishError("Build manifest is stale; run --build before publishing") from None
+    if manifest.get("controller_hashes") != expected_controller:
         raise PublishError("Build manifest is stale; run --build before publishing")
-    if "runtime_hashes" in manifest:
-        try:
-            expected_runtime_hashes = advisor_runtime_hashes(
-                selected_manifests, context.repository
-            )
-        except (BuildError, HashingError, OSError):
-            raise PublishError("Build manifest is stale; run --build before publishing") from None
-        if manifest.get("runtime_hashes") != expected_runtime_hashes:
-            raise PublishError("Build manifest is stale; run --build before publishing")
     output_hashes = manifest.get("output_hashes")
     if not isinstance(output_hashes, dict):
         raise PublishError("Build manifest has no output hashes")

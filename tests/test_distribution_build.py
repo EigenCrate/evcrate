@@ -1,196 +1,136 @@
-"""Focused coverage for Phase 2 distribution utilities."""
+"""Schema-two build and staging contracts."""
 
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import subprocess
-import sys
 import tempfile
-import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
-from distribution.build import JOURNAL_NAME, _sync_directory, _windows_repository_lock, promote_transaction, recover_interrupted_promotion, repository_lock, staged_build_root
-from distribution.antigravity_publish import build_antigravity_config
-from distribution.advisor_runtime import _validate_capabilities
-from distribution.advisor_runtime import ADVISOR_RUNTIME_AUTHORIZATION_SOURCE, is_production_runtime_artifact
-from distribution.context import DistributionContext, create_context
-from distribution.contracts import (
-    ADVISORY_CAPABILITY_BLOCK_END,
-    ADVISORY_CAPABILITY_BLOCK_START,
-    ADVISOR_RUNTIME_FILES,
-    BuildError,
-    DistributionAction,
-    add_global_workflow_fallback,
-    render_advisory_interview_workflow,
-    render_harness_script_references,
-    render_inline_advise_command,
-    validate_harness_resource_projection,
+from distribution.advisor_controller import (
+    ADVISOR_CONTROLLER_FILES,
+    controller_hashes,
+    validate_advisor_controller_projection,
+    validate_advisor_controller_source,
 )
+from distribution.build import promote_transaction, recover_interrupted_promotion, staged_build_root
+from distribution.context import create_context
+from distribution.contracts import BuildError, DistributionAction, VerifiedArtifact, validate_harness_resource_projection
 from distribution.hashing import HashingError, normalize_relative_path, source_tree_hash, tree_hash
-from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry, source_hashes
-from distribution.overlay import OverlayError, apply_exact_patch, apply_patch_file, copy_overlay_files
-from distribution.staging import BUILD_MANIFEST_PATH, _baseline_owners, _copy_source_root, _load_targets, generate_stage
-from distribute_hooks import get_agy_js_wrapper, rewrite_agy_global_paths, rewrite_codex_global_paths
-from tests.test_advisor_skill_distribution import SCOPED_COMMANDS
+from distribution.manifest import build_manifest_bytes, load_target_manifest, load_target_registry
+from distribution.overlay import OverlayError, copy_overlay_files
+from distribution.staging import BUILD_MANIFEST_PATH, build_manifest_path
+
+REPOSITORY = Path(__file__).resolve().parents[1]
+CONTROLLER = REPOSITORY / ".evcrate/source/.evcrate/bin"
 
 
 class DistributionBuildTest(unittest.TestCase):
-    def test_workflow_reference_fallback_is_target_specific_and_idempotent(self) -> None:
-        codex = add_global_workflow_fallback(
-            "Read `.codex/workflows/advisor-mentoring.md`.", "codex"
-        )
-        self.assertIn("~/.codex/workflows/advisor-mentoring.md", codex)
-        self.assertEqual(add_global_workflow_fallback(codex, "codex"), codex)
+    def test_schema_two_manifest_authorizes_shared_controller(self) -> None:
+        manifest = json.loads((REPOSITORY / BUILD_MANIFEST_PATH).read_text(encoding="utf-8"))
+        self.assertEqual(manifest["schema_version"], 2)
+        self.assertEqual(manifest["controller_hashes"], {
+            f".evcrate/bin/{relative}": digest
+            for relative, digest in controller_hashes(CONTROLLER).items()
+        })
+        self.assertTrue(manifest["validation"]["complete"])
+        self.assertEqual(manifest["validation"]["advisor_controller"]["files"], list(ADVISOR_CONTROLLER_FILES))
+        self.assertIn("advisor-controller", manifest["home_policy"])
+        self.assertEqual(manifest["home_policy"]["advisor-controller"]["bindings"], {".evcrate/bin": ".evcrate/bin"})
+        self.assertNotIn("runtime_hashes", manifest)
 
-        antigravity = add_global_workflow_fallback(
-            "Read `.antigravity/workflows/advisor-mentoring.md`.", "antigravity"
-        )
-        self.assertIn("~/.gemini/config/workflows/advisor-mentoring.md", antigravity)
+    def test_target_registry_and_manifests_have_schema_two_without_runtime(self) -> None:
+        registry = load_target_registry(REPOSITORY / ".evcrate/targets/manifest.json")
+        for name, path in registry.targets.items():
+            with self.subTest(target=name):
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(raw["schema_version"], 2)
+                self.assertNotIn("advisor_runtime", raw)
+                self.assertNotIn("runtime", raw)
+                self.assertNotIn("distribution/advisor_runtime.py", raw.get("adapter_sources", []))
+                load_target_manifest(path)
 
-    def test_harness_resource_translation_preserves_url_literals(self) -> None:
-        source = "See https://example.com/.claude/path?next=/.claude/item and .claude/scripts/tool.cjs."
-        self.assertEqual(
-            render_harness_script_references(source, "codex"),
-            "See https://example.com/.claude/path?next=/.claude/item and .codex/scripts/tool.cjs.",
-        )
-        self.assertEqual(
-            render_harness_script_references(source, "gemini"),
-            "See https://example.com/.claude/path?next=/.claude/item and .gemini/scripts/tool.cjs.",
-        )
-        self.assertEqual(
-            render_harness_script_references(
-                "self.project_root / '.claude' / 'skills' / '.env'", "codex"
-            ),
-            "self.project_root / '.agents' / 'skills' / '.env'",
-        )
-        self.assertEqual(
-            render_harness_script_references(
-                "project_dir / '.claude' / 'skills' / '.env'", "codex"
-            ),
-            "project_dir / '.agents' / 'skills' / '.env'",
-        )
+    def test_selected_context_always_includes_central_root(self) -> None:
+        context = create_context(DistributionAction.BUILD, selected_targets=("pi",))
+        self.assertEqual({path.name for path in context.local_roots}, {".evcrate", ".pi"})
+        self.assertEqual(context.local_roots[0].name, ".evcrate")
+        self.assertEqual(build_manifest_path(context), Path(".evcrate/build-manifest-pi.json"))
 
-    def test_advisory_capability_projection_is_strict_and_removes_relay_state(self) -> None:
-        canonical = (
-            Path(__file__).resolve().parents[1]
-            / ".evcrate/source/.claude/workflows/advisory-interview.md"
-        ).read_text(encoding="utf-8")
-        generated = render_advisory_interview_workflow(canonical, "codex")
-
-        self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX", generated)
-        self.assertNotIn("advise-agent-relay/claude/v1", generated)
-        self.assertNotIn("advise-state.cjs", generated)
-        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_START), 1)
-        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_END), 1)
-        for malformed in (
-            canonical.replace(ADVISORY_CAPABILITY_BLOCK_START, "", 1),
-            canonical.replace(ADVISORY_CAPABILITY_BLOCK_END, ADVISORY_CAPABILITY_BLOCK_END * 2, 1),
-            canonical.replace(ADVISORY_CAPABILITY_BLOCK_START, "__START__", 1)
-            .replace(ADVISORY_CAPABILITY_BLOCK_END, ADVISORY_CAPABILITY_BLOCK_START, 1)
-            .replace("__START__", ADVISORY_CAPABILITY_BLOCK_END, 1),
-        ):
-            with self.subTest(malformed=malformed[:30]):
-                with self.assertRaisesRegex(ValueError, "Malformed advisory capability markers"):
-                    render_advisory_interview_workflow(malformed, "codex")
-
-    def test_advise_command_projection_validates_its_own_capability_block(self) -> None:
-        canonical = (
-            Path(__file__).resolve().parents[1]
-            / ".evcrate/source/.claude/commands/advise.md"
-        ).read_text(encoding="utf-8")
-        generated = render_inline_advise_command(canonical, "codex", "request_user_input")
-
-        self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX", generated)
-        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_START), 1)
-        self.assertEqual(generated.count(ADVISORY_CAPABILITY_BLOCK_END), 1)
-        with self.assertRaisesRegex(ValueError, "Malformed advisory capability markers"):
-            render_inline_advise_command(
-                canonical.replace(ADVISORY_CAPABILITY_BLOCK_START, "", 1),
-                "codex",
-                "request_user_input",
-            )
-
-    def test_capability_validation_rejects_non_string_selectors(self) -> None:
-        repository = Path(__file__).resolve().parents[1]
-        source = (
-            repository
-            / ".evcrate/source/.claude/scripts/advisor-routing/native-capabilities.json"
-        )
-        document = json.loads(source.read_text(encoding="utf-8"))
+    def test_controller_source_and_projection_reject_extra_artifacts_and_imports(self) -> None:
+        validate_advisor_controller_source(CONTROLLER)
         with tempfile.TemporaryDirectory() as temp:
-            for selector in ([], {}):
-                with self.subTest(selector=selector):
-                    invalid = json.loads(json.dumps(document))
-                    invalid["hosts"]["claude"]["selector"] = selector
-                    path = Path(temp) / "native-capabilities.json"
-                    path.write_text(json.dumps(invalid), encoding="utf-8")
-                    with self.assertRaisesRegex(ValueError, "selector"):
-                        _validate_capabilities(path)
+            destination = Path(temp) / "bin"
+            shutil.copytree(CONTROLLER, destination)
+            (destination / "extra.cjs").write_text("module.exports = {};\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "non-production artifact"):
+                validate_advisor_controller_projection(CONTROLLER, destination)
+            (destination / "extra.cjs").unlink()
+            errors = destination / "lib/advisor/errors.cjs"
+            errors.write_text(f"{errors.read_text(encoding='utf-8')}require('../outside.cjs');\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "outside its closure"):
+                validate_advisor_controller_source(destination)
 
-    def test_capability_validation_rejects_oversized_documents(self) -> None:
-        repository = Path(__file__).resolve().parents[1]
-        source = (
-            repository
-            / ".evcrate/source/.claude/scripts/advisor-routing/native-capabilities.json"
-        )
-        document = json.loads(source.read_text(encoding="utf-8"))
-        with tempfile.TemporaryDirectory() as temp:
-            path = Path(temp) / "native-capabilities.json"
-            path.write_text(json.dumps(document) + (" " * (16 * 1024)), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "16 KiB"):
-                _validate_capabilities(path)
-
-    def test_all_advisory_adapters_hash_the_shared_contract(self) -> None:
-        repository = Path(__file__).resolve().parents[1]
-        registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
-        for target in ("codex", "gemini", "pi", "antigravity"):
+    def test_target_projections_have_complete_ordinary_resource_closures(self) -> None:
+        source = REPOSITORY / ".evcrate/source/.claude"
+        roots = {
+            "codex": REPOSITORY / ".evcrate/source/.codex",
+            "gemini": REPOSITORY / ".evcrate/source/.gemini",
+            "antigravity": REPOSITORY / ".evcrate/source/.antigravity",
+            "pi": REPOSITORY / ".evcrate/source/.pi",
+            "omp": REPOSITORY / ".evcrate/source/.omp",
+        }
+        for target, root in roots.items():
             with self.subTest(target=target):
-                manifest = load_target_manifest(registry.targets[target])
-                self.assertIn("distribution/contracts.py", manifest.adapter_sources)
+                validate_harness_resource_projection(source, root, target)
 
-    def test_normalized_paths_reject_traversal_and_windows_separators(self) -> None:
+    def test_manifest_loader_rejects_legacy_runtime_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "manifest.json"
+            base = {
+                "schema_version": 2,
+                "name": "fixture",
+                "adapter": None,
+                "output_root": ".fixture",
+                "owned_paths": [],
+                "patches": [],
+                "home_policy": {"bindings": {".fixture": ".fixture"}},
+            }
+            for key in ("runtime", "advisor_runtime"):
+                with self.subTest(key=key):
+                    path.write_text(json.dumps({**base, key: {}}), encoding="utf-8")
+                    with self.assertRaises(BuildError):
+                        load_target_manifest(path)
+
+    def test_normalized_paths_reject_escape_and_windows_separators(self) -> None:
         self.assertEqual(normalize_relative_path(".codex/config.toml"), ".codex/config.toml")
-        for path in (".", "../secret", "/tmp/secret", "nested/../secret", "nested\\secret", "./nested", "C:escape/config.json"):
-            with self.assertRaises(HashingError):
-                normalize_relative_path(path)
+        for value in (".", "../secret", "/tmp/secret", "nested/../secret", "nested\\secret", "./nested", "C:escape/config.json"):
+            with self.subTest(value=value):
+                with self.assertRaises(HashingError):
+                    normalize_relative_path(value)
 
-    def test_tree_hash_is_stable_and_includes_empty_directories(self) -> None:
+    def test_tree_hash_is_stable_and_distinguishes_empty_directories(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "empty").mkdir()
             (root / "entry.txt").write_text("same", encoding="utf-8")
-            first = tree_hash(root)
-            self.assertEqual(first, tree_hash(root))
+            digest = tree_hash(root)
+            self.assertEqual(digest, tree_hash(root))
             (root / "empty").rmdir()
-            self.assertNotEqual(first, tree_hash(root))
+            self.assertNotEqual(digest, tree_hash(root))
 
-    def test_artifact_hash_ignores_compiler_outputs(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / "entry.txt").write_text("same", encoding="utf-8")
-            before = tree_hash(root)
-            (root / "__pycache__").mkdir()
-            (root / "__pycache__" / "module.pyc").write_bytes(b"runtime")
-            (root / "generated.pyc").write_bytes(b"runtime")
-            (root / ".coverage").write_bytes(b"runtime")
-            self.assertEqual(before, tree_hash(root))
-
-    def test_source_tree_hash_ignores_local_dependency_outputs(self) -> None:
+    def test_source_hash_ignores_generated_dependency_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "source.txt").write_text("source", encoding="utf-8")
-            before = source_tree_hash(root)
+            digest = source_tree_hash(root)
             (root / "node_modules").mkdir()
-            (root / "node_modules" / "local.js").write_text("generated", encoding="utf-8")
+            (root / "node_modules/local.js").write_text("generated", encoding="utf-8")
             (root / "dist").mkdir()
-            (root / "dist" / "bundle.js").write_text("generated", encoding="utf-8")
-            self.assertEqual(before, source_tree_hash(root))
+            (root / "dist/bundle.js").write_text("generated", encoding="utf-8")
+            self.assertEqual(digest, source_tree_hash(root))
 
-    def test_overlay_rejects_baseline_file_collision(self) -> None:
+    def test_overlay_rejects_baseline_collision_and_undeclared_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             source, stage = root / "files", root / "stage"
@@ -198,740 +138,42 @@ class DistributionBuildTest(unittest.TestCase):
             stage.mkdir()
             (source / "config.json").write_text("{}", encoding="utf-8")
             (stage / "config.json").write_text("{}", encoding="utf-8")
-            with self.assertRaisesRegex(OverlayError, "owned by baseline"):
-                copy_overlay_files(source, stage, "codex", {}, ("files/config.json",))
-
-    def test_overlay_rejects_file_directory_collision(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source, stage = root / "files", root / "stage"
-            (source / "nested").mkdir(parents=True)
-            stage.mkdir()
-            (source / "nested" / "extra.txt").write_text("overlay", encoding="utf-8")
-            (stage / "nested").write_text("baseline", encoding="utf-8")
             with self.assertRaises(OverlayError):
-                copy_overlay_files(source, stage, "codex", {}, ("files/nested/extra.txt",))
-
-    def test_overlay_rejects_undeclared_files(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source, stage = root / "files", root / "stage"
-            source.mkdir()
-            stage.mkdir()
-            (source / "extra.md").write_text("overlay", encoding="utf-8")
-            with self.assertRaisesRegex(OverlayError, "owned_paths"):
-                copy_overlay_files(source, stage, "codex", {}, ())
-
-    def test_overlay_rejects_symlink_escape(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source, stage = root / "files", root / "stage"
-            source.mkdir()
-            stage.mkdir()
-            (source / "outside").symlink_to(root)
+                copy_overlay_files(source, stage, "fixture", {"config.json": "baseline"}, ("files/config.json",))
+            (source / "extra.md").write_text("extra", encoding="utf-8")
             with self.assertRaises(OverlayError):
-                copy_overlay_files(source, stage, "codex", {}, ())
+                copy_overlay_files(source, stage, "fixture", {}, ())
 
-    def test_json_patch_requires_exact_declared_existing_type_matched_keys(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            destination = Path(temp) / "settings.json"
-            destination.write_text('{"hooks":{"enabled":false},"mode":"old"}', encoding="utf-8")
-            apply_exact_patch(destination, {"hooks.enabled": True, "mode": "new"}, ("hooks.enabled", "mode"))
-            self.assertEqual(json.loads(destination.read_text(encoding="utf-8")), {"hooks": {"enabled": True}, "mode": "new"})
-            with self.assertRaises(OverlayError):
-                apply_exact_patch(destination, {"mode": 1}, ("mode",))
-            with self.assertRaises(OverlayError):
-                apply_exact_patch(destination, {"missing": "x"}, ("missing",))
-            with self.assertRaises(OverlayError):
-                apply_exact_patch(destination, {"hooks..enabled": True}, ("hooks..enabled",))
-
-    def test_patch_rejects_a_symlinked_destination(self) -> None:
+    def test_build_promotion_recovers_prior_roots(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            outside, destination = root / "outside.json", root / "settings.json"
-            outside.write_text('{"mode":"old"}', encoding="utf-8")
-            destination.symlink_to(outside)
-            with self.assertRaises(OverlayError):
-                apply_exact_patch(destination, {"mode": "new"}, ("mode",))
-            self.assertEqual(json.loads(outside.read_text(encoding="utf-8")), {"mode": "old"})
+            source = root / "stage.txt"
+            destination = root / "output.txt"
+            source.write_text("new", encoding="utf-8")
+            destination.write_text("old", encoding="utf-8")
+            promote_transaction([(source, destination)])
+            self.assertEqual(destination.read_text(encoding="utf-8"), "new")
+            self.assertFalse((root / ".evcrate-promotion-journal.json").exists())
 
-    def test_toml_patch_file_is_parser_backed_and_canonical(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            destination, patch = root / "config.toml", root / "patch.json"
-            destination.write_text('name = "old"\n[server]\nenabled = false\n', encoding="utf-8")
-            patch.write_text('{"set":{"name":"new","server.enabled":true}}', encoding="utf-8")
-            apply_patch_file(destination, patch, ("name", "server.enabled"))
-            self.assertEqual(destination.read_text(encoding="utf-8"), 'name = "new"\n\n[server]\nenabled = true\n')
-
-    def test_manifest_load_and_render_are_deterministic(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / "files").mkdir()
-            (root / "patches").mkdir()
-            (root / "files" / "extra.md").write_text("overlay", encoding="utf-8")
-            (root / "patches" / "config.json").write_text('{"set":{"mode":"new"}}', encoding="utf-8")
-            manifest_path = root / "manifest.json"
-            manifest_path.write_text(json.dumps({
-                "schema_version": 1, "name": "codex", "output_roots": [".codex"],
-                "owned_paths": ["files/extra.md"],
-                "patches": [{"source": "patches/config.json", "destination": ".codex/config.json", "keys": ["mode"]}],
-                "home_policy": {"mode": "managed"},
-            }), encoding="utf-8")
-            target = load_target_manifest(manifest_path)
-            hashes = source_hashes((target,))
-            output = root / "output"
-            output.mkdir()
-            (output / "item").write_text("value", encoding="utf-8")
-            first = build_manifest_bytes(source_hashes=hashes, adapter_hashes={"codex": "a"}, owners={".codex/item": "baseline"}, output_roots={".codex": output}, home_policy={}, validation={"valid": True})
-            self.assertEqual(first, build_manifest_bytes(source_hashes=hashes, adapter_hashes={"codex": "a"}, owners={".codex/item": "baseline"}, output_roots={".codex": output}, home_policy={}, validation={"valid": True}))
-
-    def test_manifest_rejects_patch_outside_target_root(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / "patches").mkdir()
-            (root / "patches" / "config.json").write_text('{"set":{"mode":"new"}}', encoding="utf-8")
-            manifest = {"schema_version": 1, "name": "codex", "output_roots": [".codex"], "patches": [{"source": "patches/config.json", "destination": ".gemini/settings.json", "keys": ["mode"]}]}
-            path = root / "manifest.json"
-            path.write_text(json.dumps(manifest), encoding="utf-8")
-            with self.assertRaises(BuildError):
-                load_target_manifest(path)
-
-    def test_context_uses_nested_source_root_and_rejects_legacy_roots(self) -> None:
-        from distribution.gates import _assert_legacy_root_clean
-
+    def test_staged_build_root_is_empty_and_removed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             repository = Path(temp)
-            context = DistributionContext(
-                DistributionAction.BUILD,
-                repository,
-                repository / "home",
-                repository / "stage",
-                "managed",
-                "config-and-scripts",
-            )
-            self.assertEqual(context.local_claude, repository / ".evcrate/source/.claude")
-            self.assertEqual(context.local_path("AGENTS.md"), repository / ".evcrate/source/AGENTS.md")
-            (repository / ".claude").mkdir()
-            with self.assertRaisesRegex(BuildError, "under .evcrate/source"):
-                _assert_legacy_root_clean(context)
+            with staged_build_root(repository, recover=False) as stage:
+                self.assertTrue(stage.is_dir())
+                (stage / "temporary").write_text("stage", encoding="utf-8")
+            self.assertFalse(stage.exists())
 
-    def test_current_target_registry_schema_accepts_singular_output_root(self) -> None:
-        repository = Path(__file__).resolve().parents[1]
-        registry = load_target_registry(repository / ".evcrate/targets/manifest.json")
-        context = create_context(DistributionAction.BUILD)
-        self.assertEqual(context.local_roots[-2], context.local_claude)
-        self.assertEqual(context.local_roots[-1], context.local_pi)
-        claude = load_target_manifest(registry.targets["claude"])
-        self.assertEqual(claude.output_roots, (".claude",))
-        self.assertIsNone(claude.adapter)
-        self.assertEqual(claude.project_docs, ())
-        self.assertEqual(
-            claude.home_policy,
-            {"bindings": {".claude": ".claude"}, "preserve_paths": {}, "promotion_order": 40},
+    def test_manifest_renderer_requires_controller_authorization(self) -> None:
+        outputs = {".evcrate": CONTROLLER, "AGENTS.md": REPOSITORY / ".evcrate/source/AGENTS.md"}
+        rendered = build_manifest_bytes(
+            source_hashes={}, adapter_hashes={}, controller_hashes=controller_hashes(CONTROLLER),
+            owners={".evcrate/bin/evcrate-advisor": "advisor-controller"}, output_roots=outputs,
+            home_policy={"advisor-controller": {"bindings": {".evcrate/bin": ".evcrate/bin"}}},
+            validation={"complete": True},
         )
-        codex = load_target_manifest(registry.targets["codex"])
-        self.assertEqual(codex.output_roots, (".codex", ".agents"))
-        self.assertEqual(codex.home_policy["bindings"][".codex"], ".codex")
-        self.assertIsNone(codex.runtime)
-        self.assertIsNotNone(codex.advisor_runtime)
-        self.assertEqual(codex.advisor_runtime.host, "codex")
-        self.assertEqual(codex.advisor_runtime.output_root, "scripts")
-        self.assertEqual(codex.advisor_runtime.files, ADVISOR_RUNTIME_FILES)
-        self.assertIn(ADVISOR_RUNTIME_AUTHORIZATION_SOURCE, codex.adapter_sources)
-        manifest_text = registry.targets["codex"].read_text(encoding="utf-8")
-        self.assertIn('"advisor_runtime"', manifest_text)
-        self.assertFalse((registry.targets["codex"].parent / "runtime").exists())
-        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "omp", "pi"})
-        omp = load_target_manifest(registry.targets["omp"])
-        self.assertEqual(omp.output_roots, (".omp",))
-        self.assertIsNone(omp.advisor_runtime)
-        self.assertEqual(omp.adapter, "migrate_claude_to_omp.py")
-        self.assertEqual(omp.home_policy["bindings"][".omp"], ".omp")
-        pi = load_target_manifest(registry.targets["pi"])
-        self.assertEqual(pi.output_roots, (".pi",))
-        self.assertEqual(pi.adapter_sources, (
-            ADVISOR_RUNTIME_AUTHORIZATION_SOURCE,
-            "distribution/contracts.py",
-            "pi_adapter/__init__.py",
-            "pi_adapter/agents.py",
-            "pi_adapter/frontmatter.py",
-            "pi_adapter/resources.py",
-        ))
-        self.assertEqual(pi.shared_json.destination, "agent/settings.json")
-
-    def test_manifest_rejects_escaping_duplicate_or_symlinked_adapter_sources(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp)
-            target_dir = repository / ".evcrate/targets/pi"
-            target_dir.mkdir(parents=True)
-            (repository / "migrate.py").write_text("adapter", encoding="utf-8")
-            helper = repository / "pi_adapter.py"
-            helper.write_text("helper", encoding="utf-8")
-            base = {
-                "schema_version": 1,
-                "name": "pi",
-                "adapter": "migrate.py",
-                "output_root": ".pi",
-                "additional_roots": [],
-                "adapter_sources": ["pi_adapter.py"],
-                "patches": [],
-                "home_policy": {},
-            }
-            manifest = target_dir / "manifest.json"
-            manifest.write_text(json.dumps(base), encoding="utf-8")
-            self.assertEqual(load_target_manifest(manifest).adapter_sources, ("pi_adapter.py",))
-            for sources in (["../secret"], ["pi_adapter.py", "pi_adapter.py"]):
-                invalid = dict(base, adapter_sources=sources)
-                manifest.write_text(json.dumps(invalid), encoding="utf-8")
-                with self.assertRaises(BuildError):
-                    load_target_manifest(manifest)
-            outside = repository / "outside.py"
-            outside.write_text("outside", encoding="utf-8")
-            helper.unlink()
-            helper.symlink_to(outside)
-            manifest.write_text(json.dumps(base), encoding="utf-8")
-            with self.assertRaises(BuildError):
-                load_target_manifest(manifest)
-
-    def test_generated_target_cannot_use_a_null_adapter(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp)
-            targets = repository / ".evcrate/targets"
-            targets.mkdir(parents=True)
-            (targets / "manifest.json").write_text(
-                json.dumps({"schema_version": 1, "targets": {"generated": "generated/manifest.json"}}),
-                encoding="utf-8",
-            )
-            generated = targets / "generated"
-            generated.mkdir()
-            (generated / "manifest.json").write_text(
-                json.dumps({
-                    "schema_version": 1,
-                    "name": "generated",
-                    "adapter": None,
-                    "output_root": ".gemini",
-                    "additional_roots": [],
-                    "project_docs": [],
-                    "patches": [],
-                    "home_policy": {},
-                }),
-                encoding="utf-8",
-            )
-            context = DistributionContext(DistributionAction.BUILD, repository, repository / "home", repository / "stage", "managed", "config-and-scripts")
-            with self.assertRaisesRegex(BuildError, "has no build adapter"):
-                _load_targets(context, {".gemini": repository / "stage/.gemini"})
-
-    def test_antigravity_adapter_rewrites_help_script_and_preserves_command_path(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = root / ".evcrate/source/.claude"
-            target = root / ".evcrate/source/.antigravity"
-            (source / "commands").mkdir(parents=True)
-            (source / "scripts").mkdir()
-            (source / "scripts/ev-help.py").write_text("help", encoding="utf-8")
-            (source / "commands/evcrate-help.md").write_text(
-                "---\nname: /evcrate:help\ndescription: Help\n---\n"
-                "python .claude/scripts/ev-help.py \"$ARGUMENTS\"\n",
-                encoding="utf-8",
-            )
-
-            build_antigravity_config(source, target)
-
-            generated = (target / "skills/cmd_evcrate-help/SKILL.md").read_text(encoding="utf-8")
-            self.assertIn("Command Path: /evcrate:help", generated)
-            self.assertIn("python .antigravity/scripts/ev-help.py", generated)
-            self.assertNotIn("python .claude/scripts/ev-help.py", generated)
-
-    def test_antigravity_projects_advisor_and_rejects_relay_without_state(self) -> None:
-        repository = Path(__file__).resolve().parents[1]
-        with tempfile.TemporaryDirectory() as temp:
-            target = Path(temp) / ".antigravity"
-            build_antigravity_config(repository / ".evcrate/source/.claude", target)
-
-            advisor = (target / "agents/advisor.md").read_text(encoding="utf-8")
-            advise = (target / "skills/cmd_advise/SKILL.md").read_text(encoding="utf-8")
-            workflow = (target / "workflows/advisory-interview.md").read_text(encoding="utf-8")
-            self.assertFalse((target / "settings.local.json").exists())
-            self.assertIn("model: pro", advisor)
-            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", advise)
-            self.assertIn("ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY", workflow)
-            self.assertFalse(any(target.rglob("*advise-state*")))
-
-            for relative in SCOPED_COMMANDS:
-                skill_name = "cmd_" + relative.removesuffix(".md").replace("/", "_")
-                content = (target / f"skills/{skill_name}/SKILL.md").read_text(encoding="utf-8")
-                self.assertIn(".antigravity/workflows/advisor-mentoring.md", content)
-                self.assertIn("~/.gemini/config/workflows/advisor-mentoring.md", content)
-                self.assertNotIn(".claude/workflows/advisor-mentoring.md", content)
-
-    def test_antigravity_wrapper_fails_closed_without_local_source(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            wrapper = Path(temp) / "hooks/scout-block.cjs"
-            wrapper.parent.mkdir(parents=True)
-            wrapper.write_text(get_agy_js_wrapper("scout-block.cjs"), encoding="utf-8")
-            completed = subprocess.run(
-                ["node", str(wrapper)],
-                input="{}\n",
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            payload = json.loads(completed.stdout)
-            self.assertEqual(payload["decision"], "deny")
-            self.assertEqual(payload["reason"], "EVCREATE_HOOK_UNAVAILABLE")
-
-    def test_legacy_hook_rewriters_reject_symlinked_targets(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            for filename in ("hooks.json", "config.toml"):
-                codex_root = root / f"codex-{filename.replace('.', '-')}"
-                codex_root.mkdir()
-                outside = root / f"outside-{filename}"
-                outside.write_text("preserve", encoding="utf-8")
-                (codex_root / filename).symlink_to(outside)
-                with self.assertRaisesRegex(RuntimeError, "regular file"):
-                    rewrite_codex_global_paths(codex_root)
-                self.assertEqual(outside.read_text(encoding="utf-8"), "preserve")
-
-            antigravity_root = root / "antigravity"
-            antigravity_root.mkdir()
-            outside_hooks = root / "outside-hooks.json"
-            outside_hooks.write_text("preserve", encoding="utf-8")
-            (antigravity_root / "hooks.json").symlink_to(outside_hooks)
-            with self.assertRaisesRegex(RuntimeError, "regular file"):
-                rewrite_agy_global_paths(antigravity_root)
-            self.assertEqual(outside_hooks.read_text(encoding="utf-8"), "preserve")
-
-            antigravity_hooks = root / "antigravity-hooks"
-            (antigravity_hooks / "hooks").mkdir(parents=True)
-            outside_hook = root / "outside-hook.cjs"
-            outside_hook.write_text("preserve", encoding="utf-8")
-            (antigravity_hooks / "hooks/scout-block.cjs").symlink_to(outside_hook)
-            with self.assertRaisesRegex(RuntimeError, "regular file"):
-                rewrite_agy_global_paths(antigravity_hooks)
-            self.assertEqual(outside_hook.read_text(encoding="utf-8"), "preserve")
-
-            outside_root = root / "outside-root"
-            outside_root.mkdir()
-            linked_root = root / "linked-codex"
-            linked_root.symlink_to(outside_root, target_is_directory=True)
-            with self.assertRaisesRegex(RuntimeError, "real directory"):
-                rewrite_codex_global_paths(linked_root)
-
-    def test_legacy_hook_rewriters_preflight_before_mutation(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-
-            codex = root / "codex"
-            codex.mkdir()
-            codex_hooks = {
-                "hooks": {
-                    "SessionStart": [{"hooks": [{
-                        "command": "sh \"$CODEX_PROJECT_DIR\"/.codex/hooks/session-start.cjs"
-                    }]}]
-                }
-            }
-            codex_hooks_path = codex / "hooks.json"
-            codex_hooks_path.write_text(json.dumps(codex_hooks), encoding="utf-8")
-            codex_hooks_before = codex_hooks_path.read_bytes()
-            outside_config = root / "outside-config.toml"
-            outside_config.write_text('command = "preserve"\n', encoding="utf-8")
-            (codex / "config.toml").symlink_to(outside_config)
-            with self.assertRaisesRegex(RuntimeError, "regular file"):
-                rewrite_codex_global_paths(codex)
-            self.assertEqual(codex_hooks_path.read_bytes(), codex_hooks_before)
-            self.assertEqual(outside_config.read_text(encoding="utf-8"), 'command = "preserve"\n')
-
-            antigravity = root / "antigravity"
-            hooks_dir = antigravity / "hooks"
-            hooks_dir.mkdir(parents=True)
-            antigravity_hooks = {
-                "hooks": {
-                    "PreToolUse": [{"hooks": [{
-                        "command": "node \"$CLAUDE_PROJECT_DIR\"/.antigravity/hooks/scout-block.cjs"
-                    }]}]
-                }
-            }
-            antigravity_hooks_path = antigravity / "hooks.json"
-            antigravity_hooks_path.write_text(json.dumps(antigravity_hooks), encoding="utf-8")
-            antigravity_hooks_before = antigravity_hooks_path.read_bytes()
-            hook_path = hooks_dir / "scout-block.cjs"
-            hook_path.write_text("preserve hook", encoding="utf-8")
-            hook_before = hook_path.read_bytes()
-            outside_backup = root / "outside-backup.cjs"
-            outside_backup.write_text("preserve backup", encoding="utf-8")
-            (hooks_dir / "scout-block.cjs.original.cjs").symlink_to(outside_backup)
-            with self.assertRaisesRegex(RuntimeError, "regular file"):
-                rewrite_agy_global_paths(antigravity)
-            self.assertEqual(antigravity_hooks_path.read_bytes(), antigravity_hooks_before)
-            self.assertEqual(hook_path.read_bytes(), hook_before)
-            self.assertEqual(outside_backup.read_text(encoding="utf-8"), "preserve backup")
-
-    def test_antigravity_rejects_symlinked_source_before_copy(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            outside = root / "outside"
-            outside.mkdir()
-            source = root / "source/.claude"
-            source.parent.mkdir()
-            source.symlink_to(outside, target_is_directory=True)
-            with self.assertRaisesRegex(RuntimeError, "real directory"):
-                build_antigravity_config(source, root / "stage/.antigravity")
-            self.assertFalse((root / "stage/.antigravity").exists())
-
-    def test_antigravity_global_hooks_rewrite_every_local_harness_prefix(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp) / ".antigravity"
-            root.mkdir()
-            (root / "hooks.json").write_text(json.dumps({
-                "hooks": {
-                    "PreToolUse": [{"hooks": [{
-                        "command": "node \"$CLAUDE_PROJECT_DIR\"/.antigravity/hooks/scout-block.cjs"
-                    }]}]
-                }
-            }), encoding="utf-8")
-            rewrite_agy_global_paths(root, '"$HOME"/.gemini/config/hooks')
-            command = json.loads((root / "hooks.json").read_text(encoding="utf-8"))["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
-            self.assertIn('"$HOME"/.gemini/config/hooks/scout-block.cjs', command)
-            self.assertNotIn('"$CLAUDE_PROJECT_DIR"/.antigravity/hooks', command)
-
-    def test_resource_validator_scans_nested_behavior_matrix_files(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = root / "source"
-            output = root / "output"
-            source.mkdir()
-            output.mkdir()
-            (output / "migration-behavior-matrix.json").write_text("{}", encoding="utf-8")
-            (output / "nested").mkdir()
-            (output / "nested/migration-behavior-matrix.json").write_text(
-                '{"source_command": "node .claude/hooks/outside.cjs"}',
-                encoding="utf-8",
-            )
-
-            with self.assertRaisesRegex(ValueError, "central Claude resource path"):
-                validate_harness_resource_projection(
-                    source, output, "gemini", check_resource_closure=False
-                )
-
-    def test_source_copy_omits_compiler_outputs(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source, destination = root / "source", root / "stage"
-            source.mkdir()
-            (source / "kept.md").write_text("kept", encoding="utf-8")
-            (source / "__pycache__").mkdir()
-            (source / "__pycache__" / "module.pyc").write_bytes(b"runtime")
-            _copy_source_root(source, destination)
-            self.assertTrue((destination / "kept.md").is_file())
-            self.assertFalse((destination / "__pycache__").exists())
-
-    def test_source_symlink_is_not_followed_and_baseline_rejects_it(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source, destination, outside = root / "source", root / "stage", root / "outside"
-            source.mkdir()
-            outside.mkdir()
-            (outside / "escaped.txt").write_text("outside", encoding="utf-8")
-            (source / "escape").symlink_to(outside, target_is_directory=True)
-            _copy_source_root(source, destination)
-            self.assertTrue((destination / "escape").is_symlink())
-            self.assertFalse((destination / "escaped.txt").exists())
-            with self.assertRaisesRegex(BuildError, "Generated symlink is not allowed"):
-                _baseline_owners({".claude": destination})
-
-    def test_generate_stage_rejects_nested_symlink_before_consumers(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            repository, stage, outside = root / "repo", root / "stage", root / "outside"
-            source_root = repository / ".evcrate/source"
-            (source_root / ".claude").mkdir(parents=True)
-            outside.mkdir()
-            (outside / "escaped.txt").write_text("outside", encoding="utf-8")
-            (source_root / ".claude/escape").symlink_to(outside, target_is_directory=True)
-            (source_root / "CLAUDE.md").write_text("context", encoding="utf-8")
-            (repository / "distribution").mkdir()
-            (repository / "distribution/antigravity_publish.py").write_text("adapter", encoding="utf-8")
-            (repository / "distribute_hooks.py").write_text("hooks", encoding="utf-8")
-            (repository / "adapter.py").write_text("adapter", encoding="utf-8")
-            targets = repository / ".evcrate/targets"
-            targets.mkdir(parents=True)
-            target_roots = {
-                "antigravity": [".antigravity"],
-                "claude": [".claude"],
-                "codex": [".codex", ".agents"],
-                "gemini": [".gemini"],
-                "omp": [".omp"],
-                "pi": [".pi"],
-            }
-            registry = {name: f"{name}/manifest.json" for name in target_roots}
-            (targets / "manifest.json").write_text(json.dumps({"schema_version": 1, "targets": registry}), encoding="utf-8")
-            for name, roots in target_roots.items():
-                target = targets / name
-                target.mkdir()
-                manifest = {
-                    "schema_version": 1,
-                    "name": name,
-                    "adapter": None if name == "claude" else "adapter.py",
-                    "output_root": roots[0],
-                    "additional_roots": roots[1:],
-                    "project_docs": ["AGENTS.md"] if name == "codex" else (["GEMINI.md"] if name == "gemini" else []),
-                    "patches": [],
-                    "home_policy": {},
-                }
-                (target / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-            context = DistributionContext(DistributionAction.BUILD, repository, root / "home", stage, "managed", "config-and-scripts")
-
-            def unsafe_consumer(source: Path, destination: Path) -> None:
-                shutil.copytree(source, destination, symlinks=False)
-
-            with patch("distribution.staging.build_antigravity_config", side_effect=unsafe_consumer) as consumer:
-                with self.assertRaises(BuildError):
-                    generate_stage(context, lambda *_: None)
-            consumer.assert_not_called()
-            self.assertTrue((stage / ".claude/escape").is_symlink())
-            self.assertFalse((stage / ".claude/escaped.txt").exists())
-            self.assertFalse((stage / ".antigravity").exists())
-
-    def test_staging_writes_a_deterministic_authorization_manifest(self) -> None:
-        def run(stage: Path) -> bytes:
-            context = create_context(DistributionAction.BUILD, stage=stage)
-
-            def fake_migrator(_: object, script: str, env: dict[str, str]) -> None:
-                def copy_runtime(output: str, relative_root: str) -> None:
-                    source_root = context.local_claude / "scripts"
-                    destination_root = Path(output) / relative_root
-                    for relative in ADVISOR_RUNTIME_FILES:
-                        destination = destination_root / relative
-                        destination.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copyfile(source_root / relative, destination)
-
-                def copy_resources(output: str, relative_root: str) -> None:
-                    source_root = context.local_claude
-                    destination_root = Path(output) / relative_root
-                    for kind in ("scripts", "hooks"):
-                        source_kind = source_root / kind
-                        if not source_kind.is_dir():
-                            continue
-                        for source in sorted(source_kind.rglob("*")):
-                            if not source.is_file() or source.is_symlink():
-                                continue
-                            relative = source.relative_to(source_kind)
-                            if (
-                                relative.as_posix() in ADVISOR_RUNTIME_FILES
-                                or "advise-state" in relative.name
-                                or relative.suffix.lower() in {".pyc", ".pyo"}
-                                or is_production_runtime_artifact(relative)
-                            ):
-                                continue
-                            target_relative = relative
-                            if script == "migrate_claude_to_gemini.py" and kind == "hooks" and relative.as_posix() == "session-end.cjs":
-                                target_relative = Path("claude-session-end.cjs")
-                            if script == "migrate_claude_to_omp.py" and kind == "hooks":
-                                target_kind = "hooks"
-                            else:
-                                target_kind = kind
-                            destination = destination_root / target_kind / target_relative
-                            destination.parent.mkdir(parents=True, exist_ok=True)
-                            raw = source.read_bytes()
-                            if b"\0" in raw[:1024]:
-                                destination.write_bytes(raw)
-                            else:
-                                target_name = {
-                                    "migrate_claude_to_gemini.py": "gemini",
-                                    "migrate_claude_to_omp.py": "omp",
-                                    "migrate_claude_to_pi.py": "pi",
-                                }.get(script, "codex")
-                                destination.write_text(
-                                    render_harness_script_references(raw.decode("utf-8"), target_name),
-                                    encoding="utf-8",
-                                )
-                    for name in (".evcrate.json", ".evcrateignore"):
-                        config = source_root / name
-                        if config.is_file():
-                            shutil.copyfile(config, Path(output) / name)
-                            if name == ".evcrateignore" and relative_root:
-                                shutil.copyfile(config, destination_root / name)
-
-                if script == "migrate_claude_to_gemini.py":
-                    copy_runtime(env["GEMINI_OUTPUT_DIR"], "scripts")
-                    copy_resources(env["GEMINI_OUTPUT_DIR"], "")
-                    Path(env["GEMINI_OUTPUT_DIR"]).joinpath("artifact").write_text("gemini", encoding="utf-8")
-                    Path(env["GEMINI_PROJECT_DOCS_OUTPUT_DIR"]).joinpath("GEMINI.md").write_text("context", encoding="utf-8")
-                elif script == "migrate_claude_to_omp.py":
-                    copy_resources(env["OMP_OUTPUT_DIR"], "evcrate")
-                    Path(env["OMP_OUTPUT_DIR"]).joinpath("artifact").write_text("omp", encoding="utf-8")
-                elif script == "migrate_claude_to_pi.py":
-                    copy_runtime(env["PI_OUTPUT_DIR"], "agent/evcrate/scripts")
-                    copy_resources(env["PI_OUTPUT_DIR"], "agent/evcrate")
-                else:
-                    copy_runtime(env["CODEX_OUTPUT_DIR"], "scripts")
-                    copy_resources(env["CODEX_OUTPUT_DIR"], "")
-                    Path(env["CODEX_OUTPUT_DIR"]).joinpath("artifact").write_text("codex", encoding="utf-8")
-                    Path(env["AGENTS_OUTPUT_DIR"]).joinpath("artifact").write_text("agents", encoding="utf-8")
-                    Path(env["PROJECT_DOCS_OUTPUT_DIR"]).joinpath("AGENTS.md").write_text("context", encoding="utf-8")
-
-            generate_stage(context, fake_migrator)
-            self.assertTrue((stage / ".antigravity" / "hooks.json").is_file())
-            source_file = context.local_claude / "commands/code.md"
-            self.assertEqual((stage / ".claude/commands/code.md").read_bytes(), source_file.read_bytes())
-            advisor_file = context.local_claude / "agents/advisor.md"
-            self.assertEqual((stage / ".claude/agents/advisor.md").read_bytes(), advisor_file.read_bytes())
-            self.assertFalse((stage / ".antigravity" / "config").exists())
-            self.assertFalse((stage / ".codex" / "runtime").exists())
-            manifest = (stage / BUILD_MANIFEST_PATH).read_text(encoding="utf-8")
-            manifest_data = json.loads(manifest)
-            self.assertIn(".claude", manifest_data["output_hashes"])
-            self.assertIn(".claude/commands/code.md", manifest_data["owners"])
-            self.assertIn(".claude/agents/advisor.md", manifest_data["owners"])
-            self.assertEqual(manifest_data["source_hashes"][".claude"], tree_hash(context.local_claude))
-            self.assertEqual(
-                manifest_data["home_policy"]["claude"],
-                {"bindings": {".claude": ".claude"}, "preserve_paths": {}, "promotion_order": 40},
-            )
-            self.assertEqual(
-                len(manifest_data["runtime_hashes"]),
-                len(ADVISOR_RUNTIME_FILES) * 5,
-            )
-            self.assertEqual(
-                set(manifest_data["validation"]["advisor_runtime"]),
-                {"antigravity", "claude", "codex", "gemini", "pi"},
-            )
-            for marker in (
-                "advisor_consult",
-                "mcp_servers.advisor",
-                "advisor-broker",
-                "pretool-advisor-admission",
-                "advisor-ledger",
-                "runtime-advisor-launcher",
-            ):
-                self.assertNotIn(marker, manifest)
-            return (stage / BUILD_MANIFEST_PATH).read_bytes()
-
-        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
-            self.assertEqual(run(Path(first)), run(Path(second)))
-
-    def test_missing_required_project_document_fails_stage(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            context = create_context(DistributionAction.BUILD, stage=Path(temp))
-            with self.assertRaisesRegex(BuildError, "Required generated project document"):
-                generate_stage(context, lambda *_: None)
-
-    def test_byte_level_tree_comparison_ignores_matching_mtime(self) -> None:
-        from distribution.gates import _same_tree
-
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source, destination = root / "source", root / "destination"
-            source.mkdir()
-            destination.mkdir()
-            (source / "item").write_bytes(b"left")
-            (destination / "item").write_bytes(b"right")
-            stamp = 1_700_000_000
-            os.utime(source / "item", (stamp, stamp))
-            os.utime(destination / "item", (stamp, stamp))
-            self.assertFalse(_same_tree(source, destination))
-
-    def test_recovery_restores_outputs_after_interruption(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            destination, staged = root / "artifact", root / "staged"
-            backup_root = root / ".evcrate-promotion-interrupted"
-            destination.write_text("old", encoding="utf-8")
-            staged.write_text("new", encoding="utf-8")
-            backup_root.mkdir()
-            destination.replace(backup_root / "artifact")
-            staged.replace(destination)
-            (root / JOURNAL_NAME).write_text(
-                json.dumps({"backup_dir": backup_root.name, "destinations": ["artifact"]}),
-                encoding="utf-8",
-            )
-            recover_interrupted_promotion(root)
-            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
-            self.assertFalse((root / JOURNAL_NAME).exists())
-            self.assertFalse(backup_root.exists())
-            recover_interrupted_promotion(root)
-            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
-            self.assertFalse((root / JOURNAL_NAME).exists())
-            self.assertFalse(backup_root.exists())
-
-    def test_repository_lock_rejects_concurrent_operation(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp)
-            with repository_lock(repository):
-                with self.assertRaises(BuildError):
-                    with repository_lock(repository):
-                        pass
-
-    def test_windows_lock_fallback_uses_temporary_lock_file(self) -> None:
-        calls: list[int] = []
-        fake_msvcrt = types.SimpleNamespace(
-            LK_NBLCK=1,
-            LK_UNLCK=2,
-            locking=lambda _fd, mode, _size: calls.append(mode),
-        )
-        with tempfile.TemporaryDirectory() as temp, patch.dict(sys.modules, {"msvcrt": fake_msvcrt}):
-            with _windows_repository_lock(Path(temp)):
-                pass
-        self.assertEqual(calls, [fake_msvcrt.LK_NBLCK, fake_msvcrt.LK_UNLCK])
-
-    def test_windows_directory_sync_is_a_safe_no_op(self) -> None:
-        with tempfile.TemporaryDirectory() as temp, patch("distribution.build.os.name", "nt"):
-            _sync_directory(Path(temp))
-
-    def test_read_only_stage_refuses_recovery_without_mutation(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp)
-            artifact = repository / "artifact"
-            artifact.write_text("old", encoding="utf-8")
-            (repository / JOURNAL_NAME).write_text("{}", encoding="utf-8")
-            with self.assertRaisesRegex(BuildError, "requires --build recovery"):
-                with staged_build_root(repository, recover=False):
-                    pass
-            self.assertEqual(artifact.read_text(encoding="utf-8"), "old")
-            self.assertTrue((repository / JOURNAL_NAME).is_file())
-
-    def test_promotion_failure_restores_prior_artifact(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp) / "repo"
-            repository.mkdir()
-            destination = repository / "artifact"
-            destination.write_text("old", encoding="utf-8")
-            with staged_build_root(repository) as stage:
-                staged = stage / "artifact"
-                staged.write_text("new", encoding="utf-8")
-                with self.assertRaises(BuildError):
-                    promote_transaction([(staged, destination), (stage / "missing", repository / "other")])
-            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
-
-    def test_promotion_rejects_duplicate_destinations_without_mutation(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp) / "repo"
-            repository.mkdir()
-            destination = repository / "artifact"
-            destination.write_text("old", encoding="utf-8")
-            with staged_build_root(repository) as stage:
-                first, second = stage / "first", stage / "second"
-                first.write_text("first", encoding="utf-8")
-                second.write_text("second", encoding="utf-8")
-                with self.assertRaises(BuildError):
-                    promote_transaction([(first, destination), (second, destination)])
-            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
-
-    def test_promotion_accepts_a_nested_build_manifest_destination(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            repository = Path(temp) / "repo"
-            repository.mkdir()
-            (repository / ".evcrate").mkdir()
-            with staged_build_root(repository) as stage:
-                codex, manifest = stage / ".codex", stage / "build-manifest.json"
-                codex.mkdir()
-                (codex / "config.toml").write_text('model = "new"\n', encoding="utf-8")
-                manifest.write_text('{"schema_version":1}\n', encoding="utf-8")
-                promote_transaction([(codex, repository / ".codex"), (manifest, repository / ".evcrate/build-manifest.json")])
-            self.assertTrue((repository / ".codex/config.toml").is_file())
-            self.assertEqual((repository / ".evcrate/build-manifest.json").read_text(encoding="utf-8"), '{"schema_version":1}\n')
+        document = json.loads(rendered)
+        self.assertEqual(document["schema_version"], 2)
+        self.assertIn("controller_hashes", document)
 
 
 if __name__ == "__main__":

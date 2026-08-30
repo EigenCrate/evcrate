@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { Type } from "typebox";
 import { runChildStart } from "./child-context.js";
 import { normalizeAgentRoot } from "./paths.js";
-import { registerModelRoles, resolveExactAdvisorModel, resolveModelRole, validateExplicitModel, validateExplicitThinking } from "./model-roles.js";
+import { registerModelRoles, resolveModelRole, validateExplicitModel, validateExplicitThinking } from "./model-roles.js";
 
 export const DELEGATION_EVENTS = Object.freeze({
   request: "prompt-template:subagent:request",
@@ -148,22 +148,9 @@ export function createDelegationRunner(options) {
     const ownerRunId = `evcrate-owner-${ids()}`;
     const restoreAgentRoot = normalizeChildAgentRoot();
     const runNode = async (node, index) => {
-      const advisorRoute = node.agent === "advisor"
-        ? resolveExactAdvisorModel({
-          provider: node.provider,
-          model: node.model,
-          thinking: node.thinking,
-          activeProvider: context.model?.provider,
-          registry: context.modelRegistry,
-        })
-        : undefined;
-      if (advisorRoute) {
-        if (advisorRoute.error) fail(advisorRoute.error);
-      } else {
-        const explicitError = validateExplicitModel(node.model, context.modelRegistry) ?? validateExplicitThinking(node.thinking);
-        if (explicitError) fail(explicitError);
-      }
-      const route = advisorRoute ?? options.resolveModel?.({ ...node, registry: context.modelRegistry }, context)
+      const explicitError = validateExplicitModel(node.model, context.modelRegistry) ?? validateExplicitThinking(node.thinking);
+      if (explicitError) fail(explicitError);
+      const route = options.resolveModel?.({ ...node, registry: context.modelRegistry }, context)
         ?? resolveModelRole({ ...options, ...node, registry: context.modelRegistry });
       if (route.error) fail(route.error);
       const request = {

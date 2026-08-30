@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Staging-only coordinator for the native OMP target."""
+"""Staging-only coordinator for the OMP target."""
 
 from __future__ import annotations
 
@@ -92,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
             "commands": len(command_map),
             "skills": len(skill_audit.get("native", [])),
         },
+        "skillRuntime": {
+            "projectRoot": ".omp/skills",
+            "homeRoot": "~/.omp/agent/skills",
+            "noSkills": (
+                "OMP --no-skills disables skill discovery and loading; workflows "
+                "must read required SKILL.md files directly or use the archived "
+                ".omp/evcrate/skills packages."
+            ),
+        },
         "managedStatic": {
             "workflows": list(workflow_audit),
             "scripts": list(static_audit["scripts"]),
@@ -110,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
             "inherit": "omitted",
         },
         "limitations": {
-            "advisorRelay": "unsupported; /advise --agent returns ADVISE_AGENT_RELAY_UNSUPPORTED_OMP",
+            "advisorController": "Uses shared ~/.evcrate/bin/evcrate-advisor; OMP is an enabled backend candidate qualified by the central controller.",
             "subagentStart": "OMP has no direct Claude agent_type/agent_id hook payload",
             "settingsLocal": "not activated; source settings.local.json is retained only by the canonical source",
         },

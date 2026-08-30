@@ -773,21 +773,40 @@ if (!data.tool_input || typeof data.tool_input.command !== 'string') {
 - Cross-platform test coverage
 - Clear pass/fail indicators
 
-### Wrapper & Migration Bridge Hooks Standards
+### Central Advisor Controller Standards
 
-When migrating Claude Code hooks to other CLI environments (e.g., Codex, Gemini/Antigravity), wrappers are used to bridge standard input payload formats, paths, and exit codes. 
+Checkpoint supervision has one managed executable at
+`~/.evcrate/bin/evcrate-advisor`, authored only at
+`.evcrate/source/.evcrate/bin`. Generated harnesses must not contain a second
+controller, callback bridge, handoff, or fallback launcher.
 
-**Requirements for Bridge Wrappers**:
-1. **Fallback Resolution**:
-   - Wrappers must search for a local workspace hook by traversing up from the active workspace path.
-   - If not found locally, they must check for a global hook in the user's home configuration directory (e.g. `~/.gemini/config/hooks/`).
-2. **Fail-Open on Missing Hooks**:
-   - If no hook is found (locally or globally), the wrapper must not crash or block the user; it must fail-open by returning an allow response (`decision: "allow"` or `{}`) and exiting with `0`.
-3. **Fail-Closed on Execution Failures**:
-   - The wrapper must enforce a strict allow policy: execution is only allowed if the child process completes successfully (exit status `0` and no execution `error`). Any exit code `1`, `2`, or spawn error must result in a `deny` decision.
-4. **Detailed Diagnostics**:
-   - The deny response must capture the error message (`result.error.message`) in addition to stdout/stderr.
+**Request and policy requirements**:
+1. Accept the direct ten-key `evcrate-advisor-checkpoint/v1` object only.
+2. Load the required platform-home policy with exact version-1 keys and an
+   inclusive 60000..900000 millisecond timeout.
+3. Reject duplicate keys, invalid UTF-8, control characters, credentials,
+   unsafe paths, oversized values, and unknown fields before model execution.
+4. Never accept caller-selected executable, argv, environment, route, host,
+   provider, retry, or fallback controls.
 
+**Execution requirements**:
+1. Generate the correlation UUID before parsing input and use a monotonic timer.
+2. Select one qualified adapter, run ordered probes, and make one final attempt.
+3. Use `shell:false`, fixed argv, an allowlisted environment, stdin-only
+   evidence, bounded streams, and an empty owner-only temporary workspace.
+4. Share the policy deadline across probes and final execution; terminate and
+   reap POSIX process groups on cancellation.
+5. Emit one frozen controller envelope with a fixed receipt and sanitized typed
+   failure fields. Stdout has one JSON line; stderr is empty.
+
+**Distribution and testing**:
+- Build manifests use schema 2 and `controller_hashes`; the publisher atomically
+  promotes the complete `.evcrate/bin` directory and preserves the policy file.
+- Test fake CLIs for strict input, policy migration, exact argv, isolation,
+  output lifecycle, timeout, cancellation, cleanup, and one final-process count.
+- The first release is Linux-only. Requalify each installed enabled CLI after
+  upgrades; generated projections and version strings are not qualification
+  evidence.
 ## Configuration File Standards
 
 ### package.json

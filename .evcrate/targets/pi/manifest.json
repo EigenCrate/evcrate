@@ -1,9 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "pi",
   "adapter": "migrate_claude_to_pi.py",
   "adapter_sources": [
-    "distribution/advisor_runtime.py",
     "distribution/contracts.py",
     "pi_adapter/__init__.py",
     "pi_adapter/agents.py",
@@ -11,33 +10,6 @@
     "pi_adapter/resources.py"
   ],
   "output_root": ".pi",
-  "advisor_runtime": {
-    "host": "pi",
-    "source_root": ".evcrate/source/.claude/scripts",
-    "output_root": "agent/evcrate/scripts",
-    "native_capabilities": "advisor-routing/native-capabilities.json",
-    "files": [
-      "advisor-bridge.cjs",
-      "advisor-coordinator.cjs",
-      "advisor-dispatch.cjs",
-      "advisor-handoff.cjs",
-      "advisor-routing/adapter-contract.cjs",
-      "advisor-routing/adapter-registry.cjs",
-      "advisor-routing/adapters/antigravity.cjs",
-      "advisor-routing/adapters/claude.cjs",
-      "advisor-routing/adapters/codex.cjs",
-      "advisor-routing/adapters/gemini.cjs",
-      "advisor-routing/adapters/pi.cjs",
-      "advisor-routing/checkpoint-contract.cjs",
-      "advisor-routing/errors.cjs",
-      "advisor-routing/json-document.cjs",
-      "advisor-routing/native-capabilities.json",
-      "advisor-routing/policy-schema.cjs",
-      "advisor-routing/profile.cjs",
-      "advisor-routing/resolve-route.cjs",
-      "advisor-routing/runner.cjs"
-    ]
-  },
   "additional_roots": [],
   "owned_paths": [
     "files/agent/extensions/evcrate/ATTRIBUTION.md",
