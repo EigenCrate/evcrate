@@ -113,11 +113,13 @@ def _promote_transaction(pairs: list[tuple[Path | None, Path]]) -> None:
 
 
 def _changed_promotion_pairs(context: DistributionContext, staged: VerifiedArtifact) -> list[tuple[Path | None, Path]]:
-    pairs = [
-        (source, destination)
-        for source, destination in zip(staged.roots, context.local_roots, strict=True)
-        if not _same_tree(source, destination)
-    ]
+    pairs: list[tuple[Path | None, Path]] = []
+    for source, destination in zip(staged.roots, context.local_roots, strict=True):
+        if destination.name == ".evcrate":
+            source = source / "bin"
+            destination = destination / "bin"
+        if not _same_tree(source, destination):
+            pairs.append((source, destination))
     for document in (path.name for path in context.local_project_docs):
         source = context.stage_project_docs / document
         destination = context.local_path(document)
@@ -130,7 +132,7 @@ def _changed_promotion_pairs(context: DistributionContext, staged: VerifiedArtif
     manifest = context.stage / manifest_path
     destination = context.repository / manifest_path
     if not _same_tree(manifest, destination):
-        pairs.append((manifest, destination))
+        pairs.insert(0, (manifest, destination))
     return pairs
 
 
@@ -156,11 +158,12 @@ def run_local_check(selected_targets: tuple[str, ...] = ()) -> None:
         with staged_build_root(base_context.repository, prefix=".evcrate-check-", recover=False) as stage:
             context = _stage_context(DistributionAction.CHECK, stage, base_context.selected_target_names)
             staged = _generate_stage(context)
-            differences = [
-                path
-                for root, local in zip(staged.roots, context.local_roots, strict=True)
-                for path in _tree_differences(root, local, root.name)
-            ]
+            differences: list[str] = []
+            for root, local in zip(staged.roots, context.local_roots, strict=True):
+                if local.name == ".evcrate":
+                    root = root / "bin"
+                    local = local / "bin"
+                differences.extend(_tree_differences(root, local, local.name))
             for document in (path.name for path in context.local_project_docs):
                 staged_document = context.stage_project_docs / document
                 local_document = context.local_path(document)

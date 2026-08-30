@@ -9,7 +9,7 @@ from pathlib import Path
 from .contracts import BuildError, DistributionAction
 
 
-ALL_LOCAL_ROOT_NAMES = (".gemini", ".codex", ".agents", ".antigravity", ".omp", ".claude", ".pi")
+ALL_LOCAL_ROOT_NAMES = (".evcrate", ".gemini", ".codex", ".agents", ".antigravity", ".omp", ".claude", ".pi")
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,9 @@ class DistributionContext:
     def config_root(self) -> Path:
         return self.source_root
 
+    @property
+    def local_evcrate(self) -> Path:
+        return self.local_path(".evcrate")
     def local_path(self, logical_name: str) -> Path:
         return self.source_root / logical_name
 
@@ -68,7 +71,7 @@ class DistributionContext:
         return tuple(self.local_path(name) for name in ALL_LOCAL_ROOT_NAMES if name in names)
 
     def _selected_root_names(self) -> set[str]:
-        return {root for manifest in self.selected_manifests for root in manifest.output_roots}
+        return {".evcrate"} | {root for manifest in self.selected_manifests for root in manifest.output_roots}
 
     @property
     def selected_manifests(self):

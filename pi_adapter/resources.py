@@ -11,14 +11,11 @@ from pathlib import Path, PurePosixPath
 from typing import Callable, Collection
 
 from distribution.contracts import (
-    ADVISOR_BRIDGE_FALLBACK_BLOCK,
-    ADVISOR_RUNTIME_FILES,
-    is_production_runtime_artifact,
     render_harness_script_references,
     render_advisory_interview_workflow,
-    render_advisor_runtime_metadata,
     render_inline_advise_command,
 )
+from distribution.advisor_controller import is_production_controller_artifact
 from distribution.hashing import is_ignored_artifact
 from .frontmatter import FrontmatterError, normalize_lf, split_frontmatter, validate_skill_frontmatter
 
@@ -35,7 +32,6 @@ class ResourceInventory:
     skills: tuple[str, ...]
     scripts: tuple[str, ...]
     hooks: tuple[str, ...]
-    advisor_runtime: tuple[str, ...] = ()
 
 
 LEGACY_SKILL = Path("claude-code/skill.md")
@@ -43,13 +39,6 @@ _PATH_TRANSLATIONS = (
     (re.compile(r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/workflows/([^\s)`\]\"']+)"), r"{{evcrate:workflows/\1}}"),
     (re.compile(r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/scripts/([^\s)`\]\"']+)"), r"{{evcrate:scripts/\1}}"),
     (re.compile(r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/hooks/([^\s)`\]\"']+)"), r"{{evcrate:hooks/\1}}"),
-)
-_GLOBAL_ADVISOR_BRIDGE_PATHS = (
-    "~/.claude/scripts/advisor-bridge.cjs",
-    "~/.codex/scripts/advisor-bridge.cjs",
-    "~/.gemini/scripts/advisor-bridge.cjs",
-    "~/.gemini/config/scripts/advisor-bridge.cjs",
-    "~/.pi/agent/evcrate/scripts/advisor-bridge.cjs",
 )
 # These are project-local paths that can appear in portable command, agent,
 # and skill prose. Pi's generated resources live below its own agent tree, so
@@ -194,26 +183,21 @@ def inventory(source: Path) -> ResourceInventory:
     scripts = tuple(
         str(_relative(source / "scripts", item))
         for item in _walk_files(source / "scripts")
-        if not is_production_runtime_artifact(_relative(source / "scripts", item))
+        if not is_production_controller_artifact(_relative(source / "scripts", item))
     )
-    advisor_runtime = tuple(item for item in ADVISOR_RUNTIME_FILES if item in scripts)
-    if advisor_runtime and advisor_runtime != ADVISOR_RUNTIME_FILES:
-        raise ResourceError("Canonical advisor runtime inventory is incomplete or reordered")
     hooks = tuple(
         str(_relative(source / "hooks", item))
         for item in _walk_files(source / "hooks")
         if not any(part in {"__tests__", "tests", "fixtures", "helpers"}
                    for part in _relative(source / "hooks", item).parts)
     )
-    return ResourceInventory(commands, workflows, agents, tuple(sorted(skills)), scripts, hooks, advisor_runtime)
+    return ResourceInventory(commands, workflows, agents, tuple(sorted(skills)), scripts, hooks)
 
 
 def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
     """Translate only named compatibility tokens, never broad product prose."""
 
     translated = normalize_lf(value)
-    fallback_token = "__PI_GLOBAL_ADVISOR_FALLBACK__"
-    translated = translated.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
     protected_urls: list[tuple[str, str]] = []
 
     def protect_url(match: re.Match[str]) -> str:
@@ -222,17 +206,8 @@ def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
         return token
 
     translated = _URL.sub(protect_url, translated)
-    protected_paths = []
-    for index, path in enumerate(_GLOBAL_ADVISOR_BRIDGE_PATHS):
-        token = f"__PI_GLOBAL_ADVISOR_BRIDGE_{index}__"
-        translated = translated.replace(path, token)
-        protected_paths.append((token, path))
     for pattern, replacement in _PATH_TRANSLATIONS:
         translated = pattern.sub(replacement, translated)
-    # Ordinary global helper resources are installed below Pi's agent root.
-    # Keep the advisor bridge paths protected above: the fallback table is a
-    # deliberate cross-harness list, while these mappings cover executable
-    # helpers such as resolve_env.py.
     for prefix in ("$HOME", "${HOME}", "~"):
         for separator in ("/", "\\"):
             for suffix in ("scripts", "hooks", "workflows", "output-styles", ".env", ".mcp.json"):
@@ -277,9 +252,7 @@ def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
     translated = translated.replace(".claude/.env", ".pi/.env")
     # Rewrite direct project paths that are not one of the command markers
     # above (for example ``./.claude/commands/scout.md`` in agent guidance).
-    # Preserve Windows separators for Windows-authored snippets, then replace
-    # any remaining harness-root token.  The advisor fallback block and every
-    # known global bridge path are protected above and restored below.
+    # Rewrite direct project paths while preserving Windows separators.
     for source, replacement in _PI_LOCAL_PATH_TRANSLATIONS:
         translated = translated.replace(source, replacement)
         translated = translated.replace(
@@ -293,11 +266,8 @@ def translate_prompt(value: str, commands: Collection[str] = ()) -> str:
     translated = _translate_nested_commands(translated, commands)
     for pattern, replacement in _TOOL_TRANSLATIONS:
         translated = pattern.sub(replacement, translated)
-    for token, path in protected_paths:
-        translated = translated.replace(token, path)
     for token, url in protected_urls:
         translated = translated.replace(token, url)
-    translated = translated.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
     return translated
 
 
@@ -482,12 +452,7 @@ def copy_hooks_and_scripts(source: Path, output: Path) -> None:
     scripts = source / "scripts"
     for item in _walk_files(scripts):
         relative = _relative(scripts, item)
-        if relative.as_posix() in ADVISOR_RUNTIME_FILES:
-            # The resolver/coordinator/dispatcher closure is a cross-harness
-            # protocol; preserve it byte-for-byte and translate only ordinary
-            # Pi helper scripts around it.
-            _copy_file(item, root / "scripts" / relative, output)
-        elif "advise-state" not in item.name and not is_production_runtime_artifact(relative):
+        if "advise-state" not in item.name and not is_production_controller_artifact(relative):
             _copy_file(
                 item,
                 root / "scripts" / relative,
@@ -582,6 +547,4 @@ def write_inventory(destination: Path, output: Path, resources: ResourceInventor
         "skills": list(resources.skills),
         "workflows": list(resources.workflows),
     }
-    if resources.advisor_runtime:
-        inventory["advisorRuntime"] = render_advisor_runtime_metadata("pi", "agent/evcrate/scripts")
     write_json(destination, output, inventory)

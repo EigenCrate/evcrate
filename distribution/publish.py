@@ -14,6 +14,7 @@ from distribute_hooks import rewrite_codex_global_file
 
 from .context import DistributionContext
 from .contracts import PublishError, VerifiedArtifact
+from .build import repository_lock
 from .hashing import normalize_relative_path
 from .locking import publish_lock, read_release_marker, write_release_marker
 from .manifest import SharedJsonSpec
@@ -121,6 +122,130 @@ def _validate_state_ancestors(context: DistributionContext) -> None:
     )
 
 
+def _owner_controlled_directory(path: Path, label: str) -> None:
+    if _is_reparse_point(path) or (path.exists() and not path.is_dir()):
+        raise PublishError(f"{label} must be a real directory")
+    if not path.exists():
+        return
+    try:
+        metadata = path.stat()
+        uid = os.getuid()
+    except (AttributeError, OSError) as error:
+        raise PublishError(f"{label} ownership could not be verified") from error
+    if metadata.st_uid != uid or metadata.st_mode & 0o022:
+        raise PublishError(f"{label} must be owner-controlled")
+
+
+def _validate_controller_home(context: DistributionContext, destination: Path) -> None:
+    expected = context.home / ".evcrate" / "bin"
+    if destination != expected:
+        raise PublishError("Shared advisor controller has an invalid HOME binding")
+    _validate_home_ancestors(context, destination)
+    _owner_controlled_directory(context.home, "HOME root")
+    _owner_controlled_directory(destination.parent, "Advisor controller HOME root")
+    _owner_controlled_directory(destination, "Advisor controller bin")
+
+
+def _remove_path(path: Path) -> None:
+    if not (path.exists() or path.is_symlink()):
+        return
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+
+
+def _controller_files_equal(source: Path, destination: Path) -> bool:
+    if destination.is_symlink() or not destination.is_dir():
+        raise PublishError(f"Advisor controller HOME path is not a real directory: {destination}")
+    if destination.stat().st_mode & 0o777 != 0o700:
+        return False
+    entrypoint = destination / "evcrate-advisor"
+    if entrypoint.is_file() and entrypoint.stat().st_mode & 0o777 != 0o755:
+        return False
+    source_files = _files(source)
+    destination_files: dict[str, bytes] = {}
+    for path in sorted(destination.rglob("*"), key=lambda item: item.as_posix()):
+        relative = path.relative_to(destination).as_posix()
+        if path.is_symlink():
+            raise PublishError(f"Advisor controller HOME contains a symlink: {relative}")
+        if path.is_file():
+            destination_files[relative] = path.read_bytes()
+    return source_files == destination_files
+
+
+def _controller_directory_snapshot(
+    source: Path,
+    destination: Path,
+    transaction: Path,
+    marker: dict[str, Any],
+    context: DistributionContext,
+    release_id: str,
+) -> tuple[Path, Path | None]:
+    """Atomically replace the complete controller directory on one filesystem."""
+
+    _validate_controller_home(context, destination)
+    if source.is_symlink() or not source.is_dir():
+        raise PublishError(f"Advisor controller source is missing or unsafe: {source}")
+    _files(source)
+    parent = destination.parent
+    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(parent, 0o700)
+    temporary = Path(tempfile.mkdtemp(prefix=".evcrate-controller-", dir=parent))
+    backup: Path | None = None
+    promoted = False
+    try:
+        shutil.copytree(source, temporary, symlinks=False, dirs_exist_ok=True)
+        for path in sorted(temporary.rglob("*"), key=lambda item: item.as_posix()):
+            if path.is_symlink():
+                raise PublishError(f"Advisor controller staging contains a symlink: {path}")
+            if path.is_dir():
+                os.chmod(path, 0o700)
+        entrypoint = temporary / "evcrate-advisor"
+        if not entrypoint.is_file():
+            raise PublishError("Advisor controller staging is missing its entrypoint")
+        os.chmod(entrypoint, 0o755)
+        os.chmod(temporary, 0o700)
+
+        if destination.exists() or destination.is_symlink():
+            if destination.is_symlink() or not destination.is_dir():
+                raise PublishError(f"Advisor controller HOME path is not a real directory: {destination}")
+            backup = parent / f".evcrate-bin-backup-{release_id}"
+            if backup.exists() or backup.is_symlink():
+                raise PublishError("Advisor controller backup path already exists")
+        operation = {
+            "kind": "directory",
+            "root": ".evcrate/bin",
+            "path": ".evcrate/bin",
+            "backup": backup.name if backup is not None else None,
+        }
+        marker["operations"].append(operation)
+        write_release_marker(context.state_dir, marker)
+        if backup is not None:
+            destination.replace(backup)
+        temporary.replace(destination)
+        promoted = True
+        os.chmod(destination, 0o700)
+        os.chmod(destination / "evcrate-advisor", 0o755)
+        return destination, backup
+    except (OSError, PublishError):
+        try:
+            if promoted:
+                _remove_path(destination)
+            if backup is not None and backup.exists() and not destination.exists():
+                backup.replace(destination)
+        except OSError:
+            pass
+        raise
+    finally:
+        if temporary.exists():
+            _remove_path(temporary)
+
+
+def _restore_controller_snapshot(destination: Path, backup: Path | None) -> None:
+    _remove_path(destination)
+    if backup is not None and backup.exists():
+        backup.replace(destination)
 def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[str]]]:
     policies: list[tuple[str, Path, Path, set[str], int]] = []
     for manifest in context.selected_manifests:
@@ -146,9 +271,10 @@ def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[s
                 raise PublishError(f"Invalid preserved paths for target {manifest.name}") from error
             if len(preserved) != len(raw_preserved):
                 raise PublishError(f"Duplicate preserved paths for target {manifest.name}")
-            local = context.local_path(local_name)
-            home = context.home / safe_home_name
-            policies.append((safe_home_name, local, home, preserved, order))
+            policies.append((safe_home_name, context.local_path(local_name), context.home / safe_home_name, preserved, order))
+    controller_local = context.local_path(".evcrate") / "bin"
+    controller_home = context.home / ".evcrate" / "bin"
+    policies.append((".evcrate/bin", controller_local, controller_home, set(), 5))
     ordered = sorted(policies, key=lambda value: (value[4], value[0]))
     for index, (name, _, home, _, order) in enumerate(ordered):
         _validate_home_ancestors(context, home)
@@ -173,6 +299,16 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     prior = _managed_paths_for_publish(marker)
     changes: list[PublishChange] = []
     for name, local, home, preserved in _policies(context):
+        if name == ".evcrate/bin":
+            _validate_controller_home(context, home)
+            if local.is_symlink() or not local.is_dir():
+                raise PublishError(f"Advisor controller source is missing or unsafe: {local}")
+            _files(local)
+            if not home.exists():
+                changes.append(PublishChange(name, name, "create"))
+            elif not _controller_files_equal(local, home):
+                changes.append(PublishChange(name, name, "update"))
+            continue
         _validate_home_ancestors(context, home)
         source = _publication_files(context, local, home)
         preserved_paths = {
@@ -291,7 +427,7 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
     # Validate HOME bindings and state paths before creating any lock directory.
     _policies(context)
     _validate_state_ancestors(context)
-    with publish_lock(context.state_dir):
+    with repository_lock(context.repository), publish_lock(context.state_dir):
         shared_snapshots = {
             name: _home_snapshot(home)
             for name, _, home, _ in _shared_specs(context)
@@ -319,6 +455,7 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
         marker["transaction_dir"] = transaction.name
         write_release_marker(context.state_dir, marker)
         snapshots: list[tuple[Path, bytes | None]] = []
+        directory_snapshots: list[tuple[Path, Path | None]] = []
 
         def apply(path: Path, content: bytes | None, name: str, relative: str) -> None:
             existing = path.read_bytes() if path.exists() else None
@@ -340,6 +477,30 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
             for name, local, home, preserved in _policies(context):
                 if name in shared_snapshots and _home_snapshot(home) != shared_snapshots[name]:
                     raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
+                if name == ".evcrate/bin":
+                    _validate_controller_home(context, home)
+                    source_files = _files(local)
+                    changed = any(
+                        change.root == name
+                        and change.path == name
+                        and change.action in {"create", "update"}
+                        for change in changes
+                    )
+                    if changed:
+                        destination, backup = _controller_directory_snapshot(
+                            local,
+                            home,
+                            transaction,
+                            marker,
+                            context,
+                            release_id,
+                        )
+                        directory_snapshots.append((destination, backup))
+                    managed_paths[name] = sorted(source_files)
+                    marker["roots"][name] = {"completed": True}
+                    marker["managed_paths"] = managed_paths
+                    write_release_marker(context.state_dir, marker)
+                    continue
                 source = _publication_files(context, local, home)
                 preserved_paths = {
                     _published_relative(context, local, home, relative)
@@ -371,9 +532,14 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
                 write_release_marker(context.state_dir, marker)
             marker["status"] = "complete"
             write_release_marker(context.state_dir, marker)
+            for _, backup in directory_snapshots:
+                if backup is not None:
+                    _remove_path(backup)
             shutil.rmtree(transaction, ignore_errors=True)
             return changes
         except (OSError, PublishError) as error:
+            for destination, backup in reversed(directory_snapshots):
+                _restore_controller_snapshot(destination, backup)
             for destination, content in reversed(snapshots):
                 if content is None:
                     destination.unlink(missing_ok=True)

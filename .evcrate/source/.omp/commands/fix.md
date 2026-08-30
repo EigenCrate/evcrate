@@ -4,7 +4,7 @@ description: "⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]"
 ---
 
 
-**Analyze issues and route to specialized fix command:**
+**Analyze the issue, select the narrowest fix workflow, and execute it in this session:**
 <issues>$ARGUMENTS</issues>
 
 ## Advice Mode
@@ -17,14 +17,34 @@ or differently cased text unchanged. Strip the final token into
 trailing `--advice` to the delegated command. If the selected specialist does
 not declare `--advice`, route to `/fix__hard` with the same `WORK_ARGUMENTS` so
 the requested advice gate is not silently dropped. Otherwise pass no mode token.
-Read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` before routing and dispatch exactly one blocking native OMP `advisor` subagent for the eventual
-named checkpoint.
+Read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` before routing. Its checkpoint
+request goes directly to `~/.evcrate/bin/evcrate-advisor`.
+
+## Execution Contract
+
+After selecting a route, execute the selected command immediately; do not print
+a route for the user to run manually.
+
+1. Build one enhanced description from `WORK_ARGUMENTS` and preserve it exactly
+   as the delegated command's input.
+2. When the host exposes `OMP command`, execute the selected route with that
+   mechanism in the same session. For example, `/fix__hard` is defined by
+   `.omp/commands/fix__hard.md`.
+3. If this command environment cannot recursively invoke a file-based slash
+   command, read the selected command definition and perform that workflow
+   directly in the current session. Never emit a bare specialist-command
+   handoff, ask the user to rerun it, or stop after route selection.
+4. Wait for the delegated workflow to reach its terminal result before reporting
+   the route. The router must not duplicate advisor calls or summarize a
+   partial delegation.
+
 
 ## Decision Tree
 
 **1. Check for existing plan:**
-- If markdown plan exists → `/code <path-to-plan>` plus one trailing `--advice`
-  when explicit mode is active
+- If a markdown plan exists, select `/code <path-to-plan>` and append one trailing
+  `--advice` only when explicit mode is active. Execute it under the contract
+  above.
 
 **2. Route by issue type:**
 
@@ -53,8 +73,9 @@ named checkpoint.
 → `/fix__fast <detailed-description>`
 
 When explicit advice mode is active, apply the Advice Mode routing rule above
-before emitting any of these handoffs; never report an advisor result before
-the delegated command returns a terminal structured result from the native OMP `advisor` subagent.
+before selecting a route, then execute the selected command under the contract
+above. Never report an advisor result before the delegated command returns a
+terminal `ADVICE_READY` result from `~/.evcrate/bin/evcrate-advisor`.
 
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail

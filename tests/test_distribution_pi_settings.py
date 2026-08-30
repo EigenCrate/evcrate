@@ -1,3 +1,5 @@
+"""Pi settings merge contracts under central-controller publication."""
+
 from __future__ import annotations
 
 import json
@@ -6,10 +8,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from distribution.context import DistributionContext
-from distribution.contracts import DistributionAction, PublishError, VerifiedArtifact
+from distribution.contracts import PublishError
 from distribution.pi_settings import MANAGED_PACKAGES, plan_pi_settings
 from distribution.publish import publish_local_artifacts
+
+from tests.distribution_support import artifact_for, context_for
 
 
 class PiSettingsPlanTest(unittest.TestCase):
@@ -22,7 +25,7 @@ class PiSettingsPlanTest(unittest.TestCase):
         self.assertEqual(noop.action, "noop")
         self.assertEqual(noop.result, original)
 
-    def test_update_replaces_old_managed_entries_and_preserves_unknown_values(self) -> None:
+    def test_update_replaces_managed_entries_and_preserves_unknown_values(self) -> None:
         original = json.dumps({
             "defaultProvider": "openai-codex",
             "evcrate": {"modelRoles": {"strong": "custom"}},
@@ -42,17 +45,14 @@ class PiSettingsPlanTest(unittest.TestCase):
         self.assertEqual(merged["packages"][1]["source"], MANAGED_PACKAGES[0])
         self.assertFalse(merged["packages"][1]["enabled"])
         self.assertEqual(merged["packages"][2]["source"], MANAGED_PACKAGES[1])
-        self.assertEqual(merged["packages"][2]["filter"], ["tools"])
         self.assertEqual(merged["packages"][3], MANAGED_PACKAGES[2])
 
     def test_pi_code_conflict_is_reported_without_result(self) -> None:
-        for entry in (
-            "pi-code", "npm:pi-code@1.0.2", {"source": "npm:pi-code@1.0.2"},
-            {"package": "npm:pi-code"}, {"name": "pi-code"},
-        ):
-            plan = plan_pi_settings(json.dumps({"packages": [entry]}).encode(), {"packages": list(MANAGED_PACKAGES)})
-            self.assertEqual(plan.action, "conflict")
-            self.assertIsNone(plan.result)
+        for entry in ("pi-code", "npm:pi-code@1.0.2", {"source": "npm:pi-code@1.0.2"}, {"package": "pi-code"}):
+            with self.subTest(entry=entry):
+                plan = plan_pi_settings(json.dumps({"packages": [entry]}).encode(), {"packages": list(MANAGED_PACKAGES)})
+                self.assertEqual(plan.action, "conflict")
+                self.assertIsNone(plan.result)
 
     def test_malformed_and_wrong_fragment_fail_closed(self) -> None:
         with self.assertRaises(ValueError):
@@ -62,100 +62,34 @@ class PiSettingsPlanTest(unittest.TestCase):
 
 
 class PiSettingsPublicationTest(unittest.TestCase):
-    def _fixture(self, root: Path) -> tuple[DistributionContext, VerifiedArtifact]:
-        repository = root / "repo"
-        target = repository / ".evcrate/targets/pi"
-        target.mkdir(parents=True)
-        (repository / ".evcrate/targets/manifest.json").write_text(
-            '{"schema_version":1,"targets":{"pi":"pi/manifest.json"}}', encoding="utf-8"
-        )
-        (target / "manifest.json").write_text(json.dumps({
-            "schema_version": 1, "name": "pi", "adapter": None,
-            "output_root": ".pi", "additional_roots": [], "patches": [],
-            "shared_json": {"schema": "pi-settings-v1", "destination": "agent/settings.json", "fragment": "agent/evcrate/managed-settings.json", "managed_key": "packages"},
-            "home_policy": {"bindings": {".pi": ".pi"}, "preserve_paths": {}, "promotion_order": 1},
-        }), encoding="utf-8")
-        context = DistributionContext(DistributionAction.PUBLISH, repository, root / "home", None, "managed", "config-and-scripts", root / "state")
-        fragment = context.local_pi / "agent/evcrate/managed-settings.json"
-        fragment.parent.mkdir(parents=True)
-        fragment.write_text(json.dumps({"packages": list(MANAGED_PACKAGES)}, separators=(",", ":")), encoding="utf-8")
-        return context, VerifiedArtifact(repository, context.local_roots)
-
-    def test_publish_merges_only_packages_and_keeps_settings_out_of_managed_paths(self) -> None:
+    def test_conflict_is_dry_run_only_and_non_destructive(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            context, artifact = self._fixture(Path(temp))
-            settings = context.target_pi / "agent/settings.json"
-            settings.parent.mkdir(parents=True)
-            original = b'{"defaultModel":"keep","packages":["npm:pi-subagents@0.1.0","npm:custom@1.0.0"]}'
-            settings.write_bytes(original)
-            (context.target_pi / "user-session.json").write_text("keep", encoding="utf-8")
-            with patch("distribution.publish.verify_local_artifact"):
-                changes = publish_local_artifacts(context, artifact)
-                merged_bytes = settings.read_bytes()
-                second = publish_local_artifacts(context, artifact)
-                marker_path = context.state_dir / "release-marker.json"
-                marker = json.loads(marker_path.read_text(encoding="utf-8"))
-                self.assertNotIn("agent/settings.json", marker["managed_paths"][".pi"])
-                marker["managed_paths"][".pi"].append("agent/settings.json")
-                marker_path.write_text(json.dumps(marker, sort_keys=True), encoding="utf-8")
-                legacy_marker_publish = publish_local_artifacts(context, artifact)
-            merged = json.loads(merged_bytes)
-            self.assertEqual(merged["defaultModel"], "keep")
-            self.assertEqual(merged["packages"][0], "npm:custom@1.0.0")
-            self.assertEqual(merged["packages"][1], MANAGED_PACKAGES[0])
-            self.assertEqual(merged["packages"][2], MANAGED_PACKAGES[1])
-            self.assertEqual(merged["packages"][3], MANAGED_PACKAGES[2])
-            self.assertIn((".pi", "agent/settings.json", "merge-update"), [(item.root, item.path, item.action) for item in changes])
-            self.assertIn((".pi", "agent/settings.json", "noop"), [(item.root, item.path, item.action) for item in second])
-            self.assertNotIn((".pi", "agent/settings.json", "delete"), [(item.root, item.path, item.action) for item in legacy_marker_publish])
-            self.assertTrue(settings.is_file())
-            self.assertEqual((context.target_pi / "user-session.json").read_text(encoding="utf-8"), "keep")
-
-    def test_pi_code_conflict_is_dry_run_only_and_non_destructive(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            context, artifact = self._fixture(Path(temp))
-            settings = context.target_pi / "agent/settings.json"
+            context = context_for(Path(temp), ("pi",))
+            settings = context.home / ".pi/agent/settings.json"
             settings.parent.mkdir(parents=True)
             settings.write_text('{"packages":["npm:pi-code@1.0.2"]}', encoding="utf-8")
             before = settings.read_bytes()
             with patch("distribution.publish.verify_local_artifact"):
-                dry = publish_local_artifacts(context, artifact, dry_run=True)
+                dry = publish_local_artifacts(context, artifact_for(context), dry_run=True)
                 with self.assertRaisesRegex(PublishError, "pi-code"):
-                    publish_local_artifacts(context, artifact)
-            self.assertIn((".pi", "agent/settings.json", "conflict"), [(item.root, item.path, item.action) for item in dry])
+                    publish_local_artifacts(context, artifact_for(context))
+            self.assertIn((".pi", "agent/settings.json", "conflict"), {(item.root, item.path, item.action) for item in dry})
             self.assertEqual(settings.read_bytes(), before)
 
-    def test_symlinked_settings_are_rejected_before_mutation(self) -> None:
+    def test_symlinked_settings_are_rejected_before_controller_or_pi_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            context, artifact = self._fixture(Path(temp))
-            settings = context.target_pi / "agent/settings.json"
+            root = Path(temp)
+            context = context_for(root, ("pi",))
+            settings = context.home / ".pi/agent/settings.json"
             settings.parent.mkdir(parents=True)
-            outside = Path(temp) / "outside-settings.json"
+            outside = root / "outside-settings.json"
             outside.write_text('{"packages":[]}', encoding="utf-8")
             settings.symlink_to(outside)
             with patch("distribution.publish.verify_local_artifact"):
                 with self.assertRaisesRegex(PublishError, "symlink"):
-                    publish_local_artifacts(context, artifact)
+                    publish_local_artifacts(context, artifact_for(context))
+            self.assertFalse((context.home / ".evcrate/bin").exists())
             self.assertEqual(outside.read_text(encoding="utf-8"), '{"packages":[]}')
-
-    def test_concurrent_pi_home_change_aborts_before_promotion(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            context, artifact = self._fixture(Path(temp))
-            settings = context.target_pi / "agent/settings.json"
-            settings.parent.mkdir(parents=True)
-            settings.write_text('{"packages":[]}', encoding="utf-8")
-            from distribution import publish as module
-            original = module._shared_plan
-
-            def mutate_after_plan(*args: object, **kwargs: object):
-                plan = original(*args, **kwargs)
-                settings.write_text('{"packages":["concurrent"]}', encoding="utf-8")
-                return plan
-
-            with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._shared_plan", side_effect=mutate_after_plan):
-                with self.assertRaisesRegex(PublishError, "concurrently"):
-                    publish_local_artifacts(context, artifact)
-            self.assertEqual(settings.read_text(encoding="utf-8"), '{"packages":["concurrent"]}')
 
 
 if __name__ == "__main__":

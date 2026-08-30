@@ -1,0 +1,15 @@
+{
+  "protocol": "evcrate-advisor-checkpoint",
+  "version": 1,
+  "checkpoint": "review:fixture",
+  "question": "Which safe action should follow this terminal review?",
+  "kind": "review",
+  "task_or_phase": "Controller contract verification",
+  "evidence": {
+    "terminal": "The fixture reviewer completed successfully.",
+    "files": []
+  },
+  "changed_paths": [],
+  "prior_counsel": "none",
+  "owner_disposition": "none"
+}

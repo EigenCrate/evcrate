@@ -44,3 +44,5 @@ Use the `planner` subagent to create 2 detailed implementation plans for this fo
 **IMPORTANT:** Ensure token efficiency while maintaining high quality.
 **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **IMPORTANT**: **Do not** start implementing.
+
+**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

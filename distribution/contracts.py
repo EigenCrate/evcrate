@@ -7,17 +7,7 @@ from enum import Enum
 from pathlib import Path
 import re
 
-from .advisor_runtime import (
-    ADVISOR_ADAPTERS,
-    ADVISOR_HOSTS,
-    ADVISOR_RUNTIME_AUTHORIZATION_SOURCE,
-    ADVISOR_RUNTIME_FILES,
-    ADVISOR_RUNTIME_OUTPUT_PATHS,
-    NATIVE_CAPABILITIES_FILE,
-    is_production_runtime_artifact,
-    render_advisor_runtime_metadata,
-    validate_advisor_runtime_projection,
-)
+from .advisor_controller import is_production_controller_artifact
 from .hashing import is_ignored_artifact
 
 
@@ -40,23 +30,6 @@ _WORKFLOW_ROOTS = {
     "omp": (".omp/evcrate/workflows", "~/.omp/agent/evcrate/workflows"),
 }
 _ADVISORY_WORKFLOW_NAMES = ("advisor-mentoring.md", "advisory-interview.md")
-_ADVISOR_BRIDGE_PATHS = {
-    "claude": "./.claude/scripts/advisor-bridge.cjs",
-    "codex": "./.codex/scripts/advisor-bridge.cjs",
-    "gemini": "./.gemini/scripts/advisor-bridge.cjs",
-    "antigravity": "./.antigravity/scripts/advisor-bridge.cjs",
-    "omp": "./.omp/evcrate/scripts/advisor-bridge.cjs",
-    "pi": "{{evcrate:scripts/advisor-bridge.cjs}}",
-}
-ADVISOR_BRIDGE_FALLBACK_BLOCK = """If the project does not contain a local harness runtime, use the published
-bridge for the active harness instead:
-
-- Claude: `node ~/.claude/scripts/advisor-bridge.cjs`
-- Codex: `node ~/.codex/scripts/advisor-bridge.cjs`
-- Gemini: `node ~/.gemini/scripts/advisor-bridge.cjs`
-- Antigravity: `node ~/.gemini/config/scripts/advisor-bridge.cjs`
-- Pi: `node ~/.pi/agent/evcrate/scripts/advisor-bridge.cjs`
-"""
 
 
 class DistributionAction(str, Enum):
@@ -107,18 +80,6 @@ def add_global_workflow_fallback(text: str, target: str) -> str:
     return text
 
 
-def render_advisor_bridge_reference(text: str, target: str) -> str:
-    """Point generated instructions at the bridge in their own harness tree."""
-
-    try:
-        bridge = _ADVISOR_BRIDGE_PATHS[target]
-    except KeyError as error:
-        raise ValueError(f"Unknown advisor bridge target: {target}") from error
-    return re.sub(
-        r"(?<![~A-Za-z0-9_./-])(?:\./)?\.claude/scripts/advisor-bridge\.cjs",
-        bridge,
-        text,
-    )
 
 
 _SCRIPT_RESOURCE_SUFFIXES = (
@@ -142,7 +103,10 @@ _SCRIPT_RESOURCE_ROOTS = {
 _CLAUDE_PATH_REFERENCE = re.compile(
     r"(?<![A-Za-z0-9_])\.claude(?=[/\\])"
 )
-_URL_REFERENCE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+_URI_REFERENCE = re.compile(
+    r"(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|//)[^\s<>\"']+",
+    re.IGNORECASE,
+)
 
 
 def _script_resource_path(target: str, scope: str, suffix: str) -> str:
@@ -172,24 +136,21 @@ def _script_resource_path(target: str, scope: str, suffix: str) -> str:
 def render_harness_script_references(text: str, target: str) -> str:
     """Translate Claude resource paths in ordinary harness script text.
 
-    Advisor runtime files are deliberately excluded by each caller because
-    their cross-harness protocol is byte-identical. This helper handles the
-    surrounding utility scripts, including literal HOME paths and the common
-    ``Path.home() / '.claude' / ...`` form used by the environment resolver.
+    Only ordinary harness resources are projected here. The shared controller
+    remains at the managed ``~/.evcrate/bin`` path for every target.
     """
 
     if target not in _SCRIPT_RESOURCE_ROOTS:
         raise ValueError(f"Unknown harness script target: {target}")
-    fallback_token = "__EVCRATE_HARNESS_ADVISOR_FALLBACK__"
-    rendered = text.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
     protected_urls: list[tuple[str, str]] = []
+    rendered = text
 
     def protect_url(match: re.Match[str]) -> str:
         token = f"__EVCRATE_HARNESS_URL_{len(protected_urls)}__"
         protected_urls.append((token, match.group(0)))
         return token
 
-    rendered = _URL_REFERENCE.sub(protect_url, rendered)
+    rendered = _URI_REFERENCE.sub(protect_url, rendered)
 
     for prefix in ("~", "$HOME", "${HOME}"):
         for suffix in sorted(_SCRIPT_RESOURCE_SUFFIXES, key=len, reverse=True):
@@ -289,7 +250,6 @@ def render_harness_script_references(text: str, target: str) -> str:
             ),
             rendered,
         )
-    rendered = rendered.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
     for token, url in protected_urls:
         rendered = rendered.replace(token, url)
     return rendered
@@ -321,10 +281,9 @@ def validate_harness_resource_projection(
             relative = path.relative_to(root)
             if (
                 is_ignored_artifact(relative)
-                or is_production_runtime_artifact(relative)
+                or is_production_controller_artifact(relative)
                 or "advise-state" in relative.name
                 or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
-                or (root.name == "scripts" and relative.as_posix() in ADVISOR_RUNTIME_FILES)
             ):
                 continue
             files.append(relative)
@@ -361,37 +320,24 @@ def validate_harness_resource_projection(
             if nested_ignore.is_symlink() or not nested_ignore.is_file():
                 raise ValueError(f"{target} hook-local ignore file is missing or unsafe: {nested_ignore}")
 
-    runtime_root_value = ADVISOR_RUNTIME_OUTPUT_PATHS.get(target)
-    runtime_root = Path(runtime_root_value) if runtime_root_value else None
-    if target == "pi":
-        runtime_root = Path("agent/evcrate/scripts")
     for path in sorted(output_root.rglob("*")):
         if not path.is_file():
             continue
         relative = path.relative_to(output_root)
         if relative == Path("migration-behavior-matrix.json"):
             continue
-        if runtime_root is not None and relative.parts[:len(runtime_root.parts)] == runtime_root.parts:
-            runtime_relative = relative.relative_to(runtime_root)
-            if runtime_relative.as_posix() in ADVISOR_RUNTIME_FILES:
-                continue
         try:
             raw = path.read_bytes()
             if b"\0" in raw[:1024]:
                 continue
-            content = raw.decode("utf-8").replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, "")
+            content = raw.decode("utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        content_without_urls = _URL_REFERENCE.sub("", content)
+        content_without_urls = _URI_REFERENCE.sub("", content)
         if _CLAUDE_PATH_REFERENCE.search(content_without_urls):
             raise ValueError(f"{target} output retains a central Claude resource path: {relative}")
 def render_advisory_capabilities(text: str, target: str) -> str:
-    """Replace one canonical advisory marker block with a target-specific block.
-
-    Source markers are deliberately strict build inputs: a missing, duplicated,
-    reversed, or locally edited block fails generation before a target can claim
-    a capability it has not implemented.
-    """
+    """Project the ordinary inline advice capability marker."""
 
     start_count = text.count(ADVISORY_CAPABILITY_BLOCK_START)
     end_count = text.count(ADVISORY_CAPABILITY_BLOCK_END)
@@ -403,7 +349,6 @@ def render_advisory_capabilities(text: str, target: str) -> str:
     content = text[content_start:end].strip()
     if content != _CANONICAL_ADVISORY_CAPABILITIES:
         raise ValueError("Malformed advisory capability markers: canonical capabilities were altered")
-
     relay_error = advisory_relay_error(target)
     rendered = "\n".join((
         ADVISORY_CAPABILITY_BLOCK_START,
@@ -420,7 +365,7 @@ def render_advisory_capabilities(text: str, target: str) -> str:
 
 
 def render_inline_advise_command(canonical: str, target: str, question_tool: str) -> str:
-    """Render an inline command only after validating its canonical capability block."""
+    """Render the ordinary inline interview command for a target."""
 
     relay_error = advisory_relay_error(target)
     projected = render_advisory_capabilities(canonical, target)
@@ -465,7 +410,7 @@ Run in the main session. Do not invoke a subagent or create persistent state.
 
 
 def render_advisory_interview_workflow(text: str, target: str) -> str:
-    """Project shared inline interview rules while removing unsupported relay state."""
+    """Project the ordinary inline interview workflow without relay state."""
 
     relay_error = advisory_relay_error(target)
     projected = render_advisory_capabilities(text, target)
@@ -497,37 +442,11 @@ def render_advisory_interview_workflow(text: str, target: str) -> str:
 
 
 def project_advisor_contract(body: str, target: str) -> str:
-    """Keep generated advisors checkpoint-only when their relay is unsupported."""
+    """Validate the central checkpoint contract for generated advisor agents."""
 
-    entry = body.find("## Entry modes")
-    boundaries = body.find("## Boundaries")
-    terminal = body.find("## Checkpoint terminal report")
-    if entry < 0 or boundaries < entry or terminal < boundaries:
-        raise ValueError("Canonical advisor is missing its relay/checkpoint contract boundaries")
-    prefix = body[:entry]
-    prefix = prefix.replace(
-        "for one fresh named checkpoint under explicit `--advice`, or\none terminal turn of the explicit `interview-relay/v1` contract.",
-        "for one fresh named checkpoint under explicit `--advice`.",
-    )
-    boundaries_body = body[boundaries:terminal]
-    terminal_body = body[terminal:]
-    relay_error = advisory_relay_error(target)
-    terminal_body = terminal_body.replace(
-        "This section applies only to `checkpoint/v1`. The relay path returns the exact\nJSON envelope above and never this Markdown report.",
-        "This section applies to `checkpoint/v1`. Interview relay is unsupported on this target.",
-    )
-    return (
-        prefix
-        + "## Entry mode\n\n"
-        + "The caller must use `checkpoint/v1` and supply terminal evidence for one fresh named checkpoint. "
-        + f"`interview-relay/v1` is unsupported here; `/advise --agent` returns `{relay_error}`.\n\n"
-        + "## Required checkpoint method\n\n"
-        + "1. Activate `advisor-strategy` and follow its one-shot checkpoint brief.\n"
-        + "2. Give one precise recommendation from bounded evidence and relevant prior counsel.\n"
-        + "3. Return a complete terminal report before the caller continues.\n\n"
-        + boundaries_body
-        + terminal_body
-    )
+    if "## Required checkpoint method" not in body or "## Checkpoint terminal report" not in body:
+        raise ValueError("Canonical advisor is missing its checkpoint contract")
+    return body
 
 
 @dataclass(frozen=True)

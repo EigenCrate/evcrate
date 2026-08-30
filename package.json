@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "A comprehensive boilerplate template for Claude Code, OpenCode, OMP, and native Pi coding agents.",
   "main": "index.js",
+  "bin": {
+    "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"
+  },
   "scripts": {
     "distribute": "bash -o pipefail -c 'python3 distribute.py --all 2>&1 | tee logs.txt'",
     "distribute:build": "python3 distribute.py --build",
@@ -14,10 +17,10 @@
     "migrate:gemini": "python3 migrate_claude_to_gemini.py",
     "migrate:codex": "python3 migrate_claude_to_codex.py",
     "migrate:omp": "python3 migrate_claude_to_omp.py",
-    "test": "npm run test:python && npm run test:pi && npm run test:advisor-routing",
-    "test:python": "python3 -m unittest discover -s tests -p 'test_*.py'",
-    "test:pi": "node --test .evcrate/targets/pi/tests/*.test.mjs",
-  "test:advisor-routing": "node --test .evcrate/source/.claude/scripts/__tests__/advisor-routing-integration.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-checkpoint-contract.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-profile.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-runner.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-adapter-contract.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-codex-adapter.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-claude-adapter.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-gemini-adapter.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-antigravity-adapter.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-pi-adapter.test.cjs .evcrate/source/.claude/scripts/__tests__/advisor-routing-coordinator.test.cjs",
+    "test": "npm run test:python && npm run test:pi && npm run test:advisor-controller",
+    "test:python": "python3 -m unittest tests.test_advisor_skill_distribution tests.test_distribution_build tests.test_distribution_publish tests.test_distribution_publish_symlinks tests.test_distribution_cli tests.test_distribution_pi tests.test_distribution_pi_settings tests.test_pi_resource_migration tests.test_migrate_claude_to_codex tests.test_migrate_claude_to_gemini tests.test_migrate_claude_to_omp tests.test_migrate_claude_to_pi",
+    "test:pi": "node --test --test-concurrency=1 .evcrate/targets/pi/tests/*.test.mjs",
+    "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
     "prepare": "husky install || true"
@@ -26,22 +29,14 @@
     "type": "git",
     "url": "git+https://github.com/NEBULEA-M/evcrate.git"
   },
-  "keywords": [
-    "claude-code",
-    "ai-agents",
-    "development-template",
-    "boilerplate",
-    "automation",
-    "cli-tools"
-  ],
+  "keywords": ["claude-code", "ai-agents", "development-template", "boilerplate", "automation", "cli-tools"],
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/NEBULEA-M/evcrate/issues"
-  },
+  "bugs": {"url": "https://github.com/NEBULEA-M/evcrate/issues"},
   "homepage": "https://github.com/NEBULEA-M/evcrate#readme",
   "files": [
     ".evcrate/source/.claude/**",
-    ".evcrate/source/.opencode/**",
+    ".evcrate/source/.evcrate/bin/**",
+    ".evcrate/targets/**",
     ".evcrate/source/.pi/**",
     ".evcrate/source/.omp/**",
     "distribution/**",
@@ -55,7 +50,6 @@
     "migrate_claude_to_pi.py",
     "omp_adapter/**",
     "pi_adapter/**",
-    "!**/__tests__/advisor-routing-*.test.cjs",
     "!**/__tests__/fixtures/**",
     "!**/__tests__/helpers/**",
     "!**/__pycache__/**",
@@ -84,13 +78,7 @@
     "pi-subagents": "0.44.0",
     "semantic-release": "^22.0.12"
   },
-  "engines": {
-    "node": ">=22.19.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "pi-code-graph": "^0.16.0"
-  }
+  "engines": {"node": ">=22.19.0"},
+  "publishConfig": {"access": "public"},
+  "dependencies": {"pi-code-graph": "^0.16.0"}
 }

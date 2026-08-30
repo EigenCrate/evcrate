@@ -17,6 +17,74 @@ _OMP_WORKFLOW_REFERENCE = re.compile(
     r"`(?P<path>(?:\./)?\.omp/evcrate/workflows/(?P<name>[A-Za-z0-9_*.-]+))`"
 )
 
+_URI_REFERENCE = re.compile(
+    r"(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|//)[^\s<>\"']+",
+    re.IGNORECASE,
+)
+_OMP_NO_SKILLS_GUIDANCE = (
+    "**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery "
+    "and loading. When that flag is active, do not claim automatic skill activation: "
+    "read each required migrated `SKILL.md` directly with the read tool from "
+    "`./.omp/skills/<skill-name>/SKILL.md`, falling back to "
+    "`~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, "
+    "consult `./.omp/evcrate/skill-map.json` or "
+    "`~/.omp/agent/evcrate/skill-map.json`, then read the archived package under "
+    "`./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` "
+    "path), then follow the instructions. Without `--no-skills`, use OMP's normal "
+    "skill discovery."
+)
+_SKILL_ACTIVATION_MARKERS = (
+    "activate the skills",
+    "activate needed skills",
+    "activate only needed skills",
+    "activate only the skills",
+    "activate from catalog",
+    "skills catalog",
+    "list of skills",
+    "skill tool",
+)
+
+
+def _replace_command_file_references(value: str, command_map: dict[str, dict[str, str]]) -> str:
+    """Rewrite canonical command-file paths to OMP's flattened layout."""
+
+    protected: list[str] = []
+
+    def protect(match: re.Match[str]) -> str:
+        token = f"__OMP_COMMAND_FILE_URI_{len(protected)}__"
+        protected.append(match.group(0))
+        return token
+
+    rendered = _URI_REFERENCE.sub(protect, value)
+    for item in sorted(command_map.values(), key=lambda entry: len(entry["source"]), reverse=True):
+        source = item["source"]
+        target = item["target"]
+        for prefix, replacement in (
+            ("${HOME}/", "${HOME}/.omp/agent/"),
+            ("$HOME/", "$HOME/.omp/agent/"),
+            ("~/", "~/.omp/agent/"),
+            ("./", "./.omp/"),
+            ("", ".omp/"),
+        ):
+            rendered = rendered.replace(
+                f"{prefix}.claude/commands/{source}",
+                f"{replacement}commands/{target}",
+            )
+    for index, original in enumerate(protected):
+        rendered = rendered.replace(f"__OMP_COMMAND_FILE_URI_{index}__", original)
+    return rendered
+
+
+def _add_omp_skill_runtime_guidance(value: str) -> str:
+    """Explain how migrated skills remain usable when discovery is disabled."""
+
+    lowered = value.casefold()
+    if "omp skill loading (runtime)" in lowered:
+        return value
+    if not any(marker in lowered for marker in _SKILL_ACTIVATION_MARKERS):
+        return value
+    return f"{value.rstrip()}\n\n{_OMP_NO_SKILLS_GUIDANCE}\n"
+
 
 def _add_omp_global_workflow_fallback(value: str) -> str:
     """Make workflow references work for project and HOME-loaded commands."""
@@ -67,11 +135,11 @@ def _replace_command_references(value: str, command_map: dict[str, dict[str, str
     protected: list[str] = []
 
     def protect(match: re.Match[str]) -> str:
-        token = f"__OMP_COMMAND_URL_{len(protected)}__"
+        token = f"__OMP_COMMAND_URI_{len(protected)}__"
         protected.append(match.group(0))
         return token
 
-    rendered = re.sub(r"https?://[^\s<>\"']+", protect, value, flags=re.IGNORECASE)
+    rendered = _URI_REFERENCE.sub(protect, value)
     for item in sorted(command_map.values(), key=lambda entry: len(entry["sourceName"]), reverse=True):
         source_name = item["sourceName"]
         target_name = item["targetName"]
@@ -81,105 +149,22 @@ def _replace_command_references(value: str, command_map: dict[str, dict[str, str
         )
         rendered = pattern.sub(f"/{target_name}", rendered)
     for index, original in enumerate(protected):
-        rendered = rendered.replace(f"__OMP_COMMAND_URL_{index}__", original)
-    return rendered
-def _render_omp_advisor_command(value: str) -> str:
-    """Replace executable relay instructions with OMP-native advisor dispatch."""
-
-    if "advisor-bridge.cjs" not in value:
-        return value
-    start = value.find("When explicit advice mode is active")
-    end = value.find("## Workflow:", start)
-    if start < 0 or end < 0:
-        raise ResourceError("OMP command contains an unsupported advisor bridge without a known contract")
-    replacement = (
-        "When explicit advice mode is active, the advice gate is an executable step, not\n"
-        "a writing exercise. After the required terminal review or test evidence exists\n"
-        "and before displaying advisor findings, dispatch exactly one blocking native OMP\n"
-        "`advisor` subagent with the bounded checkpoint request from the workflow. Do not\n"
-        "invoke an executable bridge, external adapter, or fallback route. If a caller\n"
-        "requests advisor relay with `--agent`, return\n"
-        "`ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` and leave the gate incomplete.\n\n"
-    )
-    rendered = value[:start] + replacement + value[end:]
-    if "advisor-bridge.cjs" in rendered:
-        raise ResourceError("OMP command retained an unsupported advisor bridge reference")
-    return rendered
-
-
-def _render_omp_advisor_workflow(value: str) -> str:
-    """Keep the mentoring contract while selecting OMP's native advisor path."""
-
-    if "advisor-bridge.cjs" not in value:
-        return value
-    start = value.find("### Executable harness bridge")
-    end = value.find("### Resolve once and choose one branch", start)
-    if start < 0 or end < 0:
-        raise ResourceError("OMP workflow contains an unsupported advisor bridge without a known contract")
-    replacement = (
-        "### OMP native dispatch\n\n"
-        "OMP has no executable advisor bridge or cross-harness relay adapter. For a\n"
-        "named checkpoint, dispatch exactly one blocking native `advisor` subagent\n"
-        "through OMP's task mechanism with the bounded checkpoint request, then wait\n"
-        "for its terminal structured result. The advisor is read-only, non-binding,\n"
-        "and non-recursive. A final standalone `--agent` relay request returns\n"
-        "`ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` before delegation or state creation.\n\n"
-    )
-    rendered = value[:start] + replacement + value[end:]
-    external_start = rendered.find("- **External descriptor:**")
-    external_end = rendered.find("\n\nBefore either child action", external_start)
-    if external_start < 0 or external_end < 0:
-        raise ResourceError("OMP workflow is missing its external advisor branch")
-    rendered = (
-        rendered[:external_start]
-        + "- **External descriptor:** unsupported on OMP. Return "
-        "`ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` and do not invoke an external adapter."
-        + rendered[external_end:]
-    )
-    rendered = rendered.replace(
-        "The `codex` value in the dispatcher-level example above is illustrative; it is\n"
-        "not a value to copy into another harness. The executable bridge below binds the\n"
-        "actual host from its installed directory.",
-        "The `codex` value in the dispatcher-level example above is illustrative; it is\n"
-        "not a value to copy into OMP. The native dispatch section below selects OMP's\n"
-        "ordinary blocking `advisor` subagent.",
-    )
-    rendered = rendered.replace(
-        "The external adapter must return a legacy `{ \"response\": \"...\" }` result or a\n"
-        "complete `evcrate-advisor-result/v1` object. The dispatcher rejects malformed\n"
-        "results and adds the original checkpoint to legacy results before returning.",
-        "The native OMP advisor must return a complete `evcrate-advisor-result/v1` object.\n"
-        "OMP rejects malformed results and preserves the original checkpoint.",
-    )
-    rendered = rendered.replace(
-        "The dispatcher owns validated route selection and the single\n"
-        "adapter exception.",
-        "OMP owns validated native advisor dispatch and the single blocking result.",
-    )
-    rendered = rendered.replace("Claude-only interview relay", "unsupported OMP interview relay")
-    if "advisor-bridge.cjs" in rendered:
-        raise ResourceError("OMP workflow retained an unsupported advisor bridge reference")
+        rendered = rendered.replace(f"__OMP_COMMAND_URI_{index}__", original)
     return rendered
 
 
 def translate_prompt(value: str, command_map: dict[str, dict[str, str]]) -> str:
     """Translate OMP resource paths, command names, and Claude-only tool prose."""
 
-    rendered = render_harness_script_references(value, "omp")
+    rendered = _replace_command_file_references(value, command_map)
+    rendered = render_harness_script_references(rendered, "omp")
     rendered = _replace_command_references(rendered, command_map)
     rendered = _add_omp_global_workflow_fallback(rendered)
-    rendered = rendered.replace("Skill tool", "skill command")
+    rendered = _add_omp_skill_runtime_guidance(rendered)
+    rendered = rendered.replace("Skill tool", "OMP command mechanism")
     rendered = rendered.replace("Task tool", "task tool")
     rendered = rendered.replace("AskUserQuestion", "ask the user")
     rendered = rendered.replace("SlashCommand", "OMP command")
-    rendered = rendered.replace(
-        "require its\nexecutable local bridge for the eventual named checkpoint.",
-        "dispatch exactly one blocking native OMP `advisor` subagent for the eventual\nnamed checkpoint.",
-    )
-    rendered = rendered.replace(
-        "terminal `ADVICE_READY` result from the local\nbridge.",
-        "terminal structured result from the native OMP `advisor` subagent.",
-    )
     return rendered
 
 
@@ -205,7 +190,6 @@ def _command_frontmatter(source_path: Path, command_map: dict[str, dict[str, str
             "native user-input flow",
         )
         transformed_body = translate_prompt(transformed_body, command_map)
-    transformed_body = _render_omp_advisor_command(transformed_body)
     return fields, transformed_body
 
 
@@ -253,8 +237,6 @@ def convert_workflows(source: Path, output: Path, command_map: dict[str, dict[st
             relative_name = relative_path(workflows_root, workflow).as_posix()
             if relative_name == "advisory-interview.md":
                 rendered = render_advisory_interview_workflow(rendered, "omp")
-            elif relative_name == "advisor-mentoring.md":
-                rendered = _render_omp_advisor_workflow(rendered)
             return rendered
         copy_file(workflow, destination / relative, output, transform)
         copied.append(relative.as_posix())

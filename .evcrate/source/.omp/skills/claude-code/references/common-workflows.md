@@ -88,7 +88,7 @@ claude "analyze the changes in PR #42"
 
 ```bash
 /bootstrap__auto create Next.js app with auth and database
-/bootstrap__auto__fast quick React app with TypeScript
+/bootstrap:auto:fast quick React app with TypeScript
 ```
 
 ## Advanced Workflows

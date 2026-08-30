@@ -1,63 +1,66 @@
 ---
 argument-hint: "[issues] [--advice]"
-description: "⚡⚡⚡ Use subagents to plan and fix hard issues"
+description: "Use subagents to plan and fix hard issues"
 ---
 
 
-**Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
+Use the orchestration protocol, development rules, and relevant skills to fix:
 <raw-issues>$ARGUMENTS</raw-issues>
 
-## Canonical checkpoint routing
+## Advice mode
 
-Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
-`.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
-and does not duplicate route or adapter selection.
+Before analysis, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`. Parse raw
+arguments exactly as that workflow specifies, derive `WORK_ARGUMENTS`, and use
+it as the issue input. A final standalone `--advice` activates explicit
+checkpoint mentoring; a non-final token remains ordinary issue text.
 
-## Advice Mode
+When explicit advice mode is active, wait until the required terminal reviewer
+or test evidence exists. Before displaying findings or making a dependent
+decision, construct the workflow's exact ten-field checkpoint object and invoke
+this command once from the repository root:
 
-A final standalone `--advice` activates explicit review mentoring in `/code`.
-Before analysis, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and derive
-`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
-issue input and apply the shared default stuck-escalation contract.
+```bash
+~/.evcrate/bin/evcrate-advisor <<'JSON'
+{
+  "protocol": "evcrate-advisor-checkpoint",
+  "version": 1,
+  "checkpoint": "review:hard-fix",
+  "question": "Which safe action should follow this terminal review?",
+  "kind": "review",
+  "task_or_phase": "Hard-fix review",
+  "evidence": {"terminal": "Bounded terminal reviewer or test result.", "files": []},
+  "changed_paths": [],
+  "prior_counsel": "none",
+  "owner_disposition": "none"
+}
+JSON
+```
 
-When explicit advice mode is active, the advice gate is an executable step, not
-a writing exercise. After the required terminal review or test evidence exists
-and before displaying advisor findings, dispatch exactly one blocking native OMP
-`advisor` subagent with the bounded checkpoint request from the workflow. Do not
-invoke an executable bridge, external adapter, or fallback route. If a caller
-requests advisor relay with `--agent`, return
-`ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` and leave the gate incomplete.
+Replace the example values with the current named checkpoint and bounded
+context. Keep the object exact: no wrapper and no route or CLI fields. Use only
+an `ADVICE_READY` controller envelope as advice. A failed, missing, malformed,
+interrupted, cancelled, timed-out, unavailable, or nonzero invocation leaves
+the gate incomplete; do not claim that advice was received or continue a
+blocked dependent action.
 
-## Workflow:
+Advice is non-binding. Record the owner's acceptance or rejection, then keep
+all implementation, tests, approvals, and user communication in the main
+workflow. Never ask the controller or advisor to edit, delegate, approve,
+grant permissions, or change workflow order.
 
-If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.
+## Execution
 
-### Fullfill the request
-**Question Everything**: Use `ask the user` tool to ask probing questions to fully understand the user's request, constraints, and true objectives. Don't assume - clarify until you're 100% certain.
+1. Use `sequential-thinking` and `problem-solving` for complex diagnosis.
+2. Activate only the skills required by the issue.
+3. Use `debugger` for root-cause evidence, `researcher` only when external
+   research is necessary, and `planner` for a non-trivial implementation plan.
+4. Implement the chosen plan through the normal `/code` workflow with
+   `WORK_ARGUMENTS`; preserve the explicit advice mode only where the workflow
+   requires another named checkpoint.
+5. Run the applicable focused tests and report changed paths, verification, and
+   unresolved questions concisely.
 
-* If you have any questions, use `ask the user` tool to ask the user to clarify them.
-* Ask 1 question at a time, wait for the user to answer before moving to the next question.
-* If you don't have any questions, start the next step.
+If screenshots or videos are supplied, use `ai-multimodal` to describe the
+observable issue before implementation and verify any generated visual asset.
 
-### Fix the issue
-
-Use `sequential-thinking` skill to break complex problems into sequential thought steps.
-Use `problem-solving` skills to tackle the issues.
-Analyze the skills catalog and activate other skills that are needed for the task during the process.
-
-1. Use `debugger` subagent to find the root cause of the issues and report back to main agent.
-2. Use `researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
-3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
-4. Then use `/code` OMP command to implement the plan step by step. This fallback
-   handoff uses `WORK_ARGUMENTS`; append exactly one trailing `--advice` in explicit
-   mode and otherwise pass no `--advice` token.
-5. Final Report:
-  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
-  * Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.
-  - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
-  - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
-
-**REMEMBER**:
-- You can always generate images with `ai-multimodal` skills on the fly for visual assets.
-- You always read and analyze the generated assets with `ai-multimodal` skills to verify they meet requirements.
-- For image editing (removing background, adjusting, cropping), use `ImageMagick` skill or similar tools as needed.
+**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

@@ -1,9 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "omp",
   "adapter": "migrate_claude_to_omp.py",
   "adapter_sources": [
-    "distribution/advisor_runtime.py",
     "distribution/contracts.py",
     "distribution/hashing.py",
     "omp_adapter/__init__.py",

@@ -1,9 +1,0 @@
-Antigravity CLI 1.0.0
--p, --print, --prompt <prompt>
---model <slug>
---effort <level> low, medium, high
---input-format <format> text, stream-json
---output-format <format> text, json, stream-json
---print-timeout <duration>
---sandbox
---dangerously-skip-permissions

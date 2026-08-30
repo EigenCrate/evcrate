@@ -1,8 +1,0 @@
-{
-  "type": "result",
-  "subtype": "success",
-  "is_error": false,
-  "result": "CLAUDE_OK",
-  "session_id": "fixture-session",
-  "num_turns": 1
-}

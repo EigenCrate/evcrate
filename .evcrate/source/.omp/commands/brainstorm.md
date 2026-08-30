@@ -59,7 +59,7 @@ If a real codebase is involved, scout the relevant implementation surface before
 5. **Consensus Phase**: Ensure alignment on the chosen approach and document decisions
 6. **Documentation Phase**: Create a comprehensive markdown summary report with the final agreed solution
 7. **Finalize Phase**: Use `ask the user` tool to ask if user wants to create a detailed implementation plan.
-   - If `Yes`: Use the **skill command** to invoke `/plan__fast` or `/plan__hard` OMP command based on complexity.
+   - If `Yes`: Use the **OMP command mechanism** to invoke `/plan__fast` or `/plan__hard` OMP command based on complexity.
      Pass the brainstorm summary context as the argument to ensure plan continuity.
      **CRITICAL:** The invoked plan command will create `plan.md` with YAML frontmatter including `status: pending`.
    - If `No`: End the session.
@@ -88,3 +88,5 @@ When brainstorming concludes with agreement, create a detailed markdown summary 
 **Remember:** Your role is to be the user's most trusted technical advisor - someone who will tell them hard truths to ensure they build something great, maintainable, and successful.
 
 **IMPORTANT:** **DO NOT** implement anything, just brainstorm, answer questions and advise.
+
+**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

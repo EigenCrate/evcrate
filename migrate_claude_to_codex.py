@@ -12,11 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from distribution.contracts import (
-    ADVISOR_BRIDGE_FALLBACK_BLOCK,
-    ADVISOR_RUNTIME_FILES,
     add_global_workflow_fallback,
     advisory_relay_error,
-    is_production_runtime_artifact,
+    is_production_controller_artifact,
     project_advisor_contract,
     render_advisory_interview_workflow,
     render_harness_script_references,
@@ -168,18 +166,9 @@ agy -p "[prompt]" --model gemini-3.7-flash-high
 Run focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command. The number of parallel searches follows the search scope and available directories, not provider selection."""
 
 COMMAND_TOKEN_RE = re.compile(r"/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*")
-GLOBAL_ADVISOR_BRIDGE_PATHS = (
-    "~/.claude/scripts/advisor-bridge.cjs",
-    "~/.codex/scripts/advisor-bridge.cjs",
-    "~/.gemini/scripts/advisor-bridge.cjs",
-    "~/.gemini/config/scripts/advisor-bridge.cjs",
-    "~/.pi/agent/evcrate/scripts/advisor-bridge.cjs",
-)
 URL_REFERENCE = re.compile(r"https?://[^\s<>()]+", re.IGNORECASE)
 
 def apply_replacements(text: str) -> str:
-    fallback_token = "__EVCRATE_GLOBAL_ADVISOR_FALLBACK__"
-    text = text.replace(ADVISOR_BRIDGE_FALLBACK_BLOCK, fallback_token)
     protected_urls = []
 
     def protect_url(match: re.Match[str]) -> str:
@@ -188,18 +177,9 @@ def apply_replacements(text: str) -> str:
         return token
 
     text = URL_REFERENCE.sub(protect_url, text)
-    protected = []
-    for index, path in enumerate(GLOBAL_ADVISOR_BRIDGE_PATHS):
-        token = f"__EVCRATE_GLOBAL_ADVISOR_BRIDGE_{index}__"
-        text = text.replace(path, token)
-        protected.append((token, path))
     for pattern, replacement in REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     text = text.replace(".Codex", ".codex")
-    text = re.sub(r"codexkit", "codexkit", text, flags=re.IGNORECASE)
-    for token, path in protected:
-        text = text.replace(token, path)
-    text = text.replace(fallback_token, ADVISOR_BRIDGE_FALLBACK_BLOCK)
     for token, url in protected_urls:
         text = text.replace(token, url)
     return text
@@ -432,8 +412,7 @@ def _ordinary_script_relatives() -> list[Path]:
             or "__pycache__" in relative.parts
             or relative.suffix.lower() in {".pyc", ".pyo"}
             or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
-            or relative.as_posix() in ADVISOR_RUNTIME_FILES
-            or is_production_runtime_artifact(relative)
+            or is_production_controller_artifact(relative)
         ):
             continue
         relatives.append(relative)
@@ -454,10 +433,6 @@ def clean_destination() -> None:
         CODEX_DIR / "agents",
         CODEX_DIR / "bin",
         CODEX_DIR / "hooks",
-        *[CODEX_DIR / "scripts" / relative for relative in ADVISOR_RUNTIME_FILES],
-        CODEX_DIR / "scripts" / "advisor-routing",
-        # Removed before the byte-identical runtime closure was introduced.
-        CODEX_DIR / "scripts" / "advise-state.cjs",
         CODEX_DIR / "workflows",
         AGENTS_DIR / "skills",
     ]:
@@ -482,7 +457,6 @@ def preflight_destination() -> None:
     managed_directories = [
         *(CODEX_DIR / name for name in ("agents", "bin", "hooks", "scripts", "workflows")),
         AGENTS_DIR / "skills",
-        CODEX_DIR / "scripts" / "advisor-routing",
     ]
     for path in managed_directories:
         _assert_managed_tree(path)
@@ -492,7 +466,6 @@ def preflight_destination() -> None:
         CODEX_DIR / EVCRATE_CONFIG_FILE,
         CODEX_DIR / ".evcrateignore",
         CODEX_DIR / "scripts" / "advise-state.cjs",
-        *(CODEX_DIR / "scripts" / relative for relative in ADVISOR_RUNTIME_FILES),
         *(CODEX_DIR / "scripts" / relative for relative in _ordinary_script_relatives()),
     ]
     for path in managed_files:
@@ -897,7 +870,7 @@ def migrate_hook_sources() -> None:
         if (
             "__pycache__" in relative.parts
             or any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts)
-            or is_production_runtime_artifact(relative)
+            or is_production_controller_artifact(relative)
         ):
             continue
         destination = dest_dir / relative
@@ -913,25 +886,6 @@ def migrate_hook_sources() -> None:
         shutil.copymode(source, destination)
         print(f"Migrated hook source: {relative}")
 
-
-def migrate_advisor_routing_runtime() -> None:
-    """Copy the resolver closure without target-language text rewrites."""
-
-    source_dir = CLAUDE_DIR / "scripts"
-    destination_dir = CODEX_DIR / "scripts"
-    if source_dir.is_symlink():
-        raise RuntimeError(f"Canonical script directory is symlinked: {source_dir}")
-    if not (source_dir / ADVISOR_RUNTIME_FILES[0]).is_file():
-        return
-    for relative in ADVISOR_RUNTIME_FILES:
-        source = source_dir / relative
-        if source.is_symlink() or not source.is_file():
-            raise RuntimeError(f"Canonical advisor runtime file is missing or unsafe: {source}")
-        destination = destination_dir / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, destination)
-        shutil.copymode(source, destination)
-        print(f"Migrated advisor runtime: {relative}")
 
 
 def migrate_commands_as_native_skills() -> None:
@@ -1510,7 +1464,6 @@ def main() -> None:
     migrate_agents()
     migrate_skills()
     migrate_help_scripts()
-    migrate_advisor_routing_runtime()
     migrate_hook_sources()
     migrate_commands_as_native_skills()
     write_codex_global_guidance()

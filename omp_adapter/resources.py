@@ -8,7 +8,7 @@ import stat
 from pathlib import Path
 from typing import Callable, Iterable
 
-from distribution.advisor_runtime import is_production_runtime_artifact
+from distribution.advisor_controller import is_production_controller_artifact
 from distribution.hashing import canonical_json_bytes, is_ignored_artifact
 from pi_adapter.frontmatter import normalize_lf
 
@@ -55,7 +55,7 @@ def walk_files(root: Path) -> list[Path]:
     return files
 
 
-def production_files(root: Path, *, exclude_runtime: bool = False) -> list[Path]:
+def production_files(root: Path) -> list[Path]:
     """Return distributable files, excluding tests, fixtures, and generated artifacts."""
 
     result: list[Path] = []
@@ -63,13 +63,8 @@ def production_files(root: Path, *, exclude_runtime: bool = False) -> list[Path]
         relative = relative_path(root, path)
         if any(part in {"__tests__", "tests", "fixtures", "helpers"} for part in relative.parts):
             continue
-        if is_production_runtime_artifact(relative):
+        if is_production_controller_artifact(relative):
             continue
-        if exclude_runtime:
-            from distribution.advisor_runtime import ADVISOR_RUNTIME_FILES
-
-            if relative.as_posix() in ADVISOR_RUNTIME_FILES:
-                continue
         result.append(path)
     return result
 
@@ -132,13 +127,11 @@ def copy_tree(
     destination: Path,
     output: Path,
     transform: Callable[[str], str] | None = None,
-    *,
-    exclude_runtime: bool = False,
 ) -> tuple[str, ...]:
     """Copy a validated tree and return its relative file inventory."""
 
     copied: list[str] = []
-    for source_file in production_files(source, exclude_runtime=exclude_runtime):
+    for source_file in production_files(source):
         relative = relative_path(source, source_file)
         copy_file(source_file, destination / relative, output, transform)
         copied.append(relative.as_posix())

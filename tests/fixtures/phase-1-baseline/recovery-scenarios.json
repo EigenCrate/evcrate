@@ -1,0 +1,61 @@
+{
+  "schema": "evcrate-phase1-recovery-scenarios/v1",
+  "baseline_commit": "61d90b49346e1d01a30a42a76952a3d49a3998c8",
+  "scenarios": [
+    {
+      "id": "interrupted-home-recovery-v2",
+      "baseline_commit": "61d90b49346e1d01a30a42a76952a3d49a3998c8",
+      "observer": "scenario:interrupted-home-recovery-v2",
+      "source": "tests/test_distribution_publish.py",
+      "result_contract": {
+        "schema": "evcrate-phase1-result-contract/v2",
+        "predicates": [
+          {"actual": "old", "expected": "old", "type": "equal"},
+          {"actual": false, "type": "false"},
+          {
+            "actual": {
+              "managed_paths": {".codex": ["agent/previous.json"]},
+              "previous_managed_paths": {".codex": ["agent/previous.json"]},
+              "recovery_action": "restored-interrupted-roots",
+              "roots": {".codex": {"backup": "..codex.evcrate-backup-v2"}},
+              "schema_version": 1,
+              "status": "recovered"
+            },
+            "expected": {
+              "managed_paths": {".codex": ["agent/previous.json"]},
+              "previous_managed_paths": {".codex": ["agent/previous.json"]},
+              "recovery_action": "restored-interrupted-roots",
+              "roots": {".codex": {"backup": "..codex.evcrate-backup-v2"}},
+              "schema_version": 1,
+              "status": "recovered"
+            },
+            "type": "equal"
+          },
+          {"actual": {".codex": ["agent/previous.json"]}, "expected": {".codex": ["agent/previous.json"]}, "type": "equal"},
+          {"actual": "old", "expected": "old", "type": "equal"},
+          {"actual": false, "type": "false"},
+          {
+            "actual": {
+              "managed_paths": {".codex": ["agent/previous.json"]},
+              "previous_managed_paths": {".codex": ["agent/previous.json"]},
+              "recovery_action": "restored-interrupted-roots",
+              "roots": {".codex": {"backup": "..codex.evcrate-backup-v2"}},
+              "schema_version": 1,
+              "status": "recovered"
+            },
+            "expected": {
+              "managed_paths": {".codex": ["agent/previous.json"]},
+              "previous_managed_paths": {".codex": ["agent/previous.json"]},
+              "recovery_action": "restored-interrupted-roots",
+              "roots": {".codex": {"backup": "..codex.evcrate-backup-v2"}},
+              "schema_version": 1,
+              "status": "recovered"
+            },
+            "type": "equal"
+          },
+          {"actual": {".codex": ["agent/previous.json"]}, "expected": {".codex": ["agent/previous.json"]}, "type": "equal"}
+        ]
+      }
+    }
+  ]
+}

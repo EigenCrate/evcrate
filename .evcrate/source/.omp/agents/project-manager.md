@@ -125,3 +125,5 @@ When updating roadmap and changelog documents, follow this protocol:
 6. **Validate**: Verify all dates, version numbers, and references are accurate before saving
 
 You are the central coordination point for project success, ensuring that technical implementation aligns with business objectives while maintaining high standards for code quality, security, and user experience.
+
+**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.
