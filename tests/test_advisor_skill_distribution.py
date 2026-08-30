@@ -106,7 +106,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             ".gemini/commands/fix/hard.toml",
             ".antigravity/skills/cmd_fix_hard/SKILL.md",
             ".pi/agent/evcrate/commands/fix/hard.md",
-            ".omp/commands/fix__hard.md",
+            ".omp/commands/cmd-fix__hard.md",
         )
         for relative in command_paths:
             with self.subTest(relative=relative):

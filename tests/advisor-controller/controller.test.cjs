@@ -24,6 +24,7 @@ const { parseInput } = require(path.join(ADVISOR_DIR, 'controller.cjs'));
 const { createRoutingError } = require(path.join(ADVISOR_DIR, 'errors.cjs'));
 const { validatePolicy } = require(path.join(ADVISOR_DIR, 'policy-schema.cjs'));
 const { getAdapter } = require(path.join(ADVISOR_DIR, 'adapter-registry.cjs'));
+const { createWorkspace, cleanupWorkspace } = require(path.join(ADVISOR_DIR, 'isolated-workspace.cjs'));
 
 function policy(backend = 'codex') {
   const model = backend === 'omp' ? 'openai-codex/gpt-5.6-sol' : 'gpt-5.6-sol';
@@ -97,6 +98,22 @@ function assertFailed(result, code) {
   assert.equal(value.error.code, code);
   return value;
 }
+
+test('standard sticky temporary roots accept foreign ownership', () => {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
+  const root = os.tmpdir();
+  const rootStat = fs.lstatSync(root);
+  if (rootStat.uid === process.getuid() || !(rootStat.mode & 0o1000)) return;
+  const workspace = createWorkspace({ environment: { TMPDIR: root } });
+  try {
+    assert.equal(workspace.root, path.resolve(root));
+    const workspaceStat = fs.statSync(workspace.path);
+    assert.equal(workspaceStat.uid, process.getuid());
+    assert.equal(workspaceStat.mode & 0o077, 0);
+  } finally {
+    cleanupWorkspace(workspace);
+  }
+});
 
 test('direct checkpoint succeeds through exactly one final Codex process', () => {
   const fixture = setup();

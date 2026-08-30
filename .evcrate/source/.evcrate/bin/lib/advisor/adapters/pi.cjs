@@ -70,6 +70,12 @@ function authCode(value) {
   if (/(?:model|provider).{0,40}(?:unknown|invalid|unsupported|not[ _-]?found|unavailable)/iu.test(text)) return 'MODEL_UNSUPPORTED';
   return 'AUTH_UNAVAILABLE';
 }
+function modelAvailable(output, route) {
+  return output.split(/\r?\n/u).some((line) => {
+    const fields = line.trim().split(/\s+/u);
+    return fields[0] === route.provider && fields[1] === route.modelId;
+  });
+}
 async function probeAuth(context) {
   const current = state(context);
   const route = target(context);
@@ -78,9 +84,12 @@ async function probeAuth(context) {
   try { status = parseJsonDocument((await command(context, ['auth', 'check', '--provider', route.provider,
     '--model', route.modelId, '--json', '--no-refresh'])).stdout.trim()); }
   catch (error) { if (codeOf(error)) throw error; fail('AUTH_UNAVAILABLE'); }
-  if (!isPlainObject(status) || Object.keys(status).some((key) => !['status', 'provider', 'model', 'reason'].includes(key))
-    || typeof status.status !== 'string' || typeof status.provider !== 'string') fail('AUTH_UNAVAILABLE');
-  if (status.provider !== route.provider || status.model !== route.modelId) fail('MODEL_UNSUPPORTED');
+  if (!isPlainObject(status) || Object.keys(status).some((key) => !['status', 'provider', 'model', 'reason', 'authType'].includes(key))
+    || typeof status.status !== 'string' || typeof status.provider !== 'string'
+    || (status.model !== undefined && (typeof status.model !== 'string' || status.model !== route.modelId))
+    || (status.reason !== undefined && typeof status.reason !== 'string')
+    || (status.authType !== undefined && (typeof status.authType !== 'string' || !status.authType))) fail('AUTH_UNAVAILABLE');
+  if (status.provider !== route.provider) fail('MODEL_UNSUPPORTED');
   if (status.status !== 'ready') fail(authCode(status.reason || status.status));
   const attestation = Object.freeze({ authenticated: true });
   current.auth = attestation;
@@ -92,14 +101,16 @@ async function probeCapabilities(context) {
   const current = state(context);
   const route = target(context);
   if (!current.version || !current.auth || current.route.model !== route.model) fail('MODEL_UNSUPPORTED');
-  const help = (await command(context, ['--help'])).stdout;
+  const help = (await command(context, ['--offline', '--help'])).stdout;
   for (const marker of ['-p', '--mode', 'json']) required(help, marker, 'OUTPUT_UNSUPPORTED');
-  for (const marker of ['--provider', '--model']) required(help, marker, 'MODEL_UNSUPPORTED');
+  for (const marker of ['--provider', '--model', '--list-models', '--offline']) required(help, marker, 'MODEL_UNSUPPORTED');
   required(help, '--thinking', 'EFFORT_UNSUPPORTED');
   if (!help.includes(route.effort)) fail('EFFORT_UNSUPPORTED');
   for (const marker of ['--no-session', '--no-extensions', '--no-skills', '--no-prompt-templates',
     '--no-context-files', '--no-themes']) required(help, marker, 'SESSION_UNSUPPORTED');
   for (const marker of ['--no-approve', '--no-tools']) required(help, marker, 'READ_ONLY_UNSUPPORTED');
+  const models = await command(context, ['--offline', '--list-models', `${route.provider}/${route.modelId}`]);
+  if (!modelAvailable(models.stdout, route)) fail('MODEL_UNSUPPORTED');
   current.capabilities = validateCapabilityAttestation({ model: route.model, effort: route.effort,
     noninteractive: true, session: 'isolated', tools: 'none', output: 'jsonl' });
   return current.capabilities;
@@ -121,7 +132,7 @@ const EVENT_KEYS = Object.freeze({
   agent_settled: ['type'],
   message_end: ['type', 'message'],
   message_start: ['type', 'message'],
-  message_update: ['type', 'assistantMessageEvent'],
+  message_update: ['type', 'assistantMessageEvent', 'usage'],
   session: SESSION_KEYS,
   tool_execution_end: ['type', 'toolCallId', 'toolName', 'result', 'isError'],
   tool_execution_start: ['type', 'toolCallId', 'toolName', 'args'],
@@ -150,6 +161,15 @@ function exactKeys(value, allowed, required = allowed) {
 }
 function finiteNumber(value) {
   if (typeof value !== 'number' || !Number.isFinite(value)) fail('PROTOCOL_INVALID');
+}
+function usageShape(value) {
+  exactKeys(value, USAGE_KEYS, ['input', 'output', 'cacheRead', 'cacheWrite', 'totalTokens', 'cost']);
+  for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'cacheWrite1h', 'reasoning', 'totalTokens']) {
+    if (value[key] !== undefined) finiteNumber(value[key]);
+  }
+  exactKeys(value.cost, COST_KEYS);
+  for (const key of COST_KEYS) finiteNumber(value.cost[key]);
+  return value;
 }
 function timestamp(value) {
   if (!Number.isSafeInteger(value) || value < 0) fail('PROTOCOL_INVALID');
@@ -208,13 +228,7 @@ function messageShape(message) {
   if (message.diagnostics !== undefined || message.deferred !== undefined || message.errorMessage !== undefined) {
     fail('PROTOCOL_INVALID');
   }
-  if (!isPlainObject(message.usage)) fail('PROTOCOL_INVALID');
-  exactKeys(message.usage, USAGE_KEYS, ['input', 'output', 'cacheRead', 'cacheWrite', 'totalTokens', 'cost']);
-  for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'cacheWrite1h', 'reasoning', 'totalTokens']) {
-    if (message.usage[key] !== undefined) finiteNumber(message.usage[key]);
-  }
-  exactKeys(message.usage.cost, COST_KEYS);
-  for (const key of COST_KEYS) finiteNumber(message.usage.cost[key]);
+  usageShape(message.usage);
   timestamp(message.timestamp);
   return message;
 }
@@ -248,7 +262,8 @@ function assistantText(message, route) {
   return text;
 }
 function updateShape(event) {
-  exactKeys(event, EVENT_KEYS.message_update);
+  exactKeys(event, EVENT_KEYS.message_update, ['type', 'assistantMessageEvent']);
+  if (event.usage !== undefined) usageShape(event.usage);
   const update = event.assistantMessageEvent;
   if (!isPlainObject(update) || typeof update.type !== 'string') fail('PROTOCOL_INVALID');
   const allowed = {
