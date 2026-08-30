@@ -438,6 +438,12 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 ## Changelog
 ### Unreleased
 
+#### TypeScript/npm EVCrate Control-Plane CLI
+- ✅ Phase 2 Protocol Contracts (canonical plan: `plans/260827-2218-typescript-control-plane-cli/phase-02-protocol-contracts.md`) complete and approved: resource control, complete advisor-settings, and qualification-only diagnostic contracts are frozen.
+- Existing CommonJS counsel behavior remains unchanged; the authorized controller closure remains exactly 17 files. Persisted targets are exactly `claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, and `copilot`; `agy` is an input-only alias.
+- Scoped validation: `npm run test:protocol` **16/16** (including TypeScript build), diagnostic **4/4**, advisor-controller **35/35**, and distribution build/CLI **22/22**; aggregate **77/77** tests pass.
+- Phases 3–11 remain planned; the overall plan remains `in_progress`.
+
 #### OMP Command Namespace Prefix
 - Completed Phase 01 map/translate implementation with OMP-only `cmd-<flattened>` targets and centralized map-driven references.
 - Validation passed: Python compilation, migration **4/4**, focused suite **25/25**, and `distribute.py --build && --check`.

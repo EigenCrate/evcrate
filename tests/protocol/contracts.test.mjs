@@ -1,0 +1,252 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import {
+  canonicalJson, decodeUtf8, parseJsonDocument, normalizeTarget, PERSISTED_TARGETS,
+  RESOURCE_OPERATIONS, ADVISOR_BACKENDS, safePath, validateResourceRequest, validateResourceResult,
+  validateAdvisorPolicy, validateAdvisorSettingsRequest, validateAdvisorSettingsResult,
+  validateSettingsMode, canonicalAdvisorPolicyDigest, bindPreviewMetadata,
+  createSettingsGetResult, createSettingsApplyResult, createSettingsConflictResult,
+  createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest
+} from '../../dist/protocol/index.js';
+import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
+
+const context = {
+  canonicalSourceRoot: '/s', targetManifestPath: '/m', generatedRoot: '/g', homeRoot: '/h',
+  stateRoot: '/state', projectId: 'p1', projectRoot: '/project', target: 'agy'
+};
+const contractFixtures = JSON.parse(readFileSync(
+  new URL('../fixtures/control-plane-v1/contracts.json', import.meta.url), 'utf8'
+));
+const negativeProxyFixtures = JSON.parse(readFileSync(
+  new URL('../fixtures/control-plane-v1/negative-proxy.json', import.meta.url), 'utf8'
+));
+
+test('canonical JSON sorts objects, preserves arrays, omits undefined object fields', () => {
+  assert.equal(canonicalJson({ z: 1, a: { d: 2, b: 1 }, list: [3, 2] }), '{"a":{"b":1,"d":2},"list":[3,2],"z":1}');
+  assert.equal(canonicalJson({ present: true, omitted: undefined }), '{"present":true}');
+});
+
+test('bounded UTF-8, strict whitespace, duplicate, and depth checks fail closed', () => {
+  assert.equal(decodeUtf8(new TextEncoder().encode('hé')), 'hé');
+  assert.throws(() => decodeUtf8(Uint8Array.from([0xc3, 0x28])));
+  assert.throws(() => parseJsonDocument('{"a":1,"a":2}'));
+  assert.throws(() => parseJsonDocument('{"a":'.padEnd(70_000, ' ') + '1}'));
+  for (const whitespace of ['\u00a0', '\u000b', '\u000c', '\ufeff']) {
+    assert.throws(() => parseJsonDocument(`${whitespace}{"a":1}`));
+  }
+  const parsed = parseJsonDocument('{"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"r","operation":"qualify","__proto__":"x"}');
+  assert.equal(Object.hasOwn(parsed, '__proto__'), true);
+  assert.throws(() => validateDiagnosticRequest(parsed));
+});
+
+test('target alias normalizes only at input boundary', () => {
+  assert.equal(normalizeTarget('agy'), 'antigravity');
+  assert.throws(() => normalizeTarget('unknown'));
+  const request = createResourceRequest('r1', 'version', context, {});
+  assert.equal(request.context.target, 'antigravity');
+});
+
+test('contract fixtures cover all persisted targets and result states', () => {
+  for (const target of PERSISTED_TARGETS) {
+    const request = createResourceRequest(`target-${target}`, 'version', { ...context, target }, {});
+    assert.equal(request.context.target, target);
+  }
+  assert.deepEqual(validateResourceRequest(contractFixtures.resource), contractFixtures.resource);
+  assert.deepEqual(validateAdvisorSettingsRequest(contractFixtures.settings), contractFixtures.settings);
+  assert.deepEqual(validateDiagnosticRequest(contractFixtures.diagnostic), contractFixtures.diagnostic);
+  for (const result of contractFixtures.resourceResults) {
+    assert.deepEqual(validateResourceResult(result), result);
+  }
+  for (const result of contractFixtures.settingsResults) {
+    assert.deepEqual(validateAdvisorSettingsResult(result), result);
+  }
+  assert.deepEqual(validateDiagnosticResult(contractFixtures.diagnosticResult), contractFixtures.diagnosticResult);
+});
+
+test('proxy fixture matrix rejects counsel fields in every control-plane family', () => {
+  for (const request of negativeProxyFixtures.resource) assert.throws(() => validateResourceRequest(request));
+  for (const request of negativeProxyFixtures.settings) assert.throws(() => validateAdvisorSettingsRequest(request));
+  for (const request of negativeProxyFixtures.diagnostic) assert.throws(() => validateDiagnosticRequest(request));
+  assert.throws(() => validateSettingsMode({ kind: 'create', mode: 0o644 }));
+});
+
+test('stable exit bands and mutation boundaries stay explicit', () => {
+  for (const [code, exitCode] of [
+    ['OK', 0], ['PROTOCOL_INVALID', 2], ['VALIDATION_INVALID', 3],
+    ['CAS_CONFLICT', 4], ['PUBLICATION_FAILED', 5], ['INTERNAL_ERROR', 6]
+  ]) {
+    assert.equal(exitCodeForError(new ControlPlaneError(code)), exitCode);
+  }
+  const minimum = { version: 1, advisor: { backend: 'codex', model: 'm', effort: 'low', timeout_ms: 60000 } };
+  const maximum = { version: 1, advisor: { backend: 'codex', model: 'm', effort: 'low', timeout_ms: 900000 } };
+  assert.doesNotThrow(() => validateAdvisorPolicy(minimum));
+  assert.doesNotThrow(() => validateAdvisorPolicy(maximum));
+  assert.throws(() => validateAdvisorPolicy({ ...minimum, advisor: { ...minimum.advisor, timeout_ms: 59999 } }));
+  assert.throws(() => validateAdvisorPolicy({ ...maximum, advisor: { ...maximum.advisor, timeout_ms: 900001 } }));
+  assert.doesNotThrow(() => validateSettingsMode({ kind: 'create', mode: 0o600 }));
+  assert.throws(() => validateSettingsMode({ kind: 'create', mode: 0o644 }));
+  assert.throws(() => createResourceRequest('oversized', 'version', context, { value: 'x'.repeat(65536) }));
+});
+
+test('resource context and exact envelope reject counsel proxy fields', () => {
+  const request = createResourceRequest('r2', 'resources.list', { ...context, target: 'omp' }, {});
+  assert.equal(request.context.target, 'omp');
+  assert.throws(() => validateResourceRequest({ ...request, question: 'counsel' }));
+  assert.throws(() => validateResourceRequest({ ...request, payload: { backend: 'codex' } }));
+});
+
+test('settings validates complete policy and diagnostic stays distinct', () => {
+  const policy = { version: 1, advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 900000 } };
+  assert.deepEqual(validateAdvisorPolicy(policy), policy);
+  assert.throws(() => validateAdvisorPolicy({ version: 1, advisor: { backend: 'codex' } }));
+  assert.throws(() => validateAdvisorPolicy({ ...policy, credential: 'secret' }));
+  assert.throws(() => validateAdvisorSettingsRequest({ protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'r3', operation: 'preview', payload: { policy: { ...policy, recommendation: 'x' }, currentRevision: { kind: 'present', identity: 'x' }, destination: '/x', mode: { kind: 'create', mode: 384 } } }));
+  assert.deepEqual(validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify' }).operation, 'qualify');
+  assert.throws(() => validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify', question: 'x' }));
+});
+
+test('diagnostic result exposes only correlated qualification data', () => {
+  const result = validateDiagnosticResult({
+    protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r5', status: 'QUALIFIED',
+    target: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    probes: { version: { status: 'passed', value: '1.0.0' }, auth: { status: 'passed' }, capabilities: { status: 'passed', model: 'gpt-5.6-sol', effort: 'high', noninteractive: true, session: 'isolated', tools: 'none', output: 'json' } }
+  });
+  assert.equal(result.status, 'QUALIFIED');
+  assert.throws(() => validateDiagnosticResult({ ...result, recommendation: 'use codex' }));
+  assert.throws(() => validateDiagnosticResult({
+    ...result, target: { ...result.target, model: 'other-model' }
+  }));
+  assert.throws(() => validateDiagnosticResult({
+    ...result, probes: {
+      ...result.probes,
+      capabilities: { ...result.probes.capabilities, effort: 'low' }
+    }
+  }));
+  assert.throws(() => validateDiagnosticResult({
+    ...result, target: { ...result.target, backend: 'copilot' }
+  }));
+});
+
+test('stable error mapping has no path or secret fields', () => {
+  const error = new ControlPlaneError('CAS_CONFLICT');
+  assert.equal(exitCodeForError(error), 4);
+  assert.deepEqual(Object.keys(serializeControlPlaneError(error)).sort(), ['action', 'category', 'code', 'message'].sort());
+  assert.equal(exitCodeForError(new Error('raw stderr /secret')), 6);
+  assert.equal(new ControlPlaneError('toString').code, 'INTERNAL_ERROR');
+  assert.equal(new ControlPlaneError('__proto__').code, 'INTERNAL_ERROR');
+});
+
+test('canonical JSON rejects escaped controls and nested array overflow', () => {
+  assert.throws(() => parseJsonDocument('"\\u0001"'));
+  assert.throws(() => canonicalJson({ value: '\u007f' }));
+  let nested = [];
+  for (let index = 0; index < 18; index += 1) nested = [nested];
+  assert.throws(() => canonicalJson(nested));
+});
+
+test('safe paths and resource results reject traversal, metadata, protocol, and credentials', () => {
+  for (const unsafe of ['relative', '/workspace/./source', '/workspace//source', '/workspace/../source',
+    'C:/workspace', '/workspace/.git/config', '/workspace/.env']) {
+    assert.throws(() => safePath(unsafe));
+  }
+  assert.equal(safePath('/'), '/');
+  const result = contractFixtures.resourceResults[0];
+  assert.throws(() => validateResourceResult({ ...result, protocolVersion: 2 }));
+  assert.throws(() => validateResourceResult({ ...result, payload: { token: 'opaque' } }));
+});
+
+test('settings previews enforce revision correlation and bounded lifetime', () => {
+  const preview = contractFixtures.settingsResults.find(({ status }) => status === 'PREVIEW');
+  assert.ok(preview);
+  assert.throws(() => validateAdvisorSettingsResult({
+    ...preview, currentRevision: { kind: 'absent', identity: 'absent' }
+  }));
+  assert.throws(() => validateAdvisorSettingsResult({
+    ...preview, expiresAt: preview.issuedAt + 900001
+  }));
+  const get = contractFixtures.settingsResults.find(({ status, operation, policy }) =>
+    status === 'OK' && operation === 'get' && policy !== null);
+  assert.ok(get);
+  assert.throws(() => validateAdvisorSettingsResult({
+    ...get, mode: { kind: 'create', mode: 0o600 }
+  }));
+});
+
+test('settings request size and preview binder stay document-bound', () => {
+  const request = validateAdvisorSettingsRequest(contractFixtures.settings);
+  const preview = contractFixtures.settingsResults.find(({ status }) => status === 'PREVIEW');
+  assert.ok(preview);
+  const digest = canonicalAdvisorPolicyDigest(request.payload.policy);
+  assert.equal(digest, preview.intendedDigest);
+  assert.deepEqual(bindPreviewMetadata(
+    request, preview.token, preview.expiresAt, preview.currentRevision, digest,
+    preview.destination, preview.mode, preview.issuedAt
+  ), preview);
+  assert.throws(() => bindPreviewMetadata(
+    request, preview.token, preview.expiresAt,
+    { kind: 'present', identity: 'sha256:other' }, digest, preview.destination, preview.mode, preview.issuedAt
+  ));
+  assert.throws(() => bindPreviewMetadata(
+    request, preview.token, preview.expiresAt, preview.currentRevision, 'a'.repeat(64),
+    preview.destination, preview.mode, preview.issuedAt
+  ));
+  assert.throws(() => validateAdvisorSettingsRequest({
+    ...contractFixtures.settings,
+    payload: { ...contractFixtures.settings.payload, destination: `/${'x'.repeat(70_000)}` }
+  }), (error) => error.code === 'PROTOCOL_INVALID');
+});
+
+test('settings result factories require matching request operations', () => {
+  const getRequest = validateAdvisorSettingsRequest({
+    protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'factory-get',
+    operation: 'get', payload: {}
+  });
+  const previewRequest = validateAdvisorSettingsRequest(contractFixtures.settings);
+  const absent = { kind: 'absent', identity: 'absent' };
+  const present = { kind: 'present', identity: 'sha256:factory' };
+  const recovery = { kind: 'none', identity: 'none' };
+  assert.doesNotThrow(() => createSettingsGetResult(getRequest, null, absent, null));
+  assert.throws(() => createSettingsGetResult(previewRequest, null, absent, null));
+  assert.throws(() => createSettingsApplyResult(getRequest, present, recovery));
+  assert.throws(() => createSettingsConflictResult(getRequest, present, present));
+  assert.throws(() => createSettingsRecoveryResult(getRequest, present, recovery));
+  assert.equal(Object.isFrozen(PERSISTED_TARGETS), true);
+  assert.equal(Object.isFrozen(RESOURCE_OPERATIONS), true);
+  assert.equal(Object.isFrozen(ADVISOR_BACKENDS), true);
+});
+
+test('diagnostic failures use the stable routing error catalog', () => {
+  const failure = {
+    protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: null,
+    status: 'FAILED', target: null,
+    probes: {
+      version: { status: 'not-run' }, auth: { status: 'not-run' },
+      capabilities: { status: 'not-run' }
+    },
+    error: {
+      code: 'ROUTE_POLICY_REQUIRED', category: 'config',
+      action: 'Create ~/.evcrate/advisor-routing.json with one version 1 advisor target.',
+      message: 'Global advisor policy is required'
+    }
+  };
+  assert.deepEqual(validateDiagnosticResult(failure), failure);
+  assert.throws(() => validateDiagnosticResult({
+    ...failure, error: { ...failure.error, action: 'unsafe action' }
+  }));
+  assert.throws(() => validateDiagnosticResult({
+    ...failure, probes: {
+      version: { status: 'not-run' }, auth: { status: 'passed' },
+      capabilities: { status: 'not-run' }
+    }
+  }));
+  assert.throws(() => validateDiagnosticResult({
+    ...failure, probes: {
+      version: { status: 'passed', value: '1.0.0' }, auth: { status: 'passed' },
+      capabilities: { status: 'passed' }
+    }
+  }));
+  assert.throws(() => validateDiagnosticResult({
+    ...failure, question: 'not counsel'
+  }), (error) => error.code === 'DIAGNOSTIC_INVALID');
+});

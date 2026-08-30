@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Last Updated**: 2026-08-26
+**Last Updated**: 2026-08-31
 **Version**: 1.15.0
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
@@ -36,6 +36,11 @@ evcrate/
 ├── migrate_claude_to_copilot.py # Deterministic, staging-only personal Copilot migrator
 ├── copilot_adapter/             # Copilot resource, hook, settings, and inventory adapters
 ├── pi_adapter/                  # Native Pi resource inventory, translation, validation, conversion, and containment helpers
+├── src/                  # TypeScript Phase 2 control-plane contract sources
+│   ├── protocol/         # JSON, validation, resource, settings, diagnostic
+│   └── errors/           # Stable control-plane errors and exit mapping
+├── tests/                # Protocol, CommonJS diagnostic, and distribution suites
+├── dist/                 # Generated TypeScript JavaScript/declaration output
 ├── README.md             # Project overview
 ├── package.json          # Node.js dependencies
 └── repomix-output.xml    # Codebase compaction file
@@ -56,6 +61,41 @@ configuration patches, generated outputs, and deterministic hashes. It records
 ordinary source/output hashes plus `controller_hashes` for the shared advisor
 closure. A failed build does not replace the last valid local artifacts or
 HOME.
+
+### Phase 2 TypeScript/npm control-plane contract layer
+
+Phase 2 adds a typed contract library under `src/`; it does not yet claim the
+Phase 3 one-shot CLI shell, package exports, or tarball/runtime behavior.
+
+- `src/protocol/json.ts` implements canonical JSON, fatal UTF-8 decoding,
+  duplicate-key/control-character rejection, bounded 64 KiB documents, and
+  maximum depth 16.
+- `src/protocol/validation.ts` centralizes exact keys, bounded identifiers,
+  safe normalized absolute POSIX paths, seven persisted targets, the input-only
+  `agy` alias, and recursive credential/counsel-field rejection.
+- `src/protocol/resource-control.ts` defines version-1
+  `evcrate-resource-control` requests and result unions for resources,
+  imports, scopes, models, changes, publication, distribution, and recovery.
+  Context is explicit; payloads, errors, CAS conflicts, and recovery states are
+  bounded and discriminated.
+- `src/protocol/advisor-settings.ts` defines whole-document version-1
+  `get|preview|apply`: safe redacted policy views, canonical intended-policy
+  digests, bounded single-use preview metadata, byte/revision CAS, restrictive
+  modes, and settings-specific conflict/recovery results.
+- `src/protocol/diagnostic.ts` defines the qualification-only
+  `evcrate-advisor-diagnostic` `qualify` request/result. It reports only the
+  configured backend/version/auth/model/effort probes and has no counsel,
+  recommendation, prompt, or arbitrary backend output.
+- `src/errors/control-plane-error.ts` defines stable serialized errors and
+  exit bands (0, 2, 3, 4, 5, and 6); `src/protocol/index.ts` and
+  `src/errors/index.ts` expose the contract modules.
+
+The existing CommonJS controller closure at
+`.evcrate/source/.evcrate/bin/` remains the sole counsel owner and retains its
+17-file authorization and checkpoint/controller/result semantics. The
+qualification diagnostic remains CommonJS-runtime compatible without rewriting
+those counsel protocols. TypeScript contract sources do not own manifests,
+generated target projections, or HOME publication.
 
 ### Central advisor controller
 
@@ -148,6 +188,8 @@ controller backend.
 ### Runtime & Dependencies
 - **Node.js**: >=22.19.0
 - **Package Manager**: npm
+- **TypeScript**: strict NodeNext compiler for Phase 2 contracts
+- **Node test runner**: protocol and CommonJS contract suites
 - **License**: MIT
 
 ### Development Tools
@@ -365,6 +407,16 @@ Types:
 - Tests must pass before push
 - No ignoring failed tests
 
+### Phase 2 TypeScript/npm contract verification
+
+- `npm run build` invokes `tsc -p tsconfig.json` and emits the TypeScript
+  contract modules to generated `dist/`.
+- `npm run test:protocol` builds first, then runs the protocol fixture tests:
+  **16/16**.
+- Final scoped evidence also includes diagnostic **4/4**,
+  advisor-controller **35/35**, and distribution build/CLI **22/22**;
+  aggregate evidence is **77/77** tests, with no tester file edits.
+
 ## Documentation Standards
 
 **Required Docs** (`./docs/`):
@@ -404,16 +456,16 @@ None (template project)
 
 ## File Statistics
 
-**Total Files**: 48 files (in repomix output)
-**Total Tokens**: 38,868 tokens
-**Total Characters**: 173,077 chars
+The 2026-08-31 `repomix-output.xml` snapshot contains **2,478 files**,
+**8,610,566 tokens**, and **32,433,868 characters**. The Phase 2 TypeScript
+contract sources contain 1,494 lines across `src/protocol/` and `src/errors/`.
 
 **Top 5 Files by Token Count**:
-1. `guide/COMMANDS.md` - 7,073 tokens (18.2%)
-2. `CHANGELOG.md` - 4,836 tokens (12.4%)
-3. `README.md` - 3,261 tokens (8.4%)
-4. `.evcrate/source/.opencode/agent/ui-ux-designer.md` - 2,521 tokens (6.5%)
-5. `.evcrate/source/.opencode/agent/system-architecture.md` - 1,714 tokens (4.4%)
+1. `.evcrate/source/.copilot/skills/evcrate-ui-ux-pro-max/data/phosphor-icons-upstream.json` - 230,228 tokens (2.7%)
+2. `.evcrate/source/.omp/skills/ui-ux-pro-max/data/phosphor-icons-upstream.json` - 230,228 tokens (2.7%)
+3. `.evcrate/source/.pi/agent/skills/ui-ux-pro-max/data/phosphor-icons-upstream.json` - 230,228 tokens (2.7%)
+4. `.evcrate/source/.copilot/skills/evcrate-ui-ux-pro-max/data/google-fonts.csv` - 199,578 tokens (2.3%)
+5. `.evcrate/source/.omp/skills/ui-ux-pro-max/data/google-fonts.csv` - 199,578 tokens (2.3%)
 
 ## Integration Capabilities
 
@@ -453,6 +505,14 @@ Features: Automated releases, changelog generation
 - `distribute_utils.py` - Shared utilities and path config resolver
 - `migrate_claude_to_codex.py` - Codex migration engine
 - `migrate_claude_to_gemini.py` - Gemini migration engine
+
+### Phase 2 TypeScript contract files
+- `src/protocol/{json,validation,resource-control,advisor-settings,diagnostic}.ts` - bounded versioned contracts
+- `src/errors/control-plane-error.ts` - stable error serialization and exit mapping
+- `src/protocol/index.ts`, `src/errors/index.ts` - source-level exports
+- `tests/protocol/contracts.test.mjs` and `tests/fixtures/control-plane-v1/` - protocol fixtures and boundaries
+- `tests/advisor-controller/diagnostic.test.cjs` - CommonJS qualification compatibility
+- `.evcrate/source/.evcrate/bin/lib/advisor/controller.cjs` - unchanged counsel owner and diagnostic runtime
 
 ### Workflows
 - `.evcrate/source/.claude/workflows/primary-workflow.md`

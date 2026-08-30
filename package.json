@@ -7,6 +7,8 @@
     "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test:protocol": "npm run build && node --test tests/protocol/*.test.mjs",
     "distribute": "bash -o pipefail -c 'python3 distribute.py --all 2>&1 | tee logs.txt'",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
@@ -31,9 +33,18 @@
     "type": "git",
     "url": "git+https://github.com/NEBULEA-M/evcrate.git"
   },
-  "keywords": ["claude-code", "ai-agents", "development-template", "boilerplate", "automation", "cli-tools"],
+  "keywords": [
+    "claude-code",
+    "ai-agents",
+    "development-template",
+    "boilerplate",
+    "automation",
+    "cli-tools"
+  ],
   "license": "MIT",
-  "bugs": {"url": "https://github.com/NEBULEA-M/evcrate/issues"},
+  "bugs": {
+    "url": "https://github.com/NEBULEA-M/evcrate/issues"
+  },
   "homepage": "https://github.com/NEBULEA-M/evcrate#readme",
   "files": [
     ".evcrate/source/.claude/**",
@@ -78,12 +89,20 @@
     "@semantic-release/github": "^9.2.6",
     "@semantic-release/npm": "^11.0.2",
     "@semantic-release/release-notes-generator": "^12.1.0",
+    "@types/node": "^22.20.1",
     "conventional-changelog-conventionalcommits": "^7.0.2",
     "husky": "^8.0.3",
     "pi-subagents": "0.44.0",
-    "semantic-release": "^22.0.12"
+    "semantic-release": "^22.0.12",
+    "typescript": "^5.9.3"
   },
-  "engines": {"node": ">=22.19.0"},
-  "publishConfig": {"access": "public"},
-  "dependencies": {"pi-code-graph": "^0.16.0"}
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "pi-code-graph": "^0.16.0"
+  }
 }

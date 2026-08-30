@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: 2026-08-26
+**Last Updated**: 2026-08-31
 **Version**: 1.10.0
 **Project**: EVCrate
 
@@ -198,6 +198,48 @@ flowchart TD
   built-in advisory features; checkpoint supervision uses only the central
   controller described above. Arbitrary launch templates and direct provider APIs
   remain outside the architecture.
+
+#### 1.4 TypeScript/npm Control-Plane Contracts (Phase 2)
+
+Phase 2 adds a typed, source-level contract layer under `src/`. It freezes
+versioned JSON boundaries before the CLI shell and handlers; the Phase 3 CLI
+foundation owns command dispatch and package export/tarball behavior.
+
+**Protocol modules**:
+- `src/protocol/json.ts` provides canonical JSON, fatal UTF-8 decoding,
+  duplicate-key detection, control-character checks, 64 KiB document bounds,
+  and maximum depth 16.
+- `src/protocol/validation.ts` centralizes bounded text/request IDs, safe
+  normalized absolute POSIX paths, exact keys, target normalization, and
+  recursive credential/counsel-field rejection. Persisted targets are exactly
+  `claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, and `copilot`;
+  `agy` is an input-only alias for `antigravity`.
+- `src/protocol/resource-control.ts` defines the version-1
+  `evcrate-resource-control` request/result families for resource, import,
+  scope, model, change, publication, distribution, and recovery operations,
+  including explicit context, bounded payloads, stable errors, CAS conflicts,
+  and recovery states.
+- `src/protocol/advisor-settings.ts` defines complete-document version-1
+  `get`, `preview`, and `apply` contracts. Results carry a redacted policy
+  view, canonical intended-policy digest, bounded single-use preview metadata,
+  byte/revision CAS identities, safe file modes, and settings-specific
+  recovery/conflict states.
+- `src/protocol/diagnostic.ts` defines the qualification-only
+  `evcrate-advisor-diagnostic` `qualify` request/result. It reports the
+  configured backend, version, authentication, model, and effort probes; it
+  has no recommendation, counsel result, prompt, or arbitrary backend output.
+- `src/errors/control-plane-error.ts` owns stable serialized
+  `code`/`category`/`action`/`message` errors and exit bands: 0 success,
+  2 usage/protocol, 3 validation/path/capability, 4 CAS conflict,
+  5 publication/rollback/recovery, and 6 internal.
+
+The existing CommonJS advisor controller under
+`.evcrate/source/.evcrate/bin/` remains the sole counsel owner and authorized
+17-file closure. Its checkpoint/controller/result counsel protocols remain
+unchanged. The TypeScript diagnostic contract stays compatible with the
+CommonJS qualification path, while never constructing a checkpoint, invoking
+counsel, or emitting an advisor result. These sources do not own target
+manifests, generated projections, or HOME publication.
 
 ### 2. Agent Layer
 
@@ -579,6 +621,9 @@ To ensure that safety/privacy hooks are consistently enforced when migrating fro
 - `.gitignore` - Git exclusions
 - `package.json` - Node.js config
 - `.releaserc.json` - Release config
+- `src/protocol/`, `src/errors/` - Phase 2 TypeScript contract sources
+- `dist/` - generated TypeScript JavaScript/declaration output
+- `tests/protocol/`, `tests/fixtures/control-plane-v1/` - contract tests and fixtures
 
 **Runtime Data**:
 - `plans/` - Implementation plans
@@ -721,6 +766,16 @@ plans/<plan-name>/reports/251026-from-tester-to-main-test-results-report.md
 - GitHub Actions
 - Conventional Commits
 - Semantic Versioning
+
+### Phase 2 TypeScript/npm verification
+
+- `tsconfig.json` compiles strict NodeNext TypeScript from `src/` to
+  generated `dist/` JavaScript and declarations.
+- `npm run test:protocol` runs the TypeScript build and Node contract tests.
+- Final scoped evidence: protocol **16/16**, diagnostic **4/4**,
+  advisor-controller **35/35**, and distribution build/CLI **22/22**
+  (**77/77** aggregate tests).
+
 
 ### Agent Skills Ecosystem
 

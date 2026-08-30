@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 'use strict';
 
-const { runController } = require('./lib/advisor/controller.cjs');
+const {
+  runController, runQualificationDiagnostic, isDiagnosticRequest
+} = require('./lib/advisor/controller.cjs');
+const { parseJsonDocument } = require('./lib/advisor/json-document.cjs');
 const { createRoutingError } = require('./lib/advisor/errors.cjs');
 const { buildFailureEnvelope } = require('./lib/advisor/controller-envelope.cjs');
 
@@ -64,21 +67,41 @@ function readStdin(signal, timeoutMs = PRE_POLICY_INPUT_TIMEOUT_MS) {
   });
 }
 
+async function dispatch(input, dependencies) {
+  let raw;
+  try { raw = await input; } catch { return runController(input, dependencies); }
+  let parsed;
+  try {
+    const text = Buffer.isBuffer(raw) || raw instanceof Uint8Array
+      ? Buffer.from(raw).toString('utf8') : raw;
+    parsed = parseJsonDocument(text, 'REQUEST_INVALID', 'REQUEST_INVALID');
+  } catch {
+    try {
+      const text = Buffer.isBuffer(raw) || raw instanceof Uint8Array
+        ? Buffer.from(raw).toString('utf8') : raw;
+      if (isDiagnosticRequest(JSON.parse(text))) return runQualificationDiagnostic(raw, dependencies);
+    } catch {}
+    return runController(raw, dependencies);
+  }
+  if (isDiagnosticRequest(parsed)) return runQualificationDiagnostic(raw, dependencies);
+  return runController(raw, dependencies);
+}
 async function main() {
   const cancellation = new AbortController();
   const onSignal = () => cancellation.abort();
   process.once('SIGINT', onSignal);
   process.once('SIGTERM', onSignal);
+
   let envelope;
   try {
-    envelope = await runController(readStdin(cancellation.signal), { signal: cancellation.signal });
+    envelope = await dispatch(readStdin(cancellation.signal), { signal: cancellation.signal });
   } catch {
     envelope = buildFailureEnvelope({ error: createRoutingError('PROCESS_FAILED'), receipt: { elapsed_ms: 0 } });
   }
   process.stdout.write(JSON.stringify(envelope) + '\n');
   process.removeListener('SIGINT', onSignal);
   process.removeListener('SIGTERM', onSignal);
-  process.exitCode = envelope.status === 'ADVICE_READY' ? 0 : 1;
+  process.exitCode = envelope.status === 'ADVICE_READY' || envelope.status === 'QUALIFIED' ? 0 : 1;
 }
 
 void main();

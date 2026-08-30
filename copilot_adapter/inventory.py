@@ -14,6 +14,7 @@ from .resources import ResourceError, relative_path, walk_files, write_json
 _DISPOSITIONS = {"native", "managed-static", "approximated", "unsupported"}
 _SYNTHETIC_SOURCES = {
     ".evcrate/source/.claude/settings.json#CLAUDE_ENV_FILE",
+    ".evcrate/source/.claude/.gitignore",
 }
 
 
@@ -258,7 +259,12 @@ def build_inventory(
 
     add(".evcrate/source/.claude/.evcrate.json", [".copilot/.evcrate.json"], "managed-static", "The target-local EVCrate configuration is consumed by translated scripts.")
     add(".evcrate/source/.claude/.evcrateignore", [".copilot/.evcrateignore", ".copilot/evcrate/.evcrateignore"], "managed-static", "The ignore policy is consumed by the translated hook closure at both target levels.")
-    add(".evcrate/source/.claude/.gitignore", [".copilot/evcrate/source-gitignore"], "managed-static", "The source-only ignore file is retained for audit and is never loaded as Copilot configuration.")
+    archives = support_audit.get("archives")
+    has_source_gitignore = isinstance(archives, list) and "evcrate/source-gitignore" in archives
+    if has_source_gitignore:
+        add(".evcrate/source/.claude/.gitignore", [".copilot/evcrate/source-gitignore"], "managed-static", "The source-only ignore file is retained for audit and is never loaded as Copilot configuration.")
+    else:
+        add(".evcrate/source/.claude/.gitignore", [], "unsupported", "npm packaging omits this dotfile; the source-only audit input is unavailable in the packed artifact.")
     add(".evcrate/source/.claude/settings.json", [".copilot/evcrate/claude-settings.json"], "managed-static", "Canonical hook/settings JSON is archived for audit; only EVCrate-owned Copilot settings are activated.")
     add(".evcrate/source/.claude/settings.local.json", [], "unsupported", "Claude local permission patterns are not activated by the personal Copilot target.")
     add(".evcrate/source/.claude/.mcp.json.example", [".copilot/mcp-config.example.json"], "managed-static", "The placeholder example is renamed and retained as opt-in documentation; no live MCP configuration is created.")
