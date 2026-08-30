@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Callable
 
@@ -99,6 +100,19 @@ def _validate_mcp(value: dict[str, object]) -> dict[str, object]:
     return {"mcpServers": rendered}
 
 
+def _is_npm_packed_source(source: Path) -> bool:
+    """Recognize the npm package layout without weakening source-tree builds."""
+
+    repository_value = os.environ.get("EVCRATE_REPOSITORY")
+    if not repository_value:
+        return False
+    repository = Path(repository_value).absolute()
+    try:
+        source.absolute().relative_to(repository / ".evcrate/source/.claude")
+    except ValueError:
+        return False
+    return (repository / "package.json").is_file() and not (repository / ".git").exists()
+
 def convert_support(source: Path, output: Path, transform: Callable[[str], str]) -> dict[str, object]:
     """Publish root config, audit archives, status lines, and an opt-in MCP example."""
 
@@ -112,10 +126,16 @@ def convert_support(source: Path, output: Path, transform: Callable[[str], str])
 
     gitignore = source / ".gitignore"
     settings = source / "settings.json"
-    if gitignore.is_symlink() or not gitignore.is_file() or settings.is_symlink() or not settings.is_file():
+    if gitignore.is_symlink() or settings.is_symlink() or not settings.is_file():
         raise ResourceError("Canonical source audit files are missing or unsafe")
-    copy_file(gitignore, output / "evcrate" / "source-gitignore", output, transform)
+    archives: list[str] = []
+    if gitignore.is_file():
+        copy_file(gitignore, output / "evcrate" / "source-gitignore", output, transform)
+        archives.append("evcrate/source-gitignore")
+    elif gitignore.exists() or not _is_npm_packed_source(source):
+        raise ResourceError("Canonical source audit files are missing or unsafe")
     copy_file(settings, output / "evcrate" / "claude-settings.json", output, transform)
+    archives.append("evcrate/claude-settings.json")
 
     statusline_paths: list[str] = []
     for path in sorted(source.glob("statusline.*")):
@@ -135,7 +155,7 @@ def convert_support(source: Path, output: Path, transform: Callable[[str], str])
     write_json(output / "mcp-config.example.json", output, mcp)
     return {
         "config": [".evcrate.json", ".evcrateignore"],
-        "archives": ["evcrate/source-gitignore", "evcrate/claude-settings.json"],
+        "archives": archives,
         "statusline": statusline_paths,
         "mcpExample": "mcp-config.example.json",
     }

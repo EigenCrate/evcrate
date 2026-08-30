@@ -1,0 +1,7 @@
+[
+  {"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"diagnostic-fixture","operation":"qualify","version":1},
+  {"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"diagnostic-fixture","operation":"qualify","checkpoint":"review:fixture"},
+  {"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"diagnostic-fixture","operation":"qualify","advisor":{"backend":"codex"}},
+  {"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"diagnostic-fixture","operation":"qualify","settings":{"backend":"codex"}},
+  {"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"bad/id","operation":"qualify"}
+]

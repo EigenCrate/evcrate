@@ -17,8 +17,8 @@ Check the `## Plan Context` section in the injected context:
 
 ## Workflow
 - Analyze the given task and use `ask_user_question` tool to ask for more details if needed.
-- Decide to use `/plan:fast` or `/plan:hard` SlashCommands based on the complexity.
-- Execute SlashCommand: `/plan:fast <detailed-instructions-prompt>` or `/plan:hard <detailed-instructions-prompt>`
+- Decide to use {{evcrate:commands/plan:fast}} or {{evcrate:commands/plan:hard}} SlashCommands based on the complexity.
+- Execute SlashCommand: {{evcrate:commands/plan:fast}} <detailed-instructions-prompt> or {{evcrate:commands/plan:hard}} <detailed-instructions-prompt>
 - Activate `planning` skill.
 - Note: `detailed-instructions-prompt` is **an enhanced prompt** that describes the task in detail based on the provided task description.
 

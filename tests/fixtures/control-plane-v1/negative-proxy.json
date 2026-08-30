@@ -1,0 +1,80 @@
+{
+  "resource": [
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "negative-resource-1",
+      "operation": "resources.list",
+      "context": {
+        "canonicalSourceRoot": "/workspace/.evcrate/source/.claude",
+        "targetManifestPath": "/workspace/.evcrate/targets/claude/manifest.json",
+        "generatedRoot": "/workspace/.evcrate/source",
+        "homeRoot": "/home/test",
+        "stateRoot": "/workspace/.evcrate/state",
+        "projectId": "fixture-project",
+        "projectRoot": "/workspace",
+        "target": "claude"
+      },
+      "payload": {},
+      "checkpoint": "review:forbidden"
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "negative-resource-2",
+      "operation": "resources.list",
+      "context": {
+        "canonicalSourceRoot": "/workspace/.evcrate/source/.claude",
+        "targetManifestPath": "/workspace/.evcrate/targets/claude/manifest.json",
+        "generatedRoot": "/workspace/.evcrate/source",
+        "homeRoot": "/home/test",
+        "stateRoot": "/workspace/.evcrate/state",
+        "projectId": "fixture-project",
+        "projectRoot": "/workspace",
+        "target": "claude"
+      },
+      "payload": {
+        "protocol": "evcrate-advisor-checkpoint",
+        "question": "forbidden counsel proxy"
+      }
+    }
+  ],
+  "settings": [
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "negative-settings-1",
+      "operation": "get",
+      "payload": {
+        "evidence": "forbidden counsel proxy"
+      }
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "negative-settings-2",
+      "operation": "apply",
+      "payload": {
+        "token": "opaque-token",
+        "currentRevision": {"kind": "present", "identity": "sha256:fixture"},
+        "result": "forbidden counsel proxy"
+      }
+    }
+  ],
+  "diagnostic": [
+    {
+      "protocol": "evcrate-advisor-diagnostic",
+      "protocolVersion": 1,
+      "requestId": "negative-diagnostic-1",
+      "operation": "qualify",
+      "checkpoint": "review:forbidden"
+    },
+    {
+      "protocol": "evcrate-advisor-diagnostic",
+      "protocolVersion": 1,
+      "requestId": "negative-diagnostic-2",
+      "operation": "qualify",
+      "evidence": {"terminal": "forbidden counsel proxy"}
+    }
+  ]
+}
