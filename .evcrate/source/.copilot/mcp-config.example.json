@@ -1,0 +1,1 @@
+{"mcpServers":{"chrome-devtools":{"args":["-y","chrome-devtools-mcp@latest"],"command":"npx"},"context7":{"args":["-y","@upstash/context7-mcp","--api-key","YOUR_API_KEY"],"command":"npx"},"sequential-thinking":{"args":["-y","@modelcontextprotocol/server-sequential-thinking"],"command":"npx"}}}

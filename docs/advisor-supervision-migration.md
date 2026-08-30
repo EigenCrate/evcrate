@@ -29,6 +29,10 @@ command: `/code` becomes `/cmd-code`, and nested paths use `__` (for example,
 invent a parallel alias. This namespace change does not alter `--advice`
 parsing or checkpoint semantics.
 
+For the personal GitHub Copilot CLI target, canonical `/fix:hard` becomes the
+user-invocable skill `/evcrate-cmd-fix-hard`; the raw argument text is passed
+through `$ARGUMENTS`. Copilot supports the translated inline advice command but
+is not a controller backend and has no advisor relay.
 
 Fallback command handoffs preserve `WORK_ARGUMENTS`: explicit mode forwards one
 final `--advice`; default mode forwards no mode token. No handoff recreates an
@@ -111,6 +115,7 @@ used.
 | `omp` | Enabled | Qualified fixed no-session/no-tools/no-LSP JSONL adapter with redacted provider usage auth. |
 | `antigravity` | Disabled candidate | `CLI_CAPABILITY_UNSUPPORTED` before final launch. |
 | `gemini` | Unsupported | `ADAPTER_UNSUPPORTED`; not a registry member. |
+| `copilot` | Personal target only | Not a controller backend; translated command skills reject advisor relay. |
 
 Installed CLIs own authentication. EVCrate stores no provider credentials. A
 CLI diagnostic version is recorded in the receipt, but version equality alone is

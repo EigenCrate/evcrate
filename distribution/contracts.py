@@ -20,6 +20,7 @@ _CANONICAL_ADVISORY_CAPABILITIES = (
 _RELAY_ERRORS = {
     "antigravity": "ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY",
     "codex": "ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX",
+    "copilot": "ADVISE_AGENT_RELAY_UNSUPPORTED_COPILOT",
     "gemini": "ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI",
     "omp": "ADVISE_AGENT_RELAY_UNSUPPORTED_OMP",
     "pi": "ADVISE_AGENT_RELAY_UNSUPPORTED_PI",
@@ -28,6 +29,7 @@ _WORKFLOW_ROOTS = {
     "codex": (".codex/workflows", "~/.codex/workflows"),
     "antigravity": (".antigravity/workflows", "~/.gemini/config/workflows"),
     "omp": (".omp/evcrate/workflows", "~/.omp/agent/evcrate/workflows"),
+    "copilot": (".copilot/evcrate/workflows", "~/.copilot/evcrate/workflows"),
 }
 _ADVISORY_WORKFLOW_NAMES = ("advisor-mentoring.md", "advisory-interview.md")
 
@@ -99,6 +101,7 @@ _SCRIPT_RESOURCE_ROOTS = {
     "antigravity": ".antigravity",
     "omp": ".omp",
     "pi": ".pi",
+    "copilot": ".copilot",
 }
 _CLAUDE_PATH_REFERENCE = re.compile(
     r"(?<![A-Za-z0-9_])\.claude(?=[/\\])"
@@ -128,6 +131,12 @@ def _script_resource_path(target: str, scope: str, suffix: str) -> str:
         if suffix in {"scripts", "hooks", "workflows", "output-styles"}:
             return f"{global_prefix}/evcrate/{suffix}"
         return f"{global_prefix}/{suffix}"
+    if target == "copilot":
+        if suffix == "skills":
+            return ".copilot/skills"
+        if suffix in {"scripts", "hooks", "workflows", "output-styles"}:
+            return f".copilot/evcrate/{suffix}"
+        return f".copilot/{suffix}"
     if target == "antigravity" and scope == "global":
         return f".gemini/config/{suffix}"
     return f"{root}/{suffix}"
@@ -292,7 +301,7 @@ def validate_harness_resource_projection(
     def target_resource_root(kind: str) -> Path:
         if target == "pi":
             return output_root / "agent" / "evcrate" / kind
-        if target == "omp":
+        if target in {"omp", "copilot"}:
             return output_root / "evcrate" / kind
         return output_root / kind
 
@@ -315,7 +324,7 @@ def validate_harness_resource_projection(
                 if destination.is_symlink() or not destination.is_file():
                     raise ValueError(f"{target} target-local config input is missing or unsafe: {destination}")
 
-        if target == "pi":
+        if target in {"pi", "copilot"}:
             nested_ignore = target_resource_root("hooks").parent / ".evcrateignore"
             if nested_ignore.is_symlink() or not nested_ignore.is_file():
                 raise ValueError(f"{target} hook-local ignore file is missing or unsafe: {nested_ignore}")
@@ -324,7 +333,7 @@ def validate_harness_resource_projection(
         if not path.is_file():
             continue
         relative = path.relative_to(output_root)
-        if relative == Path("migration-behavior-matrix.json"):
+        if relative in {Path("migration-behavior-matrix.json"), Path("evcrate/migration-inventory.json")}:
             continue
         try:
             raw = path.read_bytes()

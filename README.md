@@ -1,6 +1,6 @@
 # EVCrate
 
-EVCrate is a comprehensive boilerplate template for building professional software projects with **CLI Coding Agents** (**Claude Code**, **OpenCode**, and the native **Pi** target). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
+EVCrate is a comprehensive boilerplate template for building professional software projects with **CLI Coding Agents** (**Claude Code**, **GitHub Copilot CLI**, **OpenCode**, and the native **Pi** target). It provides a complete development environment with AI-powered agent orchestration, automated workflows, and intelligent project management.
 
 ## What is Claude Code?
 
@@ -13,6 +13,24 @@ EVCrate is a comprehensive boilerplate template for building professional softwa
 
 - [Open Code](https://opencode.ai/)
 - [Docs](https://opencode.ai/docs)
+
+## GitHub Copilot CLI target
+
+The personal GitHub Copilot CLI target is generated from the canonical
+`.evcrate/source/.claude/` tree. It converts commands to user-invocable
+`evcrate-cmd-*` skills, namespaces native skills and agents under `evcrate-*`,
+bridges the production safety hooks, and keeps workflows under managed
+`evcrate/` support paths.
+
+- [GitHub Copilot CLI](https://github.com/github/copilot-cli)
+- [GitHub Copilot CLI documentation](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
+- Build and publish it with `npm run distribute:copilot`.
+- The generated local instructions are `.evcrate/source/.copilot/copilot-instructions.md`.
+- The target publishes only to `$HOME/.copilot`; it does not add Copilot to the
+  shared advisor-controller backend or route advisor requests through Copilot.
+- Copilot-owned `includeCoAuthoredBy`, `effortLevel`, and `statusLine` settings
+  are merged without replacing unrelated user settings or JSONC comments.
+
 
 ## Related Projects & Directories
 
@@ -64,14 +82,15 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 
 ### 📖 Additional Resources
 - **[CLAUDE.md](./.evcrate/source/CLAUDE.md)** - Canonical development instructions and workflows for AI agents
+- **[Copilot instructions](./.evcrate/source/.copilot/copilot-instructions.md)** - Generated personal GitHub Copilot CLI instructions
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
-- **[Windows Statusline Support](./docs/statusline-windows-support.md)** - Windows compatibility guide for Claude Code statusline
+- **[Windows Statusline Support](./docs/statusline-windows-support.md)** - Cross-platform statusline guidance
 - **[Statusline Architecture](./docs/statusline-architecture.md)** - Technical statusline architecture
 
 ## Quick Start
 
 ### Prerequisites
-- [Claude Code](https://code.claude.com/docs/en/setup) installed and configured
+- [Claude Code](https://code.claude.com/docs/en/setup) or [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) installed and configured
 - Git for version control
 - Node.js >=22.19.0
 - Operating Systems: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
@@ -99,8 +118,8 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
    ```bash
    # Begin with Claude Code
    claude
-   # [YOLO mode - not recommended]
-   # claude --dangerously-skip-permissions
+   # Or use the personal GitHub Copilot CLI target
+   copilot
 
    # now you can use these specific commands
    /plan "implement user authentication"
@@ -119,10 +138,11 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 │   ├── .pi/                # Generated native Pi resources and extension
 │   ├── .gemini/            # Generated Gemini artifact
 │   ├── .antigravity/       # Generated Antigravity artifact
+│   ├── .copilot/           # Generated personal GitHub Copilot CLI artifact
 │   ├── .opencode/          # OpenCode compatibility source
 │   ├── CLAUDE.md           # Canonical instructions
 │   ├── AGENTS.md           # Generated Codex instructions
-│   └── GEMINI.md           # Generated Gemini instructions
+│   ├── GEMINI.md           # Generated Gemini instructions
 ├── .evcrate/bin/          # Central managed advisor controller source
 ├── .evcrate/targets/       # Logical target manifests and overlays
 ├── distribution/           # Build, check, and HOME publication code
@@ -530,16 +550,18 @@ Then add your MCP servers, below are some examples:
 - **Canonical Authoring**: Shared Claude Code configuration, hooks, workflows, commands, and skills are authored in `.evcrate/source/.claude/`. Target manifests/overlays in `.evcrate/targets/` are distribution metadata; generated artifacts remain under `.evcrate/source/` so no agent CLI discovers them as project-local configuration.
 - **Two Distribution Gates**: Run `python3 distribute.py --build` to regenerate nested local artifacts, `--check` to verify them without writes, and `--publish` to publish an existing verified build to HOME. After changing `.evcrate/source/.claude/`, use `python3 distribute.py --all` (or `--build` then `--publish`); `--publish` requires that verified build and never runs migrators.
 - **Pi-only Distribution**: `npm run distribute:pi` runs `python3 distribute.py --all --target pi`: it builds, verifies, then publishes only native `.pi` to `$EVCRATE_HOME/.pi`. For an isolated HOME, use `EVCRATE_HOME="$(mktemp -d)" EVCRATE_STATE_HOME="$(mktemp -d)" npm run distribute:pi`. The no-selector commands above retain all-target behavior.
+- **Copilot-only Distribution**: `npm run distribute:copilot` runs `python3 distribute.py --all --target copilot`: it stages the personal `.copilot` artifact, verifies its migration inventory, and publishes only `$EVCRATE_HOME/.copilot`. The adapter requires isolated staging and never supports direct/global output.
 - **HOME Publication**: The nested `.evcrate/source/.claude` artifact remains complete, while HOME publication sanitizes `$HOME/.claude` by excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives), retaining skill package directories and nested resources, and removing stale managed copies. The Pi-compatible `.evcrate/source/.agents/skills/` tree continues to publish to `$HOME/.agents/skills/`; unmanaged files remain preserved according to target policy.
+- **Copilot settings and hooks**: The target converts every canonical command to an `evcrate-cmd-*` skill, namespaces native resources, bridges SessionStart/SubagentStart/tool/compact/end hooks, and merges only `includeCoAuthoredBy`, `effortLevel`, and `statusLine` into `$HOME/.copilot/settings.json`. Unknown settings and JSONC comments remain user-owned; `.mcp.json.example` is retained only as `mcp-config.example.json`.
 - **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
 - **Pi runtime and settings**: The native extension registers commands, bounded nested dispatch, policy-gated tool restrictions, semantic provider roles, structured `pi-subagents` delegation, and the sole canonical lifecycle/tool-hook adapter. The target merges only the exact pins `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0` into `~/.pi/agent/settings.json`; unknown keys, packages, provider/model settings, and sessions remain user-owned. See [Native Pi migration](docs/pi-native-migration.md).
 - **Pi publication safety**: Stop Pi manually before live publication. Concurrent HOME changes abort promotion; `pi-code` is never removed automatically and live cutover remains user-controlled after isolated validation.
 - **Shared advisor controller**: `.evcrate/source/.evcrate/bin` is the sole authored controller closure. Build manifests record `controller_hashes`, and publication atomically installs one `$HOME/.evcrate/bin` while preserving `advisor-routing.json`; generated harnesses contain no controller copy.
 - **Pi advisor caveat**: `--target pi` narrows local build/check and publication bindings to `.pi`; `PI_CODING_AGENT_DIR` changes the runtime resource root, not the HOME publication destination. Pi must be manually quiescent for any live HOME publication, which is a separate user-authorized operation.
-- **No Direct Downstream Edits**: Do not edit `.evcrate/source/.gemini/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, or `.evcrate/source/.pi/` directly. They are generated automatically by the local build gate.
+- **No Direct Downstream Edits**: Do not edit `.evcrate/source/.gemini/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, `.evcrate/source/.pi/`, or `.evcrate/source/.copilot/` directly. They are generated automatically by the local build gate.
 - **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `EVCRATE_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
 - **HOME Cleanup**: Managed publication uses manifest-scoped deletion and preservation while keeping unrelated user-owned HOME paths intact.
-- **Track Downstream Assets**: Generated folders under `.evcrate/source/` must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions.
+- **Track Downstream Assets**: Generated folders under `.evcrate/source/` must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions, including the personal `.copilot` target.
 
 ### Code Quality
 - All code changes go through automated review

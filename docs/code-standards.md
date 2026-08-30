@@ -41,6 +41,7 @@ project-root/
 │   ├── .pi/                  # Generated native Pi Phase 03 resources and extension
 │   ├── .gemini/              # Generated Gemini artifact
 │   ├── .antigravity/         # Generated Antigravity artifact
+│   ├── .copilot/             # Generated personal GitHub Copilot CLI artifact
 │   └── .opencode/            # OpenCode compatibility source
 ├── .evcrate/targets/          # Logical target manifests and overlays
 ├── .github/                   # GitHub-specific files
@@ -63,12 +64,15 @@ project-root/
 
 ### Distribution target standards
 
-- `.evcrate/source/.claude/` is the only authored agent-configuration source. Generated `.pi`, `.agents`, `.codex`, `.gemini`, and `.antigravity` trees are build outputs and must not be hand-edited.
+- `.evcrate/source/.claude/` is the only authored agent-configuration source. Generated `.pi`, `.agents`, `.codex`, `.gemini`, `.antigravity`, and `.copilot` trees are build outputs and must not be hand-edited.
 - Target manifests must declare contained output roots, adapter/helper sources, ownership, overlays, and HOME bindings. Build and publication verification must hash the same adapter inputs.
 - The Phase 01 Pi adapter writes only to an empty staged `.pi` root. Direct/global output modes, symlinked ancestors, path traversal, and non-canonical Claude sources are rejected.
 - Phase 03 runtime code registers native commands, keeps nested dispatch bounded, enforces `allowed-tools` through the policy gate, resolves semantic roles only at structured `pi-subagents` delegation time, and preserves provider-neutral generated resources.
 - Pi's shared `agent/settings.json` is user-owned. EVCrate manages only the exact pins `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
 - Live Pi publication requires manual quiescence and a pre-promotion HOME recheck. The XML closing-tag and shell-descendant process-group regressions are covered by tests; this does not authorize release/cutover or automatic `pi-code` removal.
+- The personal Copilot adapter requires empty same-volume staging and no direct/global output. Every canonical command becomes a namespaced `evcrate-cmd-*` skill with literal `$ARGUMENTS`; native skills and agents become `evcrate-*`; unsupported or approximated resources require an inventory reason.
+- Copilot safety hooks use a generated fail-closed bridge. `PreToolUse` runs scout before privacy, malformed bridge payloads fail closed, `UserPromptSubmit` and `CLAUDE_ENV_FILE` are not activated, and statusline output is bounded.
+- Copilot publication owns only `includeCoAuthoredBy`, `effortLevel`, and `statusLine` in `$HOME/.copilot/settings.json`; the managed JSONC merger must preserve unknown keys, comments, and formatting bytes.
 
 ### File Naming Conventions
 

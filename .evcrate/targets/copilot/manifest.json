@@ -1,0 +1,42 @@
+{
+  "schema_version": 2,
+  "name": "copilot",
+  "adapter": "migrate_claude_to_copilot.py",
+  "adapter_sources": [
+    "distribution/advisor_controller.py",
+    "distribution/contracts.py",
+    "distribution/hashing.py",
+    "distribution/managed_json.py",
+    "copilot_adapter/__init__.py",
+    "copilot_adapter/agents.py",
+    "copilot_adapter/commands.py",
+    "copilot_adapter/bridge.py",
+    "copilot_adapter/hooks.py",
+    "copilot_adapter/instructions.py",
+    "copilot_adapter/inventory.py",
+    "copilot_adapter/prompts.py",
+    "copilot_adapter/resources.py",
+    "copilot_adapter/skills.py",
+    "copilot_adapter/styles.py",
+    "copilot_adapter/support.py",
+    "omp_adapter/resources.py",
+    "pi_adapter/__init__.py",
+    "pi_adapter/frontmatter.py"
+  ],
+  "output_root": ".copilot",
+  "additional_roots": [],
+  "project_docs": [],
+  "patches": [],
+  "shared_json": {
+    "schema": "managed-json-v1",
+    "destination": "settings.json",
+    "fragment": "evcrate/managed-settings.json",
+    "managed_keys": ["includeCoAuthoredBy", "effortLevel", "statusLine"]
+  },
+  "home_policy": {
+    "bindings": {".copilot": ".copilot"},
+    "preserve_paths": {},
+    "promotion_order": 40,
+    "reject_unmanaged_collisions": true
+  }
+}

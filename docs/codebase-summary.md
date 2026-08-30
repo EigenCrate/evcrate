@@ -6,7 +6,7 @@
 
 ## Overview
 
-evcrate is a comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code, Open Code, Codex, Gemini, Antigravity, and Pi). It provides a complete development environment with AI-powered agent orchestration, automated workflows, deterministic target distribution, and intelligent project management.
+evcrate is a comprehensive boilerplate template for building professional software projects with CLI Coding Agents (Claude Code, GitHub Copilot CLI, Open Code, Codex, Gemini, Antigravity, and Pi). It provides a complete development environment with AI-powered agent orchestration, automated workflows, deterministic target distribution, and intelligent project management.
 
 ## Project Structure
 
@@ -19,10 +19,11 @@ evcrate/
 │   ├── .pi/              # Generated native Pi resource projection and runtime
 │   ├── .gemini/          # Generated Gemini artifact
 │   ├── .antigravity/     # Generated Antigravity artifact
+│   ├── .copilot/         # Generated personal GitHub Copilot CLI artifact
 │   ├── .opencode/        # OpenCode compatibility source
 │   ├── CLAUDE.md         # Canonical project instructions
 │   ├── AGENTS.md         # Generated Codex instructions
-│   └── GEMINI.md         # Generated Gemini instructions
+│   ├── GEMINI.md         # Generated Gemini instructions
 ├── .evcrate/targets/     # Logical target manifests and overlays
 ├── docs/                 # Project documentation
 ├── guide/                # User guides and references
@@ -32,6 +33,8 @@ evcrate/
 ├── migrate_claude_to_codex.py   # Codex target generator
 ├── migrate_claude_to_gemini.py  # Gemini target generator
 ├── migrate_claude_to_pi.py      # Deterministic, staging-only native Pi resource migrator
+├── migrate_claude_to_copilot.py # Deterministic, staging-only personal Copilot migrator
+├── copilot_adapter/             # Copilot resource, hook, settings, and inventory adapters
 ├── pi_adapter/                  # Native Pi resource inventory, translation, validation, conversion, and containment helpers
 ├── README.md             # Project overview
 ├── package.json          # Node.js dependencies
@@ -125,6 +128,20 @@ canonical commands, and flattening collisions fail closed. The adapter requires
 `OMP_STAGE_ROOT` and never publishes the command projection or map to HOME;
 verified distribution gates own publication.
 
+### Personal Copilot CLI projection
+
+The Copilot adapter requires empty isolated staging and emits a deterministic
+`.evcrate/source/.copilot/` tree. Every canonical command maps to a
+user-invocable `evcrate-cmd-*` skill with literal `$ARGUMENTS`; native skills
+and agents use `evcrate-*` namespaces; workflows and non-native resources remain
+under `.copilot/evcrate/`. A machine-checkable migration inventory records
+every canonical source path and its disposition.
+
+Publication uses the manifest binding `.copilot` → `.copilot`, rejects
+unmanaged collisions, and merges only `includeCoAuthoredBy`, `effortLevel`, and
+`statusLine` into `$HOME/.copilot/settings.json` while preserving unrelated
+JSONC bytes. The target is a personal compatibility projection, not an advisor
+controller backend.
 
 ## Core Technologies
 

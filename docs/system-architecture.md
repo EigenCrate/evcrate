@@ -30,7 +30,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 ### 1. Core Layer
 
 #### 1.1 CLI Interface
-**Location**: Claude Code / Open Code CLI / Pi Coding Agent
+**Location**: Claude Code / GitHub Copilot CLI / Open Code CLI / Pi Coding Agent
 **Responsibility**: User interaction and command routing
 **Key Functions**:
 - Parse slash commands
@@ -38,7 +38,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - Display results to users
 - Manage conversation context
 
-**Technology**: Anthropic Claude Code CLI / OpenCode AI CLI / Pi Coding Agent
+**Technology**: Anthropic Claude Code CLI / GitHub Copilot CLI / OpenCode AI CLI / Pi Coding Agent
 
 #### 1.2 Command Parser
 **Location**: Built into CLI
@@ -50,7 +50,7 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - `$1, $2, $3...` - Individual positional arguments
 
 #### 1.3 Configuration Manager
-**Location**: `.evcrate/source/` for canonical authoring and generated `.claude/`, `.pi/`, `.omp/`, `.agents/`, `.codex/`, `.gemini/`, `.antigravity/`, and `.opencode/` trees. The nested physical root prevents project-local CLI discovery; logical target names remain unchanged for HOME publication.
+**Location**: `.evcrate/source/` for canonical authoring and generated `.claude/`, `.copilot/`, `.pi/`, `.omp/`, `.agents/`, `.codex/`, `.gemini/`, `.antigravity/`, and `.opencode/` trees. The nested physical root prevents project-local CLI discovery; logical target names remain unchanged for HOME publication.
 **Responsibility**: Load agent and command definitions
 **File Types**:
 - Agent definitions (`.md` with YAML frontmatter)
@@ -63,12 +63,13 @@ EVCrate implements a multi-agent AI orchestration architecture where specialized
 - Runtime discovers the project root first, then resolves config from that root rather than the current working directory.
 - Claude hooks default to `DEFAULT_CONFIG`, then global `~/.claude/.evcrate.json`, then local `.evcrate/source/.claude/.evcrate.json`; local values win.
 - Codex bridge hooks use a fixed logical `EVCRATE_CONFIG_DIR=.codex`, so shared hook logic merges `DEFAULT_CONFIG`, global `~/.codex/.evcrate.json`, then the nested local `.evcrate/source/.codex/.evcrate.json`; local values win.
-- The internal selector accepts `.claude`, `.codex`, and `.pi`; invalid values fall back to `.claude`. For native Pi hooks, `EVCRATE_CONFIG_DIR=.pi`, `EVCRATE_GLOBAL_CONFIG_ROOT` names the absolute directory containing the global `.evcrate.json`, and `EVCRATE_RESOURCE_ROOT` names the absolute generated `agent/evcrate` directory. **Pi extension agent-root resolution:** At startup and hook adaptation, `PI_CODING_AGENT_DIR` is authoritative when non-empty. When it is not set, use Node's `os.homedir()` so native Windows resolves the user profile (`USERPROFILE`) and POSIX systems retain their home behavior. Run the existing normalization and containment checks after resolution; preserve the existing required-root error when no usable root exists. Pi distribution regenerates all derived copies from the canonical extension files.
+- The internal selector accepts `.claude`, `.codex`, `.pi`, and `.copilot`; invalid values fall back to `.claude`. For native Pi hooks, `EVCRATE_CONFIG_DIR=.pi`, `EVCRATE_GLOBAL_CONFIG_ROOT` names the absolute directory containing the global `.evcrate.json`, and `EVCRATE_RESOURCE_ROOT` names the absolute generated `agent/evcrate` directory. For Copilot hooks, the bridge sets `EVCRATE_CONFIG_DIR=.copilot`, `COPILOT_HOME`, `EVCRATE_GLOBAL_CONFIG_ROOT`, and the absolute generated `evcrate` resource root. **Pi extension agent-root resolution:** At startup and hook adaptation, `PI_CODING_AGENT_DIR` is authoritative when non-empty. When it is not set, use Node's `os.homedir()` so native Windows resolves the user profile (`USERPROFILE`) and POSIX systems retain their home behavior. Run the existing normalization and containment checks after resolution; preserve the existing required-root error when no usable root exists. Pi distribution regenerates all derived copies from the canonical extension files.
 - Privacy blocking is stricter: the disable switch reads only the selected local `.evcrate.json`, so global config cannot disable secret-file blocking.
 - The Python-managed global sync preserves user-owned `~/.codex/.evcrate.json` by default; a full sync must be requested explicitly to replace it.
 - No legacy `.ck.json` fallback is used.
 - `EVCRATE_HOME` overrides the HOME root used by distribution publish and verification; when unset, the runtime uses the platform HOME directory.
-- `.evcrate/source/.claude/` is the canonical authoring source; target manifests/overlays under `.evcrate/targets/` describe distribution metadata. The manifest-driven local build applies target adapters in isolation and regenerates `.evcrate/source/.pi/`, `.evcrate/source/.omp/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, `.evcrate/source/.gemini/`, and `.evcrate/source/.antigravity/` projections before checking parity. Generated targets are not hand-edited; change canonical source or adapters and rebuild. OMP alone prefixes every flattened command target with `cmd-` (`fix/hard.md` → `cmd-fix__hard.md`, `/fix:hard` → `/cmd-fix__hard`); its generated command map is the source for command-file, slash-reference, help, and catalog translation. Canonical Claude names and all non-OMP projections remain unchanged. Native Windows validation remains pending.
+- The personal Copilot target uses `.evcrate/source/.copilot/` as a generated, staging-only projection. Its `copilot-instructions.md` points to local `@evcrate/workflows/*` assets with a `~/.copilot/evcrate/workflows/` fallback; commands become `evcrate-cmd-*` skills, native skills and agents are namespaced, and the migration inventory records native, managed-static, approximated, and unsupported source resources.
+- `.evcrate/source/.claude/` is the canonical authoring source; target manifests/overlays under `.evcrate/targets/` describe distribution metadata. The manifest-driven local build applies target adapters in isolation and regenerates `.evcrate/source/.pi/`, `.evcrate/source/.omp/`, `.evcrate/source/.agents/`, `.evcrate/source/.codex/`, `.evcrate/source/.gemini/`, `.evcrate/source/.antigravity/`, `.evcrate/source/.copilot/` projections before checking parity. Generated targets are not hand-edited; change canonical source or adapters and rebuild. OMP alone prefixes every flattened command target with `cmd-` (`fix/hard.md` → `cmd-fix__hard.md`, `/fix:hard` → `/cmd-fix__hard`); its generated command map is the source for command-file, slash-reference, help, and catalog translation. Canonical source names remain unchanged in non-Copilot projections; Copilot uses explicit command, skill, and agent namespaces. Native Windows validation remains pending.
 - The native Pi target owns `.pi`, including its own `agent/skills` projection. The existing Codex adapter continues to own `.codex` plus `.agents`; Pi does not rely on that Codex projection. When both are published, Pi's normal discovery sees both roots and keeps the `.pi` skill on same-name collisions. Users who want no Codex skill discovery run Pi with `--no-skills --skill "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/skills"`; Pi settings cannot portably exclude only `~/.agents/skills` while retaining automatic `~/.pi/agent/skills` discovery.
 - Pi publication supports the single `EVCRATE_HOME/.pi → EVCRATE_HOME/.pi` binding; `PI_CODING_AGENT_DIR` is a runtime resource-root override, not an alternate publication destination. `--target pi` narrows build staging, verified manifest outputs, and HOME policies to this binding, while retaining the repository build lock and HOME-wide publication lock. Publication merges only EVCrate-owned package identities into `~/.pi/agent/settings.json`; native hooks are loaded from the managed extension, not settings. User model/provider defaults, credentials, sessions, custom packages, hooks, and unrelated settings remain user-owned. Shared-file publication keeps the settings file outside file-level ownership and removes/replaces only known EVCrate package identities. Pi must be quiescent during live publication, and a pre-promotion HOME hash recheck aborts if sessions/package state changed after candidate creation.
 - EVCrate's generated local Pi extension contains recursive command registration, a bounded model-invoked command dispatcher, static workflow resources, native lifecycle/tool hook dispatch, structured subagent delegation, and runtime model-role resolution. Third-party Pi packages are pinned in the managed settings fragment and remain independently auditable/updateable.
@@ -189,7 +190,7 @@ flowchart TD
 **Phase 03 inline interview and Claude relay:**
 - Canonical `/advise [prompt-or-url]` is implemented as an inline-first main-session interview: one question at a time, explicit reframe confirmation, bounded discovery, and a sanitized linked report.
 - Canonical Claude accepts `/advise [prompt-or-url] --agent` only for one exact final standalone `--agent`; the relay uses invocation-scoped temporary state, keeps the main session as the sole user interlocutor/report writer, fails closed, and never silently falls back to inline mode.
-- Codex, Pi, Gemini, and Antigravity support checkpoint and inline advice but reject relay as `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX`, `ADVISE_AGENT_RELAY_UNSUPPORTED_PI`, `ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI`, and `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` respectively. Generated files are not support evidence; deterministic build/check and target-aware help tests are.
+- Codex, Pi, Gemini, Antigravity, and Copilot support checkpoint and inline advice but reject relay as `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX`, `ADVISE_AGENT_RELAY_UNSUPPORTED_PI`, `ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI`, `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY`, and `ADVISE_AGENT_RELAY_UNSUPPORTED_COPILOT` respectively. Generated files are not support evidence; deterministic build/check and target-aware help tests are.
 - See [Advisor Supervision Migration](./advisor-supervision-migration.md) for user syntax, target behavior, state retention, and local release gates.
 - Inline `/advise` and Claude relay remain separate from checkpoint advisor
   routing. They retain the no-broker/no-MCP/no-approval-bypass boundary.
@@ -514,15 +515,16 @@ Planner incorporates into plan
 - `SubagentStart` has no Pi lifecycle event. The EVCrate structured delegation tool invokes the generated child-start hook before emitting each `pi-subagents` delegation request.
 - Safety-class PreToolUse hooks fail closed on explicit denial, timeout, spawn failure, malformed adapter I/O, or unexpected exit; only optional context/post hooks may notify and fail open. Payload, alternate-config-root, output-parsing, reason-mapping, and failure-mode contracts are release-gated.
 
-**Codex & Gemini Hook Migration Bridges**:
-To ensure that safety/privacy hooks are consistently enforced when migrating from Claude Code to Codex CLI or Gemini/Antigravity platforms, the migration process automatically generates wrapper scripts.
+**Codex, Gemini, and Copilot Hook Migration Bridges**:
+To ensure that safety/privacy hooks are consistently enforced when migrating from Claude Code to Codex CLI, Gemini/Antigravity platforms, or GitHub Copilot CLI, the migration process automatically generates target-specific wrappers or a compatibility bridge.
 - **Codex Wrappers**: Generated under `.evcrate/source/.codex/hooks/pretool-scout-block.cjs` and `.evcrate/source/.codex/hooks/pretool-privacy-block.cjs`.
 - **Gemini/Antigravity Wrappers**: Generated under `.evcrate/source/.gemini/hooks/before-tool-scout-block.cjs` and `.evcrate/source/.gemini/hooks/before-tool-privacy-block.cjs`.
-- **Design Pattern**:
+- **Copilot Bridge**: Generated under `.evcrate/source/.copilot/evcrate/hooks/copilot-hook-bridge.cjs`; its `PreToolUse` operation runs scout before privacy and fails closed on malformed payloads, bridge errors, or sensitive-file denial.
+- **Legacy Codex/Gemini wrapper pattern**:
   - **Dynamic Root Resolution**: Traverses parent directories to locate local workspace hooks, with a fallback lookup to global hook directories in the user's home directory.
-  - **Fail-Open Policy**: If no local or global hook is found, the wrapper fails-open to prevent disabling the terminal environment (returns allowed status).
-  - **Strict Fail-Closed Policy**: Blocks tool-use if the underlying hook process crashes, errors out, or exits with a non-zero code.
-  - **Payload/Key Adaptation**: Automatically maps parameter keys from Antigravity/Codex formats (e.g. `AbsolutePath`, `CommandLine`) to those expected by legacy Claude Code hooks (e.g. `path`, `command`).
+  - **Legacy Fail-Open Policy**: If no local or global hook is found, those wrappers fail-open to prevent disabling the terminal environment (returns allowed status).
+  - **Copilot Strict Fail-Closed Policy**: The Copilot bridge blocks safety-class tool use on bridge errors, malformed payloads, missing hook scripts, or sensitive-file denial.
+  - **Payload/Key Adaptation**: Automatically maps parameter keys from Antigravity/Codex formats (e.g. `AbsolutePath`, `CommandLine`) to those expected by legacy Claude Code hooks (e.g. `path`, `command`); Copilot additionally accepts known camelCase payload aliases.
 
 #### 6.2 MCP (Model Context Protocol) Integration
 
@@ -573,7 +575,7 @@ To ensure that safety/privacy hooks are consistently enforced when migrating fro
 **Configuration Data**:
 - `.evcrate/source/.claude/` - Claude Code config source
 - `.evcrate/source/.opencode/` - OpenCode config source
-- `.evcrate/source/.pi/`, `.evcrate/source/.codex/`, `.evcrate/source/.agents/`, `.evcrate/source/.gemini/` - generated artifacts
+- `.evcrate/source/.pi/`, `.evcrate/source/.codex/`, `.evcrate/source/.agents/`, `.evcrate/source/.gemini/`, `.evcrate/source/.copilot/` - generated artifacts
 - `.gitignore` - Git exclusions
 - `package.json` - Node.js config
 - `.releaserc.json` - Release config
@@ -883,8 +885,8 @@ Generate Summary        │
 
 ```
 Developer Machine
-├── Claude Code CLI / Open Code CLI
-├── .evcrate/source/ (nested configuration and artifacts, including native `.pi`)
+├── Claude Code CLI / GitHub Copilot CLI / Open Code CLI
+├── .evcrate/source/ (nested configuration and artifacts, including native `.pi` and personal `.copilot`)
 ├── .evcrate/targets/ (logical target manifests)
 ├── Git repository
 └── Node.js runtime
@@ -1037,7 +1039,7 @@ Generated harnesses do not own or copy its runtime.
 
 - `.evcrate/source/.claude` remains the canonical harness source. Build/check
   validate the complete source tree and deterministically generate `.pi`,
-  `.agents`, `.codex`, `.gemini`, `.antigravity`, and `.omp` outputs.
+  `.agents`, `.codex`, `.gemini`, `.antigravity`, `.omp`, and `.copilot` outputs.
 - The required policy is `$HOME/.evcrate/advisor-routing.json` with one exact
   `advisor` object. Missing, legacy-host, malformed, oversized, duplicate-key,
   credential-bearing, unsafe, and schema-invalid policies fail closed.
@@ -1067,7 +1069,7 @@ Generated harnesses do not own or copy its runtime.
   settings file while preserving unknown keys, packages, providers, hooks, and
   sessions; its native extension remains a separate target concern.
 - Generated targets are projections, not authored sources. Do not hand-edit
-  `.codex`, `.agents`, `.pi`, `.gemini`, `.antigravity`, or `.omp`; regenerate
+  `.codex`, `.agents`, `.pi`, `.gemini`, `.antigravity`, `.omp`, or `.copilot`; regenerate
   from canonical source and declared overlays.
 
 Phase 03 `/advise` remains a separate inline-first main-session feature. It does

@@ -19,6 +19,7 @@ from .contracts import PublishError, VerifiedArtifact
 from .build import repository_lock
 from .hashing import normalize_relative_path
 from .locking import publish_lock, read_release_marker, write_release_marker
+from .managed_json import ManagedJsonError, ManagedJsonPlan, plan_managed_json
 from .manifest import SharedJsonSpec
 from .pi_settings import PiSettingsError, PiSettingsPlan, plan_pi_settings
 from .publish_verification import verify_local_artifact
@@ -67,24 +68,33 @@ def _shared_specs(context: DistributionContext) -> list[tuple[str, Path, Path, S
 def _shared_for_root(context: DistributionContext, local: Path, home: Path) -> list[tuple[str, SharedJsonSpec]]:
     return [(name, spec) for name, source, target, spec in _shared_specs(context) if source == local and target == home]
 
-
 def _settings_path(home: Path, spec: SharedJsonSpec) -> Path:
     path = home / spec.destination
-    _reject_symlinked_ancestors(path, "Pi shared settings path must not contain symlinks")
+    _reject_symlinked_ancestors(path, "Shared settings path must not contain symlinks")
     if path.exists() and (path.is_symlink() or not path.is_file()):
-        raise PublishError(f"Pi shared settings path is not a regular file: {path}")
+        raise PublishError(f"Shared settings path is not a regular file: {path}")
     return path
 
 
-def _shared_plan(local: Path, home: Path, spec: SharedJsonSpec) -> PiSettingsPlan:
+def _shared_plan(local: Path, home: Path, spec: SharedJsonSpec) -> PiSettingsPlan | ManagedJsonPlan:
     fragment = local / spec.fragment
     if fragment.is_symlink() or not fragment.is_file():
-        raise PublishError(f"Pi shared settings fragment is missing or unsafe: {fragment}")
+        raise PublishError(f"Shared settings fragment is missing or unsafe: {fragment}")
     path = _settings_path(home, spec)
     existing = path.read_bytes() if path.exists() else None
     try:
-        return plan_pi_settings(existing, fragment.read_bytes(), managed_key=spec.managed_key)
-    except PiSettingsError as error:
+        if spec.schema == "pi-settings-v1":
+            if len(spec.managed_keys) != 1:
+                raise PublishError("Pi shared settings requires exactly one managed key")
+            return plan_pi_settings(existing, fragment.read_bytes(), managed_key=spec.managed_keys[0])
+        if spec.schema == "managed-json-v1":
+            return plan_managed_json(
+                existing,
+                fragment.read_bytes(),
+                managed_keys=spec.managed_keys,
+            )
+        raise PublishError(f"Unsupported shared settings schema: {spec.schema}")
+    except (PiSettingsError, ManagedJsonError) as error:
         raise PublishError(str(error)) from error
 
 
@@ -390,14 +400,20 @@ def _restore_controller_snapshot(destination: Path, backup: Path | None) -> None
     _remove_path(destination)
     if backup is not None and backup.exists():
         backup.replace(destination)
-def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[str]]]:
-    policies: list[tuple[str, Path, Path, set[str], int]] = []
+def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[str], bool]]:
+    policies: list[tuple[str, Path, Path, set[str], int, bool]] = []
     for manifest in context.selected_manifests:
         policy = manifest.home_policy
         bindings = policy.get("bindings", {})
         preserve = policy.get("preserve_paths", {})
         order = policy.get("promotion_order", 100)
-        if not isinstance(bindings, dict) or not isinstance(preserve, dict) or not isinstance(order, int):
+        reject_collisions = policy.get("reject_unmanaged_collisions", False)
+        if (
+            not isinstance(bindings, dict)
+            or not isinstance(preserve, dict)
+            or not isinstance(order, int)
+            or type(reject_collisions) is not bool
+        ):
             raise PublishError(f"Invalid HOME policy for target {manifest.name}")
         for local_name, home_name in bindings.items():
             if local_name not in manifest.output_roots or not isinstance(home_name, str):
@@ -415,19 +431,26 @@ def _policies(context: DistributionContext) -> list[tuple[str, Path, Path, set[s
                 raise PublishError(f"Invalid preserved paths for target {manifest.name}") from error
             if len(preserved) != len(raw_preserved):
                 raise PublishError(f"Duplicate preserved paths for target {manifest.name}")
-            policies.append((safe_home_name, context.local_path(local_name), context.home / safe_home_name, preserved, order))
+            policies.append((
+                safe_home_name,
+                context.local_path(local_name),
+                context.home / safe_home_name,
+                preserved,
+                order,
+                reject_collisions,
+            ))
     controller_local = context.local_path(".evcrate") / "bin"
     controller_home = context.home / ".evcrate" / "bin"
-    policies.append((".evcrate/bin", controller_local, controller_home, set(), 5))
+    policies.append((".evcrate/bin", controller_local, controller_home, set(), 5, False))
     ordered = sorted(policies, key=lambda value: (value[4], value[0]))
-    for index, (name, _, home, _, order) in enumerate(ordered):
+    for index, (name, _, home, _, order, _) in enumerate(ordered):
         _validate_home_ancestors(context, home)
-        for prior_name, _, _, _, prior_order in ordered[:index]:
+        for prior_name, _, _, _, prior_order, _ in ordered[:index]:
             if name == prior_name:
                 raise PublishError("HOME policies must not duplicate a binding")
             if name.startswith(prior_name + "/") and order <= prior_order:
                 raise PublishError("Nested HOME binding must promote after its parent")
-    return [(name, local, home, preserve) for name, local, home, preserve, _ in ordered]
+    return [(name, local, home, preserve, reject) for name, local, home, preserve, _, reject in ordered]
 
 def _published_relative(context: DistributionContext, local: Path, home: Path, relative: str) -> str:
     """Map local OMP files into the HOME agent namespace."""
@@ -442,7 +465,7 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
     marker = read_release_marker(context.state_dir)
     prior = _managed_paths_for_publish(marker)
     changes: list[PublishChange] = []
-    for name, local, home, preserved in _policies(context):
+    for name, local, home, preserved, reject_collisions in _policies(context):
         if name == ".evcrate/bin":
             _validate_controller_home(context, home)
             if local.is_symlink() or not local.is_dir():
@@ -466,7 +489,9 @@ def publish_diff(context: DistributionContext, artifact: VerifiedArtifact) -> li
                 changes.append(PublishChange(name, relative, "preserve"))
                 continue
             destination = _managed_destination(home, relative)
-            if not destination.exists():
+            if destination.exists() and reject_collisions and relative not in prior_paths:
+                changes.append(PublishChange(name, relative, "conflict"))
+            elif not destination.exists():
                 changes.append(PublishChange(name, relative, "create"))
             elif destination.read_bytes() != content:
                 changes.append(PublishChange(name, relative, "update"))
@@ -533,7 +558,7 @@ def _managed_destination(home: Path, relative: str) -> Path:
         current /= part
         if _is_reparse_point(current) or (current.exists() and not current.is_dir()):
             raise PublishError(f"HOME reparse point intersects managed path: {destination}")
-    if destination.exists() and (_is_reparse_point(destination) or not destination.is_file()):
+    if _is_reparse_point(destination) or (destination.exists() and not destination.is_file()):
         raise PublishError(f"HOME reparse point intersects managed path: {destination}")
     return destination
 
@@ -563,6 +588,22 @@ def _replace_managed_file(destination: Path, content: bytes) -> None:
                 os.fsync(handle.fileno())
     finally:
         temporary.unlink(missing_ok=True)
+def _create_managed_file(destination: Path, content: bytes) -> None:
+    """Create a newly managed file without replacing a concurrent user path."""
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+    descriptor = os.open(destination, flags, 0o600)
+    try:
+        with os.fdopen(descriptor, "wb", closefd=True) as handle:
+            descriptor = -1
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+    finally:
+        if descriptor != -1:
+            os.close(descriptor)
+
 
 
 def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArtifact, *, dry_run: bool = False) -> list[PublishChange]:
@@ -579,8 +620,15 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
         changes = publish_diff(context, artifact)
         if dry_run:
             return changes
-        if any(change.action == "conflict" for change in changes):
-            raise PublishError("Pi settings conflict; remove npm:pi-code manually before publication")
+        conflicts = [change for change in changes if change.action == "conflict"]
+        if conflicts:
+            if any(change.root == ".pi" for change in conflicts):
+                raise PublishError("Pi settings conflict; remove npm:pi-code manually before publication")
+            conflict = conflicts[0]
+            raise PublishError(
+                f"Unmanaged HOME collision for {conflict.root}/{conflict.path}; "
+                "remove or preserve the conflicting path before publication"
+            )
         prior_marker = read_release_marker(context.state_dir)
         prior_paths = _managed_paths_for_publish(prior_marker)
         release_id = uuid.uuid4().hex
@@ -601,7 +649,16 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
         snapshots: list[tuple[Path, bytes | None]] = []
         directory_snapshots: list[tuple[Path, Path | None]] = []
 
-        def apply(path: Path, content: bytes | None, name: str, relative: str) -> None:
+        def apply(
+            path: Path,
+            content: bytes | None,
+            name: str,
+            relative: str,
+            *,
+            exclusive_create: bool = False,
+        ) -> None:
+            if exclusive_create and (path.exists() or path.is_symlink()):
+                raise PublishError(f"Unmanaged HOME collision for {name}/{relative}; publication aborted")
             existing = path.read_bytes() if path.exists() else None
             if existing == content:
                 return
@@ -614,13 +671,18 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
             snapshots.append((path, existing))
             if content is None:
                 path.unlink(missing_ok=True)
+            elif exclusive_create:
+                try:
+                    _create_managed_file(path, content)
+                except FileExistsError as error:
+                    raise PublishError(f"Unmanaged HOME collision for {name}/{relative}; publication aborted") from error
             else:
                 _replace_managed_file(path, content)
 
         try:
-            for name, local, home, preserved in _policies(context):
+            for name, local, home, preserved, reject_collisions in _policies(context):
                 if name in shared_snapshots and _home_snapshot(home) != shared_snapshots[name]:
-                    raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
+                    raise PublishError(f"HOME changed concurrently for {name}; publication aborted")
                 if name == ".evcrate/bin":
                     _validate_controller_home(context, home)
                     source_files = _files(local)
@@ -655,7 +717,14 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
                 prior = prior_managed_paths(prior_paths, name)
                 managed = sorted(set(source) - preserved_paths)
                 for relative in managed:
-                    apply(_managed_destination(home, relative), source[relative], name, relative)
+                    destination = _managed_destination(home, relative)
+                    apply(
+                        destination,
+                        source[relative],
+                        name,
+                        relative,
+                        exclusive_create=reject_collisions and relative not in prior,
+                    )
                 for relative in prior - set(source) - preserved_paths - shared_paths:
                     destination = _managed_destination(home, relative)
                     if destination.exists():
@@ -668,7 +737,7 @@ def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArti
                         settings = _settings_path(home, spec)
                         current = settings.read_bytes() if settings.exists() else None
                         if current != plan.original:
-                            raise PublishError(f"Pi HOME changed concurrently for {name}; publication aborted")
+                            raise PublishError(f"HOME changed concurrently for {name}; publication aborted")
                         apply(settings, plan.result, name, spec.destination)
                 managed_paths[name] = managed
                 marker["roots"][name] = {"completed": True}

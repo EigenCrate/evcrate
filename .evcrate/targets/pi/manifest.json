@@ -30,7 +30,7 @@
     "schema": "pi-settings-v1",
     "destination": "agent/settings.json",
     "fragment": "agent/evcrate/managed-settings.json",
-    "managed_key": "packages"
+    "managed_keys": ["packages"]
   },
   "project_docs": [],
   "patches": [],
