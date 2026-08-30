@@ -1,0 +1,48 @@
+---
+name: "evcrate-cmd-fix-test"
+description: "⚡⚡ Run test suite and fix issues"
+argument-hint: "[issues] [--advice]"
+user-invocable: true
+disable-model-invocation: true
+---
+
+## Invocation contract
+
+The literal `$ARGUMENTS` is the exact raw text following `/evcrate-cmd-fix-test`. Do not split, normalize, or discard it before the canonical command parses it.
+
+Before executing this command, read these EVCrate workflow assets:
+- `@evcrate/workflows/advisor-mentoring.md`
+- `@evcrate/workflows/advisory-interview.md`
+- `@evcrate/workflows/development-rules.md`
+- `@evcrate/workflows/documentation-management.md`
+- `@evcrate/workflows/orchestration-protocol.md`
+- `@evcrate/workflows/primary-workflow.md`
+
+Analyze the skills catalog and activate the skills that are needed for the task during the process.
+
+## Reported Issues:
+<raw-issues>$ARGUMENTS</raw-issues>
+
+## Canonical checkpoint routing
+
+Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+`.copilot/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
+
+## Advice Mode
+
+A final standalone `--advice` activates explicit review mentoring.
+Before testing, read `.copilot/evcrate/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
+issues input and apply the shared default stuck-escalation contract.
+
+## Workflow:
+1. Use `evcrate-tester` subagent to compile the code and fix all syntax errors if any.
+2. Use `evcrate-tester` subagent to run the tests and report back to main agent.
+3. If there are issues or failed tests, use `evcrate-debugger` subagent to find the root cause of the issues, then report back to main agent.
+4. Use `evcrate-planner` subagent to create an implementation plan based on the reports, then report back to main agent.
+5. Use main agent to implement the plan step by step.
+6. Use `evcrate-tester` agent to test the fix and make sure it works, then report back to main agent.
+7. Use `evcrate-code-reviewer` subagent to review the code changes and wait for its terminal report. In explicit advice mode, immediately follow it with exactly one blocking `evcrate-advisor` call at `review:<workflow-step>` using the bounded evidence, prior counsel, and owner disposition from the shared mentoring contract; do not fix, approve, or report findings before the advisor terminal result. Review/advisor cycle cap: at most three terminal reviewer/advisor cycles; at the cap, stop without another review/advisor call or cycle reset, then ask the user if issues remain.
+8. If there are issues or failed tests, repeat from step 2.
+9. After finishing, respond back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.

@@ -24,8 +24,7 @@ class SharedJsonSpec:
     schema: str
     destination: str
     fragment: str
-    managed_key: str
-
+    managed_keys: tuple[str, ...]
 @dataclass(frozen=True)
 class TargetManifest:
     name: str
@@ -111,8 +110,15 @@ def load_target_manifest(path: Path) -> TargetManifest:
         patches.append(PatchSpec(source, destination, tuple(keys)))
     if len({patch.destination for patch in patches}) != len(patches): raise BuildError("Only one patch declaration may target each destination")
     policy = data.get("home_policy")
-    if policy is None: policy = {"home_roots": data.get("home_roots", []), "preservation_policy": data.get("preservation_policy", "managed"), "project_docs": data.get("project_docs", [])}
+    if policy is None:
+        policy = {
+            "home_roots": data.get("home_roots", []),
+            "preservation_policy": data.get("preservation_policy", "managed"),
+            "project_docs": data.get("project_docs", []),
+        }
     if not isinstance(policy, dict): raise BuildError("home_policy must be an object")
+    if "reject_unmanaged_collisions" in policy and type(policy["reject_unmanaged_collisions"]) is not bool:
+        raise BuildError("reject_unmanaged_collisions must be a boolean")
     docs_value = data.get("project_docs", policy.get("project_docs", []))
     if not isinstance(docs_value, list) or not all(isinstance(document, str) for document in docs_value): raise BuildError("project_docs must be a list of filenames")
     try: docs = tuple(normalize_relative_path(document) for document in docs_value)
@@ -141,12 +147,20 @@ def load_target_manifest(path: Path) -> TargetManifest:
     raw_shared = data.get("shared_json")
     if raw_shared is not None:
         shared = _expect_object(raw_shared, "shared_json")
-        schema, destination, fragment, managed_key = (shared.get(key) for key in ("schema", "destination", "fragment", "managed_key"))
-        if schema != "pi-settings-v1" or not all(isinstance(value, str) for value in (destination, fragment, managed_key)): raise BuildError("shared_json is invalid")
+        schema, destination, fragment, managed_keys = (shared.get(key) for key in ("schema", "destination", "fragment", "managed_keys"))
+        if schema not in {"pi-settings-v1", "managed-json-v1"} or not isinstance(destination, str) or not isinstance(fragment, str):
+            raise BuildError("shared_json is invalid")
+        if not isinstance(managed_keys, list) or not managed_keys or not all(isinstance(key, str) and key for key in managed_keys):
+            raise BuildError("shared_json managed_keys must be a non-empty list")
+        if len(set(managed_keys)) != len(managed_keys):
+            raise BuildError("shared_json managed_keys must not contain duplicates")
+        if schema == "managed-json-v1" and any("." in key for key in managed_keys):
+            raise BuildError("managed-json-v1 keys must be top-level")
         try: destination, fragment = normalize_relative_path(destination), normalize_relative_path(fragment)
         except HashingError as error: raise BuildError(str(error)) from error
-        if destination == fragment or not managed_key or any(not part for part in managed_key.split(".")): raise BuildError("shared_json paths are invalid")
-        shared_json = SharedJsonSpec(schema, destination, fragment, managed_key)
+        if destination == fragment or any(not part for key in managed_keys for part in key.split(".")):
+            raise BuildError("shared_json paths are invalid")
+        shared_json = SharedJsonSpec(schema, destination, fragment, tuple(managed_keys))
     return TargetManifest(name, adapter, roots, owned, tuple(patches), docs, policy, source_root, overlay_root, adapter_sources, shared_json)
 
 def load_target_registry(path: Path) -> TargetRegistry:

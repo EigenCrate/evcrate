@@ -42,7 +42,7 @@ def recover_interrupted_publish(context: DistributionContext) -> None:
             transaction = context.state_dir / transaction_name
             if transaction.parent != context.state_dir or not transaction.name.startswith("release-"):
                 raise PublishError("Interrupted release marker has an unsafe transaction")
-            policy_by_name = {name: home for name, _, home, _ in _policies(context)}
+            policy_by_name = {name: home for name, _, home, _, _ in _policies(context)}
             for operation in reversed(operations):
                 if not isinstance(operation, dict):
                     raise PublishError("Interrupted release marker has an unsafe operation")
@@ -103,7 +103,7 @@ def recover_interrupted_publish(context: DistributionContext) -> None:
             marker["managed_paths"] = marker.get("previous_managed_paths", {})
             write_release_marker(context.state_dir, marker)
             return
-        policy_by_name = {name: home for name, _, home, _ in _policies(context)}
+        policy_by_name = {name: home for name, _, home, _, _ in _policies(context)}
         restored: list[tuple[Path, Path | None]] = []
         for name, details in marker.get("roots", {}).items():
             if name not in policy_by_name or not isinstance(details, dict):

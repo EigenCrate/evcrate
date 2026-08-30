@@ -17,8 +17,8 @@ class DistributionPublishSymlinkTest(unittest.TestCase):
     def _context(self, root: Path) -> DistributionContext:
         return DistributionContext(DistributionAction.PUBLISH, root / "repo", root / "home", None, "managed", "config-and-scripts", root / "state")
 
-    def _policy(self, source: Path, home: Path) -> list[tuple[str, Path, Path, set[str]]]:
-        return [(".agents", source, home, set())]
+    def _policy(self, source: Path, home: Path) -> list[tuple[str, Path, Path, set[str], bool]]:
+        return [(".agents", source, home, set(), False)]
 
     def _publish(self, context: DistributionContext, source: Path, home: Path, *, dry_run: bool = False) -> list[object]:
         with patch("distribution.publish.verify_local_artifact"), patch("distribution.publish._policies", return_value=self._policy(source, home)):

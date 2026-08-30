@@ -31,7 +31,8 @@ it is not replaced by generated-file parity or fake-CLI tests.
 - `.evcrate/source/.evcrate/bin/` is the sole additional canonical authored source
   for the shared controller.
 - `.evcrate/source/.claude`, `.codex`, `.agents`, `.gemini`, `.antigravity`,
-  `.pi`, and `.omp` are generated target artifacts; they are never hand-edited.
+  `.pi`, `.omp`, and `.copilot` are generated target artifacts; they are never
+  hand-edited.
 - The controller is copied once to the logical `.evcrate/bin` root and published
   to `$HOME/.evcrate/bin`; no harness owns a controller copy.
 - The user-owned `$HOME/.evcrate/advisor-routing.json` is read by the controller,
@@ -39,6 +40,12 @@ it is not replaced by generated-file parity or fake-CLI tests.
 - Build and publication use the same source/output hashes. Unmanaged HOME files
   remain preserved, while stale managed files are removed according to their
   target policy.
+
+The personal GitHub Copilot CLI target consumes the same canonical source but
+does not qualify as an advisor-controller backend. Its adapter is a staging-only
+projection: commands become `evcrate-cmd-*` skills, native skills and agents are
+namespaced, production safety hooks run through a fail-closed bridge, and the
+generated migration inventory records every source disposition.
 
 ## Required global policy
 
@@ -248,6 +255,17 @@ resources directly to HOME; only verified distribution output is publishable.
 Generated target workflows and direct hard-fix commands all carry the same
 literal `~/.evcrate/bin/evcrate-advisor` path. Change canonical sources or
 manifest overlays, rebuild, verify, and publish; do not hand-edit projections.
+
+### Personal Copilot target boundary
+
+The Copilot adapter requires `COPILOT_STAGE_ROOT` and `COPILOT_OUTPUT_DIR` and
+rejects direct or global output. It publishes only the manifest binding
+`.copilot` → `.copilot`. The generated `copilot-instructions.md`, command skills,
+namespaced agents/skills, workflow support, hook bridge, statusline, and
+opt-in MCP example are ordinary target resources; no live MCP configuration is
+created. Publication merges only the three declared Copilot settings keys into
+`$HOME/.copilot/settings.json`, preserving unrelated JSONC bytes and comments.
+Copilot is intentionally absent from the controller candidate backend set.
 
 ```mermaid
 flowchart LR

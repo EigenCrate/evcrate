@@ -89,6 +89,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
             ".antigravity/workflows/advisor-mentoring.md",
             ".pi/agent/evcrate/workflows/advisor-mentoring.md",
             ".omp/evcrate/workflows/advisor-mentoring.md",
+            ".copilot/evcrate/workflows/advisor-mentoring.md",
         )
         for relative in workflow_paths:
             with self.subTest(relative=relative):
@@ -117,7 +118,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
 
     def test_target_manifests_have_no_per_harness_controller_runtime(self) -> None:
         registry = load_target_registry(REPOSITORY / ".evcrate/targets/manifest.json")
-        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "omp", "pi"})
+        self.assertEqual(set(registry.targets), {"antigravity", "claude", "codex", "gemini", "omp", "pi", "copilot"})
         for name, path in registry.targets.items():
             with self.subTest(target=name):
                 raw = json.loads(path.read_text(encoding="utf-8"))
@@ -128,7 +129,7 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
                 self.assertFalse(any("advisor" in source and "runtime" in source for source in manifest.adapter_sources))
 
     def test_generated_harnesses_contain_no_old_controller_copy(self) -> None:
-        roots = (".claude", ".codex", ".agents", ".gemini", ".antigravity", ".pi", ".omp")
+        roots = (".claude", ".codex", ".agents", ".gemini", ".antigravity", ".pi", ".omp", ".copilot")
         for root_name in roots:
             root = REPOSITORY / ".evcrate/source" / root_name
             for path in root.rglob("*"):

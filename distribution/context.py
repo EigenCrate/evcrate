@@ -9,7 +9,7 @@ from pathlib import Path
 from .contracts import BuildError, DistributionAction
 
 
-ALL_LOCAL_ROOT_NAMES = (".evcrate", ".gemini", ".codex", ".agents", ".antigravity", ".omp", ".claude", ".pi")
+ALL_LOCAL_ROOT_NAMES = (".evcrate", ".gemini", ".codex", ".agents", ".antigravity", ".omp", ".claude", ".pi", ".copilot")
 
 
 @dataclass(frozen=True)
@@ -45,6 +45,9 @@ class DistributionContext:
     def local_omp(self) -> Path:
         return self.local_path(".omp")
 
+    @property
+    def local_copilot(self) -> Path:
+        return self.local_path(".copilot")
     @property
     def local_pi(self) -> Path:
         return self.local_path(".pi")
@@ -129,6 +132,9 @@ class DistributionContext:
     @property
     def target_codex(self) -> Path:
         return self.home / ".codex"
+    @property
+    def target_copilot(self) -> Path:
+        return self.home / ".copilot"
 
     @property
     def target_agents(self) -> Path:

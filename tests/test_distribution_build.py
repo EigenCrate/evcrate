@@ -68,6 +68,12 @@ class DistributionBuildTest(unittest.TestCase):
         self.assertEqual({path.name for path in context.local_roots}, {".evcrate", ".pi"})
         self.assertEqual(context.local_roots[0].name, ".evcrate")
         self.assertEqual(build_manifest_path(context), Path(".evcrate/build-manifest-pi.json"))
+    def test_selected_copilot_context_includes_personal_root(self) -> None:
+        context = create_context(DistributionAction.BUILD, selected_targets=("copilot",))
+        self.assertEqual({path.name for path in context.local_roots}, {".evcrate", ".copilot"})
+        self.assertEqual(context.local_copilot, context.local_path(".copilot"))
+        self.assertEqual(build_manifest_path(context), Path(".evcrate/build-manifest-copilot.json"))
+
 
     def test_controller_source_and_projection_reject_extra_artifacts_and_imports(self) -> None:
         validate_advisor_controller_source(CONTROLLER)
@@ -91,6 +97,7 @@ class DistributionBuildTest(unittest.TestCase):
             "antigravity": REPOSITORY / ".evcrate/source/.antigravity",
             "pi": REPOSITORY / ".evcrate/source/.pi",
             "omp": REPOSITORY / ".evcrate/source/.omp",
+            "copilot": REPOSITORY / ".evcrate/source/.copilot",
         }
         for target, root in roots.items():
             with self.subTest(target=target):
