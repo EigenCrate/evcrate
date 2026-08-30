@@ -56,6 +56,27 @@ class CopilotMigrationTest(unittest.TestCase):
         with patch.dict(os.environ, environment, clear=False):
             return migrate_claude_to_copilot.main(arguments or [])
 
+    def test_single_case_variant_is_not_duplicate(self) -> None:
+        from copilot_adapter.skills import _entrypoint
+
+        for filename in ("SKILL.md", "skill.md"):
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as temp:
+                package = Path(temp)
+                marker = package / filename
+                marker.write_text("", encoding="utf-8")
+                self.assertEqual(_entrypoint(package), marker)
+
+    def test_distinct_entrypoints_are_rejected(self) -> None:
+        from copilot_adapter.resources import ResourceError
+        from copilot_adapter.skills import _entrypoint
+
+        with tempfile.TemporaryDirectory() as temp:
+            package = Path(temp)
+            markers = (package / "SKILL.md", package / "skill.md")
+            with patch.object(Path, "iterdir", return_value=markers):
+                with self.assertRaisesRegex(ResourceError, "duplicate entrypoints"):
+                    _entrypoint(package)
+
     def test_repeat_runs_are_byte_deterministic(self) -> None:
         self.assertEqual(self.first_tree, self.second_tree)
         self.assertGreater(len(self.first_tree), 800)

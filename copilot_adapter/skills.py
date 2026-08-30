@@ -23,10 +23,11 @@ def _kebab(value: str) -> str:
 
 
 def _entrypoint(package: Path) -> Path | None:
-    upper, lower = package / "SKILL.md", package / "skill.md"
-    if upper.exists() and lower.exists():
+    # Enumerate actual entries; exists() cannot distinguish case aliases on Windows.
+    candidates = [path for path in package.iterdir() if path.name in {"SKILL.md", "skill.md"}]
+    if len(candidates) > 1:
         raise ResourceError(f"Skill package has duplicate entrypoints: {package}")
-    candidate = upper if upper.exists() else lower if lower.exists() else None
+    candidate = candidates[0] if candidates else None
     if candidate is not None and candidate.is_symlink():
         raise ResourceError(f"Symlinked canonical skill entrypoint: {candidate}")
     return candidate
