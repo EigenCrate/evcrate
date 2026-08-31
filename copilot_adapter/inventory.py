@@ -225,18 +225,24 @@ def build_inventory(
     if not isinstance(registrations, (list, tuple)):
         raise ResourceError("Invalid Copilot hook registration audit")
     for registration in registrations:
-        if not isinstance(registration, dict) or not isinstance(registration.get("event"), str) or not isinstance(registration.get("index"), int):
+        if (
+            not isinstance(registration, dict)
+            or not isinstance(registration.get("event"), str)
+            or not isinstance(registration.get("targetEvent"), str)
+            or not isinstance(registration.get("index"), int)
+        ):
             raise ResourceError("Invalid Copilot hook registration")
         event = str(registration["event"])
+        target_event = str(registration["targetEvent"])
         source_name = f".evcrate/source/.claude/settings.json#hooks.{event}[{registration['index']}]"
         if event == "UserPromptSubmit":
             add(source_name, [], "unsupported", "Copilot target hooks intentionally omit the Claude-only UserPromptSubmit registration.")
             continue
         add(
             source_name,
-            [".copilot/hooks/evcrate.json#" + event],
+            [".copilot/hooks/evcrate.json#" + target_event],
             "approximated",
-            "The Claude hook registration is bridged to the corresponding PascalCase Copilot event and source matcher.",
+            "The Claude hook registration is bridged to the corresponding native camelCase Copilot event and source matcher.",
         )
     for path in walk_files(source / "hooks"):
         relative = relative_path(source / "hooks", path).as_posix()

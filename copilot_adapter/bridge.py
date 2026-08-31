@@ -11,6 +11,25 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const MAX_OUTPUT = 16384;
+const TOOL_NAME_ALIASES = Object.freeze({
+  bash: 'Bash',
+  powershell: 'Bash',
+  view: 'Read',
+  read: 'Read',
+  create: 'Write',
+  write: 'Write',
+  edit: 'Edit',
+  str_replace_editor: 'Edit',
+  apply_patch: 'Edit',
+  grep: 'Grep',
+  rg: 'Grep',
+  glob: 'Glob',
+  web_fetch: 'WebFetch',
+  web_search: 'WebSearch',
+  ask_user: 'AskUserQuestion',
+  update_todo: 'TodoWrite',
+  task: 'Agent',
+});
 const OPERATIONS = Object.freeze({
   'session-start': ['session-init.cjs', 'dev-rules-reminder.cjs'],
   'subagent-start': ['subagent-init.cjs'],
@@ -46,23 +65,44 @@ function firstString(...values) {
   return values.find(value => typeof value === 'string' && value) || undefined;
 }
 
+function parseToolInput(value) {
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); }
+  catch { return value; }
+}
+
+function canonicalToolName(value) {
+  if (typeof value !== 'string') return undefined;
+  return TOOL_NAME_ALIASES[value.toLowerCase()] || value;
+}
+
 function canonicalPayload(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('hook payload must be a JSON object');
   }
-  const toolInput = input.tool_input !== undefined
+  const rawToolInput = input.tool_input !== undefined
     ? input.tool_input
     : input.toolInput !== undefined
       ? input.toolInput
-      : input.input;
+      : input.toolArgs !== undefined
+        ? input.toolArgs
+        : input.input;
+  const rawToolName = firstString(input.tool_name, input.toolName, input.tool?.name);
   return {
     ...input,
     cwd: firstString(input.cwd, input.workingDirectory, input.working_directory) || process.cwd(),
     session_id: firstString(input.session_id, input.sessionId, input.session?.id),
-    agent_type: firstString(input.agent_type, input.agentType, input.agent?.type),
+    agent_type: firstString(
+      input.agent_type,
+      input.agentType,
+      input.agentName,
+      input.agentDisplayName,
+      input.agent?.type,
+      input.agent?.name,
+    ),
     agent_id: firstString(input.agent_id, input.agentId, input.agent?.id),
-    tool_name: firstString(input.tool_name, input.toolName, input.tool?.name),
-    tool_input: toolInput,
+    tool_name: canonicalToolName(rawToolName),
+    tool_input: parseToolInput(rawToolInput),
     transcript_path: firstString(input.transcript_path, input.transcriptPath),
     source: firstString(input.source, input.reason, input.trigger) || 'unknown',
   };
@@ -106,7 +146,7 @@ function runOperation(operation, input) {
   if (!scripts) return fail(`unsupported operation: ${operation}`);
   let payload;
   try {
-    payload = input === undefined ? readPayload() : canonicalPayload(input);
+    payload = canonicalPayload(input === undefined ? readPayload() : input);
     validatePayload(operation, payload);
   }
   catch (error) { return fail(error.message); }

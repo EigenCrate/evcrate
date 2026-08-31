@@ -165,13 +165,19 @@ class CopilotMigrationTest(unittest.TestCase):
         hooks = hook_config["hooks"]
         self.assertEqual(
             set(hooks),
-            {"SessionStart", "SubagentStart", "PreToolUse", "PostToolUse", "PreCompact", "SessionEnd"},
+            {"sessionStart", "subagentStart", "preToolUse", "postToolUse", "preCompact", "sessionEnd"},
         )
-        self.assertNotIn("UserPromptSubmit", hooks)
-        self.assertEqual(hooks["SessionStart"][0]["matcher"], "startup|resume|new")
-        self.assertEqual(hooks["SessionEnd"][0]["matcher"], "*")
+        self.assertNotIn("userPromptSubmitted", hooks)
+        self.assertNotIn("matcher", hooks["sessionStart"][0])
+        self.assertNotIn("matcher", hooks["sessionEnd"][0])
+        self.assertEqual(
+            hooks["preToolUse"][0]["matcher"],
+            "bash|powershell|glob|grep|rg|view|edit|str_replace_editor|apply_patch|create",
+        )
         for entries in hooks.values():
-            command = entries[0]["hooks"][0]["command"]
+            self.assertEqual(entries[0]["type"], "command")
+            self.assertNotIn("hooks", entries[0])
+            command = entries[0]["command"]
             self.assertIn("COPILOT_HOME", command)
             self.assertIn("path.resolve", command)
             self.assertIn("copilot-hook-bridge.cjs", command)
@@ -232,6 +238,45 @@ class CopilotMigrationTest(unittest.TestCase):
         )
         self.assertEqual(safe.returncode, 0, safe.stderr)
 
+        native_safe = subprocess.run(
+            ["node", str(bridge), "pre-tool-use"],
+            cwd=self.stage,
+            env=environment,
+            input=json.dumps({"toolName": "view", "toolArgs": {"file_path": "safe.txt"}}),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(native_safe.returncode, 0, native_safe.stderr)
+
+        native_string_args = subprocess.run(
+            ["node", str(bridge), "pre-tool-use"],
+            cwd=self.stage,
+            env=environment,
+            input=json.dumps({"toolName": "view", "toolArgs": json.dumps({"file_path": "safe.txt"})}),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(native_string_args.returncode, 0, native_string_args.stderr)
+
+        native_subagent = subprocess.run(
+            ["node", str(bridge), "subagent-start"],
+            cwd=self.stage,
+            env=environment,
+            input=json.dumps({
+                "sessionId": "native-subagent-session",
+                "agentId": "native-agent-1",
+                "agentName": "planner",
+                "cwd": str(self.root),
+            }),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(native_subagent.returncode, 0, native_subagent.stderr)
+        self.assertIn("## Subagent: planner", native_subagent.stdout)
+
         sensitive = subprocess.run(
             ["node", str(bridge), "pre-tool-use"],
             cwd=self.stage,
@@ -243,9 +288,22 @@ class CopilotMigrationTest(unittest.TestCase):
         )
         self.assertEqual(sensitive.returncode, 2)
 
-        hook_command = json.loads((self.output / "hooks/evcrate.json").read_text(encoding="utf-8"))["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+        native_sensitive = subprocess.run(
+            ["node", str(bridge), "pre-tool-use"],
+            cwd=self.stage,
+            env=environment,
+            input=json.dumps({"toolName": "view", "toolArgs": {"file_path": ".env"}}),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(native_sensitive.returncode, 2)
+        self.assertNotIn("object tool input", native_sensitive.stderr)
+
+        hook_command = json.loads((self.output / "hooks/evcrate.json").read_text(encoding="utf-8"))["hooks"]["preToolUse"][0]["command"]
         configured = subprocess.run(
-            ["sh", "-c", hook_command],
+            hook_command,
+            shell=True,
             cwd=self.stage,
             env={**environment, "COPILOT_HOME": str(self.output)},
             input=json.dumps({"tool_name": "Read", "tool_input": {"file_path": "safe.txt"}}),
@@ -254,8 +312,20 @@ class CopilotMigrationTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(configured.returncode, 0, configured.stderr)
+        configured_native = subprocess.run(
+            hook_command,
+            shell=True,
+            cwd=self.stage,
+            env={**environment, "COPILOT_HOME": str(self.output)},
+            input=json.dumps({"toolName": "view", "toolArgs": {"file_path": "safe.txt"}}),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(configured_native.returncode, 0, configured_native.stderr)
         configured_denial = subprocess.run(
-            ["sh", "-c", hook_command],
+            hook_command,
+            shell=True,
             cwd=self.stage,
             env={**environment, "COPILOT_HOME": str(self.output)},
             input=json.dumps({"tool_name": "Read", "tool_input": {"file_path": ".env"}}),
@@ -264,6 +334,37 @@ class CopilotMigrationTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(configured_denial.returncode, 2, configured_denial.stderr)
+
+        marker_id = f"copilot-session-end-{os.getpid()}"
+        marker_path = Path(tempfile.gettempdir()) / "evcrate" / "markers" / f"{marker_id}.json"
+        tracker = self.output / "evcrate/hooks/lib/context-tracker.cjs"
+        marker_writer = (
+            f"const tracker=require({json.dumps(str(tracker))});"
+            f"tracker.writeMarker({json.dumps(marker_id)}, {{sessionId:{json.dumps(marker_id)}}});"
+        )
+        try:
+            created = subprocess.run(
+                ["node", "-e", marker_writer],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(created.returncode, 0, created.stderr)
+            self.assertTrue(marker_path.is_file())
+            session_end = subprocess.run(
+                ["node", str(bridge), "session-end"],
+                cwd=self.stage,
+                env=environment,
+                input=json.dumps({"sessionId": marker_id, "reason": "complete"}),
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(session_end.returncode, 0, session_end.stderr)
+            self.assertFalse(marker_path.exists())
+        finally:
+            if marker_path.exists():
+                marker_path.unlink()
 
         malformed = subprocess.run(
             ["node", str(bridge), "pre-tool-use"],
@@ -331,6 +432,7 @@ class CopilotMigrationTest(unittest.TestCase):
             env={**os.environ, "HOME": str(self.home)},
             input=json.dumps({"workspace": {"currentDir": str(self.root)}, "model": {"display_name": "Copilot"}}),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )
@@ -350,6 +452,7 @@ class CopilotMigrationTest(unittest.TestCase):
                 },
             }),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )
