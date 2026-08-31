@@ -22,6 +22,7 @@
     "test:cli": "npm run build && node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
     "test:phase4": "npm run build && node --test tests/filesystem/distribution-primitives.test.mjs tests/manifests/distribution-manifests.test.mjs tests/advisor-settings/distribution-primitives.test.mjs",
     "distribute": "bash -o pipefail -c 'python3 distribute.py --all 2>&1 | tee logs.txt'",
+    "test:phase5": "npm run build && node --test tests/adapters/*.test.mjs",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
     "distribute:publish": "python3 distribute.py --publish",

@@ -1,6 +1,6 @@
 ## Unreleased
 
-**Updated:** 2026-08-31
+**Updated:** 2026-09-01
 
 ### Features
 
@@ -8,6 +8,7 @@
 * **scout:** unify external CLI strategy rendering behind one canonical read-only source, with deterministic Codex/Gemini projections and exact fallback contracts.
 * **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
 * **control-plane:** define bounded, versioned `evcrate-resource-control/v1` contracts for exactly seven persisted targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `copilot`, `omp`), the `agy` input alias, strict JSON/path validation, credential/counsel rejection, stable errors and exit bands, and typed CAS/recovery result shapes; Phase 3 dispatch implements `version` only.
+* **adapters:** complete seven target-isolated, staging-only TypeScript projections (Claude, Gemini, Antigravity, Codex, Pi, OMP, Copilot) in confirmed parity order with 2,033 explicit Python delta records and no controller copies; `npm run test:phase5` passes **12/12** after a clean build. Python remains authoritative until per-target cutover; no HOME publication, live qualification, Python-free runtime, or `main` merge is claimed.
 * **advisor-settings:** define the typed `evcrate-advisor-settings/v1` `get`, `preview`, and `apply` contract with redacted views, digests, preview metadata, and CAS/recovery shapes; Phase 3 keeps operations behind an optional handler and defaults to validated `CAPABILITY_UNSUPPORTED` without policy I/O.
 * **advisor-diagnostic:** add qualification-only `evcrate-advisor-diagnostic/v1` requests for configured backend/version/auth/capability probes; the Phase 3 `health` bridge invokes only the packaged CommonJS controller diagnostic and rejects malformed, multi-line, stderr-bearing, or counsel-shaped output.
 * **cli:** publish the one-shot CommonJS `evcrate` executable at `dist/cli/evcrate.js` with `version`, `health`, `advisor settings get|preview|apply`, `distribute build|check|publish|all|recover`, and `--request-file`; it parses, resolves, dispatches, writes one result, and exits without a listener, retry, background process, or counsel proxy, using shell-free bounded process/request-file I/O with Linux-first `O_NOFOLLOW` final-component protection (no Windows security-equivalence claim).

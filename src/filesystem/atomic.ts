@@ -9,8 +9,8 @@ const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 function fail(code: 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never {
   throw new ControlPlaneError(code);
 }
-function validateMode(mode: number): void {
-  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777 || (mode & 0o077) !== 0) fail('PATH_UNSAFE');
+function validateMode(mode: number, ownerOnly = true): void {
+  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777 || (ownerOnly && (mode & 0o077) !== 0)) fail('PATH_UNSAFE');
 }
 
 function ensureParent(path: string, mode = 0o700): string {
@@ -64,8 +64,8 @@ export function syncDirectory(path: string): void {
   try { fsyncSync(descriptor); } finally { closeSync(descriptor); }
 }
 
-export function writeAtomicFile(path: string, bytes: Uint8Array, mode = 0o600): void {
-  validateMode(mode);
+function writeAtomicFileInternal(path: string, bytes: Uint8Array, mode: number, ownerOnly: boolean): void {
+  validateMode(mode, ownerOnly);
   const destination = resolve(path);
   const parent = ensureParent(destination);
   assertNoSymlinkAncestors(parent);
@@ -102,6 +102,15 @@ export function writeAtomicFile(path: string, bytes: Uint8Array, mode = 0o600): 
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') fail('PUBLICATION_FAILED');
     fail('PUBLICATION_FAILED');
   }
+}
+
+export function writeAtomicFile(path: string, bytes: Uint8Array, mode = 0o600): void {
+  writeAtomicFileInternal(path, bytes, mode, true);
+}
+
+/** Atomic writer for staged projections; supports target-prescribed modes. */
+export function writeAtomicProjectionFile(path: string, bytes: Uint8Array, mode = 0o644): void {
+  writeAtomicFileInternal(path, bytes, mode, false);
 }
 
 export function sameVolume(source: string, destinationParent: string): boolean {

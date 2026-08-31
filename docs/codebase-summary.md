@@ -1,7 +1,7 @@
 # Codebase Summary
 
-**Last Updated**: 2026-08-31  
-**Status**: Phase 4 distribution-safety continuation complete; release remains Unreleased  
+**Last Updated**: 2026-09-01  
+**Status**: Phase 5 target projection adapters complete (staging-only); release remains Unreleased  
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
@@ -14,9 +14,10 @@ engine remains the authority for `build`, `check`, `publish`, `all`, and `recove
 TypeScript invokes that engine rather than replacing it.
 
 Phase 4 adds distribution authorization and transaction primitives to the
-TypeScript package. It does **not** claim Python-free distribution parity,
-Windows security equivalence, live installed-CLI qualification, or a live HOME
-cutover.
+TypeScript package. Phase 5 adds seven target projection adapters that build
+only isolated staging roots and compare output with current Python references.
+The implementation does **not** claim Python-free distribution parity, Windows
+security equivalence, live installed-CLI qualification, or a live HOME cutover.
 
 ## Repository map
 
@@ -37,6 +38,7 @@ cutover.
 │   ├── filesystem/                       # paths, hashes, atomic I/O, locks
 │   ├── distribution/                     # build verification and promotion
 │   ├── advisor-settings/                 # policy-file staging, CAS, recovery
+│   ├── adapters/                         # staging-only target projections
 │   └── errors/                           # stable error serialization and exits
 ├── distribution/                         # Python-authoritative distribution engine
 ├── copilot_adapter/                      # staging-only Copilot projection
@@ -66,6 +68,7 @@ controller authority and is not hand-edited.
 | `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, deterministic tree hashes, atomic files, capability-backed staged roots, and interoperable locks. |
 | `src/distribution/` | Validate schema-2 build manifests and output/controller hashes; promote staged roots with durable journals, snapshots, pre-rename CAS, and recovery. |
 | `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, source/destination CAS, durable journal recovery, and identity-checked cleanup. |
+| `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; enforce declared staging roots and target-specific transforms. |
 
 ## Phase 4 distribution authorization
 
@@ -122,6 +125,29 @@ tests, fixtures, helpers, fake artifacts, and non-literal or out-of-closure
 imports. The entrypoint requires the canonical Node shebang and executable mode.
 `controller_hashes` must contain exactly the same 17 `.evcrate/bin/...` keys and
 must match the current bytes; projections must be byte-identical.
+
+## Phase 5 target projection adapters
+
+The seven TypeScript projection adapters are registered in the fixed order
+Claude, Gemini, Antigravity, Codex, Pi, OMP, Copilot. Each consumes canonical
+`.evcrate/source/.claude/` resources plus declared manifest/helper inputs and
+writes only its own isolated staging roots; generated targets and the advisor
+controller are never adapter inputs or outputs.
+
+Python snapshot parity is asserted by `tests/adapters/python-parity.test.mjs`.
+The exact explicit records in `tests/adapters/parity-deltas.mjs` total 2,033:
+Claude 189 directory records; Gemini 797 (249 directories, 548 files);
+Antigravity 324 (225 directories, 99 files); Codex 362 (232 directories, 130
+files); Pi 98 file records plus 14 approved extension extras; OMP 86 file
+records; and Copilot 177 file records. The current Python migrators/helpers
+remain authoritative until target-specific cutover.
+
+Declared staging roots are `.claude`; `.gemini` and `GEMINI.md`; `.antigravity`;
+`.agents`, `.codex`, and `AGENTS.md`; `.pi`; `.omp`; and `.copilot`,
+respectively. Validators reject traversal, graph mutation, missing/extra/hash/
+mode/symlink/special outputs, and controller markers. `npm run test:phase5`
+passed with a clean build and **12/12** tests; this is staging/parity evidence
+only, not HOME publication or live qualification.
 
 ## Canonical JSON and hashing
 
@@ -191,9 +217,10 @@ fallback, or claim Python-free parity. CommonJS package exports retain both the
 ## Evidence and limitations
 
 Independent validation passed **110/110**: Phase 4 **29/29**, protocol **18/18**,
-CLI **28/28**, and Python-authority **35/35**. Final security review approved
-**9.5/10**. Residuals are the documented low same-UID/path-race window and the
-Linux-first security scope. Live vendor qualification and HOME cutover remain
+CLI **28/28**, and Python-authority **35/35**. The Phase 5 adapter gate passed
+**12/12** after a clean build. Final security review approved **9.5/10**.
+Residuals are the documented low same-UID/path-race window and Linux-first
+security scope. Live vendor qualification and HOME cutover remain
 operator-controlled and unclaimed.
 
 ## Related documentation
@@ -208,7 +235,7 @@ operator-controlled and unclaimed.
 
 ## Compaction record
 
-A temporary Repomix XML compaction was generated on 2026-08-31 for this update
-using the repository's configured exclusions. Repomix reported **2,513 files**,
-**8,648,881 tokens**, and **32,595,351 characters**. The compaction was used as
+A temporary Repomix XML compaction was generated on 2026-09-01 using the
+repository's configured exclusions. Repomix reported **2,558 files**,
+**8,720,037 tokens**, and **32,880,702 characters**. The compaction was used as
 analysis input and is not retained as a repository deliverable.

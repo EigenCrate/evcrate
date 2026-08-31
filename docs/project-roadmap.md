@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-31 19:46:24 +0700
+**Last Updated:** 2026-09-01 02:48:35 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -175,6 +175,12 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ Phase 02 canonical one-shot `--advice` supervision implementation and review complete (2026-08-23 22:27:03 +0700); user approved. Its two approved non-blocking follow-ups closed (2026-08-23 23:00:08 +0700): duplicate `fix/test.md` step numbering corrected, and the Codex distribution assertion now generates Gemini output in a fresh temporary root before checking generated commands. Reviewer-reported validation: focused 50/50; `npm test`: 146 Python + 46 Node.
 - ✅ Phase 03 `/advise` interview and Claude relay, Phase 04 generated-target rollout, and Phase 05 migration documentation/release gates complete. Codex, Pi, Gemini, and Antigravity now receive generated capability-accurate checkpoint/inline advisory surfaces with explicit relay rejection; generated-help warnings were fixed and target checks passed. Full validation and review passed; release/publish/commit remains separately user-authorized.
 - ✅ Central Advisor CLI Supervisor — the shared `~/.evcrate/bin/evcrate-advisor` controller now owns one required global target, direct ten-key checkpoints, bounded isolated execution, one terminal envelope, schema-2 controller hashes, atomic `.evcrate/bin` publication, and qualified OMP plus disabled Antigravity candidates. Generated harnesses contain no per-harness controller runtime. Real vendor-CLI qualification and live HOME cutover remain user-operated follow-up work.
+
+### TypeScript/npm Control-Plane CLI
+- ✅ Phase 5 target projection adapters complete (2026-09-01; [Phase 5 plan](../plans/260827-2218-typescript-control-plane-cli/phase-05-adapters.md)): Claude, Gemini, Antigravity, Codex, Pi, OMP, and Copilot are registered in the confirmed parity order, with 2,033 exact Python parity delta records.
+- Validation is staging-only and target-isolated: adapters write only declared roots, reject unsafe or mutated outputs, and exclude advisor-controller copies. `npm run test:phase5` passed with a clean build and **12/12** tests.
+- Python remains authoritative for generation, build/check, HOME publication, and recovery until target-specific cutover. No HOME publication, live qualification, Python-free runtime, or `main` merge is claimed.
+- 📋 Phase 6 registry/imports next: persist manifest/hash-bound target references, import only explicit canonical resources with provenance, and keep controller/policy artifacts outside registry ownership.
 
 ### OMP Command Namespace Prefix
 - 🔄 Phase 01 map/translate complete (**100%**); parent plan **43%** overall. Review **9.5/10** approved, focused validation and build/check passed.
