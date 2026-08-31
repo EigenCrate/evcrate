@@ -1,0 +1,68 @@
+export const OMP_RUNTIME_HELPER = String.raw`import { spawn } from "node:child_process";
+import { lstatSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const SOURCE_HOOK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "hooks");
+function hasSymlinkedAncestor(candidate: string): boolean {
+  let current = path.resolve(candidate);
+  while (true) {
+    try { if (lstatSync(current).isSymbolicLink()) return true; } catch { return true; }
+    const parent = path.dirname(current); if (parent === current) return false; current = parent;
+  }
+}
+function canonicalHookPath(relative: string): string {
+  const candidate = path.resolve(SOURCE_HOOK_ROOT, relative);
+  if (!candidate.startsWith(SOURCE_HOOK_ROOT + path.sep) || hasSymlinkedAncestor(candidate)) throw new Error("Unsafe OMP hook path: " + relative);
+  const stat = lstatSync(candidate); if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Missing OMP hook source: " + relative); return candidate;
+}
+export interface CanonicalHookResult { stdout: string; stderr: string; code: number; }
+export async function runCanonicalHook(relative: string, payload: unknown, ctx: any): Promise<CanonicalHookResult> {
+  let script: string; try { script = canonicalHookPath(relative); } catch (error) { return { stdout: "", stderr: String(error), code: 127 }; }
+  const cwd = typeof ctx?.cwd === "string" && ctx.cwd ? ctx.cwd : process.cwd();
+  const resourceRoot = path.resolve(SOURCE_HOOK_ROOT, "..");
+  const env = { ...process.env, EVCRATE_CONFIG_DIR: ".omp", EVCRATE_RESOURCE_ROOT: resourceRoot, EVCRATE_GLOBAL_CONFIG_ROOT: path.join(os.homedir(), ".omp", "agent"), CLAUDE_PROJECT_DIR: cwd, OMP_PROJECT_DIR: cwd };
+  return await new Promise((resolve) => {
+    let stdout = ""; let stderr = ""; let settled = false;
+    const child = spawn("node", [script], { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
+    const finish = (result: CanonicalHookResult) => { if (settled) return; settled = true; clearTimeout(timer); resolve(result); };
+    child.stdout.on("data", (chunk) => { stdout += String(chunk); }); child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+    child.on("error", (error) => finish({ stdout, stderr: stderr + String(error), code: 127 })); child.on("close", (code) => finish({ stdout, stderr, code: code ?? 1 }));
+    const timer = setTimeout(() => { child.kill("SIGTERM"); finish({ stdout, stderr: stderr + "OMP canonical hook timed out", code: 124 }); }, 25_000);
+    try { child.stdin.end(JSON.stringify(payload ?? {})); } catch (error) { child.kill("SIGTERM"); finish({ stdout, stderr: stderr + String(error), code: 127 }); }
+  });
+}
+export function sessionFile(ctx: any): string | undefined { try { const value = ctx?.sessionManager?.getSessionFile?.(); return typeof value === "string" && value ? value : undefined; } catch { return undefined; } }
+export function sessionId(ctx: any): string { const file = sessionFile(ctx); return file ? path.basename(file) : "default"; }
+function canonicalName(toolName: string): string { return ({ bash: "Bash", glob: "Glob", grep: "Grep", read: "Read", edit: "Edit", write: "Write" } as Record<string, string>)[toolName] ?? toolName; }
+export function canonicalToolPayload(event: any, ctx: any): Record<string, unknown> { const input = { ...(event?.input ?? {}) } as Record<string, unknown>; if (input.file_path === undefined && typeof input.path === "string") input.file_path = input.path; return { tool_name: canonicalName(typeof event?.toolName === "string" ? event.toolName : "unknown"), tool_input: input, cwd: ctx?.cwd ?? process.cwd() }; }
+export function additionalContext(output: string): string | undefined { for (const line of output.split("\n").reverse()) { const trimmed = line.trim(); if (!trimmed) continue; try { const value = JSON.parse(trimmed); const candidate = value?.hookSpecificOutput?.additionalContext; if (typeof candidate === "string" && candidate.trim()) return candidate.trim(); if (Array.isArray(candidate)) { const text = candidate.filter((item: unknown): item is string => typeof item === "string").join("\n").trim(); if (text) return text; } } catch { /* plain text */ } } return undefined; }
+export function outputText(result: CanonicalHookResult): string { return result.stdout + "\n" + result.stderr; }
+`;
+
+export const OMP_PRE_MODULE = String.raw`import { canonicalToolPayload, runCanonicalHook, sessionFile, sessionId } from "../../evcrate/omp-hook-runtime.ts";
+export default function (pi: any) {
+  let startupContext = ""; let startupDelivered = false;
+  pi.on("session_start", async (_event: any, ctx: any) => { const result = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx); startupContext = result.stdout.trim(); });
+  pi.on("before_agent_start", async (event: any, ctx: any) => {
+    const parts: string[] = [];
+    if (!startupContext) { const startup = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx); startupContext = startup.stdout.trim(); }
+    if (!startupDelivered && startupContext) { parts.push(startupContext); startupDelivered = true; }
+    const reminder = await runCanonicalHook("dev-rules-reminder.cjs", { prompt: event?.prompt ?? "", transcript_path: sessionFile(ctx) }, ctx);
+    if (reminder.stdout.trim()) parts.push(reminder.stdout.trim()); if (!parts.length) return;
+    return { message: { customType: "evcrate-context", content: parts.join("\n\n"), display: false } };
+  });
+  pi.on("session_before_compact", async (_event: any, ctx: any) => { await runCanonicalHook("write-compact-marker.cjs", { source: "compact", session_id: sessionId(ctx), trigger: "omp", context_window: {} }, ctx); });
+}
+`;
+export const OMP_POLICY_MODULE = String.raw`import { canonicalToolPayload, outputText, runCanonicalHook } from "../../evcrate/omp-hook-runtime.ts";
+export default function (pi: any) {
+  pi.on("tool_call", async (event: any, ctx: any) => { const payload = canonicalToolPayload(event, ctx); for (const script of ["scout-block.cjs", "privacy-block.cjs"]) { const result = await runCanonicalHook(script, payload, ctx); if (result.code === 0) continue; return { block: true, reason: outputText(result) || "Blocked by migrated EVCrate security hook." }; } });
+}
+`;
+export const OMP_POST_MODULE = String.raw`import { additionalContext, canonicalToolPayload, runCanonicalHook, sessionId } from "../../evcrate/omp-hook-runtime.ts";
+export default function (pi: any) {
+  pi.on("tool_result", async (event: any, ctx: any) => { if (event?.toolName !== "write" && event?.toolName !== "edit") return; const result = await runCanonicalHook("modularization-hook.js", canonicalToolPayload(event, ctx), ctx); const text = additionalContext(result.stdout) ?? additionalContext(result.stderr); if (!text) return; return { content: [...(Array.isArray(event?.content) ? event.content : []), { type: "text", text }] }; });
+  pi.on("session_shutdown", async (_event: any, ctx: any) => { await runCanonicalHook("session-end.cjs", { reason: "shutdown", session_id: sessionId(ctx) }, ctx); });
+}
+`;
