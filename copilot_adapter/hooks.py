@@ -14,14 +14,22 @@ from .resources import ResourceError, copy_file, ensure_parent, production_files
 
 
 _EVENT_OPERATIONS = {
-    "SessionStart": "session-start",
-    "SubagentStart": "subagent-start",
-    "PreToolUse": "pre-tool-use",
-    "PostToolUse": "post-tool-use",
-    "PreCompact": "pre-compact",
-    "SessionEnd": "session-end",
+    "SessionStart": ("sessionStart", "session-start"),
+    "SubagentStart": ("subagentStart", "subagent-start"),
+    "PreToolUse": ("preToolUse", "pre-tool-use"),
+    "PostToolUse": ("postToolUse", "post-tool-use"),
+    "PreCompact": ("preCompact", "pre-compact"),
+    "SessionEnd": ("sessionEnd", "session-end"),
 }
 _UNSUPPORTED_EVENTS = {"UserPromptSubmit"}
+_CLAUDE_TOOL_MATCHERS = {
+    "bash": ("bash", "powershell"),
+    "glob": ("glob",),
+    "grep": ("grep", "rg"),
+    "read": ("view",),
+    "edit": ("edit", "str_replace_editor", "apply_patch"),
+    "write": ("create",),
+}
 
 
 
@@ -31,11 +39,22 @@ def _bridge_command(operation: str) -> str:
         "const path=require('node:path');"
         "const home=process.env.COPILOT_HOME||path.join(os.homedir(),'.copilot');"
         "const bridge=path.resolve(home,'evcrate','hooks','copilot-hook-bridge.cjs');"
-        "const run=require(bridge);"
-        "process.exitCode=run("
-        + json.dumps(operation) + ");"
+        "process.exitCode=require(bridge)(process.argv[1]);"
     )
-    return "node -e " + json.dumps(code)
+    return "node -e " + json.dumps(code) + " " + operation
+
+
+def _native_matcher(event_name: str, value: str | None) -> str | None:
+    if event_name in {"SessionStart", "SubagentStart", "SessionEnd"}:
+        return None
+    if value is None or value in {"", "*", "**"}:
+        return None
+    if event_name == "PreCompact":
+        return value
+    tokens = []
+    for token in value.split("|"):
+        tokens.extend(_CLAUDE_TOOL_MATCHERS.get(token.casefold(), (token,)))
+    return "|".join(dict.fromkeys(tokens))
 
 def _translate_hook(value: str, transform: Callable[[str], str], relative: Path) -> str:
     rendered = transform(render_harness_script_references(value, "copilot"))
@@ -71,6 +90,18 @@ def _translate_hook(value: str, transform: Callable[[str], str], relative: Path)
             "const envFile = process.env.COPILOT_ENV_FILE;",
             "const envFile = undefined; // Copilot has no environment-file hook",
         ).replace("CLAUDE_ENV_FILE", "Copilot environment-file hook")
+    if relative.as_posix() == "session-end.cjs":
+        rendered = rendered.replace(
+            " * Fires: When session ends (clear, compact, user exit)",
+            " * Fires: When the Copilot session ends",
+        ).replace(
+            "    // Delete marker on /clear to reset context baseline\n"
+            "    // SessionEnd fires with OLD session_id before new session starts\n"
+            "    // This ensures clean slate for the next session\n"
+            "    if (reason === 'clear' && sessionId) {",
+            "    // Remove state for every supported Copilot session-end reason.\n"
+            "    if (sessionId) {",
+        )
     return rendered
 
 
@@ -85,9 +116,10 @@ def _hook_config(events: dict[str, object]) -> dict[str, object]:
             raise ResourceError(f"Canonical hook event must contain object entries: {event_name}")
         if event_name in _UNSUPPORTED_EVENTS:
             continue
-        operation = _EVENT_OPERATIONS.get(event_name)
-        if operation is None:
+        event_mapping = _EVENT_OPERATIONS.get(event_name)
+        if event_mapping is None:
             raise ResourceError(f"Unsupported canonical hook event: {event_name}")
+        target_event, operation = event_mapping
         if len(entries) != 1:
             raise ResourceError(
                 f"Canonical {event_name} registrations cannot be collapsed safely: expected one registration"
@@ -109,16 +141,11 @@ def _hook_config(events: dict[str, object]) -> dict[str, object]:
         matcher_value = entry.get("matcher")
         if event_name not in {"SessionStart", "SessionEnd"} and not isinstance(matcher_value, str):
             raise ResourceError(f"Canonical {event_name} registration has no source matcher")
-        if event_name == "SessionStart":
-            matcher = "startup|resume|new"
-        elif event_name == "SessionEnd":
-            matcher = "*"
-        else:
-            matcher = matcher_value
-        hooks[event_name] = [{
-            "matcher": matcher,
-            "hooks": [{"type": "command", "command": _bridge_command(operation)}],
-        }]
+        matcher = _native_matcher(event_name, matcher_value)
+        registration = {"type": "command", "command": _bridge_command(operation)}
+        if matcher is not None:
+            registration["matcher"] = matcher
+        hooks[target_event] = [registration]
     return {"version": 1, "hooks": hooks}
 
 
@@ -171,7 +198,11 @@ def convert_hooks_and_scripts(source: Path, output: Path, transform: Callable[[s
         raise ResourceError("Canonical hook settings must contain a hooks object")
     write_json(output / "hooks" / "evcrate.json", output, _hook_config(events))
     registrations = [
-        {"event": event, "index": index}
+        {
+            "event": event,
+            "targetEvent": _EVENT_OPERATIONS.get(event, (event, ""))[0],
+            "index": index,
+        }
         for event, entries in sorted(events.items())
         if isinstance(entries, list)
         for index, _ in enumerate(entries)

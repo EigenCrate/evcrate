@@ -2,7 +2,7 @@
 /**
  * SessionEnd Hook - Cleanup on session end
  *
- * Fires: When session ends (clear, compact, user exit)
+ * Fires: When the Copilot session ends
  * Purpose: Delete compact marker files to reset context baseline on /clear
  *
  * Exit Codes:
@@ -19,10 +19,8 @@ async function main() {
     const reason = data.reason || 'unknown';
     const sessionId = data.session_id || null;
 
-    // Delete marker on /clear to reset context baseline
-    // SessionEnd fires with OLD session_id before new session starts
-    // This ensures clean slate for the next session
-    if (reason === 'clear' && sessionId) {
+    // Remove state for every supported Copilot session-end reason.
+    if (sessionId) {
       deleteMarker(sessionId);
     }
 
