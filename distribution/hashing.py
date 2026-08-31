@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -77,6 +79,59 @@ def canonical_json_bytes(value: Any) -> bytes:
     """Serialize JSON without formatting or platform-dependent variation."""
 
     return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = item
+    return result
+
+
+def _reject_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant: {value}")
+
+
+def read_bounded_json(path: Path, max_bytes: int) -> Any:
+    """Read an owner-only regular JSON file with strict bounded parsing."""
+
+    if path.is_symlink():
+        raise HashingError("JSON file must not be a symlink")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or (hasattr(os, "getuid") and metadata.st_uid != os.getuid())
+            or (os.name != "nt" and metadata.st_mode & 0o077)
+            or metadata.st_size > max_bytes
+        ):
+            raise HashingError("JSON file has unsafe ownership, mode, or size")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(descriptor, max_bytes - total + 1)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > max_bytes:
+                raise HashingError("JSON file is oversized")
+        final = os.fstat(descriptor)
+        if (metadata.st_dev, metadata.st_ino, metadata.st_size) != (
+            final.st_dev, final.st_ino, final.st_size
+        ):
+            raise HashingError("JSON file changed while reading")
+    finally:
+        os.close(descriptor)
+    try:
+        return json.loads(
+            b"".join(chunks).decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_keys,
+            parse_constant=_reject_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+        raise HashingError(f"invalid JSON: {error}") from error
 
 
 def hash_bytes(value: bytes) -> str:

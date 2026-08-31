@@ -6,15 +6,16 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from typing import get_type_hints
 
+from unittest.mock import patch
 from distribution.context import DistributionContext, create_context
 from distribution.contracts import DistributionAction, PublishError, VerifiedArtifact
 from distribution.gates import run_home_publish
 from distribution.publish import _owner_controlled_directory, publish_diff, publish_local_artifacts
 from distribution.publish_recovery import recover_interrupted_publish
 from distribution.publish_verification import verify_local_artifact
-from distribution.locking import write_release_marker
+from distribution.locking import publish_lock, read_release_marker, write_release_marker
 
 from tests.distribution_support import REPOSITORY, artifact_for, context_for, tree_bytes
 
@@ -53,6 +54,43 @@ class DistributionPublishTest(unittest.TestCase):
             with patch.object(Path, "stat", side_effect=PermissionError("denied")):
                 with self.assertRaisesRegex(PublishError, "ownership could not be verified"):
                     _owner_controlled_directory(context.home, "HOME root")
+    def test_shared_lock_reader_rejects_malformed_metadata_and_broken_marker_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = context_for(Path(temp), ("pi",))
+            lock = context.state_dir / "publish.lock"
+            token = "a" * 32
+            payloads = [
+                f'{{"pid":1,"startedAt":1,"token":"{token}","processStart":null,"pid":2}}',
+                f'{{"pid":1,"token":"{token}","processStart":null}}',
+                f'{{"pid":NaN,"startedAt":1,"token":"{token}","processStart":null}}',
+                "x" * 4097,
+            ]
+            for payload in payloads:
+                lock.write_text(payload, encoding="utf-8")
+                os.chmod(lock, 0o600)
+                with self.assertRaises(PublishError):
+                    with publish_lock(context.state_dir):
+                        pass
+                self.assertEqual(lock.read_text(encoding="utf-8"), payload)
+                lock.unlink()
+            (context.state_dir / "release-marker.json").symlink_to(context.state_dir / "missing-marker")
+            with self.assertRaises(PublishError):
+                read_release_marker(context.state_dir)
+            self.assertIn("return", get_type_hints(read_release_marker))
+
+    def test_stale_lock_is_quarantined_before_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = context_for(Path(temp), ("pi",))
+            lock = context.state_dir / "publish.lock"
+            lock.write_text(
+                '{"pid":999999999,"startedAt":1,"token":"' + "b" * 32 + '","processStart":null}',
+                encoding="utf-8",
+            )
+            os.chmod(lock, 0o600)
+            with publish_lock(context.state_dir):
+                self.assertTrue(lock.is_file())
+            self.assertFalse(any(".stale-" in item.name for item in context.state_dir.iterdir()))
+
 
     def test_publish_replaces_complete_controller_and_preserves_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

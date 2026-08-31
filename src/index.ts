@@ -11,3 +11,7 @@ export * from './cli/output.js';
 export * from './cli/process-runner.js';
 export * from './cli/request-file.js';
 export * from './cli/types.js';
+export * from './filesystem/index.js';
+export * from './manifests/index.js';
+export * from './advisor-settings/index.js';
+export * from './distribution/index.js';

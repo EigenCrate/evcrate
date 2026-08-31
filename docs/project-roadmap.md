@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-08-31 14:41:04 +0700
+**Last Updated:** 2026-08-31 19:46:24 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -232,6 +232,7 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 | Milestone | Status | Due Date | Progress |
 |-----------|--------|----------|----------|
 | TypeScript CLI foundation (Phase 3) | ✅ Complete | 2026-08-31 | 100% |
+| TypeScript CLI distribution safety (Phase 4) | ✅ Complete | 2026-08-31 | 100% |
 
 ---
 
@@ -293,6 +294,9 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 
 ### Recent Additions (2026-08-31)
 - ✅ TypeScript CLI foundation — Phase 3 complete ([implementation plan](../plans/260831-phase-03-cli-foundation/plan.md), completed 2026-08-31 14:41:04 +0700): delivered a one-shot CommonJS Node CLI, context/target registry, typed output/errors, diagnostic-only health bridge, Python-backed compatibility dispatch with exact `EVCRATE_STATE_DIR` handoff, package bins/exports, release build gate, and regression coverage.
+- ✅ TypeScript control-plane CLI — Phase 4 distribution-safety continuation complete (2026-08-31): schema-2 manifest/build authorization, controller closure/hash verification, Python-compatible canonical hashing, owner/symlink/containment boundaries, TS/Python lock interoperability with stale quarantine, staged promotion/recovery, advisor policy-file CAS/recovery primitives, and Python authority preservation.
+- Independent validation passed **110/110**: Phase 4 **29/29**, protocol **18/18**, CLI **28/28**, and Python authority **35/35**.
+- Linux-first and same-UID race residuals remain documented. Live qualification and cutover remain deferred; no Python-free distribution parity or Windows security-equivalence claim is made.
 - Advisor settings remain a typed, dedicated, fail-closed boundary: `get|preview|apply` return validated `CAPABILITY_UNSUPPORTED` without policy reads/writes; functional policy transactions are explicitly deferred to Phases 7–8.
 - Request-file symlink protection is Linux-first (`O_NOFOLLOW` where available); Windows security equivalence and Python-free distribution parity are not claimed. Focused evidence: `npm run build` PASS, CLI **28/28**, protocol **16/16**, packed install/version/context smoke PASS; release CI gate is wired for build, protocol/CLI, legacy, distribution, Pi, and package checks. Final review **9.0/10**, zero critical/high findings.
 
@@ -452,8 +456,10 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ Phase 2 Protocol Contracts (canonical plan: `plans/260827-2218-typescript-control-plane-cli/phase-02-protocol-contracts.md`) complete and approved: resource control, complete advisor-settings, and qualification-only diagnostic contracts are frozen.
 - Existing CommonJS counsel behavior remains unchanged; the authorized controller closure remains exactly 17 files. Persisted targets are exactly `claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, and `copilot`; `agy` is an input-only alias.
 - Scoped validation: `npm run test:protocol` **16/16** (including TypeScript build), diagnostic **4/4**, advisor-controller **35/35**, and distribution build/CLI **22/22**; aggregate **77/77** tests pass.
-- ✅ Phase 3 TypeScript CLI foundation is complete; see the [2026-08-31 roadmap entry](#recent-additions-2026-08-31) and [implementation plan](../plans/260831-phase-03-cli-foundation/plan.md) for validation, explicit Phase 4+ deferrals, the Linux-first request-file boundary, and remaining owner questions.
-- Phases 4–11 remain planned; the overall plan remains `in_progress`.
+- ✅ Phase 3 TypeScript CLI foundation is complete; see the [2026-08-31 roadmap entry](#recent-additions-2026-08-31) and [implementation plan](../plans/260831-phase-03-cli-foundation/plan.md) for validation, the Phase 3 completion-boundary deferrals for Phase 4+, the Linux-first request-file boundary, and remaining owner questions.
+- ✅ TypeScript CLI Phase 4 distribution-safety continuation complete (2026-08-31); see the [2026-08-31 roadmap entry](#recent-additions-2026-08-31) for scope and evidence. Python remains authoritative; live qualification and cutover remain deferred.
+- No canonical Phase 4 plan artifact is present at `plans/260827-2218-typescript-control-plane-cli/plan.md` in this checkout; the existing Phase 3 plan remains a completed Phase 3 record.
+- Phases 5–11 remain planned; the overall plan remains `in_progress`.
 
 #### OMP Command Namespace Prefix
 - Completed Phase 01 map/translate implementation with OMP-only `cmd-<flattened>` targets and centralized map-driven references.

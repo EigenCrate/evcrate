@@ -26,6 +26,23 @@ test('canonical JSON sorts objects, preserves arrays, omits undefined object fie
   assert.equal(canonicalJson({ z: 1, a: { d: 2, b: 1 }, list: [3, 2] }), '{"a":{"b":1,"d":2},"list":[3,2],"z":1}');
   assert.equal(canonicalJson({ present: true, omitted: undefined }), '{"present":true}');
 });
+test('canonical JSON matches Python float notation and code-point key order', () => {
+  const parsed = parseJsonDocument('{"z":1.0,"neg":-0.0,"large":1e16,"tiny":1e-5}');
+  assert.equal(canonicalJson(parsed), '{"large":1e+16,"neg":-0.0,"tiny":1e-05,"z":1.0}');
+  assert.equal(canonicalJson({
+    a: 3, [String.fromCodePoint(0xe000)]: 2, [String.fromCodePoint(0x10000)]: 1
+  }), '{"a":3,"":2,"𐀀":1}');
+  assert.equal(canonicalJson({ largeFloat: 1e16, hugeFloat: 1e20 }), '{"hugeFloat":1e+20,"largeFloat":1e+16}');
+  assert.equal(canonicalJson(parseJsonDocument('{"integer":9007199254740993}')), '{"integer":9007199254740993}');
+});
+test('canonical JSON and parser reject unpaired surrogates and primitive roots', () => {
+  assert.throws(() => canonicalJson({ value: '\ud800' }));
+  assert.throws(() => canonicalJson({ value: '\udc00' }));
+  assert.throws(() => parseJsonDocument('{"value":"\\uD800"}'));
+  assert.doesNotThrow(() => parseJsonDocument('{"value":"\\uD83D\\uDE00"}'));
+  assert.throws(() => parseJsonDocument('1.0'));
+  assert.throws(() => parseJsonDocument('-0.0'));
+});
 
 test('bounded UTF-8, strict whitespace, duplicate, and depth checks fail closed', () => {
   assert.equal(decodeUtf8(new TextEncoder().encode('hé')), 'hé');

@@ -1,5 +1,7 @@
 ## Unreleased
 
+**Updated:** 2026-08-31
+
 ### Features
 
 * **advisor:** ship global checkpoint routing with exact native/cross-host semantics, five fixed CLI adapters, strict evidence/path validation, and deterministic 19-file projections including executable per-harness bridges and secure native handoffs authorized by runtime/helper hashes; authenticated live calls and HOME publication remain separate operations.
@@ -11,6 +13,10 @@
 * **cli:** publish the one-shot CommonJS `evcrate` executable at `dist/cli/evcrate.js` with `version`, `health`, `advisor settings get|preview|apply`, `distribute build|check|publish|all|recover`, and `--request-file`; it parses, resolves, dispatches, writes one result, and exits without a listener, retry, background process, or counsel proxy, using shell-free bounded process/request-file I/O with Linux-first `O_NOFOLLOW` final-component protection (no Windows security-equivalence claim).
 * **distribution:** keep Python authoritative for `build`, `check`, `publish`, `all`, and `recover`; invoke package-relative `python3 distribute.py` and pass the exact resolved state root through `EVCRATE_STATE_DIR`, with no migrator or Node fallback.
 * **package:** retain CommonJS exports and `evcrate-advisor`, add the `evcrate` bin, and pack generated JavaScript/declarations, the controller/target closure, Python distribution modules, and `distribute.py`; release preparation runs Python build/check before archiving.
+* **distribution:** add schema-2 manifest/build validation with contained, non-overlapping output roots, authorized patch source/key/destination checks, bounded build-manifest reads, and exact controller inventory/hash closure.
+* **filesystem:** add Python-compatible canonical JSON/SHA256 behavior, strict UTF-8/surrogate/depth/duplicate handling, owner/symlink/containment and same-volume safeguards, capability-backed staged roots, durable promotion journals/recovery, and source/destination pre-rename CAS.
+* **advisor-settings:** add owner-only policy-file staging, canonical bytes/mode/revision checks, bounded transaction journals, concurrent-replacement CAS, and durable recovery primitives.
+* **locking:** add shared TypeScript/Python O_EXCL owner-only publication locking plus the TypeScript advisor-settings lock, bounded metadata, process-start checks, release identity checks, atomic stale-lock quarantine, and fail-closed release markers.
 
 ### Bug Fixes
 
@@ -18,6 +24,9 @@
 * **distribution:** preserve unrelated HOME symlinks while rejecting any symlink that overlaps a managed publication path.
 * **distribution:** rewrite Codex hook and MCP wrapper paths only in the HOME publication view, preserving project-relative local artifacts.
 * **distribution:** move agent configuration under `.evcrate/source`, keep the project root free of CLI discovery paths, and publish verified artifacts to HOME through npm distribution commands.
+* **distribution:** reject stale, incomplete, malformed, or hash-incomplete build authorization before publication; retain Python as the authoritative distribution implementation without a TypeScript fallback.
+* **filesystem:** fail closed when staged roots, promotion paths, policy files, locks, or release markers are replaced, symlinked, changed, or not owner-controlled.
+* **advisor-settings:** preserve the prior complete policy document when revision checks detect stale or concurrent replacement.
 
 ### Breaking Changes
 
@@ -28,12 +37,13 @@
 
 * **pi:** document native operating, package, skill-isolation, validation, and manual-cutover procedures.
 * **advisor:** document migration syntax, checkpoint and interview behavior, relay-state retention, target capability codes, and deterministic build/check gates.
-* **control-plane:** document the CommonJS CLI commands and entrypoint, bounded typed protocol, manifest/context/path precedence, diagnostic-only health bridge, fail-closed settings boundary, Python compatibility state handoff, package/release behavior, Linux-first `O_NOFOLLOW` request-file scope, and unchanged CommonJS counsel ownership. Phase 3 `advisor settings get|preview|apply` remains `CAPABILITY_UNSUPPORTED`; real policy transactions, CAS, publication/recovery, Phase 4+ target adapters, Python removal, Node-only parity, and full qualification remain deferred.
+* **control-plane:** document Phase 4 schema-2 distribution validation, controller closure, canonical JSON/hash and strict parser contracts, staged-root and promotion recovery safeguards, policy-file CAS/recovery primitives, and TypeScript/Python publication-lock interoperability. Phase 3 `advisor settings get|preview|apply` remains `CAPABILITY_UNSUPPORTED`; Python remains authoritative, with no Windows security-equivalence, live qualification, Python-free parity, or HOME cutover claim.
 
 ### Tests
 
 * **distribution:** add skill packaging, command-pointer, runtime-absence, idempotence, and user-configuration preservation regressions to the normal test command.
-* **control-plane:** `npm run build` passed; verify CLI **28/28**, protocol **16/16**, Python distribution CLI **8/8**, targeted release validators **16/16**; `npm test` passes Python **102/102**, Pi **49/49**, and advisor-controller **35/35**, `npm run test:pi` passes **49/49**, and packed install/version/context smoke passes.
+* **control-plane:** independent tester gate passed **110/110**: Phase 4 **29/29**, protocol **18/18**, CLI **28/28**, and Python authority **35/35**.
+* **security review:** final review approved **9.5/10**; only low same-UID/path-race and Linux-first residuals remain, with no Windows security-equivalence, live qualification, Python-free parity, or HOME cutover claim.
 * **request-file:** cover exact-boundary, oversized, invalid UTF-8, depth, directory/symlink, and bounded-maximum rejection; no Windows security-equivalence or Python-free parity claim is implied.
 
 ## 1.0.0 (2026-07-10)
