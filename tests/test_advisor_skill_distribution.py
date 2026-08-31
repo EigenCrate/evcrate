@@ -159,9 +159,15 @@ class AdvisorSkillDistributionTest(unittest.TestCase):
         advisor = (CANONICAL / "agents/advisor.md").read_text(encoding="utf-8")
         self.assertEqual(project_advisor_contract(advisor.split("---\n", 2)[-1], "codex").count("evcrate-advisor-checkpoint"), 1)
 
-    def test_package_declares_only_the_shared_controller_entrypoint(self) -> None:
+    def test_package_declares_cli_and_shared_controller_entrypoints(self) -> None:
         package = json.loads((REPOSITORY / "package.json").read_text(encoding="utf-8"))
-        self.assertEqual(package["bin"], {"evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"})
+        self.assertEqual(
+            package["bin"],
+            {
+                "evcrate": "dist/cli/evcrate.js",
+                "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor",
+            },
+        )
         self.assertIn(".evcrate/source/.evcrate/bin/**", package["files"])
         self.assertNotIn("test:advisor-routing", package["scripts"]["test"])
         self.assertEqual(package["scripts"]["test:advisor-controller"], "node --test tests/advisor-controller/*.test.cjs")

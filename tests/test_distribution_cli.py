@@ -38,6 +38,21 @@ class DistributionCliTest(unittest.TestCase):
         self.assertEqual({path.name for path in context.local_roots}, {".evcrate", ".omp"})
         self.assertEqual(context.local_evcrate, context.local_path(".evcrate"))
 
+
+    def test_resolved_state_dir_preserves_exact_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / "exact-state"
+            context = create_context(
+                DistributionAction.BUILD,
+                environ={
+                    "EVCRATE_HOME": str(root / "home"),
+                    "EVCRATE_STATE_HOME": str(root / "state-base"),
+                    "EVCRATE_STATE_DIR": str(state_dir),
+                },
+                selected_targets=("omp",),
+            )
+            self.assertEqual(context.state_dir, state_dir.absolute())
     def test_publish_path_never_runs_a_migrator(self) -> None:
         context = create_context(DistributionAction.PUBLISH)
         artifact = VerifiedArtifact(context.repository, context.local_roots)

@@ -174,8 +174,15 @@ def create_context(
         raise BuildError("Distribution target selection contains duplicates")
     resolved_targets = selected_targets or tuple(registry.targets)
     home = Path(env.get("EVCRATE_HOME", str(Path.home()))).expanduser().absolute()
-    state_base = env.get("EVCRATE_STATE_HOME") or env.get("XDG_STATE_HOME")
-    state_home = Path(state_base).expanduser().absolute() / "evcrate" if state_base else home / ".local" / "state" / "evcrate"
+    resolved_state_dir = env.get("EVCRATE_STATE_DIR")
+    if resolved_state_dir:
+        state_home = Path(resolved_state_dir).expanduser().absolute()
+    else:
+        state_base = env.get("EVCRATE_STATE_HOME") or env.get("XDG_STATE_HOME")
+        state_home = (
+            Path(state_base).expanduser().absolute() / "evcrate"
+            if state_base else home / ".local" / "state" / "evcrate"
+        )
     return DistributionContext(
         action=action, repository=repository, home=home,
         stage=stage.resolve() if stage is not None else None,

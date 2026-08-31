@@ -5,9 +5,12 @@
 * **advisor:** ship global checkpoint routing with exact native/cross-host semantics, five fixed CLI adapters, strict evidence/path validation, and deterministic 19-file projections including executable per-harness bridges and secure native handoffs authorized by runtime/helper hashes; authenticated live calls and HOME publication remain separate operations.
 * **scout:** unify external CLI strategy rendering behind one canonical read-only source, with deterministic Codex/Gemini projections and exact fallback contracts.
 * **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
-* **control-plane:** add bounded, versioned `evcrate-resource-control/v1` contracts for exactly seven persisted targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `copilot`, `omp`), the `agy` input alias, strict JSON/path validation, credential/counsel rejection, stable errors and exit bands, CAS, and recovery.
-* **advisor-settings:** add complete `evcrate-advisor-settings/v1` `get`, `preview`, and `apply` operations with redacted safe reads, canonical SHA-256 digests, single-use bounded preview metadata, whole-policy CAS, restrictive modes, and recovery.
-* **advisor-diagnostic:** add qualification-only `evcrate-advisor-diagnostic/v1` requests for configured backend/version/auth/capability probes, compatible with the existing CommonJS controller closure and without counsel execution.
+* **control-plane:** define bounded, versioned `evcrate-resource-control/v1` contracts for exactly seven persisted targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `copilot`, `omp`), the `agy` input alias, strict JSON/path validation, credential/counsel rejection, stable errors and exit bands, and typed CAS/recovery result shapes; Phase 3 dispatch implements `version` only.
+* **advisor-settings:** define the typed `evcrate-advisor-settings/v1` `get`, `preview`, and `apply` contract with redacted views, digests, preview metadata, and CAS/recovery shapes; Phase 3 keeps operations behind an optional handler and defaults to validated `CAPABILITY_UNSUPPORTED` without policy I/O.
+* **advisor-diagnostic:** add qualification-only `evcrate-advisor-diagnostic/v1` requests for configured backend/version/auth/capability probes; the Phase 3 `health` bridge invokes only the packaged CommonJS controller diagnostic and rejects malformed, multi-line, stderr-bearing, or counsel-shaped output.
+* **cli:** publish the one-shot CommonJS `evcrate` executable at `dist/cli/evcrate.js` with `version`, `health`, `advisor settings get|preview|apply`, `distribute build|check|publish|all|recover`, and `--request-file`; it parses, resolves, dispatches, writes one result, and exits without a listener, retry, background process, or counsel proxy.
+* **distribution:** keep Python authoritative for `build`, `check`, `publish`, `all`, and `recover`; invoke package-relative `python3 distribute.py` and pass the exact resolved state root through `EVCRATE_STATE_DIR`, with no migrator or Node fallback.
+* **package:** retain CommonJS exports and `evcrate-advisor`, add the `evcrate` bin, and pack generated JavaScript/declarations, the controller/target closure, Python distribution modules, and `distribute.py`; release preparation runs Python build/check before archiving.
 
 ### Bug Fixes
 
@@ -25,12 +28,12 @@
 
 * **pi:** document native operating, package, skill-isolation, validation, and manual-cutover procedures.
 * **advisor:** document migration syntax, checkpoint and interview behavior, relay-state retention, target capability codes, and deterministic build/check gates.
-* **control-plane:** document TypeScript/npm contract ownership, strict JSON/path/error/redaction/CAS boundaries, and the unchanged CommonJS counsel protocol closure. Phase 3 package exports and tarball behavior remain out of scope; no counsel protocol rewrite is included.
+* **control-plane:** document the CommonJS CLI commands and entrypoint, bounded typed protocol, manifest/context/path precedence, diagnostic-only health bridge, fail-closed settings boundary, Python compatibility state handoff, package/release behavior, and unchanged CommonJS counsel ownership. Phase 4+ target adapters, settings coordinator/CAS/publication/recovery, Python removal, Node-only parity, and full qualification remain deferred.
 
 ### Tests
 
 * **distribution:** add skill packaging, command-pointer, runtime-absence, idempotence, and user-configuration preservation regressions to the normal test command.
-* **control-plane:** verify protocol contracts 16/16 (including the TypeScript build), diagnostic 4/4, advisor-controller 35/35, and distribution build/CLI 22/22; aggregate scoped evidence is 77/77.
+* **control-plane:** `npm run build` passed; verify CLI **22/22**, protocol **16/16**, Python distribution CLI **8/8**, targeted release validators **16/16**; `npm test` passes Python **102/102**, Pi **49/49**, and advisor-controller **35/35**, `npm run test:pi` passes **49/49**, and packed install/version smoke passes.
 
 ## 1.0.0 (2026-07-10)
 

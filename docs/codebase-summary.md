@@ -1,7 +1,7 @@
 # Codebase Summary
 
 **Last Updated**: 2026-08-31
-**Version**: 1.15.0
+**Version**: 1.0.0 (Phase 3 CLI changes remain Unreleased)
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Overview
@@ -36,15 +36,64 @@ evcrate/
 ├── migrate_claude_to_copilot.py # Deterministic, staging-only personal Copilot migrator
 ├── copilot_adapter/             # Copilot resource, hook, settings, and inventory adapters
 ├── pi_adapter/                  # Native Pi resource inventory, translation, validation, conversion, and containment helpers
-├── src/                  # TypeScript Phase 2 control-plane contract sources
-│   ├── protocol/         # JSON, validation, resource, settings, diagnostic
+├── src/                  # TypeScript/npm control-plane CLI, context, and contracts
+│   ├── cli/              # CommonJS entrypoint, dispatch, output, health, and bridges
+│   ├── context/          # Manifest, target, project, HOME, and state resolution
+│   ├── protocol/         # Bounded JSON, resource, settings, and diagnostic contracts
 │   └── errors/           # Stable control-plane errors and exit mapping
-├── tests/                # Protocol, CommonJS diagnostic, and distribution suites
+├── tests/                # TypeScript CLI/protocol, CommonJS diagnostic, and distribution suites
 ├── dist/                 # Generated TypeScript JavaScript/declaration output
 ├── README.md             # Project overview
-├── package.json          # Node.js dependencies
+├── package.json          # CommonJS package, exports, bins, and npm scripts
 └── repomix-output.xml    # Codebase compaction file
 ```
+
+### TypeScript/npm control-plane CLI (Phases 2–3)
+
+Phase 2 freezes the typed version-1 protocol/error boundaries. Phase 3 adds a
+one-shot `evcrate` CommonJS executable: parse once, resolve immutable context,
+dispatch once, emit one validated result, and exit. It has no listener,
+daemon, retry, background process, or counsel proxy.
+
+- Commands are `version`, `health`, `advisor settings get|preview|apply`, and
+  `distribute build|check|publish|all|recover`; `--request-file` accepts one
+  complete bounded versioned envelope, mutually exclusive with positionals.
+  `--json` forces machine output; non-TTY output is JSON, while TTY text is
+  derived from the same validated result.
+- `json.ts` enforces fatal UTF-8, duplicate-key/control-character rejection,
+  canonical JSON, a 64 KiB document limit, and depth 16. Protocol validators
+  enforce exact keys, bounded values, safe paths, target normalization,
+  credential/counsel-field rejection, and stable exit bands 0/2/3/4/5/6.
+- `manifest.json` (schema 2) is the sole persisted-target authority for
+  `antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, and `pi`;
+  `agy` is input-only. `--source` selects canonical harness input but cannot
+  replace package-owned controller or registry roots.
+- Context precedence is `--home` > `EVCRATE_HOME` > platform home. State
+  precedence is exact `--state-home` > `EVCRATE_STATE_HOME/evcrate` >
+  `XDG_STATE_HOME/evcrate` > `<home>/.local/state/evcrate`; unsafe paths and
+  symlink ancestors fail closed.
+- `health` invokes only the packaged CommonJS `evcrate-advisor` with an
+  `evcrate-advisor-diagnostic` `qualify` request. It requires one bounded JSON
+  stdout line, empty stderr, matching request ID, and no counsel-shaped output.
+- `advisor settings` has a typed `get|preview|apply` contract, but Phase 3
+  ships no policy coordinator: without an injected handler every operation
+  returns validated `CAPABILITY_UNSUPPORTED` and performs no policy I/O.
+  Resource operations beyond `version` follow the same unsupported boundary.
+- Distribution actions invoke only package-relative `python3 distribute.py`
+  with one exact action/target argv. The bridge labels results
+  `engine: "python-compatibility"` and passes the resolved state root as the
+  exact `EVCRATE_STATE_DIR`; it never invokes migrators or a TypeScript fallback.
+- `package.json` stays CommonJS (no `"type": "module"`), exports `dist/index`,
+  retains `evcrate-advisor`, and adds `evcrate: dist/cli/evcrate.js`. `npm run
+  build` emits JavaScript/declarations; packed contents include `dist`, the
+  controller closure, schema-2 targets, Python distribution modules, and
+  `distribute.py`. Release preparation still runs Python build/check before
+  creating the archive.
+
+The existing CommonJS controller remains the sole counsel owner. Phase 4
+manifest/build authorization and target adapters, later resource/settings
+coordinators and policy CAS/publication/recovery, Python removal, Node-only
+distribution parity, and full platform/vendor qualification remain deferred.
 
 ### Distribution gates
 
@@ -62,40 +111,6 @@ ordinary source/output hashes plus `controller_hashes` for the shared advisor
 closure. A failed build does not replace the last valid local artifacts or
 HOME.
 
-### Phase 2 TypeScript/npm control-plane contract layer
-
-Phase 2 adds a typed contract library under `src/`; it does not yet claim the
-Phase 3 one-shot CLI shell, package exports, or tarball/runtime behavior.
-
-- `src/protocol/json.ts` implements canonical JSON, fatal UTF-8 decoding,
-  duplicate-key/control-character rejection, bounded 64 KiB documents, and
-  maximum depth 16.
-- `src/protocol/validation.ts` centralizes exact keys, bounded identifiers,
-  safe normalized absolute POSIX paths, seven persisted targets, the input-only
-  `agy` alias, and recursive credential/counsel-field rejection.
-- `src/protocol/resource-control.ts` defines version-1
-  `evcrate-resource-control` requests and result unions for resources,
-  imports, scopes, models, changes, publication, distribution, and recovery.
-  Context is explicit; payloads, errors, CAS conflicts, and recovery states are
-  bounded and discriminated.
-- `src/protocol/advisor-settings.ts` defines whole-document version-1
-  `get|preview|apply`: safe redacted policy views, canonical intended-policy
-  digests, bounded single-use preview metadata, byte/revision CAS, restrictive
-  modes, and settings-specific conflict/recovery results.
-- `src/protocol/diagnostic.ts` defines the qualification-only
-  `evcrate-advisor-diagnostic` `qualify` request/result. It reports only the
-  configured backend/version/auth/model/effort probes and has no counsel,
-  recommendation, prompt, or arbitrary backend output.
-- `src/errors/control-plane-error.ts` defines stable serialized errors and
-  exit bands (0, 2, 3, 4, 5, and 6); `src/protocol/index.ts` and
-  `src/errors/index.ts` expose the contract modules.
-
-The existing CommonJS controller closure at
-`.evcrate/source/.evcrate/bin/` remains the sole counsel owner and retains its
-17-file authorization and checkpoint/controller/result semantics. The
-qualification diagnostic remains CommonJS-runtime compatible without rewriting
-those counsel protocols. TypeScript contract sources do not own manifests,
-generated target projections, or HOME publication.
 
 ### Central advisor controller
 
@@ -407,15 +422,18 @@ Types:
 - Tests must pass before push
 - No ignoring failed tests
 
-### Phase 2 TypeScript/npm contract verification
+### TypeScript/npm and compatibility verification (Phases 2–3)
 
-- `npm run build` invokes `tsc -p tsconfig.json` and emits the TypeScript
-  contract modules to generated `dist/`.
-- `npm run test:protocol` builds first, then runs the protocol fixture tests:
+- `npm run build` passed; it invokes strict `tsc -p tsconfig.json` and emits
+  JavaScript plus declarations under `dist/`.
+- `npm run test:cli` passed **22/22**; `npm run test:protocol` passed
   **16/16**.
-- Final scoped evidence also includes diagnostic **4/4**,
-  advisor-controller **35/35**, and distribution build/CLI **22/22**;
-  aggregate evidence is **77/77** tests, with no tester file edits.
+- `python3 -m unittest tests.test_distribution_cli` passed **8/8** and
+  targeted release validators passed **16/16**.
+- `npm test` passed Python **102/102**, Pi **49/49**, and advisor-controller
+  **35/35**; `npm run test:pi` passed **49/49**.
+- Packed install/version smoke passed. Distribution remains Python-backed;
+  these checks do not establish Node-only parity.
 
 ## Documentation Standards
 
@@ -439,7 +457,7 @@ Types:
 ## Dependencies Overview
 
 ### Production Dependencies
-None (template project)
+- **pi-code-graph**: ^0.16.0
 
 ### Development Dependencies
 - **@commitlint/cli**: ^18.4.3
@@ -456,9 +474,9 @@ None (template project)
 
 ## File Statistics
 
-The 2026-08-31 `repomix-output.xml` snapshot contains **2,478 files**,
-**8,610,566 tokens**, and **32,433,868 characters**. The Phase 2 TypeScript
-contract sources contain 1,494 lines across `src/protocol/` and `src/errors/`.
+The refreshed 2026-08-31 `repomix-output.xml` snapshot contains **2,492 files**,
+**8,623,883 tokens**, and **32,491,294 characters**. The TypeScript source
+tree contains **2,841 lines** across `src/`.
 
 **Top 5 Files by Token Count**:
 1. `.evcrate/source/.copilot/skills/evcrate-ui-ux-pro-max/data/phosphor-icons-upstream.json` - 230,228 tokens (2.7%)
@@ -506,10 +524,13 @@ Features: Automated releases, changelog generation
 - `migrate_claude_to_codex.py` - Codex migration engine
 - `migrate_claude_to_gemini.py` - Gemini migration engine
 
-### Phase 2 TypeScript contract files
+### TypeScript/npm control-plane files
+- `src/cli/{evcrate,main,arguments,dispatch,output,health,process-runner,request-file,compatibility-distribution,types}.ts` - CommonJS CLI, bounded dispatch, output, diagnostics, and Python bridge
+- `src/context/{invocation-context,path-resolution,target-registry}.ts` - immutable context and schema-2 manifest/path resolution
 - `src/protocol/{json,validation,resource-control,advisor-settings,diagnostic}.ts` - bounded versioned contracts
 - `src/errors/control-plane-error.ts` - stable error serialization and exit mapping
-- `src/protocol/index.ts`, `src/errors/index.ts` - source-level exports
+- `src/index.ts` - side-effect-free public exports
+- `tests/cli/*.test.mjs` and `tests/context/*.test.mjs` - CLI/context contract and package smoke coverage
 - `tests/protocol/contracts.test.mjs` and `tests/fixtures/control-plane-v1/` - protocol fixtures and boundaries
 - `tests/advisor-controller/diagnostic.test.cjs` - CommonJS qualification compatibility
 - `.evcrate/source/.evcrate/bin/lib/advisor/controller.cjs` - unchanged counsel owner and diagnostic runtime
@@ -529,11 +550,12 @@ Features: Automated releases, changelog generation
 
 ## Version History
 
-**Current**: v1.8.0
+**Package baseline**: v1.0.0; Phase 3 CLI changes remain Unreleased
 **License**: MIT
 **Author**: Duy Nguyen
 **Repository**: https://github.com/NEBULEA-M/evcrate
 
 ## Unresolved Questions
 
-None identified. All core components are well-documented and functional.
+No documentation blockers identified. Phase 4+ boundaries are explicitly
+listed above.
