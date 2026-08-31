@@ -1,0 +1,162 @@
+import assert from 'node:assert/strict';
+import { chmodSync, cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, test } from 'node:test';
+import {
+  ADVISOR_CONTROLLER_FILES, buildManifestBytes, controllerHashes, loadSelectedManifests,
+  loadTargetManifest, loadTargetManifestRegistry, manifestAdapterHashes, manifestSourceHashes,
+  readBuildManifest, validateAdvisorControllerProjection, validateAdvisorControllerSource, validateBuildManifest, validateManifestSet, verifyBuild
+} from '../../dist/index.js';
+
+const packageRoot = process.cwd();
+const registryPath = join(packageRoot, '.evcrate', 'targets', 'manifest.json');
+const controllerRoot = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
+const temporaryRoots = [];
+function temporaryDirectory() {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-manifest-'));
+  temporaryRoots.push(root);
+  return root;
+}
+function code(errorCode) {
+  return (error) => error?.code === errorCode;
+}
+afterEach(() => {
+  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+test('schema-2 registry selection and input hashes follow persisted target declarations', () => {
+  const registry = loadTargetManifestRegistry(registryPath);
+  assert.deepEqual([...registry.targets.keys()], ['antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi']);
+  assert.equal(loadSelectedManifests(registry, ['agy'])[0].name, 'antigravity');
+  assert.equal(loadSelectedManifests(registry).length, 7);
+  assert.throws(() => loadSelectedManifests(registry, ['not-a-target']), code('CAPABILITY_UNSUPPORTED'));
+  const manifests = [...registry.targets.values()];
+  assert.ok(Object.keys(manifestSourceHashes(manifests)).length > 0);
+  assert.ok(Object.keys(manifestAdapterHashes(manifests, packageRoot)).length > 0);
+});
+
+test('verified build checks complete metadata, independent roots, and controller bytes', () => {
+  const root = temporaryDirectory();
+  const manifestPath = join(root, '.evcrate', 'build-manifest.json');
+  mkdirSync(join(root, '.evcrate'), { recursive: true });
+  const outputRoots = Object.fromEntries([
+    '.agents', '.antigravity', '.claude', '.codex', '.copilot', '.evcrate',
+    '.gemini', '.omp', '.pi', 'AGENTS.md', 'GEMINI.md'
+  ].map((name) => [name, join(packageRoot, '.evcrate', 'source', name)]));
+  writeFileSync(manifestPath, buildManifestBytes({
+    sourceHashes: {}, adapterHashes: {}, controllerHashes: controllerHashes(controllerRoot),
+    owners: {}, outputRoots, validation: { complete: true }, homePolicy: {}
+  }));
+  assert.equal(verifyBuild({ manifestPath, outputRoots, controllerRoot, sourceHashes: {}, adapterHashes: {} }).schema_version, 2);
+  assert.equal(Object.keys(controllerHashes(controllerRoot)).length, 17);
+  assert.equal(ADVISOR_CONTROLLER_FILES.length, 17);
+  assert.throws(() => verifyBuild({ manifestPath, outputRoots: { ...outputRoots, '.wrong': outputRoots['.claude'] } }), code('PUBLICATION_FAILED'));
+});
+test('controller verifier rejects an extra production tree entry', () => {
+  const root = temporaryDirectory();
+  const copy = join(root, 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+  writeFileSync(join(copy, 'lib', 'advisor', 'extra.cjs'), 'module.exports = {}');
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+});
+
+test('controller projection requires an executable entrypoint', () => {
+  const root = temporaryDirectory();
+  const copy = join(root, 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+  chmodSync(join(copy, 'evcrate-advisor'), 0o600);
+  assert.throws(() => validateAdvisorControllerProjection(controllerRoot, copy), code('PATH_UNSAFE'));
+});
+
+test('manifest adapters must be regular files', () => {
+  const root = temporaryDirectory();
+  const manifestDirectory = join(root, '.evcrate', 'targets', 'claude');
+  mkdirSync(manifestDirectory, { recursive: true });
+  mkdirSync(join(root, 'adapter'));
+  writeFileSync(join(manifestDirectory, 'manifest.json'), JSON.stringify({
+    schema_version: 2, name: 'claude', adapter: 'adapter', adapter_sources: [],
+    output_root: '.claude', additional_roots: [], project_docs: [], patches: [],
+    home_policy: { bindings: { '.claude': '.claude' }, preserve_paths: {}, promotion_order: 40 }
+  }));
+  assert.throws(() => loadTargetManifest(join(manifestDirectory, 'manifest.json'), 'claude'), code('PATH_UNSAFE'));
+});
+test('manifest patches stay inside the declared source and output boundaries', () => {
+  const root = temporaryDirectory();
+  const directory = join(root, '.evcrate', 'targets', 'claude');
+  mkdirSync(join(directory, 'patches'), { recursive: true });
+  writeFileSync(join(directory, 'patches', 'update.json'), '{}');
+  writeFileSync(join(directory, 'outside.json'), '{}');
+  const base = {
+    schema_version: 2, name: 'claude', adapter: null, adapter_sources: [],
+    output_roots: ['.claude'], project_docs: [], owned_paths: [],
+    home_policy: { bindings: { '.claude': '.claude' }, preserve_paths: {}, promotion_order: 40 }
+  };
+  writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
+    ...base, patches: [{ source: 'outside.json', destination: '.claude/settings.json', keys: ['hooks'] }]
+  }));
+  assert.throws(() => loadTargetManifest(join(directory, 'manifest.json'), 'claude'), code('PROTOCOL_INVALID'));
+  writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
+    ...base, patches: [{ source: 'patches/update.json', destination: '.other/settings.json', keys: ['hooks'] }]
+  }));
+  assert.throws(() => loadTargetManifest(join(directory, 'manifest.json'), 'claude'), code('PROTOCOL_INVALID'));
+  writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
+    ...base, patches: [
+      { source: 'patches/update.json', destination: '.claude/settings.json', keys: ['hooks'] },
+      { source: 'patches/update.json', destination: '.claude/settings.json', keys: ['hooks'] }
+    ]
+  }));
+  assert.throws(() => loadTargetManifest(join(directory, 'manifest.json'), 'claude'), code('PROTOCOL_INVALID'));
+  writeFileSync(join(directory, 'manifest.json'), JSON.stringify({
+    ...base, patches: [{ source: 'patches/update.json', destination: '.claude/settings.json', keys: ['\ud800'] }]
+  }));
+  assert.throws(() => loadTargetManifest(join(directory, 'manifest.json'), 'claude'), code('PROTOCOL_INVALID'));
+});
+
+test('manifest-set validation rejects nested output ownership', () => {
+  const root = temporaryDirectory();
+  const first = join(root, '.evcrate', 'targets', 'claude');
+  const second = join(root, '.evcrate', 'targets', 'codex');
+  mkdirSync(first, { recursive: true }); mkdirSync(second, { recursive: true });
+  const manifest = (name, output) => ({
+    schema_version: 2, name, adapter: null, adapter_sources: [], output_roots: [output],
+    project_docs: [], owned_paths: [], patches: [],
+    home_policy: { bindings: { [output]: `${output}-home` }, preserve_paths: {}, promotion_order: 40 }
+  });
+  writeFileSync(join(first, 'manifest.json'), JSON.stringify(manifest('claude', 'owned')));
+  writeFileSync(join(second, 'manifest.json'), JSON.stringify(manifest('codex', 'owned/nested')));
+  const loaded = [
+    loadTargetManifest(join(first, 'manifest.json')),
+    loadTargetManifest(join(second, 'manifest.json'))
+  ];
+  assert.throws(() => validateManifestSet(loaded), code('PROTOCOL_INVALID'));
+});
+
+test('build manifest reader accepts documents up to its declared bound', () => {
+  const root = temporaryDirectory();
+  const directory = join(root, '.evcrate');
+  mkdirSync(directory);
+  writeFileSync(join(directory, 'build-manifest.json'), JSON.stringify({
+    schema_version: 2, source_hashes: {}, adapter_hashes: {}, controller_hashes: controllerHashes(controllerRoot),
+    owners: {}, output_hashes: {}, validation: { complete: true, padding: 'x'.repeat(70_000) }, home_policy: {}
+  }));
+  assert.equal(readBuildManifest(join(directory, 'build-manifest.json')).validation.complete, true);
+});
+test('build manifest validator rejects unsafe keys and incomplete shape', () => {
+  const digest = 'a'.repeat(64);
+  const value = {
+    schema_version: 2,
+    source_hashes: { '../escape': digest },
+    adapter_hashes: {},
+    controller_hashes: {},
+    owners: {},
+    output_hashes: {},
+    validation: {},
+    home_policy: {}
+  };
+  assert.throws(() => validateBuildManifest(value), code('PROTOCOL_INVALID'));
+  const valid = {
+    ...value, source_hashes: { 'source/file': digest }, controller_hashes: controllerHashes(controllerRoot)
+  };
+  assert.equal(validateBuildManifest(valid).schema_version, 2);
+});

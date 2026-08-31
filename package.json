@@ -16,9 +16,11 @@
     "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"
   },
   "scripts": {
+    "prebuild": "python3 scripts/generate-controller-inventory.py",
     "build": "tsc -p tsconfig.json",
     "test:protocol": "npm run build && node --test tests/protocol/*.test.mjs",
     "test:cli": "npm run build && node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
+    "test:phase4": "npm run build && node --test tests/filesystem/distribution-primitives.test.mjs tests/manifests/distribution-manifests.test.mjs tests/advisor-settings/distribution-primitives.test.mjs",
     "distribute": "bash -o pipefail -c 'python3 distribute.py --all 2>&1 | tee logs.txt'",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",

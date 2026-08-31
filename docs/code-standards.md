@@ -1,1061 +1,322 @@
-# Code Standards & Codebase Structure
+# Code Standards and Codebase Structure
 
-**Last Updated**: 2026-08-31
-**Version**: 1.0.0 (Phase 3 CLI changes remain Unreleased)
-**Applies To**: All code within the EVCrate project
+**Last Updated**: 2026-08-31  
+**Applies to**: TypeScript/npm control plane and Python-authoritative distribution  
+**Status**: Phase 4 distribution-safety contracts complete; release remains Unreleased
 
-## Overview
+## Governing principles
 
-This document defines coding standards, file organization patterns, naming conventions, and best practices for EVCrate. All code must adhere to these standards to ensure consistency, maintainability, and quality.
+- **Correctness before optimization.** Prefer explicit validation and predictable
+  failure over clever or speculative behavior.
+- **YAGNI, KISS, and DRY.** Add only the boundary required by a contract; reuse
+  one parser, path policy, hash policy, lock protocol, and error serializer.
+- **Fail closed.** Invalid input, ambiguous ownership, unsafe paths, changed
+  identities, malformed journals, and uncertain cleanup must stop the operation.
+- **Single authority.** Canonical Claude resources are authored once. The Python
+  distribution engine remains authoritative for target generation and HOME
+  publication. Generated projections and generated inventory files are never
+  hand-edited.
+- **Bounded work.** Every file read, JSON document, process stream, process
+  lifetime, and metadata record has an explicit limit.
 
-## Core Development Principles
+## Repository structure and ownership
 
-### YANGI (You Aren't Gonna Need It)
-- Avoid over-engineering and premature optimization
-- Implement features only when needed
-- Don't build infrastructure for hypothetical future requirements
-- Start simple, refactor when necessary
-
-### KISS (Keep It Simple, Stupid)
-- Prefer simple, straightforward solutions
-- Avoid unnecessary complexity
-- Write code that's easy to understand and modify
-- Choose clarity over cleverness
-
-### DRY (Don't Repeat Yourself)
-- Eliminate code duplication
-- Extract common logic into reusable functions/modules
-- Use composition and abstraction appropriately
-- Maintain single source of truth
-
-## File Organization Standards
-
-### Directory Structure
-
-```
-project-root/
-├── .evcrate/source/           # Physical local config root; not project-discovered
-│   ├── .claude/              # Canonical Claude Code source
-│   ├── .codex/               # Generated Codex artifact
-│   ├── .agents/              # Codex-owned, Pi-compatible shared skills
-│   ├── .pi/                  # Generated native Pi Phase 03 resources and extension
-│   ├── .gemini/              # Generated Gemini artifact
-│   ├── .antigravity/         # Generated Antigravity artifact
-│   ├── .copilot/             # Generated personal GitHub Copilot CLI artifact
-│   └── .opencode/            # OpenCode compatibility source
-├── .evcrate/targets/          # Logical target manifests and overlays
-├── .github/                   # GitHub-specific files
-│   └── workflows/            # CI/CD workflows
-├── docs/                      # Project documentation
-│   ├── research/             # Research reports
-│   └── *.md                  # Core documentation files
-├── guide/                     # User guides
-├── plans/                     # Implementation plans
-│   ├── reports/              # Agent communication reports
-│   └── templates/            # Plan templates
-├── src/                       # Source code (if applicable)
-├── tests/                     # Test suites (if applicable)
-├── .gitignore                # Git ignore patterns
-├── .evcrate/source/CLAUDE.md # Canonical Claude-specific instructions
-├── README.md                 # Project overview
-├── package.json              # Node.js dependencies
-└── LICENSE                   # License file
+```text
+.
+├── .evcrate/source/.claude/       # canonical authored harness resources
+├── .evcrate/source/.evcrate/bin/  # sole authored advisor-controller source
+├── .evcrate/source/{.agents,.codex,.gemini,.antigravity,.omp,.copilot,.pi}/
+│                                  # generated target projections
+├── .evcrate/targets/              # schema-2 target registry/manifests/overlays
+├── src/                           # TypeScript control-plane sources
+│   ├── cli/                       # parse, dispatch, output, runner, bridge
+│   ├── context/                   # immutable path and target context
+│   ├── protocol/                  # JSON and versioned wire contracts
+│   ├── manifests/                 # target and controller authorization
+│   ├── filesystem/                # paths, hashes, atomic I/O, locks
+│   ├── distribution/              # build verification and promotion
+│   ├── advisor-settings/          # policy-file transactions/recovery
+│   └── errors/                    # stable error codes and exit mapping
+├── distribution/                  # Python build/check/publish authority
+├── {copilot,omp,pi}_adapter/      # staging-only projection implementations
+├── tests/                         # focused contract and authority suites
+├── dist/                          # generated JavaScript/declarations
+├── distribute.py                  # Python distribution entrypoint
+├── package.json                   # CommonJS package and command entrypoints
+└── CHANGELOG.md                   # repository changelog
 ```
 
-### Distribution target standards
+`src/manifests/controller-inventory.generated.ts` is generated from
+`distribution/advisor_controller.py`; update the Python authority and regenerate
+rather than editing the generated file. Changes to canonical resources or
+manifest overlays require a fresh isolated build/check before publication.
 
-- `.evcrate/source/.claude/` is the only authored agent-configuration source. Generated `.pi`, `.agents`, `.codex`, `.gemini`, `.antigravity`, and `.copilot` trees are build outputs and must not be hand-edited.
-- Target manifests must declare contained output roots, adapter/helper sources, ownership, overlays, and HOME bindings. Build and publication verification must hash the same adapter inputs.
-- The Phase 01 Pi adapter writes only to an empty staged `.pi` root. Direct/global output modes, symlinked ancestors, path traversal, and non-canonical Claude sources are rejected.
-- Phase 03 runtime code registers native commands, keeps nested dispatch bounded, enforces `allowed-tools` through the policy gate, resolves semantic roles only at structured `pi-subagents` delegation time, and preserves provider-neutral generated resources.
-- Pi's shared `agent/settings.json` is user-owned. EVCrate manages only the exact pins `npm:pi-subagents@0.44.0`, `npm:@juicesharp/rpiv-ask-user-question@2.4.0`, and `npm:@juicesharp/rpiv-todo@2.4.0`; unknown settings and packages remain preserved and the file is excluded from file-level managed paths.
-- Live Pi publication requires manual quiescence and a pre-promotion HOME recheck. The XML closing-tag and shell-descendant process-group regressions are covered by tests; this does not authorize release/cutover or automatic `pi-code` removal.
-- The personal Copilot adapter requires empty same-volume staging and no direct/global output. Every canonical command becomes a namespaced `evcrate-cmd-*` skill with literal `$ARGUMENTS`; native skills and agents become `evcrate-*`; unsupported or approximated resources require an inventory reason.
-- Copilot safety hooks use a generated fail-closed bridge. `PreToolUse` runs scout before privacy, malformed bridge payloads fail closed, `UserPromptSubmit` and `CLAUDE_ENV_FILE` are not activated, and statusline output is bounded.
-- Copilot publication owns only `includeCoAuthoredBy`, `effortLevel`, and `statusLine` in `$HOME/.copilot/settings.json`; the managed JSONC merger must preserve unknown keys, comments, and formatting bytes.
+## TypeScript/npm standards
 
-### TypeScript/npm control-plane CLI standards
+### Package and entrypoint
 
-- Keep the package CommonJS: compile strict NodeNext TypeScript from `src/` to
-  `dist/` with declarations, retain `evcrate-advisor`, and expose `evcrate`
-  through `dist/cli/evcrate.js`; never add `"type": "module"`.
-- The CLI parses once, resolves immutable package/manifest/context state,
-  dispatches once, writes one validated result, and exits. No listeners,
-  retries, background work, counsel proxy, or raw exception/path output.
-- Supported commands are `version`, `health`, `advisor settings
-  get|preview|apply`, and `distribute build|check|publish|all|recover`.
-  `--request-file` carries one complete bounded versioned envelope and cannot
-  be combined with command positionals; `--json` and non-TTY output are
-  canonical JSON.
-- Request files must resolve to a regular file, use a bounded descriptor read
-  (maximum 64 KiB plus an overflow check), and pass fatal UTF-8 and strict JSON
-  validation. Linux uses `O_NOFOLLOW` for final-component symlink protection;
-  this is Linux-first scope, with no Windows security-equivalence claim.
-- Route child processes through the bounded runner: fixed argv, `shell:false`,
-  an allowlisted environment, bounded input/output and line counts,
-  timeout/abort handling, and termination cleanup. Do not expose raw paths or
-  stderr.
-- Protocol boundaries require fatal UTF-8, canonical JSON, exact keys, bounded
-  documents, safe paths, credential/counsel-field rejection, and exit bands
-  0/2/3/4/5/6. Schema-2 `.evcrate/targets/manifest.json` is the only target
-  authority; reject unsafe manifest paths, roots, bindings, and symlink
-  ancestors.
-- Resolve context as `--home` > `EVCRATE_HOME` > platform home, and state as
-  exact `--state-home` > `EVCRATE_STATE_HOME/evcrate` >
-  `XDG_STATE_HOME/evcrate` > `<home>/.local/state/evcrate`. `--source` selects
-  canonical harness input only; it cannot replace packaged controller/registry
-  roots.
-- `health` may invoke only the packaged CommonJS controller's
-  `evcrate-advisor-diagnostic` qualification. Require one bounded JSON stdout
-  line, empty stderr, matching request ID, and no counsel-shaped output.
-- Keep advisor-settings `get|preview|apply` behind `AdvisorSettingsHandler`;
-  the Phase 3 default returns validated `CAPABILITY_UNSUPPORTED` without
-  policy reads/writes. Functional policy transactions, CAS, publication, and
-  recovery are deferred to Phases 7–8. Resource operations beyond `version`
-  are likewise unsupported until their owning phases.
-- Distribution delegates only to package-relative `python3 distribute.py`,
-  passes the exact resolved state root as `EVCRATE_STATE_DIR`, and labels
-  results `engine: "python-compatibility"`. No migrator, Node fallback, or
-  Python-free parity claim.
-- Release packaging retains `dist`, declarations, controller, schema-2
-  manifests, Python distribution modules, and `distribute.py`. CI runs
-  `npm ci`, `npm run build`, `npm run test:protocol`, and `npm run test:cli`
-  before legacy tests and distribution checks; packed
-  install/version/context smoke is required evidence.
-### File Naming Conventions
+- Keep the package CommonJS. Compile strict NodeNext TypeScript from `src/` to
+  `dist/` with declarations; do not add a module-mode switch that changes the
+  existing advisor executable.
+- Retain both package bins: `evcrate` for the one-shot control-plane CLI and
+  `evcrate-advisor` for the existing CommonJS controller.
+- Keep public exports side-effect free. Importing the package must not start a
+  process, open a listener, mutate HOME, or run a distribution action.
 
-**Agent Definitions** (`.evcrate/source/.claude/agents/`, `.evcrate/source/.opencode/agent/`):
-- Format: `[agent-name].md`
-- Use kebab-case: `code-reviewer.md`, `docs-manager.md`
-- Descriptive, role-based names
-- Examples: `planner.md`, `tester.md`, `git-manager.md`
+### One-shot CLI lifecycle
 
-**Commands** (`.evcrate/source/.claude/commands/`, `.evcrate/source/.opencode/command/`):
-- Format: `[command-name].md` or `[category]/[command-name].md`
-- Use kebab-case for names
-- Group related commands in subdirectories
-- Examples:
-  - `plan.md`
-  - `fix/ci.md`
-  - `design/screenshot.md`
-  - `git/cm.md`
+The CLI has one visible path:
 
-**Skills** (`.evcrate/source/.claude/skills/`):
-- Format: `[skill-name]/SKILL.md`
-- Use kebab-case for directory names
-- Main file always named `SKILL.md`
-- Supporting files in `references/` or `scripts/`
-- Examples:
-  - `better-auth/SKILL.md`
-  - `cloudflare-workers/SKILL.md`
-  - `mongodb/SKILL.md`
-
-**Documentation** (`docs/`):
-- Format: `[document-purpose].md`
-- Use kebab-case with descriptive names
-- Examples:
-  - `project-overview-pdr.md`
-  - `codebase-summary.md`
-  - `code-standards.md`
-  - `system-architecture.md`
-
-**Reports** (`plans/<plan-name>/reports/`):
-- Format: `YYMMDD-from-[agent]-to-[agent]-[task]-report.md`
-- Use date prefix for chronological sorting
-- Clear source and destination agents
-- Examples:
-  - `251026-from-planner-to-main-auth-implementation-report.md`
-  - `251026-from-tester-to-debugger-test-failures-report.md`
-
-**Plans** (`plans/`):
-- Format: `YYMMDD-[feature-name]-plan.md`
-- Use date prefix for version tracking
-- Descriptive feature names in kebab-case
-- Examples:
-  - `251026-user-authentication-plan.md`
-  - `251026-database-migration-plan.md`
-
-**Research Reports** (`plans/<plan-name>/research/`):
-- Format: `YYMMDD-[research-topic].md`
-- Date prefix for tracking
-- Clear topic description
-- Examples:
-  - `251026-oauth2-implementation-strategies.md`
-  - `251026-performance-optimization-techniques.md`
-
-## File Size Management
-
-### Hard Limits
-- **Maximum file size**: 500 lines of code
-- Files exceeding 500 lines MUST be refactored
-- Exception: Auto-generated files (with clear marking)
-
-### Refactoring Strategies
-
-**When file exceeds 500 lines**:
-1. **Extract Utility Functions**: Move to separate `utils/` directory
-2. **Component Splitting**: Break into smaller, focused components
-3. **Service Classes**: Extract business logic to dedicated services
-4. **Module Organization**: Group related functionality into modules
-
-**Example Refactoring**:
-```
-Before:
-user-service.js (750 lines)
-
-After:
-services/
-├── user-service.js (200 lines)      # Core service
-├── user-validation.js (150 lines)   # Validation logic
-└── user-repository.js (180 lines)   # Database operations
-utils/
-└── password-hasher.js (80 lines)    # Utility functions
+```text
+parse arguments/request file
+        ↓
+resolve immutable context and selected manifest(s)
+        ↓
+dispatch exactly one operation
+        ↓
+validate and write exactly one result
+        ↓
+exit
 ```
 
-## Naming Conventions
+Supported operations are `version`, `health`, `advisor settings
+get|preview|apply`, and `distribute build|check|publish|all|recover`.
+`--request-file` is one complete bounded versioned envelope and is mutually
+exclusive with positional command construction. JSON mode and non-TTY output
+are canonical JSON; TTY text is derived from that same validated result.
 
-### Variables & Functions
+The CLI must not add a daemon, listener, retry loop, background worker, counsel
+proxy, arbitrary launcher, migrator dispatch, or TypeScript distribution
+fallback. Unknown failures become stable sanitized control-plane errors; raw
+paths, child stderr, credentials, and stack traces do not cross the boundary.
 
-**JavaScript/TypeScript**:
-- **Variables**: camelCase
-  ```javascript
-  const userName = 'John Doe';
-  const isAuthenticated = true;
-  ```
+### TypeScript naming and module design
 
-- **Functions**: camelCase
-  ```javascript
-  function calculateTotal(items) { }
-  const getUserById = (id) => { };
-  ```
+- Files and directories use descriptive kebab-case. Functions and variables use
+  `camelCase`; classes and types use `PascalCase`; constants use `UPPER_SNAKE_CASE`.
+- Keep modules focused. Prefer existing module boundaries over new registries,
+  service containers, aliases, or parallel conventions. Keep new code small and
+  isolate filesystem, protocol, and process capabilities behind named helpers.
+- Prefer immutable interfaces (`readonly` fields, frozen result objects) at
+  protocol, manifest, context, and transaction boundaries.
+- Use explicit return types for exported functions and exhaustive branches for
+  operation/result unions.
+- Comments explain security rationale or non-obvious invariants, not syntax.
 
-- **Classes**: PascalCase
-  ```javascript
-  class UserService { }
-  class AuthenticationManager { }
-  ```
+## Protocol and JSON standards
 
-- **Constants**: UPPER_SNAKE_CASE
-  ```javascript
-  const MAX_RETRY_COUNT = 3;
-  const API_BASE_URL = 'https://api.example.com';
-  ```
+### Strict parser contract
 
-- **Private Members**: Prefix with underscore
-  ```javascript
-  class Database {
-    _connectionPool = null;
-    _connect() { }
-  }
-  ```
+Use the repository parser rather than permissive ad-hoc parsing at a control-plane
+boundary. It enforces:
 
-### Files & Directories
+- fatal UTF-8 decoding and a bounded 64 KiB default document;
+- object or array roots only for parsed documents (primitive roots are rejected);
+- duplicate object-key rejection, control-character rejection, trailing-data
+  rejection, finite numbers only, and maximum nesting depth 16;
+- unpaired-surrogate rejection in strings; valid surrogate pairs remain valid;
+- plain objects and arrays only, with no prototype-bearing values.
 
-**Source Files**:
-- **JavaScript/TypeScript**: kebab-case
-  ```
-  user-service.js
-  authentication-manager.ts
-  api-client.js
-  ```
+Canonical JSON follows the Python authority for supported values: object keys are
+sorted by Unicode code point, array order is preserved, undefined object fields
+are omitted, and numeric/exponent rendering follows Python-compatible forms.
+Canonical bytes use UTF-8; the build-manifest form ends with one newline. SHA-256
+is the only digest used by these contracts.
 
-- **React Components**: PascalCase
-  ```
-  UserProfile.jsx
-  AuthenticationForm.tsx
-  NavigationBar.jsx
-  ```
+### Validation and error handling
 
-- **Test Files**: Match source file name + `.test` or `.spec`
-  ```
-  user-service.test.js
-  authentication-manager.spec.ts
-  ```
+- Validate exact keys where a wire shape is frozen. Reject unknown fields,
+  duplicate semantic paths, credentials, counsel-shaped fields, control
+  characters, unsafe metadata paths, and overlong values before dispatch.
+- Use stable error codes and the established exit bands `0`, `2`, `3`, `4`,
+  `5`, and `6`. Preserve typed conflicts rather than replacing user data.
+- Do not log or return secrets, policy credentials, raw child output, or
+  filesystem implementation paths. Include actionable but sanitized messages.
+- Bounded subprocesses use fixed argument arrays, `shell: false`, an allowlisted
+  environment, bounded stdin/stdout/stderr and line counts, deadlines, abort
+  handling, descendant cleanup, and reaping.
 
-**Directories**: kebab-case
-```
-src/
-├── components/
-├── services/
-├── utils/
-├── api-clients/
-└── test-helpers/
-```
+## Manifest and build-authority standards
 
-### API Design
+### Schema-2 target manifests
 
-**REST Endpoints**:
-- Use kebab-case for URLs
-- Plural nouns for collections
-- Resource IDs in path parameters
+The registry is schema 2 and its persisted targets are exactly
+`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, and `pi`.
+`agy` is accepted only as an input alias for `antigravity`; it is not a stored
+registry key. A manifest must normalize paths and reject traversal, backslashes,
+symlinked ancestors, duplicate lists, unsafe adapter/helper files, and obsolete
+per-harness advisor-runtime fields.
 
-```
-GET    /api/users
-GET    /api/users/:id
-POST   /api/users
-PUT    /api/users/:id
-DELETE /api/users/:id
-GET    /api/users/:userId/posts
-```
+Output roots are declared relative roots. The selected manifest set rejects equal
+or nested roots, so output ownership is non-overlapping. HOME bindings must cover
+those roots, use unique destinations, and obey promotion order. Owned source
+paths stay under `files/`; project documentation entries are root-level names.
 
-**Request/Response Fields**:
-- Use camelCase for JSON properties
-```json
-{
-  "userId": 123,
-  "userName": "john_doe",
-  "emailAddress": "john@example.com",
-  "isVerified": true,
-  "createdAt": "2025-10-26T00:00:00Z"
-}
+Patch authorization is explicit and complete:
+
+1. `source` is a regular file under the manifest's `patches/` subtree.
+2. `destination` is normalized, unique across declarations, and contained by a
+   declared output root.
+3. `keys` are non-empty, unique, strict dotted JSON keys; malformed segments or
+   invalid JSON text fail closed.
+
+### Build manifests and controller closure
+
+A build manifest is schema 2 with exactly these top-level fields:
+
+```text
+schema_version
+source_hashes
+adapter_hashes
+controller_hashes
+owners
+output_hashes
+validation
+home_policy
 ```
 
-## Code Style Guidelines
+The TypeScript reader bounds the build-manifest file at 4 MiB and verifies stable
+file metadata while reading. It requires `validation.complete === true`, hashes
+current source/adapter/output roots, and rejects any missing, extra, stale, or
+mismatched digest. Hash records use normalized relative keys and 64-character
+lowercase SHA-256 values.
 
-### General Formatting
+The controller inventory is fixed at 17 production files, rooted at
+`.evcrate/source/.evcrate/bin`:
 
-**Indentation**:
-- Use 2 spaces (not tabs)
-- Consistent indentation throughout file
-- No trailing whitespace
-
-**Line Length**:
-- Preferred: 80-100 characters
-- Hard limit: 120 characters
-- Break long lines logically
-
-**Whitespace**:
-- One blank line between functions/methods
-- Two blank lines between classes
-- Space after keywords: `if (`, `for (`, `while (`
-- No space before function parentheses: `function name(`
-
-### Comments & Documentation
-
-**File Headers** (Optional but recommended):
-```javascript
-/**
- * User Service
- *
- * Handles user authentication, registration, and profile management.
- *
- * @module services/user-service
- * @author EVCrate
- * @version 1.0.0
- */
+```text
+evcrate-advisor
+lib/advisor/adapter-contract.cjs
+lib/advisor/adapter-registry.cjs
+lib/advisor/adapters/claude.cjs
+lib/advisor/adapters/codex.cjs
+lib/advisor/adapters/omp.cjs
+lib/advisor/adapters/omp-parser.cjs
+lib/advisor/adapters/pi.cjs
+lib/advisor/checkpoint-contract.cjs
+lib/advisor/controller-envelope.cjs
+lib/advisor/controller.cjs
+lib/advisor/errors.cjs
+lib/advisor/isolated-workspace.cjs
+lib/advisor/json-document.cjs
+lib/advisor/policy-schema.cjs
+lib/advisor/profile.cjs
+lib/advisor/runner.cjs
 ```
 
-**Function Documentation**:
-```javascript
-/**
- * Authenticates a user with email and password
- *
- * @param {string} email - User's email address
- * @param {string} password - User's password
- * @returns {Promise<User>} Authenticated user object
- * @throws {AuthenticationError} If credentials are invalid
- */
-async function authenticateUser(email, password) {
-  // Implementation
-}
-```
-
-**Inline Comments**:
-- Explain WHY, not WHAT
-- Complex logic requires explanation
-- TODO comments include assignee and date
-```javascript
-// TODO(john, 2025-10-26): Optimize this query for large datasets
-const users = await db.query('SELECT * FROM users');
-
-// Cache miss - fetch from database
-const user = await fetchUserFromDB(userId);
-```
-
-### Error Handling
-
-**Always Use Try-Catch**:
-```javascript
-async function processPayment(orderId) {
-  try {
-    const order = await getOrder(orderId);
-    const payment = await chargeCard(order.total);
-    await updateOrderStatus(orderId, 'paid');
-    return payment;
-  } catch (error) {
-    logger.error('Payment processing failed', { orderId, error });
-    throw new PaymentError('Failed to process payment', { cause: error });
-  }
-}
-```
-
-**Error Types**:
-- Create custom error classes for domain errors
-- Include context and cause
-- Provide actionable error messages
-
-```javascript
-class ValidationError extends Error {
-  constructor(message, field) {
-    super(message);
-    this.name = 'ValidationError';
-    this.field = field;
-  }
-}
-```
-
-**Error Logging**:
-- Log errors with context
-- Use appropriate log levels
-- Never expose sensitive data in logs
-
-```javascript
-logger.error('Database query failed', {
-  query: sanitizeQuery(query),
-  params: sanitizeParams(params),
-  error: error.message
-});
-```
-
-## Security Standards
-
-### Input Validation
-
-**Validate All Inputs**:
-```javascript
-function createUser(userData) {
-  // Validate required fields
-  if (!userData.email || !userData.password) {
-    throw new ValidationError('Email and password required');
-  }
-
-  // Sanitize inputs
-  const email = sanitizeEmail(userData.email);
-  const password = userData.password; // Never log passwords
-
-  // Validate formats
-  if (!isValidEmail(email)) {
-    throw new ValidationError('Invalid email format');
-  }
-
-  if (password.length < 8) {
-    throw new ValidationError('Password must be at least 8 characters');
-  }
-}
-```
-
-### Sensitive Data Handling
-
-**Never Commit Secrets**:
-- Use environment variables for API keys, credentials
-- Add `.env*` to `.gitignore`
-- Use secret management systems in production
-
-**Never Log Sensitive Data**:
-```javascript
-// BAD
-logger.info('User login', { email, password }); // Never log passwords
-
-// GOOD
-logger.info('User login', { email }); // OK to log email
-```
-
-**Sanitize Database Queries**:
-```javascript
-// Use parameterized queries
-const user = await db.query(
-  'SELECT * FROM users WHERE email = $1',
-  [email]
-);
-
-// Never concatenate user input
-// BAD: const user = await db.query(`SELECT * FROM users WHERE email = '${email}'`);
-```
-
-## Testing Standards
-
-### Test File Organization
-
-```
-tests/
-├── unit/              # Unit tests
-│   ├── services/
-│   └── utils/
-├── integration/       # Integration tests
-│   └── api/
-├── e2e/              # End-to-end tests
-└── fixtures/         # Test data
-```
-
-### Test Naming
-
-```javascript
-describe('UserService', () => {
-  describe('authenticateUser', () => {
-    it('should return user when credentials are valid', async () => {
-      // Test implementation
-    });
-
-    it('should throw AuthenticationError when password is incorrect', async () => {
-      // Test implementation
-    });
-
-    it('should throw ValidationError when email is missing', async () => {
-      // Test implementation
-    });
-  });
-});
-```
-
-### Test Coverage Requirements
-
-- **Unit tests**: > 80% code coverage
-- **Integration tests**: Critical user flows
-- **E2E tests**: Happy paths and edge cases
-- **Browser tests**: Playwright for accessibility modal flow, validation helpers via Vitest
-- **Accessibility**: `@axe-core/playwright` WCAG scanning (page and modal-open states; no critical/serious issues)
-- **Visual regression**: Playwright visual snapshots (deterministic viewport, frozen animations)
-- **Performance**: Lighthouse budget gates (local reports only; no external upload)
-- **Load testing**: k6 smoke tests required for the demo `test:web-gate`; fail with install guidance when no usable k6 binary is available
-- **Security**: npm audit --audit-level=high must pass
-- **Error scenarios**: All error paths tested
-
-### Release Gate Script (test:web-gate)
-
-Browser demo includes `npm run test:web-gate` combining all release gates:
-1. **Playwright tests** - Browser flow and interactions
-2. **Axe accessibility** - WCAG page & modal scanning
-3. **Visual regression** - Snapshot comparison
-4. **Lighthouse budget** - Performance/SEO thresholds
-
-Visual baseline refresh (after layout review):
-```bash
-npm run build
-npx playwright test tests/visual.spec.ts --update-snapshots
-```
-
-k6 smoke check (requires a usable k6 binary; the demo runner can also use the default Windows install path):
-```bash
-npm run build
-npm run test:k6
-```
-
-### Test Best Practices
-
-- **Arrange-Act-Assert** pattern
-- **Independent tests** (no test dependencies)
-- **Descriptive test names** (behavior, not implementation)
-- **Test one thing** per test
-- **Use fixtures** for complex test data
-- **Mock external dependencies**
-
-## Git Standards
-
-### Commit Messages
-
-**Format**: Conventional Commits
-```
-type(scope): description
-
-[optional body]
-
-[optional footer]
-```
-
-**Types**:
-- `feat`: New feature (minor version bump)
-- `fix`: Bug fix (patch version bump)
-- `docs`: Documentation changes
-- `refactor`: Code refactoring
-- `test`: Test additions/changes
-- `ci`: CI/CD changes
-- `chore`: Maintenance tasks
-- `perf`: Performance improvements
-- `style`: Code style changes
-
-**Examples**:
-```
-feat(auth): add OAuth2 authentication support
-
-Implements OAuth2 flow with Google and GitHub providers.
-Includes token refresh and revocation.
-
-Closes #123
-
----
-
-fix(api): resolve timeout in database queries
-
-Optimized slow queries and added connection pooling.
-
----
-
-docs: update installation guide with Docker setup
-```
-
-**Rules**:
-- Subject line: imperative mood, lowercase, no period
-- Max 72 characters for subject
-- Blank line between subject and body
-- Body: explain WHY, not WHAT
-- Footer: reference issues, breaking changes
-- No AI attribution or signatures
-
-### Branch Naming
-
-**Format**: `type/description`
-
-**Types**:
-- `feature/` - New features
-- `fix/` - Bug fixes
-- `refactor/` - Code refactoring
-- `docs/` - Documentation updates
-- `test/` - Test improvements
-
-**Examples**:
-```
-feature/oauth-authentication
-fix/database-connection-timeout
-refactor/user-service-cleanup
-docs/api-reference-update
-test/integration-test-suite
-```
-
-### Pre-Commit Checklist
-
-- ✅ No secrets or credentials
-- ✅ No debug code or console.logs
-- ✅ All tests pass locally
-- ✅ Code follows style guidelines
-- ✅ No linting errors
-- ✅ Files under 500 lines
-- ✅ Conventional commit message
-
-## Documentation Standards
-
-### Code Documentation
-
-**Self-Documenting Code**:
-- Clear variable and function names
-- Logical code organization
-- Minimal comments needed
-
-**When to Comment**:
-- Complex algorithms or business logic
-- Non-obvious optimizations
-- Workarounds for bugs/limitations
-- Public API functions
-- Configuration options
-
-### Markdown Documentation
-
-**Structure**:
-```markdown
-# Document Title
-
-Brief overview paragraph
-
-## Section 1
-
-Content with examples
-
-## Section 2
-
-More content
-
-## See Also
-
-- [System Architecture](./system-architecture.md)
-```
-
-**Formatting**:
-- Use ATX-style headers (`#`, `##`, `###`)
-- Code blocks with language specification
-- Tables for structured data
-- Lists for sequential items
-- Links for cross-references
-
-**Code Blocks**:
-````markdown
-```javascript
-function example() {
-  return 'example';
-}
-```
-````
-
-## Agent-Specific Standards
-
-### Agent Definition Files
-
-**Frontmatter**:
-```yaml
----
-name: agent-name
-description: Brief description of agent purpose and when to use it
-mode: subagent | all
-model: anthropic/claude-sonnet-4-20250514
-temperature: 0.1
----
-```
-
-**Required Sections**:
-1. Agent role and responsibilities
-2. Core capabilities
-3. Workflow process
-4. Output requirements
-5. Quality standards
-6. Communication protocols
-
-### Command Definition Files
-
-**Frontmatter**:
-```yaml
----
-name: command-name
-description: What this command does
----
-```
-
-**Argument Handling**:
-- `$ARGUMENTS` - All arguments as single string
-- `$1`, `$2`, `$3` - Individual positional arguments
-
-**Example**:
-```markdown
----
-name: plan
-description: Create implementation plan for given task
----
-
-Planning task: $ARGUMENTS
-
-Using planner agent to research and create comprehensive plan for: $1
-```
-
-### Skill Definition Files
-
-**Structure**:
-```markdown
-# Skill Name
-
-Guide for using [Technology] - brief description
-
-## When to Use
-
-- List of use cases
-- Scenarios where skill applies
-
-## Core Concepts
-
-Key concepts and terminology
-
-## Implementation Guide
-
-Step-by-step instructions
-
-## Examples
-
-Practical examples
-
-## Best Practices
-
-Recommendations and tips
-
-## Common Pitfalls
-
-Mistakes to avoid
-
-## Resources
-
-- Official docs
-- Tutorials
-- References
-```
-
-## Hook Implementation Standards
-
-### Scout Block Hook Architecture
-
-**Cross-Platform Design Pattern**:
-- **Single Entry Point**: Node.js hook runs consistently across supported platforms
-- **Shared Modules**: Matching, extraction, and error formatting stay platform-neutral
-- **Security-First**: Input validation, sanitized errors, safe execution
-
-**File Organization**:
-```
-.evcrate/source/.claude/hooks/
-├── scout-block.cjs       # Cross-platform Node.js entry point
-├── scout-block/          # Shared matcher, extraction, and formatting modules
-└── tests/                # Hook integration tests
-```
-
-**Implementation Requirements**:
-- **Node.js Hook**:
-  - Read stdin synchronously
-  - Validate JSON structure before parsing
-  - Handle errors with exit codes (0 = success, 2 = error)
-
-- **Pattern Modules**:
-  - Parse JSON input (use Node.js for consistency, avoid jq dependency)
-  - Validate command structure and content
-  - Apply pattern matching for blocked paths
-  - Return appropriate exit codes
-  - Provide clear error messages
-
-**Security Standards**:
-```javascript
-// Input validation
-if (!hookInput || hookInput.trim().length === 0) {
-  console.error('ERROR: Empty input');
-  process.exit(2);
-}
-
-// JSON structure validation
-const data = JSON.parse(hookInput);
-if (!data.tool_input || typeof data.tool_input.command !== 'string') {
-  console.error('ERROR: Invalid JSON structure');
-  process.exit(2);
-}
-```
-
-**Testing Standards**:
-- Test both allowed and blocked patterns
-- Validate error handling (invalid JSON, empty input, missing fields)
-- Cross-platform test coverage
-- Clear pass/fail indicators
-
-### Central Advisor Controller Standards
-
-Checkpoint supervision has one managed executable at
-`~/.evcrate/bin/evcrate-advisor`, authored only at
-`.evcrate/source/.evcrate/bin`. Generated harnesses must not contain a second
-controller, callback bridge, handoff, or fallback launcher.
-
-**Request and policy requirements**:
-1. Accept the direct ten-key `evcrate-advisor-checkpoint/v1` object only.
-2. Load the required platform-home policy with exact version-1 keys and an
-   inclusive 60000..900000 millisecond timeout.
-3. Reject duplicate keys, invalid UTF-8, control characters, credentials,
-   unsafe paths, oversized values, and unknown fields before model execution.
-4. Never accept caller-selected executable, argv, environment, route, host,
-   provider, retry, or fallback controls.
-
-**Execution requirements**:
-1. Generate the correlation UUID before parsing input and use a monotonic timer.
-2. Select one qualified adapter, run ordered probes, and make one final attempt.
-3. Use `shell:false`, fixed argv, an allowlisted environment, stdin-only
-   evidence, bounded streams, and an empty owner-only temporary workspace.
-4. Share the policy deadline across probes and final execution; terminate and
-   reap POSIX process groups on cancellation.
-5. Emit one frozen controller envelope with a fixed receipt and sanitized typed
-   failure fields. Stdout has one JSON line; stderr is empty.
-
-**Distribution and testing**:
-- Build manifests use schema 2 and `controller_hashes`; the publisher atomically
-  promotes the complete `.evcrate/bin` directory and preserves the policy file.
-- Test fake CLIs for strict input, policy migration, exact argv, isolation,
-  output lifecycle, timeout, cancellation, cleanup, and one final-process count.
-- The first release is Linux-only. Requalify each installed enabled CLI after
-  upgrades; generated projections and version strings are not qualification
-  evidence.
-## Configuration File Standards
-
-### package.json
-
-**Required Fields**:
-- name, version, description
-- repository (with URL)
-- author, license
-- engines (Node version >= 22.19.0)
-- scripts (test, lint, etc.)
-
-**Best Practices**:
-- Use semantic versioning
-- Specify exact dependency versions for stability
-- Include keywords for discoverability
-- Use `files` field to control published content
-- Specify minimum Node.js version (22.19.0+)
-
-### .gitignore
-
-**Standard Exclusions**:
-```
-# Dependencies
-node_modules/
-package-lock.json (for libraries)
-
-# Environment
-.env
-.env.*
-!.env.example
-
-# Build outputs
-dist/
-build/
-*.log
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Testing
-coverage/
-*.test.js.snap
-
-# Temporary
-tmp/
-temp/
-*.tmp
-```
-
-## Performance Standards
-
-### Code Performance
-
-**Optimization Priorities**:
-1. Correctness first
-2. Readability second
-3. Performance third (when needed)
-
-**Common Optimizations**:
-- Use appropriate data structures
-- Avoid unnecessary loops
-- Cache expensive computations
-- Lazy load when possible
-- Debounce/throttle frequent operations
-
-**Example**:
-```javascript
-// Cache expensive operations
-const memoize = (fn) => {
-  const cache = new Map();
-  return (...args) => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) return cache.get(key);
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  };
-};
-
-const expensiveCalculation = memoize((n) => {
-  // Complex calculation
-  return result;
-});
-```
-
-### File I/O
-
-- Use async operations
-- Stream large files
-- Batch writes when possible
-- Clean up file handles
-
-## Quality Assurance
-
-### Code Review Checklist
-
-**Functionality**:
-- ✅ Implements required features
-- ✅ Handles edge cases
-- ✅ Error handling complete
-- ✅ Input validation present
-
-**Code Quality**:
-- ✅ Follows naming conventions
-- ✅ Adheres to file size limits
-- ✅ DRY principle applied
-- ✅ KISS principle followed
-- ✅ Well-structured and organized
-
-**Security**:
-- ✅ No hardcoded secrets
-- ✅ Input sanitization
-- ✅ Proper authentication/authorization
-- ✅ Secure dependencies
-
-**Testing**:
-- ✅ Unit tests included
-- ✅ Integration tests for flows
-- ✅ Edge cases tested
-- ✅ Error paths covered
-
-**Documentation**:
-- ✅ Code comments where needed
-- ✅ API documentation updated
-- ✅ README updated if needed
-- ✅ Changelog entry added
-
-## Enforcement
-
-### Automated Checks
-
-**Pre-Commit**:
-- Commitlint (conventional commits)
-- Secret scanning
-- File size validation
-
-**Pre-Push**:
-- Linting (ESLint, Prettier)
-- Unit tests
-- Type checking
-
-**CI/CD**:
-- All tests
-- Build verification
-- Coverage reports
-- Security scans
-
-### Manual Review
-
-**Code Review Focus**:
-- Architecture and design decisions
-- Complex logic correctness
-- Security implications
-- Performance considerations
-- Maintainability and readability
-
-## Exceptions
-
-**When to Deviate**:
-- Performance-critical code (document reasons)
-- External library constraints
-- Generated code (mark clearly)
-- Legacy code (plan refactoring)
-
-**Documentation Required**:
-```javascript
-/**
- * EXCEPTION: File exceeds 500 lines
- * REASON: Critical performance optimization requires monolithic structure
- * TODO: Refactor when performance is no longer critical
- * DATE: 2025-10-26
- */
-```
+Source and projection checks reject symlinks, extra files/directories, tests,
+fixtures, helpers, fake artifacts, non-literal imports, and imports outside the
+allowlisted closure or Node built-ins. The entrypoint requires the canonical
+Node shebang and executable mode. `controller_hashes` must contain exactly the
+17 `.evcrate/bin/...` keys and current bytes; a projection must be byte-identical.
+
+## Filesystem, locking, and transaction standards
+
+### Paths, ownership, and staging
+
+- Normalize relative POSIX paths before joining. Reject absolute paths,
+  backslashes, dot/dot-dot segments, empty segments, NULs, symlinked ancestors,
+  non-regular entries, and containment escapes.
+- Managed roots and their ancestors must be real owner-controlled directories.
+  State, locks, journals, and policy files are owner-only on POSIX. Do not
+  chmod or replace unrelated HOME data.
+- Promotion sources must come from an opaque capability-backed staged root and
+  share a volume with the destination parent. The capability records device and
+  inode identity; use it only while the exact directory still exists.
+- Stage cleanup first renames the identity-checked directory to a random
+  quarantine name, rechecks ownership/device/inode, then removes it. Never
+  recursively remove a replacement directory through a stale path.
+
+### Atomic publication and recovery
+
+- Write journal, marker, and policy bytes through owner-only atomic temporary
+  files, flush file and directory metadata where supported, then rename.
+- Before each source or destination rename, compare a snapshot containing
+  presence, kind, device/inode, size, mode, and digest. Source or destination
+  changes are a CAS failure; never overwrite a concurrent replacement.
+- A promotion journal records backup location, destination set, original presence,
+  intended hashes, and commit state. Recover only validated, owner-controlled,
+  contained journal paths. Restore the complete prior set for an interrupted
+  transaction; committed deletions remain deletions. Unexpected state fails
+  closed and leaves user data untouched.
+
+### Shared lock and release-state protocol
+
+Publication uses an owner-only state directory and an `O_EXCL` JSON lock. The
+TypeScript implementation exposes `publish.lock` and the dedicated
+`advisor-settings.lock`; Python's `publish_lock` uses the same publication lock
+shape so TypeScript and Python publishers cannot enter the same critical section
+at once. Lock metadata is bounded to 4 KiB and contains a safe PID, millisecond
+start time, random 32-hex token, and optional process-start token.
+
+On Linux, `/proc/<pid>/stat` process-start data prevents a reused PID from being
+accepted as the prior owner. A valid stale lock is atomically renamed to a
+random `.stale-*` quarantine path, re-read, matched by token/device/inode, then
+removed. Invalid, changing, or uncertain metadata blocks acquisition. Release
+removes a lock only when token and device/inode identity still match; uncertain
+release leaves the lock for recovery.
+
+The release marker is owner-only, atomically written schema-1 JSON bounded at
+4 MiB. Missing state has an explicit empty marker. Symlinked, malformed,
+unsupported, oversized, or unstable marker data fails closed.
+
+### Advisor policy-file transactions
+
+Policy files are bounded to 16 KiB, fatal-UTF-8/strict-JSON validated, canonical,
+owner-only regular files. A read returns a safe policy view, mode, bytes, and a
+revision derived from file identity/metadata and content. Staging validates the
+expected revision and writes canonical bytes to an owner-only sibling.
+
+Apply writes a durable `prepared`/`backed_up`/`promoted` journal, checks source
+and destination revisions before backup and promotion, renames the old complete
+file to an identity-checked backup, promotes the staged file, verifies bytes and
+mode, then clears journal/backup state. Recovery restores the prior complete
+policy or accepts a fully promoted document; replacement directories and unsafe
+transaction paths are rejected. The CLI `advisor settings get|preview|apply`
+surface remains a typed, fail-closed `CAPABILITY_UNSUPPORTED` boundary and does
+not perform policy I/O in this phase.
+
+## Python-authority boundary
+
+The TypeScript distribution bridge invokes only package-relative
+`python3 distribute.py` actions with the established state-root handoff. It
+never invokes a migrator directly, silently switches to a Node implementation,
+or implies Python-free distribution parity. Python remains the release authority
+for target generation, build/check, HOME publication, and recovery.
+
+No document may claim Windows security equivalence, live vendor qualification,
+or a HOME cutover from deterministic tests. The current residuals are the low
+same-UID/path-race window and Linux-first security scope.
+
+## Testing and review standards
+
+Tests defend observable boundaries, not implementation trivia. Focused suites
+cover strict parser/manifest contracts, output ownership, controller closure,
+canonical hashes, symlink/owner checks, staged-root identity cleanup, shared
+locks, stale quarantine, promotion CAS/recovery, and advisor policy CAS/recovery.
+Use temporary roots and real filesystem/process behavior; do not weaken checks
+with fake success paths.
+
+The completed independent gate passed **110/110**: Phase 4 **29/29**, protocol
+**18/18**, CLI **28/28**, and Python authority **35/35**. Final security review
+approved **9.5/10**. These results are evidence for the current contracts, not
+live qualification or HOME cutover approval.
+
+## Documentation and changelog standards
+
+- Keep Markdown files under the repository documentation limit (800 lines).
+  Prefer short sections, tables, and links over duplicating implementation plans.
+- Link only to verified files under `docs/` or the repository root. The root
+  `CHANGELOG.md` is the changelog; do not invent `docs/project-changelog.md`.
+- Add date-stamped Unreleased entries for feature, fix, documentation, and test
+  work. Do not invent a release version or rewrite historical entries.
+- Record verified behavior and explicit non-claims. If a contract is deferred,
+  name the owning phase rather than documenting a no-op implementation.
 
 ## References
 
-### Internal Documentation
-- [Project Overview PDR](./project-overview-pdr.md)
 - [Codebase Summary](./codebase-summary.md)
 - [System Architecture](./system-architecture.md)
-
-### External Standards
-- [Conventional Commits](https://conventionalcommits.org/)
-- [Semantic Versioning](https://semver.org/)
-- [Keep a Changelog](https://keepachangelog.com/)
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-
-### Related Projects
-- [Claude Code Documentation](https://docs.claude.com/)
-- [Open Code Documentation](https://opencode.ai/docs)
-
-## Unresolved Questions
-
-None. All code standards are well-defined and documented.
+- [Project Overview and PDR](./project-overview-pdr.md)
+- [Advisor distribution architecture](./advisor-distribution-architecture.md)
+- [Repository changelog](../CHANGELOG.md)
