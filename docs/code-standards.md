@@ -76,37 +76,52 @@ project-root/
 
 ### TypeScript/npm control-plane CLI standards
 
-- Keep the package CommonJS: compile strict NodeNext TypeScript to `dist/`,
-  retain `evcrate-advisor`, and expose `evcrate` through
-  `dist/cli/evcrate.js`; never add `"type": "module"`.
-- The CLI parses once, resolves an immutable package/manifest/context view,
+- Keep the package CommonJS: compile strict NodeNext TypeScript from `src/` to
+  `dist/` with declarations, retain `evcrate-advisor`, and expose `evcrate`
+  through `dist/cli/evcrate.js`; never add `"type": "module"`.
+- The CLI parses once, resolves immutable package/manifest/context state,
   dispatches once, writes one validated result, and exits. No listeners,
   retries, background work, counsel proxy, or raw exception/path output.
 - Supported commands are `version`, `health`, `advisor settings
   get|preview|apply`, and `distribute build|check|publish|all|recover`.
-  `--request-file` carries one complete bounded versioned envelope.
-- Protocol boundaries use fatal UTF-8, canonical JSON, exact keys, bounded
+  `--request-file` carries one complete bounded versioned envelope and cannot
+  be combined with command positionals; `--json` and non-TTY output are
+  canonical JSON.
+- Request files must resolve to a regular file, use a bounded descriptor read
+  (maximum 64 KiB plus an overflow check), and pass fatal UTF-8 and strict JSON
+  validation. Linux uses `O_NOFOLLOW` for final-component symlink protection;
+  this is Linux-first scope, with no Windows security-equivalence claim.
+- Route child processes through the bounded runner: fixed argv, `shell:false`,
+  an allowlisted environment, bounded input/output and line counts,
+  timeout/abort handling, and termination cleanup. Do not expose raw paths or
+  stderr.
+- Protocol boundaries require fatal UTF-8, canonical JSON, exact keys, bounded
   documents, safe paths, credential/counsel-field rejection, and exit bands
-  0/2/3/4/5/6. Process execution uses argv arrays, `shell:false`,
-  allowlisted environment, bounded streams, timeout, and cancellation.
-- Schema-2 `.evcrate/targets/manifest.json` is the only target authority.
-  Resolve `--home` > `EVCRATE_HOME` > platform home; state resolves
-  `--state-home` > `EVCRATE_STATE_HOME/evcrate` > `XDG_STATE_HOME/evcrate`
-  > `<home>/.local/state/evcrate`, rejecting symlink/path escapes.
-- `health` may invoke only the packaged CommonJS controller's qualification
-  diagnostic and must validate one JSON stdout line with empty stderr.
-  It must never create checkpoint or counsel payloads.
-- Advisor-settings `get|preview|apply` stays behind `AdvisorSettingsHandler`;
-  the default Phase 3 route returns validated `CAPABILITY_UNSUPPORTED`
-  without policy reads/writes. Resource operations beyond `version` are
-  likewise unsupported until their owning phases.
+  0/2/3/4/5/6. Schema-2 `.evcrate/targets/manifest.json` is the only target
+  authority; reject unsafe manifest paths, roots, bindings, and symlink
+  ancestors.
+- Resolve context as `--home` > `EVCRATE_HOME` > platform home, and state as
+  exact `--state-home` > `EVCRATE_STATE_HOME/evcrate` >
+  `XDG_STATE_HOME/evcrate` > `<home>/.local/state/evcrate`. `--source` selects
+  canonical harness input only; it cannot replace packaged controller/registry
+  roots.
+- `health` may invoke only the packaged CommonJS controller's
+  `evcrate-advisor-diagnostic` qualification. Require one bounded JSON stdout
+  line, empty stderr, matching request ID, and no counsel-shaped output.
+- Keep advisor-settings `get|preview|apply` behind `AdvisorSettingsHandler`;
+  the Phase 3 default returns validated `CAPABILITY_UNSUPPORTED` without
+  policy reads/writes. Functional policy transactions, CAS, publication, and
+  recovery are deferred to Phases 7–8. Resource operations beyond `version`
+  are likewise unsupported until their owning phases.
 - Distribution delegates only to package-relative `python3 distribute.py`,
-  labels the result `python-compatibility`, and passes the exact resolved
-  state root as `EVCRATE_STATE_DIR`; no migrator or Node-only fallback.
-- Release preparation must retain `dist`, declarations, controller,
-  manifests, Python distribution modules, and `distribute.py` in the packed
-  package while Python build/check remains authoritative.
-
+  passes the exact resolved state root as `EVCRATE_STATE_DIR`, and labels
+  results `engine: "python-compatibility"`. No migrator, Node fallback, or
+  Python-free parity claim.
+- Release packaging retains `dist`, declarations, controller, schema-2
+  manifests, Python distribution modules, and `distribute.py`. CI runs
+  `npm ci`, `npm run build`, `npm run test:protocol`, and `npm run test:cli`
+  before legacy tests and distribution checks; packed
+  install/version/context smoke is required evidence.
 ### File Naming Conventions
 
 **Agent Definitions** (`.evcrate/source/.claude/agents/`, `.evcrate/source/.opencode/agent/`):
