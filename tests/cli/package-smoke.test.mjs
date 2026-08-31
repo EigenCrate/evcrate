@@ -1,16 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import process from 'node:process';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+
+function npmJson(args, cwd) {
+  const result = spawnSync('npm', [...args, '--json', '--ignore-scripts'], {
+    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout.slice(result.stdout.indexOf('[')).trim());
+}
+
+function packPackage(destination) {
+  const output = npmJson(['pack', '--pack-destination', destination], packageRoot);
+  return join(destination, output[0].filename);
+}
+
+function installPackage(tarball, root) {
+  const result = spawnSync('npm', [
+    'install', '--prefix', root, '--no-audit', '--no-fund', '--ignore-scripts', tarball
+  ], {
+    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
+  });
+  assert.equal(result.status, 0, result.stderr);
+}
 
 test('package metadata includes the CLI, declarations, and compatibility assets', () => {
-  const packed = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
-    cwd: packageRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']
-  });
-  assert.equal(packed.status, 0, packed.stderr);
-  const output = JSON.parse(packed.stdout.slice(packed.stdout.indexOf('[')).trim());
+  const output = npmJson(['pack', '--dry-run'], packageRoot);
   const files = output[0].files.map(({ path }) => path);
   for (const expected of [
     'dist/cli/evcrate.js', 'dist/index.js', 'dist/index.d.ts',
@@ -26,4 +48,47 @@ test('importing the public package has no process or output side effect', () => 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, '');
   assert.equal(result.stderr, '');
+});
+
+test('installed tarball runs version and resolves distinct target contexts', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-package-smoke-'));
+  const installRoot = join(root, 'install');
+  const home = join(root, 'home');
+  const state = join(root, 'state');
+  mkdirSync(installRoot); mkdirSync(home); mkdirSync(state);
+  const tarball = packPackage(root);
+  installPackage(tarball, installRoot);
+
+  const cliPath = join(installRoot, 'node_modules', '.bin', 'evcrate');
+  const version = spawnSync(cliPath, ['version', '--json'], {
+    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000
+  });
+  assert.equal(version.status, 0, version.stderr);
+  const versionResult = JSON.parse(version.stdout);
+  assert.equal(versionResult.payload.version, packageMetadata.version);
+
+  const contextScript = `
+    const path = require('node:path');
+    const { resolveInvocationContext } = require('evcrate');
+    const packageRoot = path.dirname(path.dirname(require.resolve('evcrate')));
+    const context = resolveInvocationContext({
+      packageRoot, cwd: process.cwd(), home: ${JSON.stringify(home)},
+      stateHome: ${JSON.stringify(state)}, targets: ['omp', 'copilot']
+    });
+    process.stdout.write(JSON.stringify({
+      ids: context.selectedTargetIds,
+      generated: context.generatedRoots,
+      homes: context.homeBindings.map(({ homeRoot }) => homeRoot)
+    }));
+  `;
+  const context = spawnSync(process.execPath, ['-e', contextScript], {
+    cwd: installRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000
+  });
+  assert.equal(context.status, 0, context.stderr);
+  const contextResult = JSON.parse(context.stdout);
+  assert.deepEqual(contextResult.ids, ['copilot', 'omp']);
+  assert.ok(contextResult.generated.some((value) => value.endsWith('/.evcrate/source/.copilot')));
+  assert.ok(contextResult.generated.some((value) => value.endsWith('/.evcrate/source/.omp')));
+  assert.ok(contextResult.homes.some((value) => value.endsWith('/.copilot')));
+  assert.ok(contextResult.homes.some((value) => value.endsWith('/.omp')));
 });

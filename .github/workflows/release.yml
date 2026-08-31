@@ -48,7 +48,13 @@ jobs:
       - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
         run: npm audit signatures
 
-      - name: Run tests
+      - name: Run TypeScript protocol tests
+        run: npm run test:protocol
+
+      - name: Run TypeScript CLI tests
+        run: npm run test:cli
+
+      - name: Run legacy tests
         run: npm test
 
       - name: Run linting

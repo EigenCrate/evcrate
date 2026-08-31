@@ -37,6 +37,7 @@
     "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
+    "prepack": "npm run build",
     "prepare": "husky install || true"
   },
   "repository": {

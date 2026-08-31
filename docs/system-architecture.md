@@ -218,17 +218,23 @@ dispatches once, writes one validated result, and exits. It has no listener,
 daemon, retry, background process, or counsel proxy. Supported commands are
 `version`, `health`, `advisor settings get|preview|apply`, and
 `distribute build|check|publish|all|recover`; `--request-file` accepts one
-complete bounded envelope and is mutually exclusive with command positionals.
-`--json` or non-TTY output produces canonical JSON; TTY text is derived from
-the same validated result.
+complete bounded versioned envelope and is mutually exclusive with command
+positionals. `--json` or non-TTY output produces canonical JSON; TTY text is
+derived from the same validated result.
 
-**Typed protocol boundary**:
+**Typed protocol and execution boundary**:
 - `json.ts` enforces fatal UTF-8, duplicate-key/control-character rejection,
-  canonical JSON, a 64 KiB document limit, and depth 16.
-- Resource, settings, and diagnostic validators enforce exact keys, bounded
-  values, safe paths, credential/counsel-field rejection, and stable exit
-  bands 0/2/3/4/5/6. Resource dispatch currently implements only `version`;
-  later operations return a validated capability failure.
+  canonical JSON, a 64 KiB document limit, and depth 16. Resource, settings,
+  and diagnostic validators enforce exact keys, bounded values, safe paths,
+  credential/counsel-field rejection, and stable exit bands 0/2/3/4/5/6.
+- The request-file loader resolves a safe path, opens a regular file read-only,
+  reads at most 64 KiB with a one-byte overflow check, and then applies fatal
+  UTF-8 and strict JSON validation. Linux adds `O_NOFOLLOW` for final-component
+  symlink protection; this is Linux-first scope, not a Windows security-
+  equivalence claim.
+- All child processes use fixed argv and `shell:false`, an allowlisted
+  environment, bounded input/output and line counts, timeout/abort handling,
+  and termination cleanup. Raw process paths and stderr are not returned.
 
 **Manifest and context boundary**:
 - `.evcrate/targets/manifest.json` (schema 2) is the sole persisted-target
@@ -244,30 +250,39 @@ the same validated result.
 **Diagnostic and settings boundaries**:
 - `health` invokes only the packaged CommonJS `evcrate-advisor` with an
   `evcrate-advisor-diagnostic` `qualify` request. It accepts one bounded JSON
-  stdout line, requires empty stderr and matching request ID, and rejects
-  counsel-shaped output; it never creates a checkpoint or counsel request.
-- `advisor settings` keeps `get|preview|apply` behind
-  `AdvisorSettingsHandler`. Without an injected handler, all operations return
-  validated `CAPABILITY_UNSUPPORTED` without reading or writing policy. The
-  settings coordinator, policy CAS, and atomic apply/recovery remain deferred.
+  stdout line, requires empty stderr and a matching request ID, rejects
+  counsel-shaped output, and never creates a checkpoint or counsel request.
+- `advisor settings get|preview|apply` remains a typed, fail-closed boundary:
+  without an injected handler each operation returns validated
+  `CAPABILITY_UNSUPPORTED` without reading or writing policy. Functional
+  policy transactions, CAS, publication, and recovery remain deferred to
+  Phases 7–8.
 
 **Distribution and package boundary**:
 - Distribution invokes only package-relative `python3 distribute.py` with one
   exact action/target argv, labels results `engine: "python-compatibility"`,
-  and passes the resolved state root as the exact `EVCRATE_STATE_DIR`. It
-  never invokes migrators or provides a TypeScript fallback.
-- The package remains CommonJS (no `"type": "module"`), exports `dist/index`,
-  retains `evcrate-advisor`, and publishes `evcrate: dist/cli/evcrate.js`.
-  `npm run build` emits JavaScript/declarations; packed files include `dist`,
-  controller/targets, Python distribution modules, and `distribute.py`.
-  Release preparation runs Python build/check before creating its archive.
+  and passes the resolved state root as the exact `EVCRATE_STATE_DIR`. It never
+  invokes migrators or provides a TypeScript fallback; this is not a
+  Python-free parity claim.
+- `tsconfig.json` emits strict NodeNext JavaScript and declarations from `src/`
+  to `dist/`. The package stays CommonJS (no `"type": "module"`), exports
+  `dist/index`, retains `evcrate-advisor`, and publishes `evcrate` at
+  `dist/cli/evcrate.js`.
+- Packed contents retain `dist`, declarations, controller/targets,
+  distribution modules, and `distribute.py`. Installed-tarball smoke runs
+  `evcrate version` and resolves distinct OMP/Copilot target contexts from
+  outside the repository.
+
+**CI and Phase 3 evidence**:
+- Release CI installs Node 22.19 and Python 3.12, runs `npm ci`, then gates
+  on `npm run build`, `npm run test:protocol`, and `npm run test:cli` before
+  legacy tests and distribution checks.
+- Focused Phase 3 evidence is build PASS, CLI **28/28**, protocol **16/16**,
+  and packed install/version/context smoke PASS.
 
 The existing CommonJS controller remains the sole counsel owner. Phase 4
-manifest/build authorization and target adapters, Phase 5 projection parity,
-later resource/settings coordinators and policy CAS/publication/recovery,
-Python removal, Node-only distribution parity, and full platform/vendor
-qualification remain deferred.
-
+manifest/build authorization and target adapters, later resource operations,
+Python removal, and full platform/vendor qualification remain deferred.
 ### 2. Agent Layer
 
 #### 2.1 Agent Types
@@ -648,9 +663,11 @@ To ensure that safety/privacy hooks are consistently enforced when migrating fro
 - `.gitignore` - Git exclusions
 - `package.json` - Node.js config
 - `.releaserc.json` - Release config
-- `src/protocol/`, `src/errors/` - Phase 2 TypeScript contract sources
-- `dist/` - generated TypeScript JavaScript/declaration output
-- `tests/protocol/`, `tests/fixtures/control-plane-v1/` - contract tests and fixtures
+- `src/cli/`, `src/context/`, `src/protocol/`, `src/errors/` - Phase 2–3
+  TypeScript CLI, context, protocol, and error sources
+- `dist/` - generated strict-NodeNext JavaScript/declaration output
+- `tests/cli/`, `tests/context/`, `tests/protocol/`, and
+  `tests/fixtures/control-plane-v1/` - CLI/context and contract tests
 
 **Runtime Data**:
 - `plans/` - Implementation plans
@@ -798,14 +815,17 @@ plans/<plan-name>/reports/251026-from-tester-to-main-test-results-report.md
 
 - `npm run build` passed; it compiles strict NodeNext TypeScript from `src/`
   to generated `dist/` JavaScript and declarations.
-- `npm run test:cli` passed **22/22**; `npm run test:protocol` passed
+- `npm run test:cli` passed **28/28**; `npm run test:protocol` passed
   **16/16**.
 - `python3 -m unittest tests.test_distribution_cli` passed **8/8** and
   targeted release validators passed **16/16**.
 - `npm test` passed Python **102/102**, Pi **49/49**, and advisor-controller
   **35/35**; `npm run test:pi` passed **49/49**.
-- Packed install/version smoke passed. Distribution remains Python-backed;
-  these checks do not establish Node-only parity.
+- Packed install/version/context smoke passed. Distribution remains
+  Python-backed; these checks do not establish Python-free parity.
+
+The release workflow runs the build and the two TypeScript test gates before
+legacy tests and distribution checks.
 
 
 ### Agent Skills Ecosystem
@@ -980,12 +1000,16 @@ Developer Machine
 
 ### CI/CD Pipeline
 
-```
+```text
 GitHub Repository
-    ↓ Push to main
-GitHub Actions
+    ↓ Push to main / workflow_dispatch
+GitHub Actions (ubuntu-latest)
+    ↓ Node 22.19 + Python 3.12, npm ci
+npm run build
     ↓
-Run Tests
+npm run test:protocol → npm run test:cli
+    ↓
+npm test → npm run lint → distribution build/check → npm pack --dry-run
     ↓
 Semantic Release
     ├─→ Version Bump

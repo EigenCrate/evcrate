@@ -52,14 +52,22 @@ evcrate/
 
 Phase 2 freezes the typed version-1 protocol/error boundaries. Phase 3 adds a
 one-shot `evcrate` CommonJS executable: parse once, resolve immutable context,
-dispatch once, emit one validated result, and exit. It has no listener,
-daemon, retry, background process, or counsel proxy.
+dispatch once, emit one validated result, and exit. It has no listener, daemon,
+retry, background process, or counsel proxy.
 
 - Commands are `version`, `health`, `advisor settings get|preview|apply`, and
   `distribute build|check|publish|all|recover`; `--request-file` accepts one
-  complete bounded versioned envelope, mutually exclusive with positionals.
-  `--json` forces machine output; non-TTY output is JSON, while TTY text is
-  derived from the same validated result.
+  complete bounded versioned envelope and is mutually exclusive with
+  positionals. `--json` forces machine output; non-TTY output is JSON, while
+  TTY text is derived from the same validated result.
+- The request-file loader resolves a safe path, opens a regular file read-only,
+  reads at most 64 KiB with a one-byte overflow check, then applies fatal UTF-8
+  and strict JSON validation. On Linux it adds `O_NOFOLLOW` to the descriptor
+  open for final-component symlink protection; this is Linux-first scope, not
+  a Windows security-equivalence claim.
+- Every child process uses fixed argv and `shell:false`, an allowlisted
+  environment, bounded input/output and line counts, timeout/abort handling,
+  and termination cleanup. Raw process paths and stderr are not exposed.
 - `json.ts` enforces fatal UTF-8, duplicate-key/control-character rejection,
   canonical JSON, a 64 KiB document limit, and depth 16. Protocol validators
   enforce exact keys, bounded values, safe paths, target normalization,
@@ -75,26 +83,29 @@ daemon, retry, background process, or counsel proxy.
 - `health` invokes only the packaged CommonJS `evcrate-advisor` with an
   `evcrate-advisor-diagnostic` `qualify` request. It requires one bounded JSON
   stdout line, empty stderr, matching request ID, and no counsel-shaped output.
-- `advisor settings` has a typed `get|preview|apply` contract, but Phase 3
-  ships no policy coordinator: without an injected handler every operation
-  returns validated `CAPABILITY_UNSUPPORTED` and performs no policy I/O.
-  Resource operations beyond `version` follow the same unsupported boundary.
+- `advisor settings get|preview|apply` remains a typed, fail-closed boundary:
+  without an injected handler each operation returns validated
+  `CAPABILITY_UNSUPPORTED` and performs no policy I/O. Functional policy
+  transactions, CAS, publication, and recovery are deferred to Phases 7–8.
 - Distribution actions invoke only package-relative `python3 distribute.py`
   with one exact action/target argv. The bridge labels results
   `engine: "python-compatibility"` and passes the resolved state root as the
-  exact `EVCRATE_STATE_DIR`; it never invokes migrators or a TypeScript fallback.
+  exact `EVCRATE_STATE_DIR`; it never invokes migrators or a TypeScript
+  fallback, and does not claim Python-free parity.
 - `package.json` stays CommonJS (no `"type": "module"`), exports `dist/index`,
   retains `evcrate-advisor`, and adds `evcrate: dist/cli/evcrate.js`. `npm run
   build` emits JavaScript/declarations; packed contents include `dist`, the
   controller closure, schema-2 targets, Python distribution modules, and
-  `distribute.py`. Release preparation still runs Python build/check before
-  creating the archive.
+  `distribute.py`.
+- Release CI installs Node 22.19 and Python 3.12, then runs `npm ci`,
+  `npm run build`, `npm run test:protocol`, and `npm run test:cli` before the
+  legacy tests and distribution checks. Focused Phase 3 evidence is build
+  PASS, CLI **28/28**, protocol **16/16**, and packed
+  install/version/context smoke PASS.
 
 The existing CommonJS controller remains the sole counsel owner. Phase 4
-manifest/build authorization and target adapters, later resource/settings
-coordinators and policy CAS/publication/recovery, Python removal, Node-only
-distribution parity, and full platform/vendor qualification remain deferred.
-
+manifest/build authorization and target adapters, later resource operations,
+Python removal, and full platform/vendor qualification remain deferred.
 ### Distribution gates
 
 The distribution entrypoint separates local generation from HOME publication.
@@ -203,7 +214,7 @@ controller backend.
 ### Runtime & Dependencies
 - **Node.js**: >=22.19.0
 - **Package Manager**: npm
-- **TypeScript**: strict NodeNext compiler for Phase 2 contracts
+- **TypeScript**: strict NodeNext compiler for Phase 2–3 contracts and CLI
 - **Node test runner**: protocol and CommonJS contract suites
 - **License**: MIT
 
@@ -411,29 +422,22 @@ Types:
 - Automated changelog generation
 - GitHub releases with generated notes
 
-## Testing Strategy
-
-- Comprehensive unit tests required
-- Demo unit checks use Vitest via `cd examples/simple-web-testing-demo && npm run test`
-- Demo browser checks use Playwright via `cd examples/simple-web-testing-demo && npm run test:e2e`
-- High code coverage mandatory
-- Error scenario testing
-- Performance validation
-- Tests must pass before push
-- No ignoring failed tests
-
 ### TypeScript/npm and compatibility verification (Phases 2–3)
 
-- `npm run build` passed; it invokes strict `tsc -p tsconfig.json` and emits
+- `npm run build` passed; it invokes strict NodeNext TypeScript and emits
   JavaScript plus declarations under `dist/`.
-- `npm run test:cli` passed **22/22**; `npm run test:protocol` passed
+- `npm run test:cli` passed **28/28**; `npm run test:protocol` passed
   **16/16**.
 - `python3 -m unittest tests.test_distribution_cli` passed **8/8** and
   targeted release validators passed **16/16**.
 - `npm test` passed Python **102/102**, Pi **49/49**, and advisor-controller
   **35/35**; `npm run test:pi` passed **49/49**.
-- Packed install/version smoke passed. Distribution remains Python-backed;
-  these checks do not establish Node-only parity.
+- Packed install/version/context smoke passed. Distribution remains
+  Python-backed; these checks do not establish Python-free parity.
+ 
+The release workflow runs the build and the two TypeScript test gates before
+legacy tests and distribution checks.
+
 
 ## Documentation Standards
 
@@ -463,9 +467,6 @@ Types:
 - **@commitlint/cli**: ^18.4.3
 - **@commitlint/config-conventional**: ^18.4.3
 - **@semantic-release/changelog**: ^6.0.3
-- **@semantic-release/commit-analyzer**: ^11.1.0
-- **@semantic-release/git**: ^10.0.1
-- **@semantic-release/github**: ^9.2.6
 - **@semantic-release/npm**: ^11.0.2
 - **@semantic-release/release-notes-generator**: ^12.1.0
 - **conventional-changelog-conventionalcommits**: ^7.0.2
@@ -474,9 +475,9 @@ Types:
 
 ## File Statistics
 
-The refreshed 2026-08-31 `repomix-output.xml` snapshot contains **2,492 files**,
-**8,623,883 tokens**, and **32,491,294 characters**. The TypeScript source
-tree contains **2,841 lines** across `src/`.
+The latest 2026-08-31 repomix scan contains **2,492 files**, **8,625,213
+tokens**, and **32,496,123 characters**. The TypeScript source tree contains
+**2,867 lines** across `src/`.
 
 **Top 5 Files by Token Count**:
 1. `.evcrate/source/.copilot/skills/evcrate-ui-ux-pro-max/data/phosphor-icons-upstream.json` - 230,228 tokens (2.7%)
