@@ -1,7 +1,7 @@
 # Code Standards & Codebase Structure
 
-**Last Updated**: 2025-10-26
-**Version**: 1.8.0
+**Last Updated**: 2026-08-31
+**Version**: 1.0.0 (Phase 3 CLI changes remain Unreleased)
 **Applies To**: All code within the EVCrate project
 
 ## Overview
@@ -73,6 +73,39 @@ project-root/
 - The personal Copilot adapter requires empty same-volume staging and no direct/global output. Every canonical command becomes a namespaced `evcrate-cmd-*` skill with literal `$ARGUMENTS`; native skills and agents become `evcrate-*`; unsupported or approximated resources require an inventory reason.
 - Copilot safety hooks use a generated fail-closed bridge. `PreToolUse` runs scout before privacy, malformed bridge payloads fail closed, `UserPromptSubmit` and `CLAUDE_ENV_FILE` are not activated, and statusline output is bounded.
 - Copilot publication owns only `includeCoAuthoredBy`, `effortLevel`, and `statusLine` in `$HOME/.copilot/settings.json`; the managed JSONC merger must preserve unknown keys, comments, and formatting bytes.
+
+### TypeScript/npm control-plane CLI standards
+
+- Keep the package CommonJS: compile strict NodeNext TypeScript to `dist/`,
+  retain `evcrate-advisor`, and expose `evcrate` through
+  `dist/cli/evcrate.js`; never add `"type": "module"`.
+- The CLI parses once, resolves an immutable package/manifest/context view,
+  dispatches once, writes one validated result, and exits. No listeners,
+  retries, background work, counsel proxy, or raw exception/path output.
+- Supported commands are `version`, `health`, `advisor settings
+  get|preview|apply`, and `distribute build|check|publish|all|recover`.
+  `--request-file` carries one complete bounded versioned envelope.
+- Protocol boundaries use fatal UTF-8, canonical JSON, exact keys, bounded
+  documents, safe paths, credential/counsel-field rejection, and exit bands
+  0/2/3/4/5/6. Process execution uses argv arrays, `shell:false`,
+  allowlisted environment, bounded streams, timeout, and cancellation.
+- Schema-2 `.evcrate/targets/manifest.json` is the only target authority.
+  Resolve `--home` > `EVCRATE_HOME` > platform home; state resolves
+  `--state-home` > `EVCRATE_STATE_HOME/evcrate` > `XDG_STATE_HOME/evcrate`
+  > `<home>/.local/state/evcrate`, rejecting symlink/path escapes.
+- `health` may invoke only the packaged CommonJS controller's qualification
+  diagnostic and must validate one JSON stdout line with empty stderr.
+  It must never create checkpoint or counsel payloads.
+- Advisor-settings `get|preview|apply` stays behind `AdvisorSettingsHandler`;
+  the default Phase 3 route returns validated `CAPABILITY_UNSUPPORTED`
+  without policy reads/writes. Resource operations beyond `version` are
+  likewise unsupported until their owning phases.
+- Distribution delegates only to package-relative `python3 distribute.py`,
+  labels the result `python-compatibility`, and passes the exact resolved
+  state root as `EVCRATE_STATE_DIR`; no migrator or Node-only fallback.
+- Release preparation must retain `dist`, declarations, controller,
+  manifests, Python distribution modules, and `distribute.py` in the packed
+  package while Python build/check remains authoritative.
 
 ### File Naming Conventions
 
@@ -819,7 +852,7 @@ controller, callback bridge, handoff, or fallback launcher.
 - name, version, description
 - repository (with URL)
 - author, license
-- engines (Node version >= 18.0.0)
+- engines (Node version >= 22.19.0)
 - scripts (test, lint, etc.)
 
 **Best Practices**:

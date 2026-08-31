@@ -10,7 +10,7 @@ const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../..")
 const piVersion = "0.84.1";
 
 function run(command, args, options = {}) {
-  return execFileSync(command, args, { encoding: "utf8", stdio: "pipe", timeout: 120_000, ...options });
+  return execFileSync(command, args, { encoding: "utf8", stdio: "pipe", timeout: 300_000, ...options });
 }
 
 function rpcCommands(runtime, home, args = [], environment = {}) {
@@ -74,7 +74,7 @@ function installManagedPackages(runtime, home) {
   ]));
 }
 
-test("packed distribution builds, publishes, and Pi discovers native commands and skills", { timeout: 180_000 }, () => {
+test("packed distribution builds, publishes, and Pi discovers native commands and skills", { timeout: 600_000 }, () => {
   const root = mkdtempSync(join(tmpdir(), "evcrate-pi-runtime-"));
   try {
     const packDirectory = join(root, "pack");

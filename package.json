@@ -2,13 +2,23 @@
   "name": "evcrate",
   "version": "1.0.0",
   "description": "A comprehensive boilerplate template for Claude Code, GitHub Copilot CLI, OpenCode, OMP, and native Pi coding agents.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "bin": {
+    "evcrate": "dist/cli/evcrate.js",
     "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test:protocol": "npm run build && node --test tests/protocol/*.test.mjs",
+    "test:cli": "npm run build && node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
     "distribute": "bash -o pipefail -c 'python3 distribute.py --all 2>&1 | tee logs.txt'",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
@@ -47,6 +57,7 @@
   },
   "homepage": "https://github.com/NEBULEA-M/evcrate#readme",
   "files": [
+    "dist/**",
     ".evcrate/source/.claude/**",
     ".evcrate/source/.evcrate/bin/**",
     ".evcrate/targets/**",
