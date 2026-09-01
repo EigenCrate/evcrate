@@ -94,6 +94,39 @@ test('projection registry is complete and qualification order is fixed', () => {
   assert.equal(getProjectionAdapter('agy').id, 'antigravity');
   assert.deepEqual([...PROJECTION_QUALIFICATION_ORDER].sort(), [...PROJECTION_REGISTRY_ORDER].sort());
 });
+test('brainstormer model projects through each target contract', () => {
+  const claude = materialize('claude').stage.path;
+  assert.match(readFileSync(join(claude, '.claude/agents/brainstormer.md'), 'utf8'), /^model: opus$/mu);
+
+  const gemini = materialize('gemini').stage.path;
+  assert.match(readFileSync(join(gemini, '.gemini/agents/brainstormer.md'), 'utf8'), /^model: pro$/mu);
+
+  const codex = materialize('codex').stage.path;
+  const codexAgent = readFileSync(join(codex, '.codex/agents/brainstormer.toml'), 'utf8');
+  assert.match(codexAgent, /^model = "gpt-5\.6-sol"$/mu);
+  assert.match(codexAgent, /^model_reasoning_effort = "high"$/mu);
+
+  const omp = materialize('omp').stage.path;
+  assert.match(readFileSync(join(omp, '.omp/agents/brainstormer.md'), 'utf8'), /^model: "@slow"$/mu);
+
+  const pi = materialize('pi').stage.path;
+  const piRoles = JSON.parse(readFileSync(join(pi, '.pi/agent/evcrate/model-roles.json'), 'utf8'));
+  assert.deepEqual(piRoles.agents.brainstormer, { role: 'strong', source: 'canonical-agent-frontmatter' });
+
+  const copilot = materialize('copilot').stage.path;
+  const copilotAudit = JSON.parse(readFileSync(join(copilot, '.copilot/evcrate/agent-tool-audit.json'), 'utf8'));
+  assert.deepEqual(copilotAudit.agents.brainstormer.model, {
+    source: 'opus',
+    target: null,
+    reason: 'Copilot inherits the active model',
+  });
+  assert.equal(copilotAudit.agents.brainstormer.droppedFields.includes('model'), true);
+  assert.doesNotMatch(readFileSync(join(copilot, '.copilot/agents/evcrate-brainstormer.agent.md'), 'utf8'), /^model\s*:/mu);
+
+  const antigravity = materialize('antigravity').stage.path;
+  assert.throws(() => lstatSync(join(antigravity, '.antigravity/agents/brainstormer.md')), { code: 'ENOENT' });
+});
+
 
 test('every target builds only its declared staged roots', () => {
   const expectedRoots = {

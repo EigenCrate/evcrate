@@ -58,6 +58,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 5 | [Target adapters](./phase-05-adapters.md) | Seven projections in confirmed parity order, including distinct OMP/Copilot | DONE — 100% in feature worktree; staging-only; not merged to `main` |
 | 6 | [Registry and imports](./phase-06-registry-and-imports.md) | Manifest/hash-bound registry; policy remains outside resource ownership | DONE — 100% in feature worktree; no publication or cutover claimed |
 | 7 | [Scopes, advisor settings, and CAS](./phase-07-scopes-and-cas.md) | Resource scope state plus dedicated settings revision/token/apply semantics | DONE — 100% in feature worktree; approved; not merged to `main` |
+| 7.1 | [Brainstormer model projection](./phase-07-1-brainstormer-model-projection.md) | Assign the canonical brainstormer strong-tier model and verify target projections | COMPLETE — 100% |
 | 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | Planned |
 | 9 | [DamHopper integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | Planned |
 | 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | Planned |
