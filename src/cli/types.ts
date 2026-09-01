@@ -1,5 +1,6 @@
 import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/advisor-settings.js';
 import type { InvocationContext } from '../context/invocation-context.js';
+import type { ResourceHandler } from '../imports/handler.js';
 import type { ProcessResult, RunBoundedProcessOptions } from './process-runner.js';
 
 export interface CliOutput {
@@ -32,6 +33,7 @@ export interface CliRuntime {
   readonly signalCode?: 130 | 143;
   readonly output?: CliOutput;
   readonly settingsHandler?: AdvisorSettingsHandler;
+  readonly resourceHandler?: ResourceHandler;
   readonly processRunner?: ProcessRunner;
 }
 

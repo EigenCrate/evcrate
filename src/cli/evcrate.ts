@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import '../adapters/index.js';
 import { main } from './main.js';
 import type { CliRuntime } from './types.js';
 

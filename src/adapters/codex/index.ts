@@ -244,6 +244,13 @@ function assertManifest(context: ProjectionBuildContext): void {
 }
 export const codexAdapter: ProjectionAdapter = Object.freeze({
   id: 'codex',
+  compatibility: {
+    skill: { status: 'needsAdapter' },
+    agent: { status: 'needsAdapter' },
+    workflow: { status: 'needsAdapter' },
+    command: { status: 'needsAdapter' },
+    hook: { status: 'needsAdapter' }
+  } as const,
   build(context: ProjectionBuildContext): void {
     assertManifest(context);
     prepareRoots(context);

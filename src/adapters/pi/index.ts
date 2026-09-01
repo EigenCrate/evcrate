@@ -71,4 +71,15 @@ function validate(context: ProjectionBuildContext): ProjectionValidation {
   return validateProjection(context);
 }
 
-export const piAdapter: ProjectionAdapter = Object.freeze({ id: 'pi', build, validate });
+export const piAdapter: ProjectionAdapter = Object.freeze({
+  id: 'pi',
+  compatibility: {
+    skill: { status: 'needsAdapter' },
+    agent: { status: 'needsAdapter' },
+    workflow: { status: 'needsAdapter' },
+    command: { status: 'needsAdapter' },
+    hook: { status: 'needsAdapter' }
+  } as const,
+  build,
+  validate
+});

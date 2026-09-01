@@ -191,6 +191,19 @@ test('promotion commits a staged set or restores the previous complete set', () 
   assert.equal(readFileSync(join(oldA, 'value'), 'utf8'), 'new-a');
   assert.equal(readFileSync(join(next, 'value'), 'utf8'), 'next');
 });
+test('promotion defaults to publication failures when CAS code is omitted', () => {
+  const root = temporaryDirectory();
+  const stage = stagedDirectory(root);
+  const destination = join(root, 'destination');
+  const source = join(stage.path, 'source');
+  mkdirSync(destination); writeFileSync(join(destination, 'value'), 'old');
+  mkdirSync(source); writeFileSync(join(source, 'value'), 'new');
+  assert.throws(() => promoteTransaction([{ source, destination }], {
+    stageRoot: stage, hooks: { beforePromote: () => { throw new Error('default failure'); } }
+  }), code('PUBLICATION_FAILED'));
+  assert.equal(readFileSync(join(destination, 'value'), 'utf8'), 'old');
+  assert.equal(readFileSync(join(source, 'value'), 'utf8'), 'new');
+});
 test('promotion rejects destination and source changes at rename boundaries', () => {
   const root = temporaryDirectory();
   const stage = stagedDirectory(root);

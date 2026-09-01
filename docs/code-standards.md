@@ -1,8 +1,8 @@
 # Code Standards and Codebase Structure
 
-**Last Updated**: 2026-08-31  
+**Last Updated**: 2026-09-01  
 **Applies to**: TypeScript/npm control plane and Python-authoritative distribution  
-**Status**: Phase 4 distribution-safety contracts complete; release remains Unreleased
+**Status**: Phase 6 registry and explicit-import contracts complete; release remains Unreleased
 
 ## Governing principles
 
@@ -28,11 +28,14 @@
 ├── .evcrate/source/{.agents,.codex,.gemini,.antigravity,.omp,.copilot,.pi}/
 │                                  # generated target projections
 ├── .evcrate/targets/              # schema-2 target registry/manifests/overlays
+├── .evcrate/registry.json         # schema-1 canonical resource registry
 ├── src/                           # TypeScript control-plane sources
 │   ├── cli/                       # parse, dispatch, output, runner, bridge
 │   ├── context/                   # immutable path and target context
 │   ├── protocol/                  # JSON and versioned wire contracts
 │   ├── manifests/                 # target and controller authorization
+│   ├── registry/                  # canonical records, scans, revisions
+│   ├── imports/                   # bounded preview/apply and token state
 │   ├── filesystem/                # paths, hashes, atomic I/O, locks
 │   ├── distribution/              # build verification and promotion
 │   ├── advisor-settings/          # policy-file transactions/recovery
@@ -79,8 +82,8 @@ validate and write exactly one result
 exit
 ```
 
-Supported operations are `version`, `health`, `advisor settings
-get|preview|apply`, and `distribute build|check|publish|all|recover`.
+Supported operations are `version`, `resources.list|get`, `imports.preview|apply`,
+`advisor settings get|preview|apply`, and `distribute build|check|publish|all|recover`.
 `--request-file` is one complete bounded versioned envelope and is mutually
 exclusive with positional command construction. JSON mode and non-TTY output
 are canonical JSON; TTY text is derived from that same validated result.
@@ -160,6 +163,78 @@ Patch authorization is explicit and complete:
 3. `keys` are non-empty, unique, strict dotted JSON keys; malformed segments or
    invalid JSON text fail closed.
 
+### Resource registry and explicit-import standards
+
+Keep distribution and resource ownership separate. The schema-2 target manifest
+is authoritative for adapters, output roots, HOME bindings, and promotion policy.
+Its single `resource_roots` map declares exactly `skill`, `agent`, `workflow`,
+`command`, and `hook`. The resolver retains the manifest-derived `resourceRoot`
+assumption: it infers the repository from `.evcrate/targets/manifest.json` and
+resolves those normalized, non-overlapping roots below
+`.evcrate/source/.claude`. Do not imply alternate layouts or arbitrary roots.
+
+The separate `.evcrate/registry.json` is schema 1 and must remain distinct from
+schema-2 target/build manifests. Its exact document shape is
+`schema_version`, `revision`, and `resources`; records use stable
+`kind:canonical-relative-path` IDs, canonical source paths, mode-aware content
+hashes, provenance, all seven persisted-target compatibility entries, detected
+capabilities, optional bounded model metadata, and positive revisions. IDs and
+records are sorted by Unicode code point; duplicate IDs/source paths, stale
+content, malformed records, and empty documents that hide canonical resources
+fail closed.
+
+Canonical scans must use owner-controlled roots, reject symlink/special entries,
+and hash before discovery. Granularity is fixed: skill directories contain
+`SKILL.md`; agents/workflows are root-level Markdown files; commands recurse for
+Markdown files; hooks are root-level files or directories. Bound registry files
+to 4 MiB and 10,000 records; bound canonical traversal to 100,000
+files/directories, 256 MiB, 16 MiB per file, depth 32, and 4 KiB paths. Resource
+queries accept only validated kind/target/status filters, a Unicode code-point
+cursor, and a limit from 1 to 100 (default 50).
+
+Projection adapters must expose an exhaustive five-kind compatibility map. The
+registry requires all seven persisted target IDs and records `native`,
+`needsAdapter`, or `unsupported` (unsupported requires a reason). Selected
+imports fail before projection execution when an adapter is missing or marks the
+resource kind unsupported.
+
+`imports.preview` is the only planning path for an explicit external source.
+Validate source kind, destination, provenance, selected targets, approvals, and
+an expiry of 1–900 seconds (default 300). Read sources into immutable bounded
+descriptors (1,000 files, 64 MiB total, 16 MiB/file, 100,000 directories, depth
+32, 4 KiB/path); reject unsafe ancestors, symlinks/special entries, sensitive
+segments, and group/world-writable modes. Executable bits, script suffixes, or
+shebangs require `script-execution`; hooks require `hook-execution`. Never
+execute imported content.
+
+Preview copies canonical source and materializes the candidate only in
+owner-only stages, validates selected projections, and writes no canonical,
+registry, target-manifest, generated, controller, policy, HOME, or managed
+settings content. Persist only the owner-only 0600, exact-key replay token
+(`<=128 KiB`) under `stateRoot/import-previews`.
+
+Apply must validate the unexpired token, reject replay, bind source hash/identity,
+canonical current/prospective hashes, registry revision/file identity, selected
+targets, target-registry/manifest hashes, adapter/output hashes, destination,
+provenance, approvals, and resource record. Source identity includes
+device/inode/size/mode; registry identity adds digest; complete canonical hashes
+include file and directory modes; promotion snapshots include node kind,
+device/inode/size/mode/digest. Recompute these bindings before each backup and
+promotion rename. Promote canonical source and registry together from one
+same-volume stage under the publication lock, with durable backup/journal
+recovery; consume the token only after success. Identical re-imports are
+`unchanged` and do not advance the registry revision.
+
+| Collision | Required behavior |
+|---|---|
+| No record and no destination node | Create managed node and record. |
+| Same-provenance managed record, matching kind | Replace in staging; report `update` or `unchanged`. |
+| Different provenance, kind mismatch, or stale dependency | Return `CAS_CONFLICT`; preserve the node. |
+| Destination node without a matching managed record | Return `CAS_CONFLICT`; never adopt or delete unmanaged content. |
+
+Generated roots, controller source/runtime, target manifests, advisor policy,
+HOME paths, and managed settings are outside registry/import ownership.
+
 ### Build manifests and controller closure
 
 A build manifest is schema 2 with exactly these top-level fields:
@@ -223,6 +298,9 @@ Node shebang and executable mode. `controller_hashes` must contain exactly the
 - Promotion sources must come from an opaque capability-backed staged root and
   share a volume with the destination parent. The capability records device and
   inode identity; use it only while the exact directory still exists.
+- Resource CAS uses `hashFileWithMode` for files and complete tree hashes for
+  directories; source identity and registry file revisions include device,
+  inode, size, and mode. A mode-only change is not an unchanged resource.
 - Stage cleanup first renames the identity-checked directory to a random
   quarantine name, rechecks ownership/device/inode, then removes it. Never
   recursively remove a replacement directory through a stale path.
@@ -291,16 +369,20 @@ same-UID/path-race window and Linux-first security scope.
 ## Testing and review standards
 
 Tests defend observable boundaries, not implementation trivia. Focused suites
-cover strict parser/manifest contracts, output ownership, controller closure,
-canonical hashes, symlink/owner checks, staged-root identity cleanup, shared
-locks, stale quarantine, promotion CAS/recovery, and advisor policy CAS/recovery.
-Use temporary roots and real filesystem/process behavior; do not weaken checks
-with fake success paths.
+cover strict parser/manifest contracts, resource-root scanning and deterministic
+queries, capability approvals, non-mutating import previews, single-use token
+expiry/replay, managed/unmanaged collisions, source/canonical/manifest/adapter/
+output CAS, output ownership, controller closure, canonical hashes,
+symlink/owner checks, staged-root identity cleanup, shared locks, stale
+quarantine, promotion CAS/recovery, and advisor policy CAS/recovery. Use
+temporary roots and real filesystem/process behavior; do not weaken checks with
+fake success paths.
 
-The completed independent gate passed **110/110**: Phase 4 **29/29**, protocol
-**18/18**, CLI **28/28**, and Python authority **35/35**. Final security review
-approved **9.5/10**. These results are evidence for the current contracts, not
-live qualification or HOME cutover approval.
+Focused implementation evidence records `npm run build` exit 0 and **85/85**
+across the Phase 6 (**23/23**), protocol (**19/19**), Phase 4 (**31/31**),
+and Phase 5 (**12/12**) focused commands. These contract results do not claim
+publication, live cutover, HOME support, Python-free completion, or deployment
+behavior.
 
 ## Documentation and changelog standards
 

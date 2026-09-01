@@ -31,6 +31,13 @@ function build(context: ProjectionBuildContext): void {
 
 export const geminiAdapter: ProjectionAdapter = Object.freeze({
   id: 'gemini',
+  compatibility: {
+    skill: { status: 'needsAdapter' },
+    agent: { status: 'needsAdapter' },
+    workflow: { status: 'needsAdapter' },
+    command: { status: 'needsAdapter' },
+    hook: { status: 'needsAdapter' }
+  } as const,
   build,
   validate: (context: ProjectionBuildContext): ProjectionValidation => (assertManifest(context), validateProjection(context)),
 });

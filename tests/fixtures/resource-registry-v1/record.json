@@ -1,0 +1,18 @@
+{
+  "id": "agent:agents/fixture-agent.md",
+  "kind": "agent",
+  "source_path": "agents/fixture-agent.md",
+  "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "origin": "fixture",
+  "compatibility": {
+    "antigravity": {"status": "needsAdapter"},
+    "claude": {"status": "native"},
+    "codex": {"status": "needsAdapter"},
+    "copilot": {"status": "needsAdapter"},
+    "gemini": {"status": "needsAdapter"},
+    "omp": {"status": "needsAdapter"},
+    "pi": {"status": "needsAdapter"}
+  },
+  "capabilities": [],
+  "revision": 1
+}

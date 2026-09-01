@@ -1,5 +1,12 @@
 {
   "schema_version": 2,
+  "resource_roots": {
+    "agent": "agents",
+    "command": "commands",
+    "hook": "hooks",
+    "skill": "skills",
+    "workflow": "workflows"
+  },
   "targets": {
     "antigravity": "antigravity/manifest.json",
     "claude": "claude/manifest.json",

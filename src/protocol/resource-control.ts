@@ -6,6 +6,7 @@ import {
   rejectCounselFields, safePath, validateOpaque, validateProjectId, validateRequestId,
   RESOURCE_PROTOCOL, PROTOCOL_VERSION, PersistedTarget
 } from './validation.js';
+import { validateResourceRequestPayload, validateResourceResultPayload } from './resource-payloads.js';
 
 export const RESOURCE_OPERATIONS = Object.freeze([
   'version', 'resources.list', 'resources.get', 'imports.preview', 'imports.apply',
@@ -106,7 +107,6 @@ export function validateResourceContext(value: unknown): ResourceContext {
     target: normalizeTarget(source.target)
   };
 }
-
 export function validateResourceRequest(value: unknown): ResourceRequest {
   assertExactKeys(value, REQUEST_KEYS, 'PROTOCOL_INVALID');
   assertResourceSize(value);
@@ -114,17 +114,18 @@ export function validateResourceRequest(value: unknown): ResourceRequest {
   if (request.protocol !== RESOURCE_PROTOCOL || request.protocolVersion !== PROTOCOL_VERSION) {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
+  const operation = validateOperation(request.operation);
   assertSafeBoundedJson(request.payload);
-  rejectCredentialKeys(request.payload);
+  rejectCredentialKeys(request.payload, 'VALIDATION_INVALID', operation === 'imports.apply' ? ['previewToken'] : []);
   rejectCounselFields(request.context);
   rejectCounselFields(request.payload);
   return {
     protocol: RESOURCE_PROTOCOL,
     protocolVersion: PROTOCOL_VERSION,
     requestId: validateRequestId(request.requestId),
-    operation: validateOperation(request.operation),
+    operation,
     context: validateResourceContext(request.context),
-    payload: request.payload as JsonValue
+    payload: validateResourceRequestPayload(operation, request.payload)
   };
 }
 
@@ -179,18 +180,19 @@ export function validateResourceResult(value: unknown): ResourceResult {
   if (result.protocol !== RESOURCE_PROTOCOL || result.protocolVersion !== PROTOCOL_VERSION) {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
+  const operation = validateOperation(result.operation);
   const base = {
     protocol: RESOURCE_PROTOCOL,
     protocolVersion: PROTOCOL_VERSION,
     requestId: validateRequestId(result.requestId),
-    operation: validateOperation(result.operation)
+    operation
   };
   if (SUCCESS_STATUSES.includes(result.status as ResourceSuccessStatus)) {
     assertExactKeys(result, [...RESULT_KEYS, 'payload'], 'PROTOCOL_INVALID');
     assertSafeBoundedJson(result.payload);
-    rejectCredentialKeys(result.payload);
+    rejectCredentialKeys(result.payload, 'VALIDATION_INVALID', operation === 'imports.preview' ? ['token'] : []);
     rejectCounselFields(result.payload);
-    return { ...base, status: result.status as ResourceSuccessStatus, payload: result.payload as JsonValue };
+    return { ...base, status: result.status as ResourceSuccessStatus, payload: validateResourceResultPayload(operation, result.payload) };
   }
   if (result.status === 'recovered') {
     assertExactKeys(result, [...RESULT_KEYS, 'payload', 'recovery'], 'PROTOCOL_INVALID');

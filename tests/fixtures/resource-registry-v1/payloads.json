@@ -1,0 +1,14 @@
+{
+  "list": {"filters": {}, "cursor": null, "limit": 50},
+  "get": {"id": "agent:agents/fixture-agent.md"},
+  "preview": {
+    "sourcePath": "/tmp/fixture-agent.md",
+    "kind": "agent",
+    "destination": "fixture-agent.md",
+    "provenance": "fixture",
+    "selectedTargets": ["claude"],
+    "capabilityApprovals": [],
+    "expiresInSeconds": 300
+  },
+  "apply": {"previewToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+}

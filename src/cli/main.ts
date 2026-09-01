@@ -20,6 +20,8 @@ function commandLabel(invocation: CliInvocation | undefined): string {
     case 'request-file': return 'request-file';
     case 'advisor-settings': return `advisor settings ${invocation.command.operation}`;
     case 'distribute': return `distribute ${invocation.command.action}`;
+    case 'resources': return `resources ${invocation.command.action}`;
+    case 'imports': return `imports ${invocation.command.action}`;
   }
 }
 

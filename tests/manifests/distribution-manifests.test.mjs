@@ -160,3 +160,23 @@ test('build manifest validator rejects unsafe keys and incomplete shape', () => 
   };
   assert.equal(validateBuildManifest(valid).schema_version, 2);
 });
+test('resource roots reject sensitive metadata declarations', () => {
+  const root = temporaryDirectory();
+  const canonical = join(root, '.evcrate', 'source', '.claude');
+  const targetDirectory = join(root, '.evcrate', 'targets', 'claude');
+  mkdirSync(canonical, { recursive: true });
+  for (const name of ['agents', 'commands', 'hooks', 'skills', 'workflows']) mkdirSync(join(canonical, name));
+  mkdirSync(targetDirectory, { recursive: true });
+  writeFileSync(join(targetDirectory, 'manifest.json'), JSON.stringify({
+    schema_version: 2, name: 'claude', adapter: null, adapter_sources: [], output_root: '.claude',
+    additional_roots: [], project_docs: [], patches: [],
+    home_policy: { bindings: { '.claude': '.claude' }, preserve_paths: {}, promotion_order: 1 }
+  }));
+  const registryPath = join(root, '.evcrate', 'targets', 'manifest.json');
+  writeFileSync(registryPath, JSON.stringify({
+    schema_version: 2,
+    resource_roots: { skill: '.git', agent: 'agents', command: 'commands', hook: 'hooks', workflow: 'workflows' },
+    targets: { claude: 'claude/manifest.json' }
+  }));
+  assert.throws(() => loadTargetManifestRegistry(registryPath), code('PROTOCOL_INVALID'));
+});

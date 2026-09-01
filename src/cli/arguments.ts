@@ -9,6 +9,8 @@ export type CliCommand =
   | { readonly kind: 'health' }
   | { readonly kind: 'advisor-settings'; readonly operation: 'get' | 'preview' | 'apply' }
   | { readonly kind: 'distribute'; readonly action: 'build' | 'check' | 'publish' | 'all' | 'recover' }
+  | { readonly kind: 'resources'; readonly action: 'list' | 'get' }
+  | { readonly kind: 'imports'; readonly action: 'preview' | 'apply' }
   | { readonly kind: 'request-file' };
 
 export interface CliOptions {
@@ -18,6 +20,16 @@ export interface CliOptions {
   readonly projectId?: string;
   readonly projectRoot?: string;
   readonly targets: readonly PersistedTarget[];
+  readonly id?: string;
+  readonly kind?: string;
+  readonly importSource?: string;
+  readonly destination?: string;
+  readonly provenance?: string;
+  readonly approveCapabilities: readonly string[];
+  readonly previewToken?: string;
+  readonly expirySeconds?: string;
+  readonly limit?: string;
+  readonly cursor?: string;
   readonly requestFile?: string;
   readonly json: boolean;
   readonly protocolVersion: 1;
@@ -31,9 +43,10 @@ export interface CliInvocation {
 
 const VALUE_OPTIONS = new Set([
   '--source', '--home', '--state-home', '--project-id', '--project-root', '--target',
-  '--request-file', '--protocol-version', '--timeout'
+  '--id', '--kind', '--import-source', '--destination', '--provenance', '--approve-capability',
+  '--preview-token', '--expiry', '--limit', '--cursor', '--request-file', '--protocol-version', '--timeout'
 ]);
-const SCALAR_OPTIONS = new Set([...VALUE_OPTIONS].filter((option) => option !== '--target'));
+const SCALAR_OPTIONS = new Set([...VALUE_OPTIONS].filter((option) => option !== '--target' && option !== '--approve-capability'));
 
 function fail(code: 'USAGE_INVALID' | 'PROTOCOL_INVALID' | 'VALIDATION_INVALID'): never {
   throw new ControlPlaneError(code);
@@ -81,12 +94,21 @@ function commandFromPositionals(positionals: readonly string[], hasRequestFile: 
     && ['build', 'check', 'publish', 'all', 'recover'].includes(positionals[1])) {
     return { kind: 'distribute', action: positionals[1] as 'build' | 'check' | 'publish' | 'all' | 'recover' };
   }
+  if (positionals.length === 2 && positionals[0] === 'resources'
+    && ['list', 'get'].includes(positionals[1])) {
+    return { kind: 'resources', action: positionals[1] as 'list' | 'get' };
+  }
+  if (positionals.length === 2 && positionals[0] === 'imports'
+    && ['preview', 'apply'].includes(positionals[1])) {
+    return { kind: 'imports', action: positionals[1] as 'preview' | 'apply' };
+  }
   fail('USAGE_INVALID');
 }
 
 export function parseArguments(argv: readonly string[]): CliInvocation {
   const positionals: string[] = [];
   const targets: PersistedTarget[] = [];
+  const approvals: string[] = [];
   const values: Record<string, string> = {};
   let json = false;
   const seen = new Set<string>();
@@ -114,6 +136,9 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
       try { target = normalizeTarget(value); } catch { throw new ControlPlaneError('CAPABILITY_UNSUPPORTED'); }
       if (targets.includes(target)) fail('VALIDATION_INVALID');
       targets.push(target);
+    } else if (option === '--approve-capability') {
+      if (approvals.includes(value)) fail('VALIDATION_INVALID');
+      approvals.push(value);
     } else if (option === '--protocol-version') {
       if (protocolInteger(value) !== PROTOCOL_VERSION) fail('PROTOCOL_INVALID');
     } else if (option === '--timeout') {
@@ -132,6 +157,16 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     projectId: values.projectid,
     projectRoot: values.projectroot,
     targets: Object.freeze([...targets]),
+    id: values.id,
+    kind: values.kind,
+    importSource: values.importsource,
+    destination: values.destination,
+    provenance: values.provenance,
+    approveCapabilities: Object.freeze([...approvals]),
+    previewToken: values.previewtoken,
+    expirySeconds: values.expiry,
+    limit: values.limit,
+    cursor: values.cursor,
     requestFile: values.requestfile,
     json,
     protocolVersion: 1,

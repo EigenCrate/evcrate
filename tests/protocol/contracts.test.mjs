@@ -7,7 +7,8 @@ import {
   validateAdvisorPolicy, validateAdvisorSettingsRequest, validateAdvisorSettingsResult,
   validateSettingsMode, canonicalAdvisorPolicyDigest, bindPreviewMetadata,
   createSettingsGetResult, createSettingsApplyResult, createSettingsConflictResult,
-  createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest
+  createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest,
+  validateResourceRequestPayload, validateResourceResultPayload
 } from '../../dist/protocol/index.js';
 import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
 
@@ -20,6 +21,9 @@ const contractFixtures = JSON.parse(readFileSync(
 ));
 const negativeProxyFixtures = JSON.parse(readFileSync(
   new URL('../fixtures/control-plane-v1/negative-proxy.json', import.meta.url), 'utf8'
+));
+const resourceV1Fixtures = JSON.parse(readFileSync(
+  new URL('../fixtures/resource-registry-v1/payloads.json', import.meta.url), 'utf8'
 ));
 
 test('canonical JSON sorts objects, preserves arrays, omits undefined object fields', () => {
@@ -80,6 +84,24 @@ test('contract fixtures cover all persisted targets and result states', () => {
   }
   assert.deepEqual(validateDiagnosticResult(contractFixtures.diagnosticResult), contractFixtures.diagnosticResult);
 });
+test('Phase 6 payload fixtures preserve exact request and token contracts', () => {
+  for (const [operation, payload] of [
+    ['resources.list', resourceV1Fixtures.list],
+    ['resources.get', resourceV1Fixtures.get],
+    ['imports.preview', resourceV1Fixtures.preview],
+    ['imports.apply', resourceV1Fixtures.apply]
+  ]) {
+    assert.deepEqual(validateResourceRequestPayload(operation, payload), payload);
+  }
+  assert.throws(() => validateResourceRequestPayload('resources.list', { ...resourceV1Fixtures.list, extra: true }));
+  assert.throws(() => validateResourceRequestPayload('imports.apply', { previewToken: 'opaque-token' }));
+  assert.throws(() => validateResourceRequestPayload('imports.preview', {
+    ...resourceV1Fixtures.preview, destination: 'a'.repeat(4097)
+  }));
+  const preview = contractFixtures.resourceResults.find(({ operation }) => operation === 'imports.preview');
+  assert.ok(preview);
+  assert.deepEqual(validateResourceResultPayload('imports.preview', preview.payload), preview.payload);
+});
 
 test('proxy fixture matrix rejects counsel fields in every control-plane family', () => {
   for (const request of negativeProxyFixtures.resource) assert.throws(() => validateResourceRequest(request));
@@ -107,7 +129,7 @@ test('stable exit bands and mutation boundaries stay explicit', () => {
 });
 
 test('resource context and exact envelope reject counsel proxy fields', () => {
-  const request = createResourceRequest('r2', 'resources.list', { ...context, target: 'omp' }, {});
+  const request = createResourceRequest('r2', 'resources.list', { ...context, target: 'omp' }, { filters: {}, cursor: null, limit: 50 });
   assert.equal(request.context.target, 'omp');
   assert.throws(() => validateResourceRequest({ ...request, question: 'counsel' }));
   assert.throws(() => validateResourceRequest({ ...request, payload: { backend: 'codex' } }));

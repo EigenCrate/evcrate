@@ -15,3 +15,6 @@ export * from './filesystem/index.js';
 export * from './manifests/index.js';
 export * from './advisor-settings/index.js';
 export * from './distribution/index.js';
+export * from './registry/index.js';
+export * from './imports/index.js';
+export * from './adapters/index.js';
