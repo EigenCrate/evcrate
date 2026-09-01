@@ -8,16 +8,18 @@ import {
 } from '../protocol/advisor-settings.js';
 import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/advisor-settings.js';
 import { createDiagnosticRequest, validateDiagnosticRequest } from '../protocol/diagnostic.js';
-import { validateResourceRequest } from '../protocol/resource-control.js';
-import type { ResourceRequest, ResourceResult } from '../protocol/resource-control.js';
+import { createResourceRequest, validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
 import { PROTOCOL_VERSION } from '../protocol/validation.js';
-import type { InvocationContext } from '../context/invocation-context.js';
+import type { ResourceContext, ResourceRequest, ResourceResult } from '../protocol/resource-control.js';
 import type { JsonValue } from '../protocol/json.js';
+import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
 import { runCompatibilityDistribution } from './compatibility-distribution.js';
 import { runHealth } from './health.js';
 import { exitCodeForResult } from './output.js';
 import type { CliResult } from './output.js';
+import { createResourceHandler, defaultResourceHandler } from '../imports/handler.js';
+import type { ResourceHandler } from '../imports/handler.js';
 import type { CliRuntime, AdvisorSettingsHandler } from './types.js';
 
 export interface DispatchOutcome {
@@ -69,7 +71,6 @@ function resourceError(request: ResourceRequest, error: unknown): ResourceResult
     error: serializeControlPlaneError(error)
   };
 }
-
 function assertResourceContext(request: ResourceRequest, context: InvocationContext): void {
   const target = context.selectedTargets.find(({ id }) => id === request.context.target);
   if (!target || target.manifestPath !== request.context.targetManifestPath
@@ -78,10 +79,48 @@ function assertResourceContext(request: ResourceRequest, context: InvocationCont
     || request.context.canonicalSourceRoot !== context.canonicalSourceRoot
     || request.context.stateRoot !== context.stateRoot
     || request.context.projectRoot !== context.projectRoot
-    || context.projectId === null
-    || request.context.projectId !== context.projectId) {
+    || (context.projectId === null ? request.context.projectId !== 'global' : request.context.projectId !== context.projectId)) {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
+}
+function numericOption(value: string | undefined, fallback: number, maximum: number): number {
+  if (value === undefined) return fallback;
+  if (!/^\d+$/u.test(value)) throw new ControlPlaneError('VALIDATION_INVALID');
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > maximum) throw new ControlPlaneError('VALIDATION_INVALID');
+  return parsed;
+}
+function resourceContext(context: InvocationContext): ResourceContext {
+  const targetId = context.selectedTargetIds[0];
+  const target = context.selectedTargets[0];
+  if (!targetId || !target) throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
+  return {
+    canonicalSourceRoot: context.canonicalSourceRoot, targetManifestPath: target.manifestPath,
+    generatedRoot: target.generatedRoots[0], homeRoot: target.homeBindings[0]?.homeRoot ?? context.homeRoot,
+    stateRoot: context.stateRoot, projectId: context.projectId ?? 'global', projectRoot: context.projectRoot, target: targetId
+  };
+}
+function cliResourceRequest(requestId: string, invocation: CliInvocation, context: InvocationContext): ResourceRequest {
+  const options = invocation.options;
+  const envelope = resourceContext(context);
+  if (invocation.command.kind === 'resources' && invocation.command.action === 'list') {
+    return createResourceRequest(requestId, 'resources.list', envelope, {
+      filters: options.kind === undefined ? {} : { kind: options.kind },
+      cursor: options.cursor ?? null, limit: numericOption(options.limit, 50, 100)
+    });
+  }
+  if (invocation.command.kind === 'resources') {
+    return createResourceRequest(requestId, 'resources.get', envelope, { id: options.id ?? '' });
+  }
+  if (invocation.command.kind === 'imports' && invocation.command.action === 'preview') {
+    return createResourceRequest(requestId, 'imports.preview', envelope, {
+      sourcePath: options.importSource ?? '', kind: options.kind ?? '', destination: options.destination ?? '',
+      provenance: options.provenance ?? '', selectedTargets: [...context.selectedTargetIds],
+      capabilityApprovals: [...options.approveCapabilities],
+      expiresInSeconds: numericOption(options.expirySeconds, 300, 900)
+    });
+  }
+  return createResourceRequest(requestId, 'imports.apply', envelope, { previewToken: options.previewToken ?? '' });
 }
 
 async function settingsResult(
@@ -120,12 +159,23 @@ async function dispatchRequest(
   if (request.protocol === 'evcrate-resource-control') {
     const resourceRequest = validateResourceRequest(request);
     assertResourceContext(resourceRequest, context);
-    if (resourceRequest.operation !== 'version') {
-      const result = resourceError(resourceRequest, new ControlPlaneError('CAPABILITY_UNSUPPORTED'));
+    if (resourceRequest.operation === 'version') {
+      const result = versionResult(resourceRequest.requestId, version(context, runtime));
+      return { result, exitCode: 0 };
+    }
+    const handler: ResourceHandler = runtime.resourceHandler
+      ?? (runtime.now === undefined ? defaultResourceHandler : createResourceHandler({ now: runtime.now }));
+    try {
+      const handled = await handler.handle(resourceRequest, context);
+      const result = validateResourceResult(handled);
+      if (result.requestId !== resourceRequest.requestId || result.operation !== resourceRequest.operation) {
+        throw new ControlPlaneError('PROTOCOL_INVALID');
+      }
+      return { result, exitCode: exitCodeForResult(result) };
+    } catch (error) {
+      const result = resourceError(resourceRequest, error);
       return { result, exitCode: exitCodeForResult(result) };
     }
-    const result = versionResult(resourceRequest.requestId, version(context, runtime));
-    return { result, exitCode: 0 };
   }
   throw new ControlPlaneError('PROTOCOL_INVALID');
 }
@@ -166,6 +216,11 @@ export async function dispatchInvocation(
         ...runtime, requestId: () => requestId
       });
       return { result, exitCode: exitCodeForResult(result) };
+    }
+    case 'resources':
+    case 'imports': {
+      const requestValue = cliResourceRequest(requestId, invocation, context);
+      return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
     }
   }
 }

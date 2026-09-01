@@ -40,4 +40,15 @@ function build(context: ProjectionBuildContext): void {
   buildInventory(context, commandMap, skills, agents, hooks, styles, workflows, support);
 }
 function validate(context: ProjectionBuildContext): ProjectionValidation { assertManifest(context); return validateProjection(context); }
-export const copilotAdapter: ProjectionAdapter = Object.freeze({ id: 'copilot', build, validate });
+export const copilotAdapter: ProjectionAdapter = Object.freeze({
+  id: 'copilot',
+  compatibility: {
+    skill: { status: 'needsAdapter' },
+    agent: { status: 'needsAdapter' },
+    workflow: { status: 'needsAdapter' },
+    command: { status: 'needsAdapter' },
+    hook: { status: 'needsAdapter' }
+  } as const,
+  build,
+  validate
+});

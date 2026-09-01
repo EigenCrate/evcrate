@@ -67,6 +67,14 @@ export function hashFile(path: string): string {
     closeSync(descriptor);
   }
 }
+export function hashFileWithMode(path: string): string {
+  const initial = assertRegularFile(path);
+  const digest = hashFile(path);
+  const final = assertRegularFile(path);
+  if (Number(initial.dev) !== Number(final.dev) || Number(initial.ino) !== Number(final.ino)
+    || Number(initial.size) !== Number(final.size) || (Number(initial.mode) & 0o777) !== (Number(final.mode) & 0o777)) unsafe();
+  return hashBytes(new TextEncoder().encode(`f\0${Number(initial.mode) & 0o777}\0${digest}\n`));
+}
 export function readBoundedFile(path: string, maxBytes: number): Uint8Array {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new RangeError('Invalid byte limit');
   assertNoSymlinkAncestors(path);
@@ -93,7 +101,7 @@ export function readBoundedFile(path: string, maxBytes: number): Uint8Array {
   }
 }
 
-function comparePaths(left: string, right: string): number {
+export function compareCanonicalPaths(left: string, right: string): number {
   const leftPoints = Array.from(left, (value) => value.codePointAt(0) as number);
   const rightPoints = Array.from(right, (value) => value.codePointAt(0) as number);
   for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
@@ -113,7 +121,7 @@ function collectTree(root: string, sourceMode: boolean): string[] {
   assertRealDirectory(root);
   const records: Array<{ path: string; value: string }> = [];
   const visit = (directory: string): void => {
-    const entries = readdirSync(directory, { withFileTypes: true }).sort((left, right) => comparePaths(left.name, right.name));
+    const entries = readdirSync(directory, { withFileTypes: true }).sort((left, right) => compareCanonicalPaths(left.name, right.name));
     for (const entry of entries) {
       const path = join(directory, entry.name);
       const relativePath = relative(root, path).split('\\').join('/');
@@ -130,7 +138,7 @@ function collectTree(root: string, sourceMode: boolean): string[] {
     }
   };
   visit(root);
-  return records.sort((left, right) => comparePaths(left.path, right.path)).map(({ value }) => value);
+  return records.sort((left, right) => compareCanonicalPaths(left.path, right.path)).map(({ value }) => value);
 }
 
 export function treeHash(root: string): string {
@@ -139,5 +147,44 @@ export function treeHash(root: string): string {
 
 export function sourceTreeHash(root: string): string {
   return hashRecords(collectTree(root, true));
+}
+export interface CompleteTreeHashLimits {
+  readonly maxFiles: number; readonly maxDirectories: number; readonly maxBytes: number;
+  readonly maxFileBytes: number; readonly maxDepth: number; readonly maxPathBytes: number;
+}
+export const COMPLETE_TREE_HASH_LIMITS: CompleteTreeHashLimits = Object.freeze({
+  maxFiles: 100_000, maxDirectories: 100_000, maxBytes: 256 * 1024 * 1024,
+  maxFileBytes: 16 * 1024 * 1024, maxDepth: 32, maxPathBytes: 4096
+});
+export function completeTreeHash(root: string, limits: CompleteTreeHashLimits = COMPLETE_TREE_HASH_LIMITS): string {
+  assertNoSymlinkAncestors(root);
+  const rootStat = assertRealDirectory(root);
+  let files = 0; let directories = 1; let bytes = 0;
+  const records: Array<{ path: string; value: string }> = [{ path: '', value: `d\0\0${Number(rootStat.mode) & 0o777}\n` }];
+  const visit = (directory: string, depth: number): void => {
+    if (depth > limits.maxDepth) unsafe();
+    let entries;
+    try { entries = readdirSync(directory, { withFileTypes: true }).sort((left, right) => compareCanonicalPaths(left.name, right.name)); }
+    catch { unsafe(); }
+    for (const entry of entries) {
+      const path = join(directory, entry.name);
+      const relativePath = normalizeRelativePath(relative(root, path).split('\\').join('/'));
+      if (Buffer.byteLength(relativePath, 'utf8') > limits.maxPathBytes) unsafe();
+      const stat = lstatSync(path);
+      if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) unsafe();
+      if (stat.isDirectory()) {
+        if (++directories > limits.maxDirectories) unsafe();
+        records.push({ path: relativePath, value: `d\0${relativePath}\0${Number(stat.mode) & 0o777}\n` });
+        visit(path, depth + 1);
+      } else {
+        const size = Number(stat.size);
+        if (++files > limits.maxFiles || size > limits.maxFileBytes || bytes > limits.maxBytes - size) unsafe();
+        bytes += size;
+        records.push({ path: relativePath, value: `f\0${relativePath}\0${hashFileWithMode(path)}\n` });
+      }
+    }
+  };
+  visit(root, 0);
+  return hashRecords(records.sort((left, right) => compareCanonicalPaths(left.path, right.path)).map(({ value }) => value));
 }
 

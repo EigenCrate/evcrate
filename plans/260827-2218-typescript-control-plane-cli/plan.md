@@ -56,7 +56,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 3 | [CLI foundation](./phase-03-typescript-cli-foundation.md) | One-shot shell with health/settings exposure; controller logic stays CommonJS | DONE — 100% in feature worktree; not merged to `main` |
 | 4 | [Distribution primitives](./phase-04-distribution-primitives.md) | Schema-2 safety, controller authorization, and bounded policy-file primitives | DONE — 100% in feature worktree; not merged to `main` |
 | 5 | [Target adapters](./phase-05-adapters.md) | Seven projections in confirmed parity order, including distinct OMP/Copilot | DONE — 100% in feature worktree; staging-only; not merged to `main` |
-| 6 | [Registry and imports](./phase-06-registry-and-imports.md) | Manifest/hash-bound registry; policy remains outside resource ownership | Planned |
+| 6 | [Registry and imports](./phase-06-registry-and-imports.md) | Manifest/hash-bound registry; policy remains outside resource ownership | DONE — 100% in feature worktree; no publication or cutover claimed |
 | 7 | [Scopes, models, CAS](./phase-07-scopes-models-and-cas.md) | Resource state plus dedicated settings revision/token/apply semantics | Planned |
 | 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | Planned |
 | 9 | [DamHopper integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | Planned |
@@ -116,6 +116,31 @@ HOME publication, and recovery until each target's later cutover gate; no
 Python-free runtime, HOME publication, live qualification, or `main` merge is
 claimed.
 
+## Phase 6 completion evidence
+
+**Status:** DONE | **Progress:** 100% in the linked feature worktree
+
+Phase 6 implements the manifest-derived canonical `resource_roots` contract,
+the separate deterministic schema-v1 `.evcrate/registry.json`, bounded
+`resources list|get`, and explicit `imports.preview|apply`. Registry records
+preserve provenance, content hashes, capabilities, all seven persisted target
+compatibility statuses, and revisions without copying target/HOME policy.
+Preview/apply bind source, registry, canonical, manifest, adapter, and
+projected-output hashes; hook/script capabilities require explicit approval and
+imports remain inert. Apply promotes canonical source and registry together
+under CAS; generated projections, controller files, advisor policy, target
+manifests, HOME paths, and managed settings remain outside registry/import
+ownership.
+
+Recorded focused verification: `npm run build` exited 0; `npm run test:phase6`
+passed **23/23**; `npm run test:protocol` passed **19/19**; `npm run test:phase4`
+passed **31/31**; `npm run test:phase5` passed **12/12**. Aggregate focused
+evidence: **85/85**. Publication, live cutover, HOME support, Python-free
+completion, and deployment behavior are not claimed. Review residuals are
+limited to the documented low same-UID/path-race window and Linux-first
+security scope.
+
+The overall plan remains `in_progress` because Phases 7–11 are still planned.
 
 ## Phase 1 evidence preserved
 

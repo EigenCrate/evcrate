@@ -496,6 +496,13 @@ ${body}`;
 }
 export const antigravityAdapter: ProjectionAdapter = Object.freeze({
   id: 'antigravity',
+  compatibility: {
+    skill: { status: 'needsAdapter' },
+    agent: { status: 'needsAdapter' },
+    workflow: { status: 'needsAdapter' },
+    command: { status: 'needsAdapter' },
+    hook: { status: 'needsAdapter' }
+  } as const,
   build,
   validate(context: ProjectionBuildContext): ProjectionValidation { assertManifest(context); return validateProjection(context); }
 });

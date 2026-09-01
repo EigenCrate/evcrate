@@ -1,23 +1,25 @@
 # Codebase Summary
 
 **Last Updated**: 2026-09-01  
-**Status**: Phase 5 target projection adapters complete (staging-only); release remains Unreleased  
+**Status**: Phase 6 registry and explicit-import contracts complete (canonical-only); release remains Unreleased
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
 
 EVCrate is a multi-target CLI coding-agent distribution repository. Canonical
 Claude resources are projected into target trees and, when explicitly requested,
-published into a user HOME. The TypeScript control-plane CLI provides typed,
-bounded command and filesystem primitives. The existing Python distribution
-engine remains the authority for `build`, `check`, `publish`, `all`, and `recover`;
-TypeScript invokes that engine rather than replacing it.
+published into a user HOME by the existing Python distribution authority. The
+TypeScript control-plane CLI provides typed, bounded command, protocol, registry,
+import, and filesystem primitives; it invokes that authority rather than
+replacing it.
 
-Phase 4 adds distribution authorization and transaction primitives to the
-TypeScript package. Phase 5 adds seven target projection adapters that build
-only isolated staging roots and compare output with current Python references.
-The implementation does **not** claim Python-free distribution parity, Windows
-security equivalence, live installed-CLI qualification, or a live HOME cutover.
+Phase 4 adds distribution authorization and transaction primitives. Phase 5 adds
+seven target projection adapters that build isolated staging roots and compare
+output with Python references. Phase 6 adds a schema-v1 canonical resource
+registry and explicit import preview/apply transaction. The implementation does
+not claim publication or live cutover, HOME support for imports, Python-free
+completion, Windows security equivalence, live installed-CLI qualification, or
+unverified deployment behavior.
 
 ## Repository map
 
@@ -28,7 +30,8 @@ security equivalence, live installed-CLI qualification, or a live HOME cutover.
 │   ├── source/.evcrate/bin/            # sole authored advisor-controller source
 │   ├── source/{.agents,.codex,.gemini,
 │   │           .antigravity,.omp,.copilot,.pi}/  # generated projections
-│   ├── targets/manifest.json            # schema-2 target registry
+│   ├── targets/manifest.json            # schema-2 target registry and roots
+│   ├── registry.json                    # schema-1 canonical resource registry
 │   └── build-manifest*.json             # verified build metadata
 ├── src/                                 # TypeScript/npm control plane
 │   ├── cli/                             # one-shot CLI, bridge, runner, output
@@ -39,6 +42,8 @@ security equivalence, live installed-CLI qualification, or a live HOME cutover.
 │   ├── distribution/                     # build verification and promotion
 │   ├── advisor-settings/                 # policy-file staging, CAS, recovery
 │   ├── adapters/                         # staging-only target projections
+│   ├── registry/                        # resource records, scans, revisions
+│   ├── imports/                         # bounded preview/apply and token state
 │   └── errors/                           # stable error serialization and exits
 ├── distribution/                         # Python-authoritative distribution engine
 ├── copilot_adapter/                      # staging-only Copilot projection
@@ -63,12 +68,14 @@ controller authority and is not hand-edited.
 |---|---|
 | `src/cli/` | Parse one invocation, load one bounded request file, resolve context, dispatch one operation, render one validated result, and exit. Child processes use fixed argv, `shell: false`, bounded streams, and cleanup. |
 | `src/context/` | Resolve package-owned roots and the schema-2 registry; normalize target aliases (`agy` is input-only) and reject unsafe/symlinked paths. |
-| `src/protocol/` | Parse bounded JSON; provide Python-compatible canonical JSON and SHA-256 policy digests; validate resource, diagnostic, advisor-settings, and error envelopes. |
-| `src/manifests/` | Load target declarations, enforce source/adapter/patch/path policy, check set-level output ownership, and validate the exact advisor-controller inventory and import closure. |
-| `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, deterministic tree hashes, atomic files, capability-backed staged roots, and interoperable locks. |
+| `src/protocol/` | Parse bounded JSON; provide Python-compatible canonical JSON and SHA-256 policy digests; validate resource/import payloads, versioned envelopes, advisor settings, diagnostics, and errors. |
+| `src/manifests/` | Load target declarations and manifest-derived resource roots; enforce source/adapter/patch/path policy, check set-level output ownership, and validate the exact advisor-controller inventory and import closure. |
+| `src/registry/` | Scan declared canonical resource roots, validate schema-v1 records, derive seven-target compatibility/capabilities, verify revisions and hashes, and serve bounded deterministic list/get queries. |
+| `src/imports/` | Read bounded external source descriptors, require capability approvals, stage non-mutating previews, persist owner-only single-use tokens, hash selected projections, and atomically apply canonical source plus registry under CAS. |
+| `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, mode-aware complete tree hashes, atomic I/O, capability-backed staged roots, and interoperable locks. |
 | `src/distribution/` | Validate schema-2 build manifests and output/controller hashes; promote staged roots with durable journals, snapshots, pre-rename CAS, and recovery. |
-| `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, source/destination CAS, durable journal recovery, and identity-checked cleanup. |
-| `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; enforce declared staging roots and target-specific transforms. |
+| `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, CAS, recovery, and identity-checked cleanup; policy remains outside the resource registry/import contract. |
+| `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; expose exhaustive five-kind compatibility and enforce declared staging roots. |
 
 ## Phase 4 distribution authorization
 
@@ -149,6 +156,91 @@ mode/symlink/special outputs, and controller markers. `npm run test:phase5`
 passed with a clean build and **12/12** tests; this is staging/parity evidence
 only, not HOME publication or live qualification.
 
+## Phase 6 registry and explicit imports
+
+### Registry authority and manifest roots
+
+The schema-2 target manifest remains distribution authority. Its single
+`resource_roots` map declares exactly five canonical roots: `skill`, `agent`,
+`workflow`, `command`, and `hook`. The resolver keeps the manifest-derived
+`resourceRoot` assumption: it reads `.evcrate/targets/manifest.json`, infers the
+repository from that path, and resolves normalized non-overlapping roots below
+`.evcrate/source/.claude`. Alternate layouts and arbitrary roots are not implied.
+
+`.evcrate/registry.json` is a separate schema-v1 document, distinct from the
+schema-2 target/build manifests. It contains a revision and code-point-sorted
+records with `kind:canonical-relative-path` IDs, source paths, mode-aware content
+hashes, provenance, seven-target compatibility, detected capabilities, optional
+model metadata, and per-record revisions. It never duplicates target manifests,
+output/HOME bindings, controller files, or advisor policy.
+
+### Bounded deterministic scanning and queries
+
+Canonical scanning requires owner-controlled real roots, hashes the tree before
+discovery, rejects symlinks/special entries, and excludes sensitive path segments
+from resource discovery. Granularity is fixed: skill directories must contain
+`SKILL.md`; agents/workflows are root-level Markdown files; commands recurse for
+Markdown files; hooks are root-level files or directories. Registry documents are
+bounded to 4 MiB and 10,000 records. Canonical traversal is bounded to 100,000
+files/directories, 256 MiB total, 16 MiB per file, depth 32, and 4 KiB paths.
+Entries and IDs use Unicode code-point order.
+
+`resources.list` validates kind/target/status filters, a code-point cursor, and a
+limit of 1–100 (default 50). `resources.get` resolves one validated ID. Loading
+rescans canonical roots and compares content, capabilities, compatibility, and
+ownership; stale documents, duplicate ownership, and an empty registry hiding
+existing canonical content fail closed.
+
+Projection adapters provide the compatibility map. The registry requires all
+seven persisted target IDs and records `native`, `needsAdapter`, or
+`unsupported` (with a reason). Missing adapters and unsupported selected target
+capabilities fail before projection execution.
+
+### Explicit import lifecycle
+
+`imports.preview` accepts a source path, one resource kind, destination,
+provenance, selected targets, capability approvals, and a 1–900 second expiry
+(default 300). Source descriptors reject unsafe ancestors, symlinks/special
+entries, sensitive paths, and group/world-writable modes. Traversal is bounded to
+1,000 files, 64 MiB total, 16 MiB per file, 100,000 directories, depth 32, and
+4 KiB per path. Executable bits, script suffixes, or shebangs require
+`script-execution`; every hook requires `hook-execution`. Content is classified
+but never executed.
+
+Preview copies canonical source into an owner-only stage, materializes the
+candidate, rescans it, and runs selected adapters in separate temporary stages.
+It does not mutate canonical source, the registry, target manifests, generated
+projections, controller files, advisor policy, HOME, or managed settings. It
+persists only an owner-only (0600) single-use replay token under
+`stateRoot/import-previews`; the canonical token record is exact-key and bounded
+to 128 KiB.
+
+Apply validates that token and expiry, rejects replay, and recomputes source
+hash/identity, canonical current/prospective hashes, registry revision/file
+identity, selected targets, target-registry and target-manifest hashes, adapter
+hashes, projection output hashes, destination, provenance, approvals, and the
+resource record. Source identity includes device/inode/size/mode; registry file
+identity includes digest plus those fields; complete canonical hashes include
+file and directory modes; promotion snapshots include kind, device/inode, size,
+mode, and digest. Mode-only changes therefore conflict.
+
+For create/update, canonical source and `.evcrate/registry.json` are promoted
+from the same-volume stage as one lock-protected transaction with durable
+backup/journal state and CAS checks before each backup/promotion rename. The
+preview token is consumed only after success. Identical re-imports return
+`unchanged` and preserve the registry revision.
+
+| Destination state | Contract |
+|---|---|
+| No record and no node | Create the managed node and record. |
+| Same-provenance managed record, matching kind | Replace in staging; `update` or `unchanged`. |
+| Different provenance, kind mismatch, or changed dependency | `CAS_CONFLICT`; preserve the node. |
+| Node with no matching managed record | `CAS_CONFLICT`; never adopt or delete unmanaged content. |
+
+Generated roots, controller source/runtime, target manifests, advisor policy,
+HOME paths, and managed settings are excluded import sources/destinations.
+
+
 ## Canonical JSON and hashing
 
 The TypeScript serializer follows the Python authority for supported values:
@@ -216,11 +308,14 @@ fallback, or claim Python-free parity. CommonJS package exports retain both the
 
 ## Evidence and limitations
 
-Independent validation passed **110/110**: Phase 4 **29/29**, protocol **18/18**,
-CLI **28/28**, and Python-authority **35/35**. The Phase 5 adapter gate passed
-**12/12** after a clean build. Final security review approved **9.5/10**.
-Residuals are the documented low same-UID/path-race window and Linux-first
-security scope. Live vendor qualification and HOME cutover remain
+Focused implementation evidence records `npm run build` exit 0 and **85/85**
+across the Phase 6 (**23/23**), protocol (**19/19**), Phase 4 (**31/31**),
+and Phase 5 (**12/12**) focused commands. These contract results do not claim
+publication, live cutover, HOME support, Python-free completion, or deployment
+behavior.
+
+Residuals remain the low same-UID/path-race window and Linux-first security
+scope. Live vendor qualification and any publication/cutover remain
 operator-controlled and unclaimed.
 
 ## Related documentation
@@ -236,6 +331,6 @@ operator-controlled and unclaimed.
 ## Compaction record
 
 A temporary Repomix XML compaction was generated on 2026-09-01 using the
-repository's configured exclusions. Repomix reported **2,558 files**,
-**8,720,037 tokens**, and **32,880,702 characters**. The compaction was used as
+repository's configured exclusions. Repomix reported **2,573 files**,
+**8,764,045 tokens**, and **33,054,904 characters**. The compaction was used as
 analysis input and is not retained as a repository deliverable.

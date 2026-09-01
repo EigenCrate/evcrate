@@ -42,4 +42,15 @@ function build(context: ProjectionBuildContext): void {
   });
 }
 function validate(context: ProjectionBuildContext): ProjectionValidation { assertManifest(context); return validateProjection(context); }
-export const ompAdapter: ProjectionAdapter = Object.freeze({ id: 'omp', build, validate });
+export const ompAdapter: ProjectionAdapter = Object.freeze({
+  id: 'omp',
+  compatibility: {
+    skill: { status: 'needsAdapter' },
+    agent: { status: 'needsAdapter' },
+    workflow: { status: 'needsAdapter' },
+    command: { status: 'needsAdapter' },
+    hook: { status: 'needsAdapter' }
+  } as const,
+  build,
+  validate
+});

@@ -8,6 +8,7 @@ import {
 import {
   HomeBinding, loadSelectedTargets, loadTargetRegistry, TargetManifestContext
 } from './target-registry.js';
+import type { ResourceRootMap } from '../manifests/types.js';
 import type { PersistedTarget } from '../protocol/validation.js';
 
 export interface InvocationContextOptions extends HomePathOptions {
@@ -35,6 +36,7 @@ export interface InvocationContext {
   readonly canonicalSourceRoot: string;
   readonly controllerRoot: string;
   readonly registryPath: string;
+  readonly resourceRoots: ResourceRootMap;
   readonly selectedTargets: readonly SelectedTargetContext[];
   readonly selectedTargetIds: readonly PersistedTarget[];
   readonly targetManifestPaths: readonly string[];
@@ -102,6 +104,7 @@ export function resolveInvocationContext(options: InvocationContextOptions = {})
     canonicalSourceRoot: canonicalHarnessRoot,
     controllerRoot,
     registryPath,
+    resourceRoots: registry.resourceRoots,
     selectedTargets: Object.freeze(selectedTargets),
     selectedTargetIds: Object.freeze(selectedTargets.map(({ id }) => id)),
     targetManifestPaths: Object.freeze(selectedTargets.map(({ manifestPath }) => manifestPath)),

@@ -195,6 +195,13 @@ function buildClaude(context: ProjectionBuildContext): void {
 
 export const claudeAdapter: ProjectionAdapter = Object.freeze({
   id: 'claude',
+  compatibility: {
+    skill: { status: 'native' },
+    agent: { status: 'native' },
+    workflow: { status: 'native' },
+    command: { status: 'native' },
+    hook: { status: 'native' }
+  } as const,
   build: buildClaude,
   validate: validateClaude
 });

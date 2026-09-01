@@ -3,8 +3,8 @@ import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js
 import {
   loadSelectedManifests, loadTargetManifestRegistry
 } from '../manifests/registry.js';
+import type { ResourceRootMap } from '../manifests/types.js';
 import type { TargetManifest } from '../manifests/types.js';
-
 export interface HomeBinding {
   readonly localRoot: string;
   readonly homeRoot: string;
@@ -20,6 +20,7 @@ export interface TargetManifestContext extends Omit<TargetManifest, 'id' | 'shar
 export interface TargetRegistry {
   readonly registryPath: string;
   readonly targets: ReadonlyMap<PersistedTarget, TargetManifestContext>;
+  readonly resourceRoots: ResourceRootMap;
 }
 
 function contextManifest(manifest: TargetManifest, id = manifest.id as PersistedTarget): TargetManifestContext {
@@ -46,7 +47,7 @@ export function loadTargetRegistry(registryPath: string): TargetRegistry {
   const registry = loadTargetManifestRegistry(registryPath);
   const targets = new Map<PersistedTarget, TargetManifestContext>();
   for (const [id, manifest] of registry.targets) targets.set(id, contextManifest(manifest));
-  return Object.freeze({ registryPath, targets });
+  return Object.freeze({ registryPath, targets, resourceRoots: registry.resourceRoots });
 }
 
 export function loadSelectedTargets(

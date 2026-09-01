@@ -1,12 +1,13 @@
 import { lstatSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
-import { assertNoSymlinkAncestors, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
+import { isSensitivePathSegment } from '../protocol/resource-payload-validation.js';
+import { assertNoSymlinkAncestors, assertRealDirectory, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
 import { canonicalJsonBytes, hashBytes, hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
 import { loadTargetManifest } from './manifest.js';
-import type { BuildManifest, TargetManifest, TargetManifestRegistry } from './types.js';
+import { RESOURCE_KINDS, type BuildManifest, type ResourceKind, type ResourceRootMap, type TargetManifest, type TargetManifestRegistry } from './types.js';
 import { ADVISOR_CONTROLLER_FILES, controllerHashes } from './controller.js';
 function invalid(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' | 'CAPABILITY_UNSUPPORTED' = 'PROTOCOL_INVALID'): never {
   throw new ControlPlaneError(code);
@@ -21,6 +22,27 @@ function readObject(path: string): Record<string, unknown> {
     if (error instanceof ControlPlaneError) throw error;
     invalid();
   }
+}
+function loadResourceRoots(value: unknown, registryPath: string): ResourceRootMap {
+  if (!isPlainObject(value)) invalid();
+  const raw = value as Record<string, unknown>;
+  if (Object.keys(raw).length !== RESOURCE_KINDS.length
+    || RESOURCE_KINDS.some((kind) => !Object.hasOwn(raw, kind))) invalid();
+  const repository = dirname(dirname(dirname(registryPath)));
+  const canonicalRoot = join(repository, '.evcrate', 'source', '.claude');
+  assertRealDirectory(canonicalRoot);
+  const result: Record<ResourceKind, string> = {} as Record<ResourceKind, string>;
+  for (const kind of RESOURCE_KINDS) {
+    if (typeof raw[kind] !== 'string') invalid();
+    const root = normalizeRelativePath(raw[kind]);
+    if (root.split('/').some(isSensitivePathSegment)) invalid();
+    assertRealDirectory(containedPath(canonicalRoot, root, true));
+    if (RESOURCE_KINDS.some((other) => other !== kind && result[other] !== undefined && overlaps(root, result[other]))) {
+      invalid();
+    }
+    result[kind] = root;
+  }
+  return Object.freeze(result);
 }
 function overlaps(left: string, right: string): boolean {
   return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
@@ -51,7 +73,8 @@ export function validateManifestSet(manifests: readonly TargetManifest[]): void 
 }
 export function loadTargetManifestRegistry(path: string): TargetManifestRegistry {
   const data = readObject(path);
-  if (data.schema_version !== 2 || !isPlainObject(data.targets)) invalid();
+  if (data.schema_version !== 2 || !isPlainObject(data.targets) || !isPlainObject(data.resource_roots)) invalid();
+  const resourceRoots = loadResourceRoots(data.resource_roots, path);
   const entries = Object.entries(data.targets).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
   if (!entries.length) invalid();
   const targets = new Map<PersistedTarget, TargetManifest>();
@@ -70,7 +93,7 @@ export function loadTargetManifestRegistry(path: string): TargetManifestRegistry
     targets.set(id, manifest);
   }
   validateManifestSet([...targets.values()]);
-  return Object.freeze({ registryPath: path, targets });
+  return Object.freeze({ registryPath: path, targets, resourceRoots });
 }
 export function loadSelectedManifests(
   registryOrPath: TargetManifestRegistry | string, requested: readonly string[] = []

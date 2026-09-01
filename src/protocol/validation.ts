@@ -109,14 +109,16 @@ export function assertSafeBoundedJson(value: unknown, maxBytes = 64 * 1024): ass
   if (canonicalBytes(value).byteLength > maxBytes) throw new ControlPlaneError('VALIDATION_INVALID');
 }
 
-export function rejectCredentialKeys(value: unknown, errorCode: ControlPlaneErrorCode = 'VALIDATION_INVALID'): void {
+export function rejectCredentialKeys(
+  value: unknown, errorCode: ControlPlaneErrorCode = 'VALIDATION_INVALID', allowedTopLevelKeys: readonly string[] = []
+): void {
   if (Array.isArray(value)) {
     value.forEach((child) => rejectCredentialKeys(child, errorCode));
     return;
   }
   if (!isPlainObject(value)) return;
   for (const [key, child] of Object.entries(value)) {
-    if (CREDENTIAL_KEY.test(key)) fail(errorCode);
+    if (CREDENTIAL_KEY.test(key) && !allowedTopLevelKeys.includes(key)) fail(errorCode);
     rejectCredentialKeys(child, errorCode);
   }
 }

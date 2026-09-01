@@ -16,8 +16,14 @@ export interface PromotionHooks {
   readonly beforePromote?: (pair: PromotionPair, index: number) => void;
   readonly afterPromote?: (pair: PromotionPair, index: number) => void;
 }
-export interface PromotionOptions { readonly stageRoot?: StagedRoot; readonly hooks?: PromotionHooks; readonly lockRoot?: string; }
+export type PromotionConflictCode = 'PUBLICATION_FAILED' | 'CAS_CONFLICT';
 function fail(code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'PATH_UNSAFE'): never { throw new ControlPlaneError(code); }
+export interface PromotionOptions {
+  readonly stageRoot?: StagedRoot;
+  readonly hooks?: PromotionHooks;
+  readonly lockRoot?: string;
+  readonly conflictCode?: PromotionConflictCode;
+}
 function commonAncestor(paths: readonly string[]): string {
   const split = paths.map((path) => resolve(path).split(sep));
   const count = Math.min(...split.map((parts) => parts.length));
@@ -32,6 +38,7 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
   const destinations = pairs.map((pair) => resolve(pair.destination));
   const sources = pairs.map((pair) => pair.source === null ? null : resolve(pair.source));
   const stageRoot = options.stageRoot ?? null;
+  const conflictCode = options.conflictCode ?? 'PUBLICATION_FAILED';
   const sourcePaths = sources.filter((source): source is string => source !== null);
   if (new Set(destinations).size !== destinations.length || new Set(sourcePaths).size !== sourcePaths.length) fail('PUBLICATION_FAILED');
   recoverPromotionJournal(commonParent);
@@ -47,6 +54,7 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
     if (pair.source !== null) {
       const source = sources[index] as string;
       if (!stageRoot || !isContained(stageRoot.path, source) || source === destination || !sameVolume(source, dirname(destination))) fail('PATH_UNSAFE');
+      if (!stageRoot) fail('PATH_UNSAFE');
       assertOwnerControlledPath(stageRoot.path, dirname(source));
     }
   }
@@ -64,9 +72,9 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
   try {
     for (const [index, pair] of pairs.entries()) {
       const destination = destinations[index];
-      assertSnapshot(destination, destinationSnapshots[index], 'PUBLICATION_FAILED');
+      assertSnapshot(destination, destinationSnapshots[index], conflictCode);
       options.hooks?.beforeBackup?.(pair, index);
-      assertSnapshot(destination, destinationSnapshots[index], 'PUBLICATION_FAILED');
+      assertSnapshot(destination, destinationSnapshots[index], conflictCode);
       if (destinationSnapshots[index].present) {
         const backup = join(backupDir, relative(commonParent, destination));
         mkdirSync(dirname(backup), { recursive: true, mode: 0o700 });
@@ -75,9 +83,9 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
       }
       options.hooks?.afterBackup?.(pair, index);
       options.hooks?.beforePromote?.(pair, index);
-      assertSnapshot(destination, { present: false }, 'PUBLICATION_FAILED');
+      assertSnapshot(destination, { present: false }, conflictCode);
       if (pair.source !== null) {
-        assertSnapshot(sources[index] as string, sourceSnapshots[index] as NodeSnapshot, 'PUBLICATION_FAILED');
+        assertSnapshot(sources[index] as string, sourceSnapshots[index] as NodeSnapshot, conflictCode);
         renameSync(sources[index] as string, destination);
       }
       options.hooks?.afterPromote?.(pair, index);

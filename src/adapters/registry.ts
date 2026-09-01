@@ -1,7 +1,7 @@
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { normalizeTarget, PERSISTED_TARGETS, type PersistedTarget } from '../protocol/validation.js';
 import { assertResourceGraph } from './resource-graph.js';
-import type { ProjectionAdapter, ProjectionBuildContext } from './types.js';
+import { normalizeProjectionCompatibility, type ProjectionAdapter, type ProjectionBuildContext } from './types.js';
 
 /** Schema order is owned by protocol/manifest validation and is not qualification order. */
 export const PROJECTION_REGISTRY_ORDER = PERSISTED_TARGETS;
@@ -18,16 +18,17 @@ function invalid(): never {
 function adapterDefinition(value: ProjectionAdapter): ProjectionAdapter {
   if (value === null || typeof value !== 'object') return invalid();
   const keys = Object.keys(value);
-  if (keys.length !== 3 || !keys.includes('id') || !keys.includes('build') || !keys.includes('validate')) {
-    return invalid();
-  }
+  if (keys.length !== 4 || !keys.includes('id') || !keys.includes('compatibility')
+    || !keys.includes('build') || !keys.includes('validate')) return invalid();
   if (typeof value.id !== 'string' || !PERSISTED_TARGETS.includes(value.id as PersistedTarget)
     || normalizeTarget(value.id) !== value.id || typeof value.build !== 'function'
     || typeof value.validate !== 'function') return invalid();
+  const compatibility = normalizeProjectionCompatibility(value.compatibility);
   const build = value.build;
   const validate = value.validate;
   return Object.freeze({
     id: value.id,
+    compatibility,
     build: (context: ProjectionBuildContext) => {
       assertResourceGraph(context.resources);
       build(context);

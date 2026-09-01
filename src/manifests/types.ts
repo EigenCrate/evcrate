@@ -1,4 +1,10 @@
 import type { PersistedTarget } from '../protocol/validation.js';
+export const RESOURCE_KINDS = Object.freeze(['skill', 'agent', 'workflow', 'command', 'hook'] as const);
+export type ResourceKind = typeof RESOURCE_KINDS[number];
+export type ResourceRootMap = Readonly<Record<ResourceKind, string>>;
+export const RESOURCE_COMPATIBILITY_STATUSES = Object.freeze(['native', 'needsAdapter', 'unsupported'] as const);
+export type ResourceCompatibilityStatus = typeof RESOURCE_COMPATIBILITY_STATUSES[number];
+
 
 export interface PatchSpec {
   readonly source: string;
@@ -40,6 +46,7 @@ export interface TargetManifest {
 export interface TargetManifestRegistry {
   readonly registryPath: string;
   readonly targets: ReadonlyMap<PersistedTarget, TargetManifest>;
+  readonly resourceRoots: ResourceRootMap;
 }
 
 export interface BuildManifest {

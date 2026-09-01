@@ -8,7 +8,7 @@ import { removePath, syncDirectory } from '../filesystem/atomic.js';
 
 export const PROMOTION_JOURNAL_NAME = '.evcrate-promotion-journal.json';
 export const PROMOTION_BACKUP_PREFIX = '.evcrate-promotion-';
-type FailureCode = 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'PATH_UNSAFE';
+type FailureCode = 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'CAS_CONFLICT' | 'PATH_UNSAFE';
 function fail(code: FailureCode): never { throw new ControlPlaneError(code); }
 function stat(path: string, code: FailureCode = 'ROLLBACK_FAILED') {
   try { return lstatSync(path); } catch (error) {
@@ -72,7 +72,7 @@ export function snapshot(path: string, code: FailureCode): NodeSnapshot {
     fail(code);
   }
 }
-export function assertSnapshot(path: string, expected: NodeSnapshot, code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED'): void {
+export function assertSnapshot(path: string, expected: NodeSnapshot, code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'CAS_CONFLICT'): void {
   if (JSON.stringify(snapshot(path, code)) !== JSON.stringify(expected)) fail(code);
 }
 export function recoverPromotionJournal(commonParent: string): void {
