@@ -26,11 +26,11 @@ revalidated: 2026-09-01
 
 ## Overview
 
-Build a one-shot TypeScript CLI for resource discovery, explicit imports, scopes, model bindings, target projections, publication, locking, CAS, and recovery. Machine callers exchange bounded versioned JSON over stdin/stdout; no daemon or HTTP service.
+Build a one-shot TypeScript CLI for resource discovery, explicit imports, scopes, target projections, publication, locking, CAS, and recovery. Machine callers exchange bounded versioned JSON over stdin/stdout; no daemon or HTTP service.
 
 Current Python manifests, adapters, build, verification, and HOME publication remain authoritative until each target's TypeScript replacement passes byte/hash, failure, and publication parity and is cut over atomically. The final supported npm path is Python-free.
 
-The existing CommonJS advisor controller is not rewritten or used as a counsel proxy. It remains the sole counsel owner, with its checkpoint/result protocols unchanged, and gains only a versioned qualification diagnostic that validates closure/policy and probes the configured backend/version/auth/model/effort tuple without generating counsel. A dedicated CLI advisor-settings subsystem owns complete-policy `get|preview|apply`; it is separate from registry/scope/model and target publication.
+The existing CommonJS advisor controller is not rewritten or used as a counsel proxy. It remains the sole counsel owner, with its checkpoint/result protocols unchanged, and gains only a versioned qualification diagnostic that validates closure/policy and probes the configured backend/version/auth/model/effort tuple without generating counsel. A dedicated CLI advisor-settings subsystem owns complete-policy `get|preview|apply`; it is separate from registry/scope and target publication. Canonical agent model frontmatter remains authored resource content; commands and workflows have no model-binding field. Mutable resource model bindings are deferred until a concrete agent override contract exists.
 
 ## Current architecture invariants
 
@@ -45,7 +45,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 
 ## Public CLI scope
 
-`version`, top-level `health`, `advisor settings get|preview|apply`, `resources list|get`, `imports preview|apply`, `scopes list|get|assign|remove|enable|disable`, `models set|unset`, `changes preview|apply`, `publish --dry-run|--apply`, `recover`, and gated `distribute build|check|publish|all|recover`. `health` always invokes the qualification-only CommonJS diagnostic and never requests or generates counsel.
+`version`, top-level `health`, `advisor settings get|preview|apply`, `resources list|get`, `imports preview|apply`, `scopes list|get|assign|remove|enable|disable`, `changes preview|apply`, `publish --dry-run|--apply`, `recover`, and gated `distribute build|check|publish|all|recover`. `health` always invokes the qualification-only CommonJS diagnostic and never requests or generates counsel.
 
 ## Phases
 
@@ -57,7 +57,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 4 | [Distribution primitives](./phase-04-distribution-primitives.md) | Schema-2 safety, controller authorization, and bounded policy-file primitives | DONE — 100% in feature worktree; not merged to `main` |
 | 5 | [Target adapters](./phase-05-adapters.md) | Seven projections in confirmed parity order, including distinct OMP/Copilot | DONE — 100% in feature worktree; staging-only; not merged to `main` |
 | 6 | [Registry and imports](./phase-06-registry-and-imports.md) | Manifest/hash-bound registry; policy remains outside resource ownership | DONE — 100% in feature worktree; no publication or cutover claimed |
-| 7 | [Scopes, models, CAS](./phase-07-scopes-models-and-cas.md) | Resource state plus dedicated settings revision/token/apply semantics | Planned |
+| 7 | [Scopes, advisor settings, and CAS](./phase-07-scopes-and-cas.md) | Resource scope state plus dedicated settings revision/token/apply semantics | DONE — 100% in feature worktree; approved; not merged to `main` |
 | 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | Planned |
 | 9 | [DamHopper integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | Planned |
 | 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | Planned |
@@ -140,7 +140,37 @@ completion, and deployment behavior are not claimed. Review residuals are
 limited to the documented low same-UID/path-race window and Linux-first
 security scope.
 
-The overall plan remains `in_progress` because Phases 7–11 are still planned.
+The overall plan remains `in_progress` because Phases 8–11 remain planned.
+
+## Phase 7 completion evidence
+
+**Status:** COMPLETE | **Progress:** 100% in the linked feature worktree | **Validated:** 2026-09-01 | **Review:** Approved with no findings
+
+Phase 7 implements package-local scope state and a dedicated advisor-settings
+coordinator:
+
+- Global `.evcrate/scopes/global.json` and project
+  `.evcrate/scopes/projects/<opaque-project-id>.json` store assignments. Project
+  identity is the SHA-256 hash of canonical absolute project-root bytes.
+- Global/project inheritance, explicit disablement, and absent-assignment
+  behavior are deterministic. Mutations use
+  `{registryRevision,globalScopeRevision,projectScopeRevision|null}`; typed
+  `changes.preview|apply` tokens bind selected targets, canonical/registry/
+  manifest/adapter hashes, independent output-root hashes, and expiry.
+- Advisor settings uses the canonical `advisor-settings.lock`, frozen v1
+  complete-document request-file input, opaque byte/identity/mode revisions,
+  single-use tokens, whole-document atomic apply, and separate journal/recovery.
+  Scope, settings, and target-publication transactions remain separate.
+- Accepted boundary: authored agent `model` frontmatter remains static resource
+  content; commands and workflows have no model-binding field; mutable resource
+  model operations remain deferred until a concrete override contract exists.
+
+Validation evidence: `npm run test:phase7` **16/16**, `npm run test:protocol`
+**20/20**, `npm run test:cli` **31/31**, `npm run test:phase6` **23/23**,
+`npm run test:phase4` **31/31**, and `npm run test:phase5` **12/12**; all builds
+passed; aggregate focused evidence **133/133**. No publication, live cutover,
+Python-free distribution, or `main` merge is claimed.
+
 
 ## Phase 1 evidence preserved
 
@@ -154,7 +184,7 @@ Baseline commit `61d90b49346e1d01a30a42a76952a3d49a3998c8`: build/check 0; focus
 - Top-level `health` validates closure and exact policy, then live-qualifies only the currently configured backend/model/effort tuple through the versioned diagnostic.
 - `advisor settings get|preview|apply` manages the complete exact v1 policy with redaction, single-use tokens, byte/revision CAS, atomic replacement/recovery, safe existing-mode preservation, restrictive create mode, and conflicts for intervening manual edits.
 - OMP projection tests and OMP backend-adapter qualification remain separate; Copilot is never routed as advisor backend.
-- Registry/import/scope/model/preview/apply/CAS/publish/recover contracts are versioned, bounded, deterministic, and crash-safe; advisor settings remain a dedicated non-registry subsystem.
+- Registry/import/scope/preview/apply/CAS/publish/recover contracts are versioned, bounded, deterministic, and crash-safe; advisor settings remain a dedicated non-registry subsystem. Resource model bindings are not part of this release contract.
 - Copilot managed-key JSONC merge, OMP no-merge behavior, OMP 30/Copilot 40 promotion order, collision/symlink rejection, publish-without-migration, and rejection of mixed-engine atomic transactions are proven.
 - DamHopper uses resource operations and top-level qualification health only through the CLI subprocess contract, never as a counsel proxy, and treats generated projections, controller, policy, manifests, and HOME roots as EVCrate-owned artifacts.
 - CI/release installs the packed npm artifact, live-qualifies only the configured policy tuple, and proves the final supported runtime is Python-free; Python is removed only after all target and rollback gates pass.
@@ -190,6 +220,19 @@ Baseline commit `61d90b49346e1d01a30a42a76952a3d49a3998c8`: build/check 0; focus
 - [x] Updated phases 2–4 and 7–11, CLI scope, architecture decisions, warnings, and definition of done for the two advisor-control contracts.
 - [x] Recorded the confirmed Phase 5 adapter order and configured-tuple-only release qualification gate.
 
+## Resource model ownership audit
+
+**Validated:** 2026-09-01
+
+Canonical `.claude` model metadata exists in agent frontmatter only. Commands and workflows do not carry model bindings, and Phase 5 adapters transform model metadata only while projecting agents. Phase 6 `model_metadata` is optional informational registry data, not effective configuration. Phase 7 therefore defers mutable resource model operations and does not redefine them for agents; a future agent-model override requires its own precedence, adapter, runtime, and consumer contract. Advisor policy `backend/model/effort` remains exclusively advisor-settings state. The Phase 7 review accepts this model-binding deferral.
+
+This audit preserves Phase 1–6 completion evidence. The reserved `models.set|unset` operation names are removed from the planned public surface and must be removed from the protocol before stable release unless a verified external consumer already depends on them.
+
 ## Unresolved questions
 
 - Which compatibility-window duration and verified consumer inventory authorize final Python deletion?
+
+### Future contract questions
+
+- Whether any prerelease DamHopper client serializes the reserved `models.set|unset` operation names.
+- Whether a concrete product requirement exists for per-scope agent model overrides; if so, define its precedence, adapter projection, runtime behavior, and consumer contract before reopening model bindings.

@@ -39,13 +39,16 @@ test('version emits one resource envelope and supports human rendering', async (
 });
 test('settings stay on their dedicated handler boundary', async () => {
   const captured = capture(false);
-  const exitCode = await main(['advisor', 'settings', 'get', '--json'], runtime(captured));
-  assert.equal(exitCode, 3);
+  const settingsRuntime = runtime(captured);
+  const exitCode = await main([
+    'advisor', 'settings', 'get', '--home', settingsRuntime.home, '--json'
+  ], settingsRuntime);
+  assert.equal(exitCode, 0);
   const result = JSON.parse(captured.values[0]);
   assert.equal(result.protocol, 'evcrate-advisor-settings');
-  assert.equal(result.status, 'FAILED');
-  assert.equal(result.error.code, 'CAPABILITY_UNSUPPORTED');
-
+  assert.equal(result.status, 'OK');
+  assert.equal(result.policy, null);
+  assert.deepEqual(result.revision, { kind: 'absent', identity: 'absent' });
   for (const operation of ['preview', 'apply']) {
     const unsupported = capture(false);
     assert.equal(
@@ -98,10 +101,14 @@ test('compatibility distribution labels Python and forwards resolved paths', asy
 test('request-file accepts a complete typed settings envelope', async () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-request-'));
   const requestPath = join(root, 'request.json');
-  writeFileSync(requestPath, JSON.stringify(createAdvisorSettingsRequest('file-1', 'get')));
+  const request = createAdvisorSettingsRequest('file-1', 'get');
+  writeFileSync(requestPath, JSON.stringify(request));
   const captured = capture(false);
-  const exitCode = await main(['--request-file', requestPath, '--json'], runtime(captured));
-  assert.equal(exitCode, 3);
+  const requestRuntime = runtime(captured);
+  const exitCode = await main([
+    'advisor', 'settings', 'get', '--request-file', requestPath, '--home', requestRuntime.home, '--json'
+  ], requestRuntime);
+  assert.equal(exitCode, 0);
   const result = JSON.parse(captured.values[0]);
   assert.equal(result.requestId, 'file-1');
   assert.equal(result.operation, 'get');

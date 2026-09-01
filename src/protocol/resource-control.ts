@@ -6,12 +6,12 @@ import {
   rejectCounselFields, safePath, validateOpaque, validateProjectId, validateRequestId,
   RESOURCE_PROTOCOL, PROTOCOL_VERSION, PersistedTarget
 } from './validation.js';
+import { validateScopeRevisionVector, type ScopeRevisionVector } from './scope-payloads.js';
 import { validateResourceRequestPayload, validateResourceResultPayload } from './resource-payloads.js';
-
 export const RESOURCE_OPERATIONS = Object.freeze([
   'version', 'resources.list', 'resources.get', 'imports.preview', 'imports.apply',
   'scopes.list', 'scopes.get', 'scopes.assign', 'scopes.remove', 'scopes.enable',
-  'scopes.disable', 'models.set', 'models.unset', 'changes.preview', 'changes.apply',
+  'scopes.disable', 'changes.preview', 'changes.apply',
   'publish.dry-run', 'publish.apply', 'recover', 'distribute.build', 'distribute.check',
   'distribute.publish', 'distribute.all', 'distribute.recover'
 ] as const);
@@ -74,7 +74,7 @@ export interface ResourceConflictResult {
   operation: ResourceOperation;
   status: 'conflict';
   error: ResourceError;
-  conflict: { expectedRevision: ResourceRevision; actualRevision: ResourceRevision; retryable: boolean };
+  conflict: { expectedRevision: ResourceConflictRevision; actualRevision: ResourceConflictRevision; retryable: boolean };
 }
 export type ResourceResult =
   | ResourceSuccessResult | ResourceRecoveredResult | ResourceErrorResult | ResourceConflictResult;
@@ -116,7 +116,7 @@ export function validateResourceRequest(value: unknown): ResourceRequest {
   }
   const operation = validateOperation(request.operation);
   assertSafeBoundedJson(request.payload);
-  rejectCredentialKeys(request.payload, 'VALIDATION_INVALID', operation === 'imports.apply' ? ['previewToken'] : []);
+  rejectCredentialKeys(request.payload, 'VALIDATION_INVALID', operation === 'imports.apply' || operation === 'changes.apply' ? ['previewToken'] : []);
   rejectCounselFields(request.context);
   rejectCounselFields(request.payload);
   return {
@@ -148,6 +148,11 @@ export function validateResourceRevision(value: unknown): ResourceRevision {
   const identity = validateOpaque(revision.identity, 256, 'revision identity');
   if (revision.kind === 'absent' && identity !== 'absent') throw new ControlPlaneError('VALIDATION_INVALID');
   return { kind: revision.kind, identity };
+}
+export type ResourceConflictRevision = ResourceRevision | ScopeRevisionVector;
+function validateConflictRevision(value: unknown, operation: ResourceOperation): ResourceConflictRevision {
+  return operation.startsWith('scopes.') || operation.startsWith('changes.')
+    ? validateScopeRevisionVector(value) : validateResourceRevision(value);
 }
 
 export function validateResourceRecovery(value: unknown): ResourceRecovery {
@@ -190,7 +195,7 @@ export function validateResourceResult(value: unknown): ResourceResult {
   if (SUCCESS_STATUSES.includes(result.status as ResourceSuccessStatus)) {
     assertExactKeys(result, [...RESULT_KEYS, 'payload'], 'PROTOCOL_INVALID');
     assertSafeBoundedJson(result.payload);
-    rejectCredentialKeys(result.payload, 'VALIDATION_INVALID', operation === 'imports.preview' ? ['token'] : []);
+    rejectCredentialKeys(result.payload, 'VALIDATION_INVALID', operation === 'imports.preview' || operation === 'changes.preview' ? ['token'] : []);
     rejectCounselFields(result.payload);
     return { ...base, status: result.status as ResourceSuccessStatus, payload: validateResourceResultPayload(operation, result.payload) };
   }
@@ -216,8 +221,8 @@ export function validateResourceResult(value: unknown): ResourceResult {
     return {
       ...base, status: 'conflict', error: validateResultError(result.error),
       conflict: {
-        expectedRevision: validateResourceRevision(conflict.expectedRevision),
-        actualRevision: validateResourceRevision(conflict.actualRevision),
+        expectedRevision: validateConflictRevision(conflict.expectedRevision, operation),
+        actualRevision: validateConflictRevision(conflict.actualRevision, operation),
         retryable: conflict.retryable
       }
     };
@@ -254,7 +259,7 @@ export function createResourceErrorResult(request: ResourceRequest, error: unkno
 }
 
 export function createResourceConflictResult(
-  request: ResourceRequest, expectedRevision: ResourceRevision, actualRevision: ResourceRevision
+  request: ResourceRequest, expectedRevision: ResourceConflictRevision, actualRevision: ResourceConflictRevision
 ): ResourceConflictResult {
   return validateResourceResult({
     protocol: RESOURCE_PROTOCOL, protocolVersion: PROTOCOL_VERSION,

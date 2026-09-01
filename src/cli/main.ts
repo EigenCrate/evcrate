@@ -22,6 +22,8 @@ function commandLabel(invocation: CliInvocation | undefined): string {
     case 'distribute': return `distribute ${invocation.command.action}`;
     case 'resources': return `resources ${invocation.command.action}`;
     case 'imports': return `imports ${invocation.command.action}`;
+    case 'scopes': return `scopes ${invocation.command.action}`;
+    case 'changes': return `changes ${invocation.command.action}`;
   }
 }
 

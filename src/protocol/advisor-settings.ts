@@ -121,7 +121,7 @@ export function validateAdvisorSettingsRequest(value: unknown): AdvisorSettingsR
   }
   assertSettingsDocumentSize(value);
   assertSafeBoundedJson(request.payload);
-  rejectCredentialKeys(request.payload, 'SETTINGS_INVALID');
+  rejectCredentialKeys(request.payload, 'SETTINGS_INVALID', request.operation === 'apply' ? ['token'] : []);
   rejectCounselFields(request.payload, ['backend'], 'SETTINGS_INVALID');
   const payload = request.payload as Record<string, unknown>;
   if (!isPlainObject(payload)) throw new ControlPlaneError('SETTINGS_INVALID');

@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-09-01  
 **Project**: EVCrate  
-**Status**: Phase 6 registry and explicit-import contracts complete; release remains Unreleased
+**Status**: Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
 
 ## Scope
 
@@ -15,10 +15,12 @@ EVCrate has two cooperating planes:
    build/check, HOME publication, and recovery.
 
 Canonical Claude resources are authored under `.evcrate/source/.claude/`.
-Generated target projections are derived artifacts. Phase 6 adds a
-schema-v1 resource registry and explicit import transaction; it does not claim
-publication or live cutover, Python-free completion, HOME support for imports,
-Windows security equivalence, or unverified deployment behavior.
+Generated target projections are derived artifacts. Phase 6 adds a schema-v1
+resource registry and explicit import transaction; Phase 7 adds package-local
+scope state, revision-vector CAS, typed preview hash/token bindings, and a
+separate advisor-settings coordinator. These phases do not claim publication or
+live cutover, Python-free completion, HOME support for imports, Windows security
+equivalence, or unverified deployment behavior.
 
 ## Architecture at a glance
 
@@ -51,6 +53,7 @@ per-target projection, distribution broker, or settings mutation path.
 | Target registry | `.evcrate/targets/manifest.json` and target manifests | Persisted target IDs, adapters, roots, patches, overlays, and HOME policy | Schema-2 manifest contract |
 | TypeScript control plane | `src/cli/`, `src/context/`, `src/protocol/`, `src/manifests/` | One-shot CLI, strict contracts, context, manifest/build authorization | Typed validation boundary |
 | Resource registry | `src/registry/` | Schema-v1 canonical resource records, manifest-root scanning, compatibility, bounded list/get, and registry revisions | Canonical source plus manifest-derived roots |
+| Scope state | `src/scopes/` | Package-local global/project assignments, inheritance, disablement, project identity, revision vectors, and scope CAS | Scope protocol and package-local state |
 | Explicit imports | `src/imports/` | Bounded source descriptors, capability approvals, preview tokens, adapter projections, and CAS-bound apply | Typed resource protocol |
 | TypeScript transactions | `src/filesystem/`, `src/distribution/`, `src/advisor-settings/` | Paths, hashes, locks, staging, promotion, policy CAS, recovery, and import atomicity | Reusable safety primitives |
 | Python distribution | `distribution/`, `distribute.py` | Generation, build/check, publication, and recovery | Authoritative distribution engine |
@@ -165,6 +168,36 @@ The residual security scope remains the low same-UID/path-race window and
 Linux-first security scope. The manifest-derived `resourceRoot` assumption and
 the separate Python publication authority remain explicit boundaries.
 
+## Phase 7 scopes, advisor settings, and CAS
+
+Scope state is persisted under the package-local `.evcrate/scopes/` root:
+`global.json` and `projects/<opaque-project-id>.json`. A project ID is the
+SHA-256 digest of canonical absolute project-root UTF-8 bytes; raw project paths
+never appear in scope filenames or bounded protocol output. Global assignments
+are inherited by projects when absent; project assignments override them, and an
+explicit disabled assignment suppresses inheritance.
+
+Every scope document has a monotonic revision. Resource mutations carry the
+explicit `{registryRevision,globalScopeRevision,projectScopeRevision|null}`
+vector. `changes.preview|apply` persists owner-only single-use tokens binding the
+operation, vector, selected targets, canonical/registry/manifest/adapter hashes,
+independent output-root hashes, and expiry. Apply rechecks all bindings at the
+mutation boundary and consumes the token only after success; scope mutations use
+the package-local `scopes.lock`.
+
+Advisor settings has a separate coordinator and canonical `advisor-settings.lock`.
+Frozen v1 complete-document request-file input is canonicalized before preview;
+opaque revisions bind policy bytes plus file identity and mode. Single-use tokens,
+whole-document atomic apply, and a dedicated journal/recovery path detect manual
+edits, recreation, mode/identity changes, replay, and expiry. Settings, scope, and
+target-publication transactions never share atomicity or recovery markers.
+
+The accepted model boundary remains explicit: authored agent model frontmatter is
+static resource content, commands and workflows have no model-binding field, and
+mutable resource model operations are deferred pending a concrete override
+contract.
+
+
 ## One-shot TypeScript control-plane flow
 
 ```text
@@ -180,10 +213,10 @@ immutable package, target, HOME, state, and project context
 one typed dispatch
   ┌─────┼──────────┬────────────┐
   ▼     ▼          ▼            ▼
-version health settings     distribution
+version health settings resources/scopes distribution
         │          │            │
         ▼          ▼            ▼
- diagnostic   typed boundary  Python bridge
+ diagnostic   settings/registry/scopes  Python bridge
         │          │            │
         └──────────┴────────────┘
                    ▼
@@ -309,16 +342,18 @@ deletions.
 ### Shared locks and release state
 
 The publication critical section uses an owner-only state directory and a shared
-`O_EXCL` JSON lock. TypeScript exposes `publish.lock` plus a dedicated
-`advisor-settings.lock`; Python's `publish_lock` uses the same publication lock
-shape and metadata. Lock metadata is bounded to 4 KiB and contains a safe PID,
-millisecond start time, random 32-hex token, and optional process-start token.
+`O_EXCL` JSON lock. TypeScript exposes `publish.lock`, package-local
+`scopes.lock`, and the canonical `advisor-settings.lock`; Python's `publish_lock`
+uses the same publication lock shape and metadata. Scope and settings locks are
+not interchangeable with target publication.
 
-On Linux, `/proc/<pid>/stat` process-start data detects PID reuse. A valid stale
-lock is atomically renamed to a random quarantine path, re-read, matched by
+Lock metadata is bounded to 4 KiB and contains a safe PID, millisecond start
+time, random 32-hex token, and optional process-start token. On Linux,
+`/proc/<pid>/stat` process-start data detects PID reuse. A valid stale lock is
+atomically renamed to a random quarantine path, re-read, matched by
 token/device/inode identity, and removed. Malformed, changing, or uncertain
 metadata blocks acquisition. Release removes a lock only if token and
- device/inode identity still match; otherwise it leaves the lock for recovery.
+device/inode identity still match; otherwise it leaves the lock for recovery.
 
 The release marker is owner-only schema-1 JSON, atomically written and bounded
 at 4 MiB. Missing state yields an explicit empty marker. Symlinked, malformed,
@@ -336,9 +371,12 @@ source/destination revision CAS checks before backup and promotion, moves the ol
 complete document to an identity-checked backup, promotes the staged document,
 verifies bytes and mode, then clears journal and backup state. Recovery restores
 the previous complete policy or accepts a fully promoted document; unsafe
-transaction paths and replacement directories fail closed. The CLI
-`advisor settings get|preview|apply` remains a typed
-`CAPABILITY_UNSUPPORTED` boundary with no policy reads or writes in this phase.
+transaction paths and replacement directories fail closed.
+The functional `advisor settings get|preview|apply` coordinator is available
+through the frozen v1 complete-document request-file contract. It uses the
+canonical `advisor-settings.lock` and settings-specific journal/recovery; it
+never joins scope or target-publication atomicity. Positional preview/apply remain
+behind the request-file boundary.
 
 ## Shared advisor controller boundary
 
@@ -370,11 +408,12 @@ window and Linux-first security scope.
 
 ## Evidence and release boundary
 
-Focused implementation evidence records `npm run build` exit 0 and **85/85**
-across the Phase 6 (**23/23**), protocol (**19/19**), Phase 4 (**31/31**),
-and Phase 5 (**12/12**) focused commands. These contract results do not claim
-publication, live cutover, HOME support, Python-free completion, or deployment
-behavior.
+Focused implementation evidence records all builds passing and **133/133**
+across Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6
+(**23/23**), Phase 4 (**31/31**), and Phase 5 (**12/12**) focused commands.
+Final review approved with no findings. These contract results do not claim
+publication, live cutover, HOME support, Python-free completion, deployment
+behavior, or `main` merge.
 
 The remaining security scope is Linux-first, with the low same-UID/path-race
 window retained as the documented residual.

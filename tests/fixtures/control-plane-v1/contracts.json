@@ -24,7 +24,7 @@
     {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"distribute.publish","status":"activated","payload":{"activated":["claude"]}},
     {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"recover","status":"recovered","payload":{"restored":"old"},"recovery":{"kind":"none","identity":"none"}},
     {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"resources.get","status":"error","error":{"code":"VALIDATION_INVALID","category":"validation","action":"Correct the invalid value and retry.","message":"Validation failed"}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"scopes.assign","status":"conflict","error":{"code":"CAS_CONFLICT","category":"conflict","action":"Refresh the current revision and preview again.","message":"Revision conflict"},"conflict":{"expectedRevision":{"kind":"present","identity":"sha256:expected"},"actualRevision":{"kind":"present","identity":"sha256:actual"},"retryable":true}}
+    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"scopes.assign","status":"conflict","error":{"code":"CAS_CONFLICT","category":"conflict","action":"Refresh the current revision and preview again.","message":"Revision conflict"},"conflict":{"expectedRevision":{"registryRevision":1,"globalScopeRevision":2,"projectScopeRevision":null},"actualRevision":{"registryRevision":1,"globalScopeRevision":3,"projectScopeRevision":null},"retryable":true}}
   ],
   "settings": {
     "protocol": "evcrate-advisor-settings",

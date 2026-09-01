@@ -1,7 +1,7 @@
 # Codebase Summary
 
 **Last Updated**: 2026-09-01  
-**Status**: Phase 6 registry and explicit-import contracts complete (canonical-only); release remains Unreleased
+**Status**: Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
@@ -16,10 +16,12 @@ replacing it.
 Phase 4 adds distribution authorization and transaction primitives. Phase 5 adds
 seven target projection adapters that build isolated staging roots and compare
 output with Python references. Phase 6 adds a schema-v1 canonical resource
-registry and explicit import preview/apply transaction. The implementation does
-not claim publication or live cutover, HOME support for imports, Python-free
-completion, Windows security equivalence, live installed-CLI qualification, or
-unverified deployment behavior.
+registry and explicit import preview/apply transaction. Phase 7 adds package-local
+global/project scopes, explicit inheritance/disablement, revision-vector CAS,
+typed preview hash/token bindings, and a separate advisor-settings coordinator
+with lock/journal/recovery. The implementation does not claim publication or live
+cutover, HOME support for imports, Python-free completion, Windows security
+equivalence, live installed-CLI qualification, or unverified deployment behavior.
 
 ## Repository map
 
@@ -32,6 +34,7 @@ unverified deployment behavior.
 │   │           .antigravity,.omp,.copilot,.pi}/  # generated projections
 │   ├── targets/manifest.json            # schema-2 target registry and roots
 │   ├── registry.json                    # schema-1 canonical resource registry
+│   ├── scopes/                           # package-local global/project scope state
 │   └── build-manifest*.json             # verified build metadata
 ├── src/                                 # TypeScript/npm control plane
 │   ├── cli/                             # one-shot CLI, bridge, runner, output
@@ -43,6 +46,7 @@ unverified deployment behavior.
 │   ├── advisor-settings/                 # policy-file staging, CAS, recovery
 │   ├── adapters/                         # staging-only target projections
 │   ├── registry/                        # resource records, scans, revisions
+│   ├── scopes/                           # assignments, inheritance, revisions, CAS
 │   ├── imports/                         # bounded preview/apply and token state
 │   └── errors/                           # stable error serialization and exits
 ├── distribution/                         # Python-authoritative distribution engine
@@ -71,6 +75,7 @@ controller authority and is not hand-edited.
 | `src/protocol/` | Parse bounded JSON; provide Python-compatible canonical JSON and SHA-256 policy digests; validate resource/import payloads, versioned envelopes, advisor settings, diagnostics, and errors. |
 | `src/manifests/` | Load target declarations and manifest-derived resource roots; enforce source/adapter/patch/path policy, check set-level output ownership, and validate the exact advisor-controller inventory and import closure. |
 | `src/registry/` | Scan declared canonical resource roots, validate schema-v1 records, derive seven-target compatibility/capabilities, verify revisions and hashes, and serve bounded deterministic list/get queries. |
+| `src/scopes/` | Persist package-local global/project assignments, resolve inheritance and disablement, compute project identities and revision vectors, and apply scope CAS. |
 | `src/imports/` | Read bounded external source descriptors, require capability approvals, stage non-mutating previews, persist owner-only single-use tokens, hash selected projections, and atomically apply canonical source plus registry under CAS. |
 | `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, mode-aware complete tree hashes, atomic I/O, capability-backed staged roots, and interoperable locks. |
 | `src/distribution/` | Validate schema-2 build manifests and output/controller hashes; promote staged roots with durable journals, snapshots, pre-rename CAS, and recovery. |
@@ -241,6 +246,32 @@ Generated roots, controller source/runtime, target manifests, advisor policy,
 HOME paths, and managed settings are excluded import sources/destinations.
 
 
+## Phase 7 scopes, advisor settings, and CAS
+
+Scope state is persisted package-locally under `.evcrate/scopes/`: global
+`global.json` plus project files under `projects/<opaque-project-id>.json`.
+Project identity is the SHA-256 hash of canonical absolute project-root UTF-8
+bytes; raw roots never become filenames or protocol output. Project assignments
+override global assignments, explicit disabled assignments suppress inheritance,
+and absent assignments inherit. The registry and scope documents contribute the
+explicit revision vector
+`{registryRevision,globalScopeRevision,projectScopeRevision|null}`.
+
+`changes.preview|apply` uses owner-only single-use tokens. Preview bindings
+include the revision vector, selected targets, canonical/registry/target-manifest/
+adapter hashes, independent output-root hashes, and expiry; apply rechecks these
+at mutation boundaries and consumes tokens only after success. Package-local scope
+mutations serialize through `scopes.lock`.
+
+Advisor settings is a separate coordinator, never a scope/registry/publication
+transaction. Its canonical `advisor-settings.lock` protects frozen v1
+complete-document request-file operations; opaque revisions bind policy bytes,
+file identity, and mode. Single-use tokens, whole-document atomic apply, and
+settings-specific journal/recovery protect manual edits, replay, expiry, and
+replacement. Authored agent model frontmatter remains static resource content;
+commands/workflows have no model binding, and mutable resource model operations
+are intentionally deferred.
+
 ## Canonical JSON and hashing
 
 The TypeScript serializer follows the Python authority for supported values:
@@ -276,16 +307,19 @@ UTF-8 and canonical-byte checks apply before protocol or manifest validation.
 - Advisor policy replacement uses bounded canonical bytes, a prepared/
   backed_up/promoted journal, source and destination revision CAS at rename
   boundaries, post-promotion byte/mode verification, and recovery of the old
-  complete document. The CLI settings operations remain a typed
-  `CAPABILITY_UNSUPPORTED` boundary without policy I/O until their owning phases.
+  complete document. The functional `advisor settings get|preview|apply`
+  coordinator uses frozen v1 complete-document request-file input, the canonical
+  `advisor-settings.lock`, and settings-specific journal/recovery; positional
+  preview/apply remain behind the request-file boundary.
 
 ## Lock and release-state interoperability
 
 Publication uses an owner-only state directory and an `O_EXCL` JSON lock with a
 bounded 4 KiB metadata document (`pid`, `startedAt`, random `token`, and Linux
-process-start token). TypeScript exposes separate `publish.lock` and
-`advisor-settings.lock` critical sections; Python's `publish_lock` uses the same
-publication lock shape and metadata so the two implementations interoperate.
+process-start token). TypeScript exposes `publish.lock`, package-local
+`scopes.lock`, and `advisor-settings.lock` critical sections; Python's
+`publish_lock` uses the same publication lock shape and metadata so the two
+implementations interoperate.
 A process-start check avoids treating a reused PID as the same owner when the
 platform exposes `/proc/<pid>/stat`. A stale lock is atomically renamed to a
 random quarantine name, re-read, matched by token/device/inode, and then removed.
@@ -308,11 +342,12 @@ fallback, or claim Python-free parity. CommonJS package exports retain both the
 
 ## Evidence and limitations
 
-Focused implementation evidence records `npm run build` exit 0 and **85/85**
-across the Phase 6 (**23/23**), protocol (**19/19**), Phase 4 (**31/31**),
-and Phase 5 (**12/12**) focused commands. These contract results do not claim
-publication, live cutover, HOME support, Python-free completion, or deployment
-behavior.
+Focused implementation evidence records all builds passing and **133/133**
+across Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6
+(**23/23**), Phase 4 (**31/31**), and Phase 5 (**12/12**) focused commands.
+Final review approved with no findings. These contract results do not claim
+publication, live cutover, HOME support, Python-free completion, deployment
+behavior, or `main` merge.
 
 Residuals remain the low same-UID/path-race window and Linux-first security
 scope. Live vendor qualification and any publication/cutover remain
@@ -331,6 +366,6 @@ operator-controlled and unclaimed.
 ## Compaction record
 
 A temporary Repomix XML compaction was generated on 2026-09-01 using the
-repository's configured exclusions. Repomix reported **2,573 files**,
-**8,764,045 tokens**, and **33,054,904 characters**. The compaction was used as
+repository's configured exclusions. Repomix reported **2,585 files**,
+**8,779,055 tokens**, and **33,124,097 characters**. The compaction was used as
 analysis input and is not retained as a repository deliverable.

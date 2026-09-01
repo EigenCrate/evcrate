@@ -1,26 +1,27 @@
 ## Unreleased
 
 **Updated:** 2026-09-01
-**Status:** Phase 6 registry and explicit-import contracts complete; release remains Unreleased
+**Status:** Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
 
 ### Features
 
 * **advisor:** ship global checkpoint routing with exact native/cross-host semantics, five fixed CLI adapters, strict evidence/path validation, and deterministic 19-file projections including executable per-harness bridges and secure native handoffs authorized by runtime/helper hashes; authenticated live calls and HOME publication remain separate operations.
 * **scout:** unify external CLI strategy rendering behind one canonical read-only source, with deterministic Codex/Gemini projections and exact fallback contracts.
 * **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
-* **control-plane:** define bounded, versioned `evcrate-resource-control/v1` contracts for exactly seven persisted targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `copilot`, `omp`), the `agy` input alias, strict JSON/path validation, credential/counsel rejection, stable errors and exit bands, and typed CAS/recovery result shapes; Phase 3 dispatch implements `version` only.
+* **control-plane:** define bounded, versioned `evcrate-resource-control/v1` contracts for exactly seven persisted targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `copilot`, `omp`), the `agy` input alias, strict JSON/path validation, credential/counsel rejection, stable errors and exit bands, and typed CAS/recovery result shapes; Phase 7 extends dispatch with typed scope and change operations.
 * **adapters:** complete seven target-isolated, staging-only TypeScript projections (Claude, Gemini, Antigravity, Codex, Pi, OMP, Copilot) in confirmed parity order with 2,033 explicit Python delta records and no controller copies; `npm run test:phase5` passes **12/12** after a clean build. Python remains authoritative until per-target cutover; no HOME publication, live qualification, Python-free runtime, or `main` merge is claimed.
 * **registry:** add a schema-v1 canonical resource registry backed by one manifest-declared `resource_roots` map for five resource kinds, with bounded deterministic scans/queries, provenance, capabilities, and exhaustive seven-target compatibility records.
 * **imports:** add explicit `imports.preview|apply` with bounded source descriptors, approval-gated hook/script capabilities, non-mutating projection previews, owner-only single-use tokens, complete mode-aware CAS bindings, and atomic canonical-plus-registry promotion; unmanaged collisions fail closed without deletion.
-* **advisor-settings:** define the typed `evcrate-advisor-settings/v1` `get`, `preview`, and `apply` contract with redacted views, digests, preview metadata, and CAS/recovery shapes; Phase 3 keeps operations behind an optional handler and defaults to validated `CAPABILITY_UNSUPPORTED` without policy I/O.
+* **scopes:** add package-local global/project assignment state with deterministic inheritance, explicit disablement, target compatibility checks, revision-vector CAS, and typed `changes.preview|apply` tokens binding canonical/registry/manifest/adapter hashes, independent output-root hashes, expiry, replay, and recovery boundaries.
+* **advisor-settings:** define the typed `evcrate-advisor-settings/v1` `get`, `preview`, and `apply` contract with redacted views, digests, preview metadata, and CAS/recovery shapes; Phase 7 enables the frozen v1 complete-document request-file coordinator, while positional preview/apply remain behind that request-file boundary.
 * **advisor-diagnostic:** add qualification-only `evcrate-advisor-diagnostic/v1` requests for configured backend/version/auth/capability probes; the Phase 3 `health` bridge invokes only the packaged CommonJS controller diagnostic and rejects malformed, multi-line, stderr-bearing, or counsel-shaped output.
 * **cli:** publish the one-shot CommonJS `evcrate` executable at `dist/cli/evcrate.js` with `version`, `health`, `advisor settings get|preview|apply`, `distribute build|check|publish|all|recover`, and `--request-file`; it parses, resolves, dispatches, writes one result, and exits without a listener, retry, background process, or counsel proxy, using shell-free bounded process/request-file I/O with Linux-first `O_NOFOLLOW` final-component protection (no Windows security-equivalence claim).
 * **distribution:** keep Python authoritative for `build`, `check`, `publish`, `all`, and `recover`; invoke package-relative `python3 distribute.py` and pass the exact resolved state root through `EVCRATE_STATE_DIR`, with no migrator or Node fallback.
 * **package:** retain CommonJS exports and `evcrate-advisor`, add the `evcrate` bin, and pack generated JavaScript/declarations, the controller/target closure, Python distribution modules, and `distribute.py`; release preparation runs Python build/check before archiving.
 * **distribution:** add schema-2 manifest/build validation with contained, non-overlapping output roots, authorized patch source/key/destination checks, bounded build-manifest reads, and exact controller inventory/hash closure.
 * **filesystem:** add Python-compatible canonical JSON/SHA256 behavior, strict UTF-8/surrogate/depth/duplicate handling, owner/symlink/containment and same-volume safeguards, capability-backed staged roots, durable promotion journals/recovery, and source/destination pre-rename CAS.
-* **advisor-settings:** add owner-only policy-file staging, canonical bytes/mode/revision checks, bounded transaction journals, concurrent-replacement CAS, and durable recovery primitives.
-* **locking:** add shared TypeScript/Python O_EXCL owner-only publication locking plus the TypeScript advisor-settings lock, bounded metadata, process-start checks, release identity checks, atomic stale-lock quarantine, and fail-closed release markers.
+* **advisor-settings:** add owner-only policy-file staging, canonical bytes/mode/revision checks, bounded transaction journals, concurrent-replacement CAS, and durable recovery primitives behind the dedicated coordinator.
+* **locking:** add shared TypeScript/Python O_EXCL owner-only publication locking plus the TypeScript `scopes.lock` and `advisor-settings.lock` critical sections, bounded metadata, process-start checks, release identity checks, atomic stale-lock quarantine, and fail-closed release markers.
 
 ### Bug Fixes
 
@@ -41,14 +42,15 @@
 
 * **pi:** document native operating, package, skill-isolation, validation, and manual-cutover procedures.
 * **advisor:** document migration syntax, checkpoint and interview behavior, relay-state retention, target capability codes, and deterministic build/check gates.
-* **control-plane:** document Phase 4 schema-2 distribution validation, controller closure, canonical JSON/hash and strict parser contracts, staged-root and promotion recovery safeguards, policy-file CAS/recovery primitives, TypeScript/Python publication-lock interoperability, and Phase 6 manifest-rooted registry/import preview/apply contracts. Phase 3 `advisor settings get|preview|apply` remains `CAPABILITY_UNSUPPORTED`; Python remains authoritative, with no publication/live cutover, HOME support, Python-free completion, or unverified deployment claim.
+* **control-plane:** document Phase 4 schema-2 distribution validation, controller closure, canonical JSON/hash and strict parser contracts, staged-root and promotion recovery safeguards, policy-file CAS/recovery primitives, TypeScript/Python publication-lock interoperability, Phase 6 manifest-rooted registry/import preview/apply contracts, and Phase 7 package-local scope inheritance/disable/revision-vector CAS, typed preview hashes/tokens, and separate advisor-settings coordination/lock/recovery. Python remains authoritative, with no publication/live cutover, HOME support, Python-free completion, or unverified deployment claim.
 
 ### Tests
 
 * **distribution:** add skill packaging, command-pointer, runtime-absence, idempotence, and user-configuration preservation regressions to the normal test command.
-* **control-plane:** `npm run build` exited 0; focused Phase 6 **23/23**, protocol **19/19**, Phase 4 **31/31**, and Phase 5 **12/12** commands passed; aggregate focused evidence **85/85**.
+* **control-plane:** all builds passed; `npm run test:phase7` **16/16**, `npm run test:protocol` **20/20**, `npm run test:cli` **31/31**, `npm run test:phase6` **23/23**, `npm run test:phase4` **31/31**, and `npm run test:phase5` **12/12**; aggregate focused evidence **133/133**.
 * **security scope:** focused contract evidence retains only the low same-UID/path-race and Linux-first residuals; no publication/live cutover, HOME support, Python-free completion, or deployment behavior claim.
 * **request-file:** cover exact-boundary, oversized, invalid UTF-8, depth, directory/symlink, and bounded-maximum rejection; no Windows security-equivalence or Python-free parity claim is implied.
+* **review:** Phase 7 final review approved with no findings; evidence is feature-worktree only and does not claim publication, live cutover, Python-free distribution, or `main` merge.
 
 ## 1.0.0 (2026-07-10)
 

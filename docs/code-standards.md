@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-09-01  
 **Applies to**: TypeScript/npm control plane and Python-authoritative distribution  
-**Status**: Phase 6 registry and explicit-import contracts complete; release remains Unreleased
+**Status**: Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
 
 ## Governing principles
 
@@ -29,6 +29,7 @@
 │                                  # generated target projections
 ├── .evcrate/targets/              # schema-2 target registry/manifests/overlays
 ├── .evcrate/registry.json         # schema-1 canonical resource registry
+├── .evcrate/scopes/              # package-local global/project scope state
 ├── src/                           # TypeScript control-plane sources
 │   ├── cli/                       # parse, dispatch, output, runner, bridge
 │   ├── context/                   # immutable path and target context
@@ -36,6 +37,7 @@
 │   ├── manifests/                 # target and controller authorization
 │   ├── registry/                  # canonical records, scans, revisions
 │   ├── imports/                   # bounded preview/apply and token state
+│   ├── scopes/                  # assignments, inheritance, revisions, CAS
 │   ├── filesystem/                # paths, hashes, atomic I/O, locks
 │   ├── distribution/              # build verification and promotion
 │   ├── advisor-settings/          # policy-file transactions/recovery
@@ -235,6 +237,31 @@ recovery; consume the token only after success. Identical re-imports are
 Generated roots, controller source/runtime, target manifests, advisor policy,
 HOME paths, and managed settings are outside registry/import ownership.
 
+### Scope and advisor-settings standards
+
+Scope state is package-local under `.evcrate/scopes/`: `global.json` stores
+global assignments and `projects/<opaque-project-id>.json` stores project
+assignments. The project ID is the SHA-256 hash of canonical absolute
+project-root UTF-8 bytes; raw roots never appear in filenames or protocol output.
+Project assignments override global assignments, explicit disablement suppresses
+inheritance, and absent assignments inherit.
+
+Scope mutations use the explicit
+`{registryRevision,globalScopeRevision,projectScopeRevision|null}` vector.
+`changes.preview|apply` tokens are owner-only and single-use; they bind selected
+targets, canonical/registry/manifest/adapter hashes, independent output-root
+hashes, and expiry. Apply rechecks bindings before mutation and consumes a token
+only after success. Package-local mutations serialize through `scopes.lock`.
+
+Advisor settings has its own coordinator and canonical `advisor-settings.lock`.
+The frozen v1 complete-document request-file input is canonicalized before
+preview; opaque revisions bind policy bytes, file identity, and mode. Whole-
+document atomic apply, single-use tokens, and settings-specific journal/recovery
+handle manual edits, recreation, mode/identity changes, replay, and expiry.
+Settings, scope, and target-publication transactions are separate. Authored agent
+model frontmatter remains static resource content; commands and workflows have no
+model binding, and mutable resource model operations are intentionally deferred.
+
 ### Build manifests and controller closure
 
 A build manifest is schema 2 with exactly these top-level fields:
@@ -321,11 +348,11 @@ Node shebang and executable mode. `controller_hashes` must contain exactly the
 ### Shared lock and release-state protocol
 
 Publication uses an owner-only state directory and an `O_EXCL` JSON lock. The
-TypeScript implementation exposes `publish.lock` and the dedicated
-`advisor-settings.lock`; Python's `publish_lock` uses the same publication lock
-shape so TypeScript and Python publishers cannot enter the same critical section
-at once. Lock metadata is bounded to 4 KiB and contains a safe PID, millisecond
-start time, random 32-hex token, and optional process-start token.
+TypeScript implementation exposes `publish.lock`, package-local `scopes.lock`,
+and canonical `advisor-settings.lock`; Python's `publish_lock` uses the same
+publication lock shape so TypeScript and Python publishers cannot enter the same
+critical section at once. Lock metadata is bounded to 4 KiB and contains a safe
+PID, millisecond start time, random 32-hex token, and optional process-start token.
 
 On Linux, `/proc/<pid>/stat` process-start data prevents a reused PID from being
 accepted as the prior owner. A valid stale lock is atomically renamed to a
@@ -350,9 +377,12 @@ and destination revisions before backup and promotion, renames the old complete
 file to an identity-checked backup, promotes the staged file, verifies bytes and
 mode, then clears journal/backup state. Recovery restores the prior complete
 policy or accepts a fully promoted document; replacement directories and unsafe
-transaction paths are rejected. The CLI `advisor settings get|preview|apply`
-surface remains a typed, fail-closed `CAPABILITY_UNSUPPORTED` boundary and does
-not perform policy I/O in this phase.
+transaction paths are rejected.
+The functional `advisor settings get|preview|apply` coordinator is available
+through the frozen v1 complete-document request-file contract. It uses the
+canonical `advisor-settings.lock` and settings-specific journal/recovery; it
+never joins scope or target-publication atomicity. Positional preview/apply remain
+behind the request-file boundary.
 
 ## Python-authority boundary
 
@@ -378,11 +408,12 @@ quarantine, promotion CAS/recovery, and advisor policy CAS/recovery. Use
 temporary roots and real filesystem/process behavior; do not weaken checks with
 fake success paths.
 
-Focused implementation evidence records `npm run build` exit 0 and **85/85**
-across the Phase 6 (**23/23**), protocol (**19/19**), Phase 4 (**31/31**),
-and Phase 5 (**12/12**) focused commands. These contract results do not claim
-publication, live cutover, HOME support, Python-free completion, or deployment
-behavior.
+Focused implementation evidence records all builds passing and **133/133**
+across Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6
+(**23/23**), Phase 4 (**31/31**), and Phase 5 (**12/12**) focused commands.
+Final review approved with no findings. These contract results do not claim
+publication, live cutover, HOME support, Python-free completion, deployment
+behavior, or `main` merge.
 
 ## Documentation and changelog standards
 

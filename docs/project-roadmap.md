@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-09-01 13:21:17 +0700
+**Last Updated:** 2026-09-01 17:18:40 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -182,6 +182,11 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - Python remains authoritative for generation, build/check, HOME publication, and recovery until target-specific cutover. Phase 6 does not claim publication, live cutover, HOME support, Python-free completion, deployment behavior, or `main` merge.
 - ✅ Phase 6 registry/imports complete (2026-09-01; [Phase 6 plan](../plans/260827-2218-typescript-control-plane-cli/phase-06-registry-and-imports.md)): manifest-derived canonical resource roots, deterministic schema-v1 registry, explicit provenance/capability-gated imports, and source/registry CAS; controller, policy, generated, target-manifest, and HOME artifacts remain outside registry ownership.
 - Focused evidence: `npm run build` exited 0; `npm run test:phase6` **23/23**, `npm run test:protocol` **19/19**, `npm run test:phase4` **31/31**, and `npm run test:phase5` **12/12**; aggregate **85/85**. Review residuals are limited to the documented low same-UID/path-race window and Linux-first security scope.
+- ✅ Phase 7 scopes, advisor settings, and CAS complete (2026-09-01; [Phase 7 plan](../plans/260827-2218-typescript-control-plane-cli/phase-07-scopes-and-cas.md)): package-local `.evcrate/scopes/global.json` and project scope files keyed by the SHA-256 hash of canonical absolute project-root bytes; global/project inheritance and explicit disablement are deterministic.
+- Scope mutations use `{registryRevision,globalScopeRevision,projectScopeRevision|null}`. Typed preview/apply tokens bind selected targets, canonical/registry/manifest/adapter hashes, independent output-root hashes, expiry, and replay/recovery boundaries.
+- Advisor settings uses the separate `advisor-settings.lock` and frozen v1 complete-document request-file coordinator with opaque byte/identity/mode revisions, single-use tokens, whole-document apply, and dedicated journal/recovery. Mutable command/workflow/resource model bindings remain deferred.
+- Focused evidence: all builds passed; Phase 7 **16/16**, protocol **20/20**, CLI **31/31**, Phase 6 **23/23**, Phase 4 **31/31**, and Phase 5 **12/12**; aggregate **133/133**. Review approved with no findings. Feature-worktree evidence only; no publication, live cutover, Python-free distribution, or `main` merge is claimed.
+ 
 
 ### OMP Command Namespace Prefix
 - 🔄 Phase 01 map/translate complete (**100%**); parent plan **43%** overall. Review **9.5/10** approved, focused validation and build/check passed.
@@ -242,6 +247,7 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 | TypeScript CLI distribution safety (Phase 4) | ✅ Complete | 2026-08-31 | 100% |
 | TypeScript CLI target adapters (Phase 5) | ✅ Complete | 2026-09-01 | 100% |
 | TypeScript CLI registry/imports (Phase 6) | ✅ Complete | 2026-09-01 | 100% |
+| TypeScript CLI scopes/advisor-settings/CAS (Phase 7) | ✅ Complete | 2026-09-01 | 100% |
 
 ---
 
@@ -305,6 +311,9 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ TypeScript/npm control-plane CLI — Phase 6 registry/imports complete (2026-09-01; [Phase 6 plan](../plans/260827-2218-typescript-control-plane-cli/phase-06-registry-and-imports.md)): manifest-derived canonical resource roots, deterministic schema-v1 registry, explicit provenance/capability-gated imports, hash-bound previews, and atomic canonical-source plus registry CAS.
 - Focused evidence: `npm run build` exited 0; `npm run test:phase6` **23/23**, `npm run test:protocol` **19/19**, `npm run test:phase4` **31/31**, and `npm run test:phase5` **12/12**; aggregate **85/85**.
 - Feature-worktree evidence only; no publication, live cutover, HOME support, Python-free completion, or deployment behavior is claimed. Review residuals are limited to the documented low same-UID/path-race window and Linux-first security scope.
+- ✅ TypeScript/npm control-plane CLI — Phase 7 scopes/advisor-settings/CAS complete (2026-09-01; [Phase 7 plan](../plans/260827-2218-typescript-control-plane-cli/phase-07-scopes-and-cas.md)): package-local scope files, explicit inheritance/disablement, revision-vector CAS, typed preview hashes/tokens, and a separate advisor-settings lock/journal/recovery boundary.
+- Validation and review: all builds passed; Phase 7 **16/16**, protocol **20/20**, CLI **31/31**, Phase 6 **23/23**, Phase 4 **31/31**, and Phase 5 **12/12**; aggregate **133/133**; approved with no findings. No publication, live cutover, Python-free distribution, or `main` merge is claimed.
+
 
 ### Recent Additions (2026-08-31)
 - ✅ TypeScript CLI foundation — Phase 3 complete ([implementation plan](../plans/260831-phase-03-cli-foundation/plan.md), completed 2026-08-31 14:41:04 +0700): delivered a one-shot CommonJS Node CLI, context/target registry, typed output/errors, diagnostic-only health bridge, Python-backed compatibility dispatch with exact `EVCRATE_STATE_DIR` handoff, package bins/exports, release build gate, and regression coverage.

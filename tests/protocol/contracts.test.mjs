@@ -8,7 +8,8 @@ import {
   validateSettingsMode, canonicalAdvisorPolicyDigest, bindPreviewMetadata,
   createSettingsGetResult, createSettingsApplyResult, createSettingsConflictResult,
   createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest,
-  validateResourceRequestPayload, validateResourceResultPayload
+  validateResourceRequestPayload, validateResourceResultPayload, validateScopeRequestPayload,
+  validateScopeResultPayload, validateScopeRevisionVector
 } from '../../dist/protocol/index.js';
 import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
 
@@ -101,6 +102,18 @@ test('Phase 6 payload fixtures preserve exact request and token contracts', () =
   const preview = contractFixtures.resourceResults.find(({ operation }) => operation === 'imports.preview');
   assert.ok(preview);
   assert.deepEqual(validateResourceResultPayload('imports.preview', preview.payload), preview.payload);
+});
+
+test('scope revisions are explicit and mutable model operations stay unsupported', () => {
+  const vector = { registryRevision: 4, globalScopeRevision: 2, projectScopeRevision: 1 };
+  assert.deepEqual(validateScopeRevisionVector(vector), vector);
+  assert.throws(() => validateScopeRevisionVector({ ...vector, extra: true }));
+  const version = createResourceRequest('scope-contract', 'version', context, {});
+  assert.throws(() => validateResourceRequest({ ...version, operation: 'models.set' }), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => validateScopeRequestPayload('scopes.assign', {
+    resourceId: 'agent:agents/a.md', targets: ['claude'], capabilityApprovals: [],
+    expectedRevision: vector, unexpected: true
+  }));
 });
 
 test('proxy fixture matrix rejects counsel fields in every control-plane family', () => {

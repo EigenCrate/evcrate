@@ -3,4 +3,5 @@ export * from './validation.js';
 export * from './resource-control.js';
 export * from './resource-payloads.js';
 export * from './advisor-settings.js';
+export * from './scope-payloads.js';
 export * from './diagnostic.js';
