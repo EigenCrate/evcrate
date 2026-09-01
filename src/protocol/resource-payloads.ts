@@ -8,6 +8,7 @@ import {
   validateResourceId, validateResourceKind, validateResourceRecord, validateResourceRevision, validateSourcePath,
   validateTargetList, validateToken, validatePositiveInteger, type ImportCapability, type ResourceChange
 } from './resource-payload-validation.js';
+import { validateScopeRequestPayload, validateScopeResultPayload } from './scope-payloads.js';
 export { IMPORT_CAPABILITIES, CHANGE_TYPES } from './resource-payload-validation.js';
 export type { ImportCapability, ResourceChange } from './resource-payload-validation.js';
 
@@ -109,6 +110,7 @@ export function validateResourceRequestPayload(operation: string, value: unknown
     assertExactKeys(raw, ['previewToken']);
     return json({ previewToken: validateToken(raw.previewToken) });
   }
+  if (operation.startsWith('scopes.') || operation.startsWith('changes.')) return validateScopeRequestPayload(operation, value);
   assertSafeBoundedJson(value);
   return value;
 }
@@ -142,6 +144,7 @@ export function validateResourceResultPayload(operation: string, value: unknown)
     if (typeof raw.changed !== 'boolean') invalidResourcePayload();
     return json({ changed: raw.changed, change: validateResourceChange(raw.change), registryRevision: validateNonNegativeInteger(raw.registryRevision), resource: validateResourceRecord(raw.resource) });
   }
+  if (operation.startsWith('scopes.') || operation.startsWith('changes.')) return validateScopeResultPayload(operation, value);
   assertSafeBoundedJson(value);
   return value;
 }

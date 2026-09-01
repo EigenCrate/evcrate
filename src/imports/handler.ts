@@ -9,6 +9,7 @@ import type {
 import { validateResourceResultPayload } from '../protocol/resource-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import { loadResourceRegistry, listResources, getResource } from '../registry/store.js';
+import { createScopeHandler } from '../scopes/handler.js';
 import { applyImport } from './apply.js';
 import { prepareImport } from './preview.js';
 import { saveImportPreview } from './preview-store.js';
@@ -26,8 +27,10 @@ function result(request: ResourceRequest, value: unknown, status: 'ok' | 'previe
 }
 function handler(options: ResourceHandlerOptions): ResourceHandler {
   const now = options.now ?? Date.now;
+  const scopeHandler = createScopeHandler({ now });
   return {
     handle(request, context): ResourceResult {
+      if (request.operation.startsWith('scopes.') || request.operation.startsWith('changes.')) return scopeHandler(request, context);
       if (request.operation === 'resources.list') {
         const input = request.payload as unknown as ResourceListPayload;
         const registry = loadResourceRegistry(registryPath(context), context.canonicalSourceRoot, context.resourceRoots);

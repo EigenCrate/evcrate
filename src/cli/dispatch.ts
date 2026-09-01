@@ -12,6 +12,10 @@ import { createResourceRequest, validateResourceRequest, validateResourceResult 
 import { PROTOCOL_VERSION } from '../protocol/validation.js';
 import type { ResourceContext, ResourceRequest, ResourceResult } from '../protocol/resource-control.js';
 import type { JsonValue } from '../protocol/json.js';
+import type {
+  ScopeMutation, ScopeMutationPayload
+} from '../protocol/scope-payloads.js';
+import { validateScopeRevisionVector } from '../protocol/scope-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
 import { runCompatibilityDistribution } from './compatibility-distribution.js';
@@ -20,18 +24,13 @@ import { exitCodeForResult } from './output.js';
 import type { CliResult } from './output.js';
 import { createResourceHandler, defaultResourceHandler } from '../imports/handler.js';
 import type { ResourceHandler } from '../imports/handler.js';
-import type { CliRuntime, AdvisorSettingsHandler } from './types.js';
+import { createAdvisorSettingsCoordinator, defaultAdvisorSettingsCoordinator } from '../advisor-settings/coordinator.js';
+import type { CliRuntime } from './types.js';
 
 export interface DispatchOutcome {
   readonly result: CliResult;
   readonly exitCode: number;
 }
-
-const unsupportedSettings: AdvisorSettingsHandler = {
-  handle(request) {
-    return createSettingsErrorResult(request, new ControlPlaneError('CAPABILITY_UNSUPPORTED'));
-  }
-};
 
 function version(context: InvocationContext, runtime: CliRuntime): string {
   if (runtime.packageVersion) return runtime.packageVersion;
@@ -90,6 +89,14 @@ function numericOption(value: string | undefined, fallback: number, maximum: num
   if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > maximum) throw new ControlPlaneError('VALIDATION_INVALID');
   return parsed;
 }
+function expectedRevision(value: string | undefined): ReturnType<typeof validateScopeRevisionVector> {
+  if (value === undefined) throw new ControlPlaneError('VALIDATION_INVALID');
+  try { return validateScopeRevisionVector(parseJsonDocument(value)); }
+  catch (error) {
+    if (error instanceof ControlPlaneError) throw error;
+    throw new ControlPlaneError('VALIDATION_INVALID');
+  }
+}
 function resourceContext(context: InvocationContext): ResourceContext {
   const targetId = context.selectedTargetIds[0];
   const target = context.selectedTargets[0];
@@ -99,6 +106,17 @@ function resourceContext(context: InvocationContext): ResourceContext {
     generatedRoot: target.generatedRoots[0], homeRoot: target.homeBindings[0]?.homeRoot ?? context.homeRoot,
     stateRoot: context.stateRoot, projectId: context.projectId ?? 'global', projectRoot: context.projectRoot, target: targetId
   };
+}
+function scopeMutation(action: 'assign' | 'remove' | 'enable' | 'disable', invocation: CliInvocation, context: InvocationContext): { operation: ScopeMutation; payload: ScopeMutationPayload } {
+  const expected = expectedRevision(invocation.options.expectedRevision);
+  const resourceId = invocation.options.id ?? '';
+  if (action === 'assign') {
+    return { operation: 'scopes.assign', payload: {
+      resourceId, targets: [...context.selectedTargetIds],
+      capabilityApprovals: [...invocation.options.approveCapabilities], expectedRevision: expected
+    } as ScopeMutationPayload };
+  }
+  return { operation: `scopes.${action}` as ScopeMutation, payload: { resourceId, expectedRevision: expected } };
 }
 function cliResourceRequest(requestId: string, invocation: CliInvocation, context: InvocationContext): ResourceRequest {
   const options = invocation.options;
@@ -111,6 +129,28 @@ function cliResourceRequest(requestId: string, invocation: CliInvocation, contex
   }
   if (invocation.command.kind === 'resources') {
     return createResourceRequest(requestId, 'resources.get', envelope, { id: options.id ?? '' });
+  }
+  if (invocation.command.kind === 'scopes') {
+    if (invocation.command.action === 'list') return createResourceRequest(requestId, 'scopes.list', envelope, {});
+    if (invocation.command.action === 'get') return createResourceRequest(requestId, 'scopes.get', envelope, { id: options.id ?? '' });
+    const mutation = scopeMutation(invocation.command.action, invocation, context);
+    return createResourceRequest(requestId, mutation.operation, envelope, mutation.payload as unknown as JsonValue);
+  }
+  if (invocation.command.kind === 'changes' && invocation.command.action === 'apply') {
+    return createResourceRequest(requestId, 'changes.apply', envelope, { previewToken: options.previewToken ?? '' });
+  }
+  if (invocation.command.kind === 'changes') {
+    const mutation = options.mutation ?? '';
+    const expected = expectedRevision(options.expectedRevision);
+    const payload = mutation === 'scopes.assign'
+      ? {
+        resourceId: options.id ?? '', targets: [...context.selectedTargetIds],
+        capabilityApprovals: [...options.approveCapabilities], expectedRevision: expected
+      }
+      : { resourceId: options.id ?? '', expectedRevision: expected };
+    return createResourceRequest(requestId, 'changes.preview', envelope, {
+      mutation, payload, expiresInSeconds: numericOption(options.expirySeconds, 300, 900)
+    } as unknown as JsonValue);
   }
   if (invocation.command.kind === 'imports' && invocation.command.action === 'preview') {
     return createResourceRequest(requestId, 'imports.preview', envelope, {
@@ -128,7 +168,8 @@ async function settingsResult(
   context: InvocationContext,
   runtime: CliRuntime
 ): Promise<AdvisorSettingsResult> {
-  const handler = runtime.settingsHandler ?? unsupportedSettings;
+  const handler = runtime.settingsHandler
+    ?? (runtime.now === undefined ? defaultAdvisorSettingsCoordinator : createAdvisorSettingsCoordinator({ now: runtime.now }));
   const result = await handler.handle(request, context);
   const normalized = validateAdvisorSettingsResult(result);
   if (normalized.requestId !== request.requestId || normalized.operation !== request.operation) {
@@ -153,6 +194,8 @@ async function dispatchRequest(
   }
   if (request.protocol === 'evcrate-advisor-settings') {
     const settingsRequest = validateAdvisorSettingsRequest(request);
+    if (invocation.command.kind === 'advisor-settings'
+      && invocation.command.operation !== settingsRequest.operation) throw new ControlPlaneError('PROTOCOL_INVALID');
     const result = await settingsResult(settingsRequest, context, runtime);
     return { result, exitCode: exitCodeForResult(result) };
   }
@@ -218,7 +261,9 @@ export async function dispatchInvocation(
       return { result, exitCode: exitCodeForResult(result) };
     }
     case 'resources':
-    case 'imports': {
+    case 'imports':
+    case 'scopes':
+    case 'changes': {
       const requestValue = cliResourceRequest(requestId, invocation, context);
       return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
     }

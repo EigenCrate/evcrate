@@ -64,7 +64,7 @@ only; it does not qualify installed vendor CLIs or authorize HOME publication.
 
 ## Other target requirements
 
-Preserve current Claude, Codex (`.codex` + `.agents`), Gemini, Antigravity, and Pi roots, path rewriting, frontmatter/model transforms, inventories, hooks/scripts, Pi settings/package merge, and publication policies exactly as declared by schema-2 manifests.
+Preserve current Claude, Codex (`.codex` + `.agents`), Gemini, Antigravity, and Pi roots, path rewriting, agent-frontmatter/model transforms, inventories, hooks/scripts, Pi settings/package merge, and publication policies exactly as declared by schema-2 manifests. Model transformation is agent-resource content only; commands and workflows have no mutable model-binding contract in this phase.
 
 ## Related code files
 

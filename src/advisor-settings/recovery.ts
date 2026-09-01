@@ -7,6 +7,7 @@ import { parseJsonDocument } from '../protocol/json.js';
 import { assertNoSymlinkAncestors, assertOwnerOnlyDirectory } from '../filesystem/paths.js';
 import { canonicalJsonBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { removePath, syncDirectory, writeAtomicFile } from '../filesystem/atomic.js';
+import { withSettingsLock } from '../filesystem/locking.js';
 export const ADVISOR_SETTINGS_JOURNAL_NAME = 'advisor-settings-journal.json';
 export const ADVISOR_SETTINGS_BACKUP_PREFIX = '.advisor-settings-backup-';
 export const ADVISOR_SETTINGS_STAGE_PREFIX = '.advisor-settings-stage-';
@@ -79,7 +80,7 @@ function secureDestinationParent(destination: string): void {
     assertOwnerOnlyDirectory(dirname(destination));
   } catch { fail('ROLLBACK_FAILED'); }
 }
-export function recoverAdvisorPolicy(stateRootValue: string): void {
+export function recoverAdvisorPolicyUnlocked(stateRootValue: string): void {
   try {
     const stateRoot = resolve(stateRootValue);
     assertNoSymlinkAncestors(stateRoot);
@@ -130,6 +131,10 @@ export function recoverAdvisorPolicy(stateRootValue: string): void {
     fail('ROLLBACK_FAILED');
   }
 }
+export function recoverAdvisorPolicy(stateRootValue: string): void {
+  withSettingsLock(stateRootValue, () => recoverAdvisorPolicyUnlocked(stateRootValue));
+}
+
 export function clearAdvisorPolicyJournal(stateRoot: string): void {
   const root = resolve(stateRoot);
   try {

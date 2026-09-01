@@ -9,7 +9,7 @@ import { withSettingsLock } from '../filesystem/locking.js';
 import { ensureAdvisorPolicyParent, readAdvisorPolicy, revisionsEqual, type AdvisorPolicySnapshot } from './policy-files.js';
 import {
   ADVISOR_SETTINGS_BACKUP_PREFIX, ADVISOR_SETTINGS_STAGE_PREFIX,
-  clearAdvisorPolicyJournal, recoverAdvisorPolicy, writeAdvisorPolicyJournal
+  clearAdvisorPolicyJournal, recoverAdvisorPolicyUnlocked, writeAdvisorPolicyJournal
 } from './recovery.js';
 
 export { ADVISOR_SETTINGS_JOURNAL_NAME, recoverAdvisorPolicy } from './recovery.js';
@@ -93,7 +93,7 @@ export function stageAdvisorPolicy(
   const stateRoot = stateRootFor(destinationPath, options.stateRoot);
   return withSettingsLock(stateRoot, () => {
     const state = ensureStateRoot(stateRoot);
-    recoverAdvisorPolicy(state);
+    recoverAdvisorPolicyUnlocked(state);
     return stageUnlocked(destinationPath, policy, revision, state);
   });
 }
@@ -104,7 +104,7 @@ function assertAbsent(destination: string): void {
 
 function applyUnlocked(destination: string, policy: AdvisorPolicy, revision: SettingsRevision, options: AdvisorPolicyOptions): AdvisorPolicySnapshot {
   const stateRoot = ensureStateRoot(stateRootFor(destination, options.stateRoot));
-  recoverAdvisorPolicy(stateRoot);
+  recoverAdvisorPolicyUnlocked(stateRoot);
   let stage: AdvisorPolicyStage | null = null;
   let backup: string | null = null;
   try {
@@ -129,7 +129,7 @@ function applyUnlocked(destination: string, policy: AdvisorPolicy, revision: Set
       || promoted.mode?.mode !== currentStage.mode) fail('CAS_CONFLICT');
   } catch (error) {
     try {
-      recoverAdvisorPolicy(stateRoot);
+      recoverAdvisorPolicyUnlocked(stateRoot);
       if (stage && ownedTransactionFile(stage.stagedPath)) unlinkSync(stage.stagedPath);
     } catch { fail('ROLLBACK_FAILED'); }
     if (error instanceof ControlPlaneError) throw error;
@@ -139,6 +139,13 @@ function applyUnlocked(destination: string, policy: AdvisorPolicy, revision: Set
   clearAdvisorPolicyJournal(stateRoot);
   syncDirectory(dirname(destination));
   return readAdvisorPolicy(destination);
+}
+
+/** Internal transaction entry point for callers holding advisor-settings.lock. */
+export function applyAdvisorPolicyUnlocked(
+  destinationValue: string, policy: AdvisorPolicy, expectedRevision: SettingsRevision, options: AdvisorPolicyOptions = {}
+): AdvisorPolicySnapshot {
+  return applyUnlocked(resolve(destinationValue), policy, expectedRevision, options);
 }
 
 export function applyAdvisorPolicy(

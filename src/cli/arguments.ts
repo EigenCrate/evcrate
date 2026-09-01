@@ -11,6 +11,8 @@ export type CliCommand =
   | { readonly kind: 'distribute'; readonly action: 'build' | 'check' | 'publish' | 'all' | 'recover' }
   | { readonly kind: 'resources'; readonly action: 'list' | 'get' }
   | { readonly kind: 'imports'; readonly action: 'preview' | 'apply' }
+  | { readonly kind: 'scopes'; readonly action: 'list' | 'get' | 'assign' | 'remove' | 'enable' | 'disable' }
+  | { readonly kind: 'changes'; readonly action: 'preview' | 'apply' }
   | { readonly kind: 'request-file' };
 
 export interface CliOptions {
@@ -27,6 +29,8 @@ export interface CliOptions {
   readonly provenance?: string;
   readonly approveCapabilities: readonly string[];
   readonly previewToken?: string;
+  readonly mutation?: string;
+  readonly expectedRevision?: string;
   readonly expirySeconds?: string;
   readonly limit?: string;
   readonly cursor?: string;
@@ -44,7 +48,7 @@ export interface CliInvocation {
 const VALUE_OPTIONS = new Set([
   '--source', '--home', '--state-home', '--project-id', '--project-root', '--target',
   '--id', '--kind', '--import-source', '--destination', '--provenance', '--approve-capability',
-  '--preview-token', '--expiry', '--limit', '--cursor', '--request-file', '--protocol-version', '--timeout'
+  '--preview-token', '--mutation', '--expected-revision', '--expiry', '--limit', '--cursor', '--request-file', '--protocol-version', '--timeout'
 ]);
 const SCALAR_OPTIONS = new Set([...VALUE_OPTIONS].filter((option) => option !== '--target' && option !== '--approve-capability'));
 
@@ -78,11 +82,14 @@ function protocolInteger(value: string): number {
   if (!Number.isSafeInteger(parsed)) fail('PROTOCOL_INVALID');
   return parsed;
 }
-
 function commandFromPositionals(positionals: readonly string[], hasRequestFile: boolean): CliCommand {
   if (hasRequestFile) {
-    if (positionals.length !== 0) fail('USAGE_INVALID');
-    return { kind: 'request-file' };
+    if (positionals.length === 0) return { kind: 'request-file' };
+    if (positionals.length === 3 && positionals[0] === 'advisor' && positionals[1] === 'settings'
+      && ['get', 'preview', 'apply'].includes(positionals[2])) {
+      return { kind: 'advisor-settings', operation: positionals[2] as 'get' | 'preview' | 'apply' };
+    }
+    fail('USAGE_INVALID');
   }
   if (positionals.length === 1 && positionals[0] === 'version') return { kind: 'version' };
   if (positionals.length === 1 && positionals[0] === 'health') return { kind: 'health' };
@@ -101,6 +108,14 @@ function commandFromPositionals(positionals: readonly string[], hasRequestFile: 
   if (positionals.length === 2 && positionals[0] === 'imports'
     && ['preview', 'apply'].includes(positionals[1])) {
     return { kind: 'imports', action: positionals[1] as 'preview' | 'apply' };
+  }
+  if (positionals.length === 2 && positionals[0] === 'scopes'
+    && ['list', 'get', 'assign', 'remove', 'enable', 'disable'].includes(positionals[1])) {
+    return { kind: 'scopes', action: positionals[1] as 'list' | 'get' | 'assign' | 'remove' | 'enable' | 'disable' };
+  }
+  if (positionals.length === 2 && positionals[0] === 'changes'
+    && ['preview', 'apply'].includes(positionals[1])) {
+    return { kind: 'changes', action: positionals[1] as 'preview' | 'apply' };
   }
   fail('USAGE_INVALID');
 }
@@ -164,6 +179,8 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     provenance: values.provenance,
     approveCapabilities: Object.freeze([...approvals]),
     previewToken: values.previewtoken,
+    mutation: values.mutation,
+    expectedRevision: values.expectedrevision,
     expirySeconds: values.expiry,
     limit: values.limit,
     cursor: values.cursor,
