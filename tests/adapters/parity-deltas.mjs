@@ -966,8 +966,8 @@ export const parityDeltaRecords = {
     },
     ".gemini/agents/brainstormer.md": {
       "kind": "file",
-      "bytes": 6712,
-      "hash": "cb092daa536611f10a57f461c9ebbbd6d2067752ea9be903ced5ed481cdc8a61",
+      "bytes": 6723,
+      "hash": "69b8a27228fb40f2cbd68828418141f4f0148eef94014218c06d6461b598dff7",
       "mode": 448,
       "reason": "Gemini target serializer or normalizer delta"
     },
@@ -9614,8 +9614,8 @@ export const parityDeltaRecords = {
     },
     ".codex/agents/brainstormer.toml": {
       "kind": "file",
-      "bytes": 8303,
-      "hash": "6aeaae8d50fd5e4dbebb80649adb29907b0fb4a8a85b92ad4912eb5974bc8048",
+      "bytes": 8357,
+      "hash": "69ad0533fa59fbfbb4217781ac129e0b1a9f145463172c442630dd9ae5b9c2ac",
       "mode": 420,
       "reason": "Codex target serializer or guidance delta"
     },
@@ -11349,8 +11349,8 @@ export const parityDeltaRecords = {
     },
     ".copilot/evcrate/agent-tool-audit.json": {
       "kind": "file",
-      "bytes": 4676,
-      "hash": "0fbf5620e57e92c413a577e821f58feeb9e6d094fc06ded1f4e73ec47f17d14a",
+      "bytes": 4699,
+      "hash": "fd5735e18e722207abdee0575326b27449d5e88b0aec8f1608ed7f150d31d2aa",
       "mode": 420,
       "reason": "Copilot target namespace or support delta"
     },
