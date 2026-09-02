@@ -1,9 +1,11 @@
+import '../dist/adapters/index.js';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  canonicalJsonBytes, resolveInvocationContext, resourceDocumentBytes, scanCanonicalResources
-} from '../dist/index.js';
+import { canonicalJsonBytes } from '../dist/filesystem/hashing.js';
+import { resolveInvocationContext } from '../dist/context/invocation-context.js';
+import { resourceDocumentBytes } from '../dist/registry/store.js';
+import { scanCanonicalResources } from '../dist/registry/scanner.js';
 
 export const RESOURCE_ROOTS = Object.freeze({
   agent: 'agents', command: 'commands', hook: 'hooks', skill: 'skills', workflow: 'workflows'

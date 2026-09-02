@@ -1,0 +1,86 @@
+{
+  "request": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-prev-002",
+    "operation": "imports.preview",
+    "context": {
+      "canonicalSourceRoot": "/workspace/.evcrate/source/.claude",
+      "targetManifestPath": "/workspace/.evcrate/targets/claude/manifest.json",
+      "generatedRoot": "/workspace/.evcrate/source",
+      "homeRoot": "/home/user",
+      "stateRoot": "/workspace/.evcrate/state",
+      "projectId": "dam-hopper-project-alpha",
+      "projectRoot": "/workspace",
+      "target": "claude"
+    },
+    "payload": {
+      "sourcePath": "/workspace/incoming/agent.md",
+      "destination": "agents/custom.md",
+      "kind": "agent",
+      "provenance": "dam-hopper-store",
+      "capabilityApprovals": [],
+      "selectedTargets": ["claude", "omp", "copilot"],
+      "expiresInSeconds": 300
+    }
+  },
+  "response": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-prev-002",
+    "operation": "imports.preview",
+    "status": "preview",
+    "payload": {
+      "token": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expiresAt": 1790000000000,
+      "kind": "agent",
+      "destination": "agents/custom.md",
+      "provenance": "dam-hopper-store",
+      "capabilityApprovals": [],
+      "sourceHash": "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+      "registryRevision": 1,
+      "registryFileRevision": {
+        "kind": "present",
+        "identity": "registry-rev-1"
+      },
+      "currentCanonicalHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "prospectiveCanonicalHash": "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+      "selectedTargets": ["claude", "omp", "copilot"],
+      "targetRegistryHash": "9999888877776666555544443333222211110000aaaabbbbccccddddeeeeffff",
+      "targetManifestHashes": {
+        "claude": "aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111",
+        "omp": "bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222",
+        "copilot": "cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333cccc3333"
+      },
+      "adapterHashes": {
+        "claude": "dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444dddd4444",
+        "omp": "eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555eeee5555",
+        "copilot": "ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666ffff6666"
+      },
+      "outputHashes": {
+        "claude": "1234123412341234123412341234123412341234123412341234123412341234",
+        "omp": "5678567856785678567856785678567856785678567856785678567856785678",
+        "copilot": "9012901290129012901290129012901290129012901290129012901290129012"
+      },
+      "change": "create",
+      "resource": {
+        "id": "agent:agents/custom.md",
+        "kind": "agent",
+        "source_path": "agents/custom.md",
+        "content_hash": "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+        "origin": "dam-hopper-store",
+        "compatibility": {
+          "claude": { "status": "native" },
+          "codex": { "status": "native" },
+          "gemini": { "status": "native" },
+          "antigravity": { "status": "native" },
+          "pi": { "status": "native" },
+          "omp": { "status": "native" },
+          "copilot": { "status": "native" }
+        },
+        "capabilities": [],
+        "revision": 2
+      }
+    }
+  }
+}

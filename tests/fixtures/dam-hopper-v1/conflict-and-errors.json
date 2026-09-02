@@ -1,0 +1,41 @@
+{
+  "casConflict": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-conf-007",
+    "operation": "scopes.assign",
+    "status": "conflict",
+    "error": {
+      "code": "CAS_CONFLICT",
+      "category": "conflict",
+      "action": "Refresh the current revision and preview again.",
+      "message": "Revision conflict"
+    },
+    "conflict": {
+      "expectedRevision": {
+        "registryRevision": 1,
+        "globalScopeRevision": 1,
+        "projectScopeRevision": 1
+      },
+      "actualRevision": {
+        "registryRevision": 1,
+        "globalScopeRevision": 1,
+        "projectScopeRevision": 2
+      },
+      "retryable": true
+    }
+  },
+  "validationError": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-err-008",
+    "operation": "resources.get",
+    "status": "error",
+    "error": {
+      "code": "VALIDATION_INVALID",
+      "category": "validation",
+      "action": "Correct the invalid value and retry.",
+      "message": "Validation failed"
+    }
+  }
+}

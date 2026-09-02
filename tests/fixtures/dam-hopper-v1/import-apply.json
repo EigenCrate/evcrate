@@ -1,0 +1,52 @@
+{
+  "request": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-appl-003",
+    "operation": "imports.apply",
+    "context": {
+      "canonicalSourceRoot": "/workspace/.evcrate/source/.claude",
+      "targetManifestPath": "/workspace/.evcrate/targets/claude/manifest.json",
+      "generatedRoot": "/workspace/.evcrate/source",
+      "homeRoot": "/home/user",
+      "stateRoot": "/workspace/.evcrate/state",
+      "projectId": "dam-hopper-project-alpha",
+      "projectRoot": "/workspace",
+      "target": "claude"
+    },
+    "payload": {
+      "token": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedRegistryRevision": 1
+    }
+  },
+  "response": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-appl-003",
+    "operation": "imports.apply",
+    "status": "applied",
+    "payload": {
+      "changed": true,
+      "change": "create",
+      "registryRevision": 2,
+      "resource": {
+        "id": "agent:agents/custom.md",
+        "kind": "agent",
+        "source_path": "agents/custom.md",
+        "content_hash": "1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff",
+        "origin": "dam-hopper-store",
+        "compatibility": {
+          "claude": { "status": "native" },
+          "codex": { "status": "native" },
+          "gemini": { "status": "native" },
+          "antigravity": { "status": "native" },
+          "pi": { "status": "native" },
+          "omp": { "status": "native" },
+          "copilot": { "status": "native" }
+        },
+        "capabilities": [],
+        "revision": 2
+      }
+    }
+  }
+}
