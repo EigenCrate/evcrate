@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { ControlPlaneError, serializeControlPlaneError } from '../errors/control-plane-error.js';
 import { parseJsonDocument, isPlainObject } from '../protocol/json.js';
 import {
@@ -8,8 +8,12 @@ import {
 } from '../protocol/advisor-settings.js';
 import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/advisor-settings.js';
 import { createDiagnosticRequest, validateDiagnosticRequest } from '../protocol/diagnostic.js';
-import { createResourceRequest, validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
+import { createResourceRequest, createResourceRecoveryResult, createResourceResult, validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
 import { PROTOCOL_VERSION } from '../protocol/validation.js';
+import {
+  PUBLICATION_BINDING_ORDER, validatePublishApplyResultPayload, validatePublishDryRunResultPayload,
+  validateRecoverResultPayload
+} from '../protocol/publication-payloads.js';
 import type { ResourceContext, ResourceRequest, ResourceResult } from '../protocol/resource-control.js';
 import type { JsonValue } from '../protocol/json.js';
 import type {
@@ -18,7 +22,7 @@ import type {
 import { validateScopeRevisionVector } from '../protocol/scope-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
-import { runCompatibilityDistribution } from './compatibility-distribution.js';
+import { runCompatibilityDistribution, runTypedPublication } from './compatibility-distribution.js';
 import { runHealth } from './health.js';
 import { exitCodeForResult } from './output.js';
 import type { CliResult } from './output.js';
@@ -177,6 +181,97 @@ async function settingsResult(
   }
   return normalized;
 }
+function homeBindingName(context: InvocationContext, homeRoot: string): string {
+  const value = relative(context.homeRoot, homeRoot).replaceAll('\\', '/');
+  if (!value || value === '..' || value.startsWith('../')) throw new ControlPlaneError('PROTOCOL_INVALID');
+  return value;
+}
+function publicationBindingOrder(
+  context: InvocationContext, selectedTargets: readonly string[] = context.selectedTargetIds
+): readonly string[] {
+  const bindings = new Set<string>(['.evcrate/bin']);
+  for (const targetId of selectedTargets) {
+    const target = context.selectedTargets.find(({ id }) => id === targetId);
+    if (!target) throw new ControlPlaneError('PROTOCOL_INVALID');
+    for (const binding of target.homeBindings) {
+      const name = homeBindingName(context, binding.homeRoot);
+      if (bindings.has(name)) throw new ControlPlaneError('PROTOCOL_INVALID');
+      bindings.add(name);
+    }
+  }
+  return PUBLICATION_BINDING_ORDER.filter((binding) => bindings.has(binding));
+}
+function assertExactValues(actual: readonly string[], expected: readonly string[]): void {
+  if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index])) {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+}
+function assertPublicationCorrelation(
+  context: InvocationContext,
+  selectedTargets: readonly string[],
+  bindingOrder: readonly string[],
+  changes: readonly { target: string; path: string }[]
+): void {
+  assertExactValues(selectedTargets, context.selectedTargetIds);
+  assertExactValues(bindingOrder, publicationBindingOrder(context, selectedTargets));
+  const targetBindings = new Map<string, Set<string>>([['advisor-controller', new Set(['.evcrate/bin'])]]);
+  for (const targetId of selectedTargets) {
+    const target = context.selectedTargets.find(({ id }) => id === targetId);
+    if (!target) throw new ControlPlaneError('PROTOCOL_INVALID');
+    targetBindings.set(targetId, new Set(target.homeBindings.map(({ homeRoot }) => homeBindingName(context, homeRoot))));
+  }
+  for (const change of changes) {
+    const bindings = targetBindings.get(change.target);
+    if (!bindings) throw new ControlPlaneError('PROTOCOL_INVALID');
+    const matches = [...bindings].filter((binding) => change.path === binding || change.path.startsWith(`${binding}/`));
+    if (matches.length !== 1) throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+}
+async function publicationResult(
+  request: ResourceRequest, context: InvocationContext, runtime: CliRuntime
+): Promise<ResourceResult> {
+  const handler = runtime.publicationHandler;
+  if (request.operation === 'publish.dry-run' || request.operation === 'publish.apply') {
+    const requested = (request.payload as unknown as { selectedTargets: readonly string[] }).selectedTargets;
+    assertExactValues(requested, context.selectedTargetIds);
+    if (request.operation === 'publish.dry-run') {
+      const raw = handler
+        ? await handler.publishDryRun(context)
+        : await runTypedPublication('publish.dry-run', context, runtime);
+      const payload = validatePublishDryRunResultPayload(raw);
+      assertPublicationCorrelation(context, payload.selectedTargets, payload.bindingOrder, payload.changes);
+      return createResourceResult(request, payload as unknown as JsonValue, 'preview');
+    }
+    const options = { ...(runtime.publicationOptions ?? {}), abortSignal: runtime.publicationOptions?.abortSignal ?? runtime.abortSignal };
+    const raw = handler
+      ? await handler.publishApply(context, options)
+      : await runTypedPublication('publish.apply', context, runtime);
+    const payload = validatePublishApplyResultPayload(raw);
+    assertPublicationCorrelation(context, payload.selectedTargets, payload.bindingOrder, payload.changes);
+    return createResourceResult(request, payload as unknown as JsonValue, 'published');
+  }
+  const requestedReleaseId = (request.payload as unknown as { releaseId: string | null }).releaseId;
+  const raw = handler
+    ? await handler.recover(context, requestedReleaseId)
+    : await runTypedPublication('recover', context, runtime, requestedReleaseId);
+  const payload = validateRecoverResultPayload(raw);
+  if (requestedReleaseId !== null && payload.releaseId !== requestedReleaseId) {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+  if (payload.action !== 'none') {
+    if (payload.selectedTargets.some((target) => !context.selectedTargetIds.includes(target))) {
+      throw new ControlPlaneError('PROTOCOL_INVALID');
+    }
+    assertExactValues(payload.bindingOrder, publicationBindingOrder(context, payload.selectedTargets));
+  }
+  if (payload.action === 'none') {
+    return createResourceRecoveryResult(request, payload as unknown as JsonValue, { kind: 'none', identity: 'none' });
+  }
+  if (payload.releaseId === null) throw new ControlPlaneError('PROTOCOL_INVALID');
+  return createResourceRecoveryResult(request, payload as unknown as JsonValue, {
+    kind: 'required', identity: payload.releaseId
+  });
+}
 
 async function dispatchRequest(
   request: JsonValue,
@@ -205,6 +300,15 @@ async function dispatchRequest(
     if (resourceRequest.operation === 'version') {
       const result = versionResult(resourceRequest.requestId, version(context, runtime));
       return { result, exitCode: 0 };
+    }
+    if (resourceRequest.operation === 'publish.dry-run' || resourceRequest.operation === 'publish.apply' || resourceRequest.operation === 'recover') {
+      try {
+        const result = await publicationResult(resourceRequest, context, runtime);
+        return { result, exitCode: exitCodeForResult(result) };
+      } catch (error) {
+        const result = resourceError(resourceRequest, error);
+        return { result, exitCode: exitCodeForResult(result) };
+      }
     }
     const handler: ResourceHandler = runtime.resourceHandler
       ?? (runtime.now === undefined ? defaultResourceHandler : createResourceHandler({ now: runtime.now }));
@@ -259,6 +363,17 @@ export async function dispatchInvocation(
         ...runtime, requestId: () => requestId
       });
       return { result, exitCode: exitCodeForResult(result) };
+    }
+    case 'publish': {
+      const operation = invocation.command.action === 'dry-run' ? 'publish.dry-run' : 'publish.apply';
+      const requestValue = createResourceRequest(requestId, operation, resourceContext(context), {
+        selectedTargets: [...context.selectedTargetIds]
+      });
+      return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
+    }
+    case 'recover': {
+      const requestValue = createResourceRequest(requestId, 'recover', resourceContext(context), { releaseId: null });
+      return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
     }
     case 'resources':
     case 'imports':

@@ -17,14 +17,14 @@ from .hashing import HashingError, canonical_json_bytes, read_bounded_json
 MARKER_NAME = "release-marker.json"
 LOCK_NAME = "publish.lock"
 MAX_LOCK_BYTES = 4096
-MAX_MARKER_BYTES = 4 * 1024 * 1024
+MAX_MARKER_BYTES = 16 * 1024 * 1024
 SAFE_INTEGER_MAX = 9007199254740991
 
 
 def _is_reparse_point(path: Path) -> bool:
     return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
 
-def _state_file(state_dir: Path, name: str) -> Path:
+def _state_file(state_dir: Path, name: str, *, create: bool = True) -> Path:
     probe = state_dir
     while True:
         if _is_reparse_point(probe):
@@ -34,6 +34,8 @@ def _state_file(state_dir: Path, name: str) -> Path:
         probe = probe.parent
     if state_dir.exists() and not state_dir.is_dir():
         raise PublishError("Distribution state directory must be a real directory")
+    if not create:
+        return state_dir / name
     state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:
         state_dir.chmod(0o700)
@@ -161,7 +163,7 @@ def publish_lock(state_dir: Path) -> Iterator[None]:
 
 
 def read_release_marker(state_dir: Path) -> dict[str, Any]:
-    marker = _state_file(state_dir, MARKER_NAME)
+    marker = _state_file(state_dir, MARKER_NAME, create=False)
     if _is_reparse_point(marker):
         raise PublishError("Release marker must not be a symlink")
     if not marker.exists():
@@ -181,11 +183,14 @@ def write_release_marker(state_dir: Path, marker: dict[str, Any]) -> None:
     path = _state_file(state_dir, MARKER_NAME)
     if _is_reparse_point(path):
         raise PublishError("Release marker must not be a symlink")
+    payload = canonical_json_bytes(marker)
+    if len(payload) > MAX_MARKER_BYTES:
+        raise PublishError("Release marker exceeds the bounded size limit")
     try:
         descriptor, temporary_name = tempfile.mkstemp(prefix=".release-marker-", dir=path.parent)
         temporary = Path(temporary_name)
         with os.fdopen(descriptor, "wb") as handle:
-            handle.write(canonical_json_bytes(marker))
+            handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
         os.chmod(temporary, 0o600)

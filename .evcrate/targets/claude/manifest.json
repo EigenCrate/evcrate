@@ -10,6 +10,7 @@
   "home_policy": {
     "bindings": {".claude": ".claude"},
     "preserve_paths": {},
-    "promotion_order": 40
+    "promotion_order": 40,
+    "publication_rules": ["claude-skill-root-exclusion"]
   }
 }

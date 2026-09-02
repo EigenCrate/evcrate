@@ -47,3 +47,16 @@ test('normalizes agy only at the input boundary', () => {
   assert.deepEqual(invocation.options.targets, ['antigravity']);
   assert.equal(codeOf(() => parseArguments(['version', '--target', 'unknown'])), 'CAPABILITY_UNSUPPORTED');
 });
+test('parses exact publication and recovery command grammar', () => {
+  assert.deepEqual(parseArguments(['publish', '--dry-run', '--target', 'omp', '--json']).command, {
+    kind: 'publish', action: 'dry-run'
+  });
+  assert.deepEqual(parseArguments(['publish', '--apply', '--target=omp']).command, {
+    kind: 'publish', action: 'apply'
+  });
+  assert.deepEqual(parseArguments(['recover', '--json']).command, { kind: 'recover' });
+  assert.equal(codeOf(() => parseArguments(['publish'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--apply'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--dry-run'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['recover', '--apply'])), 'USAGE_INVALID');
+});

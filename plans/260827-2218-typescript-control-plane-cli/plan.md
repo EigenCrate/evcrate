@@ -8,7 +8,7 @@ branch: feat/typescript-control-plane-cli
 worktree: /home/loidinh/WS/evcrate-ws/typescript-control-plane-cli
 tags: [feature, refactor, cli, typescript, npm, distribution, agent-store]
 created: 2026-08-27
-revalidated: 2026-09-01
+revalidated: 2026-09-02
 ---
 
 # TypeScript/npm EVCrate Control-Plane CLI
@@ -59,7 +59,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 6 | [Registry and imports](./phase-06-registry-and-imports.md) | Manifest/hash-bound registry; policy remains outside resource ownership | DONE — 100% in feature worktree; no publication or cutover claimed |
 | 7 | [Scopes, advisor settings, and CAS](./phase-07-scopes-and-cas.md) | Resource scope state plus dedicated settings revision/token/apply semantics | DONE — 100% in feature worktree; approved; not merged to `main` |
 | 7.1 | [Brainstormer model projection](./phase-07-1-brainstormer-model-projection.md) | Assign the canonical brainstormer strong-tier model and verify target projections | COMPLETE — 100% |
-| 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | Planned |
+| 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | DONE — 100% |
 | 9 | [DamHopper integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | Planned |
 | 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | Planned |
 | 11 | [Validation and rollout](./phase-11-validation-and-rollout.md) | Per-target matrix, settings/diagnostic proofs, unchanged counsel | Planned |
@@ -141,7 +141,7 @@ completion, and deployment behavior are not claimed. Review residuals are
 limited to the documented low same-UID/path-race window and Linux-first
 security scope.
 
-The overall plan remains `in_progress` because Phases 8–11 remain planned.
+The overall plan remains `in_progress` because Phases 9–11 remain planned.
 
 ## Phase 7 completion evidence
 
@@ -172,6 +172,13 @@ Validation evidence: `npm run test:phase7` **16/16**, `npm run test:protocol`
 passed; aggregate focused evidence **133/133**. No publication, live cutover,
 Python-free distribution, or `main` merge is claimed.
 
+## Phase 8 completion evidence
+
+**Status:** DONE | **Progress:** 100% | **Validated:** 2026-09-02 | **Review:** 9.8/10 | **Advisor:** Approved
+
+Phase 8 publish and recovery is complete in the feature worktree. Target-HOME publication and advisor-settings transactions remain separate, with publication and recovery behavior covered by the focused gate.
+
+**Bounded validation evidence:** `npm run test:phase8` passed **54/54** tests. Code reviewer score: **9.8/10**. Advisor: **approved**.
 
 ## Phase 1 evidence preserved
 

@@ -9,6 +9,8 @@ export type CliCommand =
   | { readonly kind: 'health' }
   | { readonly kind: 'advisor-settings'; readonly operation: 'get' | 'preview' | 'apply' }
   | { readonly kind: 'distribute'; readonly action: 'build' | 'check' | 'publish' | 'all' | 'recover' }
+  | { readonly kind: 'publish'; readonly action: 'dry-run' | 'apply' }
+  | { readonly kind: 'recover' }
   | { readonly kind: 'resources'; readonly action: 'list' | 'get' }
   | { readonly kind: 'imports'; readonly action: 'preview' | 'apply' }
   | { readonly kind: 'scopes'; readonly action: 'list' | 'get' | 'assign' | 'remove' | 'enable' | 'disable' }
@@ -82,38 +84,44 @@ function protocolInteger(value: string): number {
   if (!Number.isSafeInteger(parsed)) fail('PROTOCOL_INVALID');
   return parsed;
 }
-function commandFromPositionals(positionals: readonly string[], hasRequestFile: boolean): CliCommand {
+function commandFromPositionals(
+  positionals: readonly string[], hasRequestFile: boolean, dryRun: boolean, apply: boolean
+): CliCommand {
   if (hasRequestFile) {
-    if (positionals.length === 0) return { kind: 'request-file' };
-    if (positionals.length === 3 && positionals[0] === 'advisor' && positionals[1] === 'settings'
+    if (positionals.length === 0 && !dryRun && !apply) return { kind: 'request-file' };
+    if (positionals.length === 3 && !dryRun && !apply && positionals[0] === 'advisor' && positionals[1] === 'settings'
       && ['get', 'preview', 'apply'].includes(positionals[2])) {
       return { kind: 'advisor-settings', operation: positionals[2] as 'get' | 'preview' | 'apply' };
     }
     fail('USAGE_INVALID');
   }
-  if (positionals.length === 1 && positionals[0] === 'version') return { kind: 'version' };
-  if (positionals.length === 1 && positionals[0] === 'health') return { kind: 'health' };
-  if (positionals.length === 3 && positionals[0] === 'advisor' && positionals[1] === 'settings'
+  if (positionals.length === 1 && positionals[0] === 'version' && !dryRun && !apply) return { kind: 'version' };
+  if (positionals.length === 1 && positionals[0] === 'health' && !dryRun && !apply) return { kind: 'health' };
+  if (positionals.length === 1 && positionals[0] === 'recover' && !dryRun && !apply) return { kind: 'recover' };
+  if (positionals.length === 1 && positionals[0] === 'publish' && dryRun !== apply) {
+    return { kind: 'publish', action: dryRun ? 'dry-run' : 'apply' };
+  }
+  if (positionals.length === 3 && !dryRun && !apply && positionals[0] === 'advisor' && positionals[1] === 'settings'
     && ['get', 'preview', 'apply'].includes(positionals[2])) {
     return { kind: 'advisor-settings', operation: positionals[2] as 'get' | 'preview' | 'apply' };
   }
-  if (positionals.length === 2 && positionals[0] === 'distribute'
+  if (positionals.length === 2 && !dryRun && !apply && positionals[0] === 'distribute'
     && ['build', 'check', 'publish', 'all', 'recover'].includes(positionals[1])) {
     return { kind: 'distribute', action: positionals[1] as 'build' | 'check' | 'publish' | 'all' | 'recover' };
   }
-  if (positionals.length === 2 && positionals[0] === 'resources'
+  if (positionals.length === 2 && !dryRun && !apply && positionals[0] === 'resources'
     && ['list', 'get'].includes(positionals[1])) {
     return { kind: 'resources', action: positionals[1] as 'list' | 'get' };
   }
-  if (positionals.length === 2 && positionals[0] === 'imports'
+  if (positionals.length === 2 && !dryRun && !apply && positionals[0] === 'imports'
     && ['preview', 'apply'].includes(positionals[1])) {
     return { kind: 'imports', action: positionals[1] as 'preview' | 'apply' };
   }
-  if (positionals.length === 2 && positionals[0] === 'scopes'
+  if (positionals.length === 2 && !dryRun && !apply && positionals[0] === 'scopes'
     && ['list', 'get', 'assign', 'remove', 'enable', 'disable'].includes(positionals[1])) {
     return { kind: 'scopes', action: positionals[1] as 'list' | 'get' | 'assign' | 'remove' | 'enable' | 'disable' };
   }
-  if (positionals.length === 2 && positionals[0] === 'changes'
+  if (positionals.length === 2 && !dryRun && !apply && positionals[0] === 'changes'
     && ['preview', 'apply'].includes(positionals[1])) {
     return { kind: 'changes', action: positionals[1] as 'preview' | 'apply' };
   }
@@ -126,6 +134,8 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
   const approvals: string[] = [];
   const values: Record<string, string> = {};
   let json = false;
+  let dryRun = false;
+  let apply = false;
   const seen = new Set<string>();
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -137,6 +147,13 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     if (token === '--json') {
       if (json) fail('USAGE_INVALID');
       json = true;
+      continue;
+    }
+    if (token === '--dry-run' || token === '--apply') {
+      if (seen.has(token) || (token === '--dry-run' && apply) || (token === '--apply' && dryRun)) fail('USAGE_INVALID');
+      seen.add(token);
+      if (token === '--dry-run') dryRun = true;
+      else apply = true;
       continue;
     }
     const equals = token.indexOf('=');
@@ -162,7 +179,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
       values[option.slice(2).replaceAll('-', '')] = value;
     }
   }
-  const command = commandFromPositionals(positionals, values.requestfile !== undefined);
+  const command = commandFromPositionals(positionals, values.requestfile !== undefined, dryRun, apply);
   const timeoutMs = values.timeoutMs === undefined
     ? MAX_CLI_TIMEOUT_MS : boundedInteger(values.timeoutMs, MAX_CLI_TIMEOUT_MS);
   const options: CliOptions = Object.freeze({

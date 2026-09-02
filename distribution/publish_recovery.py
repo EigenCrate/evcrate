@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+from contextlib import nullcontext
 from pathlib import Path
 
 from .context import DistributionContext
@@ -18,7 +19,7 @@ def restore_roots(roots: list[tuple[Path, Path | None]]) -> None:
             backup.replace(target)
 
 
-def recover_interrupted_publish(context: DistributionContext) -> None:
+def recover_interrupted_publish(context: DistributionContext, *, lock_held: bool = False) -> None:
     """Restore roots recorded before an interrupted HOME publication."""
 
     from .publish import (
@@ -30,9 +31,10 @@ def recover_interrupted_publish(context: DistributionContext) -> None:
         _validate_state_ancestors,
     )
 
-    _policies(context)
-    _validate_state_ancestors(context)
-    with publish_lock(context.state_dir):
+    lock = nullcontext() if lock_held else publish_lock(context.state_dir)
+    with lock:
+        _policies(context)
+        _validate_state_ancestors(context)
         marker = read_release_marker(context.state_dir)
         if marker.get("status") != "in_progress":
             return

@@ -9,7 +9,9 @@ import {
   createSettingsGetResult, createSettingsApplyResult, createSettingsConflictResult,
   createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest,
   validateResourceRequestPayload, validateResourceResultPayload, validateScopeRequestPayload,
-  validateScopeResultPayload, validateScopeRevisionVector
+  validateScopeResultPayload, validateScopeRevisionVector, validatePublishRequestPayload,
+  validatePublishDryRunResultPayload, validatePublishApplyResultPayload, validateRecoverRequestPayload,
+  validateRecoverResultPayload, PUBLICATION_BINDING_ORDER
 } from '../../dist/protocol/index.js';
 import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
 
@@ -301,4 +303,42 @@ test('diagnostic failures use the stable routing error catalog', () => {
   assert.throws(() => validateDiagnosticResult({
     ...failure, question: 'not counsel'
   }), (error) => error.code === 'DIAGNOSTIC_INVALID');
+});
+test('Phase 8 publication payloads enforce order, identity, and empty recovery', () => {
+  assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
+    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+  ]);
+  assert.deepEqual(validatePublishRequestPayload({ selectedTargets: ['agy'] }), { selectedTargets: ['antigravity'] });
+  assert.deepEqual(validateRecoverRequestPayload({ releaseId: 'release-1' }), { releaseId: 'release-1' });
+  const change = {
+    target: 'omp', path: '.omp/agent/alpha.md', action: 'create',
+    beforeHash: null, intendedHash: 'a'.repeat(64)
+  };
+  const dryRun = {
+    buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'b'.repeat(64),
+    selectedTargets: ['omp'], bindingOrder: ['.evcrate/bin', '.omp'], changes: [change]
+  };
+  assert.deepEqual(validatePublishDryRunResultPayload(dryRun), dryRun);
+  const applied = {
+    ...dryRun, releaseId: 'release-1', retainedReleaseId: null
+  };
+  assert.deepEqual(validatePublishApplyResultPayload(applied), applied);
+  const generatedDotfile = {
+    ...dryRun, changes: [{ ...change, path: '.omp/agent/skills/example/.gitignore' }]
+  };
+  assert.doesNotThrow(() => validatePublishDryRunResultPayload(generatedDotfile));
+  assert.throws(() => validatePublishDryRunResultPayload({
+    ...dryRun, changes: [{ ...change, path: '.omp/.env.production' }]
+  }));
+  const none = { releaseId: null, action: 'none', selectedTargets: [], bindingOrder: [] };
+  assert.deepEqual(validateRecoverResultPayload(none), none);
+  const rolledBack = {
+    releaseId: 'release-1', action: 'rolled-back', selectedTargets: ['omp'],
+    bindingOrder: ['.evcrate/bin', '.omp']
+  };
+  assert.deepEqual(validateRecoverResultPayload(rolledBack), rolledBack);
+  assert.throws(() => validatePublishDryRunResultPayload({ ...dryRun, bindingOrder: ['.omp', '.evcrate/bin'] }));
+  assert.throws(() => validateRecoverResultPayload({ ...none, releaseId: 'release-1' }));
+  assert.throws(() => validateRecoverResultPayload({ ...rolledBack, selectedTargets: [] }));
+  assert.throws(() => validateRecoverResultPayload({ ...rolledBack, bindingOrder: [] }));
 });

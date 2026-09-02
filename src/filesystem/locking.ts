@@ -5,13 +5,14 @@ import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { parseJsonDocument } from '../protocol/json.js';
 import { assertNoSymlinkAncestors, assertOwnerControlledDirectory, assertOwnerOnlyFile, assertRealDirectory } from './paths.js';
 import { canonicalJsonBytes, readBoundedFile } from './hashing.js';
+import { MAX_PUBLICATION_STATE_BYTES } from '../protocol/publication-payloads.js';
 import { writeAtomicFile } from './atomic.js';
 
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 export const PUBLISH_LOCK_NAME = 'publish.lock';
 export const SETTINGS_LOCK_NAME = 'advisor-settings.lock';
 export const RELEASE_MARKER_NAME = 'release-marker.json';
-const MAX_MARKER_BYTES = 4 * 1024 * 1024;
+const MAX_MARKER_BYTES = MAX_PUBLICATION_STATE_BYTES;
 
 type LockMetadata = { pid: number; startedAt: number; token: string; processStart: string | null };
 type LockState = LockMetadata & { dev: number; ino: number };
@@ -161,5 +162,7 @@ export function readReleaseMarker(stateRoot: string): Record<string, unknown> {
 export function writeReleaseMarker(stateRoot: string, marker: Record<string, unknown>): void {
   if (marker.schema_version !== 1) fail('PUBLICATION_FAILED');
   const path = markerPath(stateRoot);
-  writeAtomicFile(path, canonicalJsonBytes(marker), 0o600);
+  const bytes = canonicalJsonBytes(marker);
+  if (bytes.byteLength > MAX_MARKER_BYTES) fail('PUBLICATION_FAILED');
+  writeAtomicFile(path, bytes, 0o600);
 }
