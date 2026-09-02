@@ -1,7 +1,7 @@
 ## Unreleased
 
-**Updated:** 2026-09-01
-**Status:** Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
+**Updated:** 2026-09-02
+**Status:** Phase 8 atomic publication and recovery complete; release remains Unreleased
 
 ### Features
 
@@ -23,8 +23,31 @@
 * **advisor-settings:** add owner-only policy-file staging, canonical bytes/mode/revision checks, bounded transaction journals, concurrent-replacement CAS, and durable recovery primitives behind the dedicated coordinator.
 * **locking:** add shared TypeScript/Python O_EXCL owner-only publication locking plus the TypeScript `scopes.lock` and `advisor-settings.lock` critical sections, bounded metadata, process-start checks, release identity checks, atomic stale-lock quarantine, and fail-closed release markers.
 
+### Phase 8: Atomic publication and recovery
+
+* **publication:** add TypeScript verified-build resolution and immutable
+  manifest-driven HOME publication planning for the controller plus selected
+  targets, including frozen nine-binding order, before/intended snapshots,
+  preserve/delete/no-op/merge/conflict actions, same-volume staging, CAS checks,
+  durable release marker/journal state, bounded prior-release retention
+  (512 MiB/seven days), rollback, and idempotent recovery.
+* **publication:** port explicit OMP agent-prefix, Codex HOME path rewrite,
+  Claude skill-root exclusion, Copilot three-key `managed-json-v1`, and Pi
+  pinned-package `pi-settings-v1` policies; preserve unrelated user data and
+  keep `pi-code` removal manual.
+* **publication:** keep target publication isolated from
+  `$HOME/.evcrate/advisor-routing.json` and the dedicated advisor-settings
+  lock/journal/recovery transaction; Python remains the production authority
+  until Phase 10 cutover.
+
 ### Bug Fixes
 
+* **distribution:** fail closed before HOME mutation when schema-2 build,
+  manifest policy, source/adapter/controller/output hashes, ownership, path
+  ancestry, same-volume placement, or unmanaged-collision checks do not match.
+* **distribution:** preserve external HOME paths and unexpected replacements;
+  recover only identity-checked, journaled target operations and never
+  recursively delete ambiguous evidence.
 * **orchestration:** require parent agents to poll the same subagent until a terminal result, treat no-result polls as non-terminal, and fail closed on interrupted or partial work across Claude and generated Codex command/workflow prompts.
 * **distribution:** preserve unrelated HOME symlinks while rejecting any symlink that overlaps a managed publication path.
 * **distribution:** rewrite Codex hook and MCP wrapper paths only in the HOME publication view, preserving project-relative local artifacts.
@@ -42,15 +65,16 @@
 
 * **pi:** document native operating, package, skill-isolation, validation, and manual-cutover procedures.
 * **advisor:** document migration syntax, checkpoint and interview behavior, relay-state retention, target capability codes, and deterministic build/check gates.
-* **control-plane:** document Phase 4 schema-2 distribution validation, controller closure, canonical JSON/hash and strict parser contracts, staged-root and promotion recovery safeguards, policy-file CAS/recovery primitives, TypeScript/Python publication-lock interoperability, Phase 6 manifest-rooted registry/import preview/apply contracts, and Phase 7 package-local scope inheritance/disable/revision-vector CAS, typed preview hashes/tokens, and separate advisor-settings coordination/lock/recovery. Python remains authoritative, with no publication/live cutover, HOME support, Python-free completion, or unverified deployment claim.
+* **control-plane:** document Phase 4 schema-2 distribution validation, controller closure, canonical JSON/hash and strict parser contracts, staged-root and promotion recovery safeguards, policy-file CAS/recovery primitives, TypeScript/Python publication-lock interoperability, Phase 6 manifest-rooted registry/import preview/apply contracts, Phase 7 package-local scope inheritance/disable/revision-vector CAS, separate advisor-settings coordination/lock/recovery, and Phase 8 TypeScript target-publication planning, merge rules, ordered apply, durable journal/marker recovery, bounded retention, and Python authority boundary.
 
 ### Tests
 
 * **distribution:** add skill packaging, command-pointer, runtime-absence, idempotence, and user-configuration preservation regressions to the normal test command.
-* **control-plane:** all builds passed; `npm run test:phase7` **16/16**, `npm run test:protocol` **20/20**, `npm run test:cli` **31/31**, `npm run test:phase6` **23/23**, `npm run test:phase4` **31/31**, and `npm run test:phase5` **12/12**; aggregate focused evidence **133/133**.
-* **security scope:** focused contract evidence retains only the low same-UID/path-race and Linux-first residuals; no publication/live cutover, HOME support, Python-free completion, or deployment behavior claim.
+* **control-plane:** Phase 8 focused validation passes **54/54** (`npm run test:phase8`), including protocol, CLI, publication plan/apply/recovery, parity, and cross-subsystem isolation; all builds passed.
+* **control-plane:** prior focused evidence remains Phase 7 **16/16**, protocol **20/20**, CLI **31/31**, Phase 6 **23/23**, Phase 4 **31/31**, and Phase 5 **12/12** (**133/133** aggregate).
+* **security scope:** focused contract evidence retains only the low same-UID/path-race and Linux-first residuals; no live vendor qualification, Python-free completion, or deployment behavior claim.
 * **request-file:** cover exact-boundary, oversized, invalid UTF-8, depth, directory/symlink, and bounded-maximum rejection; no Windows security-equivalence or Python-free parity claim is implied.
-* **review:** Phase 7 final review approved with no findings; evidence is feature-worktree only and does not claim publication, live cutover, Python-free distribution, or `main` merge.
+* **review:** Phase 7 final review approved with no findings; Phase 8 evidence is feature-worktree contract coverage and does not claim live cutover or `main` merge.
 
 ## 1.0.0 (2026-07-10)
 

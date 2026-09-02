@@ -1,8 +1,8 @@
 # System Architecture
 
-**Last Updated**: 2026-09-01  
+**Last Updated**: 2026-09-02  
 **Project**: EVCrate  
-**Status**: Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
+**Status**: Phase 8 atomic publication and recovery complete; release remains Unreleased
 
 ## Scope
 
@@ -18,32 +18,138 @@ Canonical Claude resources are authored under `.evcrate/source/.claude/`.
 Generated target projections are derived artifacts. Phase 6 adds a schema-v1
 resource registry and explicit import transaction; Phase 7 adds package-local
 scope state, revision-vector CAS, typed preview hash/token bindings, and a
-separate advisor-settings coordinator. These phases do not claim publication or
-live cutover, Python-free completion, HOME support for imports, Windows security
-equivalence, or unverified deployment behavior.
+separate advisor-settings coordinator. Phase 8 adds TypeScript current-build
+resolution, deterministic HOME publication planning, manifest-driven merges,
+same-volume staged promotion, durable target-publication state, retention, and
+idempotent recovery. The default CLI bridge still delegates production
+generation, build/check, publication, and cutover to Python.
 
 ## Architecture at a glance
 
 ```mermaid
 flowchart LR
   Source[Canonical .evcrate/source/.claude] --> TargetRegistry[Schema-2 target manifests and roots]
-  Source --> ResourceRegistry[Schema-1 resource registry]
-  TargetRegistry --> ResourceRegistry
-  ResourceRegistry --> TS[TypeScript validation, compatibility, and hash gates]
-  TS --> Stage[Contained same-volume staging]
-  Stage --> Python[Python distribution authority]
+  Source --> Build[TS build-resolution and verified build]
+  TargetRegistry --> Build
+  Build --> Plan[TS publication-plan and manifest rules]
+  Plan --> Apply[TS lock, CAS, same-volume stage, and ordered apply]
+  Apply --> TargetRecovery[TS publication marker/journal recovery]
+  Source --> Python[Python build/check/publication authority]
   Python --> Local[Verified local projections]
   Local --> Manifest[Schema-2 build manifest]
-  Manifest --> Publish[Manifest-verified HOME publication]
-  Publish --> Recovery[Journal and marker recovery]
+  Manifest --> Build
+  TargetRecovery --> Recovery[Idempotent rollback or commit finalization]
 
   Checkpoint[Direct checkpoint object] --> Controller[$HOME/.evcrate/bin/evcrate-advisor]
   Policy[Required advisor policy file] --> Controller
   Controller --> Result[One terminal controller envelope]
 ```
 
-The controller path is a separate shared advisory service. It is not a
-per-target projection, distribution broker, or settings mutation path.
+The TypeScript publication path and Python compatibility path consume the same
+verified build contract but are not one mixed-engine transaction. The controller
+path is a separate shared advisory service. It is not a per-target projection,
+distribution broker, or settings mutation path.
+
+## Phase 8 atomic publication and recovery
+
+Phase 8 adds a TypeScript target-publication path under `src/distribution/`.
+It consumes a current, complete schema-2 build and selected target manifests;
+it does not run target migrators/adapters during publish or recover and does
+not mutate advisor settings. The default CLI compatibility bridge still calls
+`python3 distribute.py`; direct TypeScript publication establishes the staging,
+parity, and recovery contract pending Phase 10 cutover gates.
+
+### Build closure and publication plan
+
+`build-resolution.ts` selects target manifests, resolves the target-specific or
+all-target build-manifest path, requires complete validation metadata, derives
+current canonical source/manifest/adapter/output paths and hashes, checks
+owners and HOME policy parity, and delegates digest checks to `verifyBuild`.
+Stale source, adapters, manifests, controller bytes, output roots, ownership,
+or policy cause publication failure before mutation.
+
+`publication-rules.ts` is a closed policy interpreter. Only
+`omp-agent-prefix`, `codex-home-path-rewrite`, and
+`claude-skill-root-exclusion` are accepted, and each is owned by its named
+target. OMP maps published files below `agent/`; Codex rewrites HOME hook and
+MCP-wrapper paths; Claude excludes root-level `skills/<name>` files. Behavior
+is never inferred from destination names.
+
+`publication-inventory.ts` walks roots in canonical order under bounded file,
+directory, byte, depth, and path limits. It rejects symlinks/special entries,
+checks owner-controlled ancestors, records device/inode/size/mode metadata, and
+computes complete tree or controller hashes. Marker parsing accepts the strict
+TypeScript target-publication schema and the compatible Python marker schema.
+
+`publication-plan.ts` creates immutable controller and selected-target binding
+plans. It maps source files to contained HOME destinations and emits exact
+`create`, `update`, `delete`, `preserve`, `noop`, `merge-*`, and `conflict`
+operations with before snapshots and intended hashes. Prior marker-managed
+paths identify stale deletions; unmanaged collisions remain conflicts.
+
+The binding order is fixed and validated:
+
+```text
+.evcrate/bin (controller, 5)
+.gemini (10)
+.agents (20)
+.codex (20)
+.pi (25)
+.gemini/config (30)
+.omp (30)
+.claude (40)
+.copilot (40)
+```
+
+### Shared JSON policy ports
+
+`jsonc.ts` supplies bounded JSONC scanning for comments, trailing commas,
+duplicate keys, nesting, node count, invalid strings, and trailing data while
+retaining source spans. `managed-json.ts` uses those spans to replace only the
+exact `managed-json-v1` top-level keys, preserving unrelated JSONC keys,
+comments, newline style, and BOM. Type/root/key mismatches fail closed; equal
+values return byte-identical `noop`.
+
+`pi-settings.ts` handles the manifest's `pi-settings-v1` package key. It
+preserves unrelated entries and object shapes, pins the three declared packages,
+and reports a conflict for `pi-code` (including versioned/object identities)
+without removing it. `shared-json.ts` dispatches only these two schemas; OMP
+has no shared-JSON operation.
+
+### Apply and recovery state machine
+
+The distribution exports `publicationStateRoot`, `createPublicationPlan`,
+`publishDryRun`, `publishApply`, and `recoverPublication`.
+State is under `$HOME/.evcrate/publication`: owner-only
+`publication-journal.json`, `release-marker.json`, and `release-<id>/stage`
+and `backups` directories. Dry-run is non-mutating. Apply acquires the shared
+publication lock, recovers a prior journal, checks same-volume placement,
+recomputes snapshots, stages controller/files, renames prior destinations to
+identity-checked backups, promotes in binding order, syncs parent directories,
+and verifies intended snapshots after each rename.
+
+The schema-1 journal binds release identity, home root, selected targets,
+binding order, build-manifest digest, managed paths, operation count/digest,
+before snapshots, intended hashes, backups, and promotion state. A committed
+apply writes a complete marker, clears the active journal, and retains at most
+one prior release subject to 512 MiB and seven-day limits. Failures before
+promotion restore the previous marker; failures after promotion call
+`recoverPublicationUnlocked`.
+
+`publication-recovery.ts` validates owner/mode, containment, target/binding
+associations, marker/journal identity, operation digests, node identities, and
+intended content before mutation. It restores the previous complete state as
+`rolled-back`, finalizes a committed state as `finalized`, and returns `none`
+when no journal exists. Recovery is idempotent and never recursively deletes
+an unexpected replacement. The target marker/journal are isolated from the
+separate advisor-settings lock, token, policy, and recovery transaction.
+
+The typed resource operations are `publish.dry-run`, `publish.apply`, and
+target-only `recover`; the CLI validates their selected-target/binding
+correlation. The default bridge compares Python dry-run operations before
+publish and checks the Python release marker afterward, preserving Python as
+the production authority while exposing the same typed result boundary.
+
 
 ## Ownership and component boundaries
 
@@ -55,7 +161,7 @@ per-target projection, distribution broker, or settings mutation path.
 | Resource registry | `src/registry/` | Schema-v1 canonical resource records, manifest-root scanning, compatibility, bounded list/get, and registry revisions | Canonical source plus manifest-derived roots |
 | Scope state | `src/scopes/` | Package-local global/project assignments, inheritance, disablement, project identity, revision vectors, and scope CAS | Scope protocol and package-local state |
 | Explicit imports | `src/imports/` | Bounded source descriptors, capability approvals, preview tokens, adapter projections, and CAS-bound apply | Typed resource protocol |
-| TypeScript transactions | `src/filesystem/`, `src/distribution/`, `src/advisor-settings/` | Paths, hashes, locks, staging, promotion, policy CAS, recovery, and import atomicity | Reusable safety primitives |
+| TypeScript transactions | `src/filesystem/`, `src/distribution/{build-resolution,publication-rules,publication-inventory,publication-plan,publication,publication-recovery,shared-json,managed-json,pi-settings,jsonc}.ts`, `src/advisor-settings/` | Paths, hashes, locks, build closure, target publication, policy CAS, recovery, and import atomicity | Reusable safety primitives |
 | Python distribution | `distribution/`, `distribute.py` | Generation, build/check, publication, and recovery | Authoritative distribution engine |
 | Generated projections | `.evcrate/source/.agents`, `.codex`, `.gemini`, `.antigravity`, `.omp`, `.copilot`, `.pi` | Target-specific derived trees | Never hand-edited |
 | Shared advisor controller | `.evcrate/source/.evcrate/bin` → `$HOME/.evcrate/bin` | Checkpoint qualification and one final advisory invocation | Existing CommonJS controller |
@@ -393,30 +499,35 @@ by the exact inventory/hash closure above. Generated target roots do not own a
 controller copy. See [Advisor distribution architecture](./advisor-distribution-architecture.md)
 for the full controller and operator qualification contract.
 
-## Python-authority publication boundary
+The Python engine remains authoritative for target generation, build/check, HOME
+publication, and cutover. The TypeScript Phase 8 modules independently implement
+the verified-build, manifest-policy, planning, staging, ordered promotion,
+marker/journal, retention, and recovery contract. The default CLI compatibility
+bridge compares Python dry-run operations before publish and validates the
+resulting Python marker; it does not mix Python and TypeScript mutations in one
+transaction.
 
-The Python engine consumes the verified local artifact and manifest, preserves
-unmanaged HOME data, applies declared target policies, and records durable
-release state. Publication is separate from generation: the TypeScript CLI does
-not run migrators, and a failed build or stale hash cannot replace local or HOME
-artifacts. Recovery is explicit and uses the persisted marker/journal state.
-
-The implementation has no claim of Python-free parity. Deterministic tests do not
-qualify installed vendor CLIs, authorize live publication, or establish Windows
-security equivalence. Remaining review residuals are the low same-UID/path-race
-window and Linux-first security scope.
+Publication is separate from generation: a failed build or stale hash cannot
+replace local or HOME artifacts, and the TypeScript publisher never runs
+migrators. The implementation has no claim of Python-free parity, live vendor
+CLI qualification, or Windows security equivalence. Remaining review residuals
+are the low same-UID/path-race window and Linux-first security scope.
 
 ## Evidence and release boundary
 
-Focused implementation evidence records all builds passing and **133/133**
-across Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6
-(**23/23**), Phase 4 (**31/31**), and Phase 5 (**12/12**) focused commands.
-Final review approved with no findings. These contract results do not claim
-publication, live cutover, HOME support, Python-free completion, deployment
-behavior, or `main` merge.
+Focused implementation evidence records all builds passing and Phase 8
+`npm run test:phase8` passing **54/54** across protocol, CLI, publication
+planning, apply, recovery, parity, and isolation contracts. Earlier aggregate
+evidence remains **133/133** across Phase 7 (**16/16**), protocol (**20/20**),
+CLI (**31/31**), Phase 6 (**23/23**), Phase 4 (**31/31**), and Phase 5
+(`npm run test:phase5`, **12/12**). Phase 7 final review was approved with no
+findings; Phase 8 evidence is feature-worktree contract coverage only.
 
-The remaining security scope is Linux-first, with the low same-UID/path-race
-window retained as the documented residual.
+These tests use temporary HOME/fixture state and do not qualify installed vendor
+CLIs, establish Python-free completion, authorize live cutover, establish
+deployment behavior, or claim `main` merge. The remaining security scope is
+Linux-first, with the low same-UID/path-race window retained as the documented
+residual.
 
 ## Related documentation
 

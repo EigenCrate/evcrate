@@ -10,6 +10,7 @@
   "home_policy": {
     "bindings": {".codex": ".codex", ".agents": ".agents"},
     "preserve_paths": {".codex": [".evcrate.json"]},
-    "promotion_order": 20
+    "promotion_order": 20,
+    "publication_rules": ["codex-home-path-rewrite"]
   }
 }

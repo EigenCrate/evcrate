@@ -1,7 +1,7 @@
 # Codebase Summary
 
-**Last Updated**: 2026-09-01  
-**Status**: Phase 7 scopes, advisor-settings, and CAS contracts complete; release remains Unreleased
+**Last Updated**: 2026-09-02  
+**Status**: Phase 8 atomic publication and recovery complete; release remains Unreleased
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
@@ -10,8 +10,8 @@ EVCrate is a multi-target CLI coding-agent distribution repository. Canonical
 Claude resources are projected into target trees and, when explicitly requested,
 published into a user HOME by the existing Python distribution authority. The
 TypeScript control-plane CLI provides typed, bounded command, protocol, registry,
-import, and filesystem primitives; it invokes that authority rather than
-replacing it.
+import, scope, filesystem, and target-publication primitives; it invokes the
+Python authority rather than replacing it.
 
 Phase 4 adds distribution authorization and transaction primitives. Phase 5 adds
 seven target projection adapters that build isolated staging roots and compare
@@ -19,9 +19,16 @@ output with Python references. Phase 6 adds a schema-v1 canonical resource
 registry and explicit import preview/apply transaction. Phase 7 adds package-local
 global/project scopes, explicit inheritance/disablement, revision-vector CAS,
 typed preview hash/token bindings, and a separate advisor-settings coordinator
-with lock/journal/recovery. The implementation does not claim publication or live
-cutover, HOME support for imports, Python-free completion, Windows security
-equivalence, live installed-CLI qualification, or unverified deployment behavior.
+with lock/journal/recovery. Phase 8 adds current-build resolution, deterministic
+HOME publication planning, manifest-driven merge rules, same-volume staging,
+durable target-publication journals/markers, bounded release retention, and
+idempotent rollback/finalization recovery.
+
+The TypeScript publication path is staging, parity, and recovery evidence. The
+default CLI compatibility bridge still invokes Python for production generation,
+build/check, HOME publication, and cutover. The implementation does not claim
+Python-free completion, live vendor-CLI qualification, Windows security
+equivalence, or unverified deployment behavior.
 
 ## Repository map
 
@@ -42,10 +49,10 @@ equivalence, live installed-CLI qualification, or unverified deployment behavior
 │   ├── protocol/                         # strict JSON and versioned contracts
 │   ├── manifests/                        # schema-2 manifests and controller closure
 │   ├── filesystem/                       # paths, hashes, atomic I/O, locks
-│   ├── distribution/                     # build verification and promotion
+│   ├── distribution/                     # build, publication planning, and recovery
 │   ├── advisor-settings/                 # policy-file staging, CAS, recovery
 │   ├── adapters/                         # staging-only target projections
-│   ├── registry/                        # resource records, scans, revisions
+│   ├── registry/                         # resource records, scans, revisions
 │   ├── scopes/                           # assignments, inheritance, revisions, CAS
 │   ├── imports/                         # bounded preview/apply and token state
 │   └── errors/                           # stable error serialization and exits
@@ -78,8 +85,8 @@ controller authority and is not hand-edited.
 | `src/scopes/` | Persist package-local global/project assignments, resolve inheritance and disablement, compute project identities and revision vectors, and apply scope CAS. |
 | `src/imports/` | Read bounded external source descriptors, require capability approvals, stage non-mutating previews, persist owner-only single-use tokens, hash selected projections, and atomically apply canonical source plus registry under CAS. |
 | `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, mode-aware complete tree hashes, atomic I/O, capability-backed staged roots, and interoperable locks. |
-| `src/distribution/` | Validate schema-2 build manifests and output/controller hashes; promote staged roots with durable journals, snapshots, pre-rename CAS, and recovery. |
-| `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, CAS, recovery, and identity-checked cleanup; policy remains outside the resource registry/import contract. |
+| `src/distribution/` | Resolve verified schema-2 builds; apply explicit HOME rules; plan, stage, promote, retain, journal, and recover target publications; merge Copilot/Pi shared JSON; parse JSONC. The Phase 8 modules are `build-resolution.ts`, `publication-rules.ts`, `publication-inventory.ts`, `publication-plan.ts`, `publication.ts`, `publication-recovery.ts`, `shared-json.ts`, `managed-json.ts`, `pi-settings.ts`, and `jsonc.ts`. |
+| `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, CAS, recovery, and identity-checked cleanup; policy remains outside the resource registry/import/publication contract. |
 | `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; expose exhaustive five-kind compatibility and enforce declared staging roots. |
 
 ## Phase 4 distribution authorization
@@ -272,6 +279,99 @@ replacement. Authored agent model frontmatter remains static resource content;
 commands/workflows have no model binding, and mutable resource model operations
 are intentionally deferred.
 
+## Phase 8 atomic publication and recovery
+
+Phase 8 adds a TypeScript target-publication subsystem under
+`src/distribution/`. It consumes only a current, complete schema-2 build and
+selected target manifests. It never runs target migrators/adapters during
+publication or recovery and never mutates advisor settings. The CLI's default
+compatibility path still calls `python3 distribute.py`; these TypeScript
+operations establish the typed staging/parity/recovery boundary until the
+Phase 10 cutover gates.
+
+### Build closure and deterministic planning
+
+- `build-resolution.ts` selects the requested manifests, resolves the
+  target-specific or all-target build-manifest path, validates the complete
+  schema-2 build, checks manifest-derived HOME policy parity, re-hashes current
+  canonical source/manifest/adapter inputs, checks owners and output roots, and
+  delegates final digest comparison to `verifyBuild`.
+- `publication-rules.ts` accepts only the closed manifest rules
+  `omp-agent-prefix`, `codex-home-path-rewrite`, and
+  `claude-skill-root-exclusion`. Rules are authorized to their owning target:
+  OMP prefixes published files under `agent/`, Codex rewrites HOME hook/MCP
+  paths, and Claude excludes a root-level `skills/<name>` file.
+- `publication-inventory.ts` walks staging roots in canonical order with
+  bounded file/directory/byte/depth/path limits. It rejects symlinks and
+  special entries, computes controller and complete-tree hashes, records
+  device/inode/size/mode metadata, checks owner-controlled ancestors, and
+  validates both TypeScript target-publication markers and compatible Python
+  publication markers.
+- `publication-plan.ts` creates frozen controller plus selected-target binding
+  plans. Each operation records source/destination, before snapshot, intended
+  hash, preservation, merge, create, update, delete, no-op, or conflict action.
+  Previous marker-managed paths drive stale-file deletion; unmanaged collisions
+  remain conflicts.
+
+The selected bindings are sorted and validated against the exact order:
+
+```text
+.evcrate/bin  → .evcrate/bin       (controller, order 5)
+.gemini       → .gemini            (order 10)
+.agents       → .agents            (order 20)
+.codex        → .codex             (order 20)
+.pi           → .pi                (order 25)
+.gemini/config → .gemini/config    (order 30)
+.omp          → .omp               (order 30)
+.claude       → .claude            (order 40)
+.copilot      → .copilot           (order 40)
+```
+
+### Shared JSON and settings merges
+
+- `jsonc.ts` provides bounded JSONC scanning for comments, trailing commas,
+  duplicate keys, strings, values, nesting, node count, and trailing data while
+  retaining original text spans.
+- `managed-json.ts` applies a manifest-declared `managed-json-v1` fragment only
+  to its exact top-level keys. It preserves unrelated keys, comments, newline
+  style, and BOM; it rejects root/type/key mismatches and returns
+  `create`, `update`, or byte-identical `noop`.
+- `pi-settings.ts` applies `pi-settings-v1` to the declared settings key,
+  preserves unrelated package entries and object shapes, pins the three
+  manifest packages, and reports a `conflict` when `pi-code` is present. It
+  never removes `pi-code` automatically.
+- `shared-json.ts` dispatches only those two manifest schemas and maps planner
+  failures to stable publication errors. OMP has no shared-JSON merge.
+
+### Atomic apply, marker, and recovery
+
+`publication.ts` exposes `publishDryRun`, `publishApply`, and
+`recoverPublication`. State lives below `$HOME/.evcrate/publication` in an
+owner-only `release-marker.json`, `publication-journal.json`, and release
+transaction directories. Dry-run creates no state. Apply acquires the shared
+publication lock, preflights any prior journal, checks same-volume placement,
+recomputes before snapshots, stages controller/files, renames prior destinations
+into identity-checked backups, promotes in the frozen order, syncs directories,
+and verifies intended snapshots after each rename.
+
+The journal is canonical, bounded, owner-only, and keyed to a release ID,
+selected targets, binding order, build-manifest digest, managed paths, operation
+count/digest, before snapshots, intended hashes, backup paths, and promotion
+state. A committed transaction writes the complete marker, removes the active
+journal, and retains at most one prior release subject to the 512 MiB and
+seven-day limits. Failures before promotion restore the prior marker; failures
+after promotion invoke recovery. `publication-recovery.ts` validates every
+path, identity, digest, marker/journal relationship, and operation transition,
+then either restores the prior complete state (`rolled-back`) or finalizes a
+committed state (`finalized`). Repeated recovery with no journal is `none`;
+unexpected replacements and ambiguous evidence fail closed rather than being
+deleted.
+
+The target marker and journal own only target publication. The
+`$HOME/.evcrate/advisor-routing.json` policy remains byte/mode-preserved, and
+the separate `advisor-settings` lock/journal/recovery transaction never
+consumes target-publication state.
+
 ## Canonical JSON and hashing
 
 The TypeScript serializer follows the Python authority for supported values:
@@ -342,16 +442,17 @@ fallback, or claim Python-free parity. CommonJS package exports retain both the
 
 ## Evidence and limitations
 
-Focused implementation evidence records all builds passing and **133/133**
-across Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6
-(**23/23**), Phase 4 (**31/31**), and Phase 5 (**12/12**) focused commands.
-Final review approved with no findings. These contract results do not claim
-publication, live cutover, HOME support, Python-free completion, deployment
-behavior, or `main` merge.
+Focused implementation evidence records all builds passing and Phase 8
+`npm run test:phase8` passing **54/54**; the command covers protocol, CLI,
+publication planning, apply, recovery, parity, and isolation contracts. Earlier aggregate
+evidence remains **133/133** across Phase 7 (**16/16**), protocol (**20/20**),
+CLI (**31/31**), Phase 6 (**23/23**), Phase 4 (**31/31**), and Phase 5
+(`npm run test:phase5`, **12/12**). These contract results do not claim live
+vendor-CLI qualification, Python-free completion, deployment behavior, or
+`main` merge.
 
 Residuals remain the low same-UID/path-race window and Linux-first security
-scope. Live vendor qualification and any publication/cutover remain
-operator-controlled and unclaimed.
+scope. Live vendor qualification and target cutover remain operator-controlled.
 
 ## Related documentation
 
@@ -365,7 +466,7 @@ operator-controlled and unclaimed.
 
 ## Compaction record
 
-A temporary Repomix XML compaction was generated on 2026-09-01 using the
-repository's configured exclusions. Repomix reported **2,585 files**,
-**8,779,055 tokens**, and **33,124,097 characters**. The compaction was used as
-analysis input and is not retained as a repository deliverable.
+Repomix v1.18.0 generated `repomix-output.xml` on 2026-09-02 using the
+repository's configured/default exclusions. It reported **2,596 files**,
+**8,810,707 tokens**, and **33,260,379 characters**. The compaction was used
+as the source snapshot for this summary; it is not a package deliverable.

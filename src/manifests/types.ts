@@ -19,11 +19,19 @@ export interface SharedJsonSpec {
   readonly managedKeys: readonly string[];
 }
 
+export const HOME_PUBLICATION_RULES = Object.freeze([
+  'omp-agent-prefix',
+  'codex-home-path-rewrite',
+  'claude-skill-root-exclusion'
+] as const);
+export type HomePublicationRule = typeof HOME_PUBLICATION_RULES[number];
+
 export interface HomePolicy {
   readonly bindings: Readonly<Record<string, string>>;
   readonly preservePaths: Readonly<Record<string, readonly string[]>>;
   readonly promotionOrder: number;
   readonly rejectUnmanagedCollisions: boolean;
+  readonly publicationRules: readonly HomePublicationRule[];
   readonly [key: string]: unknown;
 }
 

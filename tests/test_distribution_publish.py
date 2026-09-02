@@ -28,10 +28,10 @@ class DistributionPublishTest(unittest.TestCase):
             with patch("distribution.publish.verify_local_artifact"):
                 changes = publish_local_artifacts(context, artifact, dry_run=True)
             central = [change for change in changes if change.root == ".evcrate/bin"]
-            self.assertEqual(len(central), 1)
             self.assertEqual((central[0].root, central[0].path, central[0].action), (".evcrate/bin", ".evcrate/bin", "create"))
             self.assertFalse((context.home / ".evcrate/bin").exists())
             self.assertFalse((context.home / ".evcrate/advisor-routing.json").exists())
+            self.assertEqual(tuple(context.state_dir.iterdir()), ())
 
     def test_owner_controlled_directory_uses_platform_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -91,6 +91,27 @@ class DistributionPublishTest(unittest.TestCase):
                 self.assertTrue(lock.is_file())
             self.assertFalse(any(".stale-" in item.name for item in context.state_dir.iterdir()))
 
+    def test_publish_recovers_stale_release_before_creating_new_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            context = context_for(Path(temp), ("pi",))
+            transaction = context.state_dir / "release-stale"
+            transaction.mkdir(parents=True, mode=0o700)
+            write_release_marker(context.state_dir, {
+                "schema_version": 1,
+                "status": "in_progress",
+                "release_id": "stale",
+                "transaction_dir": transaction.name,
+                "roots": {},
+                "managed_paths": {},
+                "previous_managed_paths": {},
+                "operations": [],
+            })
+            with patch("distribution.publish.verify_local_artifact"):
+                publish_local_artifacts(context, artifact_for(context))
+            marker = read_release_marker(context.state_dir)
+            self.assertEqual(marker["status"], "complete")
+            self.assertNotEqual(marker["release_id"], "stale")
+            self.assertFalse(transaction.exists())
 
     def test_publish_replaces_complete_controller_and_preserves_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

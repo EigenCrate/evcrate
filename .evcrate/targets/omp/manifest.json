@@ -21,6 +21,7 @@
   "home_policy": {
     "bindings": {".omp": ".omp"},
     "preserve_paths": {},
-    "promotion_order": 30
+    "promotion_order": 30,
+    "publication_rules": ["omp-agent-prefix"]
   }
 }

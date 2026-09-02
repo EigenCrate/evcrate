@@ -2,6 +2,7 @@ import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { ResourceHandler } from '../imports/handler.js';
 import type { ProcessResult, RunBoundedProcessOptions } from './process-runner.js';
+import type { PublicationHandler, PublicationOptions } from '../distribution/publication.js';
 
 export interface CliOutput {
   readonly isTTY: boolean;
@@ -35,6 +36,8 @@ export interface CliRuntime {
   readonly settingsHandler?: AdvisorSettingsHandler;
   readonly resourceHandler?: ResourceHandler;
   readonly processRunner?: ProcessRunner;
+  readonly publicationHandler?: PublicationHandler;
+  readonly publicationOptions?: PublicationOptions;
 }
 
 export type RuntimeProcessOptions = Omit<RunBoundedProcessOptions, 'signal'> & {

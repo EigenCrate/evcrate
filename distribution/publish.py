@@ -609,17 +609,19 @@ def _create_managed_file(destination: Path, content: bytes) -> None:
 def publish_local_artifacts(context: DistributionContext, artifact: VerifiedArtifact, *, dry_run: bool = False) -> list[PublishChange]:
     """Publish verified artifacts only; source generation is deliberately absent."""
 
-    # Validate HOME bindings and state paths before creating any lock directory.
+    # Dry-runs compute against existing state but never create locks or state files.
     _policies(context)
     _validate_state_ancestors(context)
+    if dry_run:
+        return publish_diff(context, artifact)
+
     with repository_lock(context.repository), publish_lock(context.state_dir):
+        recover_interrupted_publish(context, lock_held=True)
         shared_snapshots = {
             name: _home_snapshot(home)
             for name, _, home, _ in _shared_specs(context)
         }
         changes = publish_diff(context, artifact)
-        if dry_run:
-            return changes
         conflicts = [change for change in changes if change.action == "conflict"]
         if conflicts:
             if any(change.root == ".pi" for change in conflicts):

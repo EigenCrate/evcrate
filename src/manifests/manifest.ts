@@ -5,7 +5,7 @@ import { type PersistedTarget } from '../protocol/validation.js';
 import { assertJsonText } from '../protocol/canonical-json.js';
 import { assertNoSymlinkAncestors, assertRegularFile, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
 import { readBoundedFile } from '../filesystem/hashing.js';
-import type { HomePolicy, PatchSpec, SharedJsonSpec, TargetManifest } from './types.js';
+import { HOME_PUBLICATION_RULES, type HomePolicy, type HomePublicationRule, type PatchSpec, type SharedJsonSpec, type TargetManifest } from './types.js';
 
 function invalid(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' = 'PROTOCOL_INVALID'): never {
   throw new ControlPlaneError(code);
@@ -37,7 +37,7 @@ function repositoryFor(path: string): string {
 }
 function parsePolicy(value: unknown, roots: readonly string[]): HomePolicy {
   const raw = object(value);
-  const allowed = new Set(['bindings', 'preserve_paths', 'promotion_order', 'reject_unmanaged_collisions']);
+  const allowed = new Set(['bindings', 'preserve_paths', 'promotion_order', 'reject_unmanaged_collisions', 'publication_rules']);
   if (Object.keys(raw).some((key) => !allowed.has(key))) invalid();
   const rawBindings = object(raw.bindings);
   const bindings: Record<string, string> = {};
@@ -57,8 +57,18 @@ function parsePolicy(value: unknown, roots: readonly string[]): HomePolicy {
   if (!Number.isSafeInteger(raw.promotion_order) || (raw.promotion_order as number) < 0) invalid();
   const reject = raw.reject_unmanaged_collisions ?? false;
   if (typeof reject !== 'boolean') invalid();
-  return Object.freeze({ bindings: Object.freeze(bindings), preservePaths: Object.freeze(preservePaths),
-    promotionOrder: raw.promotion_order as number, rejectUnmanagedCollisions: reject });
+  const rawRules = raw.publication_rules === undefined ? [] : raw.publication_rules;
+  if (!Array.isArray(rawRules)
+    || !rawRules.every((rule): rule is HomePublicationRule =>
+      typeof rule === 'string' && HOME_PUBLICATION_RULES.includes(rule as HomePublicationRule))
+    || new Set(rawRules).size !== rawRules.length) invalid();
+  return Object.freeze({
+    bindings: Object.freeze(bindings),
+    preservePaths: Object.freeze(preservePaths),
+    promotionOrder: raw.promotion_order as number,
+    rejectUnmanagedCollisions: reject,
+    publicationRules: Object.freeze(rawRules)
+  });
 }
 function parseSharedJson(value: unknown): SharedJsonSpec {
   const raw = object(value);

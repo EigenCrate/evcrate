@@ -8,6 +8,7 @@ import {
 } from './validation.js';
 import { validateScopeRevisionVector, type ScopeRevisionVector } from './scope-payloads.js';
 import { validateResourceRequestPayload, validateResourceResultPayload } from './resource-payloads.js';
+import { MAX_PUBLICATION_RESULT_BYTES } from './publication-payloads.js';
 export const RESOURCE_OPERATIONS = Object.freeze([
   'version', 'resources.list', 'resources.get', 'imports.preview', 'imports.apply',
   'scopes.list', 'scopes.get', 'scopes.assign', 'scopes.remove', 'scopes.enable',
@@ -169,9 +170,12 @@ function validateResultError(value: unknown): ResourceError {
   return validateSerializedControlPlaneError(value);
 }
 
-function assertResourceSize(value: unknown): void {
+function publicationResultSize(operation: ResourceOperation): number {
+  return operation === 'publish.dry-run' || operation === 'publish.apply' ? MAX_PUBLICATION_RESULT_BYTES : MAX_JSON_BYTES;
+}
+function assertResourceSize(value: unknown, maxBytes = MAX_JSON_BYTES): void {
   try {
-    if (canonicalBytes(value).byteLength > MAX_JSON_BYTES) throw new ControlPlaneError('PROTOCOL_INVALID');
+    if (canonicalBytes(value).byteLength > maxBytes) throw new ControlPlaneError('PROTOCOL_INVALID');
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
     throw new ControlPlaneError('PROTOCOL_INVALID');
@@ -180,12 +184,12 @@ function assertResourceSize(value: unknown): void {
 
 export function validateResourceResult(value: unknown): ResourceResult {
   if (!isPlainObject(value)) throw new ControlPlaneError('PROTOCOL_INVALID');
-  assertResourceSize(value);
   const result = value as Record<string, unknown>;
   if (result.protocol !== RESOURCE_PROTOCOL || result.protocolVersion !== PROTOCOL_VERSION) {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
   const operation = validateOperation(result.operation);
+  assertResourceSize(value, publicationResultSize(operation));
   const base = {
     protocol: RESOURCE_PROTOCOL,
     protocolVersion: PROTOCOL_VERSION,
@@ -194,18 +198,18 @@ export function validateResourceResult(value: unknown): ResourceResult {
   };
   if (SUCCESS_STATUSES.includes(result.status as ResourceSuccessStatus)) {
     assertExactKeys(result, [...RESULT_KEYS, 'payload'], 'PROTOCOL_INVALID');
-    assertSafeBoundedJson(result.payload);
+    assertSafeBoundedJson(result.payload, publicationResultSize(operation));
     rejectCredentialKeys(result.payload, 'VALIDATION_INVALID', operation === 'imports.preview' || operation === 'changes.preview' ? ['token'] : []);
     rejectCounselFields(result.payload);
     return { ...base, status: result.status as ResourceSuccessStatus, payload: validateResourceResultPayload(operation, result.payload) };
   }
   if (result.status === 'recovered') {
     assertExactKeys(result, [...RESULT_KEYS, 'payload', 'recovery'], 'PROTOCOL_INVALID');
-    assertSafeBoundedJson(result.payload);
+    assertSafeBoundedJson(result.payload, publicationResultSize(operation));
     rejectCounselFields(result.payload);
     rejectCredentialKeys(result.payload);
     return {
-      ...base, status: 'recovered', payload: result.payload as JsonValue,
+      ...base, status: 'recovered', payload: validateResourceResultPayload(operation, result.payload),
       recovery: validateResourceRecovery(result.recovery)
     };
   }
@@ -233,7 +237,7 @@ export function validateResourceResult(value: unknown): ResourceResult {
 export function createResourceResult(
   request: ResourceRequest, payload: JsonValue = {}, status: ResourceSuccessStatus = 'ok'
 ): ResourceSuccessResult {
-  assertSafeBoundedJson(payload);
+  assertSafeBoundedJson(payload, publicationResultSize(request.operation));
   rejectCounselFields(payload);
   return validateResourceResult({
     protocol: RESOURCE_PROTOCOL, protocolVersion: PROTOCOL_VERSION,

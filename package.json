@@ -25,6 +25,7 @@
     "test:phase5": "npm run build && node --test tests/adapters/*.test.mjs",
     "test:phase6": "npm run build && node --test tests/registry/resource-registry.test.mjs tests/imports/import-preview.test.mjs tests/imports/import-apply.test.mjs tests/cli/phase6-resource-commands.test.mjs tests/cli/request-file.test.mjs",
     "test:phase7": "npm run build && node --test tests/scopes/*.test.mjs tests/advisor-settings/*.test.mjs",
+    "test:phase8": "npm run build && node --test tests/protocol/contracts.test.mjs tests/cli/arguments.test.mjs tests/cli/phase8-publication.test.mjs tests/distribution/*.test.mjs",
     "distribute:build": "python3 distribute.py --build",
     "distribute:check": "python3 distribute.py --check",
     "distribute:publish": "python3 distribute.py --publish",
