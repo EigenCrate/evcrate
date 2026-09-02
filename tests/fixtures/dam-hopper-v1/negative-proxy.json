@@ -1,0 +1,29 @@
+{
+  "counselPayloadInResourceRequest": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-neg-001",
+    "operation": "resources.list",
+    "context": {
+      "canonicalSourceRoot": "/workspace/.evcrate/source/.claude",
+      "targetManifestPath": "/workspace/.evcrate/targets/claude/manifest.json",
+      "generatedRoot": "/workspace/.evcrate/source",
+      "homeRoot": "/home/user",
+      "stateRoot": "/workspace/.evcrate/state",
+      "projectId": "dam-hopper-project-alpha",
+      "projectRoot": "/workspace",
+      "target": "claude"
+    },
+    "payload": {
+      "checkpoint": "review:forbidden-counsel-proxy",
+      "question": "Should this proxy counsel?"
+    }
+  },
+  "counselPayloadInHealthRequest": {
+    "protocol": "evcrate-advisor-diagnostic",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-neg-002",
+    "operation": "qualify",
+    "question": "Forbidden counsel question in diagnostic probe"
+  }
+}

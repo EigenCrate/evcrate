@@ -60,7 +60,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 7 | [Scopes, advisor settings, and CAS](./phase-07-scopes-and-cas.md) | Resource scope state plus dedicated settings revision/token/apply semantics | DONE — 100% in feature worktree; approved; not merged to `main` |
 | 7.1 | [Brainstormer model projection](./phase-07-1-brainstormer-model-projection.md) | Assign the canonical brainstormer strong-tier model and verify target projections | COMPLETE — 100% |
 | 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | DONE — 100% |
-| 9 | [DamHopper integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | Planned |
+| 9 | [DamHopper and Agent Store integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | DONE — 100% — 2026-09-02 |
 | 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | Planned |
 | 11 | [Validation and rollout](./phase-11-validation-and-rollout.md) | Per-target matrix, settings/diagnostic proofs, unchanged counsel | Planned |
 
@@ -141,7 +141,7 @@ completion, and deployment behavior are not claimed. Review residuals are
 limited to the documented low same-UID/path-race window and Linux-first
 security scope.
 
-The overall plan remains `in_progress` because Phases 9–11 remain planned.
+The overall plan remains `in_progress` because Phases 10–11 remain planned.
 
 ## Phase 7 completion evidence
 
@@ -179,6 +179,18 @@ Python-free distribution, or `main` merge is claimed.
 Phase 8 publish and recovery is complete in the feature worktree. Target-HOME publication and advisor-settings transactions remain separate, with publication and recovery behavior covered by the focused gate.
 
 **Bounded validation evidence:** `npm run test:phase8` passed **54/54** tests. Code reviewer score: **9.8/10**. Advisor: **approved**.
+
+## Phase 9 completion evidence
+
+**Status:** DONE | **Progress:** 100% | **Validated:** 2026-09-02 | **Review:** 9.8/10 | **Advisor:** Approved
+
+Phase 9 integrates DamHopper and Agent Store through a bounded, short-lived packed npm CLI subprocess. Resource-control commands and top-level qualification health remain separate; no counsel proxy or consumer ownership of EVCrate artifacts is introduced.
+
+**Bounded validation evidence:** `npm run test:phase9` passed **14/14** integration tests. Aggregate focused evidence passed **212/212** tests. Code reviewer score: **9.8/10**. Advisor: **approved**.
+
+Coverage includes packed-artifact checksum/install, argv-based resource and target operations, discovery/get, import preview/apply, scope/CAS lifecycle, OMP/Copilot publish/recover, protocol fixtures, diagnostic-only health, and fail-closed malformed/empty/timeout/counsel responses.
+
+Phase 9 completion does not claim target cutover, Python-free release, or rollout; those remain Phases 10–11.
 
 ## Phase 1 evidence preserved
 

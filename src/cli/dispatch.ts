@@ -38,10 +38,12 @@ export interface DispatchOutcome {
 
 function version(context: InvocationContext, runtime: CliRuntime): string {
   if (runtime.packageVersion) return runtime.packageVersion;
-  try {
-    const parsed = parseJsonDocument(readFileSync(join(context.packageRoot, 'package.json')));
-    if (isPlainObject(parsed) && typeof parsed.version === 'string' && parsed.version) return parsed.version;
-  } catch { /* use a safe internal failure below */ }
+  for (const root of [context.packageRoot, join(__dirname, '..', '..')]) {
+    try {
+      const parsed = parseJsonDocument(readFileSync(join(root, 'package.json')));
+      if (isPlainObject(parsed) && typeof parsed.version === 'string' && parsed.version) return parsed.version;
+    } catch { /* try next root */ }
+  }
   throw new ControlPlaneError('INTERNAL_ERROR');
 }
 

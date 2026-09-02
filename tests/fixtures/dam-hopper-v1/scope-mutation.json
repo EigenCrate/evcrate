@@ -1,0 +1,51 @@
+{
+  "request": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-scope-004",
+    "operation": "scopes.assign",
+    "context": {
+      "canonicalSourceRoot": "/workspace/.evcrate/source/.claude",
+      "targetManifestPath": "/workspace/.evcrate/targets/claude/manifest.json",
+      "generatedRoot": "/workspace/.evcrate/source",
+      "homeRoot": "/home/user",
+      "stateRoot": "/workspace/.evcrate/state",
+      "projectId": "dam-hopper-project-alpha",
+      "projectRoot": "/workspace",
+      "target": "claude"
+    },
+    "payload": {
+      "resourceId": "agent:agents/custom.md",
+      "targets": ["claude"],
+      "capabilityApprovals": [],
+      "expectedRevision": {
+        "registryRevision": 2,
+        "globalScopeRevision": 1,
+        "projectScopeRevision": 2
+      }
+    }
+  },
+  "response": {
+    "protocol": "evcrate-resource-control",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-scope-004",
+    "operation": "scopes.assign",
+    "status": "applied",
+    "payload": {
+      "changed": true,
+      "mutation": "scopes.assign",
+      "scopeRevision": 2,
+      "revisionVector": {
+        "registryRevision": 2,
+        "globalScopeRevision": 1,
+        "projectScopeRevision": 2
+      },
+      "assignment": {
+        "resourceId": "agent:agents/custom.md",
+        "enabled": true,
+        "targets": ["claude"],
+        "capabilityApprovals": []
+      }
+    }
+  }
+}

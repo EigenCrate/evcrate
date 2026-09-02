@@ -1,4 +1,4 @@
-import { lstatSync } from 'node:fs';
+import { existsSync, lstatSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { validateProjectId } from '../protocol/validation.js';
@@ -48,7 +48,14 @@ export interface InvocationContext {
   readonly projectId: string | null;
 }
 
-function packageRootFromModule(): string {
+function defaultPackageRoot(options: InvocationContextOptions): string {
+  if (options.packageRoot) return options.packageRoot;
+  if (options.source) {
+    const canonical = resolveSafePath(options.source, options.cwd ?? process.cwd());
+    return dirname(dirname(dirname(canonical)));
+  }
+  const cwd = resolveSafePath(options.cwd ?? process.cwd());
+  if (existsSync(join(cwd, '.evcrate', 'targets', 'manifest.json'))) return cwd;
   return resolveSafePath(join(__dirname, '..', '..'));
 }
 
@@ -81,7 +88,7 @@ function targetContext(manifest: TargetManifestContext, sourceParent: string, ho
 }
 
 export function resolveInvocationContext(options: InvocationContextOptions = {}): InvocationContext {
-  const packageRoot = resolveSafePath(options.packageRoot ?? packageRootFromModule(), options.cwd ?? process.cwd());
+  const packageRoot = resolveSafePath(defaultPackageRoot(options), options.cwd ?? process.cwd());
   const canonicalHarnessRoot = resolveSafePath(
     options.source ?? join(packageRoot, '.evcrate', 'source', '.claude'), options.cwd ?? process.cwd()
   );

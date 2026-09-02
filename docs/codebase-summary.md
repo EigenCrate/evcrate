@@ -1,7 +1,7 @@
 # Codebase Summary
 
 **Last Updated**: 2026-09-02  
-**Status**: Phase 8 atomic publication and recovery complete; release remains Unreleased
+**Status**: Phase 9 DamHopper and Agent Store integration complete; release remains Unreleased
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
@@ -22,7 +22,9 @@ typed preview hash/token bindings, and a separate advisor-settings coordinator
 with lock/journal/recovery. Phase 8 adds current-build resolution, deterministic
 HOME publication planning, manifest-driven merge rules, same-volume staging,
 durable target-publication journals/markers, bounded release retention, and
-idempotent rollback/finalization recovery.
+idempotent rollback/finalization recovery. Phase 9 adds the packed npm consumer
+boundary: DamHopper resource-control lifecycle, target publication/recovery,
+qualification-only health, and fail-closed protocol/error handling.
 
 The TypeScript publication path is staging, parity, and recovery evidence. The
 default CLI compatibility bridge still invokes Python for production generation,
@@ -61,11 +63,11 @@ equivalence, or unverified deployment behavior.
 ├── omp_adapter/                          # staging-only OMP projection
 ├── pi_adapter/                           # staging-only native Pi projection
 ├── migrate_claude_to_*.py                # target adapters called by Python gates
-├── tests/                                # focused TypeScript and Python contracts
+├── tests/                                # focused TypeScript, integration, and Python contracts
 ├── docs/                                 # maintained technical documentation
 ├── guide/                                # command and skill references
 ├── distribute.py                         # Python distribution entrypoint
-├── package.json                          # CommonJS package, bins, scripts
+├── package.json                          # CommonJS package, bins, scripts, and packed closure
 └── CHANGELOG.md                          # repository changelog
 ```
 
@@ -77,15 +79,15 @@ controller authority and is not hand-edited.
 
 | Area | Verified responsibility |
 |---|---|
-| `src/cli/` | Parse one invocation, load one bounded request file, resolve context, dispatch one operation, render one validated result, and exit. Child processes use fixed argv, `shell: false`, bounded streams, and cleanup. |
-| `src/context/` | Resolve package-owned roots and the schema-2 registry; normalize target aliases (`agy` is input-only) and reject unsafe/symlinked paths. |
+| `src/cli/` | Parse one invocation, load one bounded request file, resolve context, dispatch one operation, render one validated result, and exit. Child processes use fixed argv, `shell: false`, bounded streams, and cleanup; packed consumers retain a module-root version fallback. |
+| `src/context/` | Resolve package-owned roots and the schema-2 registry; derive package roots from explicit source/cwd for packed consumers; normalize target aliases (`agy` is input-only) and reject unsafe/symlinked paths. |
 | `src/protocol/` | Parse bounded JSON; provide Python-compatible canonical JSON and SHA-256 policy digests; validate resource/import payloads, versioned envelopes, advisor settings, diagnostics, and errors. |
 | `src/manifests/` | Load target declarations and manifest-derived resource roots; enforce source/adapter/patch/path policy, check set-level output ownership, and validate the exact advisor-controller inventory and import closure. |
 | `src/registry/` | Scan declared canonical resource roots, validate schema-v1 records, derive seven-target compatibility/capabilities, verify revisions and hashes, and serve bounded deterministic list/get queries. |
 | `src/scopes/` | Persist package-local global/project assignments, resolve inheritance and disablement, compute project identities and revision vectors, and apply scope CAS. |
 | `src/imports/` | Read bounded external source descriptors, require capability approvals, stage non-mutating previews, persist owner-only single-use tokens, hash selected projections, and atomically apply canonical source plus registry under CAS. |
 | `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, mode-aware complete tree hashes, atomic I/O, capability-backed staged roots, and interoperable locks. |
-| `src/distribution/` | Resolve verified schema-2 builds; apply explicit HOME rules; plan, stage, promote, retain, journal, and recover target publications; merge Copilot/Pi shared JSON; parse JSONC. The Phase 8 modules are `build-resolution.ts`, `publication-rules.ts`, `publication-inventory.ts`, `publication-plan.ts`, `publication.ts`, `publication-recovery.ts`, `shared-json.ts`, `managed-json.ts`, `pi-settings.ts`, and `jsonc.ts`. |
+| `src/distribution/` | Resolve verified schema-2 builds; apply explicit HOME rules; plan, stage, promote, retain, journal, and recover target publications; preserve manifest shared-JSON source fragments; merge Copilot/Pi shared JSON; parse JSONC. The Phase 8 modules are `build-resolution.ts`, `publication-rules.ts`, `publication-inventory.ts`, `publication-plan.ts`, `publication.ts`, `publication-recovery.ts`, `shared-json.ts`, `managed-json.ts`, `pi-settings.ts`, and `jsonc.ts`. |
 | `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, CAS, recovery, and identity-checked cleanup; policy remains outside the resource registry/import/publication contract. |
 | `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; expose exhaustive five-kind compatibility and enforce declared staging roots. |
 
@@ -372,6 +374,55 @@ The target marker and journal own only target publication. The
 the separate `advisor-settings` lock/journal/recovery transaction never
 consumes target-publication state.
 
+## Phase 9 DamHopper and Agent Store integration
+
+Phase 9 verifies the packed npm artifact as an external consumer boundary. A
+DamHopper adapter invokes one short-lived `evcrate` subprocess with fixed argv,
+bounded stdio, a deadline, and a sanitized environment; it does not read or
+write EVCrate registry, scope, manifest, generated, controller, policy, or HOME
+artifacts directly.
+
+`package.json` adds `test:phase9` (`npm run build && node --test
+tests/integration/*.test.mjs`) and packs `.evcrate/source/.evcrate/**`,
+`.evcrate/registry.json`, and `.evcrate/build-manifest*.json` so installed
+consumers retain the verified control-plane closure. Context resolution accepts
+an explicit package root, derives one from an explicit canonical source, detects
+a manifest in the caller cwd, and otherwise falls back to the installed module
+root. Version dispatch checks the resolved package and module-root metadata.
+
+The integration adapter is split by concern:
+
+- `dam-hopper-commands.mjs` builds resource discovery/get, import preview/apply,
+  scope list/get/mutate, changes preview/apply, publish, and recover argv.
+- `dam-hopper-client.mjs` spawns the packed CLI, validates protocol v1 envelopes,
+  and bounds output (`10 MiB`) and execution (`30 s` default).
+- `dam-hopper-errors.mjs` maps stable client/CAS errors and recursively rejects
+  counsel/checkpoint fields; malformed, empty, timeout, unsupported, and error
+  envelopes fail closed.
+- `dam-hopper-lifecycle.test.mjs` covers packed tarball SHA-256/install,
+  version/discovery/get, import preview/apply, scope assignment and
+  disable/enable/remove with stale-revision conflict, independent OMP/Copilot
+  publish dry-runs, OMP apply/recover, and qualification-only health.
+- `dam-hopper-fixtures.test.mjs` validates protocol v1 discovery, import,
+  scope, publication, diagnostic, CAS/error, and negative counsel-proxy
+  fixtures under `tests/fixtures/dam-hopper-v1/`.
+
+The adapter never routes advisor counsel. Top-level `health` accepts and returns
+only the qualification diagnostic; it cannot synthesize counsel, retry another
+backend, or alter routing policy. Resource operations preserve request IDs,
+selected targets, revision/token/hash metadata, publication activation, and
+recovery results.
+
+## Phase 9 evidence and boundary
+
+`npm run test:phase9` passed **14/14** integration tests: six adapter client
+tests, six fixture-schema/proxy tests, and two packed-consumer lifecycle tests.
+Aggregate focused evidence passed **212/212** tests; code review scored **9.8/10**
+and the advisor approved. Evidence covers the feature worktree and packed
+artifact contract only. It does not claim a live DamHopper release, installed
+vendor-CLI qualification, target cutover, Python-free distribution, rollout, or
+`main` merge.
+
 ## Canonical JSON and hashing
 
 The TypeScript serializer follows the Python authority for supported values:
@@ -442,14 +493,19 @@ fallback, or claim Python-free parity. CommonJS package exports retain both the
 
 ## Evidence and limitations
 
-Focused implementation evidence records all builds passing and Phase 8
-`npm run test:phase8` passing **54/54**; the command covers protocol, CLI,
-publication planning, apply, recovery, parity, and isolation contracts. Earlier aggregate
-evidence remains **133/133** across Phase 7 (**16/16**), protocol (**20/20**),
-CLI (**31/31**), Phase 6 (**23/23**), Phase 4 (**31/31**), and Phase 5
-(`npm run test:phase5`, **12/12**). These contract results do not claim live
-vendor-CLI qualification, Python-free completion, deployment behavior, or
-`main` merge.
+Focused implementation evidence records all builds passing. Phase 9
+`npm run test:phase9` passed **14/14** integration tests, and aggregate focused
+evidence passed **212/212**. Phase 8 `npm run test:phase8` passed **54/54**;
+the command covers protocol, CLI, publication planning, apply, recovery, parity,
+and isolation contracts. Earlier aggregate evidence remains **133/133** across
+Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6 (**23/23**),
+Phase 4 (**31/31**), and Phase 5 (`npm run test:phase5`, **12/12**).
+
+Phase 9 evidence covers packed artifact installation, resource lifecycle,
+publication/recovery, diagnostic-only health, and fail-closed adapter errors.
+These contract results do not claim a live DamHopper release, installed
+vendor-CLI qualification, target cutover, Python-free completion, deployment
+behavior, or `main` merge.
 
 Residuals remain the low same-UID/path-race window and Linux-first security
 scope. Live vendor qualification and target cutover remain operator-controlled.
@@ -463,10 +519,11 @@ scope. Live vendor qualification and target cutover remain operator-controlled.
 - [Advisor supervision migration](./advisor-supervision-migration.md)
 - [Native Pi migration](./pi-native-migration.md)
 - [Repository changelog](../CHANGELOG.md)
+- [Phase release tracking](./project-changelog.md)
 
 ## Compaction record
 
 Repomix v1.18.0 generated `repomix-output.xml` on 2026-09-02 using the
 repository's configured/default exclusions. It reported **2,596 files**,
-**8,810,707 tokens**, and **33,260,379 characters**. The compaction was used
+**8,811,130 tokens**, and **33,262,382 characters**. The compaction was used
 as the source snapshot for this summary; it is not a package deliverable.

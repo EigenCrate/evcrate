@@ -154,7 +154,7 @@ function targetBinding(
   const managed: string[] = [];
   const seen = new Set<string>();
   for (const file of files) {
-    if (file.relativePath === sharedSource || file.relativePath === sharedDestination) continue;
+    if (file.relativePath === sharedDestination) continue;
     const published = publishFile(manifest, file.relativePath, file.content, destinationRoot);
     if (published === null) continue;
     if (seen.has(published.relativePath)) fail();

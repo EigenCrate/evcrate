@@ -1,0 +1,37 @@
+{
+  "request": {
+    "protocol": "evcrate-advisor-diagnostic",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-health-006",
+    "operation": "qualify"
+  },
+  "response": {
+    "protocol": "evcrate-advisor-diagnostic",
+    "protocolVersion": 1,
+    "requestId": "dam-hopper-req-health-006",
+    "status": "QUALIFIED",
+    "target": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high"
+    },
+    "probes": {
+      "version": {
+        "status": "passed",
+        "value": "0.150.1"
+      },
+      "auth": {
+        "status": "passed"
+      },
+      "capabilities": {
+        "status": "passed",
+        "model": "gpt-5.6-sol",
+        "effort": "high",
+        "noninteractive": true,
+        "session": "isolated",
+        "tools": "none",
+        "output": "jsonl"
+      }
+    }
+  }
+}
