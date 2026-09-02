@@ -49,7 +49,7 @@ eval $(python ~/.omp/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --expor
 # Add to sys.path if needed
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / '.omp' / 'agent' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.omp' / 'scripts'))
 
 from resolve_env import resolve_env, find_all, show_hierarchy
 
@@ -81,7 +81,7 @@ import sys
 from pathlib import Path
 
 # Import centralized resolver
-sys.path.insert(0, str(Path.home() / '.omp' / 'agent' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.omp' / 'scripts'))
 from resolve_env import resolve_env
 
 # Resolve API key

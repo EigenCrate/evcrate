@@ -1,7 +1,6 @@
 ---
 name: advisor
-description: Use this high-tier mentor for fresh named checkpoints; Gemini rejects
-  interview relay.
+description: "Use this high-tier mentor for fresh named checkpoints; Gemini rejects interview relay."
 model: pro
 tools:
 - glob

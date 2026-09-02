@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Analyze and fix issues [INTELLIGENT ROUTING]"
+description = "⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]"
 prompt = """**Analyze the issue, select the narrowest fix workflow, and execute it in this session:**
 <issues>{{args}}</issues>
 

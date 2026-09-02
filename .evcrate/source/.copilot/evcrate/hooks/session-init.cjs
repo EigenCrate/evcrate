@@ -324,7 +324,7 @@ async function main() {
   try {
     const stdin = fs.readFileSync(0, 'utf-8').trim();
     const data = stdin ? JSON.parse(stdin) : {};
-    const envFile = undefined; // Copilot has no environment-file hook
+    const envFile = process.env.COPILOT_ENV_FILE;
     const source = data.source || 'unknown';
     const sessionId = data.session_id || null;
 

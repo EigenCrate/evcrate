@@ -43,8 +43,8 @@ function resolvePiResourcePath(group, filename) {
 
 function resolveWorkflowPath(filename) {
   const piPath = resolvePiResourcePath('workflows', filename);
-  const localPath = path.join(process.cwd(), '.copilot', 'evcrate', 'workflows', filename);
-  const globalPath = path.join(os.homedir(), '.copilot', 'evcrate', 'workflows', filename);
+  const localPath = path.join(process.cwd(), '.copilot', 'workflows', filename);
+  const globalPath = path.join(os.homedir(), '.copilot', 'workflows', filename);
   if (piPath) return piPath;
   if (fs.existsSync(localPath)) return `.copilot/evcrate/workflows/${filename}`;
   if (fs.existsSync(globalPath)) return `~/.copilot/evcrate/workflows/${filename}`;
@@ -53,8 +53,8 @@ function resolveWorkflowPath(filename) {
 
 function resolveScriptPath(filename) {
   const piPath = resolvePiResourcePath('scripts', filename);
-  const localPath = path.join(process.cwd(), '.copilot', 'evcrate', 'scripts', filename);
-  const globalPath = path.join(os.homedir(), '.copilot', 'evcrate', 'scripts', filename);
+  const localPath = path.join(process.cwd(), '.copilot', 'scripts', filename);
+  const globalPath = path.join(os.homedir(), '.copilot', 'scripts', filename);
   if (piPath) return piPath;
   if (fs.existsSync(localPath)) return `.copilot/evcrate/scripts/${filename}`;
   if (fs.existsSync(globalPath)) return `~/.copilot/evcrate/scripts/${filename}`;

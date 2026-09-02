@@ -9,7 +9,7 @@ Resolves environment variables following the Claude Code hierarchy:
 4. .pi/.env                   - Project global
 5. ~/.pi/agent/skills/<skill>/.env  - User skill-specific
 6. ~/.pi/agent/skills/.env          - User shared
-7. ~/.pi/.env                 - User global (LOWEST)
+7. ~/.pi/agent/.env                 - User global (LOWEST)
 
 Usage:
     from resolve_env import resolve_env

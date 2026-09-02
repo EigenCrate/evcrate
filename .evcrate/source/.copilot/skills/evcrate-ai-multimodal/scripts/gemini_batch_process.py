@@ -24,7 +24,7 @@ import csv
 import shutil
 
 # Import centralized environment resolver
-sys.path.insert(0, str(Path.home() / '.copilot' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.copilot' / 'scripts'))
 try:
     from resolve_env import resolve_env
     CENTRALIZED_RESOLVER_AVAILABLE = True

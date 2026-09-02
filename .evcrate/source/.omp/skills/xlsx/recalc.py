@@ -12,7 +12,7 @@ import platform
 from pathlib import Path
 
 # Windows UTF-8 compatibility
-sys.path.insert(0, str(Path.home() / '.omp' / 'agent' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.omp' / 'scripts'))
 try:
     from win_compat import ensure_utf8_stdout
     ensure_utf8_stdout()

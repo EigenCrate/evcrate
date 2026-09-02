@@ -1,7 +1,6 @@
 ---
-description: "⚡⚡⚡⚡ Analyze the codebase and create initial documentation"
+description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
 ---
-
 
 ## Phase 1: Parallel Codebase Scouting
 

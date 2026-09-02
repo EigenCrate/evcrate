@@ -1,4 +1,29 @@
 #!/usr/bin/env python3
+def _load_omp_command_map(commands_dir):
+    import json, re
+    map_path = commands_dir.parent / "evcrate" / "command-name-map.json"
+    try:
+        payload = json.loads(map_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as error:
+        raise RuntimeError(f"Invalid or missing OMP command map: {map_path}") from error
+    if not isinstance(payload, dict) or set(payload) != {"schema", "commands"} or payload["schema"] != "evcrate-omp-command-map-v1" or not isinstance(payload["commands"], list):
+        raise RuntimeError(f"Invalid OMP command map schema: {map_path}")
+    result = {}
+    names = set()
+    sources = set()
+    for record in payload["commands"]:
+        if not isinstance(record, dict) or set(record) != {"source", "sourceName", "target", "targetName"} or any(not isinstance(record[k], str) for k in record):
+            raise RuntimeError(f"Invalid OMP command map record: {map_path}")
+        source, source_name, target, target_name = (record[k] for k in ("source", "sourceName", "target", "targetName"))
+        if source != source_name.replace(":", "/") + ".md" or not re.fullmatch(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*", source_name) or target != target_name + ".md" or not re.fullmatch(r"cmd-[A-Za-z0-9][A-Za-z0-9_-]*", target_name) or target_name.casefold() in names or source_name.casefold() in sources:
+            raise RuntimeError(f"Invalid or duplicate OMP command map record: {map_path}")
+        candidate = commands_dir / target
+        if candidate.is_symlink() or not candidate.is_file(): raise RuntimeError(f"OMP command map target is missing or unsafe: {target}")
+        result[target] = record; names.add(target_name.casefold()); sources.add(source_name.casefold())
+    actual = {path.relative_to(commands_dir).as_posix() for path in commands_dir.rglob("*.md")}
+    if actual != set(result): raise RuntimeError(f"OMP command map does not match command files: {map_path}")
+    return result
+
 """
     EVCrate Help Command - All-in-one guide with dynamic command discovery.
 Scans .omp/commands/ directory to build catalog at runtime.
@@ -290,87 +315,6 @@ Docs: `.omp/evcrate/hooks/notifications/docs/`""",
 }
 
 
-def _load_omp_command_map(commands_dir: Path) -> dict[str, dict]:
-    """Load the generated OMP map and prove it matches command files."""
-    map_path = commands_dir.parent / "evcrate" / "command-name-map.json"
-
-    def reject_duplicate_keys(pairs):
-        result = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError(f"duplicate key: {key}")
-            result[key] = value
-        return result
-
-    try:
-        payload = json.loads(
-            map_path.read_text(encoding="utf-8"),
-            object_pairs_hook=reject_duplicate_keys,
-        )
-    except (OSError, UnicodeError, ValueError) as error:
-        raise RuntimeError(f"Invalid or missing OMP command map: {map_path}") from error
-    if (
-        not isinstance(payload, dict)
-        or set(payload) != {"schema", "commands"}
-        or payload["schema"] != "evcrate-omp-command-map-v1"
-    ):
-        raise RuntimeError(f"Invalid OMP command map schema: {map_path}")
-    records = payload["commands"]
-    if not isinstance(records, list):
-        raise RuntimeError(f"Invalid OMP command map records: {map_path}")
-
-    by_target = {}
-    seen_sources = set()
-    seen_source_names = set()
-    seen_target_names = set()
-    for record in records:
-        fields = ("source", "sourceName", "target", "targetName")
-        if (
-            not isinstance(record, dict)
-            or set(record) != set(fields)
-            or any(not isinstance(record[field], str) for field in fields)
-        ):
-            raise RuntimeError(f"Invalid OMP command map record: {map_path}")
-        source = record["source"]
-        source_name = record["sourceName"]
-        target = record["target"]
-        target_name = record["targetName"]
-        source_path = Path(source)
-        target_path = Path(target)
-        if (
-            source != source_name.replace(":", "/") + ".md"
-            or not re.fullmatch(r"[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*", source_name)
-            or source_path.is_absolute()
-            or source_path.as_posix() != source
-            or ".." in source_path.parts
-            or target != f"{target_name}.md"
-            or not re.fullmatch(r"cmd-[A-Za-z0-9][A-Za-z0-9_-]*", target_name)
-            or target_path.is_absolute()
-            or target_path.as_posix() != target
-            or ".." in target_path.parts
-            or source_name.casefold() in seen_source_names
-            or target_name.casefold() in seen_target_names
-        ):
-            raise RuntimeError(f"Invalid or duplicate OMP command map record: {map_path}")
-        candidate = commands_dir / target_path
-        try:
-            candidate.relative_to(commands_dir)
-        except ValueError as error:
-            raise RuntimeError(f"OMP command map target escapes command root: {map_path}") from error
-        if candidate.is_symlink() or not candidate.is_file():
-            raise RuntimeError(f"OMP command map target is missing or unsafe: {target}")
-        by_target[target] = record
-        seen_source_names.add(source_name.casefold())
-        seen_target_names.add(target_name.casefold())
-
-    command_targets = {
-        path.relative_to(commands_dir).as_posix()
-        for path in commands_dir.rglob("*.md")
-    }
-    if command_targets != set(by_target):
-        raise RuntimeError(f"OMP command map does not match command files: {map_path}")
-    return by_target
-
 def detect_prefix(commands_dir: Path) -> str:
     """Detect if commands use /evcrate: prefix based on directory structure."""
     evcrate_commands_dir = commands_dir / "evcrate"
@@ -452,6 +396,7 @@ def discover_skill_commands(skills_dir: Path) -> dict:
     """Discover migrated cmd_* skills through their embedded Command Path."""
     commands = {}
     categories = {}
+    mapped_targets = set()
     if not skills_dir.is_dir():
         return {"commands": commands, "categories": categories}
 
@@ -496,10 +441,6 @@ def _candidate_roots(*roots: Path) -> list[Path]:
 def resolve_command_source(script_path: Path) -> tuple[str, Path]:
     """Find canonical commands or a generated target's command skills."""
     target_root = script_path.parent.parent
-    if target_root.name == "evcrate" and target_root.parent.name == "agent" and target_root.parent.parent.name == ".omp":
-        target_root = target_root.parent
-    elif target_root.name == "evcrate" and target_root.parent.name == ".omp":
-        target_root = target_root.parent
     direct_commands = target_root / "commands"
     if direct_commands.is_dir():
         return "commands", direct_commands
@@ -534,7 +475,6 @@ def discover_commands(commands_dir: Path, prefix: str, command_map: dict | None 
     """Scan command files and build the command catalog."""
     commands = {}
     categories = {}
-    mapped_targets = set()
 
     if not commands_dir.exists():
         return {"commands": commands, "categories": categories}
@@ -548,24 +488,14 @@ def discover_commands(commands_dir: Path, prefix: str, command_map: dict | None 
         parts = rel_path.parts
 
         if command_map is not None:
-            target = rel_path.as_posix()
-            record = command_map.get(target)
-            if record is None:
-                raise RuntimeError(f"OMP command map has no record for {target}")
-            mapped_targets.add(target)
+            record = command_map.get(rel_path.as_posix())
+            if record is None: raise RuntimeError(f"OMP command map has no record for {rel_path.as_posix()}")
+            mapped_targets.add(rel_path.as_posix())
             cmd_name = record["targetName"]
-            category = _skill_category("/" + record["sourceName"])
+            category = parts[0] if len(parts) > 1 else "core"
         else:
-            # Get command name from path
-            # e.g., fix/fast.md -> fix:fast, plan.md -> plan
-            if len(parts) == 1:
-                # Root command: plan.md or plan.toml -> plan
-                cmd_name = command_file.stem
-                category = "core"
-            else:
-                # Nested command: fix/fast.md -> fix:fast
-                category = parts[0]
-                cmd_name = ':'.join([*parts[:-1], command_file.stem])
+            cmd_name = command_file.stem if len(parts) == 1 else ':'.join([*parts[:-1], command_file.stem])
+            category = "core" if len(parts) == 1 else parts[0]
 
         # Parse frontmatter
         fm = parse_command_metadata(command_file)
@@ -594,9 +524,6 @@ def discover_commands(commands_dir: Path, prefix: str, command_map: dict | None 
         # Track categories
         if category not in categories:
             categories[category] = category.title()
-
-    if command_map is not None and mapped_targets != set(command_map):
-        raise RuntimeError("OMP command map does not match discovered commands")
 
     # Sort commands within each category
     for cat in commands:
@@ -778,7 +705,7 @@ def advisory_target(script_path: Path) -> str:
     """Infer the generated host from the portable help script location."""
 
     for parent in (script_path.parent, *script_path.parents):
-        if parent.name in {".antigravity", ".codex", ".gemini", ".omp", ".pi"}:
+        if parent.name in {".antigravity", ".codex", ".gemini", ".pi"}:
             return parent.name.removeprefix(".")
     return "cla" + "ude"
 
@@ -1203,8 +1130,8 @@ def show_coding_level_guide() -> None:
 
 def main():
     script_path = Path(__file__).resolve()
-    target = advisory_target(script_path)
     source_kind, source_dir = resolve_command_source(script_path)
+    command_map = _load_omp_command_map(source_dir) if source_dir.name == "commands" and source_dir.parent.name == ".omp" else None
     if not source_dir.is_dir():
         print("Error: no .omp/commands or generated command skills directory found.")
         sys.exit(1)
@@ -1214,12 +1141,7 @@ def main():
         data = discover_skill_commands(source_dir)
     else:
         prefix = detect_prefix(source_dir)
-        try:
-            command_map = _load_omp_command_map(source_dir) if target == "omp" else None
-        except RuntimeError as error:
-            print(f"Error: {error}", file=sys.stderr)
-            sys.exit(1)
-        data = discover_commands(source_dir, prefix, command_map)
+        data = discover_commands(source_dir, prefix)
 
     if not data["commands"]:
         print(f"No commands found in {source_dir}.")
@@ -1241,21 +1163,11 @@ def main():
 
     # Advisory surfaces need capability and migration guidance beyond metadata.
     if input_str.lower() in ["advise", "/cmd-advise", "advice", "/advice"]:
-        show_advisory_guide(prefix, target)
+        show_advisory_guide(prefix, advisory_target(script_path))
         return
 
     # Detect intent and route
-    command_names = {
-        command["name"].lstrip("/").casefold()
-        for commands in data["commands"].values()
-        for command in commands
-    }
-    normalized_input = input_str.lstrip("/").casefold()
-    intent = (
-        "command"
-        if target == "omp" and normalized_input in command_names
-        else detect_intent(input_str, list(data["categories"].keys()))
-    )
+    intent = detect_intent(input_str, list(data["categories"].keys()))
 
     if intent == "overview":
         show_overview(data, prefix)

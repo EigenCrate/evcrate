@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-flow"
 description: "This skill helps an LLM generate correct AxFlow workflow code using @ax-llm/ax. Use when the user asks about flow(), AxFlow, workflow orchestration, parallel execution, DAG workflows, conditional routing, map/reduce patterns, or multi-node AI pipelines."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

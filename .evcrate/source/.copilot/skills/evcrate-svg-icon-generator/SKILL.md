@@ -1,8 +1,8 @@
 ---
 name: "evcrate-svg-icon-generator"
 description: "Generate svg icon generator operations. Auto-activating skill for Visual Content.\nTriggers on: svg icon generator, svg icon generator\nPart of the Visual Content skill category. Use when working with svg icon generator functionality. Trigger with phrases like \"svg icon generator\", \"svg generator\", \"svg\"."
-allowed-tools: "Read, Write, Edit, Bash(cmd:*), Grep"
-author: "Jeremy Longshore <jeremy@intentsolutions.io>"
+allowed-tools: "\"Read, Write, Edit, Bash(cmd:*), Grep\""
+author: "\"Jeremy Longshore <jeremy@intentsolutions.io>\""
 license: "MIT"
 version: "1.0.0"
 ---

@@ -22,7 +22,7 @@ class TestEnvLoading:
         """Test successful .env file loading."""
         mock_exists.return_value = True
         mo.load_env_files()
-        # Should be called for skill, skills, and Codex dirs
+        # Should be called for skill, skills, and codex dirs
         assert mock_load_dotenv.call_count >= 1
 
     @patch('media_optimizer.load_dotenv', None)

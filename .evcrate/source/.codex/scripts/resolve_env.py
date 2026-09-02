@@ -105,12 +105,12 @@ def get_env_file_paths(skill: Optional[str] = None) -> List[Tuple[str, Path]]:
         if skill:
             paths.append((
                 f"Project skill-specific ({skill})",
-                project_root / '.agents' / 'skills' / skill / '.env'
+                project_root / '.codex' / 'skills' / skill / '.env'
             ))
 
         paths.append((
             "Project skills shared",
-            project_root / '.agents' / 'skills' / '.env'
+            project_root / '.codex' / 'skills' / '.env'
         ))
 
         paths.append((
@@ -122,12 +122,12 @@ def get_env_file_paths(skill: Optional[str] = None) -> List[Tuple[str, Path]]:
     if skill:
         paths.append((
             f"User skill-specific ({skill})",
-            home / '.agents' / 'skills' / skill / '.env'
+            home / '.codex' / 'skills' / skill / '.env'
         ))
 
     paths.append((
         "User skills shared",
-        home / '.agents' / 'skills' / '.env'
+        home / '.codex' / 'skills' / '.env'
     ))
 
     paths.append((

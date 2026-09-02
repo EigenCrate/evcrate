@@ -46,7 +46,7 @@ class EnvLoader:
 
         # Define search paths in reverse order (lowest to highest priority)
         search_paths = [
-            script_dir.parent.parent.parent.parent / ".env",  # .pi/.env
+            script_dir.parent.parent.parent.parent / '.env',  # .pi/.env
             script_dir.parent.parent / ".env",          # skills/.env
             script_dir.parent / ".env",                 # skill/.env (repomix/.env)
         ]

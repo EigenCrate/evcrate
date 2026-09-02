@@ -973,7 +973,7 @@ def show_config_guide() -> None:
     print("**Global install user (fresh directories work):**")
     print("```bash")
     print("# ~/.codex/.evcrate.json - applies everywhere")
-    print("cd /tmp/new-project && Codex  # Uses global config")
+    print("cd /tmp/new-project && codex  # Uses global config")
     print("```")
     print()
     print("**Project with local override:**")

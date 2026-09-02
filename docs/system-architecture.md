@@ -2,17 +2,18 @@
 
 **Last Updated**: 2026-09-02  
 **Project**: EVCrate  
-**Status**: Phase 8 atomic publication and recovery complete; release remains Unreleased
+**Status**: Phase 10 TypeScript release packaging and per-target cutover complete; release remains Unreleased
 
 ## Scope
 
 EVCrate has two cooperating planes:
 
-1. The TypeScript/npm control plane parses bounded requests, validates target and
-   policy data, exposes filesystem transaction primitives, and delegates the
-   distribution actions.
-2. The Python distribution plane remains authoritative for target generation,
-   build/check, HOME publication, and recovery.
+1. The TypeScript/npm control plane is the default release engine. It parses
+   bounded requests, validates target and policy data, builds/verifies target
+   projections, publishes HOME artifacts, and recovers interrupted releases.
+2. The Python distribution plane remains an explicit compatibility path for
+   transition overrides and authority-parity tests; it is not in the packaged
+   runtime.
 
 Canonical Claude resources are authored under `.evcrate/source/.claude/`.
 Generated target projections are derived artifacts. Phase 6 adds a schema-v1
@@ -21,23 +22,24 @@ scope state, revision-vector CAS, typed preview hash/token bindings, and a
 separate advisor-settings coordinator. Phase 8 adds TypeScript current-build
 resolution, deterministic HOME publication planning, manifest-driven merges,
 same-volume staged promotion, durable target-publication state, retention, and
-idempotent recovery. The default CLI bridge still delegates production
-generation, build/check, publication, and cutover to Python.
+idempotent recovery. Phase 10 adds per-target cutover receipts, uniform-engine
+rejection, TypeScript manifest generation, Python-free package execution, and
+the final release boundary.
 
 ## Architecture at a glance
 
 ```mermaid
 flowchart LR
   Source[Canonical .evcrate/source/.claude] --> TargetRegistry[Schema-2 target manifests and roots]
-  Source --> Build[TS build-resolution and verified build]
+  Source --> Build[TS local build and verified manifest]
   TargetRegistry --> Build
   Build --> Plan[TS publication-plan and manifest rules]
   Plan --> Apply[TS lock, CAS, same-volume stage, and ordered apply]
   Apply --> TargetRecovery[TS publication marker/journal recovery]
-  Source --> Python[Python build/check/publication authority]
-  Python --> Local[Verified local projections]
+  Build --> Local[TS isolated target projections]
   Local --> Manifest[Schema-2 build manifest]
-  Manifest --> Build
+  Manifest --> Plan
+  Compatibility[Explicit Python transition bridge] --> Python[python3 distribute.py]
   TargetRecovery --> Recovery[Idempotent rollback or commit finalization]
 
   Checkpoint[Direct checkpoint object] --> Controller[$HOME/.evcrate/bin/evcrate-advisor]
@@ -45,19 +47,19 @@ flowchart LR
   Controller --> Result[One terminal controller envelope]
 ```
 
-The TypeScript publication path and Python compatibility path consume the same
-verified build contract but are not one mixed-engine transaction. The controller
-path is a separate shared advisory service. It is not a per-target projection,
-distribution broker, or settings mutation path.
+The TypeScript publication path is the default engine and the Python
+compatibility path is explicit; both consume the same verified build contract
+but are never one mixed-engine transaction. The controller path is a separate
+shared advisory service. It is not a per-target projection, distribution broker,
+or settings mutation path.
 
 ## Phase 8 atomic publication and recovery
 
-Phase 8 adds a TypeScript target-publication path under `src/distribution/`.
+Phase 8 added a TypeScript target-publication path under `src/distribution/`.
 It consumes a current, complete schema-2 build and selected target manifests;
-it does not run target migrators/adapters during publish or recover and does
-not mutate advisor settings. The default CLI compatibility bridge still calls
-`python3 distribute.py`; direct TypeScript publication establishes the staging,
-parity, and recovery contract pending Phase 10 cutover gates.
+it does not run target migrators/adapters during publish or recover and does not
+mutate advisor settings. Phase 8 established the staging, parity, and recovery
+contract; Phase 10 promotes this path to the default after the per-target gates.
 
 ### Build closure and publication plan
 
@@ -146,9 +148,61 @@ separate advisor-settings lock, token, policy, and recovery transaction.
 
 The typed resource operations are `publish.dry-run`, `publish.apply`, and
 target-only `recover`; the CLI validates their selected-target/binding
-correlation. The default bridge compares Python dry-run operations before
-publish and checks the Python release marker afterward, preserving Python as
-the production authority while exposing the same typed result boundary.
+correlation. The default path executes TypeScript publication and recovery.
+The compatibility bridge compares Python dry-run operations and the Python
+release marker only when an explicit transition engine selects it.
+
+## Phase 10 release packaging and per-target cutover
+
+`src/distribution/cutover.ts` stores one immutable `TargetGateReceipt` per
+persisted target: `claude`, `gemini`, `antigravity`, `codex`, `pi`, `omp`, and
+`copilot`. Each receipt records `authoritativeEngine`, parity and closure
+verification, schema version 2, cutover timestamp, and notes. The default
+engine is TypeScript; an explicit target override can select Python for
+transition testing. `assertUniformAuthoritativeEngine` rejects a selected set
+that would mix engines, preventing split or partial atomic publication.
+
+### Build and manifest generation
+
+`npm run build` runs `scripts/generate-controller-inventory.mjs` first. The
+generator writes `src/manifests/controller-inventory.generated.ts`, whose
+exact 17-file list authorizes the CommonJS controller closure. The generated
+file is consumed by source/projection validators and is never hand-edited.
+
+`node scripts/build-manifests.mjs` calls `runLocalBuild` for each persisted
+target, then for the aggregate target set. `local-build-staging.ts` creates
+isolated target stages, runs the registered TypeScript projection adapter,
+validates declared roots, copies the controller closure, computes source,
+adapter, controller, owner, output, and HOME-policy records, and writes
+`.evcrate/build-manifest-<target>.json` or `.evcrate/build-manifest.json`.
+`runLocalCheck` repeats staging and fails on output or manifest drift.
+
+### Package and runtime boundary
+
+The npm package exposes the CommonJS `evcrate` and `evcrate-advisor` bins.
+Phase 10 packed-artifact checks require compiled `dist/**`, target manifests,
+verified build manifests, and one controller closure; they reject
+`distribution/`, migrator, and legacy adapter Python trees, `__pycache__`, and
+Python bytecode. The default TypeScript CLI therefore runs without a Python
+interpreter. The repository compatibility bridge remains for explicit
+transition/parity tests and is not the packaged default.
+
+Build/check/publish/recover do not run migrators on the TypeScript path.
+Publication consumes a current verified build, applies manifest rules in the
+fixed binding order, preserves unmanaged data and separate advisor settings,
+and recovers only identity-checked target state. The exact 17-file controller
+remains a singleton and its checkpoint/counsel contract is unchanged; `health`
+uses only its qualification diagnostic.
+
+### Phase 10 evidence
+
+`npm run test:phase10` passes **8/8**, covering seven gate receipts, alias and
+uniform-engine selection, controller closure, target/aggregate manifest
+generation, legacy-root cleanup, packed Python-free allow-list checks, and
+pure TypeScript CLI routing. Full validation passes **255/255** tests. The
+evidence covers the feature worktree and packed artifact contract; operator
+rollout, live vendor qualification, npm publication, deployment behavior, and
+`main` merge remain outside this phase.
 
 
 ## Ownership and component boundaries
@@ -157,24 +211,30 @@ the production authority while exposing the same typed result boundary.
 |---|---|---|---|
 | Canonical resources | `.evcrate/source/.claude/` | Agent, command, hook, workflow, and skill authoring | Repository author |
 | Target registry | `.evcrate/targets/manifest.json` and target manifests | Persisted target IDs, adapters, roots, patches, overlays, and HOME policy | Schema-2 manifest contract |
-| TypeScript control plane | `src/cli/`, `src/context/`, `src/protocol/`, `src/manifests/` | One-shot CLI, strict contracts, context, manifest/build authorization | Typed validation boundary |
+| TypeScript control plane | `src/cli/`, `src/context/`, `src/protocol/`, `src/manifests/`, `src/distribution/` | One-shot CLI, strict contracts, context, manifest/build authorization, cutover, publication, and recovery | Default release engine |
 | Resource registry | `src/registry/` | Schema-v1 canonical resource records, manifest-root scanning, compatibility, bounded list/get, and registry revisions | Canonical source plus manifest-derived roots |
 | Scope state | `src/scopes/` | Package-local global/project assignments, inheritance, disablement, project identity, revision vectors, and scope CAS | Scope protocol and package-local state |
 | Explicit imports | `src/imports/` | Bounded source descriptors, capability approvals, preview tokens, adapter projections, and CAS-bound apply | Typed resource protocol |
-| TypeScript transactions | `src/filesystem/`, `src/distribution/{build-resolution,publication-rules,publication-inventory,publication-plan,publication,publication-recovery,shared-json,managed-json,pi-settings,jsonc}.ts`, `src/advisor-settings/` | Paths, hashes, locks, build closure, target publication, policy CAS, recovery, and import atomicity | Reusable safety primitives |
-| Python distribution | `distribution/`, `distribute.py` | Generation, build/check, publication, and recovery | Authoritative distribution engine |
+| TypeScript transactions | `src/filesystem/`, `src/distribution/{build-resolution,local-build,local-build-staging,cutover,publication-rules,publication-inventory,publication-plan,publication,publication-recovery,shared-json,managed-json,pi-settings,jsonc}.ts`, `src/advisor-settings/` | Paths, hashes, locks, build/cutover gates, manifest generation, target publication, policy CAS, recovery, and import atomicity | Default release engine |
+| Python distribution | `distribution/`, `distribute.py` | Compatibility build/check/publication/recovery and parity reference | Explicit transition path |
 | Generated projections | `.evcrate/source/.agents`, `.codex`, `.gemini`, `.antigravity`, `.omp`, `.copilot`, `.pi` | Target-specific derived trees | Never hand-edited |
 | Shared advisor controller | `.evcrate/source/.evcrate/bin` → `$HOME/.evcrate/bin` | Checkpoint qualification and one final advisory invocation | Existing CommonJS controller |
 
-The TypeScript bridge invokes package-relative `python3 distribute.py` with one
-exact action and the resolved state-root handoff. It does not invoke migrators
-directly or provide a TypeScript fallback.
+The TypeScript compatibility bridge invokes package-relative `python3
+distribute.py` with one exact action and the resolved state-root handoff only
+when an explicit Python engine is selected. It does not invoke migrators
+directly. The packaged default path has no Python interpreter dependency.
 
 The target manifest registry contains exactly seven persisted targets. `agy` is
 accepted only at the input boundary and normalizes to `antigravity`; it is never
 stored as a second target.
 
-| Target | Local output roots | Adapter | HOME binding | Promotion order |
+Each target is built by a registered TypeScript adapter in `src/adapters/`.
+The manifest `adapter` and `adapter_sources` values below remain parity/hash
+references to legacy Python implementations; they are not invoked by the
+packaged TypeScript default path.
+
+| Target | Local output roots | Manifest adapter/parity reference | HOME binding | Promotion order |
 |---|---|---|---|---:|
 | `gemini` | `.gemini` | `migrate_claude_to_gemini.py` | `.gemini` | 10 |
 | `codex` | `.codex`, `.agents` | `migrate_claude_to_codex.py` | `.codex`, `.agents` | 20 |
@@ -272,7 +332,7 @@ does not advance the registry revision.
 
 The residual security scope remains the low same-UID/path-race window and
 Linux-first security scope. The manifest-derived `resourceRoot` assumption and
-the separate Python publication authority remain explicit boundaries.
+the explicit Python compatibility bridge remain documented boundaries.
 
 ## Phase 7 scopes, advisor settings, and CAS
 
@@ -317,18 +377,19 @@ immutable package, target, HOME, state, and project context
         │
         ▼
 one typed dispatch
-  ┌─────┼──────────┬────────────┐
-  ▼     ▼          ▼            ▼
-version health settings resources/scopes distribution
-        │          │            │
-        ▼          ▼            ▼
- diagnostic   settings/registry/scopes  Python bridge
-        │          │            │
-        └──────────┴────────────┘
-                   ▼
+  ├─ version / health
+  ├─ settings / resources / scopes
+  └─ distribution / publish / recover
+                │
+                ▼
+TypeScript handler
+  (explicit Python compatibility bridge only when selected)
+                │
+                ▼
        validate and write one result
-                   ▼
-                  exit
+                │
+                ▼
+               exit
 ```
 
 The CLI has no listener, daemon, retry loop, background worker, counsel proxy,
@@ -390,7 +451,7 @@ lib/advisor/profile.cjs
 lib/advisor/runner.cjs
 ```
 
-The inventory is generated from the Python authority into
+The inventory is generated by `scripts/generate-controller-inventory.mjs` into
 `src/manifests/controller-inventory.generated.ts`. Source and projection checks
 require regular files, reject symlinks and extra production entries, reject test,
 fixture, helper, fake, and ignored artifacts, and require literal imports to
@@ -499,35 +560,39 @@ by the exact inventory/hash closure above. Generated target roots do not own a
 controller copy. See [Advisor distribution architecture](./advisor-distribution-architecture.md)
 for the full controller and operator qualification contract.
 
-The Python engine remains authoritative for target generation, build/check, HOME
-publication, and cutover. The TypeScript Phase 8 modules independently implement
-the verified-build, manifest-policy, planning, staging, ordered promotion,
-marker/journal, retention, and recovery contract. The default CLI compatibility
-bridge compares Python dry-run operations before publish and validates the
-resulting Python marker; it does not mix Python and TypeScript mutations in one
-transaction.
+The TypeScript engine is authoritative for target generation, build/check, HOME
+publication, and cutover after Phase 10 receipts. The TypeScript modules
+implement the verified-build, manifest-policy, planning, staging, ordered
+promotion, marker/journal, retention, and recovery contract. The compatibility
+bridge compares Python dry-run operations and validates the Python release
+marker only when an explicit transition engine selects it; it never mixes
+Python and TypeScript mutations in one transaction.
 
 Publication is separate from generation: a failed build or stale hash cannot
 replace local or HOME artifacts, and the TypeScript publisher never runs
-migrators. The implementation has no claim of Python-free parity, live vendor
-CLI qualification, or Windows security equivalence. Remaining review residuals
-are the low same-UID/path-race window and Linux-first security scope.
+migrators. The implementation does not claim live vendor-CLI qualification,
+npm publication, deployment behavior, or Windows security equivalence.
+Remaining review residuals are the low same-UID/path-race window and Linux-first
+security scope.
 
 ## Evidence and release boundary
 
-Focused implementation evidence records all builds passing and Phase 8
-`npm run test:phase8` passing **54/54** across protocol, CLI, publication
-planning, apply, recovery, parity, and isolation contracts. Earlier aggregate
-evidence remains **133/133** across Phase 7 (**16/16**), protocol (**20/20**),
-CLI (**31/31**), Phase 6 (**23/23**), Phase 4 (**31/31**), and Phase 5
-(`npm run test:phase5`, **12/12**). Phase 7 final review was approved with no
-findings; Phase 8 evidence is feature-worktree contract coverage only.
+Focused implementation evidence records all builds passing. Phase 10
+`npm run test:phase10` passed **8/8**, and full validation passed **255/255**.
+Phase 8 `npm run test:phase8` passed **54/54** across protocol, CLI,
+publication planning, apply, recovery, parity, and isolation contracts.
+Earlier aggregate evidence remains **133/133** across Phase 7 (**16/16**),
+protocol (**20/20**), CLI (**31/31**), Phase 6 (**23/23**), Phase 4 (**31/31**),
+and Phase 5 (`npm run test:phase5`, **12/12**). Phase 7 final review was
+approved with no findings.
 
-These tests use temporary HOME/fixture state and do not qualify installed vendor
-CLIs, establish Python-free completion, authorize live cutover, establish
-deployment behavior, or claim `main` merge. The remaining security scope is
-Linux-first, with the low same-UID/path-race window retained as the documented
-residual.
+Phase 10 tests cover gate receipts for all seven targets, alias and
+uniform-engine selection, exact controller closure, target/aggregate manifest
+generation, legacy-root cleanup, packed Python-free allow-list checks, and
+pure TypeScript CLI routing. They do not qualify installed vendor CLIs,
+authorize operator rollout, establish deployment behavior, or claim npm
+publication or `main` merge. The remaining security scope is Linux-first, with
+the low same-UID/path-race window retained as the documented residual.
 
 ## Related documentation
 

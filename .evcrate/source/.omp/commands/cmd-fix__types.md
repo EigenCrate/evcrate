@@ -1,7 +1,6 @@
 ---
-description: "⚡ Fix type errors"
+description: ⚡ Fix type errors
 ---
-
 
 Run `bun run typecheck` or `tsc` or `npx tsc` and fix all type errors.
 

@@ -1,8 +1,3 @@
----
-description: Interview-first technical advice with native inline questioning and explicit relay rejection
-argument-hint: [prompt-or-url] [--agent]
----
-
 <!-- generated target: pi -->
 <!-- EVCRATE_ADVISORY_CAPABILITIES_START -->
 <!-- EVCRATE_CAPABILITY: advise-inline/v1 -->
@@ -34,8 +29,8 @@ Run in the main session. Do not invoke a subagent or create persistent state.
 3. Present one concise reframed problem and require explicit `confirm` or
    `correct`. Permit at most two confirmation/correction cycles. On exhaustion,
    return `INTERVIEW_NOT_CONVERGED` and write no report.
-4. After confirmation, write a concise Markdown report with exactly these
-   headings: `## Reframed problem`, `## Recommendation`,
+4. After confirmation, write a concise Markdown report with exactly these headings:
+   `## Reframed problem`, `## Recommendation`,
    `## Alternatives/tradeoffs`, `## Risks`, `## Assumptions/evidence gaps`,
    `## Success checks`, `## Next actions`, and `## Unresolved questions`.
 5. Write the sanitized report to the active `<plan>/reports` directory, or

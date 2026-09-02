@@ -1,4 +1,4 @@
-description = "\u26a1 Low-risk fast cook: scout, plan fast, implement with quality gates"
+description = "⚡ Low-risk fast cook: scout, plan fast, implement with quality gates"
 prompt = """Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>{{args}}</raw-tasks>
 

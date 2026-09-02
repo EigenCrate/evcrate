@@ -24,6 +24,20 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "bootstrap.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_bootstrap/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "bootstrap/auto.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_bootstrap_auto/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "bootstrap/auto/fast.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_bootstrap_auto_fast/SKILL.md"
@@ -38,23 +52,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "bootstrap/auto.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_bootstrap_auto/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "bootstrap.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_bootstrap/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "brainstorm.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_brainstorm/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "code.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_code/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -76,13 +83,6 @@
       "source": "code/parallel.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_code_parallel/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "code.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_code/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -122,16 +122,9 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "cook/auto/fast.md",
+      "source": "cook.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_cook_auto_fast/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "cook/auto/parallel.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_cook_auto_parallel/SKILL.md"
+      "target": ".agents/skills/cmd_cook/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -143,9 +136,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "cook.md",
+      "source": "cook/auto/fast.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_cook/SKILL.md"
+      "target": ".agents/skills/cmd_cook_auto_fast/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "cook/auto/parallel.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_cook_auto_parallel/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -227,6 +227,13 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "fix.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_fix/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "fix/ci.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_fix_ci/SKILL.md"
@@ -283,13 +290,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "fix.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_fix/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "git/cm.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_git_cm/SKILL.md"
@@ -335,6 +335,13 @@
       "source": "journal.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_journal/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "plan.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_plan/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -395,23 +402,9 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "plan.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_plan/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "preview.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_preview/SKILL.md"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "review/codebase/parallel.md",
-      "status": "migrated",
-      "target": ".agents/skills/cmd_review_codebase_parallel/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -423,9 +416,9 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "scout/ext.md",
+      "source": "review/codebase/parallel.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_scout_ext/SKILL.md"
+      "target": ".agents/skills/cmd_review_codebase_parallel/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -433,6 +426,13 @@
       "source": "scout.md",
       "status": "migrated",
       "target": ".agents/skills/cmd_scout/SKILL.md"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "scout/ext.md",
+      "status": "migrated",
+      "target": ".agents/skills/cmd_scout_ext/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -458,16 +458,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "skill/optimize/auto.md",
+      "source": "skill/optimize.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_skill_optimize_auto/SKILL.md"
+      "target": ".agents/skills/cmd_skill_optimize/SKILL.md"
     },
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "skill/optimize.md",
+      "source": "skill/optimize/auto.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_skill_optimize/SKILL.md"
+      "target": ".agents/skills/cmd_skill_optimize_auto/SKILL.md"
     },
     {
       "classification": "command-prose",
@@ -486,16 +486,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "test/ui.md",
+      "source": "test.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_test_ui/SKILL.md"
+      "target": ".agents/skills/cmd_test/SKILL.md"
     },
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "test.md",
+      "source": "test/ui.md",
       "status": "migrated",
-      "target": ".agents/skills/cmd_test/SKILL.md"
+      "target": ".agents/skills/cmd_test_ui/SKILL.md"
     },
     {
       "classification": "command-prose",

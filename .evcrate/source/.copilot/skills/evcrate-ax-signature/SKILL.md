@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-signature"
 description: "This skill helps an LLM generate correct DSPy signature code using @ax-llm/ax. Use when the user asks about signatures, s(), f(), field types, string syntax, fluent builder API, validation constraints, or type-safe inputs/outputs."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

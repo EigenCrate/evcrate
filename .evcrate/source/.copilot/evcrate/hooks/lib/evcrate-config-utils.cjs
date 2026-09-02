@@ -25,17 +25,14 @@ function absoluteDirectory(value) {
 }
 
 function getEVCrateResourceRoot(value = getEVCrateConfigDirEnv()) {
-  const configDir = resolveEVCrateConfigDir(value);
-  if (configDir !== '.pi' && configDir !== '.copilot') return null;
+  if (resolveEVCrateConfigDir(value) !== '.pi') return null;
   return absoluteDirectory(process['env'].EVCRATE_RESOURCE_ROOT)
-    || (configDir === '.copilot'
-      ? path.join(process['env'].COPILOT_HOME || path.join(os.homedir(), '.copilot'), 'evcrate')
-      : path.join(os.homedir(), '.pi', 'agent', 'evcrate'));
+    || path.join(os.homedir(), '.pi', 'agent', 'evcrate');
 }
 
 function getEVCrateConfigPaths(value = getEVCrateConfigDirEnv()) {
   const configDir = resolveEVCrateConfigDir(value);
-  const globalRoot = configDir === '.pi' || configDir === '.copilot'
+  const globalRoot = configDir === '.pi'
     ? absoluteDirectory(process['env'].EVCRATE_GLOBAL_CONFIG_ROOT)
     : null;
   return {

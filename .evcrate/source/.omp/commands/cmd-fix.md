@@ -1,8 +1,7 @@
 ---
-argument-hint: "[issues] [--advice]"
-description: "⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]"
+description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+argument-hint: [issues] [--advice]
 ---
-
 
 **Analyze the issue, select the narrowest fix workflow, and execute it in this session:**
 <issues>$ARGUMENTS</issues>

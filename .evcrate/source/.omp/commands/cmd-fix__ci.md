@@ -1,8 +1,7 @@
 ---
-argument-hint: "[github-actions-url]"
-description: "⚡ Analyze Github Actions logs and fix issues"
+description: ⚡ Analyze Github Actions logs and fix issues
+argument-hint: [github-actions-url]
 ---
-
 
 ## Github Actions URL
 <url>$ARGUMENTS</url>

@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-agent-optimize"
 description: "This skill helps an LLM generate correct AxAgent tuning and evaluation code using @ax-llm/ax. Use when the user asks about agent.optimize(...), judgeOptions, eval datasets, optimization targets, saved optimizedProgram artifacts, or agent optimization guidance."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

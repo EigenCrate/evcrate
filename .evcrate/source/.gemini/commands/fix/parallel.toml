@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1 Analyze & fix issues with parallel fullstack-developer agents"
+description = "⚡⚡ Analyze & fix issues with parallel fullstack-developer agents"
 prompt = """**Ultrathink parallel** raw input: <raw-issues>{{args}}</raw-issues>
 
 ## Canonical checkpoint routing

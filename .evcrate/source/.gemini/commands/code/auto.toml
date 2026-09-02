@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1\u26a1 [AUTO] Start coding & testing an existing plan (\"trust me bro\")"
+description = "⚡⚡⚡ [AUTO] Start coding & testing an existing plan (\"trust me bro\")"
 prompt = """**MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>{{args}}</raw-plan>
 

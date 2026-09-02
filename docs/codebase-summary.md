@@ -1,17 +1,18 @@
 # Codebase Summary
 
 **Last Updated**: 2026-09-02  
-**Status**: Phase 9 DamHopper and Agent Store integration complete; release remains Unreleased
+**Status**: Phase 10 TypeScript release packaging and per-target cutover complete; release remains Unreleased
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
 
 EVCrate is a multi-target CLI coding-agent distribution repository. Canonical
-Claude resources are projected into target trees and, when explicitly requested,
-published into a user HOME by the existing Python distribution authority. The
-TypeScript control-plane CLI provides typed, bounded command, protocol, registry,
-import, scope, filesystem, and target-publication primitives; it invokes the
-Python authority rather than replacing it.
+Claude resources are projected into target trees and published through the
+TypeScript control-plane CLI after verified build and per-target cutover gates.
+The CLI provides typed, bounded command, protocol, registry, import, scope,
+filesystem, target-publication, manifest-generation, and recovery primitives.
+The repository retains a Python compatibility bridge only for explicitly selected
+transition paths; Python distribution and migrator sources are not packaged.
 
 Phase 4 adds distribution authorization and transaction primitives. Phase 5 adds
 seven target projection adapters that build isolated staging roots and compare
@@ -24,13 +25,22 @@ HOME publication planning, manifest-driven merge rules, same-volume staging,
 durable target-publication journals/markers, bounded release retention, and
 idempotent rollback/finalization recovery. Phase 9 adds the packed npm consumer
 boundary: DamHopper resource-control lifecycle, target publication/recovery,
-qualification-only health, and fail-closed protocol/error handling.
+qualification-only health, and fail-closed protocol/error handling. Phase 10
+completes TypeScript release packaging, per-target cutover receipts, uniform
+engine enforcement, manifest generation, and the Python-free packed runtime
+boundary.
 
-The TypeScript publication path is staging, parity, and recovery evidence. The
-default CLI compatibility bridge still invokes Python for production generation,
-build/check, HOME publication, and cutover. The implementation does not claim
-Python-free completion, live vendor-CLI qualification, Windows security
-equivalence, or unverified deployment behavior.
+The default CLI path now performs projection build/check, verified-manifest
+generation, HOME publication/recovery, health, settings, and resource-control
+operations in TypeScript. An explicit Python engine override or injected process
+runner may still exercise the compatibility bridge during transition testing;
+that bridge is not selected by the packaged default path.
+
+The TypeScript publication path is now the default staging, parity, and recovery
+engine. The compatibility bridge remains available only for explicit transition
+overrides or injected process-runner tests. The implementation does not claim
+live vendor-CLI qualification, Windows security equivalence, npm publication,
+operator rollout, or unverified deployment behavior.
 
 ## Repository map
 
@@ -43,37 +53,40 @@ equivalence, or unverified deployment behavior.
 │   │           .antigravity,.omp,.copilot,.pi}/  # generated projections
 │   ├── targets/manifest.json            # schema-2 target registry and roots
 │   ├── registry.json                    # schema-1 canonical resource registry
-│   ├── scopes/                           # package-local global/project scope state
+│   ├── scopes/                          # package-local global/project scope state
 │   └── build-manifest*.json             # verified build metadata
 ├── src/                                 # TypeScript/npm control plane
 │   ├── cli/                             # one-shot CLI, bridge, runner, output
-│   ├── context/                          # HOME/state/project/target resolution
-│   ├── protocol/                         # strict JSON and versioned contracts
-│   ├── manifests/                        # schema-2 manifests and controller closure
-│   ├── filesystem/                       # paths, hashes, atomic I/O, locks
-│   ├── distribution/                     # build, publication planning, and recovery
-│   ├── advisor-settings/                 # policy-file staging, CAS, recovery
-│   ├── adapters/                         # staging-only target projections
-│   ├── registry/                         # resource records, scans, revisions
-│   ├── scopes/                           # assignments, inheritance, revisions, CAS
+│   ├── context/                         # HOME/state/project/target resolution
+│   ├── protocol/                        # strict JSON and versioned contracts
+│   ├── manifests/                       # schema-2 manifests and controller closure
+│   ├── filesystem/                      # paths, hashes, atomic I/O, locks
+│   ├── distribution/                    # build, cutover, publication, recovery
+│   ├── advisor-settings/                # policy-file staging, CAS, recovery
+│   ├── adapters/                        # staging-only target projections
+│   ├── registry/                        # resource records, scans, revisions
+│   ├── scopes/                          # assignments, inheritance, revisions, CAS
 │   ├── imports/                         # bounded preview/apply and token state
-│   └── errors/                           # stable error serialization and exits
-├── distribution/                         # Python-authoritative distribution engine
-├── copilot_adapter/                      # staging-only Copilot projection
-├── omp_adapter/                          # staging-only OMP projection
-├── pi_adapter/                           # staging-only native Pi projection
-├── migrate_claude_to_*.py                # target adapters called by Python gates
-├── tests/                                # focused TypeScript, integration, and Python contracts
-├── docs/                                 # maintained technical documentation
-├── guide/                                # command and skill references
-├── distribute.py                         # Python distribution entrypoint
-├── package.json                          # CommonJS package, bins, scripts, and packed closure
-└── CHANGELOG.md                          # repository changelog
+│   └── errors/                          # stable error serialization and exits
+├── scripts/                             # controller inventory and build-manifest generation
+├── distribution/                        # Python compatibility/transition authority
+├── copilot_adapter/                     # staging-only legacy reference
+├── omp_adapter/                         # staging-only legacy reference
+├── pi_adapter/                          # staging-only legacy reference
+├── migrate_claude_to_*.py               # legacy parity references
+├── tests/                               # focused TypeScript, integration, and Python contracts
+├── docs/                                # maintained technical documentation
+├── guide/                               # command and skill references
+├── distribute.py                        # explicit Python compatibility entrypoint
+├── package.json                         # CommonJS package, bins, scripts, and packed closure
+└── CHANGELOG.md                         # repository changelog
 ```
 
 Generated JavaScript/declarations under `dist/` are build outputs. The generated
-`src/manifests/controller-inventory.generated.ts` is derived from the Python
-controller authority and is not hand-edited.
+`src/manifests/controller-inventory.generated.ts` is derived from the controller
+inventory generator and is not hand-edited. `scripts/build-manifests.mjs` runs
+after compilation to regenerate one target-specific build manifest per target
+plus the aggregate manifest.
 
 ## TypeScript control-plane modules
 
@@ -87,7 +100,7 @@ controller authority and is not hand-edited.
 | `src/scopes/` | Persist package-local global/project assignments, resolve inheritance and disablement, compute project identities and revision vectors, and apply scope CAS. |
 | `src/imports/` | Read bounded external source descriptors, require capability approvals, stage non-mutating previews, persist owner-only single-use tokens, hash selected projections, and atomically apply canonical source plus registry under CAS. |
 | `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, mode-aware complete tree hashes, atomic I/O, capability-backed staged roots, and interoperable locks. |
-| `src/distribution/` | Resolve verified schema-2 builds; apply explicit HOME rules; plan, stage, promote, retain, journal, and recover target publications; preserve manifest shared-JSON source fragments; merge Copilot/Pi shared JSON; parse JSONC. The Phase 8 modules are `build-resolution.ts`, `publication-rules.ts`, `publication-inventory.ts`, `publication-plan.ts`, `publication.ts`, `publication-recovery.ts`, `shared-json.ts`, `managed-json.ts`, `pi-settings.ts`, and `jsonc.ts`. |
+| `src/distribution/` | Resolve verified builds; build/check isolated TypeScript projections; enforce cutover receipts and uniform engine selection; plan, stage, promote, retain, journal, and recover target publications; preserve manifest shared-JSON source fragments; merge Copilot/Pi shared JSON; parse JSONC. |
 | `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, CAS, recovery, and identity-checked cleanup; policy remains outside the resource registry/import/publication contract. |
 | `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; expose exhaustive five-kind compatibility and enforce declared staging roots. |
 
@@ -160,8 +173,9 @@ The exact explicit records in `tests/adapters/parity-deltas.mjs` total 2,033:
 Claude 189 directory records; Gemini 797 (249 directories, 548 files);
 Antigravity 324 (225 directories, 99 files); Codex 362 (232 directories, 130
 files); Pi 98 file records plus 14 approved extension extras; OMP 86 file
-records; and Copilot 177 file records. The current Python migrators/helpers
-remain authoritative until target-specific cutover.
+records; and Copilot 177 file records. The Python migrators/helpers remain
+parity references; TypeScript adapters are authoritative after the Phase 10
+target-specific cutover receipts.
 
 Declared staging roots are `.claude`; `.gemini` and `GEMINI.md`; `.antigravity`;
 `.agents`, `.codex`, and `AGENTS.md`; `.pi`; `.omp`; and `.copilot`,
@@ -283,13 +297,12 @@ are intentionally deferred.
 
 ## Phase 8 atomic publication and recovery
 
-Phase 8 adds a TypeScript target-publication subsystem under
+Phase 8 added a TypeScript target-publication subsystem under
 `src/distribution/`. It consumes only a current, complete schema-2 build and
 selected target manifests. It never runs target migrators/adapters during
-publication or recovery and never mutates advisor settings. The CLI's default
-compatibility path still calls `python3 distribute.py`; these TypeScript
-operations establish the typed staging/parity/recovery boundary until the
-Phase 10 cutover gates.
+publication or recovery and never mutates advisor settings. Phase 8 established
+the staging/parity/recovery boundary; Phase 10 promotes this path to the default
+after the per-target gates.
 
 ### Build closure and deterministic planning
 
@@ -419,9 +432,55 @@ recovery results.
 tests, six fixture-schema/proxy tests, and two packed-consumer lifecycle tests.
 Aggregate focused evidence passed **212/212** tests; code review scored **9.8/10**
 and the advisor approved. Evidence covers the feature worktree and packed
-artifact contract only. It does not claim a live DamHopper release, installed
-vendor-CLI qualification, target cutover, Python-free distribution, rollout, or
-`main` merge.
+artifact contract only. Phase 10 now records the TypeScript cutover; live
+vendor-CLI qualification, operator rollout, or `main` merge remain separate.
+
+## Phase 10 release packaging and per-target cutover
+
+Phase 10 closes the TypeScript release boundary for all seven persisted targets.
+`src/distribution/cutover.ts` exposes immutable `TargetGateReceipt` records with
+the target, authoritative engine, parity and closure results, schema version,
+cutover timestamp, and operator notes. `authoritativeEngineForTarget` normalizes
+`agy` to `antigravity` and honors an explicit transition override;
+`assertUniformAuthoritativeEngine` rejects any atomic request that would span
+Python- and TypeScript-owned targets with `CAPABILITY_UNSUPPORTED`.
+
+### Release packaging and manifest generation
+
+`npm run build` executes `scripts/generate-controller-inventory.mjs` first,
+regenerating the exact 17-file CommonJS controller inventory used by TypeScript
+validation. `node scripts/build-manifests.mjs` then calls `runLocalBuild` once
+for each persisted target and once for the aggregate set. Isolated staging runs
+the registered TypeScript adapters, validates declared roots, copies the
+controller closure, and writes `.evcrate/build-manifest-<target>.json` or
+`.evcrate/build-manifest.json`. Build/check compare staged output and reject
+legacy project-root target roots before any publication.
+
+`package.json` exposes the CommonJS `evcrate` and `evcrate-advisor` bins and
+allows compiled `dist/**`, `.evcrate/**`, plans, and release metadata. Phase 10
+package contracts require compiled JavaScript and the controller/manifest
+closure while excluding `distribution/`, migrators, legacy adapter packages,
+`__pycache__`, and Python bytecode from the packed artifact.
+
+### Default engine and runtime boundary
+
+`distribute build|check|publish|all|recover`, top-level publish/recover,
+version, health, advisor settings, and resource-control operations use the
+TypeScript path by default. The compatibility bridge remains available only
+when an explicit Python engine override or injected process runner selects it;
+that path invokes package-relative `python3 distribute.py` and is retained for
+transition tests, not as the packaged default. Generated projections remain
+derived artifacts and are never hand-edited.
+
+### Phase 10 evidence
+
+`npm run test:phase10` passes **8/8**, covering all seven receipts, alias and
+uniform-engine selection, controller closure, target/aggregate manifest
+generation, legacy-root cleanliness, Python-free package allow-list checks, and
+pure TypeScript CLI routing. Full validation passes **255/255** tests. This
+evidence proves release packaging and default runtime behavior in the feature
+worktree; operator rollout, live vendor qualification, npm publication, and
+`main` merge remain Phase 11 concerns.
 
 ## Canonical JSON and hashing
 
@@ -483,32 +542,34 @@ Missing state has an explicit empty marker; malformed, symlinked, unsupported, o
 unstable marker data fails closed. Unmanaged HOME files remain outside the
 managed marker set.
 
-## Python authority and package boundary
+## Python compatibility and package boundary
 
-The TypeScript compatibility bridge invokes only package-relative
-`python3 distribute.py` actions and passes the resolved state root through the
-established handoff. It does not invoke migrators directly, provide a Node
-fallback, or claim Python-free parity. CommonJS package exports retain both the
-`evcrate` CLI and the existing `evcrate-advisor` executable.
+The compatibility bridge invokes only package-relative `python3 distribute.py`
+actions and passes the resolved state root through the established handoff. It
+does not invoke migrators directly. The packaged Phase 10 allow-list excludes
+the distribution/migrator/legacy adapter Python trees, `__pycache__`, and Python
+bytecode; the default TypeScript CLI path therefore needs no Python interpreter.
+CommonJS package exports retain both the `evcrate` CLI and the existing
+`evcrate-advisor` executable.
 
 ## Evidence and limitations
 
-Focused implementation evidence records all builds passing. Phase 9
-`npm run test:phase9` passed **14/14** integration tests, and aggregate focused
-evidence passed **212/212**. Phase 8 `npm run test:phase8` passed **54/54**;
-the command covers protocol, CLI, publication planning, apply, recovery, parity,
-and isolation contracts. Earlier aggregate evidence remains **133/133** across
-Phase 7 (**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6 (**23/23**),
+Focused implementation evidence records all builds passing. Phase 10
+`npm run test:phase10` passed **8/8**, and full validation passed **255/255**.
+Phase 9 `npm run test:phase9` passed **14/14** integration tests; its aggregate
+focused evidence passed **212/212**. Phase 8 `npm run test:phase8` passed
+**54/54**; earlier aggregate evidence remains **133/133** across Phase 7
+(**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6 (**23/23**),
 Phase 4 (**31/31**), and Phase 5 (`npm run test:phase5`, **12/12**).
 
-Phase 9 evidence covers packed artifact installation, resource lifecycle,
-publication/recovery, diagnostic-only health, and fail-closed adapter errors.
-These contract results do not claim a live DamHopper release, installed
-vendor-CLI qualification, target cutover, Python-free completion, deployment
-behavior, or `main` merge.
+Phase 10 evidence covers target gate receipts, TypeScript manifest generation,
+controller closure, packed artifact allow-listing, Python-free default CLI
+operations, and mixed-engine rejection. It does not claim live vendor-CLI
+qualification, deployment behavior, operator rollout, npm publication, or
+`main` merge.
 
 Residuals remain the low same-UID/path-race window and Linux-first security
-scope. Live vendor qualification and target cutover remain operator-controlled.
+scope. Live vendor qualification and rollout remain operator-controlled.
 
 ## Related documentation
 
@@ -524,6 +585,6 @@ scope. Live vendor qualification and target cutover remain operator-controlled.
 ## Compaction record
 
 Repomix v1.18.0 generated `repomix-output.xml` on 2026-09-02 using the
-repository's configured/default exclusions. It reported **2,596 files**,
-**8,811,130 tokens**, and **33,262,382 characters**. The compaction was used
+repository's configured/default exclusions. It reported **2,620 files**,
+**8,956,735 tokens**, and **33,825,852 characters**. The compaction was used
 as the source snapshot for this summary; it is not a package deliverable.

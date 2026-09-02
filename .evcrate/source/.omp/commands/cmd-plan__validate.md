@@ -1,8 +1,7 @@
 ---
-argument-hint: "[plan-path]"
-description: "Validate plan with critical questions interview"
+description: Validate plan with critical questions interview
+argument-hint: [plan-path]
 ---
-
 
 ## Your mission
 

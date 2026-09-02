@@ -67,7 +67,7 @@ def find_api_key(skill_dir: Optional[Path] = None) -> Optional[str]:
             return api_key
 
     # Step 4: Check ./.agents/skills/.env
-    claude_skills_env = project_dir / '.agents' / 'skills' / '.env'
+    claude_skills_env = project_dir / '.codex' / 'skills' / '.env'
     if claude_skills_env.exists():
         api_key = load_env_file(claude_skills_env)
         if api_key:
@@ -162,7 +162,7 @@ def find_env_var(var_name: str, skill_dir: Optional[Path] = None) -> Optional[st
     env_files = [
         project_dir / '.env',
         project_dir / '.codex' / '.env',
-        project_dir / '.agents' / 'skills' / '.env',
+        project_dir / '.codex' / 'skills' / '.env',
         skill_dir / '.env'
     ]
 
@@ -203,7 +203,7 @@ def find_all_api_keys(skill_dir: Optional[Path] = None) -> List[str]:
     env_files = [
         project_dir / '.env',
         project_dir / '.codex' / '.env',
-        project_dir / '.agents' / 'skills' / '.env',
+        project_dir / '.codex' / 'skills' / '.env',
         skill_dir / '.env'
     ]
 

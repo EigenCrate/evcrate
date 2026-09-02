@@ -470,7 +470,7 @@ function sanitizeConfig(config, projectRoot) {
  *
  * Resolution order (each layer overrides the previous):
  *   1. DEFAULT_CONFIG (hardcoded defaults)
- *   2. Global config (~/.pi/.evcrate.json) - user preferences
+ *   2. Global config (~/.pi/agent/.evcrate.json) - user preferences
  *   3. Local config (./.pi/.evcrate.json) - project-specific overrides
  *      Set EVCRATE_CONFIG_DIR=.codex to use .codex/.evcrate.json instead.
  *

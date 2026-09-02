@@ -1,4 +1,4 @@
-description = "\u26a1\u26a1\u26a1 Intelligent plan creation with prompt enhancement"
+description = "⚡⚡⚡ Intelligent plan creation with prompt enhancement"
 prompt = """## Your mission
 <task>
 {{args}}

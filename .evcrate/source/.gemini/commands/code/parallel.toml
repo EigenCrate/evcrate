@@ -1,4 +1,4 @@
-description = "\u26a1 Execute parallel or sequential phases based on plan structure"
+description = "⚡ Execute parallel or sequential phases based on plan structure"
 prompt = """Raw implementation input: <raw-plan>{{args}}</raw-plan>
 
 ## Canonical checkpoint routing

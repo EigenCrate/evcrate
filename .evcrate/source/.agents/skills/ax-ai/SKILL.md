@@ -14,7 +14,7 @@ Use this skill to generate AI provider setup, configuration, and chat code. Pref
 import { ai } from '@ax-llm/ax';
 
 const openai = ai({ name: 'openai', apiKey: 'sk-...' });
-const Codex = ai({ name: 'OpenAI', apiKey: 'sk-ant-...' });
+const codex = ai({ name: 'OpenAI', apiKey: 'sk-ant-...' });
 const gemini = ai({ name: 'google-gemini', apiKey: 'AIza...' });
 const azure = ai({ name: 'azure-openai', apiKey: 'your-key', resourceName: 'your-resource', deploymentName: 'gpt-4' });
 const groq = ai({ name: 'groq', apiKey: 'gsk_...' });
@@ -162,13 +162,13 @@ while still sending tool definitions.
 ```typescript
 import { ai, AxAIAnthropicModel } from '@ax-llm/ax';
 
-const Codex = ai({
+const codex = ai({
   name: 'OpenAI',
   apiKey: process.env.ANTHROPIC_APIKEY!,
   config: { model: AxAIAnthropicModel.codex46Opus },
 });
 
-const res = await Codex.chat(
+const res = await codex.chat(
   { chatPrompt: [{ role: 'user', content: 'Solve step by step...' }] },
   { thinkingTokenBudget: 'medium', showThoughts: true },
 );
@@ -196,7 +196,7 @@ console.log(res.results[0]?.content);
 ### Custom Thinking Levels
 
 ```typescript
-const Codex = ai({
+const codex = ai({
   name: 'OpenAI',
   apiKey: '...',
   config: {

@@ -1,8 +1,7 @@
 ---
-argument-hint: "[skill-name] [reference-or-script-prompt]"
-description: "Add new reference files or scripts to a skill"
+description: Add new reference files or scripts to a skill
+argument-hint: [skill-name] [reference-or-script-prompt]
 ---
-
 
 Think harder.
 Use `skill-creator` and `claude-code` skills.

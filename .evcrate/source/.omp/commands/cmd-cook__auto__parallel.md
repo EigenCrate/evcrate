@@ -1,8 +1,7 @@
 ---
-argument-hint: "[tasks] [--advice]"
-description: "⚡⚡⚡ Plan parallel phases & execute with fullstack-developer agents"
+description: ⚡⚡⚡ Plan parallel phases & execute with fullstack-developer agents
+argument-hint: [tasks] [--advice]
 ---
-
 
 **Ultrathink parallel** raw input: <raw-tasks>$ARGUMENTS</raw-tasks>
 

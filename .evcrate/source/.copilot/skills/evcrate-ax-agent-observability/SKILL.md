@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-agent-observability"
 description: "This skill helps an LLM generate correct AxAgent observability code using @ax-llm/ax. Use when the user asks about actorTurnCallback, executorTurnCallback, onContextEvent, agentStatusCallback, onFunctionCall, reportSuccess, reportFailure, getChatLog(), getUsage(), resetUsage(), debug traces, progress updates, or telemetry for AxAgent runs."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

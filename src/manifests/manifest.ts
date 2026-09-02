@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
@@ -92,8 +93,14 @@ export function loadTargetManifest(path: string, expectedId?: PersistedTarget): 
   const adapter = data.adapter === undefined || data.adapter === null
     ? null : typeof data.adapter === 'string' ? normalizeRelativePath(data.adapter) : invalid();
   const adapterSources = pathList(data.adapter_sources ?? []);
-  for (const source of adapterSources) assertRegularFile(containedPath(repository, source, true));
-  if (adapter !== null) assertRegularFile(containedPath(repository, adapter, true));
+  for (const source of adapterSources) {
+    const full = containedPath(repository, source, false);
+    if (existsSync(full)) assertRegularFile(full);
+  }
+  if (adapter !== null) {
+    const full = containedPath(repository, adapter, false);
+    if (existsSync(full)) assertRegularFile(full);
+  }
   const rootsValue = data.output_roots ?? (typeof data.output_root === 'string'
     ? [data.output_root, ...(Array.isArray(data.additional_roots) ? data.additional_roots : [])] : undefined);
   const outputRoots = pathList(rootsValue, false);

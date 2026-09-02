@@ -61,7 +61,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 7.1 | [Brainstormer model projection](./phase-07-1-brainstormer-model-projection.md) | Assign the canonical brainstormer strong-tier model and verify target projections | COMPLETE — 100% |
 | 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | DONE — 100% |
 | 9 | [DamHopper and Agent Store integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | DONE — 100% — 2026-09-02 |
-| 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | Planned |
+| 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | DONE — 100% — 2026-09-02 |
 | 11 | [Validation and rollout](./phase-11-validation-and-rollout.md) | Per-target matrix, settings/diagnostic proofs, unchanged counsel | Planned |
 
 ## Phase 2 completion evidence
@@ -141,7 +141,7 @@ completion, and deployment behavior are not claimed. Review residuals are
 limited to the documented low same-UID/path-race window and Linux-first
 security scope.
 
-The overall plan remains `in_progress` because Phases 10–11 remain planned.
+The overall plan remains `in_progress` because Phase 11 remains planned.
 
 ## Phase 7 completion evidence
 
@@ -190,7 +190,19 @@ Phase 9 integrates DamHopper and Agent Store through a bounded, short-lived pack
 
 Coverage includes packed-artifact checksum/install, argv-based resource and target operations, discovery/get, import preview/apply, scope/CAS lifecycle, OMP/Copilot publish/recover, protocol fixtures, diagnostic-only health, and fail-closed malformed/empty/timeout/counsel responses.
 
-Phase 9 completion does not claim target cutover, Python-free release, or rollout; those remain Phases 10–11.
+Phase 9 completion did not claim target cutover, Python-free release, or rollout. Phase 10 now records the per-target cutover and Python-free packed-artifact gate; Phase 11 validation and rollout remain planned.
+
+## Phase 10 completion evidence
+
+**Status:** DONE | **Progress:** 100% | **Completed:** 2026-09-02 | **Validated:** `npm run test:phase10` 8/8
+
+Phase 10 completes the per-target TypeScript cutover and release-package cleanup in the feature worktree:
+
+- All seven persisted targets select TypeScript by default with parity, controller-closure, and schema-2 gate receipts.
+- Mixed Python/TypeScript atomic selections fail closed; `agy` remains an input-only alias for `antigravity`.
+- The exact 17-file CommonJS controller closure remains validated and singleton.
+- The packed artifact allow-list contains required compiled/runtime assets and no distribution or migrator Python files.
+- Local build/check plus version, advisor-settings, and publication dry-run smoke pass without Python.
 
 ## Phase 1 evidence preserved
 

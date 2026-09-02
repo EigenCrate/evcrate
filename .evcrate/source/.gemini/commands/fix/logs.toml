@@ -1,4 +1,4 @@
-description = "\u26a1 Analyze logs and fix issues"
+description = "⚡ Analyze logs and fix issues"
 prompt = """**IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
 
 ## Mission

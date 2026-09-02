@@ -1,6 +1,6 @@
 # EVCrate - Project Roadmap
 
-**Last Updated:** 2026-09-02 13:37:40 +0700
+**Last Updated:** 2026-09-02 21:43:02 +0700
 **Current Version:** 1.14.8
 **Repository:** https://github.com/NEBULEA-M/evcrate
 
@@ -177,6 +177,8 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ Central Advisor CLI Supervisor — the shared `~/.evcrate/bin/evcrate-advisor` controller now owns one required global target, direct ten-key checkpoints, bounded isolated execution, one terminal envelope, schema-2 controller hashes, atomic `.evcrate/bin` publication, and qualified OMP plus disabled Antigravity candidates. Generated harnesses contain no per-harness controller runtime. Real vendor-CLI qualification and live HOME cutover remain user-operated follow-up work.
 
 ### TypeScript/npm Control-Plane CLI
+
+**Overall progress:** 91% (10 of 11 primary phases complete; Phase 11 validation and staged rollout pending).
 - ✅ Phase 5 target projection adapters complete (2026-09-01; [Phase 5 plan](../plans/260827-2218-typescript-control-plane-cli/phase-05-adapters.md)): Claude, Gemini, Antigravity, Codex, Pi, OMP, and Copilot are registered in the confirmed parity order, with 2,033 exact Python parity delta records.
 - Validation is staging-only and target-isolated: adapters write only declared roots, reject unsafe or mutated outputs, and exclude advisor-controller copies. `npm run test:phase5` passed with a clean build and **12/12** tests.
 - Python remains authoritative for generation, build/check, HOME publication, and recovery until target-specific cutover. Phase 6 does not claim publication, live cutover, HOME support, Python-free completion, deployment behavior, or `main` merge.
@@ -189,7 +191,9 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ Phase 8 publish and recovery complete (2026-09-02; [Phase 8 plan](../plans/260827-2218-typescript-control-plane-cli/phase-08-atomic-publish-and-recovery.md)): target-HOME publication and advisor-settings transactions/recovery remain separate.
 - Focused evidence: `npm run test:phase8` passed **54/54** tests; code review **9.8/10**; advisor approved. Feature-worktree evidence only; no per-target cutover, Python-free release, or staged rollout is claimed.
 - ✅ Phase 9 DamHopper and Agent Store integration complete (2026-09-02; [Phase 9 plan](../plans/260827-2218-typescript-control-plane-cli/phase-09-dam-hopper-integration.md)): packed npm CLI subprocess adapter covers resource discovery/import/scope/CAS/publish/recover, while top-level health remains qualification-only.
-- Focused evidence: `npm run test:phase9` passed **14/14** integration tests; aggregate **212/212**; code review **9.8/10**; advisor approved. DamHopper remains an external consumer; no target cutover, Python-free release, or rollout is claimed. Phases 10–11 remain planned.
+- Focused evidence: `npm run test:phase9` passed **14/14** integration tests; aggregate **212/212**; code review **9.8/10**; advisor approved. Phase 11 validation and staged rollout remain planned.
+- ✅ Phase 10 release, per-target cutover, and cleanup complete (2026-09-02; [Phase 10 plan](../plans/260827-2218-typescript-control-plane-cli/phase-10-release-and-cleanup.md)): all seven persisted targets select TypeScript by default with parity/closure receipts; mixed-engine atomic transactions fail closed; the exact 17-file controller closure remains singleton; the packed artifact allow-list is Python-free.
+- Validation: `npm run test:phase10` passed **8/8**; local build/check plus version, advisor-settings, and publication dry-run smoke pass without Python. Phase 11 validation and staged rollout remain planned.
 
 ### OMP Command Namespace Prefix
 - 🔄 Phase 01 map/translate complete (**100%**); parent plan **43%** overall. Review **9.5/10** approved, focused validation and build/check passed.
@@ -253,6 +257,8 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 | TypeScript CLI scopes/advisor-settings/CAS (Phase 7) | ✅ Complete | 2026-09-01 | 100% |
 | TypeScript CLI publish/recovery (Phase 8) | ✅ Complete | 2026-09-02 | 100% |
 | TypeScript CLI DamHopper/Agent Store integration (Phase 9) | ✅ Complete | 2026-09-02 | 100% |
+| TypeScript CLI release/cutover/cleanup (Phase 10) | ✅ Complete | 2026-09-02 | 100% |
+| TypeScript CLI validation and staged rollout (Phase 11) | 📋 Planned | — | 0% |
 
 ---
 
@@ -317,6 +323,8 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - Validation: `npm run test:phase8` **54/54** tests passed; code reviewer **9.8/10**; advisor approved.
 - ✅ TypeScript/npm control-plane CLI — Phase 9 DamHopper and Agent Store integration complete (2026-09-02; [Phase 9 plan](../plans/260827-2218-typescript-control-plane-cli/phase-09-dam-hopper-integration.md); [Phase 9 changelog](./project-changelog.md#phase-9-damhopper-and-agent-store-integration)): external consumer adapter invokes packed npm CLI subprocess for resource lifecycle, target publication/recovery, and qualification-only health without counsel proxying or EVCrate artifact ownership.
 - Validation: `npm run test:phase9` passed **14/14** integration tests; aggregate **212/212**; code review **9.8/10**; advisor approved.
+- ✅ TypeScript/npm control-plane CLI — Phase 10 release, per-target cutover, and cleanup complete (2026-09-02; [Phase 10 plan](../plans/260827-2218-typescript-control-plane-cli/phase-10-release-and-cleanup.md)): all seven target receipts select TypeScript, mixed-engine atomic transactions fail closed, the exact 17-file controller closure remains singleton, and the packed artifact allow-list is Python-free.
+- Validation: `npm run test:phase10` passed **8/8**; Phase 11 validation and staged rollout remain planned.
 
 ### Recent Additions (2026-09-01)
 - ✅ TypeScript/npm control-plane CLI — Phase 6 registry/imports complete (2026-09-01; [Phase 6 plan](../plans/260827-2218-typescript-control-plane-cli/phase-06-registry-and-imports.md)): manifest-derived canonical resource roots, deterministic schema-v1 registry, explicit provenance/capability-gated imports, hash-bound previews, and atomic canonical-source plus registry CAS.
@@ -498,7 +506,8 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ TypeScript CLI Phase 8 publish and recovery complete (2026-09-02; [Phase 8 plan](../plans/260827-2218-typescript-control-plane-cli/phase-08-atomic-publish-and-recovery.md)): target-HOME and advisor-settings transaction/recovery boundaries remain separate. Validation: `npm run test:phase8` **54/54**; code review **9.8/10**; advisor approved.
 - ✅ TypeScript CLI Phase 9 DamHopper and Agent Store integration complete (2026-09-02; [Phase 9 plan](../plans/260827-2218-typescript-control-plane-cli/phase-09-dam-hopper-integration.md)). Validation: `npm run test:phase9` **14/14**; aggregate **212/212**; code review **9.8/10**; advisor approved.
 
-- Phases 10–11 remain planned; the overall plan remains `in_progress`.
+- ✅ TypeScript CLI Phase 10 release, per-target cutover, and cleanup complete (2026-09-02; [Phase 10 plan](../plans/260827-2218-typescript-control-plane-cli/phase-10-release-and-cleanup.md)): all seven target receipts select TypeScript, the exact 17-file controller closure remains singleton, and the packed artifact is Python-free.
+- Validation: `npm run test:phase10` passed **8/8**; Phase 11 validation and staged rollout remain planned, so the overall plan remains `in_progress`.
 
 #### OMP Command Namespace Prefix
 - Completed Phase 01 map/translate implementation with OMP-only `cmd-<flattened>` targets and centralized map-driven references.

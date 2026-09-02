@@ -1,8 +1,7 @@
 ---
-argument-hint: "[screenshot]"
-description: "Describe a design based on screenshot/video"
+description: Describe a design based on screenshot/video
+argument-hint: [screenshot]
 ---
-
 
 Think hard to describe the design based on this screenshot/video: 
 <screenshot>$ARGUMENTS</screenshot>

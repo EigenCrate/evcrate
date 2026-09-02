@@ -1,12 +1,12 @@
 ---
 name: cmd_coding-level
-description: Migrated command from .claude
+description: 
 ---
 # cmd_coding-level
 
 Command Path: /coding-level
 
-Description: Migrated command from .claude
+Description: 
 
 Set your coding experience level for tailored explanations and output format.
 

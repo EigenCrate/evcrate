@@ -114,7 +114,7 @@ try {
 
   // Load patterns from the project ignore configuration.
   const scriptDir = __dirname;
-  const copilotDir = path.dirname(scriptDir); // Go up from hooks/ to .copilot/
+  const copilotDir = path.dirname(path.dirname(scriptDir)); // Go up from hooks/ to .copilot/
   const evcrateIgnorePath = path.join(copilotDir, '.evcrateignore');
   const patterns = loadPatterns(evcrateIgnorePath);
   const matcher = createMatcher(patterns);

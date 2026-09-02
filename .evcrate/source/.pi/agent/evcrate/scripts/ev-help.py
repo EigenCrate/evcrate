@@ -209,7 +209,7 @@ CATEGORY_GUIDES = {
     "config": {
         "title": "EVCrate Configuration (.evcrate.json)",
         "workflow": [
-            ("Global", "Set user prefs in `~/.pi/.evcrate.json`"),
+            ("Global", "Set user prefs in `~/.pi/agent/.evcrate.json`"),
             ("Local", "Override per-project in `./.pi/.evcrate.json`"),
             ("Resolution", "DEFAULT → global → local (deep merge)"),
         ],
@@ -276,7 +276,7 @@ CATEGORY_GUIDES = {
     "notifications": {
         "title": "Session Notifications (Discord/Telegram/Slack)",
         "workflow": [
-            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.pi/.env`"),
+            ("1. Set env vars", "Add `DISCORD_WEBHOOK_URL` or `TELEGRAM_BOT_TOKEN`+`TELEGRAM_CHAT_ID` to `~/.pi/agent/.env`"),
             ("2. Add hook", "Add Stop hook to `.pi/settings.json` (see below)"),
             ("3. Test", "`echo '{\"hook_event_name\":\"Stop\"}' | node .pi/agent/evcrate/hooks/notifications/notify.cjs`"),
         ],
@@ -817,7 +817,7 @@ def show_config_guide() -> None:
     print("# EVCrate Configuration (.evcrate.json)")
     print()
     print("**Locations (cascading resolution):**")
-    print("- Global: `~/.pi/.evcrate.json` (user preferences)")
+    print("- Global: `~/.pi/agent/.evcrate.json` (user preferences)")
     print("- Local: `./.pi/.evcrate.json` (project overrides)")
     print()
     print("**Resolution Order:** `DEFAULT → global → local`")
@@ -831,7 +831,7 @@ def show_config_guide() -> None:
     print()
     print("## Quick Start")
     print()
-    print("**Global config** (`~/.pi/.evcrate.json`) - your preferences:")
+    print("**Global config** (`~/.pi/agent/.evcrate.json`) - your preferences:")
     print("```json")
     print('{')
     print('  "locale": {')
@@ -972,7 +972,7 @@ def show_config_guide() -> None:
     print()
     print("**Global install user (fresh directories work):**")
     print("```bash")
-    print("# ~/.pi/.evcrate.json - applies everywhere")
+    print("# ~/.pi/agent/.evcrate.json - applies everywhere")
     print("cd /tmp/new-project && claude  # Uses global config")
     print("```")
     print()
@@ -1028,7 +1028,7 @@ def show_coding_level_guide() -> None:
     print("```")
     print()
     print("**Location (cascading):**")
-    print("- Global: `~/.pi/.evcrate.json` - personal preference")
+    print("- Global: `~/.pi/agent/.evcrate.json` - personal preference")
     print("- Local: `./.pi/.evcrate.json` - project override")
     print()
     print("---")

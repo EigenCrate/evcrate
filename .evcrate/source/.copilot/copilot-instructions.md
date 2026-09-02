@@ -8,12 +8,12 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 
 ## Workflows
 
-- Primary workflow: @evcrate/workflows/primary-workflow.md (local `.copilot/evcrate/workflows/primary-workflow.md`; otherwise read `~/.copilot/evcrate/workflows/primary-workflow.md` (the published install))
-- Development rules: @evcrate/workflows/development-rules.md (local `.copilot/evcrate/workflows/development-rules.md`; otherwise read `~/.copilot/evcrate/workflows/development-rules.md` (the published install))
-- Orchestration protocols: @evcrate/workflows/orchestration-protocol.md (local `.copilot/evcrate/workflows/orchestration-protocol.md`; otherwise read `~/.copilot/evcrate/workflows/orchestration-protocol.md` (the published install))
-- Advisor mentoring: @evcrate/workflows/advisor-mentoring.md (local `.copilot/evcrate/workflows/advisor-mentoring.md`; otherwise read `~/.copilot/evcrate/workflows/advisor-mentoring.md` (the published install))
-- Documentation management: @evcrate/workflows/documentation-management.md (local `.copilot/evcrate/workflows/documentation-management.md`; otherwise read `~/.copilot/evcrate/workflows/documentation-management.md` (the published install))
-- And other workflows: @evcrate/workflows/* (local `.copilot/evcrate/workflows/*`; otherwise read `~/.copilot/evcrate/workflows/*` (the published install))
+- Primary workflow: @evcrate/workflows/primary-workflow.md (local .copilot/evcrate/workflows/primary-workflow.md; otherwise read ~/.copilot/evcrate/workflows/primary-workflow.md (the published install))
+- Development rules: @evcrate/workflows/development-rules.md (local .copilot/evcrate/workflows/development-rules.md; otherwise read ~/.copilot/evcrate/workflows/development-rules.md (the published install))
+- Orchestration protocols: @evcrate/workflows/orchestration-protocol.md (local .copilot/evcrate/workflows/orchestration-protocol.md; otherwise read ~/.copilot/evcrate/workflows/orchestration-protocol.md (the published install))
+- Advisor mentoring: @evcrate/workflows/advisor-mentoring.md (local .copilot/evcrate/workflows/advisor-mentoring.md; otherwise read ~/.copilot/evcrate/workflows/advisor-mentoring.md (the published install))
+- Documentation management: @evcrate/workflows/documentation-management.md (local .copilot/evcrate/workflows/documentation-management.md; otherwise read ~/.copilot/evcrate/workflows/documentation-management.md (the published install))
+- And other workflows: @evcrate/workflows/* (local .copilot/evcrate/workflows/*; otherwise read ~/.copilot/evcrate/workflows/* (the published install))
 
 ## Subagent Completion Contract
 
@@ -29,7 +29,7 @@ Delegation is synchronous unless a workflow explicitly says otherwise. After spa
 - If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.
 
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
-**IMPORTANT:** You must follow strictly the development rules in @evcrate/workflows/development-rules.md (local `.copilot/evcrate/workflows/development-rules.md`; otherwise read `~/.copilot/evcrate/workflows/development-rules.md` (the published install)) file.
+**IMPORTANT:** You must follow strictly the development rules in @evcrate/workflows/development-rules.md (local .copilot/evcrate/workflows/development-rules.md; otherwise read ~/.copilot/evcrate/workflows/development-rules.md (the published install)) file.
 **IMPORTANT:** Before you plan or proceed any implementation, always read the `./README.md` file first to get context.
 **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 **IMPORTANT:** In reports, list any unresolved questions at the end, if any.

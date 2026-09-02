@@ -22,25 +22,25 @@ Centralized environment variable resolver that follows Claude Code's hierarchy.
 4. **PROJECT/.pi/.env** - Project global defaults
 5. **~/.pi/agent/skills/\<skill\>/.env** - User skill-specific
 6. **~/.pi/agent/skills/.env** - User shared across skills
-7. **~/.pi/.env** - User global defaults (LOWEST)
+7. **~/.pi/agent/.env** - User global defaults (LOWEST)
 
 ### CLI Usage
 
 ```bash
 # Resolve a variable for a specific skill
-python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal
+python ~/.pi/agent/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal
 
 # With verbose output
-python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose
+python ~/.pi/agent/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose
 
 # Find all locations where variable is defined
-python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --find-all
+python ~/.pi/agent/scripts/resolve_env.py GEMINI_API_KEY --find-all
 
 # Show hierarchy for a skill
-python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal
+python ~/.pi/agent/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal
 
 # Export format for shell sourcing
-eval $(python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --export)
+eval $(python ~/.pi/agent/scripts/resolve_env.py GEMINI_API_KEY --export)
 ```
 
 ### Python API Usage
@@ -89,7 +89,7 @@ api_key = resolve_env('GEMINI_API_KEY', skill='ai-multimodal')
 
 if not api_key:
     print("Error: GEMINI_API_KEY not found")
-    print("Run: python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
+    print("Run: python ~/.pi/agent/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
     sys.exit(1)
 
 # Use api_key...
@@ -107,14 +107,14 @@ if not api_key:
 
 ```bash
 # Test without any config files
-python ~/.pi/agent/evcrate/scripts/resolve_env.py TEST_VAR --verbose
+python ~/.pi/agent/scripts/resolve_env.py TEST_VAR --verbose
 
 # Test with environment variable
 export TEST_VAR=from-runtime
-python ~/.pi/agent/evcrate/scripts/resolve_env.py TEST_VAR --verbose
+python ~/.pi/agent/scripts/resolve_env.py TEST_VAR --verbose
 
 # Test with skill context
-python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --find-all
+python ~/.pi/agent/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --find-all
 ```
 
 ## generate_catalogs.py
