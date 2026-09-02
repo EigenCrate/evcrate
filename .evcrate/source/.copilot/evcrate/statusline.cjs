@@ -182,10 +182,9 @@ async function main() {
         // - Layer 1: Session ID change detection
         // - Layer 2: Token drop detection (50% threshold)
         // - Layer 3: Hook marker system (SessionStart/SessionEnd)
-        const contextData = data.context_window || data.contextWindow || data.context || {};
-        const contextInput = contextData.total_input_tokens || contextData.totalInputTokens || contextData.input_tokens || contextData.inputTokens || 0;
-        const contextOutput = contextData.total_output_tokens || contextData.totalOutputTokens || contextData.output_tokens || contextData.outputTokens || 0;
-        const contextSize = contextData.context_window_size || contextData.contextWindowSize || contextData.window_size || contextData.windowSize || 0;
+        const contextInput = data.context_window?.total_input_tokens || 0;
+        const contextOutput = data.context_window?.total_output_tokens || 0;
+        const contextSize = data.context_window?.context_window_size || 0;
 
         if (contextSize > 0) {
             const result = trackContext({

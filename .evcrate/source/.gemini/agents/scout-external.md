@@ -1,7 +1,6 @@
 ---
 name: scout-external
-description: Use this agent to locate relevant files across a large codebase with
-  a read-only external search strategy and native repository-tool fallbacks.
+description: "Use this agent to locate relevant files across a large codebase with a read-only external search strategy and native repository-tool fallbacks."
 tools:
 - glob
 - google_web_search
@@ -38,7 +37,7 @@ claude -p --model sonnet "[prompt]"
 ```
 
 Run focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command. Fall back to native Glob, Grep, and Read tools when both commands are unavailable, unsafe, or fail.
-<!-- EXTERNAL_SCOUT_STRATEGY_END -->
+
 
 ## Operational protocol
 

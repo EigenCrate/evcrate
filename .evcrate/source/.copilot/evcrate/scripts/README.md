@@ -49,7 +49,7 @@ eval $(python ~/.copilot/evcrate/scripts/resolve_env.py GEMINI_API_KEY --export)
 # Add to sys.path if needed
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / '.copilot' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.copilot' / 'scripts'))
 
 from resolve_env import resolve_env, find_all, show_hierarchy
 
@@ -81,7 +81,7 @@ import sys
 from pathlib import Path
 
 # Import centralized resolver
-sys.path.insert(0, str(Path.home() / '.copilot' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.copilot' / 'scripts'))
 from resolve_env import resolve_env
 
 # Resolve API key

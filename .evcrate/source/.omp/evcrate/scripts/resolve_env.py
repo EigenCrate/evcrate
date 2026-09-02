@@ -122,17 +122,17 @@ def get_env_file_paths(skill: Optional[str] = None) -> List[Tuple[str, Path]]:
     if skill:
         paths.append((
             f"User skill-specific ({skill})",
-            home / '.omp' / 'agent' / 'skills' / skill / '.env'
+            home / '.omp' / 'skills' / skill / '.env'
         ))
 
     paths.append((
         "User skills shared",
-        home / '.omp' / 'agent' / 'skills' / '.env'
+        home / '.omp' / 'skills' / '.env'
     ))
 
     paths.append((
         "User global",
-        home / '.omp' / 'agent' / '.env'
+        home / '.omp' / '.env'
     ))
 
     return paths

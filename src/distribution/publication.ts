@@ -145,7 +145,12 @@ function ensureDestinationParent(path: string): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   assertOwnerControlledDirectory(dirname(path));
 }
-function promoteOperation(transaction: string, operation: PlannedPublicationOperation, index: number): PublicationNodeSnapshot {
+function promoteOperation(
+  transaction: string,
+  operation: PlannedPublicationOperation,
+  index: number,
+  touchedDirs?: Set<string>
+): PublicationNodeSnapshot {
   assertBefore(operation);
   const backup = backupDestination(transaction, operation, index);
   if (operation.target === 'advisor-controller') {
@@ -155,8 +160,13 @@ function promoteOperation(transaction: string, operation: PlannedPublicationOper
     ensureDestinationParent(operation.destination);
     renameSync(join(transaction, 'stage', String(index)), operation.destination);
   }
-  syncDirectory(dirname(operation.destination));
-  if (backup !== null) syncDirectory(dirname(backup));
+  if (touchedDirs) {
+    touchedDirs.add(dirname(operation.destination));
+    if (backup !== null) touchedDirs.add(dirname(backup));
+  } else {
+    syncDirectory(dirname(operation.destination));
+    if (backup !== null) syncDirectory(dirname(backup));
+  }
   return assertIntended(operation);
 }
 function transactionBytes(root: string): number {
@@ -297,21 +307,21 @@ function applyUnlocked(context: InvocationContext, options: PublicationOptions):
       }
       options.hooks?.afterBinding?.(binding.binding, bindingIndex);
     }
+    const touchedDirs = new Set<string>();
     for (const [workIndex, item] of work.entries()) {
       checkAbort(options.abortSignal);
       options.hooks?.beforeOperation?.(item.operation, workIndex);
       assertBefore(item.operation);
       stageOperation(transactionRoot, item.sourceRoot, item.operation, item.journalIndex);
       promotionStarted = true;
-      const intended = promoteOperation(transactionRoot, item.operation, item.journalIndex);
+      const intended = promoteOperation(transactionRoot, item.operation, item.journalIndex, touchedDirs);
       const entry = mutable.operations[item.journalIndex];
       if (!entry) fail();
       entry.promoted = true;
       entry.intended = intended;
-      refreshJournal(mutable);
-      writeJournal(stateRoot, mutable);
       options.hooks?.afterOperation?.(item.operation, workIndex);
     }
+    for (const dir of touchedDirs) syncDirectory(dir);
     for (const item of work) assertIntended(item.operation);
     removePath(join(transactionRoot, 'stage'));
     const backupRoot = join(transactionRoot, 'backups');

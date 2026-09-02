@@ -1,7 +1,6 @@
 ---
 name: git-manager
-description: Stage, commit, and push code changes with conventional commits. Use when
-  user says "commit", "push", or finishes a feature/fix.
+description: "Stage, commit, and push code changes with conventional commits. Use when user says \"commit\", \"push\", or finishes a feature/fix."
 model: flash-lite
 tools:
 - glob

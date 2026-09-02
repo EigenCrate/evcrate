@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-ai"
 description: "This skill helps an LLM generate correct AI provider setup and configuration code using @ax-llm/ax. Use when the user asks about ai(), providers, models, presets, embeddings, batch audio with ai.transcribe() or ai.speak(), extended thinking, context caching, or mentions OpenAI/GitHub/Google/Azure/Groq/DeepSeek/Mistral/Cohere/Together/Ollama/HuggingFace/Reka/OpenRouter with @ax-llm/ax."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

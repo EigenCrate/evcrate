@@ -47,7 +47,7 @@ function resolveWorkflowPath(filename) {
   const globalPath = path.join(os.homedir(), '.pi', 'agent', 'evcrate', 'workflows', filename);
   if (piPath) return piPath;
   if (fs.existsSync(localPath)) return `.pi/agent/evcrate/workflows/${filename}`;
-  if (fs.existsSync(globalPath)) return `~/.pi/agent/evcrate/workflows/${filename}`;
+  if (fs.existsSync(globalPath)) return `~/.pi/agent/workflows/${filename}`;
   return null;
 }
 
@@ -57,7 +57,7 @@ function resolveScriptPath(filename) {
   const globalPath = path.join(os.homedir(), '.pi', 'agent', 'evcrate', 'scripts', filename);
   if (piPath) return piPath;
   if (fs.existsSync(localPath)) return `.pi/agent/evcrate/scripts/${filename}`;
-  if (fs.existsSync(globalPath)) return `~/.pi/agent/evcrate/scripts/${filename}`;
+  if (fs.existsSync(globalPath)) return `~/.pi/agent/scripts/${filename}`;
   return null;
 }
 

@@ -1,20 +1,20 @@
-import { lstatSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { ControlPlaneError, serializeControlPlaneError } from '../errors/control-plane-error.js';
-import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import {
-  MAX_PUBLICATION_CHANGES, PUBLICATION_BINDING_ORDER, PUBLICATION_CHANGE_ACTIONS,
   type PublishApplyResultPayload, type PublishDryRunResultPayload, type RecoverResultPayload
 } from '../protocol/publication-payloads.js';
-import { createPublicationPlan } from '../distribution/publication-plan.js';
-import { readOptionalPublicationMarker } from '../distribution/publication-inventory.js';
-import { PERSISTED_TARGETS, PROTOCOL_VERSION } from '../protocol/validation.js';
+import { publishDryRun, publishApply, recoverPublication } from '../distribution/publication.js';
+import { runLocalDistribution } from '../distribution/local-build.js';
+import { assertUniformAuthoritativeEngine } from '../distribution/cutover.js';
+import { PROTOCOL_VERSION } from '../protocol/validation.js';
 import type { JsonValue } from '../protocol/json.js';
 import type { ResourceOperation, ResourceResult, ResourceSuccessStatus } from '../protocol/resource-control.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
 import { defaultProcessRunner } from './process-runner.js';
+import { assertScript, runAuthorityPublication } from './python-authority-bridge.js';
 import type { CliRuntime } from './types.js';
+
 const ACTIONS = Object.freeze({
   build: ['--build'], check: ['--check'], publish: ['--publish'], all: ['--all'], recover: ['--recover']
 } as const);
@@ -27,7 +27,6 @@ function statusFor(action: keyof typeof ACTIONS): ResourceSuccessStatus {
   return action === 'publish' || action === 'all' ? 'activated' : 'ok';
 }
 
-
 function errorResult(requestId: string, operation: ResourceOperation, error: unknown): ResourceResult {
   return {
     protocol: 'evcrate-resource-control', protocolVersion: PROTOCOL_VERSION, requestId,
@@ -35,169 +34,25 @@ function errorResult(requestId: string, operation: ResourceOperation, error: unk
   };
 }
 
-function assertScript(scriptPath: string): void {
-  try {
-    const stat = lstatSync(scriptPath);
-    if (!stat.isFile() || stat.isSymbolicLink()) throw new ControlPlaneError('PATH_UNSAFE');
-  } catch (error) {
-    if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError('PATH_UNSAFE');
-  }
-}
-
-function bridgeTargetArgs(context: InvocationContext): readonly string[] {
-  if (context.selectedTargetIds.length === 1) return ['--target', context.selectedTargetIds[0]];
-  if (context.selectedTargetIds.length === PERSISTED_TARGETS.length
-    && PERSISTED_TARGETS.every((target) => context.selectedTargetIds.includes(target))) return [];
-  throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
-}
-function bridgeBindingOrder(context: InvocationContext): readonly string[] {
-  const names = new Set<string>(['.evcrate/bin']);
-  for (const binding of context.homeBindings) {
-    const name = relative(context.homeRoot, binding.homeRoot).replaceAll('\\', '/');
-    if (!name || name === '..' || name.startsWith('../') || names.has(name)) {
-      throw new ControlPlaneError('PROTOCOL_INVALID');
-    }
-    names.add(name);
-  }
-  return PUBLICATION_BINDING_ORDER.filter((binding) => names.has(binding));
-}
-async function runAuthority(
-  context: InvocationContext,
-  runtime: CliRuntime,
-  args: readonly string[],
-  failure: 'PUBLICATION_FAILED' | 'RECOVERY_FAILED',
-  maxStdoutBytes = 16 * 1024
-): Promise<string> {
-  const scriptPath = join(context.packageRoot, 'distribute.py');
-  assertScript(scriptPath);
-  const runner = runtime.processRunner ?? defaultProcessRunner;
-  try {
-    const processResult = await runner.run({
-      executable: runtime.pythonExecutable ?? 'python3', args: [scriptPath, ...args],
-      cwd: context.packageRoot, env: {
-        ...runtime.env, EVCRATE_HOME: context.homeRoot, EVCRATE_STATE_DIR: context.stateRoot
-      },
-      signal: runtime.publicationOptions?.abortSignal ?? runtime.abortSignal,
-      maxInputBytes: 1, maxStdoutBytes, maxStderrBytes: 8 * 1024, maxLines: 256
-    });
-    if (processResult.termination !== 'completed' || processResult.exitCode !== 0) {
-      throw new ControlPlaneError(failure);
-    }
-    return processResult.stdout;
-  } catch (error) {
-    if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError(failure);
-  }
-}
-function readAuthorityMarker(context: InvocationContext): Record<string, unknown> | null {
-  try { return readOptionalPublicationMarker(join(context.stateRoot, 'release-marker.json')); }
-  catch { throw new ControlPlaneError('RECOVERY_FAILED'); }
-}
-type AuthorityChange = {
-  root: string; path: string; action: typeof PUBLICATION_CHANGE_ACTIONS[number];
-};
-function sortAuthorityChanges(changes: readonly AuthorityChange[]): AuthorityChange[] {
-  return [...changes].sort((left, right) => {
-    const a = `${left.root}\u0000${left.path}\u0000${left.action}`;
-    const b = `${right.root}\u0000${right.path}\u0000${right.action}`;
-    return a < b ? -1 : a > b ? 1 : 0;
-  });
-}
-function expectedAuthorityChanges(plan: ReturnType<typeof createPublicationPlan>): readonly AuthorityChange[] {
-  const isShared = (operation: ReturnType<typeof createPublicationPlan>['bindings'][number]['operations'][number]): boolean =>
-    plan.build.selectedManifests.some((manifest) => Object.entries(manifest.homePolicy.bindings).some(([root]) =>
-      root === operation.localRoot && manifest.sharedJson?.destination === operation.relativePath));
-  return sortAuthorityChanges(plan.bindings.flatMap((binding) => binding.operations.flatMap((operation) => {
-    if (operation.action === 'noop' && !isShared(operation)) return [];
-    return [{ root: operation.localRoot, path: operation.relativePath, action: operation.action }];
-  })));
-}
-function validateAuthorityDryRun(output: string, expected: readonly AuthorityChange[]): boolean {
-  let parsed: JsonValue;
-  try { parsed = parseJsonDocument(output, 2 * 1024 * 1024); }
-  catch { throw new ControlPlaneError('PUBLICATION_FAILED'); }
-  if (!Array.isArray(parsed) || parsed.length > MAX_PUBLICATION_CHANGES) {
-    throw new ControlPlaneError('PUBLICATION_FAILED');
-  }
-  const actual: AuthorityChange[] = [];
-  for (const item of parsed) {
-    if (!isPlainObject(item) || Object.keys(item).length !== 3
-      || typeof item.root !== 'string' || typeof item.path !== 'string' || typeof item.action !== 'string'
-      || !PUBLICATION_CHANGE_ACTIONS.includes(item.action as typeof PUBLICATION_CHANGE_ACTIONS[number])) {
-      throw new ControlPlaneError('PUBLICATION_FAILED');
-    }
-    actual.push({ root: item.root, path: item.path, action: item.action as typeof PUBLICATION_CHANGE_ACTIONS[number] });
-  }
-  const normalized = sortAuthorityChanges(actual);
-  if (normalized.length !== expected.length
-    || normalized.some((change, index) => {
-      const wanted = expected[index];
-      return wanted === undefined || change.root !== wanted.root
-        || change.path !== wanted.path || change.action !== wanted.action;
-    })) throw new ControlPlaneError('PUBLICATION_FAILED');
-  return actual.some(({ action }) => action === 'conflict');
-}
-function authorityPlan(context: InvocationContext): ReturnType<typeof createPublicationPlan> {
-  return createPublicationPlan(context, join(context.stateRoot, 'release-marker.json'));
-}
 export async function runTypedPublication(
   operation: 'publish.dry-run' | 'publish.apply' | 'recover',
   context: InvocationContext,
   runtime: CliRuntime = {},
   expectedReleaseId: string | null = null
 ): Promise<PublishDryRunResultPayload | PublishApplyResultPayload | RecoverResultPayload> {
-  const targetArgs = bridgeTargetArgs(context);
-  if (operation === 'recover') {
-    const before = readAuthorityMarker(context);
-    const beforeStatus = before?.status;
-    if (expectedReleaseId !== null
-      && (beforeStatus !== 'in_progress' || before?.release_id !== expectedReleaseId)) {
-      throw new ControlPlaneError('RECOVERY_FAILED');
+  const engine = assertUniformAuthoritativeEngine(context.selectedTargetIds, runtime.engineSelectionOptions);
+
+  if (engine === 'typescript' && runtime.processRunner === undefined) {
+    if (operation === 'publish.dry-run') {
+      return publishDryRun(context);
     }
-    await runAuthority(context, runtime, ['--recover', ...targetArgs], 'RECOVERY_FAILED');
-    if (beforeStatus !== 'in_progress') return { releaseId: null, action: 'none', selectedTargets: [], bindingOrder: [] };
-    const after = readAuthorityMarker(context);
-    if (after?.status !== 'recovered' || typeof after.release_id !== 'string'
-      || after.release_id !== before?.release_id) throw new ControlPlaneError('RECOVERY_FAILED');
-    return {
-      releaseId: after.release_id, action: 'rolled-back',
-      selectedTargets: context.selectedTargetIds, bindingOrder: bridgeBindingOrder(context)
-    };
+    if (operation === 'publish.apply') {
+      return publishApply(context, runtime.publicationOptions ?? {});
+    }
+    return recoverPublication(context, expectedReleaseId);
   }
-  const dryOutput = await runAuthority(
-    context, runtime, ['--publish', '--dry-run', '--json', ...targetArgs], 'PUBLICATION_FAILED', 2 * 1024 * 1024
-  );
-  const plan = authorityPlan(context);
-  const authorityConflict = validateAuthorityDryRun(dryOutput, expectedAuthorityChanges(plan));
-  if (operation === 'publish.dry-run') {
-    return {
-      buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-      selectedTargets: plan.selectedTargets, bindingOrder: plan.bindingOrder, changes: plan.changes
-    };
-  }
-  if (authorityConflict || plan.changes.some(({ action }) => action === 'conflict')) {
-    throw new ControlPlaneError('PUBLICATION_FAILED');
-  }
-  await runAuthority(context, runtime, ['--publish', ...targetArgs], 'PUBLICATION_FAILED');
-  const marker = readAuthorityMarker(context);
-  if (marker?.status !== 'complete' || typeof marker.release_id !== 'string') {
-    throw new ControlPlaneError('PUBLICATION_FAILED');
-  }
-  const retained = marker.retained_release_id;
-  if (retained !== undefined && retained !== null && typeof retained !== 'string') {
-    throw new ControlPlaneError('PUBLICATION_FAILED');
-  }
-  const postDryOutput = await runAuthority(
-    context, runtime, ['--publish', '--dry-run', '--json', ...targetArgs], 'PUBLICATION_FAILED', 2 * 1024 * 1024
-  );
-  const postPlan = authorityPlan(context);
-  validateAuthorityDryRun(postDryOutput, expectedAuthorityChanges(postPlan));
-  return {
-    releaseId: marker.release_id, buildManifestPath: plan.buildManifestPath,
-    buildManifestDigest: plan.buildManifestDigest, selectedTargets: plan.selectedTargets,
-    bindingOrder: plan.bindingOrder, changes: plan.changes, retainedReleaseId: retained ?? null
-  };
+
+  return runAuthorityPublication(operation, context, runtime, expectedReleaseId);
 }
 
 export async function runCompatibilityDistribution(
@@ -207,6 +62,29 @@ export async function runCompatibilityDistribution(
 ): Promise<ResourceResult> {
   if (invocation.command.kind !== 'distribute') throw new ControlPlaneError('USAGE_INVALID');
   const requestId = runtime.requestId?.() ?? `distribution-${invocation.command.action}`;
+
+  const engine = assertUniformAuthoritativeEngine(context.selectedTargetIds, runtime.engineSelectionOptions);
+
+  if (engine === 'typescript' && runtime.processRunner === undefined) {
+    try {
+      const outcome = await runLocalDistribution(
+        invocation.command.action,
+        context,
+        runtime.publicationOptions ?? {}
+      );
+      return {
+        protocol: 'evcrate-resource-control',
+        protocolVersion: PROTOCOL_VERSION,
+        requestId,
+        operation: operationFor(invocation.command.action),
+        status: statusFor(invocation.command.action),
+        payload: { engine: 'typescript', action: outcome.action } as JsonValue
+      };
+    } catch (error) {
+      return errorResult(requestId, operationFor(invocation.command.action), error);
+    }
+  }
+
   if (context.selectedTargetIds.length > 1 && invocation.options.targets.length > 1) {
     return errorResult(requestId, operationFor(invocation.command.action), new ControlPlaneError('CAPABILITY_UNSUPPORTED'));
   }

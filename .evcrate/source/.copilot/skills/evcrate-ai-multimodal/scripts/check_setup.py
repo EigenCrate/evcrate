@@ -89,7 +89,7 @@ def check_centralized_resolver():
     """Check if centralized resolver is available."""
     print_header("Checking Centralized Resolver")
 
-    resolver_path = Path.home() / '.copilot' / 'evcrate' / 'scripts' / 'resolve_env.py'
+    resolver_path = Path.home() / '.copilot' / 'scripts' / 'resolve_env.py'
 
     if resolver_path.exists():
         print_success(f"Centralized resolver found: {resolver_path}")
@@ -114,7 +114,7 @@ def find_api_key():
     print_header("Checking API Key Configuration")
 
     # Try to use centralized resolver
-    sys.path.insert(0, str(Path.home() / '.copilot' / 'evcrate' / 'scripts'))
+    sys.path.insert(0, str(Path.home() / '.copilot' / 'scripts'))
     try:
         from resolve_env import resolve_env
 

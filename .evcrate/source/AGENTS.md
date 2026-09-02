@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Codex CLI (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Codex CLI (codex.ai/code) when working with code in this repository.
 
 ## Role & Responsibilities
 

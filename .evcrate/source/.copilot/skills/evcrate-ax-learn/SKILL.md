@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-learn"
 description: "This skill helps an LLM generate correct AxLearn code using @ax-llm/ax. Use when the user asks about self-improving agents, trace-backed learning, feedback-aware updates, or AxLearn modes."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

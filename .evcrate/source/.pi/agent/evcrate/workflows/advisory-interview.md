@@ -85,4 +85,4 @@ reimplement those rules.
 
 ## Unsupported relay
 
-A final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_PI` before advisor delegation, state creation, or inline-interview work. Users can run {{evcrate:commands/advise}} <prompt> for inline advice.
+A final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_PI` before advisor delegation, state creation, or inline-interview work. Users can run `/advise <prompt>` for inline advice.

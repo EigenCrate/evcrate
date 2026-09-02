@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ai-multimodal"
 description: "Process and generate multimedia content using Google Gemini API for better vision capabilities. Capabilities include analyze audio files (transcription with timestamps, summarization, speech understanding), understand images (better image analysis than Copilot models, captioning, reasoning, object detection, OCR, visual Q&A, segmentation), process videos (scene detection, Q&A, YouTube URLs, up to 6 hours), extract from documents (PDF tables, forms, charts, diagrams, multi-page), generate images (text-to-image with Imagen 4), generate videos (text-to-video with Veo 3, 8-second clips with native audio). Use when working with audio/video files, analyzing images or screenshots when Copilot's built-in vision is insufficient, processing PDF documents, extracting structured data from media, creating images/videos from text prompts, or implementing multimodal AI features. Supports audio, music, and multi-image analysis; image editing; Gemini 3/2.5, Imagen 4, and Veo 3 models."
-allowed-tools: "- Bash\n- Read\n- Write\n- Edit"
+allowed-tools: "Bash\nRead\nWrite\nEdit"
 license: "MIT"
 ---
 

@@ -141,16 +141,9 @@ def group_by_category(skills: List[Dict]) -> Dict[str, List[Dict]]:
 
     return categories
 
-def _omp_root() -> Path:
-    for current in (Path.cwd(), *Path.cwd().parents):
-        candidate = current / '.omp'
-        if candidate.is_dir():
-            return candidate
-    return Path.home() / '.omp' / 'agent'
-
 def main():
     """Main execution."""
-    base_path = _omp_root() / 'skills'
+    base_path = Path('.omp/skills')
 
     if not base_path.exists():
         print(f"Error: {base_path} not found")
@@ -185,7 +178,7 @@ def main():
             print(f"  {scripts}{refs} {skill['name']:30} {skill['description'][:80]}")
 
     # Output YAML for processing (generate_catalogs.py reads YAML)
-    output_path = _omp_root() / 'evcrate' / 'scripts' / 'skills_data.yaml'
+    output_path = Path('.omp/evcrate/scripts/skills_data.yaml')
     output_path.write_text(yaml.dump(skills, allow_unicode=True, default_flow_style=False))
     print(f"\n✓ Saved metadata to {output_path}")
 

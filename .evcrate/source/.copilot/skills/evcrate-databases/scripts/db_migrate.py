@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Windows UTF-8 compatibility
-sys.path.insert(0, str(Path.home() / '.copilot' / 'evcrate' / 'scripts'))
+sys.path.insert(0, str(Path.home() / '.copilot' / 'scripts'))
 try:
     from win_compat import ensure_utf8_stdout
     ensure_utf8_stdout()

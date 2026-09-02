@@ -31,14 +31,14 @@ function installPackage(tarball, root) {
   assert.equal(result.status, 0, result.stderr);
 }
 
-test('package metadata includes the CLI, declarations, and compatibility assets', () => {
+test('package metadata includes the CLI, declarations, and required runtime assets', () => {
   const output = npmJson(['pack', '--dry-run'], packageRoot);
   const files = output[0].files.map(({ path }) => path);
   for (const expected of [
     'dist/cli/evcrate.js', 'dist/index.js', 'dist/index.d.ts',
-    '.evcrate/source/.evcrate/bin/evcrate-advisor', '.evcrate/targets/manifest.json',
-    'distribution/', 'distribute.py'
+    '.evcrate/source/.evcrate/bin/evcrate-advisor', '.evcrate/targets/manifest.json'
   ]) assert.ok(files.includes(expected) || files.some((file) => file.startsWith(expected)), expected);
+  assert.equal(files.some((f) => f.startsWith('distribution/') || f.startsWith('distribute.py')), false);
 });
 
 test('importing the public package has no process or output side effect', () => {
@@ -63,6 +63,9 @@ test('installed tarball runs version and resolves distinct target contexts', () 
   const version = spawnSync(cliPath, ['version', '--json'], {
     cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000
   });
+  if (version.status !== 0) {
+    console.error('package-smoke version failed with:', { status: version.status, stderr: version.stderr, stdout: version.stdout });
+  }
   assert.equal(version.status, 0, version.stderr);
   const versionResult = JSON.parse(version.stdout);
   assert.equal(versionResult.payload.version, packageMetadata.version);

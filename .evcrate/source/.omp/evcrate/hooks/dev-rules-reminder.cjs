@@ -43,8 +43,8 @@ function resolvePiResourcePath(group, filename) {
 
 function resolveWorkflowPath(filename) {
   const piPath = resolvePiResourcePath('workflows', filename);
-  const localPath = path.join(process.cwd(), '.omp', 'evcrate', 'workflows', filename);
-  const globalPath = path.join(os.homedir(), '.omp', 'agent', 'evcrate', 'workflows', filename);
+  const localPath = path.join(process.cwd(), '.omp', 'workflows', filename);
+  const globalPath = path.join(os.homedir(), '.omp', 'workflows', filename);
   if (piPath) return piPath;
   if (fs.existsSync(localPath)) return `.omp/evcrate/workflows/${filename}`;
   if (fs.existsSync(globalPath)) return `~/.omp/agent/evcrate/workflows/${filename}`;
@@ -53,8 +53,8 @@ function resolveWorkflowPath(filename) {
 
 function resolveScriptPath(filename) {
   const piPath = resolvePiResourcePath('scripts', filename);
-  const localPath = path.join(process.cwd(), '.omp', 'evcrate', 'scripts', filename);
-  const globalPath = path.join(os.homedir(), '.omp', 'agent', 'evcrate', 'scripts', filename);
+  const localPath = path.join(process.cwd(), '.omp', 'scripts', filename);
+  const globalPath = path.join(os.homedir(), '.omp', 'scripts', filename);
   if (piPath) return piPath;
   if (fs.existsSync(localPath)) return `.omp/evcrate/scripts/${filename}`;
   if (fs.existsSync(globalPath)) return `~/.omp/agent/evcrate/scripts/${filename}`;
@@ -70,7 +70,7 @@ function resolveSkillsVenv() {
     ? path.join(path.dirname(resourceRoot), 'skills', '.venv', venvBin, pythonExe)
     : null;
   const localVenv = path.join(process.cwd(), '.omp', 'skills', '.venv', venvBin, pythonExe);
-  const globalVenv = path.join(os.homedir(), '.omp', 'agent', 'skills', '.venv', venvBin, pythonExe);
+  const globalVenv = path.join(os.homedir(), '.omp', 'skills', '.venv', venvBin, pythonExe);
 
   if (piVenv && fs.existsSync(piVenv)) return piVenv;
   if (fs.existsSync(localVenv)) {

@@ -137,5 +137,3 @@ classified as such.
   * Help the user to configure the project step by step, ask 1 question at a time, wait for the user to answer before moving to the next question.
   * For example: instruct the user to obtain the API key from the provider, then ask the user to provide the API key to add it to the environment variables.
 * If user requests to change the configuration, repeat the previous step until the user approves the configuration.
-
-

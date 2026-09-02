@@ -1,7 +1,7 @@
 ---
 name: "evcrate-ax-gen"
 description: "This skill helps an LLM generate correct AxGen code using @ax-llm/ax. Use when the user asks about ax(), AxGen, generators, forward(), streamingForward(), assertions, field processors, step hooks, self-tuning, or structured outputs."
-version: "21.0.14"
+version: "\"21.0.14\""
 ---
 
 

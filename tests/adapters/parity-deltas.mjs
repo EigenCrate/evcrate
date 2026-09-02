@@ -1338,6 +1338,13 @@ export const parityDeltaRecords = {
       "mode": 448,
       "reason": "Gemini target serializer or normalizer delta"
     },
+    ".gemini/commands/evcrate-help.toml": {
+      "kind": "file",
+      "bytes": 3434,
+      "hash": "fc1932fd2ab64e1fce759f0ee59b8f7588110cfb4b2150d4226a0aaad32b8252",
+      "mode": 384,
+      "reason": "Gemini target serializer or normalizer delta"
+    },
     ".gemini/commands/fix": {
       "kind": "directory",
       "mode": 493,
@@ -1633,6 +1640,13 @@ export const parityDeltaRecords = {
       "bytes": 3133,
       "hash": "9c2af408530134b2e07a87f441198187633e03c8e8b753e02b61bd712b0794cd",
       "mode": 448,
+      "reason": "Gemini target serializer or normalizer delta"
+    },
+    ".gemini/commands/take.toml": {
+      "kind": "file",
+      "bytes": 20360,
+      "hash": "787b6740af8a7c78485e8a54087948acd2797582963ced8c1da43e5061373547",
+      "mode": 384,
       "reason": "Gemini target serializer or normalizer delta"
     },
     ".gemini/commands/test": {
@@ -2721,6 +2735,13 @@ export const parityDeltaRecords = {
       "mode": 493,
       "reason": "Gemini target serializer or normalizer delta"
     },
+    ".gemini/skills/cmd_evcrate-help/SKILL.md": {
+      "kind": "file",
+      "bytes": 3542,
+      "hash": "a83044d0a7e49deb6ca82e1ce0b9597d18004456dc555986c3cda34145f13677",
+      "mode": 384,
+      "reason": "Gemini target serializer or normalizer delta"
+    },
     ".gemini/skills/cmd_fix": {
       "kind": "directory",
       "mode": 493,
@@ -3156,6 +3177,13 @@ export const parityDeltaRecords = {
     ".gemini/skills/cmd_take": {
       "kind": "directory",
       "mode": 493,
+      "reason": "Gemini target serializer or normalizer delta"
+    },
+    ".gemini/skills/cmd_take/SKILL.md": {
+      "kind": "file",
+      "bytes": 20498,
+      "hash": "630f9fa2529a9f3bb206cc625fe36360113a55a18c3484d7353cd56ebc02560e",
+      "mode": 384,
       "reason": "Gemini target serializer or normalizer delta"
     },
     ".gemini/skills/cmd_test": {
@@ -5991,6 +6019,13 @@ export const parityDeltaRecords = {
     ".gemini/workflows": {
       "kind": "directory",
       "mode": 493,
+      "reason": "Gemini target serializer or normalizer delta"
+    },
+    ".gemini/workflows/advisory-interview.md": {
+      "kind": "file",
+      "bytes": 3926,
+      "hash": "3b2971721b6467364c6cfe66d44f26c91fcf0acfd40fe44da3e45ee297fb8526",
+      "mode": 384,
       "reason": "Gemini target serializer or normalizer delta"
     },
     ".gemini/workflows/development-rules.md": {

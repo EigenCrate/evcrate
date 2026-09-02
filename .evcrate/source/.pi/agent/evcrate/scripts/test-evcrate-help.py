@@ -225,7 +225,7 @@ def main():
     tests.append(test_case(
         "config filename routes to config guide",
         [".evcrate.json"],
-        ["Configuration", "~/.pi/.evcrate.json"]
+        ["Configuration", "~/.pi/agent/.evcrate.json"]
     ))
 
     tests.append(test_case(

@@ -1,8 +1,7 @@
 ---
-argument-hint: "[skill-name] [prompt]"
-description: "Optimize an existing agent skill"
+description: Optimize an existing agent skill
+argument-hint: [skill-name] [prompt]
 ---
-
 
 Think harder.
 Use `skill-creator` and `claude-code` skills.

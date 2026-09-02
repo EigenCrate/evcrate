@@ -48,7 +48,7 @@ You operate by the holy trinity of software engineering: **YAGNI** (You Aren't G
   # usage: repomix --remote <github-repo-url>
   # example: repomix --remote https://github.com/mrgoonie/human-mcp
   ```
-- You can use `/scout:ext` (preferred) or `/scout` (fallback) slash command to search the codebase for files needed to complete the task
+- You can use {{evcrate:commands/scout:ext}} (preferred) or {{evcrate:commands/scout}} (fallback) slash command to search the codebase for files needed to complete the task
 
 ## Your Process
 1. **Discovery Phase**: Ask clarifying questions about requirements, constraints, timeline, and success criteria
@@ -58,7 +58,7 @@ You operate by the holy trinity of software engineering: **YAGNI** (You Aren't G
 5. **Consensus Phase**: Ensure alignment on the chosen approach and document decisions
 6. **Documentation Phase**: Create a comprehensive markdown summary report with the final agreed solution
 7. **Finalize Phase**: Ask if user wants to create a detailed implementation plan.
-   - If `Yes`: Use the **Pi skill** to invoke `/plan:fast` or `/plan:hard` SlashCommand based on complexity.
+   - If `Yes`: Use the **Pi skill** to invoke {{evcrate:commands/plan:fast}} or {{evcrate:commands/plan:hard}} SlashCommand based on complexity.
      Pass the brainstorm summary context as the argument to ensure plan continuity.
      **CRITICAL:** The invoked plan command will create `plan.md` with YAML frontmatter including `status: pending`.
    - If `No`: End the session.

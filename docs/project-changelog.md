@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-02
-**Status:** Phase 9 complete; Phases 10–11 remain planned
+**Status:** Phase 10 complete; Phase 11 validation and rollout remain planned
 
 ### Phase 9: DamHopper and Agent Store integration
 
@@ -45,6 +45,28 @@
 #### Release boundary
 
 Phase 9 proves the feature-worktree packed npm/adapter contract only. It does not claim a live DamHopper or Agent Store release, installed vendor-CLI qualification, target cutover, Python-free distribution, rollout, or `main` merge. Generated projections, controller files, advisor policy, manifests, registry, scopes, and HOME roots remain EVCrate-owned artifacts.
+
+### Phase 10: TypeScript release packaging and per-target cutover
+
+#### Features
+
+- `scripts/build-manifests.mjs` now builds each persisted target manifest and the aggregate `.evcrate/build-manifest*.json` closure through the TypeScript local-build path; `prebuild` regenerates the exact 17-file controller inventory.
+- The npm package allow-list ships compiled `dist/**`, target manifests, verified build manifests, the canonical generated target assets, and one exact CommonJS controller closure; package checks reject distribution/migrator Python files, Python bytecode, and unrelated adapter trees.
+
+#### Changed
+
+- TypeScript is authoritative by default for all seven persisted targets (`claude`, `gemini`, `antigravity`, `codex`, `pi`, `omp`, and `copilot`); `agy` remains an input-only alias for `antigravity`.
+- `cutover.ts` records parity, closure, schema, timestamp, and notes in a gate receipt for each target. `assertUniformAuthoritativeEngine` rejects atomic requests that mix Python- and TypeScript-owned targets rather than splitting or partially publishing them.
+- The supported npm CLI build/check/publish/all/recover path, version, health, advisor-settings, and publication operations execute through TypeScript without a Python interpreter. The Python bridge remains only as an explicit compatibility path for transition and tests.
+
+#### Tests
+
+- Phase 10 release/cutover contracts pass **8/8**, including seven completed TypeScript gate receipts, exact controller closure, per-target and aggregate manifest generation, legacy-root cleanliness, package allow-list checks, and pure TypeScript CLI routing.
+- Full validation passes **255/255** tests. Release evidence covers the feature worktree and packed artifact contract; live vendor qualification, npm publication, rollout, and `main` merge remain separate gates.
+
+#### Release boundary
+
+Phase 10 establishes the Python-free TypeScript package/runtime and per-target cutover contract. Phase 11 retains operator-controlled validation and rollout work; no live deployment or final registry publication is implied.
 
 ## Unresolved questions
 

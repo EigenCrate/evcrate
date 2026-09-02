@@ -381,7 +381,7 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
 
     project_roots = [
         Path(value)
-        for name in ("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")
+        for name in ("GEMINI_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")
         if (value := os.environ.get(name))
     ]
     project_roots.extend((target_root.parent, Path.cwd()))

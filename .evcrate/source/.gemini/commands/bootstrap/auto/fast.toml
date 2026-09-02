@@ -1,4 +1,4 @@
-description = " Quickly bootstrap a new project automatically"
+description = "Quickly bootstrap a new project automatically"
 prompt = """**Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
 
 ---

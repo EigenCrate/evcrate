@@ -76,7 +76,7 @@ class BetterAuthInit:
         skill_dir = Path(__file__).parent.parent
         env_paths = [
             self.project_root / ".codex" / ".env",
-            self.project_root / ".agents" / "skills" / ".env",
+            self.project_root / ".codex" / "skills" / ".env",
             skill_dir / ".env",
         ]
 

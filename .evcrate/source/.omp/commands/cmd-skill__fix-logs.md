@@ -1,8 +1,7 @@
 ---
-argument-hint: "[prompt-or-path-to-skill]"
-description: "Fix the agent skill based on `logs.txt` file."
+description: Fix the agent skill based on `logs.txt` file.
+argument-hint: [prompt-or-path-to-skill]
 ---
-
 
 Think harder.
 Use `skill-creator` and `claude-code` skills.

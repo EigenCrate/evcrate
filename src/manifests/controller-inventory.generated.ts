@@ -1,4 +1,4 @@
-// Generated from distribution/advisor_controller.py; do not edit.
+// Generated from scripts/generate-controller-inventory.mjs; do not edit.
 export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "evcrate-advisor",
   "lib/advisor/adapter-contract.cjs",
@@ -19,7 +19,22 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/runner.cjs"
 ] as const);
 export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
+  "_http_agent",
+  "_http_client",
+  "_http_common",
+  "_http_incoming",
+  "_http_outgoing",
+  "_http_server",
+  "_stream_duplex",
+  "_stream_passthrough",
+  "_stream_readable",
+  "_stream_transform",
+  "_stream_wrap",
+  "_stream_writable",
+  "_tls_common",
+  "_tls_wrap",
   "assert",
+  "assert/strict",
   "async_hooks",
   "buffer",
   "child_process",
@@ -39,6 +54,7 @@ export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
   "http2",
   "https",
   "inspector",
+  "inspector/promises",
   "module",
   "net",
   "os",
@@ -52,12 +68,16 @@ export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
   "readline",
   "readline/promises",
   "repl",
+  "sea",
+  "sqlite",
   "stream",
   "stream/consumers",
   "stream/promises",
   "stream/web",
   "string_decoder",
   "sys",
+  "test",
+  "test/reporters",
   "timers",
   "timers/promises",
   "tls",

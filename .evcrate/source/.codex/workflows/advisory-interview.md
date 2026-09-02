@@ -14,7 +14,7 @@ interview that must first converge on the user's problem.
 
 ```text
 EVCRATE_CAPABILITY=advise-inline/v1
-EVCRATE_CAPABILITY=advise-agent-relay/unsupported/codex/v1
+EVCRATE_CAPABILITY=advise-agent-relay/codex/v1
 ```
 
 The second marker records this target's explicit `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` relay rejection.
@@ -50,8 +50,13 @@ START -> DISCOVERY -> CONFIRM_REFRAME -> READY -> REPORT
 any active phase -> FAILED/PAUSED (retain state)
 ```
 
-Inline mode keeps the active conversation in the main session and asks exactly
-one question per turn. No relay state is created on this target.
+Inline mode keeps the active conversation in the main session. Relay mode
+persists only the bounded, sanitized invocation state through
+`scripts/advise-state.cjs`. Both modes ask exactly one question per turn.
+
+The helper exposes the executable `parse`, `validate-envelope`, `write-report`,
+and `validate-report` operations in addition to state lifecycle operations.
+Commands must call those operations; prose is not a substitute for validation.
 
 - Ask at most eight substantive `discovery` questions.
 - Present one `reframe` and require explicit `confirm` or `correct`.
@@ -86,16 +91,3 @@ reimplement those rules.
 ## Unsupported relay
 
 A final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` before advisor delegation, state creation, or inline-interview work. Users can run `/advise <prompt>` for inline advice.
-
-## Subagent Completion Contract
-
-Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
-
-- Parallel prompt format: **spawn N agents; wait for all N to finish; collect one terminal result from each; then summarize**.
-- Wait protocol: use the native agent wait/poll operation for the same agent set. **"No agents completed yet" is a non-terminal poll result; wait again.** Do not treat it as a timeout, sleep instead of polling, restart, interrupt, or advance the workflow.
-- A polling interval or retry count is not a delegation deadline. Do not invent a wall-clock limit (including 180 seconds) for a blocking gate. Continue polling until a terminal result, explicit user stop, or an actual parent-runtime termination.
-- Treat an interrupted, timed-out, missing, or partial result as a failed gate. Do not continue from partial work or silently skip/restart the agent.
-- Sequential prompt format: **run one agent; wait for its terminal result; verify the report/artifacts; then run the next agent**.
-- Every delegated prompt must define scope, file ownership, expected report/artifact, and validation signal.
-- A spawn acknowledgement, progress event, or file change does not mean the agent completed. Completion requires the terminal response and requested validation.
-- If the parent runtime ends before completion, preserve the agent identity and report the gate as incomplete; never fabricate a result or launch a replacement.

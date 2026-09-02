@@ -3,6 +3,7 @@ import type { InvocationContext } from '../context/invocation-context.js';
 import type { ResourceHandler } from '../imports/handler.js';
 import type { ProcessResult, RunBoundedProcessOptions } from './process-runner.js';
 import type { PublicationHandler, PublicationOptions } from '../distribution/publication.js';
+import type { EngineSelectionOptions } from '../distribution/cutover.js';
 
 export interface CliOutput {
   readonly isTTY: boolean;
@@ -38,6 +39,7 @@ export interface CliRuntime {
   readonly processRunner?: ProcessRunner;
   readonly publicationHandler?: PublicationHandler;
   readonly publicationOptions?: PublicationOptions;
+  readonly engineSelectionOptions?: EngineSelectionOptions;
 }
 
 export type RuntimeProcessOptions = Omit<RunBoundedProcessOptions, 'signal'> & {

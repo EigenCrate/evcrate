@@ -1,8 +1,7 @@
 ---
-argument-hint: "[scope-or-prompt]"
-description: "⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers"
+description: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
+argument-hint: [scope-or-prompt]
 ---
-
 
 **Ultrathink** to exhaustively list ALL potential edge cases, then dispatch parallel `code-reviewer` agents to verify: <scope>$ARGUMENTS</scope>
 

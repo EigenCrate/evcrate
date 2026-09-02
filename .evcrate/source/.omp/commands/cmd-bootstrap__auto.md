@@ -1,8 +1,7 @@
 ---
-argument-hint: "[user-requirements] [--advice]"
-description: "⚡⚡⚡⚡ Bootstrap a new project automatically"
+description: ⚡⚡⚡⚡ Bootstrap a new project automatically
+argument-hint: [user-requirements] [--advice]
 ---
-
 
 **Ultrathink** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
 

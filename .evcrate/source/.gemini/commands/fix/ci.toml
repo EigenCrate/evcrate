@@ -1,4 +1,4 @@
-description = " Analyze Github Actions logs and fix issues"
+description = "Analyze Github Actions logs and fix issues"
 prompt = """## Github Actions URL
 <url>{{args}}</url>
 

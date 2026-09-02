@@ -24,6 +24,20 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "bootstrap.md",
+      "status": "migrated",
+      "target": "bootstrap.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "bootstrap/auto.md",
+      "status": "migrated",
+      "target": "bootstrap/auto.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "bootstrap/auto/fast.md",
       "status": "migrated",
       "target": "bootstrap/auto/fast.toml"
@@ -38,25 +52,18 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "bootstrap/auto.md",
-      "status": "migrated",
-      "target": "bootstrap/auto.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "bootstrap.md",
-      "status": "migrated",
-      "target": "bootstrap.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "brainstorm.md",
       "status": "migrated",
       "target": "brainstorm.toml"
     },
     {
+      "kind": "command-prose",
+      "source": "code.md",
+      "status": "migrated",
+      "target": "code.toml"
+    },
+    {
+      "classification": "command-prose",
       "kind": "command-prose",
       "source": "code/auto.md",
       "status": "migrated",
@@ -75,13 +82,6 @@
       "source": "code/parallel.md",
       "status": "migrated",
       "target": "code/parallel.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "code.md",
-      "status": "migrated",
-      "target": "code.toml"
     },
     {
       "classification": "command-prose",
@@ -121,16 +121,9 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "cook/auto/fast.md",
+      "source": "cook.md",
       "status": "migrated",
-      "target": "cook/auto/fast.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "cook/auto/parallel.md",
-      "status": "migrated",
-      "target": "cook/auto/parallel.toml"
+      "target": "cook.toml"
     },
     {
       "classification": "command-prose",
@@ -142,9 +135,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "cook.md",
+      "source": "cook/auto/fast.md",
       "status": "migrated",
-      "target": "cook.toml"
+      "target": "cook/auto/fast.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "cook/auto/parallel.md",
+      "status": "migrated",
+      "target": "cook/auto/parallel.toml"
     },
     {
       "classification": "command-prose",
@@ -226,6 +226,13 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
+      "source": "fix.md",
+      "status": "migrated",
+      "target": "fix.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
       "source": "fix/ci.md",
       "status": "migrated",
       "target": "fix/ci.toml"
@@ -282,13 +289,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "fix.md",
-      "status": "migrated",
-      "target": "fix.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "git/cm.md",
       "status": "migrated",
       "target": "git/cm.toml"
@@ -334,6 +334,13 @@
       "source": "journal.md",
       "status": "migrated",
       "target": "journal.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "plan.md",
+      "status": "migrated",
+      "target": "plan.toml"
     },
     {
       "classification": "command-prose",
@@ -394,23 +401,9 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "plan.md",
-      "status": "migrated",
-      "target": "plan.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "preview.md",
       "status": "migrated",
       "target": "preview.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "review/codebase/parallel.md",
-      "status": "migrated",
-      "target": "review/codebase/parallel.toml"
     },
     {
       "classification": "command-prose",
@@ -422,9 +415,9 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "scout/ext.md",
+      "source": "review/codebase/parallel.md",
       "status": "migrated",
-      "target": "scout/ext.toml"
+      "target": "review/codebase/parallel.toml"
     },
     {
       "classification": "command-prose",
@@ -432,6 +425,13 @@
       "source": "scout.md",
       "status": "migrated",
       "target": "scout.toml"
+    },
+    {
+      "classification": "command-prose",
+      "kind": "command-prose",
+      "source": "scout/ext.md",
+      "status": "migrated",
+      "target": "scout/ext.toml"
     },
     {
       "classification": "command-prose",
@@ -457,16 +457,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "skill/optimize/auto.md",
+      "source": "skill/optimize.md",
       "status": "migrated",
-      "target": "skill/optimize/auto.toml"
+      "target": "skill/optimize.toml"
     },
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "skill/optimize.md",
+      "source": "skill/optimize/auto.md",
       "status": "migrated",
-      "target": "skill/optimize.toml"
+      "target": "skill/optimize/auto.toml"
     },
     {
       "classification": "command-prose",
@@ -485,16 +485,16 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "test/ui.md",
+      "source": "test.md",
       "status": "migrated",
-      "target": "test/ui.toml"
+      "target": "test.toml"
     },
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "test.md",
+      "source": "test/ui.md",
       "status": "migrated",
-      "target": "test.toml"
+      "target": "test/ui.toml"
     },
     {
       "classification": "command-prose",

@@ -1,4 +1,4 @@
-description = " Analyze and fix small issues [FAST]"
+description = "Analyze and fix small issues [FAST]"
 prompt = """Analyze the skills catalog and activate the skills that are needed for the task during the process.
 
 ## Mission

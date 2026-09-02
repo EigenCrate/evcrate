@@ -69,8 +69,8 @@ function resolveSkillsVenv() {
   const piVenv = resourceRoot
     ? path.join(path.dirname(resourceRoot), 'skills', '.venv', venvBin, pythonExe)
     : null;
-  const localVenv = path.join(process.cwd(), '.agents', 'skills', '.venv', venvBin, pythonExe);
-  const globalVenv = path.join(os.homedir(), '.agents', 'skills', '.venv', venvBin, pythonExe);
+  const localVenv = path.join(process.cwd(), '.codex', 'skills', '.venv', venvBin, pythonExe);
+  const globalVenv = path.join(os.homedir(), '.codex', 'skills', '.venv', venvBin, pythonExe);
 
   if (piVenv && fs.existsSync(piVenv)) return piVenv;
   if (fs.existsSync(localVenv)) {
