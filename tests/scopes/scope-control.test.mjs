@@ -6,7 +6,7 @@ import {
   applyScopeChange, createResourceHandler, createResourceRequest, main,
   projectIdentity, readScopeDocument, scopePath
 } from '../../dist/index.js';
-import { createPhase6Fixture, closePhase6Fixture } from '../phase6-fixture.mjs';
+import { createPhase6Fixture, closePhase6Fixture } from '../resource-fixture.mjs';
 
 function envelope(context) {
   const target = context.selectedTargets[0];

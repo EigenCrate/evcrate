@@ -1,3 +1,4 @@
+import '../adapters/index.js';
 import { randomUUID } from 'node:crypto';
 import { resolveInvocationContext } from '../context/invocation-context.js';
 import { ControlPlaneError, exitCodeForError } from '../errors/control-plane-error.js';

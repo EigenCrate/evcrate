@@ -208,13 +208,18 @@ function assertExactValues(actual: readonly string[], expected: readonly string[
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
 }
+function assertSameTargets(actual: readonly string[], expected: readonly string[]): void {
+  const actualSorted = [...actual].sort();
+  const expectedSorted = [...expected].sort();
+  assertExactValues(actualSorted, expectedSorted);
+}
 function assertPublicationCorrelation(
   context: InvocationContext,
   selectedTargets: readonly string[],
   bindingOrder: readonly string[],
   changes: readonly { target: string; path: string }[]
 ): void {
-  assertExactValues(selectedTargets, context.selectedTargetIds);
+  assertSameTargets(selectedTargets, context.selectedTargetIds);
   assertExactValues(bindingOrder, publicationBindingOrder(context, selectedTargets));
   const targetBindings = new Map<string, Set<string>>([['advisor-controller', new Set(['.evcrate/bin'])]]);
   for (const targetId of selectedTargets) {
@@ -235,7 +240,7 @@ async function publicationResult(
   const handler = runtime.publicationHandler;
   if (request.operation === 'publish.dry-run' || request.operation === 'publish.apply') {
     const requested = (request.payload as unknown as { selectedTargets: readonly string[] }).selectedTargets;
-    assertExactValues(requested, context.selectedTargetIds);
+    assertSameTargets(requested, context.selectedTargetIds);
     if (request.operation === 'publish.dry-run') {
       const raw = handler
         ? await handler.publishDryRun(context)

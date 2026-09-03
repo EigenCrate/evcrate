@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import {
   createAdvisorSettingsCoordinator, createAdvisorSettingsRequest, readAdvisorPolicy
 } from '../../dist/index.js';
-import { createPhase6Fixture, closePhase6Fixture } from '../phase6-fixture.mjs';
+import { createPhase6Fixture, closePhase6Fixture } from '../resource-fixture.mjs';
 
 const POLICY = Object.freeze({
   version: 1,

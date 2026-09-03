@@ -8,7 +8,7 @@ import {
 } from '../../dist/index.js';
 import {
   RESOURCE_ROOTS, createPhase6Fixture, closePhase6Fixture
-} from '../phase6-fixture.mjs';
+} from '../resource-fixture.mjs';
 
 function codeOf(callback) {
   try { callback(); } catch (error) { return error.code; }
