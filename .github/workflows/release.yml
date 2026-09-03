@@ -29,16 +29,6 @@ jobs:
         with:
           node-version: '22.19.0'
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: requirements.txt
-
-      - name: Install Python distribution dependencies
-        run: python3 -m pip install -r requirements.txt
-
       - name: Install dependencies
         run: npm ci
 
@@ -65,14 +55,14 @@ jobs:
           npm run distribute:build
           npm run distribute:check
 
-      - name: Verify isolated Pi publication
+      - name: Verify publication smoke test
         env:
-          EVCRATE_HOME: ${{ runner.temp }}/evcrate-pi-home
-          EVCRATE_STATE_HOME: ${{ runner.temp }}/evcrate-pi-state
+          EVCRATE_HOME: ${{ runner.temp }}/evcrate-test-home
+          EVCRATE_STATE_HOME: ${{ runner.temp }}/evcrate-test-state
         run: |
-          python3 distribute.py --publish --dry-run --json
-          python3 distribute.py --publish
-          python3 distribute.py --publish --dry-run --json
+          node dist/cli/evcrate.js publish --dry-run --json
+          node dist/cli/evcrate.js publish --apply
+          node dist/cli/evcrate.js publish --dry-run --json
           npm pack --dry-run
 
       - name: Release
