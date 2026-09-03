@@ -37,16 +37,16 @@ test('all seven persisted targets have completed cutover gate receipts', () => {
   }
 });
 
-test('authoritative engine selection normalizes aliases and respects overrides', () => {
+test('authoritative engine selection normalizes aliases and rejects retired python overrides', () => {
   assert.equal(authoritativeEngineForTarget('claude'), 'typescript');
   assert.equal(authoritativeEngineForTarget('agy'), 'typescript');
   assert.equal(authoritativeEngineForTarget('omp'), 'typescript');
 
-  // Override to python for specific target
-  const pythonOverride = authoritativeEngineForTarget('omp', {
-    overrides: { omp: 'python' }
-  });
-  assert.equal(pythonOverride, 'python');
+  // Override to python for specific target is retired and throws CAPABILITY_UNSUPPORTED
+  assert.throws(
+    () => authoritativeEngineForTarget('omp', { overrides: { omp: 'python' } }),
+    (err) => err?.code === 'CAPABILITY_UNSUPPORTED'
+  );
 });
 
 test('mixed-stage atomic transactions spanning python and typescript are rejected', () => {

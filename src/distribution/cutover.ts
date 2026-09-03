@@ -101,6 +101,7 @@ export function authoritativeEngineForTarget(
   if (options.overrides?.[normalized] !== undefined) {
     const override = options.overrides[normalized];
     if (override !== 'python' && override !== 'typescript') throw new ControlPlaneError('PROTOCOL_INVALID');
+    if (override === 'python') throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
     return override;
   }
   return getTargetGateReceipt(normalized).authoritativeEngine;

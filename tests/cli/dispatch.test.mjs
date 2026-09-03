@@ -71,31 +71,22 @@ test('settings stay on their dedicated handler boundary', async () => {
   assert.equal(JSON.parse(handled.values[0]).status, 'OK');
 });
 
-test('compatibility distribution labels Python and forwards resolved paths', async () => {
-  let capturedProcess;
+test('distribution commands execute purely via TypeScript', async () => {
   const captured = capture(false);
   const selectedHome = mkdtempSync(join(tmpdir(), 'evcrate-distribution-home-'));
   const selectedState = mkdtempSync(join(tmpdir(), 'evcrate-distribution-state-'));
-  const runner = { run: async (options) => {
-    capturedProcess = options;
-    return { exitCode: 0, signal: null, stdout: '', stderr: '', termination: 'completed', timedOut: false, aborted: false };
-  } };
   assert.equal(await main([
-    'distribute', 'build', '--target', 'omp', '--home', selectedHome, '--state-home', selectedState
-  ], runtime(captured, { processRunner: runner })), 0);
+    'distribute', 'check', '--target', 'omp', '--home', selectedHome, '--state-home', selectedState
+  ], runtime(captured)), 0);
   const result = JSON.parse(captured.values[0]);
-  assert.equal(result.payload.engine, 'python-compatibility');
-  assert.deepEqual(capturedProcess.args.slice(-2), ['--target', 'omp']);
-  assert.equal(capturedProcess.executable, 'python3');
-  assert.equal(capturedProcess.env.EVCRATE_HOME, selectedHome);
-  assert.equal(capturedProcess.env.EVCRATE_STATE_DIR, selectedState);
+  assert.equal(result.payload.engine, 'typescript');
+  assert.equal(result.payload.action, 'check');
 
-  const multi = capture(false);
-  let called = false;
-  const multiRunner = { run: async () => { called = true; throw new Error('must not run'); } };
-  assert.equal(await main(['distribute', 'build', '--target', 'omp', '--target', 'copilot'], runtime(multi, { processRunner: multiRunner })), 3);
-  assert.equal(called, false);
-  assert.equal(JSON.parse(multi.values[0]).error.code, 'CAPABILITY_UNSUPPORTED');
+  const retired = capture(false);
+  assert.equal(await main(['distribute', 'build', '--target', 'omp'], runtime(retired, {
+    engineSelectionOptions: { overrides: { omp: 'python' } }
+  })), 3);
+  assert.equal(JSON.parse(retired.values[0]).error.code, 'CAPABILITY_UNSUPPORTED');
 });
 
 test('request-file accepts a complete typed settings envelope', async () => {

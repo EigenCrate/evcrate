@@ -1,18 +1,15 @@
 {
   "schema_version": 2,
   "name": "omp",
-  "adapter": "migrate_claude_to_omp.py",
+  "adapter": "dist/adapters/omp/index.js",
   "adapter_sources": [
-    "distribution/contracts.py",
-    "distribution/hashing.py",
-    "omp_adapter/__init__.py",
-    "omp_adapter/agents.py",
-    "omp_adapter/commands.py",
-    "omp_adapter/hooks.py",
-    "omp_adapter/resources.py",
-    "omp_adapter/skills.py",
-    "pi_adapter/__init__.py",
-    "pi_adapter/frontmatter.py"
+    "dist/adapters/omp/agents.js",
+    "dist/adapters/omp/commands.js",
+    "dist/adapters/omp/frontmatter.js",
+    "dist/adapters/omp/hooks.js",
+    "dist/adapters/omp/resources.js",
+    "dist/adapters/omp/skills.js",
+    "dist/adapters/omp/templates.js"
   ],
   "output_root": ".omp",
   "additional_roots": [],

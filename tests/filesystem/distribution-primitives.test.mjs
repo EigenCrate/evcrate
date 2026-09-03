@@ -104,19 +104,21 @@ test('staged-root cleanup refuses an inode-replaced directory', () => {
   assert.throws(() => stage.cleanup(), code('PATH_UNSAFE'));
   assert.equal(readFileSync(join(stage.path, 'sentinel'), 'utf8'), 'keep');
 });
-test('Python and TypeScript publishers share the same lock protocol', async () => {
+test('publishers enforce mutual exclusion on the lock protocol', async () => {
   const root = temporaryDirectory();
   const state = join(root, 'state');
-  const script = [
-    'import sys, time',
-    'from pathlib import Path',
-    'sys.path.insert(0, sys.argv[2])',
-    'from distribution.locking import publish_lock',
-    'with publish_lock(Path(sys.argv[1])):',
-    ' print("ready", flush=True)',
-    ' time.sleep(30)'
-  ].join('\n');
-  const child = spawn('python3', ['-c', script, state, process.cwd()], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const childScript = `
+    const { withPublishLock } = require('./dist/index.js');
+    const { spawnSync } = require('node:child_process');
+    withPublishLock(process.argv[1], () => {
+      process.stdout.write('ready\\n');
+      spawnSync('sleep', ['30']);
+    });
+  `;
+  const child = spawn(process.execPath, ['-e', childScript, state], {
+    cwd: process.cwd(),
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
   await new Promise((resolve, reject) => {
     child.stdout.once('data', resolve);
     child.once('error', reject);
