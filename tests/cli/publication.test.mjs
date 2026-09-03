@@ -23,13 +23,6 @@ function runtime(home, captured, publicationHandler) {
     output: captured.output, publicationHandler, home
   };
 }
-function authorityChanges(home) {
-  const context = resolveInvocationContext({ packageRoot, cwd: packageRoot, home, targets: ['omp'] });
-  const plan = createPublicationPlan(context, join(context.stateRoot, 'release-marker.json'));
-  return plan.bindings.flatMap((binding) => binding.operations.map((operation) => ({
-    root: operation.localRoot, path: operation.relativePath, action: operation.action
-  })));
-}
 
 test('top-level publish routes dry-run and apply through the typed resource envelope', async () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-publish-'));
@@ -58,26 +51,16 @@ test('top-level publish routes dry-run and apply through the typed resource enve
   }
 });
 
-test('default typed publication delegates to the Python authority bridge', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-bridge-'));
+test('publication with retired python engine override fails with CAPABILITY_UNSUPPORTED', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-retired-python-'));
   try {
     const captured = capture();
-    const calls = [];
-    const authority = JSON.stringify(authorityChanges(home));
-    const bridgeRuntime = {
+    const retiredRuntime = {
       ...runtime(home, captured),
-      processRunner: {
-        run: async (options) => {
-          calls.push(options);
-          return { termination: 'completed', exitCode: 0, stdout: authority, stderr: '' };
-        }
-      }
+      engineSelectionOptions: { overrides: { omp: 'python' } }
     };
-    assert.equal(await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'], bridgeRuntime), 0);
-    assert.equal(calls.length, 1);
-    assert.deepEqual(calls[0].args.slice(1), ['--publish', '--dry-run', '--json', '--target', 'omp']);
-    assert.equal(JSON.parse(captured.values[0]).status, 'preview');
-    assert.equal(existsSync(join(home, '.evcrate')), false);
+    assert.equal(await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'], retiredRuntime), 3);
+    assert.equal(JSON.parse(captured.values[0]).error.code, 'CAPABILITY_UNSUPPORTED');
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
@@ -112,67 +95,7 @@ test('real authority apply matches the typed plan on repeat', async () => {
     rmSync(home, { recursive: true, force: true });
   }
 });
-test('authority dry-run path and action mismatches fail before apply', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-bridge-mismatch-'));
-  try {
-    const captured = capture();
-    const calls = [];
-    const mismatched = authorityChanges(home);
-    mismatched[0] = { ...mismatched[0], path: 'wrong/path' };
-    const bridgeRuntime = {
-      ...runtime(home, captured),
-      processRunner: {
-        run: async (options) => {
-          calls.push(options);
-          return { termination: 'completed', exitCode: 0, stdout: JSON.stringify(mismatched), stderr: '' };
-        }
-      }
-    };
-    assert.equal(await main(['publish', '--apply', '--target', 'omp', '--home', home, '--json'], bridgeRuntime), 5);
-    assert.equal(calls.length, 1);
-    assert.equal(JSON.parse(captured.values[0]).error.code, 'PUBLICATION_FAILED');
-  } finally {
-    rmSync(home, { recursive: true, force: true });
-  }
-});
 
-test('default typed apply delegates mutation and release identity to Python authority', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-bridge-apply-'));
-  try {
-    const captured = capture();
-    const calls = [];
-    const authority = JSON.stringify(authorityChanges(home));
-    const bridgeRuntime = {
-      ...runtime(home, captured),
-      processRunner: {
-        run: async (options) => {
-          calls.push(options);
-          if (calls.length === 2) {
-            const state = options.env.EVCRATE_STATE_DIR;
-            mkdirSync(state, { recursive: true, mode: 0o700 });
-            chmodSync(state, 0o700);
-            writeFileSync(join(state, 'release-marker.json'), JSON.stringify({
-              schema_version: 1, status: 'complete', release_id: 'release-bridge-1',
-              transaction_dir: 'release-release-bridge-1', roots: {}, managed_paths: {},
-              previous_managed_paths: {}, operations: [], retained_release_id: null
-            }) + '\n', { mode: 0o600 });
-          }
-          return {
-            termination: 'completed', exitCode: 0,
-            stdout: calls.length === 1 || calls.length === 3 ? authority : '', stderr: ''
-          };
-        }
-      }
-    };
-    assert.equal(await main(['publish', '--apply', '--target', 'omp', '--home', home, '--json'], bridgeRuntime), 0);
-    assert.equal(calls.length, 3);
-    assert.deepEqual(calls[1].args.slice(1), ['--publish', '--target', 'omp']);
-    assert.deepEqual(calls[2].args.slice(1), ['--publish', '--dry-run', '--json', '--target', 'omp']);
-    assert.equal(JSON.parse(captured.values[0]).payload.releaseId, 'release-bridge-1');
-  } finally {
-    rmSync(home, { recursive: true, force: true });
-  }
-});
 
 test('typed publication rejects handler output with mismatched binding order', async () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-correlation-'));

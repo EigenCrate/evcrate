@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { ControlPlaneError, serializeControlPlaneError } from '../errors/control-plane-error.js';
 import {
   type PublishApplyResultPayload, type PublishDryRunResultPayload, type RecoverResultPayload
@@ -11,19 +10,15 @@ import type { JsonValue } from '../protocol/json.js';
 import type { ResourceOperation, ResourceResult, ResourceSuccessStatus } from '../protocol/resource-control.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
-import { defaultProcessRunner } from './process-runner.js';
-import { assertScript, runAuthorityPublication } from './python-authority-bridge.js';
 import type { CliRuntime } from './types.js';
 
-const ACTIONS = Object.freeze({
-  build: ['--build'], check: ['--check'], publish: ['--publish'], all: ['--all'], recover: ['--recover']
-} as const);
+type DistributeAction = 'build' | 'check' | 'publish' | 'all' | 'recover';
 
-function operationFor(action: keyof typeof ACTIONS): ResourceOperation {
+function operationFor(action: DistributeAction): ResourceOperation {
   return `distribute.${action}` as ResourceOperation;
 }
 
-function statusFor(action: keyof typeof ACTIONS): ResourceSuccessStatus {
+function statusFor(action: DistributeAction): ResourceSuccessStatus {
   return action === 'publish' || action === 'all' ? 'activated' : 'ok';
 }
 
@@ -42,7 +37,7 @@ export async function runTypedPublication(
 ): Promise<PublishDryRunResultPayload | PublishApplyResultPayload | RecoverResultPayload> {
   const engine = assertUniformAuthoritativeEngine(context.selectedTargetIds, runtime.engineSelectionOptions);
 
-  if (engine === 'typescript' && runtime.processRunner === undefined) {
+  if (engine === 'typescript') {
     if (operation === 'publish.dry-run') {
       return publishDryRun(context);
     }
@@ -52,7 +47,7 @@ export async function runTypedPublication(
     return recoverPublication(context, expectedReleaseId);
   }
 
-  return runAuthorityPublication(operation, context, runtime, expectedReleaseId);
+  throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
 }
 
 export async function runCompatibilityDistribution(
@@ -65,7 +60,7 @@ export async function runCompatibilityDistribution(
 
   const engine = assertUniformAuthoritativeEngine(context.selectedTargetIds, runtime.engineSelectionOptions);
 
-  if (engine === 'typescript' && runtime.processRunner === undefined) {
+  if (engine === 'typescript') {
     try {
       const outcome = await runLocalDistribution(
         invocation.command.action,
@@ -85,36 +80,5 @@ export async function runCompatibilityDistribution(
     }
   }
 
-  if (context.selectedTargetIds.length > 1 && invocation.options.targets.length > 1) {
-    return errorResult(requestId, operationFor(invocation.command.action), new ControlPlaneError('CAPABILITY_UNSUPPORTED'));
-  }
-  const scriptPath = join(context.packageRoot, 'distribute.py');
-  try { assertScript(scriptPath); } catch (error) {
-    return errorResult(requestId, operationFor(invocation.command.action), error);
-  }
-  const args = [...ACTIONS[invocation.command.action], ...(invocation.options.targets.length
-    ? ['--target', invocation.options.targets[0]] : [])];
-  const runner = runtime.processRunner ?? defaultProcessRunner;
-  const processResult = await runner.run({
-    executable: runtime.pythonExecutable ?? 'python3', args: [scriptPath, ...args],
-    cwd: context.packageRoot, env: {
-      ...runtime.env,
-      EVCRATE_HOME: context.homeRoot,
-      EVCRATE_STATE_DIR: context.stateRoot
-    },
-    timeoutMs: invocation.options.timeoutMs, signal: runtime.abortSignal,
-    maxInputBytes: 1, maxStdoutBytes: 16 * 1024, maxStderrBytes: 8 * 1024, maxLines: 256
-  });
-  if (processResult.termination !== 'completed' || processResult.exitCode !== 0) {
-    const code = invocation.command.action === 'recover' ? 'RECOVERY_FAILED'
-      : invocation.command.action === 'publish' || invocation.command.action === 'all'
-        ? 'PUBLICATION_FAILED' : 'INTERNAL_ERROR';
-    return errorResult(requestId, operationFor(invocation.command.action), new ControlPlaneError(code));
-  }
-  return {
-    protocol: 'evcrate-resource-control', protocolVersion: PROTOCOL_VERSION,
-    requestId, operation: operationFor(invocation.command.action),
-    status: statusFor(invocation.command.action),
-    payload: { engine: 'python-compatibility', action: invocation.command.action } as JsonValue
-  };
+  return errorResult(requestId, operationFor(invocation.command.action), new ControlPlaneError('CAPABILITY_UNSUPPORTED'));
 }

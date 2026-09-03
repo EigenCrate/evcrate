@@ -9,7 +9,7 @@ import {
   PROJECTION_QUALIFICATION_ORDER,
 } from '../../dist/index.js';
 import { parityDeltaRecords } from './parity-deltas.mjs';
-import { lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { after, test } from 'node:test';
@@ -186,9 +186,46 @@ test('TypeScript projections match Python inventories with explicit deltas', () 
       compare(target, expected, snapshot(actualRoot));
       continue;
     }
-    const pythonStage = mkdtempSync(join(tmpdir(), `evcrate-phase5-python-${target}-`));
-    pythonStages.push(pythonStage);
-    const expectedRoot = runPython(target, pythonStage);
-    compare(target, snapshot(expectedRoot), snapshot(actualRoot));
+    if (pythonScripts[target] && existsSync(join(repository, pythonScripts[target]))) {
+      const pythonStage = mkdtempSync(join(tmpdir(), `evcrate-phase5-python-${target}-`));
+      pythonStages.push(pythonStage);
+      const expectedRoot = runPython(target, pythonStage);
+      compare(target, snapshot(expectedRoot), snapshot(actualRoot));
+    } else {
+      const targetManifest = registry.targets.get(target);
+      const expected = new Map();
+      for (const root of targetManifest.outputRoots) {
+        const full = join(sourceRoot, root);
+        if (existsSync(full)) {
+          expected.set(root, { kind: 'directory', mode: lstatSync(full).mode & 0o777 });
+          for (const [p, v] of snapshot(full)) expected.set(`${root}/${p}`, v);
+        }
+      }
+      for (const doc of targetManifest.projectDocs) {
+        const full = join(sourceRoot, doc);
+        if (existsSync(full)) {
+          const bytes = readFileSync(full);
+          expected.set(doc, {
+            kind: 'file',
+            bytes: bytes.byteLength,
+            hash: createHash('sha256').update(bytes).digest('hex'),
+            mode: lstatSync(full).mode & 0o777
+          });
+        }
+      }
+      const actual = snapshot(actualRoot);
+      for (const [path, wanted] of expected) {
+        const received = actual.get(path);
+        assert.ok(received, `${target} missing committed output: ${path}`);
+        assert.equal(received.kind, wanted.kind, `${target} kind differs for ${path}`);
+        if (!path.endsWith('gitignore')) {
+          assert.equal((received.mode & 0o111) !== 0, (wanted.mode & 0o111) !== 0, `${target} executable bit differs for ${path}`);
+        }
+        if (wanted.kind === 'file') {
+          assert.equal(received.hash, wanted.hash, `${target} hash differs for ${path}`);
+          assert.equal(received.bytes, wanted.bytes, `${target} byte count differs for ${path}`);
+        }
+      }
+    }
   }
 });

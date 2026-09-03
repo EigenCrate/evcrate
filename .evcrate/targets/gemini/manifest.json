@@ -1,8 +1,13 @@
 {
   "schema_version": 2,
   "name": "gemini",
-  "adapter": "migrate_claude_to_gemini.py",
-  "adapter_sources": ["distribution/contracts.py"],
+  "adapter": "dist/adapters/gemini/index.js",
+  "adapter_sources": [
+    "dist/adapters/gemini/frontmatter.js",
+    "dist/adapters/gemini/replacements.js",
+    "dist/adapters/gemini/resources.js",
+    "dist/adapters/gemini/runtime.js"
+  ],
   "output_root": ".gemini",
   "additional_roots": [],
   "project_docs": ["GEMINI.md"],

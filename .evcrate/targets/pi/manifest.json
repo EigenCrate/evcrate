@@ -1,13 +1,12 @@
 {
   "schema_version": 2,
   "name": "pi",
-  "adapter": "migrate_claude_to_pi.py",
+  "adapter": "dist/adapters/pi/index.js",
   "adapter_sources": [
-    "distribution/contracts.py",
-    "pi_adapter/__init__.py",
-    "pi_adapter/agents.py",
-    "pi_adapter/frontmatter.py",
-    "pi_adapter/resources.py"
+    "dist/adapters/pi/agents.js",
+    "dist/adapters/pi/frontmatter.js",
+    "dist/adapters/pi/resources.js",
+    "dist/adapters/pi/transforms.js"
   ],
   "output_root": ".pi",
   "additional_roots": [],
