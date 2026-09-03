@@ -198,7 +198,8 @@ function controllerBinding(context: InvocationContext, build: VerifiedCurrentBui
 }
 export function createPublicationPlan(context: InvocationContext, markerPath?: string): PublicationPlan {
   const build = resolveCurrentBuild({ packageRoot: context.packageRoot, canonicalSourceRoot: context.canonicalSourceRoot,
-    controllerRoot: context.controllerRoot, targetRegistryPath: context.registryPath, selectedTargets: context.selectedTargetIds });
+    controllerRoot: context.controllerRoot, targetRegistryPath: context.registryPath, selectedTargets: context.selectedTargetIds,
+    mode: 'consumer' });
   const marker = markerPath === undefined ? null : readOptionalPublicationMarker(markerPath);
   const bindings: PublicationBindingPlan[] = [controllerBinding(context, build)];
   for (const manifest of build.selectedManifests) {

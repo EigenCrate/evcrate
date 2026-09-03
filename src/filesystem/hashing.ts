@@ -9,6 +9,7 @@ export const IGNORED_ARTIFACT_DIRECTORIES = Object.freeze(new Set(['node_modules
 export const IGNORED_SOURCE_DIRECTORIES = Object.freeze(new Set(['dist']));
 export const IGNORED_ARTIFACT_FILES = Object.freeze(new Set(['.coverage']));
 export const IGNORED_ARTIFACT_SUFFIXES = Object.freeze(new Set(['.pyc', '.pyo']));
+export const IGNORED_TREE_FILES = Object.freeze(new Set(['.gitignore']));
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 function unsafe(): never {
   throw new ControlPlaneError('PATH_UNSAFE');
@@ -126,6 +127,7 @@ function collectTree(root: string, sourceMode: boolean): string[] {
       const path = join(directory, entry.name);
       const relativePath = relative(root, path).split('\\').join('/');
       if ((sourceMode ? isIgnoredSource : isIgnoredArtifact)(relativePath)) continue;
+      if (IGNORED_TREE_FILES.has(entry.name)) continue;
       const normalized = normalizeRelativePath(relativePath);
       const stat = lstatSync(path);
       if (stat.isSymbolicLink()) unsafe();
@@ -170,6 +172,7 @@ export function completeTreeHash(root: string, limits: CompleteTreeHashLimits = 
       const path = join(directory, entry.name);
       const relativePath = normalizeRelativePath(relative(root, path).split('\\').join('/'));
       if (Buffer.byteLength(relativePath, 'utf8') > limits.maxPathBytes) unsafe();
+      if (IGNORED_TREE_FILES.has(entry.name)) continue;
       const stat = lstatSync(path);
       if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) unsafe();
       if (stat.isDirectory()) {
