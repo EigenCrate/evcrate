@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import { createPhase6Fixture } from '../phase6-fixture.mjs';
+import { createPhase6Fixture } from '../resource-fixture.mjs';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
 

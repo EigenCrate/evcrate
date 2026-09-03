@@ -56,6 +56,7 @@ function createCanonical(root) {
   write(join(canonical, 'hooks', '.env.example'), 'ignored\n');
   return canonical;
 }
+export const createResourceFixture = createPhase6Fixture;
 export function createPhase6Fixture(prefix = 'evcrate-phase6-') {
   const root = mkdtempSync(join(tmpdir(), prefix));
   const canonical = createCanonical(root);

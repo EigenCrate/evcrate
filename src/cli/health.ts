@@ -57,7 +57,7 @@ export async function runHealth(
     args: [controllerPath(context)],
     cwd: context.packageRoot,
     env: {
-      ...runtime.env,
+      ...(runtime.env ?? process.env),
       HOME: context.homeRoot,
       EVCRATE_HOME: context.homeRoot,
       EVCRATE_STATE_HOME: context.stateRoot

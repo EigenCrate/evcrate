@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import {
   createResourceHandler, createResourceRequest, loadResourceRegistry, validateResourceResult
 } from '../../dist/index.js';
-import { RESOURCE_ROOTS, createPhase6Fixture, writeSource, closePhase6Fixture } from '../phase6-fixture.mjs';
+import { RESOURCE_ROOTS, createPhase6Fixture, writeSource, closePhase6Fixture } from '../resource-fixture.mjs';
 
 function codeOf(callback) {
   try { callback(); } catch (error) { return error.code; }

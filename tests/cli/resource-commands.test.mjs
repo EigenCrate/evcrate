@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createResourceRequest, main, parseArguments } from '../../dist/index.js';
-import { createPhase6Fixture, writeSource, closePhase6Fixture } from '../phase6-fixture.mjs';
+import { createPhase6Fixture, writeSource, closePhase6Fixture } from '../resource-fixture.mjs';
 
 function outputCapture() {
   const values = [];
