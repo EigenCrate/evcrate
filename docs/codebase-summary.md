@@ -1,7 +1,7 @@
 # Codebase Summary
 
-**Last Updated**: 2026-09-02  
-**Status**: Phase 10 TypeScript release packaging and per-target cutover complete; release remains Unreleased
+**Last Updated**: 2026-09-04  
+**Status**: Phase 11 validation and staged rollout gates complete; release remains Unreleased
 **Repository**: [NEBULEA-M/evcrate](https://github.com/NEBULEA-M/evcrate)
 
 ## Purpose and current boundary
@@ -29,6 +29,8 @@ qualification-only health, and fail-closed protocol/error handling. Phase 10
 completes TypeScript release packaging, per-target cutover receipts, uniform
 engine enforcement, manifest generation, and the Python-free packed runtime
 boundary.
+Phase 11 validates packed consumer publication, consumer-mode build resolution,
+zero-mutation package-root behavior, and the full validation/rollout gate suite.
 
 The default CLI path now performs projection build/check, verified-manifest
 generation, HOME publication/recovery, health, settings, and resource-control
@@ -37,10 +39,13 @@ runner may still exercise the compatibility bridge during transition testing;
 that bridge is not selected by the packaged default path.
 
 The TypeScript publication path is now the default staging, parity, and recovery
-engine. The compatibility bridge remains available only for explicit transition
-overrides or injected process-runner tests. The implementation does not claim
-live vendor-CLI qualification, Windows security equivalence, npm publication,
-operator rollout, or unverified deployment behavior.
+engine. Consumer publication resolves a verified bundled build in `consumer` mode:
+it validates output and controller hashes without requiring authoring Python adapter
+sources, and it never writes under an installed package root. The compatibility
+bridge remains available only for explicit transition overrides or injected
+process-runner tests. The implementation does not claim live vendor-CLI
+qualification, Windows security equivalence, npm publication, operator rollout,
+or unverified deployment behavior.
 
 ## Repository map
 
@@ -100,7 +105,7 @@ plus the aggregate manifest.
 | `src/scopes/` | Persist package-local global/project assignments, resolve inheritance and disablement, compute project identities and revision vectors, and apply scope CAS. |
 | `src/imports/` | Read bounded external source descriptors, require capability approvals, stage non-mutating previews, persist owner-only single-use tokens, hash selected projections, and atomically apply canonical source plus registry under CAS. |
 | `src/filesystem/` | Enforce normalized containment, owner/symlink checks, descriptor-stable reads, mode-aware complete tree hashes, atomic I/O, capability-backed staged roots, and interoperable locks. |
-| `src/distribution/` | Resolve verified builds; build/check isolated TypeScript projections; enforce cutover receipts and uniform engine selection; plan, stage, promote, retain, journal, and recover target publications; preserve manifest shared-JSON source fragments; merge Copilot/Pi shared JSON; parse JSONC. |
+| `src/distribution/` | Resolve authoring and consumer verified builds; consumer mode checks bundled output/controller hashes without authoring adapter sources; build/check isolated TypeScript projections; enforce cutover receipts and uniform engine selection; plan, stage, promote, retain, journal, and recover target publications without package-root mutation; preserve manifest shared-JSON source fragments; merge Copilot/Pi shared JSON; parse JSONC. |
 | `src/advisor-settings/` | Read bounded owner-only policy files and provide staged policy replacement, CAS, recovery, and identity-checked cleanup; policy remains outside the resource registry/import/publication contract. |
 | `src/adapters/` | Build and validate seven target projections from frozen resource-graph bytes; expose exhaustive five-kind compatibility and enforce declared staging roots. |
 
@@ -299,18 +304,20 @@ are intentionally deferred.
 
 Phase 8 added a TypeScript target-publication subsystem under
 `src/distribution/`. It consumes only a current, complete schema-2 build and
-selected target manifests. It never runs target migrators/adapters during
-publication or recovery and never mutates advisor settings. Phase 8 established
-the staging/parity/recovery boundary; Phase 10 promotes this path to the default
-after the per-target gates.
+selected target manifests. Publication and recovery never run target migrators or
+adapters and never mutate advisor settings. Phase 8 established the
+staging/parity/recovery boundary; Phase 10 promotes this path to the default
+after the per-target gates, and Phase 11 validates the packed consumer path and
+staged rollout gates.
 
 ### Build closure and deterministic planning
 
-- `build-resolution.ts` selects the requested manifests, resolves the
-  target-specific or all-target build-manifest path, validates the complete
-  schema-2 build, checks manifest-derived HOME policy parity, re-hashes current
-  canonical source/manifest/adapter inputs, checks owners and output roots, and
-  delegates final digest comparison to `verifyBuild`.
+- `build-resolution.ts` selects the requested manifests and target-specific or
+  all-target build-manifest path, validates complete schema-2 metadata, checks
+  manifest-derived HOME policy parity, owners, and output roots. Authoring mode
+  additionally re-hashes canonical source and manifest-declared adapter inputs;
+  consumer mode verifies only bundled output hashes and controller closure, so an
+  installed package does not require authoring Python adapter files.
 - `publication-rules.ts` accepts only the closed manifest rules
   `omp-agent-prefix`, `codex-home-path-rewrite`, and
   `claude-skill-root-exclusion`. Rules are authorized to their owning target:
@@ -327,6 +334,10 @@ after the per-target gates.
   hash, preservation, merge, create, update, delete, no-op, or conflict action.
   Previous marker-managed paths drive stale-file deletion; unmanaged collisions
   remain conflicts.
+
+Consumer publication plans call `resolveCurrentBuild` in consumer mode and map
+only verified bundled projections; staging, promotion, and recovery are directed
+at HOME roots, not the installed package root.
 
 The selected bindings are sorted and validated against the exact order:
 
@@ -402,6 +413,10 @@ consumers retain the verified control-plane closure. Context resolution accepts
 an explicit package root, derives one from an explicit canonical source, detects
 a manifest in the caller cwd, and otherwise falls back to the installed module
 root. Version dispatch checks the resolved package and module-root metadata.
+
+Consumer-mode resolution validates the bundled outputs and controller directly; it
+does not resolve or hash authoring adapter sources that are absent from an
+installed package.
 
 The integration adapter is split by concern:
 
@@ -479,18 +494,45 @@ uniform-engine selection, controller closure, target/aggregate manifest
 generation, legacy-root cleanliness, Python-free package allow-list checks, and
 pure TypeScript CLI routing. Full validation passes **255/255** tests. This
 evidence proves release packaging and default runtime behavior in the feature
-worktree; operator rollout, live vendor qualification, npm publication, and
-`main` merge remain Phase 11 concerns.
+worktree; Phase 11 now records consumer validation and rollout readiness. Live
+vendor qualification, npm publication, deployment behavior, and `main` merge
+remain separate release gates.
+
+## Phase 11 validation and rollout readiness
+
+Phase 11 validates the external packed-consumer path and the evidence needed for
+staged rollout. `resolveCurrentBuild` has an explicit `consumer` mode: it verifies
+the bundled complete schema-2 manifest, output hashes, controller closure,
+ownership, and HOME policy without requiring authoring Python adapter sources.
+Authoring build/check retains canonical source and adapter hash verification.
+
+`createPublicationPlan` selects consumer mode for publication. The packed install
+scenario runs from an unrelated working directory and proves that dry-run, apply,
+repeat apply, and recovery leave the installed package root unchanged while
+publishing only to disposable HOME/state roots. Tampered output is rejected before
+publication, and unmanaged HOME content plus publication/advisor-settings state
+remain isolated.
+
+The hashing subsystem excludes `.gitignore` entries from deterministic
+`treeHash`, `sourceTreeHash`, and `completeTreeHash` records while retaining
+bounded traversal and symlink/special-entry rejection.
+
+`npm run test:phase11` passed **7/7**; full validation passed **241/241**. Code
+review scored **9.7/10** (approved). The advisor checkpoint is `ADVICE_READY`
+with a recommendation to mark Phase 11 complete and proceed to release/rollout;
+actual live qualification, npm publication, deployment, and `main` merge remain
+separate operator/release gates.
 
 ## Canonical JSON and hashing
 
 The TypeScript serializer follows the Python authority for supported values:
 object keys sort by Unicode code point, arrays retain order, object `undefined`
 fields are omitted, and numeric spellings use Python-compatible float/exponent
-forms. Hashes are SHA-256. Tree hashes include deterministic directory records,
-empty directories, and file digests in global lexical path order; symlinks and
+forms. Hashes are SHA-256. `treeHash`, `sourceTreeHash`, and `completeTreeHash`
+include deterministic directory records, empty directories, and file digests in
+global lexical path order but exclude `.gitignore` entries. Symlinks and
 unsupported entries fail closed. Local dependency/compiler artifacts such as
-`node_modules`, `__pycache__`, `dist`, `.pyc`, `.pyo`, and `.coverage` are
+`node_modules`, `__pycache__`, `dist`, `.pyc`, `.pyo`, and `.coverage` remain
 excluded according to source/artifact mode.
 
 The strict parser accepts only object or array document roots. It rejects
@@ -554,19 +596,23 @@ CommonJS package exports retain both the `evcrate` CLI and the existing
 
 ## Evidence and limitations
 
-Focused implementation evidence records all builds passing. Phase 10
-`npm run test:phase10` passed **8/8**, and full validation passed **255/255**.
-Phase 9 `npm run test:phase9` passed **14/14** integration tests; its aggregate
-focused evidence passed **212/212**. Phase 8 `npm run test:phase8` passed
-**54/54**; earlier aggregate evidence remains **133/133** across Phase 7
-(**16/16**), protocol (**20/20**), CLI (**31/31**), Phase 6 (**23/23**),
-Phase 4 (**31/31**), and Phase 5 (`npm run test:phase5`, **12/12**).
+Focused implementation evidence records all builds passing. Phase 11
+`npm run test:phase11` passed **7/7**, and full validation passed **241/241**.
+Phase 10 `npm run test:phase10` passed **8/8**; Phase 9 `npm run test:phase9`
+passed **14/14** integration tests; its aggregate focused evidence passed
+**212/212**. Phase 8 `npm run test:phase8` passed **54/54**; earlier aggregate
+evidence remains **133/133** across Phase 7 (**16/16**), protocol (**20/20**),
+CLI (**31/31**), Phase 6 (**23/23**), Phase 4 (**31/31**), and Phase 5
+(`npm run test:phase5`, **12/12**).
 
 Phase 10 evidence covers target gate receipts, TypeScript manifest generation,
 controller closure, packed artifact allow-listing, Python-free default CLI
-operations, and mixed-engine rejection. It does not claim live vendor-CLI
-qualification, deployment behavior, operator rollout, npm publication, or
-`main` merge.
+operations, and mixed-engine rejection. Phase 11 adds consumer-mode build
+resolution without authoring adapter sources, tamper rejection, packed
+publication/recovery, the zero-mutation installed-package-root invariant,
+cutover receipts, unmanaged HOME preservation, and isolated
+publication/advisor-settings state. It does not claim live vendor-CLI
+qualification, deployment behavior, npm publication, or `main` merge.
 
 Residuals remain the low same-UID/path-race window and Linux-first security
 scope. Live vendor qualification and rollout remain operator-controlled.
@@ -584,7 +630,7 @@ scope. Live vendor qualification and rollout remain operator-controlled.
 
 ## Compaction record
 
-Repomix v1.18.0 generated `repomix-output.xml` on 2026-09-02 using the
-repository's configured/default exclusions. It reported **2,620 files**,
-**8,956,735 tokens**, and **33,825,852 characters**. The compaction was used
+Repomix v1.18.0 generated `repomix-output.xml` on 2026-09-04 using the
+repository's configured/default exclusions. It reported **2,603 files**,
+**8,813,510 tokens**, and **33,274,114 characters**. The compaction was used
 as the source snapshot for this summary; it is not a package deliverable.

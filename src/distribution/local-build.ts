@@ -51,7 +51,8 @@ export function runLocalBuild(
       canonicalSourceRoot: join(packageRoot, '.evcrate', 'source', '.claude'),
       controllerRoot: join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin'),
       targetRegistryPath: join(packageRoot, '.evcrate', 'targets', 'manifest.json'),
-      selectedTargets
+      selectedTargets,
+      mode: 'authoring'
     });
   } finally {
     stage.cleanup();

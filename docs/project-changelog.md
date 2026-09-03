@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-02
-**Status:** Phase 10 complete; Phase 11 validation and rollout remain planned
+**Updated:** 2026-09-04
+**Status:** Phase 11 validation and staged rollout gates complete; release remains Unreleased
 
 ### Phase 9: DamHopper and Agent Store integration
 
@@ -66,7 +66,28 @@ Phase 9 proves the feature-worktree packed npm/adapter contract only. It does no
 
 #### Release boundary
 
-Phase 10 establishes the Python-free TypeScript package/runtime and per-target cutover contract. Phase 11 retains operator-controlled validation and rollout work; no live deployment or final registry publication is implied.
+Phase 10 establishes the Python-free TypeScript package/runtime and per-target cutover contract; Phase 11 records the completed consumer validation and staged-rollout gates. No live deployment or final registry publication is implied.
+
+### Phase 11: Validation and staged rollout
+
+**Updated:** 2026-09-04
+**Status:** Complete; release and rollout may proceed through operator-controlled gates
+
+#### Features
+
+- Decouple consumer-mode build resolution from authoring adapter sources. `resolveCurrentBuild` verifies the bundled complete schema-2 manifest, output hashes, controller closure, ownership, and HOME policy without requiring manifest-declared authoring Python adapters. Authoring build/check retains source and adapter hash verification.
+- Consumer publication builds plans in consumer mode and preserves the installed package root: dry-run, apply, repeat apply, and recovery run from an external working directory without package-root filesystem mutation.
+- Exclude `.gitignore` entries from deterministic tree hashes while retaining bounded traversal, mode/identity, symlink, and special-entry checks.
+
+#### Tests
+
+- Phase 11 rollout suite `npm run test:phase11` passed **7/7**. Full validation passed **241/241**.
+- Coverage includes consumer-mode resolution without authoring adapters, tampered-output rejection, packed install publish dry-run/apply/recover, zero package-root mutation, exact controller closure, TypeScript cutover receipts, unmanaged HOME preservation, and isolated publication/advisor-settings state.
+- Code review scored **9.7/10** (approved). Advisor checkpoint is `ADVICE_READY`; recommendation: mark Phase 11 complete and proceed to release/rollout.
+
+#### Release boundary
+
+Phase 11 validation covers the feature worktree and packed consumer contract. It does not itself perform live vendor qualification, npm publication, deployment, or `main` merge; those remain separate operator/release gates.
 
 ## Unresolved questions
 

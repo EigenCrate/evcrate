@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { canonicalJsonBytes, hashFile, treeHash } from '../filesystem/hashing.js';
@@ -15,6 +16,7 @@ export interface CurrentBuildOptions {
   readonly controllerRoot: string;
   readonly targetRegistryPath: string;
   readonly selectedTargets: readonly PersistedTarget[];
+  readonly mode?: 'authoring' | 'consumer';
 }
 
 export interface VerifiedCurrentBuild {
@@ -23,7 +25,6 @@ export interface VerifiedCurrentBuild {
   readonly selectedManifests: readonly TargetManifest[];
   readonly outputPaths: Readonly<Record<string, string>>;
 }
-
 function fail(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never {
   throw new ControlPlaneError(code);
 }
@@ -86,6 +87,22 @@ function expectedOutputPaths(
   for (const name of names) result[name] = containedPath(parent, name, true);
   return result;
 }
+function hasAuthoringSources(options: CurrentBuildOptions, manifests: readonly TargetManifest[]): boolean {
+  const claudeDoc = join(options.packageRoot, 'CLAUDE.md');
+  if (!existsSync(claudeDoc)) return false;
+  for (const manifest of manifests) {
+    for (const path of [manifest.adapter, ...manifest.adapterSources].filter((value): value is string => value !== null)) {
+      try {
+        const fullPath = containedPath(options.packageRoot, path, false);
+        if (!existsSync(fullPath)) return false;
+      } catch {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 
 function assertOwners(
   manifest: BuildManifest,
@@ -131,11 +148,16 @@ export function resolveCurrentBuild(options: CurrentBuildOptions): VerifiedCurre
   const manifest = readBuildManifest(manifestPath);
   assertValidation(manifest);
   if (!sameJson(manifest.home_policy, expectedPolicy(selected))) fail('PUBLICATION_FAILED');
-  const sourceHashes = currentSourceHashes(options, selected, allTargets);
-  const adapterHashes = manifestAdapterHashes(selected, options.packageRoot);
   const outputPaths = expectedOutputPaths(options.canonicalSourceRoot, selected);
   assertOwners(manifest, outputPaths, selected);
   if (!sameJson(Object.keys(manifest.output_hashes).sort(), Object.keys(outputPaths).sort())) fail('PUBLICATION_FAILED');
-  verifyBuild({ manifestPath, outputRoots: outputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
+  const isConsumer = options.mode === 'consumer' || (options.mode !== 'authoring' && !hasAuthoringSources(options, selected));
+  if (isConsumer) {
+    verifyBuild({ manifestPath, outputRoots: outputPaths, controllerRoot: options.controllerRoot });
+  } else {
+    const sourceHashes = currentSourceHashes(options, selected, allTargets);
+    const adapterHashes = manifestAdapterHashes(selected, options.packageRoot);
+    verifyBuild({ manifestPath, outputRoots: outputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
+  }
   return Object.freeze({ manifestPath, manifest, selectedManifests: selected, outputPaths: Object.freeze(outputPaths) });
 }

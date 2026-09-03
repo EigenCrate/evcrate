@@ -1,14 +1,14 @@
 ---
 title: "TypeScript/npm EVCrate Control-Plane CLI"
 description: "Deliver a one-shot Node.js control plane while preserving current distribution and advisor boundaries until gated cutover."
-status: in_progress
+status: complete
 priority: P2
 effort: 112h
 branch: feat/typescript-control-plane-cli
 worktree: /home/loidinh/WS/evcrate-ws/typescript-control-plane-cli
 tags: [feature, refactor, cli, typescript, npm, distribution, agent-store]
 created: 2026-08-27
-revalidated: 2026-09-02
+revalidated: 2026-09-04
 ---
 
 # TypeScript/npm EVCrate Control-Plane CLI
@@ -62,7 +62,7 @@ The existing CommonJS advisor controller is not rewritten or used as a counsel p
 | 8 | [Publish and recovery](./phase-08-atomic-publish-and-recovery.md) | Separate target-HOME and advisor-settings transactions/recovery | DONE — 100% |
 | 9 | [DamHopper and Agent Store integration](./phase-09-dam-hopper-integration.md) | External resource subprocess plus top-level qualification health | DONE — 100% — 2026-09-02 |
 | 10 | [Release and cleanup](./phase-10-release-and-cleanup.md) | Per-target cutover; 17-file controller package; configured-tuple gate | DONE — 100% — 2026-09-02 |
-| 11 | [Validation and rollout](./phase-11-validation-and-rollout.md) | Per-target matrix, settings/diagnostic proofs, unchanged counsel | Planned |
+| 11 | [Validation and rollout](./phase-11-validation-and-rollout.md) | Per-target matrix, settings/diagnostic proofs, unchanged counsel | DONE — 100% — 2026-09-04 |
 
 ## Phase 2 completion evidence
 
@@ -141,7 +141,7 @@ completion, and deployment behavior are not claimed. Review residuals are
 limited to the documented low same-UID/path-race window and Linux-first
 security scope.
 
-The overall plan remains `in_progress` because Phase 11 remains planned.
+The overall plan is complete with Phase 11 validation and staged rollout recorded below.
 
 ## Phase 7 completion evidence
 
@@ -190,7 +190,7 @@ Phase 9 integrates DamHopper and Agent Store through a bounded, short-lived pack
 
 Coverage includes packed-artifact checksum/install, argv-based resource and target operations, discovery/get, import preview/apply, scope/CAS lifecycle, OMP/Copilot publish/recover, protocol fixtures, diagnostic-only health, and fail-closed malformed/empty/timeout/counsel responses.
 
-Phase 9 completion did not claim target cutover, Python-free release, or rollout. Phase 10 now records the per-target cutover and Python-free packed-artifact gate; Phase 11 validation and rollout remain planned.
+Phase 9 completion did not claim target cutover, Python-free release, or rollout. Phase 10 records the per-target cutover and Python-free packed-artifact gate; Phase 11 now records the completed validation and staged rollout.
 
 ## Phase 10 completion evidence
 
@@ -203,6 +203,20 @@ Phase 10 completes the per-target TypeScript cutover and release-package cleanup
 - The exact 17-file CommonJS controller closure remains validated and singleton.
 - The packed artifact allow-list contains required compiled/runtime assets and no distribution or migrator Python files.
 - Local build/check plus version, advisor-settings, and publication dry-run smoke pass without Python.
+
+## Phase 11 completion evidence
+
+**Status:** DONE | **Progress:** 100% | **Completed:** 2026-09-04 | **Review:** 9.7/10 — Approved | **Advisor:** ADVICE_READY — approved to proceed with release/rollout
+
+Phase 11 validation closes the staged rollout gates in the linked feature worktree:
+
+- `test:phase11`: **7/7** rollout tests passed.
+- Aggregate project validation: **241/241** tests passed; no failures, skips, cancellations, or TODOs.
+- Consumer/authoring mode decoupling is explicit: authoring builds verify source and adapter inputs; packed consumer publication verifies sealed output/controller metadata without requiring repository Python adapters.
+- Zero package-root mutation was verified end-to-end: the installed package tree hash remained byte-identical before dry-run, after apply, and after repeat apply.
+- Reviewer score: **9.7/10**, approved/production ready. Advisor checkpoint: **ADVICE_READY**, recommending Phase 11 completion and release/rollout.
+
+See the [validation report](../reports/phase11-validation-260904-0121-validation-and-rollout.md) and [code review](../reports/code-review-260904-0124-phase-11-validation-rollout.md) for the command-level evidence.
 
 ## Phase 1 evidence preserved
 

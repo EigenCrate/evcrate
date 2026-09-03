@@ -115,15 +115,15 @@ export interface BuildVerificationOptions {
   readonly manifestPath: string;
   readonly outputRoots: Readonly<Record<string, string>>;
   readonly controllerRoot: string;
-  readonly sourceHashes: Readonly<Record<string, string>>;
-  readonly adapterHashes: Readonly<Record<string, string>>;
+  readonly sourceHashes?: Readonly<Record<string, string>>;
+  readonly adapterHashes?: Readonly<Record<string, string>>;
 }
 export function verifyBuild(options: BuildVerificationOptions): BuildManifest {
   const manifest = readBuildManifest(options.manifestPath);
   if (manifest.validation.complete !== true) fail('PUBLICATION_FAILED');
   verifyOutputHashes(manifest, options.outputRoots);
-  if (!sameRecord(manifest.source_hashes, options.sourceHashes)
-    || !sameRecord(manifest.adapter_hashes, options.adapterHashes)) fail('PUBLICATION_FAILED');
+  if (options.sourceHashes !== undefined && !sameRecord(manifest.source_hashes, options.sourceHashes)) fail('PUBLICATION_FAILED');
+  if (options.adapterHashes !== undefined && !sameRecord(manifest.adapter_hashes, options.adapterHashes)) fail('PUBLICATION_FAILED');
   verifyControllerHashes(manifest, options.controllerRoot);
   return manifest;
 }
