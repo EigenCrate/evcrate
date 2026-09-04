@@ -37,7 +37,7 @@
     "distribute:pi": "node dist/cli/evcrate.js distribute all --target pi",
     "distribute:omp": "node dist/cli/evcrate.js distribute all --target omp",
     "distribute:copilot": "node dist/cli/evcrate.js distribute all --target copilot",
-    "test": "npm run test:protocol && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:phase11 && npm run test:advisor-controller && npm run test:release",
+    "test": "npm run test:protocol && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:phase11 && npm run test:advisor-controller && npm run test:release && npm run test:installer:linux && npm run test:distribution:rollout",
     "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
@@ -49,7 +49,8 @@
     "release:check": "node -e \"require('./scripts/release/runtime-closure.cjs').validateRuntimeClosure(process.cwd())\"",
     "release:prepare": "node scripts/prepare-release-assets.cjs",
     "test:release": "npm run build && node --test tests/distribution/private-release-artifacts.test.mjs",
-    "test:installer:linux": "npm run build && node --test tests/installers/*.test.mjs"
+    "test:installer:linux": "npm run build && node --test tests/installers/*.test.mjs",
+    "test:distribution:rollout": "npm run build && node --test tests/distribution/private-unpack-rollout.test.mjs"
   },
   "repository": {
     "type": "git",

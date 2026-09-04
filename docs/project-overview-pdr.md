@@ -1,8 +1,8 @@
 # Project Overview & Product Development Requirements (PDR)
 
 **Project Name**: EVCrate
-**Version**: 1.8.0
-**Last Updated**: 2026-08-26
+**Version**: 1.0.0
+**Last Updated**: 2026-09-04
 **Status**: Active Development
 **Repository**: https://github.com/NEBULEA-M/evcrate
 
@@ -318,6 +318,12 @@ Provide a production-ready template that:
   descendant timeout/process-tree defects. Deterministic build/check and
   publication-hash gates are complete; live Pi cutover remains separately
   user-controlled and requires manual quiescence.
+
+**FR10: Private Registry-Free Unpack Distribution**
+- Deliver EVCrate through sealed platform archives (`.tar.gz` for Linux, `.zip` for Windows) via private GitHub Releases with SHA-256 sidecars and canonical release metadata; remove public npm publishing and tokens.
+- Provide standalone unpack installers (`install.sh` for Linux, `install.ps1` for Windows) that execute completely offline without npm, elevation, or network access.
+- Retain replace-with-backup upgrade semantics, same-version repair, explicit rollback, and safe uninstallation.
+- Linux x64 is verified end to end under network namespace isolation (`unshare -rn`); Windows assets are attached as an unvalidated preview (validation deferred).
 
 **Advisor compatibility boundary**
 - `advisor-strategy` remains static decision guidance. The workflow sends one

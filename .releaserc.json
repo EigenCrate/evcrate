@@ -97,8 +97,32 @@
             "label": "Changelog"
           },
           {
-            "path": "dist/evcrate.zip",
-            "label": "EVCrate Package"
+            "path": "dist/release/evcrate-*-linux-x64.tar.gz",
+            "label": "Linux x64 Archive"
+          },
+          {
+            "path": "dist/release/evcrate-*-linux-x64.tar.gz.sha256",
+            "label": "Linux x64 SHA-256 Sidecar"
+          },
+          {
+            "path": "dist/release/evcrate-*-windows-x64.zip",
+            "label": "Windows x64 Archive (Validation Deferred)"
+          },
+          {
+            "path": "dist/release/evcrate-*-windows-x64.zip.sha256",
+            "label": "Windows x64 SHA-256 Sidecar"
+          },
+          {
+            "path": "dist/release/evcrate-*.release.json",
+            "label": "Release Metadata"
+          },
+          {
+            "path": "dist/release/install.sh",
+            "label": "Linux Installer Entrypoint (install.sh)"
+          },
+          {
+            "path": "dist/release/install.ps1",
+            "label": "Windows Installer Entrypoint (install.ps1 - Validation Deferred)"
           }
         ]
       }

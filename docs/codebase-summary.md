@@ -597,6 +597,13 @@ bytecode; the default TypeScript CLI path therefore needs no Python interpreter.
 CommonJS package exports retain both the `evcrate` CLI and the existing
 `evcrate-advisor` executable.
 
+## Private registry-free unpack distribution
+
+- **Archive preparation**: `scripts/prepare-release-assets.cjs` produces Linux (`.tar.gz`) and Windows (`.zip`) sealed archives, SHA-256 sidecars, and canonical metadata.
+- **Linux installer**: `install.sh` provides a standalone POSIX entrypoint for user-local unpack installation, clean replace-with-backup upgrades, same-version repair, rollback, and safe uninstall. Proved offline under Linux network namespace isolation (`unshare -rn`) with package-root hash invariance across operator publication.
+- **Windows installer**: `install.ps1` provides an equivalent PowerShell unpack state machine; attached to releases as an unvalidated preview (validation and support deferred).
+- **Verification orchestration**: `scripts/verify-private-linux-release.cjs` validates release asset trees, disposable sandbox execution, network isolation, and invariant package hashes.
+
 ## Evidence and limitations
 
 Focused implementation evidence records all builds passing. Phase 11

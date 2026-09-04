@@ -114,6 +114,11 @@ function main() {
 
   // 6. Output directory
   const releaseDir = path.join(projectRoot, 'dist', 'release');
+  // Clean legacy unversioned dist/evcrate.zip if present
+  const legacyZip = path.join(projectRoot, 'dist', 'evcrate.zip');
+  if (fs.existsSync(legacyZip)) {
+    fs.unlinkSync(legacyZip);
+  }
 
   // 7. Build archives, sidecars, metadata, and stage installers in one atomic transaction
   console.log(`Building release archives for v${version}...`);

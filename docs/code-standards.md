@@ -1,8 +1,8 @@
 # Code Standards and Codebase Structure
 
-**Last Updated**: 2026-09-02  
-**Applies to**: TypeScript/npm control plane and explicit Python compatibility path  
-**Status**: Phase 10 release packaging and per-target cutover complete; release remains Unreleased
+**Last Updated**: 2026-09-04  
+**Applies to**: TypeScript control plane, sealed private release archives, and unpack installers  
+**Status**: Private Registry-Free Unpack Distribution complete (Linux verified, Windows validation deferred)
 
 ## Governing principles
 
@@ -329,12 +329,18 @@ Node shebang and executable mode. `controller_hashes` must contain exactly the
 - Build/check stages registered TypeScript adapters and never run migrators.
   HOME publication consumes only a current verified build and preserves the
   separate advisor-settings transaction.
-- The packed npm artifact must include compiled `dist/**`, target manifests,
+- The packed artifact must include compiled `dist/**`, target manifests,
   verified build manifests, and one exact controller closure. Its release
   checks exclude distribution/migrator/legacy adapter Python trees,
   `__pycache__`, and Python bytecode. The default CLI requires Node >=22.19 and
   no Python interpreter.
 
+### Private unpack distribution and installer standards
+
+- **Sealed archive packaging**: Emit POSIX-mode-preserving Linux `.tar.gz` and Windows `.zip` with SHA-256 sidecars and canonical release metadata. Refuse archive creation if external dependencies, Python trees, development dependencies, or unverified closure files are present.
+- **Installer isolation and zero network**: Installers execute offline without contacting npm or GitHub. Reject elevation (`sudo`), automatic shell edits, or unmanaged HOME writes.
+- **Snapshot immutability and replace-with-backup**: Release archives are immutable. Upgrades retain prior snapshots at explicit backup paths without mutable-state merge. Rollback is explicit and never publishes HOME.
+- **Support boundaries**: Linux x64 installer is end-to-end verified under real network namespace isolation (`unshare -rn`). Windows PowerShell installer is attached as an unvalidated preview; no Windows validation or support claim may be made without separate harness validation.
 ## Filesystem, locking, and transaction standards
 
 ### Paths, ownership, and staging

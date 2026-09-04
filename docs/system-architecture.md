@@ -1,8 +1,8 @@
 # System Architecture
 
 **Last Updated**: 2026-09-04  
-**Project**: EVCrate  
-**Status**: Phase 1 sealed private unpack artifact, release contract, and runtime closure complete; Linux installer pending (Phase 2)
+**Project**: EVCrate
+**Status**: Private Registry-Free Unpack Distribution complete (Linux end-to-end verified; Windows validation deferred)
 
 ## Scope
 
@@ -214,11 +214,9 @@ rollout, live vendor qualification, npm publication, deployment behavior, and
 `main` merge remain outside this phase.
 
 
-## Private unpack distribution boundary (Phase 1 sealed artifact complete)
+## Private unpack distribution boundary (Phase 4 complete: Linux verified, Windows deferred)
 
-Phase 1 sealed artifact packaging, metadata schemas, and zero-external-dependency
-runtime closure are implemented and verified. Linux and Windows installers remain
-for Phases 2 and 3.
+Phase 1 sealed artifact packaging, metadata schemas, zero-external-dependency runtime closure, Phase 2 Linux unpack installer lifecycle, Phase 3 Windows PowerShell installer (validation deferred), and Phase 4 private GitHub Release cutover and Linux verification are implemented and verified end to end on Linux x64.
 
 Public npm is not a distribution authority for the private repository. Release
 CI will derive one sealed payload from the existing packed-package allow-list and

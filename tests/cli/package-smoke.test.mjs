@@ -45,7 +45,7 @@ test('package metadata includes the CLI, declarations, and required runtime asse
   assert.equal(packageMetadata.dependencies, undefined, 'Package must declare zero production dependencies');
 });
 
-test('importing the public package has no process or output side effect', () => {
+test('importing the sealed package entrypoint has no process or output side effect', () => {
   const result = spawnSync(process.execPath, ['-e', "require('./dist/index.js')"], {
     cwd: packageRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']
   });

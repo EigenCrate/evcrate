@@ -96,45 +96,75 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - Operating Systems: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
 - Hardware: 4GB+ RAM
 
-### Quick Start via npm (Recommended)
+### Quick Start via Private Release Assets (Recommended)
 
-1. **Install EVCrate globally** (or run on demand with `npx evcrate`):
-   ```bash
-   npm install -g evcrate
-   ```
+EVCrate is distributed as a sealed, registry-free archive via private GitHub Releases. No public npm registry access or elevation (`sudo`) is required.
 
-2. **Publish coding agent harnesses to your environment**:
-   ```bash
-   # Preview the publication operations
-   evcrate publish --dry-run
+#### 1. Download Release Assets
 
-   # Install coding agent harnesses (Claude, Copilot, OMP, Pi, Gemini, Codex) into $HOME
-   evcrate publish --apply
-   ```
+Download the complete matching platform asset set from the private GitHub Release into a clean local directory:
 
-3. **Verify setup & diagnostic health**:
-   ```bash
-   evcrate health
-   ```
+**Linux (x64)**:
+- `install.sh`
+- `evcrate-v<VERSION>-linux-x64.tar.gz`
+- `evcrate-v<VERSION>-linux-x64.tar.gz.sha256`
+- `evcrate-v<VERSION>.release.json`
 
-4. **Start development with your preferred agent**:
-   ```bash
-   # Begin with Claude Code
-   claude
+**Windows (x64)** *(Validation Deferred — attached as unvalidated preview; no Windows support claim)*:
+- `install.ps1`
+- `evcrate-v<VERSION>-windows-x64.zip`
+- `evcrate-v<VERSION>-windows-x64.zip.sha256`
+- `evcrate-v<VERSION>.release.json`
 
-   # Or use the personal GitHub Copilot CLI target
-   copilot
+#### 2. Run the Installer
 
-   # Or use OMP (OpenCode) or Pi
-   omp
-   pi
+From the directory containing the downloaded assets, run the adjacent installer script:
 
-   # Slash commands are immediately available in your coding agent sessions:
-   /plan "implement user authentication"
-   /cook "add database integration"
-   /test
-   /review
-   ```
+```bash
+# Linux
+chmod +x install.sh
+./install.sh
+```
+
+```powershell
+# Windows (PowerShell) - Preview / Validation Deferred
+.\install.ps1
+```
+
+**Installer Characteristics**:
+- **Zero npm / Network**: The installer executes offline using local assets and Node.js (>=22.19.0). It never contacts npm or GitHub.
+- **User-Owned Scopes**: Installed under user XDG roots (`~/.local/share/evcrate`, `~/.local/state/evcrate`, `~/.local/bin`). No root or `sudo` needed.
+- **PATH Configuration**: Ensure `~/.local/bin` is in your `PATH`:
+  ```bash
+  export PATH="$HOME/.local/bin:$PATH"
+  ```
+- **CLI Only**: The installer stops after committing the verified CLI snapshot and launcher. It never automatically modifies your shell startup or publishes harnesses into `$HOME`.
+
+#### 3. Publish Coding Agent Harnesses (Operator Step)
+
+Harness publication is an explicit, separate operator action:
+
+```bash
+# Preview the planned publication operations
+evcrate publish --dry-run
+
+# Publish coding agent harnesses (Claude, Copilot, OMP, Pi, Gemini, Codex) into $HOME
+evcrate publish --apply
+```
+
+#### 4. Verify Setup & Diagnostic Health
+
+```bash
+evcrate version
+evcrate health
+```
+
+#### 5. Lifecycle Management
+
+- **Upgrade**: Download the new release asset set into a new directory and run adjacent `./install.sh`. Upgrades use **Replace with backup** — the new snapshot starts clean from shipped assets; previous snapshots and user-local mutations are retained at the reported backup path.
+- **Repair**: `./install.sh repair` (re-verifies and re-establishes clean snapshot state).
+- **Rollback**: `./install.sh rollback <snapshot-id>` (switches current pointer back to a retained backup).
+- **Uninstall**: `./install.sh uninstall` (safely removes installer-owned snapshots, state, and launcher; never touches pre-existing target HOME files or advisor policy).
 
 ### Control-Plane CLI Command Reference
 

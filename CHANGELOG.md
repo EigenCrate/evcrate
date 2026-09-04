@@ -1,28 +1,16 @@
 ## Unreleased
 
-**Updated:** 2026-09-02
-**Status:** Phase 8 atomic publication and recovery complete; release remains Unreleased
+**Updated:** 2026-09-04
+**Status:** Private Registry-Free Unpack Distribution complete (Linux end-to-end verified; Windows validation deferred)
 
 ### Features
 
-* **advisor:** ship global checkpoint routing with exact native/cross-host semantics, five fixed CLI adapters, strict evidence/path validation, and deterministic 19-file projections including executable per-harness bridges and secure native handoffs authorized by runtime/helper hashes; authenticated live calls and HOME publication remain separate operations.
-* **scout:** unify external CLI strategy rendering behind one canonical read-only source, with deterministic Codex/Gemini projections and exact fallback contracts.
-* **pi:** add native canonical lifecycle/tool hooks, scoped session context, and structured child-hook enrichment without `pi-code`.
-* **control-plane:** define bounded, versioned `evcrate-resource-control/v1` contracts for exactly seven persisted targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `copilot`, `omp`), the `agy` input alias, strict JSON/path validation, credential/counsel rejection, stable errors and exit bands, and typed CAS/recovery result shapes; Phase 7 extends dispatch with typed scope and change operations.
-* **adapters:** complete seven target-isolated, staging-only TypeScript projections (Claude, Gemini, Antigravity, Codex, Pi, OMP, Copilot) in confirmed parity order with 2,033 explicit Python delta records and no controller copies; `npm run test:phase5` passes **12/12** after a clean build. Python remains authoritative until per-target cutover; no HOME publication, live qualification, Python-free runtime, or `main` merge is claimed.
-* **registry:** add a schema-v1 canonical resource registry backed by one manifest-declared `resource_roots` map for five resource kinds, with bounded deterministic scans/queries, provenance, capabilities, and exhaustive seven-target compatibility records.
-* **imports:** add explicit `imports.preview|apply` with bounded source descriptors, approval-gated hook/script capabilities, non-mutating projection previews, owner-only single-use tokens, complete mode-aware CAS bindings, and atomic canonical-plus-registry promotion; unmanaged collisions fail closed without deletion.
-* **scopes:** add package-local global/project assignment state with deterministic inheritance, explicit disablement, target compatibility checks, revision-vector CAS, and typed `changes.preview|apply` tokens binding canonical/registry/manifest/adapter hashes, independent output-root hashes, expiry, replay, and recovery boundaries.
-* **advisor-settings:** define the typed `evcrate-advisor-settings/v1` `get`, `preview`, and `apply` contract with redacted views, digests, preview metadata, and CAS/recovery shapes; Phase 7 enables the frozen v1 complete-document request-file coordinator, while positional preview/apply remain behind that request-file boundary.
-* **advisor-diagnostic:** add qualification-only `evcrate-advisor-diagnostic/v1` requests for configured backend/version/auth/capability probes; the Phase 3 `health` bridge invokes only the packaged CommonJS controller diagnostic and rejects malformed, multi-line, stderr-bearing, or counsel-shaped output.
-* **cli:** publish the one-shot CommonJS `evcrate` executable at `dist/cli/evcrate.js` with `version`, `health`, `advisor settings get|preview|apply`, `distribute build|check|publish|all|recover`, and `--request-file`; it parses, resolves, dispatches, writes one result, and exits without a listener, retry, background process, or counsel proxy, using shell-free bounded process/request-file I/O with Linux-first `O_NOFOLLOW` final-component protection (no Windows security-equivalence claim).
-* **distribution:** keep Python authoritative for `build`, `check`, `publish`, `all`, and `recover`; invoke package-relative `python3 distribute.py` and pass the exact resolved state root through `EVCRATE_STATE_DIR`, with no migrator or Node fallback.
-* **package:** retain CommonJS exports and `evcrate-advisor`, add the `evcrate` bin, and pack generated JavaScript/declarations, the controller/target closure, Python distribution modules, and `distribute.py`; release preparation runs Python build/check before archiving.
-* **distribution:** add schema-2 manifest/build validation with contained, non-overlapping output roots, authorized patch source/key/destination checks, bounded build-manifest reads, and exact controller inventory/hash closure.
-* **filesystem:** add Python-compatible canonical JSON/SHA256 behavior, strict UTF-8/surrogate/depth/duplicate handling, owner/symlink/containment and same-volume safeguards, capability-backed staged roots, durable promotion journals/recovery, and source/destination pre-rename CAS.
-* **advisor-settings:** add owner-only policy-file staging, canonical bytes/mode/revision checks, bounded transaction journals, concurrent-replacement CAS, and durable recovery primitives behind the dedicated coordinator.
-* **locking:** add shared TypeScript/Python O_EXCL owner-only publication locking plus the TypeScript `scopes.lock` and `advisor-settings.lock` critical sections, bounded metadata, process-start checks, release identity checks, atomic stale-lock quarantine, and fail-closed release markers.
-
+* **distribution:** cut over to private registry-free archive distribution (`evcrate-v<version>-linux-x64.tar.gz` and `evcrate-v<version>-windows-x64.zip`) with SHA-256 sidecars and canonical release metadata; public npm publication, tokens, and OIDC provenance permissions are removed.
+* **installer:** add standalone Linux POSIX unpack installer (`install.sh`) supporting offline installation, upgrade with clean replace-with-backup semantics, same-version repair, explicit rollback, and safe uninstall without sudo, npm, or network access.
+* **installer:** add Windows PowerShell unpack installer (`install.ps1`) attached to private releases as an unvalidated preview; Windows runtime and harness validation remain deferred.
+* **security:** prove zero-network installation under Linux network namespace isolation (`unshare -rn`) with Node-only PATH and unreachable registry; assert package-root hash invariance across operator publication workflows and verify exact 17-file controller closure.
+* **workflow:** configure semantic-release and GitHub Actions for sealed multi-platform asset attachment, deterministic metadata binding, and verified Linux release gates without npm registry credentials.
+* **cli:** pure TypeScript control-plane CLI at `dist/cli/evcrate.js` with `version`, `health`, `advisor settings`, `distribute`, `publish`, and `recover`; zero external production dependencies and strict runtime closure.
 ### Phase 8: Atomic publication and recovery
 
 * **publication:** add TypeScript verified-build resolution and immutable

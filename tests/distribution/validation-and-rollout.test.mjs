@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import {
   ADVISOR_CONTROLLER_FILES,
@@ -22,27 +22,6 @@ import {
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
 const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
 
-function npmJson(args, cwd) {
-  const result = spawnSync('npm', [...args, '--json', '--ignore-scripts'], {
-    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
-  });
-  assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout.slice(result.stdout.indexOf('[')).trim());
-}
-
-function packPackage(destination) {
-  const output = npmJson(['pack', '--pack-destination', destination], packageRoot);
-  return join(destination, output[0].filename);
-}
-
-function installPackage(tarball, root) {
-  const result = spawnSync('npm', [
-    'install', '--prefix', root, '--no-audit', '--no-fund', '--ignore-scripts', tarball
-  ], {
-    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
-  });
-  assert.equal(result.status, 0, result.stderr);
-}
 
 test('consumer mode build resolution verifies outputs and controller closure without requiring authoring adapter sources', () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-val-home-'));
@@ -88,24 +67,35 @@ test('consumer mode verification fails closed if output projection is tampered',
   }
 });
 
-test('installed packed package runs publish dry-run and apply with zero package-root mutation', () => {
+test('installed registry-free unpacked snapshot runs publish dry-run and apply with zero package-root mutation', () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-val-rollout-'));
   const installRoot = join(root, 'install');
+  const dataDir = join(installRoot, 'data');
+  const stateDir = join(installRoot, 'state');
+  const binDir = join(installRoot, 'bin');
   const home = join(root, 'home');
   const state = join(root, 'state');
-  mkdirSync(installRoot); mkdirSync(home); mkdirSync(state);
+  mkdirSync(installRoot); mkdirSync(dataDir); mkdirSync(stateDir); mkdirSync(binDir); mkdirSync(home); mkdirSync(state);
 
   try {
-    const tarball = packPackage(root);
-    installPackage(tarball, installRoot);
+    const assetsDir = join(packageRoot, 'dist', 'release');
+    const installSh = join(assetsDir, 'install.sh');
+    const installResult = spawnSync('sh', [
+      installSh, '--data-dir', dataDir, '--state-dir', stateDir, '--bin-dir', binDir
+    ], {
+      cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000
+    });
+    assert.equal(installResult.status, 0, installResult.stderr);
 
-    const installedPackageDir = join(installRoot, 'node_modules', 'evcrate');
+    const currentLink = join(dataDir, 'current');
+    assert.ok(existsSync(currentLink));
+    const installedPackageDir = resolve(dataDir, readlinkSync(currentLink));
     assert.ok(existsSync(installedPackageDir));
 
     // Capture initial hash of installed package root
     const packageHashBefore = treeHash(installedPackageDir);
 
-    const cliPath = join(installRoot, 'node_modules', '.bin', 'evcrate');
+    const cliPath = join(binDir, 'evcrate');
 
     // 1. Dry run
     const dryRun = spawnSync(cliPath, [
