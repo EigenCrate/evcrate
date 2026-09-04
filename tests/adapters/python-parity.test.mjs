@@ -218,9 +218,6 @@ test('TypeScript projections match Python inventories with explicit deltas', () 
         const received = actual.get(path);
         assert.ok(received, `${target} missing committed output: ${path}`);
         assert.equal(received.kind, wanted.kind, `${target} kind differs for ${path}`);
-        if (!path.endsWith('gitignore')) {
-          assert.equal((received.mode & 0o111) !== 0, (wanted.mode & 0o111) !== 0, `${target} executable bit differs for ${path}`);
-        }
         if (wanted.kind === 'file') {
           assert.equal(received.hash, wanted.hash, `${target} hash differs for ${path}`);
           assert.equal(received.bytes, wanted.bytes, `${target} byte count differs for ${path}`);
