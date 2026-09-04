@@ -10,7 +10,6 @@ permissions:
   contents: write # to be able to publish a GitHub release
   issues: write # to be able to comment on released issues
   pull-requests: write # to be able to comment on released pull requests
-  id-token: write # to enable use of OIDC for npm provenance
 
 jobs:
   release:
@@ -55,6 +54,12 @@ jobs:
           npm run distribute:build
           npm run distribute:check
 
+      - name: Run distribution and release tests
+        run: |
+          npm run test:release
+          npm run test:installer:linux
+          npm run test:distribution:rollout
+
       - name: Verify publication smoke test
         env:
           EVCRATE_HOME: ${{ runner.temp }}/evcrate-test-home
@@ -68,5 +73,4 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm run semantic-release
