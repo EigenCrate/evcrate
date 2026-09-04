@@ -1,8 +1,8 @@
 # System Architecture
 
-**Last Updated**: 2026-09-02  
+**Last Updated**: 2026-09-04  
 **Project**: EVCrate  
-**Status**: Phase 10 TypeScript release packaging and per-target cutover complete; release remains Unreleased
+**Status**: Phase 1 sealed private unpack artifact, release contract, and runtime closure complete; Linux installer pending (Phase 2)
 
 ## Scope
 
@@ -41,6 +41,15 @@ flowchart LR
   Manifest --> Plan
   Compatibility[Explicit Python transition bridge] --> Python[python3 distribute.py]
   TargetRecovery --> Recovery[Idempotent rollback or commit finalization]
+
+  Build --> Sealed[Planned sealed release payload]
+  Sealed --> LinuxArchive[Private Linux tar.gz plus SHA-256]
+  Sealed --> WindowsArchive[Private Windows zip plus SHA-256]
+  LinuxArchive --> Installer[User-local unpack installer]
+  WindowsArchive --> Installer
+  Installer --> Installed[Versioned package snapshot and stable launcher]
+  Installed --> Operator[Explicit operator publish command]
+  Operator --> Apply
 
   Checkpoint[Direct checkpoint object] --> Controller[$HOME/.evcrate/bin/evcrate-advisor]
   Policy[Required advisor policy file] --> Controller
@@ -204,6 +213,73 @@ evidence covers the feature worktree and packed artifact contract; operator
 rollout, live vendor qualification, npm publication, deployment behavior, and
 `main` merge remain outside this phase.
 
+
+## Private unpack distribution boundary (Phase 1 sealed artifact complete)
+
+Phase 1 sealed artifact packaging, metadata schemas, and zero-external-dependency
+runtime closure are implemented and verified. Linux and Windows installers remain
+for Phases 2 and 3.
+
+Public npm is not a distribution authority for the private repository. Release
+CI will derive one sealed payload from the existing packed-package allow-list and
+verified TypeScript build, then emit a POSIX-mode-preserving Linux archive and a
+Windows ZIP from that same file inventory. Versioned release metadata and
+SHA-256 sidecars bind archive name, size, package version, source tag/commit,
+Node floor, file inventory, schema-2 build manifests, and the exact controller
+closure. Checksums detect corruption under the authenticated private GitHub
+Release channel; they are not a trust anchor against repository or workflow
+compromise.
+
+The consumer payload contains `package.json`, compiled `dist/**`, the authorized
+`.evcrate/**` runtime/build closure, and release notices. It contains no source
+plans, credentials, Python distribution/migrator trees, development dependencies,
+install-time scripts, or unresolved production dependency. The compiled runtime
+must use Node built-ins and relative package modules only; a future external
+runtime dependency requires an explicit sealed-dependency design rather than
+silent npm resolution.
+
+Release workflows build the complete asset sets. Authorized private-repository
+users download the matching platform archive, checksum, metadata, and installer
+from the tagged GitHub Release assets page before installation. Installers accept
+only adjacent verified assets or explicit local file paths; they have no GitHub,
+HTTP, repository/tag, URL, or credential acquisition mode. They never pipe remote
+script bytes into a shell, invoke `npm install`, or contact an npm registry. A
+source checkout is an authoring surface, not the consumer package builder or an
+offline-install claim.
+
+Linux installs versioned package snapshots under the XDG user data root, keeps
+installer lock/journal state under the XDG state root, atomically switches a
+`current` symlink, and exposes `evcrate` under `~/.local/bin` without editing
+shell startup files. Windows installs side-by-side snapshots under
+`%LOCALAPPDATA%\EVCrate`, uses no symlink, junction, elevation, Machine PATH, or
+execution-policy change, and exposes a stable `.cmd` plus Node launcher whose
+validated pointer selects the current version. A release archive is immutable,
+but an installed snapshot remains writable where existing resource import and
+scope operations intentionally mutate package-local canonical/registry/state
+paths.
+
+Archive extraction is bounded and fail-closed: reject absolute/traversal paths,
+links/reparse entries, special files, duplicates, case-fold collisions where
+applicable, unsupported names/modes, unexpected inventory, and digest or version
+mismatch before promotion. Upgrade does not merge package-local resource/import/
+scope state. It retains the prior complete installed snapshot as the explicit
+backup, reports that backup path, installs the new release from clean shipped
+state, and requires operator-directed rollback or separately validated manual
+restore. Same-version repair must not overwrite mutable package-local paths.
+Uninstall removes only installer-owned versions, launchers, pointer, and
+installer state; published target HOME trees, advisor policy, and publication
+recovery state remain because no inverse unpublish contract exists.
+
+Installation stops after committing the verified CLI snapshot, launcher, and
+installer journal. It never invokes target publication. The operator separately
+runs `evcrate publish --dry-run` and `evcrate publish --apply`; existing
+target-publication locking, CAS, journal, and recovery remain authoritative.
+Installer recovery therefore owns only stage/snapshot/pointer completion and
+never reads, rewrites, or infers target-publication state. Linux behavior is the
+first executable gate. The PowerShell installer and Windows archive are attached
+to private releases as explicitly unvalidated assets; Windows execution,
+ACL/reparse/case-fold/process-lock validation, and support remain a separate
+later harness gate.
 
 ## Ownership and component boundaries
 

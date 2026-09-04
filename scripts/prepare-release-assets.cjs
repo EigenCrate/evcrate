@@ -1,102 +1,170 @@
 #!/usr/bin/env node
+'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const { execFileSync } = require('child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
-/**
- * Generate metadata.json aligned with the package version and
- * bundle the release archive ahead of the semantic-release publish step.
- */
-(function main() {
-  const version = process.argv[2];
+const { MUTABLE_PATHS } = require('./release/release-contract.cjs');
+const { validateRuntimeClosure } = require('./release/runtime-closure.cjs');
+const { buildReleaseArchives } = require('./release/archive-writers.cjs');
+const {
+  collectPackInventory,
+  collectBuildManifestDigests,
+  collectControllerClosureDigest,
+  getInstallerEntry
+} = require('./release/pack-inventory.cjs');
 
-  if (!version) {
-    console.error('✗ Missing required version argument for prepare-release-assets');
-    process.exit(1);
+function parseCliArgs(argv) {
+  let version = null;
+  let tag = null;
+  let commit = null;
+  let allowFixtureIdentity = false;
+
+  for (let i = 2; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--tag') {
+      tag = argv[++i];
+    } else if (arg.startsWith('--tag=')) {
+      tag = arg.slice(6);
+    } else if (arg === '--commit') {
+      commit = argv[++i];
+    } else if (arg.startsWith('--commit=')) {
+      commit = arg.slice(9);
+    } else if (arg === '--allow-fixture-identity') {
+      allowFixtureIdentity = true;
+    } else if (!arg.startsWith('-') && !version) {
+      version = arg;
+    }
   }
 
-  const projectRoot = process.cwd();
-  const packageJsonPath = path.join(projectRoot, 'package.json');
-  const sourceRoot = path.join(projectRoot, '.evcrate', 'source');
-  const claudeDir = path.join(sourceRoot, '.claude');
-  const metadataPath = path.join(claudeDir, 'metadata.json');
-  const distDir = path.join(projectRoot, 'dist');
-  const archivePath = path.join(distDir, 'evcrate.zip');
+  if (!version) {
+    throw new Error('Missing required version argument');
+  }
 
+  tag = tag || `v${version}`;
+  return { version, tag, commit, allowFixtureIdentity };
+}
+
+function resolveReleaseIdentity(projectRoot, passedCommit, allowFixtureIdentity) {
+  const isTest = allowFixtureIdentity || process.env.NODE_ENV === 'test';
+  let gitCommit;
   try {
-    if (!fs.existsSync(packageJsonPath)) {
-      throw new Error('package.json not found');
+    gitCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: projectRoot, encoding: 'utf8' }).trim();
+  } catch {
+    if (!isTest || !passedCommit) {
+      throw new Error('Failed to resolve git HEAD commit and not in authorized test fixture mode');
     }
+  }
 
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  if (passedCommit && passedCommit !== gitCommit && !isTest) {
+    throw new Error(`Arbitrary commit override "${passedCommit}" rejected in release mode (matches neither HEAD nor test gate)`);
+  }
 
-    if (packageJson.version !== version) {
-      console.warn(
-        `⚠️ package.json version (${packageJson.version}) does not match semantic-release version (${version}).`
-      );
+  const effectiveCommit = passedCommit || gitCommit;
+  if (!/^[a-f0-9]{40}$/u.test(effectiveCommit)) {
+    throw new Error(`Resolved commit SHA is invalid: ${effectiveCommit}`);
+  }
+
+  if (!isTest) {
+    const status = execFileSync('git', ['status', '--porcelain'], { cwd: projectRoot, encoding: 'utf8' }).trim();
+    if (status.length > 0) {
+      throw new Error('Dirty working tree detected; release mode requires a clean commit');
     }
+  }
 
-    const requiredFields = ['name', 'description', 'repository'];
-    const missingFields = requiredFields.filter((field) => !packageJson[field]);
+  return effectiveCommit;
+}
 
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields in package.json: ${missingFields.join(', ')}`);
-    }
+function main() {
+  const projectRoot = path.resolve(__dirname, '..');
+  const { version, tag, commit: rawCommit, allowFixtureIdentity } = parseCliArgs(process.argv);
 
-    if (!fs.existsSync(claudeDir)) {
-      fs.mkdirSync(claudeDir, { recursive: true });
-    }
+  const packageJsonPath = path.join(projectRoot, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  if (pkg.version !== version) {
+    throw new Error(`Version mismatch: package.json has ${pkg.version}, argument has ${version}`);
+  }
+  if (tag !== `v${version}`) {
+    throw new Error(`Tag "${tag}" does not match package version "v${version}"`);
+  }
 
-    const metadata = {
-      version: packageJson.version,
-      name: packageJson.name,
-      description: packageJson.description,
-      buildDate: new Date().toISOString(),
-      repository: packageJson.repository,
-      download: {
-        lastDownloadedAt: null,
-        downloadedBy: null,
-        installCount: 0,
+  const commit = resolveReleaseIdentity(projectRoot, rawCommit, allowFixtureIdentity);
+
+  // 1. Build and verify targets upfront
+  console.log('Running build and distribution checks...');
+  execFileSync('npm', ['run', 'build'], { cwd: projectRoot, stdio: 'inherit' });
+  execFileSync('npm', ['run', 'distribute:check'], { cwd: projectRoot, stdio: 'inherit' });
+
+  // 2. Verify runtime closure on fresh build
+  console.log('Validating runtime closure...');
+  validateRuntimeClosure(projectRoot);
+
+  // 3. Collect verified build and controller digests
+  const buildManifestDigests = collectBuildManifestDigests(projectRoot);
+  const controllerClosureDigest = collectControllerClosureDigest(projectRoot);
+
+  // 4. Standalone installer entrypoints (authored in Phases 2 and 3)
+  const installSh = getInstallerEntry(projectRoot, 'install.sh');
+  const installPs1 = getInstallerEntry(projectRoot, 'install.ps1');
+
+  // 5. Collect sealed package inventory
+  console.log('Collecting sealed package inventory...');
+  const records = collectPackInventory(projectRoot);
+
+  // 6. Output directory
+  const releaseDir = path.join(projectRoot, 'dist', 'release');
+
+  // 7. Build archives, sidecars, metadata, and stage installers in one atomic transaction
+  console.log(`Building release archives for v${version}...`);
+  const result = buildReleaseArchives({
+    records,
+    installers: [installSh, installPs1],
+    outputDir: releaseDir,
+    version,
+    metadataGenerator: ({ inventoryDigest, platforms }) => ({
+      schema: 'evcrate-private-release/v1',
+      version,
+      tag,
+      source_commit: commit,
+      node_floor: pkg.engines?.node || '>=22.19.0',
+      inventory_digest: inventoryDigest,
+      build_manifest_digests: buildManifestDigests,
+      controller_closure_digest: controllerClosureDigest,
+      platforms,
+      installers: {
+        'install.sh': {
+          name: installSh.name,
+          size: installSh.size,
+          sha256: installSh.sha256
+        },
+        'install.ps1': {
+          name: installPs1.name,
+          size: installPs1.size,
+          sha256: installPs1.sha256
+        }
       },
-    };
+      mutable_paths: MUTABLE_PATHS
+    })
+  });
 
-    fs.writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, 'utf8');
-    console.log(`✓ Generated metadata.json with version ${metadata.version}`);
+  console.log(`✓ Successfully prepared sealed release assets in ${releaseDir}`);
+  console.log(`  Linux archive: ${result.platforms['linux-x64'].archive_name} (${result.platforms['linux-x64'].size} bytes)`);
+  console.log(`  Windows archive: ${result.platforms['windows-x64'].archive_name} (${result.platforms['windows-x64'].size} bytes)`);
+  console.log(`  Inventory digest: ${result.inventoryDigest}`);
+}
 
-    if (!fs.existsSync(distDir)) {
-      fs.mkdirSync(distDir, { recursive: true });
-    }
-
-    if (fs.existsSync(archivePath)) {
-      fs.unlinkSync(archivePath);
-    }
-
-    console.log('🔄 Building and verifying release artifacts...');
-    execFileSync('python3', ['distribute.py', '--build'], { cwd: projectRoot, stdio: 'inherit' });
-    execFileSync('python3', ['distribute.py', '--check'], { cwd: projectRoot, stdio: 'inherit' });
-
-    const archiveTargets = [
-      '.evcrate/source/.gemini',
-      '.evcrate/source/.codex',
-      '.evcrate/source/.agents',
-      '.evcrate/source/.antigravity',
-      '.evcrate/source/AGENTS.md',
-      '.evcrate/source/GEMINI.md',
-      '.evcrate/build-manifest.json',
-      '.evcrate/targets'
-    ];
-
-    const existingTargets = archiveTargets.filter((target) => fs.existsSync(path.join(projectRoot, target)));
-
-    if (existingTargets.length === 0) {
-      throw new Error('No release assets found to include in archive.');
-    }
-
-    execFileSync('zip', ['-r', archivePath, ...existingTargets], { cwd: projectRoot, stdio: 'inherit' });
-    console.log(`✓ Prepared ${archivePath}`);
+if (require.main === module) {
+  try {
+    main();
   } catch (error) {
     console.error(`✗ Failed to prepare release assets: ${error.message}`);
     process.exit(1);
   }
-})();
+}
+
+module.exports = {
+  main,
+  parseCliArgs,
+  resolveReleaseIdentity
+};

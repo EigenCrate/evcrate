@@ -39,6 +39,10 @@ test('package metadata includes the CLI, declarations, and required runtime asse
     '.evcrate/source/.evcrate/bin/evcrate-advisor', '.evcrate/targets/manifest.json'
   ]) assert.ok(files.includes(expected) || files.some((file) => file.startsWith(expected)), expected);
   assert.equal(files.some((f) => f.startsWith('distribution/') || f.startsWith('distribute.py')), false);
+  assert.equal(files.some((f) => f.startsWith('plans/')), false, 'Packaged artifact must not contain plans/');
+  assert.equal(packageMetadata.private, true, 'Package must be marked private: true');
+  assert.equal(packageMetadata.publishConfig, undefined, 'Package must not declare publishConfig');
+  assert.equal(packageMetadata.dependencies, undefined, 'Package must declare zero production dependencies');
 });
 
 test('importing the public package has no process or output side effect', () => {

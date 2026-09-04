@@ -73,7 +73,8 @@ or unverified deployment behavior.
 │   ├── scopes/                          # assignments, inheritance, revisions, CAS
 │   ├── imports/                         # bounded preview/apply and token state
 │   └── errors/                          # stable error serialization and exits
-├── scripts/                             # controller inventory and build-manifest generation
+├── scripts/                             # controller inventory, build-manifest, and private release generators
+│   └── release/                         # sealed archives, contract schemas, runtime closure validation
 ├── distribution/                        # Python compatibility/transition authority
 ├── copilot_adapter/                     # staging-only legacy reference
 ├── omp_adapter/                         # staging-only legacy reference
