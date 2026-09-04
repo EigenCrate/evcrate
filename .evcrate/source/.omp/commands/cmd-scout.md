@@ -1,7 +1,8 @@
 ---
-description: ⚡⚡ Scout given directories to respond to the user's requests
-argument-hint: [user-prompt] [scale]
+argument-hint: "[user-prompt] [scale]"
+description: "⚡⚡ Scout given directories to respond to the user's requests"
 ---
+
 
 ## Purpose
 

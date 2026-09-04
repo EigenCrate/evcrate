@@ -1,7 +1,8 @@
 ---
-description: Create an immersive design
-argument-hint: [tasks]
+argument-hint: "[tasks]"
+description: "Create an immersive design"
 ---
+
 
 Think hard to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <tasks>$ARGUMENTS</tasks>

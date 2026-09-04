@@ -1,7 +1,8 @@
 ---
-description: ⚡⚡⚡ Research, analyze, and create an implementation plan
-argument-hint: [task]
+argument-hint: "[task]"
+description: "⚡⚡⚡ Research, analyze, and create an implementation plan"
 ---
+
 
 Think harder.
 Activate `planning` skill.

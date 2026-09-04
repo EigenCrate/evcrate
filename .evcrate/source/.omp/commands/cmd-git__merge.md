@@ -1,7 +1,8 @@
 ---
-description: ⚠️ Merge code from one branch to another
-argument-hint: [branch] [from-branch]
+argument-hint: "[branch] [from-branch]"
+description: "⚠️ Merge code from one branch to another"
 ---
+
 
 ## Variables
 

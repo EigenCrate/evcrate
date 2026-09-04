@@ -1,7 +1,8 @@
 ---
-description: Write creative & smart copy [FAST]
-argument-hint: [user-request]
+argument-hint: "[user-request]"
+description: "Write creative & smart copy [FAST]"
 ---
+
 
 Write creative & smart copy for this user request:
 <user_request>$ARGUMENTS</user_request>

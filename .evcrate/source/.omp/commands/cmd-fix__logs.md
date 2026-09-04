@@ -1,7 +1,8 @@
 ---
-description: ⚡ Analyze logs and fix issues
-argument-hint: [issue] [--advice]
+argument-hint: "[issue] [--advice]"
+description: "⚡ Analyze logs and fix issues"
 ---
+
 
 **IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
 

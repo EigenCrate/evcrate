@@ -1,7 +1,8 @@
 ---
-description: ⚡⚡⚡⚡⚡ Bootstrap project with parallel execution
-argument-hint: [user-requirements] [--advice]
+argument-hint: "[user-requirements] [--advice]"
+description: "⚡⚡⚡⚡⚡ Bootstrap project with parallel execution"
 ---
+
 
 **Ultrathink parallel** raw input: <raw-user-requirements>$ARGUMENTS</raw-user-requirements>
 

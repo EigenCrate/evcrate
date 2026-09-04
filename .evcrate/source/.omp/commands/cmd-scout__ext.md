@@ -1,7 +1,8 @@
 ---
-description: ⚡ Use external agentic tools to scout given directories
-argument-hint: [user-prompt] [scale]
+argument-hint: "[user-prompt] [scale]"
+description: "⚡ Use external agentic tools to scout given directories"
 ---
+
 
 ## Purpose
 

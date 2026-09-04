@@ -1,7 +1,8 @@
 ---
-description: Create a CRO plan for the given content
-argument-hint: [issues]
+argument-hint: "[issues]"
+description: "Create a CRO plan for the given content"
 ---
+
 
 You are an expert in conversion optimization. Analyze the content based on the given issues:
 <issues>$ARGUMENTS</issues>
