@@ -20,6 +20,7 @@ import {
 } from '../../dist/index.js';
 
 const packageRoot = process.cwd();
+const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
 
 test('all seven persisted targets have completed cutover gate receipts', () => {
   const receipts = getAllTargetGateReceipts();
@@ -104,6 +105,9 @@ test('packaged artifact allowlist is Python-free and contains required runtime a
   const jsonEnd = packOutput.lastIndexOf(']');
   const [packMeta] = JSON.parse(packOutput.slice(jsonStart, jsonEnd + 1));
   assert.ok(packMeta.files && Array.isArray(packMeta.files));
+  assert.equal(packageMetadata.private, true, 'Package must be private: true');
+  assert.equal(packageMetadata.publishConfig, undefined, 'Package must not declare publishConfig');
+  assert.equal(packageMetadata.dependencies, undefined, 'Package must declare zero production dependencies');
 
   const files = packMeta.files.map((f) => f.path);
 
@@ -119,6 +123,8 @@ test('packaged artifact allowlist is Python-free and contains required runtime a
     f.endsWith('.pyc')
   );
   assert.deepEqual(distributionPythonFiles, [], 'Packaged artifact must contain no distribution/migrator Python files or bytecode');
+  assert.equal(files.some((f) => f.startsWith('plans/')), false, 'Packaged artifact must not contain plans/');
+  assert.equal(files.some((f) => f.startsWith('tests/')), false, 'Packaged artifact must not contain tests/');
 
   // Assert compiled JS is present
   const jsFiles = files.filter((f) => f.startsWith('dist/'));
