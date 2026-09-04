@@ -80,6 +80,14 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
   try {
     const assetsDir = join(packageRoot, 'dist', 'release');
     const installSh = join(assetsDir, 'install.sh');
+    if (!existsSync(installSh)) {
+      const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+      spawnSync(process.execPath, [
+        join(packageRoot, 'scripts', 'prepare-release-assets.cjs'),
+        pkg.version,
+        '--allow-fixture-identity'
+      ], { cwd: packageRoot, stdio: 'ignore' });
+    }
     const installResult = spawnSync('sh', [
       installSh, '--data-dir', dataDir, '--state-dir', stateDir, '--bin-dir', binDir
     ], {
