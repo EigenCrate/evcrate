@@ -96,7 +96,61 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 - Operating Systems: macOS 10.15+, Ubuntu 20.04+/Debian 10+, or Windows 10+ (with WSL 1, WSL 2, or Git for Windows)
 - Hardware: 4GB+ RAM
 
-### Set up an EVCrate project with the external ClaudeKit CLI
+### Quick Start via npm (Recommended)
+
+1. **Install EVCrate globally** (or run on demand with `npx evcrate`):
+   ```bash
+   npm install -g evcrate
+   ```
+
+2. **Publish coding agent harnesses to your environment**:
+   ```bash
+   # Preview the publication operations
+   evcrate publish --dry-run
+
+   # Install coding agent harnesses (Claude, Copilot, OMP, Pi, Gemini, Codex) into $HOME
+   evcrate publish --apply
+   ```
+
+3. **Verify setup & diagnostic health**:
+   ```bash
+   evcrate health
+   ```
+
+4. **Start development with your preferred agent**:
+   ```bash
+   # Begin with Claude Code
+   claude
+
+   # Or use the personal GitHub Copilot CLI target
+   copilot
+
+   # Or use OMP (OpenCode) or Pi
+   omp
+   pi
+
+   # Slash commands are immediately available in your coding agent sessions:
+   /plan "implement user authentication"
+   /cook "add database integration"
+   /test
+   /review
+   ```
+
+### Control-Plane CLI Command Reference
+
+| Command | Description |
+|---|---|
+| `evcrate publish --apply` | Publish pre-built coding agent harnesses into `$HOME` (`~/.claude`, `~/.copilot`, `~/.omp`, etc.) |
+| `evcrate publish --dry-run` | Preview planned publication operations without modifying the filesystem |
+| `evcrate health` | Run the qualification diagnostic (verifies controller closure and active backend) |
+| `evcrate version` | Display current EVCrate version |
+| `evcrate recover` | Rollback or recover from an interrupted publication transaction |
+| `evcrate resources list` | List available skills, workflows, agents, hooks, and commands |
+| `evcrate scopes list` | Inspect global and project-level resource scopes |
+| `evcrate advisor settings get` | View current advisor routing policy |
+| `evcrate advisor settings apply` | Atomically apply updated advisor configuration |
+
+### Alternative: Set up with the external ClaudeKit CLI
 
 1. **Install the external ClaudeKit CLI**:
    ```bash
@@ -112,18 +166,6 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
    ```bash
    cd /path/to/project
    ck update --kit engineer
-   ```
-
-3. **Start development**:
-   ```bash
-   # Begin with Claude Code
-   claude
-   # Or use the personal GitHub Copilot CLI target
-   copilot
-
-   # now you can use these specific commands
-   /plan "implement user authentication"
-   /cook "add database integration"
    ```
 
 📖 **Learn more from our docs:** [https://docs.evcrate.cloud](https://docs.evcrate.cloud)
@@ -143,9 +185,10 @@ The ClaudeKit repositories and CLI below are external compatibility dependencies
 │   ├── CLAUDE.md           # Canonical instructions
 │   ├── AGENTS.md           # Generated Codex instructions
 │   ├── GEMINI.md           # Generated Gemini instructions
-├── .evcrate/bin/          # Central managed advisor controller source
+│   └── .evcrate/bin/       # Central managed advisor controller source
 ├── .evcrate/targets/       # Logical target manifests and overlays
-├── distribution/           # Build, check, and HOME publication code
+├── dist/                   # Compiled TypeScript control-plane CLI and adapters
+├── src/                    # Control-plane CLI and projection adapter source code
 ├── docs/                   # Project documentation
 ├── plans/                  # Implementation plans and reports
 ├── README.md               # This file
