@@ -85,6 +85,7 @@ or unverified deployment behavior.
 ├── guide/                               # command and skill references
 ├── distribute.py                        # explicit Python compatibility entrypoint
 ├── install.sh                           # standalone Linux unpack installer and lifecycle entrypoint
+├── install.ps1                          # standalone Windows PowerShell unpack installer (validation deferred)
 ├── package.json                         # CommonJS package, bins, scripts, and packed closure
 └── CHANGELOG.md                         # repository changelog
 ```

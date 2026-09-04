@@ -198,10 +198,10 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 
 ### Private Registry-Free Unpack Distribution
 
-**Overall progress:** 50% (2 of 4 phases complete; Phase 2 Linux installer and lifecycle complete 2026-09-04).
+**Overall progress:** 75% (3 of 4 phases complete; Phase 3 Windows PowerShell installer implemented 2026-09-04).
 - ✅ Phase 1 sealed artifact, release contract, and runtime closure complete (2026-09-04; [Phase 1 plan](../plans/260904-1526-private-unpack-installers/phase-01-sealed-artifact-and-runtime-closure.md)): sorted, sealed archive inventory, `evcrate-vV-linux-x64.tar.gz` and `evcrate-vV-windows-x64.zip`, versioned metadata and SHA-256 sidecars; runtime closure has zero external production dependencies.
 - ✅ Phase 2 Linux installer and lifecycle complete (2026-09-04; [Phase 2 plan](../plans/260904-1526-private-unpack-installers/phase-02-linux-installer-lifecycle.md)): standalone root/release POSIX `./install.sh` with safe tar extraction, adjacent/explicit local asset acquisition, replace-with-backup upgrades, pointer journal, generation management, rollback, repair, and preserving uninstall. Validated with 15/15 installer tests and 283/283 aggregate tests; code review 10/10; advisor approved.
-- 📋 Phase 3 Windows PowerShell installer pending (validation deferred).
+- ✅ Phase 3 Windows PowerShell installer implemented (2026-09-04; [Phase 3 plan](../plans/260904-1526-private-unpack-installers/phase-03-windows-powershell-installer.md)): standalone root/release `install.ps1` with safe ZipArchive two-pass extraction, reparse/case/DOS device/ADS defenses, atomic `current.json` pointer replacement, stable `bin\evcrate.cmd` and `bin\launcher.cjs` shims, User PATH management, and full replace-with-backup lifecycle; code review 9.5/10; advisor approved; Windows runtime/harness validation explicitly deferred.
 - 📋 Phase 4 private release cutover, Linux proof, and cleanup pending.
 ### OMP Command Namespace Prefix
 - 🔄 Phase 01 map/translate complete (**100%**); parent plan **43%** overall. Review **9.5/10** approved, focused validation and build/check passed.
