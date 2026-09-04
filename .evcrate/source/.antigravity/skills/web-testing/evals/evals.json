@@ -1,0 +1,23 @@
+{
+  "skill_name": "web-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We just changed the checkout modal in a React app. Add the testing gate so a release cannot ship if the submit button is not clickable, Escape/focus handling is broken, or the dialog has obvious WCAG issues. The project already uses Playwright and Vitest.",
+      "expected_output": "A browser-focused testing plan or implementation that uses Playwright role/name selectors before test IDs, validates clickability and modal keyboard/focus behavior, includes an axe/WCAG check, runs or names the relevant commands, and reports evidence/artifacts.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Our Playwright suite flakes on CI. I found waitForTimeout in a login spec, a CSS selector for the submit button, and a test that waits for an API call but never checks the rendered UI. Refactor the test approach and explain the release gate evidence you would expect before merging.",
+      "expected_output": "A flake-focused repair plan or patch that removes hard waits, replaces weak selectors with user-facing locators, uses web-first UI assertions or expect.poll/toPass for async readiness, keeps retry policy controlled, and names trace/video/screenshot artifacts only for failures or first retry.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Create a CI web release gate for a Vite dashboard before launch. We need unit/integration coverage, real browser coverage, accessibility checks, Core Web Vitals/Lighthouse budget, visual regression for charts, and a lightweight load smoke for the dashboard API.",
+      "expected_output": "A CI-oriented gate design that composes Vitest, Playwright E2E or component tests, axe/WCAG checks, Lighthouse/Core Web Vitals budgets, visual screenshots for layout drift, k6 smoke thresholds, sharding or artifact policy for larger suites, and a clear pass/fail release report.",
+      "files": []
+    }
+  ]
+}
