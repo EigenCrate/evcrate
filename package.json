@@ -48,7 +48,8 @@
     "prepack": "npm run build && node scripts/generate-resource-registry.mjs",
     "release:check": "node -e \"require('./scripts/release/runtime-closure.cjs').validateRuntimeClosure(process.cwd())\"",
     "release:prepare": "node scripts/prepare-release-assets.cjs",
-    "test:release": "npm run build && node --test tests/distribution/private-release-artifacts.test.mjs"
+    "test:release": "npm run build && node --test tests/distribution/private-release-artifacts.test.mjs",
+    "test:installer:linux": "npm run build && node --test tests/installers/*.test.mjs"
   },
   "repository": {
     "type": "git",

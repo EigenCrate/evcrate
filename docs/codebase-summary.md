@@ -84,6 +84,7 @@ or unverified deployment behavior.
 ├── docs/                                # maintained technical documentation
 ├── guide/                               # command and skill references
 ├── distribute.py                        # explicit Python compatibility entrypoint
+├── install.sh                           # standalone Linux unpack installer and lifecycle entrypoint
 ├── package.json                         # CommonJS package, bins, scripts, and packed closure
 └── CHANGELOG.md                         # repository changelog
 ```

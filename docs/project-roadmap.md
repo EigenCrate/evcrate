@@ -195,6 +195,14 @@ See [Native Pi migration](./pi-native-migration.md) for the implemented boundary
 - ✅ Phase 10 release, per-target cutover, and cleanup complete (2026-09-02; [Phase 10 plan](../plans/260827-2218-typescript-control-plane-cli/phase-10-release-and-cleanup.md)): all seven persisted targets select TypeScript by default with parity/closure receipts; mixed-engine atomic transactions fail closed; the exact 17-file controller closure remains singleton; the packed artifact allow-list is Python-free.
 - Validation: `npm run test:phase10` passed **8/8**; local build/check plus version, advisor-settings, and publication dry-run smoke pass without Python.
 
+
+### Private Registry-Free Unpack Distribution
+
+**Overall progress:** 50% (2 of 4 phases complete; Phase 2 Linux installer and lifecycle complete 2026-09-04).
+- ✅ Phase 1 sealed artifact, release contract, and runtime closure complete (2026-09-04; [Phase 1 plan](../plans/260904-1526-private-unpack-installers/phase-01-sealed-artifact-and-runtime-closure.md)): sorted, sealed archive inventory, `evcrate-vV-linux-x64.tar.gz` and `evcrate-vV-windows-x64.zip`, versioned metadata and SHA-256 sidecars; runtime closure has zero external production dependencies.
+- ✅ Phase 2 Linux installer and lifecycle complete (2026-09-04; [Phase 2 plan](../plans/260904-1526-private-unpack-installers/phase-02-linux-installer-lifecycle.md)): standalone root/release POSIX `./install.sh` with safe tar extraction, adjacent/explicit local asset acquisition, replace-with-backup upgrades, pointer journal, generation management, rollback, repair, and preserving uninstall. Validated with 15/15 installer tests and 283/283 aggregate tests; code review 10/10; advisor approved.
+- 📋 Phase 3 Windows PowerShell installer pending (validation deferred).
+- 📋 Phase 4 private release cutover, Linux proof, and cleanup pending.
 ### OMP Command Namespace Prefix
 - 🔄 Phase 01 map/translate complete (**100%**); parent plan **43%** overall. Review **9.5/10** approved, focused validation and build/check passed.
 - 📋 Phase 02 regeneration/documentation and Phase 03 contract verification pending. No HOME publication.
