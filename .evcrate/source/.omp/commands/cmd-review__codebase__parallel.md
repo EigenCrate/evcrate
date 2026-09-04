@@ -1,6 +1,6 @@
 ---
 argument-hint: "[scope-or-prompt]"
-description: "⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers"
+description: "Ultrathink edge cases, then parallel verify with code-reviewers"
 ---
 
 

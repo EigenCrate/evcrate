@@ -2,7 +2,7 @@
 
 **Use when:** llms.txt not available on context7.com or official site
 
-**Speed:**  Slower (5-10min)
+**Speed:** Slower (5-10min)
 **Token usage:** 🔴 High
 **Accuracy:** 🔍 Code-based
 

@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-plan-hard"
-description: "⚡⚡⚡ Research, analyze, and create an implementation plan"
+description: "Research, analyze, and create an implementation plan"
 argument-hint: "[task]"
 user-invocable: true
 disable-model-invocation: true

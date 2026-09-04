@@ -1,6 +1,6 @@
 ---
 argument-hint: "[tasks] [--advice]"
-description: "⚡⚡ Implement a feature automatically with plan and quality gates"
+description: "Implement a feature automatically with plan and quality gates"
 ---
 
 

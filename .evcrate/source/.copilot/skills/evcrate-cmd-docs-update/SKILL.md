@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-docs-update"
-description: "⚡⚡⚡ Analyze the codebase and update documentation"
+description: "Analyze the codebase and update documentation"
 argument-hint: ""
 user-invocable: true
 disable-model-invocation: true

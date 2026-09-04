@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-bootstrap-auto"
-description: "⚡⚡⚡⚡ Bootstrap a new project automatically"
+description: "Bootstrap a new project automatically"
 argument-hint: "[user-requirements] [--advice]"
 user-invocable: true
 disable-model-invocation: true

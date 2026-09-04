@@ -1,15 +1,15 @@
 ---
 name: cmd_code
-description: ⚡⚡⚡ Start coding & testing an existing plan
+description: Start coding & testing an existing plan
 ---
 # cmd_code
 
 Command Path: /code
 
-Description: ⚡⚡⚡ Start coding & testing an existing plan
+Description: Start coding & testing an existing plan
 
 ---
-description: ⚡⚡⚡ Start coding & testing an existing plan
+description: Start coding & testing an existing plan
 argument-hint: [plan] [--advice]
 ---
 

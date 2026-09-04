@@ -67,7 +67,7 @@ def test_case(name, args, expected_patterns, unexpected_patterns=None):
             passed = False
             errors.append(f"Missing: '{pattern}'")
 
-    forbidden_patterns = ["@CK_" + "OUTPUT_TYPE", "ck-" + "help" + ".py", "/" + "ck-" + "help"]
+    forbidden_patterns = ["@EVCRATE_" + "OUTPUT_TYPE", "evcrate-" + "help" + ".py", "/" + "evcrate-" + "help"]
     for pattern in [*(unexpected_patterns or []), *forbidden_patterns]:
         if pattern in output:
             passed = False
@@ -109,7 +109,7 @@ def main():
     tests.append(test_case(
         "preview category",
         ["preview"],
-        ["Content Preview", "Novel Reader", "/cmd-preview", "markdown"]
+        ["Content Preview", "Novel Reader", "/preview", "markdown"]
     ))
 
     tests.append(test_case(
@@ -163,7 +163,7 @@ def main():
     tests.append(test_case(
         "overview shows tips",
         [],
-        ["Tips:", "/cmd-brainstorm", "ultrathink", "tokens", "/cmd-preview", ":parallel", "quota"]
+        ["Tips:", "/cmd-brainstorm", "ultrathink", "tokens", "/preview", ":parallel", "quota"]
     ))
 
     tests.append(test_case(

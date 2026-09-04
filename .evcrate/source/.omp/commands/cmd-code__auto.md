@@ -1,6 +1,6 @@
 ---
 argument-hint: "[plan] [all-phases-yes-or-no] [--advice] (default: yes)"
-description: "⚡⚡⚡ [AUTO] Start coding & testing an existing plan (\"trust me bro\")"
+description: "[AUTO] Start coding & testing an existing plan (\"trust me bro\")"
 ---
 
 
@@ -203,7 +203,7 @@ If $ALL_PHASES is `No`, wait for user confirmation before proceeding to the next
 ## Summary report
 If this is the last phase, generate a concise summary report.
 Use `ask the user` tool to ask these questions:
-- If user wants to preview the report with `/cmd-preview` slash command.
+- If user wants to preview the report with `/preview` slash command.
 - If user wants to archive the plan with `/cmd-plan__archive` slash command.
 
 ---

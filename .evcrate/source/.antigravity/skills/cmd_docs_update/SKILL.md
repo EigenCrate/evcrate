@@ -1,15 +1,15 @@
 ---
 name: cmd_docs_update
-description: ⚡⚡⚡ Analyze the codebase and update documentation
+description: Analyze the codebase and update documentation
 ---
 # cmd_docs_update
 
 Command Path: /docs/update
 
-Description: ⚡⚡⚡ Analyze the codebase and update documentation
+Description: Analyze the codebase and update documentation
 
 ---
-description: ⚡⚡⚡ Analyze the codebase and update documentation
+description: Analyze the codebase and update documentation
 ---
 
 ## Phase 1: Parallel Codebase Scouting

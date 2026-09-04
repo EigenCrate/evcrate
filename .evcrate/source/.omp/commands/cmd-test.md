@@ -1,5 +1,5 @@
 ---
-description: "⚡ Run tests locally and analyze the summary report."
+description: "Run tests locally and analyze the summary report."
 ---
 
 

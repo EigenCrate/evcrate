@@ -32,6 +32,7 @@
     "test:phase11": "npm run build && node --test tests/distribution/validation-and-rollout.test.mjs",
     "distribute:build": "node dist/cli/evcrate.js distribute build",
     "distribute:check": "node dist/cli/evcrate.js distribute check",
+    "permissions:fix": "bash scripts/fix-executable-permissions.sh",
     "distribute:publish": "node dist/cli/evcrate.js publish --apply",
     "distribute:all": "node dist/cli/evcrate.js distribute all",
     "distribute:pi": "node dist/cli/evcrate.js distribute all --target pi",
@@ -54,7 +55,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NEBULEA-M/evcrate.git"
+    "url": "git+https://github.com/EigenCrate/evcrate.git"
   },
   "keywords": [
     "claude-code",
@@ -66,10 +67,11 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/NEBULEA-M/evcrate/issues"
+    "url": "https://github.com/EigenCrate/evcrate/issues"
   },
   "files": [
     "dist/**",
+    "!dist/release/**",
     ".evcrate/build-manifest*.json",
     ".evcrate/registry.json",
     ".evcrate/scopes/**",
@@ -96,6 +98,9 @@
     "LICENSE"
   ],
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^9.2.6",
     "@semantic-release/npm": "^11.0.2",
     "@semantic-release/release-notes-generator": "^12.1.0",

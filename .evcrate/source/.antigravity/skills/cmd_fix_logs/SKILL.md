@@ -1,15 +1,15 @@
 ---
 name: cmd_fix_logs
-description: ⚡ Analyze logs and fix issues
+description: Analyze logs and fix issues
 ---
 # cmd_fix_logs
 
 Command Path: /fix/logs
 
-Description: ⚡ Analyze logs and fix issues
+Description: Analyze logs and fix issues
 
 ---
-description: ⚡ Analyze logs and fix issues
+description: Analyze logs and fix issues
 argument-hint: [issue] [--advice]
 ---
 

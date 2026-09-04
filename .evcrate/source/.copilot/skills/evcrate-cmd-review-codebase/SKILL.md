@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-review-codebase"
-description: "⚡⚡⚡ Scan & analyze the codebase."
+description: "Scan & analyze the codebase."
 argument-hint: "[tasks-or-prompt]"
 user-invocable: true
 disable-model-invocation: true

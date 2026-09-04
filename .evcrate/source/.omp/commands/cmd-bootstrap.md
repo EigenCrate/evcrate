@@ -1,6 +1,6 @@
 ---
 argument-hint: "[user-requirements] [--advice]"
-description: "⚡⚡⚡⚡⚡ Bootstrap a new project step by step"
+description: "Bootstrap a new project step by step"
 ---
 
 

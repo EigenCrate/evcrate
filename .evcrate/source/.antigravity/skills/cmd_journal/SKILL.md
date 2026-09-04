@@ -1,15 +1,15 @@
 ---
 name: cmd_journal
-description: ⚡ Write some journal entries.
+description: Write some journal entries.
 ---
 # cmd_journal
 
 Command Path: /journal
 
-Description: ⚡ Write some journal entries.
+Description: Write some journal entries.
 
 ---
-description: ⚡ Write some journal entries.
+description: Write some journal entries.
 ---
 
 Use the `journal-writer` subagent to explore the memories and recent code changes, and write some journal entries.

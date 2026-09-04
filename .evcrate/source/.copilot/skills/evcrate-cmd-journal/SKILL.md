@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-journal"
-description: "⚡ Write some journal entries."
+description: "Write some journal entries."
 argument-hint: ""
 user-invocable: true
 disable-model-invocation: true

@@ -1,15 +1,15 @@
 ---
 name: cmd_cook_auto
-description: ⚡⚡ Implement a feature automatically with plan and quality gates
+description: Implement a feature automatically with plan and quality gates
 ---
 # cmd_cook_auto
 
 Command Path: /cook/auto
 
-Description: ⚡⚡ Implement a feature automatically with plan and quality gates
+Description: Implement a feature automatically with plan and quality gates
 
 ---
-description: ⚡⚡ Implement a feature automatically with plan and quality gates
+description:  Implement a feature automatically with plan and quality gates
 argument-hint: [tasks] [--advice]
 ---
 

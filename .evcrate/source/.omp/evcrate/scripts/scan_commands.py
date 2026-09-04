@@ -54,12 +54,9 @@ def scan_commands(base_path: Path, command_map: Dict[str, Dict]) -> List[Dict]:
         # Get relative path from commands directory
         rel_path = cmd_file.relative_to(base_path)
 
-        record = command_map.get(rel_path.as_posix())
-        if record is None: raise RuntimeError(f'OMP command map has no record for {rel_path.as_posix()}')
-        mapped_targets.add(rel_path.as_posix())
-        command_name = '/' + record['targetName']
-        source_parts = record['sourceName'].split(':')
-        category = source_parts[0] if len(source_parts) > 1 else 'core'
+        # Build command name from path
+        parts = list(rel_path.parts[:-1]) + [rel_path.stem]
+        command_name = '/evcrate:' + ':'.join(parts)
 
         # Read file and extract frontmatter
         try:
@@ -78,7 +75,6 @@ def scan_commands(base_path: Path, command_map: Dict[str, Dict]) -> List[Dict]:
                 'path': str(rel_path),
                 'description': clean_desc,
                 'argument_hint': arg_hint,
-                'power_level': power_level,
                 'category': category
             })
         except Exception as e:
@@ -121,9 +117,6 @@ def main():
 
     for category, cmds in sorted(categories.items()):
         print(f"\n{category.upper()}:")
-        for cmd in cmds:
-            power = '⚡' * cmd['power_level'] if cmd['power_level'] > 0 else ''
-            print(f"  {cmd['name']:40} {power:10} {cmd['description'][:80]}")
 
     # Output YAML for processing (generate_catalogs.py expects YAML format)
     output_path = Path('.omp/evcrate/scripts/commands_data.yaml')

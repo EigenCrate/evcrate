@@ -74,7 +74,7 @@ This comprehensive document contains the complete MCP specification and guidelin
 
 **For Node/TypeScript implementations, also load:**
 - **TypeScript SDK Documentation**: Use WebFetch to load `https://raw.githubusercontent.com/modelcontextprotocol/typescript-sdk/main/README.md`
-- [⚡ TypeScript Implementation Guide](./reference/node_mcp_server.md) - Node/TypeScript-specific best practices and examples
+- [TypeScript Implementation Guide](./reference/node_mcp_server.md) - Node/TypeScript-specific best practices and examples
 
 #### 1.5 Exhaustively Study API Documentation
 
@@ -129,7 +129,7 @@ Now that you have a comprehensive plan, begin implementation following language-
 - Define Pydantic models for input validation
 
 **For Node/TypeScript:**
-- Create proper project structure (see [⚡ TypeScript Guide](./reference/node_mcp_server.md))
+- Create proper project structure (see [TypeScript Guide](./reference/node_mcp_server.md))
 - Set up `package.json` and `tsconfig.json`
 - Use MCP TypeScript SDK
 - Define Zod schemas for input validation
@@ -187,7 +187,7 @@ For each tool in the plan:
 - Proper imports organization
 - Module-level constants (CHARACTER_LIMIT, API_BASE_URL)
 
-**For Node/TypeScript: Load [⚡ TypeScript Implementation Guide](./reference/node_mcp_server.md) and ensure the following:**
+**For Node/TypeScript: Load [TypeScript Implementation Guide](./reference/node_mcp_server.md) and ensure the following:**
 - Using `server.registerTool` properly
 - Zod schemas with `.strict()`
 - TypeScript strict mode enabled
@@ -236,7 +236,7 @@ To ensure quality, review the code for:
 
 To verify implementation quality, load the appropriate checklist from the language-specific guide:
 - Python: see "Quality Checklist" in [🐍 Python Guide](./reference/python_mcp_server.md)
-- Node/TypeScript: see "Quality Checklist" in [⚡ TypeScript Guide](./reference/node_mcp_server.md)
+- Node/TypeScript: see "Quality Checklist" in [TypeScript Guide](./reference/node_mcp_server.md)
 
 ---
 
@@ -313,7 +313,7 @@ Load these resources as needed during development:
   - Complete working examples
   - Quality checklist
 
-- [⚡ TypeScript Implementation Guide](./reference/node_mcp_server.md) - Complete TypeScript guide with:
+- [TypeScript Implementation Guide](./reference/node_mcp_server.md) - Complete TypeScript guide with:
   - Project structure
   - Zod schema patterns
   - Tool registration with `server.registerTool`

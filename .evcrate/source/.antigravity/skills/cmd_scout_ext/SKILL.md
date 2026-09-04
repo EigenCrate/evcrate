@@ -1,15 +1,15 @@
 ---
 name: cmd_scout_ext
-description: ⚡ Use external agentic tools to scout given directories
+description: Use external agentic tools to scout given directories
 ---
 # cmd_scout_ext
 
 Command Path: /scout/ext
 
-Description: ⚡ Use external agentic tools to scout given directories
+Description: Use external agentic tools to scout given directories
 
 ---
-description: ⚡ Use external agentic tools to scout given directories
+description: Use external agentic tools to scout given directories
 argument-hint: [user-prompt] [scale]
 ---
 
@@ -35,7 +35,7 @@ The parent agent must wait for all requested scout agents or external searches t
 - External agentic tools are faster and more efficient when using LLMs with large context windows (1M+ tokens).
 
 **How to prompt the agents:**
-- If `agy` or `opencode` is not available, ask the user if they want to install it:
+- If `agy` is not available, ask the user if they want to install it:
   - If **yes**, install it (if there are permission issues, instruct the user to install it manually, including authentication steps)
   - If **no**, use the default `Explore` subagents.
 - IMPORTANT: Kick these agents off in parallel using the `Task` tool, analyze and divide folders for each agent to scout intelligently and quickly.

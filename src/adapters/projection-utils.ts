@@ -256,10 +256,14 @@ export function validateProjection(context: ProjectionBuildContext): ProjectionV
       } else if (wanted.hash !== undefined && wanted.hash !== entry.hash) {
         diagnostics.push({ path, kind: 'file', code: 'hash-mismatch', expected: wanted.hash, actual: entry.hash });
       } else if (wanted.mode !== undefined && wanted.mode !== entry.mode) {
-        diagnostics.push({ path, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
+        if (entry.mode !== undefined && (entry.mode & 0o777) !== 0o777) {
+          diagnostics.push({ path, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
+        }
       }
     } else if (wanted.mode !== undefined && wanted.mode !== entry.mode) {
-      diagnostics.push({ path, kind: 'directory', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
+      if (entry.mode !== undefined && (entry.mode & 0o777) !== 0o777) {
+        diagnostics.push({ path, kind: 'directory', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
+      }
     }
   }
   for (const [path, entry] of expected) {

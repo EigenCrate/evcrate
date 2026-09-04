@@ -67,7 +67,7 @@ def test_case(name, args, expected_patterns, unexpected_patterns=None):
             passed = False
             errors.append(f"Missing: '{pattern}'")
 
-    forbidden_patterns = ["@CK_" + "OUTPUT_TYPE", "ck-" + "help" + ".py", "/" + "ck-" + "help"]
+    forbidden_patterns = ["@EVCRATE_" + "OUTPUT_TYPE", "evcrate-" + "help" + ".py", "/" + "evcrate-" + "help"]
     for pattern in [*(unexpected_patterns or []), *forbidden_patterns]:
         if pattern in output:
             passed = False

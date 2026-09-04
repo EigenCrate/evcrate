@@ -1,6 +1,6 @@
 ---
 argument-hint: "[issues] [--advice]"
-description: "⚡⚡ Analyze & fix issues with parallel fullstack-developer agents"
+description: "Analyze & fix issues with parallel fullstack-developer agents"
 ---
 
 

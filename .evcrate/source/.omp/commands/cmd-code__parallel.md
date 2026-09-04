@@ -1,6 +1,6 @@
 ---
 argument-hint: "[plan-path] [--advice]"
-description: "⚡ Execute parallel or sequential phases based on plan structure"
+description: "Execute parallel or sequential phases based on plan structure"
 ---
 
 

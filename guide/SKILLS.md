@@ -40,156 +40,28 @@ ls .evcrate/source/.claude/skills/
 Skills work seamlessly with slash commands:
 
 ```bash
-/plan "implement authentication with Better Auth"
-/cook "create Docker containers for the app"
-/design "create a landing page with shadcn/ui"
+/cmd-plan "implement authentication with Better Auth"
+/cmd-cook "create Docker containers for the app"
+/cmd-design__good "create a landing page with shadcn/ui"
 ```
 
----
-
-## Gemini AI Skills
-
-Google Gemini-powered skills for AI-driven analysis and generation.
-
-### Configuration
-
-All Gemini skills require a `GEMINI_API_KEY`. See [API Key Setup](#gemini-api-key-setup) below.
-
-### gemini-audio
-
-**Audio analysis and speech generation using Gemini API**
-
-**Capabilities:**
-- Transcribe audio files (WAV, MP3, AAC, FLAC, OGG, AIFF)
-- Summarize audio content
-- Analyze specific time segments
-- Identify speakers and extract dialogue
-- Describe ambient sounds and music
-- Generate natural speech from text (TTS)
-
-**Use Cases:**
-- "Transcribe this podcast and summarize key points"
-- "What is discussed from 02:30 to 05:15 in this meeting recording?"
-- "Generate speech: 'Welcome to our application'"
-- "Identify all speakers in this interview"
-
-**Supported Formats:** Up to 9.5 hours of audio
+Project documentation uses the `/cmd-*` naming convention for slash command/resource
+examples, including `.claude` references. OMP nested names use `__`; Copilot uses
+`/evcrate-cmd-*`. Current scanner/parser prefix enforcement remains a follow-up;
+this convention does not rename source commands. See the
+[code standards](../docs/code-standards.md#normative-command-naming).
 
 ---
 
-### gemini-video-understanding
+## Provider-specific integrations
 
-**Video analysis and understanding with Gemini API**
-
-**Capabilities:**
-- Analyze local video files or YouTube URLs
-- Describe video content with timestamps
-- Answer questions about specific scenes
-- Transcribe audio with visual context
-- Extract structured data from videos
-- Clip videos with start/end offsets
-
-**Use Cases:**
-- "Describe what happens in this product demo video"
-- "What is shown from 01:00 to 02:30?"
-- "Transcribe the tutorial and include visual descriptions"
-- "Extract all product features mentioned in this video"
-
-**Supported Formats:** 9 video formats, up to 6 hours (2M token context)
-
----
-
-### gemini-document-processing
-
-**PDF document processing with native vision**
-
-**Capabilities:**
-- Extract text, images, diagrams, charts, and tables from PDFs
-- Answer questions about document content
-- Summarize documents
-- Convert PDFs to structured formats (JSON, Markdown)
-- Handle complex layouts and multi-column documents
-
-**Use Cases:**
-- "Extract all tables from this research paper"
-- "Summarize this legal document in bullet points"
-- "What are the main findings in this report?"
-- "Convert this PDF to markdown format"
-
-**Supported:** Multi-page PDFs with complex layouts
-
----
-
-### ai-multimodal
-
-**AI image generation using Gemini 2.5 Flash**
-
-**Capabilities:**
-- Generate high-quality images from text prompts
-- Control aspect ratios (1:1, 16:9, 9:16, 4:3, 3:4)
-- Text-to-image generation
-- Image editing and refinement
-- Multi-image composition
-- Iterative image improvement
-
-**Use Cases:**
-- "Generate a serene mountain landscape at sunset"
-- "Create a modern logo for a tech startup"
-- "Design a futuristic city with flying cars"
-- "Generate a product mockup for our app"
-
-**Output:** PNG images saved to `./docs/assets/`
-
----
-
-### ai-multimodal
-
-**Image analysis and vision capabilities**
-
-**Capabilities:**
-- Analyze single or multiple images
-- Object detection and segmentation
-- Visual question answering
-- Scene description and captioning
-- Image comparison and classification
-- OCR and text extraction
-
-**Use Cases:**
-- "What objects are in this photo?"
-- "Compare these two product images"
-- "Extract text from this screenshot"
-- "Describe the composition of this design"
-- "Identify the brand in this image"
-
-**Supported Formats:** PNG, JPEG, WebP, HEIC, HEIF
-
----
-
-### Gemini API Key Setup
-
-Get your API key at: https://aistudio.google.com/apikey
-
-Configure using one of these methods (priority from highest to lowest):
-
-```bash
-# 1. Environment variable (recommended for development)
-export GEMINI_API_KEY='your-api-key-here'
-
-# 2. Project root .env
-echo 'GEMINI_API_KEY=your-api-key-here' > .env
-
-# 3. Claude configuration
-cp .evcrate/source/.claude/.env.example .evcrate/source/.claude/.env
-# Edit .evcrate/source/.claude/.env and add your key
-
-# 4. Shared skills configuration
-cp .evcrate/source/.claude/skills/.env.example .evcrate/source/.claude/skills/.env
-# Edit .evcrate/source/.claude/skills/.env and add your key
-
-# 5. Individual skill directory
-cp .evcrate/source/.claude/skills/gemini-audio/.env.example .evcrate/source/.claude/skills/gemini-audio/.env
-# Edit and add your key
-```
+The canonical project environment example currently documents only notification
+variables: `DISCORD_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`.
+This guide intentionally does not assert provider API keys, provider skill names,
+supported media formats, or setup paths that are not present in the current source
+inventory. Consult a verified skill package's own documentation when one is
+explicitly installed; do not infer a project-wide provider configuration from this
+guide.
 
 ---
 
@@ -774,6 +646,5 @@ Or manually create a skill:
 ---
 
 For more information, see:
-- [Commands Reference](./COMMANDS.md)
 - [Project Documentation](../docs/)
 - [CLAUDE.md](../.evcrate/source/CLAUDE.md)

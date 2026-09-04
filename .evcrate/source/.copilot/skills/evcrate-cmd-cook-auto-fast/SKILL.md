@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-cook-auto-fast"
-description: "⚡ Low-risk fast cook: scout, plan fast, implement with quality gates"
+description: "Low-risk fast cook: scout, plan fast, implement with quality gates"
 argument-hint: "[tasks-or-prompt] [--advice]"
 user-invocable: true
 disable-model-invocation: true

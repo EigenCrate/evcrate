@@ -1,15 +1,15 @@
 ---
 name: cmd_plan_two
-description: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
+description: Research & create an implementation plan with 2 approaches
 ---
 # cmd_plan_two
 
 Command Path: /plan/two
 
-Description: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
+Description: Research & create an implementation plan with 2 approaches
 
 ---
-description: ⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches
+description: Research & create an implementation plan with 2 approaches
 argument-hint: [task]
 ---
 

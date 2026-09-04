@@ -1,6 +1,6 @@
 ---
 argument-hint: "[task]"
-description: "⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches"
+description: "Research & create an implementation plan with 2 approaches"
 ---
 
 

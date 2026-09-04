@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-plan-fast"
-description: "⚡⚡ No research. Only analyze and create an implementation plan"
+description: "No research. Only analyze and create an implementation plan"
 argument-hint: "[task]"
 user-invocable: true
 disable-model-invocation: true

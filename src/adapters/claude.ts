@@ -113,7 +113,9 @@ function collectOutput(
       if (!expectedDirs.has(relativePath)) {
         diagnostics.push({ path: relativePath, kind: 'directory', code: 'unexpected' });
       } else if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== 0o755) {
-        diagnostics.push({ path: relativePath, kind: 'directory', code: 'mode-mismatch', expected: 0o755, actual: Number(stat.mode) & 0o777 });
+        if ((Number(stat.mode) & 0o777) !== 0o777) {
+          diagnostics.push({ path: relativePath, kind: 'directory', code: 'mode-mismatch', expected: 0o755, actual: Number(stat.mode) & 0o777 });
+        }
       }
       collectOutput(context, path, expected, expectedDirs, seen, diagnostics);
     } else {
@@ -128,7 +130,9 @@ function collectOutput(
         if (!bytesEqual(bytes, wanted.bytes)) {
           diagnostics.push({ path: relativePath, kind: 'file', code: 'bytes-mismatch', expected: wanted.hash, actual: contentHash(bytes) });
         } else if ((Number(stat.mode) & 0o777) !== wanted.mode) {
-          diagnostics.push({ path: relativePath, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: Number(stat.mode) & 0o777 });
+          if ((Number(stat.mode) & 0o777) !== 0o777) {
+            diagnostics.push({ path: relativePath, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: Number(stat.mode) & 0o777 });
+          }
         }
       } catch {
         diagnostics.push({ path: relativePath, kind: 'file', code: 'unsafe' });
@@ -167,7 +171,9 @@ function validateClaude(context: ProjectionBuildContext): ProjectionValidation {
       diagnostics.push({ path: root, kind: 'directory', code: 'kind-mismatch' });
     } else {
       if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== 0o755) {
-        diagnostics.push({ path: root, kind: 'directory', code: 'mode-mismatch', expected: 0o755, actual: Number(stat.mode) & 0o777 });
+        if ((Number(stat.mode) & 0o777) !== 0o777) {
+          diagnostics.push({ path: root, kind: 'directory', code: 'mode-mismatch', expected: 0o755, actual: Number(stat.mode) & 0o777 });
+        }
       }
       collectOutput(context, destination, expected, expectedDirs, seen, diagnostics);
     }

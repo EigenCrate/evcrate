@@ -1,15 +1,15 @@
 ---
 name: cmd_review_codebase_parallel
-description: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
+description: Ultrathink edge cases, then parallel verify with code-reviewers
 ---
 # cmd_review_codebase_parallel
 
 Command Path: /review/codebase/parallel
 
-Description: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
+Description: Ultrathink edge cases, then parallel verify with code-reviewers
 
 ---
-description: ⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers
+description: Ultrathink edge cases, then parallel verify with code-reviewers
 argument-hint: [scope-or-prompt]
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Implement a feature automatically with plan and quality gates
+description:  Implement a feature automatically with plan and quality gates
 argument-hint: [tasks] [--advice]
 ---
 

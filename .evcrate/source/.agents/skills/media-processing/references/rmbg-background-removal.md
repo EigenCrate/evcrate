@@ -35,7 +35,7 @@ rmbg image.jpg -r 4096 -o image-4k.png
 ## Available Models
 
 | Model | Size | Speed | Quality | Use Case |
-|-------|------|------|---------|----------|
+|-------|------|-------|---------|----------|
 | `u2netp` | 4.5MB | Fastest | Fair | Batch processing |
 | `modnet` | 25MB | Fast | Good | Default, balanced |
 | `briaai` | 44MB | Slower | Excellent | High-quality |

@@ -1,15 +1,15 @@
 ---
 name: cmd_ask
-description: ⚡ Answer technical and architectural questions.
+description: Answer technical and architectural questions.
 ---
 # cmd_ask
 
 Command Path: /ask
 
-Description: ⚡ Answer technical and architectural questions.
+Description: Answer technical and architectural questions.
 
 ---
-description: ⚡ Answer technical and architectural questions.
+description: Answer technical and architectural questions.
 argument-hint: [technical-question]
 ---
 

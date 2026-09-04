@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-cook-auto-parallel"
-description: "⚡⚡⚡ Plan parallel phases & execute with fullstack-developer agents"
+description: "Plan parallel phases & execute with fullstack-developer agents"
 argument-hint: "[tasks] [--advice]"
 user-invocable: true
 disable-model-invocation: true

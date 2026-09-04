@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-types"
-description: "⚡ Fix type errors"
+description: "Fix type errors"
 argument-hint: ""
 user-invocable: true
 disable-model-invocation: true

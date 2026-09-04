@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-ask"
-description: "⚡ Answer technical and architectural questions."
+description: "Answer technical and architectural questions."
 argument-hint: "[technical-question]"
 user-invocable: true
 disable-model-invocation: true

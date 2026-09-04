@@ -18,7 +18,6 @@ Implement features step by step.
 
 ```bash
 /evcrate-cmd-cook implement user authentication with JWT
-/evcrate-cmd-cook add payment integration with Stripe
 ```
 
 **When to use**: Feature implementation with iterative development
@@ -323,26 +322,6 @@ Check deployment readiness.
 ```
 
 **When to use**: Pre-deployment validation
-
-## Integration Commands
-
-### /evcrate-cmd-integrate-polar [tasks]
-Implement payment integration with Polar.sh.
-
-```bash
-/evcrate-cmd-integrate-polar add subscription payments
-```
-
-**When to use**: Polar payment integration
-
-### /evcrate-cmd-integrate-sepay [tasks]
-Implement payment integration with SePay.vn.
-
-```bash
-/evcrate-cmd-integrate-sepay add Vietnamese payment gateway
-```
-
-**When to use**: SePay payment integration
 
 ## Other Commands
 

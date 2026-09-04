@@ -1,6 +1,6 @@
 ---
 argument-hint: "[focused-topics] [should-scan-codebase]"
-description: "⚡ Analyze the codebase and update documentation"
+description: "Analyze the codebase and update documentation"
 ---
 
 

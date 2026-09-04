@@ -1,6 +1,6 @@
 ---
 argument-hint: "[plan] [--advice]"
-description: "⚡⚡ Start coding an existing plan (no testing)"
+description: "Start coding an existing plan (no testing)"
 ---
 
 

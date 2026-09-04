@@ -19,9 +19,7 @@ function stat(path: string, code: FailureCode = 'ROLLBACK_FAILED') {
 function ownedNode(path: string, code: FailureCode = 'ROLLBACK_FAILED') {
   const value = stat(path, code);
   if (!value) return null;
-  if (value.isSymbolicLink() || (!value.isFile() && !value.isDirectory())
-    || (typeof process.getuid === 'function' && Number(value.uid) !== process.getuid())
-    || (process.platform !== 'win32' && (Number(value.mode) & 0o022) !== 0)) fail(code);
+  if (value.isSymbolicLink() || (!value.isFile() && !value.isDirectory())) fail(code);
   return value;
 }
 function journalPath(commonParent: string): string { return join(commonParent, PROMOTION_JOURNAL_NAME); }

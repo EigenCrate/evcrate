@@ -1,15 +1,15 @@
 ---
 name: cmd_code_parallel
-description: ⚡ Execute parallel or sequential phases based on plan structure
+description: Execute parallel or sequential phases based on plan structure
 ---
 # cmd_code_parallel
 
 Command Path: /code/parallel
 
-Description: ⚡ Execute parallel or sequential phases based on plan structure
+Description: Execute parallel or sequential phases based on plan structure
 
 ---
-description: ⚡ Execute parallel or sequential phases based on plan structure
+description: Execute parallel or sequential phases based on plan structure
 argument-hint: [plan-path] [--advice]
 ---
 

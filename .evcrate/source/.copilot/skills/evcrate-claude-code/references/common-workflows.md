@@ -108,8 +108,8 @@ copilot "analyze the changes in PR #42"
 
 **Payment integrations:**
 ```bash
-/evcrate-cmd-integrate-sepay add Vietnamese payment gateway
-/evcrate-cmd-integrate-polar implement subscription billing
+/integrate:sepay add Vietnamese payment gateway
+/integrate:polar implement subscription billing
 ```
 
 **Skill management:**

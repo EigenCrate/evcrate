@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-fast"
-description: "⚡ Analyze and fix small issues [FAST]"
+description: "Analyze and fix small issues [FAST]"
 argument-hint: "[issues]"
 user-invocable: true
 disable-model-invocation: true

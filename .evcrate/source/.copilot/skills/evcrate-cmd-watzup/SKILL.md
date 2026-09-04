@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-watzup"
-description: "⚡ Review recent changes and wrap up the work"
+description: "Review recent changes and wrap up the work"
 argument-hint: ""
 user-invocable: true
 disable-model-invocation: true

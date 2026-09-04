@@ -1,15 +1,15 @@
 ---
 name: cmd_review_codebase
-description: ⚡⚡⚡ Scan & analyze the codebase.
+description: Scan & analyze the codebase.
 ---
 # cmd_review_codebase
 
 Command Path: /review/codebase
 
-Description: ⚡⚡⚡ Scan & analyze the codebase.
+Description: Scan & analyze the codebase.
 
 ---
-description: ⚡⚡⚡ Scan & analyze the codebase.
+description: Scan & analyze the codebase.
 argument-hint: [tasks-or-prompt]
 ---
 

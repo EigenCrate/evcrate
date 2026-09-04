@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-code-parallel"
-description: "⚡ Execute parallel or sequential phases based on plan structure"
+description: "Execute parallel or sequential phases based on plan structure"
 argument-hint: "[plan-path] [--advice]"
 user-invocable: true
 disable-model-invocation: true

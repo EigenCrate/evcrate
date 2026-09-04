@@ -1,15 +1,15 @@
 ---
 name: cmd_docs_init
-description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
+description: Analyze the codebase and create initial documentation
 ---
 # cmd_docs_init
 
 Command Path: /docs/init
 
-Description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
+Description: Analyze the codebase and create initial documentation
 
 ---
-description: ⚡⚡⚡⚡ Analyze the codebase and create initial documentation
+description: Analyze the codebase and create initial documentation
 ---
 
 ## Phase 1: Parallel Codebase Scouting

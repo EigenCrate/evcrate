@@ -1,6 +1,6 @@
 ---
 argument-hint: "[issue] [--advice]"
-description: "⚡ Analyze logs and fix issues"
+description: "Analyze logs and fix issues"
 ---
 
 

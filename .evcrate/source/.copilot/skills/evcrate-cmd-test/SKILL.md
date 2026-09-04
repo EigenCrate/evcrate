@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-test"
-description: "⚡ Run tests locally and analyze the summary report."
+description: "Run tests locally and analyze the summary report."
 argument-hint: ""
 user-invocable: true
 disable-model-invocation: true

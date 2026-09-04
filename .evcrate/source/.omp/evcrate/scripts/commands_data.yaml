@@ -229,20 +229,6 @@
   argument_hint: ''
   power_level: 0
   category: git
-- name: /cmd-integrate__polar
-  path: cmd-integrate__polar.md
-  description: Implement payment integration with Polar.sh
-  argument_hint:
-  - tasks
-  power_level: 2
-  category: integrate
-- name: /cmd-integrate__sepay
-  path: cmd-integrate__sepay.md
-  description: Implement payment integration with SePay.vn
-  argument_hint:
-  - tasks
-  power_level: 2
-  category: integrate
 - name: /cmd-journal
   path: cmd-journal.md
   description: Write some journal entries.

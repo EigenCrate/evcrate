@@ -1,44 +1,86 @@
 # Native Pi migration
 
+**Status:** Pi-specific projection guide  
+**Updated:** 2026-09-05  
+**Central contract:** [system architecture](./system-architecture.md)
+
+This guide covers the Pi adapter and its user-owned settings boundary. General
+controller policy, checkpoint wire format, publication, and command naming live in
+the central architecture and are not duplicated here.
+
 ## Ownership and build
 
-EVCrate authors commands, agents, workflows, hooks, scripts, and skills in `.evcrate/source/.claude/`. The Pi-specific extension overlay in `.evcrate/targets/pi/files/` is applied during an isolated build; the build then generates `.evcrate/source/.pi/` from the canonical source and overlay. Generated files are not hand-edited: change the canonical source or overlay, then rebuild.
+EVCrate authors commands, agents, workflows, hooks, scripts, and skills in
+`.evcrate/source/.claude/`. The Pi target manifest is `.evcrate/targets/pi/manifest.json`;
+its overlay root is `.evcrate/targets/pi/files`, output root is `.pi`, and the
+shared settings fragment is `.pi/agent/evcrate/managed-settings.json`. The adapter
+copies the overlay into the generated projection, normalizes canonical resources,
+creates Pi inventories, and validates the result. Generated files are not
+hand-edited: change canonical source or the Pi overlay, then rebuild.
 
-Regenerate and verify Pi parity without touching live configuration:
+After `npm run build`, the current TypeScript CLI can build/check the Pi target
+without invoking a Python compatibility script:
 
 ```bash
-python3 distribute.py --build --target pi
-python3 distribute.py --check --target pi
+node dist/cli/evcrate.js distribute build --target pi --json
+node dist/cli/evcrate.js distribute check --target pi --json
+node dist/cli/evcrate.js publish --dry-run --target pi --json
 ```
 
-`--check` regenerates isolated staging and byte-compares the local generated artifact. Publication consumes only a current verified build and publishes `EVCRATE_HOME/.pi` to `EVCRATE_HOME/.pi`. `PI_CODING_AGENT_DIR` is runtime-only and never changes the publisher destination. Native Windows validation remains pending.
+`npm run distribute:pi` is the package's target-specific build-and-publish script;
+use it only after reviewing a verified build and intended HOME changes. Publication
+consumes only current verified output and binds local `.pi` to the Pi HOME `.pi`
+root. PI_CODING_AGENT_DIR is runtime-only and does not change the publisher
+destination. Native Windows validation remains pending.
 
 ## Runtime model
 
-- Commands are registered recursively: `commands/fix/fast.md` becomes `/fix:fast`.
-- `evcrate_command` performs bounded nested command expansion; static workflows remain Markdown documents, not executable JavaScript workflows.
-- Generated agents retain semantic roles (`strong`, `standard`, `fast`, `parent`) rather than model IDs. For `openai-codex`, implicit routes are Sol/high, Terra/high, and Luna/low respectively. Unknown providers inherit the parent model; EVCrate never guesses a cross-provider route.
-- `evcrate_subagent` uses the structured `pi-subagents` transport. A terminal response proves execution completed, not that the parent accepted the result. The parent must still inspect artifacts and run requested tests or review gates.
-Pi retains recursive colon command names; the `cmd-`/`__` flattening contract
-belongs only to the OMP projection and must not be copied into Pi resources.
+The adapter copies command/workflow files recursively below the Pi EVCrate resource
+root. The runtime helper derives its internal command name from the relative path
+using colon separators (for example, the path `commands/fix/fast.md` has internal
+name `fix:fast`). This is a Pi implementation detail; the repository documentation
+convention still uses `/cmd-*` names. OMP's `__` filename flattening is not copied
+into Pi output. Prefix enforcement across the canonical scanner and target runtimes
+is a known follow-up; this documentation change does not rename source commands.
 
-- The extension is the sole Pi lifecycle/tool-hook owner. Session starts map Pi `startup`, `new`, `resume`, `fork`, and `reload` reasons to canonical SessionStart context. Manual compaction maps to `manual`; threshold and overflow compaction map to `auto`; post-compaction reapplies compact SessionStart context. Shutdown runs canonical cleanup only—Pi has no `clear` shutdown reason, so EVCrate never fabricates Claude's `SessionEnd: clear` hook. Prompt submission, tool pre/post events, and child delegation are derived from the generated hook map.
+- `evcrate_command` performs bounded nested command expansion; static workflows
+  remain Markdown documents.
+- Generated agents retain semantic roles (`strong`, `standard`, `fast`, `parent`)
+  rather than hard-coded model IDs. For `openai-codex`, current defaults map to
+  Sol/high, Terra/high, and Luna/low; unknown providers inherit the parent model.
+- `evcrate_subagent` uses the structured `pi-subagents` transport. Completion proves
+  child execution, not parent acceptance; the parent still inspects artifacts and
+  runs requested checks.
+- The extension owns Pi lifecycle/tool-hook integration. Startup/new/resume/fork/
+  reload map to canonical session context; manual and automatic compaction map to
+  their explicit reasons; shutdown performs canonical cleanup without fabricating a
+  Claude-only clear event.
+
+Pi's generated inventory records checkpoint and inline advisory capabilities but
+marks controller relay unsupported. The shared controller remains the only
+checkpoint backend and uses `$HOME/.evcrate/bin/evcrate-advisor`.
 
 ## Managed packages and settings
 
-Publication entry-merges exactly these pinned package identities into `~/.pi/agent/settings.json`:
+Publication entry-merges exactly these pinned package identities into
+`~/.pi/agent/settings.json` under the declared `packages` key:
 
 - `npm:pi-subagents@0.44.0`
 - `npm:@juicesharp/rpiv-ask-user-question@2.4.0`
 - `npm:@juicesharp/rpiv-todo@2.4.0`
 
-It does not own provider credentials, defaults, themes, sessions, UI configuration, custom packages, user hooks, or `evcrate.modelRoles`. Package upgrades require contract-test review.
-
-The publisher rejects malformed or symlinked settings and aborts promotion if the Pi HOME tree changes concurrently. No-op, dry-run, and rollback preserve settings bytes. `pi-code` (including versioned/object forms) is a hard conflict: remove it manually before a non-dry publish. EVCrate never removes it automatically.
+EVCrate does not own provider credentials, defaults, themes, sessions, UI
+configuration, custom packages, user hooks, or `evcrate.modelRoles`. Package
+upgrades require contract review. Malformed/symlinked settings or a concurrent HOME
+change abort promotion. `pi-code` (including versioned/object forms) is a hard
+conflict: remove it manually before a non-dry publish; EVCrate never removes it.
+No-op, dry-run, and rollback preserve settings bytes.
 
 ### Optional model-role overrides
 
-User-owned routes belong under `evcrate.modelRoles.providers`; EVCrate reads them but never writes them. A route must name a model available from the same active provider. Invalid or unavailable routes warn once and inherit the parent model.
+User-owned routes belong under `evcrate.modelRoles.providers`; EVCrate reads them
+but never writes them. A route must name a model available from the same active
+provider. Invalid or unavailable routes warn once and inherit the parent model.
 
 ```json
 {
@@ -56,33 +98,49 @@ User-owned routes belong under `evcrate.modelRoles.providers`; EVCrate reads the
 }
 ```
 
-`parent` intentionally has no implicit route. Explicit per-delegation model or thinking overrides remain authoritative when valid.
+`parent` intentionally has no implicit route. Explicit per-delegation model or
+thinking overrides remain authoritative when valid.
 
 ## Skills and launch isolation
 
-Pi discovers both `.pi` and `.agents` skills. Same-name Pi skills normally win with Pi's collision warning. To use only EVCrate's Pi skills:
+Pi discovers both `.pi` and `.agents` skills. Same-name Pi skills normally win with
+Pi's collision warning. To launch only EVCrate's Pi skills:
 
 ```bash
-pi --no-skills --skill "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/skills"
+PI_CODING_AGENT_DIR="$HOME/.pi/agent" pi --no-skills --skill "$HOME/.pi/agent/skills"
 ```
 
-Pi settings cannot portably exclude only `.agents` skills while retaining automatic `.pi` skill discovery.
+Pi settings cannot portably exclude only `.agents` skills while retaining automatic
+`.pi` discovery. The isolated launch is a runtime choice, not a publication setting.
 
 ## Troubleshooting
 
-- **Pi extension root:** at startup and hook adaptation, a non-empty `PI_CODING_AGENT_DIR` wins. Otherwise Node's `os.homedir()` resolves the platform profile (`USERPROFILE` on native Windows, home directory on POSIX), then existing normalization and containment checks apply. The required-root error remains unchanged when no usable root exists. Rebuild to regenerate all derived copies.
-- **Missing command:** rebuild with `python3 distribute.py --build`, then run `--check`; nested Markdown paths register as `/dir:file`.
-- **`pi-code` conflict:** remove that package manually, exit Pi, and review a dry-run. Publication will not remove it for you.
-- **Role warning or inherited child model:** verify the selected provider has the configured route/model and that the route uses the schema above; unknown providers intentionally inherit.
-- **Safety hook blocks a tool:** inspect the hook diagnostic and canonical policy. Privacy/scout failures fail closed by design.
-- **Skill collision warning:** launch with the isolated-skill command above; `.agents` cannot be selectively excluded through settings.
+- **Missing command:** rebuild/check the Pi target with the TypeScript commands
+  above. Inspect `.pi/agent/evcrate/commands/` and its generated inventory; do not
+  edit that tree.
+- **Pi extension root:** a non-empty PI_CODING_AGENT_DIR wins. Otherwise the
+  runtime derives `$HOME/.pi/agent` (or the platform home) and applies containment
+  checks. Rebuild to regenerate derived copies.
+- **`pi-code` conflict:** remove the package manually, exit Pi processes that can
+  write settings, review a dry run, then publish. It is never auto-removed.
+- **Role warning or inherited child model:** verify the provider's route/model and
+  the schema above. Unknown providers intentionally inherit.
+- **Safety hook blocks a tool:** inspect the hook diagnostic and canonical policy;
+  privacy/scout failures fail closed.
+- **Skill collision warning:** use the isolated-skill launch above; `.agents` cannot
+  be selectively excluded through Pi settings.
 
 ## Safe cutover and rollback
 
-1. Run all build/check and temporary-HOME validation gates.
-2. Remove `npm:pi-code` manually and exit every Pi process that could write sessions, packages, or settings.
-3. Review `python3 distribute.py --publish --dry-run --json`.
-4. Publish only while Pi remains quiescent, then start Pi with the isolated-skill command above.
-5. If startup fails, use `python3 distribute.py --recover` and restore the previously removed package entry manually if needed. Do not auto-reinstall `pi-code`.
+1. Run `npm run build`, target build/check, and disposable-HOME publication gates.
+2. Remove `npm:pi-code` manually and exit Pi processes that can write sessions,
+   packages, or settings.
+3. Review `node dist/cli/evcrate.js publish --dry-run --target pi --json`.
+4. Publish only while Pi is quiescent; then launch with the isolated-skill command
+   when needed.
+5. If promotion is interrupted, run the TypeScript `recover` action and restore any
+   intentionally removed package entry manually. Do not auto-reinstall `pi-code`.
 
-Live cutover remains user-controlled and requires explicit approval after isolated validation evidence is reviewed.
+Live cutover remains user-controlled and requires explicit approval after isolated
+validation evidence is reviewed. See the [project roadmap](./project-roadmap.md)
+for release and support gates.

@@ -108,8 +108,8 @@ claude "analyze the changes in PR #42"
 
 **Payment integrations:**
 ```bash
-/cmd-integrate__sepay add Vietnamese payment gateway
-/cmd-integrate__polar implement subscription billing
+/integrate:sepay add Vietnamese payment gateway
+/integrate:polar implement subscription billing
 ```
 
 **Skill management:**

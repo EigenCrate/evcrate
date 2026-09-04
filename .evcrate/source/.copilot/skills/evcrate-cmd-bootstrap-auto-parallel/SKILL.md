@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-bootstrap-auto-parallel"
-description: "⚡⚡⚡⚡⚡ Bootstrap project with parallel execution"
+description: "Bootstrap project with parallel execution"
 argument-hint: "[user-requirements] [--advice]"
 user-invocable: true
 disable-model-invocation: true

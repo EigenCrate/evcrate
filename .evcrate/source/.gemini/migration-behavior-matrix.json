@@ -57,6 +57,7 @@
       "target": "brainstorm.toml"
     },
     {
+      "classification": "command-prose",
       "kind": "command-prose",
       "source": "code.md",
       "status": "migrated",
@@ -317,20 +318,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "integrate/polar.md",
-      "status": "migrated",
-      "target": "integrate/polar.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "integrate/sepay.md",
-      "status": "migrated",
-      "target": "integrate/sepay.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "journal.md",
       "status": "migrated",
       "target": "journal.toml"
@@ -397,13 +384,6 @@
       "source": "plan/validate.md",
       "status": "migrated",
       "target": "plan/validate.toml"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
-      "source": "preview.md",
-      "status": "migrated",
-      "target": "preview.toml"
     },
     {
       "classification": "command-prose",

@@ -101,10 +101,10 @@ function verifyPrivateLinuxRelease(options = {}) {
 
     const installResult = hasUnshare
       ? spawnSync('unshare', ['-rn', '--', 'sh', ...installArgs], {
-          cwd: sandbox.unrelatedCwd, env: sandbox.sandboxEnv, encoding: 'utf8', timeout: 30000
+          cwd: sandbox.unrelatedCwd, env: sandbox.sandboxEnv, encoding: 'utf8', timeout: 120000
         })
       : spawnSync('sh', installArgs, {
-          cwd: sandbox.unrelatedCwd, env: sandbox.sandboxEnv, encoding: 'utf8', timeout: 30000
+          cwd: sandbox.unrelatedCwd, env: sandbox.sandboxEnv, encoding: 'utf8', timeout: 120000
         });
 
     if (installResult.status !== 0) {

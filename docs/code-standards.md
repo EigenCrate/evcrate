@@ -1,83 +1,74 @@
 # Code Standards and Codebase Structure
 
-**Last Updated**: 2026-09-04  
-**Applies to**: TypeScript control plane, sealed private release archives, and unpack installers  
-**Status**: Private Registry-Free Unpack Distribution complete (Linux verified, Windows validation deferred)
+**Status:** Current implementation standard  
+**Updated:** 2026-09-05  
+**Applies to:** TypeScript control plane, canonical harness resources, shared advisor
+controller, generated projections, and publication tooling
+
+This document states implementation rules. The [system architecture](./system-architecture.md)
+is the detailed contract authority; the [codebase summary](./codebase-summary.md)
+is the navigation map.
 
 ## Governing principles
 
 - **Correctness before optimization.** Prefer explicit validation and predictable
   failure over clever or speculative behavior.
-- **YAGNI, KISS, and DRY.** Add only the boundary required by a contract; reuse
-  one parser, path policy, hash policy, lock protocol, and error serializer.
+- **YAGNI, KISS, and DRY.** Add only the boundary required by a contract. Reuse one
+  parser, path policy, hash policy, lock protocol, and error serializer per boundary.
 - **Fail closed.** Invalid input, ambiguous ownership, unsafe paths, changed
-  identities, malformed journals, and uncertain cleanup must stop the operation.
-- **Single authority.** Canonical Claude resources are authored once. The
-  TypeScript distribution engine is authoritative for target generation,
-  build/check, HOME publication, and recovery after the Phase 10 cutover gates.
-  Generated projections and generated inventory files are never hand-edited.
-- **Bounded work.** Every file read, JSON document, process stream, process
-  lifetime, and metadata record has an explicit limit.
+  identities, malformed journals, and uncertain cleanup stop the operation.
+- **Single authority.** Canonical resources are authored once. Generated projections,
+  generated inventory, manifests, and publication state are never hand-edited.
+- **Bounded work.** Every file read, JSON document, path, process stream, process
+  lifetime, workspace, and metadata record has an explicit limit.
+- **Explicit ownership.** User-owned advisor policy and unmanaged HOME data are
+  preserved; EVCrate only mutates declared managed roots.
 
 ## Repository structure and ownership
 
 ```text
 .
-├── .evcrate/source/.claude/       # canonical authored harness resources
-├── .evcrate/source/.evcrate/bin/  # sole authored advisor-controller source
-├── .evcrate/source/{.agents,.codex,.gemini,.antigravity,.omp,.copilot,.pi}/
-│                                  # generated target projections
-├── .evcrate/targets/              # schema-2 target registry/manifests/overlays
-├── .evcrate/registry.json         # schema-1 canonical resource registry
-├── .evcrate/scopes/              # package-local global/project scope state
-├── src/                           # TypeScript control-plane sources
-│   ├── cli/                       # parse, dispatch, output, runner, bridge
-│   ├── context/                   # immutable path and target context
-│   ├── protocol/                  # JSON and versioned wire contracts
-│   ├── manifests/                 # target and controller authorization
-│   ├── registry/                  # canonical records, scans, revisions
-│   ├── imports/                   # bounded preview/apply and token state
-│   ├── scopes/                  # assignments, inheritance, revisions, CAS
-│   ├── filesystem/                # paths, hashes, atomic I/O, locks
-│   ├── distribution/              # build verification and promotion
-│   ├── advisor-settings/          # policy-file transactions/recovery
-│   └── errors/                    # stable error codes and exit mapping
-├── distribution/                  # Python compatibility/parity reference
-├── {copilot,omp,pi}_adapter/      # legacy parity references
-├── tests/                         # focused contract and authority suites
-├── dist/                          # generated JavaScript/declarations
-├── distribute.py                  # explicit Python compatibility entrypoint
-├── package.json                   # CommonJS package and command entrypoints
-└── CHANGELOG.md                   # repository changelog
+├── .evcrate/source/.claude/       canonical harness resources
+├── .evcrate/source/.evcrate/bin/  shared advisor-controller source
+├── .evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/
+│                                  generated target projections
+├── .evcrate/targets/              schema-2 target manifests and overlays
+├── .evcrate/registry.json         schema-1 canonical resource registry
+├── .evcrate/scopes/               package-local scope state
+├── src/                           TypeScript control plane
+├── scripts/                       inventory, manifest, and release tooling
+├── tests/                         focused contract suites
+├── dist/                          compiled JavaScript/declarations
+├── package.json                   package metadata and scripts
+├── README.md                      concise package entry point
+└── docs/                          maintained project documentation
 ```
 
-`src/manifests/controller-inventory.generated.ts` is generated by
-`scripts/generate-controller-inventory.mjs`; update the generator and
-regenerate rather than editing the generated file. `scripts/build-manifests.mjs`
-builds each persisted target and the aggregate verified build manifest.
-Changes to canonical resources or manifest overlays require a fresh isolated
-TypeScript build/check before publication.
+`distribution/` and `pi_adapter/` are not active runtime modules in the current
+scoped repository inventory. Do not describe them as alternate engines. The current
+package path is TypeScript; source retains compatibility-engine types for transition
+and validation boundaries, but no root `distribute.py` command is canonical.
 
-## TypeScript/npm standards
+## TypeScript and npm standards
 
-### Package and entrypoint
+### Package and entrypoints
 
-- Keep the package CommonJS. Compile strict NodeNext TypeScript from `src/` to
-  `dist/` with declarations; do not add a module-mode switch that changes the
-  existing advisor executable.
-- Retain both package bins: `evcrate` for the one-shot control-plane CLI and
+- Keep the package CommonJS-compatible and compile strict NodeNext TypeScript from
+  `src/` to `dist/` with declarations.
+- Retain both bins: `evcrate` for the one-shot control-plane CLI and
   `evcrate-advisor` for the existing CommonJS controller.
-- Keep public exports side-effect free. Importing the package must not start a
+- Keep public exports side-effect free. Importing `src/index.ts` must not start a
   process, open a listener, mutate HOME, or run a distribution action.
+- Treat `package.json` scripts as command authority. Prefer `npm run build`,
+  `npm run distribute:build`, `npm run distribute:check`, and target-specific
+  `npm run distribute:*` scripts over stale Python snippets.
 
 ### One-shot CLI lifecycle
-
-The CLI has one visible path:
 
 ```text
 parse arguments/request file
         ↓
-resolve immutable context and selected manifest(s)
+resolve immutable package/project/home/target context
         ↓
 dispatch exactly one operation
         ↓
@@ -86,381 +77,212 @@ validate and write exactly one result
 exit
 ```
 
-Supported operations are `version`, `resources.list|get`, `imports.preview|apply`,
-`advisor settings get|preview|apply`, and `distribute build|check|publish|all|recover`.
-`--request-file` is one complete bounded versioned envelope and is mutually
-exclusive with positional command construction. JSON mode and non-TTY output
-are canonical JSON; TTY text is derived from that same validated result.
+The CLI supports version, health, `resources list|get`, `imports preview|apply`,
+`scopes list|get|assign|remove|enable|disable`, `changes preview|apply`,
+advisor-settings `get|preview|apply`, and distribution `build|check|publish|all|recover`.
+A request file is one complete bounded versioned envelope and is mutually exclusive
+with positional command construction. JSON and non-TTY output derive from the same
+validated result.
 
-The CLI must not add a daemon, listener, retry loop, background worker, counsel
-proxy, arbitrary launcher, or direct migrator dispatch. The Python compatibility
-bridge is explicit and transition-only; it is not a TypeScript fallback.
-Unknown failures become stable sanitized control-plane errors; raw paths, child
-stderr, credentials, and stack traces do not cross the boundary.
+Do not add a daemon, listener, retry loop, background worker, counsel proxy,
+arbitrary launcher, or direct migrator dispatch. Compatibility paths must be
+explicit and transition-only; they must not mix Python and TypeScript mutations in
+one atomic operation. Unknown failures become stable sanitized errors; raw paths,
+child stderr, credentials, and stack traces do not cross the public boundary.
 
-### TypeScript naming and module design
+### Naming and module design
 
-- Files and directories use descriptive kebab-case. Functions and variables use
-  `camelCase`; classes and types use uppercase-leading names; constants use
-  `UPPER_SNAKE_CASE`.
-- Keep modules focused. Prefer existing module boundaries over new registries,
-  service containers, aliases, or parallel conventions. Keep new code small and
-  isolate filesystem, protocol, and process capabilities behind named helpers.
-- Prefer immutable interfaces (`readonly` fields, frozen result objects) at
-  protocol, manifest, context, and transaction boundaries.
-- Use explicit return types for exported functions and exhaustive branches for
-  operation/result unions.
+- Files and directories use descriptive kebab-case.
+- Functions and variables use `camelCase`; classes and types use uppercase-leading
+  names; constants use uppercase snake case.
+- Keep modules focused. Prefer existing boundaries over new registries, service
+  containers, aliases, or parallel conventions.
+- Use immutable interfaces (`readonly` fields, frozen result objects) at protocol,
+  manifest, context, and transaction boundaries.
+- Exported functions have explicit return types and exhaustive result branches.
 - Comments explain security rationale or non-obvious invariants, not syntax.
+
+## Normative command naming
+
+All documentation and target-facing examples use a literal `cmd` prefix for every
+slash command/resource name, including names referring to `.claude` resources.
+This rule applies to prose, tables, examples, and generated documentation:
+
+- Root forms are `/cmd-plan`, `/cmd-code`, `/cmd-cook`, `/cmd-fix`, and `/cmd-advise`.
+- OMP nested resource names replace path separators with `__`, for example
+  `/cmd-fix__hard` and `/cmd-review__codebase`.
+- Copilot projects a nested resource as `/evcrate-cmd-fix-hard`; its raw arguments
+  remain `$ARGUMENTS`.
+- A source path such as `.claude/commands/fix/hard.md` is a file reference, not a
+  slash invocation, and does not change source naming.
+- Shell executable syntax (`npm`, `node`, `python3`, `cp`, `export`) is not a slash
+  resource name and remains syntactically executable.
+
+This is a documentation/target convention for the migration. The canonical
+`.claude/scripts/scan_commands.py` scanner currently derives names from relative
+paths, and `src/cli/arguments.ts` accepts bare operational action names. Neither
+currently enforces a `cmd` prefix. That enforcement is a follow-up; do not claim
+this documentation change renamed source commands or completed parser migration.
+The OMP and Copilot `evcrate/command-name-map.json` files are authoritative for
+their projections. Do not invent aliases.
 
 ## Protocol and JSON standards
 
-### Strict parser contract
+Use repository parsers rather than permissive ad-hoc parsing at a control-plane
+boundary. Contracts enforce, as applicable:
 
-Use the repository parser rather than permissive ad-hoc parsing at a control-plane
-boundary. It enforces:
+- fatal UTF-8 decoding and bounded documents;
+- object/array roots where required, never primitive protocol roots;
+- duplicate-key, control-character, trailing-data, non-finite-number, and depth
+  checks;
+- unpaired-surrogate rejection and plain objects/arrays only;
+- exact-key validation for frozen wire shapes;
+- canonical JSON ordering and SHA-256 digesting.
 
-- fatal UTF-8 decoding and a bounded 64 KiB default document;
-- object or array roots only for parsed documents (primitive roots are rejected);
-- duplicate object-key rejection, control-character rejection, trailing-data
-  rejection, finite numbers only, and maximum nesting depth 16;
-- unpaired-surrogate rejection in strings; valid surrogate pairs remain valid;
-- plain objects and arrays only, with no prototype-bearing values.
+Validate before dispatch. Reject unknown fields, duplicate semantic paths,
+credentials, counsel-shaped fields, control characters, unsafe metadata paths,
+overlong values, traversal, symlinked ancestors, special entries, and invalid
+ownership. Use stable control-plane error codes and established exit mapping. Never
+return secrets, policy credentials, raw child output, raw filesystem implementation
+paths, or stack traces.
 
-Canonical JSON follows the Python authority for supported values: object keys are
-sorted by Unicode code point, array order is preserved, undefined object fields
-are omitted, and numeric/exponent rendering follows Python-compatible forms.
-Canonical bytes use UTF-8; the build-manifest form ends with one newline. SHA-256
-is the only digest used by these contracts.
+## Manifest, registry, and resource standards
 
-### Validation and error handling
+### Target manifests
 
-- Validate exact keys where a wire shape is frozen. Reject unknown fields,
-  duplicate semantic paths, credentials, counsel-shaped fields, control
-  characters, unsafe metadata paths, and overlong values before dispatch.
-- Use stable error codes and the established exit bands `0`, `2`, `3`, `4`,
-  `5`, and `6`. Preserve typed conflicts rather than replacing user data.
-- Do not log or return secrets, policy credentials, raw child output, or
-  filesystem implementation paths. Include actionable but sanitized messages.
-- Bounded subprocesses use fixed argument arrays, `shell: false`, an allowlisted
-  environment, bounded stdin/stdout/stderr and line counts, deadlines, abort
-  handling, descendant cleanup, and reaping.
+The schema-2 target registry persists exactly `antigravity`, `claude`, `codex`,
+`copilot`, `gemini`, `omp`, and `pi`. `agy` is input-only normalization for
+`antigravity`. Manifests declare exactly the resource roots `skill`, `agent`,
+`workflow`, `command`, and `hook`, plus target output/home policy. Normalize paths;
+reject traversal, backslashes, duplicate lists, symlinked ancestors, equal/nested
+output roots, unsafe adapter/helper files, and obsolete per-harness controller
+fields.
 
-## Manifest and build-authority standards
+Patch authorization is explicit: a source must be a regular file under the manifest
+patch subtree; destination must be normalized, unique, and inside a declared output
+root; keys must be non-empty, unique strict dotted JSON keys; patch text must be
+valid JSON.
 
-### Schema-2 target manifests
+### Resource registry and imports
 
-The registry is schema 2 and its persisted targets are exactly
-`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, and `pi`.
-`agy` is accepted only as an input alias for `antigravity`; it is not a stored
-registry key. A manifest must normalize paths and reject traversal, backslashes,
-symlinked ancestors, duplicate lists, unsafe adapter/helper files, and obsolete
-per-harness advisor-runtime fields.
+Keep `.evcrate/registry.json` (schema 1) distinct from target/build manifests
+(schema 2). Registry records use stable `kind:canonical-relative-path` IDs,
+canonical source paths, mode-aware content hashes, provenance, all seven target
+compatibility entries, capabilities, bounded optional metadata, and positive
+revisions. IDs and records sort by Unicode code point.
 
-Output roots are declared relative roots. The selected manifest set rejects equal
-or nested roots, so output ownership is non-overlapping. HOME bindings must cover
-those roots, use unique destinations, and obey promotion order. Owned source
-paths stay under `files/`; project documentation entries are root-level names.
+Canonical scans use owner-controlled roots, reject symlink/special entries, and hash
+before discovery. Resource kinds are fixed: skill directories contain `SKILL.md`;
+agents/workflows are root-level Markdown files; commands recurse for Markdown files;
+hooks are root-level files or directories. Imported content is never executed.
 
-Patch authorization is explicit and complete:
+`imports.preview` reads immutable bounded descriptors into an owner-only stage and
+writes only a single-use replay token. `imports.apply` rechecks source identity,
+canonical/registry/manifest/adapter/output hashes, destination, provenance,
+approvals, expiry, and resource record before promotion. Same-provenance matches are
+updates/unchanged; different provenance, kind mismatch, stale dependencies, or
+unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or deleting user data.
 
-1. `source` is a regular file under the manifest's `patches/` subtree.
-2. `destination` is normalized, unique across declarations, and contained by a
-   declared output root.
-3. `keys` are non-empty, unique, strict dotted JSON keys; malformed segments or
-   invalid JSON text fail closed.
+## Advisor controller standards
 
-### Resource registry and explicit-import standards
+The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
+published once to `$HOME/.evcrate/bin/`. It reads the required user policy at
+`$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
 
-Keep distribution and resource ownership separate. The schema-2 target manifest
-is authoritative for adapters, output roots, HOME bindings, and promotion policy.
-Its single `resource_roots` map declares exactly `skill`, `agent`, `workflow`,
-`command`, and `hook`. The resolver retains the manifest-derived `resourceRoot`
-assumption: it infers the repository from `.evcrate/targets/manifest.json` and
-resolves those normalized, non-overlapping roots below
-`.evcrate/source/.claude`. Do not imply alternate layouts or arbitrary roots.
+Policy version 1 has exactly top-level `version`/`advisor` and advisor keys
+`backend`/`model`/`effort`/`timeout_ms`, with timeout `60000..900000`. Bound policy
+to 16 KiB, parse strict UTF-8/JSON, reject duplicate keys, credentials, unknown
+fields, unsafe paths/modes, and `hosts` migration input. Candidate backends are
+`claude`, `codex`, `antigravity`, `pi`, and `omp`; enabled backends are `claude`,
+`codex`, `pi`, and `omp`. Gemini and Copilot are not controller backends.
 
-The separate `.evcrate/registry.json` is schema 1 and must remain distinct from
-schema-2 target/build manifests. Its exact document shape is
-`schema_version`, `revision`, and `resources`; records use stable
-`kind:canonical-relative-path` IDs, canonical source paths, mode-aware content
-hashes, provenance, all seven persisted-target compatibility entries, detected
-capabilities, optional bounded model metadata, and positive revisions. IDs and
-records are sorted by Unicode code point; duplicate IDs/source paths, stale
-content, malformed records, and empty documents that hide canonical resources
-fail closed.
+The direct stdin checkpoint has exactly ten keys:
+`protocol`, `version`, `checkpoint`, `question`, `kind`, `task_or_phase`, `evidence`,
+`changed_paths`, `prior_counsel`, and `owner_disposition`. Bound request/evidence
+sizes, evidence files, changed paths, safe relative paths, and checkpoint IDs. A
+single controller transaction generates a UUID, loads policy once, selects one
+adapter, creates one empty owner-only workspace, probes and invokes once under one
+monotonic deadline, emits one frozen envelope, and cleans up. No retry, provider
+switch, model substitution, effort downgrade, callback, or local fallback is
+permitted.
 
-Canonical scans must use owner-controlled roots, reject symlink/special entries,
-and hash before discovery. Granularity is fixed: skill directories contain
-`SKILL.md`; agents/workflows are root-level Markdown files; commands recurse for
-Markdown files; hooks are root-level files or directories. Bound registry files
-to 4 MiB and 10,000 records; bound canonical traversal to 100,000
-files/directories, 256 MiB, 16 MiB per file, depth 32, and 4 KiB paths. Resource
-queries accept only validated kind/target/status filters, a Unicode code-point
-cursor, and a limit from 1 to 100 (default 50).
+The public result is one JSON line with <code>ADVICE_READY</code> or <code>FAILED</code>, a correlation UUID,
+and a receipt containing backend/model/effort/controller version/adapter version and
+elapsed time. Failure contains only sanitized error fields. Stderr is empty and exit
+zero means success only. Runner calls use `shell:false`, fixed allowlisted argv and
+environment, stdin-only prompts, bounded streams, detached POSIX process groups,
+TERM/KILL cancellation, and descendant reaping.
 
-Projection adapters must expose an exhaustive five-kind compatibility map. The
-registry requires all seven persisted target IDs and records `native`,
-`needsAdapter`, or `unsupported` (unsupported requires a reason). Selected
-imports fail before projection execution when an adapter is missing or marks the
-resource kind unsupported.
+See [system architecture](./system-architecture.md) for the complete wire shape,
+limits, closure, adapter boundaries, and verification boundary.
 
-`imports.preview` is the only planning path for an explicit external source.
-Validate source kind, destination, provenance, selected targets, approvals, and
-an expiry of 1–900 seconds (default 300). Read sources into immutable bounded
-descriptors (1,000 files, 64 MiB total, 16 MiB/file, 100,000 directories, depth
-32, 4 KiB/path); reject unsafe ancestors, symlinks/special entries, sensitive
-segments, and group/world-writable modes. Executable bits, script suffixes, or
-shebangs require `script-execution`; hooks require `hook-execution`. Never
-execute imported content.
-
-Preview copies canonical source and materializes the candidate only in
-owner-only stages, validates selected projections, and writes no canonical,
-registry, target-manifest, generated, controller, policy, HOME, or managed
-settings content. Persist only the owner-only 0600, exact-key replay token
-(`<=128 KiB`) under `stateRoot/import-previews`.
-
-Apply must validate the unexpired token, reject replay, bind source hash/identity,
-canonical current/prospective hashes, registry revision/file identity, selected
-targets, target-registry/manifest hashes, adapter/output hashes, destination,
-provenance, approvals, and resource record. Source identity includes
-device/inode/size/mode; registry identity adds digest; complete canonical hashes
-include file and directory modes; promotion snapshots include node kind,
-device/inode/size/mode/digest. Recompute these bindings before each backup and
-promotion rename. Promote canonical source and registry together from one
-same-volume stage under the publication lock, with durable backup/journal
-recovery; consume the token only after success. Identical re-imports are
-`unchanged` and do not advance the registry revision.
-
-| Collision | Required behavior |
-|---|---|
-| No record and no destination node | Create managed node and record. |
-| Same-provenance managed record, matching kind | Replace in staging; report `update` or `unchanged`. |
-| Different provenance, kind mismatch, or stale dependency | Return `CAS_CONFLICT`; preserve the node. |
-| Destination node without a matching managed record | Return `CAS_CONFLICT`; never adopt or delete unmanaged content. |
-
-Generated roots, controller source/runtime, target manifests, advisor policy,
-HOME paths, and managed settings are outside registry/import ownership.
-
-### Scope and advisor-settings standards
-
-Scope state is package-local under `.evcrate/scopes/`: `global.json` stores
-global assignments and `projects/<opaque-project-id>.json` stores project
-assignments. The project ID is the SHA-256 hash of canonical absolute
-project-root UTF-8 bytes; raw roots never appear in filenames or protocol output.
-Project assignments override global assignments, explicit disablement suppresses
-inheritance, and absent assignments inherit.
-
-Scope mutations use the explicit
-`{registryRevision,globalScopeRevision,projectScopeRevision|null}` vector.
-`changes.preview|apply` tokens are owner-only and single-use; they bind selected
-targets, canonical/registry/manifest/adapter hashes, independent output-root
-hashes, and expiry. Apply rechecks bindings before mutation and consumes a token
-only after success. Package-local mutations serialize through `scopes.lock`.
-
-Advisor settings has its own coordinator and canonical `advisor-settings.lock`.
-The frozen v1 complete-document request-file input is canonicalized before
-preview; opaque revisions bind policy bytes, file identity, and mode. Whole-
-document atomic apply, single-use tokens, and settings-specific journal/recovery
-handle manual edits, recreation, mode/identity changes, replay, and expiry.
-Settings, scope, and target-publication transactions are separate. Authored agent
-model frontmatter remains static resource content; commands and workflows have no
-model binding, and mutable resource model operations are intentionally deferred.
-
-### Build manifests and controller closure
-
-A build manifest is schema 2 with exactly these top-level fields:
-
-```text
-schema_version
-source_hashes
-adapter_hashes
-controller_hashes
-owners
-output_hashes
-validation
-home_policy
-```
-
-The TypeScript reader bounds the build-manifest file at 4 MiB and verifies stable
-file metadata while reading. It requires `validation.complete === true`, hashes
-current source/adapter/output roots, and rejects any missing, extra, stale, or
-mismatched digest. Hash records use normalized relative keys and 64-character
-lowercase SHA-256 values.
-
-The controller inventory is fixed at 17 production files, rooted at
-`.evcrate/source/.evcrate/bin`:
-
-```text
-evcrate-advisor
-lib/advisor/adapter-contract.cjs
-lib/advisor/adapter-registry.cjs
-lib/advisor/adapters/claude.cjs
-lib/advisor/adapters/codex.cjs
-lib/advisor/adapters/omp.cjs
-lib/advisor/adapters/omp-parser.cjs
-lib/advisor/adapters/pi.cjs
-lib/advisor/checkpoint-contract.cjs
-lib/advisor/controller-envelope.cjs
-lib/advisor/controller.cjs
-lib/advisor/errors.cjs
-lib/advisor/isolated-workspace.cjs
-lib/advisor/json-document.cjs
-lib/advisor/policy-schema.cjs
-lib/advisor/profile.cjs
-lib/advisor/runner.cjs
-```
-
-Source and projection checks reject symlinks, extra files/directories, tests,
-fixtures, helpers, fake artifacts, non-literal imports, and imports outside the
-allowlisted closure or Node built-ins. The entrypoint requires the canonical
-Node shebang and executable mode. `controller_hashes` must contain exactly the
-17 `.evcrate/bin/...` keys and current bytes; a projection must be byte-identical.
-
-### Phase 10 cutover and package boundary
-
-- `scripts/generate-controller-inventory.mjs` runs before compilation and
-  regenerates the exact controller inventory. `scripts/build-manifests.mjs`
-  invokes the TypeScript local-build path once per persisted target and once for
-  the aggregate set; it writes target-specific and aggregate schema-2 manifests.
-- `src/distribution/cutover.ts` records one immutable gate receipt for each of
-  the seven persisted targets. Receipts require TypeScript authority, parity,
-  closure, and schema-2 verification. `assertUniformAuthoritativeEngine` must
-  reject any atomic selection that mixes Python and TypeScript engines.
-- Build/check stages registered TypeScript adapters and never run migrators.
-  HOME publication consumes only a current verified build and preserves the
-  separate advisor-settings transaction.
-- The packed artifact must include compiled `dist/**`, target manifests,
-  verified build manifests, and one exact controller closure. Its release
-  checks exclude distribution/migrator/legacy adapter Python trees,
-  `__pycache__`, and Python bytecode. The default CLI requires Node >=22.19 and
-  no Python interpreter.
-
-### Private unpack distribution and installer standards
-
-- **Sealed archive packaging**: Emit POSIX-mode-preserving Linux `.tar.gz` and Windows `.zip` with SHA-256 sidecars and canonical release metadata. Refuse archive creation if external dependencies, Python trees, development dependencies, or unverified closure files are present.
-- **Installer isolation and zero network**: Installers execute offline without contacting npm or GitHub. Reject elevation (`sudo`), automatic shell edits, or unmanaged HOME writes.
-- **Snapshot immutability and replace-with-backup**: Release archives are immutable. Upgrades retain prior snapshots at explicit backup paths without mutable-state merge. Rollback is explicit and never publishes HOME.
-- **Support boundaries**: Linux x64 installer is end-to-end verified under real network namespace isolation (`unshare -rn`). Windows PowerShell installer is attached as an unvalidated preview; no Windows validation or support claim may be made without separate harness validation.
 ## Filesystem, locking, and transaction standards
 
-### Paths, ownership, and staging
+- Normalize relative POSIX paths before joining; reject absolute paths, backslashes,
+  dot/dot-dot segments, empty segments, NULs, symlinked ancestors, special entries,
+  and containment escapes.
+- Require real owner-controlled directories for managed roots and ancestors.
+  State, locks, journals, and policy files are owner-only on POSIX. Never chmod or
+  replace unrelated HOME data.
+- Stage on the destination volume. Record device/inode/size/mode/digest snapshots
+  and compare them before every backup/promotion rename.
+- Write journals, markers, policy bytes, and lock metadata through owner-only atomic
+  temporary files; flush metadata where supported.
+- Recover only validated, owner-controlled, contained journal paths. Restore the
+  complete prior set for an interrupted transaction; leave unexpected state and
+  user data untouched.
+- Publication, scope, and advisor-settings locks are separate transactions. Lock
+  release requires matching token and device/inode identity; uncertain release
+  leaves state for recovery.
 
-- Normalize relative POSIX paths before joining. Reject absolute paths,
-  backslashes, dot/dot-dot segments, empty segments, NULs, symlinked ancestors,
-  non-regular entries, and containment escapes.
-- Managed roots and their ancestors must be real owner-controlled directories.
-  State, locks, journals, and policy files are owner-only on POSIX. Do not
-  chmod or replace unrelated HOME data.
-- Promotion sources must come from an opaque capability-backed staged root and
-  share a volume with the destination parent. The capability records device and
-  inode identity; use it only while the exact directory still exists.
-- Resource CAS uses `hashFileWithMode` for files and complete tree hashes for
-  directories; source identity and registry file revisions include device,
-  inode, size, and mode. A mode-only change is not an unchanged resource.
-- Stage cleanup first renames the identity-checked directory to a random
-  quarantine name, rechecks ownership/device/inode, then removes it. Never
-  recursively remove a replacement directory through a stale path.
+Advisor settings uses `advisor-settings.lock`, single-use preview tokens, durable
+prepared/backed-up/promoted journals, revision/CAS checks, and whole-document
+atomic apply. It never joins scope or target-publication atomicity.
 
-### Atomic publication and recovery
+## Build, closure, and release standards
 
-- Write journal, marker, and policy bytes through owner-only atomic temporary
-  files, flush file and directory metadata where supported, then rename.
-- Before each source or destination rename, compare a snapshot containing
-  presence, kind, device/inode, size, mode, and digest. Source or destination
-  changes are a CAS failure; never overwrite a concurrent replacement.
-- A promotion journal records backup location, destination set, original presence,
-  intended hashes, and commit state. Recover only validated, owner-controlled,
-  contained journal paths. Restore the complete prior set for an interrupted
-  transaction; committed deletions remain deletions. Unexpected state fails
-  closed and leaves user data untouched.
+`scripts/generate-controller-inventory.mjs` is the source of the generated 17-file
+controller inventory. `scripts/build-manifests.mjs` invokes the TypeScript local-build
+path for each persisted target and the aggregate set. Build manifests are schema 2
+and carry `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`,
+`output_hashes`, `validation`, and `home_policy`.
 
-### Shared lock and release-state protocol
-
-Publication uses an owner-only state directory and an `O_EXCL` JSON lock. The
-TypeScript implementation exposes `publish.lock`, package-local `scopes.lock`,
-and canonical `advisor-settings.lock`; Python's `publish_lock` uses the same
-publication lock shape so TypeScript and Python publishers cannot enter the same
-critical section at once. Lock metadata is bounded to 4 KiB and contains a safe
-PID, millisecond start time, random 32-hex token, and optional process-start token.
-
-On Linux, `/proc/<pid>/stat` process-start data prevents a reused PID from being
-accepted as the prior owner. A valid stale lock is atomically renamed to a
-random `.stale-*` quarantine path, re-read, matched by token/device/inode, then
-removed. Invalid, changing, or uncertain metadata blocks acquisition. Release
-removes a lock only when token and device/inode identity still match; uncertain
-release leaves the lock for recovery.
-
-The release marker is owner-only, atomically written schema-1 JSON bounded at
-4 MiB. Missing state has an explicit empty marker. Symlinked, malformed,
-unsupported, oversized, or unstable marker data fails closed.
-
-### Advisor policy-file transactions
-
-Policy files are bounded to 16 KiB, fatal-UTF-8/strict-JSON validated, canonical,
-owner-only regular files. A read returns a safe policy view, mode, bytes, and a
-revision derived from file identity/metadata and content. Staging validates the
-expected revision and writes canonical bytes to an owner-only sibling.
-
-Apply writes a durable `prepared`/`backed_up`/`promoted` journal, checks source
-and destination revisions before backup and promotion, renames the old complete
-file to an identity-checked backup, promotes the staged file, verifies bytes and
-mode, then clears journal/backup state. Recovery restores the prior complete
-policy or accepts a fully promoted document; replacement directories and unsafe
-transaction paths are rejected. The functional `advisor settings
-get|preview|apply` coordinator is available through the frozen v1
-complete-document request-file contract. It uses the canonical
-`advisor-settings.lock` and settings-specific journal/recovery; it never joins
-scope or target-publication atomicity. Positional preview/apply remain behind
-the request-file boundary.
-
-## Python compatibility boundary
-
-The TypeScript distribution bridge invokes only package-relative
-`python3 distribute.py` actions with the established state-root handoff when an
-explicit Python engine selects the compatibility path. It never invokes a
-migrator directly or mixes Python and TypeScript mutations in one transaction.
-The packaged default path is TypeScript and requires no Python interpreter.
-
-No document may claim Windows security equivalence, live vendor qualification,
-npm publication, or operator rollout from deterministic tests. The current
-residuals are the low same-UID/path-race window and Linux-first security scope.
+Build/check must verify complete validation, current hashes, regular non-symlink
+files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.
+Publication consumes only a current verified build and preserves unmanaged roots.
+Linux x64 is the current live qualification boundary; do not infer Windows
+security equivalence, live vendor qualification, npm publication, deployment, or
+rollout from deterministic contracts.
 
 ## Testing and review standards
 
-Tests defend observable boundaries, not implementation trivia. Focused suites
-cover strict parser/manifest contracts, resource-root scanning and deterministic
-queries, capability approvals, non-mutating import previews, single-use token
-expiry/replay, managed/unmanaged collisions, source/canonical/manifest/adapter/
-output CAS, output ownership, controller closure, canonical hashes,
-symlink/owner checks, staged-root identity cleanup, shared locks, stale
-quarantine, promotion CAS/recovery, and advisor policy CAS/recovery. Use
-temporary roots and real filesystem/process behavior; do not weaken checks with
-fake success paths.
+Tests defend observable behavior: strict parser/manifest contracts, bounded scans,
+capability approvals, non-mutating previews, token expiry/replay, managed/unmanaged
+collisions, CAS hashes, output ownership, controller closure, symlink/owner checks,
+staged-root cleanup, locks, stale quarantine, promotion recovery, and advisor policy
+recovery. Prefer temporary roots and real filesystem/process behavior. Do not weaken
+checks with fake success paths or assertions on incidental implementation details.
 
-Focused implementation evidence records all builds passing. Phase 10
-`npm run test:phase10` passed **8/8**, and full validation passed **255/255**.
-Earlier focused evidence remains **212/212** for the Phase 9 aggregate, **54/54**
-for Phase 8, and **133/133** across the Phase 7, protocol, CLI, Phase 6, Phase 4,
-and Phase 5 focused commands. These contract results cover the feature worktree
-and packed artifact boundary; they do not claim live vendor qualification,
-deployment behavior, npm publication, or `main` merge.
+## Documentation standards
 
-## Documentation and changelog standards
-
-- Keep Markdown files under the repository documentation limit (800 lines).
-  Prefer short sections, tables, and links over duplicating implementation plans.
-- Link only to verified files under `docs/` or the repository root. `CHANGELOG.md`
-  is the repository release authority; `docs/project-changelog.md` mirrors
-  phase-level status and evidence.
-- Add date-stamped Unreleased entries for feature, fix, documentation, and test
-  work. Do not invent a release version or rewrite historical entries.
-- Record verified behavior and explicit non-claims. If a contract is deferred,
-  name the owning phase rather than documenting a no-op implementation.
+- Keep Markdown files below the repository limit of 800 lines; keep README below
+  300 lines. Prefer tables, concise sections, and links over duplicated contracts.
+- Link only to verified files under `docs/` or the repository root. `docs/project-changelog.md`
+  mirrors phase evidence and boundaries; no root changelog file is present in the
+  current repository inventory.
+- Date-stamp Unreleased documentation entries where project conventions require it.
+  Do not invent release versions, test totals, APIs, environment variables, or
+  support claims.
+- Keep detailed controller/distribution/supervision authority in
+  [system architecture](./system-architecture.md), requirements in the
+  [PDR](./project-overview-pdr.md), and source navigation in the
+  [codebase summary](./codebase-summary.md).
 
 ## References
 
-- [Codebase Summary](./codebase-summary.md)
-- [System Architecture](./system-architecture.md)
-- [Project Overview and PDR](./project-overview-pdr.md)
-- [Advisor distribution architecture](./advisor-distribution-architecture.md)
-- [Repository changelog](../CHANGELOG.md)
+- [System architecture](./system-architecture.md)
+- [Project overview and PDR](./project-overview-pdr.md)
+- [Codebase summary](./codebase-summary.md)
+- [Project roadmap](./project-roadmap.md)
+- [Project changelog](./project-changelog.md)
+- [Pi-native migration](./pi-native-migration.md)

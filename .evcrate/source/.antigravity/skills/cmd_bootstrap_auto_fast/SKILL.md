@@ -1,15 +1,15 @@
 ---
 name: cmd_bootstrap_auto_fast
-description: ⚡⚡⚡ Quickly bootstrap a new project automatically
+description: Quickly bootstrap a new project automatically
 ---
 # cmd_bootstrap_auto_fast
 
 Command Path: /bootstrap/auto/fast
 
-Description: ⚡⚡⚡ Quickly bootstrap a new project automatically
+Description: Quickly bootstrap a new project automatically
 
 ---
-description: ⚡⚡⚡ Quickly bootstrap a new project automatically
+description: Quickly bootstrap a new project automatically
 argument-hint: [user-requirements] [--advice]
 ---
 

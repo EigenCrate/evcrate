@@ -1,15 +1,15 @@
 ---
 name: cmd_plan_hard
-description: ⚡⚡⚡ Research, analyze, and create an implementation plan
+description: Research, analyze, and create an implementation plan
 ---
 # cmd_plan_hard
 
 Command Path: /plan/hard
 
-Description: ⚡⚡⚡ Research, analyze, and create an implementation plan
+Description: Research, analyze, and create an implementation plan
 
 ---
-description: ⚡⚡⚡ Research, analyze, and create an implementation plan
+description: Research, analyze, and create an implementation plan
 argument-hint: [task]
 ---
 

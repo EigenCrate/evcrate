@@ -230,7 +230,7 @@ if (isLoading) {
 
 ---
 
-### ⚡ Performance
+### Performance
 
 **Optimization Patterns:**
 - `useMemo`: Expensive computations (filter, sort, map)

@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-review-codebase-parallel"
-description: "⚡⚡⚡ Ultrathink edge cases, then parallel verify with code-reviewers"
+description: "Ultrathink edge cases, then parallel verify with code-reviewers"
 argument-hint: "[scope-or-prompt]"
 user-invocable: true
 disable-model-invocation: true

@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-code-auto"
-description: "⚡⚡⚡ [AUTO] Start coding & testing an existing plan (\"trust me bro\")"
+description: "[AUTO] Start coding & testing an existing plan (\"trust me bro\")"
 argument-hint: "[plan] [all-phases-yes-or-no] [--advice] (default: yes)"
 user-invocable: true
 disable-model-invocation: true
@@ -217,7 +217,7 @@ If $ALL_PHASES is `No`, wait for user confirmation before proceeding to the next
 ## Summary report
 If this is the last phase, generate a concise summary report.
 Use `user input` tool to ask these questions:
-- If user wants to preview the report with `/evcrate-cmd-preview` slash command.
+- If user wants to preview the report with `/preview` slash command.
 - If user wants to archive the plan with `/evcrate-cmd-plan-archive` slash command.
 
 ---

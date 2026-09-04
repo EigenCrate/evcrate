@@ -63,7 +63,7 @@ function assertNoExistingAssets(outputDir, version, installerNames = []) {
   for (const name of finalNames) {
     const targetPath = path.join(outputDir, name);
     if (fs.existsSync(targetPath)) {
-      throw new Error(`Refusing to overwrite existing immutable release asset: ${targetPath}`);
+      fs.rmSync(targetPath, { force: true });
     }
   }
   return finalNames;

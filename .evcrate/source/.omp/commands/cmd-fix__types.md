@@ -1,5 +1,5 @@
 ---
-description: "⚡ Fix type errors"
+description: "Fix type errors"
 ---
 
 

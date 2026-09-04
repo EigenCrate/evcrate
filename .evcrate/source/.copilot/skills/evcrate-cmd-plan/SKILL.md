@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-plan"
-description: "⚡⚡⚡ Intelligent plan creation with prompt enhancement"
+description: "Intelligent plan creation with prompt enhancement"
 argument-hint: "[task]"
 user-invocable: true
 disable-model-invocation: true

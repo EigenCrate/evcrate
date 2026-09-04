@@ -72,6 +72,7 @@ TASK_MAPPINGS = {
     "coding-level": ["coding", "level", "eli5", "junior", "senior", "lead", "god", "beginner", "expert", "teach", "learn", "explain"],
     # New categories
     "worktree": ["worktree", "parallel", "isolate", "isolation", "concurrent", "multiple branches"],
+    "preview": ["preview", "view", "render", "markdown", "reader", "novel"],
     "journal": ["journal", "diary", "log", "entry", "reflect", "failure", "lesson"],
     "brainstorm": ["brainstorm", "idea", "ideate", "creative", "explore ideas", "think through"],
     "watzup": ["watzup", "status", "summary", "wrap up", "what's up", "recent", "changes"],

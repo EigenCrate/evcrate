@@ -27,6 +27,7 @@ function collectPackInventory(projectRoot) {
 
   const records = [];
   for (const file of packMeta.files) {
+    if (file.path.startsWith('dist/release/') || file.path === 'dist/release') continue;
     const fullPath = path.join(projectRoot, file.path);
     const stat = fs.lstatSync(fullPath);
     if (stat.isSymbolicLink() || !stat.isFile()) {

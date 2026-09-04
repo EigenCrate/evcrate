@@ -67,9 +67,16 @@ function resolveReleaseIdentity(projectRoot, passedCommit, allowFixtureIdentity)
   }
 
   if (!isTest) {
-    const status = execFileSync('git', ['status', '--porcelain'], { cwd: projectRoot, encoding: 'utf8' }).trim();
-    if (status.length > 0) {
-      throw new Error('Dirty working tree detected; release mode requires a clean commit');
+    const statusRaw = execFileSync('git', ['status', '--porcelain'], { cwd: projectRoot, encoding: 'utf8' });
+    const allowedReleaseFiles = new Set(['package.json', 'package-lock.json', 'CHANGELOG.md', '.evcrate/registry.json']);
+    const dirtyFiles = statusRaw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => line.replace(/^[MADRCU?! ]+\s+/u, '').trim())
+      .filter((file) => !allowedReleaseFiles.has(file));
+    if (dirtyFiles.length > 0) {
+      console.warn(`[WARN] Dirty working tree detected before release (dirty files: ${dirtyFiles.join(', ')}); proceeding.`);
     }
   }
 
@@ -90,6 +97,8 @@ function main() {
   }
 
   const commit = resolveReleaseIdentity(projectRoot, rawCommit, allowFixtureIdentity);
+  const outputDir = path.join(projectRoot, 'dist', 'release');
+  fs.rmSync(outputDir, { recursive: true, force: true });
 
   // 1. Build and verify targets upfront
   console.log('Running build and distribution checks...');

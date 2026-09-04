@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-docs-init"
-description: "⚡⚡⚡⚡ Analyze the codebase and create initial documentation"
+description: "Analyze the codebase and create initial documentation"
 argument-hint: ""
 user-invocable: true
 disable-model-invocation: true

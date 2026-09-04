@@ -1,5 +1,5 @@
 ---
-description: "⚡⚡⚡ Analyze the codebase and update documentation"
+description: "Analyze the codebase and update documentation"
 ---
 
 

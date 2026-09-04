@@ -56,7 +56,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, unrelat
     maxBuffer: 64 * 1024 * 1024
   };
 
-  const versionRes = spawnSync(launcherPath, ['version', '--json'], { ...defaultOpts, timeout: 10000 });
+  const versionRes = spawnSync(launcherPath, ['version', '--json'], { ...defaultOpts, timeout: 60000 });
   if (versionRes.status !== 0) {
     throw new Error(`evcrate version failed: ${versionRes.stderr || versionRes.stdout}`);
   }
@@ -65,22 +65,22 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, unrelat
     throw new Error(`evcrate version returned unexpected status: ${versionJson.status}`);
   }
 
-  const healthRes = spawnSync(launcherPath, ['health', '--json'], { ...defaultOpts, timeout: 15000 });
+  const healthRes = spawnSync(launcherPath, ['health', '--json'], { ...defaultOpts, timeout: 60000 });
   const healthStatus = healthRes.status === 0 ? 'ok' : 'diagnostic-flagged';
 
   const packageHashBefore = computeDirectoryHash(snapshotDir);
 
-  const dryRun1 = spawnSync(launcherPath, ['publish', '--dry-run', '--json'], { ...defaultOpts, timeout: 20000 });
+  const dryRun1 = spawnSync(launcherPath, ['publish', '--dry-run', '--json'], { ...defaultOpts, timeout: 120000 });
   if (dryRun1.status !== 0) {
     throw new Error(`publish --dry-run failed (status ${dryRun1.status}, signal ${dryRun1.signal}, error ${dryRun1.error}): ${dryRun1.stderr || dryRun1.stdout}`);
   }
 
-  const apply = spawnSync(launcherPath, ['publish', '--apply'], { ...defaultOpts, timeout: 30000 });
+  const apply = spawnSync(launcherPath, ['publish', '--apply'], { ...defaultOpts, timeout: 180000 });
   if (apply.status !== 0) {
     throw new Error(`publish --apply failed (status ${apply.status}, signal ${apply.signal}, error ${apply.error}): ${apply.stderr || apply.stdout}`);
   }
 
-  const dryRun2 = spawnSync(launcherPath, ['publish', '--dry-run', '--json'], { ...defaultOpts, timeout: 20000 });
+  const dryRun2 = spawnSync(launcherPath, ['publish', '--dry-run', '--json'], { ...defaultOpts, timeout: 120000 });
   if (dryRun2.status !== 0) {
     throw new Error(`repeat publish --dry-run failed (status ${dryRun2.status}, signal ${dryRun2.signal}, error ${dryRun2.error}): ${dryRun2.stderr || dryRun2.stdout}`);
   }

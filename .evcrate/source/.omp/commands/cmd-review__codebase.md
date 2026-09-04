@@ -1,6 +1,6 @@
 ---
 argument-hint: "[tasks-or-prompt]"
-description: "⚡⚡⚡ Scan & analyze the codebase."
+description: "Scan & analyze the codebase."
 ---
 
 

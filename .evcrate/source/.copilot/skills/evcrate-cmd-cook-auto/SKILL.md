@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-cook-auto"
-description: "⚡⚡ Implement a feature automatically with plan and quality gates"
+description: "Implement a feature automatically with plan and quality gates"
 argument-hint: "[tasks] [--advice]"
 user-invocable: true
 disable-model-invocation: true

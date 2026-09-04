@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-logs"
-description: "⚡ Analyze logs and fix issues"
+description: "Analyze logs and fix issues"
 argument-hint: "[issue] [--advice]"
 user-invocable: true
 disable-model-invocation: true

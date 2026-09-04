@@ -1,15 +1,15 @@
 ---
 name: cmd_fix_test
-description: ⚡⚡ Run test suite and fix issues
+description: Run test suite and fix issues
 ---
 # cmd_fix_test
 
 Command Path: /fix/test
 
-Description: ⚡⚡ Run test suite and fix issues
+Description: Run test suite and fix issues
 
 ---
-description: ⚡⚡ Run test suite and fix issues
+description: Run test suite and fix issues
 argument-hint: [issues] [--advice]
 ---
 

@@ -1,6 +1,6 @@
 ---
 argument-hint: "[user-requirements] [--advice]"
-description: "⚡⚡⚡ Quickly bootstrap a new project automatically"
+description: "Quickly bootstrap a new project automatically"
 ---
 
 

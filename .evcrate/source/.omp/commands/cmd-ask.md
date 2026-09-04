@@ -1,6 +1,6 @@
 ---
 argument-hint: "[technical-question]"
-description: "⚡ Answer technical and architectural questions."
+description: "Answer technical and architectural questions."
 ---
 
 

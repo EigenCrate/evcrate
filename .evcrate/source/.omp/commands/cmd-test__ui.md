@@ -1,6 +1,6 @@
 ---
 argument-hint: "[url] [options]"
-description: "⚡⚡ Run UI tests on a website & generate a detailed report."
+description: "Run UI tests on a website & generate a detailed report."
 ---
 
 
@@ -79,7 +79,7 @@ node screenshot.js --url https://example.com/settings --output settings.png --cl
 - Use `ai-multimodal` to analyze all screenshots and visual elements.
 - Generate a comprehensive report in Markdown format, embedding all screenshots directly in the report.
 - Finally respond to the user with a concise summary of findings and recommendations.
-- Use `ask the user` tool to ask if user wants to preview the report with `/cmd-preview` slash command.
+- Use `ask the user` tool to ask if user wants to preview the report with `/preview` slash command.
 
 ## Output Requirements
 How to write reports:

@@ -1,15 +1,15 @@
 ---
 name: cmd_fix_fast
-description: ⚡ Analyze and fix small issues [FAST]
+description: Analyze and fix small issues [FAST]
 ---
 # cmd_fix_fast
 
 Command Path: /fix/fast
 
-Description: ⚡ Analyze and fix small issues [FAST]
+Description: Analyze and fix small issues [FAST]
 
 ---
-description: ⚡ Analyze and fix small issues [FAST]
+description: Analyze and fix small issues [FAST]
 argument-hint: [issues]
 ---
 

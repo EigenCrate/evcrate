@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-test"
-description: "⚡⚡ Run test suite and fix issues"
+description: "Run test suite and fix issues"
 argument-hint: "[issues] [--advice]"
 user-invocable: true
 disable-model-invocation: true

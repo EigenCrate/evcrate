@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-code-no-test"
-description: "⚡⚡ Start coding an existing plan (no testing)"
+description: "Start coding an existing plan (no testing)"
 argument-hint: "[plan] [--advice]"
 user-invocable: true
 disable-model-invocation: true

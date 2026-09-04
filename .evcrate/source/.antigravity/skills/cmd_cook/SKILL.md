@@ -1,15 +1,15 @@
 ---
 name: cmd_cook
-description: ⚡⚡⚡ Implement a feature [step by step]
+description: Implement a feature [step by step]
 ---
 # cmd_cook
 
 Command Path: /cook
 
-Description: ⚡⚡⚡ Implement a feature [step by step]
+Description: Implement a feature [step by step]
 
 ---
-description: ⚡⚡⚡ Implement a feature [step by step]
+description: Implement a feature [step by step]
 argument-hint: [tasks] [--advice]
 ---
 

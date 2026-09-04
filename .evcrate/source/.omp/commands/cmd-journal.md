@@ -1,5 +1,5 @@
 ---
-description: "⚡ Write some journal entries."
+description: "Write some journal entries."
 ---
 
 

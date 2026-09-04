@@ -1,15 +1,15 @@
 ---
 name: cmd_cook_auto_parallel
-description: ⚡⚡⚡ Plan parallel phases & execute with fullstack-developer agents
+description: Plan parallel phases & execute with fullstack-developer agents
 ---
 # cmd_cook_auto_parallel
 
 Command Path: /cook/auto/parallel
 
-Description: ⚡⚡⚡ Plan parallel phases & execute with fullstack-developer agents
+Description: Plan parallel phases & execute with fullstack-developer agents
 
 ---
-description: ⚡⚡⚡ Plan parallel phases & execute with fullstack-developer agents
+description: Plan parallel phases & execute with fullstack-developer agents
 argument-hint: [tasks] [--advice]
 ---
 

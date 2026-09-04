@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Dict, List
 import yaml
 
-COMMAND_NAME_RE = re.compile(r'^/(?:evcrate:)?[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*$')
-
 def extract_frontmatter(content: str) -> Dict:
     """Extract YAML frontmatter from markdown content."""
     match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
@@ -20,44 +18,34 @@ def extract_frontmatter(content: str) -> Dict:
             return {}
     return {}
 
-def resolve_command_name(frontmatter: Dict, parts: List[str]) -> str:
-    """Resolve command name from optional frontmatter override."""
-    command_name = str(frontmatter.get('name') or ('/' + ':'.join(parts)))
-    if not COMMAND_NAME_RE.match(command_name):
-        raise ValueError(
-            f"Invalid command name '{command_name}'. Expected /name or /evcrate:name format."
-        )
-    return command_name
-
 def scan_commands(base_path: Path) -> List[Dict]:
     """Scan all command files and extract metadata."""
     commands = []
-    seen_names = set()
 
     for cmd_file in sorted(base_path.rglob('*.md')):
         # Get relative path from commands directory
         rel_path = cmd_file.relative_to(base_path)
 
         # Build command name from path
-        # Build default command name from path
         parts = list(rel_path.parts[:-1]) + [rel_path.stem]
+        command_name = '/evcrate:' + ':'.join(parts)
 
         # Read file and extract frontmatter
         try:
             content = cmd_file.read_text()
             frontmatter = extract_frontmatter(content)
 
-            command_name = resolve_command_name(frontmatter, parts)
-            if command_name in seen_names:
-                raise ValueError(f"Duplicate command name '{command_name}'")
-            seen_names.add(command_name)
             description = frontmatter.get('description', '')
             arg_hint = frontmatter.get('argument-hint', '')
+
+            # Extract power level (⚡ count)
+            power_level = description.count('⚡')
+            clean_desc = description.replace('⚡', '').strip()
 
             commands.append({
                 'name': command_name,
                 'path': str(rel_path),
-                'description': description,
+                'description': clean_desc,
                 'argument_hint': arg_hint,
                 'category': parts[0] if len(parts) > 1 else 'core'
             })

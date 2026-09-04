@@ -1,15 +1,15 @@
 ---
 name: cmd_bootstrap_auto
-description: ⚡⚡⚡⚡ Bootstrap a new project automatically
+description: Bootstrap a new project automatically
 ---
 # cmd_bootstrap_auto
 
 Command Path: /bootstrap/auto
 
-Description: ⚡⚡⚡⚡ Bootstrap a new project automatically
+Description: Bootstrap a new project automatically
 
 ---
-description: ⚡⚡⚡⚡ Bootstrap a new project automatically
+description: Bootstrap a new project automatically
 argument-hint: [user-requirements] [--advice]
 ---
 

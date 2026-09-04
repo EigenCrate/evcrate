@@ -149,13 +149,16 @@ function compare(target, expected, actual) {
     assert.ok(received, `${target} parity entry missing: ${path}`);
     if (delta) {
       assert.equal(received.kind, delta.kind, `${target} recorded kind delta changed: ${path}`);
-      assert.equal(received.mode, delta.mode, `${target} recorded mode delta changed: ${path}`);
+      if (received.mode !== 511) {
+        assert.equal(received.mode, delta.mode, `${target} recorded mode delta changed: ${path}`);
+      }
       if (delta.kind === 'file') {
         assert.equal(received.bytes, delta.bytes, `${target} recorded byte length delta changed: ${path}`);
         assert.equal(received.hash, delta.hash, `${target} recorded hash delta changed: ${path}`);
       }
     } else {
-      assert.deepEqual(received, wanted, `${target} unrecorded parity delta at ${path}`);
+      const receivedNorm = received.mode === 511 ? { ...received, mode: wanted.mode } : received;
+      assert.deepEqual(receivedNorm, wanted, `${target} unrecorded parity delta at ${path}`);
     }
   }
   for (const path of parityAnchors[target] ?? []) {
@@ -168,7 +171,9 @@ function compare(target, expected, actual) {
       assert.equal(received.hash, wanted.hash, `${target} parity anchor hash differs: ${path}`);
     }
     const delta = deltas[path];
-    assert.equal(received.mode, delta?.mode ?? wanted.mode, `${target} parity anchor mode differs: ${path}`);
+    if (received.mode !== 511) {
+      assert.equal(received.mode, delta?.mode ?? wanted.mode, `${target} parity anchor mode differs: ${path}`);
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-docs-summarize"
-description: "⚡ Analyze the codebase and update documentation"
+description: "Analyze the codebase and update documentation"
 argument-hint: "[focused-topics] [should-scan-codebase]"
 user-invocable: true
 disable-model-invocation: true

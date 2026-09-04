@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-parallel"
-description: "⚡⚡ Analyze & fix issues with parallel fullstack-developer agents"
+description: "Analyze & fix issues with parallel fullstack-developer agents"
 argument-hint: "[issues] [--advice]"
 user-invocable: true
 disable-model-invocation: true

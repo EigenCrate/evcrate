@@ -1,15 +1,15 @@
 ---
 name: cmd_code_no-test
-description: ⚡⚡ Start coding an existing plan (no testing)
+description: Start coding an existing plan (no testing)
 ---
 # cmd_code_no-test
 
 Command Path: /code/no-test
 
-Description: ⚡⚡ Start coding an existing plan (no testing)
+Description: Start coding an existing plan (no testing)
 
 ---
-description: ⚡⚡ Start coding an existing plan (no testing)
+description: Start coding an existing plan (no testing)
 argument-hint: [plan] [--advice]
 ---
 

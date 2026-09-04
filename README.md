@@ -1,236 +1,197 @@
-## Agent Orchestration Patterns
+# EVCrate
 
-### Sequential Chaining
-Use when tasks have dependencies:
-```bash
-# Planning → Implementation → Testing → Review
-/plan "implement user dashboard"
-# Wait for plan completion, then:
-/cook "follow the implementation plan"
-# After implementation:
-/test "validate dashboard functionality"
-# Finally:
-/review "ensure code quality standards"
-```
+EVCrate is a private Node/TypeScript package that authors one agent-harness source
+tree, builds verified projections for seven targets, and publishes managed output
+with explicit ownership, hashing, locking, and recovery rules. It also ships one
+shared checkpoint advisor controller.
 
-### Parallel Execution
-Use for independent tasks:
-```bash
-# Multiple researchers exploring different approaches
-planner agent spawns:
-- researcher (database options)
-- researcher (authentication methods)
-- researcher (UI frameworks)
-# All report back to planner simultaneously
-```
+## Download & installation
 
-### Context Management
-- Agents communicate through file system reports
-- Context is preserved between agent handoffs
-- Fresh context prevents conversation degradation
-- Essential information is documented in markdown
+EVCrate provides standalone, registry-free unpack installers for Linux and Windows, as well as a developer workflow from source checkout.
 
-## Development Workflow
+### Prerequisites
 
-### 1. Feature Development
-```bash
-# Start with planning
-/plan "add real-time notifications"
+- **Node.js**: `>=22.19.0` (required on `$PATH`)
+- **Architecture**: `x86_64` (Linux) / `x64` (Windows)
 
-# Research phase (automatic)
-# Multiple researcher agents investigate approaches
+---
 
-# Implementation
-/cook "implement notification system"
+### Standalone installation (recommended)
 
-# Quality assurance
-/test
-/review
+Download the release assets corresponding to your operating system from [GitHub Releases](https://github.com/EigenCrate/evcrate/releases).
 
-# Documentation update
-/docs
+#### Linux (x86_64)
 
-# Project tracking
-/watzup  # Check project status
-```
+1. **Download release assets** into the same directory:
+   - `install.sh`
+   - `evcrate-v<version>-linux-x64.tar.gz`
+   - `evcrate-v<version>-linux-x64.tar.gz.sha256`
+   - `evcrate-v<version>.release.json`
 
-### 2. Bug Fixing
-```bash
-# Analyze the issue
-/debug "investigate login failures"
-
-# Create fix plan
-/plan "resolve authentication bug"
-
-# Implement solution
-/fix "authentication issue"
-
-# Validate fix
-/test
-```
-
-### 3. Documentation Management
-```bash
-# Update documentation
-/docs
-
-# Generate codebase summary
-repomix  # Creates ./docs/codebase-summary.md
-
-# Review project status
-/watzup
-```
-
-## Gemini Skills Configuration
-
-This project includes several Gemini-powered skills that require a Google Gemini API key:
-
-- **gemini-audio** - Audio analysis and speech generation
-- **gemini-video-understanding** - Video analysis and understanding
-- **gemini-document-processing** - PDF document processing
-- **gemini-image-gen** - AI image generation
-- **gemini-vision** - Image analysis and vision capabilities
-
-### API Key Setup
-
-The Gemini skills check for `GEMINI_API_KEY` in the following order (priority from highest to lowest):
-
-1. **Environment Variable** (Recommended for development)
+2. **Make the installer executable and install**:
    ```bash
-   export GEMINI_API_KEY='your-api-key-here'
+   chmod +x install.sh
+   ./install.sh install
    ```
 
-2. **Project Root `.env`** (Recommended for project-specific keys)
+3. **Verify installation**:
+   Ensure `~/.local/bin` is in your `$PATH`:
    ```bash
-   # Create .env in project root
-   echo 'GEMINI_API_KEY=your-api-key-here' > .env
+   export PATH="$HOME/.local/bin:$PATH"
+   evcrate version --json
+   evcrate health --json
    ```
 
-3. **`.claude/.env`** (For Claude-specific configuration)
+   **Default install locations**:
+   - Launcher: `~/.local/bin/evcrate`
+   - Data directory: `~/.local/share/evcrate/` (or `$XDG_DATA_HOME/evcrate`)
+   - State directory: `~/.local/state/evcrate/` (or `$XDG_STATE_HOME/evcrate`)
+
+   **Lifecycle commands**:
    ```bash
-   # Copy example and edit
-   cp .claude/.env.example .claude/.env
-   # Then edit .claude/.env and set your API key
+   ./install.sh repair               # Re-verify and repair current installation
+   ./install.sh rollback <snapshot>  # Roll back to a preserved prior snapshot
+   ./install.sh uninstall            # Safely remove launcher and installer-owned roots
    ```
 
-4. **`.claude/skills/.env`** (For shared skills configuration)
-   ```bash
-   # Copy example and edit
-   cp .claude/skills/.env.example .claude/skills/.env
-   # Then edit .claude/skills/.env and set your API key
+#### Windows (x64)
+
+1. **Download release assets** into the same folder:
+   - `install.ps1`
+   - `evcrate-v<version>-windows-x64.zip`
+   - `evcrate-v<version>-windows-x64.zip.sha256`
+   - `evcrate-v<version>.release.json`
+
+2. **Run the installer in PowerShell**:
+   ```powershell
+   .\install.ps1 install
    ```
 
-5. **Individual Skill Directory `.env`** (For skill-specific keys)
-   ```bash
-   # Example for gemini-audio skill
-   cp .claude/skills/gemini-audio/.env.example .claude/skills/gemini-audio/.env
-   # Then edit and set your API key
+3. **Verify installation**:
+   ```powershell
+   evcrate version --json
+   evcrate health --json
    ```
 
-### Getting Your API Key
+   **Default install locations**:
+   - Launcher: `%LOCALAPPDATA%\EVCrate\bin\evcrate.cmd`
+   - Data directory: `%LOCALAPPDATA%\EVCrate\data\`
+   - State directory: `%LOCALAPPDATA%\EVCrate\state\`
 
-Get your free Gemini API key at: https://aistudio.google.com/apikey
+   **Lifecycle commands**:
+   ```powershell
+   .\install.ps1 repair              # Repair current installation
+   .\install.ps1 rollback <snapshot> # Roll back to a prior snapshot
+   .\install.ps1 uninstall           # Safely remove launcher and installer roots
+   ```
 
-### Vertex AI Support
+---
 
-To use Vertex AI instead of Google AI Studio:
+### Developer quick start (from source)
+
+From a cloned repository checkout:
 
 ```bash
-# Enable Vertex AI
-export GEMINI_USE_VERTEX=true
-export VERTEX_PROJECT_ID=your-gcp-project-id
-export VERTEX_LOCATION=us-central1  # Optional, defaults to us-central1
+npm install
+npm run build
+npm run distribute:build
+npm run distribute:check
 ```
 
-Or in `.env` file:
-```
-GEMINI_USE_VERTEX=true
-VERTEX_PROJECT_ID=your-gcp-project-id
-VERTEX_LOCATION=us-central1
-```
+`build` compiles the TypeScript control plane and regenerates the controller inventory. `distribute:build` and `distribute:check` build and verify local projections.
 
-## Best Practices
+The compiled CLI is `dist/cli/evcrate.js`:
 
-### Development Principles
-- **YANGI**: You Aren't Gonna Need It - avoid over-engineering
-- **KISS**: Keep It Simple, Stupid - prefer simple solutions
-- **DRY**: Don't Repeat Yourself - eliminate code duplication
-
-### Configuration & Baseline Management
-- **Canonical Authoring**: Shared Claude Code configuration, hooks, workflows, commands, and skills are authored in `.claude/`. Target manifests/overlays in `.evcrate/targets/` are distribution metadata; `.agents/`, `.codex/`, `.gemini/`, and `.antigravity/` are generated outputs and must not be hand-edited.
-- **Two Distribution Gates**: Run `python3 distribute.py --build` to regenerate local artifacts, `--check` to verify them without writes, and `--publish` to publish an existing verified build to HOME. After changing `.claude/`, use `python3 distribute.py --all` (or `--build` then `--publish`); `--publish` requires that verified build and never runs migrators.
-- **HOME Publication**: The local `.claude` artifact remains complete, while HOME publication sanitizes `$HOME/.claude` by excluding regular files directly under `.claude/skills/` (installation/readme/notices/archives), retaining skill package directories and nested resources, and removing stale managed copies. The Pi-compatible `.agents/skills/` tree continues to publish to `$HOME/.agents/skills/`; unmanaged files remain preserved according to target policy.
-- **Pi Skill Metadata**: Authored and generated Pi-distributed `SKILL.md` files require YAML frontmatter with a lower-kebab-case `name` and non-empty `description`. Generated command skills use `cmd_*` directories, lower-kebab-case frontmatter names, and descriptions no longer than 1,024 characters.
-- **Pi Settings**: Pi discovers `$HOME/.agents/skills/` globally; publication does not create or modify `~/.pi/agent/settings.json`.
-- **No Direct Downstream Edits**: Do not edit `.gemini/`, `.agents/`, or `.codex/` directly. They are generated automatically by the local build gate.
-- **Emergency Global Migration Only**: Direct migrator `--global` modes are refused. For a documented recovery incident only, set `DEVKIT_ALLOW_DIRECT_GLOBAL=1`; it bypasses publication verification and emits a warning.
-- **Legacy HOME Cleanup Window**: Managed publication retains the pre-manifest cleanup lists for this transition phase; manifest-scoped deletion and user-root preservation land in the Phase 3 publish gate.
-- **Track Downstream Assets**: Generated folders (`.gemini/`, `.agents/`, `.codex/`) must be committed and tracked in Git to monitor compiled changes and prevent configuration regressions.
-
-### Code Quality
-- All code changes go through automated review
-- Comprehensive testing is mandatory
-- Security considerations are built-in
-- Performance optimization is continuous
-
-### Documentation
-- Documentation evolves with code changes
-- API docs are automatically updated
-- Architecture decisions are recorded
-- Codebase summaries are regularly refreshed
-
-### Git Workflow
-- Clean, conventional commit messages
-- Professional git history
-- No AI attribution in commits
-- Focused, atomic commits
-
-## Usage Examples
-
-### Starting a New Feature
 ```bash
-# Research and plan
-claude "I need to implement user authentication with OAuth2"
-# Planner agent creates comprehensive plan
-
-# Follow the plan
-claude "Implement the authentication plan"
-# Implementation follows the detailed plan
-
-# Ensure quality
-claude "Review and test the authentication system"
-# Testing and code review agents validate the implementation
+node dist/cli/evcrate.js version --json
+node dist/cli/evcrate.js health --json
+node dist/cli/evcrate.js publish --dry-run --json
+node dist/cli/evcrate.js publish --apply --json
+node dist/cli/evcrate.js recover --json
 ```
 
-### Debugging Issues
-```bash
-# Investigate problem
-claude "Debug the slow database queries"
-# Debugger agent analyzes logs and performance
+Publication consumes only a current verified build, preserves unmanaged HOME files, and keeps the user-owned advisor policy separate. See [system architecture](./docs/system-architecture.md) for staging, hash, atomic promotion, and recovery rules.
 
-# Create solution
-claude "Optimize the identified query performance issues"
-# Implementation follows debugging recommendations
+## Source and generated boundaries
 
-# Validate fix
-claude "Test query performance improvements"
-# Tester agent validates the optimization
+- `.evcrate/source/.claude/` is the canonical harness authoring tree.
+- `.evcrate/source/.evcrate/bin/` is the sole authored shared advisor-controller
+  source.
+- `.evcrate/targets/` contains schema-2 target manifests and overlays.
+- `.evcrate/source/.agents/`, `.codex/`, `.gemini/`, `.antigravity/`, `.pi/`,
+  `.omp/`, and `.copilot/` are generated projections. Do not hand-edit them.
+- `.evcrate/registry.json` is a separate schema-1 canonical resource registry.
+
+The package exposes `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor`
+(`.evcrate/source/.evcrate/bin/evcrate-advisor`). The TypeScript path is current;
+there is no root `distribute.py` command in the current repository inventory.
+
+## Advisor checkpoint
+
+Configure the required user-owned policy at
+`$HOME/.evcrate/advisor-routing.json`:
+
+```json
+{
+  "version": 1,
+  "advisor": {
+    "backend": "codex",
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+    "timeout_ms": 900000
+  }
+}
 ```
 
-### Project Maintenance
-```bash
-# Check project health
-claude "What's the current project status?"
-# Project manager provides comprehensive status
+The controller accepts one direct ten-key checkpoint object on stdin and emits one
+frozen JSON envelope. Missing or malformed policy, unsafe paths, failed probes,
+timeouts, cancellation, and final-process failures fail closed; there is no retry,
+provider switch, model substitution, or local fallback. The controller is published
+once to `$HOME/.evcrate/bin/evcrate-advisor`; policy remains user-owned and is never
+published. Read the [architecture contract](./docs/system-architecture.md) before
+qualifying a live CLI.
 
-# Update documentation
-claude "Sync documentation with recent changes"
-# Docs manager updates all relevant documentation
+A final standalone `--advice` token requests checkpoint counsel in the bootstrap,
+code, cook, and fix workflows. `@advisor` remains ordinary task text. The separate
+inline advice workflow does not use checkpoint routing policy.
 
-# Plan next sprint
-claude "Plan the next development phase"
-# Planner creates detailed roadmap for upcoming work
+## Documented command names
+
+All documentation and target-facing examples use a literal `cmd` prefix for slash
+command/resource names, including `.claude` references:
+
+```text
+/cmd-plan "design the change"
+/cmd-cook "implement the approved plan"
+/cmd-code plans/example.md --advice
+/cmd-review__codebase "check the source boundary"
+/cmd-docs__update
+/cmd-watzup
 ```
 
+OMP nested names use `__` (for example `/cmd-fix__hard`). Copilot projects that
+resource as `/evcrate-cmd-fix-hard` and passes raw arguments through `$ARGUMENTS`.
+The generated `evcrate/command-name-map.json` is authoritative for those target
+translations.
 
-**Start building with AI-powered development today!** This boilerplate provides everything you need to create professional software with intelligent agent assistance.
+This is a documentation/target convention, not a completed source rename. The
+canonical `.claude` scanner still derives names from paths and the TypeScript CLI
+parser accepts bare operational action names; prefix enforcement is a follow-up.
+Do not hand-edit `.claude` projections or invent aliases. Shell commands such as
+`npm`, `node`, `cp`, and `export` remain ordinary executable syntax.
+
+## Documentation map
+
+- [System architecture](./docs/system-architecture.md) — central distribution,
+  advisor, supervision, wire, isolation, and publication contracts.
+- [Project overview and PDR](./docs/project-overview-pdr.md) — product intent,
+  functional requirements, acceptance criteria, and release gates.
+- [Code standards](./docs/code-standards.md) — implementation, protocol, naming,
+  filesystem, transaction, and review standards.
+- [Codebase summary](./docs/codebase-summary.md) — source/module and generated-output
+  map derived from the repository compaction.
+- [Project roadmap](./docs/project-roadmap.md) — phase status, next gates, and gaps.
+- [Project changelog](./docs/project-changelog.md) — historical phase evidence and
+  explicit non-claims.
+- [Pi-native migration](./docs/pi-native-migration.md) — Pi-specific runtime,
+  settings, and migration boundaries.

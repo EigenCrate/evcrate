@@ -1,6 +1,6 @@
 ---
 argument-hint: "[tasks-or-prompt] [--advice]"
-description: "⚡ Low-risk fast cook: scout, plan fast, implement with quality gates"
+description: "Low-risk fast cook: scout, plan fast, implement with quality gates"
 ---
 
 

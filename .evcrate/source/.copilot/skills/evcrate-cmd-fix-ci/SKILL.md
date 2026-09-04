@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-ci"
-description: "⚡ Analyze Github Actions logs and fix issues"
+description: "Analyze Github Actions logs and fix issues"
 argument-hint: "[github-actions-url]"
 user-invocable: true
 disable-model-invocation: true

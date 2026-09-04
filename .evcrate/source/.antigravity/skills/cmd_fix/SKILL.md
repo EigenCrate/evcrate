@@ -1,15 +1,15 @@
 ---
 name: cmd_fix
-description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+description: Analyze and fix issues [INTELLIGENT ROUTING]
 ---
 # cmd_fix
 
 Command Path: /fix
 
-Description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+Description: Analyze and fix issues [INTELLIGENT ROUTING]
 
 ---
-description: ⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]
+description: Analyze and fix issues [INTELLIGENT ROUTING]
 argument-hint: [issues] [--advice]
 ---
 

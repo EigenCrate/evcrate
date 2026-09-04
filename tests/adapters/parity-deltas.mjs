@@ -60,11 +60,6 @@ export const parityDeltaRecords = {
       "mode": 493,
       "reason": "Claude generated directory-mode delta"
     },
-    ".claude/commands/integrate": {
-      "kind": "directory",
-      "mode": 493,
-      "reason": "Claude generated directory-mode delta"
-    },
     ".claude/commands/plan": {
       "kind": "directory",
       "mode": 493,
@@ -620,16 +615,6 @@ export const parityDeltaRecords = {
       "mode": 493,
       "reason": "Claude generated directory-mode delta"
     },
-    ".claude/skills/markdown-novel-viewer": {
-      "kind": "directory",
-      "mode": 493,
-      "reason": "Claude generated directory-mode delta"
-    },
-    ".claude/skills/markdown-novel-viewer/assets": {
-      "kind": "directory",
-      "mode": 493,
-      "reason": "Claude generated directory-mode delta"
-    },
     ".claude/skills/mcp-builder": {
       "kind": "directory",
       "mode": 493,
@@ -716,16 +701,6 @@ export const parityDeltaRecords = {
       "reason": "Claude generated directory-mode delta"
     },
     ".claude/skills/planning/references": {
-      "kind": "directory",
-      "mode": 493,
-      "reason": "Claude generated directory-mode delta"
-    },
-    ".claude/skills/plans-kanban": {
-      "kind": "directory",
-      "mode": 493,
-      "reason": "Claude generated directory-mode delta"
-    },
-    ".claude/skills/plans-kanban/assets": {
       "kind": "directory",
       "mode": 493,
       "reason": "Claude generated directory-mode delta"

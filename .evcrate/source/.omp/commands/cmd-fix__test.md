@@ -1,6 +1,6 @@
 ---
 argument-hint: "[issues] [--advice]"
-description: "⚡⚡ Run test suite and fix issues"
+description: "Run test suite and fix issues"
 ---
 
 

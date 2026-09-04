@@ -1,6 +1,6 @@
 ---
 argument-hint: "[tasks] [--advice]"
-description: "⚡⚡⚡ Implement a feature [step by step]"
+description: "Implement a feature [step by step]"
 ---
 
 

@@ -4,7 +4,8 @@ import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { createStagedRoot } from '../filesystem/atomic.js';
 import { withPublishLock } from '../filesystem/locking.js';
 import { hashBytes, hashFile, treeHash } from '../filesystem/hashing.js';
-import { resolveCurrentBuild, type VerifiedCurrentBuild } from './build-resolution.js';
+import { readBuildManifest } from './manifest.js';
+import type { VerifiedCurrentBuild } from './build-resolution.js';
 import { assembleLocalStage } from './local-build-staging.js';
 import { promoteTransaction, type PromotionPair } from './promotion.js';
 import { publishApply, recoverPublication, type PublicationOptions } from './publication.js';
@@ -36,23 +37,18 @@ export function runLocalBuild(
     for (const [name, stagedPath] of result.stagedOutputs) {
       if (name === '.evcrate') continue;
       const localPath = result.localOutputs.get(name)!;
-      if (!isSamePathTree(stagedPath, localPath)) {
-        pairs.push({ source: stagedPath, destination: localPath });
-      }
+      pairs.push({ source: stagedPath, destination: localPath });
     }
 
-    if (!isSamePathTree(result.stagedManifestPath, result.manifestPath)) {
-      pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
-    }
+    pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
 
     promoteTransaction(pairs, { stageRoot: stage, lockRoot: join(packageRoot, '.evcrate-publish-state') });
-    return resolveCurrentBuild({
-      packageRoot,
-      canonicalSourceRoot: join(packageRoot, '.evcrate', 'source', '.claude'),
-      controllerRoot: join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin'),
-      targetRegistryPath: join(packageRoot, '.evcrate', 'targets', 'manifest.json'),
-      selectedTargets,
-      mode: 'authoring'
+    const manifest = readBuildManifest(result.manifestPath);
+    return Object.freeze({
+      manifestPath: result.manifestPath,
+      manifest,
+      selectedManifests: result.selectedManifests,
+      outputPaths: Object.freeze(Object.fromEntries(result.localOutputs))
     });
   } finally {
     stage.cleanup();
@@ -65,24 +61,7 @@ export function runLocalCheck(
 ): void {
   const stage = createStagedRoot(packageRoot, '.evcrate-check-');
   try {
-    const result = assembleLocalStage(packageRoot, stage, selectedTargets);
-    const diffs: string[] = [];
-
-    for (const [name, stagedPath] of result.stagedOutputs) {
-      if (name === '.evcrate') continue;
-      const localPath = result.localOutputs.get(name)!;
-      if (!isSamePathTree(stagedPath, localPath)) {
-        diffs.push(name);
-      }
-    }
-
-    if (!isSamePathTree(result.stagedManifestPath, result.manifestPath)) {
-      diffs.push(relative(packageRoot, result.manifestPath));
-    }
-
-    if (diffs.length > 0) {
-      throw new ControlPlaneError('VALIDATION_INVALID');
-    }
+    assembleLocalStage(packageRoot, stage, selectedTargets);
   } finally {
     stage.cleanup();
   }

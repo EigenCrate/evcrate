@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix"
-description: "⚡⚡ Analyze and fix issues [INTELLIGENT ROUTING]"
+description: "Analyze and fix issues [INTELLIGENT ROUTING]"
 argument-hint: "[issues] [--advice]"
 user-invocable: true
 disable-model-invocation: true

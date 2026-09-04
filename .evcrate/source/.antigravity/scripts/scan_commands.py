@@ -28,7 +28,7 @@ def scan_commands(base_path: Path) -> List[Dict]:
 
         # Build command name from path
         parts = list(rel_path.parts[:-1]) + [rel_path.stem]
-        command_name = '/ck:' + ':'.join(parts)
+        command_name = '/evcrate:' + ':'.join(parts)
 
         # Read file and extract frontmatter
         try:
@@ -47,7 +47,6 @@ def scan_commands(base_path: Path) -> List[Dict]:
                 'path': str(rel_path),
                 'description': clean_desc,
                 'argument_hint': arg_hint,
-                'power_level': power_level,
                 'category': parts[0] if len(parts) > 1 else 'core'
             })
         except Exception as e:
@@ -85,9 +84,6 @@ def main():
 
     for category, cmds in sorted(categories.items()):
         print(f"\n{category.upper()}:")
-        for cmd in cmds:
-            power = '⚡' * cmd['power_level'] if cmd['power_level'] > 0 else ''
-            print(f"  {cmd['name']:40} {power:10} {cmd['description'][:80]}")
 
     # Output YAML for processing (generate_catalogs.py expects YAML format)
     output_path = Path('.antigravity/scripts/commands_data.yaml')

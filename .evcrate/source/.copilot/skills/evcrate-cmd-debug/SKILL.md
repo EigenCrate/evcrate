@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-debug"
-description: "⚡⚡ Debugging technical issues and providing solutions."
+description: "Debugging technical issues and providing solutions."
 argument-hint: "[issues]"
 user-invocable: true
 disable-model-invocation: true

@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-brainstorm"
-description: "⚡⚡ Brainstorm a feature"
+description: "Brainstorm a feature"
 argument-hint: "[question]"
 user-invocable: true
 disable-model-invocation: true

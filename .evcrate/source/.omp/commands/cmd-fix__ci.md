@@ -1,6 +1,6 @@
 ---
 argument-hint: "[github-actions-url]"
-description: "⚡ Analyze Github Actions logs and fix issues"
+description: "Analyze Github Actions logs and fix issues"
 ---
 
 

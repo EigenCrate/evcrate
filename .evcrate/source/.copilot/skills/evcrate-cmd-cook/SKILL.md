@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-cook"
-description: "⚡⚡⚡ Implement a feature [step by step]"
+description: "Implement a feature [step by step]"
 argument-hint: "[tasks] [--advice]"
 user-invocable: true
 disable-model-invocation: true

@@ -103,7 +103,11 @@ function sameRecord(left: Readonly<Record<string, string>>, right: Readonly<Reco
     && leftEntries.every(([key, value]) => right[key] === value);
 }
 export function verifyOutputHashes(manifest: BuildManifest, outputs: Readonly<Record<string, string>>): void {
-  if (!sameRecord(manifest.output_hashes, Object.fromEntries(Object.entries(outputs).map(([name, path]) => [safeKey(name), digestPath(path)])))) {
+  const actualHashes: Record<string, string> = {};
+  for (const [name, path] of Object.entries(outputs)) {
+    actualHashes[safeKey(name)] = digestPath(path);
+  }
+  if (!sameRecord(manifest.output_hashes, actualHashes)) {
     fail('PUBLICATION_FAILED');
   }
 }
@@ -121,9 +125,9 @@ export interface BuildVerificationOptions {
 export function verifyBuild(options: BuildVerificationOptions): BuildManifest {
   const manifest = readBuildManifest(options.manifestPath);
   if (manifest.validation.complete !== true) fail('PUBLICATION_FAILED');
-  verifyOutputHashes(manifest, options.outputRoots);
   if (options.sourceHashes !== undefined && !sameRecord(manifest.source_hashes, options.sourceHashes)) fail('PUBLICATION_FAILED');
   if (options.adapterHashes !== undefined && !sameRecord(manifest.adapter_hashes, options.adapterHashes)) fail('PUBLICATION_FAILED');
-  verifyControllerHashes(manifest, options.controllerRoot);
+  if (options.controllerRoot !== undefined) verifyControllerHashes(manifest, options.controllerRoot);
+  verifyOutputHashes(manifest, options.outputRoots);
   return manifest;
 }

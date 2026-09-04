@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-plan-two"
-description: "⚡⚡⚡⚡ Research & create an implementation plan with 2 approaches"
+description: "Research & create an implementation plan with 2 approaches"
 argument-hint: "[task]"
 user-invocable: true
 disable-model-invocation: true

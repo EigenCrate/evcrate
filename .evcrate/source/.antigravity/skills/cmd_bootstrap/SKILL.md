@@ -1,15 +1,15 @@
 ---
 name: cmd_bootstrap
-description: ⚡⚡⚡⚡⚡ Bootstrap a new project step by step
+description: Bootstrap a new project step by step
 ---
 # cmd_bootstrap
 
 Command Path: /bootstrap
 
-Description: ⚡⚡⚡⚡⚡ Bootstrap a new project step by step
+Description: Bootstrap a new project step by step
 
 ---
-description: ⚡⚡⚡⚡⚡ Bootstrap a new project step by step
+description: Bootstrap a new project step by step
 argument-hint: [user-requirements] [--advice]
 ---
 

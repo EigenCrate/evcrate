@@ -229,20 +229,6 @@
   argument_hint: ''
   power_level: 0
   category: git
-- name: /evcrate:integrate:polar
-  path: integrate/polar.md
-  description: Implement payment integration with Polar.sh
-  argument_hint:
-  - tasks
-  power_level: 2
-  category: integrate
-- name: /evcrate:integrate:sepay
-  path: integrate/sepay.md
-  description: Implement payment integration with SePay.vn
-  argument_hint:
-  - tasks
-  power_level: 2
-  category: integrate
 - name: /evcrate:journal
   path: journal.md
   description: Write some journal entries.

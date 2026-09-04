@@ -1,6 +1,6 @@
 ---
 argument-hint: "[question]"
-description: "⚡⚡ Brainstorm a feature"
+description: "Brainstorm a feature"
 ---
 
 

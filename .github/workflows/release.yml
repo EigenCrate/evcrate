@@ -28,6 +28,10 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Configure Linux environment for network isolation tests
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
       - name: Install dependencies
         run: npm ci
 
@@ -70,7 +74,12 @@ jobs:
           node dist/cli/evcrate.js publish --apply
           node dist/cli/evcrate.js publish --dry-run --json
           npm pack --dry-run
+          git checkout -- .evcrate/registry.json || true
 
+      - name: Remove test-generated release assets
+        run: |
+          rm -rf dist/release
+          git checkout -- .
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

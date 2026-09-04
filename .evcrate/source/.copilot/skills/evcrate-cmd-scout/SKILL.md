@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-scout"
-description: "⚡⚡ Scout given directories to respond to the user's requests"
+description: "Scout given directories to respond to the user's requests"
 argument-hint: "[user-prompt] [scale]"
 user-invocable: true
 disable-model-invocation: true

@@ -78,7 +78,7 @@ node screenshot.js --url https://example.com/settings --output settings.png --cl
 - Use `ai-multimodal` to analyze all screenshots and visual elements.
 - Generate a comprehensive report in Markdown format, embedding all screenshots directly in the report.
 - Finally respond to the user with a concise summary of findings and recommendations.
-- Use `ask_user_question` tool to ask if user wants to preview the report with {{evcrate:commands/preview}} slash command.
+- Use `ask_user_question` tool to ask if user wants to preview the report with `/preview` slash command.
 
 ## Output Requirements
 How to write reports:

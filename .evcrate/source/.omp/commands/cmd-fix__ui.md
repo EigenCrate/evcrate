@@ -1,6 +1,6 @@
 ---
 argument-hint: "[issue]"
-description: "⚡⚡ Analyze and fix UI issues"
+description: "Analyze and fix UI issues"
 ---
 
 

@@ -18,7 +18,6 @@ Implement features step by step.
 
 ```bash
 /cmd-cook implement user authentication with JWT
-/cmd-cook add payment integration with Stripe
 ```
 
 **When to use**: Feature implementation with iterative development
@@ -323,26 +322,6 @@ Check deployment readiness.
 ```
 
 **When to use**: Pre-deployment validation
-
-## Integration Commands
-
-### /cmd-integrate__polar [tasks]
-Implement payment integration with Polar.sh.
-
-```bash
-/cmd-integrate__polar add subscription payments
-```
-
-**When to use**: Polar payment integration
-
-### /cmd-integrate__sepay [tasks]
-Implement payment integration with SePay.vn.
-
-```bash
-/cmd-integrate__sepay add Vietnamese payment gateway
-```
-
-**When to use**: SePay payment integration
 
 ## Other Commands
 

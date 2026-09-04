@@ -1,6 +1,6 @@
 ---
 argument-hint: "[issues]"
-description: "⚡ Analyze and fix small issues [FAST]"
+description: "Analyze and fix small issues [FAST]"
 ---
 
 

@@ -2,7 +2,7 @@
 
 **Use when:** User asks about entire library/framework
 
-**Speed:** ⚡⚡ Moderate (30-60s)
+**Speed:** Moderate (30-60s)
 **Token usage:** 🟡 Medium
 **Accuracy:** 📚 Comprehensive
 

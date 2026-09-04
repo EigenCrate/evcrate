@@ -1,6 +1,6 @@
 ---
 name: "evcrate-cmd-fix-ui"
-description: "⚡⚡ Analyze and fix UI issues"
+description: "Analyze and fix UI issues"
 argument-hint: "[issue]"
 user-invocable: true
 disable-model-invocation: true
