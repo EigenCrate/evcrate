@@ -44,6 +44,7 @@ function setup({ mode = 'success', backend = 'codex', withPolicy = true } = {}) 
   fs.mkdirSync(bin, { mode: 0o700 });
   if (withPolicy) fs.writeFileSync(path.join(home, '.evcrate/advisor-routing.json'), `${policy(backend)}\n`, { mode: 0o600 });
   fs.writeFileSync(path.join(home, `.evcrate/fake-${executable}-mode`), `${mode}\n`, { mode: 0o600 });
+  try { fs.chmodSync(fixture, 0o755); } catch {}
   fs.symlinkSync(fixture, path.join(bin, executable));
   const environment = { ...process.env, HOME: home, TMPDIR: tmp, PATH: `${bin}${path.delimiter}${process.env.PATH || ''}` };
   delete environment.EVCRATE_ADVISOR_ACTIVE;
