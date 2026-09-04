@@ -1,9 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-examples/**/node_modules/
-/.pnp
+node_modules
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -12,14 +11,14 @@ examples/**/node_modules/
 !.yarn/versions
 
 # testing
-/coverage
+coverage
 
 # next.js
-/.next/
-/out/
+.next
+out
 
 # production
-/build
+build
 
 # misc
 .DS_Store
@@ -33,7 +32,6 @@ yarn-error.log*
 
 # package manager
 package-lock.json
-!examples/simple-web-testing-demo/package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
@@ -68,35 +66,3 @@ logs.txt
 test-ck
 __pycache__
 prompt.md
-
-# Gemini CLI settings (symlink to .evcrate/source/.claude/.mcp.json)
-/.evcrate/source/.gemini/settings.json
-
-# build output
-/dist/
-examples/**/dist/
-
-# IDE
-.idea/
-
-# tool caches / sync markers
-.codegraph/
-.stfolder/
-
-# logs
-stderr.log
-stdout.log
-
-# test/coverage artifacts
-.coverage
-test_failures.log
-examples/**/test-results/
-examples/**/playwright-report/
-examples/**/blob-report/
-examples/**/.lighthouseci/
-patches
-
-# archives
-*.tar.gz
-
-.pi-subagents
