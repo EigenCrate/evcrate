@@ -1,7 +1,8 @@
 ---
-description: ⚡⚡ Run test suite and fix issues
-argument-hint: [issues] [--advice]
+argument-hint: "[issues] [--advice]"
+description: "⚡⚡ Run test suite and fix issues"
 ---
+
 
 Analyze the skills catalog and activate the skills that are needed for the task during the process.
 

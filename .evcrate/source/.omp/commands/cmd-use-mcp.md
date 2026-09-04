@@ -1,7 +1,8 @@
 ---
-description: Utilize tools of Model Context Protocol (MCP) servers
-argument-hint: [task]
+argument-hint: "[task]"
+description: "Utilize tools of Model Context Protocol (MCP) servers"
 ---
+
 Execute MCP operations via **Gemini CLI** to preserve context budget.
 
 ## Execution Steps

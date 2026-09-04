@@ -1,7 +1,8 @@
 ---
-description: Analyze Github Actions logs and provide a plan to fix the issues
-argument-hint: [github-actions-url]
+argument-hint: "[github-actions-url]"
+description: "Analyze Github Actions logs and provide a plan to fix the issues"
 ---
+
 
 Activate `planning` skill.
 

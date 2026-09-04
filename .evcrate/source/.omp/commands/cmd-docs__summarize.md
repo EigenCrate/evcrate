@@ -1,7 +1,8 @@
 ---
-description: ⚡ Analyze the codebase and update documentation
-argument-hint: [focused-topics] [should-scan-codebase]
+argument-hint: "[focused-topics] [should-scan-codebase]"
+description: "⚡ Analyze the codebase and update documentation"
 ---
+
 
 Use `docs-manager` agent to analyze the codebase based on `docs/codebase-summary.md` and respond with a summary report.
 

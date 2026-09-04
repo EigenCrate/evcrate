@@ -1,7 +1,8 @@
 ---
-description: Create immersive interactive 3D designs with Three.js
-argument-hint: [tasks]
+argument-hint: "[tasks]"
+description: "Create immersive interactive 3D designs with Three.js"
 ---
+
 
 Think hard to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <tasks>$ARGUMENTS</tasks>

@@ -1,7 +1,8 @@
 ---
-description: ⚡⚡ No research. Only analyze and create an implementation plan
-argument-hint: [task]
+argument-hint: "[task]"
+description: "⚡⚡ No research. Only analyze and create an implementation plan"
 ---
+
 
 Think.
 Activate `planning` skill.
