@@ -30,7 +30,7 @@ maintainers change canonical resources or target overlays and rebuild instead of
 editing them. `distribution/` and `pi_adapter/` are not active source modules in
 the current scoped inventory and should not be described as runtime engines.
 
-## Canonical scout-block hook
+## Canonical scout-block hook and ignore policy
 
 The canonical Claude scout hook lives under `.evcrate/source/.claude/hooks/`.
 It protects context budget by matching extracted tool paths against the local
@@ -39,25 +39,44 @@ extraction; every later or chained segment is still checked. Blocked candidates
 retain exit status `2`, while existing fail-open handling remains for malformed
 JSON and unexpected hook errors.
 
+The canonical `.evcrateignore` and matcher fallback defaults contain the same
+twelve heavy-directory rules, all with trailing `/`: `node_modules/`, `dist/`,
+`build/`, `.next/`, `.nuxt/`, `__pycache__/`, `.venv/`, `venv/`, `vendor/`,
+`target/`, `.git/`, and `coverage/`. Directory-only rules block directory
+operands and descendants (`build/`, `apps/web/build/out.js`) without blocking
+bare lexical command tokens such as `build`; legacy custom bare patterns retain
+their prior behavior.
+
 | File | Responsibility |
 |---|---|
 | `hooks/scout-block.cjs` | Splits commands into shell segments, strips leading environment assignments and grouping wrappers, recognizes anchored package/language/tool runners, preserves virtual-environment execution allowance, and evaluates each non-exempt segment. |
 | `hooks/scout-block/path-extractor.cjs` | Performs quote/escape-aware segment scanning, classifies runner syntax versus operands, extracts exploration paths, detects shell substitutions conservatively, and preserves or adds directory trailing `/` markers. |
-| `hooks/scout-block/tests/test-build-command-allowlist.js` | Canonical `isBuildCommand` matrix for package managers, build tools, language runners, environment prefixes, malformed/substitution inputs, and direct directory commands. |
+| `hooks/scout-block/pattern-matcher.cjs` | Loads canonical or fallback policy, preserves directory-only rules and legacy custom patterns, and reports the original matching rule. |
 | `hooks/scout-block/tests/test-path-extractor.js` | Unit coverage for tool-input paths, contextual command extraction, directory operands, quote handling, segment splitting, and environment-assignment cleanup. |
+| `hooks/scout-block/tests/test-pattern-matcher.js` | Unit coverage for all twelve trailing-slash defaults, directory descendants, lexical near-matches, Windows separators, legacy custom rules, and negation behavior. |
+| `hooks/scout-block/tests/test-build-command-allowlist.js` | Production `isBuildCommand` matrix for package managers, build tools, language runners, environment prefixes, malformed/substitution inputs, and direct directory commands. |
 | `hooks/tests/test-scout-block.js` | End-to-end hook coverage for allowed builds, blocked generated/dependency exploration, adversarial chains, process substitution, broad patterns, and virtual-environment executables. |
+| `hooks/tests/test-evcrateignore.js` | Canonical/custom policy integration, fallback equality, legacy rules, and policy restoration. |
+| `hooks/scout-block/tests/test-monorepo-scenarios.js` | Nested package, generated-directory, and deep path protection scenarios. |
 
-Targeted canonical runs on 2026-09-06 reported 216/216 passing assertions:
+Focused canonical runs on 2026-09-06 reported 299/299 passing assertions:
 
 | Suite | Result |
 |---|---:|
-| `test-scout-block.js` | 66 passed |
 | `test-path-extractor.js` | 55 passed |
+| `test-pattern-matcher.js` | 55 passed |
 | `test-build-command-allowlist.js` | 95 passed |
+| `test-scout-block.js` | 52 passed |
+| `test-evcrateignore.js` | 9 passed |
+| `test-monorepo-scenarios.js` | 33 passed |
 
-Phase 01 changes are canonical hook behavior and focused tests only. Ignore-file
-directory semantics and generated target/runtime synchronization remain owned by
-Phases 02 and 03 of the active plan.
+The six generated projections (`.omp`, `.pi`, `.copilot`, `.codex`, `.gemini`,
+`.antigravity`) carry the canonical policy and hook closure without drift;
+`npm run distribute:check` verifies manifests and parity. Projected and
+published OMP runtime smoke returns `0, 0, 2, 2` for allowed builds, an
+environment-prefixed build, a chained read, and a direct generated-directory
+read. Build commands remain unblocked while heavy-directory reads/searches stay
+blocked.
 
 ## TypeScript modules
 

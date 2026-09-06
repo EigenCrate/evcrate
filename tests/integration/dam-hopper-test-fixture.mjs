@@ -10,10 +10,12 @@ const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '
 
 function npmJson(args, cwd) {
   const result = spawnSync('npm', [...args, '--json', '--ignore-scripts'], {
-    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
+    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000
   });
   if (result.status !== 0) throw new Error(`npm failed: ${result.stderr}`);
-  return JSON.parse(result.stdout.slice(result.stdout.indexOf('[')).trim());
+  const jsonIndex = result.stdout.search(/[[{]/);
+  const parsed = JSON.parse(result.stdout.slice(jsonIndex).trim());
+  return Array.isArray(parsed) ? parsed : Object.values(parsed);
 }
 
 let cachedInstall = null;

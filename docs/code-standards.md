@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-05  
+**Updated:** 2026-09-06  
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 
@@ -48,6 +48,28 @@ is the navigation map.
 scoped repository inventory. Do not describe them as alternate engines. The current
 package path is TypeScript; source retains compatibility-engine types for transition
 and validation boundaries, but no root `distribute.py` command is canonical.
+
+### Scout-block ignore policy
+
+The canonical `.evcrate/source/.claude/.evcrateignore` and
+the scout-block matcher fallback defaults are one policy: keep the
+same twelve heavy-directory entries, ordering, and comments. Standard entries
+use trailing `/`: `node_modules/`, `dist/`, `build/`, `.next/`, `.nuxt/`,
+`__pycache__/`, `.venv/`, `venv/`, `vendor/`, `target/`, `.git/`, and
+`coverage/`.
+
+Trailing `/` is normative directory-only syntax. It blocks root or nested
+directory operands and descendants (`build/`, `apps/web/build/out.js`) but does
+not block a bare lexical command token (`build`) or safe near-matches such as
+`src/build-tools.js`. Preserve legacy custom bare-name patterns and ordered
+negation behavior. Do not add `!dist`/`!build` command workarounds, infer file
+types from the working tree, or hand-edit generated projections.
+
+The canonical Claude resources are the only authored hook source. Regenerate
+the six target projections (`.omp`, `.pi`, `.copilot`, `.codex`, `.gemini`,
+`.antigravity`) and require `npm run distribute:check` before publication.
+Projected and published OMP runtime behavior must retain the same allow/block
+boundary.
 
 ## TypeScript and npm standards
 
@@ -262,6 +284,26 @@ collisions, CAS hashes, output ownership, controller closure, symlink/owner chec
 staged-root cleanup, locks, stale quarantine, promotion recovery, and advisor policy
 recovery. Prefer temporary roots and real filesystem/process behavior. Do not weaken
 checks with fake success paths or assertions on incidental implementation details.
+
+### Hook-policy test suites
+
+Run the focused suites sequentially with direct `node` commands before
+projection or publication:
+
+| Suite | Contract |
+|---|---|
+| `scout-block/tests/test-path-extractor.js` | Quote/escape-aware extraction, directory markers, runner syntax, and shell segments. |
+| `scout-block/tests/test-pattern-matcher.js` | Twelve trailing-slash defaults, descendants, near-matches, Windows paths, legacy rules, and negations. |
+| `scout-block/tests/test-build-command-allowlist.js` | Production `isBuildCommand` classification; no duplicated regex authority. |
+| `hooks/tests/test-scout-block.js` | Hook-process exit codes for build allowances, blocked reads, and adversarial chains. |
+| `hooks/tests/test-evcrateignore.js` | Canonical/fallback/custom policy behavior and restoration. |
+| `scout-block/tests/test-monorepo-scenarios.js` | Nested package and deep generated-directory protection. |
+
+Current Phase 04 evidence is 299/299 focused assertions, plus successful
+`npm run build`, `npm run distribute:build`, `npm run distribute:check`, and
+projected/published OMP smoke values `0, 0, 2, 2`. Keep both positive build
+cases and negative directory-read/search cases; a build exemption must never
+cover a later or chained access to a protected path.
 
 ## Documentation standards
 

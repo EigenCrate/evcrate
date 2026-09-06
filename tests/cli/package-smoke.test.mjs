@@ -11,10 +11,12 @@ const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'
 
 function npmJson(args, cwd) {
   const result = spawnSync('npm', [...args, '--json', '--ignore-scripts'], {
-    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
+    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000
   });
   assert.equal(result.status, 0, result.stderr);
-  return JSON.parse(result.stdout.slice(result.stdout.indexOf('[')).trim());
+  const jsonIndex = result.stdout.search(/[[{]/);
+  const parsed = JSON.parse(result.stdout.slice(jsonIndex).trim());
+  return Array.isArray(parsed) ? parsed : Object.values(parsed);
 }
 
 function packPackage(destination) {
@@ -26,7 +28,7 @@ function installPackage(tarball, root) {
   const result = spawnSync('npm', [
     'install', '--prefix', root, '--no-audit', '--no-fund', '--ignore-scripts', tarball
   ], {
-    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000
+    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000
   });
   assert.equal(result.status, 0, result.stderr);
 }

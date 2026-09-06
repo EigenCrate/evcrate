@@ -130,9 +130,9 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
     cwd: packageRoot,
     encoding: 'utf8'
   });
-  const jsonStart = packOutput.indexOf('[');
-  const jsonEnd = packOutput.lastIndexOf(']');
-  const [packMeta] = JSON.parse(packOutput.slice(jsonStart, jsonEnd + 1));
+  const jsonIndex = packOutput.search(/[[{]/);
+  const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
+  const [packMeta] = Array.isArray(parsed) ? parsed : Object.values(parsed);
   const files = packMeta.files.map((f) => f.path);
 
   // Assert compiled JS is present

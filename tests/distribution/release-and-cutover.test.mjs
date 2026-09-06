@@ -101,9 +101,9 @@ test('packaged artifact allowlist is Python-free and contains required runtime a
     cwd: packageRoot,
     encoding: 'utf8'
   });
-  const jsonStart = packOutput.indexOf('[');
-  const jsonEnd = packOutput.lastIndexOf(']');
-  const [packMeta] = JSON.parse(packOutput.slice(jsonStart, jsonEnd + 1));
+  const jsonIndex = packOutput.search(/[[{]/);
+  const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
+  const packMeta = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
   assert.ok(packMeta.files && Array.isArray(packMeta.files));
   assert.equal(packageMetadata.private, true, 'Package must be private: true');
   assert.equal(packageMetadata.publishConfig, undefined, 'Package must not declare publishConfig');

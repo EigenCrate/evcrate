@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-06  
-**Status:** Phase 01 complete; historical Phase 9/10/11 evidence retained; release remains Unreleased
+**Status:** Phases 01-04 complete; historical Phase 9/10/11 evidence retained; release remains Unreleased
 
 ### Phase 01: Core hook enhancements
 
@@ -45,10 +45,51 @@ virtual-environment executable allowance.
 
 #### Boundary
 
-Phase 01 changes the canonical scout hook and its focused tests only. Ignore-file
-directory-only semantics, target projections, and active runtime synchronization
-remain Phase 02/03 work. The hook remains a context-protection control, not a
-general shell authorization allowlist.
+Phase 01 established canonical hook behavior. Phases 02-04 completed ignore-file
+directory semantics, target projections, and active runtime synchronization. The
+hook remains a context-protection control, not a general shell authorization
+allowlist.
+
+### Phases 02-04: Ignore policy, projections, and verification
+
+**Updated:** 2026-09-06  
+**Status:** Complete
+
+#### Standardized ignore policy
+
+- Canonical `.evcrate/source/.claude/.evcrateignore` and matcher fallback
+  defaults now contain the same twelve heavy-directory rules, all with trailing
+  `/`: `node_modules/`, `dist/`, `build/`, `.next/`, `.nuxt/`, `__pycache__/`,
+  `.venv/`, `venv/`, `vendor/`, `target/`, `.git/`, and `coverage/`.
+- Trailing `/` preserves directory-only semantics: bare lexical tokens such as
+  `build` remain usable, while directory operands and descendants such as
+  `build/`, `dist/app.js`, and `node_modules/pkg/index.js` remain blocked.
+- Legacy custom bare-name rules and ordered negation behavior remain compatible;
+  no `!dist` or `!build` workaround is required.
+
+#### Projection and runtime parity
+
+- Regenerated six target projections (`.omp`, `.pi`, `.copilot`, `.codex`,
+  `.gemini`, `.antigravity`) from canonical Claude resources; each carries the
+  standardized policy and segment-aware hook closure.
+- Manifest and distribution checks report no projection drift. Published OMP
+  policy, hook closure, and runtime helper match the generated OMP projection.
+
+#### Verification matrix
+
+| Evidence | Result |
+|---|---:|
+| Build, distribution build, and distribution check | 0 / pass |
+| Allowed package/language/tool build forms, including compound and environment-prefixed commands | 0 / pass |
+| Direct reads/searches of heavy directories and descendants | 2 / blocked |
+| Adversarial build-plus-read chains | 2 / blocked |
+| Canonical hook suites | 299 / 299 passed |
+| Projected and published OMP runtime smoke (`0, 0, 2, 2`) | pass |
+
+Focused suites cover path extraction, pattern matching, production build-command
+classification, canonical ignore integration, hook process behavior, and
+monorepo scenarios. Heavy-directory protections remain active while standard
+build commands are unblocked.
 
 ### Documentation centralization
 

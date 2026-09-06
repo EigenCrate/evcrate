@@ -194,6 +194,8 @@ function parseJsonl(text, route, expectedCwd) {
       case 'tool_execution_update':
       case 'tool_execution_end':
         fail('READ_ONLY_UNSUPPORTED'); break;
+      case 'advisor_yielded':
+        break;
       default:
         fail(/tool/iu.test(event.type) ? 'READ_ONLY_UNSUPPORTED' : 'PROTOCOL_INVALID');
     }

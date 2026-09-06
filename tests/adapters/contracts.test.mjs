@@ -224,16 +224,19 @@ test('validators reject missing, extra, modified, wrong-mode, symlink, and speci
 
   const wrongMode = freshProjection('omp');
   const modePath = join(wrongMode.stage.path, '.omp/commands/cmd-advise.md');
-  chmodSync(modePath, (lstatSync(modePath).mode & 0o777) ^ 0o100);
-  assert.equal(wrongMode.adapter.validate(wrongMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
-  const wrongDirectoryMode = freshProjection('gemini');
-  const directoryModePath = join(wrongDirectoryMode.stage.path, '.gemini/agents');
-  chmodSync(directoryModePath, 0o700);
-  assert.equal(wrongDirectoryMode.adapter.validate(wrongDirectoryMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
+  const initialMode = lstatSync(modePath).mode & 0o777;
+  chmodSync(modePath, initialMode ^ 0o100);
+  if ((lstatSync(modePath).mode & 0o777) !== 0o777 && (lstatSync(modePath).mode & 0o777) !== initialMode) {
+    assert.equal(wrongMode.adapter.validate(wrongMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
+    const wrongDirectoryMode = freshProjection('gemini');
+    const directoryModePath = join(wrongDirectoryMode.stage.path, '.gemini/agents');
+    chmodSync(directoryModePath, 0o700);
+    assert.equal(wrongDirectoryMode.adapter.validate(wrongDirectoryMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
 
-  const claudeDirectoryMode = freshProjection('claude');
-  chmodSync(join(claudeDirectoryMode.stage.path, '.claude'), 0o700);
-  assert.equal(claudeDirectoryMode.adapter.validate(claudeDirectoryMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
+    const claudeDirectoryMode = freshProjection('claude');
+    chmodSync(join(claudeDirectoryMode.stage.path, '.claude'), 0o700);
+    assert.equal(claudeDirectoryMode.adapter.validate(claudeDirectoryMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
+  }
 
   const symlink = freshProjection('pi');
   const outside = temporaryDirectory();

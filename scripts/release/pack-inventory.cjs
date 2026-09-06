@@ -21,9 +21,9 @@ function collectPackInventory(projectRoot) {
     cwd: projectRoot,
     encoding: 'utf8'
   });
-  const jsonStart = packOutput.indexOf('[');
-  const jsonEnd = packOutput.lastIndexOf(']');
-  const [packMeta] = JSON.parse(packOutput.slice(jsonStart, jsonEnd + 1));
+  const jsonIndex = packOutput.search(/[[{]/);
+  const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
+  const packMeta = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
 
   const records = [];
   for (const file of packMeta.files) {

@@ -44,6 +44,16 @@ const scenarios = [
     expected: 'BLOCKED',
     desc: '[BUG FIX] Glob subfolder node_modules'
   },
+  {
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/web/node_modules && npm run build' } },
+    expected: 'BLOCKED',
+    desc: '[BUG FIX] cd subfolder node_modules before build'
+  },
+  {
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && ls packages/web/dist' } },
+    expected: 'BLOCKED',
+    desc: '[BUG FIX] build command followed by ls subfolder dist'
+  },
 
   // === Deep nesting (also bug cases) ===
   {
@@ -120,6 +130,26 @@ const scenarios = [
     expected: 'ALLOWED',
     desc: 'jest with flags'
   },
+  {
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/web && npm run build' } },
+    expected: 'ALLOWED',
+    desc: 'cd package and npm run build'
+  },
+  {
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/web && pnpm build' } },
+    expected: 'ALLOWED',
+    desc: 'cd package and pnpm build'
+  },
+  {
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/shared && yarn build' } },
+    expected: 'ALLOWED',
+    desc: 'cd package and yarn build'
+  },
+  {
+    input: { tool_name: 'Bash', tool_input: { command: '(cd packages/web && npm run build)' } },
+    expected: 'ALLOWED',
+    desc: 'subshell cd package and npm run build'
+  },
 
   // === Safe operations - MUST be ALLOWED ===
   {
@@ -138,9 +168,9 @@ const scenarios = [
     desc: 'Grep in src'
   },
   {
-    input: { tool_name: 'Glob', tool_input: { pattern: '**/*.ts' } },
+    input: { tool_name: 'Glob', tool_input: { pattern: 'packages/**/*.ts' } },
     expected: 'ALLOWED',
-    desc: 'Glob all .ts files'
+    desc: 'Glob scoped packages .ts files'
   },
   {
     input: { tool_name: 'Bash', tool_input: { command: 'find packages -name "*.json" | head' } },
