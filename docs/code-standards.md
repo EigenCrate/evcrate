@@ -267,9 +267,9 @@ checks with fake success paths or assertions on incidental implementation detail
 
 - Keep Markdown files below the repository limit of 800 lines; keep README below
   300 lines. Prefer tables, concise sections, and links over duplicated contracts.
-- Link only to verified files under `docs/` or the repository root. `docs/project-changelog.md`
-  mirrors phase evidence and boundaries; no root changelog file is present in the
-  current repository inventory.
+- Link only to verified files under `docs/` or the repository root.
+  `docs/project-changelog.md` mirrors phase evidence and boundaries; root
+  `CHANGELOG.md` is semantic-release output, not the phase-authority document.
 - Date-stamp Unreleased documentation entries where project conventions require it.
   Do not invent release versions, test totals, APIs, environment variables, or
   support claims.

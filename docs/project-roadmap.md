@@ -1,14 +1,14 @@
 # Project Roadmap
 
 **Status:** Unreleased; operator gates remain separate  
-**Updated:** 2026-09-05  
+**Updated:** 2026-09-06  
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
 and the [system architecture](./system-architecture.md)
 
 This roadmap distinguishes implementation gates recorded in the repository from
 operator/release work that has not been claimed. `docs/project-changelog.md` is the
-maintained phase mirror for this package; the repository currently has no root
-release changelog file.
+maintained phase mirror for this package; root `CHANGELOG.md` is semantic-release
+output and is not the phase evidence authority.
 
 ## Current baseline
 
@@ -30,6 +30,7 @@ edited.
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
+| Build-command unblocking — Phase 01 core hook enhancements | DONE (2026-09-06) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md) and [phase evidence](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-01-core-hook-enhancements.md); Phases 02–04 remain pending. |
 | Live vendor qualification | Pending operator gate | Each enabled installed CLI needs a bounded non-sensitive Linux qualification after upgrades. Deterministic tests do not authenticate a vendor. |
 | Release publication/rollout | Pending operator gate | npm publication, deployment, rollout, and final release remain explicitly separate from repository contracts. |
 | Windows validation | Deferred | Windows installer/runtime parity is not claimed without separate harness validation. |

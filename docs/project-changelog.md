@@ -2,8 +2,53 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-05  
-**Status:** Historical Phase 9/10/11 evidence retained; release remains Unreleased
+**Updated:** 2026-09-06  
+**Status:** Phase 01 complete; historical Phase 9/10/11 evidence retained; release remains Unreleased
+
+### Phase 01: Core hook enhancements
+
+**Updated:** 2026-09-06  
+**Status:** Complete for canonical hook behavior and focused tests
+
+#### Features
+
+- Split Bash input on top-level `&&`, `||`, `;`, `|`, newline, and background
+  separators without splitting quoted or escaped text.
+- Strip consecutive leading `KEY=value` assignments and grouping wrappers without
+  evaluating shell input.
+- Recognize anchored package-manager, language-runner, and build-tool forms,
+  including Python module/setup builds, Node build scripts, Deno, Zig, .NET,
+  Swift, and existing virtual-environment/package-manager forms.
+- Apply the build exemption per segment rather than bypassing a complete command
+  chain. A later `cat`, `grep`, `ls`, or equivalent read of protected output is
+  still evaluated.
+- Make path extraction invocation-aware: build-runner subcommand syntax is not
+  emitted as a path, exploration operands become directory candidates with
+  trailing `/`, and malformed quoting or shell substitutions receive
+  conservative handling.
+
+#### Verification
+
+The three changed canonical suites were run directly on 2026-09-06:
+
+| Suite | Passed | Failed |
+|---|---:|---:|
+| `test-scout-block.js` | 66 | 0 |
+| `test-path-extractor.js` | 55 | 0 |
+| `test-build-command-allowlist.js` | 95 | 0 |
+| **Total** | **216** | **0** |
+
+Coverage includes compound/env-prefixed builds, Python/Node/Deno/Zig/.NET/Swift
+runner forms, direct and nested generated-directory exploration, adversarial
+chains, quote/escape handling, `$(...)`/backtick/process substitution, and
+virtual-environment executable allowance.
+
+#### Boundary
+
+Phase 01 changes the canonical scout hook and its focused tests only. Ignore-file
+directory-only semantics, target projections, and active runtime synchronization
+remain Phase 02/03 work. The hook remains a context-protection control, not a
+general shell authorization allowlist.
 
 ### Documentation centralization
 

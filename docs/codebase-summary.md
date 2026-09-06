@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Generated:** 2026-09-05  
+**Generated:** 2026-09-06  
 **Source:** Repository compaction produced by Repomix at `repomix-output.xml`,
 then checked against the current package and source tree.  
 **Purpose:** Compact navigation map, not a copy of the compaction.
@@ -29,6 +29,35 @@ Generated target roots under `.evcrate/source/` are `.agents`, `.codex`,
 maintainers change canonical resources or target overlays and rebuild instead of
 editing them. `distribution/` and `pi_adapter/` are not active source modules in
 the current scoped inventory and should not be described as runtime engines.
+
+## Canonical scout-block hook
+
+The canonical Claude scout hook lives under `.evcrate/source/.claude/hooks/`.
+It protects context budget by matching extracted tool paths against the local
+ignore policy. A recognized build/tooling segment skips only that segment's path
+extraction; every later or chained segment is still checked. Blocked candidates
+retain exit status `2`, while existing fail-open handling remains for malformed
+JSON and unexpected hook errors.
+
+| File | Responsibility |
+|---|---|
+| `hooks/scout-block.cjs` | Splits commands into shell segments, strips leading environment assignments and grouping wrappers, recognizes anchored package/language/tool runners, preserves virtual-environment execution allowance, and evaluates each non-exempt segment. |
+| `hooks/scout-block/path-extractor.cjs` | Performs quote/escape-aware segment scanning, classifies runner syntax versus operands, extracts exploration paths, detects shell substitutions conservatively, and preserves or adds directory trailing `/` markers. |
+| `hooks/scout-block/tests/test-build-command-allowlist.js` | Canonical `isBuildCommand` matrix for package managers, build tools, language runners, environment prefixes, malformed/substitution inputs, and direct directory commands. |
+| `hooks/scout-block/tests/test-path-extractor.js` | Unit coverage for tool-input paths, contextual command extraction, directory operands, quote handling, segment splitting, and environment-assignment cleanup. |
+| `hooks/tests/test-scout-block.js` | End-to-end hook coverage for allowed builds, blocked generated/dependency exploration, adversarial chains, process substitution, broad patterns, and virtual-environment executables. |
+
+Targeted canonical runs on 2026-09-06 reported 216/216 passing assertions:
+
+| Suite | Result |
+|---|---:|
+| `test-scout-block.js` | 66 passed |
+| `test-path-extractor.js` | 55 passed |
+| `test-build-command-allowlist.js` | 95 passed |
+
+Phase 01 changes are canonical hook behavior and focused tests only. Ignore-file
+directory semantics and generated target/runtime synchronization remain owned by
+Phases 02 and 03 of the active plan.
 
 ## TypeScript modules
 

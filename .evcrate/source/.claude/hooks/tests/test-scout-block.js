@@ -93,6 +93,113 @@ const testCases = [
     expected: 'ALLOWED'
   },
 
+  // Chained and compound build commands (NEW)
+  {
+    name: 'Bash: cd packages/foo && npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/foo && npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: cd packages/foo && pnpm build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/foo && pnpm build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: cd packages/foo; npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/foo; npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: NODE_ENV=production npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'NODE_ENV=production npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: npm run build && npm test',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && npm test' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: cd node_modules && npm run build (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd node_modules && npm run build' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: npm run build && ls dist (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && ls dist' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: npm run build && cat build/app.js (adversarial chain blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && cat build/app.js' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: echo ok; grep token dist/bundle.js (adversarial chain blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'echo ok; grep token dist/bundle.js' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: ls build/ (directory exploration blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'ls build/' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: tree target (directory exploration blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'tree target' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: CI=true pnpm build',
+    input: { tool_name: 'Bash', tool_input: { command: 'CI=true pnpm build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: python -m build',
+    input: { tool_name: 'Bash', tool_input: { command: 'python -m build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: python3 -m build',
+    input: { tool_name: 'Bash', tool_input: { command: 'python3 -m build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: python setup.py build',
+    input: { tool_name: 'Bash', tool_input: { command: 'python setup.py build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: node build.js',
+    input: { tool_name: 'Bash', tool_input: { command: 'node build.js' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: node scripts/build.js',
+    input: { tool_name: 'Bash', tool_input: { command: 'node scripts/build.js' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: deno task build',
+    input: { tool_name: 'Bash', tool_input: { command: 'deno task build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: zig build',
+    input: { tool_name: 'Bash', tool_input: { command: 'zig build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: dotnet build',
+    input: { tool_name: 'Bash', tool_input: { command: 'dotnet build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: swift build',
+    input: { tool_name: 'Bash', tool_input: { command: 'swift build' } },
+    expected: 'ALLOWED'
+  },
+
   // Safe operations - should be ALLOWED
   {
     name: 'Grep with safe path',

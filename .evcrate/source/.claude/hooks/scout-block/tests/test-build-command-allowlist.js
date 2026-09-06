@@ -6,15 +6,7 @@
  * and allowed (bypassing path blocking).
  */
 
-// Replicate the patterns from scout-block.cjs
-const BUILD_COMMAND_PATTERN = /^(npm|pnpm|yarn|bun)\s+([^\s]+\s+)*(run\s+)?(build|test|lint|dev|start|install|ci|add|remove|update|publish|pack|init|create|exec)/;
-const TOOL_COMMAND_PATTERN = /^(\.\/)?(npx|pnpx|bunx|tsc|esbuild|vite|webpack|rollup|turbo|nx|jest|vitest|mocha|eslint|prettier|go|cargo|make|mvn|mvnw|gradle|gradlew|dotnet|docker|podman|kubectl|helm|terraform|ansible|bazel|cmake|sbt|flutter|swift|ant|ninja|meson)/;
-
-function isBuildCommand(command) {
-  if (!command || typeof command !== 'string') return false;
-  const trimmed = command.trim();
-  return BUILD_COMMAND_PATTERN.test(trimmed) || TOOL_COMMAND_PATTERN.test(trimmed);
-}
+const { isBuildCommand } = require('../../scout-block.cjs');
 
 const tests = [
   // JS/Node package managers - should be allowed
@@ -26,6 +18,8 @@ const tests = [
   { cmd: 'npm install', expected: true, desc: 'npm install' },
   { cmd: 'pnpm --filter web run build', expected: true, desc: 'pnpm with filter' },
   { cmd: 'yarn workspace app build', expected: true, desc: 'yarn workspace build' },
+  { cmd: 'NODE_ENV=production npm run build', expected: true, desc: 'npm run build with env var' },
+  { cmd: '(npm run build)', expected: true, desc: 'npm run build with parenthesis' },
 
   // JS tools - should be allowed
   { cmd: 'npx tsc', expected: true, desc: 'npx tsc' },
@@ -107,12 +101,36 @@ const tests = [
   { cmd: 'meson compile', expected: true, desc: 'meson compile' },
   { cmd: 'meson setup build', expected: true, desc: 'meson setup' },
 
+  // New language / runner build commands (Phase 01)
+  { cmd: 'python -m build', expected: true, desc: 'python -m build' },
+  { cmd: 'python3 -m build', expected: true, desc: 'python3 -m build' },
+  { cmd: 'python setup.py build', expected: true, desc: 'python setup.py build' },
+  { cmd: 'python3 setup.py build', expected: true, desc: 'python3 setup.py build' },
+  { cmd: 'node build.js', expected: true, desc: 'node build.js' },
+  { cmd: 'node build.cjs', expected: true, desc: 'node build.cjs' },
+  { cmd: 'node build.mjs', expected: true, desc: 'node build.mjs' },
+  { cmd: 'node scripts/build.js', expected: true, desc: 'node scripts/build.js' },
+  { cmd: 'node ./build.ts', expected: true, desc: 'node ./build.ts' },
+  { cmd: 'deno task build', expected: true, desc: 'deno task build' },
+  { cmd: 'zig build', expected: true, desc: 'zig build' },
+  { cmd: 'CI=true pnpm build', expected: true, desc: 'CI=true pnpm build (env var prefix)' },
+
   // Directory access - should be BLOCKED (not recognized as build commands)
   { cmd: 'cd build', expected: false, desc: 'cd build (blocked)' },
   { cmd: 'ls build', expected: false, desc: 'ls build (blocked)' },
   { cmd: 'cat build/output.js', expected: false, desc: 'cat build file (blocked)' },
   { cmd: 'cd node_modules', expected: false, desc: 'cd node_modules (blocked)' },
   { cmd: 'rm -rf dist', expected: false, desc: 'rm -rf dist (blocked)' },
+
+  // Adversarial & non-build commands - should NOT be recognized as build commands
+  { cmd: 'npm run build $(cat build/app.js)', expected: false, desc: 'command substitution $(...) in build command' },
+  { cmd: 'npm run build `cat build/app.js`', expected: false, desc: 'command substitution with backticks' },
+  { cmd: 'npm run build <(cat dist/secret)', expected: false, desc: 'process substitution <(...) in build command' },
+  { cmd: 'npm run build >(cat dist/secret)', expected: false, desc: 'process substitution >(...) in build command' },
+  { cmd: 'npm run build "unterminated', expected: false, desc: 'unterminated quote' },
+  { cmd: 'python -m unittest', expected: false, desc: 'python non-build module' },
+  { cmd: 'node server.js', expected: false, desc: 'node non-build script' },
+  { cmd: 'cat build.js', expected: false, desc: 'cat on build script' }
 ];
 
 console.log('Testing build command allowlist...\n');
