@@ -3,7 +3,67 @@
 ## Unreleased
 
 **Updated:** 2026-09-07  
-**Status:** Phase 01 catalog/scanner work complete; prior build-command Phases 01-04 remain complete; release remains Unreleased
+**Status:** Phase 02 catalog schema/freshness complete; prior build-command Phases 01-04 remain complete; release remains Unreleased
+
+### Phase 02: Catalog schema and freshness
+
+**Updated:** 2026-09-07  
+**Status:** Complete  
+**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md)  
+**Evidence:** [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md) and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md)
+
+#### Frozen data contract
+
+- `commands_data.yaml` is a strict list of records with exactly six keys, in
+  order: `source`, `name`, `path`, `description`, `argument_hint`, `category`.
+  All values are strings; all fields except `argument_hint` are non-empty.
+- `skills_data.yaml` is a strict list of records with exactly seven keys, in
+  order: `source`, `name`, `path`, `description`, `category`, `has_scripts`,
+  `has_references`. The first five values are non-empty strings; the last two
+  are strict booleans.
+- Both schemas require unique normalized `source`, `name`, and `path`
+  identities. `source` is the stable canonical relative identity for adapter
+  and freshness joins; `name` and `path` retain the current native
+  representation.
+- The retired `power_level` field is rejected as an unknown key and is absent
+  from the 70-record command input. `template-skill` and unmanaged skill
+  entries are excluded from the 36-record skill input.
+
+#### Validation, path safety, and atomic generation
+
+- `generate_catalogs.py` validates exact keys/types, required values,
+  allowlisted categories, uniqueness, and normalized relative POSIX paths
+  before grouping or serialization.
+- Path validation rejects absolute paths, backslashes, traversal or empty
+  segments, `./` prefixes, non-canonical spellings, and embedded NUL bytes.
+  The explicit NUL check prevents poisoned metadata from reaching filesystem
+  operations.
+- `scan_commands.py` and `scan_skills.py` write through adjacent temporary
+  UTF-8 files and atomically replace their data files, cleaning temporary
+  files on success or failure. Generator `--output` fully validates and
+  serializes first, then flushes, `fsync`s, closes, and atomically replaces the
+  destination; an existing destination survives a failed generation.
+- Generated grouped catalog presentation intentionally omits only `source`;
+  source remains in committed inputs for identity and freshness checks.
+
+#### Freshness and verification
+
+- `generate_catalogs.py --freshness` reloads both committed data files, runs
+  authoritative canonical command/skill scans in memory, and deep-compares
+  sorted records, including source identity, native names/paths, metadata, and
+  skill flags. A count, identity, or field mismatch exits 1 with concise
+  `stderr` and performs no write.
+- Scanner and generator roots/data paths resolve from `Path(__file__).resolve()`,
+  so invocation is independent of the caller's current working directory.
+- `test-scan-catalogs.py` passed 7/7 suites covering schema errors, NUL/path
+  safety, duplicates, freshness, canonical counts, all three command formats,
+  managed-entry exclusion, CWD independence, generated totals, and atomic
+  preservation. The accompanying `test-evcrate-help.py` independence and
+  behavior suite passed 19/19.
+
+The six implementation/data/test files changed for this phase are
+`generate_catalogs.py`, `scan_commands.py`, `scan_skills.py`,
+`commands_data.yaml`, `skills_data.yaml`, and `test-scan-catalogs.py`.
 
 ### Phase 01: Canonical metadata and scanner contracts
 
@@ -50,9 +110,10 @@
 | `test-evcrate-help.py` | 19/19 cases passed |
 | Standalone command and skill scans | 70 and 36 records written atomically |
 
-Phase 01 supplies the strict canonical inputs for the remaining scan/catalog
-plan. Catalog schema/freshness, seven-target adapter bindings, and projection
-regeneration remain later phases; `ev-help.py` remains intentionally separate.
+Phase 01 supplied the strict canonical inputs for the remaining scan/catalog plan.
+Phase 02 now completes schema/freshness validation; seven-target adapter bindings
+and projection regeneration remain later phases. `ev-help.py` remains intentionally
+separate.
 
 ### Phase 01: Core hook enhancements
 

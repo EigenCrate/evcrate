@@ -34,7 +34,7 @@ class CommandLayout:
     managed_entries: Optional[Set[str]] = None
     name_map: Optional[Dict[str, Dict[str, str]]] = None
     name_resolver: Optional[Callable[[Path, Dict[str, Any]], Tuple[str, str]]] = None
-
+    source_map: Optional[Dict[str, str]] = None
 
 def atomic_write_yaml(output_path: Path, data: Any) -> None:
     """Atomically write data as UTF-8 YAML using an adjacent temporary file."""
@@ -139,6 +139,7 @@ def scan_commands(base_path: Optional[Path] = None, layout: Optional[CommandLayo
             raise ScanError(f"{posix_rel}: failed to read file: {e}") from e
 
         meta = parser(content, posix_rel)
+        source = posix_rel
         if layout.name_resolver:
             cmd_name, category = layout.name_resolver(rel, meta["raw"])
         elif layout.name_map:
@@ -148,16 +149,22 @@ def scan_commands(base_path: Optional[Path] = None, layout: Optional[CommandLayo
             cmd_name = "/" + rec["targetName"]
             src_parts = rec.get("sourceName", "").split(":")
             category = src_parts[0] if len(src_parts) > 1 else "core"
+            source = rec.get("source", posix_rel)
         elif layout.format == "command-skill" and meta.get("name"):
             cmd_name, category = "/" + meta["name"], "core"
         else:
             cmd_name, category = default_command_name_and_category(rel)
 
+        if layout.source_map and posix_rel in layout.source_map:
+            source = layout.source_map[posix_rel]
+
         if cmd_name in seen_names:
             raise ScanError(f"Duplicate command name collision: {cmd_name} from {posix_rel}")
         seen_names.add(cmd_name)
-        commands.append({"name": cmd_name, "path": posix_rel, "description": meta["description"], "argument_hint": meta["argument_hint"], "category": category})
-
+        commands.append({
+            "source": source, "name": cmd_name, "path": posix_rel,
+            "description": meta["description"], "argument_hint": meta["argument_hint"], "category": category,
+        })
     commands.sort(key=lambda x: x["name"])
     return commands
 

@@ -1,11 +1,13 @@
-- name: advisor-strategy
+- source: advisor-strategy/SKILL.md
+  name: advisor-strategy
   path: advisor-strategy/SKILL.md
   description: Provide fresh bounded strategy counsel for named implementation checkpoints
     without editing or delegating.
   category: other
   has_scripts: false
   has_references: true
-- name: aesthetic
+- source: aesthetic/SKILL.md
+  name: aesthetic
   path: aesthetic/SKILL.md
   description: Create aesthetically beautiful interfaces following proven design principles.
     Use when building UI/UX, analyzing designs from inspiration sites, generating
@@ -20,7 +22,8 @@
   category: frontend
   has_scripts: false
   has_references: true
-- name: ai-artist
+- source: ai-artist/SKILL.md
+  name: ai-artist
   path: ai-artist/SKILL.md
   description: Write and optimize prompts for AI-generated outcomes across text and
     image models. Use when crafting prompts for LLMs (Claude, GPT, Gemini), image
@@ -31,7 +34,8 @@
   category: ai-ml
   has_scripts: false
   has_references: true
-- name: ai-multimodal
+- source: ai-multimodal/SKILL.md
+  name: ai-multimodal
   path: ai-multimodal/SKILL.md
   description: Process and generate multimedia content using Google Gemini API for
     better vision capabilities. Capabilities include analyze audio files (transcription
@@ -48,7 +52,8 @@
   category: ai-ml
   has_scripts: true
   has_references: true
-- name: backend-development
+- source: backend-development/SKILL.md
+  name: backend-development
   path: backend-development/SKILL.md
   description: Build robust backend systems with modern technologies (Node.js, Python,
     Go, Rust), frameworks (NestJS, FastAPI, Django), databases (PostgreSQL, MongoDB,
@@ -61,7 +66,8 @@
   category: backend
   has_scripts: false
   has_references: true
-- name: better-auth
+- source: better-auth/SKILL.md
+  name: better-auth
   path: better-auth/SKILL.md
   description: Implement authentication and authorization with Better Auth - a framework-agnostic
     TypeScript authentication framework. Features include email/password authentication
@@ -74,7 +80,8 @@
   category: backend
   has_scripts: true
   has_references: true
-- name: chrome-devtools
+- source: chrome-devtools/SKILL.md
+  name: chrome-devtools
   path: chrome-devtools/SKILL.md
   description: Browser automation, debugging, and performance analysis using Puppeteer
     CLI scripts. Use for automating browsers, taking screenshots, analyzing performance,
@@ -82,7 +89,8 @@
   category: multimedia
   has_scripts: true
   has_references: true
-- name: code-review
+- source: code-review/SKILL.md
+  name: code-review
   path: code-review/SKILL.md
   description: Use when receiving code review feedback (especially if unclear or technically
     questionable), when completing tasks or major features requiring review before
@@ -94,7 +102,8 @@
   category: utilities
   has_scripts: false
   has_references: true
-- name: context-engineering
+- source: context-engineering/SKILL.md
+  name: context-engineering
   path: context-engineering/SKILL.md
   description: Master context engineering for AI agent systems. Use when designing
     agent architectures, debugging context failures, optimizing token usage, implementing
@@ -106,7 +115,8 @@
   category: other
   has_scripts: true
   has_references: true
-- name: databases
+- source: databases/SKILL.md
+  name: databases
   path: databases/SKILL.md
   description: Work with MongoDB (document database, BSON documents, aggregation pipelines,
     Atlas cloud) and PostgreSQL (relational database, SQL queries, psql CLI, pgAdmin).
@@ -117,7 +127,8 @@
   category: database
   has_scripts: true
   has_references: true
-- name: debugging
+- source: debugging/SKILL.md
+  name: debugging
   path: debugging/SKILL.md
   description: Systematic debugging framework ensuring root cause investigation before
     fixes. Includes four-phase debugging process, backward call stack tracing, multi-layer
@@ -127,7 +138,8 @@
   category: utilities
   has_scripts: true
   has_references: true
-- name: devops
+- source: devops/SKILL.md
+  name: devops
   path: devops/SKILL.md
   description: Deploy and manage cloud infrastructure on Cloudflare (Workers, R2,
     D1, KV, Pages, Durable Objects, Browser Rendering), Docker containers, and Google
@@ -139,7 +151,8 @@
   category: infrastructure
   has_scripts: true
   has_references: true
-- name: docs-seeker
+- source: docs-seeker/SKILL.md
+  name: docs-seeker
   path: docs-seeker/SKILL.md
   description: 'Search technical documentation using executable scripts to detect
     query type, fetch from llms.txt sources (context7.com), and analyze results. Use
@@ -149,7 +162,8 @@
   category: dev-tools
   has_scripts: true
   has_references: true
-- name: document-skills/docx
+- source: document-skills/docx/SKILL.md
+  name: document-skills/docx
   path: document-skills/docx/SKILL.md
   description: 'Comprehensive document creation, editing, and analysis with support
     for tracked changes, comments, formatting preservation, and text extraction. When
@@ -159,7 +173,8 @@
   category: multimedia
   has_scripts: true
   has_references: false
-- name: document-skills/pdf
+- source: document-skills/pdf/SKILL.md
+  name: document-skills/pdf
   path: document-skills/pdf/SKILL.md
   description: Comprehensive PDF manipulation toolkit for extracting text and tables,
     creating new PDFs, merging/splitting documents, and handling forms. When Claude
@@ -168,7 +183,8 @@
   category: multimedia
   has_scripts: true
   has_references: false
-- name: document-skills/pptx
+- source: document-skills/pptx/SKILL.md
+  name: document-skills/pptx
   path: document-skills/pptx/SKILL.md
   description: 'Presentation creation, editing, and analysis. When Claude needs to
     work with presentations (.pptx files) for: (1) Creating new presentations, (2)
@@ -177,7 +193,8 @@
   category: multimedia
   has_scripts: true
   has_references: false
-- name: document-skills/xlsx
+- source: document-skills/xlsx/SKILL.md
+  name: document-skills/xlsx
   path: document-skills/xlsx/SKILL.md
   description: 'Comprehensive spreadsheet creation, editing, and analysis with support
     for formulas, formatting, data analysis, and visualization. When Claude needs
@@ -188,7 +205,8 @@
   category: multimedia
   has_scripts: false
   has_references: false
-- name: frontend-design
+- source: frontend-design/SKILL.md
+  name: frontend-design
   path: frontend-design/SKILL.md
   description: Create distinctive, production-grade frontend interfaces with high
     design quality. Use this skill when the user asks to build web components, pages,
@@ -199,7 +217,8 @@
   category: frontend
   has_scripts: false
   has_references: true
-- name: frontend-development
+- source: frontend-development/SKILL.md
+  name: frontend-development
   path: frontend-development/SKILL.md
   description: Frontend development guidelines for React/TypeScript applications.
     Modern patterns including Suspense, lazy loading, useSuspenseQuery, file organization
@@ -209,14 +228,16 @@
   category: frontend
   has_scripts: false
   has_references: false
-- name: google-adk-python
+- source: google-adk-python/SKILL.md
+  name: google-adk-python
   path: google-adk-python/SKILL.md
   description: Guide for building, evaluating, and deploying AI agents with Google's
     Agent Development Kit for Python.
   category: ai-ml
   has_scripts: false
   has_references: false
-- name: mcp-builder
+- source: mcp-builder/SKILL.md
+  name: mcp-builder
   path: mcp-builder/SKILL.md
   description: Guide for creating high-quality MCP (Model Context Protocol) servers
     that enable LLMs to interact with external services through well-designed tools.
@@ -225,7 +246,8 @@
   category: frontend
   has_scripts: true
   has_references: false
-- name: mcp-management
+- source: mcp-management/SKILL.md
+  name: mcp-management
   path: mcp-management/SKILL.md
   description: Manage Model Context Protocol (MCP) servers - discover, analyze, and
     execute tools/prompts/resources from configured MCP servers. Use when working
@@ -236,7 +258,8 @@
   category: dev-tools
   has_scripts: true
   has_references: true
-- name: media-processing
+- source: media-processing/SKILL.md
+  name: media-processing
   path: media-processing/SKILL.md
   description: Process multimedia files with FFmpeg (video/audio encoding, conversion,
     streaming, filtering, hardware acceleration), ImageMagick (image manipulation,
@@ -251,7 +274,8 @@
   category: multimedia
   has_scripts: true
   has_references: true
-- name: mermaidjs-v11
+- source: mermaidjs-v11/SKILL.md
+  name: mermaidjs-v11
   path: mermaidjs-v11/SKILL.md
   description: Create diagrams and visualizations using Mermaid.js v11 syntax. Use
     when generating flowcharts, sequence diagrams, class diagrams, state diagrams,
@@ -263,7 +287,8 @@
   category: other
   has_scripts: false
   has_references: true
-- name: mobile-development
+- source: mobile-development/SKILL.md
+  name: mobile-development
   path: mobile-development/SKILL.md
   description: Build modern mobile applications with React Native, Flutter, Swift/SwiftUI,
     and Kotlin/Jetpack Compose. Covers mobile-first design principles, performance
@@ -275,14 +300,16 @@
   category: frameworks
   has_scripts: false
   has_references: true
-- name: planning
+- source: planning/SKILL.md
+  name: planning
   path: planning/SKILL.md
   description: Use when you need to plan technical solutions that are scalable, secure,
     and maintainable.
   category: utilities
   has_scripts: false
   has_references: true
-- name: problem-solving
+- source: problem-solving/SKILL.md
+  name: problem-solving
   path: problem-solving/SKILL.md
   description: Apply systematic problem-solving techniques for complexity spirals
     (simplification cascades), innovation blocks (collision-zone thinking), recurring
@@ -292,7 +319,8 @@
   category: utilities
   has_scripts: false
   has_references: true
-- name: repomix
+- source: repomix/SKILL.md
+  name: repomix
   path: repomix/SKILL.md
   description: Package entire code repositories into single AI-friendly files using
     Repomix. Capabilities include pack codebases with customizable include/exclude
@@ -305,14 +333,16 @@
   category: dev-tools
   has_scripts: true
   has_references: true
-- name: research
+- source: research/SKILL.md
+  name: research
   path: research/SKILL.md
   description: Use when you need to research, analyze, and plan technical solutions
     that are scalable, secure, and maintainable.
   category: utilities
   has_scripts: false
   has_references: false
-- name: sequential-thinking
+- source: sequential-thinking/SKILL.md
+  name: sequential-thinking
   path: sequential-thinking/SKILL.md
   description: Apply structured, reflective problem-solving for complex tasks requiring
     multi-step analysis, revision capability, and hypothesis verification. Use for
@@ -321,7 +351,8 @@
   category: utilities
   has_scripts: true
   has_references: true
-- name: svg-icon-generator
+- source: svg-icon-generator/SKILL.md
+  name: svg-icon-generator
   path: svg-icon-generator/SKILL.md
   description: 'Generate svg icon generator operations. Auto-activating skill for
     Visual Content.
@@ -336,7 +367,8 @@
   category: other
   has_scripts: false
   has_references: false
-- name: threejs
+- source: threejs/SKILL.md
+  name: threejs
   path: threejs/SKILL.md
   description: Build immersive 3D web experiences with Three.js - WebGL/WebGPU library
     for scenes, cameras, geometries, materials, lights, animations, loaders, post-processing,
@@ -349,7 +381,8 @@
   category: frontend
   has_scripts: false
   has_references: true
-- name: ui-styling
+- source: ui-styling/SKILL.md
+  name: ui-styling
   path: ui-styling/SKILL.md
   description: Create beautiful, accessible user interfaces with shadcn/ui components
     (built on Radix UI + Tailwind), Tailwind CSS utility-first styling, and canvas-based
@@ -361,7 +394,8 @@
   category: frontend
   has_scripts: true
   has_references: true
-- name: ui-ux-pro-max
+- source: ui-ux-pro-max/SKILL.md
+  name: ui-ux-pro-max
   path: ui-ux-pro-max/SKILL.md
   description: 'UI/UX design intelligence for web, mobile, and desktop. This skill
     should be used when designing, building, reviewing, or fixing interfaces, including
@@ -373,7 +407,8 @@
   category: frontend
   has_scripts: true
   has_references: true
-- name: web-frameworks
+- source: web-frameworks/SKILL.md
+  name: web-frameworks
   path: web-frameworks/SKILL.md
   description: Build modern full-stack web applications with Next.js (App Router,
     Server Components, RSC, PPR, SSR, SSG, ISR), Turborepo (monorepo management, task
@@ -385,7 +420,8 @@
   category: frameworks
   has_scripts: true
   has_references: true
-- name: web-testing
+- source: web-testing/SKILL.md
+  name: web-testing
   path: web-testing/SKILL.md
   description: Web testing release-gate workflow for browser-facing changes. Use this
     skill whenever the user works on frontend UI, browser flows, Playwright, Vitest,

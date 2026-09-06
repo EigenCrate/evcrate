@@ -30,49 +30,79 @@ maintainers change canonical resources or target overlays and rebuild instead of
 editing them. `distribution/` and `pi_adapter/` are not active source modules in
 the current scoped inventory and should not be described as runtime engines.
 
-## Canonical catalogs and scanner contracts (Phase 01)
+## Canonical catalogs and scanner contracts (Phase 02)
 
-Phase 01 establishes the canonical metadata and scanner contract for command and
-skill catalogs. See the [phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md)
-and the [project changelog](./project-changelog.md) for scope and evidence.
+Phase 02 freezes the committed command/skill inputs, retires the legacy
+`power_level` field, and adds source-derived freshness validation. See the
+[Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md),
+[test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md),
+and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md)
+for scope and evidence.
 
-- All 70 files under `.evcrate/source/.claude/commands/**/*.md` now begin with
-  mapping frontmatter. Each mapping has a non-empty string `description` and an
-  explicit string `argument-hint` (the empty string represents no arguments);
-  frontmatter-only normalization preserves every command body.
-- `.evcrate/source/.claude/scripts/commands_data.yaml` is the generated 70-record
-  command input. Records expose native names, POSIX-relative paths, descriptions,
-  normalized `argument_hint` values, and categories.
-  `scan_commands.py` defines the frozen CommandLayout contract: root, target
-  format (`markdown`, `toml`, or `command-skill`), optional output, managed entries,
-  and target name-map/resolver bindings. Strict parsers use YAML frontmatter,
-  `tomllib`, or generated command-skill frontmatter; metadata must be a mapping
-  with a non-empty string description and string argument hint.
-- Command scans validate root containment, UTF-8, managed-entry coverage, and
-  duplicate names before returning deterministic name-sorted records. The CLI
-  resolves its source and output from `Path(__file__).resolve()`, so execution is
-  independent of the caller's current working directory.
-- Scanner output uses an adjacent temporary UTF-8 YAML file and atomic replacement;
-  temporary files are removed on success and failure. A failed scan therefore
-  cannot replace a previously valid catalog.
-- `scan_skills.py` defines the frozen SkillLayout contract for root, output,
-  managed entries, and exclusions. It supports authoritative allowlists, rejects
-  missing/unsafe managed files, preserves arbitrary nesting in skill names and
-  POSIX paths, sorts records deterministically, and uses the same atomic-write
-  boundary. The canonical scan yields 36 skills, excludes `template-skill`, and
-  retains nested names such as `document-skills/docx`.
-- `.evcrate/source/.claude/scripts/skills_data.yaml` is the generated 36-record
-  skill input. Unrelated files beside managed entries are ignored rather than
-  silently added to a catalog.
-- `test-scan-catalogs.py` covers canonical counts, Markdown/TOML/command-skill
-  parsing, Unicode and deep nesting, allowlists, fail-closed malformed metadata,
-  sentinel preservation, and repository-root/script-directory/temporary-CWD
-  execution. `test-evcrate-help.py` separately verifies `ev-help.py` has no
-  scanner or generated-data imports while preserving its guide and routing behavior.
+### Frozen committed-record schema
 
-The scanner core is target-parameterized; target-specific catalog schemas,
-freshness checks, and projection regeneration remain later phases of the scan
-and catalog plan.
+The scanner data files are strict, ordered YAML lists. Every mapping must have
+exactly the listed keys in the listed order. Unknown, missing, duplicate, or
+unsafe records are rejected by validation; `--freshness` additionally rejects
+stale records without generating output:
+
+| Input | Exact keys and types | Required invariants |
+|---|---|---|
+| `commands_data.yaml` | `source`, `name`, `path`, `description`, `argument_hint`, `category` — all strings | Every field except `argument_hint` is non-empty; `source` and `path` are normalized relative POSIX paths; `name` starts with `/`; category is allowlisted; `source`, `name`, and `path` are unique. |
+| `skills_data.yaml` | `source`, `name`, `path`, `description`, `category` — strings; `has_scripts`, `has_references` — booleans | The five strings are non-empty; both flags must be actual booleans; `source`, `name`, and `path` are unique; `template-skill` and unmanaged entries are excluded. |
+
+`source` is the stable canonical relative identity used for adapter and
+freshness joins. `name` and `path` describe the target-native representation.
+The canonical inputs currently contain 70 commands and 36 non-template skills.
+The retired `power_level` field is not accepted by the exact-key validator and
+does not appear in the committed command data.
+
+`generate_catalogs.py` consumes the six-/seven-key input records and removes
+only `source` from grouped presentation entries. Consequently, generated
+`commands` entries have five keys and generated `skills` entries have six;
+`source` remains in the committed `*_data.yaml` inputs for identity and
+freshness checks.
+
+### Scanner and generator behavior
+
+- `scan_commands.py` defines the frozen `CommandLayout` contract: root, format
+  (`markdown`, `toml`, or `command-skill`), optional output, managed entries,
+  and target name-map/resolver bindings. Strict parsers require valid metadata,
+  UTF-8, managed-entry coverage, and unique command names.
+- `scan_skills.py` defines the frozen `SkillLayout` contract for root, output,
+  managed entries, exclusions, and source mapping. It preserves arbitrary
+  nesting in skill names and rejects missing, unsafe, symlinked, or duplicate
+  managed entries.
+- Both scanner CLIs resolve roots and adjacent data outputs from
+  `Path(__file__).resolve()`, so repository-root, script-directory, and
+  unrelated temporary-CWD invocation use the same authoritative paths.
+- Scanner writes use an adjacent temporary UTF-8 YAML file followed by atomic
+  replacement; temporary files are removed on success and failure. Generator
+  `--output` writes, flushes, `fsync`s, closes, and atomically replaces the
+  destination only after complete validation. A failed generation leaves an
+  existing destination unchanged.
+
+### Path safety and freshness
+
+`generate_catalogs.py` validates every `source` and `path` as a normalized
+relative POSIX path. It rejects non-strings, empty values, embedded NUL bytes,
+backslashes, absolute paths, `./` prefixes, empty/dot/dot-dot segments, and
+non-canonical POSIX spellings. This embedded-null defense prevents poisoned
+metadata from reaching filesystem operations.
+
+`generate_catalogs.py --freshness` reloads and validates both committed data
+files, scans the authoritative canonical command and skill roots in memory, and
+deep-compares sorted records (including source, native name/path, metadata, and
+flags). It exits successfully only when the committed inputs match the live
+scans; a count, identity, or field mismatch exits 1 with concise stderr and
+does not write output.
+
+`test-scan-catalogs.py` covers canonical counts, all three command formats,
+Unicode and deep nesting, managed allowlists, malformed input, duplicate and
+unsafe identities, NUL-byte paths, sentinel preservation, CWD independence,
+schema validation, freshness, generated totals, and atomic output (7/7 suites
+passed in the Phase 02 evidence). `test-evcrate-help.py` remains independent
+from scanners and generated data (19/19 suites in the same evidence).
 
 
 ## Canonical scout-block hook and ignore policy

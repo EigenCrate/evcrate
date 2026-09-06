@@ -24,6 +24,7 @@ class SkillLayout:
     output_path: Optional[Path] = None
     managed_entries: Optional[Set[str]] = None
     exclusions: Optional[Set[str]] = None
+    source_map: Optional[Dict[str, str]] = None
 
 
 def atomic_write_yaml(output_path: Path, data: Any) -> None:
@@ -138,8 +139,9 @@ def scan_skills(base_path: Optional[Path] = None, layout: Optional[SkillLayout] 
         if skill_name in seen_names:
             raise ScanError(f"Duplicate skill name: {skill_name}")
         seen_names.add(skill_name)
+        source = layout.source_map.get(posix_path, posix_path) if layout and layout.source_map else posix_path
         skills.append({
-            "name": skill_name, "path": posix_path, "description": desc,
+            "source": source, "name": skill_name, "path": posix_path, "description": desc,
             "category": categorize_skill(skill_name, desc, content),
             "has_scripts": (skill_file.parent / "scripts").is_dir(),
             "has_references": (skill_file.parent / "references").is_dir(),
