@@ -1,8 +1,7 @@
 ---
-description: Intelligent plan creation with prompt enhancement
-argument-hint: [task]
+description: "Intelligent plan creation with prompt enhancement"
+argument-hint: "[task]"
 ---
-
 ## Your mission
 <task>
 $ARGUMENTS

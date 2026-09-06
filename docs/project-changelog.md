@@ -2,8 +2,57 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-06  
-**Status:** Phases 01-04 complete; historical Phase 9/10/11 evidence retained; release remains Unreleased
+**Updated:** 2026-09-07  
+**Status:** Phase 01 catalog/scanner work complete; prior build-command Phases 01-04 remain complete; release remains Unreleased
+
+### Phase 01: Canonical metadata and scanner contracts
+
+**Updated:** 2026-09-07  
+**Status:** Complete  
+**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md)  
+**Evidence:** [test report](../plans/reports/tester-260907-0036-canonical-metadata-and-scanner-contracts.md) and [code review](../plans/reports/code-review-260907-0038-canonical-metadata-and-scanner-contracts.md)
+
+#### Canonical metadata
+
+- Normalized all 70 canonical `.claude/commands/**/*.md` files to YAML mapping
+  frontmatter with a non-empty string `description` and explicit string
+  `argument-hint`; no-argument commands use `argument-hint: ""`.
+- Kept changes frontmatter-only so command bodies remain unchanged.
+- Regenerated `commands_data.yaml` with 70 deterministic records and
+  `skills_data.yaml` with 36 deterministic records.
+
+#### Scanner contracts
+
+- `scan_commands.py` now exposes a frozen CommandLayout binding for root,
+  Markdown/TOML/command-skill format, output, managed entries, and target naming
+  maps/resolvers. Strict format-specific parsers reject malformed metadata,
+  wrong consumed-field types, invalid UTF-8, missing managed entries, and
+  duplicate names.
+- Command scanning uses deterministic POSIX-relative records and an atomic
+  adjacent temporary-file replacement. CLI roots and catalog outputs derive from
+  `Path(__file__).resolve()`, making invocation independent of the caller's CWD.
+- `scan_skills.py` now exposes a frozen SkillLayout binding with authoritative
+  managed-entry and exclusion allowlists. It preserves arbitrary nesting in skill
+  names, excludes the declared template skill, rejects missing/unsafe entries,
+  and uses the same atomic-write boundary.
+- `test-scan-catalogs.py` adds regressions for 70 commands/36 skills, all three
+  command formats, Unicode and deep nesting, allowlists, malformed input,
+  sentinel preservation, and root/script/temporary-CWD execution.
+- `test-evcrate-help.py` adds an independence regression proving `ev-help.py`
+  does not import scanner modules or generated catalog data while retaining
+  existing guide and intent-routing behavior.
+
+#### Verification
+
+| Focused evidence | Result |
+|---|---:|
+| `test-scan-catalogs.py` | 5/5 suites passed |
+| `test-evcrate-help.py` | 19/19 cases passed |
+| Standalone command and skill scans | 70 and 36 records written atomically |
+
+Phase 01 supplies the strict canonical inputs for the remaining scan/catalog
+plan. Catalog schema/freshness, seven-target adapter bindings, and projection
+regeneration remain later phases; `ev-help.py` remains intentionally separate.
 
 ### Phase 01: Core hook enhancements
 

@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Generated:** 2026-09-06  
+**Generated:** 2026-09-07  
 **Source:** Repository compaction produced by Repomix at `repomix-output.xml`,
 then checked against the current package and source tree.  
 **Purpose:** Compact navigation map, not a copy of the compaction.
@@ -29,6 +29,51 @@ Generated target roots under `.evcrate/source/` are `.agents`, `.codex`,
 maintainers change canonical resources or target overlays and rebuild instead of
 editing them. `distribution/` and `pi_adapter/` are not active source modules in
 the current scoped inventory and should not be described as runtime engines.
+
+## Canonical catalogs and scanner contracts (Phase 01)
+
+Phase 01 establishes the canonical metadata and scanner contract for command and
+skill catalogs. See the [phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md)
+and the [project changelog](./project-changelog.md) for scope and evidence.
+
+- All 70 files under `.evcrate/source/.claude/commands/**/*.md` now begin with
+  mapping frontmatter. Each mapping has a non-empty string `description` and an
+  explicit string `argument-hint` (the empty string represents no arguments);
+  frontmatter-only normalization preserves every command body.
+- `.evcrate/source/.claude/scripts/commands_data.yaml` is the generated 70-record
+  command input. Records expose native names, POSIX-relative paths, descriptions,
+  normalized `argument_hint` values, and categories.
+  `scan_commands.py` defines the frozen CommandLayout contract: root, target
+  format (`markdown`, `toml`, or `command-skill`), optional output, managed entries,
+  and target name-map/resolver bindings. Strict parsers use YAML frontmatter,
+  `tomllib`, or generated command-skill frontmatter; metadata must be a mapping
+  with a non-empty string description and string argument hint.
+- Command scans validate root containment, UTF-8, managed-entry coverage, and
+  duplicate names before returning deterministic name-sorted records. The CLI
+  resolves its source and output from `Path(__file__).resolve()`, so execution is
+  independent of the caller's current working directory.
+- Scanner output uses an adjacent temporary UTF-8 YAML file and atomic replacement;
+  temporary files are removed on success and failure. A failed scan therefore
+  cannot replace a previously valid catalog.
+- `scan_skills.py` defines the frozen SkillLayout contract for root, output,
+  managed entries, and exclusions. It supports authoritative allowlists, rejects
+  missing/unsafe managed files, preserves arbitrary nesting in skill names and
+  POSIX paths, sorts records deterministically, and uses the same atomic-write
+  boundary. The canonical scan yields 36 skills, excludes `template-skill`, and
+  retains nested names such as `document-skills/docx`.
+- `.evcrate/source/.claude/scripts/skills_data.yaml` is the generated 36-record
+  skill input. Unrelated files beside managed entries are ignored rather than
+  silently added to a catalog.
+- `test-scan-catalogs.py` covers canonical counts, Markdown/TOML/command-skill
+  parsing, Unicode and deep nesting, allowlists, fail-closed malformed metadata,
+  sentinel preservation, and repository-root/script-directory/temporary-CWD
+  execution. `test-evcrate-help.py` separately verifies `ev-help.py` has no
+  scanner or generated-data imports while preserving its guide and routing behavior.
+
+The scanner core is target-parameterized; target-specific catalog schemas,
+freshness checks, and projection regeneration remain later phases of the scan
+and catalog plan.
+
 
 ## Canonical scout-block hook and ignore policy
 

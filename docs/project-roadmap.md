@@ -1,7 +1,7 @@
 # Project Roadmap
 
 **Status:** Unreleased; operator gates remain separate  
-**Updated:** 2026-09-06  
+**Updated:** 2026-09-07  
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
 and the [system architecture](./system-architecture.md)
 
@@ -31,6 +31,8 @@ edited.
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-06) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md) and [phase evidence](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-01-core-hook-enhancements.md), [Phase 02](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-02-pattern-matcher-and-ignore-standardization.md), [Phase 03](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-03-target-projections-and-runtime-sync.md), and [Phase 04](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), plus the [status report](../plans/reports/project-manager-260906-2245-phase-04-status.md); 299/299 focused assertions pass, six projections and active OMP runtime verified; build/read boundary preserved. |
+| Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
+| Command and skill catalogs — Phase 02 | NEXT | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md); freeze exact command/skill schemas, canonical source identity, freshness checks, and atomic generation before target adapters. |
 | Live vendor qualification | Pending operator gate | Each enabled installed CLI needs a bounded non-sensitive Linux qualification after upgrades. Deterministic tests do not authenticate a vendor. |
 | Release publication/rollout | Pending operator gate | npm publication, deployment, rollout, and final release remain explicitly separate from repository contracts. |
 | Windows validation | Deferred | Windows installer/runtime parity is not claimed without separate harness validation. |

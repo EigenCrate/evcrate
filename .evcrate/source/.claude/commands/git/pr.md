@@ -1,8 +1,7 @@
 ---
-description: Create a pull request
-argument-hint: [branch] [from-branch]
+description: "Create a pull request"
+argument-hint: "[branch] [from-branch]"
 ---
-
 ## Variables
 
 TO_BRANCH: $1 (defaults to `main`)

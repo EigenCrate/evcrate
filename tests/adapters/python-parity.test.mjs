@@ -85,6 +85,7 @@ function runPython(target, stage) {
   if (target !== 'antigravity') mkdirSync(output);
   const env = {
     ...process.env,
+    PYTHONDONTWRITEBYTECODE: '1',
     EVCRATE_REPOSITORY: repository,
     EVCRATE_SOURCE_DIR: sourceRoot,
     CLAUDE_SOURCE_DIR: canonicalRoot,

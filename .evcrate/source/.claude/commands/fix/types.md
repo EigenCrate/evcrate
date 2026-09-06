@@ -1,7 +1,7 @@
 ---
-description: Fix type errors
+description: "Fix type errors"
+argument-hint: ""
 ---
-
 Run `bun run typecheck` or `tsc` or `npx tsc` and fix all type errors.
 
 ## Rules

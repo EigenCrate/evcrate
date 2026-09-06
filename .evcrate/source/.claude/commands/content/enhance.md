@@ -1,8 +1,7 @@
 ---
-description: Analyze the current copy issues and enhance it
-argument-hint: [issues]
+description: "Analyze the current copy issues and enhance it"
+argument-hint: "[issues]"
 ---
-
 Enhance the copy based on reported issues:
 <issues>$ARGUMENTS</issues>
 

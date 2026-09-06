@@ -1,8 +1,7 @@
 ---
-description: Interview-first technical advice with optional Claude relay
-argument-hint: [prompt-or-url] [--agent]
+description: "Interview-first technical advice with optional Claude relay"
+argument-hint: "[prompt-or-url] [--agent]"
 ---
-
 <!-- EVCRATE_ADVISORY_CAPABILITIES_START -->
 <!-- EVCRATE_CAPABILITY: advise-inline/v1 -->
 <!-- EVCRATE_CAPABILITY: advise-agent-relay/claude/v1 -->
