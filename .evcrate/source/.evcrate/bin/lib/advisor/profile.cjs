@@ -130,7 +130,10 @@ function loadFromContext(context) {
   }
   return Object.freeze({ policy, path: context.policyPath });
 }
-function loadGlobalPolicy() { return loadFromContext(createContext(platformHome())); }
+function loadGlobalPolicy(home = undefined) {
+  const resolvedHome = home !== undefined ? resolveHomeValue(home) : platformHome();
+  return loadFromContext(createContext(resolvedHome));
+}
 
 module.exports = {
   CANDIDATE_BACKENDS,

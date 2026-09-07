@@ -120,3 +120,234 @@ test('successful leader exit terminates detached descendants before returning', 
     assert.equal(spawnSync('ps', ['-eo', 'pid=,ppid=,args='], { encoding: 'utf8' }).stdout.includes(path.basename(child)), false);
   } finally { clean(f.root); }
 });
+test('limits reject invalid mode and mismatched timing options at construction', () => {
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'invalid' }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'probe', warnAfterMs: 5000 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'probe', warnEveryMs: 5000 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'probe', maxWarnings: 5 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', timeoutMs: 5000 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', warnAfterMs: 0 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', warnEveryMs: 0 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', warnAfterMs: -1 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', warnAfterMs: 3600001 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', warnEveryMs: 3600001 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', maxWarnings: 0 }), { code: 'INVOCATION_INVALID' });
+  assert.throws(() => RUNNER.normalizeLimits({ mode: 'generation', maxWarnings: 13 }), { code: 'INVOCATION_INVALID' });
+  const genLimits = RUNNER.normalizeLimits({ mode: 'generation' });
+  assert.equal(genLimits.mode, 'generation');
+  assert.equal(genLimits.warnAfterMs, 120000);
+  assert.equal(genLimits.warnEveryMs, 300000);
+  assert.equal(genLimits.maxWarnings, 12);
+  assert.equal(genLimits.timeoutMs, undefined);
+  const probeLimits = RUNNER.normalizeLimits({ mode: 'probe', timeoutMs: 15000 });
+  assert.equal(probeLimits.mode, 'probe');
+  assert.equal(probeLimits.timeoutMs, 15000);
+});
+
+test('createGenerationRunner constructs generation invocation without timeout', async () => {
+  const f = workspace();
+  try {
+    let captured;
+    const base = { run: async (value) => { captured = value; return { result: { stdout: 'ok', stderr: '' } }; } };
+    const value = invocation(f.root, f.cwd, process.execPath, [path.join(f.root, 'noop.cjs')], { timeoutMs: 30000 });
+    const genRunner = RUNNER.createGenerationRunner({
+      runner: base,
+      wait: { warn_after_ms: 60000, warn_every_ms: 120000, max_warnings: 8 }
+    });
+    await genRunner.run(value);
+    assert.equal(captured.limits.mode, 'generation');
+    assert.equal(captured.limits.timeoutMs, undefined);
+    assert.equal(captured.limits.warnAfterMs, 60000);
+    assert.equal(captured.limits.warnEveryMs, 120000);
+    assert.equal(captured.limits.maxWarnings, 12);
+  } finally { clean(f.root); }
+});
+
+test('generation mode warning schedule emits bounded nonblocking warnings and suppresses after maxWarnings', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'delayed.cjs');
+  fs.writeFileSync(script, 'setTimeout(() => { process.stdout.write("ok"); }, 250);\n');
+  try {
+    const warnings = [];
+    const customStderr = { write: (msg) => { warnings.push(msg); } };
+    const onWarningEvents = [];
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: {
+        mode: 'generation',
+        warnAfterMs: 50,
+        warnEveryMs: 50,
+        maxWarnings: 2
+      }
+    });
+    const result = await RUNNER.runInvocation(inv, {
+      stderr: customStderr,
+      onWarning: (event) => onWarningEvents.push(event)
+    });
+    assert.equal(result.result.stdout, 'ok');
+    assert.equal(result.cleanupOutcome, 'confirmed');
+    assert.ok(warnings.length >= 2, `Expected at least 2 warnings, got ${warnings.length}`);
+    assert.ok(warnings[0].includes('Warning: active generation in progress'));
+    assert.ok(onWarningEvents.length >= 2);
+    assert.equal(onWarningEvents.some((e) => e.suppressed), true);
+  } finally { clean(f.root); }
+});
+
+test('cancellation before terminal commit dominates provisional success', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'quick-exit.cjs');
+  fs.writeFileSync(script, 'process.stdout.write("provisional"); setTimeout(() => { process.exit(0); }, 100);\n');
+  const cancellation = new AbortController();
+  try {
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', killGraceMs: 100 }
+    });
+    const earlyCancel = new AbortController();
+    earlyCancel.abort();
+    await assert.rejects(() => RUNNER.runInvocation(inv, { signal: earlyCancel.signal }), { code: 'CANCELLED' });
+
+    const running = RUNNER.runInvocation(inv, { signal: cancellation.signal });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    cancellation.abort();
+    const result = await running;
+    assert.equal(result.error.code, 'CANCELLED');
+  } finally { clean(f.root); }
+});
+
+test('unconfirmed process cleanup produces failure even if exit was 0', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'success.cjs');
+  fs.writeFileSync(script, 'process.stdout.write("ok"); process.exit(0);\n');
+  try {
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', killGraceMs: 50 }
+    });
+    const fakeKill = (pid, sig) => {
+      if (sig === 0) return true;
+    };
+    const result = await RUNNER.runInvocation(inv, { kill: fakeKill });
+    assert.equal(result.error.code, 'CLEANUP_UNCONFIRMED');
+    assert.equal(result.cleanupOutcome, 'unconfirmed');
+  } finally { clean(f.root); }
+});
+
+test('output overflow terminates immediately during generation without waiting', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'overflow.cjs');
+  fs.writeFileSync(script, 'process.stdout.write("x".repeat(200)); setTimeout(() => {}, 5000);\n');
+  try {
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', maxStdoutBytes: 50, killGraceMs: 50 }
+    });
+    const result = await RUNNER.runInvocation(inv);
+    assert.equal(result.error.code, 'OUTPUT_LIMIT');
+  } finally { clean(f.root); }
+});
+test('virtual clock proves generation mode remains silent beyond 30s deadline and succeeds', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'silent-success.cjs');
+  fs.writeFileSync(script, 'process.stdout.write("long-generation");\n');
+  try {
+    let callCount = 0;
+    const clock = () => {
+      callCount += 1;
+      return callCount === 1 ? 1000 : 45000;
+    };
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', warnAfterMs: 5000, warnEveryMs: 10000, maxWarnings: 3 }
+    });
+    const result = await RUNNER.runInvocation(inv, { now: clock });
+    assert.equal(result.result.stdout, 'long-generation');
+    assert.equal(result.cleanupOutcome, 'confirmed');
+  } finally { clean(f.root); }
+});
+
+test('warning emission to closed stderr stream does not crash generation', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'delayed-epipe.cjs');
+  fs.writeFileSync(script, 'setTimeout(() => { process.stdout.write("ok"); }, 150);\n');
+  const EventEmitter = require('node:events');
+  try {
+    const fakeStderr = new EventEmitter();
+    fakeStderr.write = () => {
+      process.nextTick(() => {
+        const err = new Error('write EPIPE');
+        err.code = 'EPIPE';
+        fakeStderr.emit('error', err);
+      });
+      return false;
+    };
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', warnAfterMs: 30, warnEveryMs: 30, maxWarnings: 2 }
+    });
+    const result = await RUNNER.runInvocation(inv, { stderr: fakeStderr });
+    assert.equal(result.result.stdout, 'ok');
+    assert.equal(result.cleanupOutcome, 'confirmed');
+  } finally { clean(f.root); }
+});
+
+test('cancellation during process run settles as CANCELLED with matching lifecycle status', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'long-run.cjs');
+  fs.writeFileSync(script, 'setTimeout(() => { process.stdout.write("ok"); }, 200);\n');
+  const cancellation = new AbortController();
+  let lifecycleEvent = null;
+  try {
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', killGraceMs: 50 }
+    });
+    const running = RUNNER.runInvocation(inv, {
+      signal: cancellation.signal,
+      onLifecycle: (event) => {
+        lifecycleEvent = event;
+      }
+    });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    cancellation.abort();
+    const result = await running;
+    assert.equal(result.error.code, 'CANCELLED');
+    assert.ok(lifecycleEvent);
+    assert.equal(lifecycleEvent.status, 'cancelled');
+  } finally { clean(f.root); }
+});
+
+test('delayed asynchronous EPIPE after generation completion does not trigger uncaught error', async () => {
+  const f = workspace();
+  const script = path.join(f.root, 'quick-warning.cjs');
+  fs.writeFileSync(script, 'setTimeout(() => { process.stdout.write("ok"); }, 40);\n');
+  const EventEmitter = require('node:events');
+  try {
+    const fakeStderr = new EventEmitter();
+    fakeStderr.write = (msg, cb) => {
+      setTimeout(() => {
+        const err = new Error('write EPIPE');
+        err.code = 'EPIPE';
+        fakeStderr.emit('error', err);
+        if (typeof cb === 'function') cb(err);
+      }, 100);
+      return false;
+    };
+    const inv = RUNNER.createInvocation({
+      adapter: 'codex', executable: process.execPath, argv: [script],
+      cwd: f.cwd, workspaceRoot: f.root, prompt: 'bounded', authKeys: [],
+      limits: { mode: 'generation', warnAfterMs: 10, warnEveryMs: 10, maxWarnings: 1 }
+    });
+    const result = await RUNNER.runInvocation(inv, { stderr: fakeStderr });
+    assert.equal(result.result.stdout, 'ok');
+    assert.equal(result.cleanupOutcome, 'confirmed');
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  } finally { clean(f.root); }
+});

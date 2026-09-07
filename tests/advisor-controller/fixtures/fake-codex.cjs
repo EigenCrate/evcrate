@@ -112,6 +112,12 @@ process.stdin.on('end', () => {
     setInterval(() => {}, 1000);
     return;
   }
+  if (mode === 'delayed-31s') {
+    setTimeout(() => {
+      output(success());
+    }, 31000);
+    return;
+  }
   if (mode === 'nonzero') {
     process.stderr.write('token=fixture-secret authorization=Bearer fixture-token\n');
     process.exitCode = 17;

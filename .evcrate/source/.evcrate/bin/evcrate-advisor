@@ -91,6 +91,18 @@ async function main() {
   const onSignal = () => cancellation.abort();
   process.once('SIGINT', onSignal);
   process.once('SIGTERM', onSignal);
+  process.stdout.on('error', (err) => {
+    if (err?.code === 'EPIPE') {
+      process.exit(process.exitCode ?? 0);
+    } else {
+      process.exit(1);
+    }
+  });
+  process.stderr?.on('error', (err) => {
+    if (err?.code === 'EPIPE') {
+      // ignore warning-side EPIPE
+    }
+  });
 
   let envelope;
   try {
@@ -98,7 +110,16 @@ async function main() {
   } catch {
     envelope = buildFailureEnvelope({ error: createRoutingError('PROCESS_FAILED'), receipt: { elapsed_ms: 0 } });
   }
-  process.stdout.write(JSON.stringify(envelope) + '\n');
+  try {
+    process.stdout.write(JSON.stringify(envelope) + '\n');
+  } catch (err) {
+    if (err?.code !== 'EPIPE') {
+      process.exitCode = 1;
+      process.removeListener('SIGINT', onSignal);
+      process.removeListener('SIGTERM', onSignal);
+      return;
+    }
+  }
   process.removeListener('SIGINT', onSignal);
   process.removeListener('SIGTERM', onSignal);
   process.exitCode = envelope.status === 'ADVICE_READY' || envelope.status === 'QUALIFIED' ? 0 : 1;

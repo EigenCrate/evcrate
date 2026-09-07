@@ -325,11 +325,32 @@ lib/advisor/profile.cjs
 lib/advisor/runner.cjs
 ```
 
-The current controller path still validates the compatibility direct checkpoint
-and executes one target/one attempt under a finite deadline. `contracts-v2.cjs`
-freezes the v2 checkpoint, result, envelope, state, and history records for
-dependent phases; generated validators do not by themselves activate retries,
-indefinite generation, or task/history commands.
+The current controller path validates the compatibility direct checkpoint and
+executes one target/one attempt, but its timing boundary is now explicit:
+adapter capability probes use finite `probe` mode, while the final model
+invocation uses `generation` mode with no generation deadline. Generation
+warnings report monotonic elapsed time on `stderr`; input, streams, output, and
+termination remain bounded.
+
+## Advisor controller timing and cleanup (Phase 02)
+
+`runner.cjs` rejects mixed timing options at invocation construction and exposes
+`createProbeRunner` for bounded probes plus `createGenerationRunner` for
+indefinite generation. Cancellation is checked before spawn, during process
+execution, after close, across result parsing, and before terminal commit, so
+provisional advice cannot win a cancellation race. Warning delivery is
+non-blocking and cannot block process draining or terminal settlement.
+
+Detached POSIX process groups receive TERM/KILL escalation. Cleanup verification
+checks leader liveness, process-group liveness, and the leader close/reap event;
+successful generation requires confirmed cleanup. `isolated-workspace.cjs`
+confirms workspace removal only when the absence probe returns **ENOENT**.
+`controller.cjs` carries `cleanup_outcome` across runner/controller boundaries,
+including probe cleanup uncertainty, and converts uncertain cleanup into
+failure rather than successful advice. The focused Phase 02 closure passes
+65/65 advisor-controller tests and the real smoke scenario completes after
+31.25s of delayed generation with bounded `stderr` warnings.
+
 
 ## Advisor v2 contracts and safe policy migration (Phase 01)
 

@@ -1,7 +1,8 @@
 'use strict';
 
 const {
-  monotonicMilliseconds, createRunner, createDeadlineRunner, buildProbeEnvironment
+  monotonicMilliseconds, createRunner, createDeadlineRunner, createProbeRunner,
+  createGenerationRunner, buildProbeEnvironment
 } = require('./runner.cjs');
 const { parseJsonDocument, decodeUtf8 } = require('./json-document.cjs');
 const {
@@ -93,29 +94,50 @@ async function runController(input, dependencies = {}) {
   let receipt = () => ({ backend: target?.backend ?? null, model: target?.model ?? null,
     effort: target?.effort ?? null, controller_version: CONTROLLER_VERSION,
     adapter_version: adapterVersion, elapsed_ms: elapsed(now, started) });
+  let envelope;
+  let cleanupOutcome = 'confirmed';
+  let lastRoutingError = null;
   try {
     const request = await input;
     if (dependencies.signal?.aborted) fail('CANCELLED');
     const checkpoint = parseInput(request);
-    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)();
+    const environment = dependencies.environment || process.env;
+    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(environment?.HOME);
     const selected = targetFromPolicy(loaded?.policy ?? loaded);
     target = selected.target;
     adapter = registryLookup(dependencies, target.backend);
-    const environment = dependencies.environment || process.env;
     const workspaceFactory = dependency(dependencies, 'createWorkspace', createWorkspace);
     workspace = normalizeWorkspace(
       await workspaceFactory({ environment }),
       dependency(dependencies, 'verifyWorkspace', verifyWorkspace)
     );
     const baseRunner = dependencies.runner || createRunner();
-    const timeoutMs = Number.isFinite(target.timeout_ms) ? target.timeout_ms : 900_000;
-    const deadline = started + timeoutMs;
-    const deadlineRunner = createDeadlineRunner({ runner: baseRunner, deadline, now });
+    const trackingRunner = {
+      run: async (inv, opts) => {
+        const res = await baseRunner.run(inv, opts);
+        if (res?.cleanupOutcome === 'unconfirmed') {
+          cleanupOutcome = 'unconfirmed';
+        }
+        return res;
+      }
+    };
+    const probeTimeoutMs = 30_000;
+    const probeDeadline = started + probeTimeoutMs;
+    const probeRunner = (dependencies.createProbeRunner || createProbeRunner)({
+      runner: trackingRunner,
+      deadline: probeDeadline,
+      now
+    });
+    const generationRunner = (dependencies.createGenerationRunner || createGenerationRunner)({
+      runner: trackingRunner,
+      wait: selected.policy?.wait || {},
+      now
+    });
     const context = {
       checkpoint,
       prompt: serializeCheckpoint(checkpoint),
       target,
-      runner: deadlineRunner,
+      runner: probeRunner,
       environment,
       signal: dependencies.signal,
       cwd: workspace.realpath,
@@ -127,22 +149,90 @@ async function runController(input, dependencies = {}) {
     await adapter.probeAuth(context);
     await adapter.probeCapabilities(context);
     const invocation = await adapter.buildInvocation(context);
-    const execution = await deadlineRunner.run(invocation, {
+    const execution = await generationRunner.run(invocation, {
       environment, requestDepth: 0, signal: dependencies.signal
     });
-    if (execution?.error) throw execution.failure || execution.error;
+    if (execution?.error) {
+      cleanupOutcome = execution.cleanupOutcome || 'unconfirmed';
+      throw execution.failure || execution.error;
+    }
+    if (dependencies.signal?.aborted) fail('CANCELLED');
     const adapterResult = await adapter.parseResult({ ...context, execution: execution?.result || execution });
+    if (dependencies.signal?.aborted) fail('CANCELLED');
     const result = normalizeResult(adapterResult, { checkpoint, maxBytes: MAX_ENVELOPE_BYTES });
-    return buildSuccessEnvelope({ correlation_id: correlationId, receipt: receipt(), result });
+    if (dependencies.signal?.aborted) fail('CANCELLED');
+    envelope = buildSuccessEnvelope({ correlation_id: correlationId, receipt: receipt(), result, cleanup_outcome: cleanupOutcome });
   } catch (error) {
+    if (error?.cleanupOutcome) {
+      cleanupOutcome = error.cleanupOutcome;
+    }
     const code = dependencies.signal?.aborted ? 'CANCELLED' : failureCode(error, adapter);
-    return buildFailureEnvelope({ correlation_id: correlationId, receipt: receipt(), error: createRoutingError(code) });
+    lastRoutingError = isRoutingError(error) ? error : createRoutingError(code);
+    envelope = buildFailureEnvelope({ correlation_id: correlationId, receipt: receipt(), error: lastRoutingError, cleanup_outcome: cleanupOutcome });
   } finally {
     if (workspace) {
       const cleanup = dependency(dependencies, 'cleanupWorkspace', cleanupWorkspace);
-      try { await cleanup(workspace); } catch { /* workspace cleanup cannot change the terminal envelope */ }
+      try {
+        const cleanupResult = await cleanup(workspace);
+        if (cleanupResult?.outcome !== 'confirmed') {
+          cleanupOutcome = 'unconfirmed';
+          if (envelope?.status === 'ADVICE_READY') {
+            envelope = buildFailureEnvelope({
+              correlation_id: correlationId,
+              receipt: receipt(),
+              error: createRoutingError('CLEANUP_UNCONFIRMED'),
+              cleanup_outcome: 'unconfirmed'
+            });
+          }
+        }
+      } catch {
+        cleanupOutcome = 'unconfirmed';
+        if (envelope?.status === 'ADVICE_READY') {
+          envelope = buildFailureEnvelope({
+            correlation_id: correlationId,
+            receipt: receipt(),
+            error: createRoutingError('CLEANUP_UNCONFIRMED'),
+            cleanup_outcome: 'unconfirmed'
+          });
+        }
+      }
+    }
+    if (dependencies.signal?.aborted) {
+      envelope = buildFailureEnvelope({
+        correlation_id: correlationId,
+        receipt: receipt(),
+        error: createRoutingError('CANCELLED'),
+        cleanup_outcome: cleanupOutcome
+      });
+    } else if (envelope && envelope.cleanup_outcome !== cleanupOutcome) {
+      envelope = envelope.status === 'ADVICE_READY'
+        ? buildSuccessEnvelope({
+          correlation_id: correlationId,
+          receipt: receipt(),
+          result: envelope.result,
+          cleanup_outcome: cleanupOutcome
+        })
+        : buildFailureEnvelope({
+          correlation_id: correlationId,
+          receipt: receipt(),
+          error: lastRoutingError || envelope.error,
+          cleanup_outcome: cleanupOutcome
+        });
+    }
+    if (envelope && typeof dependencies.onAttempt === 'function') {
+      try {
+        dependencies.onAttempt({
+          attempt_id: correlationId,
+          terminal_classification: envelope.status === 'ADVICE_READY'
+            ? 'success'
+            : (dependencies.signal?.aborted ? 'cancelled' : 'fatal'),
+          cleanup_outcome: cleanupOutcome,
+          error: envelope.error || null
+        });
+      } catch {}
     }
   }
+  return envelope;
 }
 
 function diagnosticRequestId(value) {
@@ -268,12 +358,12 @@ async function runQualificationDiagnostic(input, dependencies = {}) {
     requestId = safeDiagnosticRequestId(rawRequest) ?? requestId;
     const request = parseDiagnosticRequest(rawRequest);
     if (dependencies.signal?.aborted) fail('CANCELLED');
-    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)();
+    const sourceEnvironment = dependencies.environment || process.env;
+    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(sourceEnvironment?.HOME);
     target = targetFromPolicy(loaded?.policy ?? loaded).target;
     adapter = registryLookup(dependencies, target.backend);
     if (!adapter || typeof adapter.probeVersion !== 'function' || typeof adapter.probeAuth !== 'function'
       || typeof adapter.probeCapabilities !== 'function') fail('ADAPTER_CONTRACT_INVALID');
-    const sourceEnvironment = dependencies.environment || process.env;
     const environment = buildProbeEnvironment({
       source: sourceEnvironment,
       adapter: target.backend,

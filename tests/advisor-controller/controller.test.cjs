@@ -20,7 +20,7 @@ const CODEX_NO_TOOL_PREFIX = [
   '',
 ].join('\n');
 const ADVISOR_DIR = path.resolve(__dirname, '../../.evcrate/source/.evcrate/bin/lib/advisor');
-const { parseInput } = require(path.join(ADVISOR_DIR, 'controller.cjs'));
+const { parseInput, runController } = require(path.join(ADVISOR_DIR, 'controller.cjs'));
 const { createRoutingError } = require(path.join(ADVISOR_DIR, 'errors.cjs'));
 const { validatePolicy } = require(path.join(ADVISOR_DIR, 'policy-schema.cjs'));
 const { getAdapter } = require(path.join(ADVISOR_DIR, 'adapter-registry.cjs'));
@@ -480,4 +480,246 @@ test('checkpoint and policy contracts are exact and immutable', () => {
   }))), { code: 'ROUTE_SCHEMA_V1_MIGRATION_REQUIRED' });
   assert.throws(() => getAdapter('gemini'), { code: 'ADAPTER_UNSUPPORTED' });
   assert.equal(getAdapter('omp').name, 'omp');
+});
+test('workspace cleanup failure surfaces CLEANUP_UNCONFIRMED on successful consultation', async () => {
+  const fixture = setup();
+  try {
+    const unconfirmedCleanup = async () => ({ outcome: 'unconfirmed' });
+    const result = await runController(CHECKPOINT, {
+      environment: fixture.environment,
+      cleanupWorkspace: unconfirmedCleanup
+    });
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.error.code, 'CLEANUP_UNCONFIRMED');
+  } finally { cleanup(fixture); }
+});
+
+test('controller generation waits indefinitely without 30s deadline', async () => {
+  const fixture = setup();
+  try {
+    let observedMode;
+    let observedTimeout;
+    const { createRunner } = require(path.join(ADVISOR_DIR, 'runner.cjs'));
+    const baseRunner = createRunner();
+    const trackingRunner = {
+      run: async (inv, opts) => {
+        if (inv.limits.mode === 'generation') {
+          observedMode = inv.limits.mode;
+          observedTimeout = inv.limits.timeoutMs;
+        }
+        return baseRunner.run(inv, opts);
+      }
+    };
+    const result = await runController(CHECKPOINT, {
+      environment: fixture.environment,
+      runner: trackingRunner
+    });
+    assert.equal(result.status, 'ADVICE_READY');
+    assert.equal(observedMode, 'generation');
+    assert.equal(observedTimeout, undefined);
+  } finally { cleanup(fixture); }
+});
+test('SIGINT during active generation cancels child and emits one cancellation envelope', async () => {
+  const fixture = setup({ mode: 'timeout' });
+  try {
+    const child = spawn(CONTROLLER, [], {
+      env: fixture.environment,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    const output = [];
+    const errors = [];
+    child.stdout.on('data', (chunk) => output.push(chunk));
+    child.stderr.on('data', (chunk) => errors.push(chunk));
+    child.stdin.end(CHECKPOINT);
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    child.kill('SIGINT');
+
+    const result = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        child.kill('SIGKILL');
+        reject(new Error('controller hung after SIGINT'));
+      }, 5000);
+      child.once('exit', (status, signal) => {
+        clearTimeout(timer);
+        resolve({
+          status,
+          signal,
+          stdout: Buffer.concat(output).toString('utf8'),
+          stderr: Buffer.concat(errors).toString('utf8')
+        });
+      });
+    });
+    assert.equal(result.status, 1);
+    const env = envelope(result);
+    assert.equal(env.status, 'FAILED');
+    assert.equal(env.error.code, 'CANCELLED');
+  } finally { cleanup(fixture); }
+});
+test('cleanupWorkspace returns unconfirmed when lstat throws EACCES', () => {
+  const fakeFs = {
+    rmSync: () => {},
+    lstatSync: () => {
+      const err = new Error('Permission denied');
+      err.code = 'EACCES';
+      throw err;
+    }
+  };
+  const result = cleanupWorkspace({ path: '/tmp/test' }, fakeFs);
+  assert.equal(result.outcome, 'unconfirmed');
+  assert.equal(result.error.code, 'CLEANUP_UNCONFIRMED');
+});
+
+test('cancellation during async parseResult still settles as CANCELLED', async () => {
+  const fixture = setup();
+  const cancellation = new AbortController();
+  try {
+    const registry = {
+      getAdapter: (name) => {
+        const real = getAdapter(name);
+        return {
+          ...real,
+          parseResult: async (ctx) => {
+            cancellation.abort();
+            return real.parseResult(ctx);
+          }
+        };
+      }
+    };
+    const result = await runController(CHECKPOINT, {
+      environment: fixture.environment,
+      signal: cancellation.signal,
+      registry
+    });
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.error.code, 'CANCELLED');
+  } finally { cleanup(fixture); }
+});
+
+test('qualification diagnostic probe environment preserves supplied isolated HOME and PATH', async () => {
+  const fixture = setup();
+  const { runQualificationDiagnostic } = require(path.join(ADVISOR_DIR, 'controller.cjs'));
+  try {
+    let observedEnv;
+    const registry = {
+      getAdapter: (name) => {
+        const real = getAdapter(name);
+        return {
+          probeVersion: async (ctx) => {
+            observedEnv = ctx.environment;
+            return '1.0.0';
+          },
+          probeAuth: async () => {},
+          probeCapabilities: async () => ({
+            model: 'gpt-5.6-sol',
+            effort: 'high',
+            noninteractive: true,
+            session: 'ephemeral',
+            tools: 'disabled',
+            output: 'json'
+          })
+        };
+      }
+    };
+    const diagnosticRequest = JSON.stringify({
+      protocol: 'evcrate-advisor-diagnostic',
+      protocolVersion: 1,
+      requestId: 'test-req',
+      operation: 'qualify'
+    });
+    const result = await runQualificationDiagnostic(diagnosticRequest, {
+      environment: { ...fixture.environment, HOME: '/isolated-home', PATH: '/isolated-bin' },
+      loadGlobalPolicy: async () => ({ policy: JSON.parse(policy()), path: '/dummy' }),
+      registry
+    });
+    assert.equal(result.status, 'QUALIFIED');
+    assert.equal(observedEnv.HOME, '/isolated-home');
+    assert.equal(observedEnv.PATH, '/isolated-bin');
+  } finally { cleanup(fixture); }
+});
+test('explicit empty HOME in environment fails with HOME_UNAVAILABLE', async () => {
+  const fixture = setup();
+  try {
+    const result = await runController(CHECKPOINT, {
+      environment: { ...fixture.environment, HOME: '' }
+    });
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.error.code, 'HOME_UNAVAILABLE');
+  } finally { cleanup(fixture); }
+});
+test('primary execution failure preserves unconfirmed workspace cleanup outcome', async () => {
+  const fixture = setup({ mode: 'invalid-utf8' });
+  try {
+    const unconfirmedCleanup = async () => ({ outcome: 'unconfirmed' });
+    let observedAttempt;
+    const result = await runController(CHECKPOINT, {
+      environment: fixture.environment,
+      cleanupWorkspace: unconfirmedCleanup,
+      onAttempt: (attempt) => { observedAttempt = attempt; }
+    });
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.error.code, 'OUTPUT_INVALID');
+    assert.equal(result.cleanup_outcome, 'unconfirmed');
+    assert.equal(observedAttempt?.cleanup_outcome, 'unconfirmed');
+  } finally { cleanup(fixture); }
+});
+
+test('runner-to-controller failure preserves process cleanup uncertainty', async () => {
+  const fixture = setup();
+  try {
+    const { createRunner } = require(path.join(ADVISOR_DIR, 'runner.cjs'));
+    const baseRunner = createRunner();
+    const mockRunner = {
+      run: async (inv, opts) => {
+        if (inv.limits.mode === 'generation') {
+          return {
+            error: createRoutingError('OUTPUT_LIMIT'),
+            cleanupOutcome: 'unconfirmed'
+          };
+        }
+        return baseRunner.run(inv, opts);
+      }
+    };
+    let observedAttempt;
+    const result = await runController(CHECKPOINT, {
+      environment: fixture.environment,
+      runner: mockRunner,
+      onAttempt: (attempt) => { observedAttempt = attempt; }
+    });
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.error.code, 'OUTPUT_LIMIT');
+    assert.equal(result.cleanup_outcome, 'unconfirmed');
+    assert.equal(observedAttempt?.cleanup_outcome, 'unconfirmed');
+  } finally { cleanup(fixture); }
+});
+test('probe failure with unconfirmed cleanup preserves primary probe error and unconfirmed cleanup without launching generation', async () => {
+  const fixture = setup();
+  try {
+    const { createRunner } = require(path.join(ADVISOR_DIR, 'runner.cjs'));
+    const baseRunner = createRunner();
+    let generationLaunched = false;
+    const probeFailingRunner = {
+      run: async (inv, opts) => {
+        if (inv.limits.mode === 'generation') {
+          generationLaunched = true;
+          return baseRunner.run(inv, opts);
+        }
+        return {
+          error: createRoutingError('CLI_VERSION_UNSUPPORTED'),
+          cleanupOutcome: 'unconfirmed'
+        };
+      }
+    };
+    let observedAttempt;
+    const result = await runController(CHECKPOINT, {
+      environment: fixture.environment,
+      runner: probeFailingRunner,
+      onAttempt: (attempt) => { observedAttempt = attempt; }
+    });
+    assert.equal(result.status, 'FAILED');
+    assert.equal(result.error.code, 'CLI_VERSION_UNSUPPORTED');
+    assert.equal(result.cleanup_outcome, 'unconfirmed');
+    assert.equal(observedAttempt?.cleanup_outcome, 'unconfirmed');
+    assert.equal(generationLaunched, false);
+  } finally { cleanup(fixture); }
 });

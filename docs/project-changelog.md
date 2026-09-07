@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-07  
-**Status:** Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+**Status:** Advisor mentoring Phase 02 complete at 100%; Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; advisor Phase 03 ready to start; release remains Unreleased
 
 ### Advisor mentoring, recovery, and audit — Phase 01
 
@@ -28,6 +28,44 @@
 The review records 139 focused assertions passing and no critical issues. Its
 non-blocking follow-up is dedicated v2 validator boundary coverage before later
 phases consume the records.
+
+### Advisor mentoring, recovery, and audit — Phase 02
+
+**Updated:** 2026-09-07  
+**Status:** Complete (100%)  
+**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-02-wait-cancellation-and-cleanup.md)
+
+- Split runner timing into finite `probe` mode and indefinite `generation` mode.
+  Generation has no deadline; input, streams, output, and termination remain
+  bounded.
+- Added monotonic elapsed progress warnings on `stderr`, separate from the
+  single terminal JSON result, with bounded non-blocking delivery and suppression
+  after the warning cap.
+- Made cancellation dominant across construction, spawn, process, parsing,
+  cleanup, and other asynchronous boundaries; no provisional advice can win
+  after cancellation.
+- Termination uses detached POSIX process groups with TERM/KILL escalation and
+  leader/group liveness plus close/reap verification.
+- Workspace cleanup is observable: removal is confirmed only when the absence
+  probe returns **ENOENT**; other results remain `unconfirmed` and cannot coexist
+  with successful advice.
+- The runner/controller boundary carries cleanup uncertainty from probes and
+  generation, preserving the primary probe or execution error while exposing
+  the cleanup outcome.
+- The implementation and focused-test closure covers `runner.cjs`,
+  `isolated-workspace.cjs`, `controller.cjs`, `profile.cjs`, `errors.cjs`,
+  `controller-envelope.cjs`, `evcrate-advisor`, the runner/controller tests,
+  the real 31-second smoke scenario, and the fake Codex fixture.
+
+Verification recorded for this phase: 65/65 advisor-controller tests passed; the
+real smoke scenario completed in 31.25s with one launch and three elapsed
+warnings; `npm run distribute:check` and `npm run release:check` exited
+successfully. Sol Cycle 3 signed off at 9/10, and Astra mentor approval was
+recorded.
+
+Phase 03, adapter qualification and terminal parsing, is ready to start and
+consumes the Phase 02 timing interface.
+
 
 ### Phase 04: Regeneration, documentation, and release gates
 

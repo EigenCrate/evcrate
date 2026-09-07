@@ -18,9 +18,10 @@ const COMMON_ENV_KEYS = Object.freeze([
   'PATH', 'HOME', 'USERPROFILE', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'TERM',
   'SystemRoot', 'WINDIR', 'ComSpec', 'PATHEXT'
 ]);
+const TIMING_MODES = Object.freeze(['probe', 'generation']);
 const LIMIT_KEYS = Object.freeze([
   'maxPromptBytes', 'maxStdoutBytes', 'maxStderrBytes', 'maxLines', 'maxResultBytes',
-  'timeoutMs', 'killGraceMs'
+  'killGraceMs', 'mode', 'timeoutMs', 'warnAfterMs', 'warnEveryMs', 'maxWarnings'
 ]);
 const DEFAULT_LIMITS = Object.freeze({
   maxPromptBytes: 32 * 1024,
@@ -28,9 +29,28 @@ const DEFAULT_LIMITS = Object.freeze({
   maxStderrBytes: 16 * 1024,
   maxLines: 2048,
   maxResultBytes: 48 * 1024,
-  timeoutMs: 30_000,
-  killGraceMs: 250
+  killGraceMs: 250,
+  mode: 'probe',
+  timeoutMs: 30_000
 });
+const DEFAULT_GENERATION_LIMITS = Object.freeze({
+  maxPromptBytes: 32 * 1024,
+  maxStdoutBytes: 64 * 1024,
+  maxStderrBytes: 16 * 1024,
+  maxLines: 2048,
+  maxResultBytes: 48 * 1024,
+  killGraceMs: 250,
+  mode: 'generation',
+  warnAfterMs: 120_000,
+  warnEveryMs: 300_000,
+  maxWarnings: 12
+});
+const WARNING_SINKS = new WeakSet();
+function ensureStderrHandler(stream) {
+  if (!stream || typeof stream.on !== 'function' || WARNING_SINKS.has(stream)) return;
+  WARNING_SINKS.add(stream);
+  try { stream.on('error', () => {}); } catch {}
+}
 const LIFECYCLE_STATUS_BY_CODE = Object.freeze({
   CANCELLED: 'cancelled',
   EXECUTABLE_UNAVAILABLE: 'spawn-failed',
@@ -72,12 +92,70 @@ function deepFreeze(value, seen = new Set()) {
 function normalizeLimits(input = {}) {
   if (input === null || typeof input !== 'object' || Array.isArray(input)) fail('INVOCATION_INVALID');
   if (Object.keys(input).some((key) => !LIMIT_KEYS.includes(key))) fail('INVOCATION_INVALID');
-  const limits = { ...DEFAULT_LIMITS, ...input };
-  for (const key of LIMIT_KEYS) {
-    const minimum = key === 'killGraceMs' ? 0 : 1;
-    if (!Number.isSafeInteger(limits[key]) || limits[key] < minimum) fail('INVOCATION_INVALID');
+  const mode = input.mode === undefined ? 'probe' : input.mode;
+  if (!TIMING_MODES.includes(mode)) fail('INVOCATION_INVALID');
+
+  const base = {
+    maxPromptBytes: input.maxPromptBytes ?? DEFAULT_LIMITS.maxPromptBytes,
+    maxStdoutBytes: input.maxStdoutBytes ?? DEFAULT_LIMITS.maxStdoutBytes,
+    maxStderrBytes: input.maxStderrBytes ?? DEFAULT_LIMITS.maxStderrBytes,
+    maxLines: input.maxLines ?? DEFAULT_LIMITS.maxLines,
+    maxResultBytes: input.maxResultBytes ?? DEFAULT_LIMITS.maxResultBytes,
+    killGraceMs: input.killGraceMs ?? DEFAULT_LIMITS.killGraceMs,
+    mode
+  };
+
+  for (const key of ['maxPromptBytes', 'maxStdoutBytes', 'maxStderrBytes', 'maxLines', 'maxResultBytes']) {
+    if (!Number.isSafeInteger(base[key]) || base[key] < 1) fail('INVOCATION_INVALID');
   }
-  return deepFreeze(limits);
+  if (!Number.isSafeInteger(base.killGraceMs) || base.killGraceMs < 0) fail('INVOCATION_INVALID');
+
+  if (mode === 'probe') {
+    if (input.warnAfterMs !== undefined || input.warnEveryMs !== undefined || input.maxWarnings !== undefined) {
+      fail('INVOCATION_INVALID');
+    }
+    const timeoutMs = input.timeoutMs ?? DEFAULT_LIMITS.timeoutMs;
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) fail('INVOCATION_INVALID');
+    base.timeoutMs = timeoutMs;
+  } else if (mode === 'generation') {
+    if (input.timeoutMs !== undefined && input.timeoutMs !== null) {
+      fail('INVOCATION_INVALID');
+    }
+    const warnAfterMs = input.warnAfterMs ?? DEFAULT_GENERATION_LIMITS.warnAfterMs;
+    const warnEveryMs = input.warnEveryMs ?? DEFAULT_GENERATION_LIMITS.warnEveryMs;
+    const maxWarnings = input.maxWarnings ?? DEFAULT_GENERATION_LIMITS.maxWarnings;
+
+    if (!Number.isSafeInteger(warnAfterMs) || warnAfterMs < 1 || warnAfterMs > 3_600_000) fail('INVOCATION_INVALID');
+    if (!Number.isSafeInteger(warnEveryMs) || warnEveryMs < 1 || warnEveryMs > 3_600_000) fail('INVOCATION_INVALID');
+    if (!Number.isSafeInteger(maxWarnings) || maxWarnings < 1 || maxWarnings > 12) fail('INVOCATION_INVALID');
+
+    base.warnAfterMs = warnAfterMs;
+    base.warnEveryMs = warnEveryMs;
+    base.maxWarnings = maxWarnings;
+  }
+
+  return deepFreeze(base);
+}
+
+function checkProcessCleanup(child, kill, closed) {
+  let leaderAlive = false;
+  if (Number.isInteger(child?.pid) && child.pid > 0) {
+    try {
+      kill(child.pid, 0);
+      leaderAlive = true;
+    } catch (error) {
+      leaderAlive = error?.code !== 'ESRCH';
+    }
+  }
+  const groupAlive = processGroupAlive(child, kill);
+  const isClosed = typeof closed === 'function' ? closed() : Boolean(closed);
+  const confirmed = !leaderAlive && !groupAlive && isClosed;
+  return {
+    outcome: confirmed ? 'confirmed' : 'unconfirmed',
+    leaderAlive,
+    groupAlive,
+    closed: isClosed
+  };
 }
 
 function validateContainedCwd(cwd, workspaceRoot) {
@@ -308,9 +386,12 @@ function processGroupAlive(child, kill) {
 
 async function terminateChild(child, { kill, setTimeoutImpl, graceMs, closed, forceGroupOnClose = false }) {
   try { child.stdin?.destroy(); } catch { /* best effort */ }
+  try { child.stdout?.destroy(); } catch { /* best effort */ }
+  try { child.stderr?.destroy(); } catch { /* best effort */ }
   const grouped = process.platform !== 'win32' && Number.isInteger(child?.pid) && child.pid > 0;
+  const isClosed = () => (typeof closed === 'function' ? closed() : Boolean(closed));
   const send = (signal, force = false) => {
-    if (!force && closed() && !forceGroupOnClose) return;
+    if (!force && isClosed() && !forceGroupOnClose) return;
     try {
       if (grouped) {
         kill(-child.pid, signal);
@@ -321,20 +402,25 @@ async function terminateChild(child, { kill, setTimeoutImpl, graceMs, closed, fo
       try { child.kill?.(signal); } catch { /* best effort */ }
     }
   };
-  send('SIGTERM');
-  if (grouped) {
-    if (processGroupAlive(child, kill)) {
-      await waitDelay(graceMs, setTimeoutImpl);
-      if (processGroupAlive(child, kill)) send('SIGKILL', true);
+  if (!isClosed() || forceGroupOnClose) {
+    send('SIGTERM');
+    if (grouped) {
       if (processGroupAlive(child, kill)) {
         await waitDelay(graceMs, setTimeoutImpl);
+        if (processGroupAlive(child, kill)) send('SIGKILL', true);
+        if (processGroupAlive(child, kill)) {
+          await waitDelay(graceMs, setTimeoutImpl);
+        }
+      }
+    } else {
+      await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
+      if (!isClosed()) {
+        send('SIGKILL', true);
+        await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
       }
     }
-    return;
   }
-  await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
-  send('SIGKILL', true);
-  await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
+  return checkProcessCleanup(child, kill, isClosed);
 }
 
 function runInvocation(invocation, options = {}) {
@@ -401,54 +487,86 @@ function runInvocation(invocation, options = {}) {
       let terminating = false;
       let closeSeen = false;
       let timeoutHandle;
+      let warningHandle;
+      let warningsEmitted = 0;
       let abortHandler;
+      let terminationPromise = null;
       const stdout = new BoundedOutput(limits.maxStdoutBytes, limits.maxLines);
       const stderr = new BoundedOutput(limits.maxStderrBytes, limits.maxLines);
       let closeResolve;
       const closePromise = new Promise((done) => { closeResolve = done; });
       child.closePromise = closePromise;
-      const finish = (value) => {
-        if (settled) return;
-        settled = true;
+      const clearAllTimers = () => {
         if (timeoutHandle !== undefined) clearTimeoutImpl(timeoutHandle);
-        if (signal && abortHandler) signal.removeEventListener('abort', abortHandler);
-        resolve(value);
+        if (warningHandle !== undefined) clearTimeoutImpl(warningHandle);
       };
-      const failProcess = async (code, failure = null, forceGroupOnClose = false) => {
-        if (settled || terminating) return;
-        terminating = true;
-        let terminationStartedAt;
-        try { terminationStartedAt = now(); } catch { terminationStartedAt = startedAt; }
-        try {
-          await terminateChild(child, {
+      const getTerminationCleanup = (forceGroupOnClose) => {
+        if (!terminationPromise) {
+          terminationPromise = terminateChild(child, {
             kill,
             setTimeoutImpl,
             graceMs: limits.killGraceMs,
             closed: () => closeSeen,
             forceGroupOnClose
-          });
-        } catch { /* cleanup is best effort; the typed failure still returns */ }
+          }).catch(() => ({ outcome: 'unconfirmed', leaderAlive: false, groupAlive: false, closed: closeSeen }));
+        }
+        return terminationPromise;
+      };
+      const finish = (value, terminationWaitMs = 0) => {
+        if (settled) return;
+        settled = true;
+        clearAllTimers();
+        if (signal && abortHandler) signal.removeEventListener('abort', abortHandler);
+        let finalValue = value;
+        if (signal?.aborted && (!value?.error || value?.error?.code !== 'CANCELLED')) {
+          const cancelledCleanup = value?.cleanupOutcome || 'unconfirmed';
+          finalValue = { error: createRoutingError('CANCELLED'), cleanupOutcome: cancelledCleanup };
+        }
+        const statusCode = finalValue?.error ? finalValue.error.code : null;
+        const status = lifecycleStatus(statusCode, !finalValue?.error);
+        reportLifecycle(status, terminationWaitMs);
+        resolve(finalValue);
+      };
+      const failProcess = async (code, failure = null, forceGroupOnClose = false) => {
+        if (settled) return;
+        terminating = true;
+        clearAllTimers();
+        let terminationStartedAt;
+        try { terminationStartedAt = now(); } catch { terminationStartedAt = startedAt; }
+        let cleanup = { outcome: 'unconfirmed' };
+        try {
+          cleanup = await getTerminationCleanup(forceGroupOnClose);
+        } catch {}
         let terminationFinishedAt;
         try { terminationFinishedAt = now(); } catch { terminationFinishedAt = terminationStartedAt; }
-        reportLifecycle(lifecycleStatus(code), terminationFinishedAt - terminationStartedAt);
-        finish(failure ? { error: failure.error, failure } : { error: createRoutingError(code) });
+        const effectiveCode = signal?.aborted ? 'CANCELLED' : code;
+        const effectiveFailure = effectiveCode === 'CANCELLED' ? null : failure;
+        const value = effectiveFailure
+          ? { error: effectiveFailure.error, failure: effectiveFailure, cleanupOutcome: cleanup.outcome }
+          : { error: createRoutingError(effectiveCode), cleanupOutcome: cleanup.outcome };
+        finish(value, terminationFinishedAt - terminationStartedAt);
       };
       const finishSuccess = async () => {
         if (settled || terminating) return;
         terminating = true;
+        clearAllTimers();
         let terminationStartedAt;
         try { terminationStartedAt = now(); } catch { terminationStartedAt = startedAt; }
+        let cleanup = { outcome: 'unconfirmed' };
         try {
-          await terminateChild(child, {
-            kill,
-            setTimeoutImpl,
-            graceMs: limits.killGraceMs,
-            closed: () => closeSeen,
-            forceGroupOnClose: true
-          });
-        } catch { /* cleanup is best effort; the result remains typed */ }
+          cleanup = await getTerminationCleanup(true);
+        } catch {}
         let terminationFinishedAt;
         try { terminationFinishedAt = now(); } catch { terminationFinishedAt = terminationStartedAt; }
+        const terminationWaitMs = terminationFinishedAt - terminationStartedAt;
+        if (signal?.aborted) {
+          finish({ error: createRoutingError('CANCELLED'), cleanupOutcome: cleanup.outcome }, terminationWaitMs);
+          return;
+        }
+        if (cleanup.outcome !== 'confirmed') {
+          finish({ error: createRoutingError('CLEANUP_UNCONFIRMED'), cleanupOutcome: 'unconfirmed' }, terminationWaitMs);
+          return;
+        }
         try {
           const result = {
             stdout: stdout.value(),
@@ -456,12 +574,9 @@ function runInvocation(invocation, options = {}) {
             exitCode: 0,
             signal: null
           };
-          reportLifecycle(lifecycleStatus(null, true), terminationFinishedAt - terminationStartedAt);
-          finish({ result: Object.freeze(result) });
+          finish({ result: Object.freeze(result), cleanupOutcome: cleanup.outcome }, terminationWaitMs);
         } catch (error) {
-          reportLifecycle(lifecycleStatus(error?.code || 'OUTPUT_INVALID'),
-            terminationFinishedAt - terminationStartedAt);
-          finish({ error: error?.code ? error : createRoutingError('OUTPUT_INVALID') });
+          finish({ error: error?.code ? error : createRoutingError('OUTPUT_INVALID'), cleanupOutcome: cleanup.outcome }, terminationWaitMs);
         }
       };
       child.stdout?.on('data', (chunk) => {
@@ -508,7 +623,45 @@ function runInvocation(invocation, options = {}) {
         }
         void finishSuccess();
       });
-      timeoutHandle = setTimeoutImpl(() => void failProcess('TIMEOUT'), limits.timeoutMs);
+      if (limits.mode === 'generation') {
+        const scheduleNextWarning = () => {
+          if (settled || terminating) return;
+          if (warningsEmitted >= limits.maxWarnings) return;
+          const delay = warningsEmitted === 0 ? limits.warnAfterMs : limits.warnEveryMs;
+          warningHandle = setTimeoutImpl(() => {
+            if (settled || terminating) return;
+            warningsEmitted += 1;
+            const elapsedAt = (() => {
+              try { return now(); } catch { return startedAt; }
+            })();
+            const currentElapsedMs = lifecycleInteger(elapsedAt - startedAt);
+            const isSuppressed = warningsEmitted >= limits.maxWarnings;
+            const message = `[evcrate-advisor] Warning: active generation in progress (elapsed: ${Math.round(currentElapsedMs / 1000)}s${isSuppressed ? ', further warnings suppressed' : ''})\n`;
+            try {
+              if (typeof options.onWarning === 'function') {
+                options.onWarning({
+                  elapsedMs: currentElapsedMs,
+                  count: warningsEmitted,
+                  suppressed: isSuppressed
+                });
+              }
+              const stderrStream = options.stderr || (typeof process !== 'undefined' ? process.stderr : null);
+              if (stderrStream && typeof stderrStream.write === 'function') {
+                ensureStderrHandler(stderrStream);
+                stderrStream.write(message);
+              }
+            } catch {
+              // Progress consumer failure must not block inference
+            }
+            if (!isSuppressed) {
+              scheduleNextWarning();
+            }
+          }, delay);
+        };
+        scheduleNextWarning();
+      } else {
+        timeoutHandle = setTimeoutImpl(() => void failProcess('TIMEOUT'), limits.timeoutMs);
+      }
       abortHandler = () => void failProcess('CANCELLED');
       signal?.addEventListener('abort', abortHandler, { once: true });
       if (signal?.aborted) {
@@ -544,14 +697,14 @@ function createRunner(dependencies = {}) {
     }
   });
 }
-function createDeadlineRunner({ runner, deadline, now = monotonicMilliseconds } = {}) {
+function createProbeRunner({ runner, deadline, now = monotonicMilliseconds } = {}) {
   if (!runner || typeof runner.run !== 'function' || !Number.isFinite(deadline)
     || typeof now !== 'function') fail('INVOCATION_INVALID');
   return Object.freeze({
     async run(invocation, options = {}) {
       const remaining = Math.floor(deadline - now());
       if (remaining < 1) throw createRoutingError('TIMEOUT');
-      const limits = normalizeLimits(invocation.limits);
+      const limits = normalizeLimits({ ...invocation.limits, mode: 'probe' });
       const timeoutMs = Math.min(limits.timeoutMs, remaining);
       const boundedInvocation = timeoutMs === limits.timeoutMs
         ? invocation
@@ -570,6 +723,34 @@ function createDeadlineRunner({ runner, deadline, now = monotonicMilliseconds } 
   });
 }
 
+const createDeadlineRunner = createProbeRunner;
+
+function createGenerationRunner({ runner, wait = {}, now = monotonicMilliseconds } = {}) {
+  if (!runner || typeof runner.run !== 'function' || typeof now !== 'function') fail('INVOCATION_INVALID');
+  return Object.freeze({
+    async run(invocation, options = {}) {
+      const limits = normalizeLimits({
+        ...invocation.limits,
+        mode: 'generation',
+        warnAfterMs: wait.warn_after_ms ?? invocation.limits?.warnAfterMs ?? DEFAULT_GENERATION_LIMITS.warnAfterMs,
+        warnEveryMs: wait.warn_every_ms ?? invocation.limits?.warnEveryMs ?? DEFAULT_GENERATION_LIMITS.warnEveryMs,
+        maxWarnings: DEFAULT_GENERATION_LIMITS.maxWarnings,
+        timeoutMs: undefined
+      });
+      const generationInvocation = createInvocation({
+        adapter: invocation.adapter,
+        executable: invocation.executable,
+        argv: invocation.argv,
+        cwd: invocation.cwd,
+        workspaceRoot: invocation.workspaceRoot,
+        prompt: invocation.prompt,
+        authKeys: invocation.authKeys,
+        limits
+      });
+      return runner.run(generationInvocation, { now, ...options });
+    }
+  });
+}
 function remainingMilliseconds(deadline, now = monotonicMilliseconds) {
   if (!Number.isFinite(deadline) || typeof now !== 'function') fail('INVOCATION_INVALID');
   return Math.max(0, Math.floor(deadline - now()));
@@ -579,13 +760,18 @@ module.exports = {
   monotonicMilliseconds,
   COMMON_ENV_KEYS,
   DEFAULT_LIMITS,
+  DEFAULT_GENERATION_LIMITS,
   RECURSION_DEPTH,
   RECURSION_MARKER,
+  TIMING_MODES,
   assertNoRecursion,
   buildProbeEnvironment,
   buildChildEnvironment,
+  checkProcessCleanup,
   createDeadlineRunner,
+  createGenerationRunner,
   createInvocation,
+  createProbeRunner,
   createRunner,
   createRunnerFailure,
   isRunnerFailure,

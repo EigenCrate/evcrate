@@ -31,6 +31,8 @@ outputs of canonical source plus target policy; they are not hand edited.
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
 | Advisor mentoring/recovery/audit — Phase 01 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md) and [review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md); policy/checkpoint/result/controller v2, task/history v1 records, TS/CJS parity, typed errors, and explicit legacy-policy migration are frozen. No automatic HOME rewrite or later-phase runtime retry/wait/state/history cutover is claimed. |
+| Advisor mentoring/recovery/audit — Phase 02 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-02-wait-cancellation-and-cleanup.md); completed at 100% with indefinite generation without a generation deadline, monotonic bounded progress warnings on stderr, cancellation dominance across async boundaries, POSIX process-group termination with leader/group reap verification, observable workspace absence requiring **ENOENT**, and runner/controller tracking of probe cleanup uncertainty. Evidence: 65/65 advisor-controller tests, a real 31.25s smoke pass, `npm run distribute:check`, `npm run release:check`, Sol Cycle 3 sign-off 9/10, and Astra mentor approval. |
+| Advisor mentoring/recovery/audit — Phase 03 | READY (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-03-adapter-qualification-and-terminal-parsing.md); ready to start and consumes the Phase 02 timing interface. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -58,7 +60,7 @@ outputs of canonical source plus target policy; they are not hand edited.
    HOME or put credentials in the policy.
 6. **Qualify enabled adapters.** Run bounded Linux checks for Claude, Codex, Pi, and
    OMP using each CLI's own authentication; record receipt, lifecycle, isolation,
-   deadline, and cleanup evidence.
+   probe deadline, generation warning/cancellation, and cleanup evidence.
 7. **Review target-specific boundaries.** Treat Copilot as a projection-only target;
    review Pi settings/runtime separately; leave Antigravity unavailable until its
    capability contract is proven.
@@ -81,8 +83,9 @@ roadmap item.
   convention in future scanner/parser changes without breaking generated target maps.
 - **Advisor qualification:** Repeat real installed-CLI qualification after every
   vendor CLI upgrade; keep `antigravity` unavailable until equivalent evidence exists.
-- **V2 runtime adoption:** Integrate wait/retry/cleanup, task-state, history, and
-  workflow gates in dependent phases; validators alone do not change execution.
+- **V2 runtime adoption:** Integrate retry orchestration, task-state, history, and
+  workflow gates in dependent phases; Phase 02 now supplies wait/cancellation and
+  verified-cleanup behavior.
 - **Policy route selection:** Exact deployed primary/backup routes, vendor
   controls, auth, and independent failure domains remain operator qualification
   inputs; no model/backend defaults are implied by examples.

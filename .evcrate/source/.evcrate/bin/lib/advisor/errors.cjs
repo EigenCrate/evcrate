@@ -248,7 +248,8 @@ function isRoutingError(value) {
 }
 
 function serializeRoutingError(value) {
-  const error = isRoutingError(value) ? value : createRoutingError('PROCESS_FAILED');
+  const code = isRoutingError(value) ? value.code : (value?.code && ERROR_CODES[value.code] ? value.code : 'PROCESS_FAILED');
+  const error = isRoutingError(value) ? value : createRoutingError(code);
   return Object.freeze({
     code: error.code,
     category: error.category,

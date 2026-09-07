@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createRoutingError } = require('./errors.cjs');
+const { createRoutingError, isRoutingError } = require('./errors.cjs');
 
 function fail(code = 'CWD_UNSAFE') { throw createRoutingError(code); }
 function uid(stat) { return typeof process.getuid === 'function' ? process.getuid() : stat.uid; }
@@ -54,8 +54,27 @@ function createWorkspace({ environment = process.env, tempDirectory = os.tmpdir,
   }
 }
 function cleanupWorkspace(workspace, fsImpl = fs) {
-  if (!workspace || typeof workspace.path !== 'string') return;
-  try { fsImpl.rmSync(workspace.path, { recursive: true, force: true }); } catch { /* best effort */ }
+  if (!workspace || typeof workspace.path !== 'string') return { outcome: 'not_needed' };
+  try {
+    fsImpl.rmSync(workspace.path, { recursive: true, force: true });
+    try {
+      fsImpl.lstatSync(workspace.path);
+      return { outcome: 'unconfirmed', error: createRoutingError('CLEANUP_UNCONFIRMED') };
+    } catch (statError) {
+      if (statError?.code === 'ENOENT') {
+        return { outcome: 'confirmed' };
+      }
+      return {
+        outcome: 'unconfirmed',
+        error: isRoutingError(statError) ? statError : createRoutingError('CLEANUP_UNCONFIRMED')
+      };
+    }
+  } catch (error) {
+    return {
+      outcome: 'unconfirmed',
+      error: isRoutingError(error) ? error : createRoutingError('CLEANUP_UNCONFIRMED')
+    };
+  }
 }
 
 module.exports = { assertRoot, cleanupWorkspace, createWorkspace, rootFor, verifyWorkspace };

@@ -53,18 +53,34 @@ function validateResult(value) {
   if (typeof value.checkpoint !== 'string' || typeof value.recommendation !== 'string') fail();
   return value;
 }
-function buildSuccessEnvelope({ correlation_id, correlationId, receipt: value, result } = {}) {
+function buildSuccessEnvelope({ correlation_id, correlationId, receipt: value, result, cleanup_outcome } = {}) {
   const envelope = { protocol: CONTROLLER_PROTOCOL, version: CONTROLLER_VERSION,
     correlation_id: correlation(correlation_id ?? correlationId), status: 'ADVICE_READY',
     receipt: receipt(value), result: validateResult(result) };
   exactKeys(envelope, SUCCESS_KEYS);
+  if (cleanup_outcome !== undefined) {
+    Object.defineProperty(envelope, 'cleanup_outcome', {
+      value: cleanup_outcome,
+      enumerable: false,
+      writable: false,
+      configurable: false
+    });
+  }
   return Object.freeze(envelope);
 }
-function buildFailureEnvelope({ correlation_id, correlationId, receipt: value, error } = {}) {
+function buildFailureEnvelope({ correlation_id, correlationId, receipt: value, error, cleanup_outcome } = {}) {
   const envelope = { protocol: CONTROLLER_PROTOCOL, version: CONTROLLER_VERSION,
     correlation_id: correlation(correlation_id ?? correlationId), status: 'FAILED', receipt: receipt(value),
     error: serializeRoutingError(error) };
   exactKeys(envelope, FAILURE_KEYS);
+  if (cleanup_outcome !== undefined) {
+    Object.defineProperty(envelope, 'cleanup_outcome', {
+      value: cleanup_outcome,
+      enumerable: false,
+      writable: false,
+      configurable: false
+    });
+  }
   return Object.freeze(envelope);
 }
 function validateEnvelope(value) {
