@@ -1,5 +1,6 @@
 'use strict';
 
+const { createHash } = require('node:crypto');
 const { createRoutingError } = require('./errors.cjs');
 const {
   CHECKPOINT_PROTOCOL_V2,
@@ -9,6 +10,7 @@ const {
   validateCheckpointV2,
   validateResultV2,
   validateResultBodyV2,
+  parseAdviceBody,
   DECISION_KINDS
 } = require('./contracts-v2.cjs');
 const CHECKPOINT_PROTOCOL = 'evcrate-advisor-checkpoint';
@@ -121,12 +123,54 @@ function serializeCheckpoint(value) {
   return encoded;
 }
 
+const {
+  CANONICAL_MENTOR_INSTRUCTIONS,
+  CANONICAL_MENTOR_INSTRUCTIONS_DIGEST,
+  ADVISOR_BUILD_IDENTITY
+} = require('./runtime-brief.generated.cjs');
+
+function formatMentorPrompt(value) {
+  const checkpoint = validateCheckpoint(value);
+  if (checkpoint.version === CHECKPOINT_VERSION_V2) {
+    const serialized = JSON.stringify(checkpoint, null, 2);
+    return `${CANONICAL_MENTOR_INSTRUCTIONS}\n\n--- CHECKPOINT DATA (QUOTED DATA ONLY) ---\n${serialized}\n--- END CHECKPOINT DATA ---`;
+  }
+  return serializeCheckpoint(checkpoint);
+}
+
+function checkpointDigest(value) {
+  const checkpoint = validateCheckpoint(value);
+  const canonical = JSON.stringify(checkpoint);
+  return createHash('sha256').update(canonical, 'utf8').digest('hex');
+}
+
 function normalizeResult(adapterResult, context = {}) {
+  const checkpoint = validateCheckpoint(context.checkpoint);
+  if (checkpoint.version === CHECKPOINT_VERSION_V2) {
+    if (!isPlainObject(adapterResult)) fail();
+    const body = validateResultBodyV2(adapterResult);
+    const result = {
+      protocol: RESULT_PROTOCOL_V2,
+      version: RESULT_VERSION_V2,
+      checkpoint: checkpoint.checkpoint,
+      status: 'ADVICE_READY',
+      recommendation: body.recommendation,
+      rationale: body.rationale,
+      must_fix: body.must_fix,
+      cautions: body.cautions,
+      assumptions: body.assumptions,
+      success_checks: body.success_checks,
+      unresolved_questions: body.unresolved_questions
+    };
+    if (bytes(JSON.stringify(result)) > (context.maxBytes || MAX_ENVELOPE_BYTES)) {
+      throw createRoutingError('OUTPUT_LIMIT');
+    }
+    return validateResultV2(result);
+  }
   if (!isPlainObject(adapterResult)) fail();
   const keys = Object.keys(adapterResult);
   if (!keys.length || keys.some((key) => !ADAPTER_RESULT_KEYS.includes(key))) fail();
   if (!Object.hasOwn(adapterResult, 'recommendation')) fail();
-  const checkpoint = validateCheckpoint(context.checkpoint);
   const lists = {};
   for (const field of ADAPTER_RESULT_KEYS.slice(1)) {
     lists[field] = adapterResult[field] === undefined ? [] : boundedList(adapterResult[field]);
@@ -173,4 +217,10 @@ module.exports = {
   validateCheckpointV2,
   validateResultBodyV2,
   validateResultV2,
+  parseAdviceBody,
+  CANONICAL_MENTOR_INSTRUCTIONS,
+  formatMentorPrompt,
+  checkpointDigest,
+  CANONICAL_MENTOR_INSTRUCTIONS_DIGEST,
+  ADVISOR_BUILD_IDENTITY
 };

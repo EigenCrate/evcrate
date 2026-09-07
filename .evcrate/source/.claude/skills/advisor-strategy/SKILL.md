@@ -22,14 +22,14 @@ repository-relative text files. Keep all values bounded. Exclude secrets,
 credentials, policy contents, broad repository dumps, raw stderr, stacks,
 and unrelated logs.
 
-Use the exact ten-field `evcrate-advisor-checkpoint/v1` object from the shared
+Use the exact version 2 `evcrate-advisor-checkpoint` object from the shared
 mentoring workflow. It contains no route, CLI, provider, model, effort,
 executable, argv, or execution override. The installed central controller owns
 policy validation, selection, process isolation, and terminal normalization.
 
 The workflow sends this object directly to `~/.evcrate/bin/evcrate-advisor`; this skill itself does not invoke the controller.
 
-Return a complete terminal report with a recommendation, must-fix items,
+Return a complete terminal report with a recommendation, rationale, must-fix items,
 cautions, assumptions or evidence gaps, success checks, and unresolved
 questions. Advice is non-binding. The main workflow owns edits, tests,
 approvals, and decisions.

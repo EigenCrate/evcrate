@@ -4,6 +4,7 @@ const { isAbsolute, win32: win32Path } = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const { parseJsonDocument } = require('../json-document.cjs');
 const { createRoutingError, isRoutingError } = require('../errors.cjs');
+const { parseAdviceBody } = require('../checkpoint-contract.cjs');
 const { DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure } = require('../runner.cjs');
 const { freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation } = require('../adapter-contract.cjs');
 
@@ -375,7 +376,11 @@ function parseJsonl(text, route, expectedCwd) {
 function parseResult(context = {}) {
   const output = context.execution?.result || context.execution;
   if (!output || typeof output.stdout !== 'string') fail('PROTOCOL_INVALID');
-  return parseJsonl(output.stdout, target(context), context.cwd);
+  const result = parseJsonl(output.stdout, target(context), context.cwd);
+  if (context.checkpoint?.version === 2) {
+    return parseAdviceBody(result.recommendation);
+  }
+  return result;
 }
 function classifyFailure(error) { const code = codeOf(error); return CODES.has(code) ? code : 'PROCESS_FAILED'; }
 

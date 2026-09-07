@@ -208,9 +208,10 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 18
-production files. It reads the user-owned
-`$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 19
+production files, including the generated runtime mentor brief. It reads the
+user-owned `$HOME/.evcrate/advisor-routing.json`; policy is never generated or
+published.
 
 Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 `advisor` has distinct `primary`/`backup` route triples
@@ -232,18 +233,29 @@ remain v1 while carrying policy v2.
 
 The v2 direct checkpoint binds task/run/checkpoint/phase identity and revisions
 to bounded task, proposal, evidence, and prior fields. The v2 result requires
-explicit recommendation/rationale plus all five structured arrays. The v2
-controller envelope carries bounded attempt summaries, build identity, sanitized
-errors, and audit status. State/execution/outcome records are schema v1 and
-owner-only. Keep paths metadata-only; the controller does not read arbitrary
-checkpoint paths.
+exactly seven body fields: `recommendation`, `rationale`, `must_fix`,
+`cautions`, `assumptions`, `success_checks`, and `unresolved_questions`. The
+v2 controller envelope carries bounded attempt summaries, build identity,
+sanitized errors, and audit status. State/execution/outcome records are schema
+v1 and owner-only. Keep paths metadata-only; the controller does not read
+arbitrary checkpoint paths.
 
-The compatibility v1 controller path remains one target/one attempt under a
-finite deadline until later phases integrate v2 execution. Do not infer retries,
-indefinite generation, task gates, or history commands from validator presence.
-Runner calls still use `shell:false`, fixed allowlisted argv/environment,
-stdin-only prompts, bounded streams, detached POSIX groups, TERM/KILL
-cancellation, and descendant reaping.
+The canonical mentor instructions are authored in
+`.claude/skills/advisor-strategy/references/brief-contract.md` and generated
+into the standalone `runtime-brief.generated.cjs` closure artifact. V2 prompt
+packaging uses `formatMentorPrompt` with explicitly quoted checkpoint data.
+For v2 checkpoints, enabled adapters pass extracted assistant text to the shared
+`parseAdviceBody` parser; malformed, fenced, prose, unknown-field, or
+incomplete bodies fail closed.
+
+The compatibility v1 controller path remains one target/one attempt; v2 now
+uses the same no-retry transaction with generated prompts, structured result
+normalization, and v2 identity linkage. Generation has no generation deadline,
+while streams, output, termination, and adapter probes remain bounded. Do not
+infer retries, indefinite generation controls beyond this runner contract,
+task gates, or history commands from validator presence. Runner calls still use
+`shell:false`, fixed allowlisted argv/environment, stdin-only prompts, bounded
+streams, detached POSIX groups, TERM/KILL cancellation, and descendant reaping.
 
 See [system architecture](./system-architecture.md) for complete wire shapes,
 limits, closure, adapter boundaries, and support claims.
@@ -273,11 +285,11 @@ atomic apply. It never joins scope or target-publication atomicity.
 
 ## Build, closure, and release standards
 
-`scripts/generate-controller-inventory.mjs` is the source of the generated 18-file
-controller inventory. `scripts/build-manifests.mjs` invokes the TypeScript local-build
-path for each persisted target and the aggregate set. Build manifests are schema 2
-and carry `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`,
-`output_hashes`, `validation`, and `home_policy`.
+`scripts/generate-controller-inventory.mjs` is the source of the generated
+19-file controller inventory. `scripts/build-manifests.mjs` invokes the
+TypeScript local-build path for each persisted target and the aggregate set.
+Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`,
+`controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
 
 Build/check must verify complete validation, current hashes, regular non-symlink
 files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.

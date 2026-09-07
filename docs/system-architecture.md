@@ -116,7 +116,7 @@ package path; source retains an explicit compatibility-engine type, but no root
 use stale Python commands as the primary installation or distribution procedure.
 
 The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its 18 production files are:
+`.evcrate/source/.evcrate/bin`. Its 19 production files are:
 
 ```text
 evcrate-advisor
@@ -137,11 +137,16 @@ lib/advisor/json-document.cjs
 lib/advisor/policy-schema.cjs
 lib/advisor/profile.cjs
 lib/advisor/runner.cjs
+lib/advisor/runtime-brief.generated.cjs
 ```
 
-Source and projection entries must be regular non-symlink files with the expected
-entrypoint shebang/mode. The generated inventory and schema-2 `controller_hashes`
-are authoritative; missing, extra, stale, or mismatched entries block publication.
+`runtime-brief.generated.cjs` is generated from the canonical advisor strategy
+brief and is part of the closure; it is not hand-edited.
+
+Source and projection entries must be regular non-symlink files with the
+expected entrypoint shebang/mode. The generated inventory and schema-2
+`controller_hashes` are authoritative; missing, extra, stale, or mismatched
+entries block publication.
 
 ## 5. Shared advisor controller
 
@@ -167,8 +172,9 @@ The top level is exactly `version`/`advisor`/`wait`/`history`; routes are
 exactly `backend`/`model`/`effort`. Primary and backup triples must differ.
 Wait warnings are bounded to `1000..3600000` ms; history retention is
 `1..365` days and quota `1048576..1073741824` bytes. There is no v2
-`timeout_ms`; generation timing is a later controller-phase contract. Policy
-bytes remain bounded to 16 KiB and use fatal-UTF-8/strict-JSON parsing,
+`timeout_ms`; generation mode has no generation deadline while input, streams,
+output, termination, and adapter probes remain bounded. Policy bytes remain
+bounded to 16 KiB and use fatal-UTF-8/strict-JSON parsing,
 duplicate-key, control-character, credential, unknown-field, unsafe-path, and
 candidate-backend checks. The policy file is regular, owner-only `0600`;
 `$HOME` and `.evcrate` ancestors must be real owner-controlled directories.
@@ -233,21 +239,28 @@ accepted. Its ten keys are `protocol`, `version`, `checkpoint`, `question`,
 `kind`, `task_or_phase`, `evidence`, `changed_paths`, `prior_counsel`, and
 `owner_disposition`. New callers must use the v2 contract above.
 
-### 5.4 Current one-shot transaction and v1 envelope
+### 5.4 Current one-shot transaction and v1/v2 envelopes
 
-Until later mentoring phases integrate v2 execution, the current `runController`
-path remains one target, one final model process, and one finite generation
-deadline. It generates a correlation UUID, parses the compatibility checkpoint,
+`runController` accepts both the v1 compatibility checkpoint and the v2
+checkpoint. It remains one target and one model attempt with no retry,
+provider switch, model/effort substitution, downgrade, callback, native relay,
+or local fallback. It generates a correlation UUID, parses the checkpoint,
 loads policy once, probes one adapter, creates one empty owner-only workspace,
-emits one frozen v1 envelope, and cleans up. There is no retry, provider
-switch, model/effort substitution, downgrade, callback, native relay, or local
-fallback in this path.
+and cleans up after the child exits.
 
-Success is one JSON line with `status: "ADVICE_READY"`; failure is one JSON line
-with `status: "FAILED"`. Both envelopes contain protocol/version, a controller
-UUID, and a receipt with backend/model/effort/controller and adapter versions
-plus elapsed milliseconds. Failure exposes only sanitized `code`, `category`,
-`action`, and `message`; stderr is empty; exit code is zero only for success.
+For a v2 checkpoint, the controller computes the checkpoint digest and uses
+`formatMentorPrompt`: the generated canonical mentor brief is followed by
+explicitly quoted checkpoint data. The selected adapter returns raw assistant
+text; the shared parser requires the exact seven-field structured body before
+`normalizeResult` creates `evcrate-advisor-result` v2. The v2 envelope preserves
+task/checkpoint identity and revisions, checkpoint digest, receipt/build
+identity, controller version 2, ordered attempt summaries, and audit status.
+Success requires a model attempt with confirmed cleanup.
+
+The v1 path keeps its compatibility result/envelope shape. Both paths emit one
+terminal JSON line with `status: "ADVICE_READY"` or `status: "FAILED"`.
+Failures expose only sanitized `code`, `category`, `action`, and `message`;
+stderr is empty; exit code is zero only for success.
 
 ### 5.5 Adapter and process isolation
 
@@ -263,7 +276,6 @@ monotonic deadline. POSIX detached process groups receive TERM, then KILL if
 needed, and descendants are reaped. The workspace is empty, owner-only, outside
 the repository, checked against symlink/identity changes, and removed after
 child termination.
-
 
 ## 6. Advisor supervision and command projections
 
@@ -312,24 +324,24 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
-## 8. Advisor mentoring upgrade (Phase 01 frozen; later behavior pending)
+## 8. Advisor mentoring upgrade (Phase 04 delivered; dependent phases pending)
 
 Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
 Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
-Phase 01 contracts/migration are implemented and reviewed; the overall plan
-remains pending until later phases integrate execution, state, history, and
-workflow gates. See the [Phase 01 review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md).
+Phases 01–04 have now frozen policy/checkpoint/result/controller contracts,
+completed policy migration, delivered wait/cancellation/cleanup guarantees,
+qualified adapters, and integrated the canonical mentor brief plus structured
+v2 result parsing. The remaining plan phases add dependent state, history,
+workflow gates, and retry orchestration; they are not inferred from validators.
 
 The frozen boundary keeps one managed CommonJS controller, vendor-owned
-credentials, canonical resources, and TypeScript settings/publication. It adds
-versioned policy/checkpoint/result/controller contracts, v1 task/history records,
-typed error categories, and explicit legacy-policy migration without automatic
-HOME writes. Existing compatibility execution remains the v1 one-target,
-one-attempt path until dependent phases land.
+credentials, canonical resources, and TypeScript settings/publication. The
+runtime brief is authored once in the canonical `.claude` skill, generated
+into the 19-file controller closure, and carried by build identity/digest.
+V2 checkpoint data is bounded and quoted; paths are metadata only. Advice is
+non-binding, and human approval plus the main workflow retain mutation
+authority.
 
-Later phases may add a qualified primary plus backup, transient retries,
-wait-until-terminal warnings, mentoring briefs, durable task gates, and local
-audit records. These are not activated by validators or policy examples alone.
 Generation/publication does not establish live tool-enforcement capability.
 This remains cooperative oversight of trusted CLIs, not hostile-process
 containment or a guarantee against semantic bugs.

@@ -1,7 +1,8 @@
 # Project Overview and Product Development Requirements
 
 **Status:** Current requirements baseline  
-**Updated:** 2026-09-05  
+**Updated:** 2026-09-08  
+
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
 
@@ -114,12 +115,11 @@ preview -> apply`, preserves revision/CAS and byte-safe recovery, and never
 rewrites HOME automatically.
 
 ### FR-6: Versioned checkpoint protocol
-
 **Requirement:** Phase 01 freezes direct `evcrate-advisor-checkpoint` v2 with
 task/run/checkpoint/phase identity, task/evidence revisions, decision kind,
 task constraints, proposal, bounded evidence, and prior disposition. The
-compatibility v1 ten-key checkpoint remains only until dependent runtime
-phases cut over.
+compatibility v1 ten-key checkpoint remains an explicit compatibility path while
+dependent runtime phases cut over; no implicit v1-to-v2 upgrade is performed.
 
 **Acceptance:** V2 rejects unknown keys, unsafe paths, credentials, duplicate
 paths, invalid revisions, overlong text, oversized evidence, and missing
@@ -134,27 +134,33 @@ checkpoint identity, ordered attempt summaries, cleanup outcome, and sanitized
 terminal error/result. It freezes primary retry slots `[10000, 20000, 30000]`,
 one backup slot, and correction/state/history identities for dependent phases.
 
-**Acceptance:** Phase 01 itself does not activate retries, indefinite
-generation, task-state commands, or history tooling. Until cutover, the
-compatibility controller remains one target/one attempt under its existing
-finite deadline with no fallback, provider switch, or model substitution.
-Later phases must preserve cancellation dominance, confirmed cleanup before
-success/retry, and no auto-resume after parent loss.
+**Acceptance:** Phase 01 itself did not activate retries, indefinite
+generation, task-state commands, or history tooling. Phase 04 now integrates
+the v2 generated mentor prompt and structured result path; the current
+controller still runs one target/one attempt with no retry, fallback, provider
+switch, or model substitution. Generation has no generation deadline, while
+probes, streams, output, termination, and cleanup remain bounded. Later phases
+must preserve cancellation dominance, confirmed cleanup before success/retry,
+and no auto-resume after parent loss.
 
 ### FR-8: Stable advisor result and envelope
 
 **Requirement:** V2 public success/failure remains one terminal JSON line:
-<code>ADVICE_READY</code> or <code>FAILED</code>. The result requires
-`recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
-`success_checks`, and `unresolved_questions`. The controller envelope binds
-task/checkpoint/evidence identity, receipt/build identity, bounded attempts,
-sanitized error, and `audit_status`.
+<code>ADVICE_READY</code> or <code>FAILED</code>. The canonical mentor brief is
+generated into the standalone controller closure; v2 prompt packaging quotes
+validated checkpoint data. For v2 checkpoints, each enabled adapter passes
+extracted assistant text to one strict parser. The result requires exactly
+seven body fields: `recommendation`, `rationale`, `must_fix`, `cautions`,
+`assumptions`, `success_checks`, and `unresolved_questions`. The controller
+envelope binds task/checkpoint/evidence identity, receipt/build identity,
+bounded attempts, sanitized error, and `audit_status`.
 
 **Acceptance:** Result body is bounded to 16 KiB; envelope to 32 KiB; at most
-five model-started attempts and eight summaries. Success requires confirmed
-cleanup. Failure exposes only cataloged `code`, `category`, `action`, and
-`message`. Existing v1 output remains compatibility behavior until runtime
-integration.
+five model-started attempts and eight summaries. Missing/unknown fields,
+fences, prose, control characters, sensitive material, and raw stack traces
+fail closed. Success requires confirmed cleanup. Failure exposes only cataloged
+`code`, `category`, `action`, and `message`. Existing v1 output remains an
+explicit compatibility path.
 
 ### FR-9: Adapter qualification and isolation
 
@@ -219,7 +225,7 @@ this requirement does not rename source files or alter command implementation.
 ## Observable release gates
 
 1. Source and target manifests validate with schema-2 rules.
-2. Local build/check completes with a current complete manifest and 18-file
+2. Local build/check completes with a current complete manifest and 19-file
    controller closure.
 3. Publication dry-run reports only authorized target/HOME changes.
 4. Apply and recovery preserve unmanaged files and reject CAS changes.

@@ -2,6 +2,7 @@
 
 const { createRoutingError, isRoutingError } = require('../errors.cjs');
 const { parseJsonDocument } = require('../json-document.cjs');
+const { parseAdviceBody } = require('../checkpoint-contract.cjs');
 const {
   DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure
 } = require('../runner.cjs');
@@ -116,9 +117,12 @@ function buildInvocation(context) {
   if (current.capabilities.effort !== route.effort) fail('EFFORT_UNSUPPORTED');
   if (typeof context.prompt !== 'string') fail('REQUEST_INVALID');
   const limits = resolveInvocationLimits(FINAL_LIMITS, context.limits);
+  const prompt = context.checkpoint?.version === 2
+    ? context.prompt
+    : `${NO_TOOL_INSTRUCTION}${context.prompt}`;
   return invocation(context, ['exec', '--ephemeral', '--ignore-user-config', '--ignore-rules', '--strict-config',
     '--skip-git-repo-check', '--sandbox', 'read-only', '--model', route.model, '--config',
-    `model_reasoning_effort="${route.effort}"`, '--json', '-'], `${NO_TOOL_INSTRUCTION}${context.prompt}`, limits);
+    `model_reasoning_effort="${route.effort}"`, '--json', '-'], prompt, limits);
 }
 function eventKeys(value, allowed, requiredKeys = []) {
   const keys = Object.keys(value);
@@ -188,7 +192,11 @@ function parseJsonl(text) {
 function parseResult(context = {}) {
   const output = context.execution?.result || context.execution;
   if (!output || typeof output.stdout !== 'string') fail('PROTOCOL_INVALID');
-  return parseJsonl(output.stdout);
+  const response = parseJsonl(output.stdout);
+  if (context.checkpoint?.version === 2) {
+    return parseAdviceBody(response.recommendation);
+  }
+  return response;
 }
 function classifyFailure(error) {
   const code = codeOf(error);

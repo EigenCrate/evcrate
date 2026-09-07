@@ -17,7 +17,8 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/json-document.cjs",
   "lib/advisor/policy-schema.cjs",
   "lib/advisor/profile.cjs",
-  "lib/advisor/runner.cjs"
+  "lib/advisor/runner.cjs",
+  "lib/advisor/runtime-brief.generated.cjs"
 ] as const);
 export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
   "_http_agent",

@@ -2,11 +2,12 @@
 
 const { randomUUID } = require('node:crypto');
 const { createRoutingError, serializeRoutingError } = require('./errors.cjs');
-const { RESULT_KEYS } = require('./checkpoint-contract.cjs');
+const { RESULT_KEYS, ADVISOR_BUILD_IDENTITY, checkpointDigest } = require('./checkpoint-contract.cjs');
 const {
   CONTROLLER_PROTOCOL_V2,
   CONTROLLER_VERSION_V2,
-  validateEnvelopeV2
+  validateEnvelopeV2,
+  validateReceiptV2
 } = require('./contracts-v2.cjs');
 const CONTROLLER_PROTOCOL = 'evcrate-advisor-controller';
 const CONTROLLER_VERSION = 1;
@@ -53,7 +54,136 @@ function validateResult(value) {
   if (typeof value.checkpoint !== 'string' || typeof value.recommendation !== 'string') fail();
   return value;
 }
-function buildSuccessEnvelope({ correlation_id, correlationId, receipt: value, result, cleanup_outcome } = {}) {
+function receiptV2(value = {}) {
+  let buildIdentity = ADVISOR_BUILD_IDENTITY;
+  if (value.build_identity !== undefined && value.build_identity !== null) {
+    if (value.build_identity !== ADVISOR_BUILD_IDENTITY && !value.build_identity.startsWith('evcrate-advisor-v2')) {
+      fail();
+    }
+    buildIdentity = value.build_identity;
+  }
+  const res = {
+    backend: value.backend ?? null,
+    model: value.model ?? null,
+    effort: value.effort ?? null,
+    controller_version: CONTROLLER_VERSION_V2,
+    adapter_version: value.adapter_version ?? null,
+    build_identity: buildIdentity,
+    elapsed_ms: value.elapsed_ms ?? 0
+  };
+  return validateReceiptV2(res);
+}
+function buildSuccessEnvelopeV2({
+  correlation_id,
+  correlationId,
+  checkpoint,
+  task_run_id,
+  checkpoint_id,
+  task_revision,
+  evidence_revision,
+  checkpoint_digest,
+  receipt: value,
+  attempts,
+  result,
+  audit_status = 'disabled',
+  cleanup_outcome
+} = {}) {
+  if (checkpoint) {
+    if (task_run_id !== undefined && task_run_id !== checkpoint.task_run_id) fail();
+    if (checkpoint_id !== undefined && checkpoint_id !== checkpoint.checkpoint_id) fail();
+    if (task_revision !== undefined && task_revision !== checkpoint.task_revision) fail();
+    if (evidence_revision !== undefined && evidence_revision !== checkpoint.evidence_revision) fail();
+    const expectedDigest = checkpointDigest(checkpoint);
+    if (checkpoint_digest !== undefined && checkpoint_digest !== expectedDigest) fail();
+    checkpoint_digest = expectedDigest;
+    if (result && result.checkpoint !== checkpoint.checkpoint) fail();
+  }
+  if (attempts && Array.isArray(attempts)) {
+    const successAttempt = attempts.find((a) => a.terminal_classification === 'success');
+    if (successAttempt && value) {
+      if (value.backend && successAttempt.route.backend !== value.backend) fail();
+      if (value.model && successAttempt.route.model !== value.model) fail();
+    }
+  }
+  const envelope = {
+    protocol: CONTROLLER_PROTOCOL_V2,
+    version: CONTROLLER_VERSION_V2,
+    correlation_id: correlation(correlation_id ?? correlationId),
+    task_run_id: task_run_id ?? checkpoint?.task_run_id,
+    checkpoint_id: checkpoint_id ?? checkpoint?.checkpoint_id,
+    task_revision: task_revision ?? checkpoint?.task_revision,
+    evidence_revision: evidence_revision ?? checkpoint?.evidence_revision,
+    checkpoint_digest: checkpoint_digest ?? checkpoint?.checkpoint_digest,
+    status: 'ADVICE_READY',
+    receipt: receiptV2(value),
+    attempts: attempts ? [...attempts] : [],
+    result,
+    audit_status
+  };
+  if (cleanup_outcome !== undefined) {
+    Object.defineProperty(envelope, 'cleanup_outcome', {
+      value: cleanup_outcome,
+      enumerable: false,
+      writable: false,
+      configurable: false
+    });
+  }
+  return validateEnvelopeV2(envelope, { checkpoint });
+}
+
+function buildFailureEnvelopeV2({
+  correlation_id,
+  correlationId,
+  checkpoint,
+  task_run_id,
+  checkpoint_id,
+  task_revision,
+  evidence_revision,
+  checkpoint_digest,
+  receipt: value,
+  attempts,
+  error,
+  audit_status = 'disabled',
+  cleanup_outcome
+} = {}) {
+  if (checkpoint) {
+    task_run_id = checkpoint.task_run_id;
+    checkpoint_id = checkpoint.checkpoint_id;
+    task_revision = checkpoint.task_revision;
+    evidence_revision = checkpoint.evidence_revision;
+    checkpoint_digest = checkpointDigest(checkpoint);
+  }
+  const envelope = {
+    protocol: CONTROLLER_PROTOCOL_V2,
+    version: CONTROLLER_VERSION_V2,
+    correlation_id: correlation(correlation_id ?? correlationId),
+    task_run_id: task_run_id ?? '00000000-0000-0000-0000-000000000000',
+    checkpoint_id: checkpoint_id ?? 'unknown',
+    task_revision: task_revision ?? 0,
+    evidence_revision: evidence_revision ?? 0,
+    checkpoint_digest: checkpoint_digest ?? '0'.repeat(64),
+    status: 'FAILED',
+    receipt: receiptV2(value),
+    attempts: attempts ? [...attempts] : [],
+    error: serializeRoutingError(error),
+    audit_status
+  };
+  if (cleanup_outcome !== undefined) {
+    Object.defineProperty(envelope, 'cleanup_outcome', {
+      value: cleanup_outcome,
+      enumerable: false,
+      writable: false,
+      configurable: false
+    });
+  }
+  return validateEnvelopeV2(envelope);
+}
+
+function buildSuccessEnvelope(options = {}) {
+  if (options.result?.version === 2 || options.checkpoint?.version === 2) {
+    return buildSuccessEnvelopeV2(options);
+  }
+  const { correlation_id, correlationId, receipt: value, result, cleanup_outcome } = options;
   const envelope = { protocol: CONTROLLER_PROTOCOL, version: CONTROLLER_VERSION,
     correlation_id: correlation(correlation_id ?? correlationId), status: 'ADVICE_READY',
     receipt: receipt(value), result: validateResult(result) };
@@ -68,7 +198,11 @@ function buildSuccessEnvelope({ correlation_id, correlationId, receipt: value, r
   }
   return Object.freeze(envelope);
 }
-function buildFailureEnvelope({ correlation_id, correlationId, receipt: value, error, cleanup_outcome } = {}) {
+function buildFailureEnvelope(options = {}) {
+  if (options.checkpoint?.version === 2) {
+    return buildFailureEnvelopeV2(options);
+  }
+  const { correlation_id, correlationId, receipt: value, error, cleanup_outcome } = options;
   const envelope = { protocol: CONTROLLER_PROTOCOL, version: CONTROLLER_VERSION,
     correlation_id: correlation(correlation_id ?? correlationId), status: 'FAILED', receipt: receipt(value),
     error: serializeRoutingError(error) };
@@ -106,6 +240,8 @@ module.exports = {
   SUCCESS_KEYS,
   buildFailureEnvelope,
   buildSuccessEnvelope,
+  buildFailureEnvelopeV2,
+  buildSuccessEnvelopeV2,
   validateEnvelope,
   validateEnvelopeV2
 };

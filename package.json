@@ -17,7 +17,7 @@
     "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"
   },
   "scripts": {
-    "prebuild": "node scripts/generate-controller-inventory.mjs",
+    "prebuild": "node scripts/generate-runtime-brief.mjs && node scripts/generate-controller-inventory.mjs",
     "build": "tsc -p tsconfig.json",
     "test:protocol": "npm run build && node --test tests/protocol/*.test.mjs",
     "test:cli": "npm run build && node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
@@ -42,8 +42,8 @@
     "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "semantic-release",
+    "generate:brief": "node scripts/generate-runtime-brief.mjs",
     "generate:inventory": "node scripts/generate-controller-inventory.mjs",
-    "generate:registry": "node scripts/generate-resource-registry.mjs",
     "generate:manifests": "node scripts/build-manifests.mjs",
     "generate:all": "npm run generate:inventory && npm run build && npm run generate:registry && npm run generate:manifests",
     "prepack": "npm run build && node scripts/generate-resource-registry.mjs",

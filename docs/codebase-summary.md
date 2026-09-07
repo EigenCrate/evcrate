@@ -302,7 +302,7 @@ canonical package path.
 
 The generated inventory in `src/manifests/controller-inventory.generated.ts` is
 produced by `scripts/generate-controller-inventory.mjs`. It lists exactly these
-18 production files under `.evcrate/source/.evcrate/bin/`:
+19 production files under `.evcrate/source/.evcrate/bin/`:
 
 ```text
 evcrate-advisor
@@ -323,14 +323,49 @@ lib/advisor/json-document.cjs
 lib/advisor/policy-schema.cjs
 lib/advisor/profile.cjs
 lib/advisor/runner.cjs
+lib/advisor/runtime-brief.generated.cjs
 ```
 
-The current controller path validates the compatibility direct checkpoint and
-executes one target/one attempt, but its timing boundary is now explicit:
-adapter capability probes use finite `probe` mode, while the final model
-invocation uses `generation` mode with no generation deadline. Generation
-warnings report monotonic elapsed time on `stderr`; input, streams, output, and
-termination remain bounded.
+The runtime brief artifact is generated from the canonical
+`.claude/skills/advisor-strategy/references/brief-contract.md`; it is part of
+the exact closure and is never hand-edited.
+
+## Advisor mentoring brief and structured advice (Phase 04)
+
+Phase 04 completed on 2026-09-08. The canonical
+`.claude/skills/advisor-strategy/references/brief-contract.md` owns the runtime
+mentor instructions and the fourteen-field v2 checkpoint example. The
+`scripts/generate-runtime-brief.mjs` generator extracts the instructions into
+the standalone `runtime-brief.generated.cjs` closure artifact, including a
+content digest and `evcrate-advisor-v2-*` build identity. The controller does
+not read ambient `.claude` files at runtime.
+
+`checkpoint-contract.cjs` validates the v2 checkpoint, computes its digest, and
+`formatMentorPrompt` prepends the generated instructions to explicitly quoted
+checkpoint data. The Claude, Codex, OMP, and Pi adapters extract raw assistant
+text for v2 checkpoints and pass it to the shared `parseAdviceBody` parser.
+The parser requires exactly seven fields:
+`recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
+`success_checks`, and `unresolved_questions`. It rejects missing or unknown
+fields, non-array lists, fences/prose, control characters, sensitive material,
+and raw stack traces.
+
+`contracts-v2.cjs`, `controller-envelope.cjs`, and `controller.cjs` preserve
+correlation/task/checkpoint identity, task/evidence revisions, checkpoint
+digest, receipt/build identity, controller version 2, ordered attempt
+summaries, structured result fields, and sanitized failures. V1 remains an
+explicit compatibility path; Phase 04 does not add retries or provider
+switching. Evidence: 117/117 advisor-controller tests, `npm run build`, and
+`npm run release:check` all passed on 2026-09-08.
+
+The current controller path accepts both the compatibility v1 checkpoint and
+the v2 checkpoint, executes one target/one attempt, and preserves the explicit
+timing boundary: adapter capability probes use finite `probe` mode, while the
+final model invocation uses `generation` mode with no generation deadline.
+For v2, `formatMentorPrompt` supplies the generated brief and quoted data,
+adapters parse the seven-field body, and the controller emits the structured
+V2 result/envelope. Generation warnings report monotonic elapsed time on
+`stderr`; input, streams, output, and termination remain bounded.
 
 ## Advisor controller timing and cleanup (Phase 02)
 

@@ -42,11 +42,13 @@ function help() {
   ].join('\n');
 }
 function success({ implicitStart = false } = {}) {
+  const current = state();
+  const text = current.returnJson || 'FAKE_CODEX_OK';
   return [
     JSON.stringify({ type: 'thread.started', thread_id: 'fixture-thread' }),
     JSON.stringify({ type: 'turn.started', turn_id: 'fixture-turn' }),
     ...(implicitStart ? [] : [JSON.stringify({ type: 'item.started', item: { id: 'fixture-message', type: 'agent_message' } })]),
-    JSON.stringify({ type: 'item.completed', item: { id: 'fixture-message', type: 'agent_message', text: 'FAKE_CODEX_OK' } }),
+    JSON.stringify({ type: 'item.completed', item: { id: 'fixture-message', type: 'agent_message', text } }),
     JSON.stringify({ type: 'turn.completed', usage: { input_tokens: 1, output_tokens: 1 } }),
   ].join('\n');
 }

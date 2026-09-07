@@ -5,7 +5,7 @@ const { isDeepStrictEqual } = require('node:util');
 const { parseJsonDocument } = require('../json-document.cjs');
 const { createRoutingError } = require('../errors.cjs');
 const { isPlainObject } = require('../adapter-contract.cjs');
-
+const { parseAdviceBody } = require('../checkpoint-contract.cjs');
 function fail(code) { throw createRoutingError(code); }
 const MODEL_PATTERN = /^([^/\s]+)\/([^/\s]+)$/u;
 function target(context) {
@@ -204,6 +204,10 @@ function parseJsonl(text, route, expectedCwd) {
 function parseResult(context = {}) {
   const output = context.execution?.result || context.execution;
   if (!output || typeof output.stdout !== 'string') fail('PROTOCOL_INVALID');
-  return parseJsonl(output.stdout, target(context), context.cwd);
+  const result = parseJsonl(output.stdout, target(context), context.cwd);
+  if (context.checkpoint?.version === 2) {
+    return parseAdviceBody(result.recommendation);
+  }
+  return result;
 }
 module.exports = { parseResult };

@@ -6,7 +6,8 @@ const {
 } = require('./runner.cjs');
 const { parseJsonDocument, decodeUtf8 } = require('./json-document.cjs');
 const {
-  validateCheckpoint, serializeCheckpoint, normalizeResult, MAX_ENVELOPE_BYTES
+  validateCheckpoint, serializeCheckpoint, formatMentorPrompt, checkpointDigest,
+  normalizeResult, MAX_ENVELOPE_BYTES
 } = require('./checkpoint-contract.cjs');
 const { loadGlobalPolicy } = require('./profile.cjs');
 const { validatePolicy } = require('./policy-schema.cjs');
@@ -83,6 +84,11 @@ function normalizeWorkspace(value, verify) {
 }
 async function runController(input, dependencies = {}) {
   let target = null;
+  let checkpoint = null;
+  let digest = null;
+  let attempts = [];
+  let modelStarted = false;
+  let childSpawned = false;
   const now = dependency(dependencies, 'monotonicMilliseconds', monotonicMilliseconds);
   const makeUuid = dependency(dependencies, 'randomUUID', require('node:crypto').randomUUID);
   const correlationId = makeUuid();
@@ -92,7 +98,7 @@ async function runController(input, dependencies = {}) {
   let adapterVersion = null;
   let workspace = null;
   let receipt = () => ({ backend: target?.backend ?? null, model: target?.model ?? null,
-    effort: target?.effort ?? null, controller_version: CONTROLLER_VERSION,
+    effort: target?.effort ?? null, controller_version: checkpoint?.version === 2 ? 2 : CONTROLLER_VERSION,
     adapter_version: adapterVersion, elapsed_ms: elapsed(now, started) });
   let envelope;
   let cleanupOutcome = 'confirmed';
@@ -100,7 +106,10 @@ async function runController(input, dependencies = {}) {
   try {
     const request = await input;
     if (dependencies.signal?.aborted) fail('CANCELLED');
-    const checkpoint = parseInput(request);
+    checkpoint = parseInput(request);
+    if (checkpoint.version === 2) {
+      digest = checkpointDigest(checkpoint);
+    }
     const environment = dependencies.environment || process.env;
     const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(environment?.HOME);
     const selected = targetFromPolicy(loaded?.policy ?? loaded);
@@ -112,7 +121,8 @@ async function runController(input, dependencies = {}) {
       dependency(dependencies, 'verifyWorkspace', verifyWorkspace)
     );
     const baseRunner = dependencies.runner || createRunner();
-    const trackingRunner = {
+    childSpawned = false;
+    const probeTrackingRunner = {
       run: async (inv, opts) => {
         const res = await baseRunner.run(inv, opts);
         if (res?.cleanupOutcome === 'unconfirmed') {
@@ -121,21 +131,33 @@ async function runController(input, dependencies = {}) {
         return res;
       }
     };
+    const generationTrackingRunner = {
+      run: async (inv, opts) => {
+        const res = await baseRunner.run(inv, opts);
+        if (res?.cleanupOutcome === 'unconfirmed') {
+          cleanupOutcome = 'unconfirmed';
+        }
+        if (res && (!res.error || (res.error.code !== 'EXECUTABLE_UNAVAILABLE' && res.error.code !== 'CWD_INVALID' && res.error.code !== 'CWD_UNSAFE' && res.error.code !== 'PROMPT_OVERSIZED'))) {
+          childSpawned = true;
+        }
+        return res;
+      }
+    };
     const probeTimeoutMs = 30_000;
     const probeDeadline = started + probeTimeoutMs;
     const probeRunner = (dependencies.createProbeRunner || createProbeRunner)({
-      runner: trackingRunner,
+      runner: probeTrackingRunner,
       deadline: probeDeadline,
       now
     });
     const generationRunner = (dependencies.createGenerationRunner || createGenerationRunner)({
-      runner: trackingRunner,
+      runner: generationTrackingRunner,
       wait: selected.policy?.wait || {},
       now
     });
     const context = {
       checkpoint,
-      prompt: serializeCheckpoint(checkpoint),
+      prompt: checkpoint.version === 2 ? formatMentorPrompt(checkpoint) : serializeCheckpoint(checkpoint),
       target,
       runner: probeRunner,
       environment,
@@ -152,6 +174,7 @@ async function runController(input, dependencies = {}) {
     const execution = await generationRunner.run(invocation, {
       environment, requestDepth: 0, signal: dependencies.signal
     });
+    modelStarted = childSpawned;
     if (execution?.error) {
       cleanupOutcome = execution.cleanupOutcome || 'unconfirmed';
       throw execution.failure || execution.error;
@@ -161,14 +184,59 @@ async function runController(input, dependencies = {}) {
     if (dependencies.signal?.aborted) fail('CANCELLED');
     const result = normalizeResult(adapterResult, { checkpoint, maxBytes: MAX_ENVELOPE_BYTES });
     if (dependencies.signal?.aborted) fail('CANCELLED');
-    envelope = buildSuccessEnvelope({ correlation_id: correlationId, receipt: receipt(), result, cleanup_outcome: cleanupOutcome });
+    if (checkpoint.version === 2) {
+      attempts = [{
+        attempt_id: correlationId,
+        slot: 'primary',
+        route: { backend: target.backend, model: target.model, effort: target.effort },
+        phase: 'model',
+        model_started: true,
+        elapsed_ms: elapsed(now, started),
+        terminal_classification: 'success',
+        retry_delay_ms: null,
+        cleanup_outcome: cleanupOutcome
+      }];
+    }
+    envelope = buildSuccessEnvelope({
+      correlation_id: correlationId,
+      checkpoint,
+      checkpoint_digest: digest,
+      receipt: receipt(),
+      attempts,
+      result,
+      cleanup_outcome: cleanupOutcome
+    });
   } catch (error) {
     if (error?.cleanupOutcome) {
       cleanupOutcome = error.cleanupOutcome;
     }
     const code = dependencies.signal?.aborted ? 'CANCELLED' : failureCode(error, adapter);
     lastRoutingError = isRoutingError(error) ? error : createRoutingError(code);
-    envelope = buildFailureEnvelope({ correlation_id: correlationId, receipt: receipt(), error: lastRoutingError, cleanup_outcome: cleanupOutcome });
+    if (checkpoint?.version === 2 && target?.backend && target?.model && target?.effort) {
+      modelStarted = Boolean(childSpawned);
+      attempts = [{
+        attempt_id: correlationId,
+        slot: 'primary',
+        route: { backend: target.backend, model: target.model, effort: target.effort },
+        phase: modelStarted ? 'model' : 'preflight',
+        model_started: modelStarted,
+        elapsed_ms: elapsed(now, started),
+        terminal_classification: dependencies.signal?.aborted ? 'cancelled' : 'fatal',
+        retry_delay_ms: null,
+        cleanup_outcome: cleanupOutcome
+      }];
+    } else {
+      attempts = [];
+    }
+    envelope = buildFailureEnvelope({
+      correlation_id: correlationId,
+      checkpoint,
+      checkpoint_digest: digest,
+      receipt: receipt(),
+      attempts,
+      error: lastRoutingError,
+      cleanup_outcome: cleanupOutcome
+    });
   } finally {
     if (workspace) {
       const cleanup = dependency(dependencies, 'cleanupWorkspace', cleanupWorkspace);
@@ -177,9 +245,15 @@ async function runController(input, dependencies = {}) {
         if (cleanupResult?.outcome !== 'confirmed') {
           cleanupOutcome = 'unconfirmed';
           if (envelope?.status === 'ADVICE_READY') {
+            if (checkpoint?.version === 2 && attempts.length > 0) {
+              attempts[0] = { ...attempts[0], cleanup_outcome: 'unconfirmed', terminal_classification: 'fatal' };
+            }
             envelope = buildFailureEnvelope({
               correlation_id: correlationId,
+              checkpoint,
+              checkpoint_digest: digest,
               receipt: receipt(),
+              attempts,
               error: createRoutingError('CLEANUP_UNCONFIRMED'),
               cleanup_outcome: 'unconfirmed'
             });
@@ -188,9 +262,15 @@ async function runController(input, dependencies = {}) {
       } catch {
         cleanupOutcome = 'unconfirmed';
         if (envelope?.status === 'ADVICE_READY') {
+          if (checkpoint?.version === 2 && attempts.length > 0) {
+            attempts[0] = { ...attempts[0], cleanup_outcome: 'unconfirmed', terminal_classification: 'fatal' };
+          }
           envelope = buildFailureEnvelope({
             correlation_id: correlationId,
+            checkpoint,
+            checkpoint_digest: digest,
             receipt: receipt(),
+            attempts,
             error: createRoutingError('CLEANUP_UNCONFIRMED'),
             cleanup_outcome: 'unconfirmed'
           });
@@ -198,23 +278,38 @@ async function runController(input, dependencies = {}) {
       }
     }
     if (dependencies.signal?.aborted) {
+      if (checkpoint?.version === 2 && attempts.length > 0) {
+        attempts[0] = { ...attempts[0], cleanup_outcome: cleanupOutcome, terminal_classification: 'cancelled' };
+      }
       envelope = buildFailureEnvelope({
         correlation_id: correlationId,
+        checkpoint,
+        checkpoint_digest: digest,
         receipt: receipt(),
+        attempts,
         error: createRoutingError('CANCELLED'),
         cleanup_outcome: cleanupOutcome
       });
     } else if (envelope && envelope.cleanup_outcome !== cleanupOutcome) {
+      if (checkpoint?.version === 2 && attempts.length > 0) {
+        attempts[0] = { ...attempts[0], cleanup_outcome: cleanupOutcome };
+      }
       envelope = envelope.status === 'ADVICE_READY'
         ? buildSuccessEnvelope({
           correlation_id: correlationId,
+          checkpoint,
+          checkpoint_digest: digest,
           receipt: receipt(),
+          attempts,
           result: envelope.result,
           cleanup_outcome: cleanupOutcome
         })
         : buildFailureEnvelope({
           correlation_id: correlationId,
+          checkpoint,
+          checkpoint_digest: digest,
           receipt: receipt(),
+          attempts,
           error: lastRoutingError || envelope.error,
           cleanup_outcome: cleanupOutcome
         });

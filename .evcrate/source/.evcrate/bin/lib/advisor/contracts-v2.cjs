@@ -1,6 +1,7 @@
 'use strict';
 
 const { createRoutingError, ERROR_CATALOG } = require('./errors.cjs');
+const { parseJsonDocument } = require('./json-document.cjs');
 const CHECKPOINT_PROTOCOL_V2 = 'evcrate-advisor-checkpoint';
 const CHECKPOINT_VERSION_V2 = 2;
 
@@ -86,7 +87,8 @@ function assertKeys(value, expected, code = 'PROTOCOL_INVALID') {
 function validateText(value, limit, multiline = false, code = 'PROTOCOL_INVALID') {
   if (typeof value !== 'string' || !value || value.trim() !== value
     || CONTROL_PATTERN.test(value) || (!multiline && /[\r\n\t]/u.test(value))
-    || bytes(value) > limit || SENSITIVE_PATTERN.test(value)) {
+    || bytes(value) > limit || SENSITIVE_PATTERN.test(value)
+    || RAW_STACK_PATTERN.test(value)) {
     fail(code);
   }
   return value;
@@ -282,6 +284,26 @@ function validateResultBodyV2(body) {
   return deepFreeze(body);
 }
 
+const FENCE_PATTERN = /(?:^|\n)\s*```/u;
+
+function parseAdviceBody(text) {
+  if (typeof text !== 'string' || !text || text.trim() !== text) {
+    fail('PROTOCOL_INVALID');
+  }
+  if (FENCE_PATTERN.test(text)) {
+    fail('PROTOCOL_INVALID');
+  }
+  let body;
+  try {
+    body = parseJsonDocument(text, 'PROTOCOL_INVALID', 'PROTOCOL_INVALID');
+  } catch {
+    fail('PROTOCOL_INVALID');
+  }
+  if (!isPlainObject(body)) {
+    fail('PROTOCOL_INVALID');
+  }
+  return validateResultBodyV2(body);
+}
 function validateResultV2(value) {
   assertKeys(value, RESULT_V2_KEYS);
   if (value.protocol !== RESULT_PROTOCOL_V2 || value.version !== RESULT_VERSION_V2 || value.status !== 'ADVICE_READY') fail();
@@ -350,7 +372,7 @@ function validateReceiptV2(receipt) {
   return deepFreeze(receipt);
 }
 
-function validateEnvelopeV2(value) {
+function validateEnvelopeV2(value, context = {}) {
   if (!isPlainObject(value)) fail('PROCESS_FAILED');
   const isSuccess = value.status === 'ADVICE_READY';
   assertKeys(value, isSuccess ? ENVELOPE_V2_SUCCESS_KEYS : ENVELOPE_V2_FAILURE_KEYS, 'PROCESS_FAILED');
@@ -371,15 +393,38 @@ function validateEnvelopeV2(value) {
 
   if (!AUDIT_STATUSES.includes(value.audit_status)) fail('PROCESS_FAILED');
   if (isSuccess) {
-    const hasSuccessfulCleanAttempt = value.attempts.some(
+    const successfulAttempt = value.attempts.find(
       (a) => a.terminal_classification === 'success' && a.cleanup_outcome === 'confirmed'
     );
-    if (!hasSuccessfulCleanAttempt) fail('PROCESS_FAILED');
+    if (!successfulAttempt) fail('PROCESS_FAILED');
+    if (!successfulAttempt.model_started || successfulAttempt.phase !== 'model') {
+      fail('PROCESS_FAILED');
+    }
+    if (value.receipt.backend === null || value.receipt.model === null) {
+      fail('PROCESS_FAILED');
+    }
+    if (successfulAttempt.route.backend !== value.receipt.backend || successfulAttempt.route.model !== value.receipt.model) {
+      fail('PROCESS_FAILED');
+    }
+    if (value.receipt.effort !== null && successfulAttempt.route.effort !== value.receipt.effort) {
+      fail('PROCESS_FAILED');
+    }
+    if (value.receipt.build_identity === null) {
+      fail('PROCESS_FAILED');
+    }
     validateResultV2(value.result);
   } else if (value.status === 'FAILED') {
     validateSanitizedError(value.error, 'PROCESS_FAILED');
   } else {
     fail('PROCESS_FAILED');
+  }
+  if (context?.checkpoint) {
+    const chk = context.checkpoint;
+    if (value.task_run_id !== chk.task_run_id) fail('PROCESS_FAILED');
+    if (value.checkpoint_id !== chk.checkpoint_id) fail('PROCESS_FAILED');
+    if (value.task_revision !== chk.task_revision) fail('PROCESS_FAILED');
+    if (value.evidence_revision !== chk.evidence_revision) fail('PROCESS_FAILED');
+    if (isSuccess && value.result && value.result.checkpoint !== chk.checkpoint) fail('PROCESS_FAILED');
   }
   if (bytes(JSON.stringify(value)) > MAX_ENVELOPE_BYTES) fail('PROCESS_FAILED');
   return deepFreeze(value);
@@ -519,6 +564,7 @@ module.exports = {
   BACKUP_ATTEMPTS_LIMIT,
   validateCheckpointV2,
   validateResultBodyV2,
+  parseAdviceBody,
   validateResultV2,
   validateAttemptOutcome,
   validateEnvelopeV2,

@@ -2,9 +2,9 @@
 
 const { parseJsonDocument } = require('../json-document.cjs');
 const { createRoutingError, isRoutingError } = require('../errors.cjs');
+const { parseAdviceBody } = require('../checkpoint-contract.cjs');
 const { DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure } = require('../runner.cjs');
 const { freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation } = require('../adapter-contract.cjs');
-
 const EXECUTABLE = 'claude';
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
   maxStdoutBytes: 512 * 1024, maxResultBytes: 512 * 1024, maxLines: 256, timeoutMs: 5_000 });
@@ -138,6 +138,9 @@ function parseResult(context = {}) {
   const route = target(context);
   if (result.model !== undefined && result.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (Buffer.byteLength(result.result, 'utf8') > 16 * 1024) fail('OUTPUT_LIMIT');
+  if (context.checkpoint?.version === 2) {
+    return parseAdviceBody(result.result);
+  }
   return Object.freeze({ recommendation: result.result });
 }
 function classifyFailure(error) { const code = codeOf(error); return CODES.has(code) ? code : 'PROCESS_FAILED'; }
