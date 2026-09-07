@@ -1,5 +1,6 @@
 'use strict';
 
+const { createHash } = require('node:crypto');
 const { createRoutingError, ERROR_CATALOG } = require('./errors.cjs');
 const { parseJsonDocument } = require('./json-document.cjs');
 const CHECKPOINT_PROTOCOL_V2 = 'evcrate-advisor-checkpoint';
@@ -53,7 +54,7 @@ const CONTROL_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
 const METADATA_PATHS = new Set([
   '.git', '.gitignore', '.gitmodules', '.gitattributes', '.github', '.gitlab', '.hg', '.svn'
 ]);
-const RAW_STACK_PATTERN = /\b(?:at\s+[\w$.]+\s+\([^)]+\)|at\s+\S+:\d+:\d+|\bnode:internal\/)/u;
+const RAW_STACK_PATTERN = /(?:\bat\s+(?:async\s+|new\s+)?[\w$.<>]+\s+\([^)]*:\d+(?::\d+)?\)|\bat\s+\S+:\d+:\d+|\bnode:internal\/|\bFile\s+["'][^"']+["'],\s+line\s+\d+|\b(?:goroutine\s+\d+\s+\[|stack\s+backtrace:)|(?:^|\n)\s*[A-Za-z0-9_./-]+\.[A-Za-z0-9_]+(?:\([^)]*\))?\n\s+.*\.go:\d+|\b\d+:\s+0x[0-9a-fA-F]+\s+-\s+)/u;
 const SENSITIVE_PATTERN = /(?:-----BEGIN[^\n]*PRIVATE KEY-----|["']?(?:api[_ -]?key|secret|password|token|credential)["']?\s*[:=]|["']?(?:raw\s+)?stderr["']?\s*[:=]|["']?stack\s+trace["']?\s*[:=]|\bBearer\s+\S+|\bBasic\s+[A-Za-z0-9+/]+={0,2}\b|\b(?:AKIA|ASIA)[0-9A-Z]{16}\b|\b(?:sk|pk)_[A-Za-z0-9_-]{8,}\b|\b(?:sk-(?:proj|ant)-|gh[pous]_|github_pat_|npm_|xox[baprs]-|AIza)[A-Za-z0-9_./+=-]{8,}\b)/iu;
 
 function fail(code = 'PROTOCOL_INVALID') {
@@ -260,6 +261,11 @@ function validateCheckpointV2(value) {
   if (bytes(JSON.stringify(value)) > MAX_ENVELOPE_BYTES) fail('REQUEST_INVALID');
   return deepFreeze(value);
 }
+function computeCheckpointDigestV2(checkpoint) {
+  const validated = validateCheckpointV2(checkpoint);
+  return createHash('sha256').update(JSON.stringify(validated), 'utf8').digest('hex');
+}
+
 
 // Result V2 Validator
 const RESULT_V2_KEYS = Object.freeze([
@@ -406,7 +412,7 @@ function validateEnvelopeV2(value, context = {}) {
     if (successfulAttempt.route.backend !== value.receipt.backend || successfulAttempt.route.model !== value.receipt.model) {
       fail('PROCESS_FAILED');
     }
-    if (value.receipt.effort !== null && successfulAttempt.route.effort !== value.receipt.effort) {
+    if (successfulAttempt.route.effort !== value.receipt.effort) {
       fail('PROCESS_FAILED');
     }
     if (value.receipt.build_identity === null) {
@@ -424,7 +430,13 @@ function validateEnvelopeV2(value, context = {}) {
     if (value.checkpoint_id !== chk.checkpoint_id) fail('PROCESS_FAILED');
     if (value.task_revision !== chk.task_revision) fail('PROCESS_FAILED');
     if (value.evidence_revision !== chk.evidence_revision) fail('PROCESS_FAILED');
+    const expectedDigest = computeCheckpointDigestV2(chk);
+    if (value.checkpoint_digest !== expectedDigest) fail('PROCESS_FAILED');
     if (isSuccess && value.result && value.result.checkpoint !== chk.checkpoint) fail('PROCESS_FAILED');
+  }
+  const expectedBuildId = context?.expected_build_identity ?? context?.build_identity;
+  if (expectedBuildId !== undefined && expectedBuildId !== null) {
+    if (value.receipt.build_identity !== expectedBuildId) fail('PROCESS_FAILED');
   }
   if (bytes(JSON.stringify(value)) > MAX_ENVELOPE_BYTES) fail('PROCESS_FAILED');
   return deepFreeze(value);
@@ -576,5 +588,6 @@ module.exports = {
   validateHistoryExecutionV1,
   validateHistoryOutcomeV1,
   validateNonNegativeSafeInteger,
-  deepFreeze
+  deepFreeze,
+  computeCheckpointDigestV2,
 };

@@ -3,31 +3,47 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring Phase 04 complete at 100%; Phase 03 complete at 100%; Phase 02 complete at 100%; Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+**Status:** Advisor mentoring/recovery/audit Phase 04 complete at 100%;
+Phase 05 READY (100% prerequisite satisfied); release remains Unreleased
 
 ### 2026-09-08 — feat(advisor): package canonical mentoring brief and preserve structured V2 advice (phase-04)
 
 **Status:** Complete (100%)  
 **Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-04-mentor-brief-evidence-and-results.md)
 
-- Established `brief-contract.md` as the single source for runtime mentor
-  instructions and added `scripts/generate-runtime-brief.mjs` to emit the
-  standalone `runtime-brief.generated.cjs` controller artifact with a digest
-  and `evcrate-advisor-v2-*` build identity.
-- `checkpoint-contract.cjs` now packages v2 prompts as generated instructions
-  plus explicitly quoted checkpoint data; ambient HOME skills/rules cannot
-  replace the controller-authored brief.
+- Established
+  `.evcrate/source/.claude/skills/advisor-strategy/references/brief-contract.md`
+  as the single source for runtime mentor instructions. The
+  `brief-contract.md` → `scripts/generate-runtime-brief.mjs` →
+  `runtime-brief.generated.cjs` chain emits the standalone closure artifact
+  with a digest and `evcrate-advisor-v2-*` build identity; the generated file is
+  never hand-edited.
+- `checkpoint-contract.cjs` owns `formatMentorPrompt`: one generated brief is
+  followed by explicitly quoted v2 checkpoint data. Claude, Codex, OMP
+  (`omp-parser`), and Pi receive the same packaged prompt; each adapter only
+  performs transport parsing and sends raw assistant text to the shared parser.
 - `contracts-v2.cjs` strictly parses exactly seven advice-body fields:
   `recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
-  `success_checks`, and `unresolved_questions`. Fences, prose, unknown keys,
-  malformed lists, control characters, sensitive content, and raw stack traces
-  fail closed.
-- Claude, Codex, OMP, and Pi extract raw assistant text and pass v2 results to
-  the shared parser. `controller-envelope.cjs` and `controller.cjs` preserve
-  correlation/task/checkpoint identity, revisions, checkpoint digest, V2
-  receipt/build identity, attempt summaries, and sanitized failures.
-- Evidence: 117/117 advisor-controller tests passed; `npm run build` and
-  `npm run release:check` exited 0. No paid mentoring-quality claim is made.
+  `success_checks`, and `unresolved_questions`. A body must be one JSON object:
+  markdown fences and leading/trailing prose are rejected, as are unknown or
+  missing fields, malformed lists, control characters, sensitive material, and
+  raw stack frames from Node, Python, Go, or Rust. Ordinary prose that is not a
+  raw frame remains accepted.
+- Public `validateEnvelopeV2` recomputes the checkpoint digest with
+  `computeCheckpointDigestV2`, checks task/checkpoint identity and revisions,
+  requires `expected_build_identity` to equal `receipt.build_identity`, and
+  requires a successful attempt's route effort to equal `receipt.effort`.
+  `receiptV2` and the V2 builders enforce equality with the generated
+  **ADVISOR_BUILD_IDENTITY**.
+- V2 controller envelopes preserve correlation/task/checkpoint identity,
+  revisions, checkpoint digest, receipt/build identity, attempt summaries, and
+  sanitized failures. V1 remains an explicit compatibility path; Phase 04
+  adds no retry or provider-switch behavior.
+- Evidence: 118/118 advisor-controller tests passed in approximately 7.3
+  seconds; `npm run build` and `npm run release:check` exited 0. Astra's
+  post-fix sign-off is 8/10; all four critical correspondence/RAW_STACK
+  issues are resolved. Sol mentor counsel records the Phase 05 preconditions.
+  No paid mentoring-quality claim is made.
 
 ### 2026-09-08 — feat(advisor): qualify adapters, enforce strict terminal parsing, and adapt generation limits (phase-03)
 

@@ -177,6 +177,39 @@ test('parseAdviceBody rejects unknown fields or metadata masquerading', () => {
   const extraField = { ...VALID_ADVICE_BODY, extra_field: 'not allowed' };
   assert.throws(() => parseAdviceBody(JSON.stringify(extraField)), (err) => err.code === 'PROTOCOL_INVALID');
 });
+test('parseAdviceBody rejects multi-language raw stack frames', () => {
+  const pythonStack = { ...VALID_ADVICE_BODY, rationale: 'Error occurred: File "controller.py", line 42, in execute' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(pythonStack)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  const goStack = { ...VALID_ADVICE_BODY, rationale: 'Fatal panic: goroutine 1 [running]: main.go:10' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(goStack)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  const rustStack = { ...VALID_ADVICE_BODY, rationale: 'Crash log: stack backtrace: 0: 0x55' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(rustStack)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  const asyncNodeStack = { ...VALID_ADVICE_BODY, rationale: 'Error at async execute (/app/main.js:10:2)' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(asyncNodeStack)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  const bareGoStack = { ...VALID_ADVICE_BODY, rationale: 'Crash\nmain.worker(0x1)\n\t/home/user/app/worker.go:42 +0x25' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(bareGoStack)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  const rustFrame = { ...VALID_ADVICE_BODY, rationale: 'Trace: 0: 0x559803e0b0fa - std::sys::backtrace::tracing' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(rustFrame)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  const constructorFrame = { ...VALID_ADVICE_BODY, rationale: 'Error at new Foo (/app/main.js:10:2)' };
+  assert.throws(() => parseAdviceBody(JSON.stringify(constructorFrame)), (err) => err.code === 'PROTOCOL_INVALID');
+
+  // Benign ordinary prose must NOT be rejected
+  const benignProse1 = { ...VALID_ADVICE_BODY, rationale: 'Retry at new checkpoint (after validation).' };
+  assert.ok(parseAdviceBody(JSON.stringify(benignProse1)));
+
+  const benignProse2 = { ...VALID_ADVICE_BODY, rationale: 'Inspect failures at async boundaries (before adding retries).' };
+  assert.ok(parseAdviceBody(JSON.stringify(benignProse2)));
+
+  const benignProse3 = { ...VALID_ADVICE_BODY, rationale: 'Inspect worker.go:42 before changing cleanup.' };
+  assert.ok(parseAdviceBody(JSON.stringify(benignProse3)));
+});
+
 
 test('normalizeResult normalizes v2 result when checkpoint is v2', () => {
   const normalized = normalizeResult(VALID_ADVICE_BODY, { checkpoint: VALID_CHECKPOINT_V2 });
@@ -573,6 +606,63 @@ test('linkage: controller envelope rejects mismatched identities and routes', ()
       result: mismatchedResult
     }),
     (err) => err.code === 'PROCESS_FAILED' || err.code === 'PROTOCOL_INVALID'
+  );
+
+  // Foreign build identity rejected even if prefix matches
+  assert.throws(
+    () => buildSuccessEnvelope({
+      correlation_id: '01234567-89ab-4cde-8f01-23456789abcd',
+      checkpoint: VALID_CHECKPOINT_V2,
+      checkpoint_digest: digest,
+      receipt: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', build_identity: 'evcrate-advisor-v2-fake', elapsed_ms: 1200 },
+      attempts: [attempt],
+      result: normalizedResult
+    }),
+    (err) => err.code === 'PROCESS_FAILED' || err.code === 'PROTOCOL_INVALID'
+  );
+
+  // Direct validateEnvelopeV2 correspondence checks
+  const validEnvelope = buildSuccessEnvelope({
+    correlation_id: '01234567-89ab-4cde-8f01-23456789abcd',
+    checkpoint: VALID_CHECKPOINT_V2,
+    checkpoint_digest: digest,
+    receipt: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', elapsed_ms: 1200 },
+    attempts: [attempt],
+    result: normalizedResult
+  });
+  assert.ok(validateEnvelopeV2(validEnvelope, { checkpoint: VALID_CHECKPOINT_V2 }));
+
+  // Rejects altered checkpoint_digest at validation boundary
+  const tamperedDigestEnv = { ...validEnvelope, checkpoint_digest: 'f'.repeat(64) };
+  assert.throws(
+    () => validateEnvelopeV2(tamperedDigestEnv, { checkpoint: VALID_CHECKPOINT_V2 }),
+    (err) => err.code === 'PROCESS_FAILED'
+  );
+
+  // Rejects modified evidence at identical revisions
+  const modifiedCheckpoint = {
+    ...VALID_CHECKPOINT_V2,
+    evidence: { ...VALID_CHECKPOINT_V2.evidence, summary: 'Altered evidence text' }
+  };
+  assert.throws(
+    () => validateEnvelopeV2(validEnvelope, { checkpoint: modifiedCheckpoint }),
+    (err) => err.code === 'PROCESS_FAILED'
+  );
+
+  // Rejects mismatched expected build identity
+  assert.throws(
+    () => validateEnvelopeV2(validEnvelope, { expected_build_identity: 'evcrate-advisor-v2-mismatch' }),
+    (err) => err.code === 'PROCESS_FAILED'
+  );
+
+  // Rejects null receipt effort when attempt declared 'high'
+  const nullEffortEnv = {
+    ...validEnvelope,
+    receipt: { ...validEnvelope.receipt, effort: null }
+  };
+  assert.throws(
+    () => validateEnvelopeV2(nullEffortEnv),
+    (err) => err.code === 'PROCESS_FAILED'
   );
 });
 

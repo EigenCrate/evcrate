@@ -57,7 +57,7 @@ function validateResult(value) {
 function receiptV2(value = {}) {
   let buildIdentity = ADVISOR_BUILD_IDENTITY;
   if (value.build_identity !== undefined && value.build_identity !== null) {
-    if (value.build_identity !== ADVISOR_BUILD_IDENTITY && !value.build_identity.startsWith('evcrate-advisor-v2')) {
+    if (value.build_identity !== ADVISOR_BUILD_IDENTITY) {
       fail();
     }
     buildIdentity = value.build_identity;

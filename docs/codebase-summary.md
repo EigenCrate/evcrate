@@ -333,30 +333,50 @@ the exact closure and is never hand-edited.
 ## Advisor mentoring brief and structured advice (Phase 04)
 
 Phase 04 completed on 2026-09-08. The canonical
-`.claude/skills/advisor-strategy/references/brief-contract.md` owns the runtime
-mentor instructions and the fourteen-field v2 checkpoint example. The
-`scripts/generate-runtime-brief.mjs` generator extracts the instructions into
-the standalone `runtime-brief.generated.cjs` closure artifact, including a
-content digest and `evcrate-advisor-v2-*` build identity. The controller does
-not read ambient `.claude` files at runtime.
+`.evcrate/source/.claude/skills/advisor-strategy/references/brief-contract.md`
+owns mentor instructions. `scripts/generate-runtime-brief.mjs` extracts the
+`## Canonical Runtime Mentor Instructions` block, computes its SHA-256 digest,
+and emits the standalone
+`.evcrate/source/.evcrate/bin/lib/advisor/runtime-brief.generated.cjs` artifact
+with **CANONICAL_MENTOR_INSTRUCTIONS**, its digest, and the
+`evcrate-advisor-v2-*` build identity. The controller never reads ambient
+`.claude` or HOME skill files at runtime.
 
 `checkpoint-contract.cjs` validates the v2 checkpoint, computes its digest, and
-`formatMentorPrompt` prepends the generated instructions to explicitly quoted
-checkpoint data. The Claude, Codex, OMP, and Pi adapters extract raw assistant
-text for v2 checkpoints and pass it to the shared `parseAdviceBody` parser.
-The parser requires exactly seven fields:
-`recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
-`success_checks`, and `unresolved_questions`. It rejects missing or unknown
-fields, non-array lists, fences/prose, control characters, sensitive material,
-and raw stack traces.
+`formatMentorPrompt` packages the generated instructions followed by explicitly
+quoted checkpoint data. The controller computes this prompt once and gives the
+same `context.prompt` to the Claude, Codex, OMP (`omp-parser`), and Pi adapter
+invocations; the adapters do not supply divergent mentor instructions. Each
+adapter extracts raw assistant text from its transport and passes v2 output to
+the shared `parseAdviceBody` parser.
 
-`contracts-v2.cjs`, `controller-envelope.cjs`, and `controller.cjs` preserve
-correlation/task/checkpoint identity, task/evidence revisions, checkpoint
-digest, receipt/build identity, controller version 2, ordered attempt
-summaries, structured result fields, and sanitized failures. V1 remains an
-explicit compatibility path; Phase 04 does not add retries or provider
-switching. Evidence: 117/117 advisor-controller tests, `npm run build`, and
-`npm run release:check` all passed on 2026-09-08.
+The parser requires exactly seven semantic fields:
+`recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
+`success_checks`, and `unresolved_questions`. It accepts one JSON object only:
+markdown fences, leading/trailing prose, missing or unknown fields, non-array
+lists, control characters, and sensitive material fail closed. Field values may
+contain ordinary prose, but raw stack-frame shapes are rejected for Node
+(`at ... file:line:column`, `node:internal`), Python (`File "…", line N`), Go
+(`goroutine N` or function-plus-`.go:N` frames), and Rust (`stack backtrace`
+or hexadecimal `N: 0x… -` frames). Benign prose such as “Retry at new
+checkpoint” or a standalone `worker.go:42` reference remains valid.
+
+V2 envelope correspondence is independently validated. `validateEnvelopeV2`
+recomputes the expected checkpoint digest with `computeCheckpointDigestV2`,
+checks task/checkpoint identity and revisions, requires
+`expected_build_identity` to equal `receipt.build_identity` when supplied, and
+requires a successful attempt's route effort to equal `receipt.effort`.
+`receiptV2`/the V2 builders also reject a build identity that differs from the
+generated **ADVISOR_BUILD_IDENTITY**. V1 remains an explicit compatibility path;
+Phase 04 adds no retries or provider switching.
+
+Evidence: 118/118 advisor-controller tests passed in approximately 7.3 seconds;
+`npm run build` and `npm run release:check` both exited 0 on 2026-09-08.
+Astra's post-fix sign-off is 8/10; all four critical issues were resolved:
+public digest/build-identity correspondence, strict builder build identity,
+receipt-effort correspondence, and the refined multi-language
+**RAW_STACK_PATTERN**. Sol mentor counsel records Phase 05 preconditions; no paid
+mentoring-quality claim is made.
 
 The current controller path accepts both the compatibility v1 checkpoint and
 the v2 checkpoint, executes one target/one attempt, and preserves the explicit
