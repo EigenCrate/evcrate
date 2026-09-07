@@ -1,7 +1,16 @@
 'use strict';
 
 const { createRoutingError } = require('./errors.cjs');
-
+const {
+  CHECKPOINT_PROTOCOL_V2,
+  CHECKPOINT_VERSION_V2,
+  RESULT_PROTOCOL_V2,
+  RESULT_VERSION_V2,
+  validateCheckpointV2,
+  validateResultV2,
+  validateResultBodyV2,
+  DECISION_KINDS
+} = require('./contracts-v2.cjs');
 const CHECKPOINT_PROTOCOL = 'evcrate-advisor-checkpoint';
 const RESULT_PROTOCOL = 'evcrate-advisor-result';
 const VERSION = 1;
@@ -73,9 +82,11 @@ function boundedList(value) {
 }
 
 function validateCheckpoint(value) {
+  if (value && value.version === 2) {
+    return validateCheckpointV2(value);
+  }
   assertKeys(value, CHECKPOINT_KEYS);
   if (value.protocol !== CHECKPOINT_PROTOCOL || value.version !== VERSION) fail();
-  checkpointId(value.checkpoint);
   text(value.question, MAX_QUESTION_BYTES);
   if (!KINDS.includes(value.kind)) fail();
   text(value.task_or_phase, MAX_TASK_BYTES);
@@ -153,5 +164,13 @@ module.exports = {
   safePath,
   serializeCheckpoint,
   text,
-  validateCheckpoint
+  validateCheckpoint,
+  CHECKPOINT_PROTOCOL_V2,
+  CHECKPOINT_VERSION_V2,
+  DECISION_KINDS,
+  RESULT_PROTOCOL_V2,
+  RESULT_VERSION_V2,
+  validateCheckpointV2,
+  validateResultBodyV2,
+  validateResultV2,
 };

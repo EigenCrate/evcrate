@@ -9,6 +9,7 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/adapters/omp-parser.cjs",
   "lib/advisor/adapters/pi.cjs",
   "lib/advisor/checkpoint-contract.cjs",
+  "lib/advisor/contracts-v2.cjs",
   "lib/advisor/controller-envelope.cjs",
   "lib/advisor/controller.cjs",
   "lib/advisor/errors.cjs",

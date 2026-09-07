@@ -74,13 +74,15 @@ export function readAdvisorPolicy(pathValue: string): AdvisorPolicySnapshot {
   if (!stat) return absent(path);
   safePolicyFile(stat);
   const bytes = readBytes(path, stat);
-  let policy: AdvisorPolicy;
-  try { policy = validateAdvisorPolicy(parseJsonDocument(bytes, MAX_POLICY_BYTES)); }
-  catch (error) {
+  let policy: SafeAdvisorPolicyView;
+  try {
+    const parsed = parseJsonDocument(bytes, MAX_POLICY_BYTES);
+    policy = safeAdvisorPolicyView(parsed);
+  } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
     fail('SETTINGS_INVALID');
   }
-  return Object.freeze({ path, policy: safeAdvisorPolicyView(policy), bytes: Uint8Array.from(bytes),
+  return Object.freeze({ path, policy, bytes: Uint8Array.from(bytes),
     revision: { kind: 'present' as const, identity: identity(stat, bytes) },
     mode: { kind: 'existing' as const, mode: modeOf(stat) } });
 }

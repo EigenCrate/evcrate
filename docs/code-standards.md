@@ -208,35 +208,45 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. It reads the required user policy at
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 18
+production files. It reads the user-owned
 `$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
 
-Policy version 1 has exactly top-level `version`/`advisor` and advisor keys
-`backend`/`model`/`effort`/`timeout_ms`, with timeout `60000..900000`. Bound policy
-to 16 KiB, parse strict UTF-8/JSON, reject duplicate keys, credentials, unknown
-fields, unsafe paths/modes, and `hosts` migration input. Candidate backends are
-`claude`, `codex`, `antigravity`, `pi`, and `omp`; enabled backends are `claude`,
-`codex`, `pi`, and `omp`. Gemini and Copilot are not controller backends.
+Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
+`advisor` has distinct `primary`/`backup` route triples
+(`backend`/`model`/`effort`); wait mode is `until_terminal` with warning bounds
+`1000..3600000` ms; history is `1..365` days and
+`1048576..1073741824` bytes. Keep the 16 KiB policy limit and strict
+UTF-8/JSON, duplicate-key, credential, unknown-field, unsafe-path, owner, and
+mode checks. Candidate backends are `claude`, `codex`, `antigravity`, `pi`,
+and `omp`; enabled backends are `claude`, `codex`, `pi`, and `omp`. Gemini and
+Copilot are not controller backends.
 
-The direct stdin checkpoint has exactly ten keys:
-`protocol`, `version`, `checkpoint`, `question`, `kind`, `task_or_phase`, `evidence`,
-`changed_paths`, `prior_counsel`, and `owner_disposition`. Bound request/evidence
-sizes, evidence files, changed paths, safe relative paths, and checkpoint IDs. A
-single controller transaction generates a UUID, loads policy once, selects one
-adapter, creates one empty owner-only workspace, probes and invokes once under one
-monotonic deadline, emits one frozen envelope, and cleans up. No retry, provider
-switch, model substitution, effort downgrade, callback, or local fallback is
-permitted.
+Legacy host-v1 and single-target-v1 policy is read-only migration input. Settings
+`get` may return a `migration_required` view; execution rejects legacy policy.
+Use `get -> operator prepares v2 -> preview -> apply`. Preserve revisions,
+single-use preview authorization, owner/mode checks, byte-safe journal recovery,
+and stale-token rejection. Never auto-write HOME, guess a backup, or place
+credentials in policy. Settings request/result, journal, and preview schemas
+remain v1 while carrying policy v2.
 
-The public result is one JSON line with <code>ADVICE_READY</code> or <code>FAILED</code>, a correlation UUID,
-and a receipt containing backend/model/effort/controller version/adapter version and
-elapsed time. Failure contains only sanitized error fields. Stderr is empty and exit
-zero means success only. Runner calls use `shell:false`, fixed allowlisted argv and
-environment, stdin-only prompts, bounded streams, detached POSIX process groups,
-TERM/KILL cancellation, and descendant reaping.
+The v2 direct checkpoint binds task/run/checkpoint/phase identity and revisions
+to bounded task, proposal, evidence, and prior fields. The v2 result requires
+explicit recommendation/rationale plus all five structured arrays. The v2
+controller envelope carries bounded attempt summaries, build identity, sanitized
+errors, and audit status. State/execution/outcome records are schema v1 and
+owner-only. Keep paths metadata-only; the controller does not read arbitrary
+checkpoint paths.
 
-See [system architecture](./system-architecture.md) for the complete wire shape,
-limits, closure, adapter boundaries, and verification boundary.
+The compatibility v1 controller path remains one target/one attempt under a
+finite deadline until later phases integrate v2 execution. Do not infer retries,
+indefinite generation, task gates, or history commands from validator presence.
+Runner calls still use `shell:false`, fixed allowlisted argv/environment,
+stdin-only prompts, bounded streams, detached POSIX groups, TERM/KILL
+cancellation, and descendant reaping.
+
+See [system architecture](./system-architecture.md) for complete wire shapes,
+limits, closure, adapter boundaries, and support claims.
 
 ## Filesystem, locking, and transaction standards
 
@@ -263,7 +273,7 @@ atomic apply. It never joins scope or target-publication atomicity.
 
 ## Build, closure, and release standards
 
-`scripts/generate-controller-inventory.mjs` is the source of the generated 17-file
+`scripts/generate-controller-inventory.mjs` is the source of the generated 18-file
 controller inventory. `scripts/build-manifests.mjs` invokes the TypeScript local-build
 path for each persisted target and the aggregate set. Build manifests are schema 2
 and carry `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`,

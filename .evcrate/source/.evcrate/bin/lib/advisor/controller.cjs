@@ -50,7 +50,7 @@ function parseInput(input) {
 function targetFromPolicy(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('ROUTE_SCHEMA_INVALID');
   const policy = validatePolicy(value);
-  const target = Object.freeze({ ...policy.advisor });
+  const target = Object.freeze({ ...policy.advisor.primary });
   return { policy, target };
 }
 function version(value) {
@@ -108,7 +108,8 @@ async function runController(input, dependencies = {}) {
       dependency(dependencies, 'verifyWorkspace', verifyWorkspace)
     );
     const baseRunner = dependencies.runner || createRunner();
-    const deadline = started + target.timeout_ms;
+    const timeoutMs = Number.isFinite(target.timeout_ms) ? target.timeout_ms : 900_000;
+    const deadline = started + timeoutMs;
     const deadlineRunner = createDeadlineRunner({ runner: baseRunner, deadline, now });
     const context = {
       checkpoint,
@@ -283,7 +284,8 @@ async function runQualificationDiagnostic(input, dependencies = {}) {
     try { cwd = dependencies.cwd || process.cwd(); } catch { fail('CWD_INVALID'); }
     const workspaceRoot = dependencies.workspaceRoot || cwd;
     const baseRunner = dependencies.runner || createRunner();
-    const deadline = started + target.timeout_ms;
+    const timeoutMs = Number.isFinite(target.timeout_ms) ? target.timeout_ms : 900_000;
+    const deadline = started + timeoutMs;
     const deadlineRunner = createDeadlineRunner({ runner: baseRunner, deadline, now });
     const context = {
       request, target, runner: deadlineRunner, environment, signal: dependencies.signal,

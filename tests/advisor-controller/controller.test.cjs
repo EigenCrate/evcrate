@@ -28,9 +28,17 @@ const { createWorkspace, cleanupWorkspace } = require(path.join(ADVISOR_DIR, 'is
 
 function policy(backend = 'codex') {
   const model = backend === 'omp' ? 'openai-codex/gpt-5.6-sol' : 'gpt-5.6-sol';
-  return JSON.stringify({ version: 1, advisor: {
-    backend, model, effort: 'high', timeout_ms: 60000
-  } });
+  const backupBackend = backend === 'omp' ? 'codex' : 'omp';
+  const backupModel = backupBackend === 'omp' ? 'openai-codex/gpt-5.6-sol' : 'gpt-5.6-sol';
+  return JSON.stringify({
+    version: 2,
+    advisor: {
+      primary: { backend, model, effort: 'high' },
+      backup: { backend: backupBackend, model: backupModel, effort: 'high' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
+    history: { retention_days: 30, max_bytes: 104857600 }
+  });
 }
 function setup({ mode = 'success', backend = 'codex', withPolicy = true } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-controller-test-'));
@@ -246,6 +254,20 @@ test('old host policy fails migration before any final process', () => {
     assert.equal(state(fixture), null);
   } finally { cleanup(fixture); }
 });
+test('old version 1 policy fails migration before any final process', () => {
+  const fixture = setup();
+  try {
+    fs.writeFileSync(path.join(fixture.home, '.evcrate/advisor-routing.json'), JSON.stringify({
+      version: 1,
+      advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 60000 }
+    }), { mode: 0o600 });
+    const value = assertFailed(run(fixture), 'ROUTE_SCHEMA_V1_MIGRATION_REQUIRED');
+    assert.equal(value.error.message, 'Global advisor policy version 1 requires migration to version 2');
+    assert.equal(value.error.action, 'Run settings get, prepare a version 2 policy with primary and backup routes, and preview/apply.');
+    assert.equal(state(fixture), null);
+  } finally { cleanup(fixture); }
+});
+
 
 test('missing policy and disabled candidate fail closed', () => {
   const missing = setup({ withPolicy: false });
@@ -443,7 +465,19 @@ test('checkpoint and policy contracts are exact and immutable', () => {
   const target = validatePolicy(JSON.parse(policy()));
   assert.equal(Object.isFrozen(target), true);
   assert.equal(Object.isFrozen(target.advisor), true);
-  assert.throws(() => validatePolicy(JSON.parse(JSON.stringify({ version: 1, advisor: { backend: 'gemini', model: 'x', effort: 'high', timeout_ms: 60000 } }))), { code: 'ROUTE_ENTRY_INVALID' });
+  assert.throws(() => validatePolicy(JSON.parse(JSON.stringify({
+    version: 2,
+    advisor: {
+      primary: { backend: 'gemini', model: 'x', effort: 'high' },
+      backup: { backend: 'codex', model: 'x', effort: 'high' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
+    history: { retention_days: 30, max_bytes: 104857600 }
+  }))), { code: 'ROUTE_ENTRY_INVALID' });
+  assert.throws(() => validatePolicy(JSON.parse(JSON.stringify({
+    version: 1,
+    advisor: { backend: 'codex', model: 'x', effort: 'high', timeout_ms: 60000 }
+  }))), { code: 'ROUTE_SCHEMA_V1_MIGRATION_REQUIRED' });
   assert.throws(() => getAdapter('gemini'), { code: 'ADAPTER_UNSUPPORTED' });
   assert.equal(getAdapter('omp').name, 'omp');
 });

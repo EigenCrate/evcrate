@@ -259,14 +259,14 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, target IDs, resource/publication/scope/settings/diagnostic payloads | `validation.ts`, `json.ts`, `canonical-json.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, advisor v2/settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes | `validation.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `diagnostic.ts` |
 | `src/context/` | Immutable package/project/home/state/target context | `invocation-context.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
 | `src/registry/` | Canonical scan, schema-1 records, compatibility and deterministic queries | `scanner.ts`, `schema.ts`, `store.ts` |
 | `src/imports/` | Bounded external-source preview/apply and replay tokens | `preview.ts`, `apply.ts`, `handler.ts` |
 | `src/scopes/` | Global/project assignment state, inheritance, revisions, and CAS | `state.ts`, `mutations.ts`, `changes.ts` |
-| `src/advisor-settings/` | User policy transactions, lock, journal, preview token, and recovery | `coordinator.ts`, `transactions.ts`, `recovery.ts` |
+| `src/advisor-settings/` | User policy snapshots, transactions, lock, journal, preview token, and recovery | `policy-files.ts`, `coordinator.ts`, `transactions.ts`, `recovery.ts` |
 | `src/distribution/` | Local build/check, hash verification, staging, publication, recovery, Pi settings, cutover | `local-build.ts`, `build-resolution.ts`, `publication.ts`, `cutover.ts` |
 | `src/filesystem/` | Safe paths, hashes, atomic operations, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/cli/` | Argument parser, request files, dispatch, output, health, process runner, executable | `arguments.ts`, `dispatch.ts`, `main.ts`, `evcrate.ts` |
@@ -302,7 +302,7 @@ canonical package path.
 
 The generated inventory in `src/manifests/controller-inventory.generated.ts` is
 produced by `scripts/generate-controller-inventory.mjs`. It lists exactly these
-17 production files under `.evcrate/source/.evcrate/bin/`:
+18 production files under `.evcrate/source/.evcrate/bin/`:
 
 ```text
 evcrate-advisor
@@ -314,6 +314,7 @@ lib/advisor/adapters/omp.cjs
 lib/advisor/adapters/omp-parser.cjs
 lib/advisor/adapters/pi.cjs
 lib/advisor/checkpoint-contract.cjs
+lib/advisor/contracts-v2.cjs
 lib/advisor/controller-envelope.cjs
 lib/advisor/controller.cjs
 lib/advisor/errors.cjs
@@ -324,11 +325,36 @@ lib/advisor/profile.cjs
 lib/advisor/runner.cjs
 ```
 
-The controller reads the required HOME policy, validates one direct ten-key
-checkpoint, selects one candidate adapter, runs ordered probes and one final model
-process under one deadline, emits one frozen success/failure envelope, and cleans up
-its owner-only temporary workspace. Candidate/enabled backend details and limits
-are maintained in [system architecture](./system-architecture.md).
+The current controller path still validates the compatibility direct checkpoint
+and executes one target/one attempt under a finite deadline. `contracts-v2.cjs`
+freezes the v2 checkpoint, result, envelope, state, and history records for
+dependent phases; generated validators do not by themselves activate retries,
+indefinite generation, or task/history commands.
+
+## Advisor v2 contracts and safe policy migration (Phase 01)
+
+The CJS closure and TypeScript control plane deliberately keep separate
+validators: `.evcrate/source/.evcrate/bin/lib/advisor/{contracts-v2,policy-schema,
+checkpoint-contract,controller-envelope,controller,errors}.cjs` and
+`src/protocol/{advisor-contracts,advisor-settings,diagnostic}.ts`. The pair
+freezes the same policy/checkpoint/result/envelope shapes without importing
+`dist/` into the standalone runtime.
+
+- Policy v2 is exact `version`/`advisor`/`wait`/`history`; advisor has explicit
+  `primary`/`backup` route triples, wait warnings, and bounded history. Distinct
+  routes required; backend/model/effort values remain operator-selected.
+- Checkpoint/result/controller v2 bind task/checkpoint/evidence identity,
+  structured task/evidence/result fields, bounded attempts, sanitized errors,
+  and audit status. Task state, execution history, and outcomes are new v1
+  local records with bounded owner-only storage.
+- Legacy host-v1 and single-target-v1 policies are readable through settings
+  `get` as migration views, never executable. Operator migration is
+  `get -> prepare v2 -> preview -> apply`; CAS revisions, byte-safe journal
+  recovery, ownership, and preview replay protection remain.
+- Settings request/result, journal, and preview schemas stay v1 while carrying
+  policy v2. No automatic HOME rewrite, invented backup route, or fallback
+  runtime path. See [system architecture](./system-architecture.md) and the
+  [Phase 01 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md).
 
 ## Projection map
 

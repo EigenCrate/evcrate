@@ -13,15 +13,71 @@ export const ADVISOR_BACKENDS = Object.freeze(['claude', 'codex', 'antigravity',
 export type AdvisorBackend = typeof ADVISOR_BACKENDS[number];
 export type AdvisorOperation = 'get' | 'preview' | 'apply';
 
-export interface AdvisorPolicyTarget { backend: AdvisorBackend; model: string; effort: string; timeout_ms: number; }
-export interface AdvisorPolicy { version: 1; advisor: AdvisorPolicyTarget; }
-export interface SafeAdvisorPolicyView { version: 1; advisor: AdvisorPolicyTarget; }
+export interface AdvisorRouteTarget {
+  readonly backend: AdvisorBackend;
+  readonly model: string;
+  readonly effort: string;
+}
+
+export interface AdvisorWaitPolicy {
+  readonly mode: 'until_terminal';
+  readonly warn_after_ms: number;
+  readonly warn_every_ms: number;
+}
+
+export interface AdvisorHistoryPolicy {
+  readonly retention_days: number;
+  readonly max_bytes: number;
+}
+
+export interface AdvisorPolicyV2 {
+  readonly version: 2;
+  readonly advisor: {
+    readonly primary: AdvisorRouteTarget;
+    readonly backup: AdvisorRouteTarget;
+  };
+  readonly wait: AdvisorWaitPolicy;
+  readonly history: AdvisorHistoryPolicy;
+}
+
+export interface AdvisorPolicyTargetV1 {
+  readonly backend: AdvisorBackend;
+  readonly model: string;
+  readonly effort: string;
+  readonly timeout_ms: number;
+}
+
+export interface AdvisorPolicyV1 {
+  readonly version: 1;
+  readonly advisor: AdvisorPolicyTargetV1;
+}
+
+export type AdvisorPolicyTarget = AdvisorPolicyTargetV1;
+export type AdvisorPolicy = AdvisorPolicyV2;
+
+export interface LegacyAdvisorPolicyView {
+  readonly version: 1;
+  readonly advisor: AdvisorPolicyTargetV1;
+  readonly migration_required: true;
+}
+
+export type SafeAdvisorPolicyView = AdvisorPolicyV2 | LegacyAdvisorPolicyView;
+
 export interface SettingsRevision { kind: 'present' | 'absent'; identity: string; }
 export interface SettingsMode { kind: 'existing' | 'create'; mode: number; }
 export interface SettingsRecovery { kind: 'none' | 'required'; identity: string; }
 
-const POLICY_KEYS = Object.freeze(['version', 'advisor'] as const);
-const TARGET_KEYS = Object.freeze(['backend', 'model', 'effort', 'timeout_ms'] as const);
+const POLICY_KEYS_V2 = Object.freeze(['version', 'advisor', 'wait', 'history'] as const);
+const ADVISOR_KEYS_V2 = Object.freeze(['primary', 'backup'] as const);
+const ROUTE_KEYS_V2 = Object.freeze(['backend', 'model', 'effort'] as const);
+const WAIT_KEYS_V2 = Object.freeze(['mode', 'warn_after_ms', 'warn_every_ms'] as const);
+const HISTORY_KEYS_V2 = Object.freeze(['retention_days', 'max_bytes'] as const);
+
+const POLICY_KEYS_V1 = Object.freeze(['version', 'advisor'] as const);
+const TARGET_KEYS_V1 = Object.freeze(['backend', 'model', 'effort', 'timeout_ms'] as const);
+
+const POLICY_KEYS = POLICY_KEYS_V2;
+const TARGET_KEYS = TARGET_KEYS_V1;
 const REVISION_KEYS = Object.freeze(['kind', 'identity'] as const);
 const MODE_KEYS = Object.freeze(['kind', 'mode'] as const);
 const RECOVERY_KEYS = Object.freeze(['kind', 'identity'] as const);
@@ -32,6 +88,12 @@ const MAX_TIMEOUT_MS = 900_000;
 const MAX_PREVIEW_LIFETIME_MS = 900_000;
 const MAX_POLICY_BYTES = 16 * 1024;
 
+const MIN_WARN_MS = 1_000;
+const MAX_WARN_MS = 3_600_000;
+const MIN_RETENTION_DAYS = 1;
+const MAX_RETENTION_DAYS = 365;
+const MIN_HISTORY_BYTES = 1_048_576;
+const MAX_HISTORY_BYTES = 1_073_741_824;
 function assertSettingsDocumentSize(value: unknown): void {
   try {
     if (canonicalBytes(value).byteLength > MAX_JSON_BYTES) throw new ControlPlaneError('PROTOCOL_INVALID');
@@ -41,11 +103,58 @@ function assertSettingsDocumentSize(value: unknown): void {
   }
 }
 
-export function validateAdvisorPolicy(value: unknown): AdvisorPolicy {
-  assertExactKeys(value, POLICY_KEYS, 'SETTINGS_INVALID');
+export function validateAdvisorRouteTarget(value: unknown): AdvisorRouteTarget {
+  assertExactKeys(value, ROUTE_KEYS_V2, 'SETTINGS_INVALID');
+  const target = value as Record<string, unknown>;
+  if (typeof target.backend !== 'string' || !ADVISOR_BACKENDS.includes(target.backend as AdvisorBackend)) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  const model = boundedText(target.model, 256, 'model', 'SETTINGS_INVALID');
+  const effort = boundedText(target.effort, 64, 'effort', 'SETTINGS_INVALID');
+  return Object.freeze({ backend: target.backend as AdvisorBackend, model, effort });
+}
+
+export function validateAdvisorWaitPolicy(value: unknown): AdvisorWaitPolicy {
+  assertExactKeys(value, WAIT_KEYS_V2, 'SETTINGS_INVALID');
+  const wait = value as Record<string, unknown>;
+  if (wait.mode !== 'until_terminal') throw new ControlPlaneError('SETTINGS_INVALID');
+  if (!Number.isInteger(wait.warn_after_ms) || (wait.warn_after_ms as number) < MIN_WARN_MS
+    || (wait.warn_after_ms as number) > MAX_WARN_MS) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  if (!Number.isInteger(wait.warn_every_ms) || (wait.warn_every_ms as number) < MIN_WARN_MS
+    || (wait.warn_every_ms as number) > MAX_WARN_MS) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  return Object.freeze({
+    mode: 'until_terminal' as const,
+    warn_after_ms: wait.warn_after_ms as number,
+    warn_every_ms: wait.warn_every_ms as number
+  });
+}
+
+export function validateAdvisorHistoryPolicy(value: unknown): AdvisorHistoryPolicy {
+  assertExactKeys(value, HISTORY_KEYS_V2, 'SETTINGS_INVALID');
+  const history = value as Record<string, unknown>;
+  if (!Number.isInteger(history.retention_days) || (history.retention_days as number) < MIN_RETENTION_DAYS
+    || (history.retention_days as number) > MAX_RETENTION_DAYS) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  if (!Number.isInteger(history.max_bytes) || (history.max_bytes as number) < MIN_HISTORY_BYTES
+    || (history.max_bytes as number) > MAX_HISTORY_BYTES) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  return Object.freeze({
+    retention_days: history.retention_days as number,
+    max_bytes: history.max_bytes as number
+  });
+}
+
+export function validateLegacyAdvisorPolicy(value: unknown): AdvisorPolicyV1 {
+  assertExactKeys(value, POLICY_KEYS_V1, 'SETTINGS_INVALID');
   const policy = value as Record<string, unknown>;
   if (policy.version !== 1) throw new ControlPlaneError('SETTINGS_INVALID');
-  assertExactKeys(policy.advisor, TARGET_KEYS, 'SETTINGS_INVALID');
+  assertExactKeys(policy.advisor, TARGET_KEYS_V1, 'SETTINGS_INVALID');
   const target = policy.advisor as Record<string, unknown>;
   if (typeof target.backend !== 'string' || !ADVISOR_BACKENDS.includes(target.backend as AdvisorBackend)) {
     throw new ControlPlaneError('SETTINGS_INVALID');
@@ -56,20 +165,106 @@ export function validateAdvisorPolicy(value: unknown): AdvisorPolicy {
     || (target.timeout_ms as number) > MAX_TIMEOUT_MS) throw new ControlPlaneError('SETTINGS_INVALID');
   rejectCredentialKeys(policy, 'SETTINGS_INVALID');
   rejectCounselFields(policy, ['backend'], 'SETTINGS_INVALID');
-  const result: AdvisorPolicy = {
-    version: 1,
-    advisor: {
-      backend: target.backend as AdvisorBackend, model, effort,
+  const result: AdvisorPolicyV1 = Object.freeze({
+    version: 1 as const,
+    advisor: Object.freeze({
+      backend: target.backend as AdvisorBackend,
+      model,
+      effort,
       timeout_ms: target.timeout_ms as number
-    }
-  };
+    })
+  });
+  if (canonicalBytes(result).byteLength > MAX_POLICY_BYTES) throw new ControlPlaneError('SETTINGS_INVALID');
+  return result;
+}
+
+export function validateAdvisorPolicy(value: unknown): AdvisorPolicyV2 {
+  assertExactKeys(value, POLICY_KEYS_V2, 'SETTINGS_INVALID');
+  const policy = value as Record<string, unknown>;
+  if (policy.version !== 2) throw new ControlPlaneError('SETTINGS_INVALID');
+  assertExactKeys(policy.advisor, ADVISOR_KEYS_V2, 'SETTINGS_INVALID');
+  const advisor = policy.advisor as Record<string, unknown>;
+  const primary = validateAdvisorRouteTarget(advisor.primary);
+  const backup = validateAdvisorRouteTarget(advisor.backup);
+  if (primary.backend === backup.backend && primary.model === backup.model && primary.effort === backup.effort) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  const wait = validateAdvisorWaitPolicy(policy.wait);
+  const history = validateAdvisorHistoryPolicy(policy.history);
+  rejectCredentialKeys(policy, 'SETTINGS_INVALID');
+  rejectCounselFields(policy, ['backend'], 'SETTINGS_INVALID');
+  const result: AdvisorPolicyV2 = Object.freeze({
+    version: 2 as const,
+    advisor: Object.freeze({ primary, backup }),
+    wait,
+    history
+  });
   if (canonicalBytes(result).byteLength > MAX_POLICY_BYTES) throw new ControlPlaneError('SETTINGS_INVALID');
   return result;
 }
 
 export function safeAdvisorPolicyView(value: unknown): SafeAdvisorPolicyView {
-  const policy = validateAdvisorPolicy(value);
-  return { version: 1, advisor: { ...policy.advisor } };
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const raw = value as Record<string, unknown>;
+    if (raw.version === 2) {
+      const policy = validateAdvisorPolicy(value);
+      return Object.freeze({
+        version: 2 as const,
+        advisor: Object.freeze({
+          primary: Object.freeze({ ...policy.advisor.primary }),
+          backup: Object.freeze({ ...policy.advisor.backup })
+        }),
+        wait: Object.freeze({ ...policy.wait }),
+        history: Object.freeze({ ...policy.history })
+      });
+    }
+    if (raw.version === 1) {
+      if (Object.hasOwn(raw, 'hosts')) throw new ControlPlaneError('SETTINGS_INVALID');
+      const allowedKeys = Object.hasOwn(raw, 'migration_required')
+        ? ['version', 'advisor', 'migration_required']
+        : ['version', 'advisor'];
+      assertExactKeys(raw, allowedKeys, 'SETTINGS_INVALID');
+      if (Object.hasOwn(raw, 'migration_required') && raw.migration_required !== true) {
+        throw new ControlPlaneError('SETTINGS_INVALID');
+      }
+      const legacy = validateLegacyAdvisorPolicy({ version: 1, advisor: raw.advisor });
+      return Object.freeze({
+        version: 1 as const,
+        advisor: Object.freeze({ ...legacy.advisor }),
+        migration_required: true as const
+      });
+    }
+  }
+  throw new ControlPlaneError('SETTINGS_INVALID');
+}
+
+export function proposeAdvisorPolicyMigration(
+  legacy: AdvisorPolicyV1,
+  backup: AdvisorRouteTarget
+): AdvisorPolicyV2 {
+  const validatedLegacy = validateLegacyAdvisorPolicy(legacy);
+  const validatedBackup = validateAdvisorRouteTarget(backup);
+  const primary: AdvisorRouteTarget = {
+    backend: validatedLegacy.advisor.backend,
+    model: validatedLegacy.advisor.model,
+    effort: validatedLegacy.advisor.effort
+  };
+  if (primary.backend === validatedBackup.backend && primary.model === validatedBackup.model && primary.effort === validatedBackup.effort) {
+    throw new ControlPlaneError('SETTINGS_INVALID');
+  }
+  return validateAdvisorPolicy({
+    version: 2,
+    advisor: { primary, backup: validatedBackup },
+    wait: {
+      mode: 'until_terminal',
+      warn_after_ms: 120_000,
+      warn_every_ms: 300_000
+    },
+    history: {
+      retention_days: 30,
+      max_bytes: 104_857_600
+    }
+  });
 }
 
 export function canonicalAdvisorPolicy(value: unknown): { policy: AdvisorPolicy; bytes: Uint8Array; json: string } {
@@ -409,6 +604,18 @@ export function createSettingsRecoveryResult(
 
 export const SETTINGS_POLICY_KEYS = POLICY_KEYS;
 export const SETTINGS_TARGET_KEYS = TARGET_KEYS;
+export const SETTINGS_POLICY_KEYS_V2 = POLICY_KEYS_V2;
+export const SETTINGS_POLICY_KEYS_V1 = POLICY_KEYS_V1;
+export const SETTINGS_ADVISOR_KEYS_V2 = ADVISOR_KEYS_V2;
+export const SETTINGS_ROUTE_KEYS_V2 = ROUTE_KEYS_V2;
+export const SETTINGS_WAIT_KEYS_V2 = WAIT_KEYS_V2;
+export const SETTINGS_HISTORY_KEYS_V2 = HISTORY_KEYS_V2;
 export const SETTINGS_MAX_PREVIEW_LIFETIME_MS = MAX_PREVIEW_LIFETIME_MS;
 export const SETTINGS_MIN_TIMEOUT_MS = MIN_TIMEOUT_MS;
 export const SETTINGS_MAX_TIMEOUT_MS = MAX_TIMEOUT_MS;
+export const SETTINGS_MIN_WARN_MS = MIN_WARN_MS;
+export const SETTINGS_MAX_WARN_MS = MAX_WARN_MS;
+export const SETTINGS_MIN_RETENTION_DAYS = MIN_RETENTION_DAYS;
+export const SETTINGS_MAX_RETENTION_DAYS = MAX_RETENTION_DAYS;
+export const SETTINGS_MIN_HISTORY_BYTES = MIN_HISTORY_BYTES;
+export const SETTINGS_MAX_HISTORY_BYTES = MAX_HISTORY_BYTES;

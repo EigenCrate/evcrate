@@ -132,12 +132,28 @@ test('stable exit bands and mutation boundaries stay explicit', () => {
   ]) {
     assert.equal(exitCodeForError(new ControlPlaneError(code)), exitCode);
   }
-  const minimum = { version: 1, advisor: { backend: 'codex', model: 'm', effort: 'low', timeout_ms: 60000 } };
-  const maximum = { version: 1, advisor: { backend: 'codex', model: 'm', effort: 'low', timeout_ms: 900000 } };
+  const minimum = {
+    version: 2,
+    advisor: {
+      primary: { backend: 'codex', model: 'm', effort: 'low' },
+      backup: { backend: 'omp', model: 'm', effort: 'low' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 1000, warn_every_ms: 1000 },
+    history: { retention_days: 1, max_bytes: 1048576 }
+  };
+  const maximum = {
+    version: 2,
+    advisor: {
+      primary: { backend: 'codex', model: 'm', effort: 'low' },
+      backup: { backend: 'omp', model: 'm', effort: 'low' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 3600000, warn_every_ms: 3600000 },
+    history: { retention_days: 365, max_bytes: 1073741824 }
+  };
   assert.doesNotThrow(() => validateAdvisorPolicy(minimum));
   assert.doesNotThrow(() => validateAdvisorPolicy(maximum));
-  assert.throws(() => validateAdvisorPolicy({ ...minimum, advisor: { ...minimum.advisor, timeout_ms: 59999 } }));
-  assert.throws(() => validateAdvisorPolicy({ ...maximum, advisor: { ...maximum.advisor, timeout_ms: 900001 } }));
+  assert.throws(() => validateAdvisorPolicy({ ...minimum, wait: { ...minimum.wait, warn_after_ms: 999 } }));
+  assert.throws(() => validateAdvisorPolicy({ ...maximum, wait: { ...maximum.wait, warn_after_ms: 3600001 } }));
   assert.doesNotThrow(() => validateSettingsMode({ kind: 'create', mode: 0o600 }));
   assert.throws(() => validateSettingsMode({ kind: 'create', mode: 0o644 }));
   assert.throws(() => createResourceRequest('oversized', 'version', context, { value: 'x'.repeat(65536) }));
@@ -151,9 +167,17 @@ test('resource context and exact envelope reject counsel proxy fields', () => {
 });
 
 test('settings validates complete policy and diagnostic stays distinct', () => {
-  const policy = { version: 1, advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 900000 } };
+  const policy = {
+    version: 2,
+    advisor: {
+      primary: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+      backup: { backend: 'omp', model: 'openai-codex/gpt-5.6-sol', effort: 'high' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
+    history: { retention_days: 30, max_bytes: 104857600 }
+  };
   assert.deepEqual(validateAdvisorPolicy(policy), policy);
-  assert.throws(() => validateAdvisorPolicy({ version: 1, advisor: { backend: 'codex' } }));
+  assert.throws(() => validateAdvisorPolicy({ version: 2, advisor: { primary: { backend: 'codex' } } }));
   assert.throws(() => validateAdvisorPolicy({ ...policy, credential: 'secret' }));
   assert.throws(() => validateAdvisorSettingsRequest({ protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'r3', operation: 'preview', payload: { policy: { ...policy, recommendation: 'x' }, currentRevision: { kind: 'present', identity: 'x' }, destination: '/x', mode: { kind: 'create', mode: 384 } } }));
   assert.deepEqual(validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify' }).operation, 'qualify');

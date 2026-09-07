@@ -101,6 +101,16 @@ const DIAGNOSTIC_ERROR_DEFINITIONS = {
     action: 'Replace version 1 hosts with one version 1 advisor object containing backend, model, effort, and timeout_ms.',
     message: 'Global advisor policy requires migration from host routes'
   },
+  ROUTE_SCHEMA_HOSTS_V1: {
+    category: 'config',
+    action: 'Migrate legacy hosts policy to version 2 advisor policy containing primary and backup routes.',
+    message: 'Global advisor policy requires migration from host routes'
+  },
+  ROUTE_SCHEMA_V1_MIGRATION_REQUIRED: {
+    category: 'config',
+    action: 'Run settings get, prepare a version 2 policy with primary and backup routes, and preview/apply.',
+    message: 'Global advisor policy version 1 requires migration to version 2'
+  },
   ROUTE_SCHEMA_INVALID: {
     category: 'config',
     action: 'Use the version 1 global advisor policy schema.',
@@ -110,6 +120,41 @@ const DIAGNOSTIC_ERROR_DEFINITIONS = {
     category: 'route',
     action: 'Provide one supported backend, model, effort, and timeout_ms exactly once.',
     message: 'Global advisor target is invalid'
+  },
+  ROUTE_BACKUP_IDENTICAL: {
+    category: 'route',
+    action: 'Provide distinct primary and backup routes; identical routes do not provide backup redundancy.',
+    message: 'Global advisor backup route is identical to primary route'
+  },
+  ROUTE_UNAVAILABLE: {
+    category: 'route',
+    action: 'Ensure at least one configured route is installed and authenticated.',
+    message: 'Configured advisor routes are unavailable'
+  },
+  CLEANUP_UNCONFIRMED: {
+    category: 'process',
+    action: 'Ensure child processes and workspaces are safely terminated before retrying.',
+    message: 'Advisor process or workspace cleanup was unconfirmed'
+  },
+  AUDIT_DEGRADED: {
+    category: 'audit',
+    action: 'Free space in ~/.evcrate/advisor-history or prune old history.',
+    message: 'Advisor audit history storage is degraded'
+  },
+  TRANSIENT_PROVIDER_ERROR: {
+    category: 'network',
+    action: 'Retry the consultation after the cooldown or retry delay has elapsed.',
+    message: 'Transient provider or network error encountered'
+  },
+  STALE_STATE_REVISION: {
+    category: 'state',
+    action: 'Re-read the task state before applying state mutations.',
+    message: 'Task state revision mismatch'
+  },
+  STALE_EVIDENCE_REVISION: {
+    category: 'state',
+    action: 'Provide a new consultation for updated evidence.',
+    message: 'Evidence revision mismatch against workspace state'
   },
   ADAPTER_UNSUPPORTED: {
     category: 'adapter',

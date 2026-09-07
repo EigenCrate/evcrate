@@ -3,7 +3,11 @@
 const { randomUUID } = require('node:crypto');
 const { createRoutingError, serializeRoutingError } = require('./errors.cjs');
 const { RESULT_KEYS } = require('./checkpoint-contract.cjs');
-
+const {
+  CONTROLLER_PROTOCOL_V2,
+  CONTROLLER_VERSION_V2,
+  validateEnvelopeV2
+} = require('./contracts-v2.cjs');
 const CONTROLLER_PROTOCOL = 'evcrate-advisor-controller';
 const CONTROLLER_VERSION = 1;
 const RECEIPT_KEYS = Object.freeze(['backend', 'model', 'effort', 'controller_version', 'adapter_version', 'elapsed_ms']);
@@ -64,6 +68,9 @@ function buildFailureEnvelope({ correlation_id, correlationId, receipt: value, e
   return Object.freeze(envelope);
 }
 function validateEnvelope(value) {
+  if (value && value.version === 2) {
+    return validateEnvelopeV2(value);
+  }
   exactKeys(value, value?.status === 'ADVICE_READY' ? SUCCESS_KEYS : FAILURE_KEYS);
   if (value.protocol !== CONTROLLER_PROTOCOL || value.version !== CONTROLLER_VERSION
     || !UUID.test(value.correlation_id) || !Object.isFrozen(value) || !Object.isFrozen(value.receipt)) fail();
@@ -73,5 +80,16 @@ function validateEnvelope(value) {
   return value;
 }
 
-module.exports = { CONTROLLER_PROTOCOL, CONTROLLER_VERSION, FAILURE_KEYS, RECEIPT_KEYS,
-  SUCCESS_KEYS, buildFailureEnvelope, buildSuccessEnvelope, validateEnvelope };
+module.exports = {
+  CONTROLLER_PROTOCOL,
+  CONTROLLER_VERSION,
+  CONTROLLER_PROTOCOL_V2,
+  CONTROLLER_VERSION_V2,
+  FAILURE_KEYS,
+  RECEIPT_KEYS,
+  SUCCESS_KEYS,
+  buildFailureEnvelope,
+  buildSuccessEnvelope,
+  validateEnvelope,
+  validateEnvelopeV2
+};

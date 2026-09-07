@@ -95,52 +95,66 @@ mutually exclusive with positional construction. Unknown input and child failure
 produce stable sanitized errors; no daemon, listener, retry loop, or arbitrary
 launcher is introduced. The package's default runtime requires Node `>=22.19.0`.
 
-### FR-5: Advisor policy ownership
+### FR-5: Advisor policy ownership and safe migration
 
 **Requirement:** The shared controller reads exactly one required policy at
-`$HOME/.evcrate/advisor-routing.json`. The version-1 top level is exactly
-`version`/`advisor`; advisor keys are exactly `backend`/`model`/`effort`/`timeout_ms`.
-Timeout is inclusive `60000..900000`; policy bytes are bounded to 16 KiB and strict
-UTF-8/JSON validated.
+`$HOME/.evcrate/advisor-routing.json`. Policy v2 has exact top-level keys
+`version`/`advisor`/`wait`/`history`; routes are explicit
+`primary`/`backup` `{backend, model, effort}` triples, wait mode is
+`until_terminal`, and history has bounded retention/quota. Policy remains
+user-owned. Settings request/result, journal, and preview transport remain
+version 1 while carrying the v2 policy payload.
 
-**Acceptance:** Missing policy returns <code>ROUTE_POLICY_REQUIRED</code>; a top-level `hosts`
-shape returns <code>ROUTE_SCHEMA_MIGRATION_REQUIRED</code>; malformed, duplicate-key,
-credential-bearing, unknown, unsafe, oversized, or unstable documents fail closed.
-The policy is user-owned and is never generated or published by EVCrate.
+**Acceptance:** Policy bytes are bounded to 16 KiB and strict UTF-8/JSON
+validated. Missing, malformed, duplicate-key, credential-bearing, unknown,
+unsafe, oversized, identical-route, and unavailable-route inputs fail closed.
+Legacy host-v1 and single-target-v1 policy is readable only as a migration view;
+runtime execution rejects it. Migration is explicit `get -> prepare v2 ->
+preview -> apply`, preserves revision/CAS and byte-safe recovery, and never
+rewrites HOME automatically.
 
-### FR-6: Direct checkpoint protocol
+### FR-6: Versioned checkpoint protocol
 
-**Requirement:** `evcrate-advisor` receives one direct checkpoint object containing
-exactly ten keys: `protocol`, `version`, `checkpoint`, `question`, `kind`,
-`task_or_phase`, `evidence`, `changed_paths`, `prior_counsel`, and
-`owner_disposition`.
+**Requirement:** Phase 01 freezes direct `evcrate-advisor-checkpoint` v2 with
+task/run/checkpoint/phase identity, task/evidence revisions, decision kind,
+task constraints, proposal, bounded evidence, and prior disposition. The
+compatibility v1 ten-key checkpoint remains only until dependent runtime
+phases cut over.
 
-**Acceptance:** Valid checkpoints use `review:`, `stuck:`, or `decision:` identifiers;
-all limits and safe-path rules are enforced; evidence paths are metadata only. A
-partial/idle stdin stream reaches the finite pre-policy timeout and emits a failed
-controller envelope rather than hanging.
+**Acceptance:** V2 rejects unknown keys, unsafe paths, credentials, duplicate
+paths, invalid revisions, overlong text, oversized evidence, and missing
+structured fields. Evidence paths are metadata only; selected content uses
+digests. The request stays within 32 KiB, with bounded question/task/evidence,
+four files, and sixteen changed paths. No automatic route/executable override is accepted.
 
-### FR-7: One-shot counsel transaction
+### FR-7: Versioned counsel transaction
 
-**Requirement:** The controller creates one correlation ID, loads policy once,
-selects one adapter, creates one empty owner-only workspace, runs ordered probes and
-one final model process under one deadline, emits one frozen envelope, and cleans up.
+**Requirement:** The v2 contract reserves one correlation ID, immutable
+checkpoint identity, ordered attempt summaries, cleanup outcome, and sanitized
+terminal error/result. It freezes primary retry slots `[10000, 20000, 30000]`,
+one backup slot, and correction/state/history identities for dependent phases.
 
-**Acceptance:** Preflight failure launches no final process. There is no retry,
-backend switch, model/effort substitution, downgrade, local fallback, or native
-callback. Descendants are terminated/reaped and the workspace is removed after the
-terminal envelope is determined.
+**Acceptance:** Phase 01 itself does not activate retries, indefinite
+generation, task-state commands, or history tooling. Until cutover, the
+compatibility controller remains one target/one attempt under its existing
+finite deadline with no fallback, provider switch, or model substitution.
+Later phases must preserve cancellation dominance, confirmed cleanup before
+success/retry, and no auto-resume after parent loss.
 
-### FR-8: Stable advisor result
+### FR-8: Stable advisor result and envelope
 
-**Requirement:** Public output is exactly one JSON line. Success is
-<code>ADVICE_READY</code>; failure is <code>FAILED</code>. Both carry protocol/version, correlation UUID,
-and a receipt with backend/model/effort/controller and adapter versions plus elapsed
-milliseconds.
+**Requirement:** V2 public success/failure remains one terminal JSON line:
+<code>ADVICE_READY</code> or <code>FAILED</code>. The result requires
+`recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
+`success_checks`, and `unresolved_questions`. The controller envelope binds
+task/checkpoint/evidence identity, receipt/build identity, bounded attempts,
+sanitized error, and `audit_status`.
 
-**Acceptance:** Success adds a normalized `evcrate-advisor-result/v1` result. Failure
-adds only sanitized `code`, `category`, `action`, and `message`. Stderr is empty and
-exit status is zero only for success, one for every failed checkpoint.
+**Acceptance:** Result body is bounded to 16 KiB; envelope to 32 KiB; at most
+five model-started attempts and eight summaries. Success requires confirmed
+cleanup. Failure exposes only cataloged `code`, `category`, `action`, and
+`message`. Existing v1 output remains compatibility behavior until runtime
+integration.
 
 ### FR-9: Adapter qualification and isolation
 
@@ -205,7 +219,7 @@ this requirement does not rename source files or alter command implementation.
 ## Observable release gates
 
 1. Source and target manifests validate with schema-2 rules.
-2. Local build/check completes with a current complete manifest and 17-file
+2. Local build/check completes with a current complete manifest and 18-file
    controller closure.
 3. Publication dry-run reports only authorized target/HOME changes.
 4. Apply and recovery preserve unmanaged files and reject CAS changes.

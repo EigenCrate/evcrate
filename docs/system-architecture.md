@@ -1,7 +1,7 @@
 # System Architecture
 
 **Status:** Current implementation reference  
-**Updated:** 2026-09-05  
+**Updated:** 2026-09-07  
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -31,7 +31,7 @@ flowchart LR
   Build --> Controller[Shared controller closure]
   Projections --> Publish[Atomic HOME publication]
   Controller --> Publish
-  Checkpoint[Direct ten-key checkpoint] --> Advisor[~/.evcrate/bin/evcrate-advisor]
+  Checkpoint[Versioned checkpoint v2\n(v1 compatibility)] --> Advisor[~/.evcrate/bin/evcrate-advisor]
   Policy[$HOME/.evcrate/advisor-routing.json] --> Advisor
   Advisor --> Envelope[One terminal controller envelope]
 ```
@@ -116,7 +116,7 @@ package path; source retains an explicit compatibility-engine type, but no root
 use stale Python commands as the primary installation or distribution procedure.
 
 The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its 17 production files are:
+`.evcrate/source/.evcrate/bin`. Its 18 production files are:
 
 ```text
 evcrate-advisor
@@ -128,6 +128,7 @@ lib/advisor/adapters/omp.cjs
 lib/advisor/adapters/omp-parser.cjs
 lib/advisor/adapters/pi.cjs
 lib/advisor/checkpoint-contract.cjs
+lib/advisor/contracts-v2.cjs
 lib/advisor/controller-envelope.cjs
 lib/advisor/controller.cjs
 lib/advisor/errors.cjs
@@ -144,93 +145,111 @@ are authoritative; missing, extra, stale, or mismatched entries block publicatio
 
 ## 5. Shared advisor controller
 
-### 5.1 User policy
+### 5.1 Policy and migration boundary
 
 The controller reads exactly one required user-owned policy:
 `$HOME/.evcrate/advisor-routing.json`. There is no repository-local fallback,
-default, partial merge, or host-route selection. The version-1 document is:
+default, partial merge, or host-route selection. Phase 01 freezes policy v2:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "advisor": {
-    "backend": "codex",
-    "model": "gpt-5.6-sol",
-    "effort": "high",
-    "timeout_ms": 900000
-  }
+    "primary": {"backend": "codex", "model": "operator-selected", "effort": "high"},
+    "backup": {"backend": "omp", "model": "operator-selected", "effort": "high"}
+  },
+  "wait": {"mode": "until_terminal", "warn_after_ms": 120000, "warn_every_ms": 300000},
+  "history": {"retention_days": 30, "max_bytes": 104857600}
 }
 ```
 
-The top level contains exactly `version` and `advisor`; `advisor` contains exactly
-`backend`, `model`, `effort`, and `timeout_ms`. The timeout is an integer in the
-inclusive range `60000..900000`. Policy bytes are fatal-UTF-8/strict-JSON parsed,
-bounded to 16 KiB, and validated for duplicate keys, control characters, unknown
-fields, credentials, unsafe modes, and candidate backends. The policy file is a
-regular owner-only `0600` file; `$HOME` and `.evcrate` ancestors must be real
-owner-controlled directories where the platform supports those checks.
+The top level is exactly `version`/`advisor`/`wait`/`history`; routes are
+exactly `backend`/`model`/`effort`. Primary and backup triples must differ.
+Wait warnings are bounded to `1000..3600000` ms; history retention is
+`1..365` days and quota `1048576..1073741824` bytes. There is no v2
+`timeout_ms`; generation timing is a later controller-phase contract. Policy
+bytes remain bounded to 16 KiB and use fatal-UTF-8/strict-JSON parsing,
+duplicate-key, control-character, credential, unknown-field, unsafe-path, and
+candidate-backend checks. The policy file is regular, owner-only `0600`;
+`$HOME` and `.evcrate` ancestors must be real owner-controlled directories.
 
-Current controller source defines candidates `claude`, `codex`, `antigravity`,
-`pi`, and `omp`; enabled adapters are `claude`, `codex`, `pi`, and `omp`.
-`antigravity` is an explicit unavailable candidate and fails with
-<code>CLI_CAPABILITY_UNSUPPORTED</code> before a model launch. `gemini` and `copilot` are not
-controller backends: selection of `gemini` is unsupported, while Copilot remains a
-projection-only target.
+Candidate backends are `claude`, `codex`, `antigravity`, `pi`, and `omp`;
+enabled backends are `claude`, `codex`, `pi`, and `omp`. `antigravity` is an
+unavailable candidate; Gemini and Copilot are not controller backends.
 
-A missing policy returns <code>ROUTE_POLICY_REQUIRED</code>. A top-level legacy `hosts` object
-returns <code>ROUTE_SCHEMA_MIGRATION_REQUIRED</code>. Malformed, oversized, duplicate-key,
-credential-bearing, unknown, unsafe, or unstable policy input fails closed.
+Legacy host-v1 and single-target-v1 documents are inspectable through the
+settings `get` path as read-only `migration_required` views, but runtime
+execution rejects them with distinct migration errors. Migration is explicit:
+`settings get` -> operator prepares v2 -> `preview` -> `apply`. Apply preserves
+the legacy revision for CAS, requires a complete backup route, and never
+rewrites HOME automatically. Settings request/result, preview, and journal
+wire schemas remain version 1; they carry a v2 policy payload. Old journals
+recover in their own byte/digest format before v2 mutation; old preview tokens
+cannot authorize v2 semantics.
 
-### 5.2 Direct checkpoint wire contract
+### 5.2 Phase 01 v2 contract freeze
 
-The executable receives the checkpoint object directly on stdin. It does not accept
-an outer operation, active-host field, route override, executable, argv, credential,
-debug, or fallback field. The exact ten keys are:
+The standalone CJS validator and TypeScript settings/protocol validator remain
+separate closures. They share exact schemas and parity fixtures; CJS cannot
+import `dist/` or projected resources. Phase 01 freezes these versions:
 
-```json
-{
-  "protocol": "evcrate-advisor-checkpoint",
-  "version": 1,
-  "checkpoint": "review:implementation-step",
-  "question": "What is the smallest safe next change?",
-  "kind": "review",
-  "task_or_phase": "Implementation",
-  "evidence": {"terminal": "Bounded evidence.", "files": []},
-  "changed_paths": [],
-  "prior_counsel": [],
-  "owner_disposition": "Proceed after validation."
-}
-```
+| Contract | Version | Boundary |
+|---|---:|---|
+| `advisor-routing.json` policy | 2 | User-owned HOME input; primary/backup, wait, history. |
+| `evcrate-advisor-checkpoint` | 2 | Managed caller to controller; identity, task, proposal, evidence, prior. |
+| `evcrate-advisor-result` | 2 | Controller-normalized structured counsel. |
+| `evcrate-advisor-controller` | 2 | Terminal envelope with attempts and audit status. |
+| Settings request/result, journal, preview | 1 | Existing TS transaction transport; policy payload is v2. |
+| Task state, execution history, outcome | 1 | New owner-only local records for later phases. |
 
-`checkpoint` must use `review:<id>`, `stuck:<id>`, or `decision:<id>` after the
-workflow has the prerequisite evidence. The request is at most 32 KiB; `question`,
-`task_or_phase`, and terminal evidence are bounded to 4 KiB, 8 KiB, and 16 KiB.
-There are at most four evidence files and sixteen changed paths. Paths are unique,
-normalized relative POSIX paths and cannot name metadata, credentials, traversal,
-symlinks, or sensitive segments. Evidence file names are metadata only; the
-controller does not read or mount them. Idle/partial stdin has a finite two-second
-pre-policy deadline.
+The v2 checkpoint requires `task_run_id`, `checkpoint_id`, `phase_id`,
+`task_revision`, `evidence_revision`, decision kind, task constraints,
+proposal, bounded evidence, and prior disposition. It is at most 32 KiB:
+question 4 KiB, task/proposal text 8 KiB, evidence text 16 KiB, four evidence
+files, and sixteen changed paths. Paths are normalized relative POSIX metadata;
+the controller does not read or mount them. Evidence digests bind selected
+content; they do not prove semantic correctness.
 
-### 5.3 One-shot transaction and envelopes
+The v2 result requires non-omittable `recommendation`, `rationale`,
+`must_fix`, `cautions`, `assumptions`, `success_checks`, and
+`unresolved_questions`; body limit is 16 KiB. The v2 envelope binds
+correlation/task/checkpoint/evidence identity, receipt/build identity,
+bounded ordered attempts, result or sanitized error, and `audit_status`.
+It allows at most five model-started attempts and eight summaries; successful
+counsel requires confirmed cleanup. Task state is capped at 64 KiB;
+execution and outcome records at 128 KiB and 64 KiB.
 
-`runController` generates a correlation UUID before parsing, parses the checkpoint,
-loads policy once, selects one adapter, creates one empty owner-only temporary
-workspace, runs ordered non-model probes under the remaining deadline, builds one
-fixed invocation, executes one final model process, normalizes one result, emits one
-frozen envelope, and terminates descendants/removes the workspace in `finally`.
+Phase 01 freezes retry slots (`10/20/30` seconds for primary, one backup),
+cleanup classifications, gate statuses, and correction cap (`3`) for later
+phases. It does not itself activate indefinite generation, retry orchestration,
+task-state commands, or history tooling.
 
-A preflight failure launches zero final model processes. A final-process or cleanup
-failure remains a failed checkpoint. There is no retry, provider switch, model
-substitution, effort downgrade, callback, native relay, or local fallback.
+### 5.3 Compatibility checkpoint wire contract
+
+The existing compatibility helper still accepts the v1 direct checkpoint. The
+executable receives it directly on stdin; no outer operation, active-host field,
+route override, executable, argv, credential, debug, or fallback field is
+accepted. Its ten keys are `protocol`, `version`, `checkpoint`, `question`,
+`kind`, `task_or_phase`, `evidence`, `changed_paths`, `prior_counsel`, and
+`owner_disposition`. New callers must use the v2 contract above.
+
+### 5.4 Current one-shot transaction and v1 envelope
+
+Until later mentoring phases integrate v2 execution, the current `runController`
+path remains one target, one final model process, and one finite generation
+deadline. It generates a correlation UUID, parses the compatibility checkpoint,
+loads policy once, probes one adapter, creates one empty owner-only workspace,
+emits one frozen v1 envelope, and cleans up. There is no retry, provider
+switch, model/effort substitution, downgrade, callback, native relay, or local
+fallback in this path.
 
 Success is one JSON line with `status: "ADVICE_READY"`; failure is one JSON line
-with `status: "FAILED"`. Both envelopes contain protocol/version, a controller UUID,
-and a receipt with `backend`, `model`, `effort`, `controller_version`,
-`adapter_version`, and `elapsed_ms`. Failure exposes only sanitized `error` fields:
-`code`, `category`, `action`, and `message`. Stderr is empty; exit code is zero only
-for success and one for every failed checkpoint, including cancellation.
+with `status: "FAILED"`. Both envelopes contain protocol/version, a controller
+UUID, and a receipt with backend/model/effort/controller and adapter versions
+plus elapsed milliseconds. Failure exposes only sanitized `code`, `category`,
+`action`, and `message`; stderr is empty; exit code is zero only for success.
 
-### 5.4 Adapter and process isolation
+### 5.5 Adapter and process isolation
 
 Each enabled adapter owns credential-safe version/auth/capability probes, fixed
 arguments, and result parsing. Installed vendor CLIs retain their own credentials;
@@ -238,12 +257,13 @@ EVCrate's adapter auth-key allowlists are empty. Version equality alone is not
 qualification: model/effort controls, authentication boundary, no-tool/session
 policy, output protocol, and lifecycle probes must pass.
 
-The runner uses `shell: false`, fixed allowlisted argv/environment, stdin-only prompt
-delivery, fatal UTF-8 decoding, bounded streams/results, and one monotonic deadline.
-POSIX detached process groups receive TERM, then KILL if needed, and descendants are
-reaped. Every probe shares the remaining global `timeout_ms`; it cannot extend the
-final-process budget. The workspace is empty, owner-only, outside the repository,
-checked against symlink/identity changes, and removed only after child termination.
+The runner uses `shell: false`, fixed allowlisted argv/environment, stdin-only
+prompt delivery, fatal UTF-8 decoding, bounded streams/results, and one
+monotonic deadline. POSIX detached process groups receive TERM, then KILL if
+needed, and descendants are reaped. The workspace is empty, owner-only, outside
+the repository, checked against symlink/identity changes, and removed after
+child termination.
+
 
 ## 6. Advisor supervision and command projections
 
@@ -292,35 +312,27 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
-## 8. Proposed advisor mentoring upgrade (not implemented)
+## 8. Advisor mentoring upgrade (Phase 01 frozen; later behavior pending)
 
 Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
-Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md), status **pending**.
-Sections 5–7 above describe the existing implementation, not the proposed behavior.
+Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
+Phase 01 contracts/migration are implemented and reviewed; the overall plan
+remains pending until later phases integrate execution, state, history, and
+workflow gates. See the [Phase 01 review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md).
 
-The proposed design retains one central Node controller and vendor-owned
-credentials, but deliberately replaces the current v1 single-target/single-attempt
-and generation-deadline contracts with explicitly versioned contracts:
+The frozen boundary keeps one managed CommonJS controller, vendor-owned
+credentials, canonical resources, and TypeScript settings/publication. It adds
+versioned policy/checkpoint/result/controller contracts, v1 task/history records,
+typed error categories, and explicit legacy-policy migration without automatic
+HOME writes. Existing compatibility execution remains the v1 one-target,
+one-attempt path until dependent phases land.
 
-- Qualified primary plus explicit backup; primary initial call and up to three
-  transient-failure retries after 10/20/30 seconds, then one backup call.
-- Active generation warns and keeps waiting; no silence or wall-clock generation
-  timeout. Input, probes, output, and termination remain bounded. Cancellation,
-  unsafe output, and uncertain cleanup cannot trigger recovery attempts.
-- One canonical mentoring brief and structured result, bound to task/checkpoint
-  identity and relevant evidence revision. Only dependent work pauses for counsel.
-- Durable task state owns scope, dispositions, and three unsuccessful
-  correction-and-validation cycles before human handoff; transport retries do not
-  increment that counter.
-- Separate owner-only local audit records link sanitized checkpoint evidence,
-  attempt history, advice, executor disposition, and observed outcomes.
-- Canonical resources and projection adapters remain the authoring surface.
-  Generation/publication does not establish live tool-enforcement capability.
-
-This is cooperative oversight of trusted CLIs, not hostile-process containment or
-a guarantee against semantic bugs. Existing HOME policy is not automatically
-rewritten; history/task state are not publication assets. Exact contracts,
-migration, supported-harness claims, and rollout gates are specified in the plan.
+Later phases may add a qualified primary plus backup, transient retries,
+wait-until-terminal warnings, mentoring briefs, durable task gates, and local
+audit records. These are not activated by validators or policy examples alone.
+Generation/publication does not establish live tool-enforcement capability.
+This remains cooperative oversight of trusted CLIs, not hostile-process
+containment or a guarantee against semantic bugs.
 
 ## Related documents
 

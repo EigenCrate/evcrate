@@ -10,10 +10,15 @@ import {
 } from '../../dist/index.js';
 
 const roots = [];
-const policy = {
-  version: 1,
-  advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 900000 }
-};
+const policy = Object.freeze({
+  version: 2,
+  advisor: {
+    primary: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    backup: { backend: 'omp', model: 'openai-codex/gpt-5.6-sol', effort: 'high' }
+  },
+  wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
+  history: { retention_days: 30, max_bytes: 104857600 }
+});
 function temporaryDirectory() {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-settings-'));
   roots.push(root);
@@ -51,7 +56,7 @@ test('stale revisions and unsafe policy files fail closed without replacement', 
   const absent = readAdvisorPolicy(destination);
   applyAdvisorPolicy(destination, policy, absent.revision, { stateRoot });
   const before = readFileSync(destination);
-  assert.throws(() => applyAdvisorPolicy(destination, { ...policy, advisor: { ...policy.advisor, effort: 'low' } }, absent.revision, { stateRoot }), code('CAS_CONFLICT'));
+  assert.throws(() => applyAdvisorPolicy(destination, { ...policy, wait: { ...policy.wait, warn_after_ms: 60000 } }, absent.revision, { stateRoot }), code('CAS_CONFLICT'));
   assert.deepEqual(readFileSync(destination), before);
   chmodSync(destination, 0o640);
   assert.throws(() => readAdvisorPolicy(destination), code('PATH_UNSAFE'));
@@ -66,7 +71,7 @@ test('policy replacement boundary recovers the old complete document', () => {
   const before = readFileSync(destination);
   const current = readAdvisorPolicy(destination);
   assert.throws(() => applyAdvisorPolicy(destination, {
-    ...policy, advisor: { ...policy.advisor, model: 'different-model' }
+    ...policy, advisor: { ...policy.advisor, primary: { ...policy.advisor.primary, model: 'different-model' } }
   }, current.revision, { stateRoot, hooks: { beforePromote: () => { throw new Error('injected boundary'); } } }), code('PUBLICATION_FAILED'));
   assert.deepEqual(readFileSync(destination), before);
   recoverAdvisorPolicy(stateRoot);
@@ -81,7 +86,7 @@ test('policy CAS rejects a destination replacement after backup', () => {
   applyAdvisorPolicy(destination, policy, absent.revision, { stateRoot });
   const current = readAdvisorPolicy(destination);
   assert.throws(() => applyAdvisorPolicy(destination, {
-    ...policy, advisor: { ...policy.advisor, model: 'replacement' }
+    ...policy, advisor: { ...policy.advisor, primary: { ...policy.advisor.primary, model: 'replacement' } }
   }, current.revision, {
     stateRoot,
     hooks: {
@@ -104,7 +109,7 @@ test('stale apply cleans its stage after a concurrent replacement', () => {
   applyAdvisorPolicy(destination, policy, absent.revision, { stateRoot });
   const current = readAdvisorPolicy(destination);
   assert.throws(() => applyAdvisorPolicy(destination, {
-    ...policy, advisor: { ...policy.advisor, model: 'new-model' }
+    ...policy, advisor: { ...policy.advisor, primary: { ...policy.advisor.primary, model: 'new-model' } }
   }, current.revision, {
     stateRoot,
     hooks: {

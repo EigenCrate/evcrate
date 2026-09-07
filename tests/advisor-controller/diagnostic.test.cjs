@@ -18,9 +18,15 @@ const fixture = JSON.parse(fs.readFileSync(path.join(FIXTURES, 'diagnostic.json'
 const negatives = JSON.parse(fs.readFileSync(path.join(FIXTURES, 'diagnostic-negative.json'), 'utf8'));
 
 function policy() {
-  return { version: 1, advisor: {
-    backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 60000
-  } };
+  return {
+    version: 2,
+    advisor: {
+      primary: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+      backup: { backend: 'omp', model: 'openai-codex/gpt-5.6-sol', effort: 'high' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
+    history: { retention_days: 30, max_bytes: 104857600 }
+  };
 }
 function adapter(calls, overrides = {}) {
   return {

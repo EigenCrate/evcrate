@@ -13,11 +13,11 @@ output and is not the phase evidence authority.
 ## Current baseline
 
 The current source establishes a TypeScript control plane, seven fixed projection
-adapters, schema-2 target/build manifests, a shared 17-file advisor controller
-closure, direct ten-key checkpoint counsel, and journaled publication/recovery. The
-npm package path is authoritative by default. Generated projections and the shared
-controller are outputs of canonical source plus target policy; they are not hand
-edited.
+adapters, schema-2 target/build manifests, an 18-file advisor controller closure,
+frozen advisor v2 contracts with explicit policy migration, compatibility direct
+checkpoint counsel, and journaled publication/recovery. The npm package path is
+authoritative by default. Generated projections and the shared controller are
+outputs of canonical source plus target policy; they are not hand edited.
 
 ## Phase and gate status
 
@@ -25,11 +25,12 @@ edited.
 |---|---|---|
 | Protocol and filesystem foundations | Implemented in source | Strict bounded JSON, canonical hashing, safe paths, locks, staging, CAS, and recovery modules are present under `src/`. |
 | Target manifest and projection registry | Implemented in source | Schema-2 manifests persist seven targets; `src/adapters/index.ts` registers Claude, Gemini, Antigravity, Codex, Pi, OMP, and Copilot. |
-| Advisor controller contract | Implemented in source | The canonical `.evcrate/source/.evcrate/bin` closure contains the generated 17-file inventory, policy schema, direct checkpoint contract, runner, adapters, and envelopes. |
+| Advisor controller contract | Implemented in source | The canonical `.evcrate/source/.evcrate/bin` closure contains the generated 18-file inventory, v2 contract validators, policy migration schema, compatibility checkpoint/controller path, runner, adapters, and envelopes. |
 | Phase 9 packed consumer/adapter work | Historical evidence recorded | The changelog records packed-consumer and diagnostic adapter contracts; it does not claim live Agent Store/DamHopper release or target cutover. |
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
+| Advisor mentoring/recovery/audit — Phase 01 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md) and [review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md); policy/checkpoint/result/controller v2, task/history v1 records, TS/CJS parity, typed errors, and explicit legacy-policy migration are frozen. No automatic HOME rewrite or later-phase runtime retry/wait/state/history cutover is claimed. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -50,9 +51,11 @@ edited.
    changes, then apply only with a current verified build.
 4. **Exercise recovery.** Keep the publication marker/journal available and verify
    interrupted promotion restores the complete prior managed state.
-5. **Configure advisor policy.** Create the user-owned
-   `$HOME/.evcrate/advisor-routing.json` with the exact version-1 shape; do not put
-   credentials in the policy.
+5. **Configure or migrate advisor policy.** Create or inspect the user-owned
+   `$HOME/.evcrate/advisor-routing.json`. Runtime policy v2 requires explicit
+   primary/backup routes, wait warnings, and bounded history. For legacy v1,
+   use `settings get`, prepare v2, then `preview`/`apply`; do not auto-rewrite
+   HOME or put credentials in the policy.
 6. **Qualify enabled adapters.** Run bounded Linux checks for Claude, Codex, Pi, and
    OMP using each CLI's own authentication; record receipt, lifecycle, isolation,
    deadline, and cleanup evidence.
@@ -78,6 +81,13 @@ roadmap item.
   convention in future scanner/parser changes without breaking generated target maps.
 - **Advisor qualification:** Repeat real installed-CLI qualification after every
   vendor CLI upgrade; keep `antigravity` unavailable until equivalent evidence exists.
+- **V2 runtime adoption:** Integrate wait/retry/cleanup, task-state, history, and
+  workflow gates in dependent phases; validators alone do not change execution.
+- **Policy route selection:** Exact deployed primary/backup routes, vendor
+  controls, auth, and independent failure domains remain operator qualification
+  inputs; no model/backend defaults are implied by examples.
+- **Contract test depth:** Add dedicated CJS v2 validator boundary coverage
+  before dependent runtime phases consume the frozen records.
 - **Release authority:** Keep `docs/project-changelog.md` as the phase mirror and
   resolve its historical open question before release tagging.
 - **Support scope:** Obtain separate Windows and operator rollout evidence before

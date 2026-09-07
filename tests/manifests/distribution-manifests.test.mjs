@@ -49,8 +49,8 @@ test('verified build checks complete metadata, independent roots, and controller
     owners: {}, outputRoots, validation: { complete: true }, homePolicy: {}
   }));
   assert.equal(verifyBuild({ manifestPath, outputRoots, controllerRoot, sourceHashes: {}, adapterHashes: {} }).schema_version, 2);
-  assert.equal(Object.keys(controllerHashes(controllerRoot)).length, 17);
-  assert.equal(ADVISOR_CONTROLLER_FILES.length, 17);
+  assert.equal(Object.keys(controllerHashes(controllerRoot)).length, 18);
+  assert.equal(ADVISOR_CONTROLLER_FILES.length, 18);
   assert.throws(() => verifyBuild({ manifestPath, outputRoots: { ...outputRoots, '.wrong': outputRoots['.claude'] } }), code('PUBLICATION_FAILED'));
 });
 test('controller verifier rejects an extra production tree entry', () => {

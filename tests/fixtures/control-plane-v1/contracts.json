@@ -32,16 +32,31 @@
     "requestId": "fixture-0002",
     "operation": "preview",
     "payload": {
-      "policy": {"version":1,"advisor":{"backend":"codex","model":"gpt-5.6-sol","effort":"high","timeout_ms":900000}},
+      "policy": {
+        "version": 2,
+        "advisor": {
+          "primary": {"backend": "codex", "model": "gpt-5.6-sol", "effort": "high"},
+          "backup": {"backend": "omp", "model": "openai-codex/gpt-5.6-sol", "effort": "high"}
+        },
+        "wait": {
+          "mode": "until_terminal",
+          "warn_after_ms": 120000,
+          "warn_every_ms": 300000
+        },
+        "history": {
+          "retention_days": 30,
+          "max_bytes": 104857600
+        }
+      },
       "currentRevision": {"kind":"present","identity":"sha256:fixture"},
       "destination": "/home/test/.evcrate/advisor-routing.json",
       "mode": {"kind":"existing","mode":384}
     }
   },
   "settingsResults": [
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"get","status":"OK","policy":{"version":1,"advisor":{"backend":"codex","model":"gpt-5.6-sol","effort":"high","timeout_ms":900000}},"revision":{"kind":"present","identity":"sha256:fixture"},"mode":{"kind":"existing","mode":384}},
+    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"get","status":"OK","policy":{"version":1,"advisor":{"backend":"codex","model":"gpt-5.6-sol","effort":"high","timeout_ms":900000},"migration_required":true},"revision":{"kind":"present","identity":"sha256:fixture"},"mode":{"kind":"existing","mode":384}},
     {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"get","status":"OK","policy":null,"revision":{"kind":"absent","identity":"absent"},"mode":null},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"preview","status":"PREVIEW","token":"opaque-preview-token","issuedAt":1789999100000,"expiresAt":1790000000000,"currentRevision":{"kind":"present","identity":"sha256:fixture"},"intendedDigest":"9f96c4738545a70456786f1a5e56534f9d925a350810d49eb0d97e1c8cc0b662","destination":"/home/test/.evcrate/advisor-routing.json","mode":{"kind":"existing","mode":384}},
+    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"preview","status":"PREVIEW","token":"opaque-preview-token","issuedAt":1789999100000,"expiresAt":1790000000000,"currentRevision":{"kind":"present","identity":"sha256:fixture"},"intendedDigest":"7084ee935b599f7ee2b2c278ef4939b072db0298a6028819a1a2e36145817995","destination":"/home/test/.evcrate/advisor-routing.json","mode":{"kind":"existing","mode":384}},
     {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"APPLIED","revision":{"kind":"present","identity":"sha256:next"},"recovery":{"kind":"none","identity":"none"}},
     {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"CONFLICT","error":{"code":"CAS_CONFLICT","category":"conflict","action":"Refresh the current revision and preview again.","message":"Revision conflict"},"expectedRevision":{"kind":"present","identity":"sha256:fixture"},"actualRevision":{"kind":"present","identity":"sha256:changed"}},
     {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"FAILED","error":{"code":"SETTINGS_INVALID","category":"validation","action":"Provide one complete version 1 advisor policy.","message":"Advisor settings are invalid"}},

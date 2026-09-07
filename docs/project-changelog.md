@@ -5,6 +5,30 @@
 **Updated:** 2026-09-07  
 **Status:** Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
 
+### Advisor mentoring, recovery, and audit — Phase 01
+
+**Updated:** 2026-09-07  
+**Status:** Complete for contract freeze and policy migration; later runtime phases pending  
+**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md)  
+**Review:** [Code review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md)
+
+- Frozen policy v2 with explicit primary/backup routes, wait warnings, bounded
+  history, candidate/enabled backend boundaries, and strict 16 KiB validation.
+- Frozen checkpoint/result/controller v2 plus task-state, execution-history, and
+  outcome v1 records with identity, evidence, attempt, cleanup, audit, and
+  correction bounds.
+- Kept CJS and TypeScript validators in their independent runtime closures;
+  parity and sanitized typed errors remain explicit boundaries.
+- Added read-only legacy policy inspection and explicit
+  `get -> prepare v2 -> preview -> apply` migration. Existing revision/CAS,
+  single-use preview, owner/mode, and byte-safe journal recovery remain.
+- No automatic HOME rewrite, invented route/default, runtime retry/wait cutover,
+  task-state command, history tool, or live vendor qualification is claimed.
+
+The review records 139 focused assertions passing and no critical issues. Its
+non-blocking follow-up is dedicated v2 validator boundary coverage before later
+phases consume the records.
+
 ### Phase 04: Regeneration, documentation, and release gates
 
 **Updated:** 2026-09-07  
