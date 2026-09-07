@@ -6,7 +6,7 @@ const {
   DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure
 } = require('../runner.cjs');
 const {
-  freezeAdapter, isPlainObject, validateCapabilityAttestation
+  freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation
 } = require('../adapter-contract.cjs');
 
 const EXECUTABLE = 'codex';
@@ -24,7 +24,7 @@ const LIFECYCLE_CODES = new Set(['EXECUTABLE_UNAVAILABLE', 'CLI_VERSION_UNSUPPOR
   'MODEL_UNSUPPORTED', 'EFFORT_UNSUPPORTED', 'READ_ONLY_UNSUPPORTED', 'SESSION_UNSUPPORTED',
   'OUTPUT_UNSUPPORTED', 'PROTOCOL_INVALID', 'TIMEOUT', 'CANCELLED', 'OUTPUT_LIMIT', 'LINE_LIMIT',
   'OUTPUT_INVALID', 'ADVISOR_RECURSION', 'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID',
-  'CWD_UNSAFE', 'PROCESS_FAILED']);
+  'CWD_UNSAFE', 'TRANSIENT_PROVIDER_ERROR', 'PROCESS_FAILED']);
 
 function fail(code) { throw createRoutingError(code); }
 function state(context) {
@@ -115,9 +115,10 @@ function buildInvocation(context) {
   if (current.capabilities.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (current.capabilities.effort !== route.effort) fail('EFFORT_UNSUPPORTED');
   if (typeof context.prompt !== 'string') fail('REQUEST_INVALID');
+  const limits = resolveInvocationLimits(FINAL_LIMITS, context.limits);
   return invocation(context, ['exec', '--ephemeral', '--ignore-user-config', '--ignore-rules', '--strict-config',
     '--skip-git-repo-check', '--sandbox', 'read-only', '--model', route.model, '--config',
-    `model_reasoning_effort="${route.effort}"`, '--json', '-'], `${NO_TOOL_INSTRUCTION}${context.prompt}`, FINAL_LIMITS);
+    `model_reasoning_effort="${route.effort}"`, '--json', '-'], `${NO_TOOL_INSTRUCTION}${context.prompt}`, limits);
 }
 function eventKeys(value, allowed, requiredKeys = []) {
   const keys = Object.keys(value);

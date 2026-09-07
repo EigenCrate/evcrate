@@ -46,8 +46,13 @@ function usageHelp() {
 }
 function modelsHelp() { return 'Usage: omp models [ACTION] [PATTERN] find --json --no-extensions'; }
 function usageStatus() {
-  return JSON.stringify({ generatedAt: 1, reports: [{ provider: 'openai-codex' }],
-    accountsWithoutUsage: [], disabledCredentials: [], capacity: {} });
+  return JSON.stringify({
+    generatedAt: 1,
+    reports: [{ provider: 'openai-codex', limits: [{ id: 'primary', status: 'ok' }] }],
+    accountsWithoutUsage: [],
+    disabledCredentials: [],
+    capacity: { 'openai-codex': [{ remainingAccounts: 1 }] }
+  });
 }
 function catalog() {
   return JSON.stringify({ models: [{ provider: 'openai-codex', id: 'gpt-5.6-sol',

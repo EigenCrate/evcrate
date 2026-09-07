@@ -228,19 +228,22 @@ const ERROR_CODES = Object.freeze(Object.fromEntries(
 ));
 
 class AdvisorRoutingError extends Error {
-  constructor(code) {
+  constructor(code, details = {}) {
     const definition = CATALOG[code] || CATALOG.PROCESS_FAILED;
     super(definition.message);
     this.name = 'AdvisorRoutingError';
     this.code = CATALOG[code] ? code : 'PROCESS_FAILED';
     this.category = definition.category;
     this.action = definition.action;
+    if (details && typeof details === 'object' && details.cooldown_ms !== undefined) {
+      this.cooldown_ms = details.cooldown_ms;
+    }
     Object.freeze(this);
   }
 }
 
-function createRoutingError(code) {
-  return new AdvisorRoutingError(code);
+function createRoutingError(code, details) {
+  return new AdvisorRoutingError(code, details);
 }
 
 function isRoutingError(value) {

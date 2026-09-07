@@ -2,8 +2,35 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-07  
-**Status:** Advisor mentoring Phase 02 complete at 100%; Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; advisor Phase 03 ready to start; release remains Unreleased
+**Updated:** 2026-09-08  
+**Status:** Advisor mentoring Phase 03 complete at 100%; Phase 02 complete at 100%; Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+
+### 2026-09-08 — feat(advisor): qualify adapters, enforce strict terminal parsing, and adapt generation limits (phase-03)
+
+**Status:** Complete (100%)  
+**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-03-adapter-qualification-and-terminal-parsing.md)
+
+- Qualified the fixed Claude, Pi, OMP, and Codex adapter contracts for exact
+  model/effort routes, noninteractive isolated sessions, read-only/no-tool
+  controls, bounded machine-readable output, and typed failures. Antigravity
+  remains an explicit unavailable candidate rather than an inferred backend.
+- Claude now rejects nonempty `permission_denials`, tool/nonterminal stop reasons,
+  model drift, malformed result envelopes, and over-limit output.
+- Pi now requires strict user-then-assistant message sequencing, exact route and
+  workspace attestation, a settled terminal lifecycle, and
+  `stopReason: "stop"` before returning advice.
+- OMP now requires affirmative redacted usage readiness: a matching usable
+  report plus positive provider capacity. Its strict parser rejects tool
+  results, retries, unknown events, and undocumented `advisor_yielded`.
+- Codex now validates exact auth/model/effort capability probes and a complete
+  terminal JSONL thread/item lifecycle with no disallowed tool or side-effect
+  items.
+- All enabled adapters use `resolveInvocationLimits`; generation mode removes
+  `timeoutMs` while retaining bounded streams, output, termination, and warning
+  controls. Probes keep finite deadlines.
+- Focused Claude, Pi, OMP, fixture, runner, and controller coverage records the
+  rejection and generation-limit contracts without claiming live vendor or paid
+  route qualification.
 
 ### Advisor mentoring, recovery, and audit — Phase 01
 

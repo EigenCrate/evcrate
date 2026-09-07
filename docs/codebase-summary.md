@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Generated:** 2026-09-07  
+**Generated:** 2026-09-08
 **Source:** Repository compaction produced by Repomix at `repomix-output.xml`,
 then checked against the current package and source tree.  
 **Purpose:** Compact navigation map, not a copy of the compaction.
@@ -351,6 +351,79 @@ failure rather than successful advice. The focused Phase 02 closure passes
 65/65 advisor-controller tests and the real smoke scenario completes after
 31.25s of delayed generation with bounded `stderr` warnings.
 
+## Advisor adapter qualification and strict terminal parsing (Phase 03)
+
+Phase 03 qualifies the four enabled advisor backends (`claude`, `codex`, `pi`,
+and `omp`) against fixed executable/argv, exact route controls, noninteractive
+session isolation, read-only/no-tool behavior, and bounded machine-readable
+output. `adapter-contract.cjs` requires every adapter to expose version, auth,
+capability, invocation, result, and failure-classification methods. Capability
+attestations bind the exact model and effort plus `noninteractive`, isolated
+session, no tools, and output mode; no adapter may silently substitute a route.
+`adapter-registry.cjs` keeps `antigravity` as a candidate with an explicit
+unavailable adapter, while only the four qualified names are enabled.
+
+### Qualification and terminal contracts
+
+- **Claude:** version/auth/help probes verify the requested model/effort and
+  read-only/session/output controls before invocation. The JSON result must be
+  a successful, nonempty result envelope. Nonempty `permission_denials` rejects
+  the result as READ_ONLY_UNSUPPORTED; a non-array value is invalid.
+  `stop_reason` may be absent or `end_turn`/`stop`; `tool_use`/`tool_call`
+  rejects read-only safety, max_tokens maps to OUTPUT_LIMIT, and every other
+  value is PROTOCOL_INVALID. A reported model must equal the route.
+- **Pi:** auth and offline model probes establish the exact provider/model and
+  thinking effort, then help probes require JSON mode, no session/context
+  features, and no approval/tools. The parser requires the ordered
+  `session -> agent_start -> turn_start -> user -> assistant -> turn_end ->
+  agent_end -> agent_settled` lifecycle, exact message shapes, exact workspace
+  and route attestation, and one nonempty assistant answer. Final
+  `stopReason` must be `stop`; `pending`, `length`, `toolUse`, `error`,
+  `aborted`, and `deferred` cannot become advice (length is OUTPUT_LIMIT,
+  tool use is READ_ONLY_UNSUPPORTED, and other nonterminal values are
+  PROTOCOL_INVALID).
+- **OMP:** `usage --json --redact --provider` is accepted as usable auth only
+  when a matching report has nonempty limits whose statuses are all `ok` and
+  `capacity[provider]` has entries with finite, positive
+  `remainingAccounts`. Missing reports, exhausted limits, zero capacity, or
+  malformed status fail closed as AUTH_UNAVAILABLE. The OMP parser enforces
+  the session/user/assistant/turn/agent terminal lifecycle, exact route and
+  usage shapes, `stopReason: "stop"`, empty tool results, and
+  `isTerminal: true`. `advisor_yielded` is not a documented event and is
+  rejected; it cannot bypass terminal validation.
+- **Codex:** version/login/model-catalog probes qualify the exact model and
+  reasoning effort, while help probes require ephemeral read-only JSONL
+  execution and ignore-user-config/rules controls. The parser accepts only
+  the ordered thread/turn/item lifecycle, one nonempty `agent_message`, and
+  a terminal `turn.completed` after every item settles. Tool, file-change,
+  web-search, MCP, and todo items, duplicate/late events, route drift, and
+  malformed terminal output fail closed.
+
+The Claude, Pi, and OMP parsers validate exact event/message keys, UTF-8 and
+byte/line bounds, terminal ordering, and no-tool semantics before returning
+recommendation text. The shared typed errors in `errors.cjs` preserve protocol,
+read-only, output-limit, auth, capability, and process boundaries; arbitrary
+stderr wording is not a retry or success assertion.
+
+### Generation timing and limits
+
+`resolveInvocationLimits` is used by all four enabled adapters. It merges
+adapter defaults with context limits, but deletes `timeoutMs` whenever
+`mode: "generation"` is selected. Probe invocations retain finite bounds
+(including the adapter 5-second probe timeout); generation keeps prompt,
+stdout/stderr, result, termination, and warning bounds while carrying no
+generation deadline. Runner normalization rejects an explicit generation
+`timeoutMs`, and the generation runner constructs its final invocation with
+`timeoutMs: undefined`. Claude, Pi, OMP, and Codex therefore consume the
+Phase 02 indefinite-generation contract without reintroducing a hidden
+deadline.
+
+Focused adapter coverage lives in
+`tests/advisor-controller/{claude-adapter,pi-adapter,omp-adapter}.test.cjs`
+and `fixtures/fake-omp.cjs`; runner/controller coverage asserts generation
+invocations omit `timeoutMs`. These deterministic fixtures qualify parser and
+control behavior only; they do not claim live vendor authentication or paid
+route qualification.
 
 ## Advisor v2 contracts and safe policy migration (Phase 01)
 

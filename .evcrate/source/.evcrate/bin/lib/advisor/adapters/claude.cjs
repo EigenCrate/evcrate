@@ -1,9 +1,9 @@
 'use strict';
 
 const { parseJsonDocument } = require('../json-document.cjs');
-const { createRoutingError, isRoutingError, serializeRoutingError } = require('../errors.cjs');
+const { createRoutingError, isRoutingError } = require('../errors.cjs');
 const { DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure } = require('../runner.cjs');
-const { freezeAdapter, isPlainObject, validateCapabilityAttestation } = require('../adapter-contract.cjs');
+const { freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation } = require('../adapter-contract.cjs');
 
 const EXECUTABLE = 'claude';
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
@@ -14,11 +14,11 @@ const RESULT_KEYS = new Set(['type', 'subtype', 'is_error', 'result', 'session_i
 const CODES = new Set(['EXECUTABLE_UNAVAILABLE', 'CLI_VERSION_UNSUPPORTED', 'AUTH_UNAVAILABLE', 'MODEL_UNSUPPORTED',
   'EFFORT_UNSUPPORTED', 'READ_ONLY_UNSUPPORTED', 'SESSION_UNSUPPORTED', 'OUTPUT_UNSUPPORTED', 'PROTOCOL_INVALID',
   'TIMEOUT', 'CANCELLED', 'OUTPUT_LIMIT', 'LINE_LIMIT', 'OUTPUT_INVALID', 'ADVISOR_RECURSION',
-  'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID', 'CWD_UNSAFE', 'PROCESS_FAILED']);
+  'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID', 'CWD_UNSAFE', 'TRANSIENT_PROVIDER_ERROR',
+  'PROCESS_FAILED']);
 const CONTROL_ARGV = Object.freeze([
   '-p', '--safe-mode', '--disable-slash-commands', '--disallowed-tools', '*', '--strict-mcp-config',
-  '--mcp-config', '{"mcpServers":{}}', '--permission-mode', 'plan', '--no-session-persistence',
-  '--max-turns', '1'
+  '--mcp-config', '{"mcpServers":{}}', '--permission-mode', 'plan', '--no-session-persistence'
 ]);
 
 function fail(code) { throw createRoutingError(code); }
@@ -93,7 +93,6 @@ async function probeCapabilities(context) {
   required(help, /--permission-mode\s+<[^>]+>/u, 'READ_ONLY_UNSUPPORTED');
   required(help, /\bplan\b/u, 'READ_ONLY_UNSUPPORTED');
   required(help, /--no-session-persistence\b/u, 'SESSION_UNSUPPORTED');
-  required(help, /--max-turns\s+<[^>]+>/u, 'SESSION_UNSUPPORTED');
   required(help, /--model\s+<[^>]+>/u, 'MODEL_UNSUPPORTED');
   required(help, /--effort\s+<[^>]+>/u, 'EFFORT_UNSUPPORTED');
   required(help, /--output-format\s+<[^>]+>/u, 'OUTPUT_UNSUPPORTED');
@@ -112,8 +111,9 @@ function buildInvocation(context) {
   if (current.capabilities.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (current.capabilities.effort !== route.effort) fail('EFFORT_UNSUPPORTED');
   if (typeof context.prompt !== 'string') fail('REQUEST_INVALID');
+  const limits = resolveInvocationLimits(DEFAULT_LIMITS, context.limits);
   return invocation(context, [...CONTROL_ARGV, '--model', route.model, '--effort', route.effort,
-    '--output-format', 'json'], context.prompt);
+    '--output-format', 'json'], context.prompt, limits);
 }
 function parseResult(context = {}) {
   const output = context.execution?.result || context.execution;
@@ -123,6 +123,18 @@ function parseResult(context = {}) {
   if (!isPlainObject(result) || Object.keys(result).some((key) => !RESULT_KEYS.has(key))
     || result.type !== 'result' || result.subtype !== 'success' || result.is_error !== false
     || typeof result.result !== 'string' || !result.result.trim()) fail('PROTOCOL_INVALID');
+  if (Array.isArray(result.permission_denials) && result.permission_denials.length > 0) {
+    fail('READ_ONLY_UNSUPPORTED');
+  }
+  if (result.permission_denials !== undefined && !Array.isArray(result.permission_denials)) {
+    fail('PROTOCOL_INVALID');
+  }
+  if (result.stop_reason !== undefined) {
+    if (typeof result.stop_reason !== 'string') fail('PROTOCOL_INVALID');
+    if (result.stop_reason === 'tool_use' || result.stop_reason === 'tool_call') fail('READ_ONLY_UNSUPPORTED');
+    if (result.stop_reason === 'max_tokens') fail('OUTPUT_LIMIT');
+    if (result.stop_reason !== 'end_turn' && result.stop_reason !== 'stop') fail('PROTOCOL_INVALID');
+  }
   const route = target(context);
   if (result.model !== undefined && result.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (Buffer.byteLength(result.result, 'utf8') > 16 * 1024) fail('OUTPUT_LIMIT');

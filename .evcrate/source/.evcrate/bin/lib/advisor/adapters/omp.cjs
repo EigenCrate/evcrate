@@ -3,7 +3,7 @@
 const { parseJsonDocument } = require('../json-document.cjs');
 const { createRoutingError, isRoutingError } = require('../errors.cjs');
 const { DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure } = require('../runner.cjs');
-const { freezeAdapter, isPlainObject, validateCapabilityAttestation } = require('../adapter-contract.cjs');
+const { freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation } = require('../adapter-contract.cjs');
 const { parseResult } = require('./omp-parser.cjs');
 
 const EXECUTABLE = 'omp';
@@ -15,7 +15,8 @@ const STATES = new WeakMap();
 const CODES = new Set(['EXECUTABLE_UNAVAILABLE', 'CLI_VERSION_UNSUPPORTED', 'AUTH_UNAVAILABLE', 'MODEL_UNSUPPORTED',
   'EFFORT_UNSUPPORTED', 'READ_ONLY_UNSUPPORTED', 'SESSION_UNSUPPORTED', 'OUTPUT_UNSUPPORTED', 'PROTOCOL_INVALID',
   'TIMEOUT', 'CANCELLED', 'OUTPUT_LIMIT', 'LINE_LIMIT', 'OUTPUT_INVALID', 'ADVISOR_RECURSION',
-  'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID', 'CWD_UNSAFE', 'PROCESS_FAILED']);
+  'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID', 'CWD_UNSAFE', 'TRANSIENT_PROVIDER_ERROR',
+  'PROCESS_FAILED']);
 const CONTROL_ARGV = Object.freeze(['--no-session', '--no-tools', '--no-lsp', '--no-pty', '--no-extensions',
   '--no-skills', '--no-rules']);
 
@@ -74,7 +75,19 @@ function usageStatus(value, route) {
     || Object.keys(value).length !== allowed.length || !Number.isSafeInteger(value.generatedAt)
     || !Array.isArray(value.reports) || !Array.isArray(value.accountsWithoutUsage)
     || !Array.isArray(value.disabledCredentials) || !isPlainObject(value.capacity)) fail('AUTH_UNAVAILABLE');
-  if (!value.reports.some((entry) => isPlainObject(entry) && entry.provider === route.provider)) fail('AUTH_UNAVAILABLE');
+  const matchingReports = value.reports.filter((entry) => isPlainObject(entry) && entry.provider === route.provider);
+  if (!matchingReports.length) fail('AUTH_UNAVAILABLE');
+  const hasUsableReport = matchingReports.some((r) => Array.isArray(r.limits) && r.limits.length > 0
+    && r.limits.every((l) => isPlainObject(l) && l.status === 'ok'));
+  if (!hasUsableReport) fail('AUTH_UNAVAILABLE');
+  const capacityEntries = value.capacity[route.provider];
+  if (!Array.isArray(capacityEntries) || !capacityEntries.length) fail('AUTH_UNAVAILABLE');
+  for (const entry of capacityEntries) {
+    if (!isPlainObject(entry) || typeof entry.remainingAccounts !== 'number'
+      || !Number.isFinite(entry.remainingAccounts) || entry.remainingAccounts <= 0) {
+      fail('AUTH_UNAVAILABLE');
+    }
+  }
   return true;
 }
 async function probeAuth(context) {
@@ -153,8 +166,9 @@ function buildInvocation(context) {
   if (current.capabilities.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (current.capabilities.effort !== route.effort) fail('EFFORT_UNSUPPORTED');
   if (typeof context.prompt !== 'string') fail('REQUEST_INVALID');
+  const limits = resolveInvocationLimits(DEFAULT_LIMITS, context.limits);
   return invocation(context, [...CONTROL_ARGV, '--model', route.model, '--thinking', route.effort,
-    '--mode', 'json', '-p'], context.prompt);
+    '--mode', 'json', '-p'], context.prompt, limits);
 }
 function classifyFailure(error) { const code = codeOf(error); return CODES.has(code) ? code : 'PROCESS_FAILED'; }
 

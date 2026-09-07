@@ -5,7 +5,7 @@ const { isDeepStrictEqual } = require('node:util');
 const { parseJsonDocument } = require('../json-document.cjs');
 const { createRoutingError, isRoutingError } = require('../errors.cjs');
 const { DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure } = require('../runner.cjs');
-const { freezeAdapter, isPlainObject, validateCapabilityAttestation } = require('../adapter-contract.cjs');
+const { freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation } = require('../adapter-contract.cjs');
 
 const EXECUTABLE = 'pi';
 const MODEL_PATTERN = /^([^/\s]+)\/([^/\s]+)$/u;
@@ -16,7 +16,8 @@ const STATES = new WeakMap();
 const CODES = new Set(['EXECUTABLE_UNAVAILABLE', 'CLI_VERSION_UNSUPPORTED', 'AUTH_UNAVAILABLE', 'MODEL_UNSUPPORTED',
   'EFFORT_UNSUPPORTED', 'READ_ONLY_UNSUPPORTED', 'SESSION_UNSUPPORTED', 'OUTPUT_UNSUPPORTED', 'PROTOCOL_INVALID',
   'TIMEOUT', 'CANCELLED', 'OUTPUT_LIMIT', 'LINE_LIMIT', 'OUTPUT_INVALID', 'ADVISOR_RECURSION',
-  'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID', 'CWD_UNSAFE', 'PROCESS_FAILED']);
+  'REQUEST_DEPTH_INVALID', 'INVOCATION_INVALID', 'CWD_INVALID', 'CWD_UNSAFE', 'TRANSIENT_PROVIDER_ERROR',
+  'PROCESS_FAILED']);
 const NO_MODE = Object.freeze(['-p', '--mode', 'json', '--no-session', '--no-extensions', '--no-skills',
   '--no-prompt-templates', '--no-context-files', '--no-themes', '--no-approve', '--no-tools']);
 
@@ -122,8 +123,9 @@ function buildInvocation(context) {
   if (current.capabilities.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (current.capabilities.effort !== route.effort) fail('EFFORT_UNSUPPORTED');
   if (typeof context.prompt !== 'string') fail('REQUEST_INVALID');
+  const limits = resolveInvocationLimits(DEFAULT_LIMITS, context.limits);
   return invocation(context, [...NO_MODE, '--provider', route.provider, '--model', route.modelId,
-    '--thinking', route.effort], context.prompt);
+    '--thinking', route.effort], context.prompt, limits);
 }
 const SESSION_KEYS = Object.freeze(['type', 'version', 'id', 'timestamp', 'cwd']);
 const EVENT_KEYS = Object.freeze({
@@ -243,12 +245,17 @@ function sessionHeader(event, expectedCwd) {
 }
 function routeAttestation(message, route) {
   if (message.provider !== route.provider || message.model !== route.modelId) fail('MODEL_UNSUPPORTED');
+  if (message.responseModel !== undefined
+    && (typeof message.responseModel !== 'string' || message.responseModel !== route.modelId)) {
+    fail('MODEL_UNSUPPORTED');
+  }
 }
 function assistantText(message, route) {
   messageShape(message);
-  if (message.role !== 'assistant' || message.stopReason === 'error' || message.stopReason === 'aborted') {
-    fail('PROTOCOL_INVALID');
-  }
+  if (message.role !== 'assistant') fail('PROTOCOL_INVALID');
+  if (message.stopReason === 'toolUse') fail('READ_ONLY_UNSUPPORTED');
+  if (message.stopReason === 'length') fail('OUTPUT_LIMIT');
+  if (message.stopReason !== 'stop') fail('PROTOCOL_INVALID');
   routeAttestation(message, route);
   let text = '';
   for (const part of message.content) {
@@ -297,28 +304,35 @@ function parseJsonl(text, route, expectedCwd) {
       case 'turn_start':
         exactKeys(event, EVENT_KEYS.turn_start);
         if (phase !== 2) fail('PROTOCOL_INVALID'); phase = 3; break;
-      case 'message_start':
+      case 'message_start': {
         exactKeys(event, EVENT_KEYS.message_start);
-        if (phase !== 3 || open) fail('PROTOCOL_INVALID');
-        open = messageShape(event.message);
+        if (phase !== 3 || open || messages.length >= 2) fail('PROTOCOL_INVALID');
+        const message = messageShape(event.message);
+        if ((messages.length === 0 && message.role !== 'user') || (messages.length === 1 && message.role !== 'assistant')) {
+          fail('PROTOCOL_INVALID');
+        }
+        open = message;
         break;
+      }
       case 'message_update':
         if (phase !== 3 || !open || open.role !== 'assistant') fail('PROTOCOL_INVALID');
         updateShape(event);
         break;
-      case 'message_end':
+      case 'message_end': {
         exactKeys(event, EVENT_KEYS.message_end);
         if (phase !== 3 || !open) fail('PROTOCOL_INVALID');
         if (!isPlainObject(event.message) || event.message.role !== open.role) fail('PROTOCOL_INVALID');
-        open = messageShape(event.message);
-        messages.push(open);
-        if (open.role === 'assistant') {
+        const message = messageShape(event.message);
+        if (message.role === 'user' && !isDeepStrictEqual(message, open)) fail('PROTOCOL_INVALID');
+        messages.push(message);
+        if (message.role === 'assistant') {
           if (answer) fail('PROTOCOL_INVALID');
-          answer = assistantText(open, route);
-          finalAssistant = open;
+          answer = assistantText(message, route);
+          finalAssistant = message;
         }
         open = undefined;
         break;
+      }
       case 'tool_execution_start':
       case 'tool_execution_update':
       case 'tool_execution_end':
@@ -327,7 +341,7 @@ function parseJsonl(text, route, expectedCwd) {
         break;
       case 'turn_end':
         exactKeys(event, EVENT_KEYS.turn_end);
-        if (phase !== 3 || open || !answer || !Array.isArray(event.toolResults)
+        if (phase !== 3 || open || messages.length !== 2 || !answer || !Array.isArray(event.toolResults)
           || event.toolResults.length || !isDeepStrictEqual(event.message, finalAssistant)) {
           fail(event.toolResults?.length ? 'READ_ONLY_UNSUPPORTED' : 'PROTOCOL_INVALID');
         }
@@ -338,7 +352,7 @@ function parseJsonl(text, route, expectedCwd) {
       case 'agent_end':
         exactKeys(event, EVENT_KEYS.agent_end);
         if (phase !== 4 || event.willRetry !== false || !Array.isArray(event.messages)
-          || event.messages.length !== messages.length) fail('PROTOCOL_INVALID');
+          || event.messages.length !== 2) fail('PROTOCOL_INVALID');
         for (const [index, message] of event.messages.entries()) {
           messageShape(message);
           if (!isDeepStrictEqual(messages[index], message)) fail('PROTOCOL_INVALID');

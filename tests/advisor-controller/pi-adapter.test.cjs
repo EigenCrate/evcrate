@@ -31,7 +31,7 @@ function probeContext({ models = 'openai-codex  gpt-5.6-sol  272K  128K  yes  ye
     target: PROBE_TARGET,
     environment: {},
     requestDepth: 0,
-    createInvocation: ({ argv, prompt }) => ({ argv, prompt }),
+    createInvocation: (inv) => ({ ...inv }),
     runner: {
       run: async (invocation) => {
         calls.push(invocation.argv);
@@ -107,4 +107,64 @@ test('Pi rejects a model absent from the cached catalog', async () => {
   await PI.probeVersion(context);
   await PI.probeAuth(context);
   await assert.rejects(PI.probeCapabilities(context), { code: 'MODEL_UNSUPPORTED' });
+});
+
+test('Pi parser rejects nonterminal stop reasons (F05 violation)', () => {
+  assert.throws(() => parse(stream({ messageExtra: { stopReason: 'pending' } })), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parse(stream({ messageExtra: { stopReason: 'deferred' } })), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parse(stream({ messageExtra: { stopReason: 'toolUse' } })), { code: 'READ_ONLY_UNSUPPORTED' });
+  assert.throws(() => parse(stream({ messageExtra: { stopReason: 'length' } })), { code: 'OUTPUT_LIMIT' });
+  assert.throws(() => parse(stream({ messageExtra: { stopReason: 'error' } })), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parse(stream({ messageExtra: { stopReason: 'aborted' } })), { code: 'PROTOCOL_INVALID' });
+});
+
+test('Pi buildInvocation merges explicit generation limits', async () => {
+  const { context } = probeContext();
+  await PI.probeVersion(context);
+  await PI.probeAuth(context);
+  await PI.probeCapabilities(context);
+  delete context.createInvocation;
+  context.cwd = process.cwd();
+  context.workspaceRoot = process.cwd();
+  context.prompt = '{"checkpoint":"test"}';
+  context.limits = { mode: 'generation', warnAfterMs: 120000 };
+  const invocation = PI.buildInvocation(context);
+  assert.equal(invocation.adapter, 'pi');
+  assert.equal(invocation.limits.mode, 'generation');
+  assert.equal(invocation.limits.warnAfterMs, 120000);
+  assert.equal(invocation.limits.timeoutMs, undefined);
+});
+
+test('Pi parser enforces strict message sequencing and responseModel attestation (R4)', () => {
+  // Message sequencing: user message after assistant message must fail PROTOCOL_INVALID
+  const postAssistantUser = [
+    { type: 'session', version: 3, id: 'session-id', timestamp: '2026-08-29T00:00:00.000Z', cwd: CWD },
+    { type: 'agent_start' },
+    { type: 'turn_start' },
+    { type: 'message_start', message: USER },
+    { type: 'message_end', message: USER },
+    { type: 'message_start', message: ASSISTANT_START },
+    { type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 0 } },
+    { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'Use the smallest safe change.' } },
+    { type: 'message_update', assistantMessageEvent: { type: 'text_end', contentIndex: 0, content: 'Use the smallest safe change.' } },
+    { type: 'message_end', message: ASSISTANT },
+    { type: 'message_start', message: USER },
+    { type: 'message_end', message: USER },
+    { type: 'turn_end', message: ASSISTANT, toolResults: [] },
+    { type: 'agent_end', messages: [USER, ASSISTANT, USER], willRetry: false },
+    { type: 'agent_settled' },
+  ].map((e) => JSON.stringify(e)).join('\n');
+  assert.throws(() => parse(postAssistantUser), { code: 'PROTOCOL_INVALID' });
+
+  // responseModel mismatch must fail MODEL_UNSUPPORTED
+  assert.throws(() => parse(stream({ messageExtra: { responseModel: 'different-model' } })), { code: 'MODEL_UNSUPPORTED' });
+  assert.equal(parse(stream({ messageExtra: { responseModel: 'gpt-5.6-sol' } })).recommendation, ASSISTANT.content[0].text);
+});
+
+test('Pi classifyFailure preserves structured transient and lifecycle errors', () => {
+  const { createRoutingError } = require(path.resolve(__dirname, '../../.evcrate/source/.evcrate/bin/lib/advisor/errors.cjs'));
+  assert.equal(PI.classifyFailure(createRoutingError('TRANSIENT_PROVIDER_ERROR')), 'TRANSIENT_PROVIDER_ERROR');
+  assert.equal(PI.classifyFailure(createRoutingError('READ_ONLY_UNSUPPORTED')), 'READ_ONLY_UNSUPPORTED');
+  assert.equal(PI.classifyFailure(createRoutingError('OUTPUT_LIMIT')), 'OUTPUT_LIMIT');
+  assert.equal(PI.classifyFailure(new Error('arbitrary exit')), 'PROCESS_FAILED');
 });

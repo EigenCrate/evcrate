@@ -3,8 +3,12 @@
 const { createRoutingError } = require('./errors.cjs');
 const {
   ADAPTER_NAMES,
+  CANDIDATE_BACKENDS,
+  ENABLED_BACKENDS,
   assertAdapterName,
+  assertBackendEnabled,
   freezeAdapter,
+  isBackendEnabled,
   validateAdapter
 } = require('./adapter-contract.cjs');
 const claude = require('./adapters/claude.cjs');
@@ -59,4 +63,14 @@ function listAdapters(registry = REGISTRY) {
   return Object.freeze([...ADAPTER_NAMES]);
 }
 
-module.exports = { ADAPTER_NAMES, BUILTIN_ADAPTERS: REGISTRY, getAdapter, listAdapters, validateRegistry };
+module.exports = {
+  ADAPTER_NAMES,
+  BUILTIN_ADAPTERS: REGISTRY,
+  CANDIDATE_BACKENDS,
+  ENABLED_BACKENDS,
+  assertBackendEnabled,
+  getAdapter,
+  isBackendEnabled,
+  listAdapters,
+  validateRegistry
+};

@@ -1,10 +1,18 @@
 'use strict';
 
-const { createRoutingError } = require('./errors.cjs');
+const { createRoutingError, isRoutingError } = require('./errors.cjs');
 
 const CANDIDATE_BACKENDS = Object.freeze(['claude', 'codex', 'antigravity', 'pi', 'omp']);
 const ENABLED_BACKENDS = Object.freeze(['claude', 'codex', 'pi', 'omp']);
 const ADAPTER_NAMES = CANDIDATE_BACKENDS;
+const QUALIFICATION_STAGES = Object.freeze(['candidate', 'supported', 'compatible', 'authenticated', 'live_qualified']);
+const UPSTREAM_FAILURE_DOMAINS = Object.freeze({
+  codex: 'openai',
+  omp: 'omp-providers',
+  claude: 'anthropic',
+  pi: 'pi-providers',
+  antigravity: 'google'
+});
 const ADAPTER_AUTH_KEY_ALLOWLIST = Object.freeze(Object.fromEntries(
   CANDIDATE_BACKENDS.map((name) => [name, Object.freeze([])])
 ));
@@ -25,6 +33,14 @@ function isPlainObject(value) {
 function fail(code) { throw createRoutingError(code); }
 function assertAdapterName(name) {
   if (typeof name !== 'string' || !CANDIDATE_BACKENDS.includes(name)) fail('ADAPTER_UNSUPPORTED');
+  return name;
+}
+function isBackendEnabled(name) {
+  return typeof name === 'string' && ENABLED_BACKENDS.includes(name);
+}
+function assertBackendEnabled(name) {
+  assertAdapterName(name);
+  if (!ENABLED_BACKENDS.includes(name)) fail('CLI_CAPABILITY_UNSUPPORTED');
   return name;
 }
 function sameStringSet(left, right) {
@@ -87,6 +103,42 @@ function validateInvocationShape(invocation) {
   if (!isPlainObject(invocation.limits)) fail('INVOCATION_INVALID');
   return invocation;
 }
+function classifyAttemptFailure(error, adapter) {
+  let code = isRoutingError(error) ? error.code : error?.code || error?.error?.code;
+  if (adapter && typeof adapter.classifyFailure === 'function') {
+    try { code = adapter.classifyFailure(error) || code; } catch { /* use original code */ }
+  }
+  if (typeof code !== 'string') code = 'PROCESS_FAILED';
+  let classification = 'fatal';
+  let retryable = false;
+  let cooldownMs = null;
+  if (code === 'CANCELLED') {
+    classification = 'cancelled';
+  } else if (code === 'TRANSIENT_PROVIDER_ERROR') {
+    if (error?.cooldown_ms !== undefined && error?.cooldown_ms !== null) {
+      if (Number.isSafeInteger(error.cooldown_ms) && error.cooldown_ms > 0 && error.cooldown_ms <= 3_600_000) {
+        cooldownMs = error.cooldown_ms;
+        classification = 'transient';
+        retryable = true;
+      } else {
+        classification = 'fatal';
+        retryable = false;
+      }
+    } else {
+      classification = 'transient';
+      retryable = true;
+    }
+  }
+  return Object.freeze({ code, classification, retryable, cooldown_ms: cooldownMs });
+}
+function resolveInvocationLimits(defaultLimits, contextLimits) {
+  if (!contextLimits) return defaultLimits;
+  const limits = { ...defaultLimits, ...contextLimits };
+  if (contextLimits.mode === 'generation') {
+    delete limits.timeoutMs;
+  }
+  return limits;
+}
 
 module.exports = {
   ADAPTER_AUTH_KEY_ALLOWLIST,
@@ -103,5 +155,11 @@ module.exports = {
   sameStringSet,
   validateAdapter,
   validateCapabilityAttestation,
-  validateInvocationShape
+  validateInvocationShape,
+  QUALIFICATION_STAGES,
+  UPSTREAM_FAILURE_DOMAINS,
+  assertBackendEnabled,
+  classifyAttemptFailure,
+  isBackendEnabled,
+  resolveInvocationLimits,
 };
