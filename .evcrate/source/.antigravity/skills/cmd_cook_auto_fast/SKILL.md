@@ -1,6 +1,6 @@
 ---
 name: cmd_cook_auto_fast
-description: Low-risk fast cook: scout, plan fast, implement with quality gates
+description: 'Low-risk fast cook: scout, plan fast, implement with quality gates'
 ---
 # cmd_cook_auto_fast
 

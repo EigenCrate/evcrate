@@ -3,7 +3,27 @@
 ## Unreleased
 
 **Updated:** 2026-09-07  
-**Status:** Phase 04 verification complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+**Status:** Phase 04 regeneration/documentation/release gates complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+
+### Phase 04: Regeneration, documentation, and release gates
+
+**Updated:** 2026-09-07  
+**Status:** Complete  
+**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-04-regeneration-documentation-and-release-gates.md)  
+**Evidence:** [validation report](../plans/reports/tester-260907-1123-phase04-validation-matrix.md) and [final code review](../plans/reports/code-review-260907-1457-phase-04-final-post-fixes.md)
+
+- Rebuilt all seven target scanner/data/layout closures and eight manifests through
+  distribution tooling; generated projections remain distribution-owned.
+- Canonical and projected script READMEs document exact command/skill schemas,
+  managed authorities, native formats, CWD-independent scanner invocations,
+  atomic/fail-closed generation, and scanner/generator separation.
+- Focused release gates pass 85/85; the foreign-CWD scanner/generator matrix
+  passes 35/35; `npm run distribute:check` returns `status: "ok"`.
+- `ev-help.py` remains independent from scanners and generated data; architecture
+  ownership boundaries remain unchanged.
+
+Phase 04 closes the command/skill catalog plan. Live vendor qualification,
+npm publication, rollout, and Windows validation remain separate operator gates.
 
 ### Phase 03: Seven-target scanner and catalog adapters
 
@@ -77,8 +97,8 @@ projection.
   help behavior remains independent from scanner modules and generated data.
 
 The Phase 03 test report records 37/37 focused cases passing with no skips or
-failures. No unresolved Phase 03 questions were recorded. Phase 04 remains the
-regeneration, manifest, and release-gate step.
+failures. Phase 04 now closes regeneration, documentation, manifest, and release
+gates for the command/skill catalog plan.
 
 ### Phase 02: Catalog schema and freshness
 

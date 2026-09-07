@@ -1,0 +1,15 @@
+{
+  "schema": "evcrate-scanner-layout-v1",
+  "target": "copilot",
+  "commands": {
+    "format": "command-skill",
+    "root": "../../skills",
+    "output": "commands_data.yaml",
+    "authority": "../command-name-map.json"
+  },
+  "skills": {
+    "root": "../../skills",
+    "output": "skills_data.yaml",
+    "authority": "../skill-map.json"
+  }
+}

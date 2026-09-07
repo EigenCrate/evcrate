@@ -117,37 +117,129 @@ python ~/.omp/agent/evcrate/scripts/resolve_env.py TEST_VAR --verbose
 python ~/.omp/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --find-all
 ```
 
-## generate_catalogs.py
+## Catalog Scanners & Generators
 
-Generate YAML catalogs from command and skill data files. Outputs to stdout by default for easy consumption by Claude.
+A suite of strict, fail-closed utilities for scanning commands and skills, validating catalog metadata, and producing target-native YAML catalogs.
 
-### Usage
+### Core Scripts
 
-```bash
-# Generate skills catalog (outputs to stdout)
-python .omp/evcrate/scripts/generate_catalogs.py --skills
+- `scan_commands.py`: Scans command definitions and produces adjacent `commands_data.yaml`.
+- `scan_skills.py`: Scans skill directories and produces adjacent `skills_data.yaml`.
+- `generate_catalogs.py`: Validates data files, checks freshness, and generates structured command and skill catalogs.
 
-# Generate commands catalog (outputs to stdout)
-python .omp/evcrate/scripts/generate_catalogs.py --commands
+### Core Principles & Contracts
 
-# Generate both catalogs (outputs to stdout)
-python .omp/evcrate/scripts/generate_catalogs.py
+1. **CWD Independence**:
+   - All scanner defaults resolve paths relative to `__file__`, never CWD (`Path(__file__).resolve().parent`).
+   - Scripts can be executed from any working directory using absolute or relative paths:
+     ```bash
+     ( cd /tmp && python3 /path/to/.omp/evcrate/scripts/scan_commands.py )
+     ```
+   - Target scanners refresh their adjacent target-native data from adapter-managed resources only.
 
-# Write to file instead of stdout
-python .omp/evcrate/scripts/generate_catalogs.py --skills --output guide/SKILLS.yaml
+2. **Atomic & Fail-Closed Behavior**:
+   - Frontmatter and TOML parsing fail closed: missing required fields (`description`, `name` for command-skills), bad types, or malformed syntax immediately raise `ScanError` and exit non-zero.
+   - Output writing uses `atomic_write_yaml`: writes first to a temporary file in the destination directory, flushes and syncs, then atomically renames (`os.replace`) over the target path.
+   - Pre-existing files (sentinels) are untouched if scanning or validation fails.
 
-# View help
-python .omp/evcrate/scripts/generate_catalogs.py --help
+3. **Source Normalization**:
+   - Frontmatter strings and descriptions have surrounding whitespace trimmed.
+   - Missing optional fields (e.g. `argument-hint`) normalize to empty strings.
+
+4. **Managed-Only Scanning**:
+   - Target scanners discover resources using `scanner-layout.json` configuration (`format`, `root`, `output`, `authority`).
+   - Scanners scan only EVCrate-managed resources bound by adapter maps and inventories. Unrelated user commands or skills sharing a target root are ignored.
+   - Template skills (`template-skill`) are excluded.
+
+5. **Tool Independence & Non-Integration**:
+   - Scanners and catalog generators are decoupled from `ev-help.py`.
+   - There is no `ev-help.py` integration, no shared generated-data runtime dependency, no search flags, and no general-skill or query UI.
+
+### Data Schemas
+
+#### `commands_data.yaml`
+List of command records. Every record contains exactly these keys (strict; no `power_level` or extras):
+```yaml
+- source: string        # Path relative to canonical commands root (e.g., core/advise.md)
+  name: string          # Target-native command name (e.g., /cmd-advise or /evcrate-cmd-advise)
+  path: string          # Path relative to target commands root
+  description: string   # Non-empty description
+  argument_hint: string # Argument hint string (empty string if none)
+  category: string      # One of: core, development, documentation, quality, git, meta, review, system, tasks, testing, utilities
 ```
 
-### Input Files
+#### `skills_data.yaml`
+List of skill records. Every record contains exactly these keys (strict):
+```yaml
+- source: string        # Path relative to canonical skills root (e.g., ai-multimodal/SKILL.md)
+  name: string          # Target-native skill name (e.g., ai-multimodal)
+  path: string          # Path relative to target skills root
+  description: string   # Non-empty description
+  category: string      # One of: design, utilities, development, audio, git, communication, review, documents
+  has_scripts: boolean  # True if skill directory contains a scripts/ subdirectory
+  has_references: bool  # True if skill directory contains a references/ subdirectory
+```
 
-Located in the same directory as the script:
-- `commands_data.yaml` - Source data for commands
-- `skills_data.yaml` - Source data for skills
+### Target Projections Matrix
 
-### Output
+| Target | Script Root | Command Format | Authority / Mapping |
+|---|---|---|---|
+| Claude | `.evcrate/source/.omp/evcrate/scripts` | Markdown | `commands_data.yaml` |
+| Gemini | `.evcrate/source/.gemini/scripts` | TOML | `gemini-command-map.json` |
+| Pi | `.evcrate/source/.pi/agent/evcrate/scripts` | archived Markdown | `commands_data.yaml` |
+| OMP | `.evcrate/source/.omp/evcrate/scripts` | flattened mapped Markdown | `command-name-map.json` |
+| Codex | `.evcrate/source/.codex/scripts` | command-skill | `commands_data.yaml` |
+| Antigravity | `.evcrate/source/.antigravity/scripts` | command-skill | `commands_data.yaml` |
+| Copilot | `.evcrate/source/.copilot/evcrate/scripts` | prefixed command-skill | `copilot-command-map.json` |
 
-By default, outputs YAML to stdout. Use `--output PATH` to write to a file instead.
+### Invocations
 
-**Note:** The script can be run from any directory - it resolves input files relative to the script location.
+#### 1. Scanner Invocations (from any working directory)
+```bash
+# Canonical Claude
+python3 .evcrate/source/.omp/evcrate/scripts/scan_commands.py
+python3 .evcrate/source/.omp/evcrate/scripts/scan_skills.py
+
+# Gemini
+python3 .evcrate/source/.gemini/scripts/scan_commands.py
+python3 .evcrate/source/.gemini/scripts/scan_skills.py
+
+# Pi
+python3 .evcrate/source/.pi/agent/evcrate/scripts/scan_commands.py
+python3 .evcrate/source/.pi/agent/evcrate/scripts/scan_skills.py
+
+# OMP
+python3 .evcrate/source/.omp/evcrate/scripts/scan_commands.py
+python3 .evcrate/source/.omp/evcrate/scripts/scan_skills.py
+
+# Codex
+python3 .evcrate/source/.codex/scripts/scan_commands.py
+python3 .evcrate/source/.codex/scripts/scan_skills.py
+
+# Antigravity
+python3 .evcrate/source/.antigravity/scripts/scan_commands.py
+python3 .evcrate/source/.antigravity/scripts/scan_skills.py
+
+# Copilot
+python3 .evcrate/source/.copilot/evcrate/scripts/scan_commands.py
+python3 .evcrate/source/.copilot/evcrate/scripts/scan_skills.py
+```
+
+#### 2. Generator Invocations
+```bash
+# Generate skills catalog to stdout
+python3 .evcrate/source/.omp/evcrate/scripts/generate_catalogs.py --skills
+
+# Generate commands catalog to stdout
+python3 .evcrate/source/.omp/evcrate/scripts/generate_catalogs.py --commands
+
+# Generate both catalogs to stdout
+python3 .evcrate/source/.omp/evcrate/scripts/generate_catalogs.py
+
+# Write to file
+python3 .evcrate/source/.omp/evcrate/scripts/generate_catalogs.py --commands --output /tmp/commands.yaml
+python3 .evcrate/source/.omp/evcrate/scripts/generate_catalogs.py --skills --output /tmp/skills.yaml
+
+# Verify freshness of committed data files against live scans
+python3 .evcrate/source/.omp/evcrate/scripts/generate_catalogs.py --freshness
+```

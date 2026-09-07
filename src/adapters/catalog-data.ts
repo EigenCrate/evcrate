@@ -1,4 +1,4 @@
-import { existsSync, lstatSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { graphText, writeProjectionFile } from './projection-utils.js';
@@ -100,6 +100,76 @@ export function validateSkillRecords(records: unknown): SkillCatalogRecord[] {
   }
   return validated;
 }
+function extractMetadataFromFile(path: string, format: 'markdown' | 'toml' | 'command-skill'): { description?: string; argument_hint?: string } {
+  const content = readFileSync(path, 'utf8');
+  if (format === 'toml') {
+    const descMatch = /^\s*description\s*=\s*(?:"""([\s\S]*?)"""|"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/mu.exec(content);
+    let description: string | undefined;
+    if (descMatch) {
+      if (descMatch[1] !== undefined) description = descMatch[1].trim();
+      else if (descMatch[2] !== undefined) {
+        try { description = JSON.parse(`"${descMatch[2]}"`).trim(); } catch { description = descMatch[2].trim(); }
+      } else if (descMatch[3] !== undefined) {
+        description = descMatch[3].trim();
+      }
+    }
+    const hintMatch = /^\s*(?:argument_hint|argument-hint)\s*=\s*(?:"""([\s\S]*?)"""|"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/mu.exec(content);
+    let argument_hint: string | undefined;
+    if (hintMatch) {
+      if (hintMatch[1] !== undefined) argument_hint = hintMatch[1];
+      else if (hintMatch[2] !== undefined) {
+        try { argument_hint = JSON.parse(`"${hintMatch[2]}"`); } catch { argument_hint = hintMatch[2]; }
+      } else if (hintMatch[3] !== undefined) {
+        argument_hint = hintMatch[3];
+      }
+    }
+    return { description, argument_hint };
+  }
+  const match = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/u.exec(content);
+  if (!match) return {};
+  const lines = match[1].split('\n');
+  let description: string | undefined;
+  let argument_hint: string | undefined;
+  let currentKey: 'description' | 'argument_hint' | null = null;
+  let currentLines: string[] = [];
+
+  const flush = () => {
+    if (!currentKey) return;
+    let val = currentLines.join(' ').trim();
+    if (val.startsWith('"') && val.endsWith('"') && val.length >= 2) {
+      try { val = JSON.parse(val); } catch { val = val.slice(1, -1).replaceAll('\\"', '"'); }
+    } else if (val.startsWith("'") && val.endsWith("'") && val.length >= 2) {
+      val = val.slice(1, -1).replace(/''/g, "'");
+    }
+    if (currentKey === 'description') description = val;
+    else if (currentKey === 'argument_hint') argument_hint = val;
+    currentKey = null;
+    currentLines = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const colon = line.indexOf(':');
+    if (colon >= 1 && /^\s*[A-Za-z0-9_-]+:/.test(line)) {
+      flush();
+      const key = line.slice(0, colon).trim();
+      const raw = line.slice(colon + 1).trim();
+      if (key === 'description') currentKey = 'description';
+      else if (key === 'argument-hint' || key === 'argument_hint') currentKey = 'argument_hint';
+      if (currentKey) {
+        if (raw === '|' || raw === '|-' || raw === '>' || raw === '>-') {
+          // block scalar
+        } else if (raw) {
+          currentLines.push(raw);
+        }
+      }
+    } else if (currentKey && (line.startsWith('  ') || line.startsWith('\t'))) {
+      currentLines.push(line.trim());
+    }
+  }
+  flush();
+  return { description, argument_hint };
+}
 
 export function projectCatalogDataAndLayout(
   context: ProjectionBuildContext,
@@ -120,12 +190,13 @@ export function projectCatalogDataAndLayout(
     if (!existsSync(nativeFilePath) || lstatSync(nativeFilePath).isSymbolicLink() || !lstatSync(nativeFilePath).isFile()) {
       throw new ControlPlaneError('VALIDATION_INVALID');
     }
+    const extracted = extractMetadataFromFile(nativeFilePath, mapping.commands.format);
     transformedCommands.push({
       source: cmd.source,
       name: mapped.name,
       path: mapped.path,
-      description: mapped.description ?? cmd.description,
-      argument_hint: mapped.argument_hint ?? cmd.argument_hint,
+      description: mapped.description ?? extracted.description ?? cmd.description,
+      argument_hint: mapped.argument_hint ?? extracted.argument_hint ?? '',
       category: mapped.category ?? cmd.category
     });
   }

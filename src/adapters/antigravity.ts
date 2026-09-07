@@ -74,7 +74,7 @@ function commandPath(content: string, fallback: string): string {
 function description(content: string): string {
   for (const line of content.split('\n')) {
     const match = /^description\s*:\s*(.*)$/iu.exec(line.trim());
-    if (match) return match[1].trim().replace(/^['"]+|['"]+$/gu, '');
+    if (match) return match[1].trim().replace(/^['"]+|['"]+$/gu, '').replaceAll('\\"', '"');
   }
   return 'Migrated command from .claude';
 }

@@ -292,6 +292,36 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
+## 8. Proposed advisor mentoring upgrade (not implemented)
+
+Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
+Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md), status **pending**.
+Sections 5–7 above describe the existing implementation, not the proposed behavior.
+
+The proposed design retains one central Node controller and vendor-owned
+credentials, but deliberately replaces the current v1 single-target/single-attempt
+and generation-deadline contracts with explicitly versioned contracts:
+
+- Qualified primary plus explicit backup; primary initial call and up to three
+  transient-failure retries after 10/20/30 seconds, then one backup call.
+- Active generation warns and keeps waiting; no silence or wall-clock generation
+  timeout. Input, probes, output, and termination remain bounded. Cancellation,
+  unsafe output, and uncertain cleanup cannot trigger recovery attempts.
+- One canonical mentoring brief and structured result, bound to task/checkpoint
+  identity and relevant evidence revision. Only dependent work pauses for counsel.
+- Durable task state owns scope, dispositions, and three unsuccessful
+  correction-and-validation cycles before human handoff; transport retries do not
+  increment that counter.
+- Separate owner-only local audit records link sanitized checkpoint evidence,
+  attempt history, advice, executor disposition, and observed outcomes.
+- Canonical resources and projection adapters remain the authoring surface.
+  Generation/publication does not establish live tool-enforcement capability.
+
+This is cooperative oversight of trusted CLIs, not hostile-process containment or
+a guarantee against semantic bugs. Existing HOME policy is not automatically
+rewritten; history/task state are not publication assets. Exact contracts,
+migration, supported-harness claims, and rollout gates are specified in the plan.
+
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)

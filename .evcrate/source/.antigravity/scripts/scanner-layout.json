@@ -1,0 +1,15 @@
+{
+  "schema": "evcrate-scanner-layout-v1",
+  "target": "antigravity",
+  "commands": {
+    "format": "command-skill",
+    "root": "../skills",
+    "output": "commands_data.yaml",
+    "authority": "../migration-behavior-matrix.json"
+  },
+  "skills": {
+    "root": "../skills",
+    "output": "skills_data.yaml",
+    "authority": "../migration-behavior-matrix.json"
+  }
+}

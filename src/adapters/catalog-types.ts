@@ -94,32 +94,39 @@ export function parseCatalogYaml(content: string): Record<string, unknown>[] {
   const records: Record<string, unknown>[] = [];
   let current: Record<string, unknown> | null = null;
   let currentKey: string | null = null;
+  let currentRaw: string = '';
+
+  const flushKey = () => {
+    if (current && currentKey) {
+      current[currentKey] = parseYamlScalar(currentRaw);
+      currentKey = null;
+      currentRaw = '';
+    }
+  };
 
   for (const line of content.split(/\r?\n/)) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     if (line.startsWith('- source:')) {
+      flushKey();
       if (current) records.push(current);
       current = {};
       const val = line.slice('- source:'.length).trim();
       current['source'] = parseYamlScalar(val);
-      currentKey = 'source';
       continue;
     }
     const match = line.match(/^\s{2}([a-z_]+):\s*(.*)$/);
     if (match) {
-      const key = match[1];
-      const rawVal = match[2];
-      currentKey = key;
-      if (current) current[key] = rawVal.length > 0 ? parseYamlScalar(rawVal) : '';
+      flushKey();
+      currentKey = match[1];
+      currentRaw = match[2].trim();
       continue;
     }
-    if (current && currentKey && line.startsWith('    ')) {
+    if (current && currentKey && (line.startsWith('    ') || line.startsWith('  '))) {
       const continuation = line.trim();
-      if (typeof current[currentKey] === 'string') {
-        current[currentKey] = current[currentKey] ? `${current[currentKey]} ${continuation}` : continuation;
-      }
+      currentRaw = currentRaw ? `${currentRaw} ${continuation}` : continuation;
     }
   }
+  flushKey();
   if (current) records.push(current);
   return records;
 }

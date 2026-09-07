@@ -1,879 +1,853 @@
 {
+  "target": "antigravity",
   "behaviors": [
     {
-      "classification": "memory-file",
-      "kind": "memory-file",
-      "source": "CLAUDE.md",
-      "status": "migrated-wrapper",
-      "target": "GEMINI.md -> @./CLAUDE.md"
-    },
-    {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "advise.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "advise.toml"
+      "target": "cmd_advise/SKILL.md",
+      "target_name": "cmd_advise"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "ask.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "ask.toml"
+      "target": "cmd_ask/SKILL.md",
+      "target_name": "cmd_ask"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "bootstrap.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "bootstrap.toml"
+      "target": "cmd_bootstrap/SKILL.md",
+      "target_name": "cmd_bootstrap"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "bootstrap/auto.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "bootstrap/auto.toml"
+      "target": "cmd_bootstrap_auto/SKILL.md",
+      "target_name": "cmd_bootstrap_auto"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "bootstrap/auto/fast.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "bootstrap/auto/fast.toml"
+      "target": "cmd_bootstrap_auto_fast/SKILL.md",
+      "target_name": "cmd_bootstrap_auto_fast"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "bootstrap/auto/parallel.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "bootstrap/auto/parallel.toml"
+      "target": "cmd_bootstrap_auto_parallel/SKILL.md",
+      "target_name": "cmd_bootstrap_auto_parallel"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "brainstorm.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "brainstorm.toml"
+      "target": "cmd_brainstorm/SKILL.md",
+      "target_name": "cmd_brainstorm"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "code.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "code.toml"
+      "target": "cmd_code/SKILL.md",
+      "target_name": "cmd_code"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "code/auto.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "code/auto.toml"
+      "target": "cmd_code_auto/SKILL.md",
+      "target_name": "cmd_code_auto"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "code/no-test.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "code/no-test.toml"
+      "target": "cmd_code_no-test/SKILL.md",
+      "target_name": "cmd_code_no-test"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "code/parallel.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "code/parallel.toml"
+      "target": "cmd_code_parallel/SKILL.md",
+      "target_name": "cmd_code_parallel"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "coding-level.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "coding-level.toml"
+      "target": "cmd_coding-level/SKILL.md",
+      "target_name": "cmd_coding-level"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "content/cro.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "content/cro.toml"
+      "target": "cmd_content_cro/SKILL.md",
+      "target_name": "cmd_content_cro"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "content/enhance.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "content/enhance.toml"
+      "target": "cmd_content_enhance/SKILL.md",
+      "target_name": "cmd_content_enhance"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "content/fast.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "content/fast.toml"
+      "target": "cmd_content_fast/SKILL.md",
+      "target_name": "cmd_content_fast"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "content/good.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "content/good.toml"
+      "target": "cmd_content_good/SKILL.md",
+      "target_name": "cmd_content_good"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "cook.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "cook.toml"
+      "target": "cmd_cook/SKILL.md",
+      "target_name": "cmd_cook"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "cook/auto.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "cook/auto.toml"
+      "target": "cmd_cook_auto/SKILL.md",
+      "target_name": "cmd_cook_auto"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "cook/auto/fast.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "cook/auto/fast.toml"
+      "target": "cmd_cook_auto_fast/SKILL.md",
+      "target_name": "cmd_cook_auto_fast"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "cook/auto/parallel.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "cook/auto/parallel.toml"
+      "target": "cmd_cook_auto_parallel/SKILL.md",
+      "target_name": "cmd_cook_auto_parallel"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "debug.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "debug.toml"
+      "target": "cmd_debug/SKILL.md",
+      "target_name": "cmd_debug"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "design/3d.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "design/3d.toml"
+      "target": "cmd_design_3d/SKILL.md",
+      "target_name": "cmd_design_3d"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "design/describe.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "design/describe.toml"
+      "target": "cmd_design_describe/SKILL.md",
+      "target_name": "cmd_design_describe"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "design/fast.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "design/fast.toml"
+      "target": "cmd_design_fast/SKILL.md",
+      "target_name": "cmd_design_fast"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "design/good.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "design/good.toml"
+      "target": "cmd_design_good/SKILL.md",
+      "target_name": "cmd_design_good"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "design/screenshot.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "design/screenshot.toml"
+      "target": "cmd_design_screenshot/SKILL.md",
+      "target_name": "cmd_design_screenshot"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "design/video.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "design/video.toml"
+      "target": "cmd_design_video/SKILL.md",
+      "target_name": "cmd_design_video"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "docs/init.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "docs/init.toml"
+      "target": "cmd_docs_init/SKILL.md",
+      "target_name": "cmd_docs_init"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "docs/summarize.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "docs/summarize.toml"
+      "target": "cmd_docs_summarize/SKILL.md",
+      "target_name": "cmd_docs_summarize"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "docs/update.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "docs/update.toml"
+      "target": "cmd_docs_update/SKILL.md",
+      "target_name": "cmd_docs_update"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "evcrate-help.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "evcrate-help.toml"
+      "target": "cmd_evcrate-help/SKILL.md",
+      "target_name": "cmd_evcrate-help"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix.toml"
+      "target": "cmd_fix/SKILL.md",
+      "target_name": "cmd_fix"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/ci.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/ci.toml"
+      "target": "cmd_fix_ci/SKILL.md",
+      "target_name": "cmd_fix_ci"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/fast.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/fast.toml"
+      "target": "cmd_fix_fast/SKILL.md",
+      "target_name": "cmd_fix_fast"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/hard.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/hard.toml"
+      "target": "cmd_fix_hard/SKILL.md",
+      "target_name": "cmd_fix_hard"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/logs.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/logs.toml"
+      "target": "cmd_fix_logs/SKILL.md",
+      "target_name": "cmd_fix_logs"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/parallel.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/parallel.toml"
+      "target": "cmd_fix_parallel/SKILL.md",
+      "target_name": "cmd_fix_parallel"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/test.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/test.toml"
+      "target": "cmd_fix_test/SKILL.md",
+      "target_name": "cmd_fix_test"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/types.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/types.toml"
+      "target": "cmd_fix_types/SKILL.md",
+      "target_name": "cmd_fix_types"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "fix/ui.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "fix/ui.toml"
+      "target": "cmd_fix_ui/SKILL.md",
+      "target_name": "cmd_fix_ui"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "git/cm.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "git/cm.toml"
+      "target": "cmd_git_cm/SKILL.md",
+      "target_name": "cmd_git_cm"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "git/cp.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "git/cp.toml"
+      "target": "cmd_git_cp/SKILL.md",
+      "target_name": "cmd_git_cp"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "git/merge.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "git/merge.toml"
+      "target": "cmd_git_merge/SKILL.md",
+      "target_name": "cmd_git_merge"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "git/pr.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "git/pr.toml"
+      "target": "cmd_git_pr/SKILL.md",
+      "target_name": "cmd_git_pr"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "journal.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "journal.toml"
+      "target": "cmd_journal/SKILL.md",
+      "target_name": "cmd_journal"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan.toml"
+      "target": "cmd_plan/SKILL.md",
+      "target_name": "cmd_plan"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/archive.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/archive.toml"
+      "target": "cmd_plan_archive/SKILL.md",
+      "target_name": "cmd_plan_archive"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/ci.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/ci.toml"
+      "target": "cmd_plan_ci/SKILL.md",
+      "target_name": "cmd_plan_ci"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/cro.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/cro.toml"
+      "target": "cmd_plan_cro/SKILL.md",
+      "target_name": "cmd_plan_cro"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/fast.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/fast.toml"
+      "target": "cmd_plan_fast/SKILL.md",
+      "target_name": "cmd_plan_fast"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/hard.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/hard.toml"
+      "target": "cmd_plan_hard/SKILL.md",
+      "target_name": "cmd_plan_hard"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/parallel.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/parallel.toml"
+      "target": "cmd_plan_parallel/SKILL.md",
+      "target_name": "cmd_plan_parallel"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/two.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/two.toml"
+      "target": "cmd_plan_two/SKILL.md",
+      "target_name": "cmd_plan_two"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "plan/validate.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "plan/validate.toml"
+      "target": "cmd_plan_validate/SKILL.md",
+      "target_name": "cmd_plan_validate"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "review/codebase.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "review/codebase.toml"
+      "target": "cmd_review_codebase/SKILL.md",
+      "target_name": "cmd_review_codebase"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "review/codebase/parallel.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "review/codebase/parallel.toml"
+      "target": "cmd_review_codebase_parallel/SKILL.md",
+      "target_name": "cmd_review_codebase_parallel"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "scout.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "scout.toml"
+      "target": "cmd_scout/SKILL.md",
+      "target_name": "cmd_scout"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "scout/ext.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "scout/ext.toml"
+      "target": "cmd_scout_ext/SKILL.md",
+      "target_name": "cmd_scout_ext"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "skill/add.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "skill/add.toml"
+      "target": "cmd_skill_add/SKILL.md",
+      "target_name": "cmd_skill_add"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "skill/create.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "skill/create.toml"
+      "target": "cmd_skill_create/SKILL.md",
+      "target_name": "cmd_skill_create"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "skill/fix-logs.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "skill/fix-logs.toml"
+      "target": "cmd_skill_fix-logs/SKILL.md",
+      "target_name": "cmd_skill_fix-logs"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "skill/optimize.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "skill/optimize.toml"
+      "target": "cmd_skill_optimize/SKILL.md",
+      "target_name": "cmd_skill_optimize"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "skill/optimize/auto.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "skill/optimize/auto.toml"
+      "target": "cmd_skill_optimize_auto/SKILL.md",
+      "target_name": "cmd_skill_optimize_auto"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "skill/plan.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "skill/plan.toml"
+      "target": "cmd_skill_plan/SKILL.md",
+      "target_name": "cmd_skill_plan"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "take.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "take.toml"
+      "target": "cmd_take/SKILL.md",
+      "target_name": "cmd_take"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "test.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "test.toml"
+      "target": "cmd_test/SKILL.md",
+      "target_name": "cmd_test"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "test/ui.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "test/ui.toml"
+      "target": "cmd_test_ui/SKILL.md",
+      "target_name": "cmd_test_ui"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "use-mcp.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "use-mcp.toml"
+      "target": "cmd_use-mcp/SKILL.md",
+      "target_name": "cmd_use-mcp"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "watzup.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "watzup.toml"
+      "target": "cmd_watzup/SKILL.md",
+      "target_name": "cmd_watzup"
     },
     {
-      "classification": "command-prose",
       "kind": "command-prose",
       "source": "worktree.md",
+      "classification": "command-prose",
       "status": "migrated",
-      "target": "worktree.toml"
+      "target": "cmd_worktree/SKILL.md",
+      "target_name": "cmd_worktree"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "advisor-strategy/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "advisor-strategy/SKILL.md",
       "target_name": "advisor-strategy"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "aesthetic/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "aesthetic/SKILL.md",
       "target_name": "aesthetic"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "ai-artist/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "ai-artist/SKILL.md",
       "target_name": "ai-artist"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "ai-multimodal/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "ai-multimodal/SKILL.md",
       "target_name": "ai-multimodal"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "backend-development/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "backend-development/SKILL.md",
       "target_name": "backend-development"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "better-auth/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "better-auth/SKILL.md",
       "target_name": "better-auth"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "chrome-devtools/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "chrome-devtools/SKILL.md",
       "target_name": "chrome-devtools"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "code-review/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "code-review/SKILL.md",
       "target_name": "code-review"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "context-engineering/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "context-engineering/SKILL.md",
       "target_name": "context-engineering"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "databases/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "databases/SKILL.md",
       "target_name": "databases"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "debugging/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "debugging/SKILL.md",
       "target_name": "debugging"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "devops/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "devops/SKILL.md",
       "target_name": "devops"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "docs-seeker/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "docs-seeker/SKILL.md",
       "target_name": "docs-seeker"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "document-skills/docx/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "document-skills/docx/SKILL.md",
       "target_name": "document-skills/docx"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "document-skills/pdf/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "document-skills/pdf/SKILL.md",
       "target_name": "document-skills/pdf"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "document-skills/pptx/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "document-skills/pptx/SKILL.md",
       "target_name": "document-skills/pptx"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "document-skills/xlsx/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "document-skills/xlsx/SKILL.md",
       "target_name": "document-skills/xlsx"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "frontend-design/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "frontend-design/SKILL.md",
       "target_name": "frontend-design"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "frontend-development/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "frontend-development/SKILL.md",
       "target_name": "frontend-development"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "google-adk-python/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "google-adk-python/SKILL.md",
       "target_name": "google-adk-python"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "mcp-builder/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "mcp-builder/SKILL.md",
       "target_name": "mcp-builder"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "mcp-management/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "mcp-management/SKILL.md",
       "target_name": "mcp-management"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "media-processing/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "media-processing/SKILL.md",
       "target_name": "media-processing"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "mermaidjs-v11/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "mermaidjs-v11/SKILL.md",
       "target_name": "mermaidjs-v11"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "mobile-development/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "mobile-development/SKILL.md",
       "target_name": "mobile-development"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "planning/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "planning/SKILL.md",
       "target_name": "planning"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "problem-solving/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "problem-solving/SKILL.md",
       "target_name": "problem-solving"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "repomix/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "repomix/SKILL.md",
       "target_name": "repomix"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "research/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "research/SKILL.md",
       "target_name": "research"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "sequential-thinking/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "sequential-thinking/SKILL.md",
       "target_name": "sequential-thinking"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "svg-icon-generator/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "svg-icon-generator/SKILL.md",
       "target_name": "svg-icon-generator"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "threejs/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "threejs/SKILL.md",
       "target_name": "threejs"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "ui-styling/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "ui-styling/SKILL.md",
       "target_name": "ui-styling"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "ui-ux-pro-max/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "ui-ux-pro-max/SKILL.md",
       "target_name": "ui-ux-pro-max"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "web-frameworks/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "web-frameworks/SKILL.md",
       "target_name": "web-frameworks"
     },
     {
-      "classification": "skill-package",
       "kind": "skill-package",
       "source": "web-testing/SKILL.md",
+      "classification": "skill-package",
       "status": "migrated",
       "target": "web-testing/SKILL.md",
       "target_name": "web-testing"
-    },
-    {
-      "checkpoint": "supported",
-      "classification": "target-native",
-      "inline": "supported",
-      "kind": "advisory-capability",
-      "relay": "unsupported",
-      "relay_error": "ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI"
-    },
-    {
-      "classification": "hook-driven",
-      "kind": "hook-driven",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-init.cjs",
-      "source_event": "SessionStart",
-      "source_matcher": "startup|resume|clear|compact",
-      "status": "migrated",
-      "target_event": "SessionStart"
-    },
-    {
-      "classification": "unsupported",
-      "kind": "hook-driven",
-      "reason": "No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped.",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent-init.cjs",
-      "source_event": "SubagentStart",
-      "source_matcher": "*",
-      "status": "dropped"
-    },
-    {
-      "classification": "hook-driven",
-      "kind": "hook-driven",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/dev-rules-reminder.cjs",
-      "source_event": "UserPromptSubmit",
-      "source_matcher": "*",
-      "status": "migrated",
-      "target_event": "BeforeAgent"
-    },
-    {
-      "classification": "hook-driven",
-      "kind": "hook-driven",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/scout-block.cjs",
-      "source_event": "PreToolUse",
-      "source_matcher": "Bash|Glob|Grep|Read|Edit|Write",
-      "status": "migrated",
-      "target_event": "BeforeTool"
-    },
-    {
-      "classification": "hook-driven",
-      "kind": "hook-driven",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/privacy-block.cjs",
-      "source_event": "PreToolUse",
-      "source_matcher": "Bash|Glob|Grep|Read|Edit|Write",
-      "status": "migrated",
-      "target_event": "BeforeTool"
-    },
-    {
-      "classification": "unsupported",
-      "kind": "hook-driven",
-      "reason": "No Gemini CLI hook mapping was defined for this Claude event.",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/modularization-hook.js",
-      "source_event": "PostToolUse",
-      "source_matcher": "Write|Edit",
-      "status": "dropped"
-    },
-    {
-      "classification": "unsupported",
-      "kind": "hook-driven",
-      "reason": "No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/write-compact-marker.cjs",
-      "source_event": "PreCompact",
-      "source_matcher": "manual|auto",
-      "status": "dropped"
-    },
-    {
-      "classification": "hook-driven",
-      "kind": "hook-driven",
-      "source_command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-end.cjs",
-      "source_event": "SessionEnd",
-      "source_matcher": "clear",
-      "status": "migrated",
-      "target_event": "SessionEnd"
     }
-  ],
-  "context_file_names": [
-    "GEMINI.md",
-    "AGENTS.md",
-    "CLAUDE.md"
-  ],
-  "target": "gemini",
-  "unsupported_events": {
-    "PreCompact": "No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.",
-    "SubagentStart": "No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped."
-  }
+  ]
 }

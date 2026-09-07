@@ -67,8 +67,7 @@
 - source: coding-level.md
   name: /evcrate:coding-level
   path: coding-level.md
-  description: Set your coding experience level for tailored explanations and output
-    format.
+  description: Set your coding experience level for tailored explanations and output format.
   argument_hint: '[0-5]'
   category: core
 - source: content/cro.md
@@ -386,8 +385,7 @@
 - source: take.md
   name: /evcrate:take
   path: take.md
-  description: Transfer a feature from another project through compare, copy, improve,
-    or port gates
+  description: Transfer a feature from another project through compare, copy, improve, or port gates
   argument_hint: '[mode] <source-repo-or-path> <feature> [local-notes]'
   category: core
 - source: test.md

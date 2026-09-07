@@ -43,7 +43,7 @@ def atomic_write_yaml(output_path: Path, data: Any) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     temp = tempfile.NamedTemporaryFile(dir=out.parent, prefix=f".{out.name}.tmp.", delete=False)
     try:
-        content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False, width=1000000)
         temp.write(content.encode("utf-8"))
         temp.close()
         os.chmod(temp.name, 0o644)

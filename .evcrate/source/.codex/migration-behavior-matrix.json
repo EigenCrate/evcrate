@@ -498,6 +498,294 @@
       "target": ".agents/skills/cmd_worktree/SKILL.md"
     },
     {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "advisor-strategy/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/advisor-strategy/SKILL.md",
+      "target_name": "advisor-strategy"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "aesthetic/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/aesthetic/SKILL.md",
+      "target_name": "aesthetic"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "ai-artist/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/ai-artist/SKILL.md",
+      "target_name": "ai-artist"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "ai-multimodal/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/ai-multimodal/SKILL.md",
+      "target_name": "ai-multimodal"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "backend-development/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/backend-development/SKILL.md",
+      "target_name": "backend-development"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "better-auth/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/better-auth/SKILL.md",
+      "target_name": "better-auth"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "chrome-devtools/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/chrome-devtools/SKILL.md",
+      "target_name": "chrome-devtools"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "code-review/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/code-review/SKILL.md",
+      "target_name": "code-review"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "context-engineering/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/context-engineering/SKILL.md",
+      "target_name": "context-engineering"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "databases/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/databases/SKILL.md",
+      "target_name": "databases"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "debugging/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/debugging/SKILL.md",
+      "target_name": "debugging"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "devops/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/devops/SKILL.md",
+      "target_name": "devops"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "docs-seeker/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/docs-seeker/SKILL.md",
+      "target_name": "docs-seeker"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "document-skills/docx/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/document-skills/docx/SKILL.md",
+      "target_name": "document-skills"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "document-skills/pdf/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/document-skills/pdf/SKILL.md",
+      "target_name": "document-skills"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "document-skills/pptx/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/document-skills/pptx/SKILL.md",
+      "target_name": "document-skills"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "document-skills/xlsx/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/document-skills/xlsx/SKILL.md",
+      "target_name": "document-skills"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "frontend-design/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/frontend-design/SKILL.md",
+      "target_name": "frontend-design"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "frontend-development/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/frontend-development/SKILL.md",
+      "target_name": "frontend-development"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "google-adk-python/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/google-adk-python/SKILL.md",
+      "target_name": "google-adk-python"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "mcp-builder/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/mcp-builder/SKILL.md",
+      "target_name": "mcp-builder"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "mcp-management/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/mcp-management/SKILL.md",
+      "target_name": "mcp-management"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "media-processing/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/media-processing/SKILL.md",
+      "target_name": "media-processing"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "mermaidjs-v11/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/mermaidjs-v11/SKILL.md",
+      "target_name": "mermaidjs-v11"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "mobile-development/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/mobile-development/SKILL.md",
+      "target_name": "mobile-development"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "planning/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/planning/SKILL.md",
+      "target_name": "planning"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "problem-solving/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/problem-solving/SKILL.md",
+      "target_name": "problem-solving"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "repomix/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/repomix/SKILL.md",
+      "target_name": "repomix"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "research/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/research/SKILL.md",
+      "target_name": "research"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "sequential-thinking/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/sequential-thinking/SKILL.md",
+      "target_name": "sequential-thinking"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "svg-icon-generator/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/svg-icon-generator/SKILL.md",
+      "target_name": "svg-icon-generator"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "threejs/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/threejs/SKILL.md",
+      "target_name": "threejs"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "ui-styling/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/ui-styling/SKILL.md",
+      "target_name": "ui-styling"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "ui-ux-pro-max/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/ui-ux-pro-max/SKILL.md",
+      "target_name": "ui-ux-pro-max"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "web-frameworks/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/web-frameworks/SKILL.md",
+      "target_name": "web-frameworks"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "web-testing/SKILL.md",
+      "status": "migrated",
+      "target": ".agents/skills/web-testing/SKILL.md",
+      "target_name": "web-testing"
+    },
+    {
       "checkpoint": "supported",
       "classification": "target-native",
       "inline": "supported",

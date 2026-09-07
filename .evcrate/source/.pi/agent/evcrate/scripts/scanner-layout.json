@@ -1,0 +1,15 @@
+{
+  "schema": "evcrate-scanner-layout-v1",
+  "target": "pi",
+  "commands": {
+    "format": "markdown",
+    "root": "../commands",
+    "output": "commands_data.yaml",
+    "authority": "../inventory.json"
+  },
+  "skills": {
+    "root": "../../skills",
+    "output": "skills_data.yaml",
+    "authority": "../inventory.json"
+  }
+}

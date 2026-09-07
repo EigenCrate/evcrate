@@ -1,0 +1,15 @@
+{
+  "schema": "evcrate-scanner-layout-v1",
+  "target": "codex",
+  "commands": {
+    "format": "command-skill",
+    "root": "../../.agents/skills",
+    "output": "commands_data.yaml",
+    "authority": "../migration-behavior-matrix.json"
+  },
+  "skills": {
+    "root": "../../.agents/skills",
+    "output": "skills_data.yaml",
+    "authority": "../migration-behavior-matrix.json"
+  }
+}

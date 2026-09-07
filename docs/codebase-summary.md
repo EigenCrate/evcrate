@@ -157,6 +157,55 @@ of existing catalog bytes on failure. See the
 [test report](../plans/reports/tester-260907-0959-phase-03-seven-target-adapters.md),
 and [code review](../plans/reports/code-review-260907-1004-phase-03-seven-target-scanner-and-catalog-adapters.md).
 
+## Regeneration, documentation, and release gates (Phase 04)
+
+Phase 04 is complete as of 2026-09-07. The canonical scripts README now records
+the exact command/skill schemas, `evcrate-scanner-layout-v1` bindings, target
+formats and authorities, CWD-independent invocation, managed-only ownership,
+atomic/fail-closed writes, generator modes, and the release sequence. It also
+keeps `ev-help.py` explicitly independent from scanners and generated catalogs.
+See the [Phase 04 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-04-regeneration-documentation-and-release-gates.md),
+[validation report](../plans/reports/tester-260907-1123-phase04-validation-matrix.md),
+and [final post-fix review](../plans/reports/code-review-260907-1457-phase-04-final-post-fixes.md).
+
+### Generated ownership and scanner parity
+
+- `npm run distribute:build` is the regeneration authority for all seven target
+  projections, native `commands_data.yaml`/`skills_data.yaml`, scanner sidecars,
+  migration authorities, and the aggregate plus seven target manifests. These
+  outputs are never hand-edited.
+- `catalog-types.ts` freezes exact record keys, category allowlists, safe
+  relative POSIX paths, scanner-layout shape, multiline/quoted YAML parsing, and
+  deterministic serialization.
+- `catalog-data.ts` validates canonical records, applies existing adapter
+  mappings, verifies mapped native files are regular non-symlink files, extracts
+  target-native descriptions and argument hints, and projects the sidecar plus
+  both catalogs as one set.
+- Antigravity exposes `cmd_*` command-skills and a migration-behavior authority;
+  its adapter excludes generated catalog inputs from resource copying before
+  writing the target scanner layout.
+- Python scanners use the same sidecar/authority contract as TypeScript. They
+  support Markdown, TOML, and command-skill formats, keep PyYAML output
+  unwrapped for byte parity, restrict scans to managed entries, and atomically
+  replace adjacent data files. Foreign CWD execution cannot change roots or
+  outputs; unrelated user resources remain excluded.
+
+### Release gate sequence
+
+The completed gate order is: canonical scanner/help suites; TypeScript build;
+adapter, parity, manifest, and publication tests; `npm run distribute:build`;
+both scanners and both generator modes from an unrelated temporary CWD for all
+seven target script roots; then `npm run distribute:check`. The smoke compares
+catalog bytes, native names/paths, authority maps/inventories, actual managed
+regular files, and unrelated-resource exclusions before and after execution.
+
+The Phase 04 validation report records 85/85 focused assertions and 35/35
+foreign-CWD scanner/generator invocations. The final post-fix review records
+14/14 foreign-CWD scanners, live catalog freshness, all 14 npm test suites at
+290/290, and `distribute:check` with `status: "ok"`. This proves repository
+catalog/projection closure only; live vendor qualification, Windows support, npm
+publication, deployment, and rollout remain separate operator gates.
+
 ## Canonical scout-block hook and ignore policy
 
 The canonical Claude scout hook lives under `.evcrate/source/.claude/hooks/`.

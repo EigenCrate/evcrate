@@ -1,3 +1,7 @@
+---
+description: "Interview-first technical advice with optional Claude relay"
+argument-hint: "[prompt-or-url] [--agent]"
+---
 <!-- generated target: pi -->
 <!-- EVCRATE_ADVISORY_CAPABILITIES_START -->
 <!-- EVCRATE_CAPABILITY: advise-inline/v1 -->

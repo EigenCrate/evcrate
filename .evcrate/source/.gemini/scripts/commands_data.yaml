@@ -1,422 +1,420 @@
 - source: advise.md
-  name: /evcrate:advise
-  path: advise.md
-  description: Interview-first technical advice with optional gemini relay
-  argument_hint: '[prompt-or-url] [--agent]'
+  name: '/evcrate:advise'
+  path: advise.toml
+  description: Interview-first technical advice with native inline questioning and explicit relay rejection.
+  argument_hint: ''
   category: core
 - source: ask.md
-  name: /evcrate:ask
-  path: ask.md
+  name: '/evcrate:ask'
+  path: ask.toml
   description: Answer technical and architectural questions.
-  argument_hint: '[technical-question]'
+  argument_hint: ''
   category: core
 - source: bootstrap.md
-  name: /evcrate:bootstrap
-  path: bootstrap.md
+  name: '/evcrate:bootstrap'
+  path: bootstrap.toml
   description: Bootstrap a new project step by step
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: ''
   category: core
 - source: bootstrap/auto.md
-  name: /evcrate:bootstrap:auto
-  path: bootstrap/auto.md
+  name: '/evcrate:bootstrap:auto'
+  path: bootstrap/auto.toml
   description: Bootstrap a new project automatically
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: ''
   category: bootstrap
 - source: bootstrap/auto/fast.md
-  name: /evcrate:bootstrap:auto:fast
-  path: bootstrap/auto/fast.md
+  name: '/evcrate:bootstrap:auto:fast'
+  path: bootstrap/auto/fast.toml
   description: Quickly bootstrap a new project automatically
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: ''
   category: bootstrap
 - source: bootstrap/auto/parallel.md
-  name: /evcrate:bootstrap:auto:parallel
-  path: bootstrap/auto/parallel.md
+  name: '/evcrate:bootstrap:auto:parallel'
+  path: bootstrap/auto/parallel.toml
   description: Bootstrap project with parallel execution
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: ''
   category: bootstrap
 - source: brainstorm.md
-  name: /evcrate:brainstorm
-  path: brainstorm.md
+  name: '/evcrate:brainstorm'
+  path: brainstorm.toml
   description: Brainstorm a feature
-  argument_hint: '[question]'
+  argument_hint: ''
   category: core
 - source: code.md
-  name: /evcrate:code
-  path: code.md
+  name: '/evcrate:code'
+  path: code.toml
   description: Start coding & testing an existing plan
-  argument_hint: '[plan] [--advice]'
+  argument_hint: ''
   category: core
 - source: code/auto.md
-  name: /evcrate:code:auto
-  path: code/auto.md
+  name: '/evcrate:code:auto'
+  path: code/auto.toml
   description: '[AUTO] Start coding & testing an existing plan ("trust me bro")'
-  argument_hint: '[plan] [all-phases-yes-or-no] [--advice] (default: yes)'
+  argument_hint: ''
   category: code
 - source: code/no-test.md
-  name: /evcrate:code:no-test
-  path: code/no-test.md
+  name: '/evcrate:code:no-test'
+  path: code/no-test.toml
   description: Start coding an existing plan (no testing)
-  argument_hint: '[plan] [--advice]'
+  argument_hint: ''
   category: code
 - source: code/parallel.md
-  name: /evcrate:code:parallel
-  path: code/parallel.md
+  name: '/evcrate:code:parallel'
+  path: code/parallel.toml
   description: Execute parallel or sequential phases based on plan structure
-  argument_hint: '[plan-path] [--advice]'
+  argument_hint: ''
   category: code
 - source: coding-level.md
-  name: /evcrate:coding-level
-  path: coding-level.md
-  description: Set your coding experience level for tailored explanations and output
-    format.
-  argument_hint: '[0-5]'
+  name: '/evcrate:coding-level'
+  path: coding-level.toml
+  description: Set your coding experience level for tailored explanations and output format.
+  argument_hint: ''
   category: core
 - source: content/cro.md
-  name: /evcrate:content:cro
-  path: content/cro.md
+  name: '/evcrate:content:cro'
+  path: content/cro.toml
   description: Analyze the current content and optimize for conversion
-  argument_hint: '[issues]'
+  argument_hint: ''
   category: content
 - source: content/enhance.md
-  name: /evcrate:content:enhance
-  path: content/enhance.md
+  name: '/evcrate:content:enhance'
+  path: content/enhance.toml
   description: Analyze the current copy issues and enhance it
-  argument_hint: '[issues]'
+  argument_hint: ''
   category: content
 - source: content/fast.md
-  name: /evcrate:content:fast
-  path: content/fast.md
+  name: '/evcrate:content:fast'
+  path: content/fast.toml
   description: Write creative & smart copy [FAST]
-  argument_hint: '[user-request]'
+  argument_hint: ''
   category: content
 - source: content/good.md
-  name: /evcrate:content:good
-  path: content/good.md
+  name: '/evcrate:content:good'
+  path: content/good.toml
   description: Write good creative & smart copy [GOOD]
-  argument_hint: '[user-request]'
+  argument_hint: ''
   category: content
 - source: cook.md
-  name: /evcrate:cook
-  path: cook.md
+  name: '/evcrate:cook'
+  path: cook.toml
   description: Implement a feature [step by step]
-  argument_hint: '[tasks] [--advice]'
+  argument_hint: ''
   category: core
 - source: cook/auto.md
-  name: /evcrate:cook:auto
-  path: cook/auto.md
+  name: '/evcrate:cook:auto'
+  path: cook/auto.toml
   description: Implement a feature automatically with plan and quality gates
-  argument_hint: '[tasks] [--advice]'
+  argument_hint: ''
   category: cook
 - source: cook/auto/fast.md
-  name: /evcrate:cook:auto:fast
-  path: cook/auto/fast.md
+  name: '/evcrate:cook:auto:fast'
+  path: cook/auto/fast.toml
   description: 'Low-risk fast cook: scout, plan fast, implement with quality gates'
-  argument_hint: '[tasks-or-prompt] [--advice]'
+  argument_hint: ''
   category: cook
 - source: cook/auto/parallel.md
-  name: /evcrate:cook:auto:parallel
-  path: cook/auto/parallel.md
+  name: '/evcrate:cook:auto:parallel'
+  path: cook/auto/parallel.toml
   description: Plan parallel phases & execute with fullstack-developer agents
-  argument_hint: '[tasks] [--advice]'
+  argument_hint: ''
   category: cook
 - source: debug.md
-  name: /evcrate:debug
-  path: debug.md
+  name: '/evcrate:debug'
+  path: debug.toml
   description: Debugging technical issues and providing solutions.
-  argument_hint: '[issues]'
+  argument_hint: ''
   category: core
 - source: design/3d.md
-  name: /evcrate:design:3d
-  path: design/3d.md
+  name: '/evcrate:design:3d'
+  path: design/3d.toml
   description: Create immersive interactive 3D designs with Three.js
-  argument_hint: '[tasks]'
+  argument_hint: ''
   category: design
 - source: design/describe.md
-  name: /evcrate:design:describe
-  path: design/describe.md
+  name: '/evcrate:design:describe'
+  path: design/describe.toml
   description: Describe a design based on screenshot/video
-  argument_hint: '[screenshot]'
+  argument_hint: ''
   category: design
 - source: design/fast.md
-  name: /evcrate:design:fast
-  path: design/fast.md
+  name: '/evcrate:design:fast'
+  path: design/fast.toml
   description: Create a quick design
-  argument_hint: '[tasks]'
+  argument_hint: ''
   category: design
 - source: design/good.md
-  name: /evcrate:design:good
-  path: design/good.md
+  name: '/evcrate:design:good'
+  path: design/good.toml
   description: Create an immersive design
-  argument_hint: '[tasks]'
+  argument_hint: ''
   category: design
 - source: design/screenshot.md
-  name: /evcrate:design:screenshot
-  path: design/screenshot.md
+  name: '/evcrate:design:screenshot'
+  path: design/screenshot.toml
   description: Create a design based on screenshot
-  argument_hint: '[screenshot]'
+  argument_hint: ''
   category: design
 - source: design/video.md
-  name: /evcrate:design:video
-  path: design/video.md
+  name: '/evcrate:design:video'
+  path: design/video.toml
   description: Create a design based on video
-  argument_hint: '[video]'
+  argument_hint: ''
   category: design
 - source: docs/init.md
-  name: /evcrate:docs:init
-  path: docs/init.md
+  name: '/evcrate:docs:init'
+  path: docs/init.toml
   description: Analyze the codebase and create initial documentation
   argument_hint: ''
   category: docs
 - source: docs/summarize.md
-  name: /evcrate:docs:summarize
-  path: docs/summarize.md
+  name: '/evcrate:docs:summarize'
+  path: docs/summarize.toml
   description: Analyze the codebase and update documentation
-  argument_hint: '[focused-topics] [should-scan-codebase]'
+  argument_hint: ''
   category: docs
 - source: docs/update.md
-  name: /evcrate:docs:update
-  path: docs/update.md
+  name: '/evcrate:docs:update'
+  path: docs/update.toml
   description: Analyze the codebase and update documentation
   argument_hint: ''
   category: docs
 - source: evcrate-help.md
-  name: /evcrate:evcrate-help
-  path: evcrate-help.md
+  name: '/evcrate:evcrate-help'
+  path: evcrate-help.toml
   description: EVCrate usage guide - just type naturally
-  argument_hint: '[category|command|task description]'
+  argument_hint: ''
   category: core
 - source: fix.md
-  name: /evcrate:fix
-  path: fix.md
+  name: '/evcrate:fix'
+  path: fix.toml
   description: Analyze and fix issues [INTELLIGENT ROUTING]
-  argument_hint: '[issues] [--advice]'
+  argument_hint: ''
   category: core
 - source: fix/ci.md
-  name: /evcrate:fix:ci
-  path: fix/ci.md
+  name: '/evcrate:fix:ci'
+  path: fix/ci.toml
   description: Analyze Github Actions logs and fix issues
-  argument_hint: '[github-actions-url]'
+  argument_hint: ''
   category: fix
 - source: fix/fast.md
-  name: /evcrate:fix:fast
-  path: fix/fast.md
+  name: '/evcrate:fix:fast'
+  path: fix/fast.toml
   description: Analyze and fix small issues [FAST]
-  argument_hint: '[issues]'
+  argument_hint: ''
   category: fix
 - source: fix/hard.md
-  name: /evcrate:fix:hard
-  path: fix/hard.md
+  name: '/evcrate:fix:hard'
+  path: fix/hard.toml
   description: Use subagents to plan and fix hard issues
-  argument_hint: '[issues] [--advice]'
+  argument_hint: ''
   category: fix
 - source: fix/logs.md
-  name: /evcrate:fix:logs
-  path: fix/logs.md
+  name: '/evcrate:fix:logs'
+  path: fix/logs.toml
   description: Analyze logs and fix issues
-  argument_hint: '[issue] [--advice]'
+  argument_hint: ''
   category: fix
 - source: fix/parallel.md
-  name: /evcrate:fix:parallel
-  path: fix/parallel.md
+  name: '/evcrate:fix:parallel'
+  path: fix/parallel.toml
   description: Analyze & fix issues with parallel fullstack-developer agents
-  argument_hint: '[issues] [--advice]'
+  argument_hint: ''
   category: fix
 - source: fix/test.md
-  name: /evcrate:fix:test
-  path: fix/test.md
+  name: '/evcrate:fix:test'
+  path: fix/test.toml
   description: Run test suite and fix issues
-  argument_hint: '[issues] [--advice]'
+  argument_hint: ''
   category: fix
 - source: fix/types.md
-  name: /evcrate:fix:types
-  path: fix/types.md
+  name: '/evcrate:fix:types'
+  path: fix/types.toml
   description: Fix type errors
   argument_hint: ''
   category: fix
 - source: fix/ui.md
-  name: /evcrate:fix:ui
-  path: fix/ui.md
+  name: '/evcrate:fix:ui'
+  path: fix/ui.toml
   description: Analyze and fix UI issues
-  argument_hint: '[issue]'
+  argument_hint: ''
   category: fix
 - source: git/cm.md
-  name: /evcrate:git:cm
-  path: git/cm.md
+  name: '/evcrate:git:cm'
+  path: git/cm.toml
   description: Stage all files and create a commit.
   argument_hint: ''
   category: git
 - source: git/cp.md
-  name: /evcrate:git:cp
-  path: git/cp.md
+  name: '/evcrate:git:cp'
+  path: git/cp.toml
   description: Stage, commit and push all code in the current branch
   argument_hint: ''
   category: git
 - source: git/merge.md
-  name: /evcrate:git:merge
-  path: git/merge.md
+  name: '/evcrate:git:merge'
+  path: git/merge.toml
   description: ⚠️ Merge code from one branch to another
-  argument_hint: '[branch] [from-branch]'
+  argument_hint: ''
   category: git
 - source: git/pr.md
-  name: /evcrate:git:pr
-  path: git/pr.md
+  name: '/evcrate:git:pr'
+  path: git/pr.toml
   description: Create a pull request
-  argument_hint: '[branch] [from-branch]'
+  argument_hint: ''
   category: git
 - source: journal.md
-  name: /evcrate:journal
-  path: journal.md
+  name: '/evcrate:journal'
+  path: journal.toml
   description: Write some journal entries.
   argument_hint: ''
   category: core
 - source: plan.md
-  name: /evcrate:plan
-  path: plan.md
+  name: '/evcrate:plan'
+  path: plan.toml
   description: Intelligent plan creation with prompt enhancement
-  argument_hint: '[task]'
+  argument_hint: ''
   category: core
 - source: plan/archive.md
-  name: /evcrate:plan:archive
-  path: plan/archive.md
+  name: '/evcrate:plan:archive'
+  path: plan/archive.toml
   description: Write journal entries and archive specific plans or all plans
-  argument_hint: '[path-to-plan] (default: all plans)'
+  argument_hint: ''
   category: plan
 - source: plan/ci.md
-  name: /evcrate:plan:ci
-  path: plan/ci.md
+  name: '/evcrate:plan:ci'
+  path: plan/ci.toml
   description: Analyze Github Actions logs and provide a plan to fix the issues
-  argument_hint: '[github-actions-url]'
+  argument_hint: ''
   category: plan
 - source: plan/cro.md
-  name: /evcrate:plan:cro
-  path: plan/cro.md
+  name: '/evcrate:plan:cro'
+  path: plan/cro.toml
   description: Create a CRO plan for the given content
-  argument_hint: '[issues]'
+  argument_hint: ''
   category: plan
 - source: plan/fast.md
-  name: /evcrate:plan:fast
-  path: plan/fast.md
+  name: '/evcrate:plan:fast'
+  path: plan/fast.toml
   description: No research. Only analyze and create an implementation plan
-  argument_hint: '[task]'
+  argument_hint: ''
   category: plan
 - source: plan/hard.md
-  name: /evcrate:plan:hard
-  path: plan/hard.md
+  name: '/evcrate:plan:hard'
+  path: plan/hard.toml
   description: Research, analyze, and create an implementation plan
-  argument_hint: '[task]'
+  argument_hint: ''
   category: plan
 - source: plan/parallel.md
-  name: /evcrate:plan:parallel
-  path: plan/parallel.md
+  name: '/evcrate:plan:parallel'
+  path: plan/parallel.toml
   description: Create detailed plan with parallel-executable phases
-  argument_hint: '[task]'
+  argument_hint: ''
   category: plan
 - source: plan/two.md
-  name: /evcrate:plan:two
-  path: plan/two.md
+  name: '/evcrate:plan:two'
+  path: plan/two.toml
   description: Research & create an implementation plan with 2 approaches
-  argument_hint: '[task]'
+  argument_hint: ''
   category: plan
 - source: plan/validate.md
-  name: /evcrate:plan:validate
-  path: plan/validate.md
+  name: '/evcrate:plan:validate'
+  path: plan/validate.toml
   description: Validate plan with critical questions interview
-  argument_hint: '[plan-path]'
+  argument_hint: ''
   category: plan
 - source: review/codebase.md
-  name: /evcrate:review:codebase
-  path: review/codebase.md
+  name: '/evcrate:review:codebase'
+  path: review/codebase.toml
   description: Scan & analyze the codebase.
-  argument_hint: '[tasks-or-prompt]'
+  argument_hint: ''
   category: review
 - source: review/codebase/parallel.md
-  name: /evcrate:review:codebase:parallel
-  path: review/codebase/parallel.md
+  name: '/evcrate:review:codebase:parallel'
+  path: review/codebase/parallel.toml
   description: Ultrathink edge cases, then parallel verify with code-reviewers
-  argument_hint: '[scope-or-prompt]'
+  argument_hint: ''
   category: review
 - source: scout.md
-  name: /evcrate:scout
-  path: scout.md
+  name: '/evcrate:scout'
+  path: scout.toml
   description: Scout given directories to respond to the user's requests
-  argument_hint: '[user-prompt] [scale]'
+  argument_hint: ''
   category: core
 - source: scout/ext.md
-  name: /evcrate:scout:ext
-  path: scout/ext.md
+  name: '/evcrate:scout:ext'
+  path: scout/ext.toml
   description: Use external agentic tools to scout given directories
-  argument_hint: '[user-prompt] [scale]'
+  argument_hint: ''
   category: scout
 - source: skill/add.md
-  name: /evcrate:skill:add
-  path: skill/add.md
+  name: '/evcrate:skill:add'
+  path: skill/add.toml
   description: Add new reference files or scripts to a skill
-  argument_hint: '[skill-name] [reference-or-script-prompt]'
+  argument_hint: ''
   category: skill
 - source: skill/create.md
-  name: /evcrate:skill:create
-  path: skill/create.md
+  name: '/evcrate:skill:create'
+  path: skill/create.toml
   description: Create a new agent skill
-  argument_hint: '[prompt-or-llms-or-github-url]'
+  argument_hint: ''
   category: skill
 - source: skill/fix-logs.md
-  name: /evcrate:skill:fix-logs
-  path: skill/fix-logs.md
+  name: '/evcrate:skill:fix-logs'
+  path: skill/fix-logs.toml
   description: Fix the agent skill based on `logs.txt` file.
-  argument_hint: '[prompt-or-path-to-skill]'
+  argument_hint: ''
   category: skill
 - source: skill/optimize.md
-  name: /evcrate:skill:optimize
-  path: skill/optimize.md
+  name: '/evcrate:skill:optimize'
+  path: skill/optimize.toml
   description: Optimize an existing agent skill
-  argument_hint: '[skill-name] [prompt]'
+  argument_hint: ''
   category: skill
 - source: skill/optimize/auto.md
-  name: /evcrate:skill:optimize:auto
-  path: skill/optimize/auto.md
+  name: '/evcrate:skill:optimize:auto'
+  path: skill/optimize/auto.toml
   description: Optimize an existing agent skill [auto]
-  argument_hint: '[skill-name] [prompt]'
+  argument_hint: ''
   category: skill
 - source: skill/plan.md
-  name: /evcrate:skill:plan
-  path: skill/plan.md
+  name: '/evcrate:skill:plan'
+  path: skill/plan.toml
   description: Plan to create a new agent skill
-  argument_hint: '[skill-name] [prompt]'
+  argument_hint: ''
   category: skill
 - source: take.md
-  name: /evcrate:take
-  path: take.md
-  description: Transfer a feature from another project through compare, copy, improve,
-    or port gates
-  argument_hint: '[mode] <source-repo-or-path> <feature> [local-notes]'
+  name: '/evcrate:take'
+  path: take.toml
+  description: Transfer a feature from another project through compare, copy, improve, or port gates
+  argument_hint: ''
   category: core
 - source: test.md
-  name: /evcrate:test
-  path: test.md
+  name: '/evcrate:test'
+  path: test.toml
   description: Run tests locally and analyze the summary report.
   argument_hint: ''
   category: core
 - source: test/ui.md
-  name: /evcrate:test:ui
-  path: test/ui.md
+  name: '/evcrate:test:ui'
+  path: test/ui.toml
   description: Run UI tests on a website & generate a detailed report.
-  argument_hint: '[url] [options]'
+  argument_hint: ''
   category: test
 - source: use-mcp.md
-  name: /evcrate:use-mcp
-  path: use-mcp.md
+  name: '/evcrate:use-mcp'
+  path: use-mcp.toml
   description: Utilize tools of Model Context Protocol (MCP) servers
-  argument_hint: '[task]'
+  argument_hint: ''
   category: core
 - source: watzup.md
-  name: /evcrate:watzup
-  path: watzup.md
+  name: '/evcrate:watzup'
+  path: watzup.toml
   description: Review recent changes and wrap up the work
   argument_hint: ''
   category: core
 - source: worktree.md
-  name: /evcrate:worktree
-  path: worktree.md
+  name: '/evcrate:worktree'
+  path: worktree.toml
   description: Create isolated git worktree for parallel development
-  argument_hint: '[feature-description] OR [project] [feature] (monorepo)'
+  argument_hint: ''
   category: core
