@@ -138,13 +138,13 @@ A suite of strict, fail-closed utilities for scanning commands and skills, valid
    - Target scanners refresh their adjacent target-native data from adapter-managed resources only.
 
 2. **Atomic & Fail-Closed Behavior**:
-   - Frontmatter and TOML parsing fail closed: missing required fields (`description`, `name` for command-skills), bad types, or malformed syntax immediately raise `ScanError` and exit non-zero.
-   - Output writing uses `atomic_write_yaml`: writes first to a temporary file in the destination directory, flushes and syncs, then atomically renames (`os.replace`) over the target path.
+   - Command frontmatter/TOML parsing fails closed: missing `description`, malformed syntax, invalid types, and invalid command-skill names (when present) raise `ScanError` and exit non-zero. Skill scanners reject malformed frontmatter; when a skill has no description, they derive its first body paragraph.
+   - Output writing uses `atomic_write_yaml`: writes first to a temporary file in the destination directory, closes it, then atomically renames (`Path.replace`) over the target path.
    - Pre-existing files (sentinels) are untouched if scanning or validation fails.
 
 3. **Source Normalization**:
-   - Frontmatter strings and descriptions have surrounding whitespace trimmed.
-   - Missing optional fields (e.g. `argument-hint`) normalize to empty strings.
+   - Command descriptions and fallback skill paragraphs trim surrounding whitespace.
+   - Missing optional fields (for example `argument-hint`) normalize to empty strings.
 
 4. **Managed-Only Scanning**:
    - Target scanners discover resources using `scanner-layout.json` configuration (`format`, `root`, `output`, `authority`).
@@ -165,7 +165,7 @@ List of command records. Every record contains exactly these keys (strict; no `p
   path: string          # Path relative to target commands root
   description: string   # Non-empty description
   argument_hint: string # Argument hint string (empty string if none)
-  category: string      # One of: core, development, documentation, quality, git, meta, review, system, tasks, testing, utilities
+  category: string      # One of: core, bootstrap, code, content, cook, design, docs, fix, git, integrate, plan, review, scout, skill, test
 ```
 
 #### `skills_data.yaml`
@@ -175,9 +175,9 @@ List of skill records. Every record contains exactly these keys (strict):
   name: string          # Target-native skill name (e.g., ai-multimodal)
   path: string          # Path relative to target skills root
   description: string   # Non-empty description
-  category: string      # One of: design, utilities, development, audio, git, communication, review, documents
+  category: string      # One of: ai-ml, frontend, backend, infrastructure, database, dev-tools, multimedia, frameworks, utilities, other
   has_scripts: boolean  # True if skill directory contains a scripts/ subdirectory
-  has_references: bool  # True if skill directory contains a references/ subdirectory
+  has_references: boolean  # True if skill directory contains a references/ subdirectory
 ```
 
 ### Target Projections Matrix
@@ -243,3 +243,48 @@ python3 .evcrate/source/.copilot/evcrate/scripts/generate_catalogs.py --skills -
 # Verify freshness of committed data files against live scans
 python3 .evcrate/source/.copilot/evcrate/scripts/generate_catalogs.py --freshness
 ```
+
+### Regeneration and release gates
+
+`commands_data.yaml`, `skills_data.yaml`, `scanner-layout.json`, projected target
+resources, and the eight schema-2 build manifests (aggregate plus seven targets)
+are generated outputs. Change canonical resources or adapter mappings, then run
+`npm run distribute:build`; never hand-edit a projection, catalog, sidecar, or
+manifest. The adapter projection must read target-native metadata so a scanner
+run is byte-stable with the generated catalog.
+
+Run the release sequence in this order:
+
+```bash
+# Canonical parser/help gates
+python3 .evcrate/source/.copilot/evcrate/scripts/test-scan-catalogs.py
+python3 .evcrate/source/.copilot/evcrate/scripts/test-evcrate-help.py
+
+# TypeScript build and adapter/parity/manifest gates
+npm run build
+node --test tests/adapters/contracts.test.mjs tests/adapters/python-parity.test.mjs
+node --test tests/manifests/distribution-manifests.test.mjs \
+  tests/distribution/publication-parity.test.mjs
+
+# Regenerate all target projections and manifests
+npm run distribute:build
+
+# From an unrelated temporary CWD, run both scanners and both generator modes
+# for every target script root listed above. Compare data bytes, native names
+# and paths, authority maps/inventories, and managed regular files before/after.
+python3 "$SCRIPT_ROOT/scan_commands.py"
+python3 "$SCRIPT_ROOT/scan_skills.py"
+python3 "$SCRIPT_ROOT/generate_catalogs.py" --commands --output "$TMP/commands.yaml"
+python3 "$SCRIPT_ROOT/generate_catalogs.py" --skills --output "$TMP/skills.yaml"
+
+# Final manifest/resource closure gate
+npm run distribute:check
+```
+
+The foreign-CWD smoke must prove unrelated user resources are excluded and
+scanner execution does not dirty generated catalogs or manifest hashes. A
+failed parse, unsafe authority entry, missing managed resource, stale catalog,
+or failed write leaves the prior adjacent data file unchanged. These gates
+cover catalog/projection integrity only; `ev-help.py` remains independent, and
+live vendor qualification, Windows validation, npm publication, rollout, and
+deployment remain separate operator/release gates.
