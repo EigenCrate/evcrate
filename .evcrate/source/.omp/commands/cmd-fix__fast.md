@@ -3,7 +3,6 @@ argument-hint: "[issues]"
 description: "Analyze and fix small issues [FAST]"
 ---
 
-
 Analyze the skills catalog and activate the skills that are needed for the task during the process.
 
 ## Mission

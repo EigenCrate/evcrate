@@ -3,7 +3,6 @@ argument-hint: "[issues] [--advice]"
 description: "Use subagents to plan and fix hard issues"
 ---
 
-
 Use the orchestration protocol, development rules, and relevant skills to fix:
 <raw-issues>$ARGUMENTS</raw-issues>
 

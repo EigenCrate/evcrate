@@ -3,7 +3,6 @@ argument-hint: "[category|command|task description]"
 description: "EVCrate usage guide - just type naturally"
 ---
 
-
 Think harder.
 All-in-one EVCrate guide. Run the script and present output based on type markers.
 

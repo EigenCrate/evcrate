@@ -9,10 +9,9 @@ Command Path: /worktree
 Description: Create isolated git worktree for parallel development
 
 ---
-description: Create isolated git worktree for parallel development
-argument-hint: [feature-description] OR [project] [feature] (monorepo)
+description: "Create isolated git worktree for parallel development"
+argument-hint: "[feature-description] OR [project] [feature] (monorepo)"
 ---
-
 Create an isolated git worktree for parallel feature development.
 
 ## Workflow

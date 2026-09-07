@@ -9,10 +9,9 @@ Command Path: /design/fast
 Description: Create a quick design
 
 ---
-description: Create a quick design
-argument-hint: [tasks]
+description: "Create a quick design"
+argument-hint: "[tasks]"
 ---
-
 Think hard to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <tasks>$ARGUMENTS</tasks>
 

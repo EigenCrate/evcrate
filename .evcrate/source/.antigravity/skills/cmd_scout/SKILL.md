@@ -9,10 +9,9 @@ Command Path: /scout
 Description: Scout given directories to respond to the user's requests
 
 ---
-description: Scout given directories to respond to the user's requests
-argument-hint: [user-prompt] [scale]
+description: "Scout given directories to respond to the user's requests"
+argument-hint: "[user-prompt] [scale]"
 ---
-
 ## Purpose
 
 Search the codebase for files needed to complete the task using a fast, token efficient agent.

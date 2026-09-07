@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-07  
-**Status:** Phase 02 catalog schema/freshness complete; prior build-command Phases 01-04 remain complete; release remains Unreleased
+**Status:** Phase 04 verification complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
 
 ### Phase 02: Catalog schema and freshness
 
@@ -162,8 +162,9 @@ allowlist.
 
 ### Phases 02-04: Ignore policy, projections, and verification
 
-**Updated:** 2026-09-06  
-**Status:** Complete
+**Updated:** 2026-09-07  
+**Status:** Complete  
+**Evidence:** [Phase 04 test report](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md) and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md)
 
 #### Standardized ignore policy
 
@@ -200,6 +201,11 @@ Focused suites cover path extraction, pattern matching, production build-command
 classification, canonical ignore integration, hook process behavior, and
 monorepo scenarios. Heavy-directory protections remain active while standard
 build commands are unblocked.
+
+The 2026-09-07 evidence records six focused suites at 299/299 passed,
+`npm run distribute:check` as `status: "ok"` across seven adapters, and 21/21
+bounded matrix rows (63 evaluations) passing across canonical, projected OMP, and
+published OMP hooks.
 
 ### Documentation centralization
 

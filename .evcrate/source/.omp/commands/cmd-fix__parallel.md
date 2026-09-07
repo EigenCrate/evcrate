@@ -3,7 +3,6 @@ argument-hint: "[issues] [--advice]"
 description: "Analyze & fix issues with parallel fullstack-developer agents"
 ---
 
-
 **Ultrathink parallel** raw input: <raw-issues>$ARGUMENTS</raw-issues>
 
 ## Canonical checkpoint routing

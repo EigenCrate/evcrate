@@ -9,10 +9,9 @@ Command Path: /design/good
 Description: Create an immersive design
 
 ---
-description: Create an immersive design
-argument-hint: [tasks]
+description: "Create an immersive design"
+argument-hint: "[tasks]"
 ---
-
 Think hard to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
 <tasks>$ARGUMENTS</tasks>
 

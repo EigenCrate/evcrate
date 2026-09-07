@@ -3,7 +3,6 @@ argument-hint: "[tasks] [--advice]"
 description: "Implement a feature automatically with plan and quality gates"
 ---
 
-
 **Ultrathink** to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>$ARGUMENTS</raw-tasks>
 

@@ -3,7 +3,6 @@ argument-hint: "[plan-path] [--advice]"
 description: "Execute parallel or sequential phases based on plan structure"
 ---
 
-
 Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
 
 ## Canonical checkpoint routing

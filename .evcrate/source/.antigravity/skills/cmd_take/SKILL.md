@@ -4,16 +4,14 @@ description: Transfer a feature from another project through compare, copy, impr
 ---
 # cmd_take
 
-Command Path: /evcrate:take
+Command Path: /take
 
 Description: Transfer a feature from another project through compare, copy, improve, or port gates
 
 ---
-name: "/evcrate:take"
-description: Transfer a feature from another project through compare, copy, improve, or port gates
-argument-hint: [mode] <source-repo-or-path> <feature> [local-notes]
+description: "Transfer a feature from another project through compare, copy, improve, or port gates"
+argument-hint: "[mode] <source-repo-or-path> <feature> [local-notes]"
 ---
-
 ## Mission
 
 Transfer a feature from a source project into the current project without treating unfamiliar code as a drop-in patch. Preserve the useful behavior, reject incompatible assumptions, and produce evidence for every important decision.

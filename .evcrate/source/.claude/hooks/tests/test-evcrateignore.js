@@ -53,13 +53,16 @@ function restoreEVCrateIgnore() {
   }
 }
 
+process.on('SIGINT', () => { restoreEVCrateIgnore(); process.exit(130); });
+process.on('SIGTERM', () => { restoreEVCrateIgnore(); process.exit(143); });
+process.on('SIGHUP', () => { restoreEVCrateIgnore(); process.exit(129); });
 process.on('exit', restoreEVCrateIgnore);
 
 (async function main() {
-console.log('Testing .evcrateignore functionality...\n');
-
 let passed = 0;
 let failed = 0;
+try {
+console.log('Testing .evcrateignore functionality...\n');
 
 // Test 1: Default patterns work (with existing .evcrateignore)
 console.log('--- Test 1: Default patterns from .evcrateignore ---');
@@ -193,7 +196,10 @@ if (result.success) {
 }
 
 // Restore original .evcrateignore
-restoreEVCrateIgnore();
+} finally {
+  // Restore original .evcrateignore
+  restoreEVCrateIgnore();
+}
 
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

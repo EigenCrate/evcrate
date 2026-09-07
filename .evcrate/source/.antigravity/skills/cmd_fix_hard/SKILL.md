@@ -9,10 +9,9 @@ Command Path: /fix/hard
 Description: Use subagents to plan and fix hard issues
 
 ---
-description: Use subagents to plan and fix hard issues
-argument-hint: [issues] [--advice]
+description: "Use subagents to plan and fix hard issues"
+argument-hint: "[issues] [--advice]"
 ---
-
 Use the orchestration protocol, development rules, and relevant skills to fix:
 <raw-issues>$ARGUMENTS</raw-issues>
 

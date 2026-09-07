@@ -9,10 +9,9 @@ Command Path: /design/video
 Description: Create a design based on video
 
 ---
-description: Create a design based on video
-argument-hint: [video]
+description: "Create a design based on video"
+argument-hint: "[video]"
 ---
-
 Think hard to plan & start designing follow exactly this video: 
 <video>$ARGUMENTS</video>
 

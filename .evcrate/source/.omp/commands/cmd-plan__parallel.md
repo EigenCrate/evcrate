@@ -3,7 +3,6 @@ argument-hint: "[task]"
 description: "Create detailed plan with parallel-executable phases"
 ---
 
-
 Think strategically about parallelization.
 Activate `planning` skill.
 

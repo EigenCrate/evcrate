@@ -9,10 +9,9 @@ Command Path: /cook
 Description: Implement a feature [step by step]
 
 ---
-description: Implement a feature [step by step]
-argument-hint: [tasks] [--advice]
+description: "Implement a feature [step by step]"
+argument-hint: "[tasks] [--advice]"
 ---
-
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>$ARGUMENTS</raw-tasks>
 

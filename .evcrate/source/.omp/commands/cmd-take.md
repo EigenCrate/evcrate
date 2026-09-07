@@ -1,9 +1,7 @@
 ---
 argument-hint: "[mode] <source-repo-or-path> <feature> [local-notes]"
 description: "Transfer a feature from another project through compare, copy, improve, or port gates"
-name: "/cmd-take"
 ---
-
 
 ## Mission
 

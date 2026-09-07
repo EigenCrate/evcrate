@@ -9,10 +9,9 @@ Command Path: /fix/parallel
 Description: Analyze & fix issues with parallel fullstack-developer agents
 
 ---
-description: Analyze & fix issues with parallel fullstack-developer agents
-argument-hint: [issues] [--advice]
+description: "Analyze & fix issues with parallel fullstack-developer agents"
+argument-hint: "[issues] [--advice]"
 ---
-
 **Ultrathink parallel** raw input: <raw-issues>$ARGUMENTS</raw-issues>
 
 ## Canonical checkpoint routing

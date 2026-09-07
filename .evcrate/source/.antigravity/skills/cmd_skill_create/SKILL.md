@@ -9,10 +9,9 @@ Command Path: /skill/create
 Description: Create a new agent skill
 
 ---
-description: Create a new agent skill
-argument-hint: [prompt-or-llms-or-github-url]
+description: "Create a new agent skill"
+argument-hint: "[prompt-or-llms-or-github-url]"
 ---
-
 Ultrathink.
 Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.

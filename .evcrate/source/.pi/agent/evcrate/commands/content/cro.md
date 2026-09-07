@@ -1,8 +1,7 @@
 ---
-description: Analyze the current content and optimize for conversion
-argument-hint: [issues]
+description: "Analyze the current content and optimize for conversion"
+argument-hint: "[issues]"
 ---
-
 You are an expert in conversion optimization. Analyze the content based on reported issues:
 <issues>$ARGUMENTS</issues>
 

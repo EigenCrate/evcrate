@@ -3,7 +3,6 @@ argument-hint: "[branch] [from-branch]"
 description: "⚠️ Merge code from one branch to another"
 ---
 
-
 ## Variables
 
 TO_BRANCH: $1 (defaults to `main`)

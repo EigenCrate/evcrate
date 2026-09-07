@@ -3,7 +3,6 @@ argument-hint: "[task]"
 description: "No research. Only analyze and create an implementation plan"
 ---
 
-
 Think.
 Activate `planning` skill.
 

@@ -1,7 +1,7 @@
 ---
+argument-hint: ""
 description: "Analyze the codebase and update documentation"
 ---
-
 
 ## Phase 1: Parallel Codebase Scouting
 

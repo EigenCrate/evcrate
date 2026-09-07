@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-06  
+**Updated:** 2026-09-07  
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 
@@ -296,14 +296,18 @@ projection or publication:
 | `scout-block/tests/test-pattern-matcher.js` | Twelve trailing-slash defaults, descendants, near-matches, Windows paths, legacy rules, and negations. |
 | `scout-block/tests/test-build-command-allowlist.js` | Production `isBuildCommand` classification; no duplicated regex authority. |
 | `hooks/tests/test-scout-block.js` | Hook-process exit codes for build allowances, blocked reads, and adversarial chains. |
-| `hooks/tests/test-evcrateignore.js` | Canonical/fallback/custom policy behavior and restoration. |
+| `hooks/tests/test-evcrateignore.js` | Canonical/fallback/custom policy behavior; byte restoration in `finally` and termination handlers. |
 | `scout-block/tests/test-monorepo-scenarios.js` | Nested package and deep generated-directory protection. |
 
-Current Phase 04 evidence is 299/299 focused assertions, plus successful
-`npm run build`, `npm run distribute:build`, `npm run distribute:check`, and
-projected/published OMP smoke values `0, 0, 2, 2`. Keep both positive build
+The 2026-09-07 Phase 04 evidence records 299/299 focused assertions, plus
+successful `npm run build`, `npm run distribute:build`, `npm run distribute:check`,
+and projected/published OMP smoke values `0, 0, 2, 2`. Keep both positive build
 cases and negative directory-read/search cases; a build exemption must never
 cover a later or chained access to a protected path.
+
+Tests that mutate canonical policy must snapshot the original bytes, restore them
+in `finally` and termination handlers, and remove backups or temporary drivers
+before reporting success.
 
 ## Documentation standards
 

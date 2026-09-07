@@ -3,7 +3,6 @@ argument-hint: "[github-actions-url]"
 description: "Analyze Github Actions logs and provide a plan to fix the issues"
 ---
 
-
 Activate `planning` skill.
 
 ## Github Actions URL

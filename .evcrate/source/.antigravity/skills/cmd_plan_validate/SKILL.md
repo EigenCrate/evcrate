@@ -9,10 +9,9 @@ Command Path: /plan/validate
 Description: Validate plan with critical questions interview
 
 ---
-description: Validate plan with critical questions interview
-argument-hint: [plan-path]
+description: "Validate plan with critical questions interview"
+argument-hint: "[plan-path]"
 ---
-
 ## Your mission
 
 Interview the user with critical questions to validate assumptions, confirm decisions, and surface potential issues in an implementation plan before coding begins.

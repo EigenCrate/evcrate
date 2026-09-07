@@ -9,10 +9,9 @@ Command Path: /fix/test
 Description: Run test suite and fix issues
 
 ---
-description: Run test suite and fix issues
-argument-hint: [issues] [--advice]
+description: "Run test suite and fix issues"
+argument-hint: "[issues] [--advice]"
 ---
-
 Analyze the skills catalog and activate the skills that are needed for the task during the process.
 
 ## Reported Issues:

@@ -3,7 +3,6 @@ argument-hint: "[tasks-or-prompt] [--advice]"
 description: "Low-risk fast cook: scout, plan fast, implement with quality gates"
 ---
 
-
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>$ARGUMENTS</raw-tasks>
 

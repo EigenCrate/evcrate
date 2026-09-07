@@ -3,7 +3,6 @@ argument-hint: "[skill-name] [prompt]"
 description: "Optimize an existing agent skill"
 ---
 
-
 Think harder.
 Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.

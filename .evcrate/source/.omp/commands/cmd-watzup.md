@@ -1,4 +1,5 @@
 ---
+argument-hint: ""
 description: "Review recent changes and wrap up the work"
 ---
 

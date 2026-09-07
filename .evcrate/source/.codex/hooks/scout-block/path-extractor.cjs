@@ -387,9 +387,6 @@ function splitCommandSegments(cmd) {
     segments.push(current.trim());
   }
 
-  if (inSingleQuote || inDoubleQuote || escape) {
-    segments.hasUnterminatedQuotes = true;
-  }
 
   return segments;
 }

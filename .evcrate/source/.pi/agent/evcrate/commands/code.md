@@ -1,8 +1,7 @@
 ---
-description: Start coding & testing an existing plan
-argument-hint: [plan] [--advice]
+description: "Start coding & testing an existing plan"
+argument-hint: "[plan] [--advice]"
 ---
-
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>$ARGUMENTS</raw-plan>
 

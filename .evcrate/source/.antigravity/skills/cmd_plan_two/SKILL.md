@@ -9,10 +9,9 @@ Command Path: /plan/two
 Description: Research & create an implementation plan with 2 approaches
 
 ---
-description: Research & create an implementation plan with 2 approaches
-argument-hint: [task]
+description: "Research & create an implementation plan with 2 approaches"
+argument-hint: "[task]"
 ---
-
 Think harder.
 Activate `planning` skill.
 

@@ -9,10 +9,9 @@ Command Path: /plan/parallel
 Description: Create detailed plan with parallel-executable phases
 
 ---
-description: Create detailed plan with parallel-executable phases
-argument-hint: [task]
+description: "Create detailed plan with parallel-executable phases"
+argument-hint: "[task]"
 ---
-
 Think strategically about parallelization.
 Activate `planning` skill.
 

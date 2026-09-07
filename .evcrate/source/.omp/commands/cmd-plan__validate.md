@@ -3,7 +3,6 @@ argument-hint: "[plan-path]"
 description: "Validate plan with critical questions interview"
 ---
 
-
 ## Your mission
 
 Interview the user with critical questions to validate assumptions, confirm decisions, and surface potential issues in an implementation plan before coding begins.

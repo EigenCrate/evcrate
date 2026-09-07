@@ -1,4 +1,5 @@
 ---
+argument-hint: ""
 description: "Stage all files and create a commit."
 ---
 

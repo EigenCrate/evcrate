@@ -3,7 +3,6 @@ argument-hint: "[issues] [--advice]"
 description: "Analyze and fix issues [INTELLIGENT ROUTING]"
 ---
 
-
 **Analyze the issue, select the narrowest fix workflow, and execute it in this session:**
 <issues>$ARGUMENTS</issues>
 

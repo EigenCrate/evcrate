@@ -3,7 +3,6 @@ argument-hint: "[issues]"
 description: "Debugging technical issues and providing solutions."
 ---
 
- 
 **Reported Issues**:
  $ARGUMENTS
 

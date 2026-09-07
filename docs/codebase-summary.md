@@ -65,11 +65,11 @@ freshness checks.
 
 ### Scanner and generator behavior
 
-- `scan_commands.py` defines the frozen `CommandLayout` contract: root, format
+- `scan_commands.py` defines the frozen command-layout contract: root, format
   (`markdown`, `toml`, or `command-skill`), optional output, managed entries,
   and target name-map/resolver bindings. Strict parsers require valid metadata,
   UTF-8, managed-entry coverage, and unique command names.
-- `scan_skills.py` defines the frozen `SkillLayout` contract for root, output,
+- `scan_skills.py` defines the frozen skill-layout contract for root, output,
   managed entries, exclusions, and source mapping. It preserves arbitrary
   nesting in skill names and rejects missing, unsafe, symlinked, or duplicate
   managed entries.
@@ -131,10 +131,10 @@ their prior behavior.
 | `hooks/scout-block/tests/test-pattern-matcher.js` | Unit coverage for all twelve trailing-slash defaults, directory descendants, lexical near-matches, Windows separators, legacy custom rules, and negation behavior. |
 | `hooks/scout-block/tests/test-build-command-allowlist.js` | Production `isBuildCommand` matrix for package managers, build tools, language runners, environment prefixes, malformed/substitution inputs, and direct directory commands. |
 | `hooks/tests/test-scout-block.js` | End-to-end hook coverage for allowed builds, blocked generated/dependency exploration, adversarial chains, process substitution, broad patterns, and virtual-environment executables. |
-| `hooks/tests/test-evcrateignore.js` | Canonical/custom policy integration, fallback equality, legacy rules, and policy restoration. |
+| `hooks/tests/test-evcrateignore.js` | Canonical/custom policy integration, fallback equality, legacy rules, and byte-for-byte policy/backup restoration on completion or process termination. |
 | `hooks/scout-block/tests/test-monorepo-scenarios.js` | Nested package, generated-directory, and deep path protection scenarios. |
 
-Focused canonical runs on 2026-09-06 reported 299/299 passing assertions:
+Focused canonical runs on 2026-09-07 reported 299/299 passing assertions:
 
 | Suite | Result |
 |---|---:|
@@ -144,14 +144,15 @@ Focused canonical runs on 2026-09-06 reported 299/299 passing assertions:
 | `test-scout-block.js` | 52 passed |
 | `test-evcrateignore.js` | 9 passed |
 | `test-monorepo-scenarios.js` | 33 passed |
+Evidence: [Phase 04 test report](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md) and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md).
 
 The six generated projections (`.omp`, `.pi`, `.copilot`, `.codex`, `.gemini`,
-`.antigravity`) carry the canonical policy and hook closure without drift;
-`npm run distribute:check` verifies manifests and parity. Projected and
-published OMP runtime smoke returns `0, 0, 2, 2` for allowed builds, an
-environment-prefixed build, a chained read, and a direct generated-directory
-read. Build commands remain unblocked while heavy-directory reads/searches stay
-blocked.
+`.antigravity`) carry the canonical policy and hook closure without drift.
+The latest `npm run distribute:check` returned `status: "ok"` across all seven
+registered adapters. Projected and published OMP runtime smoke returns `0, 0, 2, 2`
+for allowed builds, an environment-prefixed build, a chained read, and a direct
+generated-directory read. Build commands remain unblocked while heavy-directory
+reads/searches stay blocked.
 
 ## TypeScript modules
 

@@ -1,12 +1,12 @@
 ---
 name: cmd_coding-level
-description: 
+description: Set your coding experience level for tailored explanations and output format.
 ---
 # cmd_coding-level
 
 Command Path: /coding-level
 
-Description: 
+Description: Set your coding experience level for tailored explanations and output format.
 
 Set your coding experience level for tailored explanations and output format.
 

@@ -3,7 +3,6 @@ argument-hint: "[issue]"
 description: "Analyze and fix UI issues"
 ---
 
-
 ## Required Skills (Priority Order)
 1. **`ui-ux-pro-max`** - Design intelligence database (ALWAYS ACTIVATE FIRST)
 2. **`aesthetic`** - Design principles

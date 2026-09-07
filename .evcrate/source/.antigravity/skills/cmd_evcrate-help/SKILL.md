@@ -9,10 +9,9 @@ Command Path: /evcrate-help
 Description: EVCrate usage guide - just type naturally
 
 ---
-description: EVCrate usage guide - just type naturally
-argument-hint: [category|command|task description]
+description: "EVCrate usage guide - just type naturally"
+argument-hint: "[category|command|task description]"
 ---
-
 Think harder.
 All-in-one EVCrate guide. Run the script and present output based on type markers.
 

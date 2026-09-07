@@ -1,4 +1,5 @@
 ---
+argument-hint: ""
 description: "Stage, commit and push all code in the current branch"
 ---
 

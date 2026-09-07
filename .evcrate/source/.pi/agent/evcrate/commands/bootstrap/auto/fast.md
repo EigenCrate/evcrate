@@ -1,8 +1,7 @@
 ---
-description: Quickly bootstrap a new project automatically
-argument-hint: [user-requirements] [--advice]
+description: "Quickly bootstrap a new project automatically"
+argument-hint: "[user-requirements] [--advice]"
 ---
-
 **Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
 
 ---

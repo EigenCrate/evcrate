@@ -3,7 +3,6 @@ argument-hint: "[url] [options]"
 description: "Run UI tests on a website & generate a detailed report."
 ---
 
-
 Activate the chrome-devtools skill.
 
 ## Purpose

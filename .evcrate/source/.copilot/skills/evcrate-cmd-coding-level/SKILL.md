@@ -1,7 +1,7 @@
 ---
 name: "evcrate-cmd-coding-level"
 description: "Set your coding experience level for tailored explanations and output format."
-argument-hint: ""
+argument-hint: "[0-5]"
 user-invocable: true
 disable-model-invocation: true
 ---

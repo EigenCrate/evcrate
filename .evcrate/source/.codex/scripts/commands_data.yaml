@@ -1,349 +1,422 @@
-- name: /evcrate:ask
+- source: advise.md
+  name: /evcrate:advise
+  path: advise.md
+  description: Interview-first technical advice with optional Codex relay
+  argument_hint: '[prompt-or-url] [--agent]'
+  category: core
+- source: ask.md
+  name: /evcrate:ask
   path: ask.md
   description: Answer technical and architectural questions.
-  argument_hint:
-  - technical-question
-  power_level: 1
+  argument_hint: '[technical-question]'
   category: core
-- name: /evcrate:bootstrap:auto:fast
-  path: bootstrap/auto/fast.md
-  description: Quickly bootstrap a new project automatically
-  argument_hint:
-  - user-requirements
-  power_level: 3
-  category: bootstrap
-- name: /evcrate:bootstrap:auto
-  path: bootstrap/auto.md
-  description: Bootstrap a new project automatically
-  argument_hint:
-  - user-requirements
-  power_level: 4
-  category: bootstrap
-- name: /evcrate:bootstrap
+- source: bootstrap.md
+  name: /evcrate:bootstrap
   path: bootstrap.md
   description: Bootstrap a new project step by step
-  argument_hint:
-  - user-requirements
-  power_level: 5
+  argument_hint: '[user-requirements] [--advice]'
   category: core
-- name: /evcrate:brainstorm
+- source: bootstrap/auto.md
+  name: /evcrate:bootstrap:auto
+  path: bootstrap/auto.md
+  description: Bootstrap a new project automatically
+  argument_hint: '[user-requirements] [--advice]'
+  category: bootstrap
+- source: bootstrap/auto/fast.md
+  name: /evcrate:bootstrap:auto:fast
+  path: bootstrap/auto/fast.md
+  description: Quickly bootstrap a new project automatically
+  argument_hint: '[user-requirements] [--advice]'
+  category: bootstrap
+- source: bootstrap/auto/parallel.md
+  name: /evcrate:bootstrap:auto:parallel
+  path: bootstrap/auto/parallel.md
+  description: Bootstrap project with parallel execution
+  argument_hint: '[user-requirements] [--advice]'
+  category: bootstrap
+- source: brainstorm.md
+  name: /evcrate:brainstorm
   path: brainstorm.md
   description: Brainstorm a feature
-  argument_hint:
-  - question
-  power_level: 2
+  argument_hint: '[question]'
   category: core
-- name: /evcrate:code
+- source: code.md
+  name: /evcrate:code
   path: code.md
   description: Start coding & testing an existing plan
-  argument_hint:
-  - plan
-  power_level: 1
+  argument_hint: '[plan] [--advice]'
   category: core
-- name: /evcrate:content:cro
+- source: code/auto.md
+  name: /evcrate:code:auto
+  path: code/auto.md
+  description: '[AUTO] Start coding & testing an existing plan ("trust me bro")'
+  argument_hint: '[plan] [all-phases-yes-or-no] [--advice] (default: yes)'
+  category: code
+- source: code/no-test.md
+  name: /evcrate:code:no-test
+  path: code/no-test.md
+  description: Start coding an existing plan (no testing)
+  argument_hint: '[plan] [--advice]'
+  category: code
+- source: code/parallel.md
+  name: /evcrate:code:parallel
+  path: code/parallel.md
+  description: Execute parallel or sequential phases based on plan structure
+  argument_hint: '[plan-path] [--advice]'
+  category: code
+- source: coding-level.md
+  name: /evcrate:coding-level
+  path: coding-level.md
+  description: Set your coding experience level for tailored explanations and output
+    format.
+  argument_hint: '[0-5]'
+  category: core
+- source: content/cro.md
+  name: /evcrate:content:cro
   path: content/cro.md
   description: Analyze the current content and optimize for conversion
-  argument_hint:
-  - issues
-  power_level: 0
+  argument_hint: '[issues]'
   category: content
-- name: /evcrate:content:enhance
+- source: content/enhance.md
+  name: /evcrate:content:enhance
   path: content/enhance.md
   description: Analyze the current copy issues and enhance it
-  argument_hint:
-  - issues
-  power_level: 0
+  argument_hint: '[issues]'
   category: content
-- name: /evcrate:content:fast
+- source: content/fast.md
+  name: /evcrate:content:fast
   path: content/fast.md
   description: Write creative & smart copy [FAST]
-  argument_hint:
-  - user-request
-  power_level: 0
+  argument_hint: '[user-request]'
   category: content
-- name: /evcrate:content:good
+- source: content/good.md
+  name: /evcrate:content:good
   path: content/good.md
   description: Write good creative & smart copy [GOOD]
-  argument_hint:
-  - user-request
-  power_level: 0
+  argument_hint: '[user-request]'
   category: content
-- name: /evcrate:cook:auto:fast
-  path: cook/auto/fast.md
-  description: No research. Only scout, plan & implement ["trust me bro"]
-  argument_hint:
-  - tasks-or-prompt
-  power_level: 1
-  category: cook
-- name: /evcrate:cook:auto
-  path: cook/auto.md
-  description: Implement a feature automatically ("trust me bro")
-  argument_hint:
-  - tasks
-  power_level: 2
-  category: cook
-- name: /evcrate:cook
+- source: cook.md
+  name: /evcrate:cook
   path: cook.md
   description: Implement a feature [step by step]
-  argument_hint:
-  - tasks
-  power_level: 3
+  argument_hint: '[tasks] [--advice]'
   category: core
-- name: /evcrate:debug
+- source: cook/auto.md
+  name: /evcrate:cook:auto
+  path: cook/auto.md
+  description: Implement a feature automatically with plan and quality gates
+  argument_hint: '[tasks] [--advice]'
+  category: cook
+- source: cook/auto/fast.md
+  name: /evcrate:cook:auto:fast
+  path: cook/auto/fast.md
+  description: 'Low-risk fast cook: scout, plan fast, implement with quality gates'
+  argument_hint: '[tasks-or-prompt] [--advice]'
+  category: cook
+- source: cook/auto/parallel.md
+  name: /evcrate:cook:auto:parallel
+  path: cook/auto/parallel.md
+  description: Plan parallel phases & execute with fullstack-developer agents
+  argument_hint: '[tasks] [--advice]'
+  category: cook
+- source: debug.md
+  name: /evcrate:debug
   path: debug.md
   description: Debugging technical issues and providing solutions.
-  argument_hint:
-  - issues
-  power_level: 2
+  argument_hint: '[issues]'
   category: core
-- name: /evcrate:design:3d
+- source: design/3d.md
+  name: /evcrate:design:3d
   path: design/3d.md
   description: Create immersive interactive 3D designs with Three.js
-  argument_hint:
-  - tasks
-  power_level: 0
+  argument_hint: '[tasks]'
   category: design
-- name: /evcrate:design:describe
+- source: design/describe.md
+  name: /evcrate:design:describe
   path: design/describe.md
   description: Describe a design based on screenshot/video
-  argument_hint:
-  - screenshot
-  power_level: 0
+  argument_hint: '[screenshot]'
   category: design
-- name: /evcrate:design:fast
+- source: design/fast.md
+  name: /evcrate:design:fast
   path: design/fast.md
   description: Create a quick design
-  argument_hint:
-  - tasks
-  power_level: 0
+  argument_hint: '[tasks]'
   category: design
-- name: /evcrate:design:good
+- source: design/good.md
+  name: /evcrate:design:good
   path: design/good.md
   description: Create an immersive design
-  argument_hint:
-  - tasks
-  power_level: 0
+  argument_hint: '[tasks]'
   category: design
-- name: /evcrate:design:screenshot
+- source: design/screenshot.md
+  name: /evcrate:design:screenshot
   path: design/screenshot.md
   description: Create a design based on screenshot
-  argument_hint:
-  - screenshot
-  power_level: 0
+  argument_hint: '[screenshot]'
   category: design
-- name: /evcrate:design:video
+- source: design/video.md
+  name: /evcrate:design:video
   path: design/video.md
   description: Create a design based on video
-  argument_hint:
-  - video
-  power_level: 0
+  argument_hint: '[video]'
   category: design
-- name: /evcrate:docs:init
+- source: docs/init.md
+  name: /evcrate:docs:init
   path: docs/init.md
   description: Analyze the codebase and create initial documentation
   argument_hint: ''
-  power_level: 4
   category: docs
-- name: /evcrate:docs:summarize
+- source: docs/summarize.md
+  name: /evcrate:docs:summarize
   path: docs/summarize.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
+  description: Analyze the codebase and update documentation
+  argument_hint: '[focused-topics] [should-scan-codebase]'
   category: docs
-- name: /evcrate:docs:update
+- source: docs/update.md
+  name: /evcrate:docs:update
   path: docs/update.md
   description: Analyze the codebase and update documentation
   argument_hint: ''
-  power_level: 3
   category: docs
-- name: /evcrate:fix:ci
+- source: evcrate-help.md
+  name: /evcrate:evcrate-help
+  path: evcrate-help.md
+  description: EVCrate usage guide - just type naturally
+  argument_hint: '[category|command|task description]'
+  category: core
+- source: fix.md
+  name: /evcrate:fix
+  path: fix.md
+  description: Analyze and fix issues [INTELLIGENT ROUTING]
+  argument_hint: '[issues] [--advice]'
+  category: core
+- source: fix/ci.md
+  name: /evcrate:fix:ci
   path: fix/ci.md
   description: Analyze Github Actions logs and fix issues
-  argument_hint:
-  - github-actions-url
-  power_level: 1
+  argument_hint: '[github-actions-url]'
   category: fix
-- name: /evcrate:fix:fast
+- source: fix/fast.md
+  name: /evcrate:fix:fast
   path: fix/fast.md
   description: Analyze and fix small issues [FAST]
-  argument_hint:
-  - issues
-  power_level: 1
+  argument_hint: '[issues]'
   category: fix
-- name: /evcrate:fix:hard
+- source: fix/hard.md
+  name: /evcrate:fix:hard
   path: fix/hard.md
   description: Use subagents to plan and fix hard issues
-  argument_hint:
-  - issues
-  power_level: 3
+  argument_hint: '[issues] [--advice]'
   category: fix
-- name: /evcrate:fix:logs
+- source: fix/logs.md
+  name: /evcrate:fix:logs
   path: fix/logs.md
   description: Analyze logs and fix issues
-  argument_hint:
-  - issue
-  power_level: 1
+  argument_hint: '[issue] [--advice]'
   category: fix
-- name: /evcrate:fix:test
+- source: fix/parallel.md
+  name: /evcrate:fix:parallel
+  path: fix/parallel.md
+  description: Analyze & fix issues with parallel fullstack-developer agents
+  argument_hint: '[issues] [--advice]'
+  category: fix
+- source: fix/test.md
+  name: /evcrate:fix:test
   path: fix/test.md
   description: Run test suite and fix issues
-  argument_hint:
-  - issues
-  power_level: 2
+  argument_hint: '[issues] [--advice]'
   category: fix
-- name: /evcrate:fix:types
+- source: fix/types.md
+  name: /evcrate:fix:types
   path: fix/types.md
   description: Fix type errors
   argument_hint: ''
-  power_level: 1
   category: fix
-- name: /evcrate:fix:ui
+- source: fix/ui.md
+  name: /evcrate:fix:ui
   path: fix/ui.md
   description: Analyze and fix UI issues
-  argument_hint:
-  - issue
-  power_level: 2
+  argument_hint: '[issue]'
   category: fix
-- name: /evcrate:fix
-  path: fix.md
-  description: Analyze and fix small issues [AUTO DETECT COMPLEXITY]
-  argument_hint:
-  - issues
-  power_level: 2
-  category: core
-- name: /evcrate:git:cm
+- source: git/cm.md
+  name: /evcrate:git:cm
   path: git/cm.md
   description: Stage all files and create a commit.
   argument_hint: ''
-  power_level: 0
   category: git
-- name: /evcrate:git:cp
+- source: git/cp.md
+  name: /evcrate:git:cp
   path: git/cp.md
   description: Stage, commit and push all code in the current branch
   argument_hint: ''
-  power_level: 0
   category: git
-- name: /evcrate:git:pr
+- source: git/merge.md
+  name: /evcrate:git:merge
+  path: git/merge.md
+  description: ⚠️ Merge code from one branch to another
+  argument_hint: '[branch] [from-branch]'
+  category: git
+- source: git/pr.md
+  name: /evcrate:git:pr
   path: git/pr.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
+  description: Create a pull request
+  argument_hint: '[branch] [from-branch]'
   category: git
-- name: /evcrate:journal
+- source: journal.md
+  name: /evcrate:journal
   path: journal.md
   description: Write some journal entries.
   argument_hint: ''
-  power_level: 1
   category: core
-- name: /evcrate:plan:ci
-  path: plan/ci.md
-  description: Analyze Github Actions logs and provide a plan to fix the issues
-  argument_hint:
-  - github-actions-url
-  power_level: 0
-  category: plan
-- name: /evcrate:plan:cro
-  path: plan/cro.md
-  description: Create a CRO plan for the given content
-  argument_hint:
-  - issues
-  power_level: 0
-  category: plan
-- name: /evcrate:plan:fast
-  path: plan/fast.md
-  description: No research. Only analyze and create an implementation plan
-  argument_hint:
-  - task
-  power_level: 2
-  category: plan
-- name: /evcrate:plan:hard
-  path: plan/hard.md
-  description: Research, analyze, and create an implementation plan
-  argument_hint:
-  - task
-  power_level: 3
-  category: plan
-- name: /evcrate:plan:two
-  path: plan/two.md
-  description: Research & create an implementation plan with 2 approaches
-  argument_hint:
-  - task
-  power_level: 4
-  category: plan
-- name: /evcrate:plan
+- source: plan.md
+  name: /evcrate:plan
   path: plan.md
   description: Intelligent plan creation with prompt enhancement
-  argument_hint:
-  - task
-  power_level: 3
+  argument_hint: '[task]'
   category: core
-- name: /evcrate:review:codebase
+- source: plan/archive.md
+  name: /evcrate:plan:archive
+  path: plan/archive.md
+  description: Write journal entries and archive specific plans or all plans
+  argument_hint: '[path-to-plan] (default: all plans)'
+  category: plan
+- source: plan/ci.md
+  name: /evcrate:plan:ci
+  path: plan/ci.md
+  description: Analyze Github Actions logs and provide a plan to fix the issues
+  argument_hint: '[github-actions-url]'
+  category: plan
+- source: plan/cro.md
+  name: /evcrate:plan:cro
+  path: plan/cro.md
+  description: Create a CRO plan for the given content
+  argument_hint: '[issues]'
+  category: plan
+- source: plan/fast.md
+  name: /evcrate:plan:fast
+  path: plan/fast.md
+  description: No research. Only analyze and create an implementation plan
+  argument_hint: '[task]'
+  category: plan
+- source: plan/hard.md
+  name: /evcrate:plan:hard
+  path: plan/hard.md
+  description: Research, analyze, and create an implementation plan
+  argument_hint: '[task]'
+  category: plan
+- source: plan/parallel.md
+  name: /evcrate:plan:parallel
+  path: plan/parallel.md
+  description: Create detailed plan with parallel-executable phases
+  argument_hint: '[task]'
+  category: plan
+- source: plan/two.md
+  name: /evcrate:plan:two
+  path: plan/two.md
+  description: Research & create an implementation plan with 2 approaches
+  argument_hint: '[task]'
+  category: plan
+- source: plan/validate.md
+  name: /evcrate:plan:validate
+  path: plan/validate.md
+  description: Validate plan with critical questions interview
+  argument_hint: '[plan-path]'
+  category: plan
+- source: review/codebase.md
+  name: /evcrate:review:codebase
   path: review/codebase.md
   description: Scan & analyze the codebase.
-  argument_hint:
-  - tasks-or-prompt
-  power_level: 3
+  argument_hint: '[tasks-or-prompt]'
   category: review
-- name: /evcrate:scout:ext
-  path: scout/ext.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
-  category: scout
-- name: /evcrate:scout
+- source: review/codebase/parallel.md
+  name: /evcrate:review:codebase:parallel
+  path: review/codebase/parallel.md
+  description: Ultrathink edge cases, then parallel verify with code-reviewers
+  argument_hint: '[scope-or-prompt]'
+  category: review
+- source: scout.md
+  name: /evcrate:scout
   path: scout.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
+  description: Scout given directories to respond to the user's requests
+  argument_hint: '[user-prompt] [scale]'
   category: core
-- name: /evcrate:skill:add
+- source: scout/ext.md
+  name: /evcrate:scout:ext
+  path: scout/ext.md
+  description: Use external agentic tools to scout given directories
+  argument_hint: '[user-prompt] [scale]'
+  category: scout
+- source: skill/add.md
+  name: /evcrate:skill:add
   path: skill/add.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
+  description: Add new reference files or scripts to a skill
+  argument_hint: '[skill-name] [reference-or-script-prompt]'
   category: skill
-- name: /evcrate:skill:create
+- source: skill/create.md
+  name: /evcrate:skill:create
   path: skill/create.md
   description: Create a new agent skill
-  argument_hint:
-  - prompt-or-llms-or-github-url
-  power_level: 0
+  argument_hint: '[prompt-or-llms-or-github-url]'
   category: skill
-- name: /evcrate:skill:fix-logs
+- source: skill/fix-logs.md
+  name: /evcrate:skill:fix-logs
   path: skill/fix-logs.md
   description: Fix the agent skill based on `logs.txt` file.
-  argument_hint:
-  - prompt-or-path-to-skill
-  power_level: 0
+  argument_hint: '[prompt-or-path-to-skill]'
   category: skill
-- name: /evcrate:skill:optimize:auto
-  path: skill/optimize/auto.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
-  category: skill
-- name: /evcrate:skill:optimize
+- source: skill/optimize.md
+  name: /evcrate:skill:optimize
   path: skill/optimize.md
-  description: ''
-  argument_hint: ''
-  power_level: 0
+  description: Optimize an existing agent skill
+  argument_hint: '[skill-name] [prompt]'
   category: skill
-- name: /evcrate:test
+- source: skill/optimize/auto.md
+  name: /evcrate:skill:optimize:auto
+  path: skill/optimize/auto.md
+  description: Optimize an existing agent skill [auto]
+  argument_hint: '[skill-name] [prompt]'
+  category: skill
+- source: skill/plan.md
+  name: /evcrate:skill:plan
+  path: skill/plan.md
+  description: Plan to create a new agent skill
+  argument_hint: '[skill-name] [prompt]'
+  category: skill
+- source: take.md
+  name: /evcrate:take
+  path: take.md
+  description: Transfer a feature from another project through compare, copy, improve,
+    or port gates
+  argument_hint: '[mode] <source-repo-or-path> <feature> [local-notes]'
+  category: core
+- source: test.md
+  name: /evcrate:test
   path: test.md
   description: Run tests locally and analyze the summary report.
   argument_hint: ''
-  power_level: 1
   category: core
-- name: /evcrate:use-mcp
+- source: test/ui.md
+  name: /evcrate:test:ui
+  path: test/ui.md
+  description: Run UI tests on a website & generate a detailed report.
+  argument_hint: '[url] [options]'
+  category: test
+- source: use-mcp.md
+  name: /evcrate:use-mcp
   path: use-mcp.md
   description: Utilize tools of Model Context Protocol (MCP) servers
-  argument_hint:
-  - task
-  power_level: 0
+  argument_hint: '[task]'
   category: core
-- name: /evcrate:watzup
+- source: watzup.md
+  name: /evcrate:watzup
   path: watzup.md
   description: Review recent changes and wrap up the work
   argument_hint: ''
-  power_level: 1
+  category: core
+- source: worktree.md
+  name: /evcrate:worktree
+  path: worktree.md
+  description: Create isolated git worktree for parallel development
+  argument_hint: '[feature-description] OR [project] [feature] (monorepo)'
   category: core

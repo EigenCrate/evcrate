@@ -9,10 +9,9 @@ Command Path: /bootstrap
 Description: Bootstrap a new project step by step
 
 ---
-description: Bootstrap a new project step by step
-argument-hint: [user-requirements] [--advice]
+description: "Bootstrap a new project step by step"
+argument-hint: "[user-requirements] [--advice]"
 ---
-
 **Ultrathink** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `CLAUDE.md` file: 
 
 ---

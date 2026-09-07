@@ -9,10 +9,9 @@ Command Path: /plan/archive
 Description: Write journal entries and archive specific plans or all plans
 
 ---
-description: Write journal entries and archive specific plans or all plans
-argument-hint: [path-to-plan] (default: all plans)
+description: "Write journal entries and archive specific plans or all plans"
+argument-hint: "[path-to-plan] (default: all plans)"
 ---
-
 ## Your mission
 Read and analyze the plans, then write journal entries and archive specific plans or all plans in the `plans` directory.
 

@@ -9,10 +9,9 @@ Command Path: /plan/ci
 Description: Analyze Github Actions logs and provide a plan to fix the issues
 
 ---
-description: Analyze Github Actions logs and provide a plan to fix the issues
-argument-hint: [github-actions-url]
+description: "Analyze Github Actions logs and provide a plan to fix the issues"
+argument-hint: "[github-actions-url]"
 ---
-
 Activate `planning` skill.
 
 ## Github Actions URL

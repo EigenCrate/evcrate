@@ -9,8 +9,8 @@ Command Path: /use-mcp
 Description: Utilize tools of Model Context Protocol (MCP) servers
 
 ---
-description: Utilize tools of Model Context Protocol (MCP) servers
-argument-hint: [task]
+description: "Utilize tools of Model Context Protocol (MCP) servers"
+argument-hint: "[task]"
 ---
 Execute MCP operations via **Gemini CLI** to preserve context budget.
 

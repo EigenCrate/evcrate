@@ -1,13 +1,13 @@
 ---
 name: "cmd-code-auto"
-description: "[AUTO] Start coding & testing an existing plan (\"trust me bro\")"
+description: "[AUTO] Start coding & testing an existing plan (\\\"trust me bro\\\")"
 ---
 
 # cmd_code_auto
 
 Command Path: /code:auto
 
-Description: [AUTO] Start coding & testing an existing plan ("trust me bro")
+Description: [AUTO] Start coding & testing an existing plan (\"trust me bro\")
 
 Codex note: when this recipe says to run another `/...` command, invoke the matching `cmd_*` skill for that path.
 

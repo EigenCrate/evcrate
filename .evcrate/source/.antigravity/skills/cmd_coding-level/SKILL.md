@@ -1,13 +1,17 @@
 ---
 name: cmd_coding-level
-description: Migrated command from .antigravity
+description: Set your coding experience level for tailored explanations and output format.
 ---
 # cmd_coding-level
 
 Command Path: /coding-level
 
-Description: Migrated command from .antigravity
+Description: Set your coding experience level for tailored explanations and output format.
 
+---
+description: "Set your coding experience level for tailored explanations and output format."
+argument-hint: "[0-5]"
+---
 Set your coding experience level for tailored explanations and output format.
 
 ## Usage

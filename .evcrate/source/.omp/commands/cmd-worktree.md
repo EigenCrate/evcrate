@@ -3,7 +3,6 @@ argument-hint: "[feature-description] OR [project] [feature] (monorepo)"
 description: "Create isolated git worktree for parallel development"
 ---
 
-
 Create an isolated git worktree for parallel feature development.
 
 ## Workflow

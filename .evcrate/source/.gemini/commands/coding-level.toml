@@ -1,4 +1,4 @@
-description = ""
+description = "Set your coding experience level for tailored explanations and output format."
 prompt = """Set your coding experience level for tailored explanations and output format.
 
 ## Usage

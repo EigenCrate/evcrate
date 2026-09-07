@@ -3,7 +3,6 @@ argument-hint: "[prompt-or-path-to-skill]"
 description: "Fix the agent skill based on `logs.txt` file."
 ---
 
-
 Think harder.
 Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.

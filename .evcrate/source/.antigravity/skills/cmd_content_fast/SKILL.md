@@ -9,10 +9,9 @@ Command Path: /content/fast
 Description: Write creative & smart copy [FAST]
 
 ---
-description: Write creative & smart copy [FAST]
-argument-hint: [user-request]
+description: "Write creative & smart copy [FAST]"
+argument-hint: "[user-request]"
 ---
-
 Write creative & smart copy for this user request:
 <user_request>$ARGUMENTS</user_request>
 

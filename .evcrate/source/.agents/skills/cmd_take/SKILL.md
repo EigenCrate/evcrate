@@ -5,7 +5,7 @@ description: "Transfer a feature from another project through compare, copy, imp
 
 # cmd_take
 
-Command Path: /evcrate:take
+Command Path: /take
 
 Description: Transfer a feature from another project through compare, copy, improve, or port gates
 

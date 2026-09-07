@@ -1,18 +1,17 @@
 ---
 name: cmd_code_auto
-description: [AUTO] Start coding & testing an existing plan ("trust me bro")
+description: [AUTO] Start coding & testing an existing plan (\"trust me bro\")
 ---
 # cmd_code_auto
 
 Command Path: /code/auto
 
-Description: [AUTO] Start coding & testing an existing plan ("trust me bro")
+Description: [AUTO] Start coding & testing an existing plan (\"trust me bro\")
 
 ---
-description: [AUTO] Start coding & testing an existing plan ("trust me bro")
-argument-hint: [plan] [all-phases-yes-or-no] [--advice] (default: yes)
+description: "[AUTO] Start coding & testing an existing plan (\"trust me bro\")"
+argument-hint: "[plan] [all-phases-yes-or-no] [--advice] (default: yes)"
 ---
-
 **MUST READ** `CLAUDE.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>$ARGUMENTS</raw-plan>
 

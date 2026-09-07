@@ -3,7 +3,6 @@ argument-hint: "[user-request]"
 description: "Write good creative & smart copy [GOOD]"
 ---
 
-
 Write good creative & smart copy for this user request:
 <user_request>$ARGUMENTS</user_request>
 

@@ -9,9 +9,9 @@ Command Path: /docs/init
 Description: Analyze the codebase and create initial documentation
 
 ---
-description: Analyze the codebase and create initial documentation
+description: "Analyze the codebase and create initial documentation"
+argument-hint: ""
 ---
-
 ## Phase 1: Parallel Codebase Scouting
 
 1. Scan the codebase and calculate the number of files with LOC in each directory (skip credentials, cache or external modules directories, such as `.antigravity`, `.opencode`, `.git`, `tests`, `node_modules`, `__pycache__`, `secrets`, etc.)

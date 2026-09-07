@@ -1,8 +1,7 @@
 ---
-description: Use external agentic tools to scout given directories
-argument-hint: [user-prompt] [scale]
+description: "Use external agentic tools to scout given directories"
+argument-hint: "[user-prompt] [scale]"
 ---
-
 ## Purpose
 
 Utilize external agentic tools to scout given directories or explore the codebase for files needed to complete the task using a fast, token efficient agent.

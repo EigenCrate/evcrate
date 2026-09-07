@@ -9,10 +9,9 @@ Command Path: /git/merge
 Description: ⚠️ Merge code from one branch to another
 
 ---
-description: ⚠️ Merge code from one branch to another
-argument-hint: [branch] [from-branch]
+description: "⚠️ Merge code from one branch to another"
+argument-hint: "[branch] [from-branch]"
 ---
-
 ## Variables
 
 TO_BRANCH: $1 (defaults to `main`)

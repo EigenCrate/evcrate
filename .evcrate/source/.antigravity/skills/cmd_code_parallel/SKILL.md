@@ -9,10 +9,9 @@ Command Path: /code/parallel
 Description: Execute parallel or sequential phases based on plan structure
 
 ---
-description: Execute parallel or sequential phases based on plan structure
-argument-hint: [plan-path] [--advice]
+description: "Execute parallel or sequential phases based on plan structure"
+argument-hint: "[plan-path] [--advice]"
 ---
-
 Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
 
 ## Canonical checkpoint routing
