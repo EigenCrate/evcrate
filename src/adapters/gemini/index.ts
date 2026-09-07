@@ -3,6 +3,7 @@ import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } 
 import { ensureProjectionDirectory, validateProjection } from '../projection-utils.js';
 import { projectAgents, projectCommands, projectSkills, projectWorkflows } from './resources.js';
 import { projectConfig, projectDocumentsAndMatrix, projectHooks, projectScripts, projectSettings } from './runtime.js';
+import { projectCatalogDataAndLayout } from '../catalog-data.js';
 
 function invalidManifest(): never {
   throw new ControlPlaneError('VALIDATION_INVALID');
@@ -27,6 +28,36 @@ function build(context: ProjectionBuildContext): void {
   projectScripts(context);
   projectDocumentsAndMatrix(context);
   projectSettings(context);
+  projectCatalogDataAndLayout(context, {
+    target: 'gemini',
+    scriptDirectory: '.gemini/scripts',
+    commands: {
+      format: 'toml',
+      root: '../commands',
+      authorityPath: '../migration-behavior-matrix.json',
+      mapRecord(cmd) {
+        const rel = cmd.source.slice(0, -3);
+        return {
+          name: cmd.name,
+          path: `${rel}.toml`
+        };
+      }
+    },
+    skills: {
+      root: '../skills',
+      authorityPath: '../migration-behavior-matrix.json',
+      mapRecord(skill) {
+        const top = skill.source.split('/')[0];
+        if (top === 'claude-code' || top === 'skill-creator') return null;
+        const mappedName = skill.name.replace(/claude/giu, 'gemini');
+        const mappedPath = skill.path.replace(/claude/giu, 'gemini');
+        return {
+          name: mappedName,
+          path: mappedPath
+        };
+      }
+    }
+  });
 }
 
 export const geminiAdapter: ProjectionAdapter = Object.freeze({

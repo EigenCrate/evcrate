@@ -7,6 +7,7 @@ import { validateProjection, writeProjectionFile } from '../projection-utils.js'
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
 import { convertAgents } from './agents.js';
 import { copyCommandsAndWorkflows, copyHooksAndScripts, copySkills, inventory, writeJson } from './resources.js';
+import { projectCatalogDataAndLayout } from '../catalog-data.js';
 
 const MANAGED_PACKAGES = Object.freeze([
   'npm:pi-subagents@0.44.0',
@@ -63,7 +64,33 @@ function build(context: ProjectionBuildContext): void {
   writeJson(context, '.pi/agent/evcrate/inventory.json', {
     agents: [...resources.agents],
     advisoryCapabilities: { checkpoint: 'supported', inline: 'supported', relay: 'unsupported', relayError: 'ADVISE_AGENT_RELAY_UNSUPPORTED_PI' },
-    commands: [...resources.commands], hooks: [...resources.hooks], legacySkillExcluded: 'claude-code/skill.md', scripts: resources.scripts.filter((item) => !item.includes('advise-state')), skills: [...resources.skills], workflows: [...resources.workflows]
+    commands: [...resources.commands], hooks: [...resources.hooks], legacySkillExcluded: 'claude-code/skill.md', scripts: [...resources.scripts.filter((item) => !item.includes('advise-state') && item !== 'commands_data.yaml' && item !== 'skills_data.yaml'), 'commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json'].sort(), skills: [...resources.skills], workflows: [...resources.workflows]
+  });
+  projectCatalogDataAndLayout(context, {
+    target: 'pi',
+    scriptDirectory: '.pi/agent/evcrate/scripts',
+    commands: {
+      format: 'markdown',
+      root: '../commands',
+      authorityPath: '../inventory.json',
+      mapRecord(cmd) {
+        return {
+          name: cmd.name,
+          path: cmd.source
+        };
+      }
+    },
+    skills: {
+      root: '../../skills',
+      authorityPath: '../inventory.json',
+      mapRecord(skill) {
+        if (skill.source.startsWith('claude-code/')) return null;
+        return {
+          name: skill.name,
+          path: skill.path
+        };
+      }
+    }
   });
 }
 function validate(context: ProjectionBuildContext): ProjectionValidation {

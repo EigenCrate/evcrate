@@ -10,6 +10,7 @@ import { convertSupport } from './support.js';
 import { generateInstructions } from './instructions.js';
 import { buildInventory } from './inventory.js';
 import { translatePrompt } from './prompts.js';
+import { projectCatalogDataAndLayout } from '../catalog-data.js';
 function assertManifest(context: ProjectionBuildContext): void {
   const shared = context.manifest.sharedJson;
   if (context.manifest.id !== 'copilot' || context.manifest.outputRoots.length !== 1
@@ -37,6 +38,36 @@ function build(context: ProjectionBuildContext): void {
   const hooks = convertHooks(context, transform);
   const support = convertSupport(context, transform);
   generateInstructions(context, transform);
+  projectCatalogDataAndLayout(context, {
+    target: 'copilot',
+    scriptDirectory: '.copilot/evcrate/scripts',
+    commands: {
+      format: 'command-skill',
+      root: '../../skills',
+      authorityPath: '../command-name-map.json',
+      mapRecord(cmd) {
+        const item = Object.values(commandMap).find((c) => c.source === cmd.source);
+        if (!item) throw new ControlPlaneError('VALIDATION_INVALID');
+        return {
+          name: '/' + item.targetName,
+          path: `${item.targetName}/SKILL.md`
+        };
+      }
+    },
+    skills: {
+      root: '../../skills',
+      authorityPath: '../skill-map.json',
+      mapRecord(skill) {
+        const item = skills.native.find((n) => n.source === skill.name || n.source === skill.source.replace(/\/SKILL\.md$/, ''));
+        if (!item) return null;
+        const targetDir = item.target.replace(/^skills\//, '');
+        return {
+          name: targetDir,
+          path: `${targetDir}/SKILL.md`
+        };
+      }
+    }
+  });
   buildInventory(context, commandMap, skills, agents, hooks, styles, workflows, support);
 }
 function validate(context: ProjectionBuildContext): ProjectionValidation { assertManifest(context); return validateProjection(context); }

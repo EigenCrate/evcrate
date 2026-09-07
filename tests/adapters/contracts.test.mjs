@@ -11,9 +11,10 @@ import {
   registeredProjectionAdapters,
   writeProjectionFile,
 } from '../../dist/index.js';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   chmodSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -253,4 +254,129 @@ test('validators reject missing, extra, modified, wrong-mode, symlink, and speci
     execFileSync('mkfifo', [specialPath]);
     assert.equal(special.adapter.validate(special.context).diagnostics.some(({ code }) => code === 'unsafe'), true);
   }
+});
+
+const SCRIPT_DIRS = {
+  claude: '.claude/scripts',
+  gemini: '.gemini/scripts',
+  antigravity: '.antigravity/scripts',
+  codex: '.codex/scripts',
+  pi: '.pi/agent/evcrate/scripts',
+  omp: '.omp/evcrate/scripts',
+  copilot: '.copilot/evcrate/scripts',
+};
+
+test('seven-target scanner and catalog contracts hold from foreign CWD', () => {
+  for (const target of PROJECTION_QUALIFICATION_ORDER) {
+    const { stage } = materialize(target);
+    const scriptDir = join(stage.path, SCRIPT_DIRS[target]);
+    const scanCommands = join(scriptDir, 'scan_commands.py');
+    const scanSkills = join(scriptDir, 'scan_skills.py');
+    const genCatalogs = join(scriptDir, 'generate_catalogs.py');
+    const layoutPath = join(scriptDir, 'scanner-layout.json');
+
+    assert.equal(existsSync(scanCommands), true, `${target}: scan_commands.py missing`);
+    assert.equal(existsSync(scanSkills), true, `${target}: scan_skills.py missing`);
+    assert.equal(existsSync(genCatalogs), true, `${target}: generate_catalogs.py missing`);
+    assert.equal(existsSync(layoutPath), true, `${target}: scanner-layout.json missing`);
+
+    const layout = JSON.parse(readFileSync(layoutPath, 'utf8'));
+    assert.equal(layout.schema, 'evcrate-scanner-layout-v1');
+
+    const cmdRoot = join(scriptDir, layout.commands.root);
+    const skillRoot = join(scriptDir, layout.skills.root);
+    assert.equal(existsSync(cmdRoot), true, `${target}: commands root missing: ${cmdRoot}`);
+    assert.equal(existsSync(skillRoot), true, `${target}: skills root missing: ${skillRoot}`);
+
+    const initialCmdData = readFileSync(join(scriptDir, 'commands_data.yaml'), 'utf8');
+    const initialSkillData = readFileSync(join(scriptDir, 'skills_data.yaml'), 'utf8');
+
+    // Plant unrelated valid command and skill in target native roots
+    let cleanupUnrelated = () => {};
+    if (layout.commands.format === 'toml') {
+      const cmdFile = join(cmdRoot, 'unrelated-user-cmd.toml');
+      writeFileSync(cmdFile, 'description = "Unrelated user command"\nprompt = "Unrelated"');
+      cleanupUnrelated = () => rmSync(cmdFile, { force: true });
+    } else if (layout.commands.format === 'command-skill') {
+      const dir = join(cmdRoot, 'cmd_unrelated_user');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'SKILL.md'), '---\nname: cmd_unrelated_user\ndescription: Unrelated command\n---\n# Unrelated');
+      cleanupUnrelated = () => rmSync(dir, { recursive: true, force: true });
+    } else {
+      const cmdFile = join(cmdRoot, 'unrelated-user-cmd.md');
+      writeFileSync(cmdFile, '---\ndescription: Unrelated command\nargument-hint: ""\n---\n# Unrelated');
+      cleanupUnrelated = () => rmSync(cmdFile, { force: true });
+    }
+
+    const unrelatedSkillDir = join(skillRoot, 'unrelated-user-skill');
+    mkdirSync(unrelatedSkillDir, { recursive: true });
+    writeFileSync(join(unrelatedSkillDir, 'SKILL.md'), '---\nname: unrelated-user-skill\ndescription: Unrelated skill\n---\n# Unrelated');
+
+    // Run both scanners from foreign CWD
+    const foreignCwd = temporaryDirectory();
+    const env = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };
+
+    const cmdRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });
+    assert.equal(cmdRun.status, 0, `${target} scan_commands.py failed: ${cmdRun.stderr}`);
+
+    const skillRun = spawnSync('python3', [scanSkills], { cwd: foreignCwd, env, encoding: 'utf8' });
+    assert.equal(skillRun.status, 0, `${target} scan_skills.py failed: ${skillRun.stderr}`);
+
+    const regeneratedCmd = readFileSync(join(scriptDir, 'commands_data.yaml'), 'utf8');
+    const regeneratedSkill = readFileSync(join(scriptDir, 'skills_data.yaml'), 'utf8');
+
+    assert.equal(regeneratedCmd.includes('unrelated'), false, `${target} included unrelated command`);
+    assert.equal(regeneratedSkill.includes('unrelated'), false, `${target} included unrelated skill`);
+
+    const genCmd = spawnSync('python3', [genCatalogs, '--commands'], { cwd: foreignCwd, env, encoding: 'utf8' });
+    assert.equal(genCmd.status, 0, `${target} generate_catalogs --commands failed: ${genCmd.stderr}`);
+
+    const genSkill = spawnSync('python3', [genCatalogs, '--skills'], { cwd: foreignCwd, env, encoding: 'utf8' });
+    assert.equal(genSkill.status, 0, `${target} generate_catalogs --skills failed: ${genSkill.stderr}`);
+
+    cleanupUnrelated();
+    rmSync(unrelatedSkillDir, { recursive: true, force: true });
+  }
+});
+
+test('projected scanners fail closed on missing target, duplicate map, and unsafe path', () => {
+  const { stage } = materialize('omp');
+  const scriptDir = join(stage.path, SCRIPT_DIRS.omp);
+  const scanCommands = join(scriptDir, 'scan_commands.py');
+  const cmdDataFile = join(scriptDir, 'commands_data.yaml');
+  const cmdMapFile = join(stage.path, '.omp/evcrate/command-name-map.json');
+  const foreignCwd = temporaryDirectory();
+  const env = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' };
+  const initialCmdData = readFileSync(cmdDataFile, 'utf8');
+
+  // Missing allowlisted command file
+  const targetCmd = join(stage.path, '.omp/commands/cmd-advise.md');
+  const backupCmd = readFileSync(targetCmd, 'utf8');
+  rmSync(targetCmd);
+  const missingRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });
+  assert.notEqual(missingRun.status, 0);
+  assert.match(missingRun.stderr, /missing or unsafe/i);
+  assert.equal(readFileSync(cmdDataFile, 'utf8'), initialCmdData);
+  writeFileSync(targetCmd, backupCmd);
+
+  // Duplicate target in authority map
+  const backupMap = readFileSync(cmdMapFile, 'utf8');
+  const dupMap = JSON.parse(backupMap);
+  dupMap.commands.push({ ...dupMap.commands[0] });
+  writeFileSync(cmdMapFile, JSON.stringify(dupMap, null, 2));
+  const dupRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });
+  assert.notEqual(dupRun.status, 0);
+  assert.match(dupRun.stderr, /duplicate/i);
+  assert.equal(readFileSync(cmdDataFile, 'utf8'), initialCmdData);
+  writeFileSync(cmdMapFile, backupMap);
+
+  // Unsafe path in authority map
+  const unsafeMap = JSON.parse(backupMap);
+  unsafeMap.commands.push({ source: 'outside.md', sourceName: 'outside', target: '../outside.md', targetName: 'outside' });
+  writeFileSync(cmdMapFile, JSON.stringify(unsafeMap, null, 2));
+  const unsafeRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });
+  assert.notEqual(unsafeRun.status, 0);
+  assert.match(unsafeRun.stderr, /missing or unsafe/i);
+  assert.equal(readFileSync(cmdDataFile, 'utf8'), initialCmdData);
+  writeFileSync(cmdMapFile, backupMap);
 });

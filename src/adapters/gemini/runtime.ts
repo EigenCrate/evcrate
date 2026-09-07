@@ -82,7 +82,8 @@ export function projectScripts(context: ProjectionBuildContext): void {
     const relative = file.path.slice('scripts/'.length);
     const parts = relative.split('/');
     if (parts.some((part) => ['__pycache__', '__tests__', 'tests', 'fixtures', 'helpers'].includes(part))
-      || isProductionControllerArtifact(relative) || relative.includes('advise-state') || basename(relative).startsWith('fake-')) continue;
+      || isProductionControllerArtifact(relative) || relative.includes('advise-state') || basename(relative).startsWith('fake-')
+      || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue;
     const bytes = file.bytes.subarray(0, 1024).includes(0) ? file.bytes : textBytes(applyTargetReplacements(new TextDecoder().decode(file.bytes)));
     writeProjectionFile(context, `.gemini/scripts/${relative}`, bytes, file.mode);
   }
@@ -126,6 +127,15 @@ export function projectDocumentsAndMatrix(context: ProjectionBuildContext): void
   const behaviors: Record<string, unknown>[] = [{ kind: 'memory-file', source: 'CLAUDE.md', classification: 'memory-file', status: sourceExists(context, 'CLAUDE.md') ? 'migrated-wrapper' : 'not-present', target: sourceExists(context, 'CLAUDE.md') ? 'GEMINI.md -> @./CLAUDE.md' : null }];
   const commands = context.resources.files.filter((file) => file.path.startsWith('commands/') && file.path.endsWith('.md'));
   for (const file of commands) behaviors.push({ kind: 'command-prose', source: file.path.slice('commands/'.length), classification: 'command-prose', status: 'migrated', target: file.path.slice('commands/'.length, -3) + '.toml' });
+  const skipSkills = new Set(['claude-code', 'skill-creator', 'template-skill']);
+  for (const file of context.resources.files.filter((entry) => entry.path.startsWith('skills/') && entry.path.endsWith('/SKILL.md'))) {
+    const rel = file.path.slice('skills/'.length);
+    const top = rel.split('/')[0];
+    if (skipSkills.has(top)) continue;
+    const mappedPath = rel.replace(/claude/giu, 'gemini');
+    const mappedName = rel.slice(0, -'/SKILL.md'.length).replace(/claude/giu, 'gemini');
+    behaviors.push({ kind: 'skill-package', source: rel, classification: 'skill-package', status: 'migrated', target: mappedPath, target_name: mappedName });
+  }
   behaviors.push({ kind: 'advisory-capability', classification: 'target-native', checkpoint: 'supported', inline: 'supported', relay: 'unsupported', relay_error: 'ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI' });
   const source = sourceJson(context); const hooks = source.hooks;
   if (hooks && typeof hooks === 'object') for (const [event, groups] of Object.entries(hooks as Record<string, unknown>)) if (Array.isArray(groups)) for (const group of groups as Record<string, unknown>[]) for (const hook of (Array.isArray(group.hooks) ? group.hooks : []) as Record<string, unknown>[]) behaviors.push({ kind: 'hook-driven', source_event: event, source_matcher: group.matcher ?? '*', source_command: hook.command ?? '', ...(EVENTS[event] ? { target_event: EVENTS[event], classification: 'hook-driven', status: 'migrated' } : { classification: 'unsupported', status: 'dropped', reason: DROPPED[event] ?? 'No Gemini CLI hook mapping was defined for this Claude event.' }) });

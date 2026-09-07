@@ -3,7 +3,82 @@
 ## Unreleased
 
 **Updated:** 2026-09-07  
-**Status:** Phase 04 verification complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+**Status:** Phase 04 verification complete; Phase 03 seven-target scanner/adapters complete; Phase 02 catalog schema/freshness complete; release remains Unreleased
+
+### Phase 03: Seven-target scanner and catalog adapters
+
+**Updated:** 2026-09-07  
+**Status:** Complete  
+**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-03-seven-target-scanner-and-catalog-adapters.md)  
+**Evidence:** [test report](../plans/reports/tester-260907-0959-phase-03-seven-target-adapters.md) and [code review](../plans/reports/code-review-260907-1004-phase-03-seven-target-scanner-and-catalog-adapters.md)
+
+#### Shared catalog and layout contract
+
+- Added `src/adapters/catalog-types.ts` for the exact command/skill record
+  schemas, category allowlists, safe relative POSIX paths, scanner-layout type,
+  YAML parsing, and deterministic serialization.
+- Added `src/adapters/catalog-data.ts` for canonical record validation,
+  adapter-supplied source-to-native mapping, staged regular-file checks, and
+  projection of target-native `commands_data.yaml`, `skills_data.yaml`, and
+  `scanner-layout.json`.
+- Standardized the projected sidecar on `evcrate-scanner-layout-v1`: target,
+  command format/root/output/authority, and skill root/output/authority.
+  Authority always comes from an existing adapter map, inventory, migration
+  matrix, or canonical managed data; no compatibility alias registry is added.
+
+#### Projected scanners
+
+- `scan_commands.py` and `scan_skills.py` now resolve layout, roots, authority,
+  and adjacent output files from their own `Path(__file__)` location, so
+  invocation from a repository root, script directory, or unrelated temporary
+  CWD is equivalent.
+- Command scanning supports the seven native layouts: Claude recursive
+  Markdown; Gemini TOML; Pi archived Markdown; OMP flattened `cmd-*.md`;
+  Codex `cmd-*` command-skills; Antigravity `cmd_*` command-skills; and
+  Copilot prefixed command-skills.
+- Authority maps/inventories produce managed-entry allowlists. Missing,
+  duplicate, symlinked, traversal, or otherwise unsafe target entries fail
+  closed; unrelated user commands/skills planted beside managed resources are
+  ignored.
+- Scanner writes use adjacent temporary UTF-8 YAML plus atomic replacement.
+  Invalid input leaves existing catalog bytes unchanged.
+
+#### Adapter coverage
+
+| Target | Command authority | Skill authority |
+|---|---|---|
+| Claude | Canonical resource graph/data set | Canonical managed skill set |
+| Gemini | Migration behavior matrix | Matrix mappings with target-name/path transforms |
+| Antigravity | Migration behavior matrix | Matrix mappings |
+| Codex | Migration inventory and generated command-skills | Inventory and explicit exclusions |
+| Pi | `inventory.json` archived command list | Native skill inventory |
+| OMP | `evcrate-omp-command-map-v1` | OMP skill map/inventory |
+| Copilot | `evcrate-copilot-command-map-v1` | Copilot skill map/inventory |
+
+OMP now consumes its generated command map at runtime instead of brittle
+canonical source-string rewrites. Gemini, Antigravity, Codex, Pi, and Copilot
+retain native hook/runtime/advisory transforms while exposing their generated
+paths to the common scanner contract. Frontmatter and advisory capability
+rendering remain target-valid, and Claude remains the canonical authoring
+projection.
+
+#### Verification
+
+- `npm run build`: pass.
+- `node --test tests/adapters/contracts.test.mjs`: 10/10 pass, including
+  seven-target foreign-CWD scanner/catalog execution and fail-closed authority
+  mutation cases.
+- `node --test tests/adapters/python-parity.test.mjs`: 1/1 pass with explicit
+  intentional projection deltas.
+- `python3 .evcrate/source/.claude/scripts/test-scan-catalogs.py`: 7/7 suites
+  pass, including all three command formats, managed allowlists, CWD
+  independence, schema/freshness, and atomic output.
+- `python3 .evcrate/source/.claude/scripts/test-evcrate-help.py`: 19/19 pass;
+  help behavior remains independent from scanner modules and generated data.
+
+The Phase 03 test report records 37/37 focused cases passing with no skips or
+failures. No unresolved Phase 03 questions were recorded. Phase 04 remains the
+regeneration, manifest, and release-gate step.
 
 ### Phase 02: Catalog schema and freshness
 

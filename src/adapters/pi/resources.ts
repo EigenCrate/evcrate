@@ -83,7 +83,7 @@ export function copyHooksAndScripts(context: ProjectionBuildContext): void {
     writeProjectionFile(context, `.pi/agent/evcrate/hooks/${name}`, bytes, file.mode);
   }
   for (const path of canonicalFiles(context, 'scripts')) {
-    const name = relativeName(path, 'scripts'); if (name.includes('advise-state') || isController(name) || isProductionControllerArtifact(name)) continue;
+    const name = relativeName(path, 'scripts'); if (name.includes('advise-state') || isController(name) || isProductionControllerArtifact(name) || name === 'commands_data.yaml' || name === 'skills_data.yaml') continue;
     const file = graphFile(context, path);
     const bytes = transformed(file.bytes, renderHarnessScriptReferences);
     writeProjectionFile(context, `.pi/agent/evcrate/scripts/${name}`, bytes, file.mode);

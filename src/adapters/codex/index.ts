@@ -5,6 +5,7 @@ import type { ResourceGraphFile } from '../resource-graph.js';
 import { applyReplacements, addWorkflowFallback, canonicalCommandPath, isBinary, markdownFrontmatter, MODEL_MAP, normalizeDescription, parseFrontmatter, renderAdvisoryInterview, renderHarnessScriptReferences, renderInlineAdvise, rewriteCommandGuidance, SUBAGENT_WAIT_CONTRACT, tomlValue, transformResourceText } from './transforms.js';
 import { contextBridge, hooksJson, permissionHook, pretoolBridge, runMcpPackage, runNodeHook } from './hooks.js';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
+import { projectCatalogDataAndLayout } from '../catalog-data.js';
 
 const SKILLS_TO_SKIP = new Set(['claude-code', 'skill-creator']);
 const OMITTED_PARTS = new Set(['__tests__', 'tests', 'fixtures', 'helpers']);
@@ -39,7 +40,7 @@ function copyScripts(context: ProjectionBuildContext): void {
   const known = knownCommands(context);
   for (const file of filesUnder(context, 'scripts')) {
     const relative = file.path.slice('scripts/'.length); const parts = relative.split('/');
-    if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionControllerArtifact(relative) || relative.includes('advise-state')) continue;
+    if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionControllerArtifact(relative) || relative.includes('advise-state') || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue;
     const content = transformed(context, file, known);
     const final = relative === 'ev-help.py' ? new TextDecoder().decode(content).replace('("CODEX_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")', '("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")') : content;
     writeProjectionFile(context, `.codex/scripts/${relative}`, typeof final === 'string' ? textBytes(final) : final, file.mode);
@@ -180,6 +181,15 @@ function behaviorMatrix(context: ProjectionBuildContext): void {
     const relative = file.path.slice('commands/'.length, -3);
     entries.push({ kind: 'command-prose', source: relative + '.md', classification: 'command-prose', status: 'migrated', target: '.agents/skills/cmd_' + relative.replaceAll('/', '_') + '/SKILL.md' });
   }
+  for (const file of filesUnder(context, 'skills')) {
+    if (!file.path.endsWith('/SKILL.md')) continue;
+    const rel = file.path.slice('skills/'.length);
+    const first = rel.split('/')[0];
+    if (SKILLS_TO_SKIP.has(first) || first === '' || first === 'template-skill') continue;
+    const mapped = first.replace(/claude/giu, 'codex');
+    const target = rel.replace(first, mapped);
+    entries.push({ kind: 'skill-package', source: rel, classification: 'skill-package', status: 'migrated', target: `.agents/skills/${target}`, target_name: mapped });
+  }
   entries.push({ kind: 'advisory-capability', classification: 'target-native', checkpoint: 'supported', inline: 'supported', relay: 'unsupported', relay_error: 'ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX' });
   const hooks = settings.hooks;
   if (hooks && typeof hooks === 'object' && !Array.isArray(hooks)) for (const [eventName, groups] of Object.entries(hooks as Record<string, unknown>)) if (Array.isArray(groups)) for (const group of groups) if (group && typeof group === 'object') for (const hook of Array.isArray((group as Record<string, unknown>).hooks) ? (group as Record<string, unknown>).hooks as unknown[] : []) if (hook && typeof hook === 'object') {
@@ -256,6 +266,37 @@ export const codexAdapter: ProjectionAdapter = Object.freeze({
     prepareRoots(context);
     projectDocument(context);
     copyConfigInputs(context); copyWorkflows(context); copyAgents(context); copySkills(context); copyScripts(context); copyHooks(context); commands(context); globalGuidance(context); generatedHooks(context); config(context); behaviorMatrix(context);
+    projectCatalogDataAndLayout(context, {
+      target: 'codex',
+      scriptDirectory: '.codex/scripts',
+      commands: {
+        format: 'command-skill',
+        root: '../../.agents/skills',
+        authorityPath: '../migration-behavior-matrix.json',
+        mapRecord(cmd) {
+          const relative = cmd.source.slice(0, -3);
+          const skillDir = 'cmd_' + relative.replaceAll('/', '_');
+          const skillName = 'cmd-' + relative.replaceAll('/', '-');
+          return {
+            name: '/' + skillName,
+            path: `${skillDir}/SKILL.md`
+          };
+        }
+      },
+      skills: {
+        root: '../../.agents/skills',
+        authorityPath: '../migration-behavior-matrix.json',
+        mapRecord(skill) {
+          const first = skill.source.split('/')[0];
+          if (SKILLS_TO_SKIP.has(first) || first === 'template-skill') return null;
+          const mapped = first.replace(/claude/giu, 'codex');
+          return {
+            name: skill.name.replace(first, mapped),
+            path: skill.path.replace(first, mapped)
+          };
+        }
+      }
+    });
   },
   validate(context: ProjectionBuildContext): ProjectionValidation { assertManifest(context); return validateProjection(context); },
 });

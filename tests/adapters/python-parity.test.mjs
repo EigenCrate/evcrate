@@ -220,13 +220,20 @@ test('TypeScript projections match Python inventories with explicit deltas', () 
         }
       }
       const actual = snapshot(actualRoot);
+      const deltas = parityDeltaRecords[target] ?? {};
       for (const [path, wanted] of expected) {
         const received = actual.get(path);
         assert.ok(received, `${target} missing committed output: ${path}`);
         assert.equal(received.kind, wanted.kind, `${target} kind differs for ${path}`);
+        const delta = deltas[path];
         if (wanted.kind === 'file') {
-          assert.equal(received.hash, wanted.hash, `${target} hash differs for ${path}`);
-          assert.equal(received.bytes, wanted.bytes, `${target} byte count differs for ${path}`);
+          if (received.hash !== wanted.hash && delta && delta.kind === 'file') {
+            assert.equal(received.hash, delta.hash, `${target} hash differs from delta for ${path}`);
+            assert.equal(received.bytes, delta.bytes, `${target} byte count differs from delta for ${path}`);
+          } else {
+            assert.equal(received.hash, wanted.hash, `${target} hash differs for ${path}`);
+            assert.equal(received.bytes, wanted.bytes, `${target} byte count differs for ${path}`);
+          }
         }
       }
     }

@@ -104,6 +104,58 @@ schema validation, freshness, generated totals, and atomic output (7/7 suites
 passed in the Phase 02 evidence). `test-evcrate-help.py` remains independent
 from scanners and generated data (19/19 suites in the same evidence).
 
+## Seven-target scanner and catalog adapters (Phase 03)
+
+Phase 03 moves catalog projection into shared TypeScript code while keeping the
+projected Python scanners runnable in every registered target. `catalog-types.ts`
+defines the exact command/skill record keys, category allowlists, safe POSIX-path
+predicate, scanner-layout shape, YAML parser, and deterministic serializers.
+`catalog-data.ts` validates canonical records, applies each adapter's existing
+source-to-native mapping, verifies every mapped file is a staged regular file,
+and writes target-native `commands_data.yaml`, `skills_data.yaml`, and
+`scanner-layout.json` as one projected catalog set.
+
+The generated sidecar uses schema `evcrate-scanner-layout-v1`. It declares the
+target, command format/root/output/authority, and skill root/output/authority.
+`scan_commands.py` supports Markdown, TOML, and command-skill inputs; it resolves
+the sidecar and authority from its own `Path(__file__)`, restricts traversal to
+allowlisted managed entries, rejects missing/unsafe/duplicate mappings, and
+atomically replaces adjacent YAML output. `scan_skills.py` uses the same
+path-derived layout, supports target source maps and explicit exclusions,
+preserves nested names, and applies the same fail-closed/atomic boundary. A
+foreign current working directory therefore cannot change scanner roots or
+outputs, and unrelated user files in native roots do not enter EVCrate catalogs.
+
+Each adapter supplies its existing conversion authority instead of inventing a
+second naming registry:
+
+| Target | Command representation | Catalog authority |
+|---|---|---|
+| Claude | Recursive Markdown | Canonical resource graph/data set |
+| Gemini | Recursive native TOML | Migration behavior matrix |
+| Antigravity | `cmd_*` command-skills | Migration behavior matrix |
+| Codex | `cmd-*` command-skills | Migration inventory and skill metadata |
+| Pi | Archived recursive Markdown | `inventory.json` and native skills |
+| OMP | Flattened `cmd-*.md` | `evcrate-omp-command-map-v1` |
+| Copilot | Prefixed command-skills | `evcrate-copilot-command-map-v1` and migration inventory |
+
+OMP now loads its generated command map at runtime rather than depending on
+canonical source-string rewrites. Gemini, Antigravity, Codex, Pi, and Copilot
+retain their native command/skill transforms, hook/runtime wrappers, and
+advisory capability boundaries while exposing the resulting paths to the
+scanner. Claude remains the canonical scanner/data owner; all seven targets
+receive the same scanner scripts, generator, README, data files, and layout
+contract.
+
+Phase 03 evidence records a clean TypeScript build, 10/10 adapter contract
+tests, 1/1 Python-parity test, 7/7 scanner/catalog regression suites, and
+19/19 independent `ev-help.py` tests. The all-target contract runs cover
+foreign-CWD execution, native regular-file resolution, unmanaged-resource
+isolation, duplicate/missing authority entries, unsafe paths, and preservation
+of existing catalog bytes on failure. See the
+[Phase 03 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-03-seven-target-scanner-and-catalog-adapters.md),
+[test report](../plans/reports/tester-260907-0959-phase-03-seven-target-adapters.md),
+and [code review](../plans/reports/code-review-260907-1004-phase-03-seven-target-scanner-and-catalog-adapters.md).
 
 ## Canonical scout-block hook and ignore policy
 
@@ -161,7 +213,7 @@ reads/searches stay blocked.
 | `src/protocol/` | Versioned JSON, canonical JSON, target IDs, resource/publication/scope/settings/diagnostic payloads | `validation.ts`, `json.ts`, `canonical-json.ts` |
 | `src/context/` | Immutable package/project/home/state/target context | `invocation-context.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts` |
-| `src/adapters/` | Seven fixed projection adapters and resource graph checks | `registry.ts`, `qualification.ts`, target subdirectories |
+| `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
 | `src/registry/` | Canonical scan, schema-1 records, compatibility and deterministic queries | `scanner.ts`, `schema.ts`, `store.ts` |
 | `src/imports/` | Bounded external-source preview/apply and replay tokens | `preview.ts`, `apply.ts`, `handler.ts` |
 | `src/scopes/` | Global/project assignment state, inheritance, revisions, and CAS | `state.ts`, `mutations.ts`, `changes.ts` |

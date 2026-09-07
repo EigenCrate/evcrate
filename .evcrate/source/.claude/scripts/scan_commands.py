@@ -2,6 +2,7 @@
 """Scan commands directory and extract command metadata across target formats."""
 
 from dataclasses import dataclass
+import json
 import os
 from pathlib import Path
 import re
@@ -45,6 +46,7 @@ def atomic_write_yaml(output_path: Path, data: Any) -> None:
         content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False)
         temp.write(content.encode("utf-8"))
         temp.close()
+        os.chmod(temp.name, 0o644)
         Path(temp.name).replace(out)
     finally:
         if os.path.exists(temp.name):
@@ -176,16 +178,154 @@ def group_by_category(commands: List[Dict]) -> Dict[str, List[Dict]]:
     return categories
 
 
+def resolve_command_layout(script_dir: Path) -> CommandLayout:
+    layout_file = script_dir / "scanner-layout.json"
+    if not layout_file.is_file():
+        base_path = (script_dir.parent / "commands").resolve()
+        if not base_path.is_dir():
+            raise ScanError(f"Root path not found: {base_path}")
+        return CommandLayout(root=base_path, format="markdown", output_path=script_dir / "commands_data.yaml")
+
+    try:
+        data = json.loads(layout_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise ScanError(f"Invalid scanner-layout.json: {e}") from e
+
+    if not isinstance(data, dict) or data.get("schema") != "evcrate-scanner-layout-v1":
+        raise ScanError(f"Invalid layout schema: {data.get('schema') if isinstance(data, dict) else type(data)}")
+
+    cmd_cfg = data.get("commands")
+    if not isinstance(cmd_cfg, dict):
+        raise ScanError("Missing or invalid 'commands' block in layout")
+
+    root = (script_dir / cmd_cfg["root"]).resolve()
+    if not root.is_dir():
+        raise ScanError(f"Command root path not found: {root}")
+
+    out_name = cmd_cfg.get("output", "commands_data.yaml")
+    output_path = (script_dir / out_name).resolve()
+    if not output_path.is_relative_to(script_dir) or output_path.parent != script_dir:
+        raise ScanError(f"Unsafe output path: {out_name}")
+    fmt = cmd_cfg.get("format", "markdown")
+    auth_rel = cmd_cfg.get("authority")
+
+    if not auth_rel:
+        return CommandLayout(root=root, format=fmt, output_path=output_path)
+
+    auth_file = (script_dir / auth_rel).resolve()
+    if not auth_file.is_file() or auth_file.is_symlink():
+        raise ScanError(f"Authoritative map missing or unsafe: {auth_file}")
+
+    managed: Set[str] = set()
+    name_map: Dict[str, Dict[str, str]] = {}
+    source_map: Dict[str, str] = {}
+
+    if auth_file.suffix in (".yaml", ".yml"):
+        try:
+            auth_data = yaml.safe_load(auth_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            raise ScanError(f"Malformed authority YAML in {auth_file}: {e}") from e
+        if not isinstance(auth_data, list):
+            raise ScanError(f"Authority YAML root must be a list in {auth_file}")
+        for item in auth_data:
+            if isinstance(item, dict) and "source" in item:
+                src = item["source"]
+                managed.add(src)
+                name = item.get("name", "")
+                tname = name[1:] if name.startswith("/") else name
+                sname = src[:-3].replace("/", ":") if src.endswith(".md") else src
+                name_map[src] = {"source": src, "targetName": tname, "sourceName": sname}
+                source_map[src] = src
+        return CommandLayout(root=root, format=fmt, output_path=output_path, managed_entries=managed, name_map=name_map, source_map=source_map)
+
+    try:
+        auth_data = json.loads(auth_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise ScanError(f"Malformed authority JSON in {auth_file}: {e}") from e
+    if not isinstance(auth_data, dict):
+        raise ScanError(f"Authority JSON root must be a mapping in {auth_file}")
+
+    schema = auth_data.get("schema")
+    if schema in ("evcrate-omp-command-map-v1", "evcrate-copilot-command-map-v1"):
+        cmds = auth_data.get("commands")
+        if not isinstance(cmds, list):
+            raise ScanError(f"Missing 'commands' list in {auth_file}")
+        for item in cmds:
+            if not isinstance(item, dict):
+                raise ScanError(f"Invalid command record in {auth_file}")
+            src, target, tname = item.get("source"), item.get("target"), item.get("targetName")
+            sname = item.get("sourceName", src[:-3].replace("/", ":") if src and src.endswith(".md") else src)
+            if not src or not target or not tname:
+                raise ScanError(f"Incomplete command record in {auth_file}")
+            rel_target = target
+            if rel_target.startswith("skills/") and root.name == "skills":
+                rel_target = rel_target[len("skills/"):]
+            if rel_target in managed:
+                raise ScanError(f"Duplicate target in {auth_file}: {rel_target}")
+            managed.add(rel_target)
+            name_map[rel_target] = {"source": src, "targetName": tname, "sourceName": sname}
+            source_map[rel_target] = src
+    elif "commands" in auth_data and isinstance(auth_data["commands"], list):
+        for cmd in auth_data["commands"]:
+            if not isinstance(cmd, str):
+                raise ScanError(f"Invalid command string in {auth_file}")
+            rel_target = cmd + ".md" if not cmd.endswith(".md") else cmd
+            if rel_target in managed:
+                raise ScanError(f"Duplicate command in {auth_file}: {rel_target}")
+            managed.add(rel_target)
+            sname = cmd[:-3].replace("/", ":") if cmd.endswith(".md") else cmd.replace("/", ":")
+            name_map[rel_target] = {"source": rel_target, "targetName": "evcrate:" + sname, "sourceName": sname}
+            source_map[rel_target] = rel_target
+    elif "behaviors" in auth_data and isinstance(auth_data["behaviors"], list):
+        for b in auth_data["behaviors"]:
+            if isinstance(b, dict) and b.get("kind") == "command-prose" and b.get("status") == "migrated":
+                src = b.get("source")
+                raw_target = b.get("target")
+                if not src or not raw_target:
+                    raise ScanError(f"Incomplete command-prose behavior in {auth_file}")
+                rel_target = raw_target
+                for pfx in [".agents/skills/", ".antigravity/skills/", "skills/"]:
+                    if rel_target.startswith(pfx) and (root.name == "skills" or root.name == ".agents"):
+                        rel_target = rel_target[len(pfx):]
+                if rel_target in managed:
+                    raise ScanError(f"Duplicate command target in {auth_file}: {rel_target}")
+                managed.add(rel_target)
+                src_stem = src[:-3] if src.endswith(".md") else src
+                sname = src_stem.replace("/", ":")
+                if b.get("target_name"):
+                    tname = b["target_name"]
+                elif fmt == "toml":
+                    tname = "evcrate:" + sname
+                elif data.get("target") == "codex":
+                    tname = "cmd-" + src_stem.replace("/", "-")
+                elif data.get("target") == "antigravity":
+                    tname = "cmd_" + src_stem.replace("/", "_")
+                else:
+                    tname = "evcrate:" + sname
+                name_map[rel_target] = {"source": src, "targetName": tname, "sourceName": sname}
+                source_map[rel_target] = src
+    else:
+        raise ScanError(f"Unrecognized authority schema in {auth_file}")
+
+    if not managed:
+        raise ScanError(f"No managed command entries resolved from {auth_file}")
+
+    return CommandLayout(
+        root=root, format=fmt, output_path=output_path,
+        managed_entries=managed, name_map=name_map, source_map=source_map
+    )
+
+
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
-    base_path = (script_dir.parent / "commands").resolve()
-    output_path = script_dir / "commands_data.yaml"
-    if not base_path.is_dir():
-        print(f"Error: {base_path} not found", file=sys.stderr)
-        sys.exit(1)
-    print("Scanning commands...")
     try:
-        commands = scan_commands(base_path)
+        layout = resolve_command_layout(script_dir)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    print(f"Scanning commands in {layout.root}...")
+    try:
+        commands = scan_commands(layout=layout)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -195,8 +335,9 @@ def main() -> None:
         for cmd in cmds:
             print(f"  {cmd['name']:45} {cmd['description'][:80]}")
     try:
-        atomic_write_yaml(output_path, commands)
-        print(f"\n✓ Saved metadata to {output_path}")
+        out_path = layout.output_path or (script_dir / "commands_data.yaml")
+        atomic_write_yaml(out_path, commands)
+        print(f"\n✓ Saved metadata to {out_path}")
     except Exception as e:
         print(f"Error saving metadata: {e}", file=sys.stderr)
         sys.exit(1)

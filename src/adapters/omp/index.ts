@@ -6,6 +6,7 @@ import { buildCommandMap, convertCommands, convertWorkflows, translatePrompt } f
 import { convertAgents } from './agents.js';
 import { convertSkills } from './skills.js';
 import { convertHooksAndScripts } from './hooks.js';
+import { projectCatalogDataAndLayout } from '../catalog-data.js';
 
 const THINKING_LEVELS = new Set(['minimal', 'low', 'medium', 'high', 'xhigh']);
 function invalid(): never { throw new ControlPlaneError('VALIDATION_INVALID'); }
@@ -25,6 +26,40 @@ function build(context: ProjectionBuildContext): void {
   const skills = convertSkills(context, map);
   const workflows = convertWorkflows(context, map);
   const staticResources = convertHooksAndScripts(context, map);
+  projectCatalogDataAndLayout(context, {
+    target: 'omp',
+    scriptDirectory: '.omp/evcrate/scripts',
+    commands: {
+      format: 'markdown',
+      root: '../../commands',
+      authorityPath: '../command-name-map.json',
+      mapRecord(cmd) {
+        const item = Object.values(map).find((c) => c.source === cmd.source);
+        if (!item) throw new ControlPlaneError('VALIDATION_INVALID');
+        const srcParts = item.sourceName.split(':');
+        const category = srcParts.length > 1 ? srcParts[0] : 'core';
+        return {
+          name: '/' + item.targetName,
+          path: item.target,
+          category
+        };
+      }
+    },
+    skills: {
+      root: '../../skills',
+      authorityPath: '../skill-map.json',
+      mapRecord(skill) {
+        const nativeItem = (skills.native as { source: string; target: string; files: string[] }[]).find(
+          (n) => n.source === skill.name || n.source === skill.source.replace(/\/SKILL\.md$/, '')
+        );
+        if (!nativeItem) return null;
+        return {
+          name: nativeItem.target,
+          path: `${nativeItem.target}/SKILL.md`
+        };
+      }
+    }
+  });
   const outputStyles: string[] = [];
   for (const entry of productionFiles(context, 'output-styles')) {
     const rel = entry.path.slice('output-styles/'.length);

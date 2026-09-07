@@ -9,6 +9,7 @@ import {
   writeProjectionFile,
   validateProjection
 } from './projection-utils.js';
+import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js';
 import type { ResourceGraphFile } from './resource-graph.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from './types.js';
 
@@ -40,6 +41,7 @@ function productionPath(path: string): boolean {
 }
 function shouldCopy(path: string): boolean {
   if (path === 'settings.json' || path === 'settings.local.json' || path === '.mcp.json.example') return false;
+  if (path === 'scripts/commands_data.yaml' || path === 'scripts/skills_data.yaml') return false;
   if (/^(?:agents|commands)(?:\/|$)/u.test(path)) return false;
   if (/^(?:statusline\.cjs|statusline\.ps1|statusline\.sh)$/u.test(path)) return false;
   return !path.split('/').some((part) => part.includes('advise-state')) && !productionPath(path);
@@ -479,7 +481,7 @@ function build(context: ProjectionBuildContext): void {
     if (suffix === 'advise') body = inlineAdviseCommand(body);
     const text = `---
 name: ${name}
-description: ${commandDescription}
+description: ${escapeYamlString(commandDescription)}
 ---
 # ${name}
 
@@ -493,6 +495,46 @@ ${body}`;
   wrapHooks(context);
   rewriteAll(context);
   rewriteGlobalHooks(context);
+  const behaviors: Record<string, unknown>[] = [];
+  for (const file of sourceFiles(context, 'commands')) {
+    if (!file.path.endsWith('.md')) continue;
+    const suffix = file.path.slice('commands/'.length, -3);
+    const name = `cmd_${suffix.replaceAll('/', '_')}`;
+    behaviors.push({ kind: 'command-prose', source: `${suffix}.md`, classification: 'command-prose', status: 'migrated', target: `${name}/SKILL.md`, target_name: name });
+  }
+  for (const file of sourceFiles(context, 'skills')) {
+    if (!file.path.endsWith('/SKILL.md') || file.path.includes('template-skill')) continue;
+    const rel = file.path.slice('skills/'.length);
+    behaviors.push({ kind: 'skill-package', source: rel, classification: 'skill-package', status: 'migrated', target: rel, target_name: rel.slice(0, -'/SKILL.md'.length) });
+  }
+  writeProjectionFile(context, '.antigravity/migration-behavior-matrix.json', textBytes(JSON.stringify({ target: 'antigravity', behaviors }, null, 2) + '\n'));
+  projectCatalogDataAndLayout(context, {
+    target: 'antigravity',
+    scriptDirectory: '.antigravity/scripts',
+    commands: {
+      format: 'command-skill',
+      root: '../skills',
+      authorityPath: '../migration-behavior-matrix.json',
+      mapRecord(cmd) {
+        const suffix = cmd.source.slice(0, -3);
+        const name = `cmd_${suffix.replaceAll('/', '_')}`;
+        return {
+          name: '/' + name,
+          path: `${name}/SKILL.md`
+        };
+      }
+    },
+    skills: {
+      root: '../skills',
+      authorityPath: '../migration-behavior-matrix.json',
+      mapRecord(skill) {
+        return {
+          name: skill.name,
+          path: skill.path
+        };
+      }
+    }
+  });
 }
 export const antigravityAdapter: ProjectionAdapter = Object.freeze({
   id: 'antigravity',

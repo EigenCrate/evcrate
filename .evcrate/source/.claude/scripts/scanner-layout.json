@@ -1,0 +1,15 @@
+{
+  "schema": "evcrate-scanner-layout-v1",
+  "target": "claude",
+  "commands": {
+    "format": "markdown",
+    "root": "../commands",
+    "output": "commands_data.yaml",
+    "authority": "commands_data.yaml"
+  },
+  "skills": {
+    "root": "../skills",
+    "output": "skills_data.yaml",
+    "authority": "skills_data.yaml"
+  }
+}

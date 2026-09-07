@@ -32,12 +32,14 @@ export function renderAdvisoryCapabilities(text: string, target: string): string
 }
 
 export function renderInlineAdviseCommand(canonical: string, target: string, questionTool: string): string {
+  const match = canonical.match(/^---\s*\n[\s\S]*?\n---\s*\n/u);
+  const frontmatter = match ? match[0] : '';
   const error = relayError(target);
   const projected = renderAdvisoryCapabilities(canonical, target);
   const begin = projected.indexOf(START);
   const finish = projected.indexOf(END, begin) + END.length;
   const capabilityBlock = projected.slice(begin, finish);
-  return `<!-- generated target: ${target} -->
+  return `${frontmatter}<!-- generated target: ${target} -->
 ${capabilityBlock}
 
 Use this command for candid technical or architectural advice. \`/advise\` is

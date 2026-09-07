@@ -1655,11 +1655,11 @@ export const parityDeltaRecords = {
       "reason": "Gemini target serializer or normalizer delta"
     },
     ".gemini/migration-behavior-matrix.json": {
+      "bytes": 24615,
+      "hash": "b2b97e0008f57ba58aabb958c0548c90b4407f91db86d68d9191fc11f342e0bf",
       "kind": "file",
-      "bytes": 16679,
-      "hash": "12fe04afc11d430904323e23ddfa306dc30322eeba66f289489ed8e09237691b",
-      "mode": 420,
-      "reason": "Gemini target serializer or normalizer delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".gemini/scripts": {
       "kind": "directory",
@@ -5907,6 +5907,34 @@ export const parityDeltaRecords = {
       "hash": "f917eeee0120c2982ba9da5005bb25d967166171cc24ca7a82f602bc1e34cc33",
       "mode": 420,
       "reason": "Gemini target serializer or normalizer delta"
+    },
+    ".gemini/scripts/commands_data.yaml": {
+      "bytes": 13565,
+      "hash": "7f5c0c58b349513074752e2ea4a9623a945216d4e4437bf7f2bc59f8d9dbb411",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".gemini/scripts/scan_commands.py": {
+      "bytes": 15214,
+      "hash": "100f97479425c8ab6addba8d6b66c9936b28e5ea109d59499e0d86bcb1e7405f",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".gemini/scripts/scan_skills.py": {
+      "bytes": 13466,
+      "hash": "40550134fbeac7d02f77e8fde40e81766618737350e273a9362dcce32c2d77f1",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".gemini/scripts/skills_data.yaml": {
+      "bytes": 21802,
+      "hash": "8bd28b7234adc290c086efba1d53fd6b88c2a8ca38c584fee27202630d77bd7a",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     }
   },
   "antigravity": {
@@ -6246,11 +6274,11 @@ export const parityDeltaRecords = {
       "reason": "Antigravity target rewrite or generated-mode delta"
     },
     ".antigravity/skills/cmd_code_auto/SKILL.md": {
+      "bytes": 12446,
+      "hash": "d6a4ecbd03e449b9adf1d32981f819a162af0e76cfa189caea88e44418505282",
       "kind": "file",
-      "bytes": 12465,
-      "hash": "c4e3b8cb4e651995f53c24b5aadf17843fd6f67a048338f7e78e0f34dfbc4bf6",
-      "mode": 420,
-      "reason": "Antigravity target rewrite or generated-mode delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".antigravity/skills/cmd_code_no-test": {
       "kind": "directory",
@@ -6366,11 +6394,11 @@ export const parityDeltaRecords = {
       "reason": "Antigravity target rewrite or generated-mode delta"
     },
     ".antigravity/skills/cmd_cook_auto_fast/SKILL.md": {
+      "bytes": 3517,
+      "hash": "8e254e43de7f71a264879711999e161e972f1ac947a8fda16acc084ede70fa6b",
       "kind": "file",
-      "bytes": 3524,
-      "hash": "75832621db9b7f5967a4c10ec5e0da85f28923b432f77d8a518ae3e0bc6b2818",
-      "mode": 420,
-      "reason": "Antigravity target rewrite or generated-mode delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".antigravity/skills/cmd_cook_auto_parallel": {
       "kind": "directory",
@@ -7662,6 +7690,34 @@ export const parityDeltaRecords = {
       "hash": "16ab97352b31af915bf1ed1c50a142a986e741aa5c1987538e3a736d2a9dabd7",
       "mode": 420,
       "reason": "Antigravity target rewrite or generated-mode delta"
+    },
+    ".antigravity/scripts/commands_data.yaml": {
+      "bytes": 13705,
+      "hash": "ebc47326986a6548601a457e6930189c76be97032d9609c8e56e0c5311852a40",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".antigravity/scripts/scan_commands.py": {
+      "bytes": 15214,
+      "hash": "100f97479425c8ab6addba8d6b66c9936b28e5ea109d59499e0d86bcb1e7405f",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".antigravity/scripts/scan_skills.py": {
+      "bytes": 13466,
+      "hash": "40550134fbeac7d02f77e8fde40e81766618737350e273a9362dcce32c2d77f1",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".antigravity/scripts/skills_data.yaml": {
+      "bytes": 21802,
+      "hash": "8bd28b7234adc290c086efba1d53fd6b88c2a8ca38c584fee27202630d77bd7a",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     }
   },
   "codex": {
@@ -9577,11 +9633,11 @@ export const parityDeltaRecords = {
       "reason": "Codex target serializer or guidance delta"
     },
     ".codex/migration-behavior-matrix.json": {
+      "bytes": 27001,
+      "hash": "f62d95364a1354a1647d7b39ca8220bbd2e133580d14ab54fe922310038f3812",
       "kind": "file",
-      "bytes": 18613,
-      "hash": "2c92d40575a695ce4de907a4bca051ab6e79a863ae15484e470d5e20dfd76eb9",
-      "mode": 420,
-      "reason": "Codex target serializer or guidance delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".codex/scripts": {
       "kind": "directory",
@@ -9662,6 +9718,34 @@ export const parityDeltaRecords = {
       "hash": "072c7206d84662ce141b68439465b15886e92bfd6eb8a1560e9d5d86c0e0966c",
       "mode": 420,
       "reason": "Codex target serializer or guidance delta"
+    },
+    ".codex/scripts/commands_data.yaml": {
+      "bytes": 13705,
+      "hash": "fed666b57a9946c3f67e2cacb16f600d359225e3cfc082126fceba0fb21094fd",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".codex/scripts/scan_commands.py": {
+      "bytes": 15214,
+      "hash": "100f97479425c8ab6addba8d6b66c9936b28e5ea109d59499e0d86bcb1e7405f",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".codex/scripts/scan_skills.py": {
+      "bytes": 13464,
+      "hash": "039778b610b88819bf87f13ff2f32a8df545bb90103e64bcb8da95fc46055990",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".codex/scripts/skills_data.yaml": {
+      "bytes": 21802,
+      "hash": "8bd28b7234adc290c086efba1d53fd6b88c2a8ca38c584fee27202630d77bd7a",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     }
   },
   "pi": {
@@ -9694,11 +9778,11 @@ export const parityDeltaRecords = {
       "reason": "Pi target transform or native-mode delta"
     },
     ".pi/agent/evcrate/commands/advise.md": {
+      "bytes": 2177,
+      "hash": "b0d3f2151b9d02963a52cb001a3372787cc5aa2e65218dd03905cc9131dfece2",
       "kind": "file",
-      "bytes": 2051,
-      "hash": "6b051c9eea68df7eb6ffb53ed0295139b6ca140a3c9821ecbca360319a920d41",
-      "mode": 420,
-      "reason": "Pi target transform or native-mode delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".pi/agent/evcrate/commands/ask.md": {
       "kind": "file",
@@ -10219,11 +10303,11 @@ export const parityDeltaRecords = {
       "reason": "Pi target transform or native-mode delta"
     },
     ".pi/agent/evcrate/inventory.json": {
+      "bytes": 3049,
+      "hash": "eed77a1b0fa73b6233614f5deb4921fa0fcabd6d199c25c379b23552907a3bce",
       "kind": "file",
-      "bytes": 3200,
-      "hash": "5044208523a5612a71b07ac3e4fe48686ac9780543c8bf2766c9f0abb3bccb86",
-      "mode": 420,
-      "reason": "Pi target transform or native-mode delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".pi/agent/evcrate/scripts/ev-help.py": {
       "kind": "file",
@@ -10350,6 +10434,34 @@ export const parityDeltaRecords = {
       "hash": "c2acdd351cd4e4397fbfb2a0641cd4acce2d1f4d21f53484edbb2cda7821cf57",
       "mode": 448,
       "reason": "Pi target transform or native-mode delta"
+    },
+    ".pi/agent/evcrate/scripts/commands_data.yaml": {
+      "bytes": 13425,
+      "hash": "044eb753bbb72f4c990dd1bb6809f6b99dfb072ecc5296a17205711ada87e526",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".pi/agent/evcrate/scripts/scan_commands.py": {
+      "bytes": 15214,
+      "hash": "100f97479425c8ab6addba8d6b66c9936b28e5ea109d59499e0d86bcb1e7405f",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".pi/agent/evcrate/scripts/scan_skills.py": {
+      "bytes": 13466,
+      "hash": "40550134fbeac7d02f77e8fde40e81766618737350e273a9362dcce32c2d77f1",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".pi/agent/evcrate/scripts/skills_data.yaml": {
+      "bytes": 21802,
+      "hash": "8bd28b7234adc290c086efba1d53fd6b88c2a8ca38c584fee27202630d77bd7a",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     }
   },
   "omp": {
@@ -10396,11 +10508,11 @@ export const parityDeltaRecords = {
       "reason": "OMP target flattening or serializer delta"
     },
     ".omp/commands/cmd-code__auto.md": {
+      "bytes": 12814,
+      "hash": "eab33cdbf93373d24501551a371dd24ed80cbc072cefb7a7dbf3abedf8ac54da",
       "kind": "file",
-      "bytes": 12822,
-      "hash": "e47631f5efd35d1b5cab7d9e02c75644ac1d14acf90870cb9e9c84be98854b7b",
-      "mode": 420,
-      "reason": "OMP target flattening or serializer delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".omp/commands/cmd-code__no-test.md": {
       "kind": "file",
@@ -10781,11 +10893,11 @@ export const parityDeltaRecords = {
       "reason": "OMP target flattening or serializer delta"
     },
     ".omp/evcrate/inventory.json": {
+      "bytes": 2334,
+      "hash": "7afde34ee612aac34bffc4f572386ac9eb19c0a1cf70462d5f716c105fd2b6d5",
       "kind": "file",
-      "bytes": 2368,
-      "hash": "80b8412b08088ee11f918cd04b404c92379a46182df302dc489de6da56ce1e18",
-      "mode": 420,
-      "reason": "OMP target flattening or serializer delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".omp/evcrate/omp-hook-runtime.ts": {
       "kind": "file",
@@ -10816,18 +10928,18 @@ export const parityDeltaRecords = {
       "reason": "OMP target flattening or serializer delta"
     },
     ".omp/evcrate/scripts/scan_commands.py": {
+      "bytes": 15214,
+      "hash": "100f97479425c8ab6addba8d6b66c9936b28e5ea109d59499e0d86bcb1e7405f",
       "kind": "file",
-      "bytes": 5522,
-      "hash": "1f6f2d726a342020b5d3ac4ed15103a5dc7c25a41eed54cd9c69695adb5aed53",
-      "mode": 384,
-      "reason": "OMP target flattening or serializer delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".omp/evcrate/scripts/scan_skills.py": {
+      "bytes": 13466,
+      "hash": "40550134fbeac7d02f77e8fde40e81766618737350e273a9362dcce32c2d77f1",
       "kind": "file",
-      "bytes": 5946,
-      "hash": "901b061ef49c34385641d34336bc97b2a5e5b5e6ba3961408b23444370f93d2c",
-      "mode": 384,
-      "reason": "OMP target flattening or serializer delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".omp/evcrate/skill-map.json": {
       "kind": "file",
@@ -10954,6 +11066,20 @@ export const parityDeltaRecords = {
       "hash": "154c837d8bda7943938732755f4ca2f3b5276cd5220af1f8de9f7d39cf2ca303",
       "mode": 448,
       "reason": "OMP target flattening or serializer delta"
+    },
+    ".omp/evcrate/scripts/commands_data.yaml": {
+      "bytes": 13401,
+      "hash": "56bfa27bf9d07ff54ff6c2b1e37c135b8207e9b5e23d03483eaddc26ad7f3c6f",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".omp/evcrate/scripts/skills_data.yaml": {
+      "bytes": 21674,
+      "hash": "7d9831777401c9f51c18f4c18f0404a900ed43ce34bc02f71d93846619507837",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     }
   },
   "copilot": {
@@ -11154,11 +11280,11 @@ export const parityDeltaRecords = {
       "reason": "Copilot target namespace or support delta"
     },
     ".copilot/evcrate/migration-inventory.json": {
+      "bytes": 232938,
+      "hash": "0b0d9edb909187b1b4c2f4ca6dec7cd14ad01a986776803aa18b6467f7c374d6",
       "kind": "file",
-      "bytes": 237733,
-      "hash": "83befe921c3518d6bc10828cdbfb4dbea46cdab6f0845a6e5604bfef8c40e50c",
-      "mode": 420,
-      "reason": "Copilot target namespace or support delta"
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     },
     ".copilot/evcrate/scripts/README.md": {
       "kind": "file",
@@ -12104,6 +12230,34 @@ export const parityDeltaRecords = {
       "hash": "4e7d62fb7d62d08b87803860ed04b7f4950b3da359016ee7ed10169fb25d0652",
       "mode": 448,
       "reason": "Copilot target namespace or support delta"
+    },
+    ".copilot/evcrate/scripts/commands_data.yaml": {
+      "bytes": 14825,
+      "hash": "b473775c891e3670b40155442f2737b10468ecc0c729710a2a518c97821e66b1",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".copilot/evcrate/scripts/scan_commands.py": {
+      "bytes": 15214,
+      "hash": "100f97479425c8ab6addba8d6b66c9936b28e5ea109d59499e0d86bcb1e7405f",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".copilot/evcrate/scripts/scan_skills.py": {
+      "bytes": 13466,
+      "hash": "579290cae0eae141321755cb0fb7fac605b539558e343a2aeefd66853b59c4a1",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
+    },
+    ".copilot/evcrate/scripts/skills_data.yaml": {
+      "bytes": 22250,
+      "hash": "09b6167230390c5b68bf6f1e276acfdbabe8c71fd32552c50f40ceadb991b75d",
+      "kind": "file",
+      "mode": 511,
+      "reason": "Phase 03 scanner and catalog adapter native projection"
     }
   }
 };

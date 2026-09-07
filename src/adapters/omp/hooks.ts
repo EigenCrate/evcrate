@@ -41,44 +41,14 @@ function scriptTransform(value: string, relative: string, map: CommandMap): stri
     rendered = rendered.replace('    script_path = Path(__file__).resolve()\n    source_kind, source_dir = resolve_command_source(script_path)', '    script_path = Path(__file__).resolve()\n    source_kind, source_dir = resolve_command_source(script_path)\n    command_map = _load_omp_command_map(source_dir) if source_dir.name == "commands" and source_dir.parent.name == ".omp" else None');
     const shebang = rendered.match(/^#![^\n]*\n/u)?.[0] ?? '';
     rendered = shebang + MAP_LOADER + '\n' + rendered.slice(shebang.length);
-  } else if (relative === 'scan_commands.py') {
-    rendered = rendered.replace('import re\n', 'import re\nimport json\nimport sys\n');
-    rendered = rendered.replace("def scan_commands(base_path: Path) -> List[Dict]:", "def scan_commands(base_path: Path, command_map: Dict[str, Dict]) -> List[Dict]:");
-    rendered = rendered.replace('    commands = []\n\n    for cmd_file', '    commands = []\n    mapped_targets = set()\n\n    for cmd_file');
-    rendered = rendered.replace("        # Build command name from path\n        parts = list(rel_path.parts[:-1]) + [rel_path.stem]\n        command_name = '/ck:' + ':'.join(parts)", "        record = command_map.get(rel_path.as_posix())\n        if record is None: raise RuntimeError(f'OMP command map has no record for {rel_path.as_posix()}')\n        mapped_targets.add(rel_path.as_posix())\n        command_name = '/' + record['targetName']\n        source_parts = record['sourceName'].split(':')\n        category = source_parts[0] if len(source_parts) > 1 else 'core'");
-    rendered = rendered.replace("'category': parts[0] if len(parts) > 1 else 'core'", "'category': category");
-    rendered = rendered.replace("    base_path = Path('.claude/commands')", "    base_path = Path('.omp/commands')");
-    rendered = rendered.replace('    commands = scan_commands(base_path)', `    try:\n        command_map = _load_omp_command_map(base_path)\n        commands = scan_commands(base_path, command_map)\n    except RuntimeError as error:\n        print(f"Error: {error}", file=sys.stderr)\n        raise SystemExit(1)`);
-    const shebang = rendered.match(/^#![^\n]*\n/u)?.[0] ?? '';
-    rendered = shebang + MAP_LOADER + '\n' + rendered.slice(shebang.length);
   }
   return rendered;
-}
-function catalogTransform(value: string, map: CommandMap): string {
-  const lines = value.split(/\r?\n/u);
-  const output: string[] = [];
-  let index = 0;
-  const seen = new Set<string>();
-  while (index < lines.length) {
-    if (!lines[index].startsWith('- name: ')) { output.push(lines[index]); index += 1; continue; }
-    const start = index;
-    index += 1;
-    while (index < lines.length && !lines[index].startsWith('- name: ')) index += 1;
-    const record = lines.slice(start, index);
-    const name = /^- name: \/evcrate:(.+)$/u.exec(record[0])?.[1];
-    const source = /^  path: (.+)$/mu.exec(record.join('\n'))?.[1];
-    if (!name || !source) invalid();
-    const item = Object.values(map).find((candidate) => candidate.source === source && candidate.sourceName === name);
-    if (!item || seen.has(name)) invalid();
-    seen.add(name);
-    output.push(...record.map((line) => line === record[0] ? `- name: /${item.targetName}` : line === `  path: ${source}` ? `  path: ${item.target}` : line));
-  }
-  return output.join('\n');
 }
 export function convertHooksAndScripts(context: ProjectionBuildContext, map: CommandMap): { hooks: string[]; scripts: string[]; modules: string[] } {
   const hooks: string[] = []; const scripts: string[] = [];
   for (const entry of productionFiles(context, 'hooks')) { const rel = relativeTo(entry.path, 'hooks'); if (!rel) continue; copy(context, entry.path, `evcrate/hooks/${rel}`, (value) => renderCommandReferences(translateHarnessReferences(value), map)); hooks.push(rel); }
-  for (const entry of productionFiles(context, 'scripts')) { const rel = relativeTo(entry.path, 'scripts'); if (!rel || rel.includes('advise-state')) continue; copy(context, entry.path, `evcrate/scripts/${rel}`, (value) => rel === 'commands_data.yaml' ? catalogTransform(value, map) : scriptTransform(value, rel, map)); scripts.push(rel); }
+  for (const entry of productionFiles(context, 'scripts')) { const rel = relativeTo(entry.path, 'scripts'); if (!rel || rel.includes('advise-state') || rel === 'commands_data.yaml' || rel === 'skills_data.yaml') continue; copy(context, entry.path, `evcrate/scripts/${rel}`, (value) => scriptTransform(value, rel, map)); scripts.push(rel); }
+  scripts.push('commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json');
   copy(context, '.evcrateignore', 'evcrate/.evcrateignore'); copy(context, '.evcrate.json', '.evcrate.json'); copy(context, '.evcrateignore', '.evcrateignore');
   for (const [source, target] of [['settings.json', 'claude-settings.json'], ['.mcp.json.example', '.mcp.json.example'] as const]) if (filesUnder(context, source).length) copy(context, source, `evcrate/source-metadata/${target}`, (value) => renderCommandReferences(translateHarnessReferences(value), map));
   for (const entry of context.resources.files.filter((item) => item.path.startsWith('statusline.') && !item.path.includes('/'))) copy(context, entry.path, `evcrate/source-metadata/statusline/${entry.path}`, (value) => renderCommandReferences(translateHarnessReferences(value), map));

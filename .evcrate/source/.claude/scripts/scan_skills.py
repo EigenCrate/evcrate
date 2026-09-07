@@ -2,6 +2,7 @@
 """Scan skills directory and extract skill metadata."""
 
 from dataclasses import dataclass
+import json
 import os
 from pathlib import Path
 import re
@@ -36,6 +37,7 @@ def atomic_write_yaml(output_path: Path, data: Any) -> None:
         content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False)
         temp.write(content.encode("utf-8"))
         temp.close()
+        os.chmod(temp.name, 0o644)
         Path(temp.name).replace(out)
     finally:
         if os.path.exists(temp.name):
@@ -107,7 +109,7 @@ def scan_skills(base_path: Optional[Path] = None, layout: Optional[SkillLayout] 
             p = (root / entry).resolve()
             if not p.is_relative_to(root) or (root / entry).is_symlink() or not p.is_file():
                 raise ScanError(f"Managed entry missing or unsafe: {entry}")
-            if entry not in exclusions:
+            if entry not in exclusions and "template-skill" not in entry:
                 files.append(root / entry)
     else:
         files = []
@@ -158,16 +160,149 @@ def group_by_category(skills: List[Dict]) -> Dict[str, List[Dict]]:
     return categories
 
 
+def resolve_skill_layout(script_dir: Path) -> SkillLayout:
+    layout_file = script_dir / "scanner-layout.json"
+    if not layout_file.is_file():
+        base_path = (script_dir.parent / "skills").resolve()
+        if not base_path.is_dir():
+            raise ScanError(f"Root path not found: {base_path}")
+        return SkillLayout(
+            root=base_path,
+            output_path=script_dir / "skills_data.yaml",
+            exclusions={"template-skill", "template-skill/SKILL.md"}
+        )
+
+    try:
+        data = json.loads(layout_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise ScanError(f"Invalid scanner-layout.json: {e}") from e
+
+    if not isinstance(data, dict) or data.get("schema") != "evcrate-scanner-layout-v1":
+        raise ScanError(f"Invalid layout schema: {data.get('schema') if isinstance(data, dict) else type(data)}")
+
+    skill_cfg = data.get("skills")
+    if not isinstance(skill_cfg, dict):
+        raise ScanError("Missing or invalid 'skills' block in layout")
+
+    root = (script_dir / skill_cfg["root"]).resolve()
+    if not root.is_dir():
+        raise ScanError(f"Skill root path not found: {root}")
+
+    out_name = skill_cfg.get("output", "skills_data.yaml")
+    output_path = (script_dir / out_name).resolve()
+    if not output_path.is_relative_to(script_dir) or output_path.parent != script_dir:
+        raise ScanError(f"Unsafe output path: {out_name}")
+    auth_rel = skill_cfg.get("authority")
+
+    if not auth_rel:
+        return SkillLayout(
+            root=root,
+            output_path=output_path,
+            exclusions={"template-skill", "template-skill/SKILL.md"}
+        )
+
+    auth_file = (script_dir / auth_rel).resolve()
+    if not auth_file.is_file() or auth_file.is_symlink():
+        raise ScanError(f"Authoritative skill map missing or unsafe: {auth_file}")
+    managed: Set[str] = set()
+    source_map: Dict[str, str] = {}
+
+    if auth_file.suffix in (".yaml", ".yml"):
+        try:
+            auth_data = yaml.safe_load(auth_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            raise ScanError(f"Malformed authority YAML in {auth_file}: {e}") from e
+        if not isinstance(auth_data, list):
+            raise ScanError(f"Authority YAML root must be a list in {auth_file}")
+        for item in auth_data:
+            if isinstance(item, dict) and "path" in item:
+                p = item["path"]
+                managed.add(p)
+                source_map[p] = item.get("source", p)
+        return SkillLayout(
+            root=root,
+            output_path=output_path,
+            managed_entries=managed,
+            source_map=source_map,
+            exclusions={"template-skill", "template-skill/SKILL.md"}
+        )
+
+    try:
+        auth_data = json.loads(auth_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise ScanError(f"Malformed authority JSON in {auth_file}: {e}") from e
+
+    if not isinstance(auth_data, dict):
+        raise ScanError(f"Authority JSON root must be a mapping in {auth_file}")
+
+    schema = auth_data.get("schema")
+    if schema in ("evcrate-omp-skill-map-v1", "evcrate-copilot-skill-map-v1") or "native" in auth_data:
+        native = auth_data.get("native")
+        if not isinstance(native, list):
+            raise ScanError(f"Missing 'native' list in {auth_file}")
+        for item in native:
+            if not isinstance(item, dict):
+                raise ScanError(f"Invalid skill record in {auth_file}")
+            target = item.get("target")
+            src = item.get("source")
+            if not target or not src:
+                raise ScanError(f"Incomplete skill record in {auth_file}")
+            rel_dir = target
+            if rel_dir.startswith("skills/") and root.name == "skills":
+                rel_dir = rel_dir[len("skills/"):]
+            rel_path = f"{rel_dir}/SKILL.md"
+            managed.add(rel_path)
+            src_path = src if src.endswith("/SKILL.md") else f"{src}/SKILL.md"
+            source_map[rel_path] = src_path
+    elif "skills" in auth_data and isinstance(auth_data["skills"], list):
+        for skill in auth_data["skills"]:
+            if not isinstance(skill, str):
+                raise ScanError(f"Invalid skill string in {auth_file}")
+            if "template-skill" in skill:
+                continue
+            rel_path = f"{skill}/SKILL.md" if not skill.endswith("SKILL.md") else skill
+            managed.add(rel_path)
+            source_map[rel_path] = rel_path
+    elif "behaviors" in auth_data and isinstance(auth_data["behaviors"], list):
+        for b in auth_data["behaviors"]:
+            if isinstance(b, dict) and b.get("kind") == "skill-package" and b.get("status") == "migrated":
+                src = b.get("source")
+                raw_target = b.get("target")
+                if not src or not raw_target:
+                    raise ScanError(f"Incomplete skill-package behavior in {auth_file}")
+                if "template-skill" in src or "template-skill" in raw_target:
+                    continue
+                rel_target = raw_target
+                for pfx in [".agents/skills/", ".antigravity/skills/", "skills/"]:
+                    if rel_target.startswith(pfx) and (root.name == "skills" or root.name == ".agents"):
+                        rel_target = rel_target[len(pfx):]
+                managed.add(rel_target)
+                source_map[rel_target] = src
+    else:
+        raise ScanError(f"Unrecognized authority schema in {auth_file}")
+
+    if not managed:
+        raise ScanError(f"No managed skill entries resolved from {auth_file}")
+
+    return SkillLayout(
+        root=root,
+        output_path=output_path,
+        managed_entries=managed,
+        source_map=source_map,
+        exclusions={"template-skill", "template-skill/SKILL.md"}
+    )
+
+
 def main() -> None:
     script_dir = Path(__file__).resolve().parent
-    base_path = (script_dir.parent / "skills").resolve()
-    output_path = script_dir / "skills_data.yaml"
-    if not base_path.is_dir():
-        print(f"Error: {base_path} not found", file=sys.stderr)
-        sys.exit(1)
-    print("Scanning skills...")
     try:
-        skills = scan_skills(base_path)
+        layout = resolve_skill_layout(script_dir)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    print(f"Scanning skills in {layout.root}...")
+    try:
+        skills = scan_skills(layout=layout)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -186,8 +321,9 @@ def main() -> None:
             sf, rf = "📦" if s["has_scripts"] else "  ", "📚" if s["has_references"] else "  "
             print(f"  {sf}{rf} {s['name']:30} {s['description'][:80]}")
     try:
-        atomic_write_yaml(output_path, skills)
-        print(f"\n✓ Saved metadata to {output_path}")
+        out_path = layout.output_path or (script_dir / "skills_data.yaml")
+        atomic_write_yaml(out_path, skills)
+        print(f"\n✓ Saved metadata to {out_path}")
     except Exception as e:
         print(f"Error saving metadata: {e}", file=sys.stderr)
         sys.exit(1)

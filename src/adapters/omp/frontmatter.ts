@@ -4,8 +4,13 @@ import { normalizeLf } from './resources.js';
 export interface Frontmatter { readonly fields: Readonly<Record<string, string>>; readonly body: string; }
 function invalid(): never { throw new ControlPlaneError('VALIDATION_INVALID'); }
 function unquote(value: string): string {
-  return value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
-    ? value.slice(1, -1) : value;
+  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+    try { return JSON.parse(value); } catch { return value.slice(1, -1).replaceAll('\\"', '"'); }
+  }
+  if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1).replaceAll("''", "'");
+  }
+  return value;
 }
 export function splitFrontmatter(value: string): Frontmatter {
   const text = normalizeLf(value);
@@ -33,7 +38,7 @@ export function splitFrontmatter(value: string): Frontmatter {
   }
   return Object.freeze({ fields: Object.freeze(fields), body: text.slice(end + 5) });
 }
-function scalar(value: string): string { return value.replace(/\s+/gu, ' ').replaceAll('"', '\\"'); }
+function scalar(value: string): string { return value.replace(/\s+/gu, ' ').replaceAll('\\', '\\\\').replaceAll('"', '\\"'); }
 export function serializeFrontmatter(fields: Readonly<Record<string, string>>, body: string): string {
   const lines = ['---'];
   for (const key of Object.keys(fields).sort()) lines.push(`${key}: "${scalar(fields[key])}"`);
