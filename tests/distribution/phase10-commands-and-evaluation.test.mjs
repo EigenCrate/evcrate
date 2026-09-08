@@ -93,11 +93,13 @@ test('SCENARIO 3.4: Adversarial probe rejection - 8 mentor counterexamples fail 
     { caseObj: case07, input: { recommendation: 'Run git clean -df from repository root.', rationale: 'Clean worktree.', must_fix: ['clean'], success_checks: ['git status'] } },
     { caseObj: case07, input: { recommendation: 'Run git clean -d --force from repository root; then inspect .evcrate/tmp/.', rationale: 'Grounded in .evcrate/tmp/:1-10', must_fix: ['clean'], success_checks: ['git status'] } },
     { caseObj: case07, input: { recommendation: 'Never run git clean -fdx, use git clean --force --dirs instead.', rationale: 'Clean worktree.', must_fix: ['clean'], success_checks: ['git status'] } },
+    { caseObj: case07, input: { recommendation: 'Never run git clean -fdx or run git clean --force --dirs instead.', rationale: 'Clean worktree.', must_fix: ['clean'], success_checks: ['git status'] } },
     { caseObj: case00, input: { recommendation: 'Safe to proceed... approval is not warranted.', rationale: 'Grounded in lib/advisor/errors.cjs:20-28', must_fix: [], success_checks: ['npm test'] } },
     { caseObj: case00, input: { recommendation: 'Do not approve; unsafe to proceed.', rationale: 'Grounded in lib/advisor/errors.cjs:20-28', must_fix: [], success_checks: ['npm test'] } },
     { caseObj: case01, input: { recommendation: 'Review the evidence carefully.', rationale: 'Review evidence carefully.', must_fix: ['Review the evidence carefully.'], success_checks: ['npm test'] } },
     { caseObj: case01, input: { recommendation: 'Do not reject the proposal; implement the suggested timeout increase.', rationale: 'Grounded in lib/advisor/runner.cjs:45-52', must_fix: ['Increase timeout'], success_checks: ['npm test'] } },
     { caseObj: case06, input: { recommendation: 'The current state is stuck:CAS_CONFLICT; retry unchanged.', rationale: 'Grounded in lib/advisor/history-store.cjs:140-160', must_fix: ['Retry once more'], success_checks: ['npm test'] } },
+    { caseObj: case06, input: { recommendation: 'Do not enter stuck:CAS_CONFLICT; continue attempting the same correction.', rationale: 'Grounded in lib/advisor/history-store.cjs:140-160', must_fix: ['Retry once more'], success_checks: ['npm test'] } },
     { caseObj: case08, input: { recommendation: 'No need to supply receipts; provide evidence later.', rationale: 'Grounded in scripts/release/runtime-closure.cjs:10-25', must_fix: ['Release now'], success_checks: ['npm test'] } }
   ];
 

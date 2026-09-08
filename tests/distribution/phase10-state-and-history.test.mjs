@@ -106,23 +106,26 @@ test('SCENARIO 2.3: Dirty user baseline preserved across corrections', (t) => {
 
   const taskRunId = randomUUID();
   const checkpoint = makeValidCheckpoint(taskRunId, 'chk-dirty', []);
-  env.invoke(['state', 'init'], {
+  const initRes = env.invoke(['state', 'init'], {
     protocol: 'evcrate-advisor-state', version: 1, operation: 'init',
     task_run_id: taskRunId, operation_id: randomUUID(), expected_revision: 0,
     payload: { phase_id: 'phase-10', task: checkpoint.task, baseline_paths: ['source.txt'] }
   });
+  assert.equal(initRes.status, 0);
 
   const reserveRes = env.invoke(['state', 'checkpoint'], {
     protocol: 'evcrate-advisor-state', version: 1, operation: 'checkpoint',
     task_run_id: taskRunId, operation_id: randomUUID(), expected_revision: 1,
     payload: { checkpoint }
   });
+  assert.equal(reserveRes.status, 0);
   const consultationId = reserveRes.json.consultation_id;
-  env.invoke([], checkpoint);
+  const ctrlRes = env.invoke([], checkpoint);
+  assert.equal(ctrlRes.status, 0);
 
   const actionId = randomUUID();
   const episodeId = 'ep-dirty-1';
-  env.invoke(['state', 'disposition'], {
+  const dispRes = env.invoke(['state', 'disposition'], {
     protocol: 'evcrate-advisor-state', version: 1, operation: 'disposition',
     task_run_id: taskRunId, operation_id: randomUUID(), expected_revision: 4,
     payload: {
@@ -131,11 +134,12 @@ test('SCENARIO 2.3: Dirty user baseline preserved across corrections', (t) => {
       correction: { action_id: actionId, episode_id: episodeId, validation_command: 'npm test' }
     }
   });
+  assert.equal(dispRes.status, 0);
 
   // Apply edit to authorized file only
   writeFileSync(join(env.cwd, 'source.txt'), 'updated source code\n');
 
-  env.invoke(['state', 'outcome'], {
+  const outcomeRes = env.invoke(['state', 'outcome'], {
     protocol: 'evcrate-advisor-state', version: 1, operation: 'outcome',
     task_run_id: taskRunId, operation_id: randomUUID(), expected_revision: 5,
     payload: {
@@ -144,7 +148,7 @@ test('SCENARIO 2.3: Dirty user baseline preserved across corrections', (t) => {
       actual_changed_paths: ['source.txt']
     }
   });
-
-  // Verify uncommitted file is completely preserved across the correction lifecycle
+  assert.equal(outcomeRes.status, 0);
+  assert.equal(outcomeRes.json.state.task_revision, 6);
   assert.equal(readFileSync(uncommittedFile, 'utf8'), 'precious uncommitted user thoughts\n');
 });
