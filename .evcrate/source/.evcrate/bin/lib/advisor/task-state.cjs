@@ -2,7 +2,9 @@
 
 const { randomUUID } = require('node:crypto');
 const { stateLocation, transactState, processIdentity, processStatus } = require('./state-io.cjs');
+const { recordOutcome: recordHistoryOutcome } = require('./history-store.cjs');
 const { captureBaseline, assertBaselineFresh } = require('./state-baseline.cjs');
+const { loadGlobalPolicy } = require('./profile.cjs');
 const { validateCheckpointV2, computeCheckpointDigestV2, validateEnvelopeV2, deepFreeze } = require('./contracts-v2.cjs');
 const { ADVISOR_BUILD_IDENTITY } = require('./checkpoint-contract.cjs');
 const {
@@ -143,9 +145,15 @@ function noCorrectionOutcome(state, payload, location) {
     || state.disposition.evidence_revision !== state.evidence_revision) fail('STALE_EVIDENCE_REVISION');
   fresh(location, state);
   if (payload.result === 'resolved') state.evidence_revision = increment(state.evidence_revision);
-  state.outcome = { ...payload, evidence_revision: state.evidence_revision,
-    checkpoint_digest: terminal.checkpoint_digest, result_digest: terminal.result_digest,
-    baseline_digest: hash(state.current_baseline) };
+  state.outcome = {
+    ...payload,
+    evidence_revision: state.evidence_revision,
+    correction_number: 1,
+    recorded_at: Date.now(),
+    checkpoint_digest: terminal.checkpoint_digest,
+    result_digest: terminal.result_digest,
+    baseline_digest: hash(state.current_baseline)
+  };
   state.gate_status = payload.result === 'resolved' ? 'open' : 'needs_evidence';
 }
 function outcome(state, payload, location) {
@@ -160,9 +168,15 @@ function outcome(state, payload, location) {
   if (changed.some((path) => !state.scope.authorized_paths.includes(path))
     || !equal(changed, [...payload.actual_changed_paths].sort())) fail('STATE_GATE_BLOCKED');
   if (payload.result !== 'unknown' && changed.length === 0) fail('STATE_GATE_BLOCKED');
+  const activeCycle = Math.max(1, Math.min(3, state.correction_count || 1));
   state.outcome = {
-    ...payload, evidence_revision: state.evidence_revision,
-    checkpoint_digest: correction.checkpoint_digest, result_digest: correction.result_digest, baseline_digest: hash(observed)
+    ...payload,
+    evidence_revision: state.evidence_revision,
+    correction_number: activeCycle,
+    recorded_at: Date.now(),
+    checkpoint_digest: correction.checkpoint_digest,
+    result_digest: correction.result_digest,
+    baseline_digest: hash(observed)
   };
   if (payload.result === 'unknown') {
     // Interrupted runs retain their original execution baseline and action identity.
@@ -292,7 +306,7 @@ function executeStateRequest(input, context = {}) {
   // Host observation may involve interaction; it must occur before taking the short lock.
   const humanEvent = observeHuman(request, context);
   const requestDigest = hash(request);
-  return transactState(location, { create: request.operation === 'init' }, (current) => {
+  const transactionResult = transactState(location, { create: request.operation === 'init' }, (current) => {
     if (current !== null) checkState(current, location, request.task_run_id);
     if (request.operation === 'get') {
       checkState(current, location, request.task_run_id);
@@ -329,6 +343,51 @@ function executeStateRequest(input, context = {}) {
     validateTaskStateV1(state);
     return { state, result: response(request, state, result) };
   });
+  if (request.operation === 'outcome') {
+    let outcomeAuditStatus = 'disabled';
+    const stateSource = transactionResult?.state || transactionResult;
+    try {
+      const environment = context.environment || process.env;
+      let policy = context.policy;
+      if (!policy) {
+        try {
+          const loaded = loadGlobalPolicy(environment?.HOME);
+          policy = loaded?.policy ?? loaded;
+        } catch {}
+      }
+      const outcomeRecord = {
+        schema_version: 1,
+        consultation_id: request.payload.consultation_id,
+        task_run_id: request.task_run_id,
+        project_id: location.projectId,
+        disposition: {
+          action: stateSource?.disposition?.action || 'accept',
+          rationale: stateSource?.disposition?.rationale || 'Accepted without concerns.'
+        },
+        evidence_revision: stateSource?.evidence_revision ?? request.expected_revision,
+        actual_changed_paths: request.payload.actual_changed_paths || [],
+        validation: request.payload.validation,
+        outcome: request.payload.result,
+        correction_number: stateSource?.outcome?.correction_number || 1,
+        recorded_at: stateSource?.outcome?.recorded_at || Date.now()
+      };
+      if (policy?.history) {
+        try {
+          recordHistoryOutcome(context, outcomeRecord, policy);
+          outcomeAuditStatus = 'recorded';
+        } catch {
+          outcomeAuditStatus = 'degraded';
+        }
+      }
+    } catch {
+      outcomeAuditStatus = 'degraded';
+    }
+    return deepFreeze({
+      ...transactionResult,
+      audit_status: outcomeAuditStatus
+    });
+  }
+  return transactionResult;
 }
 function claimCheckpoint(input, context = {}) {
   const checkpoint = validateCheckpointV2(clone(input));

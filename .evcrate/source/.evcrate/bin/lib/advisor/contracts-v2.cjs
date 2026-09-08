@@ -451,71 +451,98 @@ function validateTaskStateV1(state) {
 // History Execution V1 Validator
 const HISTORY_EXECUTION_V1_KEYS = Object.freeze([
   'schema_version', 'consultation_id', 'task_run_id', 'project_id',
-  'checkpoint_digest', 'route', 'attempts', 'status', 'result', 'error',
-  'started_at', 'completed_at'
+  'checkpoint_digest', 'checkpoint', 'route', 'receipt', 'prompt_identity', 'build_identity',
+  'attempts', 'status', 'result', 'error', 'started_at', 'completed_at'
 ]);
 
 function validateHistoryExecutionV1(execution) {
-  assertKeys(execution, HISTORY_EXECUTION_V1_KEYS, 'AUDIT_DEGRADED');
-  if (execution.schema_version !== HISTORY_VERSION_V1) fail('AUDIT_DEGRADED');
-  validateUuid(execution.consultation_id, 'AUDIT_DEGRADED');
-  validateUuid(execution.task_run_id, 'AUDIT_DEGRADED');
-  validateText(execution.project_id, 128, false, 'AUDIT_DEGRADED');
-  validateDigest(execution.checkpoint_digest, 'AUDIT_DEGRADED');
-  validateRouteTriple(execution.route, 'AUDIT_DEGRADED');
-  if (!Array.isArray(execution.attempts) || execution.attempts.length > MAX_TOTAL_ATTEMPT_SUMMARIES) fail('AUDIT_DEGRADED');
-  execution.attempts.forEach(validateAttemptOutcome);
-  if (new Set(execution.attempts.map((a) => a.attempt_id)).size !== execution.attempts.length) fail('AUDIT_DEGRADED');
-  const modelStartedAttempts = execution.attempts.filter((a) => a.model_started);
-  if (modelStartedAttempts.length > MAX_MODEL_ATTEMPTS) fail('AUDIT_DEGRADED');
+  try {
+    assertKeys(execution, HISTORY_EXECUTION_V1_KEYS, 'AUDIT_DEGRADED');
+    if (execution.schema_version !== HISTORY_VERSION_V1) fail('AUDIT_DEGRADED');
+    validateUuid(execution.consultation_id, 'AUDIT_DEGRADED');
+    validateUuid(execution.task_run_id, 'AUDIT_DEGRADED');
+    validateDigest(execution.project_id, 'AUDIT_DEGRADED');
+    validateDigest(execution.checkpoint_digest, 'AUDIT_DEGRADED');
+    validateCheckpointV2(execution.checkpoint);
+    if (computeCheckpointDigestV2(execution.checkpoint) !== execution.checkpoint_digest) fail('AUDIT_DEGRADED');
+    if (execution.checkpoint.task_run_id !== execution.task_run_id) fail('AUDIT_DEGRADED');
+    validateRouteTriple(execution.route, 'AUDIT_DEGRADED');
+    validateText(execution.prompt_identity, 128, false, 'AUDIT_DEGRADED');
+    validateText(execution.build_identity, 128, false, 'AUDIT_DEGRADED');
+    if (!Array.isArray(execution.attempts) || execution.attempts.length > MAX_TOTAL_ATTEMPT_SUMMARIES) fail('AUDIT_DEGRADED');
+    execution.attempts.forEach(validateAttemptOutcome);
+    if (new Set(execution.attempts.map((a) => a.attempt_id)).size !== execution.attempts.length) fail('AUDIT_DEGRADED');
+    const modelStartedAttempts = execution.attempts.filter((a) => a.model_started);
+    if (modelStartedAttempts.length > MAX_MODEL_ATTEMPTS) fail('AUDIT_DEGRADED');
 
-  if (!EXECUTION_STATUSES.includes(execution.status)) fail('AUDIT_DEGRADED');
-  validateNonNegativeSafeInteger(execution.started_at, 'AUDIT_DEGRADED');
-  if (execution.started_at === 0) fail('AUDIT_DEGRADED');
+    if (!EXECUTION_STATUSES.includes(execution.status)) fail('AUDIT_DEGRADED');
+    validateNonNegativeSafeInteger(execution.started_at, 'AUDIT_DEGRADED');
+    if (execution.started_at === 0) fail('AUDIT_DEGRADED');
+    if (execution.status === 'started') {
+      if (execution.result !== null || execution.error !== null || execution.completed_at !== null || execution.receipt !== null) {
+        fail('AUDIT_DEGRADED');
+      }
+    } else {
+      if (execution.receipt === null) fail('AUDIT_DEGRADED');
+      validateReceiptV2(execution.receipt);
+      if (execution.receipt.build_identity !== execution.build_identity) fail('AUDIT_DEGRADED');
+      if (execution.receipt.backend !== execution.route.backend
+        || execution.receipt.model !== execution.route.model
+        || execution.receipt.effort !== execution.route.effort) {
+        fail('AUDIT_DEGRADED');
+      }
+      validateNonNegativeSafeInteger(execution.completed_at, 'AUDIT_DEGRADED');
+      if (execution.completed_at < execution.started_at) fail('AUDIT_DEGRADED');
 
-  if (execution.status === 'started') {
-    if (execution.result !== null || execution.error !== null || execution.completed_at !== null) {
-      fail('AUDIT_DEGRADED');
+      if (execution.status === 'ADVICE_READY') {
+        if (execution.result === null || execution.error !== null) fail('AUDIT_DEGRADED');
+        validateResultV2(execution.result);
+        if (execution.result.checkpoint !== execution.checkpoint.checkpoint) fail('AUDIT_DEGRADED');
+      } else if (execution.status === 'FAILED') {
+        if (execution.error === null || execution.result !== null) fail('AUDIT_DEGRADED');
+        validateSanitizedError(execution.error, 'AUDIT_DEGRADED');
+      }
     }
-  } else if (execution.status === 'ADVICE_READY') {
-    if (execution.result === null || execution.error !== null) fail('AUDIT_DEGRADED');
-    validateResultV2(execution.result);
-    validateNonNegativeSafeInteger(execution.completed_at, 'AUDIT_DEGRADED');
-    if (execution.completed_at < execution.started_at) fail('AUDIT_DEGRADED');
-  } else if (execution.status === 'FAILED') {
-    if (execution.error === null || execution.result !== null) fail('AUDIT_DEGRADED');
-    validateSanitizedError(execution.error, 'AUDIT_DEGRADED');
-    validateNonNegativeSafeInteger(execution.completed_at, 'AUDIT_DEGRADED');
-    if (execution.completed_at < execution.started_at) fail('AUDIT_DEGRADED');
+    if (bytes(JSON.stringify(execution)) > MAX_EXECUTION_HISTORY_BYTES) fail('AUDIT_DEGRADED');
+    return deepFreeze(execution);
+  } catch (error) {
+    fail('AUDIT_DEGRADED');
   }
-
-  if (bytes(JSON.stringify(execution)) > MAX_EXECUTION_HISTORY_BYTES) fail('AUDIT_DEGRADED');
-  return deepFreeze(execution);
 }
 
 // History Outcome V1 Validator
 const HISTORY_OUTCOME_V1_KEYS = Object.freeze([
-  'schema_version', 'consultation_id', 'task_run_id', 'disposition',
-  'actual_changes_revision', 'validation_reference', 'outcome',
-  'correction_number', 'recorded_at'
+  'schema_version', 'consultation_id', 'task_run_id', 'project_id',
+  'disposition', 'evidence_revision', 'actual_changed_paths', 'validation',
+  'outcome', 'correction_number', 'recorded_at'
 ]);
 
 function validateHistoryOutcomeV1(outcome) {
-  assertKeys(outcome, HISTORY_OUTCOME_V1_KEYS, 'AUDIT_DEGRADED');
-  if (outcome.schema_version !== HISTORY_VERSION_V1) fail('AUDIT_DEGRADED');
-  validateUuid(outcome.consultation_id, 'AUDIT_DEGRADED');
-  validateUuid(outcome.task_run_id, 'AUDIT_DEGRADED');
-  validateText(outcome.disposition, 4096, true, 'AUDIT_DEGRADED');
-  validateNonNegativeSafeInteger(outcome.actual_changes_revision, 'AUDIT_DEGRADED');
-  validateText(outcome.validation_reference, 512, false, 'AUDIT_DEGRADED');
-  if (!OUTCOME_RESULTS.includes(outcome.outcome)) fail('AUDIT_DEGRADED');
-  if (!Number.isSafeInteger(outcome.correction_number) || outcome.correction_number < 1 || outcome.correction_number > MAX_CORRECTION_CYCLES) {
+  try {
+    assertKeys(outcome, HISTORY_OUTCOME_V1_KEYS, 'AUDIT_DEGRADED');
+    if (outcome.schema_version !== HISTORY_VERSION_V1) fail('AUDIT_DEGRADED');
+    validateUuid(outcome.consultation_id, 'AUDIT_DEGRADED');
+    validateUuid(outcome.task_run_id, 'AUDIT_DEGRADED');
+    validateDigest(outcome.project_id, 'AUDIT_DEGRADED');
+    if (!isPlainObject(outcome.disposition)) fail('AUDIT_DEGRADED');
+    assertKeys(outcome.disposition, ['action', 'rationale'], 'AUDIT_DEGRADED');
+    if (!['accept', 'reject-with-evidence', 'need-evidence', 'reconcile'].includes(outcome.disposition.action)) fail('AUDIT_DEGRADED');
+    validateText(outcome.disposition.rationale, 4096, true, 'AUDIT_DEGRADED');
+    validateNonNegativeSafeInteger(outcome.evidence_revision, 'AUDIT_DEGRADED');
+    if (!Array.isArray(outcome.actual_changed_paths) || outcome.actual_changed_paths.length > 32) fail('AUDIT_DEGRADED');
+    outcome.actual_changed_paths.forEach((p) => validateSafeRelativePath(p, 'AUDIT_DEGRADED'));
+    validateValidationResult(outcome.validation, 'AUDIT_DEGRADED');
+    if (!OUTCOME_RESULTS.includes(outcome.outcome)) fail('AUDIT_DEGRADED');
+    if (!Number.isSafeInteger(outcome.correction_number) || outcome.correction_number < 1 || outcome.correction_number > MAX_CORRECTION_CYCLES) {
+      fail('AUDIT_DEGRADED');
+    }
+    validateNonNegativeSafeInteger(outcome.recorded_at, 'AUDIT_DEGRADED');
+    if (outcome.recorded_at === 0) fail('AUDIT_DEGRADED');
+    if (bytes(JSON.stringify(outcome)) > MAX_OUTCOME_HISTORY_BYTES) fail('AUDIT_DEGRADED');
+    return deepFreeze(outcome);
+  } catch (error) {
     fail('AUDIT_DEGRADED');
   }
-  validateNonNegativeSafeInteger(outcome.recorded_at, 'AUDIT_DEGRADED');
-  if (outcome.recorded_at === 0) fail('AUDIT_DEGRADED');
-  if (bytes(JSON.stringify(outcome)) > MAX_OUTCOME_HISTORY_BYTES) fail('AUDIT_DEGRADED');
-  return deepFreeze(outcome);
 }
 
 module.exports = {
@@ -569,4 +596,5 @@ module.exports = {
   validateNonNegativeSafeInteger,
   deepFreeze,
   computeCheckpointDigestV2,
+  SENSITIVE_PATTERN,
 };

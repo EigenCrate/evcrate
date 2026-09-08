@@ -116,7 +116,7 @@ package path; source retains an explicit compatibility-engine type, but no root
 use stale Python commands as the primary installation or distribution procedure.
 
 The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its 25 production files are:
+`.evcrate/source/.evcrate/bin`. Its 29 production files are:
 
 ```text
 evcrate-advisor
@@ -132,6 +132,10 @@ lib/advisor/contracts-v2.cjs
 lib/advisor/controller-envelope.cjs
 lib/advisor/controller.cjs
 lib/advisor/errors.cjs
+lib/advisor/history-contract.cjs
+lib/advisor/history-prune.cjs
+lib/advisor/history-query.cjs
+lib/advisor/history-store.cjs
 lib/advisor/isolated-workspace.cjs
 lib/advisor/json-document.cjs
 lib/advisor/policy-schema.cjs
@@ -215,7 +219,7 @@ import `dist/` or projected resources. Phase 01 freezes these versions:
 | `evcrate-advisor-result` | 2 | Controller-normalized structured counsel. |
 | `evcrate-advisor-controller` | 2 | Terminal envelope with attempts and audit status. |
 | Settings request/result, journal, preview | 1 | Existing TS transaction transport; policy payload is v2. |
-| Task state, execution history, outcome | 1 | New owner-only local records for later phases. |
+| Task state, execution history, outcome | 1 | Owner-only local records; task state remains required gate authority, while history/outcome provide optional rich audit. |
 
 The v2 checkpoint requires `task_run_id`, `checkpoint_id`, `phase_id`,
 `task_revision`, `evidence_revision`, decision kind, task constraints,
@@ -447,7 +451,7 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
-## 8. Advisor mentoring upgrade (Phases 05 and 06 complete; audit/workflow phases pending)
+## 8. Advisor mentoring upgrade (Phases 05, 06, and 07 complete; workflow phases pending)
 
 Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
 Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
@@ -456,10 +460,12 @@ policy migration, delivered wait/cancellation/cleanup guarantees, qualified
 adapters, and integrated the canonical mentor brief plus structured v2 result
 parsing. Phase 05 delivered bounded primary retry (up to four launches) and
 one-shot backup orchestration. Phase 06 is complete and user-approved on
-2026-09-08 after two review cycles and a senior mentor challenge. It delivered
+2026-09-08 after two review cycles and a senior mentor challenge; it delivered
 durable task state, process-identity locking, Git/baseline identity tracking,
-three-cycle correction escalation, and observed human continuation. Later phases
-add history review, canonical workflow integration, and acceptance evaluation.
+three-cycle correction escalation, and observed human continuation. Phase 07 is
+complete and user-approved with sanitized execution/outcome history, CAS
+terminal settlement, linked outcome recording, and bounded offline review tools.
+Phase 08 adds canonical workflow integration and later phases evaluate acceptance.
 
 Phase 06 evidence is 185/185 advisor-controller tests passed; `npm run build` and
 `npm run release:check` passed against the generated 25-file controller closure.
@@ -475,6 +481,56 @@ main workflow retain mutation authority.
 Generation/publication does not establish live tool-enforcement capability.
 This remains cooperative oversight of trusted CLIs, not hostile-process
 containment or a guarantee against semantic bugs.
+
+### 8.1 Sanitized audit history, outcomes, and offline review (Phase 07)
+
+Phase 07 implements structured, sanitized local execution history and outcome
+tracking with safe CLI inspection and retention tools:
+
+1. **Storage layout & boundaries**:
+   Stored at `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
+   with owner-only permissions (`0o700` directories, `0o600` files). Project root,
+   HOME, and intermediate directories are validated against symlink swaps and
+   insecure world-writable permissions using `/proc/self/fd` directory pinning.
+
+2. **Execution & outcome snapshots**:
+   - `execution.json` (max 128 KiB): records initial started snapshot before model
+     launch, attempt summaries, terminal status (<code>ADVICE_READY</code> or <code>FAILED</code>),
+     sanitized result or error, route receipt, and timestamps. Terminal writes
+     use compare-and-set (CAS) against started records to prevent rewrite races.
+   - `outcome.json` (max 64 KiB): records linked executor disposition, actual
+     diff revision, validation command reference, outcome classification
+     (`resolved`, `unresolved`, `regressed`, `unknown`), and correction cycle.
+
+3. **Retention, quota, and audit degradation**:
+   - Defaults: 30 days retention and 100 MiB total quota (configured via policy
+     `history: { retention_days, max_bytes }`).
+   - Active records (`status: 'started'`) are strictly protected from pruning.
+   - If history storage is degraded, read-only, or quota is exhausted by active
+     records, the controller visibly sets `audit_status: 'degraded'`. History
+     write failures never fail the controller or trigger model retries.
+
+4. **Managed CLI tools**:
+   - `evcrate-advisor history list`: metadata-only pagination with project, task,
+     and status filters.
+   - `evcrate-advisor history show`: safe display of execution and outcome
+     records with ANSI and control-code sanitization.
+   - `evcrate-advisor history export`: exports sanitized history to an explicit,
+     non-existing destination with redaction review.
+   - `evcrate-advisor history prune`: dry-run preview and apply modes for
+     pruning expired terminal records and enforcing quota.
+
+5. **Offline human review workflow**:
+   - Operators select sanitized cases using `history list` and `history show`.
+   - Reviewers categorize outcomes into: (a) missing evidence, (b) incorrect advice,
+     (c) executor disregard, or (d) infrastructure/network failures.
+   - Prompt versions and model receipts are compared manually. Automatic prompt
+     rewriting or automated training on raw history logs is prohibited.
+
+Verification: the targeted Phase 07 history suites pass 19/19 and the full
+advisor-controller suite passes 204/204. The Phase Lead/Senior Mentor review
+resolved all seven final implementation items and approved Phase 07
+unconditionally at 10/10. See the [QA evidence report](../plans/reports/tester-260908-1344-phase07-final-verification.md).
 
 ## Related documents
 

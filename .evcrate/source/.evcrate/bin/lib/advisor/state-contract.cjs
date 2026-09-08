@@ -239,9 +239,10 @@ function validateState(value) {
     if ((value.correction_count === 3) !== (correction.continued_by !== null)) fail();
   }
   if (value.outcome !== null) {
-    keys(value.outcome, [...PAYLOAD_KEYS.outcome, 'evidence_revision', 'checkpoint_digest', 'result_digest', 'baseline_digest']);
+    keys(value.outcome, [...PAYLOAD_KEYS.outcome, 'evidence_revision', 'correction_number', 'recorded_at', 'checkpoint_digest', 'result_digest', 'baseline_digest']);
     validateOutcome(Object.fromEntries(PAYLOAD_KEYS.outcome.map((key) => [key, value.outcome[key]])));
-    integer(value.outcome.evidence_revision); digest(value.outcome.checkpoint_digest); digest(value.outcome.result_digest); digest(value.outcome.baseline_digest);
+    integer(value.outcome.evidence_revision); integer(value.outcome.correction_number); integer(value.outcome.recorded_at);
+    digest(value.outcome.checkpoint_digest); digest(value.outcome.result_digest); digest(value.outcome.baseline_digest);
     if (value.outcome.evidence_revision > value.evidence_revision) fail();
     if (value.outcome.result === 'unknown' && value.outcome.action_id !== null
       && (value.correction === null || value.outcome.action_id !== value.correction.action_id)) fail();

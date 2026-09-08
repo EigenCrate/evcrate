@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
   validateCheckpointV2,
+  computeCheckpointDigestV2,
   validateResultV2,
   validateAttemptOutcome,
   validateEnvelopeV2,
@@ -167,10 +168,22 @@ const VALID_TASK_STATE = Object.freeze({
 const VALID_HISTORY_EXECUTION = Object.freeze({
   schema_version: HISTORY_VERSION_V1,
   consultation_id: '01234567-89ab-4cde-8f01-23456789ef01',
-  task_run_id: '01234567-89ab-4cde-8f01-23456789abcd',
-  project_id: 'evcrate-project',
-  checkpoint_digest: 'b'.repeat(64),
+  task_run_id: VALID_CHECKPOINT_V2.task_run_id,
+  project_id: 'a'.repeat(64),
+  checkpoint_digest: computeCheckpointDigestV2(VALID_CHECKPOINT_V2),
+  checkpoint: VALID_CHECKPOINT_V2,
   route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+  receipt: {
+    backend: 'codex',
+    model: 'gpt-5.6-sol',
+    effort: 'high',
+    controller_version: 2,
+    adapter_version: '0.150.1',
+    elapsed_ms: 1000,
+    build_identity: 'evcrate-build'
+  },
+  prompt_identity: 'canonical-mentor-brief-v2',
+  build_identity: 'evcrate-build',
   attempts: [VALID_ATTEMPT],
   status: 'ADVICE_READY',
   result: VALID_RESULT_V2,
@@ -183,9 +196,18 @@ const VALID_HISTORY_OUTCOME = Object.freeze({
   schema_version: HISTORY_VERSION_V1,
   consultation_id: '01234567-89ab-4cde-8f01-23456789ef01',
   task_run_id: '01234567-89ab-4cde-8f01-23456789abcd',
-  disposition: 'Approved recommendation with non-blocking checks.',
-  actual_changes_revision: 2,
-  validation_reference: 'git:sha256:abc123',
+  project_id: 'a'.repeat(64),
+  disposition: { action: 'accept', rationale: 'Approved recommendation with non-blocking checks.' },
+  evidence_revision: 2,
+  actual_changed_paths: ['source.txt'],
+  validation: {
+    suite: 'test',
+    command: 'npm test',
+    status: 'passed',
+    passed: 1,
+    failed: 0,
+    details: null
+  },
   outcome: 'resolved',
   correction_number: 1,
   recorded_at: 1700000002000
@@ -515,12 +537,12 @@ test('validateHistoryExecutionV1 supports started and terminal states', () => {
   const started = validateHistoryExecutionV1({
     ...VALID_HISTORY_EXECUTION,
     status: 'started',
+    receipt: null,
     result: null,
     error: null,
     completed_at: null
   });
   assert.equal(started.status, 'started');
-
   // Started record cannot have result or error
   assert.throws(() => validateHistoryExecutionV1({
     ...started,

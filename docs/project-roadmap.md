@@ -13,21 +13,22 @@ output and is not the phase evidence authority.
 ## Current baseline
 
 The current source establishes a TypeScript control plane, seven fixed projection
-adapters, schema-2 target/build manifests, a 25-file advisor controller closure,
-and advisor v2 contracts with explicit policy migration, canonical generated
-mentor instructions, unified structured advice parsing, V2 envelope
-correspondence validation, compatibility direct checkpoint counsel, bounded
-primary retry with one-shot backup orchestration, and journaled
-publication/recovery. The npm package path is authoritative by default. Generated
-projections and the shared controller are outputs of canonical source plus target
-policy; they are not hand edited.
+adapters, schema-2 target/build manifests, a 29-file advisor controller closure,
+advisor v2 contracts with explicit policy migration, canonical generated mentor
+instructions, unified structured advice parsing, V2 envelope correspondence
+validation, compatibility direct checkpoint counsel, bounded primary retry with
+one-shot backup orchestration, durable task state and correction gates, sanitized
+execution/outcome history, bounded history review tools, and journaled
+publication/recovery. The npm package path is authoritative by default.
+Generated projections and the shared controller are outputs of canonical source
+plus target policy; they are not hand edited.
 
 ## Phase and gate status
 
 | Phase/gate | State | Evidence or boundary |
 |---|---|---|
 | Protocol and filesystem foundations | Implemented in source | Strict bounded JSON, canonical hashing, safe paths, locks, staging, CAS, and recovery modules are present under `src/`. |
-| Advisor controller contract | Implemented in source | The canonical `.evcrate/source/.evcrate/bin` closure contains the generated 25-file inventory, canonical runtime brief artifact, v2 contract validators, policy migration schema, compatibility checkpoint/controller path, runner, adapters, and envelopes. |
+| Advisor controller contract | Implemented in source | The canonical `.evcrate/source/.evcrate/bin` closure contains the generated 29-file inventory, history contracts/store/query/prune modules, canonical runtime brief artifact, v2 contract validators, policy migration schema, compatibility checkpoint/controller path, runner, adapters, and envelopes. |
 | Phase 9 packed consumer/adapter work | Historical evidence recorded | The changelog records packed-consumer and diagnostic adapter contracts; it does not claim live Agent Store/DamHopper release or target cutover. |
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
@@ -38,6 +39,7 @@ policy; they are not hand edited.
 | Advisor mentoring/recovery/audit — Phase 04 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-04-mentor-brief-evidence-and-results.md); completed at 100% with the `brief-contract.md` → `generate-runtime-brief.mjs` → `runtime-brief.generated.cjs` single-source chain, unified `formatMentorPrompt` packaging for Claude/Codex/OMP/Pi, strict seven-field `parseAdviceBody` validation (fences/prose and Node/Python/Go/Rust raw stack frames rejected while ordinary prose remains valid), and V2 digest/build-identity/receipt-effort correspondence checks. Evidence: 118/118 advisor-controller tests passed (~7.3s), `npm run build` exit 0, `npm run release:check` exit 0; Astra post-fix sign-off 8/10 with all four critical correspondence/RAW_STACK issues resolved. |
 | Advisor mentoring/recovery/audit — Phase 05 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md); completed at 100% with bounded recovery (up to four sequential primary launches plus one configured backup), cancellable 10/20/30s backoff, route-local preflight skip, provider cooldown handling, and qualification-to-spawn identity binding. Evidence: 140/140 advisor-controller tests passed and `npm run release:check` exited 0. |
 | Advisor mentoring/recovery/audit — Phase 06 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md); completed at 100% with durable task state, scope/disposition tracking, three-cycle correction gates, and human handoff. Review approved 2026-09-08. |
+| Advisor mentoring/recovery/audit — Phase 07 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md) and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md); completed at 100% with owner-only sanitized execution/outcome history, bounded attempt snapshots, CAS terminal settlement, linked executor outcomes, audit degradation independent of inference, and managed `history list|show|export|prune` review tools. Evidence: 204/204 advisor-controller tests passed (19/19 targeted); Phase Lead/Senior Mentor sign-off is unconditional approval at 10/10. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -88,15 +90,15 @@ roadmap item.
   convention in future scanner/parser changes without breaking generated target maps.
 - **Advisor qualification:** Repeat real installed-CLI qualification after every
   vendor CLI upgrade; keep `antigravity` unavailable until equivalent evidence exists.
-- **V2 runtime adoption:** Integrate durable task-state, history, and workflow gates
-  in dependent phases; Phase 05 now supplies bounded retry/backup, provider
-  cooldown, cancellation, and verified-cleanup behavior.
+- **V2 runtime adoption:** Integrate canonical workflow gates in Phase 08; Phase
+  07 now supplies optional sanitized history/review while required task-state
+  authority, replay protection, and correction gates remain separate.
 - **Policy route selection:** Exact deployed primary/backup routes, vendor
   controls, auth, and independent failure domains remain operator qualification
   inputs; no model/backend defaults are implied by examples.
 - **Contract test depth:** Retain dedicated CJS v2 validator, structured-body
-  boundary, public envelope-correspondence, and retry-orchestration coverage as
-  later task-state, history, and workflow phases consume the frozen records.
+  boundary, public envelope-correspondence, retry-orchestration, task-state, and
+  history CLI/CAS coverage as later workflow phases consume the frozen records.
 - **Release authority:** Keep `docs/project-changelog.md` as the phase mirror and
   resolve its historical open question before release tagging.
 - **Support scope:** Obtain separate Windows and operator rollout evidence before

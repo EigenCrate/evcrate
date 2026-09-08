@@ -304,4 +304,8 @@ function transactState(location, { create = false } = {}, callback) {
   }
 }
 
-module.exports = { stateLocation, transactState, processIdentity, processStatus };
+module.exports = {
+  stateLocation, transactState, processIdentity, processStatus,
+  inspect, same, unchanged, owner, directory, regular, absolute, chain, stable,
+  readFile, writeExclusive, removeOwned, openTask, NOFOLLOW, UUID, LOCATIONS
+};

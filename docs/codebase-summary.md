@@ -302,7 +302,7 @@ canonical package path.
 
 The generated inventory in `src/manifests/controller-inventory.generated.ts` is
 produced by `scripts/generate-controller-inventory.mjs`. It lists exactly these
-25 production files under `.evcrate/source/.evcrate/bin/`:
+29 production files under `.evcrate/source/.evcrate/bin/`:
 
 ```text
 evcrate-advisor
@@ -318,6 +318,10 @@ lib/advisor/contracts-v2.cjs
 lib/advisor/controller-envelope.cjs
 lib/advisor/controller.cjs
 lib/advisor/errors.cjs
+lib/advisor/history-contract.cjs
+lib/advisor/history-prune.cjs
+lib/advisor/history-query.cjs
+lib/advisor/history-store.cjs
 lib/advisor/isolated-workspace.cjs
 lib/advisor/json-document.cjs
 lib/advisor/policy-schema.cjs
@@ -453,6 +457,40 @@ brief and quoted data, adapters parse the seven-field body, and the controller
 emits the structured V2 result/envelope. Generation warnings report monotonic
 elapsed time on `stderr`; input, streams, output, termination, and cleanup
 remain bounded.
+
+## Sanitized advisor history and outcome review (Phase 07)
+
+Phase 07 completed on 2026-09-08. The four history modules extend the shared
+advisor closure from 25 to 29 production files; the generated inventory remains
+the authority. See the [Phase 07 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md)
+and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
+
+- `history-contract.cjs` validates version-1 history requests and execution/
+  outcome records, sanitizes display text, and detects credential/raw-output
+  patterns before export.
+- `history-store.cjs` stores
+  `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
+  with owner-only directories/files. It pins Linux directory descriptors,
+  serializes mutations with process-identity locks, enforces 128 KiB execution
+  and 64 KiB outcome limits, and uses CAS/temporary-file identity checks for
+  terminal settlement and idempotent outcome writes.
+- `history-query.cjs` implements current-project metadata list pagination,
+  validated show, and explicit non-existing-destination export with sanitized
+  records and redaction findings. `history-prune.cjs` previews/applies retention
+  and quota cleanup, oldest terminal records first, while protecting active
+  records and unrelated projects.
+- `controller.cjs` records a started snapshot before model launch, updates
+  bounded attempt facts, settles <code>ADVICE_READY</code>/<code>FAILED</code>
+  execution history, and reports `audit_status: "degraded"` without turning
+  history failure into model retry or inference failure. `task-state.cjs` links
+  disposition/outcome data to `outcome.json`.
+- The managed CLI exposes `evcrate-advisor history list|show|export|prune`.
+  Requests are strict, versioned, bounded, and project-scoped; prune supports
+  dry-run/apply modes and the default policy is 30 days/100 MiB.
+
+Evidence: targeted history suites pass 19/19; the full advisor-controller suite
+passes 204/204 across 16 files. The Phase Lead/Senior Mentor review resolved all
+seven final implementation items and approved Phase 07 unconditionally at 10/10.
 
 ## Advisor controller timing and cleanup (Phase 02)
 

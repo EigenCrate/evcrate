@@ -134,14 +134,13 @@ checkpoint identity, ordered attempt summaries, cleanup outcome, and sanitized
 terminal error/result. It freezes primary retry slots `[10000, 20000, 30000]`,
 one backup slot, and correction/state/history identities for dependent phases.
 
-**Acceptance:** Phase 01 itself did not activate retries, indefinite
-generation, task-state commands, or history tooling. Phase 04 now integrates
-the v2 generated mentor prompt and structured result path; the current
-controller still runs one target/one attempt with no retry, fallback, provider
-switch, or model substitution. Generation has no generation deadline, while
-probes, streams, output, termination, and cleanup remain bounded. Later phases
-must preserve cancellation dominance, confirmed cleanup before success/retry,
-and no auto-resume after parent loss.
+**Acceptance:** Phase 05 executes up to four sequential primary launches and one
+configured backup with cancellable bounded backoff. Phase 06 durable state gates
+reserve, claim, attach, disposition, outcome, human continuation, and complete
+operations. Phase 07 records optional sanitized execution/outcome history; its
+write failure exposes audit degradation without relaunching inference or
+resetting required state. All phases preserve cancellation dominance, confirmed
+cleanup before success/retry, and no auto-resume after parent loss.
 
 ### FR-8: Stable advisor result and envelope
 
@@ -205,10 +204,31 @@ preserve exactly one final token in explicit mode or no token in default mode.
 slash command/resource name, including `.claude` references. OMP nested names use
 `__`; Copilot names remain `/evcrate-cmd-*`.
 
-**Acceptance:** Core docs contain no bare documented workflow invocation. Each OMP or
-Copilot translation points to `evcrate/command-name-map.json`. The docs explicitly
-state that current canonical scanning/parser enforcement is a follow-up and that
-this requirement does not rename source files or alter command implementation.
+**Acceptance:** Core docs contain no bare documented workflow invocation. Each
+OMP or Copilot translation points to `evcrate/command-name-map.json`. The docs
+explicitly state that current canonical scanning/parser enforcement is a
+follow-up and that this requirement does not rename source files or alter
+command implementation.
+
+### FR-13: Sanitized audit history and outcome review
+
+**Requirement:** Store a bounded, versioned execution record and linked outcome
+record for each v2 consultation under the owner-only
+`$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
+hierarchy. Preserve started/attempt/terminal facts, route/build/prompt
+identity, disposition, actual changed paths, validation, outcome, and
+correction number without raw reasoning or credentials.
+
+**Acceptance:** `execution.json` and `outcome.json` validate within 128 KiB and
+64 KiB limits. Started records precede model launch; terminal settlement uses
+CAS identity/byte checks and cannot rewrite a settled record. Outcome writes
+require linked task/consultation identity and are idempotent for equivalent
+replays. Managed `evcrate-advisor history list|show|export|prune` operations
+remain project-scoped and bounded: list is metadata-only, show/export sanitize
+untrusted text, export requires a safe non-existing destination, and prune
+supports preview/apply retention/quota cleanup while protecting active records.
+History failure reports `audit_status: "degraded"` without failing inference or
+required state.
 
 ## Non-functional requirements
 
@@ -219,18 +239,18 @@ this requirement does not rename source files or alter command implementation.
 | Reproducibility | Canonical JSON, deterministic ordering, SHA-256, mode-aware hashes, and exact closure manifests. |
 | Isolation | No credentials in policy/checkpoint/results; vendor CLIs own credentials; child processes receive fixed environments. |
 | Compatibility | Preserve explicit target boundaries; never silently synthesize unsupported adapters or aliases. |
-| Operability | Dry-run, apply, recovery, sanitized receipts/errors, and clear ownership of user-managed state. |
+| Operability | Dry-run/apply, recovery, sanitized receipts/errors, history list/show/export/prune review tools, and clear ownership of user-managed state. |
 | Maintainability | One parser, path policy, hashing policy, lock protocol, and error serializer per boundary. |
 
 ## Observable release gates
 
 1. Source and target manifests validate with schema-2 rules.
-2. Local build/check completes with a current complete manifest and 25-file
+2. Local build/check completes with a current complete manifest and 29-file
    controller closure.
 3. Publication dry-run reports only authorized target/HOME changes.
 4. Apply and recovery preserve unmanaged files and reject CAS changes.
-5. Advisor policy, checkpoint, envelope, timeout, cancellation, and cleanup
-   contracts are exercised with bounded non-sensitive fixtures.
+5. Advisor policy, checkpoint, envelope, history, timeout, cancellation, and
+   cleanup contracts are exercised with bounded non-sensitive fixtures.
 6. Linux live qualification is run separately for each enabled installed CLI.
 7. Windows, npm publication, rollout, and live release remain explicitly gated.
 

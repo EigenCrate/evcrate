@@ -3,9 +3,39 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring/recovery/audit Phase 06 complete at 100% and
-user-approved on 2026-09-08 after two review cycles and a senior mentor
-challenge; release remains Unreleased
+**Status:** Advisor mentoring/recovery/audit Phase 07 complete at 100%; final
+Phase Lead/Senior Mentor approval is unconditional at 10/10; release remains
+Unreleased
+
+### 2026-09-08 — feat(advisor): add sanitized audit history and outcome review tools (phase-07)
+
+**Status:** Complete (100%); Phase Lead/Senior Mentor sign-off: unconditional
+approval, 10/10  
+**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md)  
+**Evidence:** [Phase 07 QA verification](../plans/reports/tester-260908-1344-phase07-final-verification.md)
+
+- Added strict version-1 execution and outcome history contracts with bounded
+  `execution.json` (128 KiB) and `outcome.json` (64 KiB) records under the
+  owner-only `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
+  hierarchy.
+- The controller persists a started snapshot before model launch, updates
+  bounded attempt facts, and settles terminal <code>ADVICE_READY</code>/<code>FAILED</code> execution
+  through compare-and-set (CAS) identity checks. Linked outcomes retain
+  disposition, evidence revision, actual changed paths, validation, result, and
+  correction number.
+- History writes are optional rich audit: storage failure exposes
+  `audit_status: "degraded"` without failing usable inference, launching another
+  model, or resetting required task state. Sanitization excludes credentials,
+  raw stderr, hidden reasoning, and raw vendor logs.
+- Added managed `evcrate-advisor history list|show|export|prune` operations:
+  metadata-only scoped pagination, sanitized inspection, explicit safe
+  non-existing-destination export with redaction review, and dry-run/apply
+  retention/quota pruning that protects active records and unrelated projects.
+- Registered the four history modules in the generated advisor closure, expanding
+  the inventory from 25 to 29 production files.
+- Verification: 204/204 advisor-controller tests passed across 16 files; the
+  targeted Phase 07 history suites passed 19/19. The final mentor review resolved
+  all seven implementation items and approved Phase 07 unconditionally at 10/10.
 
 ### 2026-09-08 — feat(advisor): add durable task and correction gates (phase-06)
 

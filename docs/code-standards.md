@@ -208,10 +208,10 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 25
-production files, including the generated runtime mentor brief. It reads the
-user-owned `$HOME/.evcrate/advisor-routing.json`; policy is never generated or
-published.
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 29
+production files, including the generated runtime mentor brief and Phase 07
+history modules. It reads the user-owned `$HOME/.evcrate/advisor-routing.json`;
+policy is never generated or published.
 
 Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 `advisor` has distinct `primary`/`backup` route triples
@@ -249,13 +249,41 @@ For v2 checkpoints, enabled adapters pass extracted assistant text to the shared
 incomplete bodies fail closed.
 
 The compatibility v1 controller path remains one target/one attempt; v2 now
-uses the same no-retry transaction with generated prompts, structured result
-normalization, and v2 identity linkage. Generation has no generation deadline,
-while streams, output, termination, and adapter probes remain bounded. Do not
-infer retries, indefinite generation controls beyond this runner contract,
-task gates, or history commands from validator presence. Runner calls still use
+uses generated prompts, structured result normalization, and v2 identity
+linkage. Phase 05 v2 execution permits up to four sequential primary launches
+and one configured backup, with cancellable bounded backoff. Generation has no
+generation deadline, while streams, output, termination, and adapter probes
+remain bounded. Task gates and history commands are explicit managed operations,
+not behavior inferred from validator presence. Runner calls still use
 `shell:false`, fixed allowlisted argv/environment, stdin-only prompts, bounded
 streams, detached POSIX groups, TERM/KILL cancellation, and descendant reaping.
+
+### Sanitized history and outcome records
+
+Phase 07 history is optional rich audit, never required task-state authority.
+Keep version-1 `execution.json` and `outcome.json` records strict, sanitized,
+owner-only, and bounded to 128 KiB and 64 KiB respectively. Store them under
+`$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`;
+directories are `0700`, files are `0600`, and Linux descriptor pinning prevents
+ancestor swaps. Use the shared state I/O ownership, identity, atomic-write, and
+lock primitives; do not create an append-only stream or database.
+
+Record execution as `started` before model launch, update bounded attempt facts,
+then settle exactly once as <code>ADVICE_READY</code> or <code>FAILED</code>.
+Terminal settlement must recheck consultation/task/checkpoint identity and the
+original bytes before CAS replacement. Record outcomes only with linked
+consultation/task identity, validated disposition, evidence revision, actual
+changed paths, validation, result, and correction number; identical replays are
+idempotent, conflicting records fail closed.
+
+History writes must never launch another model, reset required state, or turn
+usable inference into failure. Surface `audit_status: "degraded"` when optional
+storage is unavailable. `history list` is metadata-only and project-scoped;
+`show` sanitizes ANSI/control text; `export` requires an explicit safe,
+non-existing destination and reports redaction findings; `prune` supports
+dry-run/apply retention and quota cleanup, oldest terminal records first, while
+protecting active or foreign-project records. Never retain credentials, hidden
+reasoning, raw stderr, or raw vendor logs.
 
 See [system architecture](./system-architecture.md) for complete wire shapes,
 limits, closure, adapter boundaries, and support claims.
@@ -286,7 +314,7 @@ atomic apply. It never joins scope or target-publication atomicity.
 ## Build, closure, and release standards
 
 `scripts/generate-controller-inventory.mjs` is the source of the generated
-25-file controller inventory. `scripts/build-manifests.mjs` invokes the
+29-file controller inventory. `scripts/build-manifests.mjs` invokes the
 TypeScript local-build path for each persisted target and the aggregate set.
 Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`,
 `controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
