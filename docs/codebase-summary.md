@@ -302,7 +302,7 @@ canonical package path.
 
 The generated inventory in `src/manifests/controller-inventory.generated.ts` is
 produced by `scripts/generate-controller-inventory.mjs`. It lists exactly these
-19 production files under `.evcrate/source/.evcrate/bin/`:
+25 production files under `.evcrate/source/.evcrate/bin/`:
 
 ```text
 evcrate-advisor
@@ -323,7 +323,13 @@ lib/advisor/json-document.cjs
 lib/advisor/policy-schema.cjs
 lib/advisor/profile.cjs
 lib/advisor/runner.cjs
+lib/advisor/managed-checkpoint.cjs
 lib/advisor/runtime-brief.generated.cjs
+lib/advisor/state-baseline.cjs
+lib/advisor/state-contract.cjs
+lib/advisor/state-human.cjs
+lib/advisor/state-io.cjs
+lib/advisor/task-state.cjs
 ```
 
 The runtime brief artifact is generated from the canonical
@@ -405,6 +411,39 @@ and `tests/advisor-controller/retry-orchestration.test.cjs`.
 
 Evidence: 140/140 advisor-controller tests passed and
 `npm run release:check` exited 0.
+
+## Advisor durable task state and correction gates (Phase 06)
+
+Phase 06 completed on 2026-09-08 and was user-approved after two review cycles
+and a senior mentor challenge. See the
+[Phase 06 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md).
+Six CommonJS modules under
+`.evcrate/source/.evcrate/bin/lib/advisor/` provide durable task governance:
+- `state-io.cjs`: Linux descriptor-pinned `/proc/self/fd` directory traversal,
+  owner-only (0600 file / 0700 dir) permissions, token plus `/proc` start-time
+  process locking, dead-process reaping without age-based TTL stealing, atomic
+  replacement with `fsync`, and fail-closed crash handling.
+- `state-baseline.cjs`: Selected file baseline capture (up to 32 paths, 16 MiB/file,
+  64 MiB total) with streaming SHA-256 digests and Git status/index tracking.
+  Conditionally runs bounded global cached raw-diff rename discovery
+  (`git diff --cached --raw -z --find-renames`) when selected paths show index
+  additions/deletions, retaining origin and binding both endpoints without
+  widening worktree reads.
+- `state-contract.cjs`: Strict `TaskStateV1` schema validation, replay ledger
+  reconstruction, and request/payload parsing for all seven state operations.
+- `task-state.cjs`: State transition service (`executeStateRequest`,
+  `claimCheckpoint`, `attachControllerResult`, `preflightHumanDecision`). Enforces
+  5-slot end-to-end ledger headroom at reservation, 3-cycle failed correction
+  escalation to `needs_human`, one-use observed continuation, no-correction clean
+  completion pathways, and Git index-aware outcome attribution.
+- `state-human.cjs`: Cooperative local controlling-terminal (`/dev/tty`) challenge
+  with randomized authorization string and signal cancellation propagation.
+- `managed-checkpoint.cjs`: Wraps v2 inference so that a prior state reservation
+  must be claimed before inference, and required terminal linkage is committed
+  to disk before advice is emitted.
+
+Evidence: 185/185 advisor-controller tests passed; `npm run build` and
+`npm run release:check` passed against the generated 25-file controller closure.
 
 `runController` accepts both the compatibility v1 checkpoint and the v2
 checkpoint and keeps one correlation ID and one final envelope. Route

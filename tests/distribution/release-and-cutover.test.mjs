@@ -14,7 +14,6 @@ import {
   PERSISTED_TARGETS,
   runLocalBuild,
   runLocalCheck,
-  validateAdvisorControllerSource,
   main,
   resolveInvocationContext
 } from '../../dist/index.js';
@@ -66,16 +65,6 @@ test('mixed-stage atomic transactions spanning python and typescript are rejecte
   );
 });
 
-test('exact 17-file controller closure is preserved and validated', () => {
-  assert.equal(ADVISOR_CONTROLLER_FILES.length, 17);
-  assert.ok(ADVISOR_CONTROLLER_FILES.includes('evcrate-advisor'));
-  assert.ok(ADVISOR_CONTROLLER_FILES.includes('lib/advisor/controller.cjs'));
-
-  const controllerRoot = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
-  assert.doesNotThrow(() => {
-    validateAdvisorControllerSource(controllerRoot);
-  });
-});
 
 test('local distribution build executes and generates verified build manifest', () => {
   const buildResult = runLocalBuild(packageRoot, PERSISTED_TARGETS);

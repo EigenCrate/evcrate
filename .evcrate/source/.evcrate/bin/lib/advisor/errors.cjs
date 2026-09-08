@@ -101,6 +101,46 @@ const CATALOG = Object.freeze({
     action: 'Provide a new consultation for updated evidence.',
     message: 'Evidence revision mismatch against workspace state'
   },
+  STATE_IO_FAILED: {
+    category: 'state',
+    action: 'Repair required task storage; preserve existing state and user work.',
+    message: 'Required advisor task storage is unavailable'
+  },
+  STATE_LOCKED: {
+    category: 'state',
+    action: 'Wait for the current state writer; inspect uncertain locks without resetting state.',
+    message: 'Advisor task state is locked'
+  },
+  STATE_NOT_FOUND: {
+    category: 'state',
+    action: 'Initialize a new task explicitly or restore the existing required state.',
+    message: 'Required advisor task state was not found'
+  },
+  STATE_CONFLICT: {
+    category: 'state',
+    action: 'Inspect current task state and reconcile the conflicting operation.',
+    message: 'Advisor task operation conflicts with recorded state'
+  },
+  STATE_INVALID: {
+    category: 'state',
+    action: 'Provide a valid bounded state operation; preserve malformed existing state for recovery.',
+    message: 'Advisor task state or operation is invalid'
+  },
+  STATE_PENDING: {
+    category: 'state',
+    action: 'Inspect the pending consultation; never automatically relaunch it.',
+    message: 'Advisor task consultation is incomplete'
+  },
+  STATE_GATE_BLOCKED: {
+    category: 'state',
+    action: 'Resolve the recorded evidence, correction, or human decision gate before dependent work.',
+    message: 'Advisor task gate blocks the requested action'
+  },
+  HUMAN_EVENT_REQUIRED: {
+    category: 'state',
+    action: 'Obtain a real user decision through an observed host interaction or the interactive state CLI.',
+    message: 'Advisor task continuation requires an observed human decision'
+  },
   ADAPTER_UNSUPPORTED: {
     category: 'adapter',
     action: 'Use one of the five candidate advisor backends.',

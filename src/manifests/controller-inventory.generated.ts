@@ -15,10 +15,16 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/errors.cjs",
   "lib/advisor/isolated-workspace.cjs",
   "lib/advisor/json-document.cjs",
+  "lib/advisor/managed-checkpoint.cjs",
   "lib/advisor/policy-schema.cjs",
   "lib/advisor/profile.cjs",
   "lib/advisor/runner.cjs",
-  "lib/advisor/runtime-brief.generated.cjs"
+  "lib/advisor/runtime-brief.generated.cjs",
+  "lib/advisor/state-baseline.cjs",
+  "lib/advisor/state-contract.cjs",
+  "lib/advisor/state-human.cjs",
+  "lib/advisor/state-io.cjs",
+  "lib/advisor/task-state.cjs"
 ] as const);
 export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
   "_http_agent",

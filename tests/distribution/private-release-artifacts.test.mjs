@@ -140,7 +140,7 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.ok(files.includes('dist/index.js'), 'Must include dist/index.js');
   assert.ok(files.includes('dist/index.d.ts'), 'Must include dist/index.d.ts');
 
-  // Assert exact 17 controller files present
+  // Assert authoritative controller files present (ADVISOR_CONTROLLER_FILES)
   for (const entry of ADVISOR_CONTROLLER_FILES) {
     const p = `.evcrate/source/.evcrate/bin/${entry}`;
     assert.ok(files.includes(p), `Missing controller file: ${p}`);

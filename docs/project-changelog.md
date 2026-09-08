@@ -3,8 +3,36 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring/recovery/audit Phase 05 complete at 100%;
-Phase 06 READY; release remains Unreleased
+**Status:** Advisor mentoring/recovery/audit Phase 06 complete at 100% and
+user-approved on 2026-09-08 after two review cycles and a senior mentor
+challenge; release remains Unreleased
+
+### 2026-09-08 — feat(advisor): add durable task and correction gates (phase-06)
+
+**Status:** Complete (100%); user-approved 2026-09-08 after two review cycles
+and a senior mentor challenge.
+**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md)
+
+- Added owner-only 64 KiB task state, selected-file/Git baseline identity,
+  short process-identity locks, atomic CAS writes and bounded replay protection.
+- V2 CLI inference requires a matching reserved checkpoint; terminal linkage
+  persists before advice is emitted. Missing/unsafe state blocks dependent work
+  without relaunching inference or resetting unresolved episodes.
+- Added explicit disposition/outcome/scope/recovery operations. Three failed
+  advised corrections block the next correction; observed continuation permits
+  exactly one additional correction without resetting the counter.
+- Local terminal confirmation is cooperative, not protection against same-user
+  terminal automation. Windows state and authentic per-host event linkage remain
+  unqualified; no host-wide enforcement claim.
+- Verification: 185/185 advisor-controller tests; `npm run build` and
+  `npm run release:check` passed against the generated 25-file controller
+  closure. Disposable-HOME actual CLI smoke ran real syntax validation through
+  three failures, rejected a fourth correction, exercised an automated PTY
+  confirmation, then resolved/completed with sentinel preserved.
+  Cycle 2 resolved C1 (no-correction completion), C2 (ledger capacity headroom),
+  C3 (preflight human decision replay and cancellation), and C4 (compound Git
+  staged rename identity and index metadata attribution). Fixture backend
+  only; no paid inference or real user-authorization claim from the smoke.
 
 ### 2026-09-08 — feat(advisor): add bounded primary retry and one-shot backup orchestration (phase-05)
 

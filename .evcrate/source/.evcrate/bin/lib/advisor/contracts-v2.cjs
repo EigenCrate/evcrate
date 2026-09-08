@@ -443,30 +443,9 @@ function validateEnvelopeV2(value, context = {}) {
 }
 
 // Task State V1 Validator
-const TASK_STATE_V1_KEYS = Object.freeze([
-  'schema_version', 'task_run_id', 'project_id', 'task_revision',
-  'phase_id', 'gate_status', 'unresolved_episode_id', 'correction_count',
-  'pending_consultation_id', 'last_consultation_id', 'disposition', 'outcome'
-]);
-
 function validateTaskStateV1(state) {
-  assertKeys(state, TASK_STATE_V1_KEYS, 'STALE_STATE_REVISION');
-  if (state.schema_version !== STATE_VERSION_V1) fail('STALE_STATE_REVISION');
-  validateUuid(state.task_run_id, 'STALE_STATE_REVISION');
-  validateText(state.project_id, 128, false, 'STALE_STATE_REVISION');
-  validateNonNegativeSafeInteger(state.task_revision, 'STALE_STATE_REVISION');
-  validateText(state.phase_id, 128, false, 'STALE_STATE_REVISION');
-  if (!GATE_STATUSES.includes(state.gate_status)) fail('STALE_STATE_REVISION');
-  validateOptionalText(state.unresolved_episode_id, 128, false, 'STALE_STATE_REVISION');
-  if (!Number.isSafeInteger(state.correction_count) || state.correction_count < 0 || state.correction_count > MAX_CORRECTION_CYCLES) {
-    fail('STALE_STATE_REVISION');
-  }
-  if (state.pending_consultation_id !== null) validateUuid(state.pending_consultation_id, 'STALE_STATE_REVISION');
-  if (state.last_consultation_id !== null) validateUuid(state.last_consultation_id, 'STALE_STATE_REVISION');
-  validateOptionalText(state.disposition, 2048, true, 'STALE_STATE_REVISION');
-  validateOptionalText(state.outcome, 2048, true, 'STALE_STATE_REVISION');
-  if (bytes(JSON.stringify(state)) > MAX_STATE_BYTES) fail('STALE_STATE_REVISION');
-  return deepFreeze(state);
+  // Lazy delegation keeps checkpoint primitives reusable by the durable schema.
+  return require('./state-contract.cjs').validateTaskStateV1(state);
 }
 
 // History Execution V1 Validator

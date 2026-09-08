@@ -154,7 +154,7 @@ async function runController(input, dependencies = {}) {
   let attempts = [];
   const now = dependency(dependencies, 'monotonicMilliseconds', monotonicMilliseconds);
   const makeUuid = dependency(dependencies, 'randomUUID', require('node:crypto').randomUUID);
-  const correlationId = makeUuid();
+  const correlationId = dependencies.consultationId ?? makeUuid();
   let started;
   try { started = now(); } catch { started = monotonicMilliseconds(); }
   let adapter = null;

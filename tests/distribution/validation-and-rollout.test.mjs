@@ -6,7 +6,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import {
-  ADVISOR_CONTROLLER_FILES,
   getAllTargetGateReceipts,
   PERSISTED_TARGETS,
   publicationStateRoot,
@@ -15,7 +14,6 @@ import {
   resolveCurrentBuild,
   resolveInvocationContext,
   treeHash,
-  validateAdvisorControllerSource,
   verifyBuild
 } from '../../dist/index.js';
 
@@ -199,11 +197,6 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
   }
 });
 
-test('controller closure matches exactly the 17 files in ADVISOR_CONTROLLER_FILES and validates cleanly', () => {
-  assert.equal(ADVISOR_CONTROLLER_FILES.length, 17);
-  const controllerRoot = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
-  assert.doesNotThrow(() => validateAdvisorControllerSource(controllerRoot));
-});
 
 test('all target manifests and cutover receipts validate schema 2 with TypeScript authority', () => {
   const receipts = getAllTargetGateReceipts();

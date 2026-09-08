@@ -208,7 +208,7 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 19
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 25
 production files, including the generated runtime mentor brief. It reads the
 user-owned `$HOME/.evcrate/advisor-routing.json`; policy is never generated or
 published.
@@ -286,7 +286,7 @@ atomic apply. It never joins scope or target-publication atomicity.
 ## Build, closure, and release standards
 
 `scripts/generate-controller-inventory.mjs` is the source of the generated
-19-file controller inventory. `scripts/build-manifests.mjs` invokes the
+25-file controller inventory. `scripts/build-manifests.mjs` invokes the
 TypeScript local-build path for each persisted target and the aggregate set.
 Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`,
 `controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.

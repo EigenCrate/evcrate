@@ -225,7 +225,7 @@ this requirement does not rename source files or alter command implementation.
 ## Observable release gates
 
 1. Source and target manifests validate with schema-2 rules.
-2. Local build/check completes with a current complete manifest and 19-file
+2. Local build/check completes with a current complete manifest and 25-file
    controller closure.
 3. Publication dry-run reports only authorized target/HOME changes.
 4. Apply and recovery preserve unmanaged files and reject CAS changes.

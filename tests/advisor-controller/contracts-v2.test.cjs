@@ -135,16 +135,33 @@ const VALID_ENVELOPE_SUCCESS = Object.freeze({
 const VALID_TASK_STATE = Object.freeze({
   schema_version: STATE_VERSION_V1,
   task_run_id: '01234567-89ab-4cde-8f01-23456789abcd',
-  project_id: 'evcrate-project',
-  task_revision: 2,
+  project_id: 'a'.repeat(64),
+  task_revision: 1,
   phase_id: 'phase-01',
-  gate_status: 'in_consultation',
+  gate_status: 'open',
   unresolved_episode_id: null,
   correction_count: 0,
-  pending_consultation_id: '01234567-89ab-4cde-8f01-23456789ef01',
+  pending_consultation_id: null,
   last_consultation_id: null,
   disposition: null,
-  outcome: null
+  outcome: null,
+  task: VALID_CHECKPOINT_V2.task,
+  initial_baseline: [{ path: 'src/protocol/advisor-contracts.ts', digest: 'a'.repeat(64), status: 'file', git: null }],
+  scope_revision: 0,
+  scope: { authorized_paths: VALID_CHECKPOINT_V2.task.authorized_paths, rationale: VALID_CHECKPOINT_V2.task.scope_rationale, added_baseline: [] },
+  evidence_revision: 0,
+  current_baseline: [{ path: 'src/protocol/advisor-contracts.ts', digest: 'a'.repeat(64), status: 'file', git: null }],
+  pending: null,
+  last_terminal: null,
+  correction: null,
+  episode_validation_command: null,
+  human_continuation: null,
+  operation_ledger: [{
+    operation_id: '01234567-89ab-4cde-8f01-23456789ef01', operation: 'init', digest: 'b'.repeat(64),
+    revision: 1, consultation_id: null, action_id: null, episode_id: null, outcome_result: null,
+    validation_command: null, checkpoint_digest: null, result_digest: null
+  }],
+  human_decisions: []
 });
 
 const VALID_HISTORY_EXECUTION = Object.freeze({
@@ -465,6 +482,29 @@ test('validateTaskStateV1 validates task state and enforces bounds', () => {
     ...VALID_TASK_STATE,
     correction_count: 4
   }));
+});
+
+test('durable state rejects legacy records and broken nested authority relationships', () => {
+  const legacyKeys = [
+    'schema_version', 'task_run_id', 'project_id', 'task_revision', 'phase_id', 'gate_status',
+    'unresolved_episode_id', 'correction_count', 'pending_consultation_id', 'last_consultation_id', 'disposition', 'outcome'
+  ];
+  assert.throws(() => validateTaskStateV1(Object.fromEntries(legacyKeys.map((key) => [key, VALID_TASK_STATE[key]]))),
+    { code: 'STATE_INVALID' });
+  for (const change of [
+    (state) => { state.scope.authorized_paths.push('src/unapproved.ts'); },
+    (state) => { state.current_baseline[0].digest = null; },
+    (state) => { state.current_baseline[0].git = { status: '??' }; },
+    (state) => { state.pending_consultation_id = '01234567-89ab-4cde-8f01-23456789ef01'; },
+    (state) => { state.gate_status = 'completed'; },
+    (state) => { state.correction_count = 1; },
+    (state) => { state.operation_ledger = []; },
+    (state) => { state.task.allowed = true; }
+  ]) {
+    const state = structuredClone(VALID_TASK_STATE);
+    change(state);
+    assert.throws(() => validateTaskStateV1(state), { code: 'STATE_INVALID' });
+  }
 });
 
 test('validateHistoryExecutionV1 supports started and terminal states', () => {
