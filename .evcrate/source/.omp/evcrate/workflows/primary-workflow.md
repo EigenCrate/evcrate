@@ -28,16 +28,15 @@
 #### 3. Code Quality
 - After finishing implementation, delegate to `code-reviewer` agent and wait for its complete review before deciding whether work is acceptable. Scoped commands then use the named `review:<workflow-step>` checkpoint from `advisor-mentoring.md` when explicit `--advice` is active.
 - Follow `advisor-mentoring.md`. When explicit advice mode is active, enter its
-  canonical dispatcher exactly once after every terminal reviewer report and
-  before any fix or approval decision. The native branch delegates to one fresh
-  `advisor`; the external branch uses one adapter. Without explicit mode, use
-  its two-occurrence stuck threshold and once-per-episode escalation. Each later
-  consultation forwards relevant prior counsel and owner disposition explicitly.
-- At every named checkpoint, construct one bounded
-  `evcrate-advisor-checkpoint/v1` envelope and follow the canonical dispatcher
-  marker in `advisor-mentoring.md`. The primary workflow does not resolve
-  routes, choose providers/models/effort, invoke CLIs, or run native and
-  external branches together.
+  canonical dispatcher at `review:<workflow-step>` after every terminal reviewer
+  report and before any fix or approval decision. In default mode, apply the
+  three-attempt correction state machine and use `stuck:<blocker-signature>` on
+  the second matching occurrence before attempting final remediation. Each consultation
+  forwards relevant prior counsel and owner disposition explicitly.
+- At every named checkpoint, construct one bounded `evcrate-advisor-checkpoint/v2`
+  payload under the mandatory task-state lifecycle and follow the canonical dispatcher
+  in `advisor-mentoring.md`. The central controller manages policy, process bounds,
+  transient retries, and cleanup.
 - Before an existing irreversible, security-sensitive, or go/no-go decision that
   has no review coverage, use exactly one `decision:<workflow-step>` checkpoint;
   routine user preferences are not new checkpoints.
@@ -59,9 +58,9 @@
 - Read and verify the complete `debugger` report before implementing the fix.
 - Delegate to `tester` agent and wait for its complete validation report.
 - If the `tester` agent reports failed tests, fix them follow the recommendations and repeat from the **Step 2**.
-- Track stable blocker signatures as defined by `advisor-mentoring.md`. After the
-  second consecutive match without progress, obtain one terminal `advisor`
-  report before retrying; if that advised attempt returns the same blocker, stop
-  and ask the user.
+- Apply the canonical correction state machine defined in `advisor-mentoring.md`:
+  track stable blocker signatures, invoke `stuck:<blocker-signature>` on the second
+  consecutive match before attempting final remediation, and enter human handoff
+  after three failed correction outcomes (`correction_count === 3`).
 
 **OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

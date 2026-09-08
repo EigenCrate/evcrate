@@ -2,47 +2,32 @@ description = "Use subagents to plan and fix hard issues"
 prompt = """Use the orchestration protocol, development rules, and relevant skills to fix:
 <raw-issues>{{args}}</raw-issues>
 
-## Advice mode
+## Canonical checkpoint routing
 
-Before analysis, read `.gemini/workflows/advisor-mentoring.md`. Parse raw
-arguments exactly as that workflow specifies, derive `WORK_ARGUMENTS`, and use
-it as the issue input. A final standalone `--advice` activates explicit
-checkpoint mentoring; a non-final token remains ordinary issue text.
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
+`.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+and does not duplicate route or adapter selection.
 
-When explicit advice mode is active, wait until the required terminal reviewer
-or test evidence exists. Before displaying findings or making a dependent
-decision, construct the workflow's exact ten-field checkpoint object and invoke
-this command once from the repository root:
+## Advice Mode
 
-```bash
-~/.evcrate/bin/evcrate-advisor <<'JSON'
-{
-  \"protocol\": \"evcrate-advisor-checkpoint\",
-  \"version\": 1,
-  \"checkpoint\": \"review:hard-fix\",
-  \"question\": \"Which safe action should follow this terminal review?\",
-  \"kind\": \"review\",
-  \"task_or_phase\": \"Hard-fix review\",
-  \"evidence\": {\"terminal\": \"Bounded terminal reviewer or test result.\", \"files\": []},
-  \"changed_paths\": [],
-  \"prior_counsel\": \"none\",
-  \"owner_disposition\": \"none\"
-}
-JSON
-```
+A final standalone `--advice` activates explicit review mentoring.
+Before analysis, read `.gemini/workflows/advisor-mentoring.md` and derive
+`WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments. Use
+`WORK_ARGUMENTS` as the issue input and apply the shared default stuck-escalation
+contract throughout this command.
 
-Replace the example values with the current named checkpoint and bounded
-context. Keep the object exact: no wrapper and no route or CLI fields. Use only
-an `ADVICE_READY` controller envelope as advice. A failed, missing, malformed,
-interrupted, cancelled, timed-out, unavailable, or nonzero invocation leaves
-the gate incomplete; do not claim that advice was received or continue a
-blocked dependent action.
-
-Advice is non-binding. Record the owner's acceptance or rejection, then keep
-all implementation, tests, approvals, and user communication in the main
-workflow. Never ask the controller or advisor to edit, delegate, approve,
-grant permissions, or change workflow order.
-
+In explicit advice mode, wait until the required terminal reviewer or test
+evidence exists. Before displaying findings, fixing issues, or requesting approval,
+enter the canonical checkpoint dispatcher at `review:hard-fix` with bounded evidence,
+prior counsel, and owner disposition (`accept`, `reject-with-evidence`, `need-evidence`,
+or `reconcile`). Wait for its terminal result and include its must-fix guidance in the
+findings. All resulting dispositions, bounded corrections, and outcomes use the shared
+task-state lifecycle (`state disposition` -> `state outcome` -> `state complete`).
+Review/advisor cycle cap: at most three terminal reviewer/advisor cycles; at the cap,
+stop without another review/advisor call or cycle reset, then ask the user if issues remain.
+If durable correction exhaustion occurs (`correction_count === 3`), the state transitions to
+`needs_human` and requires an interactive terminal authorization; conversational approval
+cannot forge completion.
 ## Workflow:
 
 If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.

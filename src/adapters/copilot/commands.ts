@@ -1,7 +1,7 @@
 import type { ProjectionBuildContext } from '../types.js';
 import { filesUnder, fieldString, parseFrontmatter, sourcePath, invalid, writeJson, copyText, decode } from './common.js';
 import { commandBody, firstProseLine, serializeSkill } from './prompts.js';
-import { advisoryCommand, advisoryWorkflow } from './text.js';
+import { advisoryCommand, advisoryWorkflow, mentoringWorkflow } from './text.js';
 import type { NameMap } from './prompts.js';
 
 export interface CommandEntry { source: string; sourceName: string; target: string; targetName: string; description?: string; descriptionSource?: string; argumentHint?: string }
@@ -25,7 +25,7 @@ export function convertWorkflows(context: ProjectionBuildContext, transform: (va
   const copied: string[] = [];
   for (const file of filesUnder(context, 'workflows')) {
     const relative = sourcePath('workflows', file);
-    copyText(context, file.path, `evcrate/workflows/${relative}`, (value) => transform(relative === 'advisory-interview.md' ? advisoryWorkflow(value) : value));
+    copyText(context, file.path, `evcrate/workflows/${relative}`, (value) => transform(relative === 'advisory-interview.md' ? advisoryWorkflow(value) : (relative === 'advisor-mentoring.md' ? mentoringWorkflow(value) : value)));
     copied.push(relative);
   }
   return copied.sort();

@@ -10,6 +10,7 @@ import {
   validateProjection
 } from './projection-utils.js';
 import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js';
+import { renderMentoringWorkflow } from './advisory.js';
 import type { ResourceGraphFile } from './resource-graph.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from './types.js';
 
@@ -465,6 +466,11 @@ function build(context: ProjectionBuildContext): void {
   if (workflow) {
     const content = decode(workflow.bytes);
     writeProjectionFile(context, '.antigravity/workflows/advisory-interview.md', textBytes(advisoryWorkflow(content)));
+  }
+  const mentoring = context.resources.files.find((file) => file.path === 'workflows/advisor-mentoring.md');
+  if (mentoring) {
+    const content = decode(mentoring.bytes);
+    writeProjectionFile(context, '.antigravity/workflows/advisor-mentoring.md', textBytes(renderMentoringWorkflow(content, 'antigravity')));
   }
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;

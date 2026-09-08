@@ -13,7 +13,7 @@ description: "Bootstrap a new project step by step"
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
 `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 

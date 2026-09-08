@@ -3,9 +3,52 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring/recovery/audit Phase 07 complete at 100%; final
-Phase Lead/Senior Mentor approval is unconditional at 10/10; release remains
+**Status:** Advisor mentoring/recovery/audit Phase 08 complete at 100%; Lead
+Mentor approval is 10/10 and user approval is recorded; release remains
 Unreleased
+
+### 2026-09-08 — feat(advisor): integrate cooperative V2 mentoring gates across commands and harnesses (phase-08)
+
+**Status:** Complete (100%); Lead Mentor approval: 10/10; user approved  
+**Plan:** [Phase 08 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md)  
+**Evidence:** [Phase 08 integration tests](../tests/adapters/phase08-mentoring-integration.test.mjs)
+
+- Added one canonical `evcrate-advisor-checkpoint/v2` dispatcher and state
+  lifecycle for all 16 canonical code/cook/bootstrap/fix consumers:
+  `init` -> checkpoint reserve -> controller claim/attach -> state get ->
+  disposition -> outcome -> complete, with an explicit human-decision branch.
+  Generated projections and manifests retain the canonical source authority.
+- Replaced implicit executor behavior with four explicit dispositions:
+  `accept`, `reject-with-evidence`, `need-evidence`, and `reconcile`, bounded by
+  authorized scope, fresh evidence, and actual changed-path review.
+- Separated the three-cycle executor review cap from durable correction exhaustion.
+  Failed correction outcomes persist exact one-indexed ordinals 1, 2, and 3;
+  the third failure enters `needs_human`, and conversational approval cannot
+  bypass the durable state gate.
+- Preserved the user's baseline and unrelated edits through pre-write baseline
+  checks and post-change actual-path attribution. Concern-free advice supports a
+  validated no-change outcome and completion without invented edits.
+- Added **TARGET_MENTORING_CAPABILITIES** and target projection rendering. The
+  seven-target capability matrix is:
+
+  | Target | Mentoring | Write checks |
+  |---|---|---|
+  | Claude | supported | advisory-only |
+  | Codex | supported | advisory-only |
+  | OMP | supported | advisory-only |
+  | Antigravity | supported | advisory-only |
+  | Gemini | supported | advisory-only |
+  | Copilot | supported | advisory-only |
+  | Pi | supported | advisory-only |
+
+- Real disposable-HOME CLI integration covers bounded correction (Path A),
+  concern-free/no-change completion (Path B), exact 1/2/3 correction ordinals,
+  durable `needs_human` blocking, all 10 workflow JSON examples, all 16
+  dispatcher references, and all seven projections. Aggregate evidence is
+  279/279 tests; this proves fixture-backed lifecycle and projection behavior,
+  not paid inference, live vendor qualification, hostile-process containment,
+  or HOME publication.
+
 
 ### 2026-09-08 — feat(advisor): add sanitized audit history and outcome review tools (phase-07)
 

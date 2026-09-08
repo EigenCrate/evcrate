@@ -7,7 +7,7 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
 `{{evcrate:workflows/advisor-mentoring.md}}`; this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 

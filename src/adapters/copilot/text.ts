@@ -1,4 +1,4 @@
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
+import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 const URI = /(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu;
 
 export function renderHarness(value: string): string {
@@ -25,5 +25,8 @@ export function advisoryCommand(body: string): string {
 
 export function advisoryWorkflow(body: string): string {
   return renderAdvisoryInterviewWorkflow(body, 'copilot');
+}
+export function mentoringWorkflow(body: string): string {
+  return renderMentoringWorkflow(body, 'copilot');
 }
 

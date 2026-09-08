@@ -20,7 +20,7 @@ Description: Bootstrap a new project automatically
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
 `.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 

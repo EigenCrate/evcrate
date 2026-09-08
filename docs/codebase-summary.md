@@ -1,8 +1,8 @@
 # Codebase Summary
 
 **Generated:** 2026-09-08
-**Source:** Repository compaction produced by Repomix at `repomix-output.xml`,
-then checked against the current package and source tree.  
+**Source:** Repository compaction produced by Repomix v1.18.0 at
+`repomix-output.xml`, then checked against the current package and source tree.  
 **Purpose:** Compact navigation map, not a copy of the compaction.
 
 The repository is a private Node/TypeScript package. `package.json` declares
@@ -491,6 +491,81 @@ and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification
 Evidence: targeted history suites pass 19/19; the full advisor-controller suite
 passes 204/204 across 16 files. The Phase Lead/Senior Mentor review resolved all
 seven final implementation items and approved Phase 07 unconditionally at 10/10.
+
+## Cooperative mentoring across commands and harnesses (Phase 08)
+
+Phase 08 completed on 2026-09-08. The canonical workflow contract now owns
+checkpoint dispatch, task-state transitions, executor dispositions, correction
+exhaustion, human handoff, and baseline-preserving change review. See the
+[Phase 08 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md)
+and [integration tests](../tests/adapters/phase08-mentoring-integration.test.mjs).
+
+### Canonical dispatcher and real CLI lifecycle
+
+`.evcrate/source/.claude/workflows/advisor-mentoring.md` is the single authored
+contract for all named checkpoint consumers. The 16 canonical code, cook,
+bootstrap, and fix command files reference the same
+`evcrate-advisor-checkpoint/v2` dispatcher; none retains a v1 dispatcher reference.
+Its required state sequence is:
+
+```text
+init (0 -> 1)
+  -> checkpoint reserve (1 -> 2)
+  -> controller claim/attach (2 -> 3 -> 4)
+  -> state get (reads 4)
+  -> disposition (4 -> 5)
+  -> bounded work
+  -> outcome (5 -> 6)
+  -> complete (6 -> completed)
+```
+The controller's **ADVICE_READY** result is terminal advice only after the reserved
+checkpoint is claimed and attached. `accept`, `reject-with-evidence`,
+`need-evidence`, and `reconcile` are explicit executor dispositions; scope
+authorization, evidence freshness, and actual changed paths remain required.
+Concern-free advice uses a validated no-change outcome (`action_id: null`,
+`episode_id: null`, empty changed paths) rather than inventing edits.
+
+### Durable review/correction and baseline boundaries
+
+`task-state.cjs` persists failed correction outcomes and computes exact
+one-indexed ordinals 1, 2, and 3. The third failed correction enters durable
+`needs_human`; `state human-decision` requires a fresh revision and cooperative
+`/dev/tty` authorization before continuation, scope revision, or abandonment.
+The executor's three-review-cycle cap is separate: it can request a user choice
+without pretending that conversational approval satisfies durable correction
+exhaustion. `state-baseline.cjs` captures selected file/Git identity and
+post-change attribution; pre-existing user changes, untracked files, and
+unrelated hunks are preserved.
+
+### Seven-target mentoring capability matrix
+`src/adapters/advisory.ts` exports **TARGET_MENTORING_CAPABILITIES**,
+`renderMentoringCapabilities`, and `renderMentoringWorkflow`. Every registered
+projection adapter renders the canonical mentoring markers into its target
+workflow:
+
+| Target | Mentoring | Write checks |
+|---|---|---|
+| Claude | supported | advisory-only |
+| Codex | supported | advisory-only |
+| OMP | supported | advisory-only |
+| Antigravity | supported | advisory-only |
+| Gemini | supported | advisory-only |
+| Copilot | supported | advisory-only |
+| Pi | supported | advisory-only |
+
+Mentoring support means the target can invoke and consume the shared controller
+contract. `advisory-only` write checks mean no universal pre-edit mediation claim;
+missing host hooks do not disable mentoring. Projection markers are generated
+output, not runtime proof of live vendor support.
+
+Phase 08 integration coverage validates capability declarations, marker rendering,
+all 10 canonical workflow JSON examples, real disposable-HOME CLI Path A and
+Path B lifecycles, exact three-cycle ordinals and durable gate blocking, all 16
+dispatcher references, and all seven projection adapters. Evidence is 279/279
+tests; Lead Mentor approval is 10/10 and user approval is recorded. Phase 09 is
+next for projection staging and documentation cutover; live host qualification,
+HOME publication, and release remain separate gates.
+
 
 ## Advisor controller timing and cleanup (Phase 02)
 

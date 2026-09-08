@@ -3,6 +3,7 @@ export * from './resource-graph.js';
 export * from './projection-utils.js';
 export * from './registry.js';
 export * from './qualification.js';
+export * from './advisory.js';
 
 import { antigravityAdapter } from './antigravity.js';
 import { claudeAdapter } from './claude.js';

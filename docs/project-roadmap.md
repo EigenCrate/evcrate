@@ -1,9 +1,10 @@
 # Project Roadmap
 
-**Status:** Unreleased; operator gates remain separate  
+**Status:** Phase 08 complete; operator/release gates remain separate
 **Updated:** 2026-09-08
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
-and the [system architecture](./system-architecture.md)
+the [system architecture](./system-architecture.md), and the Phase 08 integration
+evidence
 
 This roadmap distinguishes implementation gates recorded in the repository from
 operator/release work that has not been claimed. `docs/project-changelog.md` is the
@@ -17,11 +18,14 @@ adapters, schema-2 target/build manifests, a 29-file advisor controller closure,
 advisor v2 contracts with explicit policy migration, canonical generated mentor
 instructions, unified structured advice parsing, V2 envelope correspondence
 validation, compatibility direct checkpoint counsel, bounded primary retry with
-one-shot backup orchestration, durable task state and correction gates, sanitized
-execution/outcome history, bounded history review tools, and journaled
-publication/recovery. The npm package path is authoritative by default.
-Generated projections and the shared controller are outputs of canonical source
-plus target policy; they are not hand edited.
+one-shot backup orchestration, durable task state and correction gates, the
+canonical V2 mentoring dispatcher, honest seven-target mentoring capability
+declarations, sanitized execution/outcome history, bounded history review tools,
+and journaled publication/recovery. Phase 08 proves the real CLI lifecycle,
+three-cycle review/correction boundaries, durable human handoff, and user-baseline
+preservation. The npm package path is authoritative by default. Generated
+projections and the shared controller are outputs of canonical source plus target
+policy; they are not hand edited.
 
 ## Phase and gate status
 
@@ -40,6 +44,8 @@ plus target policy; they are not hand edited.
 | Advisor mentoring/recovery/audit — Phase 05 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md); completed at 100% with bounded recovery (up to four sequential primary launches plus one configured backup), cancellable 10/20/30s backoff, route-local preflight skip, provider cooldown handling, and qualification-to-spawn identity binding. Evidence: 140/140 advisor-controller tests passed and `npm run release:check` exited 0. |
 | Advisor mentoring/recovery/audit — Phase 06 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md); completed at 100% with durable task state, scope/disposition tracking, three-cycle correction gates, and human handoff. Review approved 2026-09-08. |
 | Advisor mentoring/recovery/audit — Phase 07 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md) and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md); completed at 100% with owner-only sanitized execution/outcome history, bounded attempt snapshots, CAS terminal settlement, linked executor outcomes, audit degradation independent of inference, and managed `history list|show|export|prune` review tools. Evidence: 204/204 advisor-controller tests passed (19/19 targeted); Phase Lead/Senior Mentor sign-off is unconditional approval at 10/10. |
+| Advisor mentoring/recovery/audit — Phase 08 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md) and [integration evidence](../tests/adapters/phase08-mentoring-integration.test.mjs); canonical `evcrate-advisor-checkpoint/v2` dispatcher migrated across all 16 code/cook/bootstrap/fix consumers; seven targets declare mentoring supported and write checks advisory-only; real CLI Path A/Path B lifecycles, exact correction ordinals 1/2/3, durable `needs_human`, and user-baseline preservation are covered. Evidence: 279/279 tests; Lead Mentor approval 10/10; user approved. |
+| Advisor mentoring/recovery/audit — Phase 09 | NEXT (0%) | Generate and stage all projections plus documentation cutover from the Phase 08 canonical sources; HOME apply remains gated by Phase 10 acceptance. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -50,6 +56,9 @@ plus target policy; they are not hand edited.
 | Windows validation | Deferred | Windows installer/runtime parity is not claimed without separate harness validation. |
 
 ## Immediate next gates
+Phase 09 is next: regenerate/stage projections and complete the documentation
+cutover. HOME application, live host qualification, and release remain separate
+operator gates.
 
 1. **Use canonical source.** Change `.evcrate/source/.claude/`, the shared controller
    root, or a declared target overlay—not generated projection trees.
@@ -90,9 +99,10 @@ roadmap item.
   convention in future scanner/parser changes without breaking generated target maps.
 - **Advisor qualification:** Repeat real installed-CLI qualification after every
   vendor CLI upgrade; keep `antigravity` unavailable until equivalent evidence exists.
-- **V2 runtime adoption:** Integrate canonical workflow gates in Phase 08; Phase
-  07 now supplies optional sanitized history/review while required task-state
-  authority, replay protection, and correction gates remain separate.
+- **V2 runtime adoption:** Phase 08 is complete: canonical command consumers use
+  the V2 dispatcher and shared state lifecycle; seven target projections declare
+  mentoring support with advisory-only write checks. Phase 09 is next for
+  projection staging and documentation cutover.
 - **Policy route selection:** Exact deployed primary/backup routes, vendor
   controls, auth, and independent failure domains remain operator qualification
   inputs; no model/backend defaults are implied by examples.

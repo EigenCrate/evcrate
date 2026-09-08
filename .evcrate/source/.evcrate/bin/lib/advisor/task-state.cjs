@@ -168,7 +168,7 @@ function outcome(state, payload, location) {
   if (changed.some((path) => !state.scope.authorized_paths.includes(path))
     || !equal(changed, [...payload.actual_changed_paths].sort())) fail('STATE_GATE_BLOCKED');
   if (payload.result !== 'unknown' && changed.length === 0) fail('STATE_GATE_BLOCKED');
-  const activeCycle = Math.max(1, Math.min(3, state.correction_count || 1));
+  const activeCycle = Math.min(3, (state.correction_count || 0) + 1);
   state.outcome = {
     ...payload,
     evidence_revision: state.evidence_revision,

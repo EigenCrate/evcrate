@@ -6,6 +6,7 @@ import { applyReplacements, addWorkflowFallback, canonicalCommandPath, isBinary,
 import { contextBridge, hooksJson, permissionHook, pretoolBridge, runMcpPackage, runNodeHook } from './hooks.js';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { projectCatalogDataAndLayout } from '../catalog-data.js';
+import { renderMentoringWorkflow } from '../advisory.js';
 
 const SKILLS_TO_SKIP = new Set(['claude-code', 'skill-creator']);
 const OMITTED_PARTS = new Set(['__tests__', 'tests', 'fixtures', 'helpers']);
@@ -104,6 +105,7 @@ function copyWorkflows(context: ProjectionBuildContext): void {
   for (const file of filesUnder(context, 'workflows')) if (!file.path.slice('workflows/'.length).includes('/')) {
     let body = new TextDecoder().decode(file.bytes);
     if (file.path.endsWith('/advisory-interview.md')) body = renderAdvisoryInterview(body);
+    else if (file.path.endsWith('/advisor-mentoring.md')) body = renderMentoringWorkflow(body, 'codex');
     writeText(context, `.codex/workflows/${file.path.slice('workflows/'.length)}`, addWorkflowFallback(rewriteCommandGuidance(applyReplacements(body), known)));
   }
 }

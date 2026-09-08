@@ -6,7 +6,7 @@ import { copyGraphTree, graphFile, isProductionControllerArtifact, writeProjecti
 import type { ProjectionBuildContext } from '../types.js';
 import { normalizeLf, validateSkillFrontmatter } from './frontmatter.js';
 import { renderHarnessScriptReferences, translatePiSkill, translatePrompt } from './transforms.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
+import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 
 export interface ResourceInventory {
   readonly commands: readonly string[];
@@ -57,6 +57,7 @@ export function copyCommandsAndWorkflows(context: ProjectionBuildContext, resour
     let value = translatePrompt(sourceText, resources.commands);
     if (path === 'commands/advise.md') value = renderInlineAdviseCommand(sourceText, 'pi', 'ask_user_question');
     if (path === 'workflows/advisory-interview.md') value = renderAdvisoryInterviewWorkflow(sourceText, 'pi');
+    if (path === 'workflows/advisor-mentoring.md') value = translatePrompt(renderMentoringWorkflow(sourceText, 'pi'), resources.commands);
     writeProjectionFile(context, destination, new TextEncoder().encode(value));
   }
 }

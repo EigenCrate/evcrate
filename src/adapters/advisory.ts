@@ -96,3 +96,44 @@ export function renderAdvisoryInterviewWorkflow(text: string, target: string): s
   if (relay < 0) invalid();
   return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`${error}\` before advisor delegation, state creation, or inline-interview work. Users can run \`/advise <prompt>\` for inline advice.\n`;
 }
+
+export const MENTORING_START = '<!-- EVCRATE_MENTORING_CAPABILITIES_START -->';
+export const MENTORING_END = '<!-- EVCRATE_MENTORING_CAPABILITIES_END -->';
+export const CANONICAL_MENTORING = '<!-- EVCRATE_CAPABILITY: mentoring/supported/v2 -->\n<!-- EVCRATE_CAPABILITY: write-checks/claude/advisory-only/v1 -->';
+
+export interface TargetMentoringCapability {
+  readonly mentoring: 'supported' | 'unavailable';
+  readonly writeChecks: 'mediated' | 'advisory-only' | 'unavailable';
+}
+
+export const TARGET_MENTORING_CAPABILITIES: Readonly<Record<string, TargetMentoringCapability>> = Object.freeze({
+  claude: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+  codex: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+  omp: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+  antigravity: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+  gemini: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+  copilot: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+  pi: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
+});
+
+export function renderMentoringCapabilities(text: string, target: string): string {
+  const cap = TARGET_MENTORING_CAPABILITIES[target];
+  if (!cap) invalid();
+  const starts = text.split(MENTORING_START).length - 1;
+  const ends = text.split(MENTORING_END).length - 1;
+  const begin = text.indexOf(MENTORING_START);
+  const finish = text.indexOf(MENTORING_END, begin);
+  if (starts !== 1 || ends !== 1 || begin < 0 || finish < begin
+    || text.slice(begin + MENTORING_START.length, finish).trim() !== CANONICAL_MENTORING) invalid();
+  const block = [
+    MENTORING_START,
+    `<!-- EVCRATE_CAPABILITY: mentoring/${cap.mentoring}/v2 -->`,
+    `<!-- EVCRATE_CAPABILITY: write-checks/${target}/${cap.writeChecks}/v1 -->`,
+    MENTORING_END,
+  ].join('\n');
+  return `${text.slice(0, begin)}${block}${text.slice(finish + MENTORING_END.length)}`;
+}
+
+export function renderMentoringWorkflow(text: string, target: string): string {
+  return renderMentoringCapabilities(text, target);
+}

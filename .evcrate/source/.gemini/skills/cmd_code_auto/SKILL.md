@@ -13,7 +13,7 @@ Description: [AUTO] Start coding & testing an existing plan ("trust me bro")
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
 `.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
@@ -152,16 +152,22 @@ LOOP:
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Auto-approved ([warnings] warnings logged)"
      → PROCEED to Step 5
   13. ELSE IF review_must_fix AND review_cycles < 3:
-     → Output: "⚙ Step 4: Auto-fixing [must_fix_count] must-fix items (cycle [review_cycles]/3)"
-     → Apply every advisor must-fix item before approval, plus reviewer critical issues.
+     → Output: "⚙ Step 4: Evaluating [must_fix_count] must-fix items (cycle [review_cycles]/3)"
+     → Executor evaluates each reviewer critical issue and advisor must-fix item.
+     → Record explicit executor disposition for each item (accept, reject-with-evidence, need-evidence, reconcile) with causal rationale.
+     → Only apply accepted corrections that are within authorized scope and preserve user baseline.
+     → Out-of-scope refactorings or unverified advice must NOT be auto-applied.
+     → Passing self-tests do not automatically override an evidence-backed reviewer/advisor concern.
      → Re-run tester to verify no regressions
      → GOTO LOOP
   14. ELSE IF review_must_fix AND review_cycles >= 3:
-     → ESCALATE TO USER (hard cap reached)
+     → ESCALATE TO USER (review cap reached)
      → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
-     → Use ask_user:
-       - "Approve with noted issues" → proceed with explicit acknowledgement
-       - "Abort workflow" → stop
+     → IF durable state is needs_human (correction_count === 3):
+       - Conversational approval cannot complete the state gate; invoke state human-decision with fresh revision or abort.
+     → ELSE (review cap without durable correction exhaustion):
+       - Use ask_user: "Approve with noted issues" / "Abort workflow"
+       - On approve: proceed with explicit acknowledgement; STOP further review cycles.
      → STOP; do not run another fix/test/reviewer/advisor sequence
   15. ELSE (no must-fix item, but score < 9.5):
      → Output: "✓ Step 4: Code reviewed - [score]/10 - Approved ([warnings] warnings, [suggestions] suggestions logged)"

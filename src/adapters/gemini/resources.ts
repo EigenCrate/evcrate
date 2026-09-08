@@ -7,7 +7,7 @@ import {
 } from '../projection-utils.js';
 import { applyTargetReplacements, renderExternalScoutStrategy, TOOL_MAPPING, VALID_GEMINI_TOOLS } from './replacements.js';
 import { parseMarkdownFrontmatter, writeMarkdownFrontmatter, writeToml, type Frontmatter, type FrontmatterValue } from './frontmatter.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
+import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 
 const SKIP_SKILLS = new Set(['claude-code', 'skill-creator']);
 const EVENTS: Record<string, string> = { SessionStart: 'SessionStart', UserPromptSubmit: 'BeforeAgent', PreToolUse: 'BeforeTool', SessionEnd: 'SessionEnd' };
@@ -115,6 +115,7 @@ export function projectWorkflows(context: ProjectionBuildContext): void {
     if (!file.path.endsWith('.md') || file.path.slice('workflows/'.length).includes('/')) continue;
     let content = graphText(context, file.path);
     if (basename(file.path) === 'advisory-interview.md') content = renderAdvisoryInterviewWorkflow(content, 'gemini');
+    else if (basename(file.path) === 'advisor-mentoring.md') content = applyTargetReplacements(renderMentoringWorkflow(content, 'gemini'));
     else content = applyTargetReplacements(content);
     writeProjectionFile(context, `.gemini/workflows/${basename(file.path)}`, textBytes(content), graphFile(context, file.path).mode);
   }

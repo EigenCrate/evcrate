@@ -22,7 +22,7 @@ Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the `evcrate-advisor-checkpoint/v1` dispatcher block in
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
 `.copilot/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 

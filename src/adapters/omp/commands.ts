@@ -2,7 +2,7 @@ import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { copy, file, filesUnder, relativeTo, writeJson, writeText } from './resources.js';
 import { serializeFrontmatter, splitFrontmatter } from './frontmatter.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
+import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 export interface CommandRecord { readonly source: string; readonly sourceName: string; readonly target: string; readonly targetName: string; }
 export type CommandMap = Readonly<Record<string, CommandRecord>>;
 const URI = /(?<![A-Za-z0-9_./:])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/giu;
@@ -109,6 +109,7 @@ export function convertWorkflows(context: ProjectionBuildContext, map: CommandMa
     const rel = relativeTo(entry.path, 'workflows');
     let value = translatePrompt(new TextDecoder().decode(entry.bytes), map);
     if (rel === 'advisory-interview.md') value = renderAdvisoryInterviewWorkflow(value, 'omp');
+    else if (rel === 'advisor-mentoring.md') value = renderMentoringWorkflow(value, 'omp');
     copy(context, entry.path, `evcrate/workflows/${rel}`, () => value);
     copied.push(rel);
   }
