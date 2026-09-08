@@ -378,14 +378,42 @@ receipt-effort correspondence, and the refined multi-language
 **RAW_STACK_PATTERN**. Sol mentor counsel records Phase 05 preconditions; no paid
 mentoring-quality claim is made.
 
-The current controller path accepts both the compatibility v1 checkpoint and
-the v2 checkpoint, executes one target/one attempt, and preserves the explicit
-timing boundary: adapter capability probes use finite `probe` mode, while the
-final model invocation uses `generation` mode with no generation deadline.
-For v2, `formatMentorPrompt` supplies the generated brief and quoted data,
-adapters parse the seven-field body, and the controller emits the structured
-V2 result/envelope. Generation warnings report monotonic elapsed time on
-`stderr`; input, streams, output, and termination remain bounded.
+## Advisor retry orchestration (Phase 05)
+
+Phase 05 completed on 2026-09-08. `controller.cjs` now runs an explicit,
+sequential consultation state machine. It qualifies the configured primary route
+before model launch, permits up to four primary launches, and applies
+cancellable 10/20/30-second backoff after positively classified transient
+failures. After four primary transient failures, or a route-local preflight skip
+before any primary model launch, it qualifies the configured backup and invokes
+it once; backup failures are terminal and never retried.
+
+Trusted structured provider cooldowns use the larger of configured backoff and
+cooldown; unsupported cooldowns above one hour fail closed. Cancellation during
+backoff, non-retryable failures, or unconfirmed cleanup prevents later launches.
+Every attempt records slot, phase, route, model-started flag, classification,
+retry delay, and cleanup outcome, while serialized execution keeps at most one
+model process active.
+
+Qualification-to-spawn identity binding captures adapter capability and
+executable identity. The controller rebuilds each invocation and rechecks its
+executable and resolved path before spawn, so drift fails closed without a model
+launch. A route-local primary preflight skip is recorded separately and preserves
+the primary error if backup qualification fails. See the
+[Phase 05 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md)
+and `tests/advisor-controller/retry-orchestration.test.cjs`.
+
+Evidence: 140/140 advisor-controller tests passed and
+`npm run release:check` exited 0.
+
+`runController` accepts both the compatibility v1 checkpoint and the v2
+checkpoint and keeps one correlation ID and one final envelope. Route
+qualification uses finite `probe` mode; model attempts use `generation` mode
+with no generation deadline. For v2, `formatMentorPrompt` supplies the generated
+brief and quoted data, adapters parse the seven-field body, and the controller
+emits the structured V2 result/envelope. Generation warnings report monotonic
+elapsed time on `stderr`; input, streams, output, termination, and cleanup
+remain bounded.
 
 ## Advisor controller timing and cleanup (Phase 02)
 

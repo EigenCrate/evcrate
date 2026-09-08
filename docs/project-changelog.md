@@ -3,8 +3,29 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring/recovery/audit Phase 04 complete at 100%;
-Phase 05 READY (100% prerequisite satisfied); release remains Unreleased
+**Status:** Advisor mentoring/recovery/audit Phase 05 complete at 100%;
+Phase 06 READY; release remains Unreleased
+
+### 2026-09-08 — feat(advisor): add bounded primary retry and one-shot backup orchestration (phase-05)
+
+**Status:** Complete (100%)  
+**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md)
+
+- Added an explicit sequential consultation state machine with up to four
+  primary model launches. Positively classified transient failures use
+  cancellable 10/20/30-second backoff and stop on the first success.
+- After four primary transient failures, or a route-local preflight skip before
+  any primary model launch, the configured backup is qualified and invoked once.
+  Backup failures are terminal and never retried. Trusted provider cooldowns use
+  the larger of configured backoff and cooldown; excessive cooldowns fail closed.
+- Qualification-to-spawn identity binding rechecks the invocation executable and
+  resolved path before each launch. Drift fails closed without counting a model
+  launch; attempt records retain route, slot, model-started, classification,
+  retry-delay, and cleanup facts.
+- Evidence: 140/140 advisor-controller tests passed; `npm run release:check`
+  exited 0. Astra review sign-off is 8/10, and Sol mentor counsel is recorded.
+- No provider substitution, parallel hedge, backup retry, or paid
+  mentoring-quality claim is made.
 
 ### 2026-09-08 — feat(advisor): package canonical mentoring brief and preserve structured V2 advice (phase-04)
 

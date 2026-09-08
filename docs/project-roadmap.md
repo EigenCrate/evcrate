@@ -16,10 +16,11 @@ The current source establishes a TypeScript control plane, seven fixed projectio
 adapters, schema-2 target/build manifests, a 19-file advisor controller closure,
 and advisor v2 contracts with explicit policy migration, canonical generated
 mentor instructions, unified structured advice parsing, V2 envelope
-correspondence validation, compatibility direct checkpoint counsel, and
-journaled publication/recovery. The npm package path is authoritative by
-default. Generated projections and the shared controller are outputs of
-canonical source plus target policy; they are not hand edited.
+correspondence validation, compatibility direct checkpoint counsel, bounded
+primary retry with one-shot backup orchestration, and journaled
+publication/recovery. The npm package path is authoritative by default. Generated
+projections and the shared controller are outputs of canonical source plus target
+policy; they are not hand edited.
 
 ## Phase and gate status
 
@@ -35,7 +36,8 @@ canonical source plus target policy; they are not hand edited.
 | Advisor mentoring/recovery/audit — Phase 02 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-02-wait-cancellation-and-cleanup.md); completed at 100% with indefinite generation without a generation deadline, monotonic bounded progress warnings on stderr, cancellation dominance across async boundaries, POSIX process-group termination with leader/group reap verification, observable workspace absence requiring **ENOENT**, and runner/controller tracking of probe cleanup uncertainty. Evidence: 65/65 advisor-controller tests, a real 31.25s smoke pass, `npm run distribute:check`, `npm run release:check`, Sol Cycle 3 sign-off 9/10, and Astra mentor approval. |
 | Advisor mentoring/recovery/audit — Phase 03 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-03-adapter-qualification-and-terminal-parsing.md); completed at 100% with qualified adapter controls, strict final lifecycle parsing, fail-closed unsafe terminal output handling, structured operational failures, explicit route/effort/no-tool/session controls, and unavailable-backend boundaries. Evidence: 92/92 advisor-controller tests passed, `npm run build` exited 0, `npm run release:check` exited 0; Astra Cycle 3 sign-off 10/10; Sol mentor counsel recorded for Phase 04/05/10. |
 | Advisor mentoring/recovery/audit — Phase 04 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-04-mentor-brief-evidence-and-results.md); completed at 100% with the `brief-contract.md` → `generate-runtime-brief.mjs` → `runtime-brief.generated.cjs` single-source chain, unified `formatMentorPrompt` packaging for Claude/Codex/OMP/Pi, strict seven-field `parseAdviceBody` validation (fences/prose and Node/Python/Go/Rust raw stack frames rejected while ordinary prose remains valid), and V2 digest/build-identity/receipt-effort correspondence checks. Evidence: 118/118 advisor-controller tests passed (~7.3s), `npm run build` exit 0, `npm run release:check` exit 0; Astra post-fix sign-off 8/10 with all four critical correspondence/RAW_STACK issues resolved. |
-| Advisor mentoring/recovery/audit — Phase 05 | READY (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md); all Phase 05 prerequisites are satisfied (100%); implementation remains 0% and no HOME settings changed. |
+| Advisor mentoring/recovery/audit — Phase 05 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md); completed at 100% with bounded recovery (up to four sequential primary launches plus one configured backup), cancellable 10/20/30s backoff, route-local preflight skip, provider cooldown handling, and qualification-to-spawn identity binding. Evidence: 140/140 advisor-controller tests passed and `npm run release:check` exited 0. |
+| Advisor mentoring/recovery/audit — Phase 06 | READY (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md); dependencies are satisfied by Phase 05 consultation attempt history, cancellation/cleanup precedence, and route identity binding. Implementation remains pending; no durable task-state or human-handoff behavior is claimed. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -86,15 +88,15 @@ roadmap item.
   convention in future scanner/parser changes without breaking generated target maps.
 - **Advisor qualification:** Repeat real installed-CLI qualification after every
   vendor CLI upgrade; keep `antigravity` unavailable until equivalent evidence exists.
-- **V2 runtime adoption:** Integrate retry orchestration, task-state, history, and
-  workflow gates in dependent phases; Phase 02 now supplies wait/cancellation and
-  verified-cleanup behavior.
+- **V2 runtime adoption:** Integrate durable task-state, history, and workflow gates
+  in dependent phases; Phase 05 now supplies bounded retry/backup, provider
+  cooldown, cancellation, and verified-cleanup behavior.
 - **Policy route selection:** Exact deployed primary/backup routes, vendor
   controls, auth, and independent failure domains remain operator qualification
   inputs; no model/backend defaults are implied by examples.
 - **Contract test depth:** Retain dedicated CJS v2 validator, structured-body
-  boundary, and public envelope-correspondence coverage as later retry,
-  task-state, history, and workflow phases consume the frozen records.
+  boundary, public envelope-correspondence, and retry-orchestration coverage as
+  later task-state, history, and workflow phases consume the frozen records.
 - **Release authority:** Keep `docs/project-changelog.md` as the phase mirror and
   resolve its historical open question before release tagging.
 - **Support scope:** Obtain separate Windows and operator rollout evidence before

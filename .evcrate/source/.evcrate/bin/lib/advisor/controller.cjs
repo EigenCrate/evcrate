@@ -16,8 +16,47 @@ const { createWorkspace, cleanupWorkspace, verifyWorkspace } = require('./isolat
 const {
   createRoutingError, isRoutingError, serializeRoutingError, ERROR_CODES
 } = require('./errors.cjs');
-const { validateCapabilityAttestation, isPlainObject } = require('./adapter-contract.cjs');
+const { validateCapabilityAttestation, isPlainObject, classifyAttemptFailure } = require('./adapter-contract.cjs');
 const { buildSuccessEnvelope, buildFailureEnvelope } = require('./controller-envelope.cjs');
+
+const PRIMARY_RETRY_DELAYS_MS = Object.freeze([10_000, 20_000, 30_000]);
+const MAX_PRIMARY_MODEL_ATTEMPTS = 4;
+const ROUTE_LOCAL_PREFLIGHT_CODES = Object.freeze(new Set([
+  'EXECUTABLE_UNAVAILABLE',
+  'AUTH_UNAVAILABLE',
+  'MODEL_UNSUPPORTED',
+  'EFFORT_UNSUPPORTED',
+  'CLI_VERSION_UNSUPPORTED',
+  'CLI_CAPABILITY_UNSUPPORTED',
+  'READ_ONLY_UNSUPPORTED',
+  'SESSION_UNSUPPORTED',
+  'OUTPUT_UNSUPPORTED',
+  'ADAPTER_UNSUPPORTED',
+  'ADAPTER_CONTRACT_INVALID'
+]));
+
+async function cancellableDelay(delayMs, signal, sleepFn) {
+  if (signal?.aborted) fail('CANCELLED');
+  if (!delayMs || delayMs <= 0) return;
+  if (typeof sleepFn === 'function') {
+    await sleepFn(delayMs, signal);
+    if (signal?.aborted) fail('CANCELLED');
+    return;
+  }
+  let timer;
+  let onAbort;
+  try {
+    await new Promise((resolve, reject) => {
+      onAbort = () => reject(createRoutingError('CANCELLED'));
+      signal?.addEventListener('abort', onAbort, { once: true });
+      timer = setTimeout(resolve, delayMs);
+    });
+  } finally {
+    clearTimeout(timer);
+    if (onAbort) signal?.removeEventListener('abort', onAbort);
+  }
+  if (signal?.aborted) fail('CANCELLED');
+}
 
 const DIAGNOSTIC_PROTOCOL = 'evcrate-advisor-diagnostic';
 const DIAGNOSTIC_VERSION = 1;
@@ -27,10 +66,36 @@ const CONTROLLER_VERSION = 1;
 const VERSION_LIMIT = 128;
 const CONTROL = /[\u0000-\u001f\u007f]/u;
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
-
 function fail(code) { throw createRoutingError(code); }
 function codeOf(error) { return isRoutingError(error) ? error.code : error?.code || error?.error?.code; }
 function dependency(deps, name, fallback) { return typeof deps[name] === 'function' ? deps[name] : fallback; }
+
+function resolveExecutablePath(executable, envPath) {
+  if (typeof executable !== 'string' || !executable) return null;
+  const fsImpl = require('node:fs');
+  const pathImpl = require('node:path');
+  if (pathImpl.isAbsolute(executable)) {
+    try { return fsImpl.realpathSync.native(executable); } catch { return null; }
+  }
+  const dirs = (envPath || '').split(pathImpl.delimiter);
+  for (const dir of dirs) {
+    if (!dir) continue;
+    const candidate = pathImpl.join(dir, executable);
+    try {
+      const stat = fsImpl.statSync(candidate);
+      if (stat.isFile() && (stat.mode & 0o111)) {
+        return fsImpl.realpathSync.native(candidate);
+      }
+    } catch {}
+  }
+  return null;
+}
+function version(value) {
+  if (typeof value !== 'string' || !value || CONTROL.test(value) || Buffer.byteLength(value, 'utf8') > VERSION_LIMIT) {
+    fail('CLI_VERSION_UNSUPPORTED');
+  }
+  return value;
+}
 function parseInput(input) {
   let text;
   if (typeof input === 'string') {
@@ -87,8 +152,6 @@ async function runController(input, dependencies = {}) {
   let checkpoint = null;
   let digest = null;
   let attempts = [];
-  let modelStarted = false;
-  let childSpawned = false;
   const now = dependency(dependencies, 'monotonicMilliseconds', monotonicMilliseconds);
   const makeUuid = dependency(dependencies, 'randomUUID', require('node:crypto').randomUUID);
   const correlationId = makeUuid();
@@ -97,12 +160,19 @@ async function runController(input, dependencies = {}) {
   let adapter = null;
   let adapterVersion = null;
   let workspace = null;
-  let receipt = () => ({ backend: target?.backend ?? null, model: target?.model ?? null,
-    effort: target?.effort ?? null, controller_version: checkpoint?.version === 2 ? 2 : CONTROLLER_VERSION,
-    adapter_version: adapterVersion, elapsed_ms: elapsed(now, started) });
+  let receipt = () => ({
+    backend: target?.backend ?? null,
+    model: target?.model ?? null,
+    effort: target?.effort ?? null,
+    controller_version: checkpoint?.version === 2 ? 2 : CONTROLLER_VERSION,
+    adapter_version: adapterVersion,
+    elapsed_ms: elapsed(now, started)
+  });
   let envelope;
   let cleanupOutcome = 'confirmed';
   let lastRoutingError = null;
+  let attemptChildSpawned = false;
+
   try {
     const request = await input;
     if (dependencies.signal?.aborted) fail('CANCELLED');
@@ -113,15 +183,18 @@ async function runController(input, dependencies = {}) {
     const environment = dependencies.environment || process.env;
     const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(environment?.HOME);
     const selected = targetFromPolicy(loaded?.policy ?? loaded);
-    target = selected.target;
-    adapter = registryLookup(dependencies, target.backend);
+    const primaryTarget = selected.target;
+    const backupTarget = selected.policy?.advisor?.backup ? Object.freeze({ ...selected.policy.advisor.backup }) : null;
+    target = primaryTarget;
+    adapter = registryLookup(dependencies, primaryTarget.backend);
+
     const workspaceFactory = dependency(dependencies, 'createWorkspace', createWorkspace);
     workspace = normalizeWorkspace(
       await workspaceFactory({ environment }),
       dependency(dependencies, 'verifyWorkspace', verifyWorkspace)
     );
+
     const baseRunner = dependencies.runner || createRunner();
-    childSpawned = false;
     const probeTrackingRunner = {
       run: async (inv, opts) => {
         const res = await baseRunner.run(inv, opts);
@@ -138,105 +211,637 @@ async function runController(input, dependencies = {}) {
           cleanupOutcome = 'unconfirmed';
         }
         if (res && (!res.error || (res.error.code !== 'EXECUTABLE_UNAVAILABLE' && res.error.code !== 'CWD_INVALID' && res.error.code !== 'CWD_UNSAFE' && res.error.code !== 'PROMPT_OVERSIZED'))) {
-          childSpawned = true;
+          attemptChildSpawned = true;
         }
         return res;
       }
     };
+
     const probeTimeoutMs = 30_000;
-    const probeDeadline = started + probeTimeoutMs;
-    const probeRunner = (dependencies.createProbeRunner || createProbeRunner)({
-      runner: probeTrackingRunner,
-      deadline: probeDeadline,
-      now
-    });
-    const generationRunner = (dependencies.createGenerationRunner || createGenerationRunner)({
-      runner: generationTrackingRunner,
-      wait: selected.policy?.wait || {},
-      now
-    });
-    const context = {
-      checkpoint,
-      prompt: checkpoint.version === 2 ? formatMentorPrompt(checkpoint) : serializeCheckpoint(checkpoint),
-      target,
-      runner: probeRunner,
-      environment,
-      signal: dependencies.signal,
-      cwd: workspace.realpath,
-      workspaceRoot: workspace.realpath,
-      requestDepth: 0,
-      createInvocation: dependencies.createInvocation
-    };
-    adapterVersion = version(await adapter.probeVersion(context));
-    await adapter.probeAuth(context);
-    await adapter.probeCapabilities(context);
-    const invocation = await adapter.buildInvocation(context);
-    const execution = await generationRunner.run(invocation, {
-      environment, requestDepth: 0, signal: dependencies.signal
-    });
-    modelStarted = childSpawned;
-    if (execution?.error) {
-      cleanupOutcome = execution.cleanupOutcome || 'unconfirmed';
-      throw execution.failure || execution.error;
+    const probeRunnerFactory = dependencies.createProbeRunner || createProbeRunner;
+    const generationRunnerFactory = dependencies.createGenerationRunner || createGenerationRunner;
+
+    async function qualifyRoute(targetRoute, probeDeadline) {
+      const routeAdapter = registryLookup(dependencies, targetRoute.backend);
+      if (!routeAdapter || typeof routeAdapter.probeVersion !== 'function'
+        || typeof routeAdapter.probeAuth !== 'function'
+        || typeof routeAdapter.probeCapabilities !== 'function') {
+        fail('ADAPTER_CONTRACT_INVALID');
+      }
+      const probeRunner = probeRunnerFactory({
+        runner: probeTrackingRunner,
+        deadline: probeDeadline,
+        now
+      });
+      const context = {
+        checkpoint,
+        prompt: checkpoint.version === 2 ? formatMentorPrompt(checkpoint) : serializeCheckpoint(checkpoint),
+        target: targetRoute,
+        runner: probeRunner,
+        environment,
+        signal: dependencies.signal,
+        cwd: workspace.realpath,
+        workspaceRoot: workspace.realpath,
+        requestDepth: 0,
+        createInvocation: dependencies.createInvocation
+      };
+      const adapterVer = version(await routeAdapter.probeVersion(context));
+      await routeAdapter.probeAuth(context);
+      const capabilitiesRaw = await routeAdapter.probeCapabilities(context);
+      let capabilities;
+      try { capabilities = validateCapabilityAttestation(capabilitiesRaw); }
+      catch { fail('ADAPTER_CONTRACT_INVALID'); }
+      if (capabilities.model !== targetRoute.model) fail('MODEL_UNSUPPORTED');
+      if (capabilities.effort !== targetRoute.effort) fail('EFFORT_UNSUPPORTED');
+      let qualifiedExecutable = null;
+      let qualifiedExecutablePath = null;
+      try {
+        const testInv = await routeAdapter.buildInvocation(context);
+        qualifiedExecutable = testInv.executable;
+        const envPath = environment?.PATH || process.env.PATH;
+        qualifiedExecutablePath = resolveExecutablePath(qualifiedExecutable, envPath);
+      } catch {}
+      return {
+        adapter: routeAdapter,
+        adapterVersion: adapterVer,
+        capabilities,
+        context,
+        qualifiedExecutable,
+        qualifiedExecutablePath
+      };
     }
-    if (dependencies.signal?.aborted) fail('CANCELLED');
-    const adapterResult = await adapter.parseResult({ ...context, execution: execution?.result || execution });
-    if (dependencies.signal?.aborted) fail('CANCELLED');
-    const result = normalizeResult(adapterResult, { checkpoint, maxBytes: MAX_ENVELOPE_BYTES });
-    if (dependencies.signal?.aborted) fail('CANCELLED');
-    if (checkpoint.version === 2) {
-      attempts = [{
-        attempt_id: correlationId,
+
+    let finalResult = null;
+    let primaryPreflightSkipped = false;
+    let primarySkipError = null;
+    let primaryTransientExhausted = false;
+    // 1. Qualify primary route
+    let primaryQualified = null;
+    let primaryProbeError = null;
+    const primaryProbeStarted = now();
+    const primaryProbeDeadline = started + probeTimeoutMs;
+
+    try {
+      primaryQualified = await qualifyRoute(primaryTarget, primaryProbeDeadline);
+      adapter = primaryQualified.adapter;
+      adapterVersion = primaryQualified.adapterVersion;
+    } catch (err) {
+      primaryProbeError = err;
+      if (err?.cleanupOutcome) {
+        cleanupOutcome = err.cleanupOutcome;
+      }
+    }
+    if (dependencies.signal?.aborted) {
+      attempts.push({
+        attempt_id: makeUuid(),
         slot: 'primary',
-        route: { backend: target.backend, model: target.model, effort: target.effort },
-        phase: 'model',
-        model_started: true,
-        elapsed_ms: elapsed(now, started),
-        terminal_classification: 'success',
+        route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+        phase: 'preflight',
+        model_started: false,
+        elapsed_ms: elapsed(now, primaryProbeStarted),
+        terminal_classification: 'cancelled',
         retry_delay_ms: null,
         cleanup_outcome: cleanupOutcome
-      }];
+      });
+      lastRoutingError = createRoutingError('CANCELLED');
+      fail('CANCELLED');
     }
-    envelope = buildSuccessEnvelope({
-      correlation_id: correlationId,
-      checkpoint,
-      checkpoint_digest: digest,
-      receipt: receipt(),
-      attempts,
-      result,
-      cleanup_outcome: cleanupOutcome
-    });
+
+    if (primaryProbeError) {
+      const primaryProbeCode = failureCode(primaryProbeError, registryLookup(dependencies, primaryTarget.backend));
+      if (cleanupOutcome === 'unconfirmed') {
+        attempts.push({
+          attempt_id: makeUuid(),
+          slot: 'primary',
+          route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+          phase: 'preflight',
+          model_started: false,
+          elapsed_ms: elapsed(now, primaryProbeStarted),
+          terminal_classification: 'fatal',
+          retry_delay_ms: null,
+          cleanup_outcome: 'unconfirmed'
+        });
+        lastRoutingError = isRoutingError(primaryProbeError) ? primaryProbeError : createRoutingError(primaryProbeCode);
+      } else if (ROUTE_LOCAL_PREFLIGHT_CODES.has(primaryProbeCode) && backupTarget) {
+        attempts.push({
+          attempt_id: makeUuid(),
+          slot: 'primary',
+          route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+          phase: 'preflight',
+          model_started: false,
+          elapsed_ms: elapsed(now, primaryProbeStarted),
+          terminal_classification: 'skipped',
+          retry_delay_ms: null,
+          cleanup_outcome: cleanupOutcome
+        });
+        if (typeof dependencies.onAttempt === 'function') {
+          try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+        }
+        primaryPreflightSkipped = true;
+        primarySkipError = primaryProbeError;
+      } else {
+        attempts.push({
+          attempt_id: makeUuid(),
+          slot: 'primary',
+          route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+          phase: 'preflight',
+          model_started: false,
+          elapsed_ms: elapsed(now, primaryProbeStarted),
+          terminal_classification: 'fatal',
+          retry_delay_ms: null,
+          cleanup_outcome: cleanupOutcome
+        });
+        lastRoutingError = isRoutingError(primaryProbeError) ? primaryProbeError : createRoutingError(primaryProbeCode);
+      }
+    }
+
+    // 2. Primary model attempts
+    if (primaryQualified && cleanupOutcome === 'confirmed' && !dependencies.signal?.aborted) {
+      let primaryModelLaunches = 0;
+      while (primaryModelLaunches < MAX_PRIMARY_MODEL_ATTEMPTS) {
+        primaryModelLaunches++;
+        const attemptStarted = now();
+        const attemptId = makeUuid();
+        attemptChildSpawned = false;
+
+        if (dependencies.signal?.aborted) fail('CANCELLED');
+
+        const generationRunner = generationRunnerFactory({
+          runner: generationTrackingRunner,
+          wait: selected.policy?.wait || {},
+          now
+        });
+
+        let execution;
+        let executionError = null;
+        try {
+          primaryQualified.context.runner = generationRunner;
+          primaryQualified.context.limits = { mode: 'generation' };
+          const invocation = await primaryQualified.adapter.buildInvocation(primaryQualified.context);
+          if (primaryQualified.qualifiedExecutable && invocation.executable !== primaryQualified.qualifiedExecutable) {
+            fail('EXECUTABLE_UNAVAILABLE');
+          }
+          const envPath = environment?.PATH || process.env.PATH;
+          const currentExecPath = resolveExecutablePath(invocation.executable, envPath);
+          if (primaryQualified.qualifiedExecutablePath && currentExecPath !== primaryQualified.qualifiedExecutablePath) {
+            fail('EXECUTABLE_UNAVAILABLE');
+          }
+          execution = await generationRunner.run(invocation, {
+            environment, requestDepth: 0, signal: dependencies.signal
+          });
+          if (execution?.error) {
+            if (execution.cleanupOutcome) cleanupOutcome = execution.cleanupOutcome;
+            executionError = execution.failure || execution.error;
+          }
+        } catch (err) {
+          if (err?.cleanupOutcome) cleanupOutcome = err.cleanupOutcome;
+          executionError = err;
+        }
+
+        const modelStarted = Boolean(attemptChildSpawned);
+
+        if (!executionError) {
+          if (dependencies.signal?.aborted) {
+            executionError = createRoutingError('CANCELLED');
+          } else {
+            try {
+              const adapterResult = await primaryQualified.adapter.parseResult({
+                ...primaryQualified.context,
+                execution: execution?.result || execution
+              });
+              if (dependencies.signal?.aborted) {
+                executionError = createRoutingError('CANCELLED');
+              } else {
+                const result = normalizeResult(adapterResult, { checkpoint, maxBytes: MAX_ENVELOPE_BYTES });
+                if (dependencies.signal?.aborted) {
+                  executionError = createRoutingError('CANCELLED');
+                } else {
+                  attempts.push({
+                    attempt_id: attemptId,
+                    slot: 'primary',
+                    route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+                    phase: 'model',
+                    model_started: true,
+                    elapsed_ms: elapsed(now, attemptStarted),
+                    terminal_classification: 'success',
+                    retry_delay_ms: null,
+                    cleanup_outcome: cleanupOutcome
+                  });
+
+                  finalResult = result;
+                  if (typeof dependencies.onAttempt === 'function') {
+                    try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+                  }
+                  break;
+                }
+              }
+            } catch (parseErr) {
+              executionError = parseErr;
+            }
+          }
+        }
+
+        if (cleanupOutcome === 'unconfirmed') {
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: 'model',
+            model_started: modelStarted,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'fatal',
+            retry_delay_ms: null,
+            cleanup_outcome: 'unconfirmed'
+          });
+          lastRoutingError = isRoutingError(executionError) ? executionError : createRoutingError(failureCode(executionError, primaryQualified.adapter));
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+          break;
+        }
+
+        if (dependencies.signal?.aborted || (isRoutingError(executionError) && executionError.code === 'CANCELLED')) {
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: modelStarted ? 'model' : 'preflight',
+            model_started: modelStarted,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'cancelled',
+            retry_delay_ms: null,
+            cleanup_outcome: cleanupOutcome
+          });
+          lastRoutingError = createRoutingError('CANCELLED');
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+          break;
+        }
+
+        const classified = classifyAttemptFailure(executionError, primaryQualified.adapter);
+        lastRoutingError = isRoutingError(executionError) ? executionError : createRoutingError(classified.code);
+
+        if (!modelStarted && ROUTE_LOCAL_PREFLIGHT_CODES.has(classified.code) && backupTarget) {
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: 'preflight',
+            model_started: false,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'skipped',
+            retry_delay_ms: null,
+            cleanup_outcome: cleanupOutcome
+          });
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+          primaryPreflightSkipped = true;
+          primarySkipError = executionError;
+          break;
+        }
+
+        if (!modelStarted) {
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: 'preflight',
+            model_started: false,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'fatal',
+            retry_delay_ms: null,
+            cleanup_outcome: cleanupOutcome
+          });
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+          break;
+        }
+
+        if (classified.classification !== 'transient' || !classified.retryable) {
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: 'model',
+            model_started: true,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'fatal',
+            retry_delay_ms: null,
+            cleanup_outcome: cleanupOutcome
+          });
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+          break;
+        }
+
+        if (primaryModelLaunches < MAX_PRIMARY_MODEL_ATTEMPTS) {
+          const backoffMs = PRIMARY_RETRY_DELAYS_MS[primaryModelLaunches - 1];
+          const effectiveDelayMs = classified.cooldown_ms
+            ? Math.max(backoffMs, classified.cooldown_ms)
+            : backoffMs;
+
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: 'model',
+            model_started: true,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'transient',
+            retry_delay_ms: effectiveDelayMs,
+            cleanup_outcome: cleanupOutcome
+          });
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+
+          await cancellableDelay(effectiveDelayMs, dependencies.signal, dependencies.sleep);
+        } else {
+          attempts.push({
+            attempt_id: attemptId,
+            slot: 'primary',
+            route: { backend: primaryTarget.backend, model: primaryTarget.model, effort: primaryTarget.effort },
+            phase: 'model',
+            model_started: true,
+            elapsed_ms: elapsed(now, attemptStarted),
+            terminal_classification: 'transient',
+            retry_delay_ms: null,
+            cleanup_outcome: cleanupOutcome
+          });
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+          primaryTransientExhausted = true;
+          break;
+        }
+      }
+    }
+
+    // 3. Backup route (if primary skipped or primary transient exhausted)
+    const shouldRunBackup = (primaryPreflightSkipped || primaryTransientExhausted)
+      && !finalResult
+      && cleanupOutcome === 'confirmed'
+      && !dependencies.signal?.aborted
+      && Boolean(backupTarget);
+
+    if (shouldRunBackup) {
+      target = backupTarget;
+      adapter = null;
+      adapterVersion = null;
+
+      let backupQualified = null;
+      let backupProbeError = null;
+      const backupProbeStarted = now();
+      const backupProbeDeadline = now() + probeTimeoutMs;
+
+      try {
+        backupQualified = await qualifyRoute(backupTarget, backupProbeDeadline);
+        adapter = backupQualified.adapter;
+        adapterVersion = backupQualified.adapterVersion;
+      } catch (err) {
+        backupProbeError = err;
+        if (err?.cleanupOutcome) cleanupOutcome = err.cleanupOutcome;
+      }
+      if (dependencies.signal?.aborted) {
+        attempts.push({
+          attempt_id: makeUuid(),
+          slot: 'backup',
+          route: { backend: backupTarget.backend, model: backupTarget.model, effort: backupTarget.effort },
+          phase: 'preflight',
+          model_started: false,
+          elapsed_ms: elapsed(now, backupProbeStarted),
+          terminal_classification: 'cancelled',
+          retry_delay_ms: null,
+          cleanup_outcome: cleanupOutcome
+        });
+        lastRoutingError = createRoutingError('CANCELLED');
+        fail('CANCELLED');
+      }
+
+      if (backupProbeError) {
+        const backupCode = dependencies.signal?.aborted
+          ? 'CANCELLED'
+          : failureCode(backupProbeError, registryLookup(dependencies, backupTarget.backend));
+
+        attempts.push({
+          attempt_id: makeUuid(),
+          slot: 'backup',
+          route: { backend: backupTarget.backend, model: backupTarget.model, effort: backupTarget.effort },
+          phase: 'preflight',
+          model_started: false,
+          elapsed_ms: elapsed(now, backupProbeStarted),
+          terminal_classification: dependencies.signal?.aborted ? 'cancelled' : 'fatal',
+          retry_delay_ms: null,
+          cleanup_outcome: cleanupOutcome
+        });
+        if (typeof dependencies.onAttempt === 'function') {
+          try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+        }
+
+        if (dependencies.signal?.aborted) {
+          lastRoutingError = createRoutingError('CANCELLED');
+        } else if (cleanupOutcome === 'unconfirmed') {
+          lastRoutingError = isRoutingError(backupProbeError) ? backupProbeError : createRoutingError(backupCode);
+        } else if (primaryPreflightSkipped) {
+          const skipError = primarySkipError || primaryProbeError;
+          lastRoutingError = isRoutingError(skipError)
+            ? skipError
+            : createRoutingError(failureCode(skipError, registryLookup(dependencies, primaryTarget.backend)));
+        } else {
+          lastRoutingError = isRoutingError(backupProbeError) ? backupProbeError : createRoutingError(backupCode);
+        }
+      } else if (backupQualified && cleanupOutcome === 'confirmed' && !dependencies.signal?.aborted) {
+        const backupAttemptStarted = now();
+        const backupAttemptId = makeUuid();
+        attemptChildSpawned = false;
+
+        const generationRunner = generationRunnerFactory({
+          runner: generationTrackingRunner,
+          wait: selected.policy?.wait || {},
+          now
+        });
+
+        let backupExecution;
+        let backupExecutionError = null;
+        try {
+          backupQualified.context.runner = generationRunner;
+          backupQualified.context.limits = { mode: 'generation' };
+          const invocation = await backupQualified.adapter.buildInvocation(backupQualified.context);
+          if (backupQualified.qualifiedExecutable && invocation.executable !== backupQualified.qualifiedExecutable) {
+            fail('EXECUTABLE_UNAVAILABLE');
+          }
+          const envPath = environment?.PATH || process.env.PATH;
+          const currentExecPath = resolveExecutablePath(invocation.executable, envPath);
+          if (backupQualified.qualifiedExecutablePath && currentExecPath !== backupQualified.qualifiedExecutablePath) {
+            fail('EXECUTABLE_UNAVAILABLE');
+          }
+          backupExecution = await generationRunner.run(invocation, {
+            environment, requestDepth: 0, signal: dependencies.signal
+          });
+          if (backupExecution?.error) {
+            if (backupExecution.cleanupOutcome) cleanupOutcome = backupExecution.cleanupOutcome;
+            backupExecutionError = backupExecution.failure || backupExecution.error;
+          }
+        } catch (err) {
+          if (err?.cleanupOutcome) cleanupOutcome = err.cleanupOutcome;
+          backupExecutionError = err;
+        }
+
+        const backupModelStarted = Boolean(attemptChildSpawned);
+
+        if (!backupExecutionError) {
+          if (dependencies.signal?.aborted) {
+            backupExecutionError = createRoutingError('CANCELLED');
+          } else {
+            try {
+              const adapterResult = await backupQualified.adapter.parseResult({
+                ...backupQualified.context,
+                execution: backupExecution?.result || backupExecution
+              });
+              if (dependencies.signal?.aborted) {
+                backupExecutionError = createRoutingError('CANCELLED');
+              } else {
+                const result = normalizeResult(adapterResult, { checkpoint, maxBytes: MAX_ENVELOPE_BYTES });
+                if (dependencies.signal?.aborted) {
+                  backupExecutionError = createRoutingError('CANCELLED');
+                } else {
+                  attempts.push({
+                    attempt_id: backupAttemptId,
+                    slot: 'backup',
+                    route: { backend: backupTarget.backend, model: backupTarget.model, effort: backupTarget.effort },
+                    phase: 'model',
+                    model_started: true,
+                    elapsed_ms: elapsed(now, backupAttemptStarted),
+                    terminal_classification: 'success',
+                    retry_delay_ms: null,
+                    cleanup_outcome: cleanupOutcome
+                  });
+
+                  finalResult = result;
+                  if (typeof dependencies.onAttempt === 'function') {
+                    try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+                  }
+                }
+              }
+            } catch (parseErr) {
+              backupExecutionError = parseErr;
+            }
+          }
+        }
+
+        if (backupExecutionError) {
+          if (dependencies.signal?.aborted || (isRoutingError(backupExecutionError) && backupExecutionError.code === 'CANCELLED')) {
+            lastRoutingError = createRoutingError('CANCELLED');
+            attempts.push({
+              attempt_id: backupAttemptId,
+              slot: 'backup',
+              route: { backend: backupTarget.backend, model: backupTarget.model, effort: backupTarget.effort },
+              phase: backupModelStarted ? 'model' : 'preflight',
+              model_started: backupModelStarted,
+              elapsed_ms: elapsed(now, backupAttemptStarted),
+              terminal_classification: 'cancelled',
+              retry_delay_ms: null,
+              cleanup_outcome: cleanupOutcome
+            });
+          } else if (cleanupOutcome === 'unconfirmed') {
+            lastRoutingError = isRoutingError(backupExecutionError)
+              ? backupExecutionError
+              : createRoutingError(failureCode(backupExecutionError, backupQualified.adapter));
+            attempts.push({
+              attempt_id: backupAttemptId,
+              slot: 'backup',
+              route: { backend: backupTarget.backend, model: backupTarget.model, effort: backupTarget.effort },
+              phase: 'model',
+              model_started: backupModelStarted,
+              elapsed_ms: elapsed(now, backupAttemptStarted),
+              terminal_classification: 'fatal',
+              retry_delay_ms: null,
+              cleanup_outcome: 'unconfirmed'
+            });
+          } else {
+            const classified = classifyAttemptFailure(backupExecutionError, backupQualified.adapter);
+            lastRoutingError = isRoutingError(backupExecutionError) ? backupExecutionError : createRoutingError(classified.code);
+            attempts.push({
+              attempt_id: backupAttemptId,
+              slot: 'backup',
+              route: { backend: backupTarget.backend, model: backupTarget.model, effort: backupTarget.effort },
+              phase: 'model',
+              model_started: backupModelStarted,
+              elapsed_ms: elapsed(now, backupAttemptStarted),
+              terminal_classification: classified.classification === 'transient' ? 'transient' : 'fatal',
+              retry_delay_ms: null,
+              cleanup_outcome: cleanupOutcome
+            });
+          }
+          if (typeof dependencies.onAttempt === 'function') {
+            try { dependencies.onAttempt(attempts.at(-1)); } catch {}
+          }
+        }
+      }
+    }
+
+    if (finalResult && cleanupOutcome === 'confirmed' && !dependencies.signal?.aborted) {
+      envelope = buildSuccessEnvelope({
+        correlation_id: correlationId,
+        checkpoint,
+        checkpoint_digest: digest,
+        receipt: receipt(),
+        attempts,
+        result: finalResult,
+        cleanup_outcome: cleanupOutcome
+      });
+    } else {
+      if (dependencies.signal?.aborted) {
+        lastRoutingError = createRoutingError('CANCELLED');
+      } else if (!lastRoutingError) {
+        lastRoutingError = cleanupOutcome === 'unconfirmed'
+          ? createRoutingError('CLEANUP_UNCONFIRMED')
+          : createRoutingError('PROCESS_FAILED');
+      }
+      envelope = buildFailureEnvelope({
+        correlation_id: correlationId,
+        checkpoint,
+        checkpoint_digest: digest,
+        receipt: receipt(),
+        attempts,
+        error: lastRoutingError,
+        cleanup_outcome: cleanupOutcome
+      });
+    }
   } catch (error) {
     if (error?.cleanupOutcome) {
       cleanupOutcome = error.cleanupOutcome;
     }
     const code = dependencies.signal?.aborted ? 'CANCELLED' : failureCode(error, adapter);
     lastRoutingError = isRoutingError(error) ? error : createRoutingError(code);
-    if (checkpoint?.version === 2 && target?.backend && target?.model && target?.effort) {
-      modelStarted = Boolean(childSpawned);
-      attempts = [{
-        attempt_id: correlationId,
-        slot: 'primary',
-        route: { backend: target.backend, model: target.model, effort: target.effort },
-        phase: modelStarted ? 'model' : 'preflight',
-        model_started: modelStarted,
-        elapsed_ms: elapsed(now, started),
-        terminal_classification: dependencies.signal?.aborted ? 'cancelled' : 'fatal',
-        retry_delay_ms: null,
+    if (!envelope) {
+      if (checkpoint?.version === 2 && target?.backend && target?.model && target?.effort && attempts.length === 0) {
+        attempts = [{
+          attempt_id: correlationId,
+          slot: 'primary',
+          route: { backend: target.backend, model: target.model, effort: target.effort },
+          phase: 'preflight',
+          model_started: false,
+          elapsed_ms: elapsed(now, started),
+          terminal_classification: dependencies.signal?.aborted ? 'cancelled' : 'fatal',
+          retry_delay_ms: null,
+          cleanup_outcome: cleanupOutcome
+        }];
+      }
+      envelope = buildFailureEnvelope({
+        correlation_id: correlationId,
+        checkpoint,
+        checkpoint_digest: digest,
+        receipt: receipt(),
+        attempts,
+        error: lastRoutingError,
         cleanup_outcome: cleanupOutcome
-      }];
-    } else {
-      attempts = [];
+      });
     }
-    envelope = buildFailureEnvelope({
-      correlation_id: correlationId,
-      checkpoint,
-      checkpoint_digest: digest,
-      receipt: receipt(),
-      attempts,
-      error: lastRoutingError,
-      cleanup_outcome: cleanupOutcome
-    });
   } finally {
     if (workspace) {
       const cleanup = dependency(dependencies, 'cleanupWorkspace', cleanupWorkspace);
@@ -245,8 +850,13 @@ async function runController(input, dependencies = {}) {
         if (cleanupResult?.outcome !== 'confirmed') {
           cleanupOutcome = 'unconfirmed';
           if (envelope?.status === 'ADVICE_READY') {
-            if (checkpoint?.version === 2 && attempts.length > 0) {
-              attempts[0] = { ...attempts[0], cleanup_outcome: 'unconfirmed', terminal_classification: 'fatal' };
+            const lastAttempt = attempts.at(-1);
+            if (lastAttempt) {
+              attempts[attempts.length - 1] = {
+                ...lastAttempt,
+                cleanup_outcome: 'unconfirmed',
+                terminal_classification: 'fatal'
+              };
             }
             envelope = buildFailureEnvelope({
               correlation_id: correlationId,
@@ -262,8 +872,13 @@ async function runController(input, dependencies = {}) {
       } catch {
         cleanupOutcome = 'unconfirmed';
         if (envelope?.status === 'ADVICE_READY') {
-          if (checkpoint?.version === 2 && attempts.length > 0) {
-            attempts[0] = { ...attempts[0], cleanup_outcome: 'unconfirmed', terminal_classification: 'fatal' };
+          const lastAttempt = attempts.at(-1);
+          if (lastAttempt) {
+            attempts[attempts.length - 1] = {
+              ...lastAttempt,
+              cleanup_outcome: 'unconfirmed',
+              terminal_classification: 'fatal'
+            };
           }
           envelope = buildFailureEnvelope({
             correlation_id: correlationId,
@@ -278,21 +893,33 @@ async function runController(input, dependencies = {}) {
       }
     }
     if (dependencies.signal?.aborted) {
-      if (checkpoint?.version === 2 && attempts.length > 0) {
-        attempts[0] = { ...attempts[0], cleanup_outcome: cleanupOutcome, terminal_classification: 'cancelled' };
+      const lastAttempt = attempts.at(-1);
+      if (lastAttempt) {
+        const isSettled = lastAttempt.terminal_classification === 'transient'
+          || lastAttempt.terminal_classification === 'success'
+          || lastAttempt.terminal_classification === 'skipped';
+        attempts[attempts.length - 1] = {
+          ...lastAttempt,
+          cleanup_outcome: cleanupOutcome,
+          terminal_classification: isSettled ? lastAttempt.terminal_classification : 'cancelled'
+        };
       }
       envelope = buildFailureEnvelope({
         correlation_id: correlationId,
         checkpoint,
         checkpoint_digest: digest,
-        receipt: receipt(),
+        receipt: envelope?.receipt || receipt(),
         attempts,
         error: createRoutingError('CANCELLED'),
         cleanup_outcome: cleanupOutcome
       });
     } else if (envelope && envelope.cleanup_outcome !== cleanupOutcome) {
-      if (checkpoint?.version === 2 && attempts.length > 0) {
-        attempts[0] = { ...attempts[0], cleanup_outcome: cleanupOutcome };
+      const lastAttempt = attempts.at(-1);
+      if (lastAttempt) {
+        attempts[attempts.length - 1] = {
+          ...lastAttempt,
+          cleanup_outcome: cleanupOutcome
+        };
       }
       envelope = envelope.status === 'ADVICE_READY'
         ? buildSuccessEnvelope({
@@ -316,13 +943,14 @@ async function runController(input, dependencies = {}) {
     }
     if (envelope && typeof dependencies.onAttempt === 'function') {
       try {
+        const lastAttempt = attempts.at(-1);
         dependencies.onAttempt({
-          attempt_id: correlationId,
+          attempt_id: lastAttempt?.attempt_id || correlationId,
           terminal_classification: envelope.status === 'ADVICE_READY'
             ? 'success'
-            : (dependencies.signal?.aborted ? 'cancelled' : 'fatal'),
+            : (dependencies.signal?.aborted ? 'cancelled' : (lastAttempt?.terminal_classification || 'fatal')),
           cleanup_outcome: cleanupOutcome,
-          error: envelope.error || null
+          error: envelope.status === 'ADVICE_READY' ? null : (lastRoutingError || envelope.error || null)
         });
       } catch {}
     }
