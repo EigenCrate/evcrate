@@ -1,8 +1,9 @@
 # Codebase Summary
 
 **Generated:** 2026-09-08
-**Source:** Repository compaction produced by Repomix v1.18.0 at
-`repomix-output.xml`, then checked against the current package and source tree.  
+**Source:** Fresh repository compaction produced by Repomix v1.18.0 at
+`repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs, which were
+checked directly for Phase 10 evidence.  
 **Purpose:** Compact navigation map, not a copy of the compaction.
 
 The repository is a private Node/TypeScript package. `package.json` declares
@@ -19,7 +20,7 @@ The repository is a private Node/TypeScript package. `package.json` declares
 .evcrate/registry.json         schema-1 canonical resource registry
 src/                           TypeScript control plane
 scripts/                       inventory, manifest, and release tooling
-tests/                         focused contract suites
+tests/                         focused contract and acceptance suites
 README.md                      package entry point
 docs/                         maintained project documentation
 ```
@@ -636,7 +637,63 @@ state response, and `pending_process_status` of `null`, `never-started`, or `dea
 block on `live`, `unknown`, or any inspection error. Keep admissions paused through
 publication and recovery.
 
+## Phase 10 deterministic acceptance and improvement baseline (DONE 2026-09-08)
 
+Phase 10's deterministic acceptance gate is verified. Live vendor qualification,
+empirical paired executor comparison, and real HOME publication remain explicit
+operator gates. See the [QA report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
+and [acceptance matrix](../plans/260907-1208-advisor-mentoring-recovery-audit/acceptance-matrix.md).
+
+### Acceptance fixtures and corpus
+
+The added fixtures exercise the installed CommonJS controller and state/history CLI
+in disposable roots; evaluation uses representative advice without production history.
+
+| Fixture | Contract |
+|---|---|
+| `tests/distribution/phase10-test-helpers.mjs` | Owner-only temporary HOME/project/bin roots, fake Codex/OMP routes, Git baseline, bounded subprocess calls, and credential/PAT scrubbing. |
+| `tests/fixtures/mentoring-evaluation/corpus.json` | Nine sanitized cases: one positive control and eight failure-oriented cases; five rubric dimensions; passing threshold `4.0`. |
+| `tests/fixtures/mentoring-evaluation/evaluator.mjs` | Deterministic decision, direction, scope, actionability, evidence, generic-filler, and destructive-command checks. |
+
+### Dedicated acceptance suites
+
+| Suite | Cases | Observable coverage |
+|---|---:|---|
+| `phase10-controller-scenarios.test.mjs` | 7 | Primary success, fatal/malformed input, stream handling, unsupported route, cancellation, and child credential scrubbing. |
+| `phase10-state-and-history.test.mjs` | 3 | Stale evidence, idempotent replay/history inspection, and dirty-user-baseline preservation. |
+| `phase10-human-gate.test.mjs` | 1 | Three failed corrections enter `needs_human`; fourth remediation is denied. |
+| `phase10-commands-and-evaluation.test.mjs` | 4 | Seven-target declarations, V2/`--advice` contract, corpus pass, and adversarial counsel rejection. |
+| **Dedicated total** | **15** | **15/15 passed** |
+
+### Deterministic evidence
+
+| Command or surface | Result |
+|---|---:|
+| `node --test tests/distribution/phase10-*.test.mjs` | 15/15 |
+| `node tests/advisor-controller/smoke-30s.cjs` | 1/1; 31.28s silent generation, one launch |
+| `npm run test:advisor-controller` | 204/204 |
+| `npm run test:adapters` | 24/24 |
+| `npm run release:check` | 29/29 controller files; closure verified |
+| `npm run test:installer:linux` | 15/15 |
+| `npm run test:cutover && npm run test:phase11` | 13/13 |
+| **Deterministic total** | **272/272; 100%** |
+
+### Explicit boundary
+
+- Deterministic tests verify repository contracts, state transitions, process
+  behavior, capability declarations, sanitized evaluation, packaging, and
+  disposable-HOME preservation. Fake CLIs do not authenticate vendors or prove
+  paid model quality.
+- All seven targets declare mentoring support with `writeChecks: advisory-only`;
+  generated markers do not establish live host enforcement or a universal
+  pre-edit hard block.
+- No real credentials, external vendor APIs, or empirical paired runs were used;
+  live qualification and the paired improvement baseline remain **UNVERIFIED (GATED)**.
+- Tests use disposable HOME only; production `$HOME/.evcrate/` is untouched;
+  publication requires explicit operator authorization.
+
+Phase 10 closes deterministic acceptance without claiming live qualification,
+measured quality improvement, or authorized rollout.
 
 ## Advisor controller timing and cleanup (Phase 02)
 
@@ -660,76 +717,29 @@ failure rather than successful advice. The focused Phase 02 closure passes
 ## Advisor adapter qualification and strict terminal parsing (Phase 03)
 
 Phase 03 qualifies the four enabled advisor backends (`claude`, `codex`, `pi`,
-and `omp`) against fixed executable/argv, exact route controls, noninteractive
-session isolation, read-only/no-tool behavior, and bounded machine-readable
-output. `adapter-contract.cjs` requires every adapter to expose version, auth,
-capability, invocation, result, and failure-classification methods. Capability
-attestations bind the exact model and effort plus `noninteractive`, isolated
-session, no tools, and output mode; no adapter may silently substitute a route.
-`adapter-registry.cjs` keeps `antigravity` as a candidate with an explicit
-unavailable adapter, while only the four qualified names are enabled.
+and `omp`) against fixed invocations, exact route controls, isolated
+noninteractive sessions, read-only/no-tool behavior, and bounded output.
+`adapter-contract.cjs` requires version, auth, capability, invocation, result,
+and failure-classification methods; `adapter-registry.cjs` keeps `antigravity`
+as an unavailable candidate.
 
-### Qualification and terminal contracts
+### Qualification surface
 
-- **Claude:** version/auth/help probes verify the requested model/effort and
-  read-only/session/output controls before invocation. The JSON result must be
-  a successful, nonempty result envelope. Nonempty `permission_denials` rejects
-  the result as READ_ONLY_UNSUPPORTED; a non-array value is invalid.
-  `stop_reason` may be absent or `end_turn`/`stop`; `tool_use`/`tool_call`
-  rejects read-only safety, max_tokens maps to OUTPUT_LIMIT, and every other
-  value is PROTOCOL_INVALID. A reported model must equal the route.
-- **Pi:** auth and offline model probes establish the exact provider/model and
-  thinking effort, then help probes require JSON mode, no session/context
-  features, and no approval/tools. The parser requires the ordered
-  `session -> agent_start -> turn_start -> user -> assistant -> turn_end ->
-  agent_end -> agent_settled` lifecycle, exact message shapes, exact workspace
-  and route attestation, and one nonempty assistant answer. Final
-  `stopReason` must be `stop`; `pending`, `length`, `toolUse`, `error`,
-  `aborted`, and `deferred` cannot become advice (length is OUTPUT_LIMIT,
-  tool use is READ_ONLY_UNSUPPORTED, and other nonterminal values are
-  PROTOCOL_INVALID).
-- **OMP:** `usage --json --redact --provider` is accepted as usable auth only
-  when a matching report has nonempty limits whose statuses are all `ok` and
-  `capacity[provider]` has entries with finite, positive
-  `remainingAccounts`. Missing reports, exhausted limits, zero capacity, or
-  malformed status fail closed as AUTH_UNAVAILABLE. The OMP parser enforces
-  the session/user/assistant/turn/agent terminal lifecycle, exact route and
-  usage shapes, `stopReason: "stop"`, empty tool results, and
-  `isTerminal: true`. `advisor_yielded` is not a documented event and is
-  rejected; it cannot bypass terminal validation.
-- **Codex:** version/login/model-catalog probes qualify the exact model and
-  reasoning effort, while help probes require ephemeral read-only JSONL
-  execution and ignore-user-config/rules controls. The parser accepts only
-  the ordered thread/turn/item lifecycle, one nonempty `agent_message`, and
-  a terminal `turn.completed` after every item settles. Tool, file-change,
-  web-search, MCP, and todo items, duplicate/late events, route drift, and
-  malformed terminal output fail closed.
+- Claude, Pi, OMP, and Codex parsers enforce target-specific terminal lifecycle,
+  route attestation, output protocol, and no-tool semantics before advice.
+- Typed errors preserve protocol, read-only, output-limit, auth, capability, and
+  process boundaries; arbitrary child stderr is not a success or retry signal.
+- `resolveInvocationLimits` gives probes finite deadlines while generation
+  carries no generation deadline; streams, output, termination, and warnings stay
+  bounded.
+- Focused adapter coverage lives in
+  `tests/advisor-controller/{claude-adapter,pi-adapter,omp-adapter}.test.cjs`,
+  `fixtures/fake-omp.cjs`, and runner/controller generation-limit cases.
 
-The Claude, Pi, and OMP parsers validate exact event/message keys, UTF-8 and
-byte/line bounds, terminal ordering, and no-tool semantics before returning
-recommendation text. The shared typed errors in `errors.cjs` preserve protocol,
-read-only, output-limit, auth, capability, and process boundaries; arbitrary
-stderr wording is not a retry or success assertion.
-
-### Generation timing and limits
-
-`resolveInvocationLimits` is used by all four enabled adapters. It merges
-adapter defaults with context limits, but deletes `timeoutMs` whenever
-`mode: "generation"` is selected. Probe invocations retain finite bounds
-(including the adapter 5-second probe timeout); generation keeps prompt,
-stdout/stderr, result, termination, and warning bounds while carrying no
-generation deadline. Runner normalization rejects an explicit generation
-`timeoutMs`, and the generation runner constructs its final invocation with
-`timeoutMs: undefined`. Claude, Pi, OMP, and Codex therefore consume the
-Phase 02 indefinite-generation contract without reintroducing a hidden
-deadline.
-
-Focused adapter coverage lives in
-`tests/advisor-controller/{claude-adapter,pi-adapter,omp-adapter}.test.cjs`
-and `fixtures/fake-omp.cjs`; runner/controller coverage asserts generation
-invocations omit `timeoutMs`. These deterministic fixtures qualify parser and
-control behavior only; they do not claim live vendor authentication or paid
-route qualification.
+Evidence: Phase 03 records 92/92 advisor-controller tests; Phase 10 records
+24/24 adapter tests. These fixtures prove deterministic parser/control behavior
+only, not live vendor authentication or paid route qualification. See the
+[system architecture](./system-architecture.md) for full adapter contracts.
 
 ## Advisor v2 contracts and safe policy migration (Phase 01)
 

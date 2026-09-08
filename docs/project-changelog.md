@@ -3,13 +3,78 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring/recovery/audit Phase 09 DONE (2026-09-08; 100%);
-Phase 10 NEXT (0%) acceptance pending; release remains Unreleased
+**Status:** Advisor mentoring/recovery/audit Phase 10 DONE (2026-09-08;
+deterministic acceptance 100%); live qualification and HOME publication remain
+operator-gated; release remains Unreleased
+
+### 2026-09-08 — test(advisor): verify deterministic Phase 10 acceptance and establish synthetic improvement baseline (phase-10)
+
+**Status:** Phase 10 DONE for deterministic acceptance (272/272; 100%). Live
+vendor qualification, empirical paired baseline, and real HOME publication
+remain explicit operator gates.  
+**Plan:** [Phase 10 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-10-acceptance-qualification-and-improvement-evaluation.md)  
+**Evidence:** [QA acceptance report](../plans/reports/qa-260908-1915-phase10-acceptance.md) and
+[acceptance matrix](../plans/260907-1208-advisor-mentoring-recovery-audit/acceptance-matrix.md)
+
+- Added disposable-HOME end-to-end fixtures for controller, state/history, human-gate,
+  capability, command, and mentoring-evaluation behavior.
+- `tests/distribution/phase10-test-helpers.mjs` creates owner-only temporary roots,
+  fake Codex/OMP routes, a Git baseline, bounded subprocess invocation, and a
+  strict child-environment allowlist with token/PAT scrubbing.
+- `tests/fixtures/mentoring-evaluation/corpus.json` defines nine sanitized cases
+  (one positive control and eight failure-oriented cases) over five rubric
+  dimensions: direction accuracy, scope discipline, safety invariants,
+  actionability, and evidence grounding. Passing threshold: average score `4.0`.
+- `evaluator.mjs` supplies deterministic scoring, generic-filler rejection,
+  decision-alignment checks, evidence grounding, and destructive-command safety
+  probes. The corpus is a synthetic baseline, not a live model-quality benchmark.
+
+#### Dedicated acceptance suites
+
+| Suite | Cases | Observable coverage |
+|---|---:|---|
+| `phase10-controller-scenarios.test.mjs` | 7 | Primary success, fatal/malformed input, stream handling, unsupported route, cancellation, and child credential scrubbing |
+| `phase10-state-and-history.test.mjs` | 3 | Stale evidence, idempotent replay/history inspection, and dirty-user-baseline preservation |
+| `phase10-human-gate.test.mjs` | 1 | Three failed corrections enter `needs_human`; fourth remediation is denied |
+| `phase10-commands-and-evaluation.test.mjs` | 4 | Seven-target declarations, V2/`--advice` command contract, corpus pass, and adversarial counsel rejection |
+| **Dedicated total** | **15** | **15/15 passed** |
+
+#### Deterministic evidence
+
+| Command or surface | Result |
+|---|---:|
+| `node --test tests/distribution/phase10-*.test.mjs` | 15/15 |
+| `node tests/advisor-controller/smoke-30s.cjs` | 1/1; 31.28s silent generation, one launch |
+| `npm run test:advisor-controller` | 204/204 |
+| `npm run test:adapters` | 24/24 |
+| `npm run release:check` | 29/29 controller files; closure verified |
+| `npm run test:installer:linux` | 15/15 |
+| `npm run test:cutover && npm run test:phase11` | 13/13 |
+| **Deterministic total** | **272/272; 100%** |
+
+#### Explicit boundary
+
+- Deterministic tests verify repository contracts, state transitions, process
+  behavior, capability declarations, sanitized evaluation, packaging, and
+  disposable-HOME preservation. Fake CLIs do not authenticate vendors or prove
+  paid model quality.
+- All seven targets declare mentoring support with `writeChecks: advisory-only`;
+  generated markers do not establish live host enforcement or a universal
+  pre-edit hard block.
+- No real credentials, external vendor APIs, or empirical paired executor runs
+  were used. Live route/auth/model/effort/no-tool qualification and the paired
+  improvement baseline remain **UNVERIFIED (GATED)**.
+- Tests use disposable HOME only; production `$HOME/.evcrate/` was not modified.
+  HOME publication requires an operator-selected route and explicit authorization
+  before `npm run distribute:all` or an equivalent staged publish/apply action.
+
+This evidence closes the deterministic Phase 10 acceptance surface without
+claiming live qualification, measured quality improvement, or authorized rollout.
 
 ### 2026-09-08 — feat(distribution): generate projections, synchronize build manifests, and stage coherent cutover (phase-09)
 
-**Status:** Phase 09 DONE (2026-09-08; 100%); Phase 10 NEXT (0%) acceptance pending;
-release remains Unreleased
+**Status:** Phase 09 DONE (2026-09-08; 100%); superseded by the Phase 10
+deterministic acceptance entry above; release remains Unreleased
 **Plan:** [Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md)  
 **Evidence:** Full controller closure parity (29 files), 24/24 adapter projection tests, 7/7 cutover tests, 11/11 publication recovery tests, 15/15 installer tests, 5/5 private unpack rollout tests, passing `npm run distribute:check` and `npm run release:check`
 

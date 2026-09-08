@@ -3,7 +3,9 @@ title: "Native provider-aware Pi migration"
 description: "Generate and safely publish native Pi commands, workflows, agents, hooks, and skills from canonical Claude source without pi-code emulation."
 status: completed
 priority: P1
+effort: "not estimated"
 branch: main
+tags: [feature, migration, pi, distribution]
 created: 2026-08-09
 ---
 

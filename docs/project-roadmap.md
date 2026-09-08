@@ -1,10 +1,10 @@
 # Project Roadmap
 
-**Status:** Phase 09 DONE (2026-09-08; 100%); Phase 10 NEXT (0%) acceptance pending; operator/release gates remain separate
+**Status:** Phase 10 DONE (2026-09-08; 100%); deterministic acceptance complete; live qualification and operator/release gates remain separate
 **Updated:** 2026-09-08
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
-the [system architecture](./system-architecture.md), and the Phase 08 integration
-evidence
+the [system architecture](./system-architecture.md), Phase 08 integration
+evidence, and the [Phase 10 QA acceptance report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
 
 This roadmap distinguishes implementation gates recorded in the repository from
 operator/release work that has not been claimed. `docs/project-changelog.md` is the
@@ -45,21 +45,21 @@ policy; they are not hand edited.
 | Advisor mentoring/recovery/audit — Phase 06 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md); completed at 100% with durable task state, scope/disposition tracking, three-cycle correction gates, and human handoff. Review approved 2026-09-08. |
 | Advisor mentoring/recovery/audit — Phase 07 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md) and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md); completed at 100% with owner-only sanitized execution/outcome history, bounded attempt snapshots, CAS terminal settlement, linked executor outcomes, audit degradation independent of inference, and managed `history list|show|export|prune` review tools. Evidence: 204/204 advisor-controller tests passed (19/19 targeted); Phase Lead/Senior Mentor sign-off is unconditional approval at 10/10. |
 | Advisor mentoring/recovery/audit — Phase 08 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md) and [integration evidence](../tests/adapters/phase08-mentoring-integration.test.mjs); canonical `evcrate-advisor-checkpoint/v2` dispatcher migrated across all 16 code/cook/bootstrap/fix consumers; seven targets declare mentoring supported and write checks advisory-only; real CLI Path A/Path B lifecycles, exact correction ordinals 1/2/3, durable `needs_human`, and user-baseline preservation are covered. Evidence: 279/279 tests; Lead Mentor approval 10/10; user approved. |
-| Advisor mentoring/recovery/audit — Phase 09 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md); all seven target projections generated and verified with `distribute:check`; schema-2 build manifests and registry synchronized via `generate:all`; exact 29-file controller closure established across runtime and standalone installers (`install.sh`, `install.ps1`); network-isolated installer verification (`private-unpack-rollout.test.mjs`) and subprocess installer tests (`tests/installers/*.test.mjs`) pass; atomic publication recovery and disposable HOME preservation verified; operator cutover and rollback runbook documented. Actual HOME publication remains gated by Phase 10. |
-| Advisor mentoring/recovery/audit — Phase 10 | NEXT (0%) | End-to-end acceptance qualification and improvement evaluation across all integrated capabilities before authorized HOME rollout. |
+| Advisor mentoring/recovery/audit — Phase 09 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md); generated and verified seven target projections, synchronized schema-2 manifests/registry, verified the exact 29-file controller closure, passed network-isolated installer and publication-recovery checks, preserved disposable HOME, and documented operator cutover/rollback. Actual HOME publication remains operator-gated pending explicit operator authorization. |
+| Advisor mentoring/recovery/audit — Phase 10 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-10-acceptance-qualification-and-improvement-evaluation.md) and [QA acceptance](../plans/reports/qa-260908-1915-phase10-acceptance.md); deterministic acceptance: 272/272 tests passing; runtime closure: 29/29 files verified; sanitized mentoring baseline: 9/9 cases passed; live qualification gated on explicit operator authorization; HOME publication remains a separate operator gate. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
 | Command and skill catalogs — Phase 03 | DONE (2026-09-07) | [Phase 03 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-03-seven-target-scanner-and-catalog-adapters.md), [test report](../plans/reports/tester-260907-0959-phase-03-seven-target-adapters.md), and [code review](../plans/reports/code-review-260907-1004-phase-03-seven-target-scanner-and-catalog-adapters.md); seven-target scanner/layout adapters and authoritative native mappings complete; foreign-CWD, unmanaged-resource isolation, fail-closed validation, and parity checks pass 37/37. Review has no critical issues; non-blocking output-containment and symlink-hardening follow-ups remain. |
 | Command and skill catalogs — Phase 04 | DONE (2026-09-07) | [Phase 04 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-04-regeneration-documentation-and-release-gates.md), [validation report](../plans/reports/tester-260907-1123-phase04-validation-matrix.md), and [final code review](../plans/reports/code-review-260907-1457-phase-04-final-post-fixes.md); regeneration, scanner/generator documentation, and release gates complete; focused gates pass 85/85, the seven-target foreign-CWD matrix passes 35/35, and `npm run distribute:check` returns `status: "ok"`. |
-| Live vendor qualification | Pending operator gate | Each enabled installed CLI needs a bounded non-sensitive Linux qualification after upgrades. Deterministic tests do not authenticate a vendor. |
+| Live vendor qualification | GATED — operator authorization required | Each enabled installed CLI needs a bounded non-sensitive Linux qualification after upgrades. Deterministic tests do not authenticate a vendor. |
 | Release publication/rollout | Pending operator gate | npm publication, deployment, rollout, and final release remain explicitly separate from repository contracts. |
 | Windows validation | Deferred | Windows installer/runtime parity is not claimed without separate harness validation. |
 
 ## Immediate next gates
 
-Phase 10 is next: end-to-end acceptance qualification and baseline evaluation. HOME
-application, live host qualification, and release remain separate operator gates.
+Phase 10 deterministic acceptance is complete. Live vendor/host qualification,
+HOME application, and release remain separate operator gates.
 
 1. **Use canonical source.** Change `.evcrate/source/.claude/`, the shared controller
    root, or a declared target overlay—not generated projection trees.
@@ -104,8 +104,9 @@ roadmap item.
   the V2 dispatcher and shared state lifecycle; seven target projections declare
   mentoring support with advisory-only write checks. Phase 09 is complete:
   projections, manifests, controller closure, publication recovery, and
-  documentation cutover are verified. Phase 10 is next for end-to-end acceptance
-  qualification before authorized HOME rollout.
+documentation cutover are verified. Phase 10 deterministic acceptance is complete:
+272/272 tests pass and 29/29 runtime-closure files verify. Live qualification remains
+gated on explicit operator authorization before HOME rollout.
 - **Policy route selection:** Exact deployed primary/backup routes, vendor
   controls, auth, and independent failure domains remain operator qualification
   inputs; no model/backend defaults are implied by examples.
