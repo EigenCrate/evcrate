@@ -3,9 +3,45 @@
 ## Unreleased
 
 **Updated:** 2026-09-08  
-**Status:** Advisor mentoring/recovery/audit Phase 08 complete at 100%; Lead
-Mentor approval is 10/10 and user approval is recorded; release remains
-Unreleased
+**Status:** Advisor mentoring/recovery/audit Phase 09 DONE (2026-09-08; 100%);
+Phase 10 NEXT (0%) acceptance pending; release remains Unreleased
+
+### 2026-09-08 — feat(distribution): generate projections, synchronize build manifests, and stage coherent cutover (phase-09)
+
+**Status:** Phase 09 DONE (2026-09-08; 100%); Phase 10 NEXT (0%) acceptance pending;
+release remains Unreleased
+**Plan:** [Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md)  
+**Evidence:** Full controller closure parity (29 files), 24/24 adapter projection tests, 7/7 cutover tests, 11/11 publication recovery tests, 15/15 installer tests, 5/5 private unpack rollout tests, passing `npm run distribute:check` and `npm run release:check`
+
+- Synchronized all seven target projections (`claude`, `codex`, `gemini`, `antigravity`,
+  `pi`, `omp`, `copilot`) from canonical `.claude/` sources via `npm run distribute:build`
+  and verified parity with `distribute:check`.
+- Added `"generate:registry"` script to `package.json` and synchronized `.evcrate/registry.json`
+  and `.evcrate/build-manifest-*.json` via `npm run generate:all`.
+- Synchronized **ADVISOR_CONTROLLER_FILES** across `install.sh`, `install.ps1`,
+  `scripts/generate-controller-inventory.mjs`, and `src/manifests/controller.ts`, establishing
+  strict 29-file closure parity and closing controller closure digest mismatches.
+- Verified standalone unpack installers under Linux network namespace isolation
+  (`tests/distribution/private-unpack-rollout.test.mjs`) and subprocess tests
+  (`tests/installers/*.test.mjs`): package hash invariance, controller closure verification,
+  clean-new/whole-old-backup mutable state semantics, atomic locking, and published target preservation.
+- Verified publication atomic promotion, CAS conflict protection, and crash recovery in
+  disposable HOME (`tests/distribution/publication-apply.test.mjs`,
+  `tests/distribution/publication-recovery.test.mjs`), with reviewer smoke tests confirming
+  active/incomplete task state and history sentinels remain isolated and intact.
+- Documented operator cutover sequence, quiescence, settings workflow, and rollback runbooks
+  across system architecture, codebase summary, and roadmap.
+- Recovery semantics are explicit: `recover` rolls back a valid interrupted
+  `staged`/`promoting` transaction, finalizes a `committed` cleanup window, and
+  returns `none` when idle; it never rolls back a completed release. A completed
+  release rollback uses installer `rollback` to select a prior snapshot, followed
+  by publication `apply` from that snapshot. Post-first-promotion collisions
+  retain the journal and fail closed until the external path is reconciled.
+- The cutover runbook records the exact V2 policy shape and V1 transport boundary,
+  explicit `get -> prepare v2 -> preview -> apply` migration, non-clobbering backup,
+  and quiescence inspection from the original project root/HOME. Live pending
+  processes or unknown inspection status block deployment; HOME apply remains a
+  Phase 10 operator gate.
 
 ### 2026-09-08 — feat(advisor): integrate cooperative V2 mentoring gates across commands and harnesses (phase-08)
 

@@ -324,10 +324,10 @@ lib/advisor/history-query.cjs
 lib/advisor/history-store.cjs
 lib/advisor/isolated-workspace.cjs
 lib/advisor/json-document.cjs
+lib/advisor/managed-checkpoint.cjs
 lib/advisor/policy-schema.cjs
 lib/advisor/profile.cjs
 lib/advisor/runner.cjs
-lib/advisor/managed-checkpoint.cjs
 lib/advisor/runtime-brief.generated.cjs
 lib/advisor/state-baseline.cjs
 lib/advisor/state-contract.cjs
@@ -562,9 +562,80 @@ Phase 08 integration coverage validates capability declarations, marker renderin
 all 10 canonical workflow JSON examples, real disposable-HOME CLI Path A and
 Path B lifecycles, exact three-cycle ordinals and durable gate blocking, all 16
 dispatcher references, and all seven projection adapters. Evidence is 279/279
-tests; Lead Mentor approval is 10/10 and user approval is recorded. Phase 09 is
-next for projection staging and documentation cutover; live host qualification,
-HOME publication, and release remain separate gates.
+tests; Lead Mentor approval is 10/10 and user approval is recorded.
+
+## Generated projections, staged cutover, and release asset parity (Phase 09 DONE (2026-09-08; 100%))
+
+Phase 09 completed on 2026-09-08. It synchronizes all seven target projections,
+establishes exact 29-file controller closure parity across runtime and standalone
+installers, and verifies disposable-HOME publication and rollback runbooks. See the
+[Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md).
+
+### Key deliverables and parity
+
+- **Controller closure parity (29 files)**: `scripts/generate-controller-inventory.mjs`
+  emits `src/manifests/controller-inventory.generated.ts`, which drives `src/manifests/controller.ts`
+  and `scripts/release/runtime-closure.cjs`. Standalone installer scripts `install.sh` and
+  `install.ps1` are updated to match the exact 29-file list, resolving closure digest
+  mismatches during unpack installation.
+- **Projections and manifests synchronization**: All seven target projections are
+  built with `npm run distribute:build` and verified with `npm run distribute:check`.
+  Build manifests (`.evcrate/build-manifest-*.json`) and `.evcrate/registry.json` are
+  regenerated and pinned with `npm run generate:all`.
+- **Standalone unpack and installer verification**: Linux network-namespace testing
+  via `tests/distribution/private-unpack-rollout.test.mjs` proves package hash invariance,
+  network-isolated installation, clean-new/whole-old-backup mutable state semantics,
+  and published target preservation upon uninstall. Subprocess installer tests in
+  `tests/installers/*.test.mjs` validate archive checksum checks, controller closure
+  digest verification, atomic locking, staging rollback, and pointer commit.
+- **Publication and crash recovery**: Atomic publication testing under disposable HOME
+  via `tests/distribution/publication-apply.test.mjs` and `tests/distribution/publication-recovery.test.mjs`
+  proves CAS conflict prevention, idempotent journal recovery, and policy preservation;
+  reviewer smoke tests confirm active/incomplete task state and history sentinels remain
+  isolated and intact.
+- **Operator runbook**: Explicit cutover, quiescence, settings migration, and rollback
+  procedures are documented in `docs/system-architecture.md` and handed off to Phase 10;
+  native Windows qualification and live route authorization remain separate gates.
+### Phase 09 contract boundaries
+
+The persisted target registry is exactly seven IDs. `scripts/build-manifests.mjs`
+emits eight schema-2 files: the aggregate `.evcrate/build-manifest.json` plus one
+`.evcrate/build-manifest-<target>.json` for each target. The current eight manifests
+are complete, mark the target registry as validated, and each carries 29 controller
+hashes. `.evcrate/registry.json` remains schema 1 and currently indexes 140
+canonical resources; each record carries compatibility entries for all seven target
+IDs. `generate:all` runs inventory, build, registry, and manifest generation in that
+order. Generated projections, registries, and manifests are never hand-edited.
+
+Publication recovery and release rollback are separate operations:
+
+- A valid `staged`/`promoting` journal rolls back promoted operations and returns
+  `rolled-back`; a `committed` journal left by a cleanup crash is verified and
+  finalized; no journal returns `none`. `recover` never rolls back a completed
+  release.
+- A post-first-promotion external collision retains the promoting journal; recovery
+  fails closed until the operator reconciles the conflicting path. To roll back a
+  completed release, use the installer `rollback` action for the prior package
+  snapshot, then run publication `apply` from that restored snapshot.
+
+Settings migration remains an independent user-owned transaction. V2 policy keys
+are exactly `version`/`advisor`/`wait`/`history`; `advisor` is exactly
+`primary`/`backup`, each route exactly `backend`/`model`/`effort`; `wait` is exactly
+`mode`/`warn_after_ms`/`warn_every_ms`; and `history` is exactly
+`retention_days`/`max_bytes`. Legacy v1 is a read-only migration view with
+`version`/`advisor` (`backend`/`model`/`effort`/`timeout_ms`) plus
+`migration_required: true`. The settings transport remains version 1: request keys
+are exactly `protocol`, `protocolVersion`, `requestId`, `operation`, and `payload`;
+preview payload is `policy`/`currentRevision`/`destination`/`mode`; apply payload
+is `token`/`currentRevision`. The operator flow is `get -> prepare v2 -> preview ->
+apply`; no automatic HOME rewrite.
+
+Before cutover, pause admissions and inspect from the original task project root
+and original HOME. Require no active `evcrate-advisor` process, a **STATE_READY**
+state response, and `pending_process_status` of `null`, `never-started`, or `dead`;
+block on `live`, `unknown`, or any inspection error. Keep admissions paused through
+publication and recovery.
+
 
 
 ## Advisor controller timing and cleanup (Phase 02)

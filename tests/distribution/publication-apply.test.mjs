@@ -83,3 +83,73 @@ test('publication returns CAS conflict without masking or deleting an external p
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('post-first-promotion CAS conflict retains promoting journal, fails closed on recovery, and rolls back after reconciliation', () => {
+  const home = mkdtempSync(join(tmpdir(), 'evcrate-pub-post-cas-'));
+  try {
+    const context = resolveInvocationContext({ packageRoot, cwd: packageRoot, home, targets: ['omp'] });
+    directory(join(home, '.evcrate'));
+    const policy = join(home, '.evcrate', 'advisor-routing.json');
+    writeFileSync(policy, policyBytes, { mode: 0o600 });
+    directory(join(home, '.evcrate', 'tasks'));
+    const taskSentinel = join(home, '.evcrate', 'tasks', 'task-sentinel.json');
+    writeFileSync(taskSentinel, '{"task":"durable"}\n', { mode: 0o600 });
+    directory(join(home, '.evcrate', 'advisor-history'));
+    const historySentinel = join(home, '.evcrate', 'advisor-history', 'history-sentinel.json');
+    writeFileSync(historySentinel, '{"history":"active"}\n', { mode: 0o600 });
+    const unrelatedSentinel = join(home, 'unrelated.txt');
+    writeFileSync(unrelatedSentinel, 'user-data\n', { mode: 0o600 });
+
+    const state = publicationStateRoot(home);
+    const plan = publishDryRun(context);
+    assert.ok(plan.changes.length > 2, 'publication plan must have multiple operations');
+    const op1 = plan.changes[1];
+    const targetConflictPath = join(home, op1.path);
+    let injected = false;
+
+    assert.throws(
+      () => publishApply(context, {
+        hooks: {
+          afterOperation: (_op, index) => {
+            if (index === 0 && !injected) {
+              injected = true;
+              directory(join(targetConflictPath, '..'));
+              writeFileSync(targetConflictPath, 'external-collision\n', { mode: 0o600 });
+            }
+          }
+        }
+      }),
+      (error) => error?.code === 'CAS_CONFLICT'
+    );
+
+    assert.equal(existsSync(join(state, 'publication-journal.json')), true);
+    assert.equal(existsSync(join(state, 'release-marker.json')), true);
+    const marker = JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8'));
+    assert.equal(marker.status, 'promoting');
+
+    assert.equal(readFileSync(targetConflictPath, 'utf8'), 'external-collision\n');
+    assert.equal(readFileSync(policy).equals(policyBytes), true);
+    assert.equal(readFileSync(taskSentinel, 'utf8'), '{"task":"durable"}\n');
+    assert.equal(readFileSync(historySentinel, 'utf8'), '{"history":"active"}\n');
+    assert.equal(readFileSync(unrelatedSentinel, 'utf8'), 'user-data\n');
+
+    assert.throws(
+      () => recoverPublication(context),
+      (error) => error?.code === 'RECOVERY_FAILED'
+    );
+    assert.equal(readFileSync(targetConflictPath, 'utf8'), 'external-collision\n');
+
+    rmSync(targetConflictPath);
+
+    const recovery = recoverPublication(context);
+    assert.equal(recovery.action, 'rolled-back');
+    assert.equal(existsSync(join(state, 'publication-journal.json')), false);
+
+    assert.equal(readFileSync(policy).equals(policyBytes), true);
+    assert.equal(readFileSync(taskSentinel, 'utf8'), '{"task":"durable"}\n');
+    assert.equal(readFileSync(historySentinel, 'utf8'), '{"history":"active"}\n');
+    assert.equal(readFileSync(unrelatedSentinel, 'utf8'), 'user-data\n');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});

@@ -94,14 +94,26 @@ const ADVISOR_CONTROLLER_FILES = Object.freeze([
   'lib/advisor/adapters/omp-parser.cjs',
   'lib/advisor/adapters/pi.cjs',
   'lib/advisor/checkpoint-contract.cjs',
+  'lib/advisor/contracts-v2.cjs',
   'lib/advisor/controller-envelope.cjs',
   'lib/advisor/controller.cjs',
   'lib/advisor/errors.cjs',
+  'lib/advisor/history-contract.cjs',
+  'lib/advisor/history-prune.cjs',
+  'lib/advisor/history-query.cjs',
+  'lib/advisor/history-store.cjs',
   'lib/advisor/isolated-workspace.cjs',
   'lib/advisor/json-document.cjs',
+  'lib/advisor/managed-checkpoint.cjs',
   'lib/advisor/policy-schema.cjs',
   'lib/advisor/profile.cjs',
-  'lib/advisor/runner.cjs'
+  'lib/advisor/runner.cjs',
+  'lib/advisor/runtime-brief.generated.cjs',
+  'lib/advisor/state-baseline.cjs',
+  'lib/advisor/state-contract.cjs',
+  'lib/advisor/state-human.cjs',
+  'lib/advisor/state-io.cjs',
+  'lib/advisor/task-state.cjs'
 ]);
 const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/u;
 

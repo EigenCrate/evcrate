@@ -138,10 +138,10 @@ lib/advisor/history-query.cjs
 lib/advisor/history-store.cjs
 lib/advisor/isolated-workspace.cjs
 lib/advisor/json-document.cjs
+lib/advisor/managed-checkpoint.cjs
 lib/advisor/policy-schema.cjs
 lib/advisor/profile.cjs
 lib/advisor/runner.cjs
-lib/advisor/managed-checkpoint.cjs
 lib/advisor/runtime-brief.generated.cjs
 lib/advisor/state-baseline.cjs
 lib/advisor/state-contract.cjs
@@ -451,7 +451,7 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
-## 8. Advisor mentoring upgrade (Phases 05, 06, and 07 complete; workflow phases pending)
+## 8. Advisor mentoring upgrade (Phases 01–09 complete; Phase 09 DONE (2026-09-08; 100%); Phase 10 NEXT (0%) acceptance pending)
 
 Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
 Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
@@ -459,24 +459,28 @@ Phases 01–04 froze policy/checkpoint/result/controller contracts, completed
 policy migration, delivered wait/cancellation/cleanup guarantees, qualified
 adapters, and integrated the canonical mentor brief plus structured v2 result
 parsing. Phase 05 delivered bounded primary retry (up to four launches) and
-one-shot backup orchestration. Phase 06 is complete and user-approved on
-2026-09-08 after two review cycles and a senior mentor challenge; it delivered
-durable task state, process-identity locking, Git/baseline identity tracking,
-three-cycle correction escalation, and observed human continuation. Phase 07 is
-complete and user-approved with sanitized execution/outcome history, CAS
-terminal settlement, linked outcome recording, and bounded offline review tools.
-Phase 08 adds canonical workflow integration and later phases evaluate acceptance.
+one-shot backup orchestration. Phase 06 delivered durable task state, process-identity
+locking, Git/baseline identity tracking, three-cycle correction escalation, and
+observed human continuation. Phase 07 delivered sanitized execution/outcome history,
+CAS terminal settlement, linked outcome recording, and bounded offline review tools.
+Phase 08 completed canonical workflow integration across all 16 command consumers,
+honest seven-target capability declarations, real CLI lifecycle transitions, and
+user-baseline preservation. Phase 09 generates and stages all seven target projections,
+synchronizes build manifests and registry, establishes 29-file controller closure parity
+across runtime and installers, proves disposable HOME preservation and recovery, and
+delivers the operator cutover runbook.
 
-Phase 06 evidence is 185/185 advisor-controller tests passed; `npm run build` and
-`npm run release:check` passed against the generated 25-file controller closure.
-
-The frozen boundary keeps one managed CommonJS controller, vendor-owned
-credentials, canonical resources, and TypeScript settings/publication. The
-runtime brief is authored once in the canonical `.claude` skill, generated
-through `generate-runtime-brief.mjs` into the 25-file controller closure, and
-carried by build identity/digest. V2 checkpoint data is bounded and quoted;
-paths are metadata only. Advice is non-binding, and human approval plus the
-main workflow retain mutation authority.
+Phase 08 evidence is 279/279 tests passed; Lead Mentor approval 10/10; user approved.
+Phase 09 evidence is complete controller inventory/brief closure across all runtime
+modules and installers, 24/24 adapter projection tests, 7/7 cutover tests, 11/11
+publication recovery tests, 15/15 installer tests, 5/5 private unpack rollout tests,
+and passing `npm run distribute:check` and `npm run release:check`. The frozen boundary
+keeps one managed CommonJS controller, vendor-owned credentials, canonical resources,
+and TypeScript settings/publication. The runtime brief is authored once in the
+canonical `.claude` skill, generated through `generate-runtime-brief.mjs` into the
+29-file controller closure, and carried by build identity/digest. V2 checkpoint data
+is bounded and quoted; paths are metadata only. Advice is non-binding, and human
+approval plus the main workflow retains mutation authority.
 
 Generation/publication does not establish live tool-enforcement capability.
 This remains cooperative oversight of trusted CLIs, not hostile-process
@@ -531,7 +535,131 @@ Verification: the targeted Phase 07 history suites pass 19/19 and the full
 advisor-controller suite passes 204/204. The Phase Lead/Senior Mentor review
 resolved all seven final implementation items and approved Phase 07
 unconditionally at 10/10. See the [QA evidence report](../plans/reports/tester-260908-1344-phase07-final-verification.md).
+### 8.2 Generated projections, staged cutover, and operator runbook (Phase 09)
 
+Phase 09 unifies projection generation, release packaging, standalone installers, and
+atomic publication into a verified, staged cutover without performing premature HOME rollout:
+
+1. **Exact 29-file controller closure parity**:
+   The canonical advisor controller closure comprises exactly 29 CommonJS files authored
+   under `.evcrate/source/.evcrate/bin/`. Controller closure digests and file inventories
+   are strictly synchronized across:
+   - `scripts/generate-controller-inventory.mjs` and `src/manifests/controller-inventory.generated.ts`
+   - `src/manifests/controller.ts` (source closure validation and hash generation)
+   - `install.sh` and `install.ps1` (standalone unpack installer verification)
+   - `scripts/release/runtime-closure.cjs` and `scripts/release/pack-inventory.cjs`
+   Every file requires only literal relative CommonJS modules or Node.js built-ins, with
+   zero runtime dependency on `dist/` or external npm modules.
+
+2. **All-seven target projection synchronization**:
+   All seven targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`)
+   are projected directly from canonical `.claude/` sources via `npm run distribute:build`
+   and verified byte-for-byte via `npm run distribute:check`. Cryptographic SHA-256 tree
+   hashes in `.evcrate/build-manifest-*.json` and the schema-1 resource records in
+   `.evcrate/registry.json` are synchronized via `npm run generate:all`.
+
+3. **Release packaging and installer verification**:
+   Standalone tar.gz/zip packaging and unshare network-isolated installation verify:
+   - Archive SHA-256 and sidecar integrity matching `evcrate-v<ver>.release.json` metadata.
+   - Controller closure digest verification before writing destination files.
+   - Clean-new and whole-old-backup mutable-state semantics on upgrades (`<version>-<hash>-<gen>`).
+   - Idempotent repair, rollback to prior snapshot, and clean uninstall.
+   - Preservation of user-owned `$HOME/.evcrate/advisor-routing.json`, task state, and history.
+
+4. **Publication isolation, state root, and crash recovery**:
+   Publication to `$HOME` remains atomic and transactionally journaled:
+   - **State root**: `$HOME/.evcrate/publication/` (with active transaction directory `$HOME/.evcrate/publication/release-<releaseId>/`).
+   - **Pre-publication dry-run**: `evcrate publish --dry-run --json` reports authorized changes and binding order (`.evcrate/bin` then target bindings).
+   - **Atomic apply**: `evcrate publish --apply --json` promotes files via atomic rename with transaction backups under `$HOME/.evcrate/publication/release-<releaseId>/backups/`.
+   - **External modification protection**: If an unmanaged or external modification occurs on a destination path, `publishApply` detects **CAS_CONFLICT**, leaves the external file untouched, and stops with a retained journal.
+   - **Interrupted transaction recovery (`evcrate recover --json`)**:
+     - `publishApply` writes an initial release marker with status `promoting`. Both uncommitted statuses (`staged` or `promoting`) use rollback recovery when valid, restoring all promoted files to their pre-transaction state using transaction backups (`action: "rolled-back"`).
+     - If promotion completed but a crash occurred during cleanup (journal status `committed`), recovery finalizes the release and purges unretained backups (`action: "finalized"`).
+     - If no interrupted transaction exists, recovery is a no-op (`action: "none"`). Recovery does not roll back a completed release.
+     - **Post-first-promotion CAS conflict**: If an external change occurs after partial promotion has begun, `publishApply` fails with **CAS_CONFLICT**, leaving the journal in `promoting` state. An immediate `evcrate recover --json` will fail closed with **RECOVERY_FAILED** because the current external file cannot be matched to the pre-transaction snapshot. The operator must remain paused, inspect the conflicting path, decide whether to preserve or revert the external change, resolve the collision, and then run `evcrate recover --json` to restore a coherent state.
+
+5. **Operator cutover, quiescence, and rollback runbook**:
+   - **Pre-cutover validation**: Execute `npm run build`, `npm run distribute:check`, `npm run release:check`, and `npm test` locally. Confirm zero test failures and clean git status.
+   - **Consultation quiescence and admission pause**:
+     - Suspend new consultations before starting upgrade.
+     - Process table verification: verify no active advisor processes are executing (`pgrep -fa evcrate-advisor`).
+     - Task-state inspection: durable task runs operate independently from deployments. Because `state get` hashes its actual working directory into `projectId`, operators must execute inspection from the original task project root as `cwd` and original `HOME`:
+       ```bash
+       evcrate-advisor state get <<'JSON'
+       {
+         "protocol": "evcrate-advisor-state",
+         "version": 1,
+         "operation": "get",
+         "task_run_id": "<task-run-id>",
+         "operation_id": null,
+         "expected_revision": null,
+         "payload": {}
+       }
+       JSON
+       ```
+       Verify the result reports **STATE_READY** before interpreting task details. Verify `pending_process_status` is `null`, `"never-started"`, or `"dead"`. Explicitly block deployment if `pending_process_status` is `"live"` or `"unknown"` (or if any lookup, validation, or process inspection error occurs), resolving the uncertainty before continuing. Never force-complete or mutate durable tasks merely to deploy. Keep admission paused across all harnesses throughout cutover and recovery.
+   - **Standalone installer upgrade**: Execute `./install.sh install` (Linux) or `.\install.ps1 install` (Windows). This installs the new snapshot under `<data-dir>/snapshots/<version>-<hash>-<gen>` and points `<data-dir>/current` and the launcher to it.
+   - **Policy migration workflow**:
+     - Policy remains strictly user-owned at `$HOME/.evcrate/advisor-routing.json`.
+     - Step 1 (Atomic non-clobbering backup): Before modifying policy, create an atomic, exclusive, owner-only backup using the `wx` flag (failing if the destination file or symlink exists):
+       ```bash
+       node -e 'const fs = require("fs"); const src = process.env.HOME + "/.evcrate/advisor-routing.json"; const dst = src + ".pre-v2.bak"; fs.writeFileSync(dst, fs.readFileSync(src), { flag: "wx", mode: 0o600 });'
+       ```
+       If the destination exists, the command fails with **EEXIST**, preventing silent overwrites or rotation of a prior verified backup.
+     - Step 2 (Inspect current revision): Run `evcrate advisor settings get --json` to inspect current policy and retrieve its `revision` and `mode` objects.
+     - Step 3 (Preview): Construct a preview request file with schema `evcrate-advisor-settings`:
+       ```json
+       {
+         "protocol": "evcrate-advisor-settings",
+         "protocolVersion": 1,
+         "requestId": "00000000-0000-4000-8000-000000000001",
+         "operation": "preview",
+         "payload": {
+           "currentRevision": { "kind": "present", "identity": "<identity-from-get>" },
+           "destination": "<home>/.evcrate/advisor-routing.json",
+           "mode": { "kind": "existing", "mode": 384 },
+           "policy": {
+             "version": 2,
+             "advisor": {
+               "primary": { "backend": "codex", "model": "gpt-5.6-sol", "effort": "high" },
+               "backup": { "backend": "omp", "model": "gpt-6-astra", "effort": "high" }
+             },
+             "wait": { "mode": "until_terminal", "warn_after_ms": 120000, "warn_every_ms": 300000 },
+             "history": { "retention_days": 30, "max_bytes": 104857600 }
+           }
+         }
+       }
+       ```
+       Note: V2 routes require distinct `primary` and `backup` target objects (`backend`, `model`, `effort`); `timeout_ms` is retired in V2 routes in favor of `wait` policy (`mode: "until_terminal"`, `warn_after_ms`, `warn_every_ms`). Run `evcrate advisor settings preview --json --request-file <preview-request.json>` and extract the returned opaque `token`.
+     - Step 4 (Apply): Construct an apply request file with the returned preview token and current revision object:
+       ```json
+       {
+         "protocol": "evcrate-advisor-settings",
+         "protocolVersion": 1,
+         "requestId": "00000000-0000-4000-8000-000000000002",
+         "operation": "apply",
+         "payload": {
+           "token": "<preview-token-from-preview-response>",
+           "currentRevision": { "kind": "present", "identity": "<identity-from-get>" }
+         }
+       }
+       ```
+       Run `evcrate advisor settings apply --json --request-file <apply-request.json>` to atomically commit. The transaction uses temporary `.advisor-settings-backup-*` files and cleans them up upon success.
+     - Note: V1 policy remains operational via direct compatibility checkpoints; migration is an explicit operator choice. Credentials are never written to policy.
+   - **Harness publication**: Run `evcrate publish --dry-run --json` to preview managed target updates; when authorized, run `evcrate publish --apply --json` to atomically promote controller and projections into `$HOME`.
+   - **Rollback execution runbook**:
+     - **Interrupted publication recovery**: If a publication transaction is interrupted mid-promotion, run `evcrate recover --json` to roll back staged changes using `$HOME/.evcrate/publication/` backups.
+     - **Interrupted settings recovery**: `evcrate recover` is strictly for publication journals. If an advisor-settings transaction is interrupted, run `evcrate advisor settings get --json` using the same state-root configuration (by default `$HOME/.local/state/evcrate/advisor-settings-journal.json`, or pass explicit `--state-home`). This automatically detects the journal under `context.stateRoot`, finalizes or restores the policy, and removes the journal. Verify successful recovery and journal removal before continuing.
+     - **Completed publication release rollback**: After a publication transaction has committed, `evcrate recover` is a no-op (`action: "none"`). To roll back a completed publication release to a prior version:
+       1. Roll back the installed package snapshot: `./install.sh rollback <prior-snapshot>` (or `.\install.ps1 rollback <prior-snapshot>`), which repoints `<data-dir>/current` and the launcher to the prior generation.
+       2. From that restored package snapshot, run `evcrate publish --apply --json` to re-publish the prior generation's matching controller and projections into `$HOME`.
+     - **Policy rollback**:
+       The V2 settings API strictly requires `version: 2` and rejects V1 policy writes. To roll back from V2 policy to V1 policy:
+       1. Pause consultations across harnesses.
+       2. Restore the pre-migration V1 backup file manually:
+          `cp "$HOME/.evcrate/advisor-routing.json.pre-v2.bak" "$HOME/.evcrate/advisor-routing.json"`
+          `chmod 0600 "$HOME/.evcrate/advisor-routing.json"`
+       3. Resume consultations.
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)

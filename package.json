@@ -44,6 +44,7 @@
     "semantic-release": "semantic-release",
     "generate:brief": "node scripts/generate-runtime-brief.mjs",
     "generate:inventory": "node scripts/generate-controller-inventory.mjs",
+    "generate:registry": "node scripts/generate-resource-registry.mjs",
     "generate:manifests": "node scripts/build-manifests.mjs",
     "generate:all": "npm run generate:inventory && npm run build && npm run generate:registry && npm run generate:manifests",
     "prepack": "npm run build && node scripts/generate-resource-registry.mjs",

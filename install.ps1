@@ -51,14 +51,26 @@ $ADVISOR_CONTROLLER_FILES = @(
     'lib/advisor/adapters/omp-parser.cjs',
     'lib/advisor/adapters/pi.cjs',
     'lib/advisor/checkpoint-contract.cjs',
+    'lib/advisor/contracts-v2.cjs',
     'lib/advisor/controller-envelope.cjs',
     'lib/advisor/controller.cjs',
     'lib/advisor/errors.cjs',
+    'lib/advisor/history-contract.cjs',
+    'lib/advisor/history-prune.cjs',
+    'lib/advisor/history-query.cjs',
+    'lib/advisor/history-store.cjs',
     'lib/advisor/isolated-workspace.cjs',
     'lib/advisor/json-document.cjs',
+    'lib/advisor/managed-checkpoint.cjs',
     'lib/advisor/policy-schema.cjs',
     'lib/advisor/profile.cjs',
-    'lib/advisor/runner.cjs'
+    'lib/advisor/runner.cjs',
+    'lib/advisor/runtime-brief.generated.cjs',
+    'lib/advisor/state-baseline.cjs',
+    'lib/advisor/state-contract.cjs',
+    'lib/advisor/state-human.cjs',
+    'lib/advisor/state-io.cjs',
+    'lib/advisor/task-state.cjs'
 )
 
 # ---------------------------------------------------------------------------
@@ -1160,7 +1172,7 @@ function Perform-Install {
         }
     }
 
-    # Verify 17-file controller closure
+    # Verify controller closure
     if ($metadata.controller_closure_digest) {
         $controllerDir = [System.IO.Path]::Combine($packageDir, '.evcrate', 'source', '.evcrate', 'bin')
         if (-not [System.IO.Directory]::Exists($controllerDir)) {
