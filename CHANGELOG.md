@@ -1,3 +1,42 @@
+## [2.0.0](https://github.com/EigenCrate/evcrate/compare/v1.0.0...v2.0.0) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **distribution:** Python migration engine and parity suites retired; distribution requires pure TypeScript runtime. Filesystem permission bitmasks removed per Option A.
+
+### 🚀 Features
+
+* **advisor:** deliver canonical mentoring brief and structured advice body ([9839484](https://github.com/EigenCrate/evcrate/commit/9839484b3d2ce53c84c4c93c03a3bb74015341ea))
+* **advisor:** freeze v2 contracts and safe policy migration ([a5da28d](https://github.com/EigenCrate/evcrate/commit/a5da28dd554b1b83439b4dce9e5f571c8a83a5e3))
+* **advisor:** implement cooperative mentoring and harness integration ([aa17d5b](https://github.com/EigenCrate/evcrate/commit/aa17d5b6f86a7eac9a050a7b31ac9853cad519ba))
+* **advisor:** implement durable task state and correction gates ([b762447](https://github.com/EigenCrate/evcrate/commit/b762447835b50720d7d618b2d1c193f6d402270d))
+* **advisor:** implement end-to-end acceptance and improvement evaluation baseline ([1b98006](https://github.com/EigenCrate/evcrate/commit/1b98006ce521ffeec44965c7830792cadaf536b4))
+* **advisor:** implement indefinite wait, cancellation dominance, and verified cleanup ([84c110e](https://github.com/EigenCrate/evcrate/commit/84c110e4c2841093b9ce3dfc4dc1834d7689c3ea))
+* **advisor:** implement primary retry and backup orchestration ([27b361a](https://github.com/EigenCrate/evcrate/commit/27b361a15262f747c39169c20fe18f3c5b097220))
+* **advisor:** implement sanitized audit history, outcomes, and review tools ([5f1bb87](https://github.com/EigenCrate/evcrate/commit/5f1bb8718cc50fdb6412a2f92ec704eb4b0820aa))
+* **advisor:** qualify adapters, enforce strict terminal parsing, and adapt generation limits ([8b6084a](https://github.com/EigenCrate/evcrate/commit/8b6084afb08ef93f4688b488b9a00069eda1da69))
+* **catalogs:** finalize regeneration, documentation, and release gates ([b5d1345](https://github.com/EigenCrate/evcrate/commit/b5d1345a36326e0ff025b9c6d98e7d2c914d0907))
+* **catalogs:** freeze catalog schema, add source identity, and enforce freshness checks ([73f5b51](https://github.com/EigenCrate/evcrate/commit/73f5b510b5c406b91cd3cd988c557505de3f5b8b))
+* **catalogs:** implement seven-target scanner and catalog adapters ([30b22f7](https://github.com/EigenCrate/evcrate/commit/30b22f772e4b6d23c59ece6ca88324f2ecd9b5fa))
+* **catalogs:** normalize canonical metadata and implement strict scanner core ([92abcfe](https://github.com/EigenCrate/evcrate/commit/92abcfe9434e5e4fa6e2b75ae6a77d1c0797db6d))
+* **distribution:** cutover to pure TypeScript distribution and remove python parity ([8d41394](https://github.com/EigenCrate/evcrate/commit/8d413945e20d6f68bf78a94ba84041aa1bc74f82))
+* **distribution:** generate projections, synchronize build manifests, and stage coherent cutover ([40db1ab](https://github.com/EigenCrate/evcrate/commit/40db1abd32ab781b991f7bf9aa461e55db03e753))
+* **hooks:** finalize verification, signal safety, and target projections ([7fc866b](https://github.com/EigenCrate/evcrate/commit/7fc866b2aa2a6771f54cf2cf969e9eec94a130bb))
+* **hooks:** standardize ignore policy, sync target projections, and complete verification ([547b184](https://github.com/EigenCrate/evcrate/commit/547b184ecb5ea1ffae07fd41c0cff56c89cd5354))
+* **hooks:** unblock build commands and refine path extraction ([b6830e3](https://github.com/EigenCrate/evcrate/commit/b6830e3ce6b03c11e5ef256006eb575bf75f25d2))
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** harden clause conjunctions, affirmative stuck directives, and lifecycle status assertions ([fa533f6](https://github.com/EigenCrate/evcrate/commit/fa533f6c9f434552829134cf4877a5733a98eeb8))
+* **advisor:** harden V2 envelope validation correspondence and stack pattern guards ([bf9e933](https://github.com/EigenCrate/evcrate/commit/bf9e93364e33fb1a578162cc760d01bf46d31221))
+
+
+### 📚 Documentation
+
+* **scripts:** update scanner specs and refresh build manifests ([5df3c46](https://github.com/EigenCrate/evcrate/commit/5df3c4690af6c2c92a8f41a67a34cd996758c499))
+
 ## 1.0.0 (2026-09-06)
 
 
