@@ -98,11 +98,14 @@ test('atomic files, staged roots, locks, and release markers are durable boundar
 test('staged-root cleanup refuses an inode-replaced directory', () => {
   const root = temporaryDirectory();
   const stage = createStagedRoot(root);
-  rmSync(stage.path, { recursive: true, force: true });
+  const backup = `${stage.path}.bak`;
+  renameSync(stage.path, backup);
   mkdirSync(stage.path);
+  rmSync(backup, { recursive: true, force: true });
   writeFileSync(join(stage.path, 'sentinel'), 'keep');
   assert.throws(() => stage.cleanup(), code('PATH_UNSAFE'));
   assert.equal(readFileSync(join(stage.path, 'sentinel'), 'utf8'), 'keep');
+  rmSync(stage.path, { recursive: true, force: true });
 });
 test('publishers enforce mutual exclusion on the lock protocol', async () => {
   const root = temporaryDirectory();

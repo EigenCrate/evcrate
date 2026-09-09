@@ -84,7 +84,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
         join(packageRoot, 'scripts', 'prepare-release-assets.cjs'),
         pkg.version,
         '--allow-fixture-identity'
-      ], { cwd: packageRoot, stdio: 'ignore' });
+      ], { cwd: packageRoot, stdio: 'inherit' });
     }
     const installResult = spawnSync('sh', [
       installSh, '--data-dir', dataDir, '--state-dir', stateDir, '--bin-dir', binDir
@@ -109,7 +109,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     ], {
       cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
     });
-    assert.equal(dryRun.status, 0, dryRun.stderr);
+    assert.equal(dryRun.status, 0, dryRun.stderr || dryRun.stdout);
     const dryRunResult = JSON.parse(dryRun.stdout);
     assert.equal(dryRunResult.status, 'preview');
     assert.equal(dryRunResult.operation, 'publish.dry-run');
@@ -132,7 +132,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     ], {
       cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
     });
-    assert.equal(apply.status, 0, apply.stderr);
+    assert.equal(apply.status, 0, apply.stderr || apply.stdout);
     const applyResult = JSON.parse(apply.stdout);
     assert.equal(applyResult.status, 'published');
     assert.equal(applyResult.operation, 'publish.apply');
@@ -162,7 +162,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     ], {
       cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
     });
-    assert.equal(repeatApply.status, 0, repeatApply.stderr);
+    assert.equal(repeatApply.status, 0, repeatApply.stderr || repeatApply.stdout);
     const repeatResult = JSON.parse(repeatApply.stdout);
     assert.equal(repeatResult.status, 'published');
 
@@ -175,6 +175,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     ], {
       cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
     });
+    assert.equal(recover.status, 0, recover.stderr || recover.stdout);
     const recoverResult = JSON.parse(recover.stdout);
     assert.equal(recoverResult.status, 'recovered');
     assert.equal(recoverResult.operation, 'recover');
@@ -185,6 +186,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     ], {
       cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
     });
+    assert.ok(health.status === 0 || health.status === 1 || health.status === 3, health.stderr || health.stdout);
     const healthResult = JSON.parse(health.stdout);
     assert.ok(healthResult.status === 'QUALIFIED' || healthResult.status === 'FAILED');
     assert.equal(healthResult.protocol, 'evcrate-advisor-diagnostic');

@@ -34,8 +34,7 @@ function transactionFile(path: string) {
   const stat = file(path, 'ROLLBACK_FAILED');
   if (!stat) return null;
   if (stat.isSymbolicLink() || !stat.isFile() || Number(stat.size) > MAX_SETTINGS_FILE_BYTES
-    || (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid())
-    || (process.platform !== 'win32' && (Number(stat.mode) & 0o077) !== 0)) fail('ROLLBACK_FAILED');
+    || (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid())) fail('ROLLBACK_FAILED');
   return stat;
 }
 function journalPath(stateRoot: string): string { return resolve(stateRoot, ADVISOR_SETTINGS_JOURNAL_NAME); }

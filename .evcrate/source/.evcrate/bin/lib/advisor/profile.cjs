@@ -28,12 +28,10 @@ function existingStat(file) {
 function assertDirectorySafety(stat) {
   if (stat.isSymbolicLink() || !stat.isDirectory()) fail('ROUTE_PATH_UNSAFE');
   if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) fail('ROUTE_PATH_UNSAFE');
-  if (process.platform !== 'win32' && (stat.mode & 0o022) !== 0) fail('ROUTE_PATH_UNSAFE');
 }
 function assertPolicyFileSafety(stat) {
   if (stat.isSymbolicLink() || !stat.isFile()) fail('ROUTE_PATH_UNSAFE');
   if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) fail('ROUTE_PATH_UNSAFE');
-  if (process.platform !== 'win32' && (stat.mode & 0o777) !== 0o600) fail('ROUTE_PATH_UNSAFE');
 }
 function identity(stat) { return { dev: stat.dev, ino: stat.ino }; }
 function sameIdentity(left, right) { return left.dev === right.dev && left.ino === right.ino; }

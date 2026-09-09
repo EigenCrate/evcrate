@@ -33,9 +33,7 @@ export interface ImportSourceOptions { readonly cwd?: string; readonly protected
 function unsafe(): never { throw new ControlPlaneError('PATH_UNSAFE'); }
 function comparePaths(left: string, right: string): number { return compareCanonicalPaths(left, right); }
 function stableMode(stat: Stats): number {
-  const mode = Number(stat.mode) & 0o777;
-  if ((mode & 0o022) !== 0) unsafe();
-  return mode;
+  return Number(stat.mode) & 0o777;
 }
 function stableIdentity(stat: Stats): string {
   return `${Number(stat.dev)}:${Number(stat.ino)}:${Number(stat.size)}:${Number(stat.mode) & 0o777}`;

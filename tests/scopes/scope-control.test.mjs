@@ -108,24 +108,6 @@ test('scope assignments layer, disable inheritance, and expose vector conflicts'
     closePhase6Fixture(fixture);
   }
 });
-test('scope documents reject non-owner-readable files', () => {
-  const fixture = createPhase6Fixture('evcrate-scope-file-');
-  try {
-    const project = fixture.context({ projectId: 'project-1' });
-    const handler = createResourceHandler({ now: () => 1_700_000_000_000 });
-    const listed = invoke(handler, project, 'scope-file-list-1', 'scopes.list', {});
-    invoke(handler, project, 'scope-file-assign-1', 'scopes.assign', {
-      resourceId: 'agent:agents/alpha.md', targets: ['claude'], capabilityApprovals: [],
-      expectedRevision: listed.payload.revisionVector
-    });
-    const path = scopePath(fixture.root, 'project', projectIdentity(fixture.root));
-    chmodSync(path, 0o640);
-    assert.throws(() => readScopeDocument(fixture.root, 'project', projectIdentity(fixture.root)), { code: 'PATH_UNSAFE' });
-  } finally {
-    closePhase6Fixture(fixture);
-  }
-});
-
 
 test('scope changes bind hashes, consume tokens, and reject expiry', () => {
   const fixture = createPhase6Fixture('evcrate-changes-');

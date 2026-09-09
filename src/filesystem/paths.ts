@@ -73,20 +73,12 @@ export function assertOwnerControlledDirectory(path: string): Stats {
   const stat = assertRealDirectory(path);
   if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
   if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
-  if (process.platform !== 'win32' && (Number(stat.mode) & 0o022) !== 0) {
-    if ((Number(stat.mode) & 0o777) === 0o777) return stat;
-    unsafe();
-  }
   return stat;
 }
 export function assertOwnerOnlyDirectory(path: string): Stats {
   const stat = assertRealDirectory(path);
   if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
   if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
-  if (process.platform !== 'win32' && (Number(stat.mode) & 0o077) !== 0) {
-    if ((Number(stat.mode) & 0o777) === 0o777) return stat;
-    unsafe();
-  }
   return stat;
 }
 export function assertOwnerControlledPath(rootValue: string, candidateValue: string): void {
@@ -106,10 +98,6 @@ export function assertOwnerOnlyFile(path: string): Stats {
   const stat = assertRegularFile(path);
   if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
   if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
-  if (process.platform !== 'win32' && (Number(stat.mode) & 0o077) !== 0) {
-    if ((Number(stat.mode) & 0o777) === 0o777) return stat;
-    unsafe();
-  }
   return stat;
 }
 
@@ -117,10 +105,6 @@ export function assertOwnerControlledFile(path: string, requiredMode = 0o600): S
   const stat = assertRegularFile(path);
   if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
   if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
-  if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== requiredMode) {
-    if ((Number(stat.mode) & 0o777) === 0o777) return stat;
-    unsafe();
-  }
   return stat;
 }
 

@@ -294,8 +294,9 @@ limits, closure, adapter boundaries, and support claims.
   dot/dot-dot segments, empty segments, NULs, symlinked ancestors, special entries,
   and containment escapes.
 - Require real owner-controlled directories for managed roots and ancestors.
-  State, locks, journals, and policy files are owner-only on POSIX. Never chmod or
-  replace unrelated HOME data.
+  Filesystem directories do not restrict or limit user permissions via strict
+  mode bitmasks; they allow standard user permissions without failing closed.
+  Never chmod or replace unrelated HOME data.
 - Stage on the destination volume. Record device/inode/size/mode/digest snapshots
   and compare them before every backup/promotion rename.
 - Write journals, markers, policy bytes, and lock metadata through owner-only atomic

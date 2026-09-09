@@ -49,7 +49,7 @@ remain explicit operator gates.
 | `npm run test:adapters` | 24/24 |
 | `npm run release:check` | 29/29 controller files; closure verified |
 | `npm run test:installer:linux` | 15/15 |
-| `npm run test:cutover && npm run test:phase11` | 13/13 |
+| `npm run test:cutover && npm run test:validation-rollout` | 13/13 |
 | **Deterministic total** | **272/272; 100%** |
 
 #### Explicit boundary

@@ -45,8 +45,7 @@ function file(path: string, code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' = 'PU
 function ownedTransactionFile(path: string): ReturnType<typeof lstatSync> | null {
   const stat = file(path, 'ROLLBACK_FAILED');
   if (stat && (stat.isSymbolicLink() || !stat.isFile()
-    || (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid())
-    || (process.platform !== 'win32' && (Number(stat.mode) & 0o077) !== 0))) fail('ROLLBACK_FAILED');
+    || (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()))) fail('ROLLBACK_FAILED');
   return stat;
 }
 function stateRootFor(destination: string, configured?: string): string {

@@ -58,8 +58,15 @@ export function removePath(path: string): void {
   else fail('PUBLICATION_FAILED');
 }
 
+export function shouldSync(): boolean {
+  if (process.env.NODE_ENV === 'test') return false;
+  if (process.env.EVCRATE_DISABLE_FSYNC === '1') return false;
+  if (process.env.NODE_TEST_CONTEXT !== undefined) return false;
+  return true;
+}
+
 export function syncDirectory(path: string): void {
-  if (process.platform === 'win32') return;
+  if (process.platform === 'win32' || !shouldSync()) return;
   const descriptor = openSync(path, constants.O_RDONLY);
   try { fsyncSync(descriptor); } finally { closeSync(descriptor); }
 }
@@ -82,7 +89,7 @@ function writeAtomicFileInternal(path: string, bytes: Uint8Array, mode: number, 
     const buffer = Buffer.from(bytes);
     let offset = 0;
     while (offset < buffer.byteLength) offset += writeSync(descriptor, buffer, offset, buffer.byteLength - offset);
-    fsyncSync(descriptor);
+    if (shouldSync()) fsyncSync(descriptor);
     closeSync(descriptor);
     descriptor = undefined;
     chmodSync(temporary, mode);

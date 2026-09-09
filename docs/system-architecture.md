@@ -189,9 +189,9 @@ Wait warnings are bounded to `1000..3600000` ms; history retention is
 output, termination, and adapter probes remain bounded. Policy bytes remain
 bounded to 16 KiB and use fatal-UTF-8/strict-JSON parsing,
 duplicate-key, control-character, credential, unknown-field, unsafe-path, and
-candidate-backend checks. The policy file is regular, owner-only `0600`;
-`$HOME` and `.evcrate` ancestors must be real owner-controlled directories.
-
+candidate-backend checks. The policy file is regular and user-owned;
+`$HOME` and `.evcrate` ancestors must be real user-controlled directories without
+limiting mode bitmasks or failing closed on standard umask permissions.
 Candidate backends are `claude`, `codex`, `antigravity`, `pi`, and `omp`;
 enabled backends are `claude`, `codex`, `pi`, and `omp`. `antigravity` is an
 unavailable candidate; Gemini and Copilot are not controller backends.

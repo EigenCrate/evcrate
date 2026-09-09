@@ -29,4 +29,16 @@ async function run(): Promise<void> {
   }
 }
 
-void run();
+run().catch((error) => {
+  const message = error instanceof Error ? error.stack || error.message : String(error);
+  if (process.argv.includes('--json')) {
+    process.stdout.write(JSON.stringify({
+      protocol: 'evcrate-cli',
+      status: 'error',
+      error: { code: 'INTERNAL_ERROR', category: 'internal', action: 'Retry or inspect the bounded diagnostic.', message }
+    }) + '\n');
+  } else {
+    process.stderr.write(`${message}\n`);
+  }
+  process.exitCode = signalCode ?? 6;
+});
