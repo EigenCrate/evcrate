@@ -4,6 +4,8 @@ EVCrate is a private Node/TypeScript package that authors one agent-harness sour
 tree, builds verified projections for seven targets, and publishes managed output
 with explicit ownership, hashing, locking, and recovery rules. It also ships one
 shared checkpoint advisor controller.
+**Release:** 2.0.0 (`628183eb`); deterministic acceptance is complete, while live
+vendor qualification and production HOME publication remain operator-gated.
 
 ## Download & installation
 
@@ -24,9 +26,9 @@ Download the release assets corresponding to your operating system from [GitHub 
 
 1. **Download release assets** into the same directory:
    - `install.sh`
-   - `evcrate-v<version>-linux-x64.tar.gz`
-   - `evcrate-v<version>-linux-x64.tar.gz.sha256`
-   - `evcrate-v<version>.release.json`
+   - `evcrate-v2.0.0-linux-x64.tar.gz`
+   - `evcrate-v2.0.0-linux-x64.tar.gz.sha256`
+   - `evcrate-v2.0.0.release.json`
 
 2. **Make the installer executable and install**:
    ```bash
@@ -58,9 +60,9 @@ Download the release assets corresponding to your operating system from [GitHub 
 
 1. **Download release assets** into the same folder:
    - `install.ps1`
-   - `evcrate-v<version>-windows-x64.zip`
-   - `evcrate-v<version>-windows-x64.zip.sha256`
-   - `evcrate-v<version>.release.json`
+   - `evcrate-v2.0.0-windows-x64.zip`
+   - `evcrate-v2.0.0-windows-x64.zip.sha256`
+   - `evcrate-v2.0.0.release.json`
 
 2. **Run the installer in PowerShell**:
    ```powershell
@@ -175,27 +177,54 @@ Configure the required user-owned policy at
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "advisor": {
-    "backend": "codex",
-    "model": "gpt-5.6-sol",
-    "effort": "high",
-    "timeout_ms": 900000
-  }
+    "primary": {"backend": "codex", "model": "operator-selected", "effort": "high"},
+    "backup": {"backend": "omp", "model": "operator-selected", "effort": "high"}
+  },
+  "wait": {"mode": "until_terminal", "warn_after_ms": 120000, "warn_every_ms": 300000},
+  "history": {"retention_days": 30, "max_bytes": 104857600}
 }
 ```
 
-The controller accepts one direct ten-key checkpoint object on stdin and emits one
-frozen JSON envelope. Missing or malformed policy, unsafe paths, failed probes,
-timeouts, cancellation, and final-process failures fail closed; there is no retry,
-provider switch, model substitution, or local fallback. The controller is published
-once to `$HOME/.evcrate/bin/evcrate-advisor`; policy remains user-owned and is never
+Use distinct routes. Enabled controller backends are `claude`, `codex`, `pi`, and
+`omp`; `antigravity` is unavailable, and Gemini/Copilot are not controller
+backends. Replace `operator-selected` with model IDs qualified for each backend.
+`timeout_ms` is retired from v2 routes.
+
+For an existing policy, migrate explicitly and non-clobberingly:
+
+1. Back up the file without overwriting an existing backup:
+   ```bash
+   node -e 'const fs = require("node:fs"); fs.writeFileSync(process.env.HOME + "/.evcrate/advisor-routing.json.pre-v2", fs.readFileSync(process.env.HOME + "/.evcrate/advisor-routing.json"), { flag: "wx", mode: 0o600 })'
+   ```
+2. Retrieve the current revision and mode:
+   ```bash
+   evcrate advisor settings get --json
+   ```
+3. Prepare a v2 preview request file, then inspect its one-time token:
+   ```bash
+   evcrate advisor settings preview --json --request-file <req.json>
+   ```
+4. Put that token and the current revision in an apply request file and commit:
+   ```bash
+   evcrate advisor settings apply --json --request-file <apply.json>
+   ```
+
+The controller accepts the v2 checkpoint (plus an explicit v1 compatibility
+checkpoint) and emits one terminal JSON envelope. V2 retries only transient
+primary failures: up to four sequential launches with cancellable 10/20/30-second
+backoff, then one invocation of the configured backup after four failures or a
+preflight skip. Backup failure is terminal; there is no provider substitution,
+parallel hedge, or local fallback. Policy remains user-owned and is never
 published. Read the [architecture contract](./docs/system-architecture.md) before
 qualifying a live CLI.
 
-A final standalone `--advice` token requests checkpoint counsel in the bootstrap,
-code, cook, and fix workflows. `@advisor` remains ordinary task text. The separate
-inline advice workflow does not use checkpoint routing policy.
+A final standalone `--advice` token activates formal `evcrate-advisor-checkpoint/v2`
+mentoring during bootstrap, code, cook, and fix reviews, for up to three correction
+cycles. `@advisor` remains ordinary task text. The documentation-facing
+`/cmd-advise` name (the `/advise` command) is a separate interview-first main-session
+workflow and does not use checkpoint routing policy.
 
 ## Documented command names
 

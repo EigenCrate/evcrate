@@ -1,7 +1,7 @@
 # System Architecture
 
 **Status:** Current implementation reference  
-**Updated:** 2026-09-08  
+**Updated:** 2026-09-09  
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -11,7 +11,7 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `1.0.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.0.0`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections. Node `>=22.19.0` is the package engine. The package exposes:
 
@@ -97,17 +97,20 @@ manifest. The manifest records source, adapter, controller, owner, output, and
 validation metadata. The current build is usable only when validation is complete
 and all current source/adapter/output hashes, ownership, and expected files match.
 
-Build/check and publication are separate operations. `publish dry-run` plans changes;
-`publish apply` stages a complete publication under the publication lock; `recover`
-restores an interrupted transaction. The publisher:
+Build/check and publication are separate operations. `publish dry-run` plans
+changes; `publish apply` executes a journaled ordered-rename transaction on the
+destination volume under the publication lock; `recover` validates and replays
+that journal. This is not a single whole-filesystem atomic swap. The publisher:
 
 1. resolves target manifests and non-overlapping output roots;
 2. validates owner-controlled, non-symlink ancestors and unmanaged-collision policy;
 3. stages files on the destination volume;
-4. records a release journal/marker and identity/hash snapshots;
-5. backs up the prior managed set and atomically promotes the staged set;
+4. records a release journal/marker and per-operation identity/hash snapshots;
+5. renames prior managed destinations to transaction backups in declared order,
+   then renames staged files into place;
 6. verifies the promoted state before removing the backup; or
-7. restores the complete prior state when recovery is required.
+7. on conflict or uncertain state, fails closed and leaves the journal for
+   `recover`, which restores the complete prior state only after identity checks.
 
 Unmanaged HOME files remain preserved. Advisor policy and unrelated HOME roots are
 not publication inputs. The TypeScript engine is authoritative for the current
@@ -345,14 +348,19 @@ closed until separately implemented/qualified. Optional rich audit is not requir
 state authority. V1 callers remain outside this v2 state path until the Phase 08
 canonical workflow cutover; no universal mediated-write enforcement is claimed.
 
-### 5.4 Current one-shot transaction and v1/v2 envelopes
+### 5.4 Current v1 compatibility and v2 bounded transaction envelopes
 
 `runController` accepts both the v1 compatibility checkpoint and the v2
-checkpoint. It remains one target and one model attempt with no retry,
-provider switch, model/effort substitution, downgrade, callback, native relay,
-or local fallback. It generates a correlation UUID, parses the checkpoint,
-loads policy once, probes one adapter, creates one empty owner-only workspace,
-and cleans up after the child exits.
+checkpoint. The v1 compatibility path remains one target and one model attempt.
+For v2, Phase 05 runs a managed transaction with up to four sequential primary
+launches on transient failures, using cancellable 10/20/30-second backoff. After
+four primary failures or a route-local preflight skip, it qualifies and invokes
+the configured backup once. Backup failure is terminal; there is no provider or
+model substitution, parallel hedge, or local fallback.
+
+The controller generates a correlation UUID, parses the checkpoint, loads policy
+once, probes each selected adapter before its launch, creates one empty owner-only
+workspace, and cleans up after each child exits.
 
 For a v2 checkpoint, the controller computes the checkpoint digest and uses
 `formatMentorPrompt`: the generated canonical mentor brief is followed by
@@ -396,6 +404,10 @@ arguments, and result parsing. Installed vendor CLIs retain their own credential
 EVCrate's adapter auth-key allowlists are empty. Version equality alone is not
 qualification: model/effort controls, authentication boundary, no-tool/session
 policy, output protocol, and lifecycle probes must pass.
+For v2, every primary retry and the one-shot backup repeats adapter qualification
+and qualification-to-spawn executable identity checks. At most one model process
+is active; cancellation, non-retryable failure, or unconfirmed cleanup prevents
+later launches.
 
 The runner uses `shell: false`, fixed allowlisted argv/environment, stdin-only
 prompt delivery, fatal UTF-8 decoding, bounded streams/results, and one
@@ -451,7 +463,7 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
-## 8. Advisor mentoring upgrade (Phases 01–09 complete; Phase 09 DONE (2026-09-08; 100%); Phase 10 NEXT (0%) acceptance pending)
+## 8. Advisor mentoring upgrade (Phases 01–10 complete; Phase 10 DONE (Deterministic Acceptance))
 
 Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
 Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
@@ -469,6 +481,9 @@ user-baseline preservation. Phase 09 generates and stages all seven target proje
 synchronizes build manifests and registry, establishes 29-file controller closure parity
 across runtime and installers, proves disposable HOME preservation and recovery, and
 delivers the operator cutover runbook.
+Phase 10 deterministic acceptance is complete: 272/272 tests, 29/29 controller
+closure files, and a 9/9 sanitized mentoring baseline. Live vendor qualification
+and production HOME publication remain operator-gated.
 
 Phase 08 evidence is 279/279 tests passed; Lead Mentor approval 10/10; user approved.
 Phase 09 evidence is complete controller inventory/brief closure across all runtime
@@ -567,11 +582,12 @@ atomic publication into a verified, staged cutover without performing premature 
    - Preservation of user-owned `$HOME/.evcrate/advisor-routing.json`, task state, and history.
 
 4. **Publication isolation, state root, and crash recovery**:
-   Publication to `$HOME` remains atomic and transactionally journaled:
+Publication to `$HOME` is a journaled ordered-rename transaction on the
+destination volume, not a single whole-filesystem atomic swap:
    - **State root**: `$HOME/.evcrate/publication/` (with active transaction directory `$HOME/.evcrate/publication/release-<releaseId>/`).
    - **Pre-publication dry-run**: `evcrate publish --dry-run --json` reports authorized changes and binding order (`.evcrate/bin` then target bindings).
-   - **Atomic apply**: `evcrate publish --apply --json` promotes files via atomic rename with transaction backups under `$HOME/.evcrate/publication/release-<releaseId>/backups/`.
-   - **External modification protection**: If an unmanaged or external modification occurs on a destination path, `publishApply` detects **CAS_CONFLICT**, leaves the external file untouched, and stops with a retained journal.
+   - **Atomic apply**: `evcrate publish --apply --json` stages complete outputs, records each rename, and promotes files in the declared order with transaction backups under `$HOME/.evcrate/publication/release-<releaseId>/backups/`.
+   - **External modification protection**: If an unmanaged or external modification occurs on a destination path, `publishApply` detects **CAS_CONFLICT**, leaves the external file untouched, and stops with a retained journal; recovery fails closed until the path is reconciled.
    - **Interrupted transaction recovery (`evcrate recover --json`)**:
      - `publishApply` writes an initial release marker with status `promoting`. Both uncommitted statuses (`staged` or `promoting`) use rollback recovery when valid, restoring all promoted files to their pre-transaction state using transaction backups (`action: "rolled-back"`).
      - If promotion completed but a crash occurred during cleanup (journal status `committed`), recovery finalizes the release and purges unretained backups (`action: "finalized"`).
@@ -601,9 +617,9 @@ atomic publication into a verified, staged cutover without performing premature 
    - **Standalone installer upgrade**: Execute `./install.sh install` (Linux) or `.\install.ps1 install` (Windows). This installs the new snapshot under `<data-dir>/snapshots/<version>-<hash>-<gen>` and points `<data-dir>/current` and the launcher to it.
    - **Policy migration workflow**:
      - Policy remains strictly user-owned at `$HOME/.evcrate/advisor-routing.json`.
-     - Step 1 (Atomic non-clobbering backup): Before modifying policy, create an atomic, exclusive, owner-only backup using the `wx` flag (failing if the destination file or symlink exists):
+    - Step 1 (Exclusive non-clobbering backup): Before modifying policy, create an exclusive, owner-only backup using the `wx` flag (failing if the destination file or symlink exists):
        ```bash
-       node -e 'const fs = require("fs"); const src = process.env.HOME + "/.evcrate/advisor-routing.json"; const dst = src + ".pre-v2.bak"; fs.writeFileSync(dst, fs.readFileSync(src), { flag: "wx", mode: 0o600 });'
+       node -e 'const fs = require("node:fs"); fs.writeFileSync(process.env.HOME + "/.evcrate/advisor-routing.json.pre-v2", fs.readFileSync(process.env.HOME + "/.evcrate/advisor-routing.json"), { flag: "wx", mode: 0o600 });'
        ```
        If the destination exists, the command fails with **EEXIST**, preventing silent overwrites or rotation of a prior verified backup.
      - Step 2 (Inspect current revision): Run `evcrate advisor settings get --json` to inspect current policy and retrieve its `revision` and `mode` objects.
@@ -657,7 +673,7 @@ atomic publication into a verified, staged cutover without performing premature 
        The V2 settings API strictly requires `version: 2` and rejects V1 policy writes. To roll back from V2 policy to V1 policy:
        1. Pause consultations across harnesses.
        2. Restore the pre-migration V1 backup file manually:
-          `cp "$HOME/.evcrate/advisor-routing.json.pre-v2.bak" "$HOME/.evcrate/advisor-routing.json"`
+          `cp "$HOME/.evcrate/advisor-routing.json.pre-v2" "$HOME/.evcrate/advisor-routing.json"`
           `chmod 0600 "$HOME/.evcrate/advisor-routing.json"`
        3. Resume consultations.
 ## Related documents

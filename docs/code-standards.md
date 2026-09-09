@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-07  
+**Updated:** 2026-09-09  
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 
@@ -48,6 +48,9 @@ is the navigation map.
 scoped repository inventory. Do not describe them as alternate engines. The current
 package path is TypeScript; source retains compatibility-engine types for transition
 and validation boundaries, but no root `distribute.py` command is canonical.
+The seven generated target trees are listed above; the persisted adapter IDs remain
+`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, and `copilot`. Do not count
+the `.agents` Codex companion root as an additional adapter.
 
 ### Scout-block ignore policy
 
@@ -65,9 +68,10 @@ not block a bare lexical command token (`build`) or safe near-matches such as
 negation behavior. Do not add `!dist`/`!build` command workarounds, infer file
 types from the working tree, or hand-edit generated projections.
 
-The canonical Claude resources are the only authored hook source. Regenerate
-the six target projections (`.omp`, `.pi`, `.copilot`, `.codex`, `.gemini`,
-`.antigravity`) and require `npm run distribute:check` before publication.
+The canonical Claude resources are the only authored hook source. Regenerate the
+seven generated target trees (`.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`,
+`.omp`, `.copilot`) and require `npm run distribute:check` before publication.
+`.agents` is Codex's companion output root, not an eighth adapter.
 Projected and published OMP runtime behavior must retain the same allow/block
 boundary.
 
@@ -106,11 +110,14 @@ A request file is one complete bounded versioned envelope and is mutually exclus
 with positional command construction. JSON and non-TTY output derive from the same
 validated result.
 
-Do not add a daemon, listener, retry loop, background worker, counsel proxy,
-arbitrary launcher, or direct migrator dispatch. Compatibility paths must be
-explicit and transition-only; they must not mix Python and TypeScript mutations in
-one atomic operation. Unknown failures become stable sanitized errors; raw paths,
-child stderr, credentials, and stack traces do not cross the public boundary.
+Do not add a daemon, listener, generic/unbounded retry loop, background worker,
+arbitrary launcher, or direct migrator dispatch. The managed v2 advisor controller
+is the explicit retry exception: Phase 05 permits up to four sequential primary
+launches with cancellable 10/20/30-second backoff, followed by one configured
+backup; no other CLI operation retries. Compatibility paths must be explicit and
+transition-only; they must not mix Python and TypeScript mutations in one atomic
+operation. Unknown failures become stable sanitized errors; raw paths, child
+stderr, credentials, and stack traces do not cross the public boundary.
 
 ### Naming and module design
 
@@ -167,6 +174,22 @@ overlong values, traversal, symlinked ancestors, special entries, and invalid
 ownership. Use stable control-plane error codes and established exit mapping. Never
 return secrets, policy credentials, raw child output, raw filesystem implementation
 paths, or stack traces.
+### Control-plane error taxonomy
+
+`ControlPlaneErrorCategory` is the stable public classification. Exit codes are
+grouped by category:
+
+| Category | Exit code | Typical boundary |
+|---|---:|---|
+| `success` | 0 | Operation completed successfully. |
+| `usage`, `protocol` | 2 | CLI syntax or versioned request shape is invalid. |
+| `validation`, `path`, `capability` | 3 | Input, path, or requested capability is unsupported. |
+| `conflict` | 4 | A revision or ownership CAS check failed. |
+| `publication`, `rollback`, `recovery` | 5 | Publication transaction or recovery failed. |
+| `internal` | 6 | Unexpected failure; expose only the sanitized diagnostic. |
+
+Keep this mapping in `src/errors/control-plane-error.ts`; do not invent
+operation-specific exit codes at individual call sites.
 
 ## Manifest, registry, and resource standards
 

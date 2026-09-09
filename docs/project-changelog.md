@@ -2,10 +2,24 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-08  
+**Updated:** 2026-09-09  
 **Status:** Advisor mentoring/recovery/audit Phase 10 DONE (2026-09-08;
 deterministic acceptance 100%); live qualification and HOME publication remain
-operator-gated; release remains Unreleased
+operator-gated; the v2.0.0 milestone is recorded below and future changes remain
+Unreleased
+
+## [2.0.0] - 2026-09-09
+
+**Release commit:** `628183eb` (`chore(release): 2.0.0 [skip ci]`)  
+**Status:** Phase 10 deterministic acceptance complete.
+
+- Aligns the v2.0.0 release with the pure TypeScript control plane, seven-target
+  projections, schema-2 manifests, and v2 advisor routing/retry orchestration.
+- Deterministic acceptance: 272/272 tests, 29/29 controller-closure files, and
+  9/9 sanitized mentoring baseline cases passed.
+- Live vendor qualification and production `$HOME/.evcrate/` publication remain
+  operator-gated; no live quality or rollout claim is made.
+
 
 ### 2026-09-08 — test(advisor): verify deterministic Phase 10 acceptance and establish synthetic improvement baseline (phase-10)
 
@@ -74,7 +88,7 @@ claiming live qualification, measured quality improvement, or authorized rollout
 ### 2026-09-08 — feat(distribution): generate projections, synchronize build manifests, and stage coherent cutover (phase-09)
 
 **Status:** Phase 09 DONE (2026-09-08; 100%); superseded by the Phase 10
-deterministic acceptance entry above; release remains Unreleased
+deterministic acceptance entry above; the v2.0.0 milestone is recorded above
 **Plan:** [Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md)  
 **Evidence:** Full controller closure parity (29 files), 24/24 adapter projection tests, 7/7 cutover tests, 11/11 publication recovery tests, 15/15 installer tests, 5/5 private unpack rollout tests, passing `npm run distribute:check` and `npm run release:check`
 
@@ -627,9 +641,9 @@ allowlist.
 
 #### Projection and runtime parity
 
-- Regenerated six target projections (`.omp`, `.pi`, `.copilot`, `.codex`,
-  `.gemini`, `.antigravity`) from canonical Claude resources; each carries the
-  standardized policy and segment-aware hook closure.
+- Regenerated seven generated projection roots (`.agents`, `.omp`, `.pi`,
+  `.copilot`, `.codex`, `.gemini`, `.antigravity`) from canonical Claude resources;
+  each carries the standardized policy and segment-aware hook closure.
 - Manifest and distribution checks report no projection drift. Published OMP
   policy, hook closure, and runtime helper match the generated OMP projection.
 

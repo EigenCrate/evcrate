@@ -1,13 +1,13 @@
 # Codebase Summary
 
-**Generated:** 2026-09-08
+**Generated:** 2026-09-09
 **Source:** Fresh repository compaction produced by Repomix v1.18.0 at
 `repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs, which were
 checked directly for Phase 10 evidence.  
 **Purpose:** Compact navigation map, not a copy of the compaction.
 
 The repository is a private Node/TypeScript package. `package.json` declares
-`evcrate` version `1.0.0`, Node `>=22.19.0`, the `evcrate` bin at
+`evcrate` version `2.0.0`, Node `>=22.19.0`, the `evcrate` bin at
 `dist/cli/evcrate.js`, and the `evcrate-advisor` bin at
 `.evcrate/source/.evcrate/bin/evcrate-advisor`.
 
@@ -248,8 +248,9 @@ Focused canonical runs on 2026-09-07 reported 299/299 passing assertions:
 | `test-monorepo-scenarios.js` | 33 passed |
 Evidence: [Phase 04 test report](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md) and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md).
 
-The six generated projections (`.omp`, `.pi`, `.copilot`, `.codex`, `.gemini`,
-`.antigravity`) carry the canonical policy and hook closure without drift.
+The seven generated projection roots (`.agents`, `.codex`, `.gemini`,
+`.antigravity`, `.pi`, `.omp`, `.copilot`) carry the canonical policy and hook
+closure without drift.
 The latest `npm run distribute:check` returned `status: "ok"` across all seven
 registered adapters. Projected and published OMP runtime smoke returns `0, 0, 2, 2`
 for allowed builds, an environment-prefixed build, a chained read, and a direct
@@ -695,76 +696,27 @@ in disposable roots; evaluation uses representative advice without production hi
 Phase 10 closes deterministic acceptance without claiming live qualification,
 measured quality improvement, or authorized rollout.
 
-## Advisor controller timing and cleanup (Phase 02)
+## Advisor invocation modes
 
-`runner.cjs` rejects mixed timing options at invocation construction and exposes
-`createProbeRunner` for bounded probes plus `createGenerationRunner` for
-indefinite generation. Cancellation is checked before spawn, during process
-execution, after close, across result parsing, and before terminal commit, so
-provisional advice cannot win a cancellation race. Warning delivery is
-non-blocking and cannot block process draining or terminal settlement.
+A final standalone `--advice` token activates formal checkpoint mentoring through
+`evcrate-advisor-checkpoint/v2` during reviews, for up to three correction cycles.
+The documentation-facing `/cmd-advise` name (the `/advise` command) is a separate
+interview-first main-session workflow; it does not use checkpoint routing policy
+or invoke the shared checkpoint controller.
 
-Detached POSIX process groups receive TERM/KILL escalation. Cleanup verification
-checks leader liveness, process-group liveness, and the leader close/reap event;
-successful generation requires confirmed cleanup. `isolated-workspace.cjs`
-confirms workspace removal only when the absence probe returns **ENOENT**.
-`controller.cjs` carries `cleanup_outcome` across runner/controller boundaries,
-including probe cleanup uncertainty, and converts uncertain cleanup into
-failure rather than successful advice. The focused Phase 02 closure passes
-65/65 advisor-controller tests and the real smoke scenario completes after
-31.25s of delayed generation with bounded `stderr` warnings.
+## Distribution publication rules
 
-## Advisor adapter qualification and strict terminal parsing (Phase 03)
+Target manifests own publication transforms; generated output is never hand-edited.
 
-Phase 03 qualifies the four enabled advisor backends (`claude`, `codex`, `pi`,
-and `omp`) against fixed invocations, exact route controls, isolated
-noninteractive sessions, read-only/no-tool behavior, and bounded output.
-`adapter-contract.cjs` requires version, auth, capability, invocation, result,
-and failure-classification methods; `adapter-registry.cjs` keeps `antigravity`
-as an unavailable candidate.
+| Rule | Target | Effect |
+|---|---|---|
+| `omp-agent-prefix` | OMP | Prefixes every published relative path with `agent/`. |
+| `codex-home-path-rewrite` | Codex | Rewrites `hooks.json` and `config.toml` paths to the destination HOME root. |
+| `claude-skill-root-exclusion` | Claude | Omits root-level `skills/*` files while retaining nested skill packages. |
+| `reject_unmanaged_collisions` | Copilot | Blocks publication when an unmanaged destination path collides; Copilot alone enables this flag. |
 
-### Qualification surface
-
-- Claude, Pi, OMP, and Codex parsers enforce target-specific terminal lifecycle,
-  route attestation, output protocol, and no-tool semantics before advice.
-- Typed errors preserve protocol, read-only, output-limit, auth, capability, and
-  process boundaries; arbitrary child stderr is not a success or retry signal.
-- `resolveInvocationLimits` gives probes finite deadlines while generation
-  carries no generation deadline; streams, output, termination, and warnings stay
-  bounded.
-- Focused adapter coverage lives in
-  `tests/advisor-controller/{claude-adapter,pi-adapter,omp-adapter}.test.cjs`,
-  `fixtures/fake-omp.cjs`, and runner/controller generation-limit cases.
-
-Evidence: Phase 03 records 92/92 advisor-controller tests; Phase 10 records
-24/24 adapter tests. These fixtures prove deterministic parser/control behavior
-only, not live vendor authentication or paid route qualification. See the
-[system architecture](./system-architecture.md) for full adapter contracts.
-
-## Advisor v2 contracts and safe policy migration (Phase 01)
-
-The CJS closure and TypeScript control plane deliberately keep separate
-validators: `.evcrate/source/.evcrate/bin/lib/advisor/{contracts-v2,policy-schema,
-checkpoint-contract,controller-envelope,controller,errors}.cjs` and
-`src/protocol/{advisor-contracts,advisor-settings,diagnostic}.ts`. The pair
-freezes the same policy/checkpoint/result/envelope shapes without importing
-`dist/` into the standalone runtime.
-
-- Policy v2 is exact `version`/`advisor`/`wait`/`history`; advisor has explicit
-  `primary`/`backup` route triples, wait warnings, and bounded history. Distinct
-  routes required; backend/model/effort values remain operator-selected.
-- Checkpoint/result/controller v2 bind task/checkpoint/evidence identity,
-  structured task/evidence/result fields, bounded attempts, sanitized errors,
-  and audit status. Task state, execution history, and outcomes are new v1
-  local records with bounded owner-only storage.
-- Legacy host-v1 and single-target-v1 policies are readable through settings
-  `get` as migration views, never executable. Operator migration is
-  `get -> prepare v2 -> preview -> apply`; CAS revisions, byte-safe journal
-  recovery, ownership, and preview replay protection remain.
-- Settings request/result, journal, and preview schemas stay v1 while carrying
-  policy v2. No automatic HOME rewrite, invented backup route, or fallback
-  runtime path. See [system architecture](./system-architecture.md) and the
-  [Phase 01 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md).
+Build resolution uses `.evcrate/build-manifest-<target>.json` for one selected
+target and `.evcrate/build-manifest.json` for multiple or all targets.
 
 ## Projection map
 

@@ -1,7 +1,7 @@
 # Project Overview and Product Development Requirements
 
 **Status:** Current requirements baseline  
-**Updated:** 2026-09-08  
+**Updated:** 2026-09-09
 
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -44,11 +44,17 @@ counsel bounded and fail-closed.
 ### Out of scope for this baseline
 
 - Editing generated projections or renaming canonical source commands.
-- A daemon, background advisor broker, retries, provider switching, model
-  substitution, local fallback, or native callback relay.
+- A daemon, background advisor broker, or generic/unbounded CLI retry loop.
+- Provider switching, model substitution, local fallback, or native callback relay
+  outside the managed v2 controller flow.
 - Copilot as a controller backend.
 - Windows equivalence, live vendor qualification, npm publication, deployment, or
   operator rollout claims without separate evidence.
+  
+The managed Phase-05 exception is in scope under FR-7: up to four sequential
+primary attempts with cancellable 10/20/30-second backoff and one configured
+backup invocation. It is bounded and controller-owned; generic CLI retries remain
+out of scope.
 
 ## Product requirements
 
@@ -91,10 +97,12 @@ context, dispatches one operation, writes one validated result, and exits. Suppo
 operations are version, health, resource, import, scope/change, advisor-settings, and
 `distribute` build/check/publish/all/recover operations.
 
-**Acceptance:** `--request-file` accepts one complete bounded versioned envelope and is
-mutually exclusive with positional construction. Unknown input and child failures
-produce stable sanitized errors; no daemon, listener, retry loop, or arbitrary
-launcher is introduced. The package's default runtime requires Node `>=22.19.0`.
+**Acceptance:** `--request-file` accepts one complete bounded versioned envelope and
+is mutually exclusive with positional construction. Unknown input and child failures
+produce stable sanitized errors; no daemon, listener, generic/unbounded retry loop,
+or arbitrary launcher is introduced. The managed v2 advisor retry schedule is the
+explicit FR-7 exception and does not apply to other CLI operations. The package's
+default runtime requires Node `>=22.19.0`.
 
 ### FR-5: Advisor policy ownership and safe migration
 
@@ -105,6 +113,8 @@ launcher is introduced. The package's default runtime requires Node `>=22.19.0`.
 `until_terminal`, and history has bounded retention/quota. Policy remains
 user-owned. Settings request/result, journal, and preview transport remain
 version 1 while carrying the v2 policy payload.
+The [README advisor checkpoint](../README.md#advisor-checkpoint) contains the v2
+template and the operator migration sequence.
 
 **Acceptance:** Policy bytes are bounded to 16 KiB and strict UTF-8/JSON
 validated. Missing, malformed, duplicate-key, credential-bearing, unknown,
@@ -243,6 +253,10 @@ required state.
 | Maintainability | One parser, path policy, hashing policy, lock protocol, and error serializer per boundary. |
 
 ## Observable release gates
+**v2.0.0 release status:** Phase 10 deterministic acceptance is complete
+(272/272 tests, 29/29 controller-closure files, and a 9/9 sanitized mentoring
+baseline). Live vendor qualification and production `$HOME/.evcrate/` publication
+remain operator-gated.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and 29-file

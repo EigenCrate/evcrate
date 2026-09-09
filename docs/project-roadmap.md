@@ -1,7 +1,9 @@
 # Project Roadmap
 
-**Status:** Phase 10 DONE (2026-09-08; 100%); deterministic acceptance complete; live qualification and operator/release gates remain separate
-**Updated:** 2026-09-08
+**Status:** Phase 10 DONE (Deterministic Acceptance; 272/272 tests, 29/29
+closure files, 9/9 sanitized baseline); live vendor qualification and HOME
+publication remain operator-gated  
+**Updated:** 2026-09-09
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
 the [system architecture](./system-architecture.md), Phase 08 integration
 evidence, and the [Phase 10 QA acceptance report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
@@ -46,7 +48,7 @@ policy; they are not hand edited.
 | Advisor mentoring/recovery/audit — Phase 07 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md) and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md); completed at 100% with owner-only sanitized execution/outcome history, bounded attempt snapshots, CAS terminal settlement, linked executor outcomes, audit degradation independent of inference, and managed `history list|show|export|prune` review tools. Evidence: 204/204 advisor-controller tests passed (19/19 targeted); Phase Lead/Senior Mentor sign-off is unconditional approval at 10/10. |
 | Advisor mentoring/recovery/audit — Phase 08 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md) and [integration evidence](../tests/adapters/phase08-mentoring-integration.test.mjs); canonical `evcrate-advisor-checkpoint/v2` dispatcher migrated across all 16 code/cook/bootstrap/fix consumers; seven targets declare mentoring supported and write checks advisory-only; real CLI Path A/Path B lifecycles, exact correction ordinals 1/2/3, durable `needs_human`, and user-baseline preservation are covered. Evidence: 279/279 tests; Lead Mentor approval 10/10; user approved. |
 | Advisor mentoring/recovery/audit — Phase 09 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md); generated and verified seven target projections, synchronized schema-2 manifests/registry, verified the exact 29-file controller closure, passed network-isolated installer and publication-recovery checks, preserved disposable HOME, and documented operator cutover/rollback. Actual HOME publication remains operator-gated pending explicit operator authorization. |
-| Advisor mentoring/recovery/audit — Phase 10 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-10-acceptance-qualification-and-improvement-evaluation.md) and [QA acceptance](../plans/reports/qa-260908-1915-phase10-acceptance.md); deterministic acceptance: 272/272 tests passing; runtime closure: 29/29 files verified; sanitized mentoring baseline: 9/9 cases passed; live qualification gated on explicit operator authorization; HOME publication remains a separate operator gate. |
+| Advisor mentoring/recovery/audit — Phase 10 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-10-acceptance-qualification-and-improvement-evaluation.md) and [QA acceptance](../plans/reports/qa-260908-1915-phase10-acceptance.md); deterministic acceptance is complete: 272/272 tests, 29/29 runtime-closure files, and a 9/9 sanitized mentoring baseline; live qualification and HOME publication remain operator-gated. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -58,8 +60,10 @@ policy; they are not hand edited.
 
 ## Immediate next gates
 
-Phase 10 deterministic acceptance is complete. Live vendor/host qualification,
-HOME application, and release remain separate operator gates.
+Phase 10 deterministic acceptance is complete: 272/272 tests pass, 29/29
+runtime-closure files verify, and the 9/9 sanitized mentoring baseline passes.
+Live vendor qualification and production `$HOME/.evcrate/` publication remain
+operator-gated; deterministic evidence does not authorize rollout.
 
 1. **Use canonical source.** Change `.evcrate/source/.claude/`, the shared controller
    root, or a declared target overlay—not generated projection trees.
