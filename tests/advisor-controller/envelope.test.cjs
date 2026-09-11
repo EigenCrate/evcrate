@@ -59,3 +59,18 @@ test('failure envelope serializes only the typed actionable error', () => {
   assert.equal(Object.isFrozen(value.error), true);
   assert.equal(Object.isFrozen(value), true);
 });
+
+test('failure envelope serializes REQUEST_INVALID with revised version-neutral action', () => {
+  const value = envelope.buildFailureEnvelope({
+    correlation_id: ID,
+    receipt: { elapsed_ms: 2 },
+    error: createRoutingError('REQUEST_INVALID'),
+  });
+  assert.deepEqual(Object.keys(value), ['protocol', 'version', 'correlation_id', 'status', 'receipt', 'error']);
+  assert.deepEqual(value.error, {
+    code: 'REQUEST_INVALID',
+    category: 'request',
+    action: 'Provide a valid advisor checkpoint request. In V2, evidence.files requires objects with { path, excerpt, digest } and intended_changed_paths are strings.',
+    message: 'Advisor checkpoint request is invalid',
+  });
+});

@@ -188,77 +188,77 @@ const PROPOSAL_KEYS = Object.freeze(['next_action', 'rationale', 'intended_chang
 const EVIDENCE_V2_KEYS = Object.freeze(['summary', 'files', 'validation_results', 'artifacts']);
 const PRIOR_KEYS = Object.freeze(['prior_consultation_id', 'prior_counsel', 'prior_disposition', 'observed_outcome']);
 
-function validateCheckpointV2(value) {
-  assertKeys(value, CHECKPOINT_V2_KEYS);
-  if (value.protocol !== CHECKPOINT_PROTOCOL_V2 || value.version !== CHECKPOINT_VERSION_V2) fail();
-  validateUuid(value.task_run_id);
-  validateText(value.checkpoint_id, 128);
-  validateText(value.phase_id, 128);
-  validateNonNegativeSafeInteger(value.task_revision);
-  validateNonNegativeSafeInteger(value.evidence_revision);
-  validateText(value.checkpoint, 128);
-  if (!DECISION_KINDS.includes(value.kind)) fail();
-  validateText(value.question, MAX_QUESTION_BYTES);
+function validateCheckpointV2(value, code = 'PROTOCOL_INVALID') {
+  assertKeys(value, CHECKPOINT_V2_KEYS, code);
+  if (value.protocol !== CHECKPOINT_PROTOCOL_V2 || value.version !== CHECKPOINT_VERSION_V2) fail(code);
+  validateUuid(value.task_run_id, code);
+  validateText(value.checkpoint_id, 128, false, code);
+  validateText(value.phase_id, 128, false, code);
+  validateNonNegativeSafeInteger(value.task_revision, code);
+  validateNonNegativeSafeInteger(value.evidence_revision, code);
+  validateText(value.checkpoint, 128, false, code);
+  if (!DECISION_KINDS.includes(value.kind)) fail(code);
+  validateText(value.question, MAX_QUESTION_BYTES, false, code);
 
   // task
-  assertKeys(value.task, TASK_KEYS);
-  validateText(value.task.goal, MAX_TASK_BYTES, true);
-  if (!Array.isArray(value.task.non_goals)) fail();
-  value.task.non_goals.forEach((item) => validateText(item, MAX_TASK_BYTES, true));
-  if (!Array.isArray(value.task.authorized_paths)) fail();
-  value.task.authorized_paths.forEach(validateSafeRelativePath);
-  if (new Set(value.task.authorized_paths).size !== value.task.authorized_paths.length) fail();
-  validateText(value.task.scope_rationale, MAX_TASK_BYTES, true);
-  if (!Array.isArray(value.task.invariants)) fail();
-  value.task.invariants.forEach((item) => validateText(item, MAX_TASK_BYTES, true));
-  if (!Array.isArray(value.task.success_criteria)) fail();
-  value.task.success_criteria.forEach((item) => validateText(item, MAX_TASK_BYTES, true));
+  assertKeys(value.task, TASK_KEYS, code);
+  validateText(value.task.goal, MAX_TASK_BYTES, true, code);
+  if (!Array.isArray(value.task.non_goals)) fail(code);
+  value.task.non_goals.forEach((item) => validateText(item, MAX_TASK_BYTES, true, code));
+  if (!Array.isArray(value.task.authorized_paths)) fail(code);
+  value.task.authorized_paths.forEach((p) => validateSafeRelativePath(p, code));
+  if (new Set(value.task.authorized_paths).size !== value.task.authorized_paths.length) fail(code);
+  validateText(value.task.scope_rationale, MAX_TASK_BYTES, true, code);
+  if (!Array.isArray(value.task.invariants)) fail(code);
+  value.task.invariants.forEach((item) => validateText(item, MAX_TASK_BYTES, true, code));
+  if (!Array.isArray(value.task.success_criteria)) fail(code);
+  value.task.success_criteria.forEach((item) => validateText(item, MAX_TASK_BYTES, true, code));
 
   // proposal
-  assertKeys(value.proposal, PROPOSAL_KEYS);
-  validateText(value.proposal.next_action, MAX_TASK_BYTES, true);
-  validateText(value.proposal.rationale, MAX_TASK_BYTES, true);
-  if (!Array.isArray(value.proposal.intended_changed_paths) || value.proposal.intended_changed_paths.length > MAX_CHANGED_PATHS) fail();
-  value.proposal.intended_changed_paths.forEach(validateSafeRelativePath);
-  if (new Set(value.proposal.intended_changed_paths).size !== value.proposal.intended_changed_paths.length) fail();
+  assertKeys(value.proposal, PROPOSAL_KEYS, code);
+  validateText(value.proposal.next_action, MAX_TASK_BYTES, true, code);
+  validateText(value.proposal.rationale, MAX_TASK_BYTES, true, code);
+  if (!Array.isArray(value.proposal.intended_changed_paths) || value.proposal.intended_changed_paths.length > MAX_CHANGED_PATHS) fail(code);
+  value.proposal.intended_changed_paths.forEach((p) => validateSafeRelativePath(p, code));
+  if (new Set(value.proposal.intended_changed_paths).size !== value.proposal.intended_changed_paths.length) fail(code);
 
   // evidence
-  assertKeys(value.evidence, EVIDENCE_V2_KEYS);
-  validateText(value.evidence.summary, MAX_EVIDENCE_TEXT_BYTES, true);
-  if (!Array.isArray(value.evidence.files) || value.evidence.files.length > MAX_EVIDENCE_FILES) fail();
+  assertKeys(value.evidence, EVIDENCE_V2_KEYS, code);
+  validateText(value.evidence.summary, MAX_EVIDENCE_TEXT_BYTES, true, code);
+  if (!Array.isArray(value.evidence.files) || value.evidence.files.length > MAX_EVIDENCE_FILES) fail(code);
   let aggregateEvidenceTextBytes = bytes(value.evidence.summary);
   value.evidence.files.forEach((file) => {
-    assertKeys(file, ['path', 'excerpt', 'digest']);
-    validateSafeRelativePath(file.path);
-    validateText(file.excerpt, MAX_EVIDENCE_TEXT_BYTES, true);
-    validateDigest(file.digest);
+    assertKeys(file, ['path', 'excerpt', 'digest'], code);
+    validateSafeRelativePath(file.path, code);
+    validateText(file.excerpt, MAX_EVIDENCE_TEXT_BYTES, true, code);
+    validateDigest(file.digest, code);
     aggregateEvidenceTextBytes += bytes(file.excerpt);
   });
-  if (new Set(value.evidence.files.map((f) => f.path)).size !== value.evidence.files.length) fail();
-  if (!Array.isArray(value.evidence.validation_results) || value.evidence.validation_results.length > 16) fail();
+  if (new Set(value.evidence.files.map((f) => f.path)).size !== value.evidence.files.length) fail(code);
+  if (!Array.isArray(value.evidence.validation_results) || value.evidence.validation_results.length > 16) fail(code);
   value.evidence.validation_results.forEach((r) => {
-    validateValidationResult(r);
+    validateValidationResult(r, code);
     aggregateEvidenceTextBytes += bytes(r.suite);
     aggregateEvidenceTextBytes += bytes(r.command);
     if (typeof r.details === 'string') {
       aggregateEvidenceTextBytes += bytes(r.details);
     }
   });
-  if (!Array.isArray(value.evidence.artifacts) || value.evidence.artifacts.length > 16) fail();
+  if (!Array.isArray(value.evidence.artifacts) || value.evidence.artifacts.length > 16) fail(code);
   value.evidence.artifacts.forEach((a) => {
-    validateArtifactRef(a);
+    validateArtifactRef(a, code);
     aggregateEvidenceTextBytes += bytes(a.id);
     aggregateEvidenceTextBytes += bytes(a.description);
   });
-  if (aggregateEvidenceTextBytes > MAX_EVIDENCE_TEXT_BYTES) fail('REQUEST_INVALID');
+  if (aggregateEvidenceTextBytes > MAX_EVIDENCE_TEXT_BYTES) fail(code === 'PROTOCOL_INVALID' ? 'REQUEST_INVALID' : code);
   // prior
-  assertKeys(value.prior, PRIOR_KEYS);
-  if (value.prior.prior_consultation_id !== null) validateUuid(value.prior.prior_consultation_id);
-  validateOptionalText(value.prior.prior_counsel, MAX_TASK_BYTES, true);
-  validateOptionalText(value.prior.prior_disposition, MAX_TASK_BYTES, true);
-  validateOptionalText(value.prior.observed_outcome, MAX_TASK_BYTES, true);
+  assertKeys(value.prior, PRIOR_KEYS, code);
+  if (value.prior.prior_consultation_id !== null) validateUuid(value.prior.prior_consultation_id, code);
+  validateOptionalText(value.prior.prior_counsel, MAX_TASK_BYTES, true, code);
+  validateOptionalText(value.prior.prior_disposition, MAX_TASK_BYTES, true, code);
+  validateOptionalText(value.prior.observed_outcome, MAX_TASK_BYTES, true, code);
 
-  if (bytes(JSON.stringify(value)) > MAX_ENVELOPE_BYTES) fail('REQUEST_INVALID');
+  if (bytes(JSON.stringify(value)) > MAX_ENVELOPE_BYTES) fail(code === 'PROTOCOL_INVALID' ? 'REQUEST_INVALID' : code);
   return deepFreeze(value);
 }
 function computeCheckpointDigestV2(checkpoint) {

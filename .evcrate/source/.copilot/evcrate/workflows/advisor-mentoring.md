@@ -62,10 +62,14 @@ Use only these canonical checkpoint IDs:
 Routine planning, minor edits, and preference choices do not create a
 checkpoint. The caller supplies one precise question, terminal evidence,
 changed paths, relevant prior counsel, and the owner's earlier disposition.
-Include at most four repository-relative evidence files and sixteen changed
-paths. Exclude secrets, credentials, policy contents, raw stderr, stacks,
-traces, broad dumps, and unrelated logs.
-
+Include at most four repository-relative evidence file objects and sixteen changed
+paths. In V2, `evidence.files` is an array of 0-4 objects each having exactly
+`path`, `excerpt`, and `digest`. `path` is a safe repository-relative POSIX path.
+`excerpt` is non-empty text bounded within the aggregate 16 KiB evidence text budget.
+`digest` is the lowercase 64-character SHA-256 hex digest of the complete current
+file bytes (never the excerpt). `proposal.intended_changed_paths` is an array of
+relative path strings; bare strings in `evidence.files` are invalid. Exclude secrets,
+credentials, policy contents, raw stderr, stacks, traces, broad dumps, and unrelated logs.
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
@@ -146,7 +150,13 @@ Before invoking inference, reserve the checkpoint gate (advances revision from 1
       },
       "evidence": {
         "summary": "Terminal review completed. Tests passed.",
-        "files": [],
+        "files": [
+          {
+            "path": "source.txt",
+            "excerpt": "initial user work",
+            "digest": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+          }
+        ],
         "validation_results": [
           {
             "suite": "test",
@@ -203,7 +213,13 @@ Pass the exact reserved checkpoint JSON directly to `evcrate-advisor`:
   },
   "evidence": {
     "summary": "Terminal review completed. Tests passed.",
-    "files": [],
+    "files": [
+      {
+        "path": "source.txt",
+        "excerpt": "initial user work",
+        "digest": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+      }
+    ],
     "validation_results": [
       {
         "suite": "test",

@@ -18,8 +18,9 @@ Every consultation is independent and one-shot. Name exactly one
 owner disposition explicitly; never rely on hidden conversation state.
 
 The caller supplies one precise question, task or phase, terminal review or
-test evidence, changed paths, constraints, and at most four relevant
-repository-relative text files. Keep all values bounded. Exclude secrets,
+test evidence, changed paths (as strings), constraints, and at most four relevant
+evidence file objects, each having exact keys { path, excerpt, digest } (never bare
+string paths). Keep all values bounded. Exclude secrets,
 credentials, policy contents, broad repository dumps, raw stderr, stacks,
 and unrelated logs.
 

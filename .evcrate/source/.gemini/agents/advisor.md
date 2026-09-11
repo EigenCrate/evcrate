@@ -16,7 +16,7 @@ caller invokes you for one fresh named checkpoint under explicit `--advice`.
 2. The caller supplies the version 2 `evcrate-advisor-checkpoint` object with
    task contract, proposal, decision kind, precise question, bounded evidence,
    and relevant prior context.
-3. Use at most four repository-relative evidence files. Treat supplied review
+3. Use at most four evidence file objects, each having exact keys { path, excerpt, digest } (never bare strings; changed paths are separate string arrays). Treat supplied review
    and test reports as evidence; do not broaden into a repository audit.
 4. Compare viable next actions, prefer the least complex safe option, and state
    assumptions or evidence gaps the executor must verify.

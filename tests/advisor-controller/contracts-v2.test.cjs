@@ -242,6 +242,24 @@ test('validateCheckpointV2 rejects duplicate paths in authorized_paths, proposal
   }));
 });
 
+test('validateCheckpointV2 rejects string evidence.files with custom code or default PROTOCOL_INVALID', () => {
+  const badCheckpoint = {
+    ...VALID_CHECKPOINT_V2,
+    evidence: {
+      ...VALID_CHECKPOINT_V2.evidence,
+      files: ['source.txt']
+    }
+  };
+  assert.throws(
+    () => validateCheckpointV2(badCheckpoint, 'REQUEST_INVALID'),
+    (err) => err.code === 'REQUEST_INVALID'
+  );
+  assert.throws(
+    () => validateCheckpointV2(badCheckpoint),
+    (err) => err.code === 'PROTOCOL_INVALID'
+  );
+});
+
 test('validateCheckpointV2 enforces aggregate evidence text budget of 16 KiB across all fields', () => {
   // Summary + files excerpts exceed
   const oversizedFiles = {

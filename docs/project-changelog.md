@@ -2,11 +2,18 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-09  
-**Status:** Advisor mentoring/recovery/audit Phase 10 DONE (2026-09-08;
-deterministic acceptance 100%); live qualification and HOME publication remain
-operator-gated; the v2.0.0 milestone is recorded below and future changes remain
-Unreleased
+**Updated:** 2026-09-11  
+**Status:** Advisor checkpoint V2 evidence schema and diagnostics fix complete.
+
+### 2026-09-11 — fix(advisor): resolve V2 evidence.files schema ambiguity and improve input diagnostics
+
+- Resolved `PROTOCOL_INVALID` failure on caller-provided string `evidence.files` by differentiating client request validation from downstream adapter protocol errors.
+- Parameterized `validateCheckpointV2(value, code = 'PROTOCOL_INVALID')`; request boundaries in `state-contract.cjs` and `task-state.cjs` pass `REQUEST_INVALID`.
+- Updated `REQUEST_INVALID` in `errors.cjs` to provide version-neutral, actionable instructions indicating that V2 `evidence.files` requires `{ path, excerpt, digest }` objects and `intended_changed_paths` are strings. Preserved exact four-key error envelope.
+- Populated empty `evidence.files` examples in canonical `advisor-mentoring.md` and `brief-contract.md` with schema-valid `{ path, excerpt, digest }` fixtures while maintaining exactly 10 extractable JSON blocks.
+- Clarified agent instructions across all seven target projections (`advisor.md`, `SKILL.md`).
+- Validated zero projection drift across all seven harnesses via `distribute:check` and 100% test pass rate across 230 tests (`test:advisor-controller` 207/207, `test:adapters` 23/23).
+- Independent code review (9.5/10 Approved) and mentor review (`review:hard-fix` with GPT-5.6 Sol high effort: Approved).
 
 ## [2.0.0] - 2026-09-09
 

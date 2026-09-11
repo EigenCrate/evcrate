@@ -70,7 +70,7 @@ function initialize(request, location) {
   };
 }
 function matchCheckpoint(state, checkpoint, location, reserved = false) {
-  validateCheckpointV2(checkpoint);
+  validateCheckpointV2(checkpoint, 'REQUEST_INVALID');
   if (checkpoint.task_run_id !== state.task_run_id || checkpoint.phase_id !== state.phase_id
     || !equal(checkpoint.task, effectiveTask(state))) fail('STATE_CONFLICT');
   if (!reserved && checkpoint.task_revision !== state.task_revision) fail('STALE_STATE_REVISION');

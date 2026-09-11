@@ -13,7 +13,7 @@ Prepare one concise, decision-oriented brief for one fresh consultation.
 - `question`: one precise decision question (at most 4 KiB).
 - `task`: goal, non_goals, authorized_paths, scope_rationale, invariants, success_criteria.
 - `proposal`: next_action, rationale, intended_changed_paths (at most 16 paths).
-- `evidence`: summary, files (at most 4 files with path, excerpt, digest), validation_results (at most 16), artifacts (at most 16).
+- `evidence`: summary, files (at most 4 file objects each with exact keys path, excerpt, digest; bare string paths are invalid), validation_results (at most 16), artifacts (at most 16). For each file, path is a safe repo-relative path, excerpt is non-empty text within the 16 KiB aggregate evidence budget, and digest is the lowercase 64-hex SHA-256 of the complete current file content matching recorded task-state baseline.
 - `prior`: prior_consultation_id, prior_counsel, prior_disposition, observed_outcome.
 
 Exclude secrets, credentials, policy contents, environment values, broad
@@ -52,7 +52,13 @@ fourteen canonical fields and no outer operation object:
   },
   "evidence": {
     "summary": "139 tests passing across all suites",
-    "files": [],
+    "files": [
+      {
+        "path": "source.txt",
+        "excerpt": "initial user work",
+        "digest": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+      }
+    ],
     "validation_results": [],
     "artifacts": []
   },

@@ -71,7 +71,7 @@ function setup(t) {
     assert.equal(reserved.value.status, 'STATE_READY', JSON.stringify(reserved));
     return request;
   }
-  return { home, cwd, environment, invoke, operation, checkpoint, reserve,
+  return { home, cwd, environment, invoke, operation, checkpoint, reserve, task,
     provider: () => JSON.parse(fs.readFileSync(providerState, 'utf8')) };
 }
 
@@ -157,6 +157,28 @@ test('actual CLI completes concern-free review with no correction and no invente
   assert.equal(completed.value.state.gate_status, 'completed');
   assert.equal(completed.value.state.correction_count, 0);
   assert.equal(fs.readFileSync(path.join(f.cwd, 'source.txt'), 'utf8'), 'original user work\n');
+});
+
+test('state checkpoint rejects string array evidence.files with REQUEST_INVALID without mutating state', (t) => {
+  const f = setup(t);
+  const initialized = f.operation('init', 0, { phase_id: 'phase-06', task: f.task, baseline_paths: ['source.txt'] });
+  assert.equal(initialized.value.status, 'STATE_READY');
+  const badCheckpoint = {
+    ...f.checkpoint(1, 0),
+    evidence: {
+      ...f.checkpoint(1, 0).evidence,
+      files: ['source.txt']
+    }
+  };
+  const result = f.operation('checkpoint', 1, { checkpoint: badCheckpoint });
+  assert.equal(result.exit, 1);
+  assert.equal(result.value.status, 'FAILED');
+  assert.equal(result.value.error.code, 'REQUEST_INVALID');
+  assert.equal(result.value.error.category, 'request');
+  assert.match(result.value.error.action, /evidence\.files requires objects with \{ path, excerpt, digest \}/);
+  const current = f.operation('get', null, {});
+  assert.equal(current.value.state.task_revision, 1);
+  assert.equal(current.value.state.pending, null);
 });
 
 test('terminal human observer propagates cancellation instead of human-event-required', async () => {

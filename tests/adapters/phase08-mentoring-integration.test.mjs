@@ -122,10 +122,14 @@ test('canonical advisor-mentoring.md examples pass runtime schema validation for
   for (const doc of jsonBlocks) {
     if (doc.protocol === 'evcrate-advisor-checkpoint') {
       assert.doesNotThrow(() => validateCheckpointV2(doc));
+      assert.ok(Array.isArray(doc.evidence?.files) && doc.evidence.files.length > 0);
+      assert.ok(doc.evidence.files.every((f) => typeof f === 'object' && f !== null && f.path && f.excerpt && f.digest));
     } else if (doc.protocol === 'evcrate-advisor-state') {
       assert.doesNotThrow(() => parseStateRequest(doc, doc.operation));
       if (doc.operation === 'checkpoint' && doc.payload?.checkpoint) {
         assert.doesNotThrow(() => validateCheckpointV2(doc.payload.checkpoint));
+        assert.ok(Array.isArray(doc.payload.checkpoint.evidence?.files) && doc.payload.checkpoint.evidence.files.length > 0);
+        assert.ok(doc.payload.checkpoint.evidence.files.every((f) => typeof f === 'object' && f !== null && f.path && f.excerpt && f.digest));
       }
     } else {
       assert.fail(`Unexpected protocol in extracted document: ${doc.protocol}`);

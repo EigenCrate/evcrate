@@ -3,7 +3,7 @@
 const CATALOG = Object.freeze({
   REQUEST_INVALID: {
     category: 'request',
-    action: 'Provide one exact evcrate-advisor-checkpoint/v1 request.',
+    action: 'Provide a valid advisor checkpoint request. In V2, evidence.files requires objects with { path, excerpt, digest } and intended_changed_paths are strings.',
     message: 'Advisor checkpoint request is invalid'
   },
   HOME_UNAVAILABLE: {

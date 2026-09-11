@@ -139,7 +139,7 @@ function parseStateRequest(input) {
   if (request.operation === 'init') {
     text(payload.phase_id); validateTask(payload.task); paths(payload.baseline_paths);
     if (request.expected_revision !== 0) fail('STALE_STATE_REVISION');
-  } else if (request.operation === 'checkpoint') validateCheckpointV2(payload.checkpoint);
+  } else if (request.operation === 'checkpoint') validateCheckpointV2(payload.checkpoint, 'REQUEST_INVALID');
   else if (request.operation === 'disposition') validateDisposition(payload);
   else if (request.operation === 'outcome') validateOutcome(payload);
   else if (request.operation === 'human-decision') validateHumanPayload(payload);
