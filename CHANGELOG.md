@@ -1,3 +1,15 @@
+## [2.0.1](https://github.com/EigenCrate/evcrate/compare/v2.0.0...v2.0.1) (2026-09-11)
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** resolve V2 evidence files schema and diagnostics ([cb435e4](https://github.com/EigenCrate/evcrate/commit/cb435e4ccda5d7db98ea9c70ecc9062a8dd5847e))
+
+
+### 📚 Documentation
+
+* update documentation and README for v2.0.0 release ([0dddbd9](https://github.com/EigenCrate/evcrate/commit/0dddbd9429b2fa74d49cc904e7665ef62ed257a7))
+
 ## [2.0.0](https://github.com/EigenCrate/evcrate/compare/v1.0.0...v2.0.0) (2026-09-09)
 
 
