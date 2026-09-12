@@ -1,5 +1,5 @@
 import { lstatSync, readdirSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import {
   COMPLETE_TREE_HASH_LIMITS, completeTreeHash, hashBytes, readBoundedFile,
@@ -13,7 +13,7 @@ import { parseJsonDocument, isPlainObject } from '../protocol/json.js';
 import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
 import {
   MAX_PUBLICATION_STATE_BYTES, MAX_PUBLICATION_CHANGES, PUBLICATION_BINDING_ORDER,
-  PUBLICATION_LOCAL_ROOTS, PUBLICATION_TARGET_BINDINGS
+  PUBLICATION_LOCAL_ROOTS, PUBLICATION_TARGET_BINDINGS, PUBLICATION_PROJECT_TARGET_BINDINGS
 } from '../protocol/publication-payloads.js';
 
 export const MAX_PUBLICATION_FILE_BYTES = COMPLETE_TREE_HASH_LIMITS.maxFileBytes;
@@ -29,6 +29,7 @@ export interface PublicationFile {
   readonly relativePath: string;
   readonly content: Uint8Array;
   readonly hash: string;
+  readonly mode: number;
 }
 export interface PublicationNode {
   readonly present: boolean;
@@ -108,7 +109,9 @@ export function listPublicationFiles(root: string): readonly PublicationFile[] {
         || bytes > PUBLICATION_TRAVERSAL_LIMITS.maxBytes - size) fail();
       bytes += size;
       const content = readBoundedFile(path, MAX_PUBLICATION_FILE_BYTES);
-      files.push(Object.freeze({ relativePath, content, hash: hashBytes(content) }));
+      files.push(Object.freeze({
+        relativePath, content, hash: hashBytes(content), mode: Number(stat.mode) & 0o777
+      }));
     }
   };
   visit(root, 0);
@@ -125,7 +128,10 @@ export function controllerTreeHash(root: string, source = false): string {
     fail();
   }
   const records = [{ relativePath: '', value: `d\0\0${rootMode}\n` },
-    ...listPublicationFiles(root).map(({ relativePath, hash }) => ({ relativePath, value: `f\0${relativePath}\0${hash}\n` }))];
+    ...listPublicationFiles(root).map(({ relativePath, hash, mode }) => {
+      const effectiveMode = relativePath === 'evcrate-advisor' ? 0o755 : mode;
+      return { relativePath, value: `f\0${relativePath}\0${hash}\0${effectiveMode}\n` };
+    })];
   try {
     const stat = lstatSync(join(root, 'evcrate-advisor'));
     if (stat.isSymbolicLink() || !stat.isFile()) fail('PATH_UNSAFE');
@@ -225,8 +231,17 @@ function markerManaged(value: unknown): void {
     if (new Set(normalized).size !== normalized.length) fail();
   }
 }
-function markerTargets(value: unknown): readonly PersistedTarget[] {
-  if (!Array.isArray(value) || value.length === 0) fail();
+function markerProjectManaged(value: unknown): void {
+  if (!isPlainObject(value)) fail();
+  const known = new Set<string>(Object.values(PUBLICATION_PROJECT_TARGET_BINDINGS).flat());
+  for (const [binding, paths] of Object.entries(value)) {
+    if (!known.has(binding) || !Array.isArray(paths)) fail();
+    const normalized = paths.map(markerRelative);
+    if (new Set(normalized).size !== normalized.length) fail();
+  }
+}
+function markerTargets(value: unknown, allowEmpty = false): readonly PersistedTarget[] {
+  if (!Array.isArray(value) || (!allowEmpty && !value.length)) fail();
   const result = value.map((entry) => normalizeTarget(entry));
   if (new Set(result).size !== result.length) fail();
   return Object.freeze(result);
@@ -247,7 +262,7 @@ function validateTargetMarker(marker: Record<string, unknown>): void {
     || !['promoting', 'complete', 'recovered'].includes(String(marker.status))) fail();
   const release = markerRelease(marker.release_id);
   if (marker.transaction_dir !== `release-${release}`) fail();
-  const targets = markerTargets(marker.selected_targets);
+  const targets = markerTargets(marker.selected_targets, true);
   const bindings = marker.binding_order;
   if (!Array.isArray(bindings) || bindings.length !== markerBindings(targets).length
     || bindings.some((value, index) => markerRelative(value) !== markerBindings(targets)[index])) fail();
@@ -256,6 +271,30 @@ function validateTargetMarker(marker: Record<string, unknown>): void {
   if (!/^\.evcrate\/build-manifest(?:-[a-z]+)?\.json$/u.test(markerRelative(marker.build_manifest_path))) fail();
   if (typeof marker.build_manifest_digest !== 'string' || !/^[a-f0-9]{64}$/u.test(marker.build_manifest_digest)) fail();
   if (marker.retained_release_id !== null) markerRelease(marker.retained_release_id);
+}
+function validateProjectMarker(marker: Record<string, unknown>): void {
+  const keys = ['schema_version', 'status', 'transaction_type', 'release_id', 'selected_targets', 'binding_order',
+    'managed_paths', 'previous_managed_paths', 'build_manifest_path', 'build_manifest_digest', 'transaction_dir',
+    'retained_release_id', 'scope', 'destination_root', 'durable_state_root', 'workspace_root', 'workspace_name',
+    'project_identity', 'retention'];
+  if (Object.keys(marker).length !== keys.length || Object.keys(marker).some((key) => !keys.includes(key))
+    || marker.scope !== 'project' || !['promoting', 'complete', 'recovered'].includes(String(marker.status))) fail();
+  const release = markerRelease(marker.release_id);
+  if (marker.transaction_dir !== `release-${release}`) fail();
+  const targets = markerTargets(marker.selected_targets);
+  const expected = targets.flatMap((target) => PUBLICATION_PROJECT_TARGET_BINDINGS[target]);
+  if (!Array.isArray(marker.binding_order) || marker.binding_order.length !== expected.length
+    || marker.binding_order.some((value, index) => markerRelative(value) !== expected[index])) fail();
+  markerProjectManaged(marker.managed_paths);
+  markerProjectManaged(marker.previous_managed_paths);
+  if (typeof marker.destination_root !== 'string' || resolve(marker.destination_root) !== marker.destination_root
+    || typeof marker.durable_state_root !== 'string' || resolve(marker.durable_state_root) !== marker.durable_state_root
+    || typeof marker.workspace_root !== 'string' || resolve(marker.workspace_root) !== marker.workspace_root
+    || marker.workspace_name !== `.evcrate-publish-${release}`
+    || typeof marker.project_identity !== 'string' || !/^[a-f0-9]{64}$/u.test(marker.project_identity)
+    || marker.retention !== 'none' || marker.retained_release_id !== null) fail();
+  if (typeof marker.build_manifest_digest !== 'string' || !/^[a-f0-9]{64}$/u.test(marker.build_manifest_digest)) fail();
+  markerRelative(marker.build_manifest_path);
 }
 function validatePythonMarker(marker: Record<string, unknown>): void {
   const keys = ['schema_version', 'status', 'release_id', 'roots', 'managed_paths', 'previous_managed_paths',
@@ -290,7 +329,8 @@ function validatePythonMarker(marker: Record<string, unknown>): void {
 }
 function validatePublicationMarker(marker: Record<string, unknown>): void {
   if (marker.schema_version !== 1) fail();
-  if (marker.transaction_type === 'target-publication') validateTargetMarker(marker);
+  if (marker.transaction_type === 'target-publication' && marker.scope === 'project') validateProjectMarker(marker);
+  else if (marker.transaction_type === 'target-publication') validateTargetMarker(marker);
   else if (marker.transaction_type === undefined) validatePythonMarker(marker);
   else fail();
 }

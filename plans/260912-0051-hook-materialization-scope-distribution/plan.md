@@ -7,7 +7,7 @@ effort: "not estimated"
 branch: main
 tags: [feature, distribution, publication, recovery, security]
 created: 2026-09-12
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 # Hook Materialization Scope Distribution
@@ -28,7 +28,7 @@ Future contracts are frozen in [design-contracts.md](./design-contracts.md); req
 | [02](./phase-02-context-and-manifest-project-bindings.md) | Normalized project descriptors and identity boundary | **DONE (2026-09-12)** — 100% | 01 wire names | 03, 04, 05 |
 | [03](./phase-03-neutral-seven-target-runtime-closures.md) | Seven neutral runtime closures and structured HOME rules | **DONE (2026-09-12)** — 100% | 02 descriptor contract | 04, 07, 08 |
 | [04](./phase-04-one-snapshot-phase-planning.md) | One snapshot; shared/HOME/project phase plans | **DONE (2026-09-12) — 100%** | 01–03 | 05, 06, 07 |
-| [05](./phase-05-generic-transaction-engine.md) | Generic transaction descriptor, locks, fsync, retention | Pending | 02, 04 | 06, 07 |
+| [05](./phase-05-generic-transaction-engine.md) | Generic transaction descriptor, locks, fsync, retention | **DONE (2026-09-13) — 100%** | 02, 04 | 06, 07 |
 | [06](./phase-06-state-migration-recovery-and-partial-orchestration.md) | Schema 2, migration, isolated recovery, partial orchestration | Pending | 01, 04, 05 | 07, 08 |
 | [07](./phase-07-focused-contract-and-runtime-proof.md) | Focused protocol/adapter/publication/recovery proof | Pending | 01–06 | 08 |
 | [08](./phase-08-installed-release-fixtures-and-regeneration.md) | Installed Linux fixtures and checked-in regeneration | Pending | 03, 06, 07 | 09 |
@@ -51,6 +51,14 @@ Planning preserves selected-target ownership and stale cleanup bounds, shared JS
 Deterministic repository evidence: `npm run build` passed; focused `node --test tests/distribution/publication-plan.test.mjs tests/distribution/publication-parity.test.mjs` passed 8/8; `npm run test:publication` passed 57/57; `npm run test:adapters` passed 24/24; `npm run distribute:check` returned `status: "ok"`. The tester subagent could not execute because its external Cloud Code Assist backend returned HTTP 429; the direct commands above are the evidence. Live operator/vendor qualification and publication remain deferred; generated outputs remain Phase 08-owned and `docs/system-architecture.md` remains Phase 09-owned.
 
 Handoff proceeds to Phase 05 generic transaction execution, Phase 06 schema-2 state/recovery and partial orchestration, and Phase 07 focused contract/runtime proof.
+
+## Phase 05 completion record
+
+Phase 05 is complete at 100% after the approved blocking review correction and finalization. The generic immutable transaction descriptor/engine now covers HOME and project publication with preflight-before-mutation, HOME-then-project locking, durable journal-before-workspace ordering, workspace identity/containment and same-volume checks, fsync/marker ordering, bounded HOME retention with project no-retention cleanup, and distinct recovery/error outcomes. Existing schema-1 HOME recovery compatibility remains required; schema-2 migration, isolated recovery, and partial orchestration remain Phase 06-owned.
+
+Verified evidence: `npm run build` passed; `npm run test:publication` passed 66/66; `npm run test:integration` passed 14/14; focused recovery and oversized-result regressions passed. The review correction was resolved in the advisor state gate at revision 11, and the user approved finalization. Generated projections, manifests, registries, and live operator architecture docs remain outside Phase 05 and were not hand-edited.
+
+Handoff proceeds to Phase 06 for schema-2 state migration, isolated recovery, and partial orchestration. Phase 07 remains the subsequent focused contract/runtime proof gate.
 
 ## Shared-file ownership and parallelization
 

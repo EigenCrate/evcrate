@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### 🚀 Features
+
+* **distribution:** generalize journaled publication across HOME and project scopes with complete preflight, ordered locks, durable workspace identity, fsync/marker recovery, per-source mode provenance, and bounded retention.
+
 ## [2.0.0](https://github.com/EigenCrate/evcrate/compare/v1.0.0...v2.0.0) (2026-09-09)
 
 

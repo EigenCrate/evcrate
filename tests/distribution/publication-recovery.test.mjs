@@ -137,6 +137,32 @@ test('staged journal recovers when crash precedes marker publication', () => {
     rmSync(fixtureValue.root, { recursive: true, force: true });
   }
 });
+
+test('staged journal rolls back when the crash occurs before workspace creation', () => {
+  const fixtureValue = fixture('evcrate-recovery-preworkspace-');
+  try {
+    const { home, state } = fixtureValue;
+    const { destination, transaction } = journalFor(home, state, 'promoting', 'old');
+    rmSync(join(state, 'release-marker.json'), { force: true });
+    const journalPath = join(state, 'publication-journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
+    journal.status = 'staged';
+    journal.operations[0].promoted = false;
+    journal.operations[0].intended = null;
+    journal.operations_digest = hashBytes(canonicalJsonBytes(journal.operations));
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+    rmSync(transaction, { recursive: true, force: true });
+
+    const result = recoverPublicationUnlocked(state, home);
+    assert.equal(result.action, 'rolled-back');
+    assert.equal(readFileSync(destination, 'utf8'), 'old');
+    assert.equal(existsSync(join(state, 'publication-journal.json')), false);
+    assert.equal(existsSync(join(state, 'release-marker.json')), false);
+    assert.equal(recoverPublicationUnlocked(state, home).action, 'none');
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
 test('staged journal with promoted operation rolls back after promotion crash', () => {
   const fixtureValue = fixture('evcrate-recovery-staged-promoted-');
   try {
@@ -220,6 +246,78 @@ test('recovery refuses an untampered operation digest mismatch before mutation',
     writeAtomicFile(journalPath, canonicalJsonBytes(journal));
     assert.throws(() => recoverPublicationUnlocked(state, home));
     assert.equal(readFileSync(destination, 'utf8'), 'new');
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
+test('recovery refuses an unproven create promotion even when external content matches intended', () => {
+  const fixtureValue = fixture('evcrate-recovery-unproven-create-');
+  try {
+    const { home, state } = fixtureValue;
+    const { destination, transaction } = journalFor(home, state, 'promoting', 'old');
+    const journalPath = join(state, 'publication-journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
+    const workspaceStat = lstatSync(transaction);
+    const stateStat = lstatSync(state);
+    Object.assign(journal, {
+      workspace_device: Number(workspaceStat.dev),
+      workspace_inode: Number(workspaceStat.ino),
+      workspace_parent_device: Number(stateStat.dev),
+      workspace_parent_inode: Number(stateStat.ino)
+    });
+    journal.operations[0] = {
+      ...journal.operations[0],
+      action: 'create',
+      backup: null,
+      before: { present: false },
+      intended: null,
+      promoted: false,
+      mode: 0o600
+    };
+    journal.operations_digest = hashBytes(canonicalJsonBytes(journal.operations));
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+    rmSync(destination, { force: true });
+    writeFileSync(destination, 'new');
+    chmodSync(destination, 0o600);
+
+    assert.throws(
+      () => recoverPublicationUnlocked(state, home),
+      (error) => error?.code === 'RECOVERY_FAILED'
+    );
+    assert.equal(readFileSync(destination, 'utf8'), 'new');
+    assert.equal(existsSync(transaction), true);
+    assert.equal(existsSync(journalPath), true);
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
+
+test('recovery rejects progress evidence with an operation mode mismatch', () => {
+  const fixtureValue = fixture('evcrate-recovery-progress-mode-');
+  try {
+    const { home, state } = fixtureValue;
+    const { destination, transaction } = journalFor(home, state, 'promoting', 'new');
+    const journalPath = join(state, 'publication-journal.json');
+    const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
+    const originalIntended = journal.operations[0].intended;
+    journal.operations[0] = { ...journal.operations[0], promoted: false, intended: null, mode: 0o600 };
+    journal.operations_digest = hashBytes(canonicalJsonBytes(journal.operations));
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+    const progress = directory(join(transaction, 'progress'));
+    const intended = { ...originalIntended, mode: 0o644 };
+    writeAtomicFile(join(progress, '0.json'), canonicalJsonBytes({
+      index: 0, promoted: true, intended
+    }));
+    chmodSync(destination, 0o644);
+
+    assert.throws(
+      () => recoverPublicationUnlocked(state, home),
+      (error) => error?.code === 'RECOVERY_FAILED'
+    );
+    assert.equal(readFileSync(destination, 'utf8'), 'new');
+    assert.equal(lstatSync(destination).mode & 0o777, 0o644);
+    assert.equal(existsSync(transaction), true);
+    assert.equal(existsSync(journalPath), true);
   } finally {
     rmSync(fixtureValue.root, { recursive: true, force: true });
   }
