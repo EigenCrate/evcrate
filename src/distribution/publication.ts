@@ -255,8 +255,10 @@ function assertHomeScope(scope: PublicationScope): void {
   if (scope !== 'home') throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
 }
 function assertSelectedTargets(context: InvocationContext, selectedTargets: readonly string[]): void {
-  if (selectedTargets.length !== context.selectedTargetIds.length
-    || selectedTargets.some((target, index) => target !== context.selectedTargetIds[index])) {
+  const actualSorted = [...selectedTargets].sort();
+  const expectedSorted = [...context.selectedTargetIds].sort();
+  if (actualSorted.length !== expectedSorted.length
+    || actualSorted.some((target, index) => target !== expectedSorted[index])) {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
 }

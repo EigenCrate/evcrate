@@ -1,6 +1,5 @@
 export const OMP_RUNTIME_HELPER = String.raw`import { spawn } from "node:child_process";
 import { lstatSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const SOURCE_HOOK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "hooks");
@@ -21,7 +20,7 @@ export async function runCanonicalHook(relative: string, payload: unknown, ctx: 
   let script: string; try { script = canonicalHookPath(relative); } catch (error) { return { stdout: "", stderr: String(error), code: 127 }; }
   const cwd = typeof ctx?.cwd === "string" && ctx.cwd ? ctx.cwd : process.cwd();
   const resourceRoot = path.resolve(SOURCE_HOOK_ROOT, "..");
-  const env = { ...process.env, EVCRATE_CONFIG_DIR: ".omp", EVCRATE_RESOURCE_ROOT: resourceRoot, EVCRATE_GLOBAL_CONFIG_ROOT: path.join(os.homedir(), ".omp", "agent"), CLAUDE_PROJECT_DIR: cwd, OMP_PROJECT_DIR: cwd };
+  const env = { ...process.env, EVCRATE_CONFIG_DIR: ".omp", EVCRATE_RESOURCE_ROOT: resourceRoot, EVCRATE_GLOBAL_CONFIG_ROOT: path.dirname(resourceRoot), CLAUDE_PROJECT_DIR: cwd, OMP_PROJECT_DIR: cwd };
   return await new Promise((resolve) => {
     let stdout = ""; let stderr = ""; let settled = false;
     const child = spawn("node", [script], { cwd, env, stdio: ["pipe", "pipe", "pipe"] });

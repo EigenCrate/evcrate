@@ -13,6 +13,7 @@ import {
 } from '../../dist/index.js';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
+  cpSync,
   chmodSync,
   existsSync,
   lstatSync,
@@ -170,6 +171,21 @@ test('target-specific managed settings and command maps stay independent', () =>
   assert.deepEqual(Object.keys(managed).sort(), ['effortLevel', 'includeCoAuthoredBy', 'statusLine']);
   assert.equal(managed.includeCoAuthoredBy, false);
   assert.equal(managed.effortLevel, 'high');
+});
+
+test('Gemini rejects declared malformed or non-object settings', () => {
+  for (const document of ['{', '[]', 'null', '"scalar"']) {
+    const sourceContainer = temporaryDirectory();
+    const sourceRoot = join(sourceContainer, '.claude');
+    mkdirSync(sourceRoot);
+    cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
+    writeFileSync(join(sourceContainer, 'CLAUDE.md'), '# Test project context');
+    writeFileSync(join(sourceRoot, 'settings.json'), document);
+    const stage = createStagedRoot(repository, '.phase5-invalid-gemini-');
+    stages.push(stage);
+    const context = createProjectionBuildContext(registry.targets.get('gemini'), sourceRoot, stage);
+    assert.throws(() => getProjectionAdapter('gemini').build(context), code('VALIDATION_INVALID'), document);
+  }
 });
 
 test('resource graph snapshots dist assets and rejects unsafe source entries', () => {

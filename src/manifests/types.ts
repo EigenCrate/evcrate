@@ -44,6 +44,10 @@ export type ProjectDescriptor = ProjectDirectoryDescriptor | ProjectDocumentDesc
 export const HOME_PUBLICATION_RULES = Object.freeze([
   'omp-agent-prefix',
   'codex-home-path-rewrite',
+  'claude-home-path-rewrite',
+  'gemini-home-path-rewrite',
+  'antigravity-home-path-rewrite',
+  'copilot-home-path-rewrite',
   'claude-skill-root-exclusion'
 ] as const);
 export type HomePublicationRule = typeof HOME_PUBLICATION_RULES[number];

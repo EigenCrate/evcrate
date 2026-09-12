@@ -16,6 +16,7 @@
   "home_policy": {
     "bindings": {".gemini": ".gemini"},
     "preserve_paths": {},
-    "promotion_order": 10
+    "promotion_order": 10,
+    "publication_rules": ["gemini-home-path-rewrite"]
   }
 }

@@ -14,7 +14,7 @@ updated: 2026-09-12
 
 ## Current baseline and planned outcome
 
-Current live architecture is HOME-only: `createPublicationPlan` combines the shared controller and HOME harness bindings in one schema-1 transaction. `--project-root` supplies invocation context, not a destination. Generated wrappers still contain HOME lookups or workspace-ancestor searches. `docs/system-architecture.md` remains authoritative for that current behavior until implementation is proven.
+Publication remains HOME-owned for shared infrastructure: `createPublicationPlan` still combines the shared controller and HOME harness bindings in the current publication path. Phase 03 closes canonical runtime lookup and structured HOME rules in source; generated wrappers/metadata remain a Phase 08 regeneration boundary. `--project-root` supplies invocation context, not a destination, and `docs/system-architecture.md` remains authoritative for publication behavior until the later phases are proven.
 
 Planned outcome: `--scope home|project` selects only harness destination, defaulting to `home`. Shared `.evcrate/bin` always publishes beneath `--home`. One current verified neutral schema-2 snapshot feeds ordered `shared` and `harness` phases. HOME uses one atomic transaction/release; project uses a committed shared HOME release followed by an independent project harness release and reports a structured partial result if only the latter fails.
 
@@ -26,7 +26,7 @@ Future contracts are frozen in [design-contracts.md](./design-contracts.md); req
 |---|---|---|---|---|
 | [01](./phase-01-cli-and-protocol-contract.md) | CLI, exact wire, partial result, correlation | **DONE (2026-09-12)** — 100% | Research baseline | 02, 04, 06, 07 |
 | [02](./phase-02-context-and-manifest-project-bindings.md) | Normalized project descriptors and identity boundary | **DONE (2026-09-12)** — 100% | 01 wire names | 03, 04, 05 |
-| [03](./phase-03-neutral-seven-target-runtime-closures.md) | Seven neutral runtime closures and structured HOME rules | Pending | 02 descriptor contract | 04, 07, 08 |
+| [03](./phase-03-neutral-seven-target-runtime-closures.md) | Seven neutral runtime closures and structured HOME rules | **DONE (2026-09-12)** — 100% | 02 descriptor contract | 04, 07, 08 |
 | [04](./phase-04-one-snapshot-phase-planning.md) | One snapshot; shared/HOME/project phase plans | Pending | 01–03 | 05, 06, 07 |
 | [05](./phase-05-generic-transaction-engine.md) | Generic transaction descriptor, locks, fsync, retention | Pending | 02, 04 | 06, 07 |
 | [06](./phase-06-state-migration-recovery-and-partial-orchestration.md) | Schema 2, migration, isolated recovery, partial orchestration | Pending | 01, 04, 05 | 07, 08 |
@@ -34,7 +34,14 @@ Future contracts are frozen in [design-contracts.md](./design-contracts.md); req
 | [08](./phase-08-installed-release-fixtures-and-regeneration.md) | Installed Linux fixtures and checked-in regeneration | Pending | 03, 06, 07 | 09 |
 | [09](./phase-09-post-verification-operator-documentation.md) | Live-current operator docs after proof | Pending | 08 full verification | Completion |
 
-Critical path: `01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09`. Phase 04 protocol-facing design may begin after 01–02, but integration waits for Phase 03’s materialization rules.
+Critical path remains `01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09`. Phase 04 protocol-facing design may begin after 01–02; Phase 03 materialization rules are now finalized, and subsequent integration depends on Phases 04–07 before Phase 08 regeneration.
+
+## Phase 03 completion record
+
+Phase 03 is complete after approved Claude/Gemini corrections and focused validation. The phase plan records the seven installation-relative runtime closures, structured target-owned HOME rules, Claude manifest association, strict Gemini declared-settings parsing, publication target-order correlation, and regressions in the adapter, publication-plan, and publication-parity suites.
+
+Source-derived temporary validation passed `npm run test:publication` 54/54 and `npm run test:integration` 14/14 after manifest generation in an isolated copy; `npm run build` and `npm run test:adapters` (24/24) also passed. A complete source-derived `npm test` run passed after isolated manifest and release-asset preparation. Direct canonical publication/integration checks may report stale checked-in generated metadata; generated projections, `.evcrate/build-manifest*.json`, `.evcrate/targets/manifest.json`, registry, and release artifacts remain Phase 08-owned and untouched.
+
 
 ## Shared-file ownership and parallelization
 

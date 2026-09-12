@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PUBLICATION_BINDING_ORDER, assertPublicationRules, mapPublicationPath, publishFile
+  PUBLICATION_BINDING_ORDER, assertPublicationRules, loadTargetManifest, mapPublicationPath, publishFile
 } from '../../dist/index.js';
+import { join } from 'node:path';
 
 const bytes = (value) => new TextEncoder().encode(value);
 const text = (value) => new TextDecoder().decode(value);
@@ -30,6 +31,22 @@ test('publication rules are closed, explicit, and preserve the frozen order', ()
   assert.throws(() => assertPublicationRules(manifest('omp', ['unknown'])));
 });
 
+
+test('Claude HOME settings rewriting follows the target manifest rule', () => {
+  const target = loadTargetManifest(join(process.cwd(), '.evcrate/targets/claude/manifest.json'));
+  assert.deepEqual(target.homePolicy.publicationRules, ['claude-home-path-rewrite', 'claude-skill-root-exclusion']);
+  const settings = bytes(JSON.stringify({
+    hooks: { PreToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: '"$CLAUDE_PROJECT_DIR"/.claude/hooks/run.sh' }] }] },
+    statusLine: { type: 'command', command: '$CLAUDE_PROJECT_DIR/.claude/statusline.cjs' },
+    keep: 'value'
+  }));
+  const rewritten = publishFile(target, 'settings.json', settings, '/home/user/.claude');
+  assert.ok(rewritten);
+  const value = JSON.parse(text(rewritten.content));
+  assert.equal(value.hooks.PreToolUse[0].hooks[0].command, '/home/user/.claude/hooks/run.sh');
+  assert.equal(value.statusLine.command, '/home/user/.claude/statusline.cjs');
+  assert.equal(value.keep, 'value');
+});
 test('Codex rewriting is selected by manifest rule, not destination naming', () => {
   const hooks = bytes(JSON.stringify({ hooks: { notify: [{ hooks: [{ command: '"$CODEX_PROJECT_DIR"/.codex/hooks/run.sh' }] }] } }));
   const rewritten = publishFile(manifest('codex', ['codex-home-path-rewrite']), 'hooks.json', hooks, '/home/user/.codex');

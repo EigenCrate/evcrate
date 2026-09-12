@@ -11,6 +11,6 @@
     "bindings": {".claude": ".claude"},
     "preserve_paths": {},
     "promotion_order": 40,
-    "publication_rules": ["claude-skill-root-exclusion"]
+    "publication_rules": ["claude-home-path-rewrite", "claude-skill-root-exclusion"]
   }
 }

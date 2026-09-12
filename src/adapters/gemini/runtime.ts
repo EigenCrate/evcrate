@@ -2,12 +2,14 @@ import { lstatSync } from 'node:fs';
 import { basename } from 'node:path';
 import type { ProjectionBuildContext } from '../types.js';
 import { parseJsonDocument } from '../../protocol/json.js';
+import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { graphFile, sourceSibling, writeProjectionFile, ensureProjectionDirectory, textBytes, isProductionControllerArtifact } from '../projection-utils.js';
 import { applyTargetReplacements, TOOL_MAPPING } from './replacements.js';
 const EVENTS: Record<string, string> = { SessionStart: 'SessionStart', UserPromptSubmit: 'BeforeAgent', PreToolUse: 'BeforeTool', SessionEnd: 'SessionEnd' };
 const DROPPED: Record<string, string> = { SubagentStart: 'No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped.', PreCompact: 'No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.' };
 const CONTEXT_NAMES = ['GEMINI.md', 'AGENTS.md', 'CLAUDE.md'];
 const HOOK_MATCHER = 'run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file';
+function invalidSettings(): never { throw new ControlPlaneError('VALIDATION_INVALID'); }
 
 function sourceExists(context: ProjectionBuildContext, path: string): boolean {
   try { const stat = lstatSync(sourceSibling(context, path)); return stat.isFile() && !stat.isSymbolicLink(); }
@@ -15,8 +17,14 @@ function sourceExists(context: ProjectionBuildContext, path: string): boolean {
 }
 function sourceJson(context: ProjectionBuildContext): Record<string, unknown> {
   if (!context.resources.files.some((file) => file.path === 'settings.json')) return {};
-  const parsed = parseJsonDocument(graphFile(context, 'settings.json').bytes);
-  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  let parsed: unknown;
+  try {
+    parsed = parseJsonDocument(graphFile(context, 'settings.json').bytes);
+  } catch {
+    invalidSettings();
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) invalidSettings();
+  return parsed as Record<string, unknown>;
 }
 function transformJson(value: unknown): unknown {
   if (typeof value === 'string') {
@@ -56,7 +64,7 @@ function bridge(kind: 'context' | 'block' | 'passthrough', event: string, source
     kind === 'passthrough' ? "process.stdout.write(JSON.stringify({}));" :
     `const ok=result.status===0&&!result.error;process.stdout.write(ok?JSON.stringify({decision:'allow',hookSpecificOutput:{hookEventName:${eventJson}}}):JSON.stringify({decision:'deny',reason:(result.stderr||result.stdout||'').trim()||'Blocked by migrated Claude hook.',hookSpecificOutput:{hookEventName:${eventJson}}}));`;
   const inputTransform = kind === 'block' ? "try{const d=JSON.parse(input);const a=d?.toolCall?.args;if(a){const keys={AbsolutePath:'path',TargetFile:'path',SearchPath:'path',DirectoryPath:'path',CommandLine:'command'};payload=JSON.stringify({tool_name:a.CommandLine?'run_command':a.TargetFile?'replace_file_content':a.Query?'grep_search':a.DirectoryPath?'list_dir':a.AbsolutePath?'view_file':'unknown',tool_input:Object.fromEntries(Object.entries(a).map(([k,v])=>[keys[k]||k,v]))});}}catch{}" : '';
-  return `#!/usr/bin/env node\nconst fs=require('fs'),path=require('path'),{spawnSync}=require('child_process');const input=fs.readFileSync(0,'utf8');let payload=input;const project=process.env.GEMINI_PROJECT_DIR||process.cwd();const hook=path.join(project,${escaped});${inputTransform}if(!fs.existsSync(hook)){process.stdout.write(${unavailable});process.exit(0)}const result=spawnSync(process.execPath,[hook],{input:payload,encoding:'utf8',env:{...process.env,CLAUDE_PROJECT_DIR:project,GEMINI_PROJECT_DIR:project,EVCRATE_CONFIG_DIR:'.gemini'}});${output}\n`;
+  return `#!/usr/bin/env node\nconst fs=require('fs'),path=require('path'),{spawnSync}=require('child_process');const input=fs.readFileSync(0,'utf8');let payload=input;const sourceHook=path.join(__dirname,path.basename(${escaped}));const hasSymlinkedPathComponent=(candidate)=>{let current=path.resolve(candidate);while(true){try{if(fs.lstatSync(current).isSymbolicLink())return true;}catch{return true;}const parent=path.dirname(current);if(parent===current)return false;current=parent;}};const isUsableHook=(candidate)=>{try{const stat=fs.lstatSync(candidate);return stat.isFile()&&!stat.isSymbolicLink()&&!hasSymlinkedPathComponent(candidate);}catch{return false;}};const project=process.env.GEMINI_PROJECT_DIR||process.cwd();${inputTransform}if(!isUsableHook(sourceHook)){process.stdout.write(${unavailable});process.exit(0)}const result=spawnSync(process.execPath,[sourceHook],{cwd:project,input:payload,encoding:'utf8',env:{...process.env,CLAUDE_PROJECT_DIR:project,GEMINI_PROJECT_DIR:project,EVCRATE_CONFIG_DIR:'.gemini'}});${output}\n`;
 }
 
 export function projectHooks(context: ProjectionBuildContext): void {
