@@ -49,6 +49,7 @@ export function runLocalBuild(
     return Object.freeze({
       manifestPath: result.manifestPath,
       manifest,
+      manifestDigest: hashBytes(result.manifestData),
       selectedManifests: result.selectedManifests,
       outputPaths: Object.freeze(Object.fromEntries(result.localOutputs))
     });

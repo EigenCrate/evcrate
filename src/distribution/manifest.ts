@@ -2,7 +2,7 @@ import { lstatSync } from 'node:fs';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { assertExactKeys, assertSafeBoundedJson, boundedText } from '../protocol/validation.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
-import { hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
+import { hashBytes, hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors, normalizeRelativePath } from '../filesystem/paths.js';
 import { ADVISOR_CONTROLLER_FILES, controllerHashes } from '../manifests/controller.js';
 import type { BuildManifest } from '../manifests/types.js';
@@ -11,6 +11,13 @@ export const MAX_BUILD_MANIFEST_BYTES = 4 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/u;
 const MANIFEST_KEYS = ['schema_version', 'source_hashes', 'adapter_hashes', 'controller_hashes', 'owners', 'output_hashes', 'validation', 'home_policy'] as const;
 function fail(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never { throw new ControlPlaneError(code); }
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  }
+  return value;
+}
 function record(value: unknown): Record<string, unknown> {
   if (!isPlainObject(value)) fail('PROTOCOL_INVALID');
   return value;
@@ -62,26 +69,36 @@ export function validateBuildManifest(value: unknown): BuildManifest {
   if (data.schema_version !== 2) fail('PROTOCOL_INVALID');
   const validation = record(data.validation);
   const homePolicy = record(data.home_policy);
-  return Object.freeze({
-    schema_version: 2,
+  const manifest = {
+    schema_version: 2 as const,
     source_hashes: hashes(data.source_hashes),
     adapter_hashes: hashes(data.adapter_hashes),
     controller_hashes: controllerHashValues(data.controller_hashes),
     owners: owners(data.owners),
     output_hashes: hashes(data.output_hashes),
-    validation: Object.freeze({ ...record(data.validation) }),
-    home_policy: Object.freeze({ ...record(data.home_policy) })
-  });
+    validation: Object.freeze({ ...validation }),
+    home_policy: Object.freeze({ ...homePolicy })
+  };
+  return deepFreeze(manifest);
 }
-export function readBuildManifest(pathValue: string): BuildManifest {
+export interface BuildManifestSnapshot {
+  readonly manifest: BuildManifest;
+  readonly digest: string;
+}
+export function readBuildManifestSnapshot(pathValue: string): BuildManifestSnapshot {
   const path = pathValue;
   assertNoSymlinkAncestors(path);
   try {
-    return validateBuildManifest(parseJsonDocument(readBoundedFile(path, MAX_BUILD_MANIFEST_BYTES), MAX_BUILD_MANIFEST_BYTES));
+    const bytes = readBoundedFile(path, MAX_BUILD_MANIFEST_BYTES);
+    const manifest = validateBuildManifest(parseJsonDocument(bytes, MAX_BUILD_MANIFEST_BYTES));
+    return Object.freeze({ manifest, digest: hashBytes(bytes) });
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
     fail('PROTOCOL_INVALID');
   }
+}
+export function readBuildManifest(pathValue: string): BuildManifest {
+  return readBuildManifestSnapshot(pathValue).manifest;
 }
 function digestPath(path: string): string {
   assertNoSymlinkAncestors(path);
@@ -121,9 +138,10 @@ export interface BuildVerificationOptions {
   readonly controllerRoot: string;
   readonly sourceHashes?: Readonly<Record<string, string>>;
   readonly adapterHashes?: Readonly<Record<string, string>>;
+  readonly manifest?: BuildManifest;
 }
 export function verifyBuild(options: BuildVerificationOptions): BuildManifest {
-  const manifest = readBuildManifest(options.manifestPath);
+  const manifest = options.manifest ?? readBuildManifest(options.manifestPath);
   if (manifest.validation.complete !== true) fail('PUBLICATION_FAILED');
   if (options.sourceHashes !== undefined && !sameRecord(manifest.source_hashes, options.sourceHashes)) fail('PUBLICATION_FAILED');
   if (options.adapterHashes !== undefined && !sameRecord(manifest.adapter_hashes, options.adapterHashes)) fail('PUBLICATION_FAILED');
