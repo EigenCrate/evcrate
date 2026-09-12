@@ -15,8 +15,8 @@
       "target": "claude"
     },
     "payload": {
-      "selectedTargets": ["claude", "omp", "copilot"],
-      "releaseId": "dam-hopper-rel-001"
+      "scope": "home",
+      "selectedTargets": ["claude", "omp", "copilot"]
     }
   },
   "response": {
@@ -26,13 +26,32 @@
     "operation": "publish.apply",
     "status": "published",
     "payload": {
-      "releaseId": "dam-hopper-rel-001",
+      "scope": "home",
+      "projectIdentity": null,
       "buildManifestPath": ".evcrate/build-manifest.json",
       "buildManifestDigest": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-      "selectedTargets": ["claude", "omp", "copilot"],
-      "bindingOrder": [".evcrate/bin", ".omp", ".claude", ".copilot"],
-      "changes": [],
-      "retainedReleaseId": null
+      "phases": [
+        {
+          "phase": "shared",
+          "scope": "home",
+          "selectedTargets": [],
+          "bindingOrder": [".evcrate/bin"],
+          "changes": [],
+          "status": "committed",
+          "releaseId": "dam-hopper-rel-001",
+          "retainedReleaseId": null
+        },
+        {
+          "phase": "harness",
+          "scope": "home",
+          "selectedTargets": ["claude", "omp", "copilot"],
+          "bindingOrder": [".omp", ".claude", ".copilot"],
+          "changes": [],
+          "status": "committed",
+          "releaseId": "dam-hopper-rel-001",
+          "retainedReleaseId": null
+        }
+      ]
     }
   }
 }

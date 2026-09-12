@@ -113,12 +113,14 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     const dryRunResult = JSON.parse(dryRun.stdout);
     assert.equal(dryRunResult.status, 'preview');
     assert.equal(dryRunResult.operation, 'publish.dry-run');
-    assert.ok(Array.isArray(dryRunResult.payload.changes));
-    assert.ok(dryRunResult.payload.changes.length > 0);
+    const dryRunChanges = dryRunResult.payload.phases.flatMap(({ changes }) => changes);
+    assert.ok(Array.isArray(dryRunChanges));
+    assert.ok(dryRunChanges.length > 0);
 
-    // Verify promotion order: controller -> OMP -> Copilot
-    assert.deepEqual([...dryRunResult.payload.bindingOrder], [
-      '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+    // Verify promotion order: shared controller, then HOME harness bindings
+    assert.deepEqual([...dryRunResult.payload.phases[0].bindingOrder], ['.evcrate/bin']);
+    assert.deepEqual([...dryRunResult.payload.phases[1].bindingOrder], [
+      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
     ]);
 
     // Ensure home directory remains empty after dry-run
@@ -136,7 +138,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     const applyResult = JSON.parse(apply.stdout);
     assert.equal(applyResult.status, 'published');
     assert.equal(applyResult.operation, 'publish.apply');
-    assert.ok(typeof applyResult.payload.releaseId === 'string');
+    assert.ok(typeof applyResult.payload.phases[0].releaseId === 'string');
 
     // Inviolable invariant: ZERO filesystem writes or mutations under installed package root
     const packageHashAfter = treeHash(installedPackageDir);
@@ -228,7 +230,7 @@ test('unmanaged existing content in user HOME is preserved across publication ap
 
 
     const result = publishApply(context);
-    assert.ok(result.releaseId);
+    assert.ok(result.phases[0].releaseId);
 
     // Verify that the custom user file is still intact
     assert.ok(existsSync(customFilePath));

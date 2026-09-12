@@ -328,41 +328,105 @@ test('diagnostic failures use the stable routing error catalog', () => {
     ...failure, question: 'not counsel'
   }), (error) => error.code === 'DIAGNOSTIC_INVALID');
 });
-test('Phase 8 publication payloads enforce order, identity, and empty recovery', () => {
+test('Phase 8 publication payloads enforce scope, phase order, identity, and empty recovery', () => {
   assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
     '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
   ]);
-  assert.deepEqual(validatePublishRequestPayload({ selectedTargets: ['agy'] }), { selectedTargets: ['antigravity'] });
-  assert.deepEqual(validateRecoverRequestPayload({ releaseId: 'release-1' }), { releaseId: 'release-1' });
+  assert.deepEqual(validatePublishRequestPayload({
+    scope: 'home', selectedTargets: ['agy']
+  }), { scope: 'home', selectedTargets: ['antigravity'] });
+  assert.deepEqual(validateRecoverRequestPayload({
+    scope: 'home', projectIdentity: null, releaseId: 'release-1'
+  }), { scope: 'home', projectIdentity: null, releaseId: 'release-1' });
   const change = {
     target: 'omp', path: '.omp/agent/alpha.md', action: 'create',
     beforeHash: null, intendedHash: 'a'.repeat(64)
   };
   const dryRun = {
+    scope: 'home', projectIdentity: null,
     buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'b'.repeat(64),
-    selectedTargets: ['omp'], bindingOrder: ['.evcrate/bin', '.omp'], changes: [change]
+    phases: [
+      { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
+      { phase: 'harness', scope: 'home', selectedTargets: ['omp'], bindingOrder: ['.omp'], changes: [change] }
+    ]
   };
   assert.deepEqual(validatePublishDryRunResultPayload(dryRun), dryRun);
   const applied = {
-    ...dryRun, releaseId: 'release-1', retainedReleaseId: null
+    ...dryRun,
+    phases: dryRun.phases.map((phase) => ({
+      ...phase, status: 'committed', releaseId: 'release-1', retainedReleaseId: null
+    }))
   };
   assert.deepEqual(validatePublishApplyResultPayload(applied), applied);
+  const incompleteApply = {
+    ...dryRun,
+    phases: [
+      { ...dryRun.phases[0], status: 'failed', releaseId: null, retainedReleaseId: null },
+      { ...dryRun.phases[1], status: 'not-started', releaseId: null, retainedReleaseId: null }
+    ]
+  };
+  assert.throws(() => validatePublishApplyResultPayload(incompleteApply));
+  const partialPayload = {
+    scope: 'project', projectIdentity: 'c'.repeat(64),
+    buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'd'.repeat(64),
+    phases: [
+      { ...dryRun.phases[0], status: 'committed', releaseId: 'shared-release', retainedReleaseId: null },
+      { ...dryRun.phases[1], scope: 'project', status: 'failed', releaseId: null, retainedReleaseId: null }
+    ]
+  };
+  assert.throws(() => validatePublishApplyResultPayload(partialPayload));
+  const partialResult = validateResourceResult({
+    protocol: 'evcrate-resource-control', protocolVersion: 1, requestId: 'partial-1',
+    operation: 'publish.apply', status: 'partial', payload: partialPayload,
+    error: {
+      code: 'PUBLICATION_FAILED', category: 'publication',
+      action: 'Repair the publication state before retrying.', message: 'Publication failed'
+    }
+  });
+  assert.equal(partialResult.status, 'partial');
+  assert.deepEqual(partialResult.payload, partialPayload);
   const generatedDotfile = {
-    ...dryRun, changes: [{ ...change, path: '.omp/agent/skills/example/.gitignore' }]
+    ...dryRun,
+    phases: [dryRun.phases[0], {
+      ...dryRun.phases[1], changes: [{ ...change, path: '.omp/agent/skills/example/.gitignore' }]
+    }]
   };
   assert.doesNotThrow(() => validatePublishDryRunResultPayload(generatedDotfile));
   assert.throws(() => validatePublishDryRunResultPayload({
-    ...dryRun, changes: [{ ...change, path: '.omp/.env.production' }]
+    ...dryRun,
+    phases: [dryRun.phases[0], {
+      ...dryRun.phases[1], changes: [{ ...change, path: '.omp/.env.production' }]
+    }]
   }));
-  const none = { releaseId: null, action: 'none', selectedTargets: [], bindingOrder: [] };
+  const none = { scope: 'home', projectIdentity: null, action: 'none', phases: [] };
   assert.deepEqual(validateRecoverResultPayload(none), none);
   const rolledBack = {
-    releaseId: 'release-1', action: 'rolled-back', selectedTargets: ['omp'],
-    bindingOrder: ['.evcrate/bin', '.omp']
+    scope: 'home', projectIdentity: null, action: 'recovered',
+    phases: [
+      { phase: 'shared', scope: 'home', releaseId: 'release-1', action: 'rolled-back', selectedTargets: [], bindingOrder: ['.evcrate/bin'] },
+      { phase: 'harness', scope: 'home', releaseId: 'release-1', action: 'rolled-back', selectedTargets: ['omp'], bindingOrder: ['.omp'] }
+    ]
   };
   assert.deepEqual(validateRecoverResultPayload(rolledBack), rolledBack);
-  assert.throws(() => validatePublishDryRunResultPayload({ ...dryRun, bindingOrder: ['.omp', '.evcrate/bin'] }));
-  assert.throws(() => validateRecoverResultPayload({ ...none, releaseId: 'release-1' }));
-  assert.throws(() => validateRecoverResultPayload({ ...rolledBack, selectedTargets: [] }));
-  assert.throws(() => validateRecoverResultPayload({ ...rolledBack, bindingOrder: [] }));
+  assert.throws(() => validateRecoverResultPayload({
+    ...rolledBack,
+    phases: [rolledBack.phases[0], { ...rolledBack.phases[1], releaseId: 'release-2' }]
+  }));
+  assert.throws(() => validateRecoverResultPayload({
+    ...rolledBack,
+    phases: [rolledBack.phases[0], { ...rolledBack.phases[1], action: 'finalized' }]
+  }));
+  assert.throws(() => validatePublishDryRunResultPayload({
+    ...dryRun,
+    phases: [dryRun.phases[0], { ...dryRun.phases[1], bindingOrder: ['.omp', '.evcrate/bin'] }]
+  }));
+  assert.throws(() => validateRecoverResultPayload({
+    ...none, phases: [rolledBack.phases[0]]
+  }));
+  assert.throws(() => validateRecoverResultPayload({
+    ...rolledBack, phases: [rolledBack.phases[0], { ...rolledBack.phases[1], selectedTargets: [] }]
+  }));
+  assert.throws(() => validateRecoverResultPayload({
+    ...rolledBack, phases: [rolledBack.phases[0], { ...rolledBack.phases[1], bindingOrder: [] }]
+  }));
 });

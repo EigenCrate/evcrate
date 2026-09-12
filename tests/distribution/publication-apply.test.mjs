@@ -33,25 +33,29 @@ test('OMP publication is real, isolated, recoverable, and retention-bounded', ()
     const beforePolicyMode = Number(lstatSync(policy).mode) & 0o777;
     const state = publicationStateRoot(home);
     const preview = publishDryRun(context);
-    assert.deepEqual(preview.selectedTargets, ['omp']);
-    assert.deepEqual(preview.bindingOrder, ['.evcrate/bin', '.omp']);
+    assert.deepEqual(preview.phases[1].selectedTargets, ['omp']);
+    assert.deepEqual(preview.phases[0].bindingOrder, ['.evcrate/bin']);
+    assert.deepEqual(preview.phases[1].bindingOrder, ['.omp']);
     assert.equal(existsSync(state), false);
     assert.deepEqual(readFileSync(policy), policyBytes);
     const first = publishApply(context);
-    assert.equal(first.selectedTargets[0], 'omp');
-    assert.equal(first.retainedReleaseId, first.releaseId);
+    const firstRelease = first.phases[0].releaseId;
+    assert.equal(first.phases[1].selectedTargets[0], 'omp');
+    assert.equal(first.phases[1].releaseId, firstRelease);
+    assert.equal(first.phases[0].retainedReleaseId, firstRelease);
+    assert.equal(first.phases[1].retainedReleaseId, firstRelease);
     assert.equal(readFileSync(policy).equals(policyBytes), true);
     assert.equal(Number(lstatSync(policy).mode) & 0o777, beforePolicyMode);
     assert.notEqual(readFileSync(oldPath, 'utf8'), 'user-version\n');
-    assert.equal(existsSync(join(state, `release-${first.releaseId}`)), true);
+    assert.equal(existsSync(join(state, `release-${firstRelease}`)), true);
     assert.equal(JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8')).status, 'complete');
     assert.equal(recoverPublication(context).action, 'none');
     const second = publishApply(context);
-    assert.equal(second.retainedReleaseId, first.releaseId);
-    assert.equal(existsSync(join(state, `release-${first.releaseId}`)), true);
+    assert.equal(second.phases[0].retainedReleaseId, firstRelease);
+    assert.equal(existsSync(join(state, `release-${firstRelease}`)), true);
     const third = publishApply(context, { now: () => Date.now() + MAX_RETAINED_RELEASE_AGE_MS + 1 });
-    assert.equal(third.retainedReleaseId, null);
-    assert.equal(existsSync(join(state, `release-${first.releaseId}`)), false);
+    assert.equal(third.phases[0].retainedReleaseId, null);
+    assert.equal(existsSync(join(state, `release-${firstRelease}`)), false);
     assert.equal(JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8')).retained_release_id, null);
   } finally {
     rmSync(home, { recursive: true, force: true });
@@ -102,8 +106,9 @@ test('post-first-promotion CAS conflict retains promoting journal, fails closed 
 
     const state = publicationStateRoot(home);
     const plan = publishDryRun(context);
-    assert.ok(plan.changes.length > 2, 'publication plan must have multiple operations');
-    const op1 = plan.changes[1];
+    const changes = plan.phases.flatMap(({ changes: phaseChanges }) => phaseChanges);
+    assert.ok(changes.length > 2, 'publication plan must have multiple operations');
+    const op1 = changes[1];
     const targetConflictPath = join(home, op1.path);
     let injected = false;
 
@@ -142,7 +147,10 @@ test('post-first-promotion CAS conflict retains promoting journal, fails closed 
     rmSync(targetConflictPath);
 
     const recovery = recoverPublication(context);
-    assert.equal(recovery.action, 'rolled-back');
+    assert.equal(recovery.action, 'recovered');
+    assert.deepEqual(recovery.phases.map(({ phase, action }) => [phase, action]), [
+      ['shared', 'rolled-back'], ['harness', 'rolled-back']
+    ]);
     assert.equal(existsSync(join(state, 'publication-journal.json')), false);
 
     assert.equal(readFileSync(policy).equals(policyBytes), true);

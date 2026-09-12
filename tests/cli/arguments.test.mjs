@@ -51,12 +51,20 @@ test('parses exact publication and recovery command grammar', () => {
   assert.deepEqual(parseArguments(['publish', '--dry-run', '--target', 'omp', '--json']).command, {
     kind: 'publish', action: 'dry-run'
   });
+  assert.equal(parseArguments(['publish', '--dry-run']).options.scope, 'home');
+  assert.equal(parseArguments(['publish', '--dry-run', '--scope', 'project']).options.scope, 'project');
   assert.deepEqual(parseArguments(['publish', '--apply', '--target=omp']).command, {
     kind: 'publish', action: 'apply'
   });
+  assert.equal(parseArguments(['recover', '--scope=project']).options.scope, 'project');
   assert.deepEqual(parseArguments(['recover', '--json']).command, { kind: 'recover' });
   assert.equal(codeOf(() => parseArguments(['publish'])), 'USAGE_INVALID');
   assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--apply'])), 'USAGE_INVALID');
   assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--dry-run'])), 'USAGE_INVALID');
   assert.equal(codeOf(() => parseArguments(['recover', '--apply'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['version', '--scope', 'home'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['distribute', 'build', '--scope', 'project'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--scope', 'other'])), 'VALIDATION_INVALID');
+  assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--scope', 'home', '--scope', 'project'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['--request-file', 'request.json', '--scope', 'project'])), 'USAGE_INVALID');
 });

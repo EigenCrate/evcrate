@@ -8,7 +8,7 @@ import {
 } from './validation.js';
 import { validateScopeRevisionVector, type ScopeRevisionVector } from './scope-payloads.js';
 import { validateResourceRequestPayload, validateResourceResultPayload } from './resource-payloads.js';
-import { MAX_PUBLICATION_RESULT_BYTES } from './publication-payloads.js';
+import { MAX_PUBLICATION_RESULT_BYTES, validatePublishApplyResultPayload, type PublishApplyResultPayload } from './publication-payloads.js';
 export const RESOURCE_OPERATIONS = Object.freeze([
   'version', 'resources.list', 'resources.get', 'imports.preview', 'imports.apply',
   'scopes.list', 'scopes.get', 'scopes.assign', 'scopes.remove', 'scopes.enable',
@@ -77,8 +77,18 @@ export interface ResourceConflictResult {
   error: ResourceError;
   conflict: { expectedRevision: ResourceConflictRevision; actualRevision: ResourceConflictRevision; retryable: boolean };
 }
+export interface ResourcePartialResult {
+  protocol: typeof RESOURCE_PROTOCOL;
+  protocolVersion: typeof PROTOCOL_VERSION;
+  requestId: string;
+  operation: ResourceOperation;
+  status: 'partial';
+  payload: JsonValue;
+  error: ResourceError;
+}
 export type ResourceResult =
-  | ResourceSuccessResult | ResourceRecoveredResult | ResourceErrorResult | ResourceConflictResult;
+  | ResourceSuccessResult | ResourceRecoveredResult | ResourceErrorResult
+  | ResourceConflictResult | ResourcePartialResult;
 
 const REQUEST_KEYS = Object.freeze(['protocol', 'protocolVersion', 'requestId', 'operation', 'context', 'payload'] as const);
 const CONTEXT_KEYS = Object.freeze(['canonicalSourceRoot', 'targetManifestPath', 'generatedRoot', 'homeRoot', 'stateRoot', 'projectId', 'projectRoot', 'target'] as const);
@@ -171,7 +181,8 @@ function validateResultError(value: unknown): ResourceError {
 }
 
 function publicationResultSize(operation: ResourceOperation): number {
-  return operation === 'publish.dry-run' || operation === 'publish.apply' ? MAX_PUBLICATION_RESULT_BYTES : MAX_JSON_BYTES;
+  return ['publish.dry-run', 'publish.apply', 'recover', 'distribute.publish', 'distribute.all', 'distribute.recover'].includes(operation)
+    ? MAX_PUBLICATION_RESULT_BYTES : MAX_JSON_BYTES;
 }
 function assertResourceSize(value: unknown, maxBytes = MAX_JSON_BYTES): void {
   try {
@@ -213,6 +224,25 @@ export function validateResourceResult(value: unknown): ResourceResult {
       recovery: validateResourceRecovery(result.recovery)
     };
   }
+  if (result.status === 'partial') {
+    if (operation !== 'publish.apply' && operation !== 'distribute.publish' && operation !== 'distribute.all') {
+      throw new ControlPlaneError('PROTOCOL_INVALID');
+    }
+    assertExactKeys(result, [...RESULT_KEYS, 'payload', 'error'], 'PROTOCOL_INVALID');
+    assertSafeBoundedJson(result.payload, publicationResultSize(operation));
+    rejectCredentialKeys(result.payload, 'VALIDATION_INVALID');
+    rejectCounselFields(result.payload);
+    const payload = validatePublishApplyResultPayload(result.payload, true);
+    const [shared, harness] = payload.phases;
+    if (payload.scope !== 'project' || shared.status !== 'committed' || harness.status !== 'failed') {
+      throw new ControlPlaneError('PROTOCOL_INVALID');
+    }
+    const error = validateResultError(result.error);
+    if (error.code !== 'PUBLICATION_FAILED' && error.code !== 'ROLLBACK_FAILED') {
+      throw new ControlPlaneError('PROTOCOL_INVALID');
+    }
+    return { ...base, status: 'partial', payload: payload as unknown as JsonValue, error };
+  }
   if (result.status === 'error') {
     assertExactKeys(result, [...RESULT_KEYS, 'error'], 'PROTOCOL_INVALID');
     return { ...base, status: 'error', error: validateResultError(result.error) };
@@ -243,6 +273,15 @@ export function createResourceResult(
     protocol: RESOURCE_PROTOCOL, protocolVersion: PROTOCOL_VERSION,
     requestId: request.requestId, operation: request.operation, status, payload
   }) as ResourceSuccessResult;
+}
+export function createResourcePartialResult(
+  request: ResourceRequest, payload: JsonValue, error: unknown
+): ResourcePartialResult {
+  return validateResourceResult({
+    protocol: RESOURCE_PROTOCOL, protocolVersion: PROTOCOL_VERSION,
+    requestId: request.requestId, operation: request.operation, status: 'partial',
+    payload, error: serializeControlPlaneError(error)
+  }) as ResourcePartialResult;
 }
 
 export function createResourceRecoveryResult(

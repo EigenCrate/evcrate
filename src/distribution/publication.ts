@@ -5,7 +5,9 @@ import { ControlPlaneError } from '../errors/control-plane-error.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import {
   MAX_PUBLICATION_RESULT_BYTES, MAX_PUBLICATION_STATE_BYTES, validatePublishApplyResultPayload,
-  type PublishApplyResultPayload, type PublishDryRunResultPayload, type RecoverResultPayload
+  type ApplyPhaseRecord, type DryRunPhaseRecord, type PublishApplyResultPayload,
+  type PublishDryRunResultPayload, type PublicationScope, type PublishRequestPayload,
+  type RecoverRequestPayload, type RecoverResultPayload, type RecoveryPhaseRecord
 } from '../protocol/publication-payloads.js';
 import { canonicalBytes } from '../protocol/json.js';
 import { canonicalJsonBytes, hashBytes, readBoundedFile } from '../filesystem/hashing.js';
@@ -14,7 +16,7 @@ import { removePath, sameVolume, syncDirectory, writeAtomicFile, writeAtomicProj
 import { RELEASE_MARKER_NAME, withPublishLock } from '../filesystem/locking.js';
 import { isPlainObject } from '../protocol/json.js';
 import { createPublicationPlan, type PlannedPublicationOperation, type PublicationPlan } from './publication-plan.js';
-import { PUBLICATION_JOURNAL_NAME, readPublicationJournal, recoverPublicationUnlocked } from './publication-recovery.js';
+import { PUBLICATION_JOURNAL_NAME, readPublicationJournal, recoverPublicationUnlocked, type PublicationRecoveryOutcome } from './publication-recovery.js';
 import {
   MAX_PUBLICATION_FILE_BYTES, PUBLICATION_TRAVERSAL_LIMITS, publicationNode, publicationSnapshot,
   readOptionalPublicationMarker, type PublicationNodeSnapshot
@@ -249,12 +251,87 @@ function cleanupReleases(
   }
   return retained?.id ?? null;
 }
+function assertHomeScope(scope: PublicationScope): void {
+  if (scope !== 'home') throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
+}
+function assertSelectedTargets(context: InvocationContext, selectedTargets: readonly string[]): void {
+  if (selectedTargets.length !== context.selectedTargetIds.length
+    || selectedTargets.some((target, index) => target !== context.selectedTargetIds[index])) {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+}
+function assertPublishRequest(context: InvocationContext, request: PublishRequestPayload): void {
+  assertHomeScope(request.scope);
+  assertSelectedTargets(context, request.selectedTargets);
+}
+function assertRecoverRequest(request: RecoverRequestPayload): void {
+  assertHomeScope(request.scope);
+  if (request.projectIdentity !== null) throw new ControlPlaneError('PROTOCOL_INVALID');
+}
+function phaseChanges(plan: PublicationPlan, phase: 'shared' | 'harness') {
+  return Object.freeze(plan.changes.filter(({ target }) =>
+    phase === 'shared' ? target === 'advisor-controller' : target !== 'advisor-controller'));
+}
+function phaseBindings(plan: PublicationPlan, phase: 'shared' | 'harness'): readonly string[] {
+  return Object.freeze(plan.bindings
+    .filter(({ controller }) => phase === 'shared' ? controller : !controller)
+    .map(({ binding }) => binding));
+}
+function dryRunPhase(plan: PublicationPlan, phase: 'shared' | 'harness'): DryRunPhaseRecord {
+  return Object.freeze({
+    phase, scope: 'home',
+    selectedTargets: phase === 'shared' ? Object.freeze([]) : plan.selectedTargets,
+    bindingOrder: phaseBindings(plan, phase),
+    changes: phaseChanges(plan, phase)
+  });
+}
+function dryRunPayload(plan: PublicationPlan): PublishDryRunResultPayload {
+  return Object.freeze({
+    scope: 'home', projectIdentity: null,
+    buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
+    phases: [dryRunPhase(plan, 'shared'), dryRunPhase(plan, 'harness')] as const
+  });
+}
+function applyPhase(
+  plan: PublicationPlan, phase: 'shared' | 'harness', releaseId: string, retainedReleaseId: string | null
+): ApplyPhaseRecord {
+  return Object.freeze({
+    ...dryRunPhase(plan, phase), status: 'committed' as const, releaseId, retainedReleaseId
+  });
+}
+function applyPayload(
+  plan: PublicationPlan, releaseId: string, retainedReleaseId: string | null
+): PublishApplyResultPayload {
+  return Object.freeze({
+    scope: 'home', projectIdentity: null,
+    buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
+    phases: [applyPhase(plan, 'shared', releaseId, retainedReleaseId),
+      applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const
+  });
+}
+function recoveryPayload(result: PublicationRecoveryOutcome, request: RecoverRequestPayload): RecoverResultPayload {
+  if (result.action === 'none') {
+    return Object.freeze({ scope: 'home', projectIdentity: null, action: 'none', phases: Object.freeze([]) });
+  }
+  if (result.releaseId === null) fail('RECOVERY_FAILED');
+  const harnessBindings = result.bindingOrder.filter((binding) => binding !== '.evcrate/bin');
+  if ((result.selectedTargets.length === 0) !== (harnessBindings.length === 0)) fail('RECOVERY_FAILED');
+  const action = result.action === 'rolled-back' ? 'rolled-back' : 'finalized';
+  const phases: RecoveryPhaseRecord[] = [{
+    phase: 'shared', scope: 'home', releaseId: result.releaseId, action,
+    selectedTargets: Object.freeze([]), bindingOrder: Object.freeze(['.evcrate/bin'])
+  }];
+  if (harnessBindings.length > 0) {
+    phases.push({
+      phase: 'harness', scope: 'home', releaseId: result.releaseId, action,
+      selectedTargets: Object.freeze([...result.selectedTargets]),
+      bindingOrder: Object.freeze([...harnessBindings])
+    });
+  }
+  return Object.freeze({ scope: request.scope, projectIdentity: request.projectIdentity, action: 'recovered', phases: Object.freeze(phases) });
+}
 function assertApplyResultBudget(plan: PublicationPlan, releaseId: string): void {
-  const candidate = {
-    releaseId, buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-    selectedTargets: plan.selectedTargets, bindingOrder: plan.bindingOrder, changes: plan.changes,
-    retainedReleaseId: releaseId
-  };
+  const candidate = applyPayload(plan, releaseId, releaseId);
   try {
     validatePublishApplyResultPayload(candidate);
     if (canonicalBytes(candidate).byteLength > MAX_PUBLICATION_RESULT_BYTES - 4096) fail('PUBLICATION_FAILED');
@@ -345,10 +422,7 @@ function applyUnlocked(context: InvocationContext, options: PublicationOptions):
     }
     syncDirectory(stateRoot);
     removePath(join(stateRoot, PUBLICATION_JOURNAL_NAME));
-    return {
-      releaseId, buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-      selectedTargets: plan.selectedTargets, bindingOrder: plan.bindingOrder, changes: plan.changes, retainedReleaseId
-    };
+    return applyPayload(plan, releaseId, retainedReleaseId);
   } catch (error) {
     const control = error instanceof ControlPlaneError ? error : null;
     if (!promotionStarted) {
@@ -370,14 +444,21 @@ function writeRelease(stateRoot: string, value: Record<string, unknown>): void {
     build_manifest_path: value.build_manifest_path, build_manifest_digest: value.build_manifest_digest, transaction_dir: value.transaction_dir,
     retained_release_id: value.retained_release_id ?? null }), 0o600);
 }
-export function publishDryRun(context: InvocationContext): PublishDryRunResultPayload {
+export function publishDryRun(
+  context: InvocationContext,
+  request: PublishRequestPayload = { scope: 'home', selectedTargets: context.selectedTargetIds }
+): PublishDryRunResultPayload {
+  assertPublishRequest(context, request);
   const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
   if (readPublicationJournal(stateRoot)) fail('RECOVERY_FAILED');
   const plan = createPublicationPlan(context, markerPath(stateRoot));
-  return { buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest, selectedTargets: plan.selectedTargets,
-    bindingOrder: plan.bindingOrder, changes: plan.changes };
+  return dryRunPayload(plan);
 }
-export function publishApply(context: InvocationContext, options: PublicationOptions = {}): PublishApplyResultPayload {
+export function publishApply(
+  context: InvocationContext, options: PublicationOptions = {},
+  request: PublishRequestPayload = { scope: 'home', selectedTargets: context.selectedTargetIds }
+): PublishApplyResultPayload {
+  assertPublishRequest(context, request);
   const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
   return withPublishLock(stateRoot, () => {
     if (!sameVolume(stateRoot, context.homeRoot)) fail('PATH_UNSAFE');
@@ -386,20 +467,27 @@ export function publishApply(context: InvocationContext, options: PublicationOpt
   });
 }
 export function recoverPublication(
-  context: InvocationContext, expectedReleaseId: string | null = null
+  context: InvocationContext,
+  request: RecoverRequestPayload = { scope: 'home', projectIdentity: null, releaseId: null }
 ): RecoverResultPayload {
+  assertRecoverRequest(request);
   const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
   return withPublishLock(stateRoot, () => {
     if (!sameVolume(stateRoot, context.homeRoot)) fail('PATH_UNSAFE');
-    const result = recoverPublicationUnlocked(stateRoot, context.homeRoot, expectedReleaseId);
-    return { releaseId: result.releaseId, action: result.action, selectedTargets: result.selectedTargets,
-      bindingOrder: result.bindingOrder };
+    const result = recoverPublicationUnlocked(stateRoot, context.homeRoot, request.releaseId);
+    return recoveryPayload(result, request);
   });
 }
 export interface PublicationHandler {
-  publishDryRun(context: InvocationContext): PublishDryRunResultPayload | Promise<PublishDryRunResultPayload>;
-  publishApply(context: InvocationContext, options?: PublicationOptions): PublishApplyResultPayload | Promise<PublishApplyResultPayload>;
-  recover(context: InvocationContext, expectedReleaseId?: string | null): RecoverResultPayload | Promise<RecoverResultPayload>;
+  publishDryRun(
+    context: InvocationContext, request?: PublishRequestPayload
+  ): PublishDryRunResultPayload | Promise<PublishDryRunResultPayload>;
+  publishApply(
+    context: InvocationContext, options?: PublicationOptions, request?: PublishRequestPayload
+  ): PublishApplyResultPayload | Promise<PublishApplyResultPayload>;
+  recover(
+    context: InvocationContext, request?: RecoverRequestPayload
+  ): RecoverResultPayload | Promise<RecoverResultPayload>;
 }
 export const defaultPublicationHandler: PublicationHandler = Object.freeze({
   publishDryRun,

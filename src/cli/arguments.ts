@@ -1,6 +1,7 @@
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { normalizeTarget, PROTOCOL_VERSION } from '../protocol/validation.js';
 import type { PersistedTarget } from '../protocol/validation.js';
+import { validatePublicationScope, type PublicationScope } from '../protocol/publication-payloads.js';
 
 export const MAX_CLI_TIMEOUT_MS = 900_000;
 
@@ -23,6 +24,7 @@ export interface CliOptions {
   readonly stateHome?: string;
   readonly projectId?: string;
   readonly projectRoot?: string;
+  readonly scope: PublicationScope;
   readonly targets: readonly PersistedTarget[];
   readonly id?: string;
   readonly kind?: string;
@@ -48,7 +50,7 @@ export interface CliInvocation {
 }
 
 const VALUE_OPTIONS = new Set([
-  '--source', '--home', '--state-home', '--project-id', '--project-root', '--target',
+  '--source', '--home', '--state-home', '--project-id', '--project-root', '--scope', '--target',
   '--id', '--kind', '--import-source', '--destination', '--provenance', '--approve-capability',
   '--preview-token', '--mutation', '--expected-revision', '--expiry', '--limit', '--cursor', '--request-file', '--protocol-version', '--timeout'
 ]);
@@ -180,6 +182,10 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     }
   }
   const command = commandFromPositionals(positionals, values.requestfile !== undefined, dryRun, apply);
+  const scope = values.scope === undefined ? 'home' : validatePublicationScope(values.scope);
+  const acceptsScope = command.kind === 'publish' || command.kind === 'recover'
+    || (command.kind === 'distribute' && ['publish', 'all', 'recover'].includes(command.action));
+  if (values.scope !== undefined && !acceptsScope) fail('USAGE_INVALID');
   const timeoutMs = values.timeoutMs === undefined
     ? MAX_CLI_TIMEOUT_MS : boundedInteger(values.timeoutMs, MAX_CLI_TIMEOUT_MS);
   const options: CliOptions = Object.freeze({
@@ -188,6 +194,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     stateHome: values.statehome,
     projectId: values.projectid,
     projectRoot: values.projectroot,
+    scope,
     targets: Object.freeze([...targets]),
     id: values.id,
     kind: values.kind,
