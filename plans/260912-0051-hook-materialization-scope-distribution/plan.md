@@ -25,7 +25,7 @@ Future contracts are frozen in [design-contracts.md](./design-contracts.md); req
 | Phase | Boundary | Status | Depends on | Unlocks |
 |---|---|---|---|---|
 | [01](./phase-01-cli-and-protocol-contract.md) | CLI, exact wire, partial result, correlation | **DONE (2026-09-12)** — 100% | Research baseline | 02, 04, 06, 07 |
-| [02](./phase-02-context-and-manifest-project-bindings.md) | Normalized project descriptors and identity boundary | **READY (2026-09-12)** — 0% | 01 wire names | 03, 04, 05 |
+| [02](./phase-02-context-and-manifest-project-bindings.md) | Normalized project descriptors and identity boundary | **DONE (2026-09-12)** — 100% | 01 wire names | 03, 04, 05 |
 | [03](./phase-03-neutral-seven-target-runtime-closures.md) | Seven neutral runtime closures and structured HOME rules | Pending | 02 descriptor contract | 04, 07, 08 |
 | [04](./phase-04-one-snapshot-phase-planning.md) | One snapshot; shared/HOME/project phase plans | Pending | 01–03 | 05, 06, 07 |
 | [05](./phase-05-generic-transaction-engine.md) | Generic transaction descriptor, locks, fsync, retention | Pending | 02, 04 | 06, 07 |

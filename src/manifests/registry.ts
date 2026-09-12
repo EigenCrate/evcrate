@@ -4,7 +4,7 @@ import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
 import { isSensitivePathSegment } from '../protocol/resource-payload-validation.js';
-import { assertNoSymlinkAncestors, assertRealDirectory, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory, containedPath, normalizeRelativePath, pathOverlaps } from '../filesystem/paths.js';
 import { canonicalJsonBytes, hashBytes, hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
 import { loadTargetManifest } from './manifest.js';
 import { RESOURCE_KINDS, type BuildManifest, type ResourceKind, type ResourceRootMap, type TargetManifest, type TargetManifestRegistry } from './types.js';
@@ -37,24 +37,28 @@ function loadResourceRoots(value: unknown, registryPath: string): ResourceRootMa
     const root = normalizeRelativePath(raw[kind]);
     if (root.split('/').some(isSensitivePathSegment)) invalid();
     assertRealDirectory(containedPath(canonicalRoot, root, true));
-    if (RESOURCE_KINDS.some((other) => other !== kind && result[other] !== undefined && overlaps(root, result[other]))) {
+    if (RESOURCE_KINDS.some((other) => other !== kind && result[other] !== undefined && pathOverlaps(root, result[other]))) {
       invalid();
     }
     result[kind] = root;
   }
   return Object.freeze(result);
 }
-function overlaps(left: string, right: string): boolean {
-  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
-}
 export function validateManifestSet(manifests: readonly TargetManifest[]): void {
   const outputOwners = new Map<string, string>();
+  const docOwners = new Map<string, string>();
   const homeOwners = new Map<string, string>();
   const policies: Array<{ target: string; home: string; order: number }> = [];
   for (const manifest of manifests) {
     for (const root of manifest.outputRoots) {
-      if ([...outputOwners.keys()].some((existing) => overlaps(existing, root))) invalid();
+      if ([...outputOwners.keys()].some((existing) => pathOverlaps(existing, root))) invalid();
+      if ([...docOwners.keys()].some((existingDoc) => pathOverlaps(root, existingDoc))) invalid();
       outputOwners.set(root, manifest.name);
+    }
+    for (const doc of manifest.projectDocs) {
+      if (docOwners.has(doc)) invalid();
+      if ([...outputOwners.keys()].some((existingRoot) => pathOverlaps(existingRoot, doc))) invalid();
+      docOwners.set(doc, manifest.name);
     }
     for (const [root, home] of Object.entries(manifest.homePolicy.bindings)) {
       const owner = homeOwners.get(home);

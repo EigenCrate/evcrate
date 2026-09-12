@@ -118,3 +118,8 @@ export function safeParent(path: string): string {
   assertNoSymlinkAncestors(parent);
   return parent;
 }
+
+export function pathOverlaps(left: string, right: string): boolean {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+}
+
