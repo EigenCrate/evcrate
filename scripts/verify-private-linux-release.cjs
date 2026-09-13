@@ -122,7 +122,8 @@ function verifyPrivateLinuxRelease(options = {}) {
     const snapshotDir = path.resolve(sandbox.dataDir, fs.readlinkSync(currentLink));
 
     const verification = verifyInstalledLauncherAndInvariance(
-      launcherPath, snapshotDir, sandbox.unrelatedCwd, sandbox.sandboxEnv, sandbox.homeDir
+      launcherPath, snapshotDir, sandbox.workspaceDir, sandbox.sandboxEnv, sandbox.homeDir,
+      sandbox.projectDir, sandbox.stateDir
     );
 
     evidence.health_check_status = verification.healthStatus;
@@ -131,6 +132,9 @@ function verifyPrivateLinuxRelease(options = {}) {
     evidence.package_hash_invariant = true;
     evidence.controller_closure_verified = true;
     evidence.home_projections_verified = true;
+    evidence.project_projections_verified = verification.projectProjectionsVerified;
+    evidence.runtime_entrypoints_verified = verification.runtimeEntrypointsVerified;
+    evidence.partial_recovery_verified = verification.partialRecoveryVerified;
     evidence.status = 'PASS';
     evidence.evidence_complete = true;
   } finally {
@@ -154,7 +158,7 @@ function main() {
     console.log(`  Archive: ${result.archive_name} (${result.archive_sha256.slice(0, 16)}...)`);
     console.log(`  Network isolation: ${result.network_isolation}`);
     console.log(`  Package root hash invariant: ${result.package_hash_invariant}`);
-    console.log(`  Target HOME publication: verified 7 projections + controller closure`);
+    console.log(`  Target publication: HOME + project scopes and installed runtimes verified`);
     if (options.evidenceFile) console.log(`  Evidence written to: ${options.evidenceFile}`);
   } catch (error) {
     console.error(`✗ Linux release verification FAILED: ${error.message}`);

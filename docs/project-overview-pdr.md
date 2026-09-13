@@ -1,7 +1,8 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline  
-**Updated:** 2026-09-09
+**Status:** Current requirements baseline; Hook Materialization Scope
+Distribution is complete through Phase 09.  
+**Updated:** 2026-09-13
 
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -36,6 +37,10 @@ counsel bounded and fail-closed.
 - Schema-2 target manifests/build manifests and schema-1 resource registry.
 - Seven fixed projection adapters with no discovery or fallback adapter.
 - CAS-aware import, scope, advisor-settings, build, publication, and recovery flows.
+- Scope-aware publication (`--scope home|project`) with unconditional shared controller
+  publication to `<home>/.evcrate/bin` and independent project harness materialization.
+- Two-phase project publication transactions with project-only rollback, non-compensation
+  of shared commit, and schema-2 scope-isolated recovery.
 - One shared advisor controller published to `$HOME/.evcrate/bin`.
 - Explicit checkpoint counsel through a final `--advice` token.
 - Documentation/target command naming as `/cmd-*`, OMP `__` flattening, and
@@ -187,16 +192,27 @@ vendor CLI upgrades and is currently a Linux-only operator gate.
 ### FR-10: Publication and recovery
 
 **Requirement:** Build/check, publication, and recovery are separate operations.
-Publication consumes a current verified schema-2 build, stages complete outputs on
-the destination volume, preserves unmanaged HOME data, and uses journaled atomic
-promotion with identity/hash checks.
+Publication consumes a current verified schema-2 build snapshot, stages complete
+outputs on the destination volume, preserves unmanaged files, and supports scalar
+`--scope home|project` (defaulting to `home`).
+- Shared controller (`.evcrate/bin`) is unconditionally published under `--home`
+  and is never filtered by `--target` or published to project.
+- Harness projections are published to `<home>` or `<project-root>`.
+- HOME publication executes as a single atomic transaction.
+- Project publication executes as a two-phase transaction: shared HOME commit, followed
+  by project harness commit under the project workspace lock (no reverse locking).
+- Harness failure after shared commit rolls back only project work, producing a
+  `partial` result (exit 5) with `PUBLICATION_FAILED` or `ROLLBACK_FAILED`. Shared
+  commit is never compensated.
+- Schema-2 recovery is scope-isolated: HOME recovery reads only HOME state; project
+  recovery validates canonical `projectIdentity` and inspects only project state.
 
 **Acceptance:** Stale/missing/extra/mismatched source, adapter, controller, owner, or
-output hashes block publication. A simulated interruption recovers the complete
-prior managed set; unrelated policy and HOME roots remain untouched. Current package
-scripts invoke the TypeScript path; no root `distribute.py` command is treated as
-canonical.
-
+output hashes block publication. Overlap preflight rejects equal, nested, or colliding
+roots before destination reads. A simulated interruption recovers the complete
+prior managed set; unrelated policy, HOME roots, and unmanaged project files remain
+untouched. Current package scripts invoke the TypeScript path; no root `distribute.py`
+command is treated as canonical.
 ### FR-11: Supervision semantics
 
 **Requirement:** A standalone final `--advice` token is explicit checkpoint counsel
@@ -253,21 +269,20 @@ required state.
 | Maintainability | One parser, path policy, hashing policy, lock protocol, and error serializer per boundary. |
 
 ## Observable release gates
-**v2.0.0 release status:** Phase 10 deterministic acceptance is complete
-(272/272 tests, 29/29 controller-closure files, and a 9/9 sanitized mentoring
-baseline). Live vendor qualification and production `$HOME/.evcrate/` publication
-remain operator-gated.
+**v2.0.0 release status:** Deterministic acceptance and installed Linux verification
+are complete (512/512 tests, 29/29 controller-closure files, and verified standalone
+Linux unpack installation with HOME/project publication proof). Live vendor qualification
+and production `$HOME/.evcrate/` publication remain operator-gated.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and 29-file
    controller closure.
-3. Publication dry-run reports only authorized target/HOME changes.
-4. Apply and recovery preserve unmanaged files and reject CAS changes.
+3. Publication dry-run reports only authorized target, HOME, and project changes.
+4. Apply and recovery preserve unmanaged files, enforce scope isolation, and reject CAS changes.
 5. Advisor policy, checkpoint, envelope, history, timeout, cancellation, and
    cleanup contracts are exercised with bounded non-sensitive fixtures.
 6. Linux live qualification is run separately for each enabled installed CLI.
 7. Windows, npm publication, rollout, and live release remain explicitly gated.
-
 ## Documentation map
 
 - [System architecture](./system-architecture.md) — detailed controller,

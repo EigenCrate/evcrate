@@ -127,15 +127,15 @@ test('dam-hopper consumer exercises separate OMP and Copilot targets and health 
 
     const pubOmp = client.publishDryRun({ targets: ['omp'] });
     assert.equal(pubOmp.status, 'preview');
-    assert.deepEqual(pubOmp.payload.selectedTargets, ['omp']);
+    assert.deepEqual(pubOmp.payload.phases[1].selectedTargets, ['omp']);
 
     const pubCopilot = client.publishDryRun({ targets: ['copilot'] });
     assert.equal(pubCopilot.status, 'preview');
-    assert.deepEqual(pubCopilot.payload.selectedTargets, ['copilot']);
+    assert.deepEqual(pubCopilot.payload.phases[1].selectedTargets, ['copilot']);
 
     const pubApply = client.publishApply({ targets: ['omp'] });
     assert.equal(pubApply.status, 'published');
-    assert.deepEqual(pubApply.payload.selectedTargets, ['omp']);
+    assert.deepEqual(pubApply.payload.phases[1].selectedTargets, ['omp']);
 
     const recoverRes = client.recover({ targets: ['omp'] });
     assert.equal(recoverRes.status, 'recovered');

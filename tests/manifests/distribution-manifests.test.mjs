@@ -30,6 +30,10 @@ test('schema-2 registry selection and input hashes follow persisted target decla
   assert.deepEqual([...registry.targets.keys()], ['antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi']);
   assert.equal(loadSelectedManifests(registry, ['agy'])[0].name, 'antigravity');
   assert.equal(loadSelectedManifests(registry).length, 7);
+  assert.deepEqual(
+    loadSelectedManifests(registry, ['copilot', 'pi', 'claude', 'codex']).map(({ id }) => id),
+    ['claude', 'codex', 'copilot', 'pi']
+  );
   assert.throws(() => loadSelectedManifests(registry, ['not-a-target']), code('CAPABILITY_UNSUPPORTED'));
   const manifests = [...registry.targets.values()];
   assert.ok(Object.keys(manifestSourceHashes(manifests)).length > 0);

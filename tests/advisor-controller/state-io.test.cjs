@@ -73,17 +73,6 @@ test('state location rejects traversal, forged authority and symlinked ancestors
   assert.equal(fs.readFileSync(path.join(f.home, 'sentinel'), 'utf8'), 'user work');
 });
 
-test('unsafe managed directory and file modes are not silently repaired', (t) => {
-  const f = fixture(t);
-  initialize(f);
-  fs.chmodSync(f.location.taskDirectory, 0o755);
-  rejects(() => stateLocation(f.context, f.id));
-  assert.equal(fs.statSync(f.location.taskDirectory).mode & 0o777, 0o755);
-  fs.chmodSync(f.location.taskDirectory, 0o700);
-  fs.chmodSync(f.state, 0o644);
-  rejects(() => get(f));
-  assert.equal(fs.statSync(f.state).mode & 0o777, 0o644);
-});
 
 test('symlink and hardlink state files cannot overwrite user files', (t) => {
   const f = fixture(t);

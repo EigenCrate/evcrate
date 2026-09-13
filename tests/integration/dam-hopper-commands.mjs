@@ -64,14 +64,16 @@ export function buildChangesApplyArgs({ token }) {
   return ['changes', 'apply', '--preview-token', token];
 }
 
-export function buildPublishArgs(mode, { targets = null } = {}) {
+export function buildPublishArgs(mode, { targets = null, scope = null } = {}) {
   const args = ['publish', mode === 'dry-run' ? '--dry-run' : '--apply'];
   if (targets) for (const target of targets) args.push('--target', target);
+  if (scope !== null) args.push('--scope', scope);
   return args;
 }
 
-export function buildRecoverArgs({ targets = null } = {}) {
+export function buildRecoverArgs({ targets = null, scope = null } = {}) {
   const args = ['recover'];
   if (targets) for (const target of targets) args.push('--target', target);
+  if (scope !== null) args.push('--scope', scope);
   return args;
 }

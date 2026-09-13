@@ -162,7 +162,7 @@ test('pure TypeScript CLI routes health, settings, version, and publication with
     assert.equal(pCode, 0);
     const pParsed = JSON.parse(capturedPub[0]);
     assert.equal(pParsed.status, 'preview');
-    assert.deepEqual(pParsed.payload.selectedTargets, ['omp']);
+    assert.deepEqual(pParsed.payload.phases[1].selectedTargets, ['omp']);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

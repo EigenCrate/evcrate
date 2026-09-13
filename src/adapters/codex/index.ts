@@ -163,6 +163,9 @@ max_depth = 1
 interrupt_message = true
 [features]
 hooks = true
+
+[mcp_servers.evcrate]
+command = ".codex/bin/run-mcp-package.sh"
 `;
   writeText(context, '.codex/config.toml', value);
 }

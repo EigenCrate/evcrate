@@ -148,7 +148,7 @@ export function readReleaseMarker(stateRoot: string): Record<string, unknown> {
     const value = parseJsonDocument(readBoundedFile(path, MAX_MARKER_BYTES));
     if (value === null || Array.isArray(value) || typeof value !== 'object') fail('PUBLICATION_FAILED');
     const marker = value as Record<string, unknown>;
-    if (marker.schema_version !== 1) fail('PUBLICATION_FAILED');
+    if (marker.schema_version !== 1 && marker.schema_version !== 2) fail('PUBLICATION_FAILED');
     return marker;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -160,9 +160,9 @@ export function readReleaseMarker(stateRoot: string): Record<string, unknown> {
 }
 
 export function writeReleaseMarker(stateRoot: string, marker: Record<string, unknown>): void {
-  if (marker.schema_version !== 1) fail('PUBLICATION_FAILED');
-  const path = markerPath(stateRoot);
+  if (marker.schema_version !== 1 && marker.schema_version !== 2) fail('PUBLICATION_FAILED');
   const bytes = canonicalJsonBytes(marker);
   if (bytes.byteLength > MAX_MARKER_BYTES) fail('PUBLICATION_FAILED');
+  const path = markerPath(stateRoot);
   writeAtomicFile(path, bytes, 0o600);
 }

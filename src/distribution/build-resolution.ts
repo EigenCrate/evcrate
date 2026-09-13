@@ -1,3 +1,4 @@
+import type { InvocationContext } from '../context/invocation-context.js';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
@@ -8,7 +9,7 @@ import {
   loadSelectedManifests, loadTargetManifestRegistry, manifestAdapterHashes, manifestSourceHashes
 } from '../manifests/registry.js';
 import type { BuildManifest, TargetManifest } from '../manifests/types.js';
-import { readBuildManifest, verifyBuild } from './manifest.js';
+import { readBuildManifestSnapshot, verifyBuild } from './manifest.js';
 
 export interface CurrentBuildOptions {
   readonly packageRoot: string;
@@ -22,6 +23,7 @@ export interface CurrentBuildOptions {
 export interface VerifiedCurrentBuild {
   readonly manifestPath: string;
   readonly manifest: BuildManifest;
+  readonly manifestDigest: string;
   readonly selectedManifests: readonly TargetManifest[];
   readonly outputPaths: Readonly<Record<string, string>>;
 }
@@ -139,25 +141,69 @@ export function buildManifestPath(packageRoot: string, selectedTargets: readonly
   return join(packageRoot, '.evcrate', 'build-manifest.json');
 }
 
+function resolveBuild(
+  options: CurrentBuildOptions,
+  selected: readonly TargetManifest[],
+  verifiedManifests: readonly TargetManifest[],
+  manifestPath: string,
+  outputPaths: Readonly<Record<string, string>>,
+  allTargets: boolean
+): VerifiedCurrentBuild {
+  const snapshot = readBuildManifestSnapshot(manifestPath);
+  const manifest = snapshot.manifest;
+  assertValidation(manifest);
+  if (!sameJson(manifest.home_policy, expectedPolicy(verifiedManifests))) fail('PUBLICATION_FAILED');
+  assertOwners(manifest, outputPaths, verifiedManifests);
+  if (!sameJson(Object.keys(manifest.output_hashes).sort(), Object.keys(outputPaths).sort())) fail('PUBLICATION_FAILED');
+  const isConsumer = options.mode === 'consumer' || (options.mode !== 'authoring' && !hasAuthoringSources(options, verifiedManifests));
+  if (isConsumer) {
+    verifyBuild({ manifestPath, manifest, outputRoots: outputPaths, controllerRoot: options.controllerRoot });
+  } else {
+    const sourceHashes = currentSourceHashes(options, verifiedManifests, allTargets);
+    const adapterHashes = manifestAdapterHashes(verifiedManifests, options.packageRoot);
+    verifyBuild({ manifestPath, manifest, outputRoots: outputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
+  }
+  return Object.freeze({
+    manifestPath, manifest, manifestDigest: snapshot.digest,
+    selectedManifests: Object.freeze([...selected]), outputPaths: Object.freeze({ ...outputPaths })
+  });
+}
+
 export function resolveCurrentBuild(options: CurrentBuildOptions): VerifiedCurrentBuild {
   const registry = loadTargetManifestRegistry(options.targetRegistryPath);
   const selected = loadSelectedManifests(registry, options.selectedTargets.map((target) => normalizeTarget(target)));
   const allTargets = selected.length === registry.targets.size
     && selected.every((manifest) => registry.targets.has(manifest.id as PersistedTarget));
   const manifestPath = buildManifestPath(options.packageRoot, selected.map(({ id }) => id as PersistedTarget));
-  const manifest = readBuildManifest(manifestPath);
-  assertValidation(manifest);
-  if (!sameJson(manifest.home_policy, expectedPolicy(selected))) fail('PUBLICATION_FAILED');
   const outputPaths = expectedOutputPaths(options.canonicalSourceRoot, selected);
-  assertOwners(manifest, outputPaths, selected);
-  if (!sameJson(Object.keys(manifest.output_hashes).sort(), Object.keys(outputPaths).sort())) fail('PUBLICATION_FAILED');
-  const isConsumer = options.mode === 'consumer' || (options.mode !== 'authoring' && !hasAuthoringSources(options, selected));
-  if (isConsumer) {
-    verifyBuild({ manifestPath, outputRoots: outputPaths, controllerRoot: options.controllerRoot });
-  } else {
-    const sourceHashes = currentSourceHashes(options, selected, allTargets);
-    const adapterHashes = manifestAdapterHashes(selected, options.packageRoot);
-    verifyBuild({ manifestPath, outputRoots: outputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
+  return resolveBuild(options, selected, selected, manifestPath, outputPaths, allTargets);
+}
+
+/**
+ * Publication always verifies the neutral aggregate snapshot once, then exposes
+ * only the requested target manifests to harness planning.
+ */
+function publicationBuildOptions(input: CurrentBuildOptions | InvocationContext): CurrentBuildOptions {
+  if ('selectedTargetIds' in input) {
+    return {
+      packageRoot: input.packageRoot, canonicalSourceRoot: input.canonicalSourceRoot,
+      controllerRoot: input.controllerRoot, targetRegistryPath: input.registryPath,
+      selectedTargets: input.selectedTargetIds, mode: 'consumer'
+    };
   }
-  return Object.freeze({ manifestPath, manifest, selectedManifests: selected, outputPaths: Object.freeze(outputPaths) });
+  return input;
+}
+
+export function resolveCurrentPublicationBuild(options: CurrentBuildOptions): VerifiedCurrentBuild;
+export function resolveCurrentPublicationBuild(context: InvocationContext): VerifiedCurrentBuild;
+export function resolveCurrentPublicationBuild(
+  input: CurrentBuildOptions | InvocationContext
+): VerifiedCurrentBuild {
+  const options = publicationBuildOptions(input);
+  const registry = loadTargetManifestRegistry(options.targetRegistryPath);
+  const selected = loadSelectedManifests(registry, options.selectedTargets.map((target) => normalizeTarget(target)));
+  const allManifests = Object.freeze([...registry.targets.values()]);
+  const manifestPath = buildManifestPath(options.packageRoot, []);
+  const outputPaths = expectedOutputPaths(options.canonicalSourceRoot, allManifests);
+  return resolveBuild(options, selected, allManifests, manifestPath, outputPaths, true);
 }

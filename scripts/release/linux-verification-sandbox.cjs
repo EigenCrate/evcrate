@@ -54,10 +54,14 @@ function createDisposableSandbox() {
   const stateDir = path.join(tmpDir, 'state');
   const binDir = path.join(tmpDir, 'bin');
   const unrelatedCwd = path.join(tmpDir, 'unrelated-cwd');
+  const projectDir = path.join(tmpDir, 'project destination');
+  const workspaceDir = path.join(tmpDir, 'active workspace');
   const nodeOnlyDir = path.join(tmpDir, 'node-only-bin');
 
   fs.mkdirSync(homeDir, { recursive: true });
   fs.mkdirSync(unrelatedCwd, { recursive: true });
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.mkdirSync(workspaceDir, { recursive: true });
   fs.mkdirSync(nodeOnlyDir, { recursive: true });
 
   const excluded = new Set(['npm', 'npx', 'curl', 'wget', 'tar']);
@@ -88,8 +92,12 @@ function createDisposableSandbox() {
     try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
   };
 
-  return { tmpDir, homeDir, dataDir, stateDir, binDir, unrelatedCwd, nodeOnlyDir, sandboxEnv, cleanup };
+  return {
+    tmpDir, homeDir, dataDir, stateDir, binDir, unrelatedCwd, projectDir, workspaceDir,
+    nodeOnlyDir, sandboxEnv, cleanup
+  };
 }
+
 
 module.exports = {
   computeDirectoryHash,

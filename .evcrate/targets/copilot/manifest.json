@@ -32,6 +32,7 @@
     "bindings": {".copilot": ".copilot"},
     "preserve_paths": {},
     "promotion_order": 40,
-    "reject_unmanaged_collisions": true
+    "reject_unmanaged_collisions": true,
+    "publication_rules": ["copilot-home-path-rewrite"]
   }
 }

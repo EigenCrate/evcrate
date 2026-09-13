@@ -10,8 +10,10 @@ import { assembleLocalStage } from './local-build-staging.js';
 import { promoteTransaction, type PromotionPair } from './promotion.js';
 import { publishApply, recoverPublication, type PublicationOptions } from './publication.js';
 import { PERSISTED_TARGETS, type PersistedTarget } from '../protocol/validation.js';
+import type {
+  PublishApplyResultPayload, PublishRequestPayload, PublicationRequestPayload, RecoverRequestPayload, RecoverResultPayload
+} from '../protocol/publication-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
-
 export { assertLegacyRootClean } from './local-build-staging.js';
 
 function isSamePathTree(staged: string, local: string): boolean {
@@ -47,6 +49,7 @@ export function runLocalBuild(
     return Object.freeze({
       manifestPath: result.manifestPath,
       manifest,
+      manifestDigest: hashBytes(result.manifestData),
       selectedManifests: result.selectedManifests,
       outputPaths: Object.freeze(Object.fromEntries(result.localOutputs))
     });
@@ -67,11 +70,30 @@ export function runLocalCheck(
   }
 }
 
+type LocalDistributionOutcome =
+  | { readonly action: 'build' | 'check'; readonly engine: 'typescript' }
+  | { readonly action: 'publish' | 'all'; readonly engine: 'typescript'; readonly payload: PublishApplyResultPayload }
+  | { readonly action: 'recover'; readonly engine: 'typescript'; readonly payload: RecoverResultPayload };
+
+function publishRequest(
+  context: InvocationContext, request: PublicationRequestPayload | undefined
+): PublishRequestPayload {
+  if (request !== undefined && !('selectedTargets' in request)) throw new ControlPlaneError('PROTOCOL_INVALID');
+  return request ?? { scope: 'home', selectedTargets: context.selectedTargetIds };
+}
+function recoverRequest(
+  request: PublicationRequestPayload | undefined
+): RecoverRequestPayload {
+  if (request !== undefined && !('releaseId' in request)) throw new ControlPlaneError('PROTOCOL_INVALID');
+  return request ?? { scope: 'home', projectIdentity: null, releaseId: null };
+}
+
 export async function runLocalDistribution(
   action: 'build' | 'check' | 'publish' | 'all' | 'recover',
   context: InvocationContext,
-  options: PublicationOptions = {}
-): Promise<{ readonly action: string; readonly engine: 'typescript' }> {
+  options: PublicationOptions = {},
+  request?: PublicationRequestPayload
+): Promise<LocalDistributionOutcome> {
   switch (action) {
     case 'build':
       runLocalBuild(context.packageRoot, context.selectedTargetIds);
@@ -80,14 +102,11 @@ export async function runLocalDistribution(
       runLocalCheck(context.packageRoot, context.selectedTargetIds);
       return { action: 'check', engine: 'typescript' };
     case 'publish':
-      publishApply(context, options);
-      return { action: 'publish', engine: 'typescript' };
+      return { action: 'publish', engine: 'typescript', payload: publishApply(context, options, publishRequest(context, request)) };
     case 'all':
       runLocalBuild(context.packageRoot, context.selectedTargetIds);
-      publishApply(context, options);
-      return { action: 'all', engine: 'typescript' };
+      return { action: 'all', engine: 'typescript', payload: publishApply(context, options, publishRequest(context, request)) };
     case 'recover':
-      recoverPublication(context);
-      return { action: 'recover', engine: 'typescript' };
+      return { action: 'recover', engine: 'typescript', payload: recoverPublication(context, recoverRequest(request)) };
   }
 }

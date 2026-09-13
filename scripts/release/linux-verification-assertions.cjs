@@ -3,8 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { spawnSync } = require('node:child_process');
-const { computeDirectoryHash } = require('./linux-verification-sandbox.cjs');
+const { verifyInstalledLauncherAndInvariance } = require('./installed-lifecycle-assertions.cjs');
 
 function verifyReleaseAssetTree(assetsDir) {
   const files = fs.readdirSync(assetsDir);
@@ -48,61 +47,6 @@ function verifyReleaseAssetTree(assetsDir) {
   return { linuxArchive, archiveSha256, metadata };
 }
 
-function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, unrelatedCwd, sandboxEnv, homeDir) {
-  const defaultOpts = {
-    cwd: unrelatedCwd,
-    env: sandboxEnv,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024
-  };
-
-  const versionRes = spawnSync(launcherPath, ['version', '--json'], { ...defaultOpts, timeout: 60000 });
-  if (versionRes.status !== 0) {
-    throw new Error(`evcrate version failed: ${versionRes.stderr || versionRes.stdout}`);
-  }
-  const versionJson = JSON.parse(versionRes.stdout);
-  if (versionJson.status !== 'ok') {
-    throw new Error(`evcrate version returned unexpected status: ${versionJson.status}`);
-  }
-
-  const healthRes = spawnSync(launcherPath, ['health', '--json'], { ...defaultOpts, timeout: 60000 });
-  const healthStatus = healthRes.status === 0 ? 'ok' : 'diagnostic-flagged';
-
-  const packageHashBefore = computeDirectoryHash(snapshotDir);
-
-  const dryRun1 = spawnSync(launcherPath, ['publish', '--dry-run', '--json'], { ...defaultOpts, timeout: 120000 });
-  if (dryRun1.status !== 0) {
-    throw new Error(`publish --dry-run failed (status ${dryRun1.status}, signal ${dryRun1.signal}, error ${dryRun1.error}): ${dryRun1.stderr || dryRun1.stdout}`);
-  }
-
-  const apply = spawnSync(launcherPath, ['publish', '--apply'], { ...defaultOpts, timeout: 180000 });
-  if (apply.status !== 0) {
-    throw new Error(`publish --apply failed (status ${apply.status}, signal ${apply.signal}, error ${apply.error}): ${apply.stderr || apply.stdout}`);
-  }
-
-  const dryRun2 = spawnSync(launcherPath, ['publish', '--dry-run', '--json'], { ...defaultOpts, timeout: 120000 });
-  if (dryRun2.status !== 0) {
-    throw new Error(`repeat publish --dry-run failed (status ${dryRun2.status}, signal ${dryRun2.signal}, error ${dryRun2.error}): ${dryRun2.stderr || dryRun2.stdout}`);
-  }
-  const packageHashAfter = computeDirectoryHash(snapshotDir);
-  if (packageHashBefore !== packageHashAfter) {
-    throw new Error(`Package snapshot mutated during publish! Before: ${packageHashBefore}, After: ${packageHashAfter}`);
-  }
-
-  const expectedTargets = ['.claude', '.copilot', '.omp', '.pi', '.gemini', '.codex', '.agents'];
-  for (const target of expectedTargets) {
-    if (!fs.existsSync(path.join(homeDir, target))) {
-      throw new Error(`Missing expected HOME target projection: ${target}`);
-    }
-  }
-
-  const controllerBin = path.join(homeDir, '.evcrate', 'bin', 'evcrate-advisor');
-  if (!fs.existsSync(controllerBin)) {
-    throw new Error('Advisor controller binary missing in published HOME');
-  }
-
-  return { healthStatus, packageHashBefore, packageHashAfter };
-}
 
 module.exports = {
   verifyReleaseAssetTree,

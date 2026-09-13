@@ -11,8 +11,10 @@ import {
   registeredProjectionAdapters,
   writeProjectionFile,
 } from '../../dist/index.js';
+import { projectionExpectations, registerProjectionExpectation } from '../../dist/adapters/types.js';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
+  cpSync,
   chmodSync,
   existsSync,
   lstatSync,
@@ -60,14 +62,17 @@ function materialize(target) {
   return result;
 }
 function freshProjection(target) {
+  const source = materialize(target);
   const stage = createStagedRoot(repository, `.phase5-mutation-${target}-`);
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get(target), canonicalRoot, stage);
-  const adapter = getProjectionAdapter(target);
-  adapter.build(context);
-  const validation = adapter.validate(context);
-  assert.equal(validation.valid, true, `${target}: ${JSON.stringify(validation.diagnostics)}`);
-  return { stage, context, adapter };
+  for (const name of readdirSync(source.stage.path)) {
+    cpSync(join(source.stage.path, name), join(stage.path, name), { recursive: true });
+  }
+  for (const expectation of projectionExpectations(source.context)) {
+    registerProjectionExpectation(context, expectation);
+  }
+  return { stage, context, adapter: getProjectionAdapter(target) };
 }
 function filesUnder(root, prefix = '') {
   const entries = readdirSync(join(root, prefix), { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
@@ -79,6 +84,29 @@ function filesUnder(root, prefix = '') {
   }
   return result;
 }
+function invokeRuntime(args, cwd, env, input = '{}') {
+  const result = spawnSync(process.execPath, args, {
+    cwd, env: { ...process.env, ...env }, input, encoding: 'utf8'
+  });
+  assert.equal(result.status, 0, `${args.join(' ')} failed: ${result.stderr}`);
+  return result.stdout;
+}
+function installProjections(destination) {
+  for (const target of PROJECTION_QUALIFICATION_ORDER) {
+    const source = materialize(target).stage.path;
+    for (const name of readdirSync(source)) {
+      cpSync(join(source, name), join(destination, name), { recursive: true });
+    }
+  }
+}
+function installedProjectionRoot() {
+  const stage = createStagedRoot(repository, '.phase7-installed-');
+  stages.push(stage);
+  installProjections(stage.path);
+  symlinkSync(join(repository, 'node_modules'), join(stage.path, 'node_modules'), 'dir');
+  return stage.path;
+}
+
 
 before(() => {
   for (const target of PROJECTION_QUALIFICATION_ORDER) materialize(target);
@@ -172,6 +200,21 @@ test('target-specific managed settings and command maps stay independent', () =>
   assert.equal(managed.effortLevel, 'high');
 });
 
+test('Gemini rejects declared malformed or non-object settings', () => {
+  for (const document of ['{', '[]', 'null', '"scalar"']) {
+    const sourceContainer = temporaryDirectory();
+    const sourceRoot = join(sourceContainer, '.claude');
+    mkdirSync(sourceRoot);
+    cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
+    writeFileSync(join(sourceContainer, 'CLAUDE.md'), '# Test project context');
+    writeFileSync(join(sourceRoot, 'settings.json'), document);
+    const stage = createStagedRoot(repository, '.phase5-invalid-gemini-');
+    stages.push(stage);
+    const context = createProjectionBuildContext(registry.targets.get('gemini'), sourceRoot, stage);
+    assert.throws(() => getProjectionAdapter('gemini').build(context), code('VALIDATION_INVALID'), document);
+  }
+});
+
 test('resource graph snapshots dist assets and rejects unsafe source entries', () => {
   const graph = createResourceGraph(canonicalRoot);
   assert.ok(graph.files.some(({ path }) => path === 'skills/mcp-management/scripts/dist/cli.js'));
@@ -254,6 +297,90 @@ test('validators reject missing, extra, modified, wrong-mode, symlink, and speci
     execFileSync('mkfifo', [specialPath]);
     assert.equal(special.adapter.validate(special.context).diagnostics.some(({ code }) => code === 'unsafe'), true);
   }
+});
+
+test('installed runtime entrypoints resolve children from their own roots and keep workspace context', () => {
+  const container = temporaryDirectory();
+  const installed = installedProjectionRoot();
+  const workspace = join(container, 'workspace with spaces');
+  mkdirSync(workspace, { recursive: true });
+  mkdirSync(join(container, '.codex'), { recursive: true });
+
+  const claude = invokeRuntime(
+    [join(installed, '.claude/hooks/session-init.cjs')],
+    workspace, { CLAUDE_PROJECT_DIR: workspace }
+  );
+  assert.equal(claude.includes('EVCREATE_HOOK_UNAVAILABLE'), false);
+
+  const codex = JSON.parse(invokeRuntime(
+    [join(installed, '.codex/hooks/session-start.cjs')],
+    workspace, { CODEX_PROJECT_DIR: workspace }
+  ));
+  assert.equal(codex.hookSpecificOutput?.hookEventName, 'SessionStart');
+
+  const gemini = JSON.parse(invokeRuntime(
+    [join(installed, '.gemini/hooks/session-start.cjs')],
+    workspace, { GEMINI_PROJECT_DIR: workspace }
+  ));
+  assert.equal(gemini.hookSpecificOutput?.hookEventName, 'SessionStart');
+
+  const antigravity = JSON.parse(invokeRuntime(
+    [join(installed, '.antigravity/hooks/scout-block.cjs')],
+    workspace, { AGY_PROJECT_DIR: workspace }
+  ));
+  assert.equal(antigravity.decision, 'allow');
+
+  const ompProgram = [
+    `import { runCanonicalHook } from ${JSON.stringify(`file://${join(installed, '.omp/evcrate/omp-hook-runtime.ts')}`)};`,
+    `const result = await runCanonicalHook('session-init.cjs', {}, { cwd: ${JSON.stringify(workspace)} });`,
+    'process.exitCode = result.code;'
+  ].join('\n');
+  invokeRuntime(
+    ['--experimental-strip-types', '--input-type=module', '--eval', ompProgram],
+    workspace, {}
+  );
+
+
+  const piProgram = [
+    `import extension from ${JSON.stringify(`file://${join(installed, '.pi/agent/extensions/evcrate/index.js')}`)};`,
+    'const handlers = new Map();',
+    'const pi = { on(name, handler) { handlers.set(name, handler); }, registerCommand() {}, registerTool() {}, getActiveTools() { return []; }, getAllTools() { return []; }, setActiveTools() {}, events: { on() {} } };',
+    'const result = await extension(pi);',
+    'process.stdout.write(JSON.stringify({ agentRoot: result.agentRoot, resourceRoot: result.resourceRoot }));'
+  ].join('\n');
+  const pi = JSON.parse(invokeRuntime(
+    ['--input-type=module', '--eval', piProgram],
+    workspace, { PI_CODING_AGENT_DIR: join(installed, '.pi/agent') }
+  ));
+  assert.equal(pi.agentRoot, join(installed, '.pi/agent'));
+  assert.equal(pi.resourceRoot, join(installed, '.pi/agent/evcrate'));
+});
+
+test('installed runtime wrappers deny missing and symlinked child hooks', () => {
+  const container = temporaryDirectory();
+  const installed = installedProjectionRoot();
+  const workspace = join(container, 'workspace');
+  mkdirSync(workspace, { recursive: true });
+
+  const codexChild = join(installed, '.codex/hooks/scout-block.cjs');
+  rmSync(codexChild);
+  const missing = JSON.parse(invokeRuntime(
+    [join(installed, '.codex/hooks/pretool-scout-block.cjs')],
+    workspace, { CODEX_PROJECT_DIR: workspace }
+  ));
+  assert.equal(missing.hookSpecificOutput.permissionDecision, 'deny');
+  assert.equal(missing.hookSpecificOutput.permissionDecisionReason, 'EVCREATE_HOOK_UNAVAILABLE');
+
+  const geminiChild = join(installed, '.gemini/hooks/scout-block.cjs');
+  rmSync(geminiChild);
+  symlinkSync(join(installed, '.gemini/hooks/privacy-block.cjs'), geminiChild);
+  const symlinked = JSON.parse(invokeRuntime(
+    [join(installed, '.gemini/hooks/before-tool-scout-block.cjs')],
+    workspace, { GEMINI_PROJECT_DIR: workspace },
+    '{"toolCall":{"args":{"CommandLine":"echo safe"}}}'
+  ));
+  assert.equal(symlinked.decision, 'deny');
+  assert.equal(symlinked.reason, 'EVCREATE_HOOK_UNAVAILABLE');
 });
 
 const SCRIPT_DIRS = {
