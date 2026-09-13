@@ -242,85 +242,69 @@ const isUsableHook = (candidate) => {
 
 // Format Antigravity payload for Claude hook
 let claudePayload = input;
+let projectRoot = process.cwd();
+const isWorkspaceDirectory = (candidate) => {
+  if (typeof candidate !== "string" || !path.isAbsolute(candidate)) return false;
+  try {
+    const stat = fs.lstatSync(candidate);
+    return stat.isDirectory() && !stat.isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
 try {
   const data = JSON.parse(input);
-  if (data && !data.tool_input) {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const workspaceCandidates = [
+      ...(Array.isArray(data.workspacePaths) ? data.workspacePaths : []),
+      data.cwd,
+      process.env.AGY_PROJECT_DIR,
+      process.env.GEMINI_PROJECT_DIR,
+      process.env.CLAUDE_PROJECT_DIR,
+      process.cwd(),
+    ];
+    projectRoot = workspaceCandidates.find(isWorkspaceDirectory) || process.cwd();
+  }
+  if (data && !data.tool_input && data.toolCall && data.toolCall.args) {
+    const args = data.toolCall.args;
     let toolName = "unknown";
-    if (data.toolCall && data.toolCall.args) {
-       const args = data.toolCall.args;
-       if (args.CommandLine) toolName = "run_command";
-       else if (args.TargetFile) toolName = "replace_file_content";
-       else if (args.Query) toolName = "grep_search";
-       else if (args.DirectoryPath) toolName = "list_dir";
-       else if (args.AbsolutePath) toolName = "view_file";
-       
-        const findProjectRoot = () => {
-          if (data.workspacePaths && data.workspacePaths.length > 0) {
-            return data.workspacePaths[0];
-          }
-          if (data.cwd) {
-            return data.cwd;
-          }
-          if (process.env.GEMINI_PROJECT_DIR) return process.env.GEMINI_PROJECT_DIR;
-          if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
-          let current = process.cwd();
-          while (true) {
-            if (fs.existsSync(path.join(current, '.antigravity')) ||
-                fs.existsSync(path.join(current, '.codex')) ||
-                fs.existsSync(path.join(current, '.gemini')) ||
-                fs.existsSync(path.join(current, '.pi'))) {
-              return current;
-            }
-            if (fs.existsSync(path.join(current, '.agents')) || 
-                fs.existsSync(path.join(current, '.git'))) {
-              return current;
-            }
-            const parent = path.dirname(current);
-            if (parent === current) break;
-            current = parent;
-          }
-          return process.cwd();
-        };
+    if (args.CommandLine) toolName = "run_command";
+    else if (args.TargetFile) toolName = "replace_file_content";
+    else if (args.Query) toolName = "grep_search";
+    else if (args.DirectoryPath) toolName = "list_dir";
+    else if (args.AbsolutePath) toolName = "view_file";
 
-        const projectRoot = findProjectRoot();
+    const mapKeys = (obj) => {
+      if (typeof obj === "string") {
+        const normalized = obj.replace(/\\/g, '/');
+        const projectNormalized = projectRoot.replace(/\\/g, '/').replace(/\/+$/, '');
+        if (normalized === projectNormalized) return '';
+        if (normalized.startsWith(projectNormalized + '/')) return normalized.slice(projectNormalized.length + 1);
+        return obj;
+      }
+      if (Array.isArray(obj)) return obj.map(mapKeys);
+      if (typeof obj === "object" && obj !== null) {
+        const newObj = {};
+        for (const key of Object.keys(obj)) {
+          let mappedKey = key;
+          if (key === 'AbsolutePath') mappedKey = 'path';
+          else if (key === 'TargetFile') mappedKey = 'path';
+          else if (key === 'SearchPath') mappedKey = 'path';
+          else if (key === 'DirectoryPath') mappedKey = 'path';
+          else if (key === 'CommandLine') mappedKey = 'command';
+          newObj[mappedKey] = mapKeys(obj[key]);
+        }
+        return newObj;
+      }
+      return obj;
+    };
 
-        const mapKeys = (obj) => {
-          if (typeof obj === "string") {
-            let normalized = obj.replace(/\\/g, '/');
-            let projNormalized = projectRoot.replace(/\\/g, '/');
-            if (normalized.startsWith(projNormalized)) {
-              let rel = normalized.substring(projNormalized.length);
-              if (rel.startsWith('/')) rel = rel.substring(1);
-              return rel;
-            }
-            return obj;
-          }
-          if (Array.isArray(obj)) return obj.map(mapKeys);
-          if (typeof obj === "object" && obj !== null) {
-            const newObj = {};
-            for (const key of Object.keys(obj)) {
-              let mappedKey = key;
-              if (key === 'AbsolutePath') mappedKey = 'path';
-              else if (key === 'TargetFile') mappedKey = 'path';
-              else if (key === 'SearchPath') mappedKey = 'path';
-              else if (key === 'DirectoryPath') mappedKey = 'path';
-              else if (key === 'CommandLine') mappedKey = 'command';
-              
-              newObj[mappedKey] = mapKeys(obj[key]);
-            }
-            return newObj;
-          }
-          return obj;
-        };
-        
-        claudePayload = JSON.stringify({
-          tool_name: toolName,
-          tool_input: mapKeys(args)
-        });
-     }
-   }
- } catch(e) {}
-
+    claudePayload = JSON.stringify({
+      tool_name: toolName,
+      tool_input: mapKeys(args)
+    });
+  }
+} catch(e) {}
 if (!isUsableHook(sourceHook)) {
   process.stdout.write(JSON.stringify({
     decision: "deny",
@@ -330,12 +314,14 @@ if (!isUsableHook(sourceHook)) {
 }
 
 const result = spawnSync(process.execPath, [sourceHook], {
+  cwd: projectRoot,
   input: claudePayload,
   encoding: 'utf-8',
   env: {
     ...process.env,
-    CLAUDE_PROJECT_DIR: process.cwd(),
-    GEMINI_PROJECT_DIR: process.cwd(),
+    CLAUDE_PROJECT_DIR: projectRoot,
+    GEMINI_PROJECT_DIR: projectRoot,
+    AGY_PROJECT_DIR: projectRoot,
   },
 });
 
@@ -354,6 +340,15 @@ if (result.status === 0 && !result.error) {
 }
 `;
 }
+function neutralHookCommand(command: string): string {
+  const prefixes: readonly [string, string][] = [
+    ['"$CLAUDE_PROJECT_DIR"/.claude/hooks', '"$AGY_PROJECT_DIR"/.antigravity/hooks'],
+    ["'$CLAUDE_PROJECT_DIR'/.claude/hooks", "'$AGY_PROJECT_DIR'/.antigravity/hooks"],
+    ['$CLAUDE_PROJECT_DIR/.claude/hooks', '$AGY_PROJECT_DIR/.antigravity/hooks'],
+    ['${CLAUDE_PROJECT_DIR}/.claude/hooks', '${AGY_PROJECT_DIR}/.antigravity/hooks']
+  ];
+  return prefixes.reduce((value, [source, target]) => value.replaceAll(source, target), command);
+}
 function extractHooks(context: ProjectionBuildContext): void {
   const settings = context.resources.files.find((file) => file.path === 'settings.json');
   if (!settings) return;
@@ -362,6 +357,21 @@ function extractHooks(context: ProjectionBuildContext): void {
   if ('hooks' in data) {
     if (data.hooks === null || typeof data.hooks !== 'object' || Array.isArray(data.hooks)) invalid();
     hooks = data.hooks as Record<string, JsonValue>;
+  }
+  for (const groups of Object.values(hooks)) {
+    if (!Array.isArray(groups)) invalid();
+    for (const group of groups) {
+      if (group === null || typeof group !== 'object' || Array.isArray(group)) invalid();
+      const entries = (group as Record<string, JsonValue>).hooks;
+      if (entries === undefined) continue;
+      if (!Array.isArray(entries)) invalid();
+      for (const hook of entries) {
+        if (hook === null || typeof hook !== 'object' || Array.isArray(hook)) invalid();
+        const object = hook as Record<string, JsonValue>;
+        if (object.command !== undefined && typeof object.command !== 'string') invalid();
+        if (typeof object.command === 'string') object.command = neutralHookCommand(object.command);
+      }
+    }
   }
   if ('PreToolUse' in hooks) {
     const pretool = hooks.PreToolUse;
@@ -372,47 +382,6 @@ function extractHooks(context: ProjectionBuildContext): void {
     }
   }
   writeProjectionFile(context, '.antigravity/hooks.json', textBytes(pythonJson({ hooks })));
-}
-function rewriteGlobalHooks(context: ProjectionBuildContext): void {
-  const path = context.stagePath('.antigravity/hooks.json');
-  let bytes: Uint8Array;
-  try {
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink() || !stat.isFile()) unsafe();
-    bytes = readBoundedFile(path, 16 * 1024 * 1024);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
-    throw error;
-  }
-  const data = record(parseText(bytes));
-  const prefixes = [
-    '"$CODEX_PROJECT_DIR"/.codex/hooks', '"$AGY_PROJECT_DIR"/.gemini/config/hooks',
-    '"$AGY_PROJECT_DIR"/.antigravity/hooks', '"$CLAUDE_PROJECT_DIR"/.claude/hooks',
-    '"$CLAUDE_PROJECT_DIR"/.antigravity/hooks', '"$GEMINI_PROJECT_DIR"/.gemini/hooks',
-    '"$GEMINI_PROJECT_DIR"/.antigravity/hooks'
-  ];
-  const hooks = data.hooks;
-  if (hooks === null || typeof hooks !== 'object' || Array.isArray(hooks)) invalid();
-  for (const groups of Object.values(hooks as Record<string, JsonValue>)) {
-    if (!Array.isArray(groups)) invalid();
-    for (const group of groups) {
-      if (group === null || typeof group !== 'object' || Array.isArray(group)) invalid();
-      const groupHooks = (group as Record<string, JsonValue>).hooks;
-      if (groupHooks === undefined) continue;
-      if (!Array.isArray(groupHooks)) invalid();
-      for (const hook of groupHooks) {
-        if (hook === null || typeof hook !== 'object' || Array.isArray(hook)) invalid();
-        const object = hook as Record<string, JsonValue>;
-        if (typeof object.command === 'string') {
-          object.command = prefixes.reduce(
-            (command, prefix) => command.replaceAll(prefix, '"$HOME"/.gemini/config/hooks'),
-            object.command
-          );
-        }
-      }
-    }
-  }
-  writeProjectionFile(context, '.antigravity/hooks.json', textBytes(pythonJson(data)));
 }
 function wrapHooks(context: ProjectionBuildContext): void {
   for (const hookFile of HOOK_FILES) {
@@ -500,7 +469,6 @@ ${body}`;
   }
   wrapHooks(context);
   rewriteAll(context);
-  rewriteGlobalHooks(context);
   const behaviors: Record<string, unknown>[] = [];
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;

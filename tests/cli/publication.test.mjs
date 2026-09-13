@@ -3,24 +3,34 @@ import assert from 'node:assert/strict';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createPublicationPlan, main, recoverPublication, resolveInvocationContext } from '../../dist/index.js';
+import { createPublicationPlan, main, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext } from '../../dist/index.js';
+import { PublicationPartialError } from '../../dist/distribution/publication.js';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
-const bindingOrder = ['.evcrate/bin', '.omp'];
+const bindingOrder = ['.omp'];
 const dryRun = Object.freeze({
+  scope: 'home', projectIdentity: null,
   buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'a'.repeat(64),
-  selectedTargets: ['omp'], bindingOrder, changes: []
+  phases: [
+    { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
+    { phase: 'harness', scope: 'home', selectedTargets: ['omp'], bindingOrder, changes: [] }
+  ]
 });
-const applied = Object.freeze({ ...dryRun, releaseId: 'release-cli-1', retainedReleaseId: null });
+const applied = Object.freeze({
+  ...dryRun,
+  phases: dryRun.phases.map((phase) => ({
+    ...phase, status: 'committed', releaseId: 'release-cli-1', retainedReleaseId: null
+  }))
+});
 
 function capture() {
   const values = [];
   return { values, output: { isTTY: false, write: (value) => values.push(value) } };
 }
-function runtime(home, captured, publicationHandler) {
+function runtime(home, captured, publicationHandler, extra = {}) {
   return {
     packageRoot, cwd: packageRoot, packageVersion: '1.0.0', requestId: () => 'phase8-cli',
-    output: captured.output, publicationHandler, home
+    output: captured.output, publicationHandler, home, ...extra
   };
 }
 
@@ -30,21 +40,21 @@ test('top-level publish routes dry-run and apply through the typed resource enve
     const handler = {
       publishDryRun: () => dryRun,
       publishApply: () => applied,
-      recover: () => ({ releaseId: null, action: 'none', selectedTargets: [], bindingOrder: [] })
+      recover: () => ({ scope: 'home', projectIdentity: null, action: 'none', phases: [] })
     };
     const preview = capture();
     assert.equal(await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'], runtime(home, preview, handler)), 0);
     assert.equal(JSON.parse(preview.values[0]).status, 'preview');
-    assert.deepEqual(JSON.parse(preview.values[0]).payload.bindingOrder, bindingOrder);
+    assert.deepEqual(JSON.parse(preview.values[0]).payload.phases[1].bindingOrder, bindingOrder);
     const result = capture();
     assert.equal(await main(['publish', '--apply', '--target', 'omp', '--home', home, '--json'], runtime(home, result, handler)), 0);
     assert.equal(JSON.parse(result.values[0]).status, 'published');
-    assert.equal(JSON.parse(result.values[0]).payload.releaseId, 'release-cli-1');
+    assert.equal(JSON.parse(result.values[0]).payload.phases[1].releaseId, 'release-cli-1');
     const recovery = capture();
     assert.equal(await main(['recover', '--target', 'omp', '--home', home, '--json'], runtime(home, recovery, handler)), 0);
     const recovered = JSON.parse(recovery.values[0]);
     assert.equal(recovered.status, 'recovered');
-    assert.deepEqual(recovered.payload, { releaseId: null, action: 'none', selectedTargets: [], bindingOrder: [] });
+    assert.deepEqual(recovered.payload, { scope: 'home', projectIdentity: null, action: 'none', phases: [] });
     assert.deepEqual(recovered.recovery, { kind: 'none', identity: 'none' });
   } finally {
     rmSync(home, { recursive: true, force: true });
@@ -90,11 +100,46 @@ test('real authority apply matches the typed plan on repeat', async () => {
     assert.equal(await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'],
       runtime(home, repeated)), 0);
     const payload = JSON.parse(repeated.values[0]).payload;
-    assert.ok(payload.changes.every(({ action }) => action === 'noop' || action === 'preserve'));
+    assert.ok(payload.phases.flatMap(({ changes }) => changes)
+      .every(({ action }) => action === 'noop' || action === 'preserve'));
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('project typed publication serializes a valid partial result with exit five', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-project-partial-'));
+  try {
+    const captured = capture();
+    const handler = {
+      publishApply(context) {
+        const partial = {
+          scope: 'project',
+          projectIdentity: resolvePublicationProjectContext(context).projectIdentity,
+          buildManifestPath: '.evcrate/build-manifest-omp.json',
+          buildManifestDigest: 'a'.repeat(64),
+          phases: [
+            { ...dryRun.phases[0], status: 'committed', releaseId: 'shared-release', retainedReleaseId: null },
+            { ...dryRun.phases[1], scope: 'project', status: 'failed', releaseId: null, retainedReleaseId: null }
+          ]
+        };
+        throw new PublicationPartialError(partial, 'PUBLICATION_FAILED');
+      }
+    };
+    assert.equal(await main([
+      'publish', '--apply', '--scope', 'project', '--target', 'omp',
+      '--home', home, '--project-root', packageRoot, '--json'
+    ], runtime(home, captured, handler)), 5);
+    const result = JSON.parse(captured.values[0]);
+    assert.equal(result.status, 'partial');
+    assert.equal(result.error.code, 'PUBLICATION_FAILED');
+    assert.equal(result.payload.phases[0].status, 'committed');
+    assert.equal(result.payload.phases[1].status, 'failed');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
 
 
 test('typed publication rejects handler output with mismatched binding order', async () => {
@@ -103,11 +148,15 @@ test('typed publication rejects handler output with mismatched binding order', a
     const captured = capture();
     const handler = {
       publishDryRun: () => ({
+        scope: 'home', projectIdentity: null,
         buildManifestPath: '.evcrate/build-manifest.json', buildManifestDigest: 'a'.repeat(64),
-        selectedTargets: ['codex', 'omp'], bindingOrder: ['.evcrate/bin', '.omp'], changes: []
+        phases: [
+          { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
+          { phase: 'harness', scope: 'home', selectedTargets: ['codex'], bindingOrder: ['.agents', '.codex'], changes: [] }
+        ]
       }),
       publishApply: () => applied,
-      recover: () => ({ releaseId: null, action: 'none', selectedTargets: [], bindingOrder: [] })
+      recover: () => ({ scope: 'home', projectIdentity: null, action: 'none', phases: [] })
     };
     assert.equal(
       await main(['publish', '--dry-run', '--target', 'codex', '--target', 'omp', '--home', home, '--json'],

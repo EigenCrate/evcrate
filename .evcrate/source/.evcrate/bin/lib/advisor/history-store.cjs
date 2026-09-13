@@ -251,7 +251,7 @@ function scanProjectRecords(ctx, targetProjectId) {
   try {
     const pPath = `${root.base}/${projId}`;
     const pStat = inspect(pPath);
-    if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink() || !owner(pStat) || (Number(pStat.mode) & 0o777) !== 0o700) {
+    if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink() || !owner(pStat)) {
       return [];
     }
 
@@ -263,7 +263,7 @@ function scanProjectRecords(ctx, targetProjectId) {
       if (!UUID.test(tName)) continue;
       const tPath = `${pPath}/${tName}`;
       const tStat = inspect(tPath);
-      if (!tStat || !tStat.isDirectory() || tStat.isSymbolicLink() || !owner(tStat) || (Number(tStat.mode) & 0o777) !== 0o700) {
+      if (!tStat || !tStat.isDirectory() || tStat.isSymbolicLink() || !owner(tStat)) {
         continue;
       }
 
@@ -275,19 +275,19 @@ function scanProjectRecords(ctx, targetProjectId) {
         if (!UUID.test(cName)) continue;
         const cPath = `${tPath}/${cName}`;
         const cStat = inspect(cPath);
-        if (!cStat || !cStat.isDirectory() || cStat.isSymbolicLink() || !owner(cStat) || (Number(cStat.mode) & 0o777) !== 0o700) {
+        if (!cStat || !cStat.isDirectory() || cStat.isSymbolicLink() || !owner(cStat)) {
           continue;
         }
 
         const execUnderBase = `${cPath}/execution.json`;
         const execStat = inspect(execUnderBase);
-        if (!execStat || !execStat.isFile() || execStat.isSymbolicLink() || !owner(execStat) || (Number(execStat.mode) & 0o777) !== 0o600 || execStat.nlink !== 1n) {
+        if (!execStat || !execStat.isFile() || execStat.isSymbolicLink() || !owner(execStat) || execStat.nlink !== 1n) {
           continue;
         }
 
         const outUnderBase = `${cPath}/outcome.json`;
         const outStat = inspect(outUnderBase);
-        const hasValidOutcome = outStat && outStat.isFile() && !outStat.isSymbolicLink() && owner(outStat) && (Number(outStat.mode) & 0o777) === 0o600 && outStat.nlink === 1n;
+        const hasValidOutcome = outStat && outStat.isFile() && !outStat.isSymbolicLink() && owner(outStat) && outStat.nlink === 1n;
 
         // Account for all files in directory to ensure quota captures temp/stray files
         let totalDiskBytes = Number(execStat.size) + (hasValidOutcome ? Number(outStat.size) : 0);

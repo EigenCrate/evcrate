@@ -2,8 +2,103 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-11  
-**Status:** Advisor checkpoint V2 evidence schema and diagnostics fix complete.
+**Updated:** 2026-09-13  
+**Status:** Hook Materialization Scope Distribution complete through Phase 09 (Post-Verification Operator Documentation); older phase records remain in the linked archive.
+
+### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
+
+**Status:** Phase 09 DONE (2026-09-13; 100%). Live operator and architecture documentation updated after full implementation proof, release gate verification, 14-suite `npm test` success (512/512), exact 29-file closure verification, and installed Linux release proof.
+**Plan:** [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
+
+- Reconciled code and design contracts against Phase 08 evidence.
+- Updated `README.md` with operator CLI examples (`--scope home|project`, `--home`, `--project-root`, `--target`, recovery), the seven-target destination matrix, shared controller HOME invariant, partial failure semantics (`PUBLICATION_FAILED`/`ROLLBACK_FAILED`, exit 5), quiescence runbook, and the explicit distinction between standalone installer rollback (`install.sh rollback`) and harness publication recovery.
+- Updated `docs/system-architecture.md` with the updated build-to-publication dataflow diagram, two-phase transaction execution, HOME-then-project lock ordering, preflight-before-mutation checks, schema-2 state roots, and scope-isolated recovery.
+- Updated `docs/project-overview-pdr.md` with observable functional requirements for scope-aware publication (FR-10), partial exit codes, and Linux-only qualification status.
+- Updated `docs/code-standards.md` with enforceable architectural bans (no project controller, no reverse lock acquisition, no arbitrary wrapper body rewriting, no ancestor project searches, no cross-volume atomicity fiction, no hand-editing generated files, no cross-scope recovery) and two-phase transaction standards.
+- Updated `docs/codebase-summary.md` with exact current symbols, test suites, descriptor types, and the comprehensive scope distribution architecture summary.
+- Updated `docs/pi-native-migration.md` with scope-aware publication commands, extension-derived EVCrate root derivation, and `PI_CODING_AGENT_DIR` runtime variable semantics.
+- Updated `docs/project-roadmap.md` and `docs/project-changelog.md` with complete evidence traceability for Phases 01 through 09.
+- Verification: [Cycle 2 validation](../plans/reports/tester-260913-1742-phase-09-cycle-2-test-suite-validation.md) records `npm run build`, `npm run distribute:check`, and `npm test` passing; [Cycle 2 review](../plans/reports/code-review-260913-1758-phase-09-operator-docs-cycle-2.md) approved the documentation set at 10/10.
+
+### 2026-09-13 — feat(distribution): installed Linux release fixtures and regeneration (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-13; 100%). Installed Linux fixtures and checked-in regeneration verified.
+**Plan:** [Phase 08 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-08-installed-release-fixtures-and-regeneration.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
+
+- Extended `verifyInstalledLauncherAndInvariance` to prove HOME non-mutation on install, all-seven HOME publication with shared controller, project publication to separate project directory without project controller, runtime entrypoint execution across all seven targets from third workspace, partial failure rollback and recovery isolation, and package snapshot byte invariance throughout.
+- Modularized installed assertions into `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC).
+- All release gates passed sequentially: `npm run distribute:build`, `npm run generate:registry`, `npm run generate:manifests`, `npm run distribute:check`, `npm run test:release` (10/10), `npm run test:installer:linux` (15/15), `npm run test:validation-rollout` (6/6), `npm run test:distribution:rollout` (5/5), and full test suite (512/512).
+- Terminal code review approved (Verdict: PASS) with zero blockers and full A43–A49 compliance.
+
+### 2026-09-13 — feat(distribution): focused contract and runtime proof for scope distribution (Phase 07)
+
+**Status:** Phase 07 DONE (2026-09-13; 100%). Focused proof gate passed across all protocol, adapter, publication, and recovery suites.
+**Plan:** [Phase 07 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-07-focused-contract-and-runtime-proof.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
+
+- Focused gates passed: build; protocol 21/21; CLI/context 47/47; primitives 31/31; adapters 26/26; publication 77/77; integration 14/14; cutover 7/7; and direct `distribute:check` returned `status: "ok"`.
+- Tester passed five targeted checks; terminal code review approved with no findings; advisor reconciliation approved finalization.
+- Canonical regeneration ran through `distribute:build`, `generate:registry`, and `generate:manifests` to restore controller-manifest hash integrity.
+### 2026-09-13 — feat(distribution): schema-2 state migration and scope-isolated recovery (Phase 06)
+
+**Status:** Phase 06 DONE (2026-09-13; 100%). Blocking review corrections resolved and implementation approved. Generated `.evcrate` artifacts remain Phase 08-owned; `docs/system-architecture.md` remains Phase 09-owned.
+**Plan:** [Phase 06 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-06-state-migration-recovery-and-partial-orchestration.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
+
+- Schema 2 separates shared controller state from HOME harness state. Valid schema-1 in-progress state is recovered first under the HOME lock; valid terminal state migrates atomically, while ambiguous ownership remains untouched and fails closed.
+- Recovery is scope-isolated: HOME recovery reads only HOME state; project recovery validates the canonical project identity and reads only its identity-keyed project state. Project publication commits shared HOME first, then applies harness independently; harness failure rolls back only project work and returns a top-level `partial` (exit category 5), using `PUBLICATION_FAILED` after successful rollback or preserving the journal with `ROLLBACK_FAILED` when rollback fails.
+- Blocking review corrections covered schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, and same-volume preflight. Existing modes, hashes, CAS, ownership, and unmanaged-data protections remain fail-closed.
+- **Direct local evidence:** `npm run build` passed; `node --test tests/distribution/publication-recovery.test.mjs` passed 19/19; `node --test tests/distribution/publication-apply.test.mjs` passed 12/12; `node --test tests/distribution/publication-plan.test.mjs` passed 6/6; `node --test tests/cli/publication.test.mjs` passed 6/6.
+- The mandatory tester agent could not execute because its provider returned HTTP 429 before commands; no tester-agent execution is claimed. These local checks do not qualify live vendors/operators or authorize HOME publication.
+
+
+### 2026-09-13 — feat(distribution): generic transaction engine and locking (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-13; 100%). Generic transaction descriptor and execution engine implemented.
+**Plan:** [Phase 05 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-05-generic-transaction-engine.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
+
+- Generic immutable transaction descriptor/engine covering HOME and project publication with preflight-before-mutation, HOME-then-project locking, durable journal-before-workspace ordering, workspace identity/containment and same-volume checks, fsync/marker ordering, bounded HOME retention with project no-retention cleanup, and distinct recovery/error outcomes.
+- Existing schema-1 HOME recovery compatibility preserved.
+- Direct evidence: `npm run build` passed; `npm run test:publication` passed 66/66; `npm run test:integration` passed 14/14; focused recovery and oversized-result regressions passed.
+### 2026-09-12 — feat(distribution): one-snapshot shared and harness phase planning (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-12; 100%). Final authorized-scope review approved with no findings. Live operator documentation (`docs/system-architecture.md`) remains unchanged until Phase 09; generated outputs remain Phase 08-owned.
+**Plan:** [Phase 04 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-04-one-snapshot-phase-planning.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
+
+- Resolved one aggregate schema-2 `VerifiedCurrentBuild` and digest once, then passed the immutable snapshot to ordered shared and harness planning. Shared controller materialization remains fixed beneath `<home>/.evcrate/bin`; HOME uses strict target mappings/order, with only valid Gemini `.gemini` → Antigravity `.gemini/config` nesting; project roots/documents remain neutral and contained.
+- Preserved selected-target ownership and stale cleanup bounds, shared JSON merges and user-owned bytes, hashes, modes, CAS snapshots, immutable defensive operation bytes, transformed/merged file-size bounds, and duplicate planned-destination rejection. Full overlap/path preflight runs before destination reads.
+- Advisor correction state completed after user-approved bounded corrections. Final blocking code review verdict: approve with no findings.
+- **Direct repository evidence:** `npm run build` passed; `node --test tests/distribution/publication-plan.test.mjs tests/distribution/publication-parity.test.mjs` passed 8/8; `npm run test:publication` passed 57/57; `npm run test:adapters` passed 24/24; `npm run distribute:check` returned `status: "ok"`.
+- The tester subagent could not execute because its external Cloud Code Assist backend returned HTTP 429; the direct commands above are the evidence. These deterministic repository checks do not qualify live vendors/operators or authorize HOME publication.
+- Handoff: Phase 05 generic transaction engine; Phase 06 schema-2 state/recovery/partial orchestration; Phase 07 focused contract/runtime proof.
+### 2026-09-12 — feat(distribution): neutral seven-target runtime closures and structured HOME rules (Phase 03)
+
+**Status:** Phase 03 DONE (2026-09-12; 100%).  
+**Plan:** [Phase 03 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-03-neutral-seven-target-runtime-closures.md)
+
+- Completed installation-relative neutral runtime closures for all seven targets, structured HOME transforms, workspace `cwd`/environment separation, and fail-closed child validation.
+- Evidence: `npm run build`, adapters 24/24, source-derived publication 54/54, integration 14/14, and the source-derived full suite passed. Checked-in generated outputs remained Phase 08-owned.
+
+
+### 2026-09-12 — feat(distribution): context and manifest project bindings (Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-12; 100%). Live operator documentation (`docs/system-architecture.md`) remains unchanged until final proof in Phase 09 per design contracts and acceptance matrix A47/A50.  
+**Plan:** [Phase 02 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-02-context-and-manifest-project-bindings.md)  
+**Evidence:** [Advisor review](../plans/reports/advisor-260912-1035-phase02-context-and-manifest-project-bindings.md) and [context tests](../tests/context/invocation-context.test.mjs)
+
+- Normalized project destinations: Added immutable `ProjectDirectoryDescriptor` and `ProjectDocumentDescriptor` unions to `SelectedTargetContext` and `InvocationContext` (`src/manifests/types.ts`, `src/context/invocation-context.ts`), derived strictly from manifest `outputRoots` and `projectDocs` in declaration order without filesystem ancestor traversal.
+- Retained file/directory distinction: Root documents (Codex `AGENTS.md`, Gemini `GEMINI.md`) are explicitly represented as document descriptors, never traversed as directory bindings.
+- Intra- and cross-target overlap validation: Added strict overlap rejection via `pathOverlaps` and `assertNoDescriptorOverlap` (`src/manifests/manifest.ts`, `src/manifests/registry.ts`, `src/context/invocation-context.ts`) that rejects equal, nested (ancestor/descendant), duplicate document, and root/document collisions before any destination inventory reads.
+- Canonical project root and owner-controlled identity: Implemented `canonicalProjectRoot` in `src/scopes/identity.ts` enforcing real directory existence, non-symlink ancestry, owner control (`process.getuid()` or root), and native `realpath` canonicalization. Computed lowercase 64-hex SHA-256 `projectIdentity` over the validated canonical absolute path.
+- Non-publication safety: Added `resolvePublicationProjectContext` for publication-boundary mutation checks while preserving lexical project root resolution and independent `projectId` for general `resolveInvocationContext` commands.
+- Projection neutrality: Maintained exact byte-for-byte shape compatibility for `ProjectionBuildContext` in `src/adapters/types.ts`; adapters receive no scope or transaction context.
+- Verification: 174/174 tests passing across primitives, CLI, adapters, publication, and protocol test suites (`npm run test:primitives`, `npm run test:cli`); `npm run distribute:check` status ok with zero drift.
+### 2026-09-12 — feat(distribution): freeze scope publication protocol (Phase 01)
+
+**Status:** Phase 01 DONE (2026-09-12; 100%).  
+**Plan:** [Phase 01 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-01-cli-and-protocol-contract.md)
+
+- Froze scalar `--scope home|project` parsing/defaults, exact publication/recovery wire shapes, ordered shared/harness phase correlation, partial results, and exit category 5.
+- Evidence: protocol 21/21, CLI 42/42, integration 14/14, publication 53/53, and `npm run build` passed.
+
 
 ### 2026-09-11 — fix(advisor): resolve V2 evidence.files schema ambiguity and improve input diagnostics
 
@@ -316,461 +411,7 @@ and a senior mentor challenge.
   rejection and generation-limit contracts without claiming live vendor or paid
   route qualification.
 
-### Advisor mentoring, recovery, and audit — Phase 01
+## Historical entries
 
-**Updated:** 2026-09-07  
-**Status:** Complete for contract freeze and policy migration; later runtime phases pending  
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md)  
-**Review:** [Code review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md)
-
-- Frozen policy v2 with explicit primary/backup routes, wait warnings, bounded
-  history, candidate/enabled backend boundaries, and strict 16 KiB validation.
-- Frozen checkpoint/result/controller v2 plus task-state, execution-history, and
-  outcome v1 records with identity, evidence, attempt, cleanup, audit, and
-  correction bounds.
-- Kept CJS and TypeScript validators in their independent runtime closures;
-  parity and sanitized typed errors remain explicit boundaries.
-- Added read-only legacy policy inspection and explicit
-  `get -> prepare v2 -> preview -> apply` migration. Existing revision/CAS,
-  single-use preview, owner/mode, and byte-safe journal recovery remain.
-- No automatic HOME rewrite, invented route/default, runtime retry/wait cutover,
-  task-state command, history tool, or live vendor qualification is claimed.
-
-The review records 139 focused assertions passing and no critical issues. Its
-non-blocking follow-up is dedicated v2 validator boundary coverage before later
-phases consume the records.
-
-### Advisor mentoring, recovery, and audit — Phase 02
-
-**Updated:** 2026-09-07  
-**Status:** Complete (100%)  
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-02-wait-cancellation-and-cleanup.md)
-
-- Split runner timing into finite `probe` mode and indefinite `generation` mode.
-  Generation has no deadline; input, streams, output, and termination remain
-  bounded.
-- Added monotonic elapsed progress warnings on `stderr`, separate from the
-  single terminal JSON result, with bounded non-blocking delivery and suppression
-  after the warning cap.
-- Made cancellation dominant across construction, spawn, process, parsing,
-  cleanup, and other asynchronous boundaries; no provisional advice can win
-  after cancellation.
-- Termination uses detached POSIX process groups with TERM/KILL escalation and
-  leader/group liveness plus close/reap verification.
-- Workspace cleanup is observable: removal is confirmed only when the absence
-  probe returns **ENOENT**; other results remain `unconfirmed` and cannot coexist
-  with successful advice.
-- The runner/controller boundary carries cleanup uncertainty from probes and
-  generation, preserving the primary probe or execution error while exposing
-  the cleanup outcome.
-- The implementation and focused-test closure covers `runner.cjs`,
-  `isolated-workspace.cjs`, `controller.cjs`, `profile.cjs`, `errors.cjs`,
-  `controller-envelope.cjs`, `evcrate-advisor`, the runner/controller tests,
-  the real 31-second smoke scenario, and the fake Codex fixture.
-
-Verification recorded for this phase: 65/65 advisor-controller tests passed; the
-real smoke scenario completed in 31.25s with one launch and three elapsed
-warnings; `npm run distribute:check` and `npm run release:check` exited
-successfully. Sol Cycle 3 signed off at 9/10, and Astra mentor approval was
-recorded.
-
-Phase 03, adapter qualification and terminal parsing, is ready to start and
-consumes the Phase 02 timing interface.
-
-
-### Phase 04: Regeneration, documentation, and release gates
-
-**Updated:** 2026-09-07  
-**Status:** Complete  
-**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-04-regeneration-documentation-and-release-gates.md)  
-**Evidence:** [validation report](../plans/reports/tester-260907-1123-phase04-validation-matrix.md) and [final code review](../plans/reports/code-review-260907-1457-phase-04-final-post-fixes.md)
-
-- Rebuilt all seven target scanner/data/layout closures and eight manifests through
-  distribution tooling; generated projections remain distribution-owned.
-- Canonical and projected script READMEs document exact command/skill schemas,
-  managed authorities, native formats, CWD-independent scanner invocations,
-  atomic/fail-closed generation, and scanner/generator separation.
-- Focused release gates pass 85/85; the foreign-CWD scanner/generator matrix
-  passes 35/35; `npm run distribute:check` returns `status: "ok"`.
-- `ev-help.py` remains independent from scanners and generated data; architecture
-  ownership boundaries remain unchanged.
-
-Phase 04 closes the command/skill catalog plan. Live vendor qualification,
-npm publication, rollout, and Windows validation remain separate operator gates.
-
-### Phase 03: Seven-target scanner and catalog adapters
-
-**Updated:** 2026-09-07  
-**Status:** Complete  
-**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-03-seven-target-scanner-and-catalog-adapters.md)  
-**Evidence:** [test report](../plans/reports/tester-260907-0959-phase-03-seven-target-adapters.md) and [code review](../plans/reports/code-review-260907-1004-phase-03-seven-target-scanner-and-catalog-adapters.md)
-
-#### Shared catalog and layout contract
-
-- Added `src/adapters/catalog-types.ts` for the exact command/skill record
-  schemas, category allowlists, safe relative POSIX paths, scanner-layout type,
-  YAML parsing, and deterministic serialization.
-- Added `src/adapters/catalog-data.ts` for canonical record validation,
-  adapter-supplied source-to-native mapping, staged regular-file checks, and
-  projection of target-native `commands_data.yaml`, `skills_data.yaml`, and
-  `scanner-layout.json`.
-- Standardized the projected sidecar on `evcrate-scanner-layout-v1`: target,
-  command format/root/output/authority, and skill root/output/authority.
-  Authority always comes from an existing adapter map, inventory, migration
-  matrix, or canonical managed data; no compatibility alias registry is added.
-
-#### Projected scanners
-
-- `scan_commands.py` and `scan_skills.py` now resolve layout, roots, authority,
-  and adjacent output files from their own `Path(__file__)` location, so
-  invocation from a repository root, script directory, or unrelated temporary
-  CWD is equivalent.
-- Command scanning supports the seven native layouts: Claude recursive
-  Markdown; Gemini TOML; Pi archived Markdown; OMP flattened `cmd-*.md`;
-  Codex `cmd-*` command-skills; Antigravity `cmd_*` command-skills; and
-  Copilot prefixed command-skills.
-- Authority maps/inventories produce managed-entry allowlists. Missing,
-  duplicate, symlinked, traversal, or otherwise unsafe target entries fail
-  closed; unrelated user commands/skills planted beside managed resources are
-  ignored.
-- Scanner writes use adjacent temporary UTF-8 YAML plus atomic replacement.
-  Invalid input leaves existing catalog bytes unchanged.
-
-#### Adapter coverage
-
-| Target | Command authority | Skill authority |
-|---|---|---|
-| Claude | Canonical resource graph/data set | Canonical managed skill set |
-| Gemini | Migration behavior matrix | Matrix mappings with target-name/path transforms |
-| Antigravity | Migration behavior matrix | Matrix mappings |
-| Codex | Migration inventory and generated command-skills | Inventory and explicit exclusions |
-| Pi | `inventory.json` archived command list | Native skill inventory |
-| OMP | `evcrate-omp-command-map-v1` | OMP skill map/inventory |
-| Copilot | `evcrate-copilot-command-map-v1` | Copilot skill map/inventory |
-
-OMP now consumes its generated command map at runtime instead of brittle
-canonical source-string rewrites. Gemini, Antigravity, Codex, Pi, and Copilot
-retain native hook/runtime/advisory transforms while exposing their generated
-paths to the common scanner contract. Frontmatter and advisory capability
-rendering remain target-valid, and Claude remains the canonical authoring
-projection.
-
-#### Verification
-
-- `npm run build`: pass.
-- `node --test tests/adapters/contracts.test.mjs`: 10/10 pass, including
-  seven-target foreign-CWD scanner/catalog execution and fail-closed authority
-  mutation cases.
-- `node --test tests/adapters/python-parity.test.mjs`: 1/1 pass with explicit
-  intentional projection deltas.
-- `python3 .evcrate/source/.claude/scripts/test-scan-catalogs.py`: 7/7 suites
-  pass, including all three command formats, managed allowlists, CWD
-  independence, schema/freshness, and atomic output.
-- `python3 .evcrate/source/.claude/scripts/test-evcrate-help.py`: 19/19 pass;
-  help behavior remains independent from scanner modules and generated data.
-
-The Phase 03 test report records 37/37 focused cases passing with no skips or
-failures. Phase 04 now closes regeneration, documentation, manifest, and release
-gates for the command/skill catalog plan.
-
-### Phase 02: Catalog schema and freshness
-
-**Updated:** 2026-09-07  
-**Status:** Complete  
-**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md)  
-**Evidence:** [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md) and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md)
-
-#### Frozen data contract
-
-- `commands_data.yaml` is a strict list of records with exactly six keys, in
-  order: `source`, `name`, `path`, `description`, `argument_hint`, `category`.
-  All values are strings; all fields except `argument_hint` are non-empty.
-- `skills_data.yaml` is a strict list of records with exactly seven keys, in
-  order: `source`, `name`, `path`, `description`, `category`, `has_scripts`,
-  `has_references`. The first five values are non-empty strings; the last two
-  are strict booleans.
-- Both schemas require unique normalized `source`, `name`, and `path`
-  identities. `source` is the stable canonical relative identity for adapter
-  and freshness joins; `name` and `path` retain the current native
-  representation.
-- The retired `power_level` field is rejected as an unknown key and is absent
-  from the 70-record command input. `template-skill` and unmanaged skill
-  entries are excluded from the 36-record skill input.
-
-#### Validation, path safety, and atomic generation
-
-- `generate_catalogs.py` validates exact keys/types, required values,
-  allowlisted categories, uniqueness, and normalized relative POSIX paths
-  before grouping or serialization.
-- Path validation rejects absolute paths, backslashes, traversal or empty
-  segments, `./` prefixes, non-canonical spellings, and embedded NUL bytes.
-  The explicit NUL check prevents poisoned metadata from reaching filesystem
-  operations.
-- `scan_commands.py` and `scan_skills.py` write through adjacent temporary
-  UTF-8 files and atomically replace their data files, cleaning temporary
-  files on success or failure. Generator `--output` fully validates and
-  serializes first, then flushes, `fsync`s, closes, and atomically replaces the
-  destination; an existing destination survives a failed generation.
-- Generated grouped catalog presentation intentionally omits only `source`;
-  source remains in committed inputs for identity and freshness checks.
-
-#### Freshness and verification
-
-- `generate_catalogs.py --freshness` reloads both committed data files, runs
-  authoritative canonical command/skill scans in memory, and deep-compares
-  sorted records, including source identity, native names/paths, metadata, and
-  skill flags. A count, identity, or field mismatch exits 1 with concise
-  `stderr` and performs no write.
-- Scanner and generator roots/data paths resolve from `Path(__file__).resolve()`,
-  so invocation is independent of the caller's current working directory.
-- `test-scan-catalogs.py` passed 7/7 suites covering schema errors, NUL/path
-  safety, duplicates, freshness, canonical counts, all three command formats,
-  managed-entry exclusion, CWD independence, generated totals, and atomic
-  preservation. The accompanying `test-evcrate-help.py` independence and
-  behavior suite passed 19/19.
-
-The six implementation/data/test files changed for this phase are
-`generate_catalogs.py`, `scan_commands.py`, `scan_skills.py`,
-`commands_data.yaml`, `skills_data.yaml`, and `test-scan-catalogs.py`.
-
-### Phase 01: Canonical metadata and scanner contracts
-
-**Updated:** 2026-09-07  
-**Status:** Complete  
-**Plan:** [Phase plan](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md)  
-**Evidence:** [test report](../plans/reports/tester-260907-0036-canonical-metadata-and-scanner-contracts.md) and [code review](../plans/reports/code-review-260907-0038-canonical-metadata-and-scanner-contracts.md)
-
-#### Canonical metadata
-
-- Normalized all 70 canonical `.claude/commands/**/*.md` files to YAML mapping
-  frontmatter with a non-empty string `description` and explicit string
-  `argument-hint`; no-argument commands use `argument-hint: ""`.
-- Kept changes frontmatter-only so command bodies remain unchanged.
-- Regenerated `commands_data.yaml` with 70 deterministic records and
-  `skills_data.yaml` with 36 deterministic records.
-
-#### Scanner contracts
-
-- `scan_commands.py` now exposes a frozen CommandLayout binding for root,
-  Markdown/TOML/command-skill format, output, managed entries, and target naming
-  maps/resolvers. Strict format-specific parsers reject malformed metadata,
-  wrong consumed-field types, invalid UTF-8, missing managed entries, and
-  duplicate names.
-- Command scanning uses deterministic POSIX-relative records and an atomic
-  adjacent temporary-file replacement. CLI roots and catalog outputs derive from
-  `Path(__file__).resolve()`, making invocation independent of the caller's CWD.
-- `scan_skills.py` now exposes a frozen SkillLayout binding with authoritative
-  managed-entry and exclusion allowlists. It preserves arbitrary nesting in skill
-  names, excludes the declared template skill, rejects missing/unsafe entries,
-  and uses the same atomic-write boundary.
-- `test-scan-catalogs.py` adds regressions for 70 commands/36 skills, all three
-  command formats, Unicode and deep nesting, allowlists, malformed input,
-  sentinel preservation, and root/script/temporary-CWD execution.
-- `test-evcrate-help.py` adds an independence regression proving `ev-help.py`
-  does not import scanner modules or generated catalog data while retaining
-  existing guide and intent-routing behavior.
-
-#### Verification
-
-| Focused evidence | Result |
-|---|---:|
-| `test-scan-catalogs.py` | 5/5 suites passed |
-| `test-evcrate-help.py` | 19/19 cases passed |
-| Standalone command and skill scans | 70 and 36 records written atomically |
-
-Phase 01 supplied the strict canonical inputs for the remaining scan/catalog plan.
-Phase 02 now completes schema/freshness validation; seven-target adapter bindings
-and projection regeneration remain later phases. `ev-help.py` remains intentionally
-separate.
-
-### Phase 01: Core hook enhancements
-
-**Updated:** 2026-09-06  
-**Status:** Complete for canonical hook behavior and focused tests
-
-#### Features
-
-- Split Bash input on top-level `&&`, `||`, `;`, `|`, newline, and background
-  separators without splitting quoted or escaped text.
-- Strip consecutive leading `KEY=value` assignments and grouping wrappers without
-  evaluating shell input.
-- Recognize anchored package-manager, language-runner, and build-tool forms,
-  including Python module/setup builds, Node build scripts, Deno, Zig, .NET,
-  Swift, and existing virtual-environment/package-manager forms.
-- Apply the build exemption per segment rather than bypassing a complete command
-  chain. A later `cat`, `grep`, `ls`, or equivalent read of protected output is
-  still evaluated.
-- Make path extraction invocation-aware: build-runner subcommand syntax is not
-  emitted as a path, exploration operands become directory candidates with
-  trailing `/`, and malformed quoting or shell substitutions receive
-  conservative handling.
-
-#### Verification
-
-The three changed canonical suites were run directly on 2026-09-06:
-
-| Suite | Passed | Failed |
-|---|---:|---:|
-| `test-scout-block.js` | 66 | 0 |
-| `test-path-extractor.js` | 55 | 0 |
-| `test-build-command-allowlist.js` | 95 | 0 |
-| **Total** | **216** | **0** |
-
-Coverage includes compound/env-prefixed builds, Python/Node/Deno/Zig/.NET/Swift
-runner forms, direct and nested generated-directory exploration, adversarial
-chains, quote/escape handling, `$(...)`/backtick/process substitution, and
-virtual-environment executable allowance.
-
-#### Boundary
-
-Phase 01 established canonical hook behavior. Phases 02-04 completed ignore-file
-directory semantics, target projections, and active runtime synchronization. The
-hook remains a context-protection control, not a general shell authorization
-allowlist.
-
-### Phases 02-04: Ignore policy, projections, and verification
-
-**Updated:** 2026-09-07  
-**Status:** Complete  
-**Evidence:** [Phase 04 test report](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md) and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md)
-
-#### Standardized ignore policy
-
-- Canonical `.evcrate/source/.claude/.evcrateignore` and matcher fallback
-  defaults now contain the same twelve heavy-directory rules, all with trailing
-  `/`: `node_modules/`, `dist/`, `build/`, `.next/`, `.nuxt/`, `__pycache__/`,
-  `.venv/`, `venv/`, `vendor/`, `target/`, `.git/`, and `coverage/`.
-- Trailing `/` preserves directory-only semantics: bare lexical tokens such as
-  `build` remain usable, while directory operands and descendants such as
-  `build/`, `dist/app.js`, and `node_modules/pkg/index.js` remain blocked.
-- Legacy custom bare-name rules and ordered negation behavior remain compatible;
-  no `!dist` or `!build` workaround is required.
-
-#### Projection and runtime parity
-
-- Regenerated seven generated projection roots (`.agents`, `.omp`, `.pi`,
-  `.copilot`, `.codex`, `.gemini`, `.antigravity`) from canonical Claude resources;
-  each carries the standardized policy and segment-aware hook closure.
-- Manifest and distribution checks report no projection drift. Published OMP
-  policy, hook closure, and runtime helper match the generated OMP projection.
-
-#### Verification matrix
-
-| Evidence | Result |
-|---|---:|
-| Build, distribution build, and distribution check | 0 / pass |
-| Allowed package/language/tool build forms, including compound and environment-prefixed commands | 0 / pass |
-| Direct reads/searches of heavy directories and descendants | 2 / blocked |
-| Adversarial build-plus-read chains | 2 / blocked |
-| Canonical hook suites | 299 / 299 passed |
-| Projected and published OMP runtime smoke (`0, 0, 2, 2`) | pass |
-
-Focused suites cover path extraction, pattern matching, production build-command
-classification, canonical ignore integration, hook process behavior, and
-monorepo scenarios. Heavy-directory protections remain active while standard
-build commands are unblocked.
-
-The 2026-09-07 evidence records six focused suites at 299/299 passed,
-`npm run distribute:check` as `status: "ok"` across seven adapters, and 21/21
-bounded matrix rows (63 evaluations) passing across canonical, projected OMP, and
-published OMP hooks.
-
-### Documentation centralization
-
-- Folded advisor distribution, checkpoint supervision, policy, wire, isolation,
-  publication, and migration facts into the six core documents.
-- Removed the two standalone advisor documents so
-  [system architecture](./system-architecture.md) is the detailed controller and
-  distribution authority.
-- Standardized documented slash command/resource examples on `/cmd-*`, OMP `__`
-  flattening, and Copilot `evcrate-cmd-*` projection names. This is a
-  documentation/target convention; current scanner/parser enforcement remains a
-  follow-up and no source command was renamed.
-- Added cross-links among the [PDR](./project-overview-pdr.md),
-  [code standards](./code-standards.md), [codebase summary](./codebase-summary.md),
-  [roadmap](./project-roadmap.md), and [Pi migration](./pi-native-migration.md).
-
-### Phase 9: DamHopper and Agent Store integration
-
-#### Features
-
-- Added the Phase 9 integration command and packed-consumer closure for canonical
-  source, resource registry, and build manifests.
-- Resolved package roots from explicit package/source/cwd inputs and preserved
-  shared-JSON source fragments during publication planning.
-- Kept DamHopper outside EVCrate artifact ownership; no direct registry, scope,
-  manifest, or HOME mutation belongs to that adapter.
-
-#### Adapter and compatibility evidence
-
-- The integration client invokes the packed `evcrate` CLI as a bounded short-lived
-  subprocess with fixed arguments and sanitized environment.
-- Resource discovery/get, import preview/apply, scope, changes, publish, recover,
-  and qualification-only health paths were covered by recorded fixtures.
-- Historical evidence reports 14/14 Phase 9 integration tests and an aggregate
-  212/212 focused result. Those numbers describe the feature worktree evidence and
-  are not a live release claim.
-
-#### Release boundary
-
-Phase 9 proves the packed npm/adapter contract only. It does not claim a live
-DamHopper or Agent Store release, installed vendor-CLI qualification, target cutover,
-Python-free distribution, rollout, or `main` merge. Generated projections,
-controller files, advisor policy, manifests, registry, scopes, and HOME roots remain
-EVCrate-owned boundaries.
-
-### Phase 10: TypeScript release packaging and per-target cutover
-
-#### Features
-
-- `scripts/build-manifests.mjs` builds each persisted target and the aggregate
-  schema-2 build manifest through the TypeScript local-build path.
-- The npm package allow-list ships compiled `dist/**`, target manifests, verified
-  build manifests, generated target assets, and one exact CommonJS controller
-  closure.
-- TypeScript is authoritative by default for `claude`, `gemini`, `antigravity`,
-  `codex`, `pi`, `omp`, and `copilot`; `agy` remains input-only for Antigravity.
-- Cutover receipts record parity, closure, schema, timestamp, and notes; mixed
-  Python/TypeScript atomic selection is rejected rather than split.
-- The supported npm CLI build/check/publish/all/recover, version, health,
-  advisor-settings, and publication paths execute through TypeScript. Compatibility
-  engine types remain explicit transition boundaries.
-
-#### Release boundary
-
-The historical Phase 10 evidence records completed per-target cutover contracts and
-255/255 full validation. That evidence covers the feature worktree and packed
-artifact boundary; live vendor qualification, npm publication, rollout, and `main`
-merge remain separate gates.
-
-### Phase 11: Validation and staged rollout
-
-**Updated:** 2026-09-04  
-**Status:** Historical validation gate recorded complete; release and rollout remain
-operator-controlled
-
-#### Features
-
-- Consumer-mode build resolution verifies bundled complete schema-2 manifests, output
-  hashes, controller closure, ownership, and HOME policy without requiring authoring
-  adapters.
-- Consumer publication runs from an external working directory, preserves the
-  installed package root, and supports dry-run, apply, repeat apply, and recovery.
-- Deterministic tree hashes exclude `.gitignore` entries while retaining bounded
-  traversal, mode/identity, symlink, and special-entry checks.
-
-#### Release boundary
-
-Historical Phase 11 evidence records a 7/7 rollout suite and 241/241 full
-validation. These are separate historical totals from Phase 10's broader evidence,
-not a new release claim. Phase 11 does not itself perform live vendor qualification,
-npm publication, deployment, or `main` merge.
-
-## Current unresolved questions
-
-- Confirm whether this docs-facing changelog should remain the package's phase
-  mirror when a separate release authority is introduced.
-- Reconcile the historical 255/255 and 241/241 totals only if release documentation
-  needs one aggregate denominator; do not infer a new total from those records.
-- Decide where future source enforcement should validate the documented `cmd` prefix
-  without renaming existing canonical resources.
+Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md).
+The current changelog remains the maintained phase mirror for the active milestone.

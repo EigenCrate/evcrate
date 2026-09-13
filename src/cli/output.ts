@@ -43,6 +43,10 @@ function statusText(result: Record<string, unknown>): string {
     const error = result.error as Record<string, unknown> | undefined;
     return error ? `error ${String(error.code)}: ${String(error.message)}` : 'error';
   }
+  if (result.status === 'partial') {
+    const error = result.error as Record<string, unknown> | undefined;
+    return error ? `partial ${String(error.code)}: ${String(error.message)}` : 'partial';
+  }
   if (result.status === 'OK' && result.operation === 'get') return 'advisor settings read';
   if (result.status === 'PREVIEW') return 'advisor settings preview ready';
   if (result.status === 'APPLIED') return 'advisor settings applied';
@@ -79,6 +83,7 @@ export function exitCodeForResult(result: CliResult): number {
     || result.status === 'preview' || result.status === 'applied' || result.status === 'published'
     || result.status === 'activated' || result.status === 'recovered') return 0;
   if (result.status === 'CONFLICT' || result.status === 'conflict') return 4;
+  if (result.status === 'partial') return 5;
   if (result.status === 'FAILED') {
     const category = result.error.category;
     return ['timeout', 'cancel', 'process', 'output'].includes(category) ? 6 : 3;

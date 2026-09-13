@@ -74,7 +74,7 @@ export function validateTargetList(value: unknown): readonly PersistedTarget[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > PERSISTED_TARGETS.length) invalidResourcePayload();
   const normalized = value.map((entry) => normalizeTarget(entry));
   if (new Set(normalized).size !== normalized.length) invalidResourcePayload();
-  return Object.freeze(PERSISTED_TARGETS.filter((target) => normalized.includes(target)));
+  return Object.freeze(normalized as PersistedTarget[]);
 }
 export function validateApprovals(value: unknown): readonly ImportCapability[] {
   if (!Array.isArray(value) || value.length > IMPORT_CAPABILITIES.length

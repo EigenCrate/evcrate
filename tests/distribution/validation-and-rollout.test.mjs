@@ -73,7 +73,9 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
   const binDir = join(installRoot, 'bin');
   const home = join(root, 'home');
   const state = join(root, 'state');
-  mkdirSync(installRoot); mkdirSync(dataDir); mkdirSync(stateDir); mkdirSync(binDir); mkdirSync(home); mkdirSync(state);
+  const project = join(root, 'project destination');
+  const workspace = join(root, 'active workspace');
+  mkdirSync(installRoot); mkdirSync(dataDir); mkdirSync(stateDir); mkdirSync(binDir); mkdirSync(home); mkdirSync(state); mkdirSync(project); mkdirSync(workspace);
 
   try {
     const assetsDir = join(packageRoot, 'dist', 'release');
@@ -113,12 +115,14 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     const dryRunResult = JSON.parse(dryRun.stdout);
     assert.equal(dryRunResult.status, 'preview');
     assert.equal(dryRunResult.operation, 'publish.dry-run');
-    assert.ok(Array.isArray(dryRunResult.payload.changes));
-    assert.ok(dryRunResult.payload.changes.length > 0);
+    const dryRunChanges = dryRunResult.payload.phases.flatMap(({ changes }) => changes);
+    assert.ok(Array.isArray(dryRunChanges));
+    assert.ok(dryRunChanges.length > 0);
 
-    // Verify promotion order: controller -> OMP -> Copilot
-    assert.deepEqual([...dryRunResult.payload.bindingOrder], [
-      '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+    // Verify promotion order: shared controller, then HOME harness bindings
+    assert.deepEqual([...dryRunResult.payload.phases[0].bindingOrder], ['.evcrate/bin']);
+    assert.deepEqual([...dryRunResult.payload.phases[1].bindingOrder], [
+      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
     ]);
 
     // Ensure home directory remains empty after dry-run
@@ -136,7 +140,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     const applyResult = JSON.parse(apply.stdout);
     assert.equal(applyResult.status, 'published');
     assert.equal(applyResult.operation, 'publish.apply');
-    assert.ok(typeof applyResult.payload.releaseId === 'string');
+    assert.ok(typeof applyResult.payload.phases[0].releaseId === 'string');
 
     // Inviolable invariant: ZERO filesystem writes or mutations under installed package root
     const packageHashAfter = treeHash(installedPackageDir);
@@ -155,6 +159,21 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     // Verify advisor controller is executable
     const advisorStat = lstatSync(join(home, '.evcrate', 'bin', 'evcrate-advisor'));
     assert.ok((advisorStat.mode & 0o111) !== 0, 'evcrate-advisor must be executable');
+    const projectApply = spawnSync(cliPath, [
+      'publish', '--apply', '--json', '--scope', 'project', '--home', home, '--state-home', state,
+      '--project-root', project, '--target', 'claude', '--target', 'copilot'
+    ], {
+      cwd: workspace, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
+    });
+    assert.equal(projectApply.status, 0, projectApply.stderr || projectApply.stdout);
+    const projectResult = JSON.parse(projectApply.stdout);
+    assert.equal(projectResult.status, 'published');
+    assert.equal(projectResult.payload.phases[0].scope, 'home');
+    assert.equal(projectResult.payload.phases[1].scope, 'project');
+    assert.ok(existsSync(join(project, '.claude')));
+    assert.ok(existsSync(join(project, '.copilot')));
+    assert.equal(existsSync(join(project, '.evcrate', 'bin')), false);
+    assert.equal(treeHash(installedPackageDir), packageHashBefore);
 
     // 3. Repeat apply is idempotent
     const repeatApply = spawnSync(cliPath, [
@@ -179,6 +198,14 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     const recoverResult = JSON.parse(recover.stdout);
     assert.equal(recoverResult.status, 'recovered');
     assert.equal(recoverResult.operation, 'recover');
+    const projectRecover = spawnSync(cliPath, [
+      'recover', '--json', '--scope', 'project', '--home', home, '--state-home', state, '--project-root', project
+    ], {
+      cwd: workspace, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
+    });
+    assert.equal(projectRecover.status, 0, projectRecover.stderr || projectRecover.stdout);
+    assert.equal(JSON.parse(projectRecover.stdout).payload.scope, 'project');
+    assert.equal(treeHash(installedPackageDir), packageHashBefore);
 
     // 5. Health diagnostic in consumer environment
     const health = spawnSync(cliPath, [
@@ -228,7 +255,7 @@ test('unmanaged existing content in user HOME is preserved across publication ap
 
 
     const result = publishApply(context);
-    assert.ok(result.releaseId);
+    assert.ok(result.phases[0].releaseId);
 
     // Verify that the custom user file is still intact
     assert.ok(existsSync(customFilePath));

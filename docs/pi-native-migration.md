@@ -1,7 +1,7 @@
 # Native Pi migration
 
 **Status:** Pi-specific projection guide  
-**Updated:** 2026-09-05  
+**Updated:** 2026-09-13  
 **Central contract:** [system architecture](./system-architecture.md)
 
 This guide covers the Pi adapter and its user-owned settings boundary. General
@@ -22,16 +22,30 @@ After `npm run build`, the current TypeScript CLI can build/check the Pi target
 without invoking a Python compatibility script:
 
 ```bash
+# Build and check Pi target projection
 node dist/cli/evcrate.js distribute build --target pi --json
 node dist/cli/evcrate.js distribute check --target pi --json
+
+# HOME publication (publishes to <home>/.pi)
 node dist/cli/evcrate.js publish --dry-run --target pi --json
+node dist/cli/evcrate.js publish --apply --target pi --json
+
+# Project publication (publishes to <project>/.pi)
+node dist/cli/evcrate.js publish --apply --scope project --project-root /path/to/project --target pi --json
 ```
 
 `npm run distribute:pi` is the package's target-specific build-and-publish script;
 use it only after reviewing a verified build and intended HOME changes. Publication
-consumes only current verified output and binds local `.pi` to the Pi HOME `.pi`
-root. PI_CODING_AGENT_DIR is runtime-only and does not change the publisher
-destination. Native Windows validation remains pending.
+consumes only current verified output. For HOME scope, it binds local `.pi` to the
+Pi HOME `<home>/.pi` root; for project scope, it binds to `<project-root>/.pi`.
+The shared controller closure (`.evcrate/bin`) is always published under `--home`
+(`<home>/.evcrate/bin`) and is never placed under `--project-root`.
+`PI_CODING_AGENT_DIR` is a runtime configuration variable and does not change the
+publisher destination. Native Windows validation remains pending.
+
+Phase 09 installed Linux fixtures verify Pi projection materialization and runtime
+entrypoint behavior. This evidence does not qualify a live Pi vendor CLI or
+Windows runtime equivalence.
 
 ## Runtime model
 
@@ -118,9 +132,12 @@ Pi settings cannot portably exclude only `.agents` skills while retaining automa
 - **Missing command:** rebuild/check the Pi target with the TypeScript commands
   above. Inspect `.pi/agent/evcrate/commands/` and its generated inventory; do not
   edit that tree.
-- **Pi extension root:** a non-empty PI_CODING_AGENT_DIR wins. Otherwise the
-  runtime derives `$HOME/.pi/agent` (or the platform home) and applies containment
-  checks. Rebuild to regenerate derived copies.
+- **Pi extension root:** The installed extension derives the EVCrate root from its
+  own installed location (`import.meta.url` / `__dirname`), ensuring that child
+  commands and resources are resolved accurately without relying on `process.cwd()`.
+  For isolated skill launches, a non-empty `PI_CODING_AGENT_DIR` configures the
+  agent's runtime state root; otherwise the runtime derives `$HOME/.pi/agent` (or
+  the platform home) with containment checks. It does not alter publisher destinations.
 - **`pi-code` conflict:** remove the package manually, exit Pi processes that can
   write settings, review a dry run, then publish. It is never auto-removed.
 - **Role warning or inherited child model:** verify the provider's route/model and

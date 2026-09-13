@@ -150,6 +150,16 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   for (const target of PERSISTED_TARGETS) {
     assert.ok(files.includes(`.evcrate/targets/${target}/manifest.json`), `Missing target manifest: ${target}`);
   }
+  const targetManifestFiles = files.filter((file) => /^\.evcrate\/targets\/[^/]+\/manifest\.json$/u.test(file));
+  assert.deepEqual(
+    targetManifestFiles.sort(),
+    PERSISTED_TARGETS.map((target) => `.evcrate/targets/${target}/manifest.json`).sort()
+  );
+  const controllerFiles = files
+    .filter((file) => file.startsWith('.evcrate/source/.evcrate/bin/'))
+    .map((file) => file.slice('.evcrate/source/.evcrate/bin/'.length))
+    .sort();
+  assert.deepEqual(controllerFiles, [...ADVISOR_CONTROLLER_FILES].sort());
 
   // Assert NO distribution, migration, adapter Python scripts and NO pycache/bytecode
   const forbiddenPython = files.filter((f) =>

@@ -112,7 +112,7 @@ test('terminal required-state write failure suppresses advice without retrying i
   const stateDirectory = path.join(f.home, '.evcrate/advisor-state', projectId, request.task_run_id);
   const result = await runManagedCheckpoint(JSON.stringify(request), {
     cwd: f.cwd, environment: f.environment,
-    onAttempt() { fs.chmodSync(stateDirectory, 0o777); }
+    onAttempt() { fs.chmodSync(stateDirectory, 0o500); }
   });
   fs.chmodSync(stateDirectory, 0o700);
   assert.equal(result.status, 'FAILED');

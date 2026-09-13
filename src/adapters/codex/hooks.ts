@@ -3,27 +3,22 @@ export function contextBridge(event: string, sourceHook: string, guidance = ''):
   const guidanceOutput = guidance ? `, readGuidance()` : '';
   return `#!/usr/bin/env node
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const input = fs.readFileSync(0, 'utf-8');
 ${guidanceCode}
-function safeFile(candidate) {
-  try { const stat = fs.lstatSync(candidate); return stat.isFile() && !stat.isSymbolicLink(); } catch { return false; }
-}
-function resolveHook() {
-  const starts = [process.env.CODEX_PROJECT_DIR, process.cwd()].filter(Boolean);
-  for (const start of starts) {
-    let current = path.resolve(start);
-    while (true) {
-      const candidate = path.join(current, ${JSON.stringify(sourceHook)});
-      if (safeFile(candidate) && path.resolve(candidate) !== path.resolve(path.join(os.homedir(), ${JSON.stringify(sourceHook)}))) return { projectDir: current, sourceHook: candidate };
-      const parent = path.dirname(current); if (parent === current) break; current = parent;
-    }
+const sourceHook = path.join(__dirname, path.basename(${JSON.stringify(sourceHook)}));
+function hasSymlinkedPathComponent(candidate) {
+  let current = path.resolve(candidate);
+  while (true) {
+    try { if (fs.lstatSync(current).isSymbolicLink()) return true; } catch { return true; }
+    const parent = path.dirname(current); if (parent === current) return false; current = parent;
   }
-  return { projectDir: process.env.CODEX_PROJECT_DIR || process.cwd(), sourceHook: path.join(process.cwd(), ${JSON.stringify(sourceHook)}) };
 }
-const { projectDir, sourceHook } = resolveHook();
+function safeFile(candidate) {
+  try { const stat = fs.lstatSync(candidate); return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate); } catch { return false; }
+}
+const projectDir = process.env.CODEX_PROJECT_DIR || process.cwd();
 if (!safeFile(sourceHook)) { process.stdout.write(JSON.stringify({})); process.exit(0); }
 const result = spawnSync(process.execPath, [sourceHook], { cwd: projectDir, input, encoding: 'utf-8', env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, CODEX_PROJECT_DIR: projectDir, EVCRATE_CONFIG_DIR: '.codex' } });
 const additionalContext = [(result.stdout || '').trim()${guidanceOutput}].filter(Boolean).join('\\n\\n');
@@ -37,20 +32,18 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const input = fs.readFileSync(0, 'utf-8');
-function safeFile(candidate) { try { const stat = fs.lstatSync(candidate); return stat.isFile() && !stat.isSymbolicLink(); } catch { return false; } }
-function resolveHook() {
-  const starts = [process.env.CODEX_PROJECT_DIR, process.cwd()].filter(Boolean);
-  for (const start of starts) {
-    let current = path.resolve(start);
-    while (true) {
-      const candidate = path.join(current, ${JSON.stringify(sourceHook)});
-      if (safeFile(candidate)) return { projectDir: current, sourceHook: candidate };
-      const parent = path.dirname(current); if (parent === current) break; current = parent;
-    }
+const sourceHook = path.join(__dirname, path.basename(${JSON.stringify(sourceHook)}));
+function hasSymlinkedPathComponent(candidate) {
+  let current = path.resolve(candidate);
+  while (true) {
+    try { if (fs.lstatSync(current).isSymbolicLink()) return true; } catch { return true; }
+    const parent = path.dirname(current); if (parent === current) return false; current = parent;
   }
-  return { projectDir: process.env.CODEX_PROJECT_DIR || process.cwd(), sourceHook: path.join(process.cwd(), ${JSON.stringify(sourceHook)}) };
 }
-const { projectDir, sourceHook } = resolveHook();
+function safeFile(candidate) {
+  try { const stat = fs.lstatSync(candidate); return stat.isFile() && !stat.isSymbolicLink() && !hasSymlinkedPathComponent(candidate); } catch { return false; }
+}
+const projectDir = process.env.CODEX_PROJECT_DIR || process.cwd();
 if (!safeFile(sourceHook)) { process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'EVCREATE_HOOK_UNAVAILABLE' } })); process.exit(0); }
 const result = spawnSync(process.execPath, [sourceHook], { cwd: projectDir, input, encoding: 'utf-8', env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, CODEX_PROJECT_DIR: projectDir, EVCRATE_CONFIG_DIR: '.codex' } });
 if (result.status === 0 && !result.error) process.stdout.write(JSON.stringify({}));

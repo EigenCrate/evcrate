@@ -2,6 +2,7 @@ import { realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
+import { fileURLToPath } from "node:url";
 /** Accept the exact resource-root value sometimes passed by child launchers. */
 export function normalizeAgentRoot(value) {
   const configured = resolve(value);
@@ -9,6 +10,12 @@ export function normalizeAgentRoot(value) {
   return basename(configured) === "evcrate" && basename(parent) === "agent"
     ? parent
     : configured;
+}
+
+/** Resolve the EVCrate-owned agent root from the loaded extension location. */
+export function getInstalledAgentRoot(extensionUrl) {
+  const extensionRoot = dirname(fileURLToPath(extensionUrl));
+  return normalizeAgentRoot(dirname(dirname(extensionRoot)));
 }
 
 /** Correct the environment before third-party Pi extensions resolve skills. */

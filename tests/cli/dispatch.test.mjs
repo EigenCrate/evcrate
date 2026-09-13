@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   createResourceRequest, createSettingsGetResult, createAdvisorSettingsRequest,
-  main, resolveInvocationContext
+  exitCodeForResult, main, resolveInvocationContext
 } from '../../dist/index.js';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
@@ -22,6 +22,10 @@ function runtime(captureValue, extra = {}) {
     requestId: () => 'dispatch-1', output: captureValue.output, ...extra
   };
 }
+test('conflict result statuses retain the conflict exit code', () => {
+  assert.equal(exitCodeForResult({ status: 'conflict' }), 4);
+  assert.equal(exitCodeForResult({ status: 'CONFLICT' }), 4);
+});
 
 test('version emits one resource envelope and supports human rendering', async () => {
   const captured = capture(false);
@@ -103,6 +107,117 @@ test('request-file accepts a complete typed settings envelope', async () => {
   const result = JSON.parse(captured.values[0]);
   assert.equal(result.requestId, 'file-1');
   assert.equal(result.operation, 'get');
+});
+test('request-file distribution publication uses compatibility orchestration', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-request-distribute-'));
+  const home = join(root, 'home');
+  mkdirSync(home, { mode: 0o700 });
+  try {
+    const context = resolveInvocationContext({ packageRoot, home, targets: ['omp'] });
+    const target = context.selectedTargets[0];
+    const request = createResourceRequest('file-distribute-1', 'distribute.publish', {
+      canonicalSourceRoot: context.canonicalSourceRoot,
+      targetManifestPath: target.manifestPath,
+      generatedRoot: target.generatedRoots[0],
+      homeRoot: target.homeBindings[0].homeRoot,
+      stateRoot: context.stateRoot,
+      projectId: context.projectId ?? 'global',
+      projectRoot: context.projectRoot,
+      target: target.id
+    }, { scope: 'home', selectedTargets: ['omp'] });
+    const requestPath = join(root, 'request.json');
+    writeFileSync(requestPath, JSON.stringify(request));
+    const captured = capture(false);
+    const requestRuntime = runtime(captured, {
+      home,
+      publicationHandler: {
+        publishApply() { throw new Error('request-file must use compatibility orchestration'); }
+      }
+    });
+    assert.equal(await main([
+      '--request-file', requestPath, '--home', home, '--target', 'omp', '--json'
+    ], requestRuntime), 0);
+    const result = JSON.parse(captured.values[0]);
+    assert.equal(result.requestId, 'file-distribute-1');
+    assert.equal(result.operation, 'distribute.publish');
+    assert.equal(result.status, 'activated');
+    assert.equal(result.payload.scope, 'home');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+test('project recovery request identity is checked before handler access', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-recovery-'));
+  const home = join(root, 'home');
+  try {
+    const context = resolveInvocationContext({
+      packageRoot, home, projectId: 'project-1', projectRoot: packageRoot, targets: ['omp']
+    });
+    const target = context.selectedTargets[0];
+    const request = createResourceRequest('project-recovery-1', 'recover', {
+      canonicalSourceRoot: context.canonicalSourceRoot,
+      targetManifestPath: target.manifestPath,
+      generatedRoot: target.generatedRoots[0],
+      homeRoot: target.homeBindings[0].homeRoot,
+      stateRoot: context.stateRoot,
+      projectId: 'project-1',
+      projectRoot: context.projectRoot,
+      target: target.id
+    }, { scope: 'project', projectIdentity: 'd'.repeat(64), releaseId: null });
+    const requestPath = join(root, 'request.json');
+    writeFileSync(requestPath, JSON.stringify(request));
+    let called = false;
+    const captured = capture(false);
+    const requestRuntime = runtime(captured, {
+      home,
+      publicationHandler: {
+        recover() {
+          called = true;
+          return { scope: 'project', projectIdentity: 'd'.repeat(64), action: 'recovered', phases: [] };
+        }
+      }
+    });
+    assert.equal(await main([
+      '--request-file', requestPath, '--home', home, '--project-id', 'project-1',
+      '--project-root', packageRoot, '--target', 'omp', '--json'
+    ], requestRuntime), 2);
+    assert.equal(called, false);
+    assert.equal(JSON.parse(captured.values[0]).error.code, 'PROTOCOL_INVALID');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+test('request-file compatibility recovery rejects a wrong project identity before capability dispatch', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-compat-recovery-'));
+  const home = join(root, 'home');
+  try {
+    const context = resolveInvocationContext({
+      packageRoot, home, projectId: 'project-1', projectRoot: packageRoot, targets: ['omp']
+    });
+    const target = context.selectedTargets[0];
+    const request = createResourceRequest('project-compat-recovery-1', 'distribute.recover', {
+      canonicalSourceRoot: context.canonicalSourceRoot,
+      targetManifestPath: target.manifestPath,
+      generatedRoot: target.generatedRoots[0],
+      homeRoot: target.homeBindings[0].homeRoot,
+      stateRoot: context.stateRoot,
+      projectId: 'project-1',
+      projectRoot: context.projectRoot,
+      target: target.id
+    }, { scope: 'project', projectIdentity: 'd'.repeat(64), releaseId: null });
+    const requestPath = join(root, 'request.json');
+    writeFileSync(requestPath, JSON.stringify(request));
+    const captured = capture(false);
+    assert.equal(await main([
+      '--request-file', requestPath, '--home', home, '--project-id', 'project-1',
+      '--project-root', packageRoot, '--target', 'omp', '--json'
+    ], runtime(captured)), 2);
+    const result = JSON.parse(captured.values[0]);
+    assert.equal(result.operation, 'distribute.recover');
+    assert.equal(result.error.code, 'PROTOCOL_INVALID');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('resource request files require the selected project identity', async () => {

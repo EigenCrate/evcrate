@@ -11,6 +11,7 @@
   "home_policy": {
     "bindings": {".antigravity": ".gemini/config"},
     "preserve_paths": {},
-    "promotion_order": 30
+    "promotion_order": 30,
+    "publication_rules": ["antigravity-home-path-rewrite"]
   }
 }

@@ -19,9 +19,35 @@ export interface SharedJsonSpec {
   readonly managedKeys: readonly string[];
 }
 
+export type ProjectDescriptorKind = 'directory' | 'document';
+
+export interface ProjectDirectoryDescriptor {
+  readonly kind: 'directory';
+  readonly targetId: PersistedTarget;
+  readonly localSource: string;
+  readonly generatedSource: string;
+  readonly relativeDestination: string;
+  readonly declarationIndex: number;
+}
+
+export interface ProjectDocumentDescriptor {
+  readonly kind: 'document';
+  readonly targetId: PersistedTarget;
+  readonly localSource: string;
+  readonly generatedSource: string;
+  readonly relativeDestination: string;
+  readonly declarationIndex: number;
+}
+
+export type ProjectDescriptor = ProjectDirectoryDescriptor | ProjectDocumentDescriptor;
+
 export const HOME_PUBLICATION_RULES = Object.freeze([
   'omp-agent-prefix',
   'codex-home-path-rewrite',
+  'claude-home-path-rewrite',
+  'gemini-home-path-rewrite',
+  'antigravity-home-path-rewrite',
+  'copilot-home-path-rewrite',
   'claude-skill-root-exclusion'
 ] as const);
 export type HomePublicationRule = typeof HOME_PUBLICATION_RULES[number];

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/session-init.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/session-init.cjs"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/subagent-init.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/subagent-init.cjs"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/dev-rules-reminder.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/dev-rules-reminder.cjs"
           }
         ]
       }
@@ -38,11 +38,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/scout-block.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/scout-block.cjs"
           },
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/privacy-block.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/privacy-block.cjs"
           }
         ]
       }
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/modularization-hook.js"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/modularization-hook.js"
           }
         ]
       }
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/write-compact-marker.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/write-compact-marker.cjs"
           }
         ]
       }
@@ -75,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME\"/.gemini/config/hooks/session-end.cjs"
+            "command": "node \"$AGY_PROJECT_DIR\"/.antigravity/hooks/session-end.cjs"
           }
         ]
       }

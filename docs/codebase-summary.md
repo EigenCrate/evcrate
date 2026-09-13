@@ -1,9 +1,9 @@
 # Codebase Summary
 
-**Generated:** 2026-09-09
+**Generated:** 2026-09-13
 **Source:** Fresh repository compaction produced by Repomix v1.18.0 at
 `repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs, which were
-checked directly for Phase 10 evidence.  
+checked directly for Phase 09 evidence and documentation consistency.
 **Purpose:** Compact navigation map, not a copy of the compaction.
 
 The repository is a private Node/TypeScript package. `package.json` declares
@@ -261,15 +261,15 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, advisor v2/settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes | `validation.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `diagnostic.ts` |
-| `src/context/` | Immutable package/project/home/state/target context | `invocation-context.ts`, `target-registry.ts` |
-| `src/manifests/` | Schema-2 target manifest loading and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, advisor v2/settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes | `validation.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `diagnostic.ts`, `resource-payload-validation.ts` |
+| `src/context/` | Immutable package/project/home/state/target context, project directory/document descriptors | `invocation-context.ts`, `target-registry.ts` |
+| `src/manifests/` | Schema-2 target manifest loading, descriptor types, and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts`, `types.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
 | `src/registry/` | Canonical scan, schema-1 records, compatibility and deterministic queries | `scanner.ts`, `schema.ts`, `store.ts` |
 | `src/imports/` | Bounded external-source preview/apply and replay tokens | `preview.ts`, `apply.ts`, `handler.ts` |
-| `src/scopes/` | Global/project assignment state, inheritance, revisions, and CAS | `state.ts`, `mutations.ts`, `changes.ts` |
+| `src/scopes/` | Global/project assignment state, canonical project identity, inheritance, revisions, and CAS | `identity.ts`, `state.ts`, `mutations.ts`, `changes.ts` |
 | `src/advisor-settings/` | User policy snapshots, transactions, lock, journal, preview token, and recovery | `policy-files.ts`, `coordinator.ts`, `transactions.ts`, `recovery.ts` |
-| `src/distribution/` | Local build/check, hash verification, staging, publication, recovery, Pi settings, cutover | `local-build.ts`, `build-resolution.ts`, `publication.ts`, `cutover.ts` |
+| `src/distribution/` | Local build/check, hash verification, phase planning, staging, publication, recovery, Pi settings, cutover | `local-build.ts`, `build-resolution.ts`, `publication-plan.ts`, `publication-inventory.ts`, `publication-rules.ts`, `publication.ts`, `publication-recovery.ts`, `shared-json.ts`, `cutover.ts` |
 | `src/filesystem/` | Safe paths, hashes, atomic operations, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/cli/` | Argument parser, request files, dispatch, output, health, process runner, executable | `arguments.ts`, `dispatch.ts`, `main.ts`, `evcrate.ts` |
 | `src/errors/` | Stable control-plane error types and exit mapping | `control-plane-error.ts` |
@@ -566,12 +566,11 @@ Path B lifecycles, exact three-cycle ordinals and durable gate blocking, all 16
 dispatcher references, and all seven projection adapters. Evidence is 279/279
 tests; Lead Mentor approval is 10/10 and user approval is recorded.
 
-## Generated projections, staged cutover, and release asset parity (Phase 09 DONE (2026-09-08; 100%))
+## Historical advisor mentoring release packaging and staged cutover (Phase 09; 2026-09-08)
 
-Phase 09 completed on 2026-09-08. It synchronizes all seven target projections,
-establishes exact 29-file controller closure parity across runtime and standalone
-installers, and verifies disposable-HOME publication and rollback runbooks. See the
-[Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md).
+This historical Phase 09 synchronized target projections, controller closure parity,
+standalone installers, and disposable-HOME publication/recovery runbooks. See the
+[historical Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md).
 
 ### Key deliverables and parity
 
@@ -595,10 +594,10 @@ installers, and verifies disposable-HOME publication and rollback runbooks. See 
   proves CAS conflict prevention, idempotent journal recovery, and policy preservation;
   reviewer smoke tests confirm active/incomplete task state and history sentinels remain
   isolated and intact.
-- **Operator runbook**: Explicit cutover, quiescence, settings migration, and rollback
-  procedures are documented in `docs/system-architecture.md` and handed off to Phase 10;
-  native Windows qualification and live route authorization remain separate gates.
-### Phase 09 contract boundaries
+- **Operator runbook:** Explicit cutover, quiescence, settings migration, and
+  rollback procedures live in `docs/system-architecture.md`; native Windows
+  qualification and live route authorization remain separate gates.
+### Historical Phase 09 contract boundaries
 
 The persisted target registry is exactly seven IDs. `scripts/build-manifests.mjs`
 emits eight schema-2 files: the aggregate `.evcrate/build-manifest.json` plus one
@@ -638,11 +637,11 @@ state response, and `pending_process_status` of `null`, `never-started`, or `dea
 block on `live`, `unknown`, or any inspection error. Keep admissions paused through
 publication and recovery.
 
-## Phase 10 deterministic acceptance and improvement baseline (DONE 2026-09-08)
+## Historical advisor mentoring Phase 10 deterministic acceptance (DONE 2026-09-08)
 
-Phase 10's deterministic acceptance gate is verified. Live vendor qualification,
-empirical paired executor comparison, and real HOME publication remain explicit
-operator gates. See the [QA report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
+The prior milestone's deterministic acceptance gate is verified. Live vendor
+qualification, empirical paired executor comparison, and real HOME publication
+remain explicit operator gates. See the [QA report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
 and [acceptance matrix](../plans/260907-1208-advisor-mentoring-recovery-audit/acceptance-matrix.md).
 
 ### Acceptance fixtures and corpus
@@ -718,6 +717,53 @@ Target manifests own publication transforms; generated output is never hand-edit
 Build resolution uses `.evcrate/build-manifest-<target>.json` for one selected
 target and `.evcrate/build-manifest.json` for multiple or all targets.
 
+
+## Hook materialization scope distribution and release verification (Phases 01–09)
+
+Phases 01–08 deliver scope-aware publication (`--scope home|project`, defaulting
+to `home`), neutral runtime closures, two-phase transactions, schema-2 state
+migration, scope-isolated recovery, and installed Linux release verification.
+Phase 09 reconciles and finalizes operator documentation against that proof:
+
+1. **Scope and destination matrix**:
+   - **Shared infrastructure**: The advisor controller closure (`.evcrate/bin`) is unconditionally
+     materialized under `<home>/.evcrate/bin` across all scopes. `--target` never filters shared controller
+     publication, and the controller is never materialized under a project root.
+   - **Seven target projections**:
+     - Claude: `<home>/.claude` (HOME) / `<project>/.claude` (Project).
+     - Codex: `<home>/.agents` then `<home>/.codex` without root doc (HOME) / `<project>/.codex`, `<project>/.agents`, then `<project>/AGENTS.md` (Project).
+     - Gemini: `<home>/.gemini` without root doc (HOME) / `<project>/.gemini` then `<project>/GEMINI.md` (Project).
+     - Antigravity: mapped to `<home>/.gemini/config` via structured rule (HOME) / `<project>/.antigravity` (Project).
+     - Pi: `<home>/.pi` (HOME) / `<project>/.pi` (Project).
+     - OMP: `<home>/.omp` with declared path mapping (HOME) / `<project>/.omp` (Project).
+     - Copilot: `<home>/.copilot` (HOME) / `<project>/.copilot` (Project).
+
+2. **Preflight and two-phase transaction semantics**:
+   - Preflight validates real owner-controlled directories, non-symlink ancestry, canonical project
+     root (SHA-256 `projectIdentity`), intra-/cross-target descriptor overlap, and same-volume atomicity.
+   - HOME publication executes as a single atomic transaction under the HOME publication lock.
+   - Project publication executes in two phases:
+     1. Shared commit to `<home>/.evcrate/bin` under the HOME publication lock.
+     2. Project harness commit to `<project-root>` under the project workspace lock (holding HOME lock, never reversing lock acquisition).
+   - Partial failure: If project harness application fails after shared commit, only the project workspace
+     is rolled back. Shared HOME commit is never compensated. If rollback succeeds, the result is
+     `status: 'partial'` with `PUBLICATION_FAILED` (exit category 5). If rollback fails, the journal is
+     preserved with `ROLLBACK_FAILED` (exit category 5) for operator recovery.
+
+3. **Schema-2 scope-isolated recovery**:
+   - `evcrate recover --scope home`: Reads only HOME publication state under `$HOME/.evcrate/publication/`.
+   - `evcrate recover --scope project --project-root <dir>`: Validates matching canonical `projectIdentity`
+     and recovers only project publication state under `<project-root>/.evcrate-publish-state/`.
+   - Quiescence is strictly required; recovery never crosses requested scope boundaries.
+
+4. **Installed release verification**:
+   - Modularized installed assertions in `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC)
+     integrate with `scripts/release/linux-verification-assertions.cjs` and `scripts/verify-private-linux-release.cjs`.
+   - Verifies HOME non-mutation on installation, all-seven HOME publication with shared controller,
+     project publication to an independent workspace without a project controller, multi-target execution
+     from a foreign workspace, partial failure rollback/isolation, and package snapshot byte invariance throughout.
+   - Release gates pass sequentially: `test:release` (10/10), `test:installer:linux` (15/15),
+     `test:validation-rollout` (6/6), `test:distribution:rollout` (5/5), and full test suite (512/512).
 ## Projection map
 
 - Claude is the canonical authoring projection and source of command/workflow text.
@@ -748,4 +794,5 @@ syntax and are not slash resource names.
 - [Code standards](./code-standards.md) — implementation rules and boundaries.
 - [Project roadmap](./project-roadmap.md) — phases, gates, and unresolved work.
 - [Project changelog](./project-changelog.md) — historical phase evidence.
+- [Project changelog archive](./project-changelog-archive.md) — older phase detail.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.

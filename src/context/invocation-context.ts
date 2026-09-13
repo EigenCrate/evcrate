@@ -1,6 +1,7 @@
 import { existsSync, lstatSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
+import { pathOverlaps } from '../filesystem/paths.js';
 import { validateProjectId } from '../protocol/validation.js';
 import {
   HomePathOptions, resolveHomeRoot, resolveProjectRoot, resolveSafePath, resolveStateRoot
@@ -8,8 +9,13 @@ import {
 import {
   HomeBinding, loadSelectedTargets, loadTargetRegistry, TargetManifestContext
 } from './target-registry.js';
-import type { ResourceRootMap } from '../manifests/types.js';
+import type {
+  ProjectDescriptor, ProjectDirectoryDescriptor, ProjectDocumentDescriptor, ResourceRootMap
+} from '../manifests/types.js';
 import type { PersistedTarget } from '../protocol/validation.js';
+import {
+  canonicalProjectRoot, resolvePublicationProjectIdentity, type PublicationProjectIdentity
+} from '../scopes/identity.js';
 
 export interface InvocationContextOptions extends HomePathOptions {
   readonly packageRoot?: string;
@@ -27,6 +33,11 @@ export interface SelectedTargetContext {
   readonly generatedRoots: readonly string[];
   readonly homeBindings: readonly HomeBinding[];
   readonly projectDocs: readonly string[];
+  readonly projectDirectoryDescriptors: readonly ProjectDirectoryDescriptor[];
+  readonly projectDocumentDescriptors: readonly ProjectDocumentDescriptor[];
+  readonly projectDescriptors: readonly ProjectDescriptor[];
+  readonly projectDirectoryBindings: readonly ProjectDirectoryDescriptor[];
+  readonly projectDocumentBindings: readonly ProjectDocumentDescriptor[];
   readonly sharedJson: Readonly<Record<string, unknown>> | null;
 }
 
@@ -42,6 +53,11 @@ export interface InvocationContext {
   readonly targetManifestPaths: readonly string[];
   readonly generatedRoots: readonly string[];
   readonly homeBindings: readonly HomeBinding[];
+  readonly projectDirectoryDescriptors: readonly ProjectDirectoryDescriptor[];
+  readonly projectDocumentDescriptors: readonly ProjectDocumentDescriptor[];
+  readonly projectDescriptors: readonly ProjectDescriptor[];
+  readonly projectDirectoryBindings: readonly ProjectDirectoryDescriptor[];
+  readonly projectDocumentBindings: readonly ProjectDocumentDescriptor[];
   readonly homeRoot: string;
   readonly stateRoot: string;
   readonly projectRoot: string;
@@ -69,6 +85,20 @@ function assertDirectory(path: string): void {
   }
 }
 
+export function assertNoDescriptorOverlap(
+  descriptors: readonly (ProjectDirectoryDescriptor | ProjectDocumentDescriptor)[]
+): void {
+  for (let i = 0; i < descriptors.length; i += 1) {
+    const left = descriptors[i];
+    for (let j = i + 1; j < descriptors.length; j += 1) {
+      const right = descriptors[j];
+      if (pathOverlaps(left.relativeDestination, right.relativeDestination)) {
+        throw new ControlPlaneError('PROTOCOL_INVALID');
+      }
+    }
+  }
+}
+
 function targetContext(manifest: TargetManifestContext, sourceParent: string, homeRoot: string): SelectedTargetContext {
   const generatedRoots = manifest.outputRoots.map((root) => resolveSafePath(join(sourceParent, root)));
   const homeBindings = manifest.homeBindings.map((binding) => ({
@@ -76,6 +106,37 @@ function targetContext(manifest: TargetManifestContext, sourceParent: string, ho
     homeRoot: resolveSafePath(join(homeRoot, binding.homeRoot)),
     promotionOrder: binding.promotionOrder
   }));
+  const projectDirectoryDescriptors: readonly ProjectDirectoryDescriptor[] = Object.freeze(
+    manifest.outputRoots.map((root, index) => {
+      const source = resolveSafePath(join(sourceParent, root));
+      return Object.freeze({
+        kind: 'directory' as const,
+        targetId: manifest.id,
+        localSource: source,
+        generatedSource: source,
+        relativeDestination: root,
+        declarationIndex: index
+      });
+    })
+  );
+  const projectDocumentDescriptors: readonly ProjectDocumentDescriptor[] = Object.freeze(
+    manifest.projectDocs.map((doc, index) => {
+      const source = resolveSafePath(join(sourceParent, doc));
+      return Object.freeze({
+        kind: 'document' as const,
+        targetId: manifest.id,
+        localSource: source,
+        generatedSource: source,
+        relativeDestination: doc,
+        declarationIndex: index
+      });
+    })
+  );
+  const projectDescriptors: readonly ProjectDescriptor[] = Object.freeze([
+    ...projectDirectoryDescriptors,
+    ...projectDocumentDescriptors
+  ]);
+  assertNoDescriptorOverlap(projectDescriptors);
   return Object.freeze({
     id: manifest.id,
     manifestPath: manifest.manifestPath,
@@ -83,6 +144,11 @@ function targetContext(manifest: TargetManifestContext, sourceParent: string, ho
     generatedRoots: Object.freeze(generatedRoots),
     homeBindings: Object.freeze(homeBindings),
     projectDocs: manifest.projectDocs,
+    projectDirectoryDescriptors,
+    projectDocumentDescriptors,
+    projectDescriptors,
+    projectDirectoryBindings: projectDirectoryDescriptors,
+    projectDocumentBindings: projectDocumentDescriptors,
     sharedJson: manifest.sharedJson
   });
 }
@@ -105,6 +171,16 @@ export function resolveInvocationContext(options: InvocationContextOptions = {})
   const selectedTargets = manifests.map((manifest) => targetContext(manifest, sourceParent, homeRoot));
   const generatedRoots = selectedTargets.flatMap((target) => target.generatedRoots);
   const homeBindings = selectedTargets.flatMap((target) => target.homeBindings);
+  const projectDirectoryDescriptors = Object.freeze(
+    selectedTargets.flatMap((target) => target.projectDirectoryDescriptors)
+  );
+  const projectDocumentDescriptors = Object.freeze(
+    selectedTargets.flatMap((target) => target.projectDocumentDescriptors)
+  );
+  const projectDescriptors = Object.freeze(
+    selectedTargets.flatMap((target) => target.projectDescriptors)
+  );
+  assertNoDescriptorOverlap(projectDescriptors);
   return Object.freeze({
     packageRoot,
     canonicalHarnessRoot,
@@ -117,6 +193,11 @@ export function resolveInvocationContext(options: InvocationContextOptions = {})
     targetManifestPaths: Object.freeze(selectedTargets.map(({ manifestPath }) => manifestPath)),
     generatedRoots: Object.freeze(generatedRoots),
     homeBindings: Object.freeze(homeBindings),
+    projectDirectoryDescriptors,
+    projectDocumentDescriptors,
+    projectDescriptors,
+    projectDirectoryBindings: projectDirectoryDescriptors,
+    projectDocumentBindings: projectDocumentDescriptors,
     homeRoot,
     stateRoot,
     projectRoot,
@@ -124,4 +205,13 @@ export function resolveInvocationContext(options: InvocationContextOptions = {})
   });
 }
 
+export function resolvePublicationProjectContext(
+  context: InvocationContext | { readonly projectRoot: string }
+): PublicationProjectIdentity {
+  return resolvePublicationProjectIdentity(context.projectRoot);
+}
+
 export { loadTargetRegistry, loadSelectedTargets } from './target-registry.js';
+export { canonicalProjectRoot, resolvePublicationProjectIdentity } from '../scopes/identity.js';
+export type { PublicationProjectIdentity } from '../scopes/identity.js';
+export type { ProjectDirectoryDescriptor, ProjectDocumentDescriptor, ProjectDescriptor } from '../manifests/types.js';

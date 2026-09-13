@@ -4,7 +4,7 @@ import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { type PersistedTarget } from '../protocol/validation.js';
 import { assertJsonText } from '../protocol/canonical-json.js';
-import { assertNoSymlinkAncestors, assertRegularFile, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRegularFile, containedPath, normalizeRelativePath, pathOverlaps } from '../filesystem/paths.js';
 import { readBoundedFile } from '../filesystem/hashing.js';
 import { HOME_PUBLICATION_RULES, type HomePolicy, type HomePublicationRule, type PatchSpec, type SharedJsonSpec, type TargetManifest } from './types.js';
 
@@ -104,6 +104,11 @@ export function loadTargetManifest(path: string, expectedId?: PersistedTarget): 
   const rootsValue = data.output_roots ?? (typeof data.output_root === 'string'
     ? [data.output_root, ...(Array.isArray(data.additional_roots) ? data.additional_roots : [])] : undefined);
   const outputRoots = pathList(rootsValue, false);
+  for (let i = 0; i < outputRoots.length; i += 1) {
+    for (let j = i + 1; j < outputRoots.length; j += 1) {
+      if (pathOverlaps(outputRoots[i], outputRoots[j])) invalid();
+    }
+  }
   const ownedPaths = pathList(data.owned_paths ?? []);
   for (const owned of ownedPaths) {
     if (!owned.startsWith('files/')) invalid();
@@ -131,6 +136,9 @@ export function loadTargetManifest(path: string, expectedId?: PersistedTarget): 
   });
   const docs = pathList(data.project_docs ?? []);
   if (docs.some((doc) => doc.includes('/'))) invalid();
+  for (const doc of docs) {
+    if (outputRoots.some((root) => pathOverlaps(root, doc))) invalid();
+  }
   const overlayRoot = data.overlay_root === undefined || data.overlay_root === null
     ? null : containedPath(repository, normalizeRelativePath(data.overlay_root));
   const policyValue = data.home_policy ?? { bindings: {}, preserve_paths: {}, promotion_order: 0 };

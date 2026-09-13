@@ -16,7 +16,7 @@ function translate(value: string, relative: string): string {
   return rendered;
 }
 function bridgeCommand(operation: string): string {
-  const code = "const os=require('node:os');const path=require('node:path');const home=process.env.COPILOT_HOME||path.join(os.homedir(),'.copilot');const bridge=path.resolve(home,'evcrate','hooks','copilot-hook-bridge.cjs');process.exitCode=require(bridge)(process.argv[1]);";
+  const code = "const path=require('node:path');const root=process.env.COPILOT_PROJECT_DIR||process.cwd();const bridge=path.resolve(root,'.copilot','evcrate','hooks','copilot-hook-bridge.cjs');process.exitCode=require(bridge)(process.argv[1]);";
   return `node -e ${JSON.stringify(code)} ${operation}`;
 }
 function matcher(event: string, value: unknown): string | undefined {
@@ -50,7 +50,7 @@ export function convertHooks(context: ProjectionBuildContext, transform: (value:
   const settings = parseJson(context, 'settings.json'); const events = settings.hooks; if (!events || typeof events !== 'object' || Array.isArray(events)) invalid();
   const shared = context.manifest.sharedJson;
   if (!shared || shared.schema !== 'managed-json-v1' || shared.destination !== 'settings.json' || shared.fragment !== 'evcrate/managed-settings.json' || shared.managedKeys.length !== 3 || new Set(shared.managedKeys).size !== 3 || !['includeCoAuthoredBy', 'effortLevel', 'statusLine'].every((key) => shared.managedKeys.includes(key))) invalid();
-  const statusline = "const os=require('node:os');const path=require('node:path');const home=process.env.COPILOT_HOME||path.join(os.homedir(),'.copilot');const statusline=path.resolve(home,'evcrate','statusline.cjs');require(statusline);";
+  const statusline = "const path=require('node:path');const root=process.env.COPILOT_PROJECT_DIR||process.cwd();const statusline=path.resolve(root,'.copilot','evcrate','statusline.cjs');require(statusline);";
   writeJson(context, 'hooks/evcrate.json', hookConfig(events as Record<string, unknown>)); writeJson(context, 'evcrate/managed-settings.json', { includeCoAuthoredBy: false, effortLevel: 'high', statusLine: { type: 'command', command: `node -e ${JSON.stringify(statusline)}` } });
   const registrations: HookAudit['registrations'] = []; for (const event of Object.keys(events as object).sort()) { const entries = (events as Record<string, unknown>)[event]; if (!Array.isArray(entries)) invalid(); const targetEvent = EVENTS[event]?.[0] ?? event; entries.forEach((_entry, index) => registrations.push({ event, targetEvent, index })); }
   copyFile(context, 'settings.json', 'evcrate/claude-settings.json', transform);
