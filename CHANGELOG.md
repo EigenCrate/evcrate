@@ -3,6 +3,7 @@
 ### 🚀 Features
 
 * **distribution:** generalize journaled publication across HOME and project scopes with complete preflight, ordered locks, durable workspace identity, fsync/marker recovery, per-source mode provenance, and bounded retention.
+* **distribution:** separate schema-2 shared-controller and HOME-harness state; migrate and recover valid schema-1 state under the HOME lock; isolate HOME/project recovery; report project partials with project-only rollback and durable `ROLLBACK_FAILED` journals; fail closed on ambiguous ownership, identity, workspace, volume, and cleanup state.
 
 ## [2.0.0](https://github.com/EigenCrate/evcrate/compare/v1.0.0...v2.0.0) (2026-09-09)
 

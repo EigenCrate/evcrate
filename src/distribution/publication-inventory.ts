@@ -240,6 +240,112 @@ function markerProjectManaged(value: unknown): void {
     if (new Set(normalized).size !== normalized.length) fail();
   }
 }
+function markerOwnershipV2(
+  value: unknown, scope: 'home' | 'project', phase: 'shared' | 'harness',
+  allowedTargets: ReadonlySet<string>
+): void {
+  if (!isPlainObject(value)) fail();
+  for (const [target, bindings] of Object.entries(value)) {
+    if (target === 'advisor-controller' || !isPlainObject(bindings)) fail();
+    const expected = scope === 'home'
+      ? PUBLICATION_TARGET_BINDINGS[target as keyof typeof PUBLICATION_TARGET_BINDINGS]
+      : PUBLICATION_PROJECT_TARGET_BINDINGS[target as keyof typeof PUBLICATION_PROJECT_TARGET_BINDINGS];
+    if (!expected || phase !== 'harness'
+      || !allowedTargets.has(target)) fail();
+    for (const [binding, paths] of Object.entries(bindings)) {
+      if (!expected.includes(binding as never) || !Array.isArray(paths)) fail();
+      const normalized = paths.map(markerRelative);
+      if (new Set(normalized).size !== normalized.length) fail();
+    }
+  }
+}
+const V2_RECORD_KEYS = [
+  'phase', 'scope', 'status', 'release_id', 'selected_targets', 'binding_order',
+  'managed_paths', 'previous_managed_paths', 'build_manifest_path', 'build_manifest_digest',
+  'transaction_dir', 'retained_release_id', 'destination_root', 'durable_state_root',
+  'workspace_root', 'workspace_name', 'project_identity', 'retention'
+] as const;
+export function validatePublicationStateRecord(
+  value: unknown, phase: 'shared' | 'harness', scope: 'home' | 'project'
+): void {
+  if (!isPlainObject(value)
+    || Object.keys(value).length !== V2_RECORD_KEYS.length
+    || Object.keys(value).some((key) => !V2_RECORD_KEYS.includes(key as never))
+    || value.phase !== phase || value.scope !== scope
+    || !['promoting', 'complete', 'recovered'].includes(String(value.status))) fail();
+  const release = markerRelease(value.release_id);
+  if (value.transaction_dir !== `release-${release}`) fail();
+  const selected = markerTargets(value.selected_targets, phase === 'shared');
+  if (phase === 'shared' && selected.length !== 0) fail();
+  if (phase === 'harness' && scope === 'home' && selected.length === 0) fail();
+  const expectedBindings = phase === 'shared'
+    ? ['.evcrate/bin']
+    : scope === 'home'
+      ? PUBLICATION_BINDING_ORDER.filter((binding) => binding !== '.evcrate/bin'
+        && selected.some((target) => PUBLICATION_TARGET_BINDINGS[target].includes(binding as never)))
+      : selected.flatMap((target) => PUBLICATION_PROJECT_TARGET_BINDINGS[target]);
+  if (!Array.isArray(value.binding_order)
+    || value.binding_order.length !== expectedBindings.length
+    || value.binding_order.some((binding, index) => binding !== expectedBindings[index])) fail();
+  const previousOwnership = value.previous_managed_paths;
+  if (!isPlainObject(previousOwnership)) fail();
+  const allowedTargets = new Set<string>(selected);
+  for (const target of Object.keys(previousOwnership)) allowedTargets.add(target);
+  markerOwnershipV2(previousOwnership, scope, phase, allowedTargets);
+  markerOwnershipV2(value.managed_paths, scope, phase, allowedTargets);
+  if (phase === 'shared'
+    && (!isPlainObject(value.managed_paths) || Object.keys(value.managed_paths).length !== 0)) fail();
+  if (!/^\.evcrate\/build-manifest(?:-[a-z]+)?\.json$/u.test(markerRelative(value.build_manifest_path))
+    || typeof value.build_manifest_digest !== 'string'
+    || !/^[a-f0-9]{64}$/u.test(value.build_manifest_digest)) fail();
+  if (value.retained_release_id !== null && (scope === 'project' || typeof value.retained_release_id !== 'string')) fail();
+  if (value.retained_release_id !== null) markerRelease(value.retained_release_id);
+  if (typeof value.destination_root !== 'string' || resolve(value.destination_root) !== value.destination_root
+    || typeof value.durable_state_root !== 'string' || resolve(value.durable_state_root) !== value.durable_state_root
+    || typeof value.workspace_root !== 'string' || resolve(value.workspace_root) !== value.workspace_root
+    || typeof value.workspace_name !== 'string'
+    || value.workspace_name !== (scope === 'project' ? `.evcrate-publish-${release}` : `release-${release}`)
+    || resolve(value.workspace_root) !== (scope === 'project'
+      ? resolve(value.destination_root, value.workspace_name)
+      : resolve(value.durable_state_root, value.transaction_dir))
+    || (scope === 'home' && value.project_identity !== null)
+    || (scope === 'project' && (typeof value.project_identity !== 'string'
+      || !/^[a-f0-9]{64}$/u.test(value.project_identity)))
+    || (scope === 'home' && value.retention !== 'bounded-one-home-release')
+    || (scope === 'project' && value.retention !== 'none')) fail();
+}
+function validatePublicationMarkerV2(marker: Record<string, unknown>): void {
+  const keys = ['schema_version', 'transaction_type', 'scope', 'records'];
+  if (Object.keys(marker).length !== keys.length || Object.keys(marker).some((key) => !keys.includes(key))
+    || marker.transaction_type !== 'target-publication'
+    || (marker.scope !== 'home' && marker.scope !== 'project')
+    || !isPlainObject(marker.records)) fail();
+  const records = marker.records as Record<string, unknown>;
+  if (marker.scope === 'home') {
+    if (Object.keys(records).length !== 2 || !Object.hasOwn(records, 'shared')
+      || !Object.hasOwn(records, 'harness')) fail();
+    validatePublicationStateRecord(records.shared, 'shared', 'home');
+    if (records.harness !== null) validatePublicationStateRecord(records.harness, 'harness', 'home');
+    const harness = records.harness;
+    if (harness !== null) {
+      const shared = records.shared as Record<string, unknown>;
+      for (const key of ['destination_root', 'durable_state_root', 'project_identity', 'retention']) {
+        if (shared[key] !== (harness as Record<string, unknown>)[key]) fail();
+      }
+    }
+    return;
+  }
+  if (Object.keys(records).length !== 1 || !Object.hasOwn(records, 'harness')) fail();
+  validatePublicationStateRecord(records.harness, 'harness', 'project');
+}
+export function publicationMarkerRecord(
+  marker: Record<string, unknown> | null, phase: 'shared' | 'harness'
+): Record<string, unknown> | null {
+  if (marker === null || marker.schema_version !== 2 || !isPlainObject(marker.records)) return null;
+  const records = marker.records as Record<string, unknown>;
+  const value = records[phase];
+  return value === null || value === undefined ? null : isPlainObject(value) ? value : fail();
+}
 function markerTargets(value: unknown, allowEmpty = false): readonly PersistedTarget[] {
   if (!Array.isArray(value) || (!allowEmpty && !value.length)) fail();
   const result = value.map((entry) => normalizeTarget(entry));
@@ -328,6 +434,10 @@ function validatePythonMarker(marker: Record<string, unknown>): void {
   }
 }
 function validatePublicationMarker(marker: Record<string, unknown>): void {
+  if (marker.schema_version === 2) {
+    validatePublicationMarkerV2(marker);
+    return;
+  }
   if (marker.schema_version !== 1) fail();
   if (marker.transaction_type === 'target-publication' && marker.scope === 'project') validateProjectMarker(marker);
   else if (marker.transaction_type === 'target-publication') validateTargetMarker(marker);

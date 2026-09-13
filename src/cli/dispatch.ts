@@ -8,7 +8,8 @@ import {
 } from '../protocol/advisor-settings.js';
 import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/advisor-settings.js';
 import { createDiagnosticRequest, validateDiagnosticRequest } from '../protocol/diagnostic.js';
-import { createResourceRequest, createResourceRecoveryResult, createResourceResult, validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
+import { createResourceRequest, createResourceRecoveryResult, createResourceResult,
+  createResourcePartialResult, validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
 import { PROTOCOL_VERSION } from '../protocol/validation.js';
 import {
   PUBLICATION_BINDING_ORDER, validatePublishApplyResultPayload, validatePublishDryRunResultPayload,
@@ -28,6 +29,7 @@ import { validateScopeRevisionVector } from '../protocol/scope-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
 import { runCompatibilityDistribution, runTypedPublication } from './compatibility-distribution.js';
+import { isPublicationPartialError } from '../distribution/publication.js';
 import { runHealth } from './health.js';
 import { exitCodeForResult } from './output.js';
 import type { CliResult } from './output.js';
@@ -355,14 +357,21 @@ async function publicationResult(
       ...(runtime.publicationOptions ?? {}),
       abortSignal: runtime.publicationOptions?.abortSignal ?? runtime.abortSignal
     };
-    const raw = handler
-      ? await handler.publishApply(context, options, publicationRequest)
-      : await runTypedPublication('publish.apply', context, runtime, publicationRequest);
-    const payload = validatePublishApplyResultPayload(raw);
-    assertPublicationCorrelation(context, publicationRequest, payload);
-    return createResourceResult(
-      request, payload as unknown as JsonValue, request.operation === 'publish.apply' ? 'published' : 'activated'
-    );
+    try {
+      const raw = handler
+        ? await handler.publishApply(context, options, publicationRequest)
+        : await runTypedPublication('publish.apply', context, runtime, publicationRequest);
+      const payload = validatePublishApplyResultPayload(raw);
+      assertPublicationCorrelation(context, publicationRequest, payload);
+      return createResourceResult(
+        request, payload as unknown as JsonValue, request.operation === 'publish.apply' ? 'published' : 'activated'
+      );
+    } catch (error) {
+      if (!isPublicationPartialError(error)) throw error;
+      const payload = validatePublishApplyResultPayload(error.payload, true);
+      assertPublicationCorrelation(context, publicationRequest, payload);
+      return createResourcePartialResult(request, payload as unknown as JsonValue, new ControlPlaneError(error.code));
+    }
   }
   const recoveryRequest = request.payload as unknown as RecoverRequestPayload;
   assertRecoveryRequestCorrelation(context, recoveryRequest);

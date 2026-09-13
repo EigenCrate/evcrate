@@ -1,7 +1,7 @@
 ---
 title: "Hook Materialization Scope Distribution"
 description: "Add scope-aware hook publication while keeping shared infrastructure HOME-owned and one neutral verified build authoritative."
-status: in-progress
+status: completed
 priority: P2
 effort: "not estimated"
 branch: main
@@ -29,7 +29,7 @@ Future contracts are frozen in [design-contracts.md](./design-contracts.md); req
 | [03](./phase-03-neutral-seven-target-runtime-closures.md) | Seven neutral runtime closures and structured HOME rules | **DONE (2026-09-12)** — 100% | 02 descriptor contract | 04, 07, 08 |
 | [04](./phase-04-one-snapshot-phase-planning.md) | One snapshot; shared/HOME/project phase plans | **DONE (2026-09-12) — 100%** | 01–03 | 05, 06, 07 |
 | [05](./phase-05-generic-transaction-engine.md) | Generic transaction descriptor, locks, fsync, retention | **DONE (2026-09-13) — 100%** | 02, 04 | 06, 07 |
-| [06](./phase-06-state-migration-recovery-and-partial-orchestration.md) | Schema 2, migration, isolated recovery, partial orchestration | Pending | 01, 04, 05 | 07, 08 |
+| [06](./phase-06-state-migration-recovery-and-partial-orchestration.md) | Schema 2, migration, isolated recovery, partial orchestration | **DONE (2026-09-13) — 100%** | 01, 04, 05 | 07, 08 |
 | [07](./phase-07-focused-contract-and-runtime-proof.md) | Focused protocol/adapter/publication/recovery proof | Pending | 01–06 | 08 |
 | [08](./phase-08-installed-release-fixtures-and-regeneration.md) | Installed Linux fixtures and checked-in regeneration | Pending | 03, 06, 07 | 09 |
 | [09](./phase-09-post-verification-operator-documentation.md) | Live-current operator docs after proof | Pending | 08 full verification | Completion |
@@ -59,6 +59,14 @@ Phase 05 is complete at 100% after the approved blocking review correction and f
 Verified evidence: `npm run build` passed; `npm run test:publication` passed 66/66; `npm run test:integration` passed 14/14; focused recovery and oversized-result regressions passed. The review correction was resolved in the advisor state gate at revision 11, and the user approved finalization. Generated projections, manifests, registries, and live operator architecture docs remain outside Phase 05 and were not hand-edited.
 
 Handoff proceeds to Phase 06 for schema-2 state migration, isolated recovery, and partial orchestration. Phase 07 remains the subsequent focused contract/runtime proof gate.
+
+## Phase 06 completion record
+
+Phase 06 is complete at 100% after the blocking review corrections were applied in the authorized source/tests and approval was granted. The implementation covers schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, same-volume preflight, and focused regressions.
+
+Verified evidence: `npm run build` passed. Local focused tests passed individually: recovery 19/19, apply 12/12, publication-plan 6/6, and CLI publication 6/6. The mandatory tester agent could not execute because its provider returned HTTP 429 before commands; no tester-agent execution is claimed.
+
+Final blocking review approved; user approved finalization. Handoff proceeds to Phase 07 focused contract/runtime proof.
 
 ## Shared-file ownership and parallelization
 

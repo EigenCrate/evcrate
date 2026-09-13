@@ -3,7 +3,10 @@ import {
   type PublishApplyResultPayload, type PublishDryRunResultPayload, type PublicationRequestPayload,
   type PublishRequestPayload, type RecoverRequestPayload, type RecoverResultPayload
 } from '../protocol/publication-payloads.js';
-import { publishDryRun, publishApply, recoverPublication } from '../distribution/publication.js';
+import {
+  publishDryRun, publishApply, recoverPublication, isPublicationPartialError,
+  type PublicationPartialError
+} from '../distribution/publication.js';
 import { runLocalDistribution } from '../distribution/local-build.js';
 import { assertUniformAuthoritativeEngine } from '../distribution/cutover.js';
 import { projectIdentity } from '../scopes/identity.js';
@@ -30,6 +33,15 @@ function errorResult(requestId: string, operation: ResourceOperation, error: unk
     protocol: 'evcrate-resource-control', protocolVersion: PROTOCOL_VERSION, requestId,
     operation, status: 'error', error: serializeControlPlaneError(error)
   };
+}
+function partialResult(
+  requestId: string, operation: ResourceOperation, error: PublicationPartialError
+): ResourceResult {
+  return validateResourceResult({
+    protocol: 'evcrate-resource-control', protocolVersion: PROTOCOL_VERSION, requestId,
+    operation, status: 'partial', payload: error.payload as unknown as JsonValue,
+    error: serializeControlPlaneError(new ControlPlaneError(error.code))
+  });
 }
 
 function defaultTypedRequest(
@@ -166,6 +178,9 @@ export async function runCompatibilityDistribution(
       );
       return compatibilityResult(requestId, invocation.command.action, outcome);
     } catch (error) {
+      if (isPublicationPartialError(error)) {
+        return partialResult(requestId, operationFor(invocation.command.action), error);
+      }
       return errorResult(requestId, operationFor(invocation.command.action), error);
     }
   }

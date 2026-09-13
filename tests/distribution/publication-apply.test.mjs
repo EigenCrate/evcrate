@@ -5,7 +5,7 @@ import {
   readdirSync, rmSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   ControlPlaneError, MAX_RETAINED_RELEASE_AGE_MS, PERSISTED_TARGETS, publishApply, publishDryRun,
   publicationStateRoot, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext,
@@ -63,7 +63,13 @@ test('OMP publication is real, isolated, recoverable, and retention-bounded', ()
     assert.equal(Number(lstatSync(policy).mode) & 0o777, beforePolicyMode);
     assert.notEqual(readFileSync(oldPath, 'utf8'), 'user-version\n');
     assert.equal(existsSync(join(state, `release-${firstRelease}`)), true);
-    assert.equal(JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8')).status, 'complete');
+    const marker = JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8'));
+    assert.equal(marker.schema_version, 2);
+    assert.equal(marker.scope, 'home');
+    assert.equal(marker.records.shared.status, 'complete');
+    assert.equal(marker.records.harness.status, 'complete');
+    assert.equal(marker.records.shared.retained_release_id, firstRelease);
+    assert.equal(marker.records.harness.retained_release_id, firstRelease);
     assert.equal(recoverPublication(context).action, 'none');
     const second = publishApply(context);
     assert.equal(second.phases[0].retainedReleaseId, firstRelease);
@@ -71,7 +77,9 @@ test('OMP publication is real, isolated, recoverable, and retention-bounded', ()
     const third = publishApply(context, { now: () => Date.now() + MAX_RETAINED_RELEASE_AGE_MS + 1 });
     assert.equal(third.phases[0].retainedReleaseId, null);
     assert.equal(existsSync(join(state, `release-${firstRelease}`)), false);
-    assert.equal(JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8')).retained_release_id, null);
+    const finalMarker = JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8'));
+    assert.equal(finalMarker.records.shared.retained_release_id, null);
+    assert.equal(finalMarker.records.harness.retained_release_id, null);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
@@ -104,11 +112,13 @@ test('project publication commits shared HOME and scoped harness without retaini
     assert.equal(existsSync(join(project, `.evcrate-publish-${result.phases[1].releaseId}`)), false);
     assert.equal(existsSync(join(projectState, 'publication-journal.json')), false);
     const marker = JSON.parse(readFileSync(join(projectState, 'release-marker.json'), 'utf8'));
-    assert.equal(marker.status, 'complete');
+    assert.equal(marker.schema_version, 2);
     assert.equal(marker.scope, 'project');
-    assert.equal(marker.destination_root, project);
-    assert.equal(marker.retention, 'none');
-    assert.equal(marker.retained_release_id, null);
+    assert.equal(marker.records.harness.status, 'complete');
+    assert.equal(marker.records.harness.destination_root, project);
+    assert.equal(marker.records.harness.retention, 'none');
+    assert.equal(marker.records.harness.retained_release_id, null);
+    assert.equal(Object.hasOwn(marker.records, 'shared'), false);
     assert.equal(recoverPublication(context, {
       scope: 'project', projectIdentity: identity, releaseId: null
     }).action, 'none');
@@ -116,6 +126,132 @@ test('project publication commits shared HOME and scoped harness without retaini
     rmSync(root, { recursive: true, force: true });
   }
 });
+test('project apply rejects a marker substituted to another destination root before HOME mutation', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-root-binding-'));
+  const home = join(root, 'home');
+  const project = join(root, 'project');
+  const other = join(root, 'other');
+  directory(home);
+  directory(project);
+  directory(other);
+  try {
+    const context = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['omp']
+    });
+    const request = { scope: 'project', selectedTargets: ['omp'] };
+    publishApply(context, {}, request);
+    const identity = resolvePublicationProjectContext(context).projectIdentity;
+    const homeState = publicationStateRoot(home);
+    const projectState = join(context.stateRoot, 'project-publication', identity);
+    const homeMarkerPath = join(homeState, 'release-marker.json');
+    const controllerPath = join(home, '.evcrate', 'bin', 'evcrate-advisor');
+    const homeMarkerBefore = readFileSync(homeMarkerPath);
+    const controllerBefore = readFileSync(controllerPath);
+    const projectMarkerPath = join(projectState, 'release-marker.json');
+    const projectMarker = JSON.parse(readFileSync(projectMarkerPath, 'utf8'));
+    projectMarker.records.harness.destination_root = resolve(other);
+    projectMarker.records.harness.workspace_root = join(
+      resolve(other), projectMarker.records.harness.workspace_name
+    );
+    writeFileSync(projectMarkerPath, JSON.stringify(projectMarker), { mode: 0o600 });
+
+    assert.throws(
+      () => publishApply(context, {}, request),
+      (error) => error?.code === 'PATH_UNSAFE'
+    );
+    assert.deepEqual(readFileSync(homeMarkerPath), homeMarkerBefore);
+    assert.deepEqual(readFileSync(controllerPath), controllerBefore);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('project apply replans shared publication after recovering HOME state', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-home-recovery-'));
+  const home = join(root, 'home');
+  const project = join(root, 'project');
+  directory(home);
+  directory(project);
+  try {
+    const context = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['omp']
+    });
+    const request = { scope: 'project', selectedTargets: ['omp'] };
+    let interrupted = false;
+    assert.throws(
+      () => publishApply(context, {
+        hooks: {
+          afterOperation: (operation) => {
+            if (operation.target === 'advisor-controller' && !interrupted) {
+              interrupted = true;
+              throw new ControlPlaneError('CAS_CONFLICT');
+            }
+          }
+        }
+      }, request),
+      (error) => error?.code === 'CAS_CONFLICT'
+    );
+    const homeState = publicationStateRoot(home);
+    assert.equal(existsSync(join(homeState, 'publication-journal.json')), true);
+
+    const result = publishApply(context, {}, request);
+    assert.equal(result.scope, 'project');
+    assert.equal(result.phases[0].scope, 'home');
+    assert.equal(result.phases[1].scope, 'project');
+    assert.equal(existsSync(join(homeState, 'publication-journal.json')), false);
+    assert.equal(existsSync(join(project, '.omp')), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('project recovery migrates only project-owned schema-1 state', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-migration-'));
+  const home = join(root, 'home');
+  const project = join(root, 'project');
+  directory(home);
+  directory(project);
+  try {
+    const context = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['omp']
+    });
+    const identity = resolvePublicationProjectContext(context).projectIdentity;
+    const state = join(context.stateRoot, 'project-publication', identity);
+    directory(state);
+    const homeState = publicationStateRoot(home);
+    directory(homeState);
+    const homeMarkerPath = join(homeState, 'release-marker.json');
+    writeFileSync(homeMarkerPath, 'home-sentinel\n', { mode: 0o600 });
+    writeFileSync(join(state, 'release-marker.json'), JSON.stringify({
+      schema_version: 1, status: 'complete', transaction_type: 'target-publication',
+      release_id: 'legacy-project', selected_targets: ['omp'], binding_order: ['.omp'],
+      managed_paths: { '.omp': ['agent/owned.md'] }, previous_managed_paths: {},
+      build_manifest_path: '.evcrate/build-manifest-omp.json', build_manifest_digest: 'a'.repeat(64),
+      transaction_dir: 'release-legacy-project', retained_release_id: null, scope: 'project',
+      destination_root: project, durable_state_root: state,
+      workspace_root: join(project, '.evcrate-publish-legacy-project'),
+      workspace_name: '.evcrate-publish-legacy-project', project_identity: identity, retention: 'none'
+    }), { mode: 0o600 });
+
+    const result = recoverPublication(context, {
+      scope: 'project', projectIdentity: identity, releaseId: null
+    });
+    assert.equal(result.action, 'none');
+    const marker = JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8'));
+    assert.equal(marker.schema_version, 2);
+    assert.equal(marker.scope, 'project');
+    assert.deepEqual(marker.records.harness.managed_paths, {
+      omp: { '.omp': ['agent/owned.md'] }
+    });
+    assert.deepEqual(marker.records.harness.previous_managed_paths, {});
+    assert.equal(readFileSync(homeMarkerPath, 'utf8'), 'home-sentinel\n');
+    assert.equal(existsSync(join(home, '.evcrate', 'bin')), false);
+    assert.equal(existsSync(join(project, '.evcrate-publish-legacy-project')), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 
 test('project shared prephase preserves HOME managed ownership and retained release state', () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-project-home-state-'));
@@ -141,7 +277,7 @@ test('project shared prephase preserves HOME managed ownership and retained rele
     publishApply(projectContext, {}, { scope: 'project', selectedTargets: ['omp'] });
 
     const afterMarker = JSON.parse(readFileSync(join(homeState, 'release-marker.json'), 'utf8'));
-    assert.deepEqual(afterMarker.managed_paths, beforeMarker.managed_paths);
+    assert.deepEqual(afterMarker.records.harness.managed_paths, beforeMarker.records.harness.managed_paths);
     assert.equal(existsSync(controllerSentinel), false);
     assert.equal(recoverPublication(projectContext, {
       scope: 'project', projectIdentity: identity, releaseId: null
@@ -186,6 +322,12 @@ test('project recovery rejects replacement of the durable workspace inode', () =
       packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['omp']
     });
     const request = { scope: 'project', selectedTargets: ['omp'] };
+    const preview = publishDryRun(context, request);
+    const firstMutation = preview.phases[1].changes.find(({ action }) =>
+      action !== 'noop' && action !== 'preserve'
+    );
+    assert.ok(firstMutation);
+    const collisionPath = join(project, firstMutation.path);
     let interrupted = false;
     assert.throws(
       () => publishApply(context, {
@@ -193,12 +335,14 @@ test('project recovery rejects replacement of the durable workspace inode', () =
           afterOperation: (operation) => {
             if (operation.target === 'omp' && !interrupted) {
               interrupted = true;
+              directory(join(collisionPath, '..'));
+              writeFileSync(collisionPath, 'external-collision\n', { mode: 0o600 });
               throw new ControlPlaneError('CAS_CONFLICT');
             }
           }
         }
       }, request),
-      (error) => error?.code === 'CAS_CONFLICT'
+      (error) => error?.code === 'ROLLBACK_FAILED'
     );
     const identity = resolvePublicationProjectContext(context).projectIdentity;
     const state = join(context.stateRoot, 'project-publication', identity);
@@ -227,6 +371,12 @@ test('project recovery rejects a journal bound to another project identity', () 
       packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['omp']
     });
     const request = { scope: 'project', selectedTargets: ['omp'] };
+    const preview = publishDryRun(context, request);
+    const firstMutation = preview.phases[1].changes.find(({ action }) =>
+      action !== 'noop' && action !== 'preserve'
+    );
+    assert.ok(firstMutation);
+    const collisionPath = join(project, firstMutation.path);
     let interrupted = false;
     assert.throws(
       () => publishApply(context, {
@@ -234,12 +384,14 @@ test('project recovery rejects a journal bound to another project identity', () 
           afterOperation: (operation) => {
             if (operation.target === 'omp' && !interrupted) {
               interrupted = true;
+              directory(join(collisionPath, '..'));
+              writeFileSync(collisionPath, 'external-collision\n', { mode: 0o600 });
               throw new ControlPlaneError('CAS_CONFLICT');
             }
           }
         }
       }, request),
-      (error) => error?.code === 'CAS_CONFLICT'
+      (error) => error?.code === 'ROLLBACK_FAILED'
     );
     const identity = resolvePublicationProjectContext(context).projectIdentity;
     const state = join(context.stateRoot, 'project-publication', identity);
@@ -249,7 +401,7 @@ test('project recovery rejects a journal bound to another project identity', () 
     writeFileSync(journalPath, JSON.stringify(journal));
     const markerPath = join(state, 'release-marker.json');
     const marker = JSON.parse(readFileSync(markerPath, 'utf8'));
-    marker.project_identity = '0'.repeat(64);
+    marker.records.harness.project_identity = '0'.repeat(64);
     writeFileSync(markerPath, JSON.stringify(marker));
     assert.throws(
       () => recoverPublication(context, {
@@ -384,7 +536,8 @@ test('post-first-promotion CAS conflict retains promoting journal, fails closed 
     assert.equal(existsSync(join(state, 'publication-journal.json')), true);
     assert.equal(existsSync(join(state, 'release-marker.json')), true);
     const marker = JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8'));
-    assert.equal(marker.status, 'promoting');
+    assert.equal(marker.records.shared.status, 'promoting');
+    assert.equal(marker.records.harness.status, 'promoting');
 
     assert.equal(readFileSync(targetConflictPath, 'utf8'), 'external-collision\n');
     assert.equal(readFileSync(policy).equals(policyBytes), true);
