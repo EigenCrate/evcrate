@@ -1,3 +1,27 @@
+## [2.1.0](https://github.com/EigenCrate/evcrate/compare/v2.0.1...v2.1.0) (2026-09-13)
+
+
+### 🚀 Features
+
+* **distribution:** add manifest project descriptors and canonical identity ([b027e25](https://github.com/EigenCrate/evcrate/commit/b027e2523f3b9679f525b8d5760abad7b18ea9d3))
+* **distribution:** add scoped publication state recovery ([0e409ea](https://github.com/EigenCrate/evcrate/commit/0e409ea579784f03d99e09f87e836ee1bd27aebf))
+* **distribution:** add shared publication planning ([a5f9463](https://github.com/EigenCrate/evcrate/commit/a5f94639794fb346a49b3f0da74673cce023167e))
+* **distribution:** freeze scoped publication contracts ([2de9520](https://github.com/EigenCrate/evcrate/commit/2de9520162e715bd72275f58dd28db75613cf055))
+* **distribution:** generalize scoped publication transactions ([82e56a4](https://github.com/EigenCrate/evcrate/commit/82e56a4226d1609dd921c737836fe1c10c9dbd1d))
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** relax non-private directory mode and ownership checks for non-POSIX mounts ([bcf65ca](https://github.com/EigenCrate/evcrate/commit/bcf65ca8a10f29e2d3ff9cd63a008028d9ed3556))
+* **advisor:** remove file and directory mode checks across controller modules ([8e9c97c](https://github.com/EigenCrate/evcrate/commit/8e9c97c856892c9828704693bc40de5754d18d9d))
+* **distribution:** close runtime publication scope ([c7ab2b7](https://github.com/EigenCrate/evcrate/commit/c7ab2b7cf01a06ac5e15faa7209485b59b627e68))
+* **publication:** auto-create missing homeRoot on publish apply and clean submodule gitlink ([ce0b235](https://github.com/EigenCrate/evcrate/commit/ce0b2352500022aa6d7f3a6c2044d117d9cd115e))
+
+
+### 📚 Documentation
+
+* **distribution:** post-verification operator and architecture documentation ([15df486](https://github.com/EigenCrate/evcrate/commit/15df4867aadf428a82633fbc602033e4279f00fa))
+
 ## [Unreleased]
 
 ### 🚀 Features
