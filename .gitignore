@@ -100,3 +100,4 @@ patches
 *.tar.gz
 
 .pi-subagents
+/ext/

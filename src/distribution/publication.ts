@@ -577,6 +577,22 @@ function existingOwnerControlledAncestor(path: string): string {
     }
   }
 }
+function ensureHomeDirectory(homeRoot: string): string {
+  const resolved = resolve(homeRoot);
+  assertNoSymlinkAncestors(resolved);
+  const existing = lstatSync(resolved, { throwIfNoEntry: false });
+  if (existing === undefined) {
+    try {
+      mkdirSync(resolved, { recursive: true, mode: 0o700 });
+      if (process.platform !== 'win32') chmodSync(resolved, 0o700);
+    } catch (error) {
+      if (error instanceof ControlPlaneError) throw error;
+      fail('PATH_UNSAFE');
+    }
+  }
+  assertOwnerControlledDirectory(resolved);
+  return resolved;
+}
 function preflightStateVolume(stateRoot: string, destinationRoot: string): void {
   assertNoSymlinkAncestors(destinationRoot);
   assertRealDirectory(destinationRoot);
@@ -911,7 +927,7 @@ export function publishApply(
     const identity = projectContext.projectIdentity;
     const projectState = projectStateRoot(context, identity);
     const homeState = publicationStateRoot(context.homeRoot);
-    assertNoSymlinkAncestors(context.homeRoot);
+    ensureHomeDirectory(context.homeRoot);
     const projectJournal = readPublicationJournal(projectState);
     const earlyProjectMarker = readOptionalPublicationMarker(markerPath(projectState));
     const earlyProjectRecord = earlyProjectMarker?.schema_version === 2
@@ -1006,7 +1022,7 @@ export function publishApply(
     });
   }
   const stateRoot = publicationStateRoot(context.homeRoot);
-  assertNoSymlinkAncestors(context.homeRoot);
+  ensureHomeDirectory(context.homeRoot);
   preflightStateVolume(stateRoot, context.homeRoot);
   return withPublishLock(stateRoot, () => {
     if (!sameVolume(stateRoot, context.homeRoot)) fail('PATH_UNSAFE');
@@ -1051,7 +1067,7 @@ export function recoverPublication(
       });
     });
   }
-  const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
+  const stateRoot = publicationStateRoot(context.homeRoot); ensureHomeDirectory(context.homeRoot);
   preflightStateVolume(stateRoot, context.homeRoot);
   return withPublishLock(stateRoot, () => {
     if (!sameVolume(stateRoot, context.homeRoot)) fail('PATH_UNSAFE');
