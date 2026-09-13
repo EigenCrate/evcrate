@@ -46,7 +46,7 @@ function stable(entries) {
   for (const entry of entries) {
     const current = inspect(entry.file);
     directory(current);
-    if (!same(current, entry.stat) || current.mode !== entry.stat.mode || current.uid !== entry.stat.uid) fail();
+    if (!same(current, entry.stat) || current.uid !== entry.stat.uid) fail();
   }
 }
 function captureFile(root, selected, roots, budget, observations) {

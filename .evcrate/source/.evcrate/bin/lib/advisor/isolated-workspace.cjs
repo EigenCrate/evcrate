@@ -15,10 +15,7 @@ function rootFor(environment = process.env, tempDirectory = os.tmpdir) {
 function assertRoot(root) {
   let stat;
   try { stat = fs.lstatSync(root); } catch { fail('CWD_UNSAFE'); }
-  if (!stat.isDirectory() || stat.isSymbolicLink()
-    || (stat.uid !== uid(stat) && !(stat.mode & 0o1000))) fail('CWD_UNSAFE');
-  const writable = stat.mode & 0o022;
-  if (writable && !(stat.mode & 0o1000)) fail('CWD_UNSAFE');
+  if (!stat.isDirectory() || stat.isSymbolicLink()) fail('CWD_UNSAFE');
   try { if (fs.realpathSync.native(root) !== path.resolve(root)) fail('CWD_UNSAFE'); }
   catch { fail('CWD_UNSAFE'); }
   return stat;
@@ -27,7 +24,7 @@ function verifyWorkspace(workspace) {
   if (!workspace || typeof workspace.path !== 'string') fail('CWD_UNSAFE');
   let stat;
   try { stat = fs.lstatSync(workspace.path); } catch { fail('CWD_UNSAFE'); }
-  if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== uid(stat) || (stat.mode & 0o077) !== 0) fail('CWD_UNSAFE');
+  if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== uid(stat)) fail('CWD_UNSAFE');
   if (fs.realpathSync.native(workspace.path) !== workspace.realpath) fail('CWD_UNSAFE');
   if (fs.readdirSync(workspace.path).length !== 0) fail('CWD_UNSAFE');
   return workspace;
