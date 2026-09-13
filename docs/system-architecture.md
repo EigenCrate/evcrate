@@ -1,7 +1,11 @@
 # System Architecture
 
-**Status:** Current implementation reference  
-**Updated:** 2026-09-09  
+**Status:** Current implementation reference; Hook Materialization Scope
+Distribution is complete through Phase 09 (512/512 tests, 29/29 closure files,
+and verified Linux release fixtures). Historical advisor mentoring acceptance is
+recorded below; live vendor qualification and production HOME publication remain
+operator-gated.  
+**Updated:** 2026-09-13  
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -24,18 +28,19 @@ dispatches one operation, writes one result, and exits. It does not run a daemon
 listener, background broker, or provider router.
 
 ```mermaid
-flowchart LR
+flowchart TD
   Canonical[.evcrate/source/.claude\ncanonical authoring] --> Build[TypeScript build/check]
   Overlays[.evcrate/targets/*\nmanifest and overlay policy] --> Build
-  Build --> Projections[Generated target projections]
-  Build --> Controller[Shared controller closure]
-  Projections --> Publish[Atomic HOME publication]
-  Controller --> Publish
+  Build --> Snapshot[VerifiedCurrentBuild snapshot\nand build digest]
+  Snapshot --> SharedPhase[Ordered Phase 1: Shared\n.evcrate/bin closure]
+  Snapshot --> HarnessPhase[Ordered Phase 2: Harness\nTarget projections]
+  SharedPhase --> HomeShared[Shared HOME commit\n~/.evcrate/bin]
+  HarnessPhase --> ScopeHome[--scope home\nHOME harness targets]
+  HarnessPhase --> ScopeProject[--scope project\nProject workspace targets]
   Checkpoint[Versioned checkpoint v2\n(v1 compatibility)] --> Advisor[~/.evcrate/bin/evcrate-advisor]
   Policy[$HOME/.evcrate/advisor-routing.json] --> Advisor
   Advisor --> Envelope[One terminal controller envelope]
 ```
-
 ## 2. Ownership and generated boundaries
 
 | Area | Owner | Editing rule |
@@ -97,27 +102,58 @@ manifest. The manifest records source, adapter, controller, owner, output, and
 validation metadata. The current build is usable only when validation is complete
 and all current source/adapter/output hashes, ownership, and expected files match.
 
-Build/check and publication are separate operations. `publish dry-run` plans
-changes; `publish apply` executes a journaled ordered-rename transaction on the
-destination volume under the publication lock; `recover` validates and replays
-that journal. This is not a single whole-filesystem atomic swap. The publisher:
+Build/check and publication are separate operations. Publication accepts a scalar
+`--scope home|project` parameter (defaulting to `home`). Exactly one neutral,
+verified `VerifiedCurrentBuild` snapshot and digest feeds two ordered logical phases:
+`shared` (phase 1) and `harness` (phase 2).
 
-1. resolves target manifests and non-overlapping output roots;
-2. validates owner-controlled, non-symlink ancestors and unmanaged-collision policy;
-3. stages files on the destination volume;
-4. records a release journal/marker and per-operation identity/hash snapshots;
-5. renames prior managed destinations to transaction backups in declared order,
-   then renames staged files into place;
-6. verifies the promoted state before removing the backup; or
-7. on conflict or uncertain state, fails closed and leaves the journal for
-   `recover`, which restores the complete prior state only after identity checks.
+1. **Shared infrastructure**: The advisor controller closure (`.evcrate/bin`) is
+   unconditionally published under `--home` (`<home>/.evcrate/bin`) in both scopes.
+   Target filtering via `--target` applies only to harness projections and never
+   filters or skips shared controller publication. Shared controller materialization
+   never targets a project workspace.
+2. **Harness destinations**:
+   - **HOME scope (`--scope home`)**: Target manifests specify `homePolicy.bindings`
+     beneath `--home`. Neutral source roots map to target HOME directories (`.claude`,
+     `.agents`, `.codex`, `.gemini`, `.pi`, `.omp`, `.copilot`), with Antigravity
+     mapping to `<home>/.gemini/config`. Root documents (`AGENTS.md`, `GEMINI.md`) are
+     excluded from HOME.
+   - **Project scope (`--scope project`)**: Harness projections bind under
+     `--project-root`. Target manifests declare `output_roots`, `additional_roots`,
+     and `project_docs` in deterministic declaration order. Installed wrappers resolve
+     internal resources from their own installation location, while runtime environment
+     and `process.cwd()` remain active project workspace data.
+3. **Transaction models**:
+   - **HOME scope**: Executes as a single atomic transaction on the HOME destination volume.
+     Shared and harness records share a single `releaseId` and bounded retention cleanup.
+   - **Project scope**: Executes as a two-phase transaction:
+     - Phase 1: Commits the shared controller to `--home` under the HOME publication lock.
+     - Phase 2: Acquires the project workspace lock (holding HOME lock, never reversing locks)
+       and commits harness projections to `--project-root`.
+     - The shared HOME commit is never compensated or rolled back if project harness application fails.
+4. **Preflight and safety invariants**:
+   - Complete path validation, non-symlink ancestor checks, owner control, and intra-/cross-target
+     overlap detection run before any destination reads or mutations.
+   - Both destinations must verify same-volume atomicity with their respective staging roots.
+5. **Partial failure semantics (exit code 5)**:
+   - Failure before shared commit fails closed as an ordinary resource error.
+   - Failure during project harness application rolls back only the project workspace.
+   - Successful rollback outputs status `'partial'` and sanitized error code `PUBLICATION_FAILED`.
+   - Rollback failure outputs status `'partial'`, error code `ROLLBACK_FAILED`, and preserves
+     the project journal for recovery. Exit category is 5.
+6. **Scope-isolated recovery**:
+   - `evcrate recover --scope home`: Reads only schema-2 HOME publication state under
+     `$HOME/.evcrate/publication/`.
+   - `evcrate recover --scope project --project-root <dir>`: Validates canonical
+     `projectIdentity` (lowercase SHA-256 over normalized absolute path) and recovers only
+     project harness state under `<project-root>/.evcrate-publish-state/`.
+   - Recovery requires process quiescence and never crosses requested scope boundaries.
 
-Unmanaged HOME files remain preserved. Advisor policy and unrelated HOME roots are
-not publication inputs. The TypeScript engine is authoritative for the current
+Unmanaged HOME and project files remain preserved. Advisor policy and unrelated roots
+are not publication inputs. The TypeScript engine is authoritative for the current
 package path; source retains an explicit compatibility-engine type, but no root
 `distribute.py` entrypoint is present in the current repository inventory. Do not
 use stale Python commands as the primary installation or distribution procedure.
-
 The controller build is a separate exact closure rooted at
 `.evcrate/source/.evcrate/bin`. Its 29 production files are:
 
@@ -463,7 +499,12 @@ each installed CLI upgrade. Windows installer/runtime validation, npm publicatio
 operator rollout, and a live vendor qualification result are separate gates and are
 not implied by deterministic repository contracts.
 
-## 8. Advisor mentoring upgrade (Phases 01–10 complete; Phase 10 DONE (Deterministic Acceptance))
+The current Hook Materialization Scope Distribution milestone (Phases 01–09) is
+verified by the 512/512 full-suite result, exact 29-file closure, `distribute:check`,
+and installed Linux release fixtures. These deterministic checks do not qualify
+live vendors or authorize production HOME publication.
+
+## 8. Historical advisor mentoring upgrade (Phases 01–10; deterministic Phase 10 acceptance)
 
 Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
 Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
@@ -550,7 +591,7 @@ Verification: the targeted Phase 07 history suites pass 19/19 and the full
 advisor-controller suite passes 204/204. The Phase Lead/Senior Mentor review
 resolved all seven final implementation items and approved Phase 07
 unconditionally at 10/10. See the [QA evidence report](../plans/reports/tester-260908-1344-phase07-final-verification.md).
-### 8.2 Generated projections, staged cutover, and operator runbook (Phase 09)
+### 8.2 Historical generated projections, staged cutover, and operator runbook (advisor milestone Phase 09)
 
 Phase 09 unifies projection generation, release packaging, standalone installers, and
 atomic publication into a verified, staged cutover without performing premature HOME rollout:
@@ -582,18 +623,22 @@ atomic publication into a verified, staged cutover without performing premature 
    - Preservation of user-owned `$HOME/.evcrate/advisor-routing.json`, task state, and history.
 
 4. **Publication isolation, state root, and crash recovery**:
-Publication to `$HOME` is a journaled ordered-rename transaction on the
+Publication is a scope-aware, journaled ordered-rename transaction on the
 destination volume, not a single whole-filesystem atomic swap:
-   - **State root**: `$HOME/.evcrate/publication/` (with active transaction directory `$HOME/.evcrate/publication/release-<releaseId>/`).
-   - **Pre-publication dry-run**: `evcrate publish --dry-run --json` reports authorized changes and binding order (`.evcrate/bin` then target bindings).
-   - **Atomic apply**: `evcrate publish --apply --json` stages complete outputs, records each rename, and promotes files in the declared order with transaction backups under `$HOME/.evcrate/publication/release-<releaseId>/backups/`.
+   - **Schema-2 state roots**:
+     - HOME publication state: `$HOME/.evcrate/publication/` (with active transaction directory `$HOME/.evcrate/publication/release-<releaseId>/`).
+     - Project publication state: `<project-root>/.evcrate-publish-state/` (isolated per canonical project identity).
+   - **Pre-publication dry-run**: `evcrate publish --dry-run [--scope home|project] [--project-root <dir>] --json` reports authorized changes and binding order (`.evcrate/bin` then target bindings).
+   - **Atomic apply**: `evcrate publish --apply [--scope home|project] [--project-root <dir>] --json`:
+     - In `home` scope: stages complete outputs, records each rename, and promotes controller and target files under a single HOME lock with backups under `$HOME/.evcrate/publication/release-<releaseId>/backups/`.
+     - In `project` scope: two-phase transaction. Commits shared controller to `$HOME/.evcrate/bin` first under HOME lock, then locks project root (HOME lock held, never reversed) and applies harness projections to `<project-root>`.
    - **External modification protection**: If an unmanaged or external modification occurs on a destination path, `publishApply` detects **CAS_CONFLICT**, leaves the external file untouched, and stops with a retained journal; recovery fails closed until the path is reconciled.
-   - **Interrupted transaction recovery (`evcrate recover --json`)**:
+   - **Interrupted transaction recovery (`evcrate recover [--scope home|project] [--project-root <dir>] --json`)**:
      - `publishApply` writes an initial release marker with status `promoting`. Both uncommitted statuses (`staged` or `promoting`) use rollback recovery when valid, restoring all promoted files to their pre-transaction state using transaction backups (`action: "rolled-back"`).
      - If promotion completed but a crash occurred during cleanup (journal status `committed`), recovery finalizes the release and purges unretained backups (`action: "finalized"`).
      - If no interrupted transaction exists, recovery is a no-op (`action: "none"`). Recovery does not roll back a completed release.
-     - **Post-first-promotion CAS conflict**: If an external change occurs after partial promotion has begun, `publishApply` fails with **CAS_CONFLICT**, leaving the journal in `promoting` state. An immediate `evcrate recover --json` will fail closed with **RECOVERY_FAILED** because the current external file cannot be matched to the pre-transaction snapshot. The operator must remain paused, inspect the conflicting path, decide whether to preserve or revert the external change, resolve the collision, and then run `evcrate recover --json` to restore a coherent state.
-
+     - **Partial failures in project scope**: If project harness application fails after shared commit, project workspace rollback is attempted. If successful, result is `'partial'` with `PUBLICATION_FAILED` (exit 5). If rollback fails, the journal is preserved (`ROLLBACK_FAILED`, exit 5). Shared commit is never rolled back or compensated.
+     - **Post-first-promotion CAS conflict**: If an external change occurs after partial promotion has begun, `publishApply` fails with **CAS_CONFLICT**, leaving the journal in `promoting` state. An immediate `evcrate recover` will fail closed with **RECOVERY_FAILED** because the current external file cannot be matched to the pre-transaction snapshot. The operator must remain paused, inspect the conflicting path, decide whether to preserve or revert the external change, resolve the collision, and then run `evcrate recover` to restore a coherent state.
 5. **Operator cutover, quiescence, and rollback runbook**:
    - **Pre-cutover validation**: Execute `npm run build`, `npm run distribute:check`, `npm run release:check`, and `npm test` locally. Confirm zero test failures and clean git status.
    - **Consultation quiescence and admission pause**:
@@ -662,13 +707,13 @@ destination volume, not a single whole-filesystem atomic swap:
        ```
        Run `evcrate advisor settings apply --json --request-file <apply-request.json>` to atomically commit. The transaction uses temporary `.advisor-settings-backup-*` files and cleans them up upon success.
      - Note: V1 policy remains operational via direct compatibility checkpoints; migration is an explicit operator choice. Credentials are never written to policy.
-   - **Harness publication**: Run `evcrate publish --dry-run --json` to preview managed target updates; when authorized, run `evcrate publish --apply --json` to atomically promote controller and projections into `$HOME`.
+   - **Harness publication**: Run `evcrate publish --dry-run [--scope home|project] [--project-root <dir>] --json` to preview managed target updates; when authorized, run `evcrate publish --apply [--scope home|project] [--project-root <dir>] --json` to promote controller and projections.
    - **Rollback execution runbook**:
-     - **Interrupted publication recovery**: If a publication transaction is interrupted mid-promotion, run `evcrate recover --json` to roll back staged changes using `$HOME/.evcrate/publication/` backups.
+     - **Interrupted publication recovery**: If a publication transaction is interrupted mid-promotion, run `evcrate recover --scope <home|project> [--project-root <dir>] --json` to roll back staged changes using publication backups.
      - **Interrupted settings recovery**: `evcrate recover` is strictly for publication journals. If an advisor-settings transaction is interrupted, run `evcrate advisor settings get --json` using the same state-root configuration (by default `$HOME/.local/state/evcrate/advisor-settings-journal.json`, or pass explicit `--state-home`). This automatically detects the journal under `context.stateRoot`, finalizes or restores the policy, and removes the journal. Verify successful recovery and journal removal before continuing.
      - **Completed publication release rollback**: After a publication transaction has committed, `evcrate recover` is a no-op (`action: "none"`). To roll back a completed publication release to a prior version:
        1. Roll back the installed package snapshot: `./install.sh rollback <prior-snapshot>` (or `.\install.ps1 rollback <prior-snapshot>`), which repoints `<data-dir>/current` and the launcher to the prior generation.
-       2. From that restored package snapshot, run `evcrate publish --apply --json` to re-publish the prior generation's matching controller and projections into `$HOME`.
+       2. From that restored package snapshot, run `evcrate publish --apply --scope <home|project> [--project-root <dir>] --json` to re-publish the prior generation's matching controller and projections.
      - **Policy rollback**:
        The V2 settings API strictly requires `version: 2` and rejects V1 policy writes. To roll back from V2 policy to V1 policy:
        1. Pause consultations across harnesses.

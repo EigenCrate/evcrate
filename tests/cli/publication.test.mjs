@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createPublicationPlan, main, recoverPublication, resolveInvocationContext } from '../../dist/index.js';
+import { createPublicationPlan, main, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext } from '../../dist/index.js';
+import { PublicationPartialError } from '../../dist/distribution/publication.js';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
 const bindingOrder = ['.omp'];
@@ -26,10 +27,10 @@ function capture() {
   const values = [];
   return { values, output: { isTTY: false, write: (value) => values.push(value) } };
 }
-function runtime(home, captured, publicationHandler) {
+function runtime(home, captured, publicationHandler, extra = {}) {
   return {
     packageRoot, cwd: packageRoot, packageVersion: '1.0.0', requestId: () => 'phase8-cli',
-    output: captured.output, publicationHandler, home
+    output: captured.output, publicationHandler, home, ...extra
   };
 }
 
@@ -105,6 +106,40 @@ test('real authority apply matches the typed plan on repeat', async () => {
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('project typed publication serializes a valid partial result with exit five', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-project-partial-'));
+  try {
+    const captured = capture();
+    const handler = {
+      publishApply(context) {
+        const partial = {
+          scope: 'project',
+          projectIdentity: resolvePublicationProjectContext(context).projectIdentity,
+          buildManifestPath: '.evcrate/build-manifest-omp.json',
+          buildManifestDigest: 'a'.repeat(64),
+          phases: [
+            { ...dryRun.phases[0], status: 'committed', releaseId: 'shared-release', retainedReleaseId: null },
+            { ...dryRun.phases[1], scope: 'project', status: 'failed', releaseId: null, retainedReleaseId: null }
+          ]
+        };
+        throw new PublicationPartialError(partial, 'PUBLICATION_FAILED');
+      }
+    };
+    assert.equal(await main([
+      'publish', '--apply', '--scope', 'project', '--target', 'omp',
+      '--home', home, '--project-root', packageRoot, '--json'
+    ], runtime(home, captured, handler)), 5);
+    const result = JSON.parse(captured.values[0]);
+    assert.equal(result.status, 'partial');
+    assert.equal(result.error.code, 'PUBLICATION_FAILED');
+    assert.equal(result.payload.phases[0].status, 'committed');
+    assert.equal(result.payload.phases[1].status, 'failed');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
 
 
 test('typed publication rejects handler output with mismatched binding order', async () => {

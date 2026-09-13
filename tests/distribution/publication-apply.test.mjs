@@ -126,6 +126,30 @@ test('project publication commits shared HOME and scoped harness without retaini
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('project publication validates a canonical multi-target binding sequence', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-order-'));
+  const home = join(root, 'home');
+  const project = join(root, 'project');
+  directory(home);
+  directory(project);
+  try {
+    const context = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project,
+      targets: ['copilot', 'pi', 'claude', 'codex']
+    });
+    const request = { scope: 'project', selectedTargets: context.selectedTargetIds };
+    assert.deepEqual(context.selectedTargetIds, ['claude', 'codex', 'copilot', 'pi']);
+    const result = publishApply(context, {}, request);
+    assert.deepEqual(result.phases[1].bindingOrder, ['.claude', '.codex', '.agents', 'AGENTS.md', '.copilot', '.pi']);
+    for (const relativePath of result.phases[1].bindingOrder) {
+      assert.equal(existsSync(join(project, relativePath)), true);
+    }
+    assert.equal(existsSync(join(project, '.evcrate', 'bin')), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 test('project apply rejects a marker substituted to another destination root before HOME mutation', () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-project-root-binding-'));
   const home = join(root, 'home');

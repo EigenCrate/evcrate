@@ -30,6 +30,9 @@ test('Linux release verification script passes with unshare network isolation an
   assert.equal(result.home_untouched_on_install, true);
   assert.equal(result.controller_closure_verified, true);
   assert.equal(result.home_projections_verified, true);
+  assert.equal(result.project_projections_verified, true);
+  assert.equal(result.runtime_entrypoints_verified, true);
+  assert.equal(result.partial_recovery_verified, true);
 });
 
 test('installed package snapshot proves clean-new and whole-old-backup mutable-state semantics on upgrade', (t) => {
@@ -134,7 +137,8 @@ test('installed launcher exercises recover, health, and repeat apply without pac
     const snapshot = path.resolve(sandbox.dataDir, fs.readlinkSync(path.join(sandbox.dataDir, 'current')));
 
     const verification = verifyInstalledLauncherAndInvariance(
-      launcher, snapshot, sandbox.unrelatedCwd, sandbox.sandboxEnv, sandbox.homeDir
+      launcher, snapshot, sandbox.workspaceDir, sandbox.sandboxEnv, sandbox.homeDir,
+      sandbox.projectDir, sandbox.stateDir
     );
     assert.equal(verification.packageHashBefore, verification.packageHashAfter);
 

@@ -101,6 +101,7 @@ export interface PublicationPlan {
   readonly bindingOrder: readonly string[];
   readonly bindings: readonly PublicationBindingPlan[];
   readonly changes: readonly PublicationChange[];
+  readonly managedOwnership: PriorManagedOwnership;
 }
 
 interface BindingDescriptor {
@@ -850,7 +851,8 @@ function composeLegacyPlan(
   return Object.freeze({
     build, buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
     selectedTargets: Object.freeze([...context.selectedTargetIds]),
-    bindingOrder: Object.freeze(bindings.map(({ binding }) => binding)), bindings, changes
+    bindingOrder: Object.freeze(bindings.map(({ binding }) => binding)), bindings, changes,
+    managedOwnership: harness.managedOwnership
   });
 }
 

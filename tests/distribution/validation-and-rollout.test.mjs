@@ -73,7 +73,9 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
   const binDir = join(installRoot, 'bin');
   const home = join(root, 'home');
   const state = join(root, 'state');
-  mkdirSync(installRoot); mkdirSync(dataDir); mkdirSync(stateDir); mkdirSync(binDir); mkdirSync(home); mkdirSync(state);
+  const project = join(root, 'project destination');
+  const workspace = join(root, 'active workspace');
+  mkdirSync(installRoot); mkdirSync(dataDir); mkdirSync(stateDir); mkdirSync(binDir); mkdirSync(home); mkdirSync(state); mkdirSync(project); mkdirSync(workspace);
 
   try {
     const assetsDir = join(packageRoot, 'dist', 'release');
@@ -157,6 +159,21 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     // Verify advisor controller is executable
     const advisorStat = lstatSync(join(home, '.evcrate', 'bin', 'evcrate-advisor'));
     assert.ok((advisorStat.mode & 0o111) !== 0, 'evcrate-advisor must be executable');
+    const projectApply = spawnSync(cliPath, [
+      'publish', '--apply', '--json', '--scope', 'project', '--home', home, '--state-home', state,
+      '--project-root', project, '--target', 'claude', '--target', 'copilot'
+    ], {
+      cwd: workspace, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
+    });
+    assert.equal(projectApply.status, 0, projectApply.stderr || projectApply.stdout);
+    const projectResult = JSON.parse(projectApply.stdout);
+    assert.equal(projectResult.status, 'published');
+    assert.equal(projectResult.payload.phases[0].scope, 'home');
+    assert.equal(projectResult.payload.phases[1].scope, 'project');
+    assert.ok(existsSync(join(project, '.claude')));
+    assert.ok(existsSync(join(project, '.copilot')));
+    assert.equal(existsSync(join(project, '.evcrate', 'bin')), false);
+    assert.equal(treeHash(installedPackageDir), packageHashBefore);
 
     // 3. Repeat apply is idempotent
     const repeatApply = spawnSync(cliPath, [
@@ -181,6 +198,14 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     const recoverResult = JSON.parse(recover.stdout);
     assert.equal(recoverResult.status, 'recovered');
     assert.equal(recoverResult.operation, 'recover');
+    const projectRecover = spawnSync(cliPath, [
+      'recover', '--json', '--scope', 'project', '--home', home, '--state-home', state, '--project-root', project
+    ], {
+      cwd: workspace, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
+    });
+    assert.equal(projectRecover.status, 0, projectRecover.stderr || projectRecover.stdout);
+    assert.equal(JSON.parse(projectRecover.stdout).payload.scope, 'project');
+    assert.equal(treeHash(installedPackageDir), packageHashBefore);
 
     // 5. Health diagnostic in consumer environment
     const health = spawnSync(cliPath, [

@@ -67,4 +67,12 @@ test('parses exact publication and recovery command grammar', () => {
   assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--scope', 'other'])), 'VALIDATION_INVALID');
   assert.equal(codeOf(() => parseArguments(['publish', '--dry-run', '--scope', 'home', '--scope', 'project'])), 'USAGE_INVALID');
   assert.equal(codeOf(() => parseArguments(['--request-file', 'request.json', '--scope', 'project'])), 'USAGE_INVALID');
+  for (const action of ['publish', 'all', 'recover']) {
+    assert.equal(parseArguments(['distribute', action, '--scope', 'project']).options.scope, 'project');
+  }
+  for (const action of ['build', 'check']) {
+    assert.equal(codeOf(() => parseArguments(['distribute', action, '--scope', 'home'])), 'USAGE_INVALID');
+  }
+  assert.equal(codeOf(() => parseArguments(['distribute', 'publish', '--scope', 'home', '--scope', 'project'])), 'USAGE_INVALID');
 });
+

@@ -8,6 +8,7 @@ branch: main
 tags: [feature, distribution, publication, recovery, security]
 created: 2026-09-12
 updated: 2026-09-13
+completed: 2026-09-13
 ---
 
 # Hook Materialization Scope Distribution
@@ -30,9 +31,9 @@ Future contracts are frozen in [design-contracts.md](./design-contracts.md); req
 | [04](./phase-04-one-snapshot-phase-planning.md) | One snapshot; shared/HOME/project phase plans | **DONE (2026-09-12) — 100%** | 01–03 | 05, 06, 07 |
 | [05](./phase-05-generic-transaction-engine.md) | Generic transaction descriptor, locks, fsync, retention | **DONE (2026-09-13) — 100%** | 02, 04 | 06, 07 |
 | [06](./phase-06-state-migration-recovery-and-partial-orchestration.md) | Schema 2, migration, isolated recovery, partial orchestration | **DONE (2026-09-13) — 100%** | 01, 04, 05 | 07, 08 |
-| [07](./phase-07-focused-contract-and-runtime-proof.md) | Focused protocol/adapter/publication/recovery proof | Pending | 01–06 | 08 |
-| [08](./phase-08-installed-release-fixtures-and-regeneration.md) | Installed Linux fixtures and checked-in regeneration | Pending | 03, 06, 07 | 09 |
-| [09](./phase-09-post-verification-operator-documentation.md) | Live-current operator docs after proof | Pending | 08 full verification | Completion |
+| [07](./phase-07-focused-contract-and-runtime-proof.md) | Focused protocol/adapter/publication/recovery proof | **DONE (2026-09-13) — 100%** | 01–06 | 08 |
+| [08](./phase-08-installed-release-fixtures-and-regeneration.md) | Installed Linux fixtures and checked-in regeneration | **DONE (2026-09-13) — 100%** | 03, 06, 07 | 09 |
+| [09](./phase-09-post-verification-operator-documentation.md) | Live-current operator docs after proof | **DONE (2026-09-13) — 100%** | 08 full verification | Completion |
 
 Critical path remains `01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09`. Phase 04 protocol-facing design may begin after 01–02; Phase 03 materialization rules are now finalized, and subsequent integration depends on Phases 04–07 before Phase 08 regeneration.
 
@@ -67,6 +68,37 @@ Phase 06 is complete at 100% after the blocking review corrections were applied 
 Verified evidence: `npm run build` passed. Local focused tests passed individually: recovery 19/19, apply 12/12, publication-plan 6/6, and CLI publication 6/6. The mandatory tester agent could not execute because its provider returned HTTP 429 before commands; no tester-agent execution is claimed.
 
 Final blocking review approved; user approved finalization. Handoff proceeds to Phase 07 focused contract/runtime proof.
+
+## Phase 07 completion record
+
+Phase 07 is complete at 100% after the focused proof gate. Focused gates passed: build; protocol 21/21; CLI/context 47/47; primitives 31/31; adapters 26/26; publication 77/77; integration 14/14; cutover 7/7; and direct `distribute:check` returned `status: "ok"`. The mandatory tester passed five targeted checks; terminal code review approved with no findings; advisor reconciliation approved finalization and completed at state revision 11.
+
+Canonical regeneration ran through `distribute:build`, `generate:registry`, and `generate:manifests` to restore controller-manifest hash integrity after user-owned controller edits blocked the focused proof. Canonical `.evcrate/build-manifest-omp.json` digest at handoff: `9f393f60d9e8a7ae3e45deae5a39a304636f9c0aa88f1fcb801744320addc5d3`. Phase 08 remains responsible for installed Linux fixtures, release/installer verification, and any regeneration required by its own changes.
+
+Handoff proceeds to Phase 08 for installed Linux fixtures, release/installer/rollout gates, and full-suite verification. Phase 09 remains pending.
+
+## Phase 08 completion record
+
+Phase 08 is complete at 100%. Installed Linux fixtures and checked-in regeneration are verified:
+- Extended `verifyInstalledLauncherAndInvariance` to prove HOME non-mutation on install, all-seven HOME publication with shared controller, project publication to separate project directory without project controller, runtime entrypoint execution across all seven targets from third workspace, partial failure rollback and recovery isolation, and package snapshot byte invariance throughout.
+- Modularized installed assertions into `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC).
+- All release gates passed sequentially: `npm run distribute:build`, `npm run generate:registry`, `npm run generate:manifests`, `npm run distribute:check`, `npm run test:release` (10/10), `npm run test:installer:linux` (15/15), `npm run test:validation-rollout` (6/6), `npm run test:distribution:rollout` (5/5), and full test suite (512/512).
+- Terminal code review approved (Verdict: PASS) with zero blockers and full A43–A49 compliance.
+- Handoff proceeds to Phase 09 for live operator and architecture documentation.
+
+## Phase 09 completion record
+
+Phase 09 is complete at 100%. Live operator and architecture documentation updated after full implementation proof, release gate verification, and complete test suite pass:
+- Reconciled final code against design contracts and Phase 08 evidence.
+- Updated `README.md` with operator CLI examples (`--scope home|project`, `--home`, `--project-root`, `--target`, recovery), seven-target destination matrix, shared controller HOME invariant, partial failure semantics (`PUBLICATION_FAILED`/`ROLLBACK_FAILED`, exit 5), quiescence runbook, and explicit distinction between installer rollback and publication recovery.
+- Updated `docs/system-architecture.md` with build-to-publication dataflow diagram, two-phase transaction execution, HOME-then-project lock ordering, preflight-before-mutation checks, schema-2 state roots, and scope-isolated recovery.
+- Updated `docs/project-overview-pdr.md` with observable functional requirements for scope-aware publication (FR-10), partial exit codes, and Linux-only qualification status.
+- Updated `docs/code-standards.md` with enforceable architectural bans and two-phase transaction standards.
+- Updated `docs/codebase-summary.md` with exact current symbols, test suites, descriptor types, and scope distribution summary.
+- Updated `docs/pi-native-migration.md` with scope-aware publication commands, extension-derived root derivation, and `PI_CODING_AGENT_DIR` runtime variable semantics.
+- Updated `docs/project-roadmap.md` and `docs/project-changelog.md` with complete evidence traceability for Phases 05 through 09.
+- Terminal code review approved (Verdict: PASS, Score: 10/10) with zero blockers and zero warnings.
+- Plan completed. Remaining external gates (live vendor qualification, Windows runtime qualification, npm publication, deployment, rollout) remain operator-gated.
 
 ## Shared-file ownership and parallelization
 

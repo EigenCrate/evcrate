@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -111,6 +111,7 @@ test('request-file accepts a complete typed settings envelope', async () => {
 test('request-file distribution publication uses compatibility orchestration', async () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-request-distribute-'));
   const home = join(root, 'home');
+  mkdirSync(home, { mode: 0o700 });
   try {
     const context = resolveInvocationContext({ packageRoot, home, targets: ['omp'] });
     const target = context.selectedTargets[0];

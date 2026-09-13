@@ -14,7 +14,7 @@
 - **Date:** 2026-09-12
 - **Description:** Make all seven generated runtime closures installation-relative and workspace-correct while confining HOME path binding to structured publication rules.
 - **Priority:** P2
-- **Implementation status:** Completed (2026-09-12)
+- **Implementation status:** DONE (2026-09-12; 100%)
 - **Review status:** Approved (2026-09-12)
 
 ## Key Insights

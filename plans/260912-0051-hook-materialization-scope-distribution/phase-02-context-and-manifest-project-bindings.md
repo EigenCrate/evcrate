@@ -14,7 +14,7 @@
 - **Date:** 2026-09-12
 - **Description:** Normalize manifest-derived project destinations and enforce canonical project identity at the publication boundary without changing projection context.
 - **Priority:** P2
-- **Implementation status:** Completed (2026-09-12)
+- **Implementation status:** DONE (2026-09-12; 100%)
 - **Review status:** Approved (2026-09-12)
 
 ## Key Insights

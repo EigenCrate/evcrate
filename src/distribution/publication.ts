@@ -848,7 +848,7 @@ function composeHomePublicationPlan(planSet: PublicationPlanSet): PublicationPla
     buildManifestDigest: planSet.buildManifestDigest,
     selectedTargets: Object.freeze([...planSet.harness.selectedTargets]),
     bindingOrder: Object.freeze(bindings.map(({ binding }) => binding)),
-    bindings, changes
+    bindings, changes, managedOwnership: planSet.harness.managedOwnership
   });
 }
 function homePublicationPlan(

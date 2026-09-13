@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-09  
+**Updated:** 2026-09-13  
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 
@@ -24,6 +24,17 @@ is the navigation map.
 - **Explicit ownership.** User-owned advisor policy and unmanaged HOME data are
   preserved; EVCrate only mutates declared managed roots.
 
+
+### Enforceable architectural bans
+
+The following patterns are strictly prohibited across the codebase:
+- **No project-local controller**: The advisor controller closure (`.evcrate/bin`) is strictly HOME-owned (`<home>/.evcrate/bin`). Never materialize a controller under a project directory.
+- **No reverse lock acquisition**: In project publication, the HOME publication lock is always acquired first, held through shared commit and project harness application, and released last. The project workspace lock is acquired second. Reverse lock acquisition or premature release is banned.
+- **No arbitrary body rewrite**: Installed wrappers are neutral. Never perform global or arbitrary text rewrites on wrapper code. Only schema-validated command registration fields may be transformed for HOME materialization (e.g. Antigravity mapping into `.gemini/config`).
+- **No ancestor project search or cwd child resolution**: Installed wrappers must locate child resources relative to their own installation root (`import.meta.url` / `__dirname`). Never traverse parent directories hoping to find an ancestor project root, and never use `process.cwd()` to resolve EVCrate internal child resources.
+- **No cross-volume atomicity fiction**: Per-volume atomic renaming is the attainable filesystem boundary. Cross-volume project publication explicitly admits and manages partial completion. Never attempt cross-volume rollback of committed shared HOME state.
+- **No hand edits to generated files**: Never edit generated target projections, build manifests, registries, or runtime brief artifacts directly. Modify canonical sources and regenerate through established scripts.
+- **No cross-scope recovery search**: Recovery must never cross the requested scope boundary. HOME recovery never mutates project files; project recovery never searches or mutates HOME state.
 ## Repository structure and ownership
 
 ```text
@@ -319,14 +330,28 @@ limits, closure, adapter boundaries, and support claims.
 - Require real owner-controlled directories for managed roots and ancestors.
   Filesystem directories do not restrict or limit user permissions via strict
   mode bitmasks; they allow standard user permissions without failing closed.
-  Never chmod or replace unrelated HOME data.
+  Never chmod or replace unrelated HOME or project data.
+- **Preflight before mutation**: Perform complete path normalization, ancestor verification,
+  owner control checks, intra- and cross-target overlap detection, and same-volume
+  verification before any destination reads, writes, or staging.
+- **Two-phase project transactions and locking order**:
+  1. Acquire HOME publication lock.
+  2. Preflight shared controller and project harness destinations.
+  3. Commit shared controller to `<home>/.evcrate/bin` on the HOME volume.
+  4. Acquire project workspace lock (HOME lock held, never reversed).
+  5. Apply harness projections to `<project-root>`.
+  6. If harness application fails: roll back only project workspace changes. Shared
+     HOME commit is never rolled back or compensated.
+  7. Release project lock, then release HOME lock.
 - Stage on the destination volume. Record device/inode/size/mode/digest snapshots
   and compare them before every backup/promotion rename.
 - Write journals, markers, policy bytes, and lock metadata through owner-only atomic
   temporary files; flush metadata where supported.
-- Recover only validated, owner-controlled, contained journal paths. Restore the
-  complete prior set for an interrupted transaction; leave unexpected state and
-  user data untouched.
+- **Scope-isolated recovery**: Recover only validated, owner-controlled, contained journal
+  paths matching the requested scope (`--scope home` reads only HOME state;
+  `--scope project` validates canonical `projectIdentity` and reads only project state).
+  Restore the complete prior set for an interrupted transaction; leave unexpected state
+  and user data untouched. Recovery never crosses scope boundaries.
 - Publication, scope, and advisor-settings locks are separate transactions. Lock
   release requires matching token and device/inode identity; uncertain release
   leaves state for recovery.
@@ -334,7 +359,6 @@ limits, closure, adapter boundaries, and support claims.
 Advisor settings uses `advisor-settings.lock`, single-use preview tokens, durable
 prepared/backed-up/promoted journals, revision/CAS checks, and whole-document
 atomic apply. It never joins scope or target-publication atomicity.
-
 ## Build, closure, and release standards
 
 `scripts/generate-controller-inventory.mjs` is the source of the generated
@@ -385,8 +409,9 @@ before reporting success.
 
 ## Documentation standards
 
-- Keep Markdown files below the repository limit of 800 lines; keep README below
-  300 lines. Prefer tables, concise sections, and links over duplicated contracts.
+- Keep Markdown files below the repository limit of 800 lines; keep README concise
+  (preferably below 400 lines). Split oversized historical/reference topics into
+  linked documents instead of exceeding the limit.
 - Link only to verified files under `docs/` or the repository root.
   `docs/project-changelog.md` mirrors phase evidence and boundaries; root
   `CHANGELOG.md` is semantic-release output, not the phase-authority document.
@@ -405,4 +430,5 @@ before reporting success.
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
+- [Project changelog archive](./project-changelog-archive.md)
 - [Pi-native migration](./pi-native-migration.md)

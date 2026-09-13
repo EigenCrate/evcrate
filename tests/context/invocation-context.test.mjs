@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import {
   resolveHomeRoot, resolveStateRoot, resolveInvocationContext, loadTargetRegistry,
   loadTargetManifest, validateManifestSet, assertNoDescriptorOverlap,
-  canonicalProjectRoot, projectIdentity, resolvePublicationProjectContext
+  canonicalProjectRoot, projectIdentity, resolvePublicationProjectContext, loadSelectedTargets
 } from '../../dist/index.js';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
@@ -35,6 +35,11 @@ test('resolves explicit HOME/state/project values and target roots independently
   assert.equal(context.stateRoot, state);
   assert.equal(context.projectRoot, project);
   assert.equal(context.projectId, 'project-1');
+  const registry = loadTargetRegistry(join(packageRoot, '.evcrate', 'targets', 'manifest.json'));
+  assert.deepEqual(
+    loadSelectedTargets(registry, ['copilot', 'pi', 'claude', 'codex']).map(({ id }) => id),
+    ['claude', 'codex', 'copilot', 'pi']
+  );
 });
 
 test('applies HOME and state precedence without inventing state suffixes for overrides', () => {
