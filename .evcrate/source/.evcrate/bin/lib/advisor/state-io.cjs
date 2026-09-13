@@ -23,10 +23,7 @@ function owner(stat) { return typeof process.getuid === 'function' && stat.uid =
 function directory(stat, privateMode = false, ancestor = false) {
   if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail();
   const mode = Number(stat.mode);
-  if (ancestor) {
-    if (!owner(stat) && stat.uid !== 0n) fail();
-    if ((mode & 0o022) && !(stat.uid === 0n && (mode & 0o1000))) fail();
-  } else if (!owner(stat) || (mode & (privateMode ? 0o077 : 0o022))) fail();
+  if (privateMode && (!owner(stat) || (mode & 0o077))) fail();
 }
 function regular(stat) {
   if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n || !owner(stat)

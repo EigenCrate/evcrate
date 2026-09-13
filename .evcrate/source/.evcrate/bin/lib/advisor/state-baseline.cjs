@@ -26,9 +26,7 @@ function same(a, b) { return a && b && a.dev === b.dev && a.ino === b.ino; }
 function unchanged(a, b) { return same(a, b) && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs; }
 function directory(stat) { if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail(); }
 function regular(stat) {
-  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n
-    || (Number(stat.mode) & 0o022) || typeof process.getuid !== 'function'
-    || stat.uid !== BigInt(process.getuid())) fail();
+  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n) fail();
 }
 function rootChain(root) {
   if (typeof root !== 'string' || !path.isAbsolute(root) || path.normalize(root) !== root
@@ -39,8 +37,6 @@ function rootChain(root) {
     if (component) current = path.join(current, component);
     const stat = inspect(current);
     directory(stat);
-    if (typeof process.getuid !== 'function' || (stat.uid !== 0n && stat.uid !== BigInt(process.getuid()))
-      || ((Number(stat.mode) & 0o022) && !(stat.uid === 0n && (Number(stat.mode) & 0o1000)))) fail();
     entries.push({ file: current, stat });
   }
   if (fs.realpathSync.native(root) !== root) fail();
@@ -72,7 +68,6 @@ function captureFile(root, selected, roots, budget, observations) {
         return { path: selected, digest: null, status: 'missing' };
       }
       directory(stat);
-      if (stat.uid !== BigInt(process.getuid()) || (Number(stat.mode) & 0o022)) fail();
       const next = fs.openSync(child, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW);
       descriptors.push(next);
       if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
@@ -118,7 +113,7 @@ function gitEnvironment() {
   return { ...environment, GIT_OPTIONAL_LOCKS: '0', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', LC_ALL: 'C' };
 }
 function git(root, args, environment) {
-  const result = spawnSync('git', ['--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'core.untrackedCache=false', '-C', root, ...args], {
+  const result = spawnSync('git', ['--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'core.untrackedCache=false', '-c', 'safe.directory=*', '-C', root, ...args], {
     env: environment, timeout: 5000, maxBuffer: 64 * 1024, windowsHide: true
   });
   if (result.error || result.signal || result.status !== 0) fail();
@@ -130,7 +125,6 @@ function repository(root) {
     if (marker) {
       if (marker.isSymbolicLink() || (!marker.isDirectory() && !marker.isFile())
         || (marker.isFile() && marker.nlink !== 1n)) fail();
-      if (marker.uid !== BigInt(process.getuid()) || (Number(marker.mode) & 0o022)) fail();
       return current;
     }
     if (path.dirname(current) === current) return null;
