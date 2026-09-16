@@ -4,13 +4,25 @@ import crypto from 'node:crypto';
 
 import { createTarArchive } from '../../../scripts/release/tar-writer.cjs';
 import { computeInventoryDigest } from '../../../scripts/release/path-policy.cjs';
-import { canonicalJsonBytes, sha256Bytes, compareCodePoints } from '../../../scripts/release/canonical-json.cjs';
-import { ADVISOR_CONTROLLER_FILES } from '../../../dist/index.js';
-import { createMinimalValidRecords } from './fixture-records.mjs';
+import { compareCodePoints } from '../../../scripts/release/canonical-json.cjs';
+import { createMinimalValidRecords, FIXTURE_BUILD_TIMESTAMP } from './fixture-records.mjs';
+import {
+  PROJECT_ROOT,
+  computeControllerClosureDigest,
+  computeBuildManifestDigests,
+  getRealInstallerEntry
+} from './release-fixture-shared-helpers.mjs';
+import { buildWindowsTestReleaseSet } from './windows-release-fixture.mjs';
 
-export { createMinimalValidRecords };
-
-const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../..');
+export {
+  createMinimalValidRecords,
+  FIXTURE_BUILD_TIMESTAMP,
+  PROJECT_ROOT,
+  computeControllerClosureDigest,
+  computeBuildManifestDigests,
+  getRealInstallerEntry,
+  buildWindowsTestReleaseSet
+};
 
 export function buildTestReleaseSet(options) {
   const {
@@ -36,14 +48,9 @@ export function buildTestReleaseSet(options) {
   const windowsName = `evcrate-v${version}-windows-x64.zip`;
   const metaName = `evcrate-v${version}.release.json`;
 
-  let installShData;
-  if (customInstallShContent) {
-    installShData = Buffer.from(customInstallShContent);
-  } else {
-    installShData = fs.readFileSync(path.join(PROJECT_ROOT, 'install.sh'));
-  }
-
-  const installShSha256 = crypto.createHash('sha256').update(installShData).digest('hex');
+  const installShEntry = getRealInstallerEntry('install.sh', PROJECT_ROOT, customInstallShContent);
+  const installShData = installShEntry.data;
+  const installShSha256 = installShEntry.sha256;
 
   if (includeInstallSh) {
     fs.writeFileSync(path.join(outputDir, 'install.sh'), installShData, { mode: 0o755 });
@@ -77,23 +84,10 @@ export function buildTestReleaseSet(options) {
 
   let controllerClosureDigest = 'c'.repeat(64);
   if (!tamperController) {
-    const controllerMap = {};
-    for (const f of ADVISOR_CONTROLLER_FILES) {
-      const rec = sortedRecords.find((r) => r.path === `.evcrate/source/.evcrate/bin/${f}`);
-      if (rec) {
-        controllerMap[`.evcrate/bin/${f}`] = rec.sha256;
-      }
-    }
-    controllerClosureDigest = sha256Bytes(canonicalJsonBytes(controllerMap));
+    controllerClosureDigest = computeControllerClosureDigest(sortedRecords);
   }
 
-  const buildManifestDigests = {};
-  for (const rec of sortedRecords) {
-    if (rec.path.startsWith('.evcrate/build-manifest')) {
-      const key = rec.path === '.evcrate/build-manifest.json' ? 'all' : rec.path.replace(/^\.evcrate\/build-manifest-/u, '').replace(/\.json$/u, '');
-      buildManifestDigests[key] = rec.sha256;
-    }
-  }
+  const buildManifestDigests = computeBuildManifestDigests(sortedRecords);
 
   const metadata = {
     schema: 'evcrate-private-release/v1',
@@ -158,3 +152,4 @@ export function buildTestReleaseSet(options) {
     archiveSha256: actualArchiveSha256
   };
 }
+

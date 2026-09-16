@@ -56,7 +56,7 @@ test('advisor settings coordinator creates whole policy with independent CAS', (
     assert.equal(applied.recovery.kind, 'none');
     const file = readAdvisorPolicy(destination(context));
     assert.deepEqual(file.policy, POLICY);
-    assert.equal(Number(lstatSync(destination(context)).mode) & 0o777, 0o600);
+    assert.equal(Number(lstatSync(destination(context)).mode) & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
     assert.equal(JSON.parse(readFileSync(destination(context), 'utf8')).advisor.primary.backend, 'codex');
 
     const replay = coordinator.handle(request('settings-replay-1', 'apply', {
@@ -112,7 +112,7 @@ test('settings preview token survives a failed publication boundary', () => {
     };
     const preview = coordinator.handle(request('settings-retry-preview-2', 'preview', {
       policy: replacement, currentRevision: current.revision, destination: destination(context),
-      mode: { kind: 'existing', mode: 0o600 }
+      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 }
     }), context);
     const failing = createAdvisorSettingsCoordinator({
       now: () => clock, applyHooks: { beforePromote: () => { throw new Error('injected boundary'); } }
@@ -183,7 +183,7 @@ test('legacy v1 policy is readable via get with migration_required but cannot be
       },
       currentRevision: result.revision,
       destination: destination(context),
-      mode: { kind: 'existing', mode: 0o600 }
+      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 }
     }), (error) => error.code === 'SETTINGS_INVALID');
   } finally {
     closePhase6Fixture(fixture);
@@ -211,7 +211,7 @@ test('migrates legacy v1 policy to v2 preserving CAS revision and applying new p
       policy: POLICY,
       currentRevision: legacyGet.revision,
       destination: dest,
-      mode: { kind: 'existing', mode: 0o600 }
+      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 }
     }), context);
     assert.equal(preview.status, 'PREVIEW');
     assert.deepEqual(preview.currentRevision, legacyGet.revision);
@@ -259,7 +259,7 @@ test('stale v1 preview token fails on apply with CAS_CONFLICT', () => {
         advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 60000 }
       },
       current_revision: legacyGet.revision,
-      mode: { kind: 'existing', mode: 0o600 },
+      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 },
       expires_at: Date.now() + 600_000,
       intended_digest: '0'.repeat(64)
     }));

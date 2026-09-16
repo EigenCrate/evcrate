@@ -2,8 +2,122 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-13  
-**Status:** Hook Materialization Scope Distribution complete through Phase 09 (Post-Verification Operator Documentation); older phase records remain in the linked archive.
+**Updated:** 2026-09-16
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Package version: `2.1.0`.
+Older phase records remain in the linked archive.
+
+### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
+
+**Status:** Phases 09–10 DONE (10/10 Windows qualification phases; 100%; completed 2026-09-15).  
+**Plan:** [Windows qualification master plan](../plans/260914-0636-windows-release-qualification/plan.md)  
+**Evidence:** [Phase 09 integrated qualification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md), [Phase 09 suite validation](../plans/reports/tester-260915-1119-phase-09-suite-validation.md), and [Phase 10 support cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md)
+
+- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node
+  `22.19.0`/`24.21.0`, with standalone installer lifecycle (`install`,
+  repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and `version --json`
+  qualification.
+- Bounded support now covers the standalone installer and version reporting only.
+  `publish`, `health`, advisor execution, live vendor qualification, and production
+  HOME publication remain Linux-only or operator-gated.
+- Reconciled README and architecture, standards, PDR, and roadmap documentation with
+  package version `2.1.0`, Windows defaults, user PATH behavior, and project
+  publication state.
+
+### 2026-09-15 — feat(ci): unprivileged Windows PR smoke and qualified asset labels (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-15; 100%).  
+**Plan:** [Phase 08 plan](../plans/260914-0636-windows-release-qualification/phase-08-unprivileged-windows-pr-smoke-and-labels.md)  
+**Evidence:** `tests/distribution/release-orchestration.test.mjs` (WRQ-042–044).
+
+- Added `.github/workflows/windows-smoke.yml`: `pull_request`/manual-only, read-only
+  `contents`, canceling concurrency, `windows-2025` x64, Node `22.19.0`, pinned
+  v4 actions, `npm ci`, checked-in version/SHA fixture build, exact-seven verify,
+  and explicit `pwsh.exe` smoke harness.
+- Fixture identity uses `--allow-fixture-identity` and is diagnostic only: no
+  secrets, write scope, upload, semantic-release, or privileged follow-up/handoff.
+- `.releaserc.json` now labels the Windows ZIP `Windows x64 Archive` and
+  `install.ps1` `Windows Installer Entrypoint (install.ps1)`; other labels,
+  paths/order, and prepare command remain unchanged.
+- WRQ-042 covers workflow isolation, WRQ-043 fixture/exact-seven/smoke wiring,
+  and WRQ-044 exact labels plus preserved asset configuration. Native matrix,
+  publication, and final byte proof remain Phase 09/operator gates.
+
+### 2026-09-15 — feat(ci): split release workflow into producer, matrix, and publisher (Phase 07)
+
+**Status:** Phase 07 DONE (2026-09-15; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 07 plan](../plans/260914-0636-windows-release-qualification/phase-07-release-workflow-producer-matrix-publisher.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260915-0155-phase-07-cycle-2.md)
+
+- Replaced the monolithic release job with an unprivileged Ubuntu producer, a
+  four-row `windows-2025` x64 qualification matrix, and a success-only publisher.
+- Producer gates remain ordered; release handoff uses one immutable artifact ID,
+  receipt, and producer hashes. Matrix rows consume the artifact without checkout/npm.
+- Publisher is the sole writer, copies exactly seven assets, and runs semantic-release
+  in verify mode. All eight action uses are pinned to full v4 SHAs.
+- Static YAML/permissions/action-pin/expression checks passed; release orchestration
+  passed 12/12. Native Windows execution and live publication remain Phase 09/operator gates.
+
+### 2026-09-14 — feat(release): canonical semantic-release candidate, receipt, and publisher (Windows qualification Phase 06)
+
+**Status:** Phase 06 DONE (2026-09-14; 100%); Cycle 2 code review approved 10/10.
+**Plan:** [Phase 06 plan](../plans/260914-0636-windows-release-qualification/phase-06-semantic-release-candidate-receipt-and-publisher.md)
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2236-phase-06-cycle-2-release-orchestration.md)
+
+- Added the canonical candidate runner with strict `.releaserc.json` loading,
+  disposable bare-mirror semantic-release execution, GitHub-plugin removal only,
+  build-mode asset preparation, release-token stripping, clean checkout/source
+  identity checks, exact seven/four staging, canonical `candidate.json`, atomic
+  promotion, and exactly nine safe GitHub output scalars.
+- Added the verify-only publisher wrapper: receipt and hash preflight, exact
+  assets-only `dist/release` copy, forced `EVCRATE_RELEASE_ASSET_MODE=verify`,
+  canonical semantic-release invocation, and version/tag/source equality checks.
+- Bound `semantic-release`, `release:candidate`, `release:verify-assets`,
+  `test:release`, and `test:installer:windows` in `package.json`; no new
+  dependency or orchestration-only lockfile edit.
+- `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes
+  29/29; build and CLI help checks pass. Native Windows execution and live
+  npm/GitHub publication remain downstream gates.
+
+
+
+### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
+**Plan:** [Phase 05 plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md)
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)
+
+- Delivered the Node-builtins-only qualification CLI with strict host,
+  receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners;
+  smoke/full lifecycle controllers; immutable-state and PATH observers; and
+  isolated negative scenarios.
+- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts
+  17/17, and Linux installer wildcard 15/15. Direct `--help` invocation
+  exited 0, confirming the standalone entrypoint.
+- Native Windows smoke/full execution remains an explicit downstream Phase 09
+  evidence gate; Phase 07 workflow wiring is complete but does not execute hosted
+  rows. This deterministic host-independent evidence makes no runtime support claim.
+- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
+  publisher.
+
+### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
+**Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
+**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
+and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
+
+- Factored shared fixture record ordering, controller/build-manifest digests, real
+  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
+  now uses `buildReleaseArchives` and emits exactly four Windows assets.
+- Added bounded stable-release enumeration and exact-label/canonical-name
+  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
+  lowercase `a`×40 identity only before qualification history; latest stable is
+  mandatory afterward, with no older/bootstrap fallback.
+- Added private staged streaming downloads with cross-origin token stripping,
+  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
+  CLI flags, and cleanup of partial output on failure.
+- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
+  This deterministic Linux evidence does not qualify native Windows runtime.
 
 ### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
 

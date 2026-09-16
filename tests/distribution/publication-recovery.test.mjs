@@ -529,7 +529,7 @@ test('recovery rejects progress evidence with an operation mode mismatch', () =>
       (error) => error?.code === 'RECOVERY_FAILED'
     );
     assert.equal(readFileSync(destination, 'utf8'), 'new');
-    assert.equal(lstatSync(destination).mode & 0o777, 0o644);
+    assert.equal(lstatSync(destination).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o644);
     assert.equal(existsSync(transaction), true);
     assert.equal(existsSync(journalPath), true);
   } finally {

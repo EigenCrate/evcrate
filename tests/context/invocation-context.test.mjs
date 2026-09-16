@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   resolveHomeRoot, resolveStateRoot, resolveInvocationContext, loadTargetRegistry,
   loadTargetManifest, validateManifestSet, assertNoDescriptorOverlap,
   canonicalProjectRoot, projectIdentity, resolvePublicationProjectContext, loadSelectedTargets
 } from '../../dist/index.js';
 
-const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]+$/u, '');
 
 function temporaryDirectory() {
   return mkdtempSync(join(tmpdir(), 'evcrate-cli-context-'));

@@ -17,6 +17,7 @@ $SCHEMA_RECEIPT = 'evcrate-installer-receipt/v1'
 $SCHEMA_OWNED = 'evcrate-installer-owned/v1'
 $SCHEMA_POINTER = 'evcrate-current-pointer/v1'
 
+$UTF8_NO_BOM = [System.Text.UTF8Encoding]::new($false)
 $MAX_ARCHIVE_BYTES = 512 * 1024 * 1024 # 512 MiB
 $MAX_TOTAL_EXPANDED_BYTES = 512 * 1024 * 1024 # 512 MiB
 $MAX_FILE_BYTES = 16 * 1024 * 1024 # 16 MiB
@@ -257,7 +258,7 @@ function Test-InventoryPathSafety {
 
     $segments = $normalized.Split('/')
     if ($segments.Length -gt $MAX_PATH_DEPTH) {
-        throw [System.InvalidOperationException]::new("Path exceeds maximum depth of $MAX_PATH_DEPTH: $RelativePath")
+        throw [System.InvalidOperationException]::new("Path exceeds maximum depth of ${MAX_PATH_DEPTH}: $RelativePath")
     }
 
     foreach ($seg in $segments) {
@@ -300,6 +301,159 @@ function Test-InventoryPathSafety {
     }
 
     return $normalized
+}
+
+function Test-ContainedPath {
+    param(
+        [string]$BasePath,
+        [string]$CandidatePath,
+        [bool]$AllowExact = $false
+    )
+    if ([string]::IsNullOrEmpty($BasePath) -or [string]::IsNullOrEmpty($CandidatePath)) {
+        return $false
+    }
+    try {
+        $fullBase = [System.IO.Path]::GetFullPath($BasePath)
+        $fullCandidate = [System.IO.Path]::GetFullPath($CandidatePath)
+    } catch {
+        return $false
+    }
+
+    $normBase = $fullBase.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $root = [System.IO.Path]::GetPathRoot($fullBase)
+    if ([string]::IsNullOrEmpty($normBase) -or $normBase -eq $root.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)) {
+        $normBase = $root
+    }
+
+    $normCandidate = $fullCandidate.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $candidateRoot = [System.IO.Path]::GetPathRoot($fullCandidate)
+    if ([string]::IsNullOrEmpty($normCandidate) -or $normCandidate -eq $candidateRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)) {
+        $normCandidate = $candidateRoot
+    }
+
+    if ([string]::Equals($normBase, $normCandidate, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $AllowExact
+    }
+
+    if ($normBase.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString()) -or $normBase.EndsWith([System.IO.Path]::AltDirectorySeparatorChar.ToString())) {
+        if ($fullCandidate.Length -gt $normBase.Length -and
+            $fullCandidate.StartsWith($normBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    } else {
+        $prefix = $normBase + [System.IO.Path]::DirectorySeparatorChar
+        if ($fullCandidate.Length -ge $prefix.Length -and
+            $fullCandidate.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Assert-ContainedPath {
+    param(
+        [string]$BasePath,
+        [string]$CandidatePath,
+        [bool]$AllowExact = $false,
+        [string]$Message = 'Path containment violation'
+    )
+    if (-not (Test-ContainedPath -BasePath $BasePath -CandidatePath $CandidatePath -AllowExact $AllowExact)) {
+        throw [System.InvalidOperationException]::new("$Message`: '$CandidatePath' is not contained in '$BasePath'")
+    }
+}
+
+function Assert-NoReparseAncestor {
+    param(
+        [string]$Path,
+        [string]$Description = 'path'
+    )
+    if ([string]::IsNullOrEmpty($Path)) { return }
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($fullPath)
+    if ([string]::IsNullOrEmpty($root)) {
+        throw [System.InvalidOperationException]::new("Cannot determine path root for: $fullPath")
+    }
+
+    $cur = $fullPath
+    $components = [System.Collections.Generic.List[string]]::new()
+    while (-not [string]::IsNullOrEmpty($cur)) {
+        $components.Add($cur)
+        $parent = [System.IO.Path]::GetDirectoryName($cur)
+        if ([string]::IsNullOrEmpty($parent) -or [string]::Equals($cur, $parent, [System.StringComparison]::OrdinalIgnoreCase)) {
+            break
+        }
+        $cur = $parent
+    }
+
+    $components.Reverse()
+
+    foreach ($checkPath in $components) {
+        if ([string]::Equals($checkPath, $root, [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+        $entryExists = $false
+        $isReparse = $false
+        try {
+            $attrs = [System.IO.File]::GetAttributes($checkPath)
+            $entryExists = $true
+            if (($attrs -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                $isReparse = $true
+            }
+        } catch [System.InvalidOperationException] {
+            throw
+        } catch {
+            # File::GetAttributes threw (e.g. DirectoryNotFoundException on dangling junction in PS 5.1)
+            try {
+                $item = Get-Item -LiteralPath $checkPath -Force -ErrorAction SilentlyContinue
+                if ($null -ne $item) {
+                    $entryExists = $true
+                    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                        $isReparse = $true
+                    }
+                }
+            } catch {}
+
+            if (-not $entryExists) {
+                try {
+                    $parentDir = [System.IO.Path]::GetDirectoryName($checkPath)
+                    $leafName = [System.IO.Path]::GetFileName($checkPath)
+                    if ([System.IO.Directory]::Exists($parentDir)) {
+                        $pDi = [System.IO.DirectoryInfo]::new($parentDir)
+                        $matches = $pDi.GetFileSystemInfos($leafName)
+                        if ($matches.Length -gt 0) {
+                            $entryExists = $true
+                            if (($matches[0].Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                                $isReparse = $true
+                            }
+                        }
+                    }
+                } catch {}
+            }
+        }
+
+        if ($isReparse) {
+            throw [System.InvalidOperationException]::new("Insecure reparse point or junction detected in $Description ancestor: $checkPath")
+        }
+
+        if (-not $entryExists) {
+            break
+        }
+    }
+}
+
+function New-SafeDirectory {
+    param(
+        [string]$DirPath,
+        [string]$Description = 'directory'
+    )
+    if ([string]::IsNullOrEmpty($DirPath)) { return }
+    $fullDir = [System.IO.Path]::GetFullPath($DirPath)
+    Assert-NoReparseAncestor -Path $fullDir -Description $Description
+    if (-not [System.IO.Directory]::Exists($fullDir)) {
+        [void][System.IO.Directory]::CreateDirectory($fullDir)
+    }
+    Assert-NoReparseAncestor -Path $fullDir -Description $Description
 }
 
 # ---------------------------------------------------------------------------
@@ -438,8 +592,20 @@ function Assert-NodeFloor {
 # Roots Resolution and Reparse-Point / Lock Checks
 # ---------------------------------------------------------------------------
 
+function Test-AlreadyUninstalled {
+    param($Roots)
+    return (-not [System.IO.Directory]::Exists($Roots.dataRoot) -and
+            -not [System.IO.Directory]::Exists($Roots.stateRoot) -and
+            -not [System.IO.Directory]::Exists($Roots.binDir) -and
+            -not [System.IO.File]::Exists($Roots.cmdLauncher) -and
+            -not [System.IO.File]::Exists($Roots.jsLauncher))
+}
+
 function Resolve-InstallRoots {
-    param($Options)
+    param(
+        $Options,
+        [bool]$EnsureDirectories = $false
+    )
     $localAppData = $env:LOCALAPPDATA
     if ([string]::IsNullOrEmpty($localAppData)) {
         $localAppData = [System.IO.Path]::Combine($env:USERPROFILE, 'AppData', 'Local')
@@ -450,95 +616,126 @@ function Resolve-InstallRoots {
     $stateRoot = if ($Options.StateDir) { $Options.StateDir } else { [System.IO.Path]::Combine($dataRoot, 'state') }
     $binDir = if ($Options.BinDir) { $Options.BinDir } else { [System.IO.Path]::Combine($dataRoot, 'bin') }
 
-    # FUTURE PROOF: NTFS reparse points, junctions, and developer-mode symlink traversal must be verified by native Windows harness.
-    # Check that root paths do not contain reparse points / junctions
-    foreach ($dirPath in @($dataRoot, $stateRoot, $binDir)) {
-        $cur = [System.IO.Path]::GetFullPath($dirPath)
-        while (-not [string]::IsNullOrEmpty($cur) -and [System.IO.Directory]::Exists($cur)) {
-            $di = [System.IO.DirectoryInfo]::new($cur)
-            if (($di.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-                throw [System.InvalidOperationException]::new("Insecure reparse point or junction detected in root path ancestor: $cur")
-            }
-            $parent = [System.IO.Path]::GetDirectoryName($cur)
-            if ($parent -eq $cur) { break }
-            $cur = $parent
-        }
+    $fullDataRoot = [System.IO.Path]::GetFullPath($dataRoot)
+    $fullStateRoot = [System.IO.Path]::GetFullPath($stateRoot)
+    $fullBinDir = [System.IO.Path]::GetFullPath($binDir)
+
+    Assert-NoReparseAncestor -Path $fullDataRoot -Description 'data root'
+    Assert-NoReparseAncestor -Path $fullStateRoot -Description 'state root'
+    Assert-NoReparseAncestor -Path $fullBinDir -Description 'bin directory'
+
+    if ($EnsureDirectories) {
+        New-SafeDirectory -DirPath $fullDataRoot -Description 'data root'
+        New-SafeDirectory -DirPath $fullStateRoot -Description 'state root'
+        New-SafeDirectory -DirPath $fullBinDir -Description 'bin directory'
     }
 
-    [void][System.IO.Directory]::CreateDirectory($dataRoot)
-    [void][System.IO.Directory]::CreateDirectory($stateRoot)
-    [void][System.IO.Directory]::CreateDirectory($binDir)
-
     return @{
-        dataRoot      = [System.IO.Path]::GetFullPath($dataRoot)
-        stateRoot     = [System.IO.Path]::GetFullPath($stateRoot)
-        binDir        = [System.IO.Path]::GetFullPath($binDir)
-        versionsDir   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($dataRoot, 'versions'))
-        stagingDir    = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($dataRoot, 'staging'))
-        currentJson   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($dataRoot, 'current.json'))
-        cmdLauncher   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($binDir, 'evcrate.cmd'))
-        jsLauncher    = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($binDir, 'launcher.cjs'))
-        lockPath      = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($stateRoot, 'install.lock'))
-        journalPath   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($stateRoot, 'install-journal.json'))
-        ownedPath     = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($stateRoot, 'installer-owned.json'))
+        dataRoot      = $fullDataRoot
+        stateRoot     = $fullStateRoot
+        binDir        = $fullBinDir
+        versionsDir   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullDataRoot, 'versions'))
+        stagingDir    = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullDataRoot, 'staging'))
+        currentJson   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullDataRoot, 'current.json'))
+        cmdLauncher   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullBinDir, 'evcrate.cmd'))
+        jsLauncher    = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullBinDir, 'launcher.cjs'))
+        lockPath      = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullStateRoot, 'install.lock'))
+        journalPath   = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullStateRoot, 'install-journal.json'))
+        ownedPath     = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($fullStateRoot, 'installer-owned.json'))
     }
 }
 
-# FUTURE PROOF: Windows file locking and sharing violations (ERROR_SHARING_VIOLATION) during upgrade must be validated in native harness.
 function Acquire-InstallLock {
     param($Roots)
     $lockPath = $Roots.lockPath
+    $stateDir = [System.IO.Path]::GetDirectoryName($lockPath)
+    New-SafeDirectory -DirPath $stateDir -Description 'state root'
+    Assert-NoReparseAncestor -Path $lockPath -Description 'lock file'
+
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $tokenBytes = [byte[]]::new(16)
+    $rng.GetBytes($tokenBytes)
+    $rng.Dispose()
+    $token = [System.BitConverter]::ToString($tokenBytes).Replace('-', '').ToLowerInvariant()
+
     $payload = ConvertTo-CanonicalJson @{
         pid        = [System.Diagnostics.Process]::GetCurrentProcess().Id
         hostname   = [System.Environment]::MachineName
+        token      = $token
         created_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
     $lockBytes = [System.Text.Encoding]::UTF8.GetBytes("$payload`n")
+    $fileOptions = [System.IO.FileOptions]::DeleteOnClose
 
     try {
         $fs = [System.IO.FileStream]::new(
             $lockPath,
             [System.IO.FileMode]::CreateNew,
-            [System.IO.FileAccess]::Write,
-            [System.IO.FileShare]::None
+            [System.IO.FileAccess]::ReadWrite,
+            [System.IO.FileShare]::None,
+            4096,
+            $fileOptions
         )
         $fs.Write($lockBytes, 0, $lockBytes.Length)
-        $fs.Flush()
-        return @{ FileStream = $fs; LockPath = $lockPath }
+        $fs.Flush($true)
+        return @{ FileStream = $fs; LockPath = $lockPath; Token = $token }
     } catch [System.IO.IOException] {
-        # Check if lock is stale
-        $isStale = $false
+        # Lock file exists or is held by another process; evaluate for stale legacy lock
+        $isStaleLegacy = $false
         try {
             if ([System.IO.File]::Exists($lockPath)) {
-                $rawLock = [System.IO.File]::ReadAllText($lockPath, [System.Text.Encoding]::UTF8)
+                $fsRead = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+                $reader = [System.IO.StreamReader]::new($fsRead, [System.Text.Encoding]::UTF8)
+                $rawLock = $reader.ReadToEnd()
+                $reader.Dispose()
+                $fsRead.Dispose()
+
                 $lockData = ConvertFrom-Json -InputObject $rawLock
-                if ($lockData.hostname -eq [System.Environment]::MachineName -and $null -ne $lockData.pid) {
-                    $liveProc = Get-Process -Id $lockData.pid -ErrorAction SilentlyContinue
-                    if ($null -eq $liveProc) {
-                        $isStale = $true
+                # Legacy shape must have hostname, pid, created_at, and MUST NOT have token
+                if ($null -ne $lockData) {
+                    $hasToken = $null -ne $lockData.PSObject.Properties['token']
+                    $hasHostname = $null -ne $lockData.PSObject.Properties['hostname']
+                    $hasPid = $null -ne $lockData.PSObject.Properties['pid']
+                    $hasCreatedAt = $null -ne $lockData.PSObject.Properties['created_at']
+                    if (-not $hasToken -and $hasHostname -and $hasPid -and $hasCreatedAt) {
+                        if ($lockData.hostname -eq [System.Environment]::MachineName) {
+                            $pidNum = 0
+                            if ([int]::TryParse($lockData.pid.ToString(), [ref]$pidNum) -and $pidNum -gt 0) {
+                                $liveProc = Get-Process -Id $pidNum -ErrorAction SilentlyContinue
+                                if ($null -eq $liveProc) {
+                                    $isStaleLegacy = $true
+                                }
+                            }
+                        }
                     }
                 }
             }
         } catch {
-            # Corrupt lock file remains active for safety
+            # Sharing violation or parse failure: active or corrupt lock; fails closed
         }
 
-        if ($isStale) {
-            $quarantine = "$lockPath.stale-$(Get-Date -UFormat %s)"
+        if ($isStaleLegacy) {
+            $uniqueId = "$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$([System.Guid]::NewGuid().ToString('N'))"
+            $quarantine = "$lockPath.stale-$uniqueId"
             try {
                 [System.IO.File]::Move($lockPath, $quarantine)
             } catch {
-                [System.IO.File]::Delete($lockPath)
+                # Never delete after failed rename! Ambiguity fails closed.
+                throw [System.InvalidOperationException]::new("Failed to quarantine stale legacy lock at $lockPath`: $($_.Exception.Message)")
             }
+
+            # Re-attempt lock acquisition after successful rename quarantine
             $fs = [System.IO.FileStream]::new(
                 $lockPath,
                 [System.IO.FileMode]::CreateNew,
-                [System.IO.FileAccess]::Write,
-                [System.IO.FileShare]::None
+                [System.IO.FileAccess]::ReadWrite,
+                [System.IO.FileShare]::None,
+                4096,
+                $fileOptions
             )
             $fs.Write($lockBytes, 0, $lockBytes.Length)
-            $fs.Flush()
-            return @{ FileStream = $fs; LockPath = $lockPath }
+            $fs.Flush($true)
+            return @{ FileStream = $fs; LockPath = $lockPath; Token = $token }
         }
 
         throw [System.InvalidOperationException]::new("Installer is busy: active lock at $lockPath")
@@ -549,10 +746,10 @@ function Release-InstallLock {
     param($LockHandle)
     if ($null -eq $LockHandle) { return }
     if ($null -ne $LockHandle.FileStream) {
-        try { $LockHandle.FileStream.Dispose() } catch {}
-    }
-    if ([System.IO.File]::Exists($LockHandle.LockPath)) {
-        try { [System.IO.File]::Delete($LockHandle.LockPath) } catch {}
+        try {
+            $LockHandle.FileStream.Dispose()
+            $LockHandle.FileStream = $null
+        } catch {}
     }
 }
 
@@ -560,16 +757,62 @@ function Release-InstallLock {
 # Journaling & Recovery State Machine
 # ---------------------------------------------------------------------------
 
+function Replace-FileAtomic {
+    param(
+        [string]$SourcePath,
+        [string]$DestinationPath
+    )
+    if ([System.IO.File]::Exists($DestinationPath)) {
+        $backupPath = "$DestinationPath.bak.$([System.Guid]::NewGuid().ToString('N'))"
+        try {
+            [void][System.IO.File]::Replace($SourcePath, $DestinationPath, $backupPath)
+        } finally {
+            if ([System.IO.File]::Exists($backupPath)) {
+                try { [System.IO.File]::Delete($backupPath) } catch {}
+            }
+        }
+    } else {
+        [System.IO.File]::Move($SourcePath, $DestinationPath)
+    }
+}
+
 function Write-InstallJournal {
     param($Roots, $Data)
     $journalPath = $Roots.journalPath
-    $tmpJournal = "$journalPath.tmp-$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$(Get-Date -UFormat %s)"
+    $journalDir = [System.IO.Path]::GetDirectoryName($journalPath)
+    New-SafeDirectory -DirPath $journalDir -Description 'journal directory'
+    Assert-NoReparseAncestor -Path $journalPath -Description 'journal destination'
+
+    $uniqueId = "$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$([System.Guid]::NewGuid().ToString('N'))"
+    $tmpJournal = [System.IO.Path]::Combine($journalDir, "install-journal.tmp-$uniqueId")
+
     $json = ConvertTo-CanonicalJson -InputObject $Data
-    [System.IO.File]::WriteAllText($tmpJournal, "$json`n", [System.Text.Encoding]::UTF8)
-    if ([System.IO.File]::Exists($journalPath)) {
-        [System.IO.File]::Delete($journalPath)
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes("$json`n")
+
+    try {
+        $fs = [System.IO.FileStream]::new(
+            $tmpJournal,
+            [System.IO.FileMode]::CreateNew,
+            [System.IO.FileAccess]::Write,
+            [System.IO.FileShare]::None
+        )
+        try {
+            $fs.Write($bytes, 0, $bytes.Length)
+            $fs.Flush($true)
+        } finally {
+            $fs.Dispose()
+        }
+
+        Assert-NoReparseAncestor -Path $journalPath -Description 'journal destination'
+
+        Replace-FileAtomic -SourcePath $tmpJournal -DestinationPath $journalPath
+        Assert-NoReparseAncestor -Path $journalPath -Description 'journal destination after replacement'
+    } catch {
+        if ([System.IO.File]::Exists($tmpJournal)) {
+            try { [System.IO.File]::Delete($tmpJournal) } catch {}
+        }
+        throw
     }
-    [System.IO.File]::Move($tmpJournal, $journalPath)
 }
 
 function Read-InstallJournal {
@@ -585,29 +828,50 @@ function Read-InstallJournal {
 function Clear-InstallJournal {
     param($Roots)
     if ([System.IO.File]::Exists($Roots.journalPath)) {
+        Assert-NoReparseAncestor -Path $Roots.journalPath -Description 'journal destination'
         try { [System.IO.File]::Delete($Roots.journalPath) } catch {}
     }
 }
 
 function Recover-InstallJournal {
     param($Roots)
+    if (-not [System.IO.File]::Exists($Roots.journalPath)) { return }
     $journal = Read-InstallJournal -Roots $Roots
-    if ($null -eq $journal) { return }
+    if ($null -eq $journal) {
+        throw [System.InvalidOperationException]::new("Corrupt or unreadable install journal at $($Roots.journalPath)")
+    }
+    if ($journal.schema -ne $SCHEMA_JOURNAL) {
+        throw [System.InvalidOperationException]::new("Invalid journal schema: $($journal.schema), expected $SCHEMA_JOURNAL")
+    }
 
     if ($journal.state -eq 'staged') {
-        if ($journal.stage_path -and [System.IO.Directory]::Exists($journal.stage_path)) {
-            if ($journal.stage_path.StartsWith($Roots.stagingDir)) {
+        if (-not [string]::IsNullOrEmpty($journal.stage_path)) {
+            Assert-ContainedPath -BasePath $Roots.stagingDir -CandidatePath $journal.stage_path -AllowExact $false -Message 'Journal stage_path escape detected'
+            if ([System.IO.Directory]::Exists($journal.stage_path)) {
+                Assert-NoReparseAncestor -Path $journal.stage_path -Description 'journal stage path'
                 [System.IO.Directory]::Delete($journal.stage_path, $true)
             }
         }
         Clear-InstallJournal -Roots $Roots
     } elseif ($journal.state -eq 'pointer-ready') {
-        if ($journal.target_snapshot_path -and [System.IO.Directory]::Exists($journal.target_snapshot_path)) {
-            Commit-Pointers -Roots $Roots -TargetVersionDir $journal.target_snapshot_path -SnapshotId $journal.new_snapshot -ArchiveSha $journal.archive_digest -Version $journal.version
-            $journal.state = 'committed'
-            $journal.updated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-            Write-InstallJournal -Roots $Roots -Data $journal
+        if (-not [string]::IsNullOrEmpty($journal.target_snapshot_path)) {
+            Assert-ContainedPath -BasePath $Roots.versionsDir -CandidatePath $journal.target_snapshot_path -AllowExact $false -Message 'Journal target_snapshot_path escape detected'
+            if ([System.IO.Directory]::Exists($journal.target_snapshot_path)) {
+                Assert-NoReparseAncestor -Path $journal.target_snapshot_path -Description 'journal target snapshot path'
+                Commit-Pointers -Roots $Roots -TargetVersionDir $journal.target_snapshot_path -SnapshotId $journal.new_snapshot -ArchiveSha $journal.archive_digest -Version $journal.version
+                $journal.state = 'committed'
+                $journal.updated_at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                Write-InstallJournal -Roots $Roots -Data $journal
+            } else {
+                throw [System.InvalidOperationException]::new("Journal target snapshot directory missing: $($journal.target_snapshot_path)")
+            }
+        } else {
+            throw [System.InvalidOperationException]::new('Journal in pointer-ready state missing target_snapshot_path')
         }
+    } elseif ($journal.state -eq 'committed') {
+        return
+    } else {
+        throw [System.InvalidOperationException]::new("Unknown journal state: $($journal.state)")
     }
 }
 
@@ -624,10 +888,29 @@ function Commit-Pointers {
         [string]$Version
     )
 
+    $fullDataRoot = [System.IO.Path]::GetFullPath($Roots.dataRoot)
+    $fullBinDir = [System.IO.Path]::GetFullPath($Roots.binDir)
+    $fullStateRoot = [System.IO.Path]::GetFullPath($Roots.stateRoot)
+
+    New-SafeDirectory -DirPath $fullDataRoot -Description 'data root'
+    New-SafeDirectory -DirPath $fullBinDir -Description 'bin directory'
+    New-SafeDirectory -DirPath $fullStateRoot -Description 'state root'
+
+    Assert-ContainedPath -BasePath $fullDataRoot -CandidatePath $Roots.currentJson -AllowExact $false -Message 'current.json escapes data root'
+    Assert-NoReparseAncestor -Path $Roots.currentJson -Description 'current.json pointer'
+
+    Assert-ContainedPath -BasePath $fullBinDir -CandidatePath $Roots.cmdLauncher -AllowExact $false -Message 'cmdLauncher escapes bin directory'
+    Assert-NoReparseAncestor -Path $Roots.cmdLauncher -Description 'cmd launcher'
+
+    Assert-ContainedPath -BasePath $fullBinDir -CandidatePath $Roots.jsLauncher -AllowExact $false -Message 'jsLauncher escapes bin directory'
+    Assert-NoReparseAncestor -Path $Roots.jsLauncher -Description 'js launcher'
+
+    Assert-ContainedPath -BasePath $fullStateRoot -CandidatePath $Roots.ownedPath -AllowExact $false -Message 'ownedPath escapes state root'
+    Assert-NoReparseAncestor -Path $Roots.ownedPath -Description 'installer-owned metadata'
+
     $versionDirName = [System.IO.Path]::GetFileName($TargetVersionDir)
 
     # 1. Atomic current.json pointer update
-    # FUTURE PROOF: Atomic file replacement across volume boundaries and antivirus file-lock behavior must be validated on NTFS.
     $pointer = @{
         schema          = $SCHEMA_POINTER
         version_dir     = $versionDirName
@@ -636,28 +919,42 @@ function Commit-Pointers {
         generation      = [int]($versionDirName.Split('-')[-1])
     }
     $pointerJson = ConvertTo-CanonicalJson -InputObject $pointer
-    $tmpPointer = [System.IO.Path]::Combine($Roots.dataRoot, "current.json.tmp-$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$(Get-Date -UFormat %s)")
-    [System.IO.File]::WriteAllText($tmpPointer, "$pointerJson`n", [System.Text.Encoding]::UTF8)
-
-    if ([System.IO.File]::Exists($Roots.currentJson)) {
-        [void][System.IO.File]::Replace($tmpPointer, $Roots.currentJson, $null)
-    } else {
-        [System.IO.File]::Move($tmpPointer, $Roots.currentJson)
+    $tmpPointer = [System.IO.Path]::Combine($fullDataRoot, "current.json.tmp-$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$([System.Guid]::NewGuid().ToString('N'))")
+    $pointerBytes = [System.Text.Encoding]::UTF8.GetBytes("$pointerJson`n")
+    $fsPointer = [System.IO.FileStream]::new(
+        $tmpPointer,
+        [System.IO.FileMode]::CreateNew,
+        [System.IO.FileAccess]::Write,
+        [System.IO.FileShare]::None
+    )
+    try {
+        $fsPointer.Write($pointerBytes, 0, $pointerBytes.Length)
+        $fsPointer.Flush($true)
+    } finally {
+        $fsPointer.Dispose()
     }
+
+    Assert-NoReparseAncestor -Path $Roots.currentJson -Description 'current.json pointer destination'
+    Replace-FileAtomic -SourcePath $tmpPointer -DestinationPath $Roots.currentJson
+    Assert-NoReparseAncestor -Path $Roots.currentJson -Description 'current.json pointer after replacement'
 
     # 2. Stable cmd launcher: bin\evcrate.cmd
     $cmdContent = "@ECHO OFF`r`nSETLOCAL`r`nnode `"%~dp0launcher.cjs`" %*`r`nEXIT /B %ERRORLEVEL%`r`n"
     [System.IO.File]::WriteAllText($Roots.cmdLauncher, $cmdContent, [System.Text.Encoding]::ASCII)
-
+    Assert-NoReparseAncestor -Path $Roots.cmdLauncher -Description 'cmd launcher after write'
     # 3. Stable Node.js launcher: bin\launcher.cjs
-    $launcherJs = @'
+    $escapedDataRoot = $Roots.dataRoot.Replace('\', '\\').Replace("'", "\'")
+    $launcherJsTemplate = @'
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 function main() {
-  const installRoot = path.resolve(__dirname, '..');
+  let installRoot = path.resolve(__dirname, '..');
+  if (!fs.existsSync(path.join(installRoot, 'current.json'))) {
+    installRoot = path.resolve('__CONFIGURED_DATA_ROOT__');
+  }
   const pointerPath = path.join(installRoot, 'current.json');
   if (!fs.existsSync(pointerPath)) {
     console.error('Error: EVCrate current.json pointer not found at: ' + pointerPath);
@@ -711,7 +1008,9 @@ function main() {
 
 main();
 '@
-    [System.IO.File]::WriteAllText($Roots.jsLauncher, $launcherJs, [System.Text.Encoding]::UTF8)
+    $launcherJs = $launcherJsTemplate.Replace('__CONFIGURED_DATA_ROOT__', $escapedDataRoot)
+    [System.IO.File]::WriteAllText($Roots.jsLauncher, $launcherJs, $UTF8_NO_BOM)
+    Assert-NoReparseAncestor -Path $Roots.jsLauncher -Description 'js launcher after write'
 
     # 4. Record installer ownership
     $owned = @{
@@ -725,7 +1024,8 @@ main();
         updated_at      = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
     $ownedJson = ConvertTo-CanonicalJson -InputObject $owned
-    [System.IO.File]::WriteAllText($Roots.ownedPath, "$ownedJson`n", [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($Roots.ownedPath, "$ownedJson`n", $UTF8_NO_BOM)
+    Assert-NoReparseAncestor -Path $Roots.ownedPath -Description 'installer-owned metadata after write'
 }
 
 # ---------------------------------------------------------------------------
@@ -740,9 +1040,10 @@ function Add-UserPathEntry {
         if ($null -eq $userPath) { $userPath = '' }
         $entries = $userPath.Split(';') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
-        $normBin = $BinDir.TrimEnd('\').ToLowerInvariant()
+        $normBin = [System.IO.Path]::GetFullPath($BinDir).TrimEnd('\', '/')
         foreach ($entry in $entries) {
-            if ($entry.TrimEnd('\').ToLowerInvariant() -eq $normBin) {
+            $normEntry = $entry.Trim().TrimEnd('\', '/')
+            if ([string]::Equals($normEntry, $normBin, [System.StringComparison]::OrdinalIgnoreCase)) {
                 return $false # already in path
             }
         }
@@ -757,22 +1058,51 @@ function Add-UserPathEntry {
 
 function Remove-UserPathEntry {
     param([string]$BinDir)
+    if ([string]::IsNullOrEmpty($BinDir)) { return }
+    $normBin = [System.IO.Path]::GetFullPath($BinDir).TrimEnd('\', '/')
+
+    $removed = $false
     try {
         $userPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
-        if ($null -eq $userPath) { return }
-        $entries = $userPath.Split(';') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        if ($null -ne $userPath -and $userPath -ne '') {
+            $entries = $userPath.Split(';')
+            $kept = [System.Collections.Generic.List[string]]::new()
+            foreach ($entry in $entries) {
+                if ([string]::IsNullOrWhiteSpace($entry)) { continue }
+                $trimmed = $entry.Trim()
+                $normEntry = $trimmed.TrimEnd('\', '/')
+                if ([string]::Equals($normEntry, $normBin, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $removed = $true
+                } else {
+                    $kept.Add($entry)
+                }
+            }
 
-        $normBin = $BinDir.TrimEnd('\').ToLowerInvariant()
-        $kept = [System.Collections.Generic.List[string]]::new()
-        foreach ($entry in $entries) {
-            if ($entry.TrimEnd('\').ToLowerInvariant() -ne $normBin) {
-                $kept.Add($entry)
+            if ($removed) {
+                $newPath = if ($kept.Count -eq 0) { '' } else { [string]::Join(';', $kept) }
+                [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::User)
             }
         }
-
-        $newPath = [string]::Join(';', $kept)
-        [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::User)
     } catch {}
+
+    # Verify absence by re-reading user PATH
+    try {
+        $verifyPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
+        if ($null -ne $verifyPath -and $verifyPath -ne '') {
+            $verifyEntries = $verifyPath.Split(';')
+            foreach ($v in $verifyEntries) {
+                if ([string]::IsNullOrWhiteSpace($v)) { continue }
+                $normV = $v.Trim().TrimEnd('\', '/')
+                if ([string]::Equals($normV, $normBin, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    throw [System.InvalidOperationException]::new("Failed to remove '$BinDir' from user PATH in registry/environment")
+                }
+            }
+        }
+    } catch [System.InvalidOperationException] {
+        throw
+    } catch {}
+
+    return
 }
 
 # ---------------------------------------------------------------------------
@@ -933,7 +1263,8 @@ function Extract-ZipArchiveSafely {
 
         # Pass 2: Extract each regular file using FileMode.CreateNew under fresh stage
         $records = [System.Collections.Generic.List[object]]::new()
-        $packageStageRoot = [System.IO.Path]::Combine($StageDir, 'package')
+        $packageStageRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($StageDir, 'package'))
+        New-SafeDirectory -DirPath $packageStageRoot -Description 'package stage root'
 
         foreach ($entry in $zip.Entries) {
             $relPath = $entry.FullName.Replace('\', '/').Substring('package/'.Length)
@@ -941,15 +1272,11 @@ function Extract-ZipArchiveSafely {
             $destFullPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($packageStageRoot, $destSubPath))
 
             # Strict containment check
-            if (-not $destFullPath.StartsWith($packageStageRoot)) {
-                throw [System.InvalidOperationException]::new("Extraction path escapes stage root: $destFullPath")
-            }
+            Assert-ContainedPath -BasePath $packageStageRoot -CandidatePath $destFullPath -AllowExact $false -Message 'Extraction path escapes stage root'
 
             $destDir = [System.IO.Path]::GetDirectoryName($destFullPath)
-            if (-not [System.IO.Directory]::Exists($destDir)) {
-                [void][System.IO.Directory]::CreateDirectory($destDir)
-            }
-
+            New-SafeDirectory -DirPath $destDir -Description 'extraction subdirectory'
+            Assert-NoReparseAncestor -Path $destFullPath -Description 'extracted file destination'
             # Extract via CreateNew to prevent overwriting or following links
             $entryStream = $entry.Open()
             $destStream = [System.IO.File]::Open($destFullPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
@@ -1064,7 +1391,10 @@ function Prune-OldSnapshots {
     foreach ($entry in $entries) {
         $base = [System.IO.Path]::GetFileName($entry)
         if (-not $keepSet.Contains($base)) {
-            try { [System.IO.Directory]::Delete($entry, $true) } catch {}
+            $fullEntry = [System.IO.Path]::GetFullPath($entry)
+            Assert-ContainedPath -BasePath $Roots.versionsDir -CandidatePath $fullEntry -AllowExact $false -Message 'Prune entry escapes versions directory'
+            Assert-NoReparseAncestor -Path $fullEntry -Description 'prune entry'
+            try { [System.IO.Directory]::Delete($fullEntry, $true) } catch {}
         }
     }
 }
@@ -1119,10 +1449,10 @@ function Perform-Install {
     }
 
     # 5. Stage fresh extraction
-    [void][System.IO.Directory]::CreateDirectory($Roots.stagingDir)
-    $stageDir = [System.IO.Path]::Combine($Roots.stagingDir, "stage-$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$(Get-Date -UFormat %s)")
-    [void][System.IO.Directory]::CreateDirectory($stageDir)
-
+    New-SafeDirectory -DirPath $Roots.stagingDir -Description 'staging root'
+    $stageDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($Roots.stagingDir, "stage-$([System.Diagnostics.Process]::GetCurrentProcess().Id)-$([System.Guid]::NewGuid().ToString('N'))"))
+    Assert-ContainedPath -BasePath $Roots.stagingDir -CandidatePath $stageDir -AllowExact $false -Message 'Stage directory escapes staging root'
+    New-SafeDirectory -DirPath $stageDir -Description 'stage directory'
     Write-InstallJournal -Roots $Roots -Data @{
         schema               = $SCHEMA_JOURNAL
         operation            = if ($IsRepair) { 'repair' } elseif ($oldSnapshotId) { 'upgrade' } else { 'install' }
@@ -1204,7 +1534,7 @@ function Perform-Install {
     Execute-StagedSmoke -NodePath $NodePath -StagedCliPath $stagedCli -ExpectedVersion $metadata.version
 
     # 9. Determine generation
-    [void][System.IO.Directory]::CreateDirectory($Roots.versionsDir)
+    New-SafeDirectory -DirPath $Roots.versionsDir -Description 'versions root'
     $existingVersions = [System.IO.Directory]::GetDirectories($Roots.versionsDir) | ForEach-Object { [System.IO.Path]::GetFileName($_) }
     $prefix = "$($metadata.version)-$archiveSha-"
     $maxGen = 0
@@ -1219,7 +1549,8 @@ function Perform-Install {
     }
     $nextGen = $maxGen + 1
     $newSnapshotId = "$prefix$nextGen"
-    $targetVersionDir = [System.IO.Path]::Combine($Roots.versionsDir, $newSnapshotId)
+    $targetVersionDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($Roots.versionsDir, $newSnapshotId))
+    Assert-ContainedPath -BasePath $Roots.versionsDir -CandidatePath $targetVersionDir -AllowExact $false -Message 'Target version directory escapes versions directory'
 
     # 10. Write snapshot receipt
     $immutableFiles = @{}
@@ -1242,11 +1573,13 @@ function Perform-Install {
         installed_at     = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
     $receiptJson = ConvertTo-CanonicalJson -InputObject $receipt
-    [System.IO.File]::WriteAllText([System.IO.Path]::Combine($stageDir, 'installer-receipt.json'), "$receiptJson`n", [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText([System.IO.Path]::Combine($stageDir, 'installer-receipt.json'), "$receiptJson`n", $UTF8_NO_BOM)
 
     # 11. Promote stage to versions directory
+    Assert-NoReparseAncestor -Path $stageDir -Description 'stage directory before promotion'
+    Assert-NoReparseAncestor -Path $targetVersionDir -Description 'target version directory before promotion'
     [System.IO.Directory]::Move($stageDir, $targetVersionDir)
-
+    Assert-NoReparseAncestor -Path $targetVersionDir -Description 'target version directory after promotion'
     # 12. Journal state: pointer-ready
     Write-InstallJournal -Roots $Roots -Data @{
         schema               = $SCHEMA_JOURNAL
@@ -1314,13 +1647,31 @@ function Perform-Rollback {
         throw [System.InvalidOperationException]::new('No snapshots found in versions directory.')
     }
 
-    if ([string]::IsNullOrEmpty($TargetSnapshotId)) {
+    if ([string]::IsNullOrWhiteSpace($TargetSnapshotId)) {
         $availList = $available -join ', '
         throw [System.ArgumentException]::new("Rollback requires an explicit snapshot identifier. Available: [$availList]")
     }
 
-    $targetId = [System.IO.Path]::GetFileName($TargetSnapshotId)
-    $targetDir = [System.IO.Path]::Combine($Roots.versionsDir, $targetId)
+    # Strict snapshot grammar and safety validation; reject any directory separators or path traversal
+    if ($TargetSnapshotId.Contains('/') -or $TargetSnapshotId.Contains('\')) {
+        throw [System.ArgumentException]::new("Snapshot identifier must not contain path separators: $TargetSnapshotId")
+    }
+
+    try {
+        [void](Test-InventoryPathSafety -RelativePath $TargetSnapshotId)
+    } catch {
+        throw [System.ArgumentException]::new("Invalid snapshot identifier '$TargetSnapshotId': $($_.Exception.Message)")
+    }
+
+    if (-not ($TargetSnapshotId -match '^[0-9A-Za-z._-]+$')) {
+        throw [System.ArgumentException]::new("Snapshot identifier does not match grammar '^[0-9A-Za-z._-]+$': $TargetSnapshotId")
+    }
+
+    $targetId = $TargetSnapshotId
+    $targetDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($Roots.versionsDir, $targetId))
+    Assert-ContainedPath -BasePath $Roots.versionsDir -CandidatePath $targetDir -AllowExact $false -Message 'Rollback target escapes versions directory'
+    Assert-NoReparseAncestor -Path $targetDir -Description 'rollback target'
+
     if (-not [System.IO.Directory]::Exists($targetDir)) {
         $availList = $available -join ', '
         throw [System.IO.DirectoryNotFoundException]::new("Snapshot '$targetId' not found in $($Roots.versionsDir). Available: [$availList]")
@@ -1336,11 +1687,35 @@ function Perform-Rollback {
         throw [System.InvalidOperationException]::new("Invalid snapshot receipt schema: $($receipt.schema)")
     }
 
+    if ($null -eq $receipt.immutable_files) {
+        throw [System.InvalidOperationException]::new("Snapshot receipt missing immutable_files table in: $receiptPath")
+    }
+
     # Validate immutable files against receipt
-    $packageDir = [System.IO.Path]::Combine($targetDir, 'package')
-    foreach ($prop in $receipt.immutable_files.PSObject.Properties) {
-        $relPath = $prop.Name
-        $meta = $prop.Value
+    $packageDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($targetDir, 'package'))
+    Assert-ContainedPath -BasePath $targetDir -CandidatePath $packageDir -AllowExact $false -Message 'Package directory escapes rollback target'
+    Assert-NoReparseAncestor -Path $packageDir -Description 'package directory'
+
+    $props = if ($receipt.immutable_files -is [PSCustomObject]) {
+        $receipt.immutable_files.PSObject.Properties
+    } else {
+        $receipt.immutable_files.GetEnumerator()
+    }
+
+    foreach ($prop in $props) {
+        $relPath = if ($prop -is [System.Collections.DictionaryEntry]) { $prop.Key } else { $prop.Name }
+        $meta = if ($prop -is [System.Collections.DictionaryEntry]) { $prop.Value } else { $prop.Value }
+
+        # Validate receipt key safety FIRST before anything else!
+        try {
+            [void](Test-InventoryPathSafety -RelativePath $relPath)
+        } catch {
+            throw [System.InvalidOperationException]::new("Receipt contains invalid or hostile immutable_files key '$relPath': $($_.Exception.Message)")
+        }
+
+        if ($null -eq $meta -or $null -eq $meta.size -or $null -eq $meta.sha256) {
+            throw [System.InvalidOperationException]::new("Malformed receipt metadata for file '$relPath'")
+        }
 
         # Skip mutable paths
         $isMutable = $false
@@ -1353,7 +1728,11 @@ function Perform-Rollback {
         }
         if ($isMutable) { continue }
 
-        $fullPath = [System.IO.Path]::Combine($packageDir, $relPath.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+        $subPath = $relPath.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+        $fullPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($packageDir, $subPath))
+        Assert-ContainedPath -BasePath $packageDir -CandidatePath $fullPath -AllowExact $false -Message 'Immutable file escapes package directory'
+        Assert-NoReparseAncestor -Path $fullPath -Description 'rollback file'
+
         if (-not [System.IO.File]::Exists($fullPath)) {
             throw [System.InvalidOperationException]::new("Immutable file missing from rollback target: $relPath")
         }
@@ -1411,55 +1790,219 @@ function Perform-Rollback {
     }
 }
 
+function Remove-EmptyDirectoryTree {
+    param([string]$DirPath)
+    if (-not [System.IO.Directory]::Exists($DirPath)) { return }
+    Assert-NoReparseAncestor -Path $DirPath -Description 'directory cleanup'
+
+    try {
+        $subDirs = [System.IO.Directory]::GetDirectories($DirPath)
+        foreach ($sd in $subDirs) {
+            Remove-EmptyDirectoryTree -DirPath $sd
+        }
+
+        $entries = [System.IO.Directory]::GetFileSystemEntries($DirPath)
+        if ($entries.Length -eq 0) {
+            [System.IO.Directory]::Delete($DirPath, $false)
+        }
+    } catch {}
+}
+
 function Perform-Uninstall {
-    param($Roots)
-    # Check if already uninstalled
-    if (-not [System.IO.Directory]::Exists($Roots.dataRoot) -and
-        -not [System.IO.Directory]::Exists($Roots.stateRoot) -and
-        -not [System.IO.File]::Exists($Roots.cmdLauncher)) {
-        return @{ action = 'already_uninstalled' }
+    param(
+        $Roots,
+        $LockHandle
+    )
+    if (Test-AlreadyUninstalled -Roots $Roots) {
+        return @{ action = 'already_uninstalled'; survivors = @() }
     }
 
     # 1. Remove User PATH entry
-    Remove-UserPathEntry -BinDir $Roots.binDir
+    [void](Remove-UserPathEntry -BinDir $Roots.binDir)
 
-    # 2. Remove launchers
+    $ownedFiles = [System.Collections.Generic.List[string]]::new()
+
+    # 2. Launchers
     if ([System.IO.File]::Exists($Roots.cmdLauncher)) {
-        try { [System.IO.File]::Delete($Roots.cmdLauncher) } catch {}
+        $ownedFiles.Add($Roots.cmdLauncher)
     }
     if ([System.IO.File]::Exists($Roots.jsLauncher)) {
-        try { [System.IO.File]::Delete($Roots.jsLauncher) } catch {}
+        $ownedFiles.Add($Roots.jsLauncher)
     }
 
-    # 3. Remove versions and staging
-    if ([System.IO.Directory]::Exists($Roots.versionsDir)) {
-        try { [System.IO.Directory]::Delete($Roots.versionsDir, $true) } catch {}
-    }
-    if ([System.IO.Directory]::Exists($Roots.stagingDir)) {
-        try { [System.IO.Directory]::Delete($Roots.stagingDir, $true) } catch {}
-    }
-
-    # 4. Remove current.json and data root files
+    # 3. Pointers and state files
     if ([System.IO.File]::Exists($Roots.currentJson)) {
-        try { [System.IO.File]::Delete($Roots.currentJson) } catch {}
+        $ownedFiles.Add($Roots.currentJson)
+    }
+    if ([System.IO.File]::Exists($Roots.ownedPath)) {
+        $ownedFiles.Add($Roots.ownedPath)
+    }
+    if ([System.IO.File]::Exists($Roots.journalPath)) {
+        $ownedFiles.Add($Roots.journalPath)
     }
 
-    # 5. Remove state files
+    # Collect stale lock files or journal temp files in state root
     if ([System.IO.Directory]::Exists($Roots.stateRoot)) {
-        try { [System.IO.Directory]::Delete($Roots.stateRoot, $true) } catch {}
+        try {
+            $stateFiles = [System.IO.Directory]::GetFiles($Roots.stateRoot)
+            foreach ($sf in $stateFiles) {
+                $sfName = [System.IO.Path]::GetFileName($sf)
+                if ($sfName.StartsWith('install.lock.stale-') -or
+                    $sfName.StartsWith('install-journal.tmp-')) {
+                    $ownedFiles.Add($sf)
+                }
+            }
+        } catch {}
     }
 
-    # 6. Remove data root if empty
+    # Collect current pointer temp files in data root
     if ([System.IO.Directory]::Exists($Roots.dataRoot)) {
         try {
-            $items = [System.IO.Directory]::GetFileSystemEntries($Roots.dataRoot)
-            if ($items.Length -eq 0) {
+            $dataFiles = [System.IO.Directory]::GetFiles($Roots.dataRoot)
+            foreach ($df in $dataFiles) {
+                $dfName = [System.IO.Path]::GetFileName($df)
+                if ($dfName.StartsWith('current.json.tmp-')) {
+                    $ownedFiles.Add($df)
+                }
+            }
+        } catch {}
+    }
+
+    # 4. Snapshot versions receipts and immutable files
+    if ([System.IO.Directory]::Exists($Roots.versionsDir)) {
+        $snapDirs = [System.IO.Directory]::GetDirectories($Roots.versionsDir)
+        foreach ($sDir in $snapDirs) {
+            $rcptFile = [System.IO.Path]::Combine($sDir, 'installer-receipt.json')
+            if ([System.IO.File]::Exists($rcptFile)) {
+                $ownedFiles.Add($rcptFile)
+                $rcpt = Parse-JsonFile -FilePath $rcptFile
+                if ($rcpt -and $rcpt.immutable_files) {
+                    $props = if ($rcpt.immutable_files -is [PSCustomObject]) {
+                        $rcpt.immutable_files.PSObject.Properties
+                    } else {
+                        $rcpt.immutable_files.GetEnumerator()
+                    }
+                    $pkgDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($sDir, 'package'))
+                    Assert-ContainedPath -BasePath $sDir -CandidatePath $pkgDir -AllowExact $false -Message 'Package directory escapes snapshot directory'
+                    foreach ($p in $props) {
+                        $k = if ($p -is [System.Collections.DictionaryEntry]) { $p.Key } else { $p.Name }
+                        try {
+                            [void](Test-InventoryPathSafety -RelativePath $k)
+                        } catch {
+                            throw [System.InvalidOperationException]::new("Receipt in '$sDir' contains invalid immutable_files key '$k': $($_.Exception.Message)")
+                        }
+                        $sub = $k.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+                        $fPath = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($pkgDir, $sub))
+                        Assert-ContainedPath -BasePath $pkgDir -CandidatePath $fPath -AllowExact $false -Message "Owned file path '$k' escapes package directory"
+                        Assert-NoReparseAncestor -Path $fPath -Description 'owned file candidate'
+                        if ([System.IO.File]::Exists($fPath)) {
+                            $ownedFiles.Add($fPath)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    # 5. Staging files
+    if ([System.IO.Directory]::Exists($Roots.stagingDir)) {
+        try {
+            $stageDirs = [System.IO.Directory]::GetDirectories($Roots.stagingDir)
+            foreach ($stg in $stageDirs) {
+                $stgFiles = [System.IO.Directory]::GetFiles($stg, '*', [System.IO.SearchOption]::AllDirectories)
+                foreach ($sf in $stgFiles) {
+                    $ownedFiles.Add($sf)
+                }
+            }
+        } catch {}
+    }
+
+    # Delete owned files and collect survivors
+    $survivors = [System.Collections.Generic.List[object]]::new()
+    foreach ($filePath in $ownedFiles) {
+        if ([System.IO.File]::Exists($filePath)) {
+            try {
+                Assert-NoReparseAncestor -Path $filePath -Description 'owned file'
+                [System.IO.File]::Delete($filePath)
+            } catch {
+                $errCategory = $_.Exception.GetType().Name
+                $survivors.Add(@{
+                    path  = $filePath
+                    error = $errCategory
+                })
+            }
+        }
+    }
+
+    # Bottom-up empty directory removal
+    if ([System.IO.Directory]::Exists($Roots.stagingDir)) {
+        Remove-EmptyDirectoryTree -DirPath $Roots.stagingDir
+    }
+    if ([System.IO.Directory]::Exists($Roots.versionsDir)) {
+        Remove-EmptyDirectoryTree -DirPath $Roots.versionsDir
+    }
+
+    # If any file survived, do NOT remove roots; report survivors
+    if ($survivors.Count -gt 0) {
+        return @{
+            action    = 'partial'
+            survivors = $survivors
+        }
+    }
+
+    # Dispose delete-on-close lock before removing state root so install.lock disappears atomically
+    if ($null -ne $LockHandle) {
+        Release-InstallLock -LockHandle $LockHandle
+    }
+
+    # Non-recursively remove empty state, bin, and data roots
+    if ([System.IO.Directory]::Exists($Roots.stateRoot)) {
+        try {
+            $sEntries = [System.IO.Directory]::GetFileSystemEntries($Roots.stateRoot)
+            if ($sEntries.Length -eq 0) {
+                [System.IO.Directory]::Delete($Roots.stateRoot, $false)
+            }
+        } catch {}
+    }
+    if ([System.IO.Directory]::Exists($Roots.binDir)) {
+        try {
+            $bEntries = [System.IO.Directory]::GetFileSystemEntries($Roots.binDir)
+            if ($bEntries.Length -eq 0) {
+                [System.IO.Directory]::Delete($Roots.binDir, $false)
+            }
+        } catch {}
+    }
+    if ([System.IO.Directory]::Exists($Roots.dataRoot)) {
+        try {
+            $dEntries = [System.IO.Directory]::GetFileSystemEntries($Roots.dataRoot)
+            if ($dEntries.Length -eq 0) {
                 [System.IO.Directory]::Delete($Roots.dataRoot, $false)
             }
         } catch {}
     }
 
-    return @{ action = 'uninstalled' }
+    # Final verification: check if any owned file still exists
+    $remainingOwned = [System.Collections.Generic.List[object]]::new()
+    foreach ($filePath in $ownedFiles) {
+        if ([System.IO.File]::Exists($filePath)) {
+            $remainingOwned.Add(@{
+                path  = $filePath
+                error = 'FileStillExists'
+            })
+        }
+    }
+
+    if ($remainingOwned.Count -gt 0) {
+        return @{
+            action    = 'partial'
+            survivors = $remainingOwned
+        }
+    }
+
+    return @{
+        action    = 'uninstalled'
+        survivors = @()
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -1566,39 +2109,72 @@ Options:
 }
 
 function Main {
-    $parsed = Parse-Args -RawArgs $args
+    param([string[]]$ScriptArgs)
+    $parsed = Parse-Args -RawArgs $ScriptArgs
 
     if ($parsed.subcommand -eq 'help') {
         Show-Help
         return 0
     }
 
-    # Preflight Node.js >= 22.19.0
-    $nodePath = Assert-NodeFloor
+    # For uninstall: check if already uninstalled first before creating any roots or locks
+    if ($parsed.subcommand -eq 'uninstall') {
+        $roots = Resolve-InstallRoots -Options $parsed.options -EnsureDirectories $false
+        if (Test-AlreadyUninstalled -Roots $roots) {
+            Write-Output "$([char]0x2713) Already uninstalled EVCrate CLI."
+            return 0
+        }
 
-    $roots = Resolve-InstallRoots -Options $parsed.options
+        $lock = Acquire-InstallLock -Roots $roots
+        try {
+            Recover-InstallJournal -Roots $roots
+            $uninstResult = Perform-Uninstall -Roots $roots -LockHandle $lock
+            if ($uninstResult.action -eq 'already_uninstalled') {
+                Write-Output "$([char]0x2713) Already uninstalled EVCrate CLI."
+                return 0
+            }
+            if ($uninstResult.survivors.Count -gt 0 -or $uninstResult.action -eq 'partial') {
+                $lines = [System.Collections.Generic.List[string]]::new()
+                $lines.Add("Uninstall incomplete: $($uninstResult.survivors.Count) file(s) could not be removed due to sharing violations or access restrictions.")
+                foreach ($s in $uninstResult.survivors) {
+                    $lines.Add("  Survivor: $($s.path) ($($s.error))")
+                }
+                throw [System.InvalidOperationException]::new(($lines -join "`n"))
+            }
+            Write-Output "$([char]0x2713) Successfully uninstalled EVCrate CLI."
+            return 0
+        } finally {
+            Release-InstallLock -LockHandle $lock
+        }
+    }
+
+    # For rollback, install, repair: ensure directories exist
+    $roots = Resolve-InstallRoots -Options $parsed.options -EnsureDirectories $true
     $lock = Acquire-InstallLock -Roots $roots
 
     try {
         Recover-InstallJournal -Roots $roots
 
-        if ($parsed.subcommand -eq 'uninstall') {
-            $uninstResult = Perform-Uninstall -Roots $roots
-            Write-Output '✓ Successfully uninstalled EVCrate CLI.'
-            return 0
-        }
-
         if ($parsed.subcommand -eq 'rollback') {
+            # Rollback does not require Node.js
             $rbResult = Perform-Rollback -Roots $roots -TargetSnapshotId $parsed.targetSnapshot
-            Write-Output "✓ Rolled back to snapshot: $($rbResult.snapshotId) (v$($rbResult.version))"
+            Write-Output "$([char]0x2713) Rolled back to snapshot: $($rbResult.snapshotId) (v$($rbResult.version))"
             if ($rbResult.backupSnapshot) {
                 Write-Output "  Displaced snapshot preserved at: $($rbResult.backupSnapshot)"
             }
             return 0
         }
 
-        # install / repair
-        $scriptPath = $MyInvocation.MyCommand.Path
+        # install / repair: requires Node.js >= 22.19.0
+        $nodePath = Assert-NodeFloor
+
+        $scriptPath = $null
+        if (Test-Path Variable:\PSCommandPath) {
+            $scriptPath = $PSCommandPath
+        }
+        if ([string]::IsNullOrEmpty($scriptPath) -and (Test-Path Variable:\PSScriptRoot)) {
+            $scriptPath = [System.IO.Path]::Combine($PSScriptRoot, 'install.ps1')
+        }
         if ([string]::IsNullOrEmpty($scriptPath)) {
             $scriptPath = [System.IO.Path]::Combine((Get-Location).Path, 'install.ps1')
         }
@@ -1608,11 +2184,11 @@ function Main {
         $result = Perform-Install -Roots $roots -Assets $assets -Options $parsed.options -IsRepair $isRepair -NodePath $nodePath
 
         if ($result.action -eq 'idempotent') {
-            Write-Output "✓ EVCrate v$($result.version) is already installed at snapshot $($result.snapshotId)."
+            Write-Output "$([char]0x2713) EVCrate v$($result.version) is already installed at snapshot $($result.snapshotId)."
             return 0
         }
 
-        Write-Output "✓ Successfully $($result.action) EVCrate v$($result.version)"
+        Write-Output "$([char]0x2713) Successfully $($result.action) EVCrate v$($result.version)"
         Write-Output "  Snapshot: $($result.snapshotId)"
         Write-Output "  Launcher: $($result.launcher)"
         if ($result.backupSnapshot) {
@@ -1626,9 +2202,8 @@ function Main {
             Write-Output 'Please reopen your terminal for PATH changes to take effect.'
         }
 
-        Write-Output "`nNext steps to publish coding agent harnesses:"
-        Write-Output '  evcrate publish --dry-run'
-        Write-Output '  evcrate publish --apply'
+        Write-Output "`nNext steps to verify installation:"
+        Write-Output '  evcrate version --json'
 
         return 0
     } finally {
@@ -1637,7 +2212,7 @@ function Main {
 }
 
 try {
-    $exitCode = Main
+    $exitCode = Main -ScriptArgs $args
     exit $exitCode
 } catch {
     Write-Error "Installation error: $($_.Exception.Message)"

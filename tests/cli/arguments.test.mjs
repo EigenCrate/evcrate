@@ -22,12 +22,19 @@ test('parses commands and all supported scalar options', () => {
   assert.equal(invocation.options.projectRoot, '/tmp/project');
   assert.equal(invocation.options.timeoutMs, 1234);
   assert.equal(invocation.options.json, true);
+  assert.equal(invocation.options.debug, false);
 });
 
 test('accepts request files without a positional command', () => {
   const invocation = parseArguments(['--request-file', 'request.json', '--json']);
   assert.deepEqual(invocation.command, { kind: 'request-file' });
   assert.equal(invocation.options.requestFile, 'request.json');
+});
+
+test('accepts --debug flag and rejects duplicate', () => {
+  const invocation = parseArguments(['version', '--debug']);
+  assert.equal(invocation.options.debug, true);
+  assert.equal(codeOf(() => parseArguments(['version', '--debug', '--debug'])), 'USAGE_INVALID');
 });
 
 test('rejects duplicate, unknown, invalid, and incompatible options', () => {

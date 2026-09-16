@@ -127,7 +127,7 @@ export function createProjectionBuildContext(
   const outputRoots = Object.freeze(manifest.outputRoots.map((path) => normalizeRelativePath(path)));
   const projectDocs = Object.freeze(manifest.projectDocs.map((path) => normalizeRelativePath(path)));
   const stagePath = (relativePath: string): string => {
-    const name = normalizeRelativePath(relativePath);
+    const name = normalizeRelativePath(typeof relativePath === 'string' ? relativePath.split('\\').join('/') : relativePath);
     const authorized = outputRoots.some((root) => name === root || name.startsWith(`${root}/`))
       || projectDocs.includes(name);
     if (!authorized) throw new ControlPlaneError('PATH_UNSAFE');

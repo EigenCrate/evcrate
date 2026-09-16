@@ -82,8 +82,10 @@ function snapshot(path: string, controller = false): PublicationNodeSnapshot {
   return publicationSnapshot(path, controller);
 }
 function same(left: PublicationNodeSnapshot, right: PublicationNodeSnapshot): boolean {
-  return ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash']
-    .every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
+  const keys = process.platform === 'win32'
+    ? ['present', 'kind', 'size', 'hash']
+    : ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash'];
+  return keys.every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
 }
 function sameContent(left: PublicationNodeSnapshot, right: PublicationNodeSnapshot): boolean {
   return left.present === right.present && left.kind === right.kind && left.hash === right.hash;
@@ -96,7 +98,9 @@ function releaseId(value: unknown): string {
   return value;
 }
 function safeInteger(value: unknown, maximum: number): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > maximum) fail();
+  if (typeof value !== 'number' || value < 0) fail();
+  if (process.platform === 'win32' && Number.isFinite(value)) return value;
+  if (!Number.isSafeInteger(value) || value > maximum) fail();
   return value;
 }
 function nullableSafeInteger(value: unknown, maximum: number): number | null {
@@ -659,7 +663,7 @@ function assertLegacyOwnedNode(
   if (stat.isSymbolicLink() || (expected === 'file' && !stat.isFile())
     || (expected === 'directory' && !stat.isDirectory())
     || (!stat.isFile() && !stat.isDirectory())
-    || (Number(stat.mode) & 0o077) !== 0) fail('PATH_UNSAFE');
+    || (process.platform !== 'win32' && (Number(stat.mode) & 0o077) !== 0)) fail('PATH_UNSAFE');
   try {
     if (stat.isDirectory()) assertOwnerOnlyDirectory(path);
     else assertOwnerOnlyFile(path);
@@ -689,7 +693,7 @@ function assertLegacyWorkspaceTree(workspaceRoot: string): LegacyStat {
 }
 function cleanupPlanIdentity(value: unknown): number {
   const result = safeInteger(value, Number.MAX_SAFE_INTEGER);
-  if (result <= 0) fail('PATH_UNSAFE');
+  if (process.platform === 'win32' ? result < 0 : result <= 0) fail('PATH_UNSAFE');
   return result;
 }
 function readLegacyCleanupPlan(stateRoot: string): LegacyCleanupPlan | null {

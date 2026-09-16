@@ -1,10 +1,15 @@
 # Project Roadmap
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09 (Post-Verification Operator Documentation; 512/512 tests, 29/29 closure files, verified Linux release installer); live vendor qualification and production HOME publication remain operator-gated
-**Updated:** 2026-09-13
+**Status:** Current roadmap for package `2.1.0`; Hook Materialization Scope
+Distribution is complete through Phase 09, and Windows release qualification is
+complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+**Updated:** 2026-09-16
+
+**Windows release qualification progress:** 100% (10/10 phases complete; Phases
+01–10 DONE on 2026-09-15).
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
-the [system architecture](./system-architecture.md), Phase 08 integration
-evidence, and the [Phase 10 QA acceptance report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
+the [system architecture](./system-architecture.md), [Phase 09 integrated qualification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md),
+[Phase 09 suite validation](../plans/reports/tester-260915-1119-phase-09-suite-validation.md), and the [Phase 10 support cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md)
 
 This roadmap distinguishes implementation gates recorded in the repository from
 operator/release work that has not been claimed. `docs/project-changelog.md` is the
@@ -37,6 +42,7 @@ policy; they are not hand edited.
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
+
 | Advisor mentoring/recovery/audit — Phase 01 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md) and [review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md); policy/checkpoint/result/controller v2, task/history v1 records, TS/CJS parity, typed errors, and explicit legacy-policy migration are frozen. No automatic HOME rewrite or later-phase runtime retry/wait/state/history cutover is claimed. |
 | Advisor mentoring/recovery/audit — Phase 02 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-02-wait-cancellation-and-cleanup.md); completed at 100% with indefinite generation without a generation deadline, monotonic bounded progress warnings on stderr, cancellation dominance across async boundaries, POSIX process-group termination with leader/group reap verification, observable workspace absence requiring **ENOENT**, and runner/controller tracking of probe cleanup uncertainty. Evidence: 65/65 advisor-controller tests, a real 31.25s smoke pass, `npm run distribute:check`, `npm run release:check`, Sol Cycle 3 sign-off 9/10, and Astra mentor approval. |
 | Advisor mentoring/recovery/audit — Phase 03 | DONE (2026-09-08) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-03-adapter-qualification-and-terminal-parsing.md); completed at 100% with qualified adapter controls, strict final lifecycle parsing, fail-closed unsafe terminal output handling, structured operational failures, explicit route/effort/no-tool/session controls, and unavailable-backend boundaries. Evidence: 92/92 advisor-controller tests passed, `npm run build` exited 0, `npm run release:check` exited 0; Astra Cycle 3 sign-off 10/10; Sol mentor counsel recorded for Phase 04/05/10. |
@@ -63,7 +69,48 @@ policy; they are not hand edited.
 | Hook materialization scope distribution — Phase 09 | DONE (2026-09-13; 100%) | [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md); live operator and architecture documentation updated after full implementation proof, release gate verification, and complete test suite pass. Covers CLI examples, destination matrix, shared controller HOME invariant, partial outcomes, scope-isolated recovery, and installer distinction. |
 | Live vendor qualification | GATED — operator authorization required | Each enabled installed CLI needs a bounded non-sensitive Linux qualification after upgrades. Deterministic tests do not authenticate a vendor. |
 | Release publication/rollout | Pending operator gate | npm publication, deployment, rollout, and final release remain explicitly separate from repository contracts. |
-| Windows validation | Deferred | Windows installer/runtime parity is not claimed without separate harness validation. |
+| Windows validation | COMPLETE (2026-09-15) | [Master plan](../plans/260914-0636-windows-release-qualification/plan.md), [Phase 09 verification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md), [Phase 10 documentation cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md); build-once handoff, 4-row matrix (`windows-2025` x64, Windows PowerShell 5.1 and PowerShell 7, Node 22.19.0 and 24.21.0), publisher-only write, automatic predecessor transitions, and seven-file byte identity proven. Bounded support cutover complete; runtime/desktop/signing exclusions remain. |
+
+### Windows release qualification milestone
+
+| Milestone | Progress | Evidence / next gate |
+|---|---:|---|
+| Windows release qualification | **100% (10/10 phases complete)** | [Master plan](../plans/260914-0636-windows-release-qualification/plan.md); Phases 01–10 are DONE (2026-09-15). Qualified one immutable Windows release candidate across `windows-2025` x64 with Windows PowerShell 5.1 and PowerShell 7 and Node 22.19.0 and 24.21.0 for standalone installer lifecycle and `version --json`. Runtime commands (`publish`, `health`, advisor execution), desktop/UAC/SmartScreen/Authenticode/enterprise-policy environments, and live vendor qualification remain future/unclaimed. |
+
+Phase 04 freezes the predecessor handoff consumed by later candidate/harness phases:
+`buildWindowsTestReleaseSet` builds the archive and real `install.ps1` entrypoint
+through shared release authorities with a fixed metadata timestamp. The resolver
+enumerates bounded non-draft stable releases, requires the exact Windows archive
+and installer labels plus exact-four byte verification, and downloads only the ZIP,
+sidecar, release metadata, and installer into a private staging directory. Before
+qualification it emits deterministic `bootstrap-fixture` `1.0.0` bytes with the
+fixed `a`×40 source identity; after qualification history exists, an unqualified
+latest stable release, missing/tampered asset, duplicate label, or API/token
+failure is terminal—no older or bootstrap fallback. The normalized handoff is
+`{kind, version, tag, sourceCommit, files, directory}`. This remains internal
+fixture/release evidence; it does not qualify native Windows runtime support.
+
+Phase 05 completes the self-contained Windows qualification harness. The
+Node-builtins-only CLI freezes strict host/receipt/byte preflight, safe
+PowerShell and `cmd.exe` invocation, path-with-spaces smoke/full lifecycle
+transitions, isolated negatives, immutable-state observers, and exact user
+`PATH` restoration. Scoped evidence is 60/60 checks with Cycle 2 review approval
+at 10/10. These host-independent checks do not claim native Windows execution.
+**Phase 06 — Canonical Semantic-Release Candidate, Receipt, and Publisher —
+Completed (2026-09-14; 100%)** supplies the candidate, receipt, and verify-only
+publisher boundary with 47/47 distribution tests and 10/10 review approval.
+**Phase 07 — Release Workflow Producer, Native Matrix, and Publisher Split —
+Completed (2026-09-15; 100%)** adds the least-privilege `release.yml` producer,
+four fixed Windows rows, exact-ID handoff, and success-only publisher. Static
+workflow checks and release orchestration passed 12/12.
+**Phase 08 — Unprivileged Windows PR Smoke and Qualified Asset Labels —
+Completed (2026-09-15; 100%)** adds the read-only PR/manual smoke, diagnostic
+fixture build/exact-seven verification, explicit `pwsh.exe`, exact labels, and
+WRQ-042–044 contract coverage. Phase 09 completed integrated qualification, failure routing, predecessor transition, rerun boundaries, and final seven-file byte identity; Phase 10 owns bounded docs/support cutover.
+
+**Phase 09 — Integrated Qualification, Failure Routing, and Release-Byte Verification — Completed (2026-09-15; 100%)** closes WRQ-047–052 and WRQ-059. Evidence: [integrated qualification report](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md) and [suite validation report](../plans/reports/tester-260915-1119-phase-09-suite-validation.md).
+
+**Phase 10 — Post-Proof Documentation and Bounded Support Cutover — Completed (2026-09-15; 100%)** closes WRQ-006, WRQ-045–046, and WRQ-054. Documentation across `README.md` and the five core docs reflects the proven build-once candidate, four-lane matrix, publisher-only write, and exact installer/version support boundary while retaining all named runtime, signing, desktop, and live vendor exclusions.
 
 ## Immediate next gates
 
@@ -127,8 +174,7 @@ roadmap item.
   history CLI/CAS coverage as later workflow phases consume the frozen records.
 - **Release authority:** Keep `docs/project-changelog.md` as the phase mirror and
   resolve its historical open question before release tagging.
-- **Support scope:** Obtain separate Windows and operator rollout evidence before
-  widening support claims.
+- **Support scope:** Standalone Windows installer lifecycle and version verification are qualified (Phases 01–10); obtain separate evidence before widening support claims to broader Windows runtime equivalence, desktop/signing environments, or operator rollout.
 - **Metrics:** Retain contract evidence by phase, but do not copy unexplained test
   totals into new documentation.
 

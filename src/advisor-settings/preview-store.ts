@@ -28,7 +28,7 @@ export interface AdvisorSettingsPreviewToken {
 }
 function conflict(): never { throw new ControlPlaneError('CAS_CONFLICT'); }
 function pathFor(stateRoot: string, token: string): string {
-  return containedPath(stateRoot, join('advisor-settings-previews', `${validateOpaque(token, 512, 'preview token')}.json`));
+  return containedPath(stateRoot, `advisor-settings-previews/${validateOpaque(token, 512, 'preview token')}.json`);
 }
 function jsonRecord(record: AdvisorSettingsPreviewToken): Record<string, unknown> {
   return {

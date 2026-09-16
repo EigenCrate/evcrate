@@ -74,9 +74,10 @@ function stageUnlocked(destinationValue: string, policy: AdvisorPolicy, revision
   const parent = ensureAdvisorPolicyParent(destination);
   const stagedPath = resolve(parent, `${ADVISOR_SETTINGS_STAGE_PREFIX}${process.pid}-${randomBytes(8).toString('hex')}`);
   const bytes = stageBytes(policy);
-  writeAtomicFile(stagedPath, bytes, snapshot.mode?.mode ?? 0o600);
+  const targetMode = process.platform === 'win32' ? 0o600 : (snapshot.mode?.mode ?? 0o600);
+  writeAtomicFile(stagedPath, bytes, targetMode);
   return Object.freeze({ destination, stagedPath, bytes: Uint8Array.from(bytes), expectedRevision: revision,
-    mode: snapshot.mode?.mode ?? 0o600, journalRoot: state });
+    mode: targetMode, journalRoot: state });
 }
 
 export function stageAdvisorPolicy(
@@ -125,7 +126,7 @@ function applyUnlocked(destination: string, policy: AdvisorPolicy, revision: Set
     options.hooks?.afterPromote?.();
     const promoted = readAdvisorPolicy(destination);
     if (!promoted.bytes || !Buffer.from(promoted.bytes).equals(Buffer.from(currentStage.bytes))
-      || promoted.mode?.mode !== currentStage.mode) fail('CAS_CONFLICT');
+      || (process.platform !== 'win32' && promoted.mode?.mode !== currentStage.mode)) fail('CAS_CONFLICT');
   } catch (error) {
     try {
       recoverAdvisorPolicyUnlocked(stateRoot);

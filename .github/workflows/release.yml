@@ -6,27 +6,44 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: release-${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
 permissions:
-  contents: write # to be able to publish a GitHub release
-  issues: write # to be able to comment on released issues
-  pull-requests: write # to be able to comment on released pull requests
+  contents: read
 
 jobs:
-  release:
-    name: Release
+  release-candidate:
+    name: Produce Release Candidate
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      has_release: ${{ steps.candidate.outputs.has_release }}
+      version: ${{ steps.candidate.outputs.version }}
+      tag: ${{ steps.candidate.outputs.tag }}
+      source_commit: ${{ steps.candidate.outputs.source_commit }}
+      artifact_name: ${{ steps.candidate.outputs.artifact_name }}
+      windows_archive_sha256: ${{ steps.candidate.outputs.windows_archive_sha256 }}
+      windows_sidecar_sha256: ${{ steps.candidate.outputs.windows_sidecar_sha256 }}
+      metadata_sha256: ${{ steps.candidate.outputs.metadata_sha256 }}
+      install_ps1_sha256: ${{ steps.candidate.outputs.install_ps1_sha256 }}
+      artifact_id: ${{ steps.upload_candidate.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload_candidate.outputs.artifact-digest }}
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '24'
+          node-version: '24.21.0'
+          architecture: x64
 
       - name: Configure Linux environment for network isolation tests
         run: |
@@ -80,7 +97,216 @@ jobs:
         run: |
           rm -rf dist/release
           git checkout -- .
-      - name: Release
+      - name: Run candidate release decision and build
+        id: candidate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run semantic-release
+          BRANCH_NAME: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          npm run release:candidate -- \
+            --output-dir release-candidate \
+            --branch "$BRANCH_NAME" \
+            --source-commit "$SOURCE_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Upload release candidate artifact
+        id: upload_candidate
+        if: steps.candidate.outputs.has_release == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.candidate.outputs.artifact_name }}
+          path: release-candidate/
+          if-no-files-found: error
+          overwrite: false
+          compression-level: 0
+          retention-days: 7
+
+  windows-qualification:
+    name: Qualify Windows Release Candidate (${{ matrix.powershell }}, Node ${{ matrix.node-version }})
+    needs: release-candidate
+    if: needs.release-candidate.outputs.has_release == 'true' && needs.release-candidate.outputs.artifact_id != ''
+    runs-on: windows-2025
+    timeout-minutes: 45
+    permissions:
+      contents: none
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - powershell: powershell.exe
+            node-version: '22.19.0'
+          - powershell: powershell.exe
+            node-version: '24.21.0'
+          - powershell: pwsh.exe
+            node-version: '22.19.0'
+          - powershell: pwsh.exe
+            node-version: '24.21.0'
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          architecture: x64
+
+      - name: Download release candidate artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: ${{ needs.release-candidate.outputs.artifact_id }}
+          path: candidate-artifact
+          merge-multiple: true
+
+      - name: Assert downloaded artifact structure
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.release-candidate.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          CANDIDATE_ROOT="candidate-artifact"
+          if [ ! -f "$CANDIDATE_ROOT/candidate.json" ] && [ -f "$CANDIDATE_ROOT/$ARTIFACT_NAME/candidate.json" ]; then
+            CANDIDATE_ROOT="$CANDIDATE_ROOT/$ARTIFACT_NAME"
+          fi
+          test -f "$CANDIDATE_ROOT/candidate.json"
+          test -d "$CANDIDATE_ROOT/assets"
+          test -d "$CANDIDATE_ROOT/predecessor"
+          test -f "$CANDIDATE_ROOT/qualification/windows-release-qualification.mjs"
+          echo "Downloaded candidate artifact structure verified at $CANDIDATE_ROOT"
+
+      - name: Run Windows release qualification harness
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.release-candidate.outputs.artifact_name }}
+          CANDIDATE_VERSION: ${{ needs.release-candidate.outputs.version }}
+          SOURCE_COMMIT: ${{ needs.release-candidate.outputs.source_commit }}
+          MATRIX_POWERSHELL: ${{ matrix.powershell }}
+          GITHUB_REPO: ${{ github.repository }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          CANDIDATE_ROOT="candidate-artifact"
+          if [ ! -f "$CANDIDATE_ROOT/candidate.json" ] && [ -f "$CANDIDATE_ROOT/$ARTIFACT_NAME/candidate.json" ]; then
+            CANDIDATE_ROOT="$CANDIDATE_ROOT/$ARTIFACT_NAME"
+          fi
+          node "$CANDIDATE_ROOT/qualification/windows-release-qualification.mjs" \
+            --mode full \
+            --assets "$CANDIDATE_ROOT/assets" \
+            --receipt "$CANDIDATE_ROOT/candidate.json" \
+            --predecessor "$CANDIDATE_ROOT/predecessor" \
+            --version "$CANDIDATE_VERSION" \
+            --source-commit "$SOURCE_COMMIT" \
+            --powershell "$MATRIX_POWERSHELL" \
+            --repository "$GITHUB_REPO" \
+            --workflow-run-id "$WORKFLOW_RUN_ID" \
+            --workflow-run-attempt "$WORKFLOW_RUN_ATTEMPT"
+
+  publish:
+    name: Publish Release
+    needs: [release-candidate, windows-qualification]
+    if: needs.release-candidate.outputs.has_release == 'true' && needs.release-candidate.outputs.artifact_id != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: read
+
+    steps:
+      - name: Checkout source commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.release-candidate.outputs.source_commit }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.21.0'
+          architecture: x64
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download release candidate artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: ${{ needs.release-candidate.outputs.artifact_id }}
+          path: release-candidate
+          merge-multiple: true
+
+      - name: Prepare publication workspace assets
+        env:
+          ARTIFACT_NAME: ${{ needs.release-candidate.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          CANDIDATE_DIR="release-candidate"
+          if [ ! -f "$CANDIDATE_DIR/candidate.json" ] && [ -f "$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json" ]; then
+            CANDIDATE_DIR="$CANDIDATE_DIR/$ARTIFACT_NAME"
+          fi
+          rm -rf dist/release
+          mkdir -p dist/release
+          cp -p "$CANDIDATE_DIR/assets"/* dist/release/
+          ASSET_COUNT=$(ls -1 dist/release | wc -l)
+          if [ "$ASSET_COUNT" -ne 7 ]; then
+            echo "Error: dist/release must contain exactly 7 files, found $ASSET_COUNT" >&2
+            exit 1
+          fi
+          echo "dist/release prepared with exact 7 assets."
+
+      - name: Verify release assets before publication
+        env:
+          ARTIFACT_NAME: ${{ needs.release-candidate.outputs.artifact_name }}
+          CANDIDATE_VERSION: ${{ needs.release-candidate.outputs.version }}
+          CANDIDATE_TAG: ${{ needs.release-candidate.outputs.tag }}
+          SOURCE_COMMIT: ${{ needs.release-candidate.outputs.source_commit }}
+          WIN_ARCHIVE_SHA: ${{ needs.release-candidate.outputs.windows_archive_sha256 }}
+          WIN_SIDECAR_SHA: ${{ needs.release-candidate.outputs.windows_sidecar_sha256 }}
+          METADATA_SHA: ${{ needs.release-candidate.outputs.metadata_sha256 }}
+          INSTALL_PS1_SHA: ${{ needs.release-candidate.outputs.install_ps1_sha256 }}
+        run: |
+          set -euo pipefail
+          CANDIDATE_DIR="release-candidate"
+          if [ ! -f "$CANDIDATE_DIR/candidate.json" ] && [ -f "$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json" ]; then
+            CANDIDATE_DIR="$CANDIDATE_DIR/$ARTIFACT_NAME"
+          fi
+          npm run release:verify-assets -- \
+            --dir dist/release \
+            --set release \
+            --version "$CANDIDATE_VERSION" \
+            --tag "$CANDIDATE_TAG" \
+            --source-commit "$SOURCE_COMMIT" \
+            --expected-hash "evcrate-v${CANDIDATE_VERSION}-windows-x64.zip=${WIN_ARCHIVE_SHA}" \
+            --expected-hash "evcrate-v${CANDIDATE_VERSION}-windows-x64.zip.sha256=${WIN_SIDECAR_SHA}" \
+            --expected-hash "evcrate-v${CANDIDATE_VERSION}.release.json=${METADATA_SHA}" \
+            --expected-hash "install.ps1=${INSTALL_PS1_SHA}"
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVCRATE_RELEASE_ASSET_MODE: verify
+          EVCRATE_RELEASE_CANDIDATE_RECEIPT: release-candidate/candidate.json
+          EVCRATE_EXPECTED_VERSION: ${{ needs.release-candidate.outputs.version }}
+          EVCRATE_EXPECTED_TAG: ${{ needs.release-candidate.outputs.tag }}
+          EVCRATE_EXPECTED_SOURCE_COMMIT: ${{ needs.release-candidate.outputs.source_commit }}
+          EVCRATE_EXPECTED_RUN_ID: ${{ github.run_id }}
+          EVCRATE_EXPECTED_RUN_ATTEMPT: ${{ github.run_attempt }}
+          EVCRATE_EXPECTED_WINDOWS_ARCHIVE_SHA256: ${{ needs.release-candidate.outputs.windows_archive_sha256 }}
+          EVCRATE_EXPECTED_WINDOWS_SIDECAR_SHA256: ${{ needs.release-candidate.outputs.windows_sidecar_sha256 }}
+          EVCRATE_EXPECTED_METADATA_SHA256: ${{ needs.release-candidate.outputs.metadata_sha256 }}
+          EVCRATE_EXPECTED_INSTALL_PS1_SHA256: ${{ needs.release-candidate.outputs.install_ps1_sha256 }}
+          ARTIFACT_NAME: ${{ needs.release-candidate.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          CANDIDATE_DIR="release-candidate"
+          if [ ! -f "$CANDIDATE_DIR/candidate.json" ] && [ -f "$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json" ]; then
+            export EVCRATE_RELEASE_CANDIDATE_RECEIPT="$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json"
+          fi
+          npm run semantic-release

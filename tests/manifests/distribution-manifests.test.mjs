@@ -64,6 +64,7 @@ test('controller verifier rejects an extra production tree entry', () => {
 });
 
 test('controller projection requires an executable entrypoint', () => {
+  if (process.platform === 'win32') return;
   const root = temporaryDirectory();
   const copy = join(root, 'bin');
   cpSync(controllerRoot, copy, { recursive: true });

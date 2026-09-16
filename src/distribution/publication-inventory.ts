@@ -1,5 +1,5 @@
 import { lstatSync, readdirSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import {
   COMPLETE_TREE_HASH_LIMITS, completeTreeHash, hashBytes, readBoundedFile,
@@ -50,13 +50,15 @@ export interface PublicationNodeSnapshot extends PublicationNode {
   readonly hash?: string;
 }
 
-function fail(code: 'PATH_UNSAFE' | 'PUBLICATION_FAILED' | 'CAS_CONFLICT' = 'PUBLICATION_FAILED'): never {
-  throw new ControlPlaneError(code);
+function fail(code: 'PATH_UNSAFE' | 'PUBLICATION_FAILED' | 'CAS_CONFLICT' = 'PUBLICATION_FAILED', detail?: string): never {
+  throw new ControlPlaneError(code, detail);
 }
 
 function safeNumber(value: number | bigint): number {
   const result = Number(value);
-  if (!Number.isSafeInteger(result) || result < 0) fail();
+  if (typeof result !== 'number' || result < 0) fail();
+  if (process.platform === 'win32' && Number.isFinite(result)) return result;
+  if (!Number.isSafeInteger(result)) fail();
   return result;
 }
 
@@ -122,7 +124,7 @@ export function controllerTreeHash(root: string, source = false): string {
   try {
     const stat = lstatSync(root);
     if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE');
-    rootMode = source ? 0o700 : Number(stat.mode) & 0o777;
+    rootMode = (source || process.platform === 'win32') ? 0o700 : Number(stat.mode) & 0o777;
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
     fail();
@@ -135,7 +137,8 @@ export function controllerTreeHash(root: string, source = false): string {
   try {
     const stat = lstatSync(join(root, 'evcrate-advisor'));
     if (stat.isSymbolicLink() || !stat.isFile()) fail('PATH_UNSAFE');
-    records.push({ relativePath: 'evcrate-advisor\0mode', value: `m\0evcrate-advisor\0${source ? 0o755 : Number(stat.mode) & 0o777}\n` });
+    const modeValue = (source || process.platform === 'win32') ? 0o755 : Number(stat.mode) & 0o777;
+    records.push({ relativePath: 'evcrate-advisor\0mode', value: `m\0evcrate-advisor\0${modeValue}\n` });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || source) {
       if (error instanceof ControlPlaneError) throw error;
@@ -194,23 +197,26 @@ export function safePublicationChild(root: string, relativePath: string): string
 }
 
 export function validatePublicationAncestors(homeRoot: string, destination: string): void {
-  const root = homeRoot;
-  assertNoSymlinkAncestors(root);
-  const resolvedRoot = root;
-  const resolvedDestination = destination;
-  const suffix = resolvedDestination === resolvedRoot ? '' : resolvedDestination.slice(`${resolvedRoot}/`.length);
-  if (resolvedDestination !== resolvedRoot && !resolvedDestination.startsWith(`${resolvedRoot}/`)) fail('PATH_UNSAFE');
+  const resolvedRoot = resolve(homeRoot);
+  const resolvedDestination = resolve(destination);
+  assertNoSymlinkAncestors(resolvedRoot);
+  if (resolvedDestination === resolvedRoot) return;
+  const suffix = relative(resolvedRoot, resolvedDestination);
+  if (!suffix || suffix === '..' || suffix.startsWith(`..${sep}`) || suffix.startsWith('../') || isAbsolute(suffix)) {
+    fail('PATH_UNSAFE', `destination "${resolvedDestination}" is outside home "${resolvedRoot}" (relative suffix: "${suffix}")`);
+  }
   let current = resolvedRoot;
-  for (const part of suffix ? suffix.split('/') : []) {
+  for (const part of suffix.split(/[/\\]/u)) {
+    if (!part) continue;
     current = join(current, part);
     try {
       const stat = lstatSync(current);
-      if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE');
+      if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE', `ancestor "${current}" is a symlink or not a directory`);
       assertOwnerControlledDirectory(current);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') break;
       if (error instanceof ControlPlaneError) throw error;
-      fail('PATH_UNSAFE');
+      fail('PATH_UNSAFE', `stat failed on ancestor "${current}": ${(error as Error).message}`);
     }
   }
 }

@@ -255,12 +255,12 @@ export function validateProjection(context: ProjectionBuildContext): ProjectionV
         diagnostics.push({ path, kind: 'file', code: 'bytes-mismatch', expected: wanted.size, actual: entry.size });
       } else if (wanted.hash !== undefined && wanted.hash !== entry.hash) {
         diagnostics.push({ path, kind: 'file', code: 'hash-mismatch', expected: wanted.hash, actual: entry.hash });
-      } else if (wanted.mode !== undefined && wanted.mode !== entry.mode) {
+      } else if (process.platform !== 'win32' && wanted.mode !== undefined && wanted.mode !== entry.mode) {
         if (entry.mode !== undefined && (entry.mode & 0o777) !== 0o777) {
           diagnostics.push({ path, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
         }
       }
-    } else if (wanted.mode !== undefined && wanted.mode !== entry.mode) {
+    } else if (process.platform !== 'win32' && wanted.mode !== undefined && wanted.mode !== entry.mode) {
       if (entry.mode !== undefined && (entry.mode & 0o777) !== 0o777) {
         diagnostics.push({ path, kind: 'directory', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
       }

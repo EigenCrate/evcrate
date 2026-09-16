@@ -1,0 +1,70 @@
+name: Windows Smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-smoke-${{ github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows-smoke:
+    name: Windows PR Smoke
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.19.0'
+          architecture: x64
+
+      - name: Install dependencies
+        shell: bash
+        run: npm ci
+
+      - name: Build release assets under diagnostic fixture identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          COMMIT=$(git rev-parse HEAD)
+          if [[ ! "${COMMIT}" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "::error::Invalid commit SHA: ${COMMIT}"
+            exit 1
+          fi
+          echo "PACKAGE_VERSION=${VERSION}" >> "${GITHUB_ENV}"
+          echo "SOURCE_COMMIT=${COMMIT}" >> "${GITHUB_ENV}"
+          node scripts/prepare-release-assets.cjs "${VERSION}" --tag "v${VERSION}" --commit "${COMMIT}" --allow-fixture-identity
+
+      - name: Verify exact-seven release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release/asset-verification.cjs \
+            --dir dist/release \
+            --set release \
+            --version "${PACKAGE_VERSION}" \
+            --tag "v${PACKAGE_VERSION}" \
+            --commit "${SOURCE_COMMIT}"
+
+      - name: Run Windows qualification smoke harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/installers/windows-release-qualification.mjs \
+            --mode smoke \
+            --assets dist/release \
+            --version "${PACKAGE_VERSION}" \
+            --source-commit "${SOURCE_COMMIT}" \
+            --powershell pwsh.exe

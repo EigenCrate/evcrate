@@ -1,11 +1,11 @@
 # System Architecture
 
-**Status:** Current implementation reference; Hook Materialization Scope
-Distribution is complete through Phase 09 (512/512 tests, 29/29 closure files,
-and verified Linux release fixtures). Historical advisor mentoring acceptance is
-recorded below; live vendor qualification and production HOME publication remain
-operator-gated.  
-**Updated:** 2026-09-13  
+**Status:** Current implementation reference; Hook Materialization Scope Distribution
+is complete through Phase 09, and Windows release qualification is complete through
+Phase 10 (10/10 phases, 100%; completed 2026-09-15). The bounded Windows support
+cutover covers the standalone installer lifecycle and `version --json`; live vendor
+qualification and production HOME publication remain operator-gated.
+**Updated:** 2026-09-16
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -15,7 +15,7 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.0.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.1.0`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections. Node `>=22.19.0` is the package engine. The package exposes:
 
@@ -94,6 +94,28 @@ The CLI accepts `version`, `health`, `resources list|get`, `imports preview|appl
 A complete bounded versioned request file is mutually exclusive with positional
 command construction. JSON and non-TTY output use the same validated result.
 
+### Host-native context paths
+
+Invocation context uses a strict host/portable path boundary:
+
+- `safePath` and `resolveSafePath` validate host-native absolute roots. On Windows,
+  `validateWindowsPath` accepts drive-rooted paths and emits native separators,
+  while rejecting drive-relative, UNC/device, traversal, duplicate, ADS, invalid
+  character, trailing dot/space, DOS-device, metadata, and sensitive segments.
+- `normalizeRelativePath` remains the authority for relative POSIX metadata in
+  manifests, archives, inventories, and receipts; Windows handling does not
+  broaden those identities.
+- `assertNoSymlinkAncestors` is the shared ancestor guard. It walks from
+  `parse(resolve(value)).root` with the host `sep`, stops only at missing
+  components, and fails closed for other filesystem errors. `path-resolution.ts`
+  reuses it instead of maintaining a private walker.
+- Context still resolves before request loading and dispatch; `version --json` has
+  no context bypass. Focused context/CLI fixtures derive roots from file URLs,
+  and package smoke uses ComSpec to invoke `.cmd` through Windows command dispatch.
+  Phase 09 integrated qualification plus Phase 10 support cutover qualify the
+  standalone installer lifecycle and clean-install verification across the
+  supported Windows matrix; broader Windows runtime equivalence remains excluded.
+
 ## 4. Build, hash, and publication
 
 A local build stages canonical resources and selected projections outside the live
@@ -145,15 +167,41 @@ verified `VerifiedCurrentBuild` snapshot and digest feeds two ordered logical ph
    - `evcrate recover --scope home`: Reads only schema-2 HOME publication state under
      `$HOME/.evcrate/publication/`.
    - `evcrate recover --scope project --project-root <dir>`: Validates canonical
-     `projectIdentity` (lowercase SHA-256 over normalized absolute path) and recovers only
-     project harness state under `<project-root>/.evcrate-publish-state/`.
+     `projectIdentity` (lowercase SHA-256 over normalized absolute path) and reads
+     project harness state under `stateRoot/project-publication/<canonical SHA-256 identity>`.
    - Recovery requires process quiescence and never crosses requested scope boundaries.
 
-Unmanaged HOME and project files remain preserved. Advisor policy and unrelated roots
-are not publication inputs. The TypeScript engine is authoritative for the current
-package path; source retains an explicit compatibility-engine type, but no root
-`distribute.py` entrypoint is present in the current repository inventory. Do not
-use stale Python commands as the primary installation or distribution procedure.
+Standalone unpack layouts differ by platform: Linux uses
+`<data-root>/snapshots/<snapshot>` plus a `<data-root>/current` symlink;
+Windows uses `<root>/versions/<snapshot>` plus a `<root>/current.json` pointer
+and `<root>/bin/evcrate.cmd`. Publication state is separate from either
+installer layout.
+
+The TypeScript engine is authoritative; no root `distribute.py` exists, and stale
+Python commands are not primary procedures. The Windows release candidate and
+publisher are a separate semantic-release boundary; see [PDR FR-15](./project-overview-pdr.md#fr-15-canonical-semantic-release-candidate-and-verify-only-publisher).
+
+### 4.1 Release workflow trust boundary (Phases 07–10)
+`.github/workflows/release.yml` implements `release-candidate` →
+`windows-qualification` → `publish`.
+- The producer is read-only/non-canceling, keeps Ubuntu/Node 24.21.0 gates, uploads
+  only for `has_release=true`, and routes bytes by exact `artifact_id`.
+- The matrix is `windows-2025` x64, `fail-fast: false`, four PowerShell/Node rows
+  without checkout/npm; any non-success blocks publication.
+- `publish` is the sole writer after matrix success, checks out the producer SHA,
+  copies seven assets, re-verifies receipt/hash/run identity, and runs
+  semantic-release in `verify` mode.
+- Phase 09 proved integrated routing and final seven-file byte equality; Phase 10
+  completed the bounded documentation/support cutover.
+
+### 4.2 Unprivileged Windows PR smoke (Phase 08)
+`.github/workflows/windows-smoke.yml` triggers only `pull_request` and manual dispatch; `contents: read` plus canceling concurrency keep PR execution unprivileged.
+- On `windows-2025` x64 with Node `22.19.0`, it runs `npm ci` after pinned checkout/setup-node actions.
+- It reads the checked-in version and current 40-hex SHA, builds diagnostic fixture assets with `--allow-fixture-identity`, verifies exact-seven files, and invokes the same smoke harness with explicit `--powershell pwsh.exe`.
+- It has no secrets, write scope, upload, semantic-release, privileged follow-up, or release handoff; status is diagnostic only.
+- `.releaserc.json` uses exact post-qualification labels `Windows x64 Archive` and `Windows Installer Entrypoint (install.ps1)`; other asset paths/labels and prepare authority remain unchanged.
+- `tests/distribution/release-orchestration.test.mjs` covers WRQ-042 (workflow boundary), WRQ-043 (fixture/verify/smoke), and WRQ-044 (labels/preserved config).
+
 The controller build is a separate exact closure rooted at
 `.evcrate/source/.evcrate/bin`. Its 29 production files are:
 
@@ -493,234 +541,130 @@ cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic
 recovery, and selected-target publication. These contracts do not authenticate a
 vendor CLI.
 
-Linux x64 is the currently qualified operator boundary for live installed-CLI
-checks and process-group behavior. Repeat bounded, non-sensitive qualification after
-each installed CLI upgrade. Windows installer/runtime validation, npm publication,
-operator rollout, and a live vendor qualification result are separate gates and are
-not implied by deterministic repository contracts.
+Linux x64 is the qualified operator boundary for live installed-CLI checks.
+Windows release qualification is complete through Phase 10 (10/10 phases, 100%;
+completed 2026-09-15) for the standalone installer lifecycle (`install`,
+repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and `version --json`.
+The proven matrix is GitHub-hosted Windows Server 2025 (`windows-2025`) x64,
+Windows PowerShell 5.1/PowerShell 7, and Node.js 22.19.0/24.21.0. Windows
+runtime commands (`publish`, `health`, advisor execution, and process-tree parity)
+remain Linux-only operator-gated behavior. Desktop/UAC/SmartScreen/Authenticode/
+enterprise-policy environments, npm publication, rollout, and live vendor
+qualification remain separate gates.
+The Hook Materialization Scope Distribution milestone (Phases 01–09) is verified
+by the 512/512 full-suite result, exact 29-file closure, `distribute:check`, and
+installed Linux release fixtures. These deterministic checks do not qualify live
+vendors or authorize production HOME publication.
 
-The current Hook Materialization Scope Distribution milestone (Phases 01–09) is
-verified by the 512/512 full-suite result, exact 29-file closure, `distribute:check`,
-and installed Linux release fixtures. These deterministic checks do not qualify
-live vendors or authorize production HOME publication.
+### Deterministic Windows fixture and predecessor resolver (Phase 04)
 
-## 8. Historical advisor mentoring upgrade (Phases 01–10; deterministic Phase 10 acceptance)
+Phase 04 (2026-09-14) adds an internal, deterministic predecessor boundary for
+the later Windows candidate and harness phases. It does not qualify native
+Windows installer/runtime behavior or change the public support boundary.
 
-Design authority: [September 7 assessment](../plans/reports/brainstorm-260907-1004-advisor-mode-edge-case-assessment.md).
-Implementation plan: [advisor mentoring, recovery, and audit](../plans/260907-1208-advisor-mentoring-recovery-audit/plan.md).
-Phases 01–04 froze policy/checkpoint/result/controller contracts, completed
-policy migration, delivered wait/cancellation/cleanup guarantees, qualified
-adapters, and integrated the canonical mentor brief plus structured v2 result
-parsing. Phase 05 delivered bounded primary retry (up to four launches) and
-one-shot backup orchestration. Phase 06 delivered durable task state, process-identity
-locking, Git/baseline identity tracking, three-cycle correction escalation, and
-observed human continuation. Phase 07 delivered sanitized execution/outcome history,
-CAS terminal settlement, linked outcome recording, and bounded offline review tools.
-Phase 08 completed canonical workflow integration across all 16 command consumers,
-honest seven-target capability declarations, real CLI lifecycle transitions, and
-user-baseline preservation. Phase 09 generates and stages all seven target projections,
-synchronizes build manifests and registry, establishes 29-file controller closure parity
-across runtime and installers, proves disposable HOME preservation and recovery, and
-delivers the operator cutover runbook.
-Phase 10 deterministic acceptance is complete: 272/272 tests, 29/29 controller
-closure files, and a 9/9 sanitized mentoring baseline. Live vendor qualification
-and production HOME publication remain operator-gated.
+`buildWindowsTestReleaseSet` builds the Windows archive, sidecar, release
+metadata, and real `install.ps1` entrypoint through `buildReleaseArchives`.
+Shared fixture helpers own code-point-sorted records, inventory/controller/build
+manifest digests, installer bytes, and the fixed
+`FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z`; independent output roots
+therefore contain identical four-file names, sizes, hashes, and bytes.
 
-Phase 08 evidence is 279/279 tests passed; Lead Mentor approval 10/10; user approved.
-Phase 09 evidence is complete controller inventory/brief closure across all runtime
-modules and installers, 24/24 adapter projection tests, 7/7 cutover tests, 11/11
-publication recovery tests, 15/15 installer tests, 5/5 private unpack rollout tests,
-and passing `npm run distribute:check` and `npm run release:check`. The frozen boundary
-keeps one managed CommonJS controller, vendor-owned credentials, canonical resources,
-and TypeScript settings/publication. The runtime brief is authored once in the
-canonical `.claude` skill, generated through `generate-runtime-brief.mjs` into the
-29-file controller closure, and carried by build identity/digest. V2 checkpoint data
-is bounded and quoted; paths are metadata only. Advice is non-binding, and human
-approval plus the main workflow retains mutation authority.
+The resolver fetches bounded pages of non-draft, non-prerelease semver releases
+from the producer's read-only GitHub API. A release is qualified only when it
+has exactly one `Windows x64 Archive` label and one
+`Windows Installer Entrypoint (install.ps1)` label, canonical filenames, and
+all four assets pass `verifyWindowsAssetSet`. Before any qualification history,
+the resolver emits verified `bootstrap-fixture` `1.0.0`/`v1.0.0` bytes with the
+fixed lowercase `a`×40 source identity and requires candidate `>` 1.0.0.
+After qualification history exists, only the latest stable release is usable;
+an unqualified latest, missing/tampered/duplicate asset, or API/token failure
+fails closed without older-release or bootstrap fallback.
 
-Generation/publication does not establish live tool-enforcement capability.
-This remains cooperative oversight of trusted CLIs, not hostile-process
-containment or a guarantee against semantic bugs.
+`predecessor-downloader.mjs` downloads exactly the ZIP, sidecar, release
+metadata, and `install.ps1` into private staging, bounds response/error bytes,
+strips authorization across origins, verifies before and after promotion, and
+removes staging/partial output on failure. `prepare-windows-predecessor.mjs`
+returns the normalized `{kind, version, tag, sourceCommit, files, directory}`
+handoff consumed by later phases. Phase 09 integrated proof confirmed the irreversible
+predecessor transition (bootstrap initially; fail-closed on tampered or unqualified latest
+release) and final published-byte comparison.
 
-### 8.1 Sanitized audit history, outcomes, and offline review (Phase 07)
+## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
-Phase 07 implements structured, sanitized local execution history and outcome
-tracking with safe CLI inspection and retention tools:
+This section preserves historical acceptance context; current contracts are
+defined in Sections 3–7. The advisor mentoring milestone froze policy, checkpoint,
+result, controller, retry, durable-state, history, workflow, and projection
+boundaries. Its deterministic Phase 10 acceptance (2026-09-08) recorded 272/272
+tests, 29/29 controller-closure files, and a 9/9 sanitized mentoring baseline.
+It did not qualify live vendors or authorize production HOME publication.
 
-1. **Storage layout & boundaries**:
-   Stored at `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
-   with owner-only permissions (`0o700` directories, `0o600` files). Project root,
-   HOME, and intermediate directories are validated against symlink swaps and
-   insecure world-writable permissions using `/proc/self/fd` directory pinning.
+The separate Windows release milestone completed Phases 01–10 on 2026-09-15.
+Phase 09 proved the immutable candidate, four-row native matrix, failure routing,
+predecessor transition, rerun boundaries, and final seven-file byte identity.
+Phase 10 completed this documentation/support cutover. Windows support remains
+limited to the installer/version subset described in Section 7.
 
-2. **Execution & outcome snapshots**:
-   - `execution.json` (max 128 KiB): records initial started snapshot before model
-     launch, attempt summaries, terminal status (<code>ADVICE_READY</code> or <code>FAILED</code>),
-     sanitized result or error, route receipt, and timestamps. Terminal writes
-     use compare-and-set (CAS) against started records to prevent rewrite races.
-   - `outcome.json` (max 64 KiB): records linked executor disposition, actual
-     diff revision, validation command reference, outcome classification
-     (`resolved`, `unresolved`, `regressed`, `unknown`), and correction cycle.
+### 8.1 Sanitized history and outcome review
 
-3. **Retention, quota, and audit degradation**:
-   - Defaults: 30 days retention and 100 MiB total quota (configured via policy
-     `history: { retention_days, max_bytes }`).
-   - Active records (`status: 'started'`) are strictly protected from pruning.
-   - If history storage is degraded, read-only, or quota is exhausted by active
-     records, the controller visibly sets `audit_status: 'degraded'`. History
-     write failures never fail the controller or trigger model retries.
+Phase 07 history is optional rich audit, not task-state authority:
 
-4. **Managed CLI tools**:
-   - `evcrate-advisor history list`: metadata-only pagination with project, task,
-     and status filters.
-   - `evcrate-advisor history show`: safe display of execution and outcome
-     records with ANSI and control-code sanitization.
-   - `evcrate-advisor history export`: exports sanitized history to an explicit,
-     non-existing destination with redaction review.
-   - `evcrate-advisor history prune`: dry-run preview and apply modes for
-     pruning expired terminal records and enforcing quota.
+- Store owner-only `execution.json` (128 KiB) and `outcome.json` (64 KiB) under
+  `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`.
+- Record a started snapshot before model launch; settle terminal
+  `ADVICE_READY`/`FAILED` exactly once with CAS identity and byte checks.
+- Link outcomes to task/consultation identity, disposition, evidence revision,
+  actual changed paths, validation, result, and correction number.
+- Retain 30 days/100 MiB by default; protect active records. Storage failure
+  reports `audit_status: "degraded"` without retrying inference or failing usable
+  advice.
+- `evcrate-advisor history list|show|export|prune` provides bounded, project-scoped
+  metadata, sanitized display/export, and dry-run/apply retention cleanup.
+- Never retain credentials, hidden reasoning, raw stderr, raw vendor logs, or
+  unbounded text. Targeted history evidence passed 19/19; the full advisor
+  controller suite passed 204/204.
 
-5. **Offline human review workflow**:
-   - Operators select sanitized cases using `history list` and `history show`.
-   - Reviewers categorize outcomes into: (a) missing evidence, (b) incorrect advice,
-     (c) executor disregard, or (d) infrastructure/network failures.
-   - Prompt versions and model receipts are compared manually. Automatic prompt
-     rewriting or automated training on raw history logs is prohibited.
+### 8.2 Generated projections, installers, and publication runbook
 
-Verification: the targeted Phase 07 history suites pass 19/19 and the full
-advisor-controller suite passes 204/204. The Phase Lead/Senior Mentor review
-resolved all seven final implementation items and approved Phase 07
-unconditionally at 10/10. See the [QA evidence report](../plans/reports/tester-260908-1344-phase07-final-verification.md).
-### 8.2 Historical generated projections, staged cutover, and operator runbook (advisor milestone Phase 09)
+Phase 09 synchronized the generated release boundary:
 
-Phase 09 unifies projection generation, release packaging, standalone installers, and
-atomic publication into a verified, staged cutover without performing premature HOME rollout:
+1. **Controller closure.** The canonical CommonJS controller has exactly 29 files.
+   Inventory/hash authorities are synchronized across
+   `generate-controller-inventory.mjs`, `src/manifests/controller.ts`, `install.sh`,
+   `install.ps1`, and `scripts/release/runtime-closure.cjs`. The runtime brief is
+   authored once under `.claude`, generated into the closure, and never hand-edited.
+2. **Target projections.** `npm run distribute:build` generates all seven targets;
+   `npm run distribute:check` verifies byte parity. Build manifests and the schema-1
+   registry are synchronized by `npm run generate:all`.
+3. **Installer layouts.** Linux installs snapshots under
+   `<data-root>/snapshots/<snapshot>` and points `<data-root>/current` at the
+   selected snapshot with a symlink. Windows installs under
+   `<root>/versions/<snapshot>` and writes `<root>/current.json`; its launcher is
+   `<root>/bin/evcrate.cmd`. Both retain prior snapshots for bounded rollback.
+4. **Windows assets and lifecycle.** The verified assets are `install.ps1`,
+   `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar, and
+   `evcrate-v<version>.release.json`. `install`, repeat-install, `repair`, upgrade,
+   `rollback`, `uninstall`, and `version --json` are qualified only on the Section 7
+   matrix. Runtime `publish`, `health`, and advisor execution are not Windows claims.
+5. **Publication state.** HOME state is `$HOME/.evcrate/publication/`; project
+   state is `stateRoot/project-publication/<canonical SHA-256 identity>`. Project
+   publication commits the shared HOME controller first and then project harness
+   output. A harness failure rolls back only project work; `PUBLICATION_FAILED` and
+   `ROLLBACK_FAILED` are both exit category 5 outcomes.
+6. **Recovery.** Recovery requires quiescence, validates owner-controlled paths and
+   canonical project identity, and reads only the requested scope. `staged`/`promoting`
+   journals roll back when snapshots match; `committed` journals finalize cleanup;
+   no journal returns `action: "none"`. Recovery never rolls back a completed release.
+7. **Operator sequence.** Build/check and dry-run from disposable HOME first; pause
+   consultations and inspect pending processes from the original project root; apply
+   only after review. For interrupted publication, run matching-scope
+   `evcrate recover`. For a completed release rollback, select a prior installer
+   snapshot (`./install.sh rollback <snapshot>` or `.\install.ps1 rollback <snapshot>`)
+   and then re-publish that generation. Advisor-settings recovery is separate:
+   use `evcrate advisor settings get --json` with the same state-root configuration.
 
-1. **Exact 29-file controller closure parity**:
-   The canonical advisor controller closure comprises exactly 29 CommonJS files authored
-   under `.evcrate/source/.evcrate/bin/`. Controller closure digests and file inventories
-   are strictly synchronized across:
-   - `scripts/generate-controller-inventory.mjs` and `src/manifests/controller-inventory.generated.ts`
-   - `src/manifests/controller.ts` (source closure validation and hash generation)
-   - `install.sh` and `install.ps1` (standalone unpack installer verification)
-   - `scripts/release/runtime-closure.cjs` and `scripts/release/pack-inventory.cjs`
-   Every file requires only literal relative CommonJS modules or Node.js built-ins, with
-   zero runtime dependency on `dist/` or external npm modules.
-
-2. **All-seven target projection synchronization**:
-   All seven targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`)
-   are projected directly from canonical `.claude/` sources via `npm run distribute:build`
-   and verified byte-for-byte via `npm run distribute:check`. Cryptographic SHA-256 tree
-   hashes in `.evcrate/build-manifest-*.json` and the schema-1 resource records in
-   `.evcrate/registry.json` are synchronized via `npm run generate:all`.
-
-3. **Release packaging and installer verification**:
-   Standalone tar.gz/zip packaging and unshare network-isolated installation verify:
-   - Archive SHA-256 and sidecar integrity matching `evcrate-v<ver>.release.json` metadata.
-   - Controller closure digest verification before writing destination files.
-   - Clean-new and whole-old-backup mutable-state semantics on upgrades (`<version>-<hash>-<gen>`).
-   - Idempotent repair, rollback to prior snapshot, and clean uninstall.
-   - Preservation of user-owned `$HOME/.evcrate/advisor-routing.json`, task state, and history.
-
-4. **Publication isolation, state root, and crash recovery**:
-Publication is a scope-aware, journaled ordered-rename transaction on the
-destination volume, not a single whole-filesystem atomic swap:
-   - **Schema-2 state roots**:
-     - HOME publication state: `$HOME/.evcrate/publication/` (with active transaction directory `$HOME/.evcrate/publication/release-<releaseId>/`).
-     - Project publication state: `<project-root>/.evcrate-publish-state/` (isolated per canonical project identity).
-   - **Pre-publication dry-run**: `evcrate publish --dry-run [--scope home|project] [--project-root <dir>] --json` reports authorized changes and binding order (`.evcrate/bin` then target bindings).
-   - **Atomic apply**: `evcrate publish --apply [--scope home|project] [--project-root <dir>] --json`:
-     - In `home` scope: stages complete outputs, records each rename, and promotes controller and target files under a single HOME lock with backups under `$HOME/.evcrate/publication/release-<releaseId>/backups/`.
-     - In `project` scope: two-phase transaction. Commits shared controller to `$HOME/.evcrate/bin` first under HOME lock, then locks project root (HOME lock held, never reversed) and applies harness projections to `<project-root>`.
-   - **External modification protection**: If an unmanaged or external modification occurs on a destination path, `publishApply` detects **CAS_CONFLICT**, leaves the external file untouched, and stops with a retained journal; recovery fails closed until the path is reconciled.
-   - **Interrupted transaction recovery (`evcrate recover [--scope home|project] [--project-root <dir>] --json`)**:
-     - `publishApply` writes an initial release marker with status `promoting`. Both uncommitted statuses (`staged` or `promoting`) use rollback recovery when valid, restoring all promoted files to their pre-transaction state using transaction backups (`action: "rolled-back"`).
-     - If promotion completed but a crash occurred during cleanup (journal status `committed`), recovery finalizes the release and purges unretained backups (`action: "finalized"`).
-     - If no interrupted transaction exists, recovery is a no-op (`action: "none"`). Recovery does not roll back a completed release.
-     - **Partial failures in project scope**: If project harness application fails after shared commit, project workspace rollback is attempted. If successful, result is `'partial'` with `PUBLICATION_FAILED` (exit 5). If rollback fails, the journal is preserved (`ROLLBACK_FAILED`, exit 5). Shared commit is never rolled back or compensated.
-     - **Post-first-promotion CAS conflict**: If an external change occurs after partial promotion has begun, `publishApply` fails with **CAS_CONFLICT**, leaving the journal in `promoting` state. An immediate `evcrate recover` will fail closed with **RECOVERY_FAILED** because the current external file cannot be matched to the pre-transaction snapshot. The operator must remain paused, inspect the conflicting path, decide whether to preserve or revert the external change, resolve the collision, and then run `evcrate recover` to restore a coherent state.
-5. **Operator cutover, quiescence, and rollback runbook**:
-   - **Pre-cutover validation**: Execute `npm run build`, `npm run distribute:check`, `npm run release:check`, and `npm test` locally. Confirm zero test failures and clean git status.
-   - **Consultation quiescence and admission pause**:
-     - Suspend new consultations before starting upgrade.
-     - Process table verification: verify no active advisor processes are executing (`pgrep -fa evcrate-advisor`).
-     - Task-state inspection: durable task runs operate independently from deployments. Because `state get` hashes its actual working directory into `projectId`, operators must execute inspection from the original task project root as `cwd` and original `HOME`:
-       ```bash
-       evcrate-advisor state get <<'JSON'
-       {
-         "protocol": "evcrate-advisor-state",
-         "version": 1,
-         "operation": "get",
-         "task_run_id": "<task-run-id>",
-         "operation_id": null,
-         "expected_revision": null,
-         "payload": {}
-       }
-       JSON
-       ```
-       Verify the result reports **STATE_READY** before interpreting task details. Verify `pending_process_status` is `null`, `"never-started"`, or `"dead"`. Explicitly block deployment if `pending_process_status` is `"live"` or `"unknown"` (or if any lookup, validation, or process inspection error occurs), resolving the uncertainty before continuing. Never force-complete or mutate durable tasks merely to deploy. Keep admission paused across all harnesses throughout cutover and recovery.
-   - **Standalone installer upgrade**: Execute `./install.sh install` (Linux) or `.\install.ps1 install` (Windows). This installs the new snapshot under `<data-dir>/snapshots/<version>-<hash>-<gen>` and points `<data-dir>/current` and the launcher to it.
-   - **Policy migration workflow**:
-     - Policy remains strictly user-owned at `$HOME/.evcrate/advisor-routing.json`.
-    - Step 1 (Exclusive non-clobbering backup): Before modifying policy, create an exclusive, owner-only backup using the `wx` flag (failing if the destination file or symlink exists):
-       ```bash
-       node -e 'const fs = require("node:fs"); fs.writeFileSync(process.env.HOME + "/.evcrate/advisor-routing.json.pre-v2", fs.readFileSync(process.env.HOME + "/.evcrate/advisor-routing.json"), { flag: "wx", mode: 0o600 });'
-       ```
-       If the destination exists, the command fails with **EEXIST**, preventing silent overwrites or rotation of a prior verified backup.
-     - Step 2 (Inspect current revision): Run `evcrate advisor settings get --json` to inspect current policy and retrieve its `revision` and `mode` objects.
-     - Step 3 (Preview): Construct a preview request file with schema `evcrate-advisor-settings`:
-       ```json
-       {
-         "protocol": "evcrate-advisor-settings",
-         "protocolVersion": 1,
-         "requestId": "00000000-0000-4000-8000-000000000001",
-         "operation": "preview",
-         "payload": {
-           "currentRevision": { "kind": "present", "identity": "<identity-from-get>" },
-           "destination": "<home>/.evcrate/advisor-routing.json",
-           "mode": { "kind": "existing", "mode": 384 },
-           "policy": {
-             "version": 2,
-             "advisor": {
-               "primary": { "backend": "codex", "model": "gpt-5.6-sol", "effort": "high" },
-               "backup": { "backend": "omp", "model": "gpt-6-astra", "effort": "high" }
-             },
-             "wait": { "mode": "until_terminal", "warn_after_ms": 120000, "warn_every_ms": 300000 },
-             "history": { "retention_days": 30, "max_bytes": 104857600 }
-           }
-         }
-       }
-       ```
-       Note: V2 routes require distinct `primary` and `backup` target objects (`backend`, `model`, `effort`); `timeout_ms` is retired in V2 routes in favor of `wait` policy (`mode: "until_terminal"`, `warn_after_ms`, `warn_every_ms`). Run `evcrate advisor settings preview --json --request-file <preview-request.json>` and extract the returned opaque `token`.
-     - Step 4 (Apply): Construct an apply request file with the returned preview token and current revision object:
-       ```json
-       {
-         "protocol": "evcrate-advisor-settings",
-         "protocolVersion": 1,
-         "requestId": "00000000-0000-4000-8000-000000000002",
-         "operation": "apply",
-         "payload": {
-           "token": "<preview-token-from-preview-response>",
-           "currentRevision": { "kind": "present", "identity": "<identity-from-get>" }
-         }
-       }
-       ```
-       Run `evcrate advisor settings apply --json --request-file <apply-request.json>` to atomically commit. The transaction uses temporary `.advisor-settings-backup-*` files and cleans them up upon success.
-     - Note: V1 policy remains operational via direct compatibility checkpoints; migration is an explicit operator choice. Credentials are never written to policy.
-   - **Harness publication**: Run `evcrate publish --dry-run [--scope home|project] [--project-root <dir>] --json` to preview managed target updates; when authorized, run `evcrate publish --apply [--scope home|project] [--project-root <dir>] --json` to promote controller and projections.
-   - **Rollback execution runbook**:
-     - **Interrupted publication recovery**: If a publication transaction is interrupted mid-promotion, run `evcrate recover --scope <home|project> [--project-root <dir>] --json` to roll back staged changes using publication backups.
-     - **Interrupted settings recovery**: `evcrate recover` is strictly for publication journals. If an advisor-settings transaction is interrupted, run `evcrate advisor settings get --json` using the same state-root configuration (by default `$HOME/.local/state/evcrate/advisor-settings-journal.json`, or pass explicit `--state-home`). This automatically detects the journal under `context.stateRoot`, finalizes or restores the policy, and removes the journal. Verify successful recovery and journal removal before continuing.
-     - **Completed publication release rollback**: After a publication transaction has committed, `evcrate recover` is a no-op (`action: "none"`). To roll back a completed publication release to a prior version:
-       1. Roll back the installed package snapshot: `./install.sh rollback <prior-snapshot>` (or `.\install.ps1 rollback <prior-snapshot>`), which repoints `<data-dir>/current` and the launcher to the prior generation.
-       2. From that restored package snapshot, run `evcrate publish --apply --scope <home|project> [--project-root <dir>] --json` to re-publish the prior generation's matching controller and projections.
-     - **Policy rollback**:
-       The V2 settings API strictly requires `version: 2` and rejects V1 policy writes. To roll back from V2 policy to V1 policy:
-       1. Pause consultations across harnesses.
-       2. Restore the pre-migration V1 backup file manually:
-          `cp "$HOME/.evcrate/advisor-routing.json.pre-v2" "$HOME/.evcrate/advisor-routing.json"`
-          `chmod 0600 "$HOME/.evcrate/advisor-routing.json"`
-       3. Resume consultations.
+The generated trees, controller closure, manifests, registry, publication journals,
+and installer state are managed artifacts. User policy, unmanaged HOME/project
+files, and vendor credentials remain outside the publication authority.
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)

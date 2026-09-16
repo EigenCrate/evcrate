@@ -78,10 +78,12 @@ function defaultPackageRoot(options: InvocationContextOptions): string {
 function assertDirectory(path: string): void {
   try {
     const stat = lstatSync(path);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new ControlPlaneError('PATH_UNSAFE');
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw new ControlPlaneError('PATH_UNSAFE', `Path is not a directory or is a symlink: "${path}"`);
+    }
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError('PATH_UNSAFE');
+    throw new ControlPlaneError('PATH_UNSAFE', `lstatSync failed on "${path}": ${(error as Error).message}`);
   }
 }
 

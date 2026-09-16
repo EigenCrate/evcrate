@@ -1,15 +1,16 @@
 # Codebase Summary
 
-**Generated:** 2026-09-13
+**Generated:** 2026-09-16
 **Source:** Fresh repository compaction produced by Repomix v1.18.0 at
-`repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs, which were
-checked directly for Phase 09 evidence and documentation consistency.
-**Purpose:** Compact navigation map, not a copy of the compaction.
+`repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs. Release
+workflow, phase plans, and related evidence were checked directly for this
+summary.
 
 The repository is a private Node/TypeScript package. `package.json` declares
-`evcrate` version `2.0.0`, Node `>=22.19.0`, the `evcrate` bin at
+`evcrate` version `2.1.0`, Node `>=22.19.0`, the `evcrate` bin at
 `dist/cli/evcrate.js`, and the `evcrate-advisor` bin at
 `.evcrate/source/.evcrate/bin/evcrate-advisor`.
+
 
 ## Source-of-truth map
 
@@ -204,7 +205,7 @@ The Phase 04 validation report records 85/85 focused assertions and 35/35
 foreign-CWD scanner/generator invocations. The final post-fix review records
 14/14 foreign-CWD scanners, live catalog freshness, all 14 npm test suites at
 290/290, and `distribute:check` with `status: "ok"`. This proves repository
-catalog/projection closure only; live vendor qualification, Windows support, npm
+catalog/projection closure only; live vendor qualification, broader Windows runtime support, npm
 publication, deployment, and rollout remain separate operator gates.
 
 ## Canonical scout-block hook and ignore policy
@@ -261,8 +262,8 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, advisor v2/settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes | `validation.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `diagnostic.ts`, `resource-payload-validation.ts` |
-| `src/context/` | Immutable package/project/home/state/target context, project directory/document descriptors | `invocation-context.ts`, `target-registry.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, advisor v2/settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `diagnostic.ts`, `resource-payload-validation.ts` |
+| `src/context/` | Immutable package/project/home/state/target context and host-native path resolution | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading, descriptor types, and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts`, `types.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
 | `src/registry/` | Canonical scan, schema-1 records, compatibility and deterministic queries | `scanner.ts`, `schema.ts`, `store.ts` |
@@ -270,15 +271,17 @@ reads/searches stay blocked.
 | `src/scopes/` | Global/project assignment state, canonical project identity, inheritance, revisions, and CAS | `identity.ts`, `state.ts`, `mutations.ts`, `changes.ts` |
 | `src/advisor-settings/` | User policy snapshots, transactions, lock, journal, preview token, and recovery | `policy-files.ts`, `coordinator.ts`, `transactions.ts`, `recovery.ts` |
 | `src/distribution/` | Local build/check, hash verification, phase planning, staging, publication, recovery, Pi settings, cutover | `local-build.ts`, `build-resolution.ts`, `publication-plan.ts`, `publication-inventory.ts`, `publication-rules.ts`, `publication.ts`, `publication-recovery.ts`, `shared-json.ts`, `cutover.ts` |
-| `src/filesystem/` | Safe paths, hashes, atomic operations, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
+| `src/filesystem/` | Safe paths, the shared native-separator ancestor guard, hashes, atomic operations, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/cli/` | Argument parser, request files, dispatch, output, health, process runner, executable | `arguments.ts`, `dispatch.ts`, `main.ts`, `evcrate.ts` |
 | `src/errors/` | Stable control-plane error types and exit mapping | `control-plane-error.ts` |
 | `src/index.ts` | Side-effect-free public export surface | `index.ts` |
 
-`src/protocol/validation.ts` owns the persisted target list
-`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`; `agy` is an
-input alias only. `src/adapters/index.ts` registers all seven projection adapters,
-while `src/adapters/registry.ts` rejects duplicates and missing implementations.
+`src/protocol/validation.ts` owns persisted targets `claude`, `codex`, `gemini`,
+`antigravity`, `pi`, `omp`, `copilot`; `agy` is an input alias only. `safePath`
+is host-native on win32; `normalizeRelativePath` remains slash-relative POSIX metadata.
+`src/context/path-resolution.ts` uses `lexicalAbsoluteWindows`, then shared
+`assertNoSymlinkAncestors` from `src/filesystem/paths.ts`; URL-derived Phase 01
+fixtures cover the boundary; Windows standalone installer lifecycle and version verification are qualified (Phases 01–10).
 
 ## CLI and build tooling
 
@@ -286,61 +289,43 @@ while `src/adapters/registry.ts` rejects duplicates and missing implementations.
 
 | Script/action | Role |
 |---|---|
-| `npm run build` | Runs controller inventory generation through `prebuild`, then TypeScript compilation. |
-| `npm run generate:inventory` | Regenerates the controller inventory from the JavaScript closure list. |
+| `npm run build` | Generates controller inventory through `prebuild`, then compiles TypeScript. |
+| `npm run generate:inventory` | Regenerates the exact controller inventory. |
 | `npm run generate:registry` | Regenerates canonical schema-1 resource records. |
-| `npm run generate:manifests` | Builds target and aggregate schema-2 manifests through `scripts/build-manifests.mjs`. |
-| `npm run distribute:build` / `distribute:check` | Run compiled CLI build/check actions. |
-| `npm run distribute:all` | Build and publish all selected targets through the TypeScript CLI. |
+| `npm run generate:manifests` | Builds target and aggregate schema-2 manifests. |
+| `npm run distribute:build` / `distribute:check` | Build and verify projections through the compiled CLI. |
+| `npm run distribute:all` | Build and publish all selected targets. |
 | `npm run distribute:pi`, `distribute:omp`, `distribute:copilot` | Select one projection target. |
-| `npm run test:advisor-controller` and focused suites | Existing contract evidence; not a replacement for live vendor qualification. |
+| `npm run release:check` | Verifies the 29-file runtime closure. |
+| `npm run release:candidate` | Builds the immutable semantic-release candidate and receipt. |
+| `npm run release:verify-assets` | Verifies exact release asset sets and expected hashes. |
+| `npm run semantic-release` | Runs the verify-only release publisher wrapper. |
+| `npm run test:release` | Runs release-artifact and release-orchestration suites. |
+| `npm run test:installer:linux` | Runs Linux installer lifecycle tests. |
+| `npm run test:installer:windows` | Runs the Windows qualification harness. |
+| `npm run test:distribution:rollout` | Runs private unpack rollout checks. |
+| `npm run test:advisor-controller` and focused suites | Contract evidence; not live vendor qualification. |
 
-The compiled CLI accepts version, health, advisor-settings, resource, import, scope,
-change, publish, recover, and distribution actions. There is no root
-`distribute.py` in the current root inventory; old Python snippets are not the
-canonical package path.
+The compiled CLI accepts `version`, `health`, `resources list|get`, `imports
+preview|apply`, `scopes list|get|assign|remove|enable|disable`, `changes
+preview|apply`, advisor settings, publication, recovery, and distribution
+actions. There is no canonical root `distribute.py` command.
 
 ## Controller closure
 
-The generated inventory in `src/manifests/controller-inventory.generated.ts` is
-produced by `scripts/generate-controller-inventory.mjs`. It lists exactly these
-29 production files under `.evcrate/source/.evcrate/bin/`:
+`scripts/generate-controller-inventory.mjs` produces
+`src/manifests/controller-inventory.generated.ts`, the authoritative exact
+29-file CommonJS closure under `.evcrate/source/.evcrate/bin/`. The closure
+contains the advisor entrypoint, adapter/contract/controller modules, policy,
+runner/workspace, generated runtime brief, and state/history modules. Every
+file uses only literal relative CommonJS imports or Node built-ins; it never
+depends on `dist/` or external npm modules.
 
-```text
-evcrate-advisor
-lib/advisor/adapter-contract.cjs
-lib/advisor/adapter-registry.cjs
-lib/advisor/adapters/claude.cjs
-lib/advisor/adapters/codex.cjs
-lib/advisor/adapters/omp.cjs
-lib/advisor/adapters/omp-parser.cjs
-lib/advisor/adapters/pi.cjs
-lib/advisor/checkpoint-contract.cjs
-lib/advisor/contracts-v2.cjs
-lib/advisor/controller-envelope.cjs
-lib/advisor/controller.cjs
-lib/advisor/errors.cjs
-lib/advisor/history-contract.cjs
-lib/advisor/history-prune.cjs
-lib/advisor/history-query.cjs
-lib/advisor/history-store.cjs
-lib/advisor/isolated-workspace.cjs
-lib/advisor/json-document.cjs
-lib/advisor/managed-checkpoint.cjs
-lib/advisor/policy-schema.cjs
-lib/advisor/profile.cjs
-lib/advisor/runner.cjs
-lib/advisor/runtime-brief.generated.cjs
-lib/advisor/state-baseline.cjs
-lib/advisor/state-contract.cjs
-lib/advisor/state-human.cjs
-lib/advisor/state-io.cjs
-lib/advisor/task-state.cjs
-```
-
-The runtime brief artifact is generated from the canonical
-`.claude/skills/advisor-strategy/references/brief-contract.md`; it is part of
-the exact closure and is never hand-edited.
+The same inventory and hashes are checked by `src/manifests/controller.ts`,
+`install.sh`, `install.ps1`, and `scripts/release/runtime-closure.cjs`; the
+runtime brief comes from the canonical `.claude` advisor reference and is not
+hand-edited. See [system architecture](./system-architecture.md#4-build-hash-and-publication)
+for the complete closure list.
 
 ## Advisor mentoring brief and structured advice (Phase 04)
 
@@ -566,134 +551,123 @@ Path B lifecycles, exact three-cycle ordinals and durable gate blocking, all 16
 dispatcher references, and all seven projection adapters. Evidence is 279/279
 tests; Lead Mentor approval is 10/10 and user approval is recorded.
 
-## Historical advisor mentoring release packaging and staged cutover (Phase 09; 2026-09-08)
+## Windows release qualification asset boundary (Phase 02)
 
-This historical Phase 09 synchronized target projections, controller closure parity,
-standalone installers, and disposable-HOME publication/recovery runbooks. See the
-[historical Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md).
+Phase 02 (2026-09-14) freezes the read-only release-asset boundary used by
+candidate, predecessor, and publisher phases. See the
+[phase plan](../plans/260914-0636-windows-release-qualification/phase-02-exact-release-asset-verifier-and-prepare-boundary.md),
+[design contracts](../plans/260914-0636-windows-release-qualification/design-contracts.md#exact-asset-verification),
+and [acceptance matrix](../plans/260914-0636-windows-release-qualification/acceptance-matrix.md).
 
-### Key deliverables and parity
+- `scripts/release/asset-verification.cjs` reuses `release-contract.cjs` for
+  canonical names, code-point ordering, strict sidecar parsing, metadata
+  validation, and digest policy. It exports
+  `getExpectedReleaseAssetNames`, `sha256File`, `verifyWindowsAssetSet`,
+  `verifyReleaseAssetSet`, `parseVerifierArgs`, and `main`.
+- Exact-seven `verifyReleaseAssetSet` permits only
+  `evcrate-v<version>-linux-x64.tar.gz`, its `.sha256` sidecar,
+  `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar,
+  `evcrate-v<version>.release.json`, `install.sh`, and `install.ps1`.
+  Exact-four `verifyWindowsAssetSet` permits only the Windows archive, its
+  sidecar, release metadata, and `install.ps1`; Linux records may remain in
+  metadata but Linux files must be absent from this directory.
+- Both sets enumerate once, `lstat` every entry, reject directory/symlink/
+  special-file entries, enforce exact membership, validate metadata version,
+  `v<version>` tag, lowercase 40-hex `source_commit`, required platform and
+  installer records, strict sidecar bytes, archive/installer sizes, and
+  streaming SHA-256 digests. Caller `tag`, `sourceCommit`, `expectedHashes`,
+  and expected file records can strengthen checks; unknown expected file keys
+  reject. No verifier path writes, repairs, or regenerates bytes.
+- Successful verification returns the frozen
+  `{version, tag, sourceCommit, files, metadata}` summary. Materialized file
+  records contain name/size/SHA-256 in canonical code-point order.
+- `semantic-release-asset-prepare.cjs` requires
+  `EVCRATE_RELEASE_ASSET_MODE`; after trimming, only `build` and `verify` are
+  accepted, and mode validation runs before filesystem/process work. Build
+  delegates `scripts/prepare-release-assets.cjs <version>` then verifies
+  exact-seven output. Verify checks existing `dist/release` only and cannot
+  build, invoke npm/distribution, or regenerate missing/tampered assets.
+- `.releaserc.json` changes only the exec `prepareCmd`; analyzer, notes,
+  changelog, npm, GitHub, and git plugin order/specifications remain intact.
+  `tests/distribution/private-release-artifacts.test.mjs` covers WRQ-007–012:
+  exact sets, identity/tamper/receipt-hash rejection, no-mutation behavior,
+  mode isolation, CLI parsing, and configuration structure.
 
-- **Controller closure parity (29 files)**: `scripts/generate-controller-inventory.mjs`
-  emits `src/manifests/controller-inventory.generated.ts`, which drives `src/manifests/controller.ts`
-  and `scripts/release/runtime-closure.cjs`. Standalone installer scripts `install.sh` and
-  `install.ps1` are updated to match the exact 29-file list, resolving closure digest
-  mismatches during unpack installation.
-- **Projections and manifests synchronization**: All seven target projections are
-  built with `npm run distribute:build` and verified with `npm run distribute:check`.
-  Build manifests (`.evcrate/build-manifest-*.json`) and `.evcrate/registry.json` are
-  regenerated and pinned with `npm run generate:all`.
-- **Standalone unpack and installer verification**: Linux network-namespace testing
-  via `tests/distribution/private-unpack-rollout.test.mjs` proves package hash invariance,
-  network-isolated installation, clean-new/whole-old-backup mutable state semantics,
-  and published target preservation upon uninstall. Subprocess installer tests in
-  `tests/installers/*.test.mjs` validate archive checksum checks, controller closure
-  digest verification, atomic locking, staging rollback, and pointer commit.
-- **Publication and crash recovery**: Atomic publication testing under disposable HOME
-  via `tests/distribution/publication-apply.test.mjs` and `tests/distribution/publication-recovery.test.mjs`
-  proves CAS conflict prevention, idempotent journal recovery, and policy preservation;
-  reviewer smoke tests confirm active/incomplete task state and history sentinels remain
-  isolated and intact.
-- **Operator runbook:** Explicit cutover, quiescence, settings migration, and
-  rollback procedures live in `docs/system-architecture.md`; native Windows
-  qualification and live route authorization remain separate gates.
-### Historical Phase 09 contract boundaries
+## PowerShell installer safety and lifecycle (Phase 03)
+Phase 03 (2026-09-14) hardens the standalone `install.ps1` state machine; this is an internal contract and does not qualify native Windows support.
+- `Resolve-InstallRoots` validates root ancestry before optional creation; already-uninstalled teardown does not recreate roots.
+- `Acquire-InstallLock` uses exclusive create, no sharing, delete-on-close semantics, and a random token; legacy stale locks are rename-quarantined only, and release disposes the handle.
+- `Test-ContainedPath`/`Assert-ContainedPath` enforce canonical case-insensitive separator boundaries; `Test-InventoryPathSafety` validates snapshot and receipt keys before combination.
+- `Assert-NoReparseAncestor` walks root-to-leaf, including dangling reparse fallback; directory creation and every state/pointer mutation are checked before and after writes.
+- Journals use same-directory flushed temporary files and atomic replace/move; recovery validates schema and stage/target containment.
+- Extraction is two-pass and bounded, rejects links/collisions, creates each file without overwrite, and records hashes; rollback verifies receipt inventory before repointing.
+- Uninstall deletes receipt-owned files only, reports survivors with nonzero status, verifies PATH removal, and removes only empty owned roots; install/repair alone require Node.
+- Native `powershell.exe`/`pwsh.exe` lifecycle execution was verified on hosted `windows-2025` x64 in Phase 09.
+Evidence: [Phase 03 plan](../plans/260914-0636-windows-release-qualification/phase-03-powershell-installer-safety-and-lifecycle.md), [acceptance matrix](../plans/260914-0636-windows-release-qualification/acceptance-matrix.md), and [cycle 3 review](../plans/reports/code-review-260914-1407-phase-03-powershell-installer-safety-and-lifecycle.md).
 
-The persisted target registry is exactly seven IDs. `scripts/build-manifests.mjs`
-emits eight schema-2 files: the aggregate `.evcrate/build-manifest.json` plus one
-`.evcrate/build-manifest-<target>.json` for each target. The current eight manifests
-are complete, mark the target registry as validated, and each carries 29 controller
-hashes. `.evcrate/registry.json` remains schema 1 and currently indexes 140
-canonical resources; each record carries compatibility entries for all seven target
-IDs. `generate:all` runs inventory, build, registry, and manifest generation in that
-order. Generated projections, registries, and manifests are never hand-edited.
+## Deterministic Windows fixture and predecessor resolver (Phase 04)
 
-Publication recovery and release rollback are separate operations:
+Phase 04 (2026-09-14) adds the reproducible Windows predecessor boundary. See
+the [phase plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md),
+[acceptance matrix](../plans/260914-0636-windows-release-qualification/acceptance-matrix.md),
+and [cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
 
-- A valid `staged`/`promoting` journal rolls back promoted operations and returns
-  `rolled-back`; a `committed` journal left by a cleanup crash is verified and
-  finalized; no journal returns `none`. `recover` never rolls back a completed
-  release.
-- A post-first-promotion external collision retains the promoting journal; recovery
-  fails closed until the operator reconciles the conflicting path. To roll back a
-  completed release, use the installer `rollback` action for the prior package
-  snapshot, then run publication `apply` from that restored snapshot.
+| Module | Responsibility |
+|---|---|
+| `fixture-records.mjs` | Fixed `FIXTURE_BUILD_TIMESTAMP` and minimal deterministic records. |
+| `release-fixture-shared-helpers.mjs` | Shared sorted-record, controller/build-manifest digest, and real-installer authorities. |
+| `windows-release-fixture.mjs` | `buildWindowsTestReleaseSet`, using `buildReleaseArchives` and real `install.ps1`, returns exactly ZIP/sidecar/metadata/installer records. |
+| `private-release-fixture.mjs` | Linux fixture compatibility through the shared authorities. |
+| `predecessor-resolver-core.mjs` | Bounded GitHub release pagination, stable semver filtering, exact-label qualification, canonical asset names, and irreversible plan selection. |
+| `predecessor-downloader.mjs` | Bounded streaming downloads, cross-origin token stripping, private staging, exact-four verification, post-promotion verification, and cleanup. |
+| `prepare-windows-predecessor.mjs` | Bootstrap/qualified orchestration and strict CLI/library boundary; handoff shape is `{kind, version, tag, sourceCommit, files, directory}`. |
+| `windows-predecessor-mock-releases.mjs` and three `windows-*` suites | Determinism, resolver state/tamper/API cases, and subprocess CLI coverage. |
 
-Settings migration remains an independent user-owned transaction. V2 policy keys
-are exactly `version`/`advisor`/`wait`/`history`; `advisor` is exactly
-`primary`/`backup`, each route exactly `backend`/`model`/`effort`; `wait` is exactly
-`mode`/`warn_after_ms`/`warn_every_ms`; and `history` is exactly
-`retention_days`/`max_bytes`. Legacy v1 is a read-only migration view with
-`version`/`advisor` (`backend`/`model`/`effort`/`timeout_ms`) plus
-`migration_required: true`. The settings transport remains version 1: request keys
-are exactly `protocol`, `protocolVersion`, `requestId`, `operation`, and `payload`;
-preview payload is `policy`/`currentRevision`/`destination`/`mode`; apply payload
-is `token`/`currentRevision`. The operator flow is `get -> prepare v2 -> preview ->
-apply`; no automatic HOME rewrite.
+The resolver starts in bootstrap mode only when no stable release has the exact
+Windows archive and installer labels. It builds verified `1.0.0`/`v1.0.0` bytes
+with the fixed lowercase `a`×40 source identity and requires candidate `>` 1.0.0.
+After any qualified release, it inspects only the latest stable release; an
+unqualified latest, missing/tampered/duplicate asset, or required API/token
+failure aborts without older-release or bootstrap fallback. Qualified downloads
+contain only the Windows ZIP, sidecar, release metadata, and `install.ps1`.
 
-Before cutover, pause admissions and inspect from the original task project root
-and original HOME. Require no active `evcrate-advisor` process, a **STATE_READY**
-state response, and `pending_process_status` of `null`, `never-started`, or `dead`;
-block on `live`, `unknown`, or any inspection error. Keep admissions paused through
-publication and recovery.
+Cycle 2 evidence: targeted Phase 04 suites 7/7, release suite 17/17, Linux
+installer suite 15/15, total 39/39 (100%); code review approved 10/10. Predecessor
+transitions and downloads were integrated into the full matrix qualification in Phase 09.
 
+## Windows release candidate, qualification, and support cutover (Phases 05–10)
+- **Qualification harness (Phase 05)**: `tests/installers/windows-release-qualification.mjs` runs strict CLI/host/byte preflight, safe PowerShell/`cmd.exe` invocation, and smoke/full lifecycle/negative flows.
+- **Candidate & publisher (Phase 06)**: `run-release-candidate.cjs` uses a bare mirror and stages exact assets plus receipt; `publish-release.cjs` verifies receipt/hashes and copies only verified assets.
+- **Release workflow (Phase 07)**: `.github/workflows/release.yml` implements least-privilege producer (`contents: read`), 4-row matrix (`windows-2025` x64, Windows PowerShell 5.1 and PowerShell 7, Node 22.19.0 and 24.21.0), exact-ID handoff, and publisher (`contents: write`).
+- **PR smoke (Phase 08)**: `.github/workflows/windows-smoke.yml` provides unprivileged diagnostic smoke on Windows PowerShell 7 + Node 22.19.0 with fixture identities; `.releaserc.json` locks exact Windows labels.
+- **Integrated qualification (Phase 09)**: Proved full gate sequence, bare-mirror isolation, tamper rejection, 4-row matrix routing, irreversible predecessor transitions, rerun boundaries, and final seven-file byte identity.
+- **Support cutover (Phase 10)**: Updated `README.md` and core docs with bounded installer/version support and explicit runtime/desktop/signing exclusions.
 ## Historical advisor mentoring Phase 10 deterministic acceptance (DONE 2026-09-08)
 
-The prior milestone's deterministic acceptance gate is verified. Live vendor
-qualification, empirical paired executor comparison, and real HOME publication
-remain explicit operator gates. See the [QA report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
+The prior advisor milestone's deterministic acceptance gate is verified; live
+vendor qualification, empirical paired comparison, and production HOME
+publication remain operator-gated. See the [QA report](../plans/reports/qa-260908-1915-phase10-acceptance.md)
 and [acceptance matrix](../plans/260907-1208-advisor-mentoring-recovery-audit/acceptance-matrix.md).
 
-### Acceptance fixtures and corpus
+Fixtures used disposable owner-only HOME/project roots, fake Codex/OMP routes,
+Git baselines, bounded subprocesses, and credential/PAT scrubbing. The evaluation
+corpus contains nine sanitized cases (one positive, eight failure-oriented) over
+direction, scope, safety, actionability, and evidence dimensions; threshold `4.0`.
 
-The added fixtures exercise the installed CommonJS controller and state/history CLI
-in disposable roots; evaluation uses representative advice without production history.
-
-| Fixture | Contract |
-|---|---|
-| `tests/distribution/phase10-test-helpers.mjs` | Owner-only temporary HOME/project/bin roots, fake Codex/OMP routes, Git baseline, bounded subprocess calls, and credential/PAT scrubbing. |
-| `tests/fixtures/mentoring-evaluation/corpus.json` | Nine sanitized cases: one positive control and eight failure-oriented cases; five rubric dimensions; passing threshold `4.0`. |
-| `tests/fixtures/mentoring-evaluation/evaluator.mjs` | Deterministic decision, direction, scope, actionability, evidence, generic-filler, and destructive-command checks. |
-
-### Dedicated acceptance suites
-
-| Suite | Cases | Observable coverage |
+| Suite | Cases | Coverage |
 |---|---:|---|
-| `phase10-controller-scenarios.test.mjs` | 7 | Primary success, fatal/malformed input, stream handling, unsupported route, cancellation, and child credential scrubbing. |
-| `phase10-state-and-history.test.mjs` | 3 | Stale evidence, idempotent replay/history inspection, and dirty-user-baseline preservation. |
-| `phase10-human-gate.test.mjs` | 1 | Three failed corrections enter `needs_human`; fourth remediation is denied. |
-| `phase10-commands-and-evaluation.test.mjs` | 4 | Seven-target declarations, V2/`--advice` contract, corpus pass, and adversarial counsel rejection. |
+| `phase10-controller-scenarios.test.mjs` | 7 | Success/failure, streams, unsupported route, cancellation, scrubbing. |
+| `phase10-state-and-history.test.mjs` | 3 | Stale evidence, replay/history, dirty-baseline preservation. |
+| `phase10-human-gate.test.mjs` | 1 | Three failures enter `needs_human`; fourth is denied. |
+| `phase10-commands-and-evaluation.test.mjs` | 4 | Seven targets, V2/`--advice`, corpus, adversarial counsel. |
 | **Dedicated total** | **15** | **15/15 passed** |
 
-### Deterministic evidence
-
-| Command or surface | Result |
-|---|---:|
-| `node --test tests/distribution/phase10-*.test.mjs` | 15/15 |
-| `node tests/advisor-controller/smoke-30s.cjs` | 1/1; 31.28s silent generation, one launch |
-| `npm run test:advisor-controller` | 204/204 |
-| `npm run test:adapters` | 24/24 |
-| `npm run release:check` | 29/29 controller files; closure verified |
-| `npm run test:installer:linux` | 15/15 |
-| `npm run test:cutover && npm run test:validation-rollout` | 13/13 |
-| **Deterministic total** | **272/272; 100%** |
-
-### Explicit boundary
-
-- Deterministic tests verify repository contracts, state transitions, process
-  behavior, capability declarations, sanitized evaluation, packaging, and
-  disposable-HOME preservation. Fake CLIs do not authenticate vendors or prove
-  paid model quality.
-- All seven targets declare mentoring support with `writeChecks: advisory-only`;
-  generated markers do not establish live host enforcement or a universal
-  pre-edit hard block.
-- No real credentials, external vendor APIs, or empirical paired runs were used;
-  live qualification and the paired improvement baseline remain **UNVERIFIED (GATED)**.
-- Tests use disposable HOME only; production `$HOME/.evcrate/` is untouched;
-  publication requires explicit operator authorization.
-
-Phase 10 closes deterministic acceptance without claiming live qualification,
-measured quality improvement, or authorized rollout.
+Deterministic evidence: phase10 suites 15/15; advisor-controller 204/204;
+adapters 24/24; `release:check` verified 29/29 closure files; Linux installer
+15/15; cutover/validation 13/13; total 272/272. These fixtures verify
+repository contracts and sanitized transitions, not paid model quality, live
+vendor authentication, or universal host enforcement. All seven targets remain
+`writeChecks: advisory-only`; production `$HOME/.evcrate/` was untouched.
 
 ## Advisor invocation modes
 
@@ -751,9 +725,9 @@ Phase 09 reconciles and finalizes operator documentation against that proof:
      preserved with `ROLLBACK_FAILED` (exit category 5) for operator recovery.
 
 3. **Schema-2 scope-isolated recovery**:
-   - `evcrate recover --scope home`: Reads only HOME publication state under `$HOME/.evcrate/publication/`.
    - `evcrate recover --scope project --project-root <dir>`: Validates matching canonical `projectIdentity`
-     and recovers only project publication state under `<project-root>/.evcrate-publish-state/`.
+     and recovers only project publication state under
+     `stateRoot/project-publication/<canonical SHA-256 identity>`.
    - Quiescence is strictly required; recovery never crosses requested scope boundaries.
 
 4. **Installed release verification**:
@@ -766,33 +740,25 @@ Phase 09 reconciles and finalizes operator documentation against that proof:
      `test:validation-rollout` (6/6), `test:distribution:rollout` (5/5), and full test suite (512/512).
 ## Projection map
 
-- Claude is the canonical authoring projection and source of command/workflow text.
-- Codex, Gemini, Antigravity, Pi, OMP, and Copilot are registered TypeScript
-  projections with target-specific transforms and validation.
-- OMP stages canonical commands, writes `evcrate/command-name-map.json`, and
-  flattens nested command paths to `cmd-` files with `__` separators.
-- Copilot writes its own command map and exposes `evcrate-cmd-*` skills with raw
-  `$ARGUMENTS`; it is not an advisor backend.
-- Pi keeps a target-specific runtime/extension overlay and owns a separate settings
-  merge contract documented in [Pi-native migration](./pi-native-migration.md).
+- Claude is canonical; Codex, Gemini, Antigravity, Pi, OMP, and Copilot are
+  fixed TypeScript projections with target-specific transforms and validation.
+- OMP emits `evcrate/command-name-map.json` and flattens nested commands with `__`.
+- Copilot emits `evcrate-cmd-*` skills with raw `$ARGUMENTS`; it is not an advisor
+  backend. Pi keeps its runtime/extension and settings-merge boundary.
 
 ### Command naming note
 
-Core documentation uses `/cmd-*` for every documented slash command/resource name,
-including `.claude` references. OMP nested names use `__`; Copilot uses
-`/evcrate-cmd-*`. The canonical `.claude` scanner currently derives names from
-paths and the CLI parser accepts bare operational actions, so prefix enforcement is
-a documented/target convention and a known follow-up, not a completed source change.
-Shell commands (`npm`, `node`, `python3`, `cp`, `export`) remain normal executable
-syntax and are not slash resource names.
+Core docs use `/cmd-*`; OMP nested names use `__`, and Copilot uses
+`/evcrate-cmd-*`. The canonical scanner/parser do not yet enforce this convention;
+it is a documented follow-up, not a source rename. Shell commands remain executable
+syntax, not slash resource names.
 
 ## Documentation navigation
 
-- [System architecture](./system-architecture.md) — central distribution,
-  controller, supervision, wire, isolation, and publication authority.
-- [Project overview and PDR](./project-overview-pdr.md) — requirements and acceptance.
-- [Code standards](./code-standards.md) — implementation rules and boundaries.
-- [Project roadmap](./project-roadmap.md) — phases, gates, and unresolved work.
-- [Project changelog](./project-changelog.md) — historical phase evidence.
-- [Project changelog archive](./project-changelog-archive.md) — older phase detail.
+- [System architecture](./system-architecture.md) — central contracts.
+- [Project overview and PDR](./project-overview-pdr.md) — requirements.
+- [Code standards](./code-standards.md) — implementation rules.
+- [Project roadmap](./project-roadmap.md) — phases and gates.
+- [Project changelog](./project-changelog.md) — historical evidence.
+- [Project changelog archive](./project-changelog-archive.md) — older detail.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.

@@ -85,7 +85,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "node scripts/prepare-release-assets.cjs ${nextRelease.version}"
+        "prepareCmd": "node scripts/release/semantic-release-asset-prepare.cjs ${nextRelease.version}"
       }
     ],
     [
@@ -106,7 +106,7 @@
           },
           {
             "path": "dist/release/evcrate-*-windows-x64.zip",
-            "label": "Windows x64 Archive (Validation Deferred)"
+            "label": "Windows x64 Archive"
           },
           {
             "path": "dist/release/evcrate-*-windows-x64.zip.sha256",
@@ -122,7 +122,7 @@
           },
           {
             "path": "dist/release/install.ps1",
-            "label": "Windows Installer Entrypoint (install.ps1 - Validation Deferred)"
+            "label": "Windows Installer Entrypoint (install.ps1)"
           }
         ]
       }

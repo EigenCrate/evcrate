@@ -1,8 +1,9 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline; Hook Materialization Scope
-Distribution is complete through Phase 09.  
-**Updated:** 2026-09-13
+**Status:** Current requirements baseline; Hook Materialization Scope Distribution
+is complete through Phase 09, and Windows release qualification is complete through
+Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+**Updated:** 2026-09-16
 
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -53,8 +54,11 @@ counsel bounded and fail-closed.
 - Provider switching, model substitution, local fallback, or native callback relay
   outside the managed v2 controller flow.
 - Copilot as a controller backend.
-- Windows equivalence, live vendor qualification, npm publication, deployment, or
-  operator rollout claims without separate evidence.
+- Full Windows runtime equivalence (such as `publish`, `health`, advisor execution,
+  or process-tree parity), desktop/non-admin/UAC/SmartScreen/enterprise environments,
+  Authenticode signing, live vendor qualification, npm publication, deployment, or
+  operator rollout claims. (The bounded Windows installer lifecycle and `version --json`
+  qualification is in scope under FR-17).
   
 The managed Phase-05 exception is in scope under FR-7: up to four sequential
 primary attempts with cancellable 10/20/30-second backoff and one configured
@@ -79,10 +83,14 @@ projections. A generated output is never treated as an authoring source.
 **Requirement:** Schema-2 manifests declare resource roots, output roots, HOME
 bindings, promotion order, collision policy, and any declared patches. Paths must be
 normalized, non-overlapping, non-symlinked, and contained.
+Host context roots are validated as native absolute paths by the context boundary;
+portable manifest/archive/inventory identities remain normalized relative POSIX
+paths and are not widened for Windows.
 
 **Acceptance:** Unknown fields, traversal, backslashes, duplicate roots, unsafe
 ancestors, nested/equal output roots, invalid patches, or unsupported target IDs fail
-before projection or publication.
+before projection or publication. Native path and shared ancestor checks fail before
+filesystem use; broader Windows runtime equivalence outside the installer/version subset remains out of scope.
 
 ### FR-3: Bounded resource registry and imports
 
@@ -186,8 +194,10 @@ backends.
 **Acceptance:** Each enabled adapter uses fixed executable/argv and credential-safe
 version/auth/capability probes. Runner calls use `shell:false`, allowlisted
 environment, bounded streams, stdin-only prompts, detached POSIX process groups,
-deadlines, cancellation, and descendant reaping. Qualification is repeated after
-vendor CLI upgrades and is currently a Linux-only operator gate.
+deadlines, cancellation, and descendant reaping. This remains live vendor/runtime
+qualification and is repeated after vendor CLI upgrades on Linux only. The separate
+Windows qualification covers standalone installer lifecycle and `version --json`
+under FR-17; it does not qualify adapter execution.
 
 ### FR-10: Publication and recovery
 
@@ -256,6 +266,84 @@ supports preview/apply retention/quota cleanup while protecting active records.
 History failure reports `audit_status: "degraded"` without failing inference or
 required state.
 
+### FR-14: Deterministic Windows predecessor boundary
+
+**Requirement:** Build a reproducible Windows fixture from the shared archive and
+installer authorities, then resolve the predecessor for a release candidate using
+bounded, read-only stable-release metadata and exact-four verification. The
+qualification state is irreversible: use the verified `bootstrap-fixture`
+(`1.0.0`/`v1.0.0`/`a`×40) only before any qualified release; afterward require the
+latest stable release and never fall back to an older release or bootstrap.
+
+**Acceptance:** Independent fixture builds have identical names, sizes, SHA-256
+digests, and bytes. Exact labels are unique and paired with canonical ZIP,
+sidecar, metadata, and `install.ps1` assets. Missing/tampered/duplicate assets,
+unqualified latest releases, candidate versions not greater than the predecessor,
+or required API/token/download failures fail closed with no partial output.
+The normalized predecessor handoff is ready for receipt staging. Predecessor
+qualification is verified as part of the bounded Windows release qualification (FR-17).
+
+
+### FR-15: Canonical semantic-release candidate and verify-only publisher
+
+**Requirement:** Produce one release candidate through the canonical semantic-release
+v22 API in a disposable local bare mirror, then publish only the verified candidate
+bytes. Candidate execution uses the canonical plugin order with the GitHub plugin
+removed, `EVCRATE_RELEASE_ASSET_MODE=build`, and no release credentials. The
+publisher uses the canonical configuration with `EVCRATE_RELEASE_ASSET_MODE=verify`.
+
+**Acceptance:** A clean checkout captures one branch and exact lowercase 40-hex
+source commit. A releasable run verifies exact seven candidate assets and exact four
+predecessor assets, stages those bytes plus the qualification harness, and writes one
+canonical `evcrate-release-candidate/v1` `candidate.json` receipt. Receipt file
+records are sorted and hash the staged bytes. A no-release result returns success
+with `has_release=false` and no handoff.
+
+The candidate emits exactly nine safe scalar outputs:
+`has_release`, `version`, `tag`, `source_commit`, `artifact_name`,
+`windows_archive_sha256`, `windows_sidecar_sha256`, `metadata_sha256`, and
+`install_ps1_sha256`. The publisher requires the receipt, run/release identity, and
+producer hashes; it copies only verified `assets/` into `dist/release`, cannot build
+or repair, and fails closed on tampering, `semantic-release=false`, or any
+version/tag/source mismatch.
+The final semantic-release result must match the receipt exactly. Candidate and
+publisher verification feed the release matrix without authorizing live npm/GitHub publication.
+
+### FR-16: Release workflow trust separation
+
+**Requirement:** The release workflow separates candidate production, native Windows
+qualification, and publication into jobs with least-privilege permissions. One
+immutable artifact ID and receipt bind the producer's bytes to every matrix row and
+to the verify-only publisher.
+
+**Acceptance:** `main` push/manual runs use non-canceling concurrency and read-only
+defaults. The Ubuntu/Node 24.21.0 producer retains its Linux gates and uploads only
+on `has_release=true`; four `windows-2025` x64 PowerShell 5.1/7 × Node
+22.19.0/24.21.0 rows consume the exact artifact ID without checkout/npm.
+The sole publisher starts only after all four matrix rows succeed, checks out the
+producer SHA, copies exactly seven assets, re-verifies receipt/hash/run identity,
+and invokes semantic-release in `verify` mode. Phase 09 integrated qualification
+verified this trust separation and final published-byte equality.
+
+
+### FR-17: Bounded Windows release qualification
+
+**Requirement:** Qualify one immutable release candidate across the supported
+hosted Windows matrix for standalone installer lifecycle operations and clean-install
+verification before publication. Broad CLI Windows equivalence remains out of scope.
+
+**Status:** Complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+
+**Acceptance:** Hosted `windows-2025` x64 execution succeeds across all four release
+matrix rows (Windows PowerShell 5.1 and PowerShell 7 × Node 22.19.0 and Node 24.21.0)
+over the exact candidate artifact ID. Standalone lifecycle operations (`install`,
+repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and `version --json` execute
+without error; state and bin directories remain contained under `%LOCALAPPDATA%\EVCrate`;
+and diagnostic PR smoke (`windows-smoke.yml` on PowerShell 7 + Node 22.19.0) passes
+without publication authority. Runtime commands (`publish`, `health`, advisor execution,
+process-tree parity), desktop/UAC/SmartScreen/Authenticode/enterprise-policy environments,
+and execution-policy workarounds remain explicitly excluded. Live vendor/runtime
+execution remains Linux-only.
 ## Non-functional requirements
 
 | Area | Requirement |
@@ -269,20 +357,29 @@ required state.
 | Maintainability | One parser, path policy, hashing policy, lock protocol, and error serializer per boundary. |
 
 ## Observable release gates
-**v2.0.0 release status:** Deterministic acceptance and installed Linux verification
-are complete (512/512 tests, 29/29 controller-closure files, and verified standalone
-Linux unpack installation with HOME/project publication proof). Live vendor qualification
-and production `$HOME/.evcrate/` publication remain operator-gated.
+
+**Current status:** Phase 09 integrated Windows proof and final seven-asset byte
+comparison are complete. Phase 10 post-proof documentation and bounded support
+cutover are complete. Deterministic Linux publication/installer evidence remains
+separate from live vendor qualification and production `$HOME/.evcrate/` publication.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and 29-file
    controller closure.
 3. Publication dry-run reports only authorized target, HOME, and project changes.
-4. Apply and recovery preserve unmanaged files, enforce scope isolation, and reject CAS changes.
-5. Advisor policy, checkpoint, envelope, history, timeout, cancellation, and
-   cleanup contracts are exercised with bounded non-sensitive fixtures.
+4. Apply and recovery preserve unmanaged files, enforce scope isolation, and reject
+   CAS changes.
+5. Advisor policy, checkpoint, envelope, history, timeout, cancellation, and cleanup
+   contracts are exercised with bounded non-sensitive fixtures.
 6. Linux live qualification is run separately for each enabled installed CLI.
-7. Windows, npm publication, rollout, and live release remain explicitly gated.
+7. Phase 06 candidate orchestration passes its release/receipt/publisher contract
+   checks (`release-orchestration.test.mjs` and `npm run test:release`); this is
+   deterministic repository evidence, not a live publication.
+8. Phase 09 Windows qualification passes all four hosted `windows-2025` rows and
+   final seven-asset byte comparison.
+9. Phase 10 documentation/support cutover records the exact installer and
+   `version --json` Windows boundary; npm/GitHub publication, operator rollout,
+   desktop/signing environments, and live runtime/vendor execution remain gated.
 ## Documentation map
 
 - [System architecture](./system-architecture.md) — detailed controller,

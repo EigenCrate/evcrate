@@ -102,12 +102,14 @@ export function isPublicationPartialError(value: unknown): value is PublicationP
   return value instanceof PublicationPartialError;
 }
 export function publicationStateRoot(homeRoot: string): string { return join(resolve(homeRoot), PUBLICATION_STATE_DIRECTORY); }
-function fail(code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'RECOVERY_FAILED' | 'CAS_CONFLICT' | 'PATH_UNSAFE' = 'PUBLICATION_FAILED'): never { throw new ControlPlaneError(code); }
+function fail(code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'RECOVERY_FAILED' | 'CAS_CONFLICT' | 'PATH_UNSAFE' = 'PUBLICATION_FAILED', detail?: string): never { throw new ControlPlaneError(code, detail); }
 function markerPath(stateRoot: string): string { return join(stateRoot, 'release-marker.json'); }
 function checkAbort(signal?: AbortSignal): void { if (signal?.aborted) fail(); }
 function sameSnapshot(left: PublicationNodeSnapshot, right: PublicationNodeSnapshot): boolean {
-  return ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash']
-    .every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
+  const keys = process.platform === 'win32'
+    ? ['present', 'kind', 'size', 'hash']
+    : ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash'];
+  return keys.every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
 }
 function assertBefore(operation: PlannedPublicationOperation): void {
   const controller = operation.target === 'advisor-controller';
@@ -121,7 +123,8 @@ function assertIntended(operation: PlannedPublicationOperation): PublicationNode
     return current;
   }
   if (!current.present || current.kind !== (controller ? 'directory' : 'file')
-    || current.hash !== operation.intendedHash || current.mode !== operation.mode) {
+    || current.hash !== operation.intendedHash
+    || (process.platform !== 'win32' && current.mode !== operation.mode)) {
     fail('PUBLICATION_FAILED');
   }
   return current;
@@ -569,10 +572,10 @@ function existingOwnerControlledAncestor(path: string): string {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         if (error instanceof ControlPlaneError) throw error;
-        fail('PATH_UNSAFE');
+        fail('PATH_UNSAFE', `failed stating ancestor of "${path}" at "${current}": ${(error as Error).message}`);
       }
       const parent = dirname(current);
-      if (parent === current) fail('PATH_UNSAFE');
+      if (parent === current) fail('PATH_UNSAFE', `reached filesystem root without finding owner controlled ancestor for "${path}"`);
       current = parent;
     }
   }
@@ -598,7 +601,10 @@ function preflightStateVolume(stateRoot: string, destinationRoot: string): void 
   assertRealDirectory(destinationRoot);
   assertOwnerControlledDirectory(destinationRoot);
   assertNoSymlinkAncestors(stateRoot);
-  if (!sameVolume(destinationRoot, existingOwnerControlledAncestor(stateRoot))) fail('PATH_UNSAFE');
+  const ancestor = existingOwnerControlledAncestor(stateRoot);
+  if (!sameVolume(destinationRoot, ancestor)) {
+    fail('PATH_UNSAFE', `destinationRoot "${destinationRoot}" and stateRoot ancestor "${ancestor}" are on different volumes`);
+  }
 }
 
 function preflightTransaction(
@@ -614,12 +620,12 @@ function preflightTransaction(
   }
   assertNoSymlinkAncestors(descriptor.transactionWorkspaceRoot);
   if (lstatSync(descriptor.transactionWorkspaceRoot, { throwIfNoEntry: false }) !== undefined) {
-    fail('PATH_UNSAFE');
+    fail('PATH_UNSAFE', `transactionWorkspaceRoot already exists: "${descriptor.transactionWorkspaceRoot}"`);
   }
-  if (!sameVolume(
-    descriptor.destinationRoot,
-    existingOwnerControlledAncestor(dirname(descriptor.transactionWorkspaceRoot))
-  )) fail('PATH_UNSAFE');
+  const workspaceAncestor = existingOwnerControlledAncestor(dirname(descriptor.transactionWorkspaceRoot));
+  if (!sameVolume(descriptor.destinationRoot, workspaceAncestor)) {
+    fail('PATH_UNSAFE', `destinationRoot "${descriptor.destinationRoot}" and workspace ancestor "${workspaceAncestor}" are on different volumes`);
+  }
   if (plan.bindings.some(({ operations }) => operations.some(({ action }) => action === 'conflict'))) fail();
 }
 function applyTransaction(
@@ -650,13 +656,17 @@ function applyTransaction(
     const workspaceInode = Number(workspace.ino);
     const workspaceParentDevice = Number(workspaceParent.dev);
     const workspaceParentInode = Number(workspaceParent.ino);
+    const validDevice = process.platform === 'win32'
+      ? Number.isFinite(workspaceDevice) && Number.isFinite(workspaceParentDevice)
+      : Number.isSafeInteger(workspaceDevice) && Number.isSafeInteger(workspaceParentDevice);
+    const validInode = process.platform === 'win32'
+      ? Number.isFinite(workspaceInode) && workspaceInode >= 0 && Number.isFinite(workspaceParentInode) && workspaceParentInode >= 0
+      : Number.isSafeInteger(workspaceInode) && workspaceInode > 0 && Number.isSafeInteger(workspaceParentInode) && workspaceParentInode > 0;
     if (!workspace.isDirectory() || workspace.isSymbolicLink()
-      || !Number.isSafeInteger(workspaceDevice) || !Number.isSafeInteger(workspaceInode)
-      || !Number.isSafeInteger(workspaceParentDevice) || !Number.isSafeInteger(workspaceParentInode)
-      || workspaceDevice !== workspaceParentDevice || workspaceInode <= 0 || workspaceParentInode <= 0) {
-      fail('PATH_UNSAFE');
+      || !validDevice || !validInode
+      || workspaceDevice !== workspaceParentDevice) {
+      fail('PATH_UNSAFE', `workspace validation failed: dev=${workspaceDevice}, parentDev=${workspaceParentDevice}, ino=${workspaceInode}, parentIno=${workspaceParentInode}`);
     }
-    assertOwnerOnlyDirectory(descriptor.transactionWorkspaceRoot);
     const progressRoot = join(descriptor.transactionWorkspaceRoot, 'progress');
     mkdirSync(progressRoot, { recursive: true, mode: 0o700 });
     assertOwnerOnlyDirectory(progressRoot);
@@ -1025,7 +1035,9 @@ export function publishApply(
   ensureHomeDirectory(context.homeRoot);
   preflightStateVolume(stateRoot, context.homeRoot);
   return withPublishLock(stateRoot, () => {
-    if (!sameVolume(stateRoot, context.homeRoot)) fail('PATH_UNSAFE');
+    if (!sameVolume(stateRoot, context.homeRoot)) {
+      fail('PATH_UNSAFE', `stateRoot "${stateRoot}" and homeRoot "${context.homeRoot}" are on different volumes`);
+    }
     recoverAndMigrateHomeStateUnlocked(stateRoot, context.homeRoot);
     const previousMarker = readOptionalPublicationMarker(markerPath(stateRoot));
     const plan = homePublicationPlan(context, stateRoot, previousMarker);

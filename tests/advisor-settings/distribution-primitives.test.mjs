@@ -45,8 +45,8 @@ test('policy read, stage, and apply preserve canonical bytes and owner-only mode
   const applied = applyAdvisorPolicy(destination, policy, absent.revision, { stateRoot });
   assert.deepEqual(applied.policy, policy);
   assert.deepEqual([...applied.bytes], [...canonicalAdvisorPolicy(policy).bytes]);
-  assert.equal(statSync(destination).mode & 0o777, 0o600);
-  assert.equal(readAdvisorPolicy(destination).mode.mode, 0o600);
+  assert.equal(statSync(destination).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
+  assert.equal(readAdvisorPolicy(destination).mode.mode, process.platform === 'win32' ? 0o666 : 0o600);
 });
 
 test('stale revisions and unsafe policy files fail closed without replacement', () => {
@@ -58,8 +58,10 @@ test('stale revisions and unsafe policy files fail closed without replacement', 
   const before = readFileSync(destination);
   assert.throws(() => applyAdvisorPolicy(destination, { ...policy, wait: { ...policy.wait, warn_after_ms: 60000 } }, absent.revision, { stateRoot }), code('CAS_CONFLICT'));
   assert.deepEqual(readFileSync(destination), before);
-  chmodSync(destination, 0o640);
-  assert.throws(() => readAdvisorPolicy(destination), code('PATH_UNSAFE'));
+  if (process.platform !== 'win32') {
+    chmodSync(destination, 0o640);
+    assert.throws(() => readAdvisorPolicy(destination), code('PATH_UNSAFE'));
+  }
 });
 
 test('policy replacement boundary recovers the old complete document', () => {

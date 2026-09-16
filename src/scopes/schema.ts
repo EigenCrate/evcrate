@@ -76,7 +76,7 @@ export function scopePath(packageRoot: string, scope: ScopeKind, projectId?: str
   const root = scopeRoot(packageRoot);
   if (scope === 'global') return containedPath(root, 'global.json');
   if (projectId === undefined) invalid();
-  return containedPath(root, join('projects', `${validateProjectIdentity(projectId)}.json`));
+  return containedPath(root, `projects/${validateProjectIdentity(projectId)}.json`);
 }
 function ensureDirectory(path: string): void {
   assertNoSymlinkAncestors(path);

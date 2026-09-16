@@ -22,7 +22,7 @@ export interface ScopeChangeTokenRecord {
 }
 function conflict(): never { throw new ControlPlaneError('CAS_CONFLICT'); }
 function tokenPath(stateRoot: string, token: string): string {
-  return containedPath(stateRoot, join('scope-changes', `${validateToken(token)}.json`));
+  return containedPath(stateRoot, `scope-changes/${validateToken(token)}.json`);
 }
 function jsonRecord(record: ScopeChangeTokenRecord): Record<string, unknown> {
   return {

@@ -1,5 +1,5 @@
 import { lstatSync, renameSync, unlinkSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { assertOwnerControlledDirectory, assertOwnerControlledPath, containedPath, assertNoSymlinkAncestors } from '../filesystem/paths.js';
@@ -41,7 +41,7 @@ function safeJournalPath(commonParent: string, value: unknown): string {
   if (typeof value !== 'string') fail('ROLLBACK_FAILED');
   try {
     const path = containedPath(commonParent, value);
-    if (dirname(path) !== commonParent || !path.split('/').at(-1)?.startsWith(PROMOTION_BACKUP_PREFIX)) fail('ROLLBACK_FAILED');
+    if (dirname(path) !== commonParent || !basename(path).startsWith(PROMOTION_BACKUP_PREFIX)) fail('ROLLBACK_FAILED');
     assertNoSymlinkAncestors(path);
     return path;
   } catch { fail('ROLLBACK_FAILED'); }
