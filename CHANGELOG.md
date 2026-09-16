@@ -1,3 +1,10 @@
+## [2.2.0](https://github.com/EigenCrate/evcrate/compare/v2.1.0...v2.2.0) (2026-09-16)
+
+
+### 🚀 Features
+
+* **windows:** implement Windows release qualification, installer lifecycle support, and publication fixes ([fb13ad8](https://github.com/EigenCrate/evcrate/commit/fb13ad895a0f49816b271ae5bab29a782982f60a))
+
 ## [2.1.0](https://github.com/EigenCrate/evcrate/compare/v2.0.1...v2.1.0) (2026-09-13)
 
 
