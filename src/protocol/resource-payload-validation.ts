@@ -50,10 +50,16 @@ export function validateToken(value: unknown): string {
   return value;
 }
 export function validateSourcePath(value: unknown): string {
-  const path = boundedText(value, 4096, 'source path');
-  if (path.includes('\\') || path.includes('\0')) invalidResourcePayload();
+  let path = boundedText(value, 4096, 'source path');
+  if (path.includes('\0')) invalidResourcePayload();
+  if (process.platform === 'win32') {
+    path = path.replace(/\\/g, '/');
+  } else if (path.includes('\\')) {
+    invalidResourcePayload();
+  }
+  const isWindowsDrive = /^[A-Za-z]:\//u.test(path);
   const parts = path.split('/');
-  const start = path.startsWith('/') ? 1 : 0;
+  const start = path.startsWith('/') ? 1 : isWindowsDrive ? 1 : 0;
   if (parts.slice(start).some((part, index) => !part || part === '.' || part === '..'
     || (start === 0 && index === 0 && part.endsWith(':')) || isSensitivePathSegment(part))) invalidResourcePayload();
   return path;

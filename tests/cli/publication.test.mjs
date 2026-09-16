@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createPublicationPlan, main, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext } from '../../dist/index.js';
+import { fileURLToPath } from 'node:url';
+import { ControlPlaneError, createPublicationPlan, main, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext } from '../../dist/index.js';
 import { PublicationPartialError } from '../../dist/distribution/publication.js';
 
-const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]$/u, '');
 const bindingOrder = ['.omp'];
 const dryRun = Object.freeze({
   scope: 'home', projectIdentity: null,
@@ -185,6 +186,28 @@ test('target recovery reads only publication state and leaves advisor settings u
     assert.equal(outcome.action, 'none');
     assert.deepEqual(readFileSync(policy), bytes);
     assert.equal(Number(lstatSync(policy).mode) & 0o777, beforeMode);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('publish --apply --debug outputs debug detail on failure', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-debug-'));
+  try {
+    const handler = {
+      publishApply: () => {
+        throw new ControlPlaneError('PATH_UNSAFE', 'custom debug test reason');
+      }
+    };
+    const captured = capture();
+    captured.output.isTTY = true;
+    const exitCode = await main(
+      ['publish', '--apply', '--debug', '--target', 'omp'],
+      runtime(home, captured, handler)
+    );
+    assert.equal(exitCode, 3);
+    const text = captured.values.join('');
+    assert.ok(text.includes('[DEBUG] Detail: custom debug test reason'));
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

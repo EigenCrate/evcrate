@@ -41,7 +41,7 @@
     "test": "npm run build && npm run test:protocol && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:validation-rollout && npm run test:advisor-controller && npm run test:release && npm run test:installer:linux && npm run test:distribution:rollout",
     "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
-    "semantic-release": "semantic-release",
+    "semantic-release": "node scripts/release/publish-release.cjs",
     "generate:brief": "node scripts/generate-runtime-brief.mjs",
     "generate:inventory": "node scripts/generate-controller-inventory.mjs",
     "generate:registry": "node scripts/generate-resource-registry.mjs",
@@ -49,9 +49,12 @@
     "generate:all": "npm run generate:inventory && npm run build && npm run generate:registry && npm run generate:manifests",
     "prepack": "npm run build && node scripts/generate-resource-registry.mjs",
     "release:check": "node -e \"require('./scripts/release/runtime-closure.cjs').validateRuntimeClosure(process.cwd())\"",
+    "release:candidate": "node scripts/release/run-release-candidate.cjs",
     "release:prepare": "node scripts/prepare-release-assets.cjs",
-    "test:release": "node --test tests/distribution/private-release-artifacts.test.mjs",
+    "release:verify-assets": "node scripts/release/asset-verification.cjs",
+    "test:release": "node --test tests/distribution/private-release-artifacts.test.mjs tests/distribution/release-orchestration.test.mjs",
     "test:installer:linux": "node --test tests/installers/*.test.mjs",
+    "test:installer:windows": "node tests/installers/windows-release-qualification.mjs",
     "test:distribution:rollout": "node --test tests/distribution/private-unpack-rollout.test.mjs"
   },
   "repository": {

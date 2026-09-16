@@ -1,5 +1,5 @@
 import { canonicalJson } from '../protocol/json.js';
-import { serializeControlPlaneError } from '../errors/control-plane-error.js';
+import { serializeControlPlaneError, CONTROL_PLANE_ERROR_DETAILS } from '../errors/control-plane-error.js';
 import type { SerializedControlPlaneError } from '../errors/control-plane-error.js';
 import { CONTROL_PLANE_EXIT_CODES } from '../errors/control-plane-error.js';
 import type { AdvisorSettingsResult } from '../protocol/advisor-settings.js';
@@ -21,6 +21,7 @@ export type CliResult = ResourceResult | AdvisorSettingsResult | DiagnosticSucce
 export interface RenderOptions {
   readonly json?: boolean;
   readonly isTTY?: boolean;
+  readonly debug?: boolean;
 }
 
 export function createCliErrorResult(
@@ -34,14 +35,19 @@ export function createCliErrorResult(
   });
 }
 
-function statusText(result: Record<string, unknown>): string {
+function statusText(result: Record<string, unknown>, debug = false): string {
   if (result.status === 'QUALIFIED') {
     const target = result.target as Record<string, unknown> | null;
     return target ? `qualified ${String(target.backend)} ${String(target.model)}` : 'qualified';
   }
   if (result.status === 'FAILED' || result.status === 'error') {
     const error = result.error as Record<string, unknown> | undefined;
-    return error ? `error ${String(error.code)}: ${String(error.message)}` : 'error';
+    const isDebug = debug || process.argv.includes('--debug')
+      || process.env.EVCRATE_DEBUG === '1' || process.env.EVCRATE_DEBUG === 'true';
+    const detail = (isDebug && error && CONTROL_PLANE_ERROR_DETAILS.get(error))
+      ? `\n[DEBUG] Detail: ${CONTROL_PLANE_ERROR_DETAILS.get(error)}`
+      : '';
+    return error ? `error ${String(error.code)}: ${String(error.message)}${detail}` : 'error';
   }
   if (result.status === 'partial') {
     const error = result.error as Record<string, unknown> | undefined;
@@ -63,7 +69,7 @@ function statusText(result: Record<string, unknown>): string {
 export function renderResult(result: CliResult, options: RenderOptions = {}): string {
   const machine = options.json === true || options.isTTY !== true;
   if (machine) return `${canonicalJson(result)}\n`;
-  return `${statusText(result as unknown as Record<string, unknown>)}\n`;
+  return `${statusText(result as unknown as Record<string, unknown>, options.debug)}\n`;
 }
 
 export function writeResult(

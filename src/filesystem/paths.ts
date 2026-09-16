@@ -1,10 +1,10 @@
 import { lstatSync } from 'node:fs';
 import type { Stats } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 
-function unsafe(): never {
-  throw new ControlPlaneError('PATH_UNSAFE');
+function unsafe(detail?: string): never {
+  throw new ControlPlaneError('PATH_UNSAFE', detail);
 }
 
 function inspect(path: string): Stats | null {
@@ -13,7 +13,7 @@ function inspect(path: string): Stats | null {
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === 'ENOENT' || code === 'ENOTDIR') return null;
-    unsafe();
+    unsafe(`inspect failed on "${path}": ${(error as Error).message}`);
   }
   return null;
 }
@@ -21,13 +21,14 @@ function inspect(path: string): Stats | null {
 /** Reject symlinked components that already exist in an absolute path. */
 export function assertNoSymlinkAncestors(value: string): void {
   const absolute = resolve(value);
-  let current = absolute.startsWith(sep) ? sep : '';
-  const parts = absolute.startsWith(sep) ? absolute.slice(1).split(sep) : absolute.split(sep);
+  const root = parse(absolute).root;
+  let current = root;
+  const parts = absolute.slice(root.length).split(/[/\\]/u);
   for (const part of parts) {
     if (!part) continue;
-    current = current ? join(current, part) : part;
+    current = join(current, part);
     const stat = inspect(current);
-    if (stat?.isSymbolicLink()) unsafe();
+    if (stat?.isSymbolicLink()) unsafe(`symlink or reparse point detected in ancestor: "${current}"`);
     if (stat === null) return;
   }
 }
@@ -42,7 +43,8 @@ export function normalizeRelativePath(value: unknown): string {
 }
 
 export function containedPath(root: string, value: unknown, mustExist = false): string {
-  const normalized = normalizeRelativePath(value);
+  const normalizedValue = typeof value === 'string' ? value.split('\\').join('/') : value;
+  const normalized = normalizeRelativePath(normalizedValue);
   const resolvedRoot = resolve(root);
   assertNoSymlinkAncestors(resolvedRoot);
   const candidate = join(resolvedRoot, ...normalized.split('/'));
@@ -59,26 +61,30 @@ export function containedPath(root: string, value: unknown, mustExist = false): 
 
 export function assertRegularFile(path: string): Stats {
   const stat = inspect(path);
-  if (!stat || stat.isSymbolicLink() || !stat.isFile()) unsafe();
+  if (!stat || stat.isSymbolicLink() || !stat.isFile()) unsafe(`not a regular file: "${path}"`);
   return stat;
 }
 
 export function assertRealDirectory(path: string): Stats {
   const stat = inspect(path);
-  if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) unsafe();
+  if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) unsafe(`not a real directory: "${path}"`);
   return stat;
 }
 
 export function assertOwnerControlledDirectory(path: string): Stats {
   const stat = assertRealDirectory(path);
   if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
+  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) {
+    unsafe(`directory not owner controlled: "${path}" (owner=${stat.uid}, current=${process.getuid()})`);
+  }
   return stat;
 }
 export function assertOwnerOnlyDirectory(path: string): Stats {
   const stat = assertRealDirectory(path);
   if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
+  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) {
+    unsafe(`directory not owner only: "${path}" (owner=${stat.uid}, current=${process.getuid()})`);
+  }
   return stat;
 }
 export function assertOwnerControlledPath(rootValue: string, candidateValue: string): void {
@@ -88,7 +94,7 @@ export function assertOwnerControlledPath(rootValue: string, candidateValue: str
   if (suffix === '..' || suffix.startsWith(`..${sep}`) || isAbsolute(suffix)) unsafe();
   assertOwnerControlledDirectory(root);
   let current = root;
-  for (const part of suffix ? suffix.split(sep) : []) {
+  for (const part of suffix ? suffix.split(/[/\\]/u) : []) {
     current = join(current, part);
     assertOwnerControlledDirectory(current);
   }
@@ -120,6 +126,7 @@ export function safeParent(path: string): string {
 }
 
 export function pathOverlaps(left: string, right: string): boolean {
-  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)
+    || left.startsWith(`${right}${sep}`) || right.startsWith(`${left}${sep}`);
 }
 

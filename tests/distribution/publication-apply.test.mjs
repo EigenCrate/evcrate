@@ -6,13 +6,14 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   ControlPlaneError, MAX_RETAINED_RELEASE_AGE_MS, PERSISTED_TARGETS, publishApply, publishDryRun,
   publicationStateRoot, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext,
   runLocalBuild
 } from '../../dist/index.js';
 
-const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]$/u, '');
 const policyBytes = Buffer.from('{"version":1,"advisor":{"backend":"codex","model":"m","effort":"low","timeout_ms":60000}}\n');
 
 function directory(path) {

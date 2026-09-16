@@ -122,9 +122,10 @@ type Materialization = 'home' | 'project';
 type MutableOwnership = Record<string, Record<string, readonly string[]>>;
 
 function fail(
-  code: 'PUBLICATION_FAILED' | 'PATH_UNSAFE' | 'PROTOCOL_INVALID' = 'PUBLICATION_FAILED'
+  code: 'PUBLICATION_FAILED' | 'PATH_UNSAFE' | 'PROTOCOL_INVALID' = 'PUBLICATION_FAILED',
+  detail?: string
 ): never {
-  throw new ControlPlaneError(code);
+  throw new ControlPlaneError(code, detail);
 }
 
 function lexicalChild(root: string, value: string): string {
@@ -132,8 +133,8 @@ function lexicalChild(root: string, value: string): string {
   const resolvedRoot = resolve(root);
   const candidate = join(resolvedRoot, ...normalized.split('/'));
   const escaped = relative(resolvedRoot, resolve(candidate));
-  if (!escaped || escaped === '..' || escaped.startsWith(`..${sep}`) || isAbsolute(escaped)) {
-    fail('PATH_UNSAFE');
+  if (!escaped || escaped === '..' || escaped.startsWith(`..${sep}`) || escaped.startsWith('../') || isAbsolute(escaped)) {
+    fail('PATH_UNSAFE', `lexicalChild escaped root: root="${resolvedRoot}", candidate="${candidate}"`);
   }
   return candidate;
 }
@@ -339,7 +340,7 @@ function actionForFile(
     }, content);
   }
   const action = current.hash === null ? 'create'
-    : current.hash === intendedHash && current.snapshot.mode === mode ? 'noop' : 'update';
+    : current.hash === intendedHash && (process.platform === 'win32' || current.snapshot.mode === mode) ? 'noop' : 'update';
   return plannedOperation({
     target, binding, localRoot, relativePath, destination, action, beforeHash: current.hash,
     beforeSnapshot: current.snapshot, intendedHash, mode
@@ -501,7 +502,7 @@ function controllerBinding(
   const currentSnapshot = snapshotFor(current, descriptor.destinationRoot, true);
   const beforeHash = currentSnapshot.present ? currentSnapshot.hash as string : null;
   const action = beforeHash === null ? 'create'
-    : beforeHash === intendedHash && currentSnapshot.mode === 0o700 ? 'noop' : 'update';
+    : beforeHash === intendedHash && (process.platform === 'win32' || currentSnapshot.mode === 0o700) ? 'noop' : 'update';
   const operation: PlannedPublicationOperation = plannedOperation({
     target: 'advisor-controller', binding: descriptor.binding, localRoot: descriptor.localRoot,
     relativePath: descriptor.binding, destination: descriptor.destinationRoot, action,

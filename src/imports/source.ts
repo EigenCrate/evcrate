@@ -1,5 +1,5 @@
 import { chmodSync, lstatSync, mkdirSync, readdirSync, type Dirent, type Stats } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { hashBytes, readBoundedFile, COMPLETE_TREE_HASH_LIMITS, compareCanonicalPaths } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors, containedPath, normalizeRelativePath, isContained } from '../filesystem/paths.js';
@@ -170,7 +170,7 @@ export function materializeImportSource(source: ImportSource, destination: strin
   } else {
     const parent = dirname(destination);
     assertNoSymlinkAncestors(parent);
-    materializeFiles(parent, [{ ...source.files[0], path: source.files[0].path ? source.files[0].path : destination.split('/').at(-1) ?? '' }]);
+    materializeFiles(parent, [{ ...source.files[0], path: source.files[0].path ? source.files[0].path : basename(destination) }]);
   }
 }
 export function copyTreeBounded(source: string, destination: string): void {

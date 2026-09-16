@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   createResourceRequest, createSettingsGetResult, createAdvisorSettingsRequest,
   exitCodeForResult, main, resolveInvocationContext
 } from '../../dist/index.js';
 
-const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]+$/u, '');
 
 function capture(isTTY = false) {
   const values = [];

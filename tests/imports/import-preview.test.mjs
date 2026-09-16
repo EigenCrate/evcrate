@@ -45,7 +45,7 @@ test('preview is non-mutating, bounded, and stores owner-only replay state', () 
     const token = result.payload.token;
     const tokenPath = join(context.stateRoot, 'import-previews', `${token}.json`);
     assert.equal(existsSync(tokenPath), true);
-    assert.equal(statSync(tokenPath).mode & 0o777, 0o600);
+    assert.equal(statSync(tokenPath).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
     assert.equal(JSON.parse(readFileSync(tokenPath, 'utf8')).source_path, source);
   } finally { closePhase6Fixture(fixture); }
 });

@@ -88,7 +88,8 @@ test('local distribution check validates artifact tree without drift', () => {
 test('packaged artifact allowlist is Python-free and contains required runtime assets', () => {
   const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: packageRoot,
-    encoding: 'utf8'
+    encoding: 'utf8',
+    shell: true
   });
   const jsonIndex = packOutput.search(/[[{]/);
   const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());

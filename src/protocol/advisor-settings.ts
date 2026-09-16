@@ -291,7 +291,7 @@ export function validateSettingsMode(value: unknown): SettingsMode {
   if ((mode.kind !== 'existing' && mode.kind !== 'create') || !Number.isInteger(mode.mode)
     || (mode.mode as number) < 0 || (mode.mode as number) > 0o777) throw new ControlPlaneError('SETTINGS_INVALID');
   if (mode.kind === 'create' && mode.mode !== 0o600) throw new ControlPlaneError('SETTINGS_INVALID');
-  if (mode.kind === 'existing' && ((mode.mode as number) & 0o077) !== 0) {
+  if (process.platform !== 'win32' && mode.kind === 'existing' && ((mode.mode as number) & 0o077) !== 0) {
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
   return { kind: mode.kind, mode: mode.mode as number };

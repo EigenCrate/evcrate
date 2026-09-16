@@ -1,0 +1,887 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
+const runReleaseCandidate = require('../../scripts/release/run-release-candidate.cjs');
+const publishRelease = require('../../scripts/release/publish-release.cjs');
+const assetVerification = require('../../scripts/release/asset-verification.cjs');
+const releaseContract = require('../../scripts/release/release-contract.cjs');
+const { buildReleaseArchives } = require('../../scripts/release/archive-writers.cjs');
+const { createMinimalValidRecords } = await import('../installers/fixtures/fixture-records.mjs');
+const {
+  getRealInstallerEntry,
+  computeControllerClosureDigest,
+  computeBuildManifestDigests
+} = await import('../installers/fixtures/release-fixture-shared-helpers.mjs');
+const { buildWindowsTestReleaseSet } = await import('../installers/fixtures/windows-release-fixture.mjs');
+
+const projectRoot = process.cwd();
+
+/**
+ * Helper to build exact-seven valid release assets in a directory.
+ */
+function createExactSevenAssets(outputDir, version = '2.2.0', commit = 'c'.repeat(40)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+  const records = createMinimalValidRecords(version);
+  const sortedRecords = [...records].sort((a, b) => releaseContract.compareCodePoints(a.path, b.path));
+
+  const installSh = getRealInstallerEntry('install.sh', projectRoot);
+  const installPs1 = getRealInstallerEntry('install.ps1', projectRoot);
+
+  buildReleaseArchives({
+    records: sortedRecords,
+    installers: [installSh, installPs1],
+    outputDir,
+    version,
+    metadataGenerator: ({ inventoryDigest, platforms }) => ({
+      schema: 'evcrate-private-release/v1',
+      version,
+      tag: `v${version}`,
+      source_commit: commit,
+      node_floor: '>=22.19.0',
+      inventory_digest: inventoryDigest,
+      build_manifest_digests: computeBuildManifestDigests(sortedRecords),
+      controller_closure_digest: computeControllerClosureDigest(sortedRecords),
+      platforms,
+      installers: {
+        'install.sh': { name: 'install.sh', size: installSh.size, sha256: installSh.sha256 },
+        'install.ps1': { name: 'install.ps1', size: installPs1.size, sha256: installPs1.sha256 }
+      },
+      mutable_paths: releaseContract.MUTABLE_PATHS
+    })
+  });
+
+  fs.writeFileSync(path.join(outputDir, 'install.sh'), installSh.data);
+  fs.writeFileSync(path.join(outputDir, 'install.ps1'), installPs1.data);
+
+  return assetVerification.verifyReleaseAssetSet({
+    dir: outputDir,
+    version,
+    tag: `v${version}`,
+    sourceCommit: commit
+  });
+}
+
+test('readCanonicalReleaseConfig strictly validates canonical configuration and returns a deep copy', () => {
+  const config = runReleaseCandidate.readCanonicalReleaseConfig({ projectRoot });
+  assert.ok(Array.isArray(config.branches));
+  assert.ok(config.branches.includes('main'));
+  assert.ok(Array.isArray(config.plugins));
+
+  // Verify deep copy: mutating returned object does not affect next read
+  config.branches.push('tampered-branch');
+  const freshConfig = runReleaseCandidate.readCanonicalReleaseConfig({ projectRoot });
+  assert.equal(freshConfig.branches.includes('tampered-branch'), false);
+
+  // Rejection cases
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-config-test-'));
+  try {
+    // Missing file
+    assert.throws(
+      () => runReleaseCandidate.readCanonicalReleaseConfig({ configPath: path.join(tmpDir, 'missing.json') }),
+      /Canonical release configuration file not found/
+    );
+
+    // Invalid JSON
+    const badJsonPath = path.join(tmpDir, 'bad.json');
+    fs.writeFileSync(badJsonPath, 'not-json');
+    assert.throws(
+      () => runReleaseCandidate.readCanonicalReleaseConfig({ configPath: badJsonPath }),
+      /Failed to parse canonical release config/
+    );
+
+    // Non-object
+    const arrayJsonPath = path.join(tmpDir, 'array.json');
+    fs.writeFileSync(arrayJsonPath, '[]');
+    assert.throws(
+      () => runReleaseCandidate.readCanonicalReleaseConfig({ configPath: arrayJsonPath }),
+      /must be a non-null object/
+    );
+
+    // Missing branches
+    const noBranchesPath = path.join(tmpDir, 'no-branches.json');
+    fs.writeFileSync(noBranchesPath, JSON.stringify({ plugins: [] }));
+    assert.throws(
+      () => runReleaseCandidate.readCanonicalReleaseConfig({ configPath: noBranchesPath }),
+      /must specify "branches"/
+    );
+
+    // Empty branches array
+    const emptyBranchesPath = path.join(tmpDir, 'empty-branches.json');
+    fs.writeFileSync(emptyBranchesPath, JSON.stringify({ branches: [], plugins: [] }));
+    assert.throws(
+      () => runReleaseCandidate.readCanonicalReleaseConfig({ configPath: emptyBranchesPath }),
+      /"branches" array cannot be empty/
+    );
+
+    // Missing plugins array
+    const noPluginsPath = path.join(tmpDir, 'no-plugins.json');
+    fs.writeFileSync(noPluginsPath, JSON.stringify({ branches: ['main'] }));
+    assert.throws(
+      () => runReleaseCandidate.readCanonicalReleaseConfig({ configPath: noPluginsPath }),
+      /must specify a "plugins" array/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('createCandidatePluginSpecs retains required plugins in order, removes github, and wraps notes generator', async () => {
+  const canonicalConfig = runReleaseCandidate.readCanonicalReleaseConfig({ projectRoot });
+  const adapted = runReleaseCandidate.createCandidatePluginSpecs(canonicalConfig.plugins, {
+    canonicalRepositoryUrl: 'https://github.com/EigenCrate/evcrate'
+  });
+
+  // Exactly 6 plugins (canonical has 7: analyzer, notes, changelog, npm, exec, github, git -> minus github = 6)
+  assert.equal(adapted.length, 6);
+
+  // Verify github plugin is removed
+  const hasGithub = adapted.some((item) => {
+    const id = typeof item === 'string' ? item : (Array.isArray(item) ? item[0] : item?.path);
+    return id === '@semantic-release/github';
+  });
+  assert.equal(hasGithub, false);
+
+  // Verify notes generator is wrapped
+  // Verify notes generator is wrapped in a plugin object (not bare function) to avoid EPLUGINSCONF
+  const notesItem = adapted[1];
+  assert.ok(Array.isArray(notesItem));
+  const [notesObj, notesConfig] = notesItem;
+  assert.equal(typeof notesObj, 'object');
+  assert.equal(typeof notesObj.generateNotes, 'function');
+  assert.equal(notesObj.generateNotes.pluginName, '@semantic-release/release-notes-generator');
+  assert.equal(notesConfig.preset, 'conventionalcommits');
+
+  // Verify wrapped notes generator passes canonical repositoryUrl in context
+  const dummyContext = {
+    options: { repositoryUrl: 'file:///disposable/mirror.git' },
+    commits: [
+      {
+        message: 'feat: add windows qualification\n\nBREAKING CHANGE: none',
+        hash: 'a'.repeat(40)
+      }
+    ],
+    lastRelease: { version: '2.1.0', gitTag: 'v2.1.0', gitHead: 'b'.repeat(40) },
+    nextRelease: { version: '2.2.0', gitTag: 'v2.2.0', gitHead: 'a'.repeat(40) },
+    cwd: projectRoot,
+    logger: {
+      log: () => {},
+      error: () => {},
+      warn: () => {},
+      scope: () => ({ log: () => {}, error: () => {}, warn: () => {} })
+    }
+  };
+
+  const notesResult = await notesObj.generateNotes(notesConfig, dummyContext);
+  assert.ok(typeof notesResult === 'string');
+  assert.ok(notesResult.includes('Features') || notesResult.includes('windows qualification'));
+  // Test error on missing required plugins
+  assert.throws(
+    () => runReleaseCandidate.createCandidatePluginSpecs([['@semantic-release/commit-analyzer', {}]]),
+    /Canonical plugins missing required plugin/
+  );
+});
+test('semantic-release runtime validation accepts candidate plugins without EPLUGINSCONF and resolves callable default', async () => {
+  const canonicalConfig = runReleaseCandidate.readCanonicalReleaseConfig({ projectRoot });
+  const adapted = runReleaseCandidate.createCandidatePluginSpecs(canonicalConfig.plugins, {
+    canonicalRepositoryUrl: 'https://github.com/EigenCrate/evcrate'
+  });
+
+  // Verify CJS semantic-release export resolution
+  const rawSr = require('semantic-release');
+  const resolvedSr = typeof rawSr === 'function' ? rawSr : rawSr.default;
+  assert.equal(typeof resolvedSr, 'function');
+
+  // Verify semantic-release plugins normalize without EPLUGINSCONF
+  const pluginsModule = await import('semantic-release/lib/plugins/index.js');
+  const getPlugins = pluginsModule.default || pluginsModule;
+  const dummyContext = {
+    cwd: projectRoot,
+    options: {
+      plugins: adapted,
+      repositoryUrl: 'file:///tmp/dummy'
+    },
+    stdout: process.stdout,
+    stderr: process.stderr,
+    logger: {
+      log: () => {},
+      error: () => {},
+      warn: () => {},
+      success: () => {},
+      scope: () => ({ log: () => {}, error: () => {}, warn: () => {}, success: () => {} })
+    }
+  };
+
+  const loadedPlugins = await getPlugins(dummyContext, {});
+  assert.ok(loadedPlugins);
+  assert.equal(typeof loadedPlugins.generateNotes, 'function');
+  assert.equal(typeof loadedPlugins.analyzeCommits, 'function');
+});
+
+
+test('createLocalReleaseMirror initializes bare repo, seeds branch and tags, and cleans up', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-mirror-test-'));
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+
+  try {
+    const mirror = runReleaseCandidate.createLocalReleaseMirror({
+      cwd: projectRoot,
+      tempDir: tmpDir,
+      branch: 'main',
+      sourceCommit: head
+    });
+
+    assert.ok(mirror.mirrorPath);
+    assert.ok(mirror.mirrorUrl.startsWith('file://'));
+    assert.ok(fs.existsSync(mirror.mirrorPath));
+
+    // Verify branch ref in bare repo points to HEAD
+    const mirrorHead = execFileSync('git', ['rev-parse', 'refs/heads/main'], {
+      cwd: mirror.mirrorPath,
+      encoding: 'utf8'
+    }).trim().toLowerCase();
+    assert.equal(mirrorHead, head);
+
+    // Verify bare mirror HEAD points to the target branch ref and is fetchable
+    const symbolicHead = execFileSync('git', ['--git-dir', mirror.mirrorPath, 'symbolic-ref', 'HEAD'], {
+      encoding: 'utf8'
+    }).trim();
+    assert.equal(symbolicHead, 'refs/heads/main');
+    execFileSync('git', ['fetch', '--tags', mirror.mirrorUrl], { cwd: projectRoot, encoding: 'utf8' });
+    // Test cleanup
+    mirror.cleanup();
+    assert.equal(fs.existsSync(mirror.mirrorPath), false);
+
+    // Negative tests
+    assert.throws(
+      () => runReleaseCandidate.createLocalReleaseMirror({ cwd: projectRoot, tempDir: tmpDir, branch: 'main', sourceCommit: 'short' }),
+      /requires exact lowercase 40-hex sourceCommit/
+    );
+    assert.throws(
+      () => runReleaseCandidate.createLocalReleaseMirror({ cwd: projectRoot, tempDir: tmpDir, branch: '', sourceCommit: head }),
+      /requires valid branch name/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('writeGithubOutputs writes exact 9 keys with safe encoding and rejects invalid characters', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-output-test-'));
+  const outputFile = path.join(tmpDir, 'github_output.txt');
+
+  try {
+    const validOutputs = {
+      has_release: 'true',
+      version: '2.2.0',
+      tag: 'v2.2.0',
+      source_commit: 'a'.repeat(40),
+      artifact_name: 'release-candidate-1-1-' + 'a'.repeat(40),
+      windows_archive_sha256: 'b'.repeat(64),
+      windows_sidecar_sha256: 'c'.repeat(64),
+      metadata_sha256: 'd'.repeat(64),
+      install_ps1_sha256: 'e'.repeat(64)
+    };
+
+    runReleaseCandidate.writeGithubOutputs(validOutputs, { githubOutput: outputFile });
+
+    const content = fs.readFileSync(outputFile, 'utf8');
+    const lines = content.trim().split('\n');
+    assert.equal(lines.length, 9);
+    assert.ok(lines.includes('has_release=true'));
+    assert.ok(lines.includes('version=2.2.0'));
+    assert.ok(lines.includes('tag=v2.2.0'));
+
+    // Rejection of invalid characters (injection protection)
+    assert.throws(
+      () => runReleaseCandidate.writeGithubOutputs({ version: 'bad\nvalue' }, { githubOutput: outputFile }),
+      /contains invalid characters/
+    );
+    assert.throws(
+      () => runReleaseCandidate.writeGithubOutputs({ version: 'bad value with spaces' }, { githubOutput: outputFile }),
+      /contains invalid characters/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('stageCandidateArtifact stages exact tree, hashes staged bytes, creates canonical candidate.json, and promotes atomically', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-stage-test-'));
+  const assetsDir = path.join(tmpDir, 'source-assets');
+  const predDir = path.join(tmpDir, 'source-predecessor');
+  const finalOutputDir = path.join(tmpDir, 'final-candidate');
+  const harnessPath = path.join(projectRoot, 'tests', 'installers', 'windows-release-qualification.mjs');
+
+  const version = '2.2.0';
+  const sourceCommit = '1'.repeat(40);
+  const pVersion = '1.0.0';
+  const pCommit = 'a'.repeat(40);
+
+  try {
+    // 1. Create exact 7 assets
+    createExactSevenAssets(assetsDir, version, sourceCommit);
+
+    // 2. Create exact 4 predecessor assets
+    buildWindowsTestReleaseSet({
+      outputDir: predDir,
+      version: pVersion,
+      commit: pCommit
+    });
+
+    const staged = await runReleaseCandidate.stageCandidateArtifact({
+      outputDir: finalOutputDir,
+      tempDir: tmpDir,
+      distReleaseDir: assetsDir,
+      predecessorDir: predDir,
+      predecessorInfo: {
+        kind: 'bootstrap-fixture',
+        version: pVersion,
+        tag: `v${pVersion}`,
+        sourceCommit: pCommit
+      },
+      harnessPath,
+      candidateVersion: version,
+      sourceCommit,
+      repository: 'EigenCrate/evcrate',
+      workflowRunId: 42,
+      workflowRunAttempt: 2
+    });
+
+    assert.equal(staged.stagedDir, finalOutputDir);
+    assert.ok(fs.existsSync(finalOutputDir));
+
+    // Verify layout: assets/ (7), predecessor/ (4), qualification/ (1), candidate.json (1)
+    const topEntries = fs.readdirSync(finalOutputDir).sort();
+    assert.deepEqual(topEntries, ['assets', 'candidate.json', 'predecessor', 'qualification']);
+
+    const stagedAssets = fs.readdirSync(path.join(finalOutputDir, 'assets')).sort();
+    assert.equal(stagedAssets.length, 7);
+
+    const stagedPred = fs.readdirSync(path.join(finalOutputDir, 'predecessor')).sort();
+    assert.equal(stagedPred.length, 4);
+
+    const stagedQual = fs.readdirSync(path.join(finalOutputDir, 'qualification')).sort();
+    assert.deepEqual(stagedQual, ['windows-release-qualification.mjs']);
+
+    // Verify candidate.json
+    const receiptRaw = fs.readFileSync(path.join(finalOutputDir, 'candidate.json'), 'utf8');
+    const receipt = JSON.parse(receiptRaw);
+    assert.equal(receipt.schema, 'evcrate-release-candidate/v1');
+    assert.equal(receipt.repository, 'EigenCrate/evcrate');
+    assert.equal(receipt.workflow_run_id, 42);
+    assert.equal(receipt.workflow_run_attempt, 2);
+    assert.equal(receipt.source_commit, sourceCommit);
+    assert.equal(receipt.version, version);
+    assert.equal(receipt.tag, `v${version}`);
+    assert.equal(receipt.files.length, 7);
+    assert.equal(receipt.predecessor.kind, 'bootstrap-fixture');
+    assert.equal(receipt.predecessor.version, pVersion);
+    assert.equal(receipt.predecessor.files.length, 4);
+
+    // Verify candidate.json files sort canonically by code points
+    for (let i = 1; i < receipt.files.length; i++) {
+      assert.ok(releaseContract.compareCodePoints(receipt.files[i - 1].name, receipt.files[i].name) < 0);
+    }
+    for (let i = 1; i < receipt.predecessor.files.length; i++) {
+      assert.ok(releaseContract.compareCodePoints(receipt.predecessor.files[i - 1].name, receipt.predecessor.files[i].name) < 0);
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('runCandidateRelease rejects dirty working tree when requireClean is enabled', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-runner-dirty-test-'));
+  execFileSync('git', ['init', tmpDir]);
+  fs.writeFileSync(path.join(tmpDir, 'uncommitted.txt'), 'dirty');
+  try {
+    await assert.rejects(
+      () => runReleaseCandidate.runCandidateRelease({
+        cwd: tmpDir,
+        runnerTemp: tmpDir,
+        outputDir: path.join(tmpDir, 'rc'),
+        distReleaseDir: path.join(tmpDir, 'dist'),
+        sourceCommit: 'a'.repeat(40),
+        branch: 'main',
+        requireClean: true
+      }),
+      /Working directory is dirty: clean checkout required for candidate release/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('runCandidateRelease handles no-release (false) branch: outputs has_release=false, clears outputDir, cleans mirror', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-runner-false-test-'));
+  const outputDir = path.join(tmpDir, 'release-candidate');
+  const distReleaseDir = path.join(tmpDir, 'dist-release');
+  const outputFile = path.join(tmpDir, 'github-output.txt');
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+
+  // Create dummy outputDir to ensure it gets cleaned up on false
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputDir, 'stale.txt'), 'stale');
+
+  try {
+    const dummySemanticRelease = async (options, context) => {
+      // Assert tokens are stripped from environment
+      assert.equal(context.env.GITHUB_TOKEN, undefined);
+      assert.equal(context.env.GH_TOKEN, undefined);
+      assert.equal(context.env.NPM_TOKEN, undefined);
+      assert.equal(context.env.EVCRATE_RELEASE_ASSET_MODE, 'build');
+      return false; // simulate no release needed
+    };
+
+    const res = await runReleaseCandidate.runCandidateRelease({
+      cwd: projectRoot,
+      runnerTemp: tmpDir,
+      outputDir,
+      distReleaseDir,
+      githubOutput: outputFile,
+      sourceCommit: head,
+      branch: 'main',
+      requireClean: false,
+      semanticReleaseFn: dummySemanticRelease
+    });
+
+    assert.equal(res.hasRelease, false);
+    assert.equal(res.outputs.has_release, 'false');
+    assert.equal(res.outputs.version, '');
+    assert.equal(res.outputs.artifact_name, '');
+
+    // Output dir must be absent
+    assert.equal(fs.existsSync(outputDir), false);
+
+    // GitHub output was written
+    const outputContent = fs.readFileSync(outputFile, 'utf8');
+    assert.ok(outputContent.includes('has_release=false'));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('runCandidateRelease handles release branch with mock semantic-release: verifies assets, stages candidate, outputs scalars', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-runner-release-test-'));
+  const outputDir = path.join(tmpDir, 'release-candidate');
+  const distReleaseDir = path.join(tmpDir, 'dist-release');
+  const outputFile = path.join(tmpDir, 'github-output.txt');
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+  const version = '2.2.0';
+
+  try {
+    const dummySemanticRelease = async (options, context) => {
+      // Create exact-seven assets in distReleaseDir as semantic-release prepare would
+      createExactSevenAssets(distReleaseDir, version, head);
+
+      return {
+        lastRelease: { version: '2.1.0' },
+        nextRelease: {
+          version,
+          gitTag: `v${version}`,
+          gitHead: head,
+          notes: 'Release notes'
+        }
+      };
+    };
+
+    const res = await runReleaseCandidate.runCandidateRelease({
+      cwd: projectRoot,
+      runnerTemp: tmpDir,
+      outputDir,
+      distReleaseDir,
+      githubOutput: outputFile,
+      sourceCommit: head,
+      workflowRunId: 100,
+      workflowRunAttempt: 3,
+      requireClean: false,
+      semanticReleaseFn: dummySemanticRelease,
+      predecessorResolver: async (opts) => {
+        const { prepareWindowsPredecessor } = await import('../../scripts/release/prepare-windows-predecessor.mjs');
+        return prepareWindowsPredecessor({ ...opts, releases: [] });
+      }
+    });
+    assert.equal(res.hasRelease, true);
+    assert.equal(res.outputs.has_release, 'true');
+    assert.equal(res.outputs.version, version);
+    assert.equal(res.outputs.tag, `v${version}`);
+    assert.equal(res.outputs.source_commit, head);
+    assert.equal(res.outputs.artifact_name, `release-candidate-100-3-${head}`);
+    assert.ok(/^[0-9a-f]{64}$/.test(res.outputs.windows_archive_sha256));
+    assert.ok(/^[0-9a-f]{64}$/.test(res.outputs.windows_sidecar_sha256));
+    assert.ok(/^[0-9a-f]{64}$/.test(res.outputs.metadata_sha256));
+    assert.ok(/^[0-9a-f]{64}$/.test(res.outputs.install_ps1_sha256));
+
+    // Staged artifact exists
+    assert.ok(fs.existsSync(path.join(outputDir, 'candidate.json')));
+    assert.ok(fs.existsSync(path.join(outputDir, 'assets')));
+    assert.ok(fs.existsSync(path.join(outputDir, 'predecessor')));
+    assert.ok(fs.existsSync(path.join(outputDir, 'qualification')));
+
+    // GitHub output file contains all 9 values
+    const outRaw = fs.readFileSync(outputFile, 'utf8');
+    assert.ok(outRaw.includes('has_release=true'));
+    assert.ok(outRaw.includes(`version=${version}`));
+    assert.ok(outRaw.includes(`artifact_name=release-candidate-100-3-${head}`));
+    // Rejection when semanticRelease returns an unrelated gitHead commit
+    const unrelatedCommit = 'f'.repeat(40);
+    await assert.rejects(
+      () => runReleaseCandidate.runCandidateRelease({
+        cwd: projectRoot,
+        runnerTemp: tmpDir,
+        outputDir,
+        distReleaseDir,
+        githubOutput: outputFile,
+        sourceCommit: head,
+        workflowRunId: 101,
+        workflowRunAttempt: 1,
+        requireClean: false,
+        semanticReleaseFn: async () => ({
+          lastRelease: { version: '2.1.0' },
+          nextRelease: {
+            version,
+            gitTag: `v${version}`,
+            gitHead: unrelatedCommit,
+            notes: 'Release notes'
+          }
+        })
+      }),
+      /Release gitHead "f{40}" does not match captured sourceCommit/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+
+});
+
+test('runCandidateRelease cleans mirror when semanticRelease throws an error', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-runner-error-test-'));
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+
+  try {
+    const throwingSemanticRelease = async () => {
+      throw new Error('Simulated semantic-release catastrophic error');
+    };
+
+    await assert.rejects(
+      () => runReleaseCandidate.runCandidateRelease({
+        cwd: projectRoot,
+        runnerTemp: tmpDir,
+        outputDir: path.join(tmpDir, 'rc'),
+        distReleaseDir: path.join(tmpDir, 'dist'),
+        sourceCommit: head,
+        branch: 'main',
+        requireClean: false,
+        semanticReleaseFn: throwingSemanticRelease
+      }),
+      /Simulated semantic-release catastrophic error/
+    );
+
+    // Verify no leftover mirror directories under runnerTemp
+    const remaining = fs.readdirSync(tmpDir).filter((e) => e.startsWith('evcrate-release-mirror-'));
+    assert.equal(remaining.length, 0);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('publish-release validates receipt, verifies assets, copies to dist/release, and enforces verify mode', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-publish-test-'));
+  const candidateDir = path.join(tmpDir, 'release-candidate');
+  const distReleaseDir = path.join(tmpDir, 'dist-release');
+  const assetsDir = path.join(tmpDir, 'source-assets');
+  const predDir = path.join(tmpDir, 'source-predecessor');
+  const harnessPath = path.join(projectRoot, 'tests', 'installers', 'windows-release-qualification.mjs');
+
+  const version = '2.2.0';
+  const commit = '1'.repeat(40);
+
+  try {
+    // Stage candidate
+    createExactSevenAssets(assetsDir, version, commit);
+    buildWindowsTestReleaseSet({ outputDir: predDir, version: '1.0.0', commit: 'a'.repeat(40) });
+
+    await runReleaseCandidate.stageCandidateArtifact({
+      outputDir: candidateDir,
+      tempDir: tmpDir,
+      distReleaseDir: assetsDir,
+      predecessorDir: predDir,
+      predecessorInfo: { kind: 'bootstrap-fixture', version: '1.0.0', tag: 'v1.0.0', sourceCommit: 'a'.repeat(40) },
+      harnessPath,
+      candidateVersion: version,
+      sourceCommit: commit,
+      repository: 'EigenCrate/evcrate',
+      workflowRunId: 77,
+      workflowRunAttempt: 1
+    });
+
+    const receiptPath = path.join(candidateDir, 'candidate.json');
+
+    // 1. Rejection without EVCRATE_RELEASE_ASSET_MODE=verify
+    assert.throws(
+      () => publishRelease.parsePublisherOptions(['node', 'publish.js'], {}),
+      /EVCRATE_RELEASE_ASSET_MODE must be set to "verify"/
+    );
+    assert.throws(
+      () => publishRelease.parsePublisherOptions(['node', 'publish.js'], { EVCRATE_RELEASE_ASSET_MODE: 'build' }),
+      /EVCRATE_RELEASE_ASSET_MODE must be set to "verify"/
+    );
+
+    // 2. Receipt verification positive
+    const verifiedReceipt = publishRelease.verifyCandidateReceipt(receiptPath, {
+      expectedVersion: version,
+      expectedTag: `v${version}`,
+      expectedSourceCommit: commit,
+      expectedRunId: 77,
+      expectedRunAttempt: 1
+    });
+    assert.equal(verifiedReceipt.version, version);
+
+    // 3. Receipt identity mismatches
+    assert.throws(
+      () => publishRelease.verifyCandidateReceipt(receiptPath, { expectedVersion: '2.3.0' }),
+      /Receipt version "2.2.0" does not match expectedVersion "2.3.0"/
+    );
+    assert.throws(
+      () => publishRelease.verifyCandidateReceipt(receiptPath, { expectedSourceCommit: '2'.repeat(40) }),
+      /Receipt source_commit/
+    );
+    assert.throws(
+      () => publishRelease.verifyCandidateReceipt(receiptPath, { expectedRunId: 999 }),
+      /Receipt workflow_run_id/
+    );
+
+    // 4. Asset tampering rejection
+    const winZipPath = path.join(candidateDir, 'assets', `evcrate-v${version}-windows-x64.zip`);
+    const originalBytes = fs.readFileSync(winZipPath);
+    try {
+      fs.appendFileSync(winZipPath, Buffer.from('corrupt'));
+      assert.throws(
+        () => publishRelease.verifyCandidateReceipt(receiptPath, {}),
+        /size.*does not match receipt size/
+      );
+    } finally {
+      fs.writeFileSync(winZipPath, originalBytes);
+    }
+
+    // 5. Successful publish run with mock semanticRelease
+    let modeSeenInPublish = null;
+    const mockPublishSemanticRelease = async (cfg, ctx) => {
+      modeSeenInPublish = ctx.env.EVCRATE_RELEASE_ASSET_MODE;
+      // Assert distReleaseDir contains exact 7 files
+      const inDist = fs.readdirSync(distReleaseDir).sort();
+      assert.equal(inDist.length, 7);
+      return {
+        nextRelease: {
+          version,
+          gitTag: `v${version}`,
+          gitHead: commit
+        }
+      };
+    };
+
+    const pubResult = await publishRelease.runPublishRelease({
+      receiptPath,
+      distReleaseDir,
+      runnerTemp: tmpDir,
+      env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+      semanticReleaseFn: mockPublishSemanticRelease,
+      config: { branches: ['main'], plugins: [] }
+    });
+
+    assert.equal(pubResult.success, true);
+    assert.equal(pubResult.publishedRelease.version, version);
+    assert.equal(modeSeenInPublish, 'verify');
+
+    // 6. Rejection when semanticRelease returns false in publish mode
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        semanticReleaseFn: async () => false,
+        config: { branches: ['main'], plugins: [] }
+      }),
+      /semantic-release returned false \(no release\) in publish mode/
+    );
+
+    // 7. Rejection when semanticRelease returns an unrelated gitHead commit
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        semanticReleaseFn: async () => ({
+          nextRelease: {
+            version,
+            gitTag: `v${version}`,
+            gitHead: 'e'.repeat(40)
+          }
+        }),
+        config: { branches: ['main'], plugins: [] }
+      }),
+      /Published release gitHead "e{40}" does not match receipt source_commit/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI entries support -h and --help gracefully', () => {
+  const candidateHelp = execFileSync('node', ['scripts/release/run-release-candidate.cjs', '--help'], { encoding: 'utf8' });
+  assert.ok(candidateHelp.includes('Usage: node scripts/release/run-release-candidate.cjs'));
+
+  const publishHelp = execFileSync('node', ['scripts/release/publish-release.cjs', '--help'], {
+    encoding: 'utf8',
+    env: { ...process.env, EVCRATE_RELEASE_ASSET_MODE: 'verify' }
+  });
+  assert.ok(publishHelp.includes('Usage: node scripts/release/publish-release.cjs'));
+});
+
+test('WRQ-042: .github/workflows/windows-smoke.yml enforces read-only PR triggers, Windows 2025 PS7/Node22, and pinned actions', () => {
+  const workflowPath = path.join(projectRoot, '.github', 'workflows', 'windows-smoke.yml');
+  assert.ok(fs.existsSync(workflowPath), 'windows-smoke.yml must exist');
+  const content = fs.readFileSync(workflowPath, 'utf8');
+
+  // Must not contain banned triggers
+  assert.match(content, /on:\s*\n\s*pull_request:\s*\n\s*workflow_dispatch:/u);
+  assert.doesNotMatch(content, /pull_request_target/u, 'Must not use pull_request_target');
+  assert.doesNotMatch(content, /workflow_run/u, 'Must not use workflow_run');
+  assert.doesNotMatch(content, /push:/u, 'Must not trigger on push');
+
+  // Top-level permissions: contents: read
+  assert.match(content, /permissions:\s*\n\s*contents:\s*read/u);
+  assert.doesNotMatch(content, /contents:\s*write/u, 'Must not have contents write permission');
+  assert.doesNotMatch(content, /pull-requests:\s*write/u, 'Must not have pull-requests write permission');
+  assert.doesNotMatch(content, /issues:\s*write/u, 'Must not have issues write permission');
+
+  // Concurrency with cancel-in-progress: true
+  assert.match(content, /concurrency:\s*\n\s*group:\s*windows-smoke-/u);
+  assert.match(content, /cancel-in-progress:\s*true/u);
+
+  // Job definition: windows-2025, Node 22.19.0, explicit pwsh.exe
+  assert.match(content, /runs-on:\s*windows-2025/u);
+  assert.match(content, /node-version:\s*'22\.19\.0'/u);
+  assert.match(content, /architecture:\s*x64/u);
+  assert.match(content, /--powershell\s+pwsh\.exe/u);
+
+  // Pinned actions with exact SHAs and # v4 comments
+  const checkoutPin = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4';
+  const setupNodePin = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4';
+  assert.ok(content.includes(checkoutPin), `Must use pinned checkout: ${checkoutPin}`);
+  assert.ok(content.includes(setupNodePin), `Must use pinned setup-node: ${setupNodePin}`);
+
+  // No secrets or release publication/upload
+  assert.doesNotMatch(content, /secrets\./u, 'Must not reference secrets');
+  assert.doesNotMatch(content, /upload-artifact/u, 'Must not upload artifacts');
+  assert.doesNotMatch(content, /semantic-release/u, 'Must not publish releases');
+});
+
+test('WRQ-043: windows-smoke workflow builds fixture identity, verifies exact-seven, and runs smoke harness', () => {
+  const workflowPath = path.join(projectRoot, '.github', 'workflows', 'windows-smoke.yml');
+  const content = fs.readFileSync(workflowPath, 'utf8');
+
+  // Requires --allow-fixture-identity with checked-in version and commit
+  assert.match(content, /scripts\/prepare-release-assets\.cjs[\s\S]*?--allow-fixture-identity/u);
+  assert.match(content, /scripts\/release\/asset-verification\.cjs[\s\S]*?--set\s+release/u);
+  assert.match(content, /tests\/installers\/windows-release-qualification\.mjs[\s\S]*?--mode\s+smoke/u);
+
+  // Rejects invalid commit SHA pattern
+  assert.match(content, /\^\[a-f0-9\]\{40\}\$/u);
+});
+
+test('WRQ-044: .releaserc.json replaces deferred labels with exact post-qualification labels', () => {
+  const configPath = path.join(projectRoot, '.releaserc.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+  const githubPlugin = config.plugins.find((p) => Array.isArray(p) && p[0] === '@semantic-release/github');
+  assert.ok(githubPlugin, 'GitHub plugin must be configured in .releaserc.json');
+  const assets = githubPlugin[1].assets;
+
+  const winZipAsset = assets.find((a) => a.path === 'dist/release/evcrate-*-windows-x64.zip');
+  assert.ok(winZipAsset, 'Windows zip asset must exist in .releaserc.json');
+  assert.equal(winZipAsset.label, 'Windows x64 Archive');
+
+  const winPs1Asset = assets.find((a) => a.path === 'dist/release/install.ps1');
+  assert.ok(winPs1Asset, 'Windows install.ps1 asset must exist in .releaserc.json');
+  assert.equal(winPs1Asset.label, 'Windows Installer Entrypoint (install.ps1)');
+
+  // Verify other assets remain intact with canonical labels
+  const linuxTarAsset = assets.find((a) => a.path === 'dist/release/evcrate-*-linux-x64.tar.gz');
+  assert.equal(linuxTarAsset.label, 'Linux x64 Archive');
+
+  const linuxSidecarAsset = assets.find((a) => a.path === 'dist/release/evcrate-*-linux-x64.tar.gz.sha256');
+  assert.equal(linuxSidecarAsset.label, 'Linux x64 SHA-256 Sidecar');
+
+  const winSidecarAsset = assets.find((a) => a.path === 'dist/release/evcrate-*-windows-x64.zip.sha256');
+  assert.equal(winSidecarAsset.label, 'Windows x64 SHA-256 Sidecar');
+
+  const metaAsset = assets.find((a) => a.path === 'dist/release/evcrate-*.release.json');
+  assert.equal(metaAsset.label, 'Release Metadata');
+
+  const linuxShAsset = assets.find((a) => a.path === 'dist/release/install.sh');
+  assert.equal(linuxShAsset.label, 'Linux Installer Entrypoint (install.sh)');
+
+  const changelogAsset = assets.find((a) => a.path === 'CHANGELOG.md');
+  assert.equal(changelogAsset.label, 'Changelog');
+});
+
+test('releaseContract.isValidReleaseCommitOrSource enforces strict release commit lineage and rejects merge/unrelated/malformed commits', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-lineage-test-'));
+  try {
+    execFileSync('git', ['init', tmpDir]);
+    execFileSync('git', ['-C', tmpDir, 'config', 'user.name', 'Tester']);
+    execFileSync('git', ['-C', tmpDir, 'config', 'user.email', 'tester@example.com']);
+
+    // Base commit (sourceCommit)
+    fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Base');
+    execFileSync('git', ['-C', tmpDir, 'add', '.']);
+    execFileSync('git', ['-C', tmpDir, 'commit', '-m', 'chore: base']);
+    const sourceCommit = execFileSync('git', ['-C', tmpDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+
+    // 1. Source commit equality
+    assert.equal(releaseContract.isValidReleaseCommitOrSource(sourceCommit, sourceCommit, '2.2.0', tmpDir), true);
+
+    // 2. Valid single-parent release child
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), '{}');
+    execFileSync('git', ['-C', tmpDir, 'add', 'package.json']);
+    execFileSync('git', ['-C', tmpDir, 'commit', '-m', 'chore(release): 2.2.0 [skip ci]\n\nRelease notes']);
+    const releaseChild = execFileSync('git', ['-C', tmpDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+    assert.equal(releaseContract.isValidReleaseCommitOrSource(releaseChild, sourceCommit, '2.2.0', tmpDir), true);
+
+    // 3. Unrelated direct child (different message or non-release file)
+    execFileSync('git', ['-C', tmpDir, 'checkout', sourceCommit], { stdio: 'pipe' });
+    execFileSync('git', ['-C', tmpDir, 'checkout', '-b', 'unrelated-branch'], { stdio: 'pipe' });
+    fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'feature');
+    execFileSync('git', ['-C', tmpDir, 'add', 'feature.txt']);
+    execFileSync('git', ['-C', tmpDir, 'commit', '-m', 'feat: ordinary feature']);
+    const unrelatedChild = execFileSync('git', ['-C', tmpDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+    assert.equal(releaseContract.isValidReleaseCommitOrSource(unrelatedChild, sourceCommit, '2.2.0', tmpDir), false);
+
+    // 4. Non-child commit
+    assert.equal(releaseContract.isValidReleaseCommitOrSource('f'.repeat(40), sourceCommit, '2.2.0', tmpDir), false);
+
+    // 5. Merge commit (2 parents)
+    execFileSync('git', ['-C', tmpDir, 'checkout', releaseChild], { stdio: 'pipe' });
+    execFileSync('git', ['-C', tmpDir, 'merge', '--no-ff', '-m', 'chore(release): 2.2.0 [skip ci]', unrelatedChild], { stdio: 'pipe' });
+    const mergeCommit = execFileSync('git', ['-C', tmpDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+    assert.equal(releaseContract.isValidReleaseCommitOrSource(mergeCommit, sourceCommit, '2.2.0', tmpDir), false);
+
+    // 6. Malformed and empty values
+    assert.equal(releaseContract.isValidReleaseCommitOrSource('not-a-sha', sourceCommit, '2.2.0', tmpDir), false);
+    assert.equal(releaseContract.isValidReleaseCommitOrSource('', sourceCommit, '2.2.0', tmpDir), false);
+    assert.equal(releaseContract.isValidReleaseCommitOrSource(null, sourceCommit, '2.2.0', tmpDir), false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

@@ -46,31 +46,57 @@ export class ControlPlaneError extends Error {
   readonly category: ControlPlaneErrorCategory;
   readonly action: string;
   readonly exitCode: number;
+  readonly detail?: string;
 
-  constructor(code: ControlPlaneErrorCode, message?: never) {
+  constructor(code: ControlPlaneErrorCode, detailOrOptions?: string | { readonly detail?: string; readonly cause?: unknown }) {
     const known = Object.hasOwn(DEFINITIONS, code);
     const definition = known ? DEFINITIONS[code] : DEFINITIONS.INTERNAL_ERROR;
-    super(definition.message);
+    const detail = typeof detailOrOptions === 'string' ? detailOrOptions : detailOrOptions?.detail;
+    const cause = typeof detailOrOptions === 'object' && detailOrOptions !== null ? detailOrOptions.cause : undefined;
+    super(definition.message, cause !== undefined ? { cause } : undefined);
     this.name = 'ControlPlaneError';
     this.code = known ? code : 'INTERNAL_ERROR';
     this.category = definition.category;
     this.action = definition.action;
     this.exitCode = EXIT_CODES[this.category];
+    if (detail !== undefined) {
+      this.detail = detail;
+    }
     Object.freeze(this);
   }
 }
 
-export function createControlPlaneError(code: ControlPlaneErrorCode): ControlPlaneError {
-  return new ControlPlaneError(code);
+export function createControlPlaneError(
+  code: ControlPlaneErrorCode,
+  detailOrOptions?: string | { readonly detail?: string; readonly cause?: unknown }
+): ControlPlaneError {
+  return new ControlPlaneError(code, detailOrOptions);
 }
 
 export function isControlPlaneError(value: unknown): value is ControlPlaneError {
   return value instanceof ControlPlaneError;
 }
+export const CONTROL_PLANE_ERROR_DETAILS = new WeakMap<object, string>();
+const LOGGED_DEBUG_ERRORS = new WeakSet<object>();
+
 
 export function serializeControlPlaneError(value: unknown): SerializedControlPlaneError {
+  const isDebug = process.argv.includes('--debug')
+    || process.env.EVCRATE_DEBUG === '1' || process.env.EVCRATE_DEBUG === 'true';
+  if (isDebug && typeof value === 'object' && value !== null) {
+    if (!LOGGED_DEBUG_ERRORS.has(value)) {
+      LOGGED_DEBUG_ERRORS.add(value);
+      const err = value instanceof Error ? value : new Error(String(value));
+      const detailMsg = value instanceof ControlPlaneError && value.detail ? `\n[DEBUG] Detail: ${value.detail}` : '';
+      process.stderr.write(`[DEBUG] ${err.stack ?? err.message}${detailMsg}\n`);
+    }
+  }
   const error = isControlPlaneError(value) ? value : new ControlPlaneError('INTERNAL_ERROR');
-  return { code: error.code, category: error.category, action: error.action, message: error.message };
+  const serialized = { code: error.code, category: error.category, action: error.action, message: error.message };
+  if (error.detail !== undefined) {
+    CONTROL_PLANE_ERROR_DETAILS.set(serialized, error.detail);
+  }
+  return serialized;
 }
 
 export function validateSerializedControlPlaneError(value: unknown): SerializedControlPlaneError {

@@ -47,7 +47,8 @@ export function hashFile(path: string): string {
   const buffer = Buffer.allocUnsafe(1024 * 1024);
   try {
     const opened = fstatSync(descriptor);
-    if (Number(opened.dev) !== Number(stat.dev) || Number(opened.ino) !== Number(stat.ino)
+    if ((process.platform !== 'win32' && Number(opened.dev) !== Number(stat.dev))
+      || Number(opened.ino) !== Number(stat.ino)
       || Number(opened.size) !== Number(stat.size)) {
       unsafe();
     }
@@ -84,7 +85,8 @@ export function readBoundedFile(path: string, maxBytes: number): Uint8Array {
   const descriptor = openSync(path, constants.O_RDONLY | NO_FOLLOW);
   try {
     const opened = fstatSync(descriptor);
-    if (Number(opened.dev) !== Number(initial.dev) || Number(opened.ino) !== Number(initial.ino)
+    if ((process.platform !== 'win32' && Number(opened.dev) !== Number(initial.dev))
+      || Number(opened.ino) !== Number(initial.ino)
       || Number(opened.size) !== Number(initial.size) || Number(opened.size) > maxBytes) unsafe();
     const bytes = Buffer.alloc(Number(opened.size));
     let offset = 0;

@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   PUBLICATION_BINDING_ORDER, PERSISTED_TARGETS, resolveCurrentPublicationBuild,
   resolveInvocationContext, runLocalBuild, verifyBuild
 } from '../../dist/index.js';
 
-const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]$/u, '');
 let builtFixture;
 function sourceDerivedPackage() {
   if (builtFixture !== undefined) return builtFixture;

@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import { ADVISOR_CONTROLLER_FILES } from '../../../dist/index.js';
 
+export const FIXTURE_BUILD_TIMESTAMP = '2026-01-01T00:00:00.000Z';
+
 export function createMinimalValidRecords(version = '1.0.0') {
   const pkgJson = Buffer.from(JSON.stringify({
     name: 'evcrate',
@@ -46,7 +48,7 @@ export function createMinimalValidRecords(version = '1.0.0') {
     schema: 'evcrate-build-manifest/v2',
     generator: 'test',
     target: 'all',
-    build_timestamp: new Date().toISOString(),
+    build_timestamp: FIXTURE_BUILD_TIMESTAMP,
     output_hashes: {
       '.claude': crypto.createHash('sha256').update(dummyJson).digest('hex')
     },

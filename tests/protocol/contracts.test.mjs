@@ -224,8 +224,9 @@ test('canonical JSON rejects escaped controls and nested array overflow', () => 
 });
 
 test('safe paths and resource results reject traversal, metadata, protocol, and credentials', () => {
+  const foreignPath = process.platform === 'win32' ? 'C:workspace' : 'C:/workspace';
   for (const unsafe of ['relative', '/workspace/./source', '/workspace//source', '/workspace/../source',
-    'C:/workspace', '/workspace/.git/config', '/workspace/.env']) {
+    foreignPath, '/workspace/.git/config', '/workspace/.env']) {
     assert.throws(() => safePath(unsafe));
   }
   assert.equal(safePath('/'), '/');

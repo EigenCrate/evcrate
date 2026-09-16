@@ -112,10 +112,12 @@ test('stale source, canonical, manifest, and expiry bindings conflict before mut
     writeFileSync(ignoredArtifact, 'ignored\n');
     assert.equal(codeOf(() => handler.handle(applyRequest(context, concurrent.payload.token), context)), 'CAS_CONFLICT');
     unlinkSync(ignoredArtifact);
-    const modeChanged = join(fixture.canonical, 'agents', 'alpha.md');
-    chmodSync(modeChanged, 0o600);
-    assert.equal(codeOf(() => handler.handle(applyRequest(context, concurrent.payload.token), context)), 'CAS_CONFLICT');
-    chmodSync(modeChanged, 0o644);
+    if (process.platform !== 'win32') {
+      const modeChanged = join(fixture.canonical, 'agents', 'alpha.md');
+      chmodSync(modeChanged, 0o600);
+      assert.equal(codeOf(() => handler.handle(applyRequest(context, concurrent.payload.token), context)), 'CAS_CONFLICT');
+      chmodSync(modeChanged, 0o644);
+    }
     const manifest = preview(handler, context, source, 'stale-manifest.md');
     writeFileSync(fixture.root + '/.evcrate/targets/manifest.json', `${readFileSync(fixture.root + '/.evcrate/targets/manifest.json', 'utf8')}\n`);
     assert.equal(codeOf(() => handler.handle(applyRequest(context, manifest.payload.token), context)), 'CAS_CONFLICT');

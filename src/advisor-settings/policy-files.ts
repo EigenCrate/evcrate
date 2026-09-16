@@ -48,7 +48,8 @@ function readBytes(path: string, stat: Stats): Uint8Array {
   try {
     const opened = fstatSync(descriptor) as Stats;
     safePolicyFile(opened);
-    if (Number(opened.dev) !== Number(stat.dev) || Number(opened.ino) !== Number(stat.ino)
+    if ((process.platform !== 'win32' && Number(opened.dev) !== Number(stat.dev))
+      || Number(opened.ino) !== Number(stat.ino)
       || Number(opened.size) !== Number(stat.size)) fail('PATH_UNSAFE');
     const bytes = Buffer.alloc(Number(opened.size));
     let offset = 0;

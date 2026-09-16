@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -183,7 +183,7 @@ test('state CLI executes real lifecycle Path A (bounded correction) with exact t
     })
   }), { mode: 0o600 });
 
-  const env = { ...process.env, HOME: home, TMPDIR: root, PATH: `${bin}:${process.env.PATH}` };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, TMPDIR: root, PATH: `${bin}${delimiter}${process.env.PATH}` };
   delete env.EVCRATE_ADVISOR_ACTIVE;
   delete env.EVCRATE_ADVISOR_DEPTH;
 
@@ -345,7 +345,7 @@ test('state CLI executes real lifecycle Path B (concern-free no-change outcome)'
     })
   }), { mode: 0o600 });
 
-  const env = { ...process.env, HOME: home, TMPDIR: root, PATH: `${bin}:${process.env.PATH}` };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, TMPDIR: root, PATH: `${bin}${delimiter}${process.env.PATH}` };
   delete env.EVCRATE_ADVISOR_ACTIVE;
   delete env.EVCRATE_ADVISOR_DEPTH;
 
@@ -479,7 +479,7 @@ test('state CLI tracks failed correction outcomes with exact 1-indexed ordinals 
     })
   }), { mode: 0o600 });
 
-  const env = { ...process.env, HOME: home, TMPDIR: root, PATH: `${bin}:${process.env.PATH}` };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, TMPDIR: root, PATH: `${bin}${delimiter}${process.env.PATH}` };
   delete env.EVCRATE_ADVISOR_ACTIVE;
   delete env.EVCRATE_ADVISOR_DEPTH;
 

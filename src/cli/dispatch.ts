@@ -167,7 +167,7 @@ function cliResourceRequest(requestId: string, invocation: CliInvocation, contex
   }
   if (invocation.command.kind === 'imports' && invocation.command.action === 'preview') {
     return createResourceRequest(requestId, 'imports.preview', envelope, {
-      sourcePath: options.importSource ?? '', kind: options.kind ?? '', destination: options.destination ?? '',
+      sourcePath: options.importSource ? options.importSource.split('\\').join('/') : '', kind: options.kind ?? '', destination: options.destination ?? '',
       provenance: options.provenance ?? '', selectedTargets: [...context.selectedTargetIds],
       capabilityApprovals: [...options.approveCapabilities],
       expiresInSeconds: numericOption(options.expirySeconds, 300, 900)

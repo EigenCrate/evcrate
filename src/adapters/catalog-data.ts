@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { graphText, writeProjectionFile } from './projection-utils.js';
 import type { ProjectionBuildContext } from './types.js';
@@ -186,7 +186,7 @@ export function projectCatalogDataAndLayout(
   const transformedCommands: CommandCatalogRecord[] = [];
   for (const cmd of canonicalCommands) {
     const mapped = mapping.commands.mapRecord(cmd);
-    const nativeFilePath = context.stagePath(join(mapping.scriptDirectory, mapping.commands.root, mapped.path));
+    const nativeFilePath = context.stagePath(posix.join(mapping.scriptDirectory, mapping.commands.root, mapped.path));
     if (!existsSync(nativeFilePath) || lstatSync(nativeFilePath).isSymbolicLink() || !lstatSync(nativeFilePath).isFile()) {
       throw new ControlPlaneError('VALIDATION_INVALID');
     }
@@ -206,7 +206,7 @@ export function projectCatalogDataAndLayout(
   for (const skill of canonicalSkills) {
     const mapped = mapping.skills.mapRecord(skill);
     if (!mapped) continue;
-    const nativeSkillFile = context.stagePath(join(mapping.scriptDirectory, mapping.skills.root, mapped.path));
+    const nativeSkillFile = context.stagePath(posix.join(mapping.scriptDirectory, mapping.skills.root, mapped.path));
     if (!existsSync(nativeSkillFile) || lstatSync(nativeSkillFile).isSymbolicLink() || !lstatSync(nativeSkillFile).isFile()) {
       throw new ControlPlaneError('VALIDATION_INVALID');
     }

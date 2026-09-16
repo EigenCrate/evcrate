@@ -67,7 +67,7 @@ function createZipArchive(records, outputPath) {
     // Central Directory Header
     const cdHeader = Buffer.alloc(46);
     cdHeader.writeUInt32LE(0x02014b50, 0);
-    cdHeader.writeUInt16LE(0x0014, 4);
+    cdHeader.writeUInt16LE(0x0314, 4); // UNIX (0x03), PKZIP 2.0 (0x14)
     cdHeader.writeUInt16LE(20, 6);
     cdHeader.writeUInt16LE(0x0800, 8);
     cdHeader.writeUInt16LE(8, 10);
@@ -81,7 +81,8 @@ function createZipArchive(records, outputPath) {
     cdHeader.writeUInt16LE(0, 32);
     cdHeader.writeUInt16LE(0, 34);
     cdHeader.writeUInt16LE(0, 36);
-    cdHeader.writeUInt32LE(0, 38);
+    const posixMode = (0o100000 | (rec.mode & 0o777)) >>> 0;
+    cdHeader.writeUInt32LE((posixMode << 16) >>> 0, 38);
     cdHeader.writeUInt32LE(currentOffset, 42);
 
     cdChunks.push(cdHeader, nameBuf);

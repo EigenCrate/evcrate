@@ -40,6 +40,7 @@ export interface CliOptions {
   readonly cursor?: string;
   readonly requestFile?: string;
   readonly json: boolean;
+  readonly debug: boolean;
   readonly protocolVersion: 1;
   readonly timeoutMs: number;
 }
@@ -136,6 +137,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
   const approvals: string[] = [];
   const values: Record<string, string> = {};
   let json = false;
+  let debug = false;
   let dryRun = false;
   let apply = false;
   const seen = new Set<string>();
@@ -149,6 +151,11 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     if (token === '--json') {
       if (json) fail('USAGE_INVALID');
       json = true;
+      continue;
+    }
+    if (token === '--debug') {
+      if (debug) fail('USAGE_INVALID');
+      debug = true;
       continue;
     }
     if (token === '--dry-run' || token === '--apply') {
@@ -210,6 +217,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     cursor: values.cursor,
     requestFile: values.requestfile,
     json,
+    debug,
     protocolVersion: 1,
     timeoutMs
   });

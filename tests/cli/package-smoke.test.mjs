@@ -3,15 +3,16 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
-const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
+const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]+$/u, '');
 const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
 
 function npmJson(args, cwd) {
   const result = spawnSync('npm', [...args, '--json', '--ignore-scripts'], {
-    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000
+    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000, shell: true
   });
   assert.equal(result.status, 0, result.stderr);
   const jsonIndex = result.stdout.search(/[[{]/);
@@ -28,7 +29,7 @@ function installPackage(tarball, root) {
   const result = spawnSync('npm', [
     'install', '--prefix', root, '--no-audit', '--no-fund', '--ignore-scripts', tarball
   ], {
-    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000
+    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000, shell: true
   });
   assert.equal(result.status, 0, result.stderr);
 }
@@ -66,7 +67,10 @@ test('installed tarball runs version and resolves distinct target contexts', () 
   installPackage(tarball, installRoot);
 
   const cliPath = join(installRoot, 'node_modules', '.bin', 'evcrate');
-  const version = spawnSync(cliPath, ['version', '--json'], {
+  const isWindows = process.platform === 'win32';
+  const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : cliPath;
+  const args = isWindows ? ['/d', '/s', '/c', `${cliPath}.cmd`, 'version', '--json'] : ['version', '--json'];
+  const version = spawnSync(command, args, {
     cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000
   });
   if (version.status !== 0) {
@@ -96,8 +100,8 @@ test('installed tarball runs version and resolves distinct target contexts', () 
   assert.equal(context.status, 0, context.stderr);
   const contextResult = JSON.parse(context.stdout);
   assert.deepEqual(contextResult.ids, ['copilot', 'omp']);
-  assert.ok(contextResult.generated.some((value) => value.endsWith('/.evcrate/source/.copilot')));
-  assert.ok(contextResult.generated.some((value) => value.endsWith('/.evcrate/source/.omp')));
-  assert.ok(contextResult.homes.some((value) => value.endsWith('/.copilot')));
-  assert.ok(contextResult.homes.some((value) => value.endsWith('/.omp')));
+  assert.ok(contextResult.generated.some((value) => value.endsWith(`${sep}.evcrate${sep}source${sep}.copilot`) || value.endsWith('/.evcrate/source/.copilot')));
+  assert.ok(contextResult.generated.some((value) => value.endsWith(`${sep}.evcrate${sep}source${sep}.omp`) || value.endsWith('/.evcrate/source/.omp')));
+  assert.ok(contextResult.homes.some((value) => value.endsWith(`${sep}.copilot`) || value.endsWith('/.copilot')));
+  assert.ok(contextResult.homes.some((value) => value.endsWith(`${sep}.omp`) || value.endsWith('/.omp')));
 });

@@ -37,6 +37,9 @@ function stableRequestId(runtime: CliRuntime): string {
 
 export async function main(argv: readonly string[], runtime: CliRuntime = {}): Promise<number> {
   const requestId = stableRequestId(runtime);
+  const isDebug = argv.includes('--debug')
+    || runtime.env?.EVCRATE_DEBUG === '1' || runtime.env?.EVCRATE_DEBUG === 'true'
+    || process.env.EVCRATE_DEBUG === '1' || process.env.EVCRATE_DEBUG === 'true';
   let invocation: CliInvocation | undefined;
   try {
     invocation = parseArguments(argv);
@@ -53,12 +56,17 @@ export async function main(argv: readonly string[], runtime: CliRuntime = {}): P
     const result = await dispatchInvocation(
       invocation, context, { ...runtime, requestId: () => requestId }, request, requestId
     );
-    writeResult(result.result, runtime.output ?? defaultOutput(), { json: invocation.options.json });
+    writeResult(result.result, runtime.output ?? defaultOutput(), { json: invocation.options.json, debug: isDebug });
     return runtime.signalCode ?? result.exitCode;
   } catch (error) {
+    if (isDebug) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      const detailMsg = error instanceof ControlPlaneError && error.detail ? `\n[DEBUG] Detail: ${error.detail}` : '';
+      process.stderr.write(`[DEBUG] ${err.stack ?? err.message}${detailMsg}\n`);
+    }
     const safeError = error instanceof ControlPlaneError ? error : new ControlPlaneError('INTERNAL_ERROR');
     const result = createCliErrorResult(requestId, commandLabel(invocation), safeError);
-    writeResult(result, runtime.output ?? defaultOutput(), { json: invocation?.options.json ?? false });
+    writeResult(result, runtime.output ?? defaultOutput(), { json: invocation?.options.json ?? false, debug: isDebug });
     return runtime.signalCode ?? exitCodeForError(safeError);
   }
 }

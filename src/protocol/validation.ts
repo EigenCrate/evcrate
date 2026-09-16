@@ -15,13 +15,16 @@ const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
 const PROJECT_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const CREDENTIAL_KEY = /(?:api[_ -]?key|token|secret|password|passwd|authorization|cookie|credential)/iu;
 const COUNSEL_KEY = /^(?:checkpoint|question|evidence|prior_counsel|owner_disposition|recommendation|result|hosts|backend)$/u;
-const METADATA_SEGMENTS: Record<string, true> = {
+export const METADATA_SEGMENTS: Record<string, true> = {
   '.git': true, '.gitignore': true, '.gitmodules': true, '.gitattributes': true,
   '.github': true, '.gitlab': true, '.hg': true, '.svn': true
 };
-const SENSITIVE_PATH_SEGMENT = /^(?:\.env(?:\.|$)|.*(?:secret|credential|password|token|private[-_]?key).*)$/iu;
-function fail(code: ControlPlaneErrorCode): never {
-  throw new ControlPlaneError(code);
+export const SENSITIVE_PATH_SEGMENT = /^(?:\.env(?:\..*)?$|.*(?:secret|credential|password|token|private[-_]?key).*)$/iu;
+export const WINDOWS_DOS_DEVICE = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]|CONIN\$|CONOUT\$|CLOCK\$)(?:\.|$)/iu;
+export const WINDOWS_INVALID_CHARS = /[<>"|?*]/u;
+export const WINDOWS_DRIVE_ROOT = /^[A-Za-z]:[/\\]/u;
+function fail(code: ControlPlaneErrorCode, detail?: string): never {
+  throw new ControlPlaneError(code, detail);
 }
 
 export function utf8Length(value: string): number { return new TextEncoder().encode(value).byteLength; }
@@ -49,8 +52,33 @@ export function boundedText(
   return value;
 }
 
+export function validateWindowsPath(path: string): string {
+  if (!WINDOWS_DRIVE_ROOT.test(path)) fail('PATH_UNSAFE', `Path missing drive root: "${path}"`);
+  if (path.slice(2).includes(':')) fail('PATH_UNSAFE', `Path contains extra colon: "${path}"`);
+  if (WINDOWS_INVALID_CHARS.test(path)) fail('PATH_UNSAFE', `Path contains invalid characters: "${path}"`);
+  if (/[/\\]{2,}/u.test(path)) fail('PATH_UNSAFE', `Path contains consecutive slashes: "${path}"`);
+  const drive = path.slice(0, 2);
+  if (path.length === 3) return `${drive}\\`;
+  if (path.endsWith('/') || path.endsWith('\\')) fail('PATH_UNSAFE', `Path has trailing slash: "${path}"`);
+  const components = path.slice(3).split(/[/\\]/u);
+  for (const component of components) {
+    if (!component) fail('PATH_UNSAFE', `Empty component in path: "${path}"`);
+    if (component === '.' || component === '..') fail('PATH_UNSAFE', `Relative component "${component}" in path: "${path}"`);
+    if (component.endsWith('.') || component.endsWith(' ')) fail('PATH_UNSAFE', `Component ends with dot or space: "${component}" in "${path}"`);
+    if (WINDOWS_DOS_DEVICE.test(component)) fail('PATH_UNSAFE', `Component matches DOS device name: "${component}" in "${path}"`);
+    if (METADATA_SEGMENTS[component.toLowerCase()] === true) fail('PATH_UNSAFE', `Component is VCS metadata: "${component}" in "${path}"`);
+    if (SENSITIVE_PATH_SEGMENT.test(component)) fail('PATH_UNSAFE', `Component matched sensitive path pattern: "${component}" in "${path}"`);
+  }
+  return `${drive}\\${components.join('\\')}`;
+}
+
 export function safePath(value: unknown, maxBytes = 4096): string {
   const path = boundedText(value, maxBytes, 'path');
+  if (process.platform === 'win32') {
+    if (WINDOWS_DRIVE_ROOT.test(path) || !path.startsWith('/')) {
+      return validateWindowsPath(path);
+    }
+  }
   if (path.includes('\\') || /^[A-Za-z]:/u.test(path)) fail('PATH_UNSAFE');
   if (path !== '/') {
     const segments = path.split('/');

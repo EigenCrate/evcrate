@@ -1,8 +1,12 @@
-import { lstatSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, parse, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { safePath, validateProjectId } from '../protocol/validation.js';
+import { assertNoSymlinkAncestors } from '../filesystem/paths.js';
+import {
+  safePath, validateProjectId,
+  WINDOWS_DOS_DEVICE, WINDOWS_INVALID_CHARS, WINDOWS_DRIVE_ROOT,
+  METADATA_SEGMENTS, SENSITIVE_PATH_SEGMENT
+} from '../protocol/validation.js';
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -20,23 +24,62 @@ export interface StatePathOptions extends HomePathOptions {
   readonly stateHome?: string;
 }
 
-function rejectSymlinkAncestors(value: string): void {
-  const root = parse(value).root;
-  let current = root;
-  for (const segment of value.slice(root.length).split('/')) {
-    if (!segment) continue;
-    current = join(current, segment);
-    try {
-      if (lstatSync(current).isSymbolicLink()) throw new ControlPlaneError('PATH_UNSAFE');
-    } catch (error) {
-      if (error instanceof ControlPlaneError) throw error;
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT' && code !== 'ENOTDIR') throw new ControlPlaneError('PATH_UNSAFE');
+
+export function lexicalAbsoluteWindows(value: string, base: string): string {
+  if (typeof value !== 'string' || value.length === 0 || value.trim() !== value || value.includes('\0')) {
+    throw new ControlPlaneError('PATH_UNSAFE', `Invalid path string: "${value}"`);
+  }
+  if (/^\/[A-Za-z]:[/\\]/u.test(value)) {
+    value = value.slice(1);
+  }
+  if (value.startsWith('\\\\') || value.startsWith('//') || /^[/\\][/\\]/u.test(value)) {
+    throw new ControlPlaneError('PATH_UNSAFE', `UNC path not allowed: "${value}"`);
+  }
+  if (/^[A-Za-z]:(?![/\\])/u.test(value)) {
+    throw new ControlPlaneError('PATH_UNSAFE', `Drive-relative path not allowed: "${value}"`);
+  }
+  if (value.includes(':')) {
+    if (!WINDOWS_DRIVE_ROOT.test(value) || value.slice(2).includes(':')) {
+      throw new ControlPlaneError('PATH_UNSAFE', `Invalid colon in path: "${value}"`);
     }
+  }
+  if (WINDOWS_INVALID_CHARS.test(value) || /[/\\]{2,}/u.test(value)) {
+    throw new ControlPlaneError('PATH_UNSAFE', `Invalid characters or consecutive slashes in path: "${value}"`);
+  }
+  const isDriveRoot = /^[A-Za-z]:[/\\]$/u.test(value);
+  if (!isDriveRoot && (value.endsWith('/') || value.endsWith('\\'))) {
+    throw new ControlPlaneError('PATH_UNSAFE', `Trailing slash not allowed: "${value}"`);
+  }
+  let components: string[];
+  if (WINDOWS_DRIVE_ROOT.test(value)) {
+    components = value.length === 3 ? [] : value.slice(3).split(/[/\\]/u);
+  } else {
+    if (value.startsWith('/') || value.startsWith('\\')) {
+      throw new ControlPlaneError('PATH_UNSAFE', `Root-relative path not allowed: "${value}"`);
+    }
+    components = value.split(/[/\\]/u);
+  }
+  for (const comp of components) {
+    if (!comp) throw new ControlPlaneError('PATH_UNSAFE', `Empty component in path: "${value}"`);
+    if (comp === '.' || comp === '..') throw new ControlPlaneError('PATH_UNSAFE', `Relative component "${comp}" in path: "${value}"`);
+    if (comp.endsWith('.') || comp.endsWith(' ')) throw new ControlPlaneError('PATH_UNSAFE', `Component ends with dot or space: "${comp}" in "${value}"`);
+    if (WINDOWS_DOS_DEVICE.test(comp)) throw new ControlPlaneError('PATH_UNSAFE', `Component matches DOS device: "${comp}" in "${value}"`);
+    if (METADATA_SEGMENTS[comp.toLowerCase()] === true) throw new ControlPlaneError('PATH_UNSAFE', `Component is VCS metadata: "${comp}" in "${value}"`);
+    if (SENSITIVE_PATH_SEGMENT.test(comp)) throw new ControlPlaneError('PATH_UNSAFE', `Component matches sensitive pattern: "${comp}" in "${value}"`);
+  }
+  const absolute = WINDOWS_DRIVE_ROOT.test(value) ? value : resolve(base, value);
+  try {
+    return safePath(absolute);
+  } catch (error) {
+    if (error instanceof ControlPlaneError) throw error;
+    throw new ControlPlaneError('PATH_UNSAFE', `safePath failed on "${absolute}": ${(error as Error).message}`);
   }
 }
 
 function lexicalAbsolute(value: string, base: string): string {
+  if (process.platform === 'win32') {
+    return lexicalAbsoluteWindows(value, base);
+  }
   if (typeof value !== 'string' || value.length === 0 || value.trim() !== value
     || value.includes('\\') || value.includes('\0')) {
     throw new ControlPlaneError('PATH_UNSAFE');
@@ -56,7 +99,7 @@ function lexicalAbsolute(value: string, base: string): string {
 
 export function resolveSafePath(value: string, base = process.cwd()): string {
   const result = lexicalAbsolute(value, base);
-  rejectSymlinkAncestors(result);
+  assertNoSymlinkAncestors(result);
   return result;
 }
 

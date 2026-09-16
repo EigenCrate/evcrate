@@ -1,5 +1,5 @@
 import { chmodSync, closeSync, constants, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, renameSync, rmSync, statSync, writeSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, parse, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { assertNoSymlinkAncestors, assertOwnerOnlyDirectory, assertRealDirectory, safeParent } from './paths.js';
@@ -10,7 +10,7 @@ function fail(code: 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never {
   throw new ControlPlaneError(code);
 }
 function validateMode(mode: number, ownerOnly = true): void {
-  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777 || (ownerOnly && (mode & 0o077) !== 0)) fail('PATH_UNSAFE');
+  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777 || (process.platform !== 'win32' && ownerOnly && (mode & 0o077) !== 0)) fail('PATH_UNSAFE');
 }
 
 function ensureParent(path: string, mode = 0o700): string {
@@ -121,6 +121,11 @@ export function writeAtomicProjectionFile(path: string, bytes: Uint8Array, mode 
 }
 
 export function sameVolume(source: string, destinationParent: string): boolean {
+  if (process.platform === 'win32') {
+    const srcRoot = parse(resolve(source)).root.toUpperCase();
+    const dstRoot = parse(resolve(destinationParent)).root.toUpperCase();
+    if (srcRoot && dstRoot) return srcRoot === dstRoot;
+  }
   try { return statSync(source).dev === statSync(destinationParent).dev; } catch { return false; }
 }
 

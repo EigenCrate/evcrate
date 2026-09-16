@@ -83,14 +83,14 @@ test('atomic files, staged roots, locks, and release markers are durable boundar
   const destination = join(root, 'nested', 'policy.json');
   writeAtomicFile(destination, new TextEncoder().encode('first'));
   assert.equal(readFileSync(destination, 'utf8'), 'first');
-  assert.equal(statSync(destination).mode & 0o777, 0o600);
+  assert.equal(statSync(destination).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
   writeAtomicFile(destination, new TextEncoder().encode('second'));
   assert.equal(readFileSync(destination, 'utf8'), 'second');
   const staged = createStagedRoot(root);
-  assert.equal(statSync(staged.path).mode & 0o777, 0o700);
+  assert.equal(statSync(staged.path).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o700);
   staged.cleanup();
   const state = join(root, 'state');
-  withPublishLock(state, () => assert.equal(statSync(join(state, 'publish.lock')).mode & 0o777, 0o600));
+  withPublishLock(state, () => assert.equal(statSync(join(state, 'publish.lock')).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600));
   assert.equal(false, (() => { try { statSync(join(state, 'publish.lock')); return true; } catch { return false; } })());
   writeReleaseMarker(state, { schema_version: 1, status: 'complete', roots: {}, managed_paths: {} });
   assert.equal(readReleaseMarker(state).status, 'complete');

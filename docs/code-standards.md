@@ -1,9 +1,12 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-13  
+**Updated:** 2026-09-16
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
+**Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
+2026-09-15) for standalone installer lifecycle and `version --json`; live runtime
+commands and vendor qualification remain Linux-only and operator-gated.
 
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
@@ -327,6 +330,14 @@ limits, closure, adapter boundaries, and support claims.
 - Normalize relative POSIX paths before joining; reject absolute paths, backslashes,
   dot/dot-dot segments, empty segments, NULs, symlinked ancestors, special entries,
   and containment escapes.
+- Keep host-native absolute paths separate from portable metadata. `safePath` and
+  `resolveSafePath` use the host branch for context roots; on Windows only
+  drive-rooted native paths are accepted and hostile lexical forms fail closed.
+- Keep `normalizeRelativePath` slash-relative and platform-neutral for manifests,
+  archives, inventories, and receipts; never feed it native host paths.
+- `assertNoSymlinkAncestors` is the sole ancestor guard. Walk from the parsed
+  native root using `sep`, inspect existing components, stop only when a component
+  is absent, and fail closed on other filesystem errors. Context resolution reuses it.
 - Require real owner-controlled directories for managed roots and ancestors.
   Filesystem directories do not restrict or limit user permissions via strict
   mode bitmasks; they allow standard user permissions without failing closed.
@@ -349,9 +360,10 @@ limits, closure, adapter boundaries, and support claims.
   temporary files; flush metadata where supported.
 - **Scope-isolated recovery**: Recover only validated, owner-controlled, contained journal
   paths matching the requested scope (`--scope home` reads only HOME state;
-  `--scope project` validates canonical `projectIdentity` and reads only project state).
-  Restore the complete prior set for an interrupted transaction; leave unexpected state
-  and user data untouched. Recovery never crosses scope boundaries.
+  `--scope project` validates canonical `projectIdentity` and reads only
+  `stateRoot/project-publication/<canonical SHA-256 identity>`). Restore the complete
+  prior set for an interrupted transaction; leave unexpected state and user data
+  untouched. Recovery never crosses scope boundaries.
 - Publication, scope, and advisor-settings locks are separate transactions. Lock
   release requires matching token and device/inode identity; uncertain release
   leaves state for recovery.
@@ -370,10 +382,88 @@ Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`,
 Build/check must verify complete validation, current hashes, regular non-symlink
 files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.
 Publication consumes only a current verified build and preserves unmanaged roots.
-Linux x64 is the current live qualification boundary; do not infer Windows
-security equivalence, live vendor qualification, npm publication, deployment, or
-rollout from deterministic contracts.
+Linux x64 is the qualification boundary for full CLI runtime behavior. Windows
+qualification is complete through Phase 10 (10/10 phases, 100%; completed
+2026-09-15) and is strictly bounded to the standalone installer lifecycle
+(`install`, repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and
+`version --json` on hosted `windows-2025` x64 across PowerShell 5.1/7 and Node
+22.19.0/24.21.0. Windows runtime commands (`publish`, `health`, advisor execution,
+and process-tree parity) remain Linux-only operator-gated behavior. Desktop/signing/
+policy environments, live vendor qualification, npm publication, deployment, and
+rollout remain explicitly excluded.
+### Windows fixture and predecessor standards (Phase 04)
 
+- Build Windows fixtures through `buildReleaseArchives` and the real
+  `install.ps1`; share sorted-record, inventory/controller/build-manifest digest,
+  installer-byte, and metadata authorities with Linux fixtures.
+- Freeze every byte-bearing timestamp (`FIXTURE_BUILD_TIMESTAMP`) and compare
+  independent builds by filename, size, digest, and content. Do not use wall-clock
+  values or duplicate release metadata rules.
+- Treat exact labels as qualification markers only:
+  `Windows x64 Archive` and `Windows Installer Entrypoint (install.ps1)` must be
+  unique, canonical filenames must match, and all four materialized assets must
+  pass `verifyWindowsAssetSet`.
+- Resolve only non-draft, non-prerelease stable releases through bounded,
+  read-only API access. Before qualification history, use only the verified
+  `bootstrap-fixture` (`1.0.0`, `v1.0.0`, lowercase `a`×40); afterward inspect
+  only the latest stable release and fail closed on uncertainty—never fall back.
+- Download into private staging, bound redirects/response bytes, strip tokens
+  across origins, verify before and after promotion, and remove partial output
+  on failure. Return canonical `{kind, version, tag, sourceCommit, files,
+  directory}` records for downstream receipt consumers.
+
+### Canonical candidate and publisher standards (Phase 06)
+
+- Treat `.releaserc.json` and semantic-release's public API as the sole version,
+  notes, and prepare authority. Candidate orchestration must use a disposable
+  `file://` bare mirror, preserve canonical plugin order, remove only the GitHub
+  plugin, set `publish: []`, and never reimplement Conventional Commit rules.
+- Require a clean checkout, one exact lowercase 40-hex source commit, branch/ref
+  validation, and containment checks before clearing stale `dist/release` or
+  candidate output. Seed only the local mirror with the triggering ref and tags;
+  always remove it in `finally`.
+- Build candidates with an allowlisted child environment and
+  `EVCRATE_RELEASE_ASSET_MODE=build`; strip `GITHUB_TOKEN`, `GH_TOKEN`, and
+  `NPM_TOKEN`. A false semantic-release result succeeds with `has_release=false`
+  and no handoff.
+- Stage privately, hash staged bytes, and atomically promote one tree containing
+  exactly seven candidate assets, four predecessor assets, one qualification
+  harness, and `candidate.json` (`evcrate-release-candidate/v1`). Receipt records
+  use canonical code-point ordering and non-symlink regular files.
+- Emit only the nine fixed `$GITHUB_OUTPUT` scalars defined by the candidate
+  contract. Scalars route workflow jobs; the receipt remains the durable byte
+  authority and must agree with every scalar/hash.
+- The publisher is verify-only: require `EVCRATE_RELEASE_ASSET_MODE=verify`,
+  expected receipt/version/tag/source/run identity, and producer hashes; clear
+  `dist/release`, copy only verified `assets/`, verify again, and call canonical
+  semantic-release. It must not build, repair, or accept `false`/identity
+  mismatches.
+- Keep `npm run release:candidate`, `npm run release:verify-assets`,
+  `npm run test:installer:windows`, and `npm run semantic-release` bound to these
+  wrappers. Do not hand-edit `package-lock.json` or root `CHANGELOG.md` for
+  orchestration.
+
+The focused orchestration suite covers clean/dirty checkout, no-release and
+release paths, mirror cleanup, receipt/tamper checks, exact outputs, and
+verify-only publication. Its Phase 06 review records 12/12 orchestration tests
+and 29/29 `npm run test:release` checks passing.
+
+### Release workflow producer, matrix, and publisher standards (Phase 07)
+
+- Keep `.github/workflows/release.yml` read-only by default; grant GitHub write scopes only to the success-gated publisher.
+- Preserve the producer's ordered Linux gates before candidate creation; a no-release result must not upload or trigger downstream jobs.
+- Route matrix and publisher bytes by exact `artifact_id`, never by artifact name or digest; keep the receipt and producer hashes as verification authorities.
+- Keep the native matrix fixed at `windows-2025` x64 with PowerShell 5.1/7 crossed with Node `22.19.0`/`24.21.0`; use `fail-fast: false`.
+- Matrix jobs consume the artifact-carried harness without checkout/npm. The publisher checks out the exact source SHA, copies only seven assets, and uses verify mode.
+- Pin every action to a full commit SHA with its version comment. Pass workflow expressions through step `env:` blocks rather than interpolating them in shell scripts.
+
+
+### Windows release qualification and installer safety standards (Phases 03, 08, 10)
+
+- **Installer safety protocol**: Standalone `install.ps1` must enforce strict root containment (`Assert-ContainedPath`), reparse-point ancestor rejection (`Assert-NoReparseAncestor`), exclusive delete-on-close locking (`Acquire-InstallLock` with random token), snapshot verification, and safe rollback/repair/uninstall lifecycles without touching unmanaged data. Never recommend `-ExecutionPolicy Bypass`.
+- **Exact-set verifier authority**: `scripts/release/asset-verification.cjs` is the sole release-set verifier. Exact-seven (`verifyReleaseAssetSet`) and exact-four (`verifyWindowsAssetSet`) reject missing, extra, directory, symlink, hash, size, and metadata mismatches without byte repair.
+- **Workflow permissions and isolation**: Producer is read-only (`contents: read`); matrix rows run unprivileged; publisher is the sole write-capable job (`contents: write`). Publisher must never rebuild assets or publish on failure/cancellation (<code>always()</code> is strictly banned). Downstream jobs consume the exact `artifact_id` handoff.
+- **PR smoke boundary**: `windows-smoke.yml` runs diagnostic smoke on `windows-2025` x64 with PowerShell 7 and Node `22.19.0` using checked-in version/SHA fixtures (`--allow-fixture-identity`); it has zero secrets, write permissions, or release handoff authority.
 ## Testing and review standards
 
 Tests defend observable behavior: strict parser/manifest contracts, bounded scans,
@@ -409,9 +499,9 @@ before reporting success.
 
 ## Documentation standards
 
-- Keep Markdown files below the repository limit of 800 lines; keep README concise
-  (preferably below 400 lines). Split oversized historical/reference topics into
-  linked documents instead of exceeding the limit.
+- Keep Markdown files below the repository limit of 800 lines; keep README strictly
+  below 300 lines. Split oversized historical/reference topics into linked documents
+  instead of exceeding either limit.
 - Link only to verified files under `docs/` or the repository root.
   `docs/project-changelog.md` mirrors phase evidence and boundaries; root
   `CHANGELOG.md` is semantic-release output, not the phase-authority document.

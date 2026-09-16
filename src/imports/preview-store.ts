@@ -49,7 +49,7 @@ export interface ImportPreviewTokenRecord {
 function conflict(): never { throw new ControlPlaneError('CAS_CONFLICT'); }
 function tokenPath(stateRoot: string, token: string): string {
   const value = validateToken(token);
-  return containedPath(stateRoot, join('import-previews', `${value}.json`));
+  return containedPath(stateRoot, `import-previews/${value}.json`);
 }
 function jsonRecord(record: ImportPreviewTokenRecord): Record<string, unknown> {
   return {
@@ -68,8 +68,10 @@ function parseRecord(value: unknown): ImportPreviewTokenRecord {
   assertExactKeys(raw, TOKEN_KEYS);
   if (raw.schema_version !== 1 || raw.operation !== 'imports.preview') conflict();
   if (typeof raw.expires_at !== 'number' || !Number.isSafeInteger(raw.expires_at) || raw.expires_at <= 0) conflict();
-  const sourcePath = boundedText(raw.source_path, 4096, 'source path');
-  if (!sourcePath.startsWith('/') || sourcePath.includes('\\') || sourcePath.includes('\0')) conflict();
+  const rawSource = boundedText(raw.source_path, 4096, 'source path');
+  const sourcePath = process.platform === 'win32' ? rawSource.replace(/\\/g, '/') : rawSource;
+  const isWindowsDrive = /^[A-Za-z]:\//u.test(sourcePath);
+  if ((!sourcePath.startsWith('/') && !isWindowsDrive) || sourcePath.includes('\0') || (process.platform !== 'win32' && sourcePath.includes('\\'))) conflict();
   const record: ImportPreviewTokenRecord = {
     schema_version: 1, operation: 'imports.preview', token: validateToken(raw.token), sourcePath,
     sourceIdentity: validateOpaque(raw.source_identity, 256, 'source identity'), expiresAt: raw.expires_at,

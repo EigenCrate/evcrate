@@ -129,7 +129,7 @@ function collectOutput(
         const bytes = readOutputFile(path, stat);
         if (!bytesEqual(bytes, wanted.bytes)) {
           diagnostics.push({ path: relativePath, kind: 'file', code: 'bytes-mismatch', expected: wanted.hash, actual: contentHash(bytes) });
-        } else if ((Number(stat.mode) & 0o777) !== wanted.mode) {
+        } else if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== wanted.mode) {
           if ((Number(stat.mode) & 0o777) !== 0o777) {
             diagnostics.push({ path: relativePath, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: Number(stat.mode) & 0o777 });
           }
