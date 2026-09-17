@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-16
+**Updated:** 2026-09-18
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
@@ -249,6 +249,27 @@ published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 29
 production files, including the generated runtime mentor brief and Phase 07
 history modules. It reads the user-owned `$HOME/.evcrate/advisor-routing.json`;
 policy is never generated or published.
+
+### Portable advisor contract runtime
+Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
+
+- `src/protocol/advisor-contract-runtime.ts` is the portable implementation.
+  Keep it free of `node:*` imports, process/HOME/filesystem access, and crypto;
+  it may use the existing protocol JSON primitives. Validators return
+  deep-frozen values and throw `AdvisorContractError` with stable code/path data.
+- `src/protocol/advisor-contracts.ts` owns state v1 declarations and re-exports
+  the runtime; do not recreate advisor wire types or constants here.
+- `src/protocol/advisor-settings.ts` is the control-plane adapter. Delegate
+  shared route/wait/history/policy validation, then map runtime failures to
+  `<code>SETTINGS_INVALID</code>` without leaking neutral error details.
+- `src/protocol/index.ts` is the public protocol barrel and must export the
+  runtime alongside existing protocol modules. Root `src/index.ts` reaches it
+  transitively.
+
+The boundary is source/export preparation, not a replacement for the installed
+advisor controller closure. Preserve the separate exact 29-file CJS closure and
+historical release evidence. Keep valid/invalid contract fixtures and focused
+protocol tests synchronized with exported validators.
 
 Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 `advisor` has distinct `primary`/`backup` route triples

@@ -9,48 +9,32 @@ import {
   safePath, validateOpaque, validateRequestId, SETTINGS_PROTOCOL, PROTOCOL_VERSION, utf8Length
 } from './validation.js';
 
-export const ADVISOR_BACKENDS = Object.freeze(['claude', 'codex', 'antigravity', 'pi', 'omp'] as const);
-export type AdvisorBackend = typeof ADVISOR_BACKENDS[number];
+import {
+  ADVISOR_BACKENDS,
+  type AdvisorBackend,
+  type AdvisorRouteTarget,
+  type AdvisorWaitPolicy,
+  type AdvisorHistoryPolicy,
+  type AdvisorPolicyV2,
+  type AdvisorPolicyTargetV1,
+  type AdvisorPolicyV1,
+  validateRouteTarget as runtimeValidateRouteTarget,
+  validateWaitPolicy as runtimeValidateWaitPolicy,
+  validateHistoryPolicy as runtimeValidateHistoryPolicy,
+  validatePolicyV2 as runtimeValidatePolicyV2
+} from './advisor-contract-runtime.js';
+
+export {
+  ADVISOR_BACKENDS,
+  type AdvisorBackend,
+  type AdvisorRouteTarget,
+  type AdvisorWaitPolicy,
+  type AdvisorHistoryPolicy,
+  type AdvisorPolicyV2,
+  type AdvisorPolicyTargetV1,
+  type AdvisorPolicyV1
+};
 export type AdvisorOperation = 'get' | 'preview' | 'apply';
-
-export interface AdvisorRouteTarget {
-  readonly backend: AdvisorBackend;
-  readonly model: string;
-  readonly effort: string;
-}
-
-export interface AdvisorWaitPolicy {
-  readonly mode: 'until_terminal';
-  readonly warn_after_ms: number;
-  readonly warn_every_ms: number;
-}
-
-export interface AdvisorHistoryPolicy {
-  readonly retention_days: number;
-  readonly max_bytes: number;
-}
-
-export interface AdvisorPolicyV2 {
-  readonly version: 2;
-  readonly advisor: {
-    readonly primary: AdvisorRouteTarget;
-    readonly backup: AdvisorRouteTarget;
-  };
-  readonly wait: AdvisorWaitPolicy;
-  readonly history: AdvisorHistoryPolicy;
-}
-
-export interface AdvisorPolicyTargetV1 {
-  readonly backend: AdvisorBackend;
-  readonly model: string;
-  readonly effort: string;
-  readonly timeout_ms: number;
-}
-
-export interface AdvisorPolicyV1 {
-  readonly version: 1;
-  readonly advisor: AdvisorPolicyTargetV1;
-}
 
 export type AdvisorPolicyTarget = AdvisorPolicyTargetV1;
 export type AdvisorPolicy = AdvisorPolicyV2;
@@ -104,50 +88,27 @@ function assertSettingsDocumentSize(value: unknown): void {
 }
 
 export function validateAdvisorRouteTarget(value: unknown): AdvisorRouteTarget {
-  assertExactKeys(value, ROUTE_KEYS_V2, 'SETTINGS_INVALID');
-  const target = value as Record<string, unknown>;
-  if (typeof target.backend !== 'string' || !ADVISOR_BACKENDS.includes(target.backend as AdvisorBackend)) {
+  try {
+    return runtimeValidateRouteTarget(value);
+  } catch {
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
-  const model = boundedText(target.model, 256, 'model', 'SETTINGS_INVALID');
-  const effort = boundedText(target.effort, 64, 'effort', 'SETTINGS_INVALID');
-  return Object.freeze({ backend: target.backend as AdvisorBackend, model, effort });
 }
 
 export function validateAdvisorWaitPolicy(value: unknown): AdvisorWaitPolicy {
-  assertExactKeys(value, WAIT_KEYS_V2, 'SETTINGS_INVALID');
-  const wait = value as Record<string, unknown>;
-  if (wait.mode !== 'until_terminal') throw new ControlPlaneError('SETTINGS_INVALID');
-  if (!Number.isInteger(wait.warn_after_ms) || (wait.warn_after_ms as number) < MIN_WARN_MS
-    || (wait.warn_after_ms as number) > MAX_WARN_MS) {
+  try {
+    return runtimeValidateWaitPolicy(value);
+  } catch {
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
-  if (!Number.isInteger(wait.warn_every_ms) || (wait.warn_every_ms as number) < MIN_WARN_MS
-    || (wait.warn_every_ms as number) > MAX_WARN_MS) {
-    throw new ControlPlaneError('SETTINGS_INVALID');
-  }
-  return Object.freeze({
-    mode: 'until_terminal' as const,
-    warn_after_ms: wait.warn_after_ms as number,
-    warn_every_ms: wait.warn_every_ms as number
-  });
 }
 
 export function validateAdvisorHistoryPolicy(value: unknown): AdvisorHistoryPolicy {
-  assertExactKeys(value, HISTORY_KEYS_V2, 'SETTINGS_INVALID');
-  const history = value as Record<string, unknown>;
-  if (!Number.isInteger(history.retention_days) || (history.retention_days as number) < MIN_RETENTION_DAYS
-    || (history.retention_days as number) > MAX_RETENTION_DAYS) {
+  try {
+    return runtimeValidateHistoryPolicy(value);
+  } catch {
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
-  if (!Number.isInteger(history.max_bytes) || (history.max_bytes as number) < MIN_HISTORY_BYTES
-    || (history.max_bytes as number) > MAX_HISTORY_BYTES) {
-    throw new ControlPlaneError('SETTINGS_INVALID');
-  }
-  return Object.freeze({
-    retention_days: history.retention_days as number,
-    max_bytes: history.max_bytes as number
-  });
 }
 
 export function validateLegacyAdvisorPolicy(value: unknown): AdvisorPolicyV1 {
@@ -179,28 +140,16 @@ export function validateLegacyAdvisorPolicy(value: unknown): AdvisorPolicyV1 {
 }
 
 export function validateAdvisorPolicy(value: unknown): AdvisorPolicyV2 {
-  assertExactKeys(value, POLICY_KEYS_V2, 'SETTINGS_INVALID');
-  const policy = value as Record<string, unknown>;
-  if (policy.version !== 2) throw new ControlPlaneError('SETTINGS_INVALID');
-  assertExactKeys(policy.advisor, ADVISOR_KEYS_V2, 'SETTINGS_INVALID');
-  const advisor = policy.advisor as Record<string, unknown>;
-  const primary = validateAdvisorRouteTarget(advisor.primary);
-  const backup = validateAdvisorRouteTarget(advisor.backup);
-  if (primary.backend === backup.backend && primary.model === backup.model && primary.effort === backup.effort) {
+  try {
+    const result = runtimeValidatePolicyV2(value);
+    rejectCredentialKeys(value, 'SETTINGS_INVALID');
+    rejectCounselFields(value, ['backend'], 'SETTINGS_INVALID');
+    if (canonicalBytes(result).byteLength > MAX_POLICY_BYTES) throw new ControlPlaneError('SETTINGS_INVALID');
+    return result;
+  } catch (error) {
+    if (error instanceof ControlPlaneError) throw error;
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
-  const wait = validateAdvisorWaitPolicy(policy.wait);
-  const history = validateAdvisorHistoryPolicy(policy.history);
-  rejectCredentialKeys(policy, 'SETTINGS_INVALID');
-  rejectCounselFields(policy, ['backend'], 'SETTINGS_INVALID');
-  const result: AdvisorPolicyV2 = Object.freeze({
-    version: 2 as const,
-    advisor: Object.freeze({ primary, backup }),
-    wait,
-    history
-  });
-  if (canonicalBytes(result).byteLength > MAX_POLICY_BYTES) throw new ControlPlaneError('SETTINGS_INVALID');
-  return result;
 }
 
 export function safeAdvisorPolicyView(value: unknown): SafeAdvisorPolicyView {

@@ -11,7 +11,11 @@ import {
   validateResourceRequestPayload, validateResourceResultPayload, validateScopeRequestPayload,
   validateScopeResultPayload, validateScopeRevisionVector, validatePublishRequestPayload,
   validatePublishDryRunResultPayload, validatePublishApplyResultPayload, validateRecoverRequestPayload,
-  validateRecoverResultPayload, PUBLICATION_BINDING_ORDER
+  validateRecoverResultPayload, PUBLICATION_BINDING_ORDER,
+  CHECKPOINT_PROTOCOL_V2, CHECKPOINT_VERSION_V2, RESULT_PROTOCOL_V2, RESULT_VERSION_V2,
+  CONTROLLER_PROTOCOL_V2, CONTROLLER_VERSION_V2, HISTORY_PROTOCOL_V1, HISTORY_VERSION_V1,
+  validateCheckpointV2, validateResultV2, validateEnvelopeV2, validateHistoryExecutionV1,
+  validateHistoryOutcomeV1, AdvisorContractError
 } from '../../dist/protocol/index.js';
 import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
 
@@ -430,4 +434,21 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   assert.throws(() => validateRecoverResultPayload({
     ...rolledBack, phases: [rolledBack.phases[0], { ...rolledBack.phases[1], bindingOrder: [] }]
   }));
+});
+
+test('Phase 1 portable advisor contract runtime exports and public shapes', () => {
+  assert.equal(CHECKPOINT_PROTOCOL_V2, 'evcrate-advisor-checkpoint');
+  assert.equal(CHECKPOINT_VERSION_V2, 2);
+  assert.equal(RESULT_PROTOCOL_V2, 'evcrate-advisor-result');
+  assert.equal(RESULT_VERSION_V2, 2);
+  assert.equal(CONTROLLER_PROTOCOL_V2, 'evcrate-advisor-controller');
+  assert.equal(CONTROLLER_VERSION_V2, 2);
+  assert.equal(HISTORY_PROTOCOL_V1, 'evcrate-advisor-history');
+  assert.equal(HISTORY_VERSION_V1, 1);
+  assert.equal(typeof validateCheckpointV2, 'function');
+  assert.equal(typeof validateResultV2, 'function');
+  assert.equal(typeof validateEnvelopeV2, 'function');
+  assert.equal(typeof validateHistoryExecutionV1, 'function');
+  assert.equal(typeof validateHistoryOutcomeV1, 'function');
+  assert.equal(typeof AdvisorContractError, 'function');
 });

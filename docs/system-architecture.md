@@ -5,7 +5,7 @@ is complete through Phase 09, and Windows release qualification is complete thro
 Phase 10 (10/10 phases, 100%; completed 2026-09-15). The bounded Windows support
 cutover covers the standalone installer lifecycle and `version --json`; live vendor
 qualification and production HOME publication remain operator-gated.
-**Updated:** 2026-09-16
+**Updated:** 2026-09-18
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -69,7 +69,7 @@ presented as a relay to `evcrate-advisor`.
 The source is organized around narrow contracts:
 
 - `src/protocol/`: bounded JSON, canonical JSON, resource, publication, scope,
-  diagnostic, and advisor-settings wire shapes.
+  diagnostic, advisor-settings, and portable advisor-contract wire shapes.
 - `src/context/`: package, project, home, state, target, and immutable path context.
 - `src/manifests/`: schema-2 target manifests, resource roots, home bindings,
   patch authorization, and manifest registry loading.
@@ -295,9 +295,28 @@ cannot authorize v2 semantics.
 
 ### 5.2 Phase 01 v2 contract freeze
 
-The standalone CJS validator and TypeScript settings/protocol validator remain
-separate closures. They share exact schemas and parity fixtures; CJS cannot
-import `dist/` or projected resources. Phase 01 freezes these versions:
+The standalone CJS validator remains separate from the TypeScript protocol
+runtime. They share exact schemas and parity fixtures; CJS cannot import `dist/`
+or projected resources. The TypeScript runtime has no `node:*` imports, process
+state, HOME access, filesystem access, or crypto dependency.
+
+Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
+
+1. `src/protocol/advisor-contract-runtime.ts` owns portable advisor policy,
+   checkpoint, result, receipt, attempt, envelope, and history types/constants
+   plus deep-freezing and neutral code/path validators.
+2. `src/protocol/advisor-contracts.ts` retains state v1 contracts and re-exports
+   the portable runtime for existing state consumers.
+3. `src/protocol/advisor-settings.ts` delegates shared policy validators and maps
+   runtime violations to the settings <code>SETTINGS_INVALID</code> boundary.
+4. `src/protocol/index.ts` exports the runtime alongside the existing protocol
+   barrels; `src/index.ts` exposes it transitively.
+
+This four-file boundary is protocol-source/export preparation only; it does not
+change the installed advisor controller's separate exact 29-file closure or
+release artifacts.
+
+The following wire versions remain frozen:
 
 | Contract | Version | Boundary |
 |---|---:|---|
