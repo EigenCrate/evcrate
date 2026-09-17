@@ -3,7 +3,7 @@
 **Status:** Current requirements baseline; Hook Materialization Scope Distribution
 is complete through Phase 09, and Windows release qualification is complete through
 Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Updated:** 2026-09-16
+**Updated:** 2026-09-18
 
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -141,14 +141,22 @@ rewrites HOME automatically.
 **Requirement:** Phase 01 freezes direct `evcrate-advisor-checkpoint` v2 with
 task/run/checkpoint/phase identity, task/evidence revisions, decision kind,
 task constraints, proposal, bounded evidence, and prior disposition. The
-compatibility v1 ten-key checkpoint remains an explicit compatibility path while
-dependent runtime phases cut over; no implicit v1-to-v2 upgrade is performed.
+TypeScript implementation is prepared as an environment-neutral portable
+runtime in `src/protocol/advisor-contract-runtime.ts`; the exact four-file
+TypeScript protocol closure boundary also includes
+`src/protocol/advisor-contracts.ts`, `src/protocol/advisor-settings.ts`, and
+`src/protocol/index.ts`. The compatibility v1 ten-key checkpoint
+remains an explicit compatibility path while dependent runtime phases cut over;
+no implicit v1-to-v2 upgrade is performed.
 
 **Acceptance:** V2 rejects unknown keys, unsafe paths, credentials, duplicate
 paths, invalid revisions, overlong text, oversized evidence, and missing
 structured fields. Evidence paths are metadata only; selected content uses
 digests. The request stays within 32 KiB, with bounded question/task/evidence,
-four files, and sixteen changed paths. No automatic route/executable override is accepted.
+four files, and sixteen changed paths. Portable validators expose stable
+neutral code/path failures and deep-freeze accepted values; protocol barrels
+export the runtime without changing the separate 29-file controller closure.
+No automatic route/executable override is accepted.
 
 ### FR-7: Versioned counsel transaction
 

@@ -1,0 +1,475 @@
+{
+  "contract_type_invalid": {
+    "validator": "validateCheckpointV2",
+    "data": "not-an-object",
+    "expectedCode": "CONTRACT_TYPE_INVALID",
+    "expectedPath": ""
+  },
+  "contract_keys_invalid_missing": {
+    "validator": "validateCheckpointV2",
+    "data": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [],
+        "validation_results": [],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "expectedCode": "CONTRACT_KEYS_INVALID",
+    "expectedPath": ""
+  },
+  "contract_keys_invalid_extra": {
+    "validator": "validatePolicyV2",
+    "data": {
+      "version": 2,
+      "advisor": {
+        "primary": { "backend": "claude", "model": "m", "effort": "e" },
+        "backup": { "backend": "codex", "model": "m2", "effort": "e" }
+      },
+      "wait": { "mode": "until_terminal", "warn_after_ms": 10000, "warn_every_ms": 30000 },
+      "history": { "retention_days": 30, "max_bytes": 104857600 },
+      "extra_field": true
+    },
+    "expectedCode": "CONTRACT_KEYS_INVALID",
+    "expectedPath": ""
+  },
+  "contract_value_invalid_kind": {
+    "validator": "validateCheckpointV2",
+    "data": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "invalid_kind_value",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [],
+        "validation_results": [],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "expectedCode": "CONTRACT_VALUE_INVALID",
+    "expectedPath": "/kind"
+  },
+  "contract_value_invalid_route_identical": {
+    "validator": "validatePolicyV2",
+    "data": {
+      "version": 2,
+      "advisor": {
+        "primary": { "backend": "claude", "model": "claude-3-5-sonnet", "effort": "high" },
+        "backup": { "backend": "claude", "model": "claude-3-5-sonnet", "effort": "high" }
+      },
+      "wait": { "mode": "until_terminal", "warn_after_ms": 10000, "warn_every_ms": 30000 },
+      "history": { "retention_days": 30, "max_bytes": 104857600 }
+    },
+    "expectedCode": "CONTRACT_VALUE_INVALID",
+    "expectedPath": "/advisor/backup"
+  },
+  "contract_size_exceeded_files": {
+    "validator": "validateCheckpointV2",
+    "data": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [
+          { "path": "src/1.ts", "excerpt": "1", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+          { "path": "src/2.ts", "excerpt": "2", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+          { "path": "src/3.ts", "excerpt": "3", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+          { "path": "src/4.ts", "excerpt": "4", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+          { "path": "src/5.ts", "excerpt": "5", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }
+        ],
+        "validation_results": [],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "expectedCode": "CONTRACT_SIZE_EXCEEDED",
+    "expectedPath": "/evidence/files"
+  },
+  "contract_version_unsupported_protocol": {
+    "validator": "validateCheckpointV2",
+    "data": {
+      "protocol": "wrong-protocol",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [],
+        "validation_results": [],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "expectedCode": "CONTRACT_VERSION_UNSUPPORTED",
+    "expectedPath": "/protocol"
+  },
+  "contract_version_unsupported_version": {
+    "validator": "validateCheckpointV2",
+    "data": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 99,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [],
+        "validation_results": [],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "expectedCode": "CONTRACT_VERSION_UNSUPPORTED",
+    "expectedPath": "/version"
+  },
+  "contract_identity_mismatch_task": {
+    "validator": "validateHistoryExecutionV1",
+    "data": {
+      "schema_version": 1,
+      "consultation_id": "00000000-0000-4000-8000-000000000010",
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+      "checkpoint": {
+        "protocol": "evcrate-advisor-checkpoint",
+        "version": 2,
+        "task_run_id": "11111111-1111-4000-8000-111111111111",
+        "checkpoint_id": "cp-1",
+        "phase_id": "phase-01",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "checkpoint": "review:step-4",
+        "kind": "review",
+        "question": "Is this valid?",
+        "task": {
+          "goal": "Test goal",
+          "non_goals": ["None"],
+          "authorized_paths": ["src/index.ts"],
+          "scope_rationale": "Testing scope",
+          "invariants": ["Preserve existing"],
+          "success_criteria": ["Pass tests"]
+        },
+        "proposal": {
+          "next_action": "Proceed to next step",
+          "rationale": "Review passed",
+          "intended_changed_paths": ["src/index.ts"]
+        },
+        "evidence": {
+          "summary": "Evidence summary",
+          "files": [],
+          "validation_results": [],
+          "artifacts": []
+        },
+        "prior": {
+          "prior_consultation_id": null,
+          "prior_counsel": null,
+          "prior_disposition": null,
+          "observed_outcome": null
+        }
+      },
+      "route": { "backend": "claude", "model": "claude-3-5-sonnet", "effort": "high" },
+      "receipt": null,
+      "prompt_identity": "prompt-v1",
+      "build_identity": "b1",
+      "attempts": [],
+      "status": "started",
+      "result": null,
+      "error": null,
+      "started_at": 1000,
+      "completed_at": null
+    },
+    "expectedCode": "CONTRACT_IDENTITY_MISMATCH",
+    "expectedPath": "/checkpoint/task_run_id"
+  },
+  "contract_digest_mismatch": {
+    "validator": "validateHistoryExecutionV1",
+    "data": {
+      "schema_version": 1,
+      "consultation_id": "00000000-0000-4000-8000-000000000010",
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "checkpoint_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "checkpoint": {
+        "protocol": "evcrate-advisor-checkpoint",
+        "version": 2,
+        "task_run_id": "00000000-0000-4000-8000-000000000000",
+        "checkpoint_id": "cp-1",
+        "phase_id": "phase-01",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "checkpoint": "review:step-4",
+        "kind": "review",
+        "question": "Is this valid?",
+        "task": {
+          "goal": "Test goal",
+          "non_goals": ["None"],
+          "authorized_paths": ["src/index.ts"],
+          "scope_rationale": "Testing scope",
+          "invariants": ["Preserve existing"],
+          "success_criteria": ["Pass tests"]
+        },
+        "proposal": {
+          "next_action": "Proceed to next step",
+          "rationale": "Review passed",
+          "intended_changed_paths": ["src/index.ts"]
+        },
+        "evidence": {
+          "summary": "Evidence summary",
+          "files": [],
+          "validation_results": [],
+          "artifacts": []
+        },
+        "prior": {
+          "prior_consultation_id": null,
+          "prior_counsel": null,
+          "prior_disposition": null,
+          "observed_outcome": null
+        }
+      },
+      "route": { "backend": "claude", "model": "claude-3-5-sonnet", "effort": "high" },
+      "receipt": null,
+      "prompt_identity": "prompt-v1",
+      "build_identity": "b1",
+      "attempts": [],
+      "status": "started",
+      "result": null,
+      "error": null,
+      "started_at": 1000,
+      "completed_at": null
+    },
+    "useDigest": true,
+    "expectedCode": "CONTRACT_DIGEST_MISMATCH",
+    "expectedPath": "/checkpoint_digest"
+  },
+  "contract_status_invalid": {
+    "validator": "validateHistoryExecutionV1",
+    "data": {
+      "schema_version": 1,
+      "consultation_id": "00000000-0000-4000-8000-000000000010",
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+      "checkpoint": {
+        "protocol": "evcrate-advisor-checkpoint",
+        "version": 2,
+        "task_run_id": "00000000-0000-4000-8000-000000000000",
+        "checkpoint_id": "cp-1",
+        "phase_id": "phase-01",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "checkpoint": "review:step-4",
+        "kind": "review",
+        "question": "Is this valid?",
+        "task": {
+          "goal": "Test goal",
+          "non_goals": ["None"],
+          "authorized_paths": ["src/index.ts"],
+          "scope_rationale": "Testing scope",
+          "invariants": ["Preserve existing"],
+          "success_criteria": ["Pass tests"]
+        },
+        "proposal": {
+          "next_action": "Proceed to next step",
+          "rationale": "Review passed",
+          "intended_changed_paths": ["src/index.ts"]
+        },
+        "evidence": {
+          "summary": "Evidence summary",
+          "files": [],
+          "validation_results": [],
+          "artifacts": []
+        },
+        "prior": {
+          "prior_consultation_id": null,
+          "prior_counsel": null,
+          "prior_disposition": null,
+          "observed_outcome": null
+        }
+      },
+      "route": { "backend": "claude", "model": "claude-3-5-sonnet", "effort": "high" },
+      "receipt": null,
+      "prompt_identity": "prompt-v1",
+      "build_identity": "b1",
+      "attempts": [],
+      "status": "started",
+      "result": { "unexpected": "result_on_started" },
+      "error": null,
+      "started_at": 1000,
+      "completed_at": null
+    },
+    "expectedCode": "CONTRACT_STATUS_INVALID",
+    "expectedPath": ""
+  },
+  "contract_duplicate_identity_files": {
+    "validator": "validateCheckpointV2",
+    "data": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [
+          { "path": "src/duplicate.ts", "excerpt": "1", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+          { "path": "src/duplicate.ts", "excerpt": "2", "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }
+        ],
+        "validation_results": [],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "expectedCode": "CONTRACT_DUPLICATE_IDENTITY",
+    "expectedPath": "/evidence/files/1/path"
+  }
+}

@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Generated:** 2026-09-16
+**Generated:** 2026-09-18
 **Source:** Fresh repository compaction produced by Repomix v1.18.0 at
 `repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs. Release
 workflow, phase plans, and related evidence were checked directly for this
@@ -262,7 +262,7 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, advisor v2/settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `diagnostic.ts`, `resource-payload-validation.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package/project/home/state/target context and host-native path resolution | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading, descriptor types, and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts`, `types.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
@@ -310,6 +310,33 @@ The compiled CLI accepts `version`, `health`, `resources list|get`, `imports
 preview|apply`, `scopes list|get|assign|remove|enable|disable`, `changes
 preview|apply`, advisor settings, publication, recovery, and distribution
 actions. There is no canonical root `distribute.py` command.
+
+## Portable advisor contract runtime (Phase 01)
+
+`src/protocol/advisor-contract-runtime.ts` centralizes environment-neutral
+advisor policy, checkpoint, result, receipt, attempt, envelope, and v1 history
+types/constants plus deep-freezing and code/path validators. It imports only the
+existing protocol JSON plain-object predicate; it has no `node:*`, process,
+HOME, filesystem, or crypto dependency.
+
+The exact Phase 01 TypeScript four-file protocol closure boundary is:
+
+1. `src/protocol/advisor-contract-runtime.ts` — portable validators and shared
+   wire types/constants.
+2. `src/protocol/advisor-contracts.ts` — state v1 contracts plus runtime
+   re-export.
+3. `src/protocol/advisor-settings.ts` — settings adapter and
+   `<code>SETTINGS_INVALID</code>` mapping over shared validators.
+4. `src/protocol/index.ts` — public protocol barrel; `src/index.ts` exposes it
+   transitively.
+
+Focused fixtures (`tests/fixtures/advisor-contracts/valid-contracts.json` and
+`invalid-contracts.json`) cover valid deep-frozen values and invalid neutral
+code/path failures; protocol tests assert the updated constants and exports. This
+is source/export preparation only: the installed advisor controller remains the
+separate exact 29-file CJS closure, with no historical evidence or release
+artifact change.
+
 
 ## Controller closure
 
