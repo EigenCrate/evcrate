@@ -20,7 +20,11 @@
     "prebuild": "node scripts/generate-runtime-brief.mjs && npm run generate:advisor-runtime && node scripts/generate-controller-inventory.mjs",
     "build": "tsc -p tsconfig.json",
     "generate:advisor-runtime": "tsc -p tsconfig.advisor-runtime.json",
+    "build:viewer": "tsc -p viewer/tsconfig.json && vite build --config viewer/vite.config.ts",
+    "build:all": "npm run build && npm run build:viewer",
+    "viewer:preview": "vite preview --config viewer/vite.config.ts --host 127.0.0.1 --strictPort",
     "test:advisor-metrics": "node --test tests/advisor-metrics/*.test.mjs",
+    "test:advisor-viewer": "npm run build:viewer && playwright test --config viewer/playwright.config.ts",
     "test:advisor-parity": "node --test tests/protocol/advisor-contract-parity.test.mjs",
     "test:protocol": "node --test tests/protocol/*.test.mjs",
     "test:cli": "node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
@@ -41,7 +45,7 @@
     "distribute:pi": "node dist/cli/evcrate.js distribute all --target pi",
     "distribute:omp": "node dist/cli/evcrate.js distribute all --target omp",
     "distribute:copilot": "node dist/cli/evcrate.js distribute all --target copilot",
-    "test": "npm run build && npm run test:protocol && npm run test:advisor-metrics && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:validation-rollout && npm run test:advisor-controller && npm run test:release && npm run test:installer:linux && npm run test:distribution:rollout",
+    "test": "npm run build:all && npm run test:protocol && npm run test:advisor-metrics && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:validation-rollout && npm run test:advisor-controller && npm run test:release && npm run test:installer:linux && npm run test:distribution:rollout",
     "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "node scripts/release/publish-release.cjs",
@@ -50,7 +54,7 @@
     "generate:registry": "node scripts/generate-resource-registry.mjs",
     "generate:manifests": "node scripts/build-manifests.mjs",
     "generate:all": "npm run generate:inventory && npm run build && npm run generate:registry && npm run generate:manifests",
-    "prepack": "npm run build && node scripts/generate-resource-registry.mjs",
+    "prepack": "npm run build:all && node scripts/generate-resource-registry.mjs",
     "release:check": "node -e \"require('./scripts/release/runtime-closure.cjs').validateRuntimeClosure(process.cwd())\"",
     "release:candidate": "node scripts/release/run-release-candidate.cjs",
     "release:prepare": "node scripts/prepare-release-assets.cjs",
@@ -79,6 +83,7 @@
   "files": [
     "dist/**",
     "!dist/release/**",
+    "viewer/dist/**",
     ".evcrate/build-manifest*.json",
     ".evcrate/registry.json",
     ".evcrate/scopes/**",
@@ -105,6 +110,7 @@
     "LICENSE"
   ],
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
@@ -112,11 +118,16 @@
     "@semantic-release/npm": "^11.0.2",
     "@semantic-release/release-notes-generator": "^12.1.0",
     "@types/node": "^22.20.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "conventional-changelog-conventionalcommits": "^7.0.2",
     "husky": "^8.0.3",
     "pi-subagents": "0.44.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "semantic-release": "^22.0.12",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "8.1.4"
   },
   "engines": {
     "node": ">=22.19.0"

@@ -289,6 +289,10 @@ fixtures cover the boundary; Windows standalone installer lifecycle and version 
 | Script/action | Role |
 |---|---|
 | `npm run build` | Generates the runtime brief, four generated advisor runtime modules, and controller inventory through `prebuild`, then compiles TypeScript. |
+| `npm run build:viewer` | Type-checks `viewer/` with `viewer/tsconfig.json`, then emits the static Vite bundle to `viewer/dist`. |
+| `npm run build:all` | Runs the root TypeScript build followed by the viewer build. |
+| `npm run viewer:preview` | Serves the built viewer on loopback `127.0.0.1:4173` with strict port binding. |
+| `npm run test:advisor-viewer` | Rebuilds the viewer and runs the single Chromium Playwright project against the preview server. |
 | `npm run generate:inventory` | Regenerates the exact controller inventory. |
 | `npm run generate:registry` | Regenerates canonical schema-1 resource records. |
 | `npm run generate:manifests` | Builds target and aggregate schema-2 manifests. |
@@ -487,6 +491,48 @@ passed**, strict viewer typecheck/build passed with **zero TypeScript diagnostic
 and code review approved **10/10**. Canonical advisor mentoring verification
 remains the `.claude/workflows/advisor-mentoring.md` authority; the viewer only
 renders validated data and makes no mentor-quality or live-vendor claim.
+
+## Packaging, CSP, preview, and release inventory (Phase 08)
+
+Phase 08 completed on 2026-09-19. The viewer now has an explicit static-build,
+loopback-preview, and package/release boundary; it remains outside the advisor
+controller closure. See the [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md).
+
+### Viewer build and preview configuration
+
+| Path | Responsibility |
+|---|---|
+| `viewer/tsconfig.json` | Strict ES2020/DOM browser typecheck with ESNext, Bundler resolution, `react-jsx`, isolated modules, and `noEmit`. |
+| `viewer/vite.config.ts` | Relative-base static output in `viewer/dist`, empty output, ES2020 target, no sourcemaps, loopback host/port, and exact CSP headers. |
+| `viewer/playwright.config.ts` | One serial Chromium project; starts `viewer:preview` at `http://127.0.0.1:4173` and uses a 15-second server timeout. |
+| `viewer/src/io/history-record-reader.ts` | Bounded browser file reads with fatal UTF-8/JSON validation, shared record validators, checkpoint digest checks, normalization, and four-worker scheduling. |
+
+The preview and development server bind to `127.0.0.1:4173` with strict port
+selection. Their HTTP CSP is:
+`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;
+connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`.
+The built index contains no external URLs.
+
+### Package and release boundary
+
+- `package.json` keeps viewer libraries development-only, allows only
+  `viewer/dist/**`, and runs `build:all` from `test` and `prepack`.
+- `scripts/prepare-release-assets.cjs` builds the root and viewer before
+  distribution checks, closure verification, and sealed package inventory.
+- `scripts/release/pack-inventory.cjs` parses `npm pack --dry-run --json`,
+  rejects non-regular inventory entries, hashes packed files, and excludes
+  `dist/release` from package records.
+- `tests/viewer/package-inventory.test.mjs` proves dev-only dependencies,
+  viewer allow/deny paths, bundle limits, zero viewer/controller edges, exact
+  seven release assets, exact CSP/loopback settings, and no external URLs.
+- `tests/distribution/private-release-artifacts.test.mjs` proves the packed
+  viewer is present while source/config/test/map paths and `node_modules` stay
+  absent.
+
+Phase 08 evidence records **39/39 tests passed** and a **298.5 kB <= 5 MiB**
+viewer bundle. The controller inventory remains exactly 33 files, and
+`dist/release` remains exactly seven top-level assets; viewer files are archive
+contents, not release assets.
 
 
 ## Historical advisor state and audit modules (Phases 06–07)

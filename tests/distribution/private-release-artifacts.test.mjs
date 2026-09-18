@@ -143,9 +143,10 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: packageRoot,
     encoding: 'utf8',
-    shell: true
+    env: { ...process.env, NO_COLOR: '1' }
   });
-  const jsonIndex = packOutput.search(/[[{]/);
+  const match = packOutput.match(/^[{[]/m);
+  const jsonIndex = match ? match.index : packOutput.search(/[[{]/);
   const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
   const [packMeta] = Array.isArray(parsed) ? parsed : Object.values(parsed);
   const files = packMeta.files.map((f) => f.path);
@@ -154,6 +155,11 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.ok(files.includes('dist/cli/evcrate.js'), 'Must include dist/cli/evcrate.js');
   assert.ok(files.includes('dist/index.js'), 'Must include dist/index.js');
   assert.ok(files.includes('dist/index.d.ts'), 'Must include dist/index.d.ts');
+  // Assert built viewer is present in package
+  assert.ok(files.includes('viewer/dist/index.html'), 'Must include viewer/dist/index.html');
+  assert.ok(files.some((f) => f.startsWith('viewer/dist/assets/') && f.endsWith('.js')), 'Must include viewer hashed JS');
+  assert.ok(files.some((f) => f.startsWith('viewer/dist/assets/') && f.endsWith('.css')), 'Must include viewer hashed CSS');
+
 
   // Assert authoritative controller files present (ADVISOR_CONTROLLER_FILES)
   for (const entry of ADVISOR_CONTROLLER_FILES) {
@@ -195,6 +201,11 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.equal(files.some((f) => f.startsWith('tests/')), false, 'Must not contain tests/');
   assert.equal(files.some((f) => f.startsWith('src/')), false, 'Must not contain src/');
   assert.equal(files.some((f) => f.includes('node_modules')), false, 'Must not contain node_modules/');
+
+  // Assert no viewer source, config, tests, or sourcemaps in package
+  assert.equal(files.some((f) => f.startsWith('viewer/src/')), false, 'Must not contain viewer/src/');
+  assert.equal(files.some((f) => f.startsWith('viewer/') && f.endsWith('.ts')), false, 'Must not contain viewer configs or TS files');
+  assert.equal(files.some((f) => f.endsWith('.map')), false, 'Must not contain sourcemap files');
 
   // Assert registry-authorized skill resources remain present
   const registry = JSON.parse(readFileSync(join(packageRoot, '.evcrate', 'registry.json'), 'utf8'));

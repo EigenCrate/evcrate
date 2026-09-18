@@ -3,8 +3,33 @@
 ## Unreleased
 
 **Updated:** 2026-09-19
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 07 (7/10 phases, 70%; completed 2026-09-19). Next phase: Phase 08 — Packaging, CSP, preview, and release inventory. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 08 (8/10 phases, 80%; completed 2026-09-19). Next phase: Phase 09 — Focused qualification and performance benchmark. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-19; 100%); **39/39 focused tests passed**.
+**Plan:** [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md)
+**Evidence:** `tests/viewer/package-inventory.test.mjs`; `tests/distribution/private-release-artifacts.test.mjs`
+
+- Added the viewer TypeScript, Vite, and Playwright boundaries: strict ES2020
+  browser typechecking, relative static assets, no sourcemaps, and one Chromium
+  project served from the built preview.
+- Added `build:viewer`, `build:all`, `viewer:preview`, and
+  `test:advisor-viewer`; release preparation now builds the root and viewer
+  together before collecting package inventory.
+- Preview binds strictly to loopback `127.0.0.1:4173` and emits the exact HTTP
+  CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'
+  data:; connect-src 'none'; object-src 'none'; base-uri 'none';
+  frame-ancestors 'none'`.
+- Package inventory includes only built `viewer/dist/**` viewer assets; source,
+  configs, tests, maps, and `node_modules` remain excluded. The measured bundle
+  is **298.5 kB <= 5 MiB**.
+- Exact-seven top-level release assets and the exact 33-file controller closure
+  remain unchanged. The viewer is packed inside platform archives, never added
+  as a release asset.
+- Handoff: **Phase 09 — Focused qualification and performance benchmark**.
+
 ### 2026-09-19 — feat(viewer): complete React Explorer and view architecture (Phase 07)
 
 **Status:** Phase 07 DONE (2026-09-19; 100%); code review approved **10/10**.  
