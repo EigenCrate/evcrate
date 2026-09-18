@@ -5,6 +5,8 @@ Distribution is complete through Phase 09, and Windows release qualification is
 complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Updated:** 2026-09-18
 
+**Advisor metrics explorer progress:** 20% (2/10 phases complete; Phases 01–02 DONE on 2026-09-18).
+
 **Windows release qualification progress:** 100% (10/10 phases complete; Phases
 01–10 DONE on 2026-09-15).
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
@@ -19,7 +21,7 @@ output and is not the phase evidence authority.
 ## Current baseline
 
 The current source establishes a TypeScript control plane, seven fixed projection
-adapters, schema-2 target/build manifests, a 29-file advisor controller closure,
+adapters, schema-2 target/build manifests, a 33-file advisor controller closure,
 advisor v2 contracts with explicit policy migration, canonical generated mentor
 instructions, unified structured advice parsing, V2 envelope correspondence
 validation, compatibility direct checkpoint counsel, bounded primary retry with
@@ -37,7 +39,7 @@ policy; they are not hand edited.
 | Phase/gate | State | Evidence or boundary |
 |---|---|---|
 | Protocol and filesystem foundations | Implemented in source | Strict bounded JSON, canonical hashing, safe paths, locks, staging, CAS, and recovery modules are present under `src/`. |
-| Advisor controller contract | Implemented in source | The canonical `.evcrate/source/.evcrate/bin` closure contains the generated 29-file inventory, history contracts/store/query/prune modules, canonical runtime brief artifact, v2 contract validators, policy migration schema, compatibility checkpoint/controller path, runner, adapters, and envelopes. |
+| Advisor controller contract | Implemented in source | The canonical `.evcrate/source/.evcrate/bin` closure contains the generated 33-file inventory, history contracts/store/query/prune modules, canonical runtime brief artifact, v2 contract validators, policy migration schema, compatibility checkpoint/controller path, runner, adapters, and envelopes. |
 | Phase 9 packed consumer/adapter work | Historical evidence recorded | The changelog records packed-consumer and diagnostic adapter contracts; it does not claim live Agent Store/DamHopper release or target cutover. |
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
@@ -54,6 +56,7 @@ policy; they are not hand edited.
 | Advisor mentoring/recovery/audit — Phase 09 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md); generated and verified seven target projections, synchronized schema-2 manifests/registry, verified the exact 29-file controller closure, passed network-isolated installer and publication-recovery checks, preserved disposable HOME, and documented operator cutover/rollback. Actual HOME publication remains operator-gated pending explicit operator authorization. |
 | Advisor mentoring/recovery/audit — Phase 10 | DONE (2026-09-08; 100%) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-10-acceptance-qualification-and-improvement-evaluation.md) and [QA acceptance](../plans/reports/qa-260908-1915-phase10-acceptance.md); deterministic acceptance is complete: 272/272 tests, 29/29 runtime-closure files, and a 9/9 sanitized mentoring baseline; live qualification and HOME publication remain operator-gated. |
 | Advisor metrics explorer — Phase 01 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-01-portable-advisor-contract-runtime.md), [validation](../plans/reports/tester-260918-0027-phase-01-portable-advisor-contract-runtime.md), and [review](../plans/reports/code-review-260918-0028-phase-01-portable-advisor-contract-runtime.md); portable zero-Node contract runtime and corrected public history shapes complete. Focused proof: 49/49 requested test executions passed. Review found no critical issues; follow-up warnings remain non-blocking. |
+| Advisor metrics explorer — Phase 02 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md), [review](../plans/reports/code-review-260918-0244-phase02-re-review.md); deterministic checkpoint digest, portable metrics kernel, generated four-file CJS runtime, compatibility adapters, and 33-file controller inventory complete. Evidence: protocol 31/31, metrics 5/5, parity 4/4, advisor-controller 206/206, `distribute:check`/`distribute:build` status `ok`, and `npm run build` passed. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |

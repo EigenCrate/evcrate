@@ -203,7 +203,7 @@ publisher are a separate semantic-release boundary; see [PDR FR-15](./project-ov
 - `tests/distribution/release-orchestration.test.mjs` covers WRQ-042 (workflow boundary), WRQ-043 (fixture/verify/smoke), and WRQ-044 (labels/preserved config).
 
 The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its 29 production files are:
+`.evcrate/source/.evcrate/bin`. Its current 33 production files are:
 
 ```text
 evcrate-advisor
@@ -219,6 +219,10 @@ lib/advisor/contracts-v2.cjs
 lib/advisor/controller-envelope.cjs
 lib/advisor/controller.cjs
 lib/advisor/errors.cjs
+lib/advisor/generated/advisor-contract-runtime.js
+lib/advisor/generated/advisor-metrics.js
+lib/advisor/generated/canonical-json.js
+lib/advisor/generated/json.js
 lib/advisor/history-contract.cjs
 lib/advisor/history-prune.cjs
 lib/advisor/history-query.cjs
@@ -312,9 +316,11 @@ Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
 4. `src/protocol/index.ts` exports the runtime alongside the existing protocol
    barrels; `src/index.ts` exposes it transitively.
 
-This four-file boundary is protocol-source/export preparation only; it does not
-change the installed advisor controller's separate exact 29-file closure or
-release artifacts.
+The Phase 01 four-file TypeScript boundary is source/export preparation only.
+Phase 02 adds the exact four-file generated CommonJS runtime beneath
+`lib/advisor/generated/`. The installed advisor controller closure is now exact
+33 files; historical 29-file closure evidence and release records remain dated
+facts and are not rewritten.
 
 The following wire versions remain frozen:
 
@@ -348,6 +354,31 @@ Phase 01 freezes retry slots (`10/20/30` seconds for primary, one backup),
 cleanup classifications, gate statuses, and correction cap (`3`) for later
 phases. It does not itself activate indefinite generation, retry orchestration,
 task-state commands, or history tooling.
+
+#### Phase 02 checkpoint digest and history metrics
+
+The checkpoint digest is a compatibility byte contract, not canonical JSON:
+validate the v2 object without reconstruction or key sorting, preserve parsed
+property insertion order, UTF-8 encode `JSON.stringify(validatedCheckpoint)`,
+then SHA-256 those bytes and emit lowercase hex. The Node adapter uses
+`createHash('sha256')`; browser consumers hash the same `TextEncoder` bytes with
+Web Crypto. The non-lexicographic golden fixture protects retained history.
+
+`src/protocol/advisor-metrics.ts` is the portable, deterministic kernel. Its
+pure API is `normalizeHistoryRecord`, `normalizeHistoryFilter`,
+`filterHistoryRecords`, `nearestRankPercentile`, and `calculateHistoryMetrics`;
+callers supply `generated_at`, and the kernel performs no filesystem, crypto,
+DOM, process, or locale work. It lowercases identities, excludes invalid
+execution records, excludes every conflicting duplicate identity with a
+`DUPLICATE_IDENTITY` diagnostic, and deep-freezes returned values.
+
+The exact ten-key filter is null/unconstrained, OR-within and AND-across, with
+inclusive positive timestamp bounds. Ratios use numerator/denominator/excluded
+counts, six-decimal rounding, and `null` for zero denominators. Latency uses
+terminal `receipt.elapsed_ms` only and nearest-rank p50/p95; attempt, failure,
+and route groups use stored facts and deterministic code-point ordering. Results
+carry scan diagnostics, counts, missingness, completeness, and stable limitation
+codes so partial or unattested history is not presented as causal evidence.
 
 ### 5.3 Compatibility checkpoint wire contract
 
@@ -646,11 +677,14 @@ Phase 07 history is optional rich audit, not task-state authority:
 
 Phase 09 synchronized the generated release boundary:
 
-1. **Controller closure.** The canonical CommonJS controller has exactly 29 files.
-   Inventory/hash authorities are synchronized across
+1. **Controller closure.** The canonical CommonJS controller has exactly 33
+   files: the prior 29 CJS files plus the four generated runtime modules
+   (`advisor-contract-runtime.js`, `advisor-metrics.js`, `canonical-json.js`,
+   and `json.js`). Inventory/hash authorities are synchronized across
    `generate-controller-inventory.mjs`, `src/manifests/controller.ts`, `install.sh`,
    `install.ps1`, and `scripts/release/runtime-closure.cjs`. The runtime brief is
-   authored once under `.claude`, generated into the closure, and never hand-edited.
+   authored once under `.claude`, generated into the closure, and never
+   hand-edited.
 2. **Target projections.** `npm run distribute:build` generates all seven targets;
    `npm run distribute:check` verifies byte parity. Build manifests and the schema-1
    registry are synchronized by `npm run generate:all`.

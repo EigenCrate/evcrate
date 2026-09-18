@@ -245,10 +245,10 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 29
-production files, including the generated runtime mentor brief and Phase 07
-history modules. It reads the user-owned `$HOME/.evcrate/advisor-routing.json`;
-policy is never generated or published.
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 33
+production files: the original 29 CJS files plus four generated CommonJS runtime
+modules under `lib/advisor/generated/`. It reads the user-owned
+`$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
 
 ### Portable advisor contract runtime
 Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
@@ -266,10 +266,39 @@ Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
   runtime alongside existing protocol modules. Root `src/index.ts` reaches it
   transitively.
 
-The boundary is source/export preparation, not a replacement for the installed
-advisor controller closure. Preserve the separate exact 29-file CJS closure and
-historical release evidence. Keep valid/invalid contract fixtures and focused
-protocol tests synchronized with exported validators.
+The Phase 01 boundary is source/export preparation, not a replacement for the
+installed advisor controller closure. Preserve the exact 33-file CJS closure,
+while retaining dated 29-file release evidence unchanged. Keep valid/invalid
+contract fixtures and focused protocol tests synchronized with exported
+validators.
+
+### Phase 02 metrics kernel and generated CJS adapters
+
+- `src/protocol/advisor-metrics.ts` is the single portable history-metrics
+  implementation. Its pure exports are `normalizeHistoryRecord`,
+  `normalizeHistoryFilter`, `filterHistoryRecords`, `nearestRankPercentile`, and
+  `calculateHistoryMetrics`; callers provide `generated_at`.
+- Normalize IDs before grouping. Invalid execution records do not enter a
+  population. Byte-identical duplicate identities may collapse; conflicting
+  copies exclude every copy and emit `DUPLICATE_IDENTITY`. Return values remain
+  deeply frozen.
+- Filters are the exact ten-key wire shape. `null` is unconstrained; values are
+  OR-within and AND-across; positive `started_at_from`/`started_at_to` bounds are
+  inclusive. Ratios and means round to six decimals and use `null` on a zero
+  denominator; latency uses terminal receipt elapsed time and nearest-rank
+  percentiles.
+- The digest compatibility contract is not canonical JSON: validate without
+  reconstruction or key sorting, preserve insertion order, hash UTF-8 bytes of
+  `JSON.stringify(validatedCheckpoint)`, and emit lowercase SHA-256 hex. Node
+  crypto and browser Web Crypto adapters must hash identical bytes.
+- `tsconfig.advisor-runtime.json` and `npm run generate:advisor-runtime` emit
+  exactly `canonical-json.js`, `json.js`, `advisor-contract-runtime.js`, and
+  `advisor-metrics.js` under `lib/advisor/generated/`. Generated output is
+  literal-relative CommonJS, dependency-free, and never hand-edited.
+- `contracts-v2.cjs` retains Node hashing, advice parsing, state delegation,
+  export names, and existing boundary mappings. `policy-schema.cjs` retains
+  enabled-backend decisions, legacy inspection/migration, parse/decode exports,
+  and route error codes while delegating shared validation.
 
 Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 `advisor` has distinct `primary`/`backup` route triples
@@ -395,10 +424,12 @@ atomic apply. It never joins scope or target-publication atomicity.
 ## Build, closure, and release standards
 
 `scripts/generate-controller-inventory.mjs` is the source of the generated
-29-file controller inventory. `scripts/build-manifests.mjs` invokes the
-TypeScript local-build path for each persisted target and the aggregate set.
-Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`,
-`controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
+33-file controller inventory, including the four generated runtime modules.
+`npm run generate:advisor-runtime` runs before inventory generation in `prebuild`.
+`scripts/build-manifests.mjs` invokes the TypeScript local-build path for each
+persisted target and the aggregate set. Build manifests are schema 2 and carry
+`source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`,
+`validation`, and `home_policy`.
 
 Build/check must verify complete validation, current hashes, regular non-symlink
 files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.

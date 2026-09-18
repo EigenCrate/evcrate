@@ -1,4 +1,5 @@
 export * from './advisor-contract-runtime.js';
+export * from './advisor-metrics.js';
 import type {
   CheckpointV2, ControllerReceiptV2, OutcomeResult, EvidenceValidationResult
 } from './advisor-contract-runtime.js';

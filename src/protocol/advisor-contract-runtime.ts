@@ -68,6 +68,7 @@ export function inspectPolicy(v: unknown, p = ''): { policy: AdvisorPolicyV2 | A
 }
 
 export function validateValidationResult(v: unknown, p = ''): EvidenceValidationResult { const o = asObj(v, ['suite', 'command', 'status', 'passed', 'failed', 'details'], p); if (!['passed', 'failed', 'skipped'].includes(o.status as string)) fail('CONTRACT_VALUE_INVALID', `${p}/status`); return Object.freeze({ suite: str(o.suite, 128, false, `${p}/suite`), command: str(o.command, 512, false, `${p}/command`), status: o.status as 'passed' | 'failed' | 'skipped', passed: num(o.passed, 0, Number.MAX_SAFE_INTEGER, `${p}/passed`), failed: num(o.failed, 0, Number.MAX_SAFE_INTEGER, `${p}/failed`), details: o.details === null ? null : str(o.details, 4096, true, `${p}/details`) }); }
+export function validateArtifactRef(a: unknown, p = ''): EvidenceArtifactRef { const ao = asObj(a, ['id', 'path', 'digest', 'description'], p); return Object.freeze({ id: str(ao.id, 128, false, `${p}/id`), path: safePath(ao.path, `${p}/path`), digest: digest(ao.digest, `${p}/digest`), description: str(ao.description, 1024, true, `${p}/description`) }); }
 export function validateCheckpointV2(cp: unknown, p = ''): CheckpointV2 {
   const o = asObj(cp, ['protocol', 'version', 'task_run_id', 'checkpoint_id', 'phase_id', 'task_revision', 'evidence_revision', 'checkpoint', 'kind', 'question', 'task', 'proposal', 'evidence', 'prior'], p);
   if (o.protocol !== CHECKPOINT_PROTOCOL_V2 || o.version !== CHECKPOINT_VERSION_V2) fail('CONTRACT_VERSION_UNSUPPORTED', o.protocol !== CHECKPOINT_PROTOCOL_V2 ? `${p}/protocol` : `${p}/version`);
@@ -76,26 +77,26 @@ export function validateCheckpointV2(cp: unknown, p = ''): CheckpointV2 {
   const t = asObj(o.task, ['goal', 'non_goals', 'authorized_paths', 'scope_rationale', 'invariants', 'success_criteria'], `${p}/task`);
   str(t.goal, MAX_TASK_BYTES, true, `${p}/task/goal`); str(t.scope_rationale, MAX_TASK_BYTES, true, `${p}/task/scope_rationale`);
   (['non_goals', 'invariants', 'success_criteria'] as const).forEach(k => arr<string>(t[k], 64, `${p}/task/${k}`).forEach((x, i) => str(x, 1024, false, `${p}/task/${k}/${i}`)));
-  arr<string>(t.authorized_paths, 64, `${p}/task/authorized_paths`).forEach((x, i) => safePath(x, `${p}/task/authorized_paths/${i}`));
+  const authPaths = arr<string>(t.authorized_paths, 64, `${p}/task/authorized_paths`); authPaths.forEach((x, i) => safePath(x, `${p}/task/authorized_paths/${i}`));
+  if (new Set(authPaths).size !== authPaths.length) fail('CONTRACT_DUPLICATE_IDENTITY', `${p}/task/authorized_paths`);
   const pr = asObj(o.proposal, ['next_action', 'rationale', 'intended_changed_paths'], `${p}/proposal`);
-  str(pr.next_action, 4096, true, `${p}/proposal/next_action`); str(pr.rationale, 4096, true, `${p}/proposal/rationale`);
-  arr<string>(pr.intended_changed_paths, MAX_CHANGED_PATHS, `${p}/proposal/intended_changed_paths`).forEach((x, i) => safePath(x, `${p}/proposal/intended_changed_paths/${i}`));
+  str(pr.next_action, MAX_TASK_BYTES, true, `${p}/proposal/next_action`); str(pr.rationale, MAX_TASK_BYTES, true, `${p}/proposal/rationale`);
+  const chPaths = arr<string>(pr.intended_changed_paths, MAX_CHANGED_PATHS, `${p}/proposal/intended_changed_paths`); chPaths.forEach((x, i) => safePath(x, `${p}/proposal/intended_changed_paths/${i}`));
+  if (new Set(chPaths).size !== chPaths.length) fail('CONTRACT_DUPLICATE_IDENTITY', `${p}/proposal/intended_changed_paths`);
   const ev = asObj(o.evidence, ['summary', 'files', 'validation_results', 'artifacts'], `${p}/evidence`);
-  str(ev.summary, MAX_EVIDENCE_TEXT_BYTES, true, `${p}/evidence/summary`);
-  const fPaths: Record<string, true> = {};
+  const evSummary = str(ev.summary, MAX_EVIDENCE_TEXT_BYTES, true, `${p}/evidence/summary`);
+  let evBytes = utf8Bytes(evSummary); const fPaths: Record<string, true> = {}, aIds: Record<string, true> = {};
   arr<Record<string, unknown>>(ev.files, MAX_EVIDENCE_FILES, `${p}/evidence/files`).forEach((f, i) => {
     const fo = asObj(f, ['path', 'excerpt', 'digest'], `${p}/evidence/files/${i}`), fp = safePath(fo.path, `${p}/evidence/files/${i}/path`);
     if (fPaths[fp]) fail('CONTRACT_DUPLICATE_IDENTITY', `${p}/evidence/files/${i}/path`);
-    fPaths[fp] = true; str(fo.excerpt, MAX_EVIDENCE_TEXT_BYTES, true, `${p}/evidence/files/${i}/excerpt`); digest(fo.digest, `${p}/evidence/files/${i}/digest`);
+    fPaths[fp] = true; str(fo.excerpt, MAX_EVIDENCE_TEXT_BYTES, true, `${p}/evidence/files/${i}/excerpt`); digest(fo.digest, `${p}/evidence/files/${i}/digest`); evBytes += utf8Bytes(fo.excerpt as string);
   });
-  arr<unknown>(ev.validation_results, 32, `${p}/evidence/validation_results`).forEach((v, i) => validateValidationResult(v, `${p}/evidence/validation_results/${i}`));
-  arr<Record<string, unknown>>(ev.artifacts, 32, `${p}/evidence/artifacts`).forEach((a, i) => {
-    const ao = asObj(a, ['id', 'path', 'digest', 'description'], `${p}/evidence/artifacts/${i}`);
-    uuid(ao.id, `${p}/evidence/artifacts/${i}/id`); safePath(ao.path, `${p}/evidence/artifacts/${i}/path`); digest(ao.digest, `${p}/evidence/artifacts/${i}/digest`); str(ao.description, 1024, false, `${p}/evidence/artifacts/${i}/description`);
-  });
+  arr<unknown>(ev.validation_results, 16, `${p}/evidence/validation_results`).forEach((v, i) => { const vr = validateValidationResult(v, `${p}/evidence/validation_results/${i}`); evBytes += utf8Bytes(vr.suite) + utf8Bytes(vr.command) + (vr.details ? utf8Bytes(vr.details) : 0); });
+  arr<unknown>(ev.artifacts, 16, `${p}/evidence/artifacts`).forEach((a, i) => { const ar = validateArtifactRef(a, `${p}/evidence/artifacts/${i}`); if (aIds[ar.id]) fail('CONTRACT_DUPLICATE_IDENTITY', `${p}/evidence/artifacts/${i}/id`); aIds[ar.id] = true; evBytes += utf8Bytes(ar.id) + utf8Bytes(ar.description); });
+  if (evBytes > MAX_EVIDENCE_TEXT_BYTES) fail('CONTRACT_SIZE_EXCEEDED', `${p}/evidence`);
   const pri = asObj(o.prior, ['prior_consultation_id', 'prior_counsel', 'prior_disposition', 'observed_outcome'], `${p}/prior`);
   if (pri.prior_consultation_id !== null) uuid(pri.prior_consultation_id, `${p}/prior/prior_consultation_id`);
-  (['prior_counsel', 'prior_disposition', 'observed_outcome'] as const).forEach(k => { if (pri[k] !== null) str(pri[k], 16384, true, `${p}/prior/${k}`); });
+  (['prior_counsel', 'prior_disposition', 'observed_outcome'] as const).forEach(k => { if (pri[k] !== null) str(pri[k], MAX_TASK_BYTES, true, `${p}/prior/${k}`); });
   checkBytes(cp, MAX_ENVELOPE_BYTES, p); return deepFreeze(cp as unknown as CheckpointV2);
 }
 function valResultFields(o: Record<string, unknown>, p: string): void { (['recommendation', 'rationale'] as const).forEach(k => str(o[k], MAX_RESULT_BODY_BYTES, true, `${p}/${k}`)); (['must_fix', 'cautions', 'assumptions', 'success_checks', 'unresolved_questions'] as const).forEach(k => arr<string>(o[k], 32, `${p}/${k}`).forEach((x, i) => str(x, 2048, true, `${p}/${k}/${i}`))); }
@@ -116,14 +117,14 @@ export function validateReceiptV2(r: unknown, p = ''): ControllerReceiptV2 {
   (['model', 'effort', 'adapter_version', 'build_identity'] as const).forEach(k => { if (o[k] !== null) str(o[k], 256, false, `${p}/${k}`); });
   num(o.elapsed_ms, 0, Number.MAX_SAFE_INTEGER, `${p}/elapsed_ms`); return deepFreeze(r as unknown as ControllerReceiptV2);
 }
-function validateSanitizedError(e: unknown, p = ''): SanitizedErrorRecord {
+export function validateSanitizedError(e: unknown, p = ''): SanitizedErrorRecord {
   const o = asObj(e, ['code', 'category', 'action', 'message'], p);
-  (['code', 'category', 'action'] as const).forEach(k => str(o[k], 64, false, `${p}/${k}`));
-  str(o.message, 1024, true, `${p}/message`); return deepFreeze(e as unknown as SanitizedErrorRecord);
+  str(o.code, 64, false, `${p}/code`); str(o.category, 64, false, `${p}/category`); str(o.action, 1024, false, `${p}/action`); str(o.message, 1024, true, `${p}/message`);
+  return deepFreeze(e as unknown as SanitizedErrorRecord);
 }
 export function validateAttemptOutcome(a: unknown, p = ''): AttemptOutcome {
   const o = asObj(a, ['attempt_id', 'slot', 'route', 'phase', 'model_started', 'elapsed_ms', 'terminal_classification', 'retry_delay_ms', 'cleanup_outcome'], p);
-  uuid(o.attempt_id, `${p}/attempt_id`); if (!ATTEMPT_SLOTS.includes(o.slot as AttemptSlot)) fail('CONTRACT_VALUE_INVALID', `${p}/slot`);
+  str(o.attempt_id, 128, false, `${p}/attempt_id`); if (!ATTEMPT_SLOTS.includes(o.slot as AttemptSlot)) fail('CONTRACT_VALUE_INVALID', `${p}/slot`);
   validateRouteTarget(o.route, `${p}/route`); if (!ATTEMPT_PHASES.includes(o.phase as AttemptPhase)) fail('CONTRACT_VALUE_INVALID', `${p}/phase`);
   if (typeof o.model_started !== 'boolean') fail('CONTRACT_TYPE_INVALID', `${p}/model_started`); num(o.elapsed_ms, 0, Number.MAX_SAFE_INTEGER, `${p}/elapsed_ms`);
   if (!TERMINAL_CLASSIFICATIONS.includes(o.terminal_classification as TerminalClassification)) fail('CONTRACT_VALUE_INVALID', `${p}/terminal_classification`);

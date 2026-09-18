@@ -2,9 +2,24 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-16
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Package version: `2.1.0`.
+**Updated:** 2026-09-18
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 02 (2/10 phases, 20%; completed 2026-09-18). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-18 — feat(advisor): complete checkpoint digest, metrics kernel, and generated CJS adapters (Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-18; 100%); review approved 10/10.  
+**Plan:** [Phase 02 plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md)  
+**Evidence:** [Phase 02 re-review](../plans/reports/code-review-260918-0244-phase02-re-review.md)
+
+- Completed the portable deterministic metrics kernel, exact history filters/formulas,
+  frozen results, duplicate exclusion, diagnostics, completeness, and limitation codes.
+- Preserved order-sensitive checkpoint digest bytes and proved Node/Web Crypto parity;
+  converted the CJS contract and policy validators to generated-runtime adapters while
+  retaining required exports and boundary error codes.
+- Registered the generated four-file runtime closure in the 33-file controller
+  inventory. Focused proof passed: protocol 31/31, metrics 5/5, parity 4/4,
+  advisor-controller 206/206, distribution check/build `status: "ok"`, and build.
 
 ### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
 
