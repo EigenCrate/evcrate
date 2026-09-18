@@ -1,10 +1,8 @@
 # System Architecture
 
-**Status:** Current implementation reference; Hook Materialization Scope Distribution
-is complete through Phase 09, and Windows release qualification is complete through
-Phase 10 (10/10 phases, 100%; completed 2026-09-15). The bounded Windows support
-cutover covers the standalone installer lifecycle and `version --json`; live vendor
-qualification and production HOME publication remain operator-gated.
+**Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+**Advisor metrics explorer:** Phase 06 DONE (6/10 phases, 60%; completed 2026-09-18). Next phase: **Phase 07 — React explorer and view architecture**.
+**Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
 **Updated:** 2026-09-18
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
@@ -414,32 +412,22 @@ time, or causal effectiveness, and does not alter list/show/export/prune.
 
 #### Phase 05 browser history traversal and scanner
 
-The static viewer has a separate browser-only read boundary documented in
-[Browser History Scanner](./browser-history-scanner.md). It accepts only an
-explicit File System Access handle and never infers HOME, uploads data, persists
-handles, or mutates history/policy.
+The static viewer has a separate browser-only read boundary documented in [Browser History Scanner](./browser-history-scanner.md): explicit read-only handles, no HOME inference/upload/handle persistence, sorted three-level traversal, bounded reads, and shared history normalization.
+- `history-traversal.ts` and `history-record-reader.ts` enforce sorted project/task/consultation traversal, strict records, identity/digest checks, and bounded workers.
+- `history-scan-budget.ts` owns limits and diagnostics; `browser-digest.ts` matches Node checkpoint-byte SHA-256; `policy-reader.ts` reports v2 or legacy migration-required states.
+- `history-reader.ts` cancels prior generations and replaces only complete scans; limits, failures, cancellation, and stale generations retain the prior snapshot as stale.
+Browser records feed the same metrics kernel and limitation codes; browser races are diagnostics, not deletion evidence.
 
-- `history-traversal.ts` classifies a selected 64-hex project or history root,
-  then walks only sorted project/task/consultation levels and direct
-  `execution.json`/`outcome.json` files.
-- `history-scan-budget.ts` enforces file, entry, consultation, byte, diagnostic,
-  concurrency, and yield limits. `history-record-reader.ts` uses bounded reads,
-  fatal UTF-8/JSON, shared v1 validators, identity correspondence, and
-  `normalizeHistoryRecord`.
-- `browser-digest.ts` hashes the insertion-order `JSON.stringify` bytes of a
-  validated checkpoint with Web Crypto SHA-256, matching the Node adapter.
-- `history-reader.ts` cancels the prior abort controller, increments a
-  generation, and commits only complete or complete-with-errors scans. A limit,
-  permission/traversal failure, cancellation, or stale generation retains the
-  prior snapshot as stale; older generations cannot overwrite newer ones.
-- `policy-reader.ts` explicitly selects one JSON file, validates read permission
-  and 16 KiB bounds, delegates v2/legacy classification to `inspectPolicy`, and
-  reports migration-required/invalid states without writing.
+#### Phase 06 counsel evaluation protocol and fixtures
 
-Browser records feed the same metrics kernel and limitations as controller
-records. Browser traversal is non-atomic: concurrent changes are diagnostics,
-not deletion evidence. `viewer/tsconfig.json` uses strict NodeNext type-checking
-with DOM declarations and emits no viewer artifact.
+The display-only evaluation boundary accepts untrusted external `evcrate-advisor-counsel-evaluation` v1 documents and never joins consultation history or production metrics.
+- `advisor-evaluation.ts` exposes types/constants; `advisor-evaluation-primitives.ts` enforces exact keys, bounds, IDs, text, and score primitives; `advisor-evaluation-validation.ts` validates nested documents and sync/async digests; `advisor-evaluation-comparison.ts` provides pure grouping/aggregation.
+- Rubric and case inputs use sorted-key canonical JSON SHA-256 (`rubric_digest`, `input_digest`); observation matrices are complete and unique; `ADVICE_READY`, `FAILED`, and `MISSING` states remain distinct.
+- Scores enforce human/automated provenance, dimension coverage, partial/full/null aggregate rules, two-decimal averages, and threshold results; comparison keys require both digests and preserve provenance groups.
+- `viewer/src/io/evaluation-reader.ts` uses an explicit read-only multi-file picker with an 8 MiB bound and per-file statuses; it does not write, execute, grade, persist handles, or feed history metrics.
+- `valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and `corpus-nine-cases.json` cover state/provenance/digest/matrix boundaries; derived viewer fixtures contain no `expected_mentor_response` oracle.
+- Verification: **87/87 tests passed**, build/viewer typecheck/release-check passed, all modules stayed below 200 LOC, and Cycle 2 review approved **10/10**; the 33-file controller closure stayed unchanged.
+Phase 07 renders validated evaluation groups beside history/configuration in the React explorer without merging state or metrics.
 
 ### 5.3 Compatibility checkpoint wire contract
 

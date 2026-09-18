@@ -3,8 +3,20 @@
 ## Unreleased
 
 **Updated:** 2026-09-18
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 05 (5/10 phases, 50%; completed 2026-09-18). Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 06 (6/10 phases, 60%; completed 2026-09-18). Next phase: Phase 07 — React explorer and view architecture. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+### 2026-09-18 — feat(advisor): complete counsel evaluation protocol and fixtures (Phase 06)
+
+**Status:** Phase 06 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 06 plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md)  
+**Evidence:** [Cycle 2 validation](../plans/reports/tester-260918-1733-phase06-cycle2-validation.md); [Cycle 2 review](../plans/reports/code-review-260918-1736-phase-06-counsel-evaluation-cycle-2.md)
+
+- Added public `evcrate-advisor-counsel-evaluation` v1 types/facade, strict nested validation, canonical rubric/input SHA-256 checks, immutable documents, response/score invariants, and digest/provenance-separated aggregation.
+- Added explicit read-only browser multi-file evaluation reader with bounded 8 MiB files, per-file statuses, and no persistence, execution, grading, or history-metrics path.
+- Added `valid-mixed`, digest-mismatch, invalid-observations, and oracle-free nine-case fixtures derived from corpus inputs without `expected_mentor_response`.
+- Verification: **87/87 tests passed** across protocol, viewer, metrics, parity, and distribution suites; build, viewer typecheck, and release-check passed; review **10/10**.
+- Controller closure remains 33 files and unchanged. Handoff: **Phase 07 — React explorer and view architecture**.
+
 ### 2026-09-18 — feat(advisor): complete browser history traversal and scanner (Phase 05)
 
 **Status:** Phase 05 DONE (2026-09-18; 100%); Cycle 2 review approved 9.8/10.  
