@@ -169,9 +169,9 @@ export async function readConsultationRecordsBounded(
       if (rec) records.push(rec);
       processed += 1;
       if (processed % YIELD_CADENCE_RECORDS === 0) {
-        const { promise, resolve } = Promise.withResolvers<void>();
-        setTimeout(resolve, 0);
-        await promise;
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 0);
+        });
       }
     }
   }
