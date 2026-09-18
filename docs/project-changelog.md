@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-18
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 02 (2/10 phases, 20%; completed 2026-09-18). Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 03 (3/10 phases, 30%; completed 2026-09-18). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-18 — feat(advisor): complete checkpoint digest, metrics kernel, and generated CJS adapters (Phase 02)
@@ -20,6 +20,20 @@ Older phase records remain in the linked archive.
 - Registered the generated four-file runtime closure in the 33-file controller
   inventory. Focused proof passed: protocol 31/31, metrics 5/5, parity 4/4,
   advisor-controller 206/206, distribution check/build `status: "ok"`, and build.
+
+### 2026-09-18 — test(advisor): close controller closure and installer inventory parity (Phase 03)
+
+**Status:** Phase 03 DONE (2026-09-18; 100%); review approved 10/10.  
+**Plan:** [Phase 03 plan](../plans/260917-2308-advisor-visual-metrics/phase-03-controller-closure-and-inventory-migration.md)  
+**Evidence:** [Closure parity evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json); [code review](../plans/reports/code-review-260918-1136-phase-03-controller-closure-inventory-migration.md)
+
+- `install.sh` and `install.ps1` now carry the exact 33-file code-point-sorted
+  controller inventory, including the four generated runtime modules.
+- `tests/manifests/distribution-manifests.test.mjs` asserts exact count/hash parity
+  and rejects an extra `viewer.js` or a foreign `require('lodash')`.
+- Evidence records sequence-identical authority/generated/installer lists, 81
+  validation checks, and zero failures. Historical dated 29/29 evidence remains
+  unchanged; Phase 04 is the next history-metrics CLI integration gate.
 
 ### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
 

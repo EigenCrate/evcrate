@@ -155,7 +155,8 @@ structured fields. Evidence paths are metadata only; selected content uses
 digests. The request stays within 32 KiB, with bounded question/task/evidence,
 four files, and sixteen changed paths. Portable validators expose stable
 neutral code/path failures and deep-freeze accepted values; protocol barrels
-export the runtime without changing the separate 29-file controller closure.
+export the runtime; Phase 03 registers generated adapters in the exact current
+33-file controller closure while preserving dated 29-file release evidence.
 No automatic route/executable override is accepted.
 
 ### FR-7: Versioned counsel transaction
@@ -372,8 +373,8 @@ cutover are complete. Deterministic Linux publication/installer evidence remains
 separate from live vendor qualification and production `$HOME/.evcrate/` publication.
 
 1. Source and target manifests validate with schema-2 rules.
-2. Local build/check completes with a current complete manifest and 29-file
-   controller closure.
+2. Local build/check completes with a current complete manifest and exact 33-file
+   controller closure; prior dated 29/29 evidence remains historical.
 3. Publication dry-run reports only authorized target, HOME, and project changes.
 4. Apply and recovery preserve unmanaged files, enforce scope isolation, and reject
    CAS changes.
