@@ -484,32 +484,35 @@ advisor closure from 25 to 29 production files; the generated inventory remains
 the authority. See the [Phase 07 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md)
 and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
 
-- `history-contract.cjs` validates version-1 history requests and execution/
-  outcome records, sanitizes display text, and detects credential/raw-output
-  patterns before export.
-- `history-store.cjs` stores
-  `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
-  with owner-only directories/files. It pins Linux directory descriptors,
-  serializes mutations with process-identity locks, enforces 128 KiB execution
-  and 64 KiB outcome limits, and uses CAS/temporary-file identity checks for
-  terminal settlement and idempotent outcome writes.
+- `history-contract.cjs` validates v1 history requests and execution/outcome
+  records, sanitizes display text, and detects credential/raw-output patterns.
+- `history-store.cjs` stores `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
+  with owner-only directories/files; pins Linux descriptors, serializes mutations
+  with process-identity locks, enforces 128 KiB/64 KiB limits, and uses CAS/
+  temporary-file identity checks for terminal settlement and idempotent writes.
 - `history-query.cjs` implements current-project metadata list pagination,
-  validated show, and explicit non-existing-destination export with sanitized
-  records and redaction findings. `history-prune.cjs` previews/applies retention
-  and quota cleanup, oldest terminal records first, while protecting active
-  records and unrelated projects.
+  validated show, explicit non-existing-destination export with sanitized
+  records and redaction findings; `getHistoryMetrics` performs an unlocked
+  bounded scan, normalizes through the generated kernel, and returns sorted
+  diagnostics, byte/count accounting, completeness, and limitation codes;
+  `history-prune.cjs` previews/applies retention/quota cleanup, oldest terminal
+  records first, while protecting active records and unrelated projects.
 - `controller.cjs` records a started snapshot before model launch, updates
   bounded attempt facts, settles <code>ADVICE_READY</code>/<code>FAILED</code>
   execution history, and reports `audit_status: "degraded"` without turning
   history failure into model retry or inference failure. `task-state.cjs` links
   disposition/outcome data to `outcome.json`.
 - The managed CLI exposes `evcrate-advisor history list|show|export|prune`.
-  Requests are strict, versioned, bounded, and project-scoped; prune supports
-  dry-run/apply modes and the default policy is 30 days/100 MiB.
-
+  Requests are strict, versioned, bounded, project-scoped; prune supports
+  dry-run/apply with the default 30 days/100 MiB.
+- Current Advisor Metrics Explorer Phase 04 adds read-only `evcrate-advisor
+  history metrics`: exact filters/current scope, `HISTORY_READY` output, and
+  sanitized `REQUEST_INVALID` failures.
 Evidence: targeted history suites pass 19/19; the full advisor-controller suite
-passes 204/204 across 16 files. The Phase Lead/Senior Mentor review resolved all
+passes 204/204 across 16 files; the Phase Lead/Senior Mentor review resolved all
 seven final implementation items and approved Phase 07 unconditionally at 10/10.
+Phase 04 focused proof: history CLI 7/7, history store 13/13, advisor metrics
+6/6 (26/26 passed, no failures/skips).
 
 ## Cooperative mentoring across commands and harnesses (Phase 08)
 

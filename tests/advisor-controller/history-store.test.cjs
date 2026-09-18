@@ -28,6 +28,7 @@ const {
   listHistory,
   getHistoryEntry,
   exportHistory,
+  getHistoryMetrics,
   pruneHistory,
   calculateTotalHistoryBytes,
   withHistoryLock
@@ -738,4 +739,96 @@ test('withHistoryLock serializes concurrent mutations and protects CAS settlemen
     secondAcquired = true;
   });
   assert.equal(secondAcquired, true);
+});
+
+test('getHistoryMetrics: unlocked read collects metrics and scopes to task_run_id', (t) => {
+  const f = setupFixture(t);
+  const taskRunId = randomUUID();
+  const c1 = randomUUID();
+  const checkpoint = makeCheckpoint(taskRunId);
+  const digest = computeCheckpointDigestV2(checkpoint);
+
+  const exec1 = {
+    schema_version: 1, consultation_id: c1, task_run_id: taskRunId, project_id: f.projectId,
+    checkpoint_digest: digest, checkpoint,
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    receipt: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', controller_version: 2, adapter_version: '0.150.1', elapsed_ms: 1000, build_identity: ADVISOR_BUILD_IDENTITY },
+    prompt_identity: 'canonical-mentor-brief-v2', build_identity: ADVISOR_BUILD_IDENTITY,
+    attempts: [{ attempt_id: 'att-1', slot: 'primary', route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' }, phase: 'model', model_started: true, elapsed_ms: 1000, terminal_classification: 'success', retry_delay_ms: null, cleanup_outcome: 'confirmed' }],
+    status: 'ADVICE_READY',
+    result: { protocol: 'evcrate-advisor-result', version: 2, checkpoint: 'review:phase-07', status: 'ADVICE_READY', recommendation: 'Proceed.', rationale: 'Verified.', must_fix: [], cautions: [], assumptions: [], success_checks: ['Run tests.'], unresolved_questions: [] },
+    error: null, started_at: 1000, completed_at: 2000
+  };
+  recordStartedExecution(f.context, { ...exec1, status: 'started', result: null, receipt: null, completed_at: null });
+  recordTerminalExecution(f.context, exec1);
+
+  // Verify metrics can be read without lock and returns exact shape
+  const metrics = getHistoryMetrics(f.context, { project_id: null, task_run_id: null, filters: null });
+  assert.equal(metrics.protocol, 'evcrate-advisor-history');
+  assert.equal(metrics.version, 1);
+  assert.equal(metrics.operation, 'metrics');
+  assert.equal(metrics.status, 'HISTORY_READY');
+  assert.equal(metrics.counts.consultations, 1);
+  assert.equal(metrics.counts.terminal, 1);
+  assert.equal(metrics.counts.statuses.ADVICE_READY, 1);
+  assert.equal(metrics.metrics.delivery.value, 1);
+  assert.equal(metrics.metrics.delivery.numerator, 1);
+  assert.equal(metrics.metrics.delivery.denominator, 1);
+  assert.equal(metrics.metrics.outcome_coverage.value, 0); // outcome is missing
+  assert.equal(metrics.missingness.missing_outcome, 1);
+  assert.equal(metrics.completeness.is_complete, true);
+
+  // Scoped to matching taskRunId
+  const scoped = getHistoryMetrics(f.context, { project_id: f.projectId, task_run_id: taskRunId, filters: null });
+  assert.equal(scoped.counts.consultations, 1);
+
+  // Scoped to non-matching taskRunId returns 0
+  const emptyScoped = getHistoryMetrics(f.context, { project_id: null, task_run_id: randomUUID(), filters: null });
+  assert.equal(emptyScoped.counts.consultations, 0);
+});
+
+test('getHistoryMetrics: collector captures diagnostics for invalid execution and outcome files', (t) => {
+  const f = setupFixture(t);
+  const t1 = randomUUID();
+  const cValid = randomUUID();
+  const cBadExec = randomUUID();
+  const cp = makeCheckpoint(t1);
+  const digest = computeCheckpointDigestV2(cp);
+
+  // Valid record
+  const execValid = {
+    schema_version: 1, consultation_id: cValid, task_run_id: t1, project_id: f.projectId,
+    checkpoint_digest: digest, checkpoint: cp,
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    receipt: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', controller_version: 2, adapter_version: '0.150.1', elapsed_ms: 1000, build_identity: ADVISOR_BUILD_IDENTITY },
+    prompt_identity: 'canonical-mentor-brief-v2', build_identity: ADVISOR_BUILD_IDENTITY,
+    attempts: [{ attempt_id: 'att-1', slot: 'primary', route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' }, phase: 'model', model_started: true, elapsed_ms: 1000, terminal_classification: 'success', retry_delay_ms: null, cleanup_outcome: 'confirmed' }],
+    status: 'ADVICE_READY',
+    result: { protocol: 'evcrate-advisor-result', version: 2, checkpoint: 'review:phase-07', status: 'ADVICE_READY', recommendation: 'Proceed.', rationale: 'Verified.', must_fix: [], cautions: [], assumptions: [], success_checks: ['Run tests.'], unresolved_questions: [] },
+    error: null, started_at: 1000, completed_at: 2000
+  };
+  recordStartedExecution(f.context, { ...execValid, status: 'started', result: null, receipt: null, completed_at: null });
+  recordTerminalExecution(f.context, execValid);
+
+  // Add an invalid outcome file directly to cValid directory with literal "null"
+  const cValidDir = path.join(f.home, '.evcrate/advisor-history', f.projectId, t1, cValid);
+  fs.writeFileSync(path.join(cValidDir, 'outcome.json'), 'null', { mode: 0o600 });
+
+  // Add a bad execution record
+  recordStartedExecution(f.context, { ...execValid, consultation_id: cBadExec, status: 'started', result: null, receipt: null, completed_at: null });
+  const cBadExecDir = path.join(f.home, '.evcrate/advisor-history', f.projectId, t1, cBadExec);
+  fs.writeFileSync(path.join(cBadExecDir, 'execution.json'), '{ invalid_json', { mode: 0o600 });
+
+  const metrics = getHistoryMetrics(f.context, { project_id: null, task_run_id: null, filters: null });
+  assert.equal(metrics.scan.status, 'complete_with_errors');
+  assert.equal(metrics.scan.accepted_records, 1); // Only cValid accepted
+  assert.equal(metrics.scan.invalid_records, 1); // cBadExec invalid
+  assert.equal(metrics.missingness.invalid_execution, 1);
+  assert.equal(metrics.missingness.invalid_outcome, 1);
+
+  // Check that diagnostics contain both codes
+  const diagCodes = metrics.scan.diagnostics.map((d) => d.code);
+  assert.equal(diagCodes.includes('EXECUTION_INVALID_JSON'), true);
+  assert.equal(diagCodes.includes('OUTCOME_INVALID'), true);
+  assert.equal(metrics.limitations.includes('INVALID_RECORDS_EXCLUDED'), true);
 });

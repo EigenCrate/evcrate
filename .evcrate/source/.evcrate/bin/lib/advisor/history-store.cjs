@@ -21,7 +21,8 @@ const {
 const {
   listHistory: listHistoryImpl,
   getHistoryEntry: getHistoryEntryImpl,
-  exportHistory: exportHistoryImpl
+  exportHistory: exportHistoryImpl,
+  getHistoryMetrics: getHistoryMetricsImpl
 } = require('./history-query.cjs');
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -560,6 +561,10 @@ function getHistoryEntry(dependencies, params) {
 function exportHistory(dependencies, options) {
   return exportHistoryImpl(dependencies, options, queryContextFns);
 }
+function getHistoryMetrics(dependencies, request = {}) {
+  return getHistoryMetricsImpl(dependencies, request, queryContextFns);
+}
+
 
 function pruneHistory(dependencies, policy = {}, options = {}) {
   return withHistoryLock(historyContext(dependencies), () => {
@@ -581,6 +586,7 @@ module.exports = {
   listHistory,
   getHistoryEntry,
   exportHistory,
+  getHistoryMetrics,
   pruneHistory,
   calculateTotalHistoryBytes,
   historyContext,

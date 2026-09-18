@@ -5,7 +5,7 @@ Distribution is complete through Phase 09, and Windows release qualification is
 complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Updated:** 2026-09-18
 
-**Advisor metrics explorer progress:** 30% (3/10 phases complete; Phases 01–03 DONE on 2026-09-18).
+**Advisor metrics explorer progress:** 40% (4/10 phases complete; Phases 01–04 DONE on 2026-09-18).
 
 **Windows release qualification progress:** 100% (10/10 phases complete; Phases
 01–10 DONE on 2026-09-15).
@@ -58,6 +58,7 @@ policy; they are not hand edited.
 | Advisor metrics explorer — Phase 01 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-01-portable-advisor-contract-runtime.md), [validation](../plans/reports/tester-260918-0027-phase-01-portable-advisor-contract-runtime.md), and [review](../plans/reports/code-review-260918-0028-phase-01-portable-advisor-contract-runtime.md); portable zero-Node contract runtime and corrected public history shapes complete. Focused proof: 49/49 requested test executions passed. Review found no critical issues; follow-up warnings remain non-blocking. |
 | Advisor metrics explorer — Phase 02 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md), [review](../plans/reports/code-review-260918-0244-phase02-re-review.md); deterministic checkpoint digest, portable metrics kernel, generated four-file CJS runtime, compatibility adapters, and 33-file controller inventory complete. Evidence: protocol 31/31, metrics 5/5, parity 4/4, advisor-controller 206/206, `distribute:check`/`distribute:build` status `ok`, and `npm run build` passed. |
 | Advisor metrics explorer — Phase 03 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-03-controller-closure-and-inventory-migration.md), [closure evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json), and [review](../plans/reports/code-review-260918-1136-phase-03-controller-closure-inventory-migration.md); exact 33-file parity now covers generated inventory, manifests, `install.sh`, and `install.ps1`; negative tests reject viewer files and external-package requires. |
+| Advisor metrics explorer — Phase 04 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-04-history-metrics-cli-integration.md), [Cycle 2 review](../plans/reports/code-review-260918-1243-phase-04-history-metrics-cli-integration-cycle-2.md); read-only current-project history metrics CLI integrates bounded scanning with the shared Phase 02 kernel, exact envelopes, deterministic diagnostics, and CLI/kernel parity. Focused proof: 26/26 history CLI/store/metrics tests, 6/6 advisor-metrics tests, and 11/11 controller-closure tests. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -123,9 +124,9 @@ Hook Materialization Scope Distribution is complete through Phase 09 (Post-Verif
 Operator Documentation): 512/512 tests pass, 29/29 runtime-closure files verify, and
 the verified Linux release installer fixture passes.
 The 29/29 figure above is dated evidence for that completed milestone and remains
-unchanged. Current Advisor Metrics Explorer Phase 03 proof is the 33-file closure
-recorded in the changelog and closure evidence report.
-Advisor Metrics Explorer next gate: Phase 04 — History metrics CLI integration.
+unchanged. Current Advisor Metrics Explorer Phase 04 proof is recorded in the
+phase plan and Cycle 2 review; the 33-file closure remains evidenced by Phase 03.
+Advisor Metrics Explorer next gate: Phase 05 — Browser history traversal and scanner.
 Live vendor qualification and production `$HOME/.evcrate/` publication remain
 operator-gated; deterministic evidence does not authorize rollout.
 

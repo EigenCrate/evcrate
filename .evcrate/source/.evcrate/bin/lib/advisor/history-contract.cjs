@@ -14,8 +14,9 @@ const {
   deepFreeze,
   SENSITIVE_PATTERN
 } = require('./contracts-v2.cjs');
+const { normalizeHistoryFilter } = require('./generated/advisor-metrics.js');
 
-const HISTORY_OPERATIONS = Object.freeze(['list', 'show', 'export', 'prune']);
+const HISTORY_OPERATIONS = Object.freeze(['list', 'show', 'export', 'prune', 'metrics']);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const ANSI_PATTERN = /\u001b\[[0-9;]*[a-zA-Z]/gu;
@@ -25,7 +26,8 @@ const REQUEST_KEYS = Object.freeze({
   list: ['protocol', 'version', 'operation', 'project_id', 'task_run_id', 'status', 'cursor', 'limit'],
   show: ['protocol', 'version', 'operation', 'project_id', 'task_run_id', 'consultation_id'],
   export: ['protocol', 'version', 'operation', 'destination', 'project_id', 'task_run_id', 'consultation_id', 'dry_run'],
-  prune: ['protocol', 'version', 'operation', 'dry_run', 'retention_days', 'max_bytes']
+  prune: ['protocol', 'version', 'operation', 'dry_run', 'retention_days', 'max_bytes'],
+  metrics: ['protocol', 'version', 'operation', 'project_id', 'task_run_id', 'filters']
 });
 
 function fail(code = 'REQUEST_INVALID') {
@@ -33,8 +35,7 @@ function fail(code = 'REQUEST_INVALID') {
 }
 
 function assertPlainObject(value, code = 'REQUEST_INVALID') {
-  if (!value || typeof value !== 'object' || Array.isArray(value)
-    || Object.getPrototypeOf(value) !== Object.prototype) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
     fail(code);
   }
 }
@@ -42,9 +43,7 @@ function assertPlainObject(value, code = 'REQUEST_INVALID') {
 function assertKeys(value, expected, code = 'REQUEST_INVALID') {
   assertPlainObject(value, code);
   const keys = Object.keys(value);
-  if (keys.length !== expected.length || keys.some((key) => !expected.includes(key))) {
-    fail(code);
-  }
+  if (keys.length !== expected.length || keys.some((key) => !expected.includes(key))) fail(code);
 }
 
 function sanitizeTextForDisplay(value) {
@@ -145,17 +144,26 @@ function parseHistoryRequest(input, expectedOperation) {
     }
   } else if (parsed.operation === 'prune') {
     if (typeof parsed.dry_run !== 'boolean') fail('REQUEST_INVALID');
-    if (parsed.retention_days !== null) {
-      if (typeof parsed.retention_days !== 'number' || !Number.isSafeInteger(parsed.retention_days)
-        || parsed.retention_days < 1 || parsed.retention_days > 365) {
-        fail('REQUEST_INVALID');
-      }
+    if (parsed.retention_days !== null && (typeof parsed.retention_days !== 'number'
+      || !Number.isSafeInteger(parsed.retention_days) || parsed.retention_days < 1 || parsed.retention_days > 365)) {
+      fail('REQUEST_INVALID');
     }
-    if (parsed.max_bytes !== null) {
-      if (typeof parsed.max_bytes !== 'number' || !Number.isSafeInteger(parsed.max_bytes)
-        || parsed.max_bytes < 1024 * 1024 || parsed.max_bytes > 1024 * 1024 * 1024) {
-        fail('REQUEST_INVALID');
-      }
+    if (parsed.max_bytes !== null && (typeof parsed.max_bytes !== 'number'
+      || !Number.isSafeInteger(parsed.max_bytes) || parsed.max_bytes < 1024 * 1024 || parsed.max_bytes > 1024 * 1024 * 1024)) {
+      fail('REQUEST_INVALID');
+    }
+  } else if (parsed.operation === 'metrics') {
+    if (parsed.project_id !== null && (typeof parsed.project_id !== 'string' || !SHA256_PATTERN.test(parsed.project_id))) {
+      fail('REQUEST_INVALID');
+    }
+    if (parsed.task_run_id !== null && (typeof parsed.task_run_id !== 'string' || !UUID_PATTERN.test(parsed.task_run_id))) {
+      fail('REQUEST_INVALID');
+    }
+    if (parsed.filters !== null) assertPlainObject(parsed.filters, 'REQUEST_INVALID');
+    try {
+      normalizeHistoryFilter(parsed.filters);
+    } catch {
+      fail('REQUEST_INVALID');
     }
   }
 
