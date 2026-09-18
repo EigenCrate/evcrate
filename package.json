@@ -17,8 +17,11 @@
     "evcrate-advisor": ".evcrate/source/.evcrate/bin/evcrate-advisor"
   },
   "scripts": {
-    "prebuild": "node scripts/generate-runtime-brief.mjs && node scripts/generate-controller-inventory.mjs",
+    "prebuild": "node scripts/generate-runtime-brief.mjs && npm run generate:advisor-runtime && node scripts/generate-controller-inventory.mjs",
     "build": "tsc -p tsconfig.json",
+    "generate:advisor-runtime": "tsc -p tsconfig.advisor-runtime.json",
+    "test:advisor-metrics": "node --test tests/advisor-metrics/*.test.mjs",
+    "test:advisor-parity": "node --test tests/protocol/advisor-contract-parity.test.mjs",
     "test:protocol": "node --test tests/protocol/*.test.mjs",
     "test:cli": "node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
     "test:primitives": "node --test tests/filesystem/distribution-primitives.test.mjs tests/manifests/distribution-manifests.test.mjs tests/advisor-settings/distribution-primitives.test.mjs",
@@ -38,7 +41,7 @@
     "distribute:pi": "node dist/cli/evcrate.js distribute all --target pi",
     "distribute:omp": "node dist/cli/evcrate.js distribute all --target omp",
     "distribute:copilot": "node dist/cli/evcrate.js distribute all --target copilot",
-    "test": "npm run build && npm run test:protocol && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:validation-rollout && npm run test:advisor-controller && npm run test:release && npm run test:installer:linux && npm run test:distribution:rollout",
+    "test": "npm run build && npm run test:protocol && npm run test:advisor-metrics && npm run test:cli && npm run test:primitives && npm run test:adapters && npm run test:registry && npm run test:scopes && npm run test:publication && npm run test:integration && npm run test:cutover && npm run test:validation-rollout && npm run test:advisor-controller && npm run test:release && npm run test:installer:linux && npm run test:distribution:rollout",
     "test:advisor-controller": "node --test tests/advisor-controller/*.test.cjs",
     "lint": "echo \"Linting passed\"",
     "semantic-release": "node scripts/release/publish-release.cjs",

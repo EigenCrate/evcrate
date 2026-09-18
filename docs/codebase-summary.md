@@ -262,7 +262,7 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-settings.ts`, `index.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts and metrics, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-metrics.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package/project/home/state/target context and host-native path resolution | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading, descriptor types, and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts`, `types.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
@@ -289,14 +289,16 @@ fixtures cover the boundary; Windows standalone installer lifecycle and version 
 
 | Script/action | Role |
 |---|---|
-| `npm run build` | Generates controller inventory through `prebuild`, then compiles TypeScript. |
+| `npm run build` | Generates the runtime brief, four generated advisor runtime modules, and controller inventory through `prebuild`, then compiles TypeScript. |
 | `npm run generate:inventory` | Regenerates the exact controller inventory. |
 | `npm run generate:registry` | Regenerates canonical schema-1 resource records. |
 | `npm run generate:manifests` | Builds target and aggregate schema-2 manifests. |
 | `npm run distribute:build` / `distribute:check` | Build and verify projections through the compiled CLI. |
 | `npm run distribute:all` | Build and publish all selected targets. |
 | `npm run distribute:pi`, `distribute:omp`, `distribute:copilot` | Select one projection target. |
-| `npm run release:check` | Verifies the 29-file runtime closure. |
+| `npm run release:check` | Verifies the current 33-file runtime closure. |
+| `npm run generate:advisor-runtime` | Compiles the exact four-file CommonJS protocol runtime. |
+| `npm run test:advisor-metrics` / `test:advisor-parity` | Exercises kernel formulas and ESM/generated-CJS/browser digest parity. |
 | `npm run release:candidate` | Builds the immutable semantic-release candidate and receipt. |
 | `npm run release:verify-assets` | Verifies exact release asset sets and expected hashes. |
 | `npm run semantic-release` | Runs the verify-only release publisher wrapper. |
@@ -313,46 +315,51 @@ actions. There is no canonical root `distribute.py` command.
 
 ## Portable advisor contract runtime (Phase 01)
 
-`src/protocol/advisor-contract-runtime.ts` centralizes environment-neutral
-advisor policy, checkpoint, result, receipt, attempt, envelope, and v1 history
-types/constants plus deep-freezing and code/path validators. It imports only the
-existing protocol JSON plain-object predicate; it has no `node:*`, process,
-HOME, filesystem, or crypto dependency.
+`src/protocol/advisor-contract-runtime.ts` centralizes environment-neutral advisor
+policy, checkpoint, result, receipt, attempt, envelope, and v1 history types,
+constants, deep-freezing, and code/path validators. It imports only protocol JSON
+helpers and has no `node:*`, process, HOME, filesystem, or crypto dependency.
 
-The exact Phase 01 TypeScript four-file protocol closure boundary is:
+The Phase 01 source boundary is `advisor-contract-runtime.ts`,
+`advisor-contracts.ts`, `advisor-settings.ts`, and `protocol/index.ts`;
+`src/index.ts` exposes it transitively. Focused contract fixtures cover frozen
+valid values and neutral code/path failures. The source boundary is not the
+installed controller closure.
 
-1. `src/protocol/advisor-contract-runtime.ts` — portable validators and shared
-   wire types/constants.
-2. `src/protocol/advisor-contracts.ts` — state v1 contracts plus runtime
-   re-export.
-3. `src/protocol/advisor-settings.ts` — settings adapter and
-   `<code>SETTINGS_INVALID</code>` mapping over shared validators.
-4. `src/protocol/index.ts` — public protocol barrel; `src/index.ts` exposes it
-   transitively.
+## Advisor metrics kernel and generated CJS runtime (Phase 02)
 
-Focused fixtures (`tests/fixtures/advisor-contracts/valid-contracts.json` and
-`invalid-contracts.json`) cover valid deep-frozen values and invalid neutral
-code/path failures; protocol tests assert the updated constants and exports. This
-is source/export preparation only: the installed advisor controller remains the
-separate exact 29-file CJS closure, with no historical evidence or release
-artifact change.
+Phase 02 completes the pure history-metrics kernel, digest compatibility, and
+CommonJS adapter generation. See the [Phase 02 plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md).
+`src/protocol/advisor-metrics.ts` exports `normalizeHistoryRecord`,
+`normalizeHistoryFilter`, `filterHistoryRecords`, `nearestRankPercentile`, and `calculateHistoryMetrics`; callers provide `generated_at`, and all returned values are deeply frozen.
+- Normalization lowercases identities, excludes invalid execution records, and
+  excludes conflicting duplicate identities with `DUPLICATE_IDENTITY` diagnostics.
+- Filters use the exact ten-key shape: null is unconstrained, arrays are
+  OR-within/AND-across, and positive time bounds are inclusive.
+- Ratios/means round to six decimals and use null for zero denominators; latency
+  uses terminal receipt elapsed time and nearest-rank p50/p95.
+- Results retain scan diagnostics, counts, missingness, completeness, limitation
+  codes, attempts, failures, and deterministically ordered route groups.
 
+Checkpoint digests are not canonical JSON: validate without reconstruction or key
+sorting, preserve insertion order, hash UTF-8 `JSON.stringify(validatedCheckpoint)` bytes
+with SHA-256 and emit lowercase hex. The golden fixture proves Node and Web Crypto parity.
+
+`tsconfig.advisor-runtime.json`/`npm run generate:advisor-runtime` emit exactly:
+`canonical-json.js`, `json.js`, `advisor-contract-runtime.js`, and
+`advisor-metrics.js`. `contracts-v2.cjs` retains Node hashing, advice parsing,
+state delegation, exports, and boundary mappings; `policy-schema.cjs` retains
+enabled-backend and legacy migration behavior while delegating shared validation.
 
 ## Controller closure
 
 `scripts/generate-controller-inventory.mjs` produces
-`src/manifests/controller-inventory.generated.ts`, the authoritative exact
-29-file CommonJS closure under `.evcrate/source/.evcrate/bin/`. The closure
-contains the advisor entrypoint, adapter/contract/controller modules, policy,
-runner/workspace, generated runtime brief, and state/history modules. Every
-file uses only literal relative CommonJS imports or Node built-ins; it never
-depends on `dist/` or external npm modules.
-
-The same inventory and hashes are checked by `src/manifests/controller.ts`,
-`install.sh`, `install.ps1`, and `scripts/release/runtime-closure.cjs`; the
-runtime brief comes from the canonical `.claude` advisor reference and is not
-hand-edited. See [system architecture](./system-architecture.md#4-build-hash-and-publication)
-for the complete closure list.
+`src/manifests/controller-inventory.generated.ts`, the authoritative current
+33-file CommonJS closure under `.evcrate/source/.evcrate/bin/`. The four generated
+runtime modules are under `lib/advisor/generated/`; all closure imports are
+literal relative CommonJS or Node built-ins, with no `dist/` or external package
+dependency. Inventory/hash checks are shared by controller validation, installers,
+release checks, manifests, and publication; generated files are never hand-edited.
 
 ## Advisor mentoring brief and structured advice (Phase 04)
 
