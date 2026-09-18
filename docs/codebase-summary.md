@@ -260,7 +260,7 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts and metrics, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-metrics.ts`, `advisor-settings.ts`, `index.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts/metrics/evaluation documents, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-metrics.ts`, `advisor-evaluation.ts`, `advisor-evaluation-validation.ts`, `advisor-evaluation-comparison.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package/project/home/state/target context and host-native path resolution | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading, descriptor types, and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts`, `types.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
@@ -435,48 +435,28 @@ checks, normalization, and four-worker scheduling.
 for incomplete work; browser races are diagnostics, not deletion evidence.
 Focused Phase 05 proof is recorded in the changelog.
 
-## Advisor durable task state and correction gates (Phase 06)
+## Advisor counsel evaluation protocol and fixtures (Phase 06)
 
-Phase 06 completed on 2026-09-08 and was user-approved after two review cycles
-and a senior mentor challenge. See the
-[Phase 06 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md).
-Six CommonJS modules under
-`.evcrate/source/.evcrate/bin/lib/advisor/` provide durable task governance:
-- `state-io.cjs`: Linux descriptor-pinned `/proc/self/fd` directory traversal,
-  owner-only (0600 file / 0700 dir) permissions, token plus `/proc` start-time
-  process locking, dead-process reaping without age-based TTL stealing, atomic
-  replacement with `fsync`, and fail-closed crash handling.
-- `state-baseline.cjs`: Selected file baseline capture (up to 32 paths, 16 MiB/file,
-  64 MiB total) with streaming SHA-256 digests and Git status/index tracking.
-  Conditionally runs bounded global cached raw-diff rename discovery
-  (`git diff --cached --raw -z --find-renames`) when selected paths show index
-  additions/deletions, retaining origin and binding both endpoints without
-  widening worktree reads.
-- `state-contract.cjs`: Strict `TaskStateV1` schema validation, replay ledger
-  reconstruction, and request/payload parsing for all seven state operations.
-- `task-state.cjs`: State transition service (`executeStateRequest`,
-  `claimCheckpoint`, `attachControllerResult`, `preflightHumanDecision`). Enforces
-  5-slot end-to-end ledger headroom at reservation, 3-cycle failed correction
-  escalation to `needs_human`, one-use observed continuation, no-correction clean
-  completion pathways, and Git index-aware outcome attribution.
-- `state-human.cjs`: Cooperative local controlling-terminal (`/dev/tty`) challenge
-  with randomized authorization string and signal cancellation propagation.
-- `managed-checkpoint.cjs`: Wraps v2 inference so that a prior state reservation
-  must be claimed before inference, and required terminal linkage is committed
-  to disk before advice is emitted.
+Phase 06 completed on 2026-09-18; it defines display-only external counsel comparison
+documents and prepares the Phase 07 React explorer handoff. See the [Phase 06 plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md).
+- `src/protocol/advisor-evaluation.ts` exposes `evcrate-advisor-counsel-evaluation` v1 types/constants; primitives, validation, and comparison modules enforce exact keys, bounds, canonical rubric/input digests, complete observation matrices, immutable documents, and provenance-separated aggregation.
+- Response states remain distinct (`ADVICE_READY`, `FAILED`, `MISSING`); scores enforce human/automated provenance, dimension coverage, partial/full/null rules, two-decimal averages, and thresholds. Evaluation IDs never join consultation history.
+- `viewer/src/io/evaluation-reader.ts` reads explicitly selected files through the browser File System Access API with an 8 MiB bound and per-file status mapping; it never writes, executes, grades, persists handles, or feeds production history metrics.
+- Fixtures `valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and `corpus-nine-cases.json` cover state/digest/matrix boundaries; derived inputs contain no `expected_mentor_response` oracle.
+- Evidence: **87/87 tests passed**, build/viewer typecheck/release-check passed, modules stayed below 200 LOC, and Cycle 2 review approved **10/10**. The 33-file controller closure stayed unchanged.
+- Handoff: **Phase 07 — React explorer and view architecture**; render evaluation groups alongside history/configuration without merging state or metrics.
 
-Evidence: 185/185 advisor-controller tests passed; `npm run build` and
-`npm run release:check` passed against the generated 25-file controller closure.
+## Historical advisor durable task state and correction gates (Phase 06)
 
-`runController` accepts both the compatibility v1 checkpoint and the v2
-checkpoint and keeps one correlation ID and one final envelope. Route
-qualification uses finite `probe` mode; model attempts use `generation` mode
-with no generation deadline. For v2, `formatMentorPrompt` supplies the generated
-brief and quoted data, adapters parse the seven-field body, and the controller
-emits the structured V2 result/envelope. Generation warnings report monotonic
-elapsed time on `stderr`; input, streams, output, termination, and cleanup
-remain bounded.
-
+The advisor mentoring Phase 06 completed on 2026-09-08; it is separate from the
+current Advisor Metrics Explorer Phase 06. See the [historical plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md).
+Six CommonJS modules provide owner-only durable state, baseline capture, strict
+`TaskStateV1` validation, reservation/claim/attach/disposition/outcome/complete
+transitions, three-cycle `needs_human` escalation, cooperative TTY continuation,
+and required terminal linkage before advice. Evidence was 185/185 advisor-controller
+tests; build and `release:check` passed against the historical 25-file closure.
+`runController` retains v1/v2 compatibility, one correlation ID, bounded cleanup,
+and generation-mode warnings; the current controller closure is documented above.
 ## Sanitized advisor history and outcome review (Phase 07)
 
 Phase 07 completed on 2026-09-08. The four history modules extend the shared
