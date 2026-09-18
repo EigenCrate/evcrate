@@ -1,10 +1,8 @@
 # Codebase Summary
 
 **Generated:** 2026-09-18
-**Source:** Fresh repository compaction produced by Repomix v1.18.0 at
-`repomix-output.xml`; `.repomixignore` excludes tests, plans, and docs. Release
-workflow, phase plans, and related evidence were checked directly for this
-summary.
+**Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
+excludes tests, plans, and docs. Release workflow and phase evidence checked directly.
 
 The repository is a private Node/TypeScript package. `package.json` declares
 `evcrate` version `2.1.0`, Node `>=22.19.0`, the `evcrate` bin at
@@ -351,15 +349,15 @@ with SHA-256 and emit lowercase hex. The golden fixture proves Node and Web Cryp
 state delegation, exports, and boundary mappings; `policy-schema.cjs` retains
 enabled-backend and legacy migration behavior while delegating shared validation.
 
-## Controller closure
+## Controller closure and inventory migration (Phase 03)
 
-`scripts/generate-controller-inventory.mjs` produces
-`src/manifests/controller-inventory.generated.ts`, the authoritative current
-33-file CommonJS closure under `.evcrate/source/.evcrate/bin/`. The four generated
-runtime modules are under `lib/advisor/generated/`; all closure imports are
-literal relative CommonJS or Node built-ins, with no `dist/` or external package
-dependency. Inventory/hash checks are shared by controller validation, installers,
-release checks, manifests, and publication; generated files are never hand-edited.
+`scripts/generate-controller-inventory.mjs` produces `src/manifests/controller-inventory.generated.ts`, authority for the current 33-file CommonJS
+closure under `.evcrate/source/.evcrate/bin/`. Four generated modules live under
+`lib/advisor/generated/`; imports remain literal-relative CommonJS or Node built-ins, with no `dist/` or external package dependency.
+`install.sh` and `install.ps1` carry the same code-point-sorted list; hashes,
+manifests, staging, publication, and release checks consume it.
+`tests/manifests/distribution-manifests.test.mjs` asserts exact count/hash parity and rejects `viewer.js` and
+`require('lodash')`; [closure evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json) records parity, and generated files are never hand-edited.
 
 ## Advisor mentoring brief and structured advice (Phase 04)
 

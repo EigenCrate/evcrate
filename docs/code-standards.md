@@ -434,6 +434,10 @@ persisted target and the aggregate set. Build manifests are schema 2 and carry
 Build/check must verify complete validation, current hashes, regular non-symlink
 files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.
 Publication consumes only a current verified build and preserves unmanaged roots.
+`install.sh` and `install.ps1` embed the same code-point-sorted 33-file list;
+changes to the generated inventory require parity updates in both installers.
+The manifest contract suite covers exact count/hash parity and rejects viewer or
+external-package entries; dated 29/29 evidence remains unchanged.
 Linux x64 is the qualification boundary for full CLI runtime behavior. Windows
 qualification is complete through Phase 10 (10/10 phases, 100%; completed
 2026-09-15) and is strictly bounded to the standalone installer lifecycle

@@ -251,6 +251,10 @@ Source and projection entries must be regular non-symlink files with the
 expected entrypoint shebang/mode. The generated inventory and schema-2
 `controller_hashes` are authoritative; missing, extra, stale, or mismatched
 entries block publication.
+Phase 03 keeps installer inventories in lockstep: `install.sh` and `install.ps1`
+embed the same 33 code-point-sorted paths. The manifest suite asserts exact
+count/hash parity and rejects viewer files and external-package requires; this is
+a closure boundary test, not viewer registration.
 
 ## 5. Shared advisor controller
 
