@@ -407,33 +407,33 @@ receipt-effort correspondence, and the refined multi-language
 **RAW_STACK_PATTERN**. Sol mentor counsel records Phase 05 preconditions; no paid
 mentoring-quality claim is made.
 
-## Advisor retry orchestration (Phase 05)
+## Advisor retry orchestration (historical Phase 05)
 
-Phase 05 completed on 2026-09-08. `controller.cjs` now runs an explicit,
-sequential consultation state machine. It qualifies the configured primary route
-before model launch, permits up to four primary launches, and applies
-cancellable 10/20/30-second backoff after positively classified transient
-failures. After four primary transient failures, or a route-local preflight skip
-before any primary model launch, it qualifies the configured backup and invokes
-it once; backup failures are terminal and never retried.
+The advisor mentoring milestone completed on 2026-09-08 with a sequential
+consultation state machine: qualify the primary route, allow four primary
+launches with cancellable 10/20/30-second backoff, then qualify/invoke one
+configured backup. Backup failures are terminal; no provider substitution or
+parallel hedge is allowed.
 
-Trusted structured provider cooldowns use the larger of configured backoff and
-cooldown; unsupported cooldowns above one hour fail closed. Cancellation during
-backoff, non-retryable failures, or unconfirmed cleanup prevents later launches.
-Every attempt records slot, phase, route, model-started flag, classification,
-retry delay, and cleanup outcome, while serialized execution keeps at most one
-model process active.
+Cancellation, non-retryable failure, unconfirmed cleanup, cooldowns above one
+hour, or qualification-to-spawn executable drift fail closed. Attempts retain
+slot, phase, route, model-started, classification, delay, and cleanup facts while
+serialized execution keeps one model process active; see the
+[historical Phase 05 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md)
+and retry suite. Evidence: 140/140 advisor-controller tests and `npm run release:check` passed.
 
-Qualification-to-spawn identity binding captures adapter capability and
-executable identity. The controller rebuilds each invocation and rechecks its
-executable and resolved path before spawn, so drift fails closed without a model
-launch. A route-local primary preflight skip is recorded separately and preserves
-the primary error if backup qualification fails. See the
-[Phase 05 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md)
-and `tests/advisor-controller/retry-orchestration.test.cjs`.
+## Browser history scanner (Phase 05)
 
-Evidence: 140/140 advisor-controller tests passed and
-`npm run release:check` exited 0.
+The current Advisor Metrics Explorer Phase 05 adds a browser-only, explicit-handle
+reader; see the [browser scanner guide](./browser-history-scanner.md).
+`history-traversal.ts` and `history-record-reader.ts` perform sorted three-level
+traversal, exact budgets, bounded strict reads, shared validation, identity
+checks, normalization, and four-worker scheduling.
+`browser-digest.ts` uses Web Crypto SHA-256 for Node checkpoint-byte parity;
+`policy-reader.ts` reports validated v2 or legacy-v1 migration-required states.
+`history-reader.ts` replaces only complete scans and retains prior snapshots stale
+for incomplete work; browser races are diagnostics, not deletion evidence.
+Focused Phase 05 proof is recorded in the changelog.
 
 ## Advisor durable task state and correction gates (Phase 06)
 
@@ -796,4 +796,4 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.

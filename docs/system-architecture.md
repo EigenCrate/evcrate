@@ -412,6 +412,35 @@ operation does not claim complete audit coverage, task success, cost, saved
 time, or causal effectiveness, and does not alter list/show/export/prune.
 
 
+#### Phase 05 browser history traversal and scanner
+
+The static viewer has a separate browser-only read boundary documented in
+[Browser History Scanner](./browser-history-scanner.md). It accepts only an
+explicit File System Access handle and never infers HOME, uploads data, persists
+handles, or mutates history/policy.
+
+- `history-traversal.ts` classifies a selected 64-hex project or history root,
+  then walks only sorted project/task/consultation levels and direct
+  `execution.json`/`outcome.json` files.
+- `history-scan-budget.ts` enforces file, entry, consultation, byte, diagnostic,
+  concurrency, and yield limits. `history-record-reader.ts` uses bounded reads,
+  fatal UTF-8/JSON, shared v1 validators, identity correspondence, and
+  `normalizeHistoryRecord`.
+- `browser-digest.ts` hashes the insertion-order `JSON.stringify` bytes of a
+  validated checkpoint with Web Crypto SHA-256, matching the Node adapter.
+- `history-reader.ts` cancels the prior abort controller, increments a
+  generation, and commits only complete or complete-with-errors scans. A limit,
+  permission/traversal failure, cancellation, or stale generation retains the
+  prior snapshot as stale; older generations cannot overwrite newer ones.
+- `policy-reader.ts` explicitly selects one JSON file, validates read permission
+  and 16 KiB bounds, delegates v2/legacy classification to `inspectPolicy`, and
+  reports migration-required/invalid states without writing.
+
+Browser records feed the same metrics kernel and limitations as controller
+records. Browser traversal is non-atomic: concurrent changes are diagnostics,
+not deletion evidence. `viewer/tsconfig.json` uses strict NodeNext type-checking
+with DOM declarations and emits no viewer artifact.
+
 ### 5.3 Compatibility checkpoint wire contract
 
 The existing compatibility helper still accepts the v1 direct checkpoint. The
