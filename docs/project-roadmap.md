@@ -3,9 +3,9 @@
 **Status:** Current roadmap for package `2.1.0`; Hook Materialization Scope
 Distribution is complete through Phase 09, and Windows release qualification is
 complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Updated:** 2026-09-18
+**Updated:** 2026-09-19
 
-**Advisor metrics explorer progress:** 60% (6/10 phases complete; Phases 01–06 DONE on 2026-09-18). Next phase pointer: **Phase 07 — React explorer and view architecture**.
+**Advisor metrics explorer progress:** 70% (7/10 phases complete; Phases 01–07 DONE, with Phase 07 completed 2026-09-19). Next phase pointer: **Phase 08 — Packaging, CSP, preview, and release inventory**.
 
 **Windows release qualification progress:** 100% (10/10 phases complete; Phases
 01–10 DONE on 2026-09-15).
@@ -60,6 +60,7 @@ policy; they are not hand edited.
 | Advisor metrics explorer — Phase 04 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-04-history-metrics-cli-integration.md), [Cycle 2 review](../plans/reports/code-review-260918-1243-phase-04-history-metrics-cli-integration-cycle-2.md); read-only current-project history metrics CLI integrates bounded scanning with the shared Phase 02 kernel, exact envelopes, deterministic diagnostics, and CLI/kernel parity. Focused proof: 26/26 history CLI/store/metrics tests, 6/6 advisor-metrics tests, and 11/11 controller-closure tests. |
 | Advisor metrics explorer — Phase 05 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-05-browser-history-traversal-and-scanner.md), [Cycle 2 review](../plans/reports/code-review-260918-1353-phase-05-browser-history-traversal-cycle-2.md), and [suite validation](../plans/reports/tester-260918-1350-phase05-suite-validation.md); browser File System Access traversal, bounded reads, sanitized diagnostics, atomic generation/stale retention, and read-only policy inspection complete. Focused proof: viewer 24/24, advisor metrics 6/6, parity 4/4 (34/34 total). |
 | Advisor metrics explorer — Phase 06 | DONE (2026-09-18) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md), [Cycle 2 validation](../plans/reports/tester-260918-1733-phase06-cycle2-validation.md), and [Cycle 2 review](../plans/reports/code-review-260918-1736-phase-06-counsel-evaluation-cycle-2.md); exact `evcrate-advisor-counsel-evaluation` v1 protocol, canonical digest checks, response/score invariants, provenance-separated comparison, explicit read-only viewer picker, and oracle-free nine-case fixtures complete. Evidence: **87/87 tests passed** and **10/10 review**. Handoff: Phase 07 — React explorer and view architecture. |
+| Advisor metrics explorer — Phase 07 | DONE (2026-09-19) | [Phase plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md), [validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md), and [review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md); React explorer and four-view architecture complete. Evidence: 28/28 targeted tests passed, strict viewer typecheck and build passed, all modules remain under 200 LOC. |
 | Build-command unblocking — Phases 01–04 | DONE (2026-09-07) | [Plan](../plans/260906-2125-unblock-build-commands-evcrateignore/plan.md), [Phase 04 verification](../plans/260906-2125-unblock-build-commands-evcrateignore/phase-04-verification-and-regression-testing.md), [test evidence](../plans/reports/tester-260907-0209-unblock-build-commands-phase-04.md), and [code review](../plans/reports/code-review-260907-0209-unblock-build-commands-phase-04.md); six focused suites pass 299/299, distribution parity is clean across seven adapters, and the bounded canonical/projected/published OMP matrix passes 21/21 (63 evaluations). |
 | Command and skill catalogs — Phase 01 | DONE (2026-09-07) | [Plan](../plans/260906-2300-scan-command-skill-catalogs/plan.md) and [Phase 01 evidence](../plans/260906-2300-scan-command-skill-catalogs/phase-01-canonical-metadata-and-scanner-contracts.md); 70 commands and 36 non-template skills normalized, strict multi-format scanner contracts delivered, and focused scanner/help tests pass 24/24. |
 | Command and skill catalogs — Phase 02 | DONE (2026-09-07) | [Phase 02 plan](../plans/260906-2300-scan-command-skill-catalogs/phase-02-catalog-data-schema-and-freshness.md), [test report](../plans/reports/tester-260907-0152-catalog-regression-freshness.md), and [code review](../plans/reports/code-review-260907-0153-phase-02-catalog-schema-freshness.md); strict schemas, canonical source identity, atomic generation, freshness validation, and fail-closed regressions complete; focused evidence passes 26/26 with freshness confirmed. |
@@ -125,9 +126,9 @@ Hook Materialization Scope Distribution is complete through Phase 09 (Post-Verif
 Operator Documentation): 512/512 tests pass, 29/29 runtime-closure files verify, and
 the verified Linux release installer fixture passes.
 The 29/29 figure above is dated evidence for that completed milestone and remains
-unchanged. Current Advisor Metrics Explorer Phase 06 proof is recorded in the phase
-plan, Cycle 2 validation, and Cycle 2 review; the 33-file closure remains evidenced
-by Phase 03. Next phase pointer: **Phase 07 — React explorer and view architecture**.
+unchanged. Current Advisor Metrics Explorer Phase 07 proof is recorded in the phase
+plan, viewer validation, and review; the 33-file closure remains evidenced
+by Phase 03. Next phase pointer: **Phase 08 — Packaging, CSP, preview, and release inventory**.
 Live vendor qualification and production `$HOME/.evcrate/` publication remain
 operator-gated; deterministic evidence does not authorize rollout.
 

@@ -1,8 +1,9 @@
 # Codebase Summary
 
-**Generated:** 2026-09-18
+**Generated:** 2026-09-19
 **Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
-excludes tests, plans, and docs. Release workflow and phase evidence checked directly.
+excludes tests, plans, and docs. Release workflow, viewer source, and phase evidence checked directly.
+
 
 The repository is a private Node/TypeScript package. `package.json` declares
 `evcrate` version `2.1.0`, Node `>=22.19.0`, the `evcrate` bin at
@@ -409,18 +410,13 @@ mentoring-quality claim is made.
 
 ## Advisor retry orchestration (historical Phase 05)
 
-The advisor mentoring milestone completed on 2026-09-08 with a sequential
-consultation state machine: qualify the primary route, allow four primary
-launches with cancellable 10/20/30-second backoff, then qualify/invoke one
-configured backup. Backup failures are terminal; no provider substitution or
-parallel hedge is allowed.
+The historical advisor milestone (2026-09-08) added four sequential primary
+launches with cancellable 10/20/30-second backoff and one configured backup.
+Cancellation, cleanup uncertainty, excessive cooldowns, and executable drift
+fail closed; backup failure is terminal. See the
+[historical Phase 05 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md).
+Evidence: 140/140 advisor-controller tests and `npm run release:check`.
 
-Cancellation, non-retryable failure, unconfirmed cleanup, cooldowns above one
-hour, or qualification-to-spawn executable drift fail closed. Attempts retain
-slot, phase, route, model-started, classification, delay, and cleanup facts while
-serialized execution keeps one model process active; see the
-[historical Phase 05 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md)
-and retry suite. Evidence: 140/140 advisor-controller tests and `npm run release:check` passed.
 
 ## Browser history scanner (Phase 05)
 
@@ -446,125 +442,82 @@ documents and prepares the Phase 07 React explorer handoff. See the [Phase 06 pl
 - Evidence: **87/87 tests passed**, build/viewer typecheck/release-check passed, modules stayed below 200 LOC, and Cycle 2 review approved **10/10**. The 33-file controller closure stayed unchanged.
 - Handoff: **Phase 07 — React explorer and view architecture**; render evaluation groups alongside history/configuration without merging state or metrics.
 
-## Historical advisor durable task state and correction gates (Phase 06)
+## React Explorer and view architecture (Phase 07)
 
-The advisor mentoring Phase 06 completed on 2026-09-08; it is separate from the
-current Advisor Metrics Explorer Phase 06. See the [historical plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md).
-Six CommonJS modules provide owner-only durable state, baseline capture, strict
-`TaskStateV1` validation, reservation/claim/attach/disposition/outcome/complete
-transitions, three-cycle `needs_human` escalation, cooperative TTY continuation,
-and required terminal linkage before advice. Evidence was 185/185 advisor-controller
-tests; build and `release:check` passed against the historical 25-file closure.
-`runController` retains v1/v2 compatibility, one correlation ID, bounded cleanup,
-and generation-mode warnings; the current controller closure is documented above.
-## Sanitized advisor history and outcome review (Phase 07)
+Phase 07 completed on 2026-09-19. The private static React viewer composes
+validated browser snapshots, policy inspection, and counsel-evaluation documents
+without adding a backend, router, global store, model call, persistence, or
+network path. See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md),
+[validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md),
+and [review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md).
 
-Phase 07 completed on 2026-09-08. The four history modules extend the shared
-advisor closure from 25 to 29 production files; the generated inventory remains
-the authority. See the [Phase 07 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md)
-and [QA evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
+### Shell, state, and navigation
 
-- `history-contract.cjs` validates v1 history requests and execution/outcome
-  records, sanitizes display text, and detects credential/raw-output patterns.
-- `history-store.cjs` stores `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
-  with owner-only directories/files; pins Linux descriptors, serializes mutations
-  with process-identity locks, enforces 128 KiB/64 KiB limits, and uses CAS/
-  temporary-file identity checks for terminal settlement and idempotent writes.
-- `history-query.cjs` implements current-project metadata list pagination,
-  validated show, explicit non-existing-destination export with sanitized
-  records and redaction findings; `getHistoryMetrics` performs an unlocked
-  bounded scan, normalizes through the generated kernel, and returns sorted
-  diagnostics, byte/count accounting, completeness, and limitation codes;
-  `history-prune.cjs` previews/applies retention/quota cleanup, oldest terminal
-  records first, while protecting active records and unrelated projects.
-- `controller.cjs` records a started snapshot before model launch, updates
-  bounded attempt facts, settles <code>ADVICE_READY</code>/<code>FAILED</code>
-  execution history, and reports `audit_status: "degraded"` without turning
-  history failure into model retry or inference failure. `task-state.cjs` links
-  disposition/outcome data to `outcome.json`.
-- The managed CLI exposes `evcrate-advisor history list|show|export|prune`.
-  Requests are strict, versioned, bounded, project-scoped; prune supports
-  dry-run/apply with the default 30 days/100 MiB.
-- Current Advisor Metrics Explorer Phase 04 adds read-only `evcrate-advisor
-  history metrics`: exact filters/current scope, `HISTORY_READY` output, and
-  sanitized `REQUEST_INVALID` failures.
-Evidence: targeted history suites pass 19/19; the full advisor-controller suite
-passes 204/204 across 16 files; the Phase Lead/Senior Mentor review resolved all
-seven final implementation items and approved Phase 07 unconditionally at 10/10.
-Phase 04 focused proof: history CLI 7/7, history store 13/13, advisor metrics
-6/6 (26/26 passed, no failures/skips).
+- `viewer/index.html` is a local mount; `viewer/src/main.tsx` only calls React
+  `createRoot`. `viewer/src/app.tsx` composes controls, status, tabs, one selected
+  view, diagnostics, and footer.
+- `viewer/src/app-state.ts` owns the immutable `useReducer` model: `idle`,
+  `selecting`, `scanning`, `fresh`, `stale`, and `unsupported`; scan generation,
+  snapshot, filters, diagnostics, policy/evaluations, selection, and reveal state.
+  Late generation actions are ignored; failed/cancelled/incomplete scans retain
+  the prior snapshot as stale.
+- `viewer/src/hash-view.ts` is the router-free hash authority for `#overview`,
+  `#history`, `#configuration`, and `#evaluations`; invalid or empty hashes
+  resolve to overview. File-system handles remain in refs, never reducer state
+  or persistence.
 
-## Cooperative mentoring across commands and harnesses (Phase 08)
+### Views, components, and browser I/O
 
-Phase 08 completed on 2026-09-08. The canonical workflow contract now owns
-checkpoint dispatch, task-state transitions, executor dispositions, correction
-exhaustion, human handoff, and baseline-preserving change review. See the
+| Path | Responsibility |
+|---|---|
+| `viewer/src/views/overview-view.tsx` | n/N/excluded ratios, counts, missingness, latency, and methodological limitations. |
+| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Frozen filters, project/task/consultation table, 100-row pages, and lazy inert detail drawer. |
+| `viewer/src/views/configuration-view.tsx` | Current policy separated from historical route/prompt/build groups; observational-only labels. |
+| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Exact digest-comparable groups, ready/failed/missing states, provenance, and masked/revealed candidates. |
+| `viewer/src/components/source-controls.tsx`, `status-banner.tsx`, `hash-tabs.tsx` | Explicit pick/refresh/cancel controls, freshness/unsupported guidance, and accessible four-view tabs. |
+| `viewer/src/components/metric-ratio.tsx`, `diagnostic-panel.tsx`, `pagination-controls.tsx`, `text-block.tsx` | Honest ratio formatting, sanitized diagnostics, paging, and text-only untrusted content. |
+| `viewer/src/io/history-reader.ts`, `policy-reader.ts`, `evaluation-reader.ts` | Consume Phase 05/06 read-only readers; no writes, execution, grading, or handle persistence. |
+| `viewer/src/io/history-traversal.ts`, `history-record-reader.ts`, `history-scan-budget.ts`, `browser-digest.ts`, `file-system-access.d.ts` | Bounded traversal/reads, browser digest parity, budgets, and minimal picker declarations. |
+| `viewer/src/styles.css`, `react-ambient.d.ts` | Local responsive/focus/reduced-motion styling and minimal ambient React/DOM types. |
+
+All viewer modules stay below 200 LOC. Semantic HTML, keyboard-visible focus,
+responsive tables/drawers, escaped text nodes, no active record links, and no
+remote assets preserve the private diagnostic boundary. Evidence: **28/28 tests
+passed**, strict viewer typecheck/build passed with **zero TypeScript diagnostics**,
+and code review approved **10/10**. Canonical advisor mentoring verification
+remains the `.claude/workflows/advisor-mentoring.md` authority; the viewer only
+renders validated data and makes no mentor-quality or live-vendor claim.
+
+
+## Historical advisor state and audit modules (Phases 06–07)
+
+These 2026-09-08 mentoring phases are separate from the current metrics
+explorer. The historical state module added owner-only task reservations,
+dispositions, outcomes, three-cycle `needs_human`, and cooperative TTY
+continuation; the history modules added sanitized execution/outcome records,
+CAS settlement, bounded list/show/export/prune, and read-only `history metrics`.
+The generated controller inventory remains authoritative. See the
+[state plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md),
+[audit plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md),
+and [audit evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
+Historical evidence remains 185/185 state tests and 204/204 controller tests;
+the current 33-file closure and current metrics explorer evidence are documented
+in their respective sections above.
+
+
+## Cooperative mentoring across commands and harnesses (historical Phase 08)
+
+The 2026-09-08 milestone made
+`.evcrate/source/.claude/workflows/advisor-mentoring.md` the single authored
+checkpoint dispatcher for 16 code/cook/bootstrap/fix consumers. It preserves
+the reserve → claim/attach → disposition → outcome → complete lifecycle,
+explicit dispositions, exact correction ordinals, durable `needs_human`, and
+baseline-preserving review. All seven projections declare mentoring supported
+with `writeChecks: advisory-only`; generated markers are not live vendor or
+host-enforcement proof. See the
 [Phase 08 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md)
-and [integration tests](../tests/adapters/phase08-mentoring-integration.test.mjs).
-
-### Canonical dispatcher and real CLI lifecycle
-
-`.evcrate/source/.claude/workflows/advisor-mentoring.md` is the single authored
-contract for all named checkpoint consumers. The 16 canonical code, cook,
-bootstrap, and fix command files reference the same
-`evcrate-advisor-checkpoint/v2` dispatcher; none retains a v1 dispatcher reference.
-Its required state sequence is:
-
-```text
-init (0 -> 1)
-  -> checkpoint reserve (1 -> 2)
-  -> controller claim/attach (2 -> 3 -> 4)
-  -> state get (reads 4)
-  -> disposition (4 -> 5)
-  -> bounded work
-  -> outcome (5 -> 6)
-  -> complete (6 -> completed)
-```
-The controller's **ADVICE_READY** result is terminal advice only after the reserved
-checkpoint is claimed and attached. `accept`, `reject-with-evidence`,
-`need-evidence`, and `reconcile` are explicit executor dispositions; scope
-authorization, evidence freshness, and actual changed paths remain required.
-Concern-free advice uses a validated no-change outcome (`action_id: null`,
-`episode_id: null`, empty changed paths) rather than inventing edits.
-
-### Durable review/correction and baseline boundaries
-
-`task-state.cjs` persists failed correction outcomes and computes exact
-one-indexed ordinals 1, 2, and 3. The third failed correction enters durable
-`needs_human`; `state human-decision` requires a fresh revision and cooperative
-`/dev/tty` authorization before continuation, scope revision, or abandonment.
-The executor's three-review-cycle cap is separate: it can request a user choice
-without pretending that conversational approval satisfies durable correction
-exhaustion. `state-baseline.cjs` captures selected file/Git identity and
-post-change attribution; pre-existing user changes, untracked files, and
-unrelated hunks are preserved.
-
-### Seven-target mentoring capability matrix
-`src/adapters/advisory.ts` exports **TARGET_MENTORING_CAPABILITIES**,
-`renderMentoringCapabilities`, and `renderMentoringWorkflow`. Every registered
-projection adapter renders the canonical mentoring markers into its target
-workflow:
-
-| Target | Mentoring | Write checks |
-|---|---|---|
-| Claude | supported | advisory-only |
-| Codex | supported | advisory-only |
-| OMP | supported | advisory-only |
-| Antigravity | supported | advisory-only |
-| Gemini | supported | advisory-only |
-| Copilot | supported | advisory-only |
-| Pi | supported | advisory-only |
-
-Mentoring support means the target can invoke and consume the shared controller
-contract. `advisory-only` write checks mean no universal pre-edit mediation claim;
-missing host hooks do not disable mentoring. Projection markers are generated
-output, not runtime proof of live vendor support.
-
-Phase 08 integration coverage validates capability declarations, marker rendering,
-all 10 canonical workflow JSON examples, real disposable-HOME CLI Path A and
-Path B lifecycles, exact three-cycle ordinals and durable gate blocking, all 16
-dispatcher references, and all seven projection adapters. Evidence is 279/279
-tests; Lead Mentor approval is 10/10 and user approval is recorded.
+and [integration evidence](../tests/adapters/phase08-mentoring-integration.test.mjs).
+Evidence: 279/279 tests; Lead Mentor approval 10/10.
 
 ## Windows release qualification asset boundary (Phase 02)
 
