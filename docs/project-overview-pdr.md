@@ -272,8 +272,13 @@ replays. Managed `evcrate-advisor history list|show|export|prune` operations
 remain project-scoped and bounded: list is metadata-only, show/export sanitize
 untrusted text, export requires a safe non-existing destination, and prune
 supports preview/apply retention/quota cleanup while protecting active records.
-History failure reports `audit_status: "degraded"` without failing inference or
-required state.
+The read-only `history metrics` operation is also current-project scoped: it
+accepts the exact ten-key filter shape, excludes invalid execution records,
+preserves missing/invalid/unknown outcome states, reports scan diagnostics,
+counts, missingness, completeness, and limitation codes, and uses `null` for
+zero-denominator values. It does not claim complete audit coverage, task
+success, cost, saved time, or causal effectiveness. History failure reports
+`audit_status: "degraded"` without failing inference or required state.
 
 ### FR-14: Deterministic Windows predecessor boundary
 
@@ -357,7 +362,7 @@ execution remains Linux-only.
 
 | Area | Requirement |
 |---|---|
-| Safety | Fail closed on invalid input, unsafe paths, ownership changes, stale identities, and uncertain recovery. |
+| Operability | Dry-run/apply, recovery, sanitized receipts/errors, history list/show/export/prune review tools, read-only history metrics, and clear ownership of user-managed state. |
 | Bounded work | Bound documents, paths, files, process streams, deadlines, workspace, and transaction state. |
 | Reproducibility | Canonical JSON, deterministic ordering, SHA-256, mode-aware hashes, and exact closure manifests. |
 | Isolation | No credentials in policy/checkpoint/results; vendor CLIs own credentials; child processes receive fixed environments. |

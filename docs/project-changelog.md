@@ -3,8 +3,24 @@
 ## Unreleased
 
 **Updated:** 2026-09-18
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 03 (3/10 phases, 30%; completed 2026-09-18). Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 04 (4/10 phases, 40%; completed 2026-09-18). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 04 plan](../plans/260917-2308-advisor-visual-metrics/phase-04-history-metrics-cli-integration.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1243-phase-04-history-metrics-cli-integration-cycle-2.md)
+
+- Added the read-only `history metrics` CLI operation with exact request/result
+  envelopes, current-project/task scope, bounded unlocked collection, and
+  sanitized deterministic diagnostics.
+- Reused the finalized Phase 02 normalization and metrics kernel without
+  controller-local formulas; invalid, missing, unknown, and conflicting records
+  remain distinct and reconcile with scan accounting.
+- Focused proof passed: 26/26 history CLI/store/metrics tests, 6/6 advisor-metrics
+  tests, and 11/11 controller-closure tests; existing history operations remain
+  unchanged. Phase 05 is next: browser history traversal and scanner.
 
 ### 2026-09-18 — feat(advisor): complete checkpoint digest, metrics kernel, and generated CJS adapters (Phase 02)
 
@@ -33,7 +49,8 @@ Older phase records remain in the linked archive.
   and rejects an extra `viewer.js` or a foreign `require('lodash')`.
 - Evidence records sequence-identical authority/generated/installer lists, 81
   validation checks, and zero failures. Historical dated 29/29 evidence remains
-  unchanged; Phase 04 is the next history-metrics CLI integration gate.
+  unchanged; Phase 04 is complete and Phase 05 is next: browser history traversal
+  and scanner.
 
 ### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
 

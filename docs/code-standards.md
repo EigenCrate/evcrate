@@ -372,6 +372,25 @@ dry-run/apply retention and quota cleanup, oldest terminal records first, while
 protecting active or foreign-project records. Never retain credentials, hidden
 reasoning, raw stderr, or raw vendor logs.
 
+### History metrics CLI integration (Phase 04)
+
+Keep `history metrics` read-only, current-project scoped, and unlocked. Parse one
+bounded v1 request with exact keys; `project_id: null` means the invocation
+project, and a supplied ID must match. Apply optional task scope before the
+shared generated metrics kernel, then apply its exact ten-key filters. Do not
+reimplement formulas, sorting, or duplicate handling in CommonJS.
+
+The collector must normalize validated execution/outcome pairs, exclude invalid
+execution records, preserve missing/invalid/unknown outcomes, and return bounded
+relative-path diagnostics plus bytes, counts, completeness, and limitation
+codes. Absolute HOME/cwd paths, raw advice, credentials, stderr, and hidden
+reasoning never cross the output boundary. Return one
+`evcrate-advisor-history` v1 result with `operation: "metrics"` and
+`HISTORY_READY`; malformed requests remain sanitized `REQUEST_INVALID` failures.
+Existing list/show/export/prune request shapes, locks, sanitization, and results
+remain unchanged.
+
+
 See [system architecture](./system-architecture.md) for complete wire shapes,
 limits, closure, adapter boundaries, and support claims.
 

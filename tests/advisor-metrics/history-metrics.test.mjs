@@ -1,5 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import {
   normalizeHistoryRecord,
   normalizeHistoryFilter,
@@ -322,4 +328,128 @@ test('calculateHistoryMetrics handles zero denominators gracefully', () => {
   assert.equal(metrics.metrics.latency.p50, null);
   assert.equal(metrics.metrics.latency.p95, null);
   assert.equal(metrics.metrics.route_groups.length, 0);
+});
+
+test('CLI metrics matches direct ESM calculateHistoryMetrics output', (t) => {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const CLI = resolve(__dirname, '../../.evcrate/source/.evcrate/bin/evcrate-advisor');
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-hist-parity-'));
+  const home = join(root, 'home');
+  const project = join(root, 'project');
+  const bin = join(root, 'bin');
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+
+  for (const d of [home, project, bin, join(home, '.evcrate')]) {
+    mkdirSync(d, { mode: 0o700 });
+  }
+  writeFileSync(join(project, 'source.txt'), 'console.log("parity");\n');
+
+  const policy = {
+    version: 2,
+    advisor: {
+      primary: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+      backup: { backend: 'omp', model: 'openai-codex/gpt-5.6-sol', effort: 'high' }
+    },
+    wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
+    history: { retention_days: 30, max_bytes: 104857600 }
+  };
+  writeFileSync(join(home, '.evcrate/advisor-routing.json'), JSON.stringify(policy), { mode: 0o600 });
+
+  const env = {
+    ...process.env,
+    HOME: home,
+    TMPDIR: root,
+    PATH: `${bin}:${process.env.PATH}`
+  };
+  delete env.EVCRATE_ADVISOR_ACTIVE;
+  delete env.EVCRATE_ADVISOR_DEPTH;
+
+  const projectId = createHash('sha256').update(project).digest('hex');
+  const taskRunId = '33333333-3333-4000-8000-000000000001';
+  const c1 = '44444444-4444-4000-8000-000000000001';
+  const c2 = '44444444-4444-4000-8000-000000000002';
+  const c1Dir = join(home, '.evcrate/advisor-history', projectId, taskRunId, c1);
+  const c2Dir = join(home, '.evcrate/advisor-history', projectId, taskRunId, c2);
+  mkdirSync(c1Dir, { recursive: true, mode: 0o700 });
+  mkdirSync(c2Dir, { recursive: true, mode: 0o700 });
+
+  const ex1 = createRawExecution({
+    project_id: projectId, task_run_id: taskRunId, consultation_id: c1,
+    status: 'ADVICE_READY', started_at: 1000, completed_at: 2500,
+    receipt: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', controller_version: 2, adapter_version: '0.1.0', build_identity: 'build-v2', elapsed_ms: 1500 },
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    attempts: [{ attempt_id: 'att-1', slot: 'primary', route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' }, phase: 'model', model_started: true, elapsed_ms: 1500, terminal_classification: 'success', retry_delay_ms: null, cleanup_outcome: 'confirmed' }],
+    result: { protocol: 'evcrate-advisor-result', version: 2, checkpoint: 'review:step-4', status: 'ADVICE_READY', recommendation: 'ok', rationale: 'ok', must_fix: [], cautions: [], assumptions: [], success_checks: [], unresolved_questions: [] },
+    error: null
+  });
+  const oc1 = createRawOutcome({
+    project_id: projectId, task_run_id: taskRunId, consultation_id: c1, outcome: 'resolved'
+  });
+
+  const ex2 = createRawExecution({
+    project_id: projectId, task_run_id: taskRunId, consultation_id: c2,
+    status: 'FAILED', started_at: 3000, completed_at: 4000,
+    receipt: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', controller_version: 2, adapter_version: '0.1.0', build_identity: 'build-v2', elapsed_ms: 1000 },
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    attempts: [{ attempt_id: 'att-2', slot: 'primary', route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' }, phase: 'model', model_started: true, elapsed_ms: 1000, terminal_classification: 'fatal', retry_delay_ms: null, cleanup_outcome: 'confirmed' }],
+    result: null, error: { code: 'PROCESS_FAILED', category: 'fatal', message: 'Advisor process failed', action: 'Inspect host environment and logs; retry once if transient.' }
+  });
+
+  writeFileSync(join(c1Dir, 'execution.json'), JSON.stringify(ex1), { mode: 0o600 });
+  writeFileSync(join(c1Dir, 'outcome.json'), JSON.stringify(oc1), { mode: 0o600 });
+  writeFileSync(join(c2Dir, 'execution.json'), JSON.stringify(ex2), { mode: 0o600 });
+
+  // Run CLI
+  const cliResult = spawnSync(process.execPath, [CLI, 'history', 'metrics'], {
+    cwd: project,
+    env,
+    input: JSON.stringify({
+      protocol: 'evcrate-advisor-history',
+      version: 1,
+      operation: 'metrics',
+      project_id: null,
+      task_run_id: null,
+      filters: null
+    }),
+    encoding: 'utf8'
+  });
+  assert.equal(cliResult.status, 0);
+  const cliOutput = JSON.parse(cliResult.stdout.trim());
+  assert.equal(cliOutput.status, 'HISTORY_READY');
+
+  // Run direct ESM calculateHistoryMetrics
+  const norm1 = normalizeHistoryRecord(ex1, oc1, { kind: 'controller', relative_path: `${projectId}/${taskRunId}/${c1}` });
+  const norm2 = normalizeHistoryRecord(ex2, null, { kind: 'controller', relative_path: `${projectId}/${taskRunId}/${c2}` });
+
+  const esmOutput = calculateHistoryMetrics({
+    scope: { kind: 'project', project_ids: [projectId], selected_project_id: projectId },
+    filters: null,
+    completeness: { is_complete: true, omitted_records: 0, omitted_bytes: 0 },
+    scan: {
+      status: 'complete',
+      projects_discovered: 1,
+      tasks_discovered: 1,
+      consultations_discovered: 2,
+      accepted_records: 2,
+      invalid_records: 0,
+      bytes_discovered: cliOutput.scan.bytes_discovered,
+      bytes_read: cliOutput.scan.bytes_read,
+      diagnostics: [],
+      suppressed_diagnostics: 0,
+      limit_hit: false
+    },
+    records: [norm1, norm2],
+    generated_at: cliOutput.generated_at
+  });
+
+  // Assert deep equality
+  assert.deepEqual(cliOutput.counts, esmOutput.counts);
+  assert.deepEqual(cliOutput.metrics, esmOutput.metrics);
+  assert.deepEqual(cliOutput.missingness, esmOutput.missingness);
+  assert.deepEqual(cliOutput.completeness, esmOutput.completeness);
+  assert.deepEqual(cliOutput.limitations, esmOutput.limitations);
+  assert.deepEqual(cliOutput.scope, esmOutput.scope);
+  assert.deepEqual(cliOutput.filters, esmOutput.filters);
+  assert.equal(cliOutput.metric_definition_version, esmOutput.metric_definition_version);
+  assert.equal(cliOutput.generated_at, esmOutput.generated_at);
 });

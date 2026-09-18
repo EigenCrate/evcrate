@@ -16,7 +16,7 @@ const { executeStateRequest, preflightHumanDecision } = require('./lib/advisor/t
 const { observeTerminalDecision } = require('./lib/advisor/state-human.cjs');
 const { serializeRoutingError } = require('./lib/advisor/errors.cjs');
 const { parseHistoryRequest } = require('./lib/advisor/history-contract.cjs');
-const { listHistory, getHistoryEntry, exportHistory, pruneHistory } = require('./lib/advisor/history-store.cjs');
+const { listHistory, getHistoryEntry, exportHistory, pruneHistory, getHistoryMetrics } = require('./lib/advisor/history-store.cjs');
 const { loadGlobalPolicy } = require('./lib/advisor/profile.cjs');
 
 const MAX_INPUT_BYTES = 32 * 1024;
@@ -128,7 +128,7 @@ async function dispatchHistory(input, dependencies, operation) {
     const raw = await input;
     if (dependencies.signal?.aborted) throw createRoutingError('CANCELLED');
     if (raw.byteLength > 64 * 1024) throw createRoutingError('REQUEST_INVALID');
-    if (!['list', 'show', 'export', 'prune'].includes(operation)) {
+    if (!['list', 'show', 'export', 'prune', 'metrics'].includes(operation)) {
       throw createRoutingError('REQUEST_INVALID');
     }
     const request = parseHistoryRequest(raw, operation);
@@ -151,6 +151,8 @@ async function dispatchHistory(input, dependencies, operation) {
       return exportHistory(dependencies, request);
     } else if (operation === 'prune') {
       return pruneHistory(dependencies, policy || {}, request);
+    } else if (operation === 'metrics') {
+      return getHistoryMetrics(dependencies, request);
     }
     throw createRoutingError('REQUEST_INVALID');
   } catch (error) {

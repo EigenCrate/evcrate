@@ -383,6 +383,34 @@ terminal `receipt.elapsed_ms` only and nearest-rank p50/p95; attempt, failure,
 and route groups use stored facts and deterministic code-point ordering. Results
 carry scan diagnostics, counts, missingness, completeness, and stable limitation
 codes so partial or unattested history is not presented as causal evidence.
+#### Phase 04 history metrics CLI integration
+
+`evcrate-advisor history metrics` is a read-only, current-project projection of
+the retained controller history. The request is one bounded
+`evcrate-advisor-history` v1 object with exact keys
+`protocol`, `version`, `operation`, `project_id`, `task_run_id`, and `filters`:
+
+```json
+{"protocol":"evcrate-advisor-history","version":1,"operation":"metrics","project_id":null,"task_run_id":null,"filters":null}
+```
+
+`project_id: null` selects the invocation project; an explicit ID must match it.
+An optional `task_run_id` is applied before the shared kernel's exact ten-key
+filters. Collection is unlocked and non-atomic, reuses bounded descriptor-safe
+history scanning, and never exposes absolute paths or HOME data. Valid execution
+records are normalized through the generated metrics runtime; invalid execution
+records are excluded with sorted relative-path diagnostics, while missing or
+invalid outcomes remain visible as distinct missingness. Scan bytes, accepted and
+invalid counts, completeness, and diagnostic suppression are returned.
+
+The result is the standard `evcrate-advisor-history` v1 envelope with
+`operation: "metrics"`, `status: "HISTORY_READY"`, metric-definition version,
+scope, normalized filters, counts, metrics, missingness, scan facts,
+completeness, and limitation codes. It exits zero only for `HISTORY_READY`;
+malformed requests remain sanitized `FAILED`/`REQUEST_INVALID` results. The
+operation does not claim complete audit coverage, task success, cost, saved
+time, or causal effectiveness, and does not alter list/show/export/prune.
+
 
 ### 5.3 Compatibility checkpoint wire contract
 
