@@ -2,9 +2,36 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-18
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 06 (6/10 phases, 60%; completed 2026-09-18). Next phase: Phase 07 — React explorer and view architecture. Package version: `2.1.0`.
+**Updated:** 2026-09-19
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 07 (7/10 phases, 70%; completed 2026-09-19). Next phase: Phase 08 — Packaging, CSP, preview, and release inventory. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+### 2026-09-19 — feat(viewer): complete React Explorer and view architecture (Phase 07)
+
+**Status:** Phase 07 DONE (2026-09-19; 100%); code review approved **10/10**.  
+**Plan:** [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md)  
+**Evidence:** [viewer validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md); [architecture review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md)
+
+- Added the private static React explorer under `viewer/src/`: one reducer
+  state machine, explicit File System Access pick/refresh/cancel controls,
+  router-free `#overview`, `#history`, `#configuration`, and `#evaluations`
+  views, and local responsive styling.
+- Overview renders honest n/N/excluded ratios, missingness, latency, attempts,
+  completeness, and limitations. History provides frozen filters, 100-row
+  paging, and lazy inert detail. Configuration separates current policy from
+  historical route/prompt/build comparisons. Evaluations group exact comparable
+  digests, preserve human/automated provenance, and mask candidates until reveal.
+- Handles remain in refs; scans are generation-fenced; failed/cancelled/
+  incomplete refresh retains stale snapshots. No raw HTML, active record links,
+  network calls, model execution, persistence, grading, or external assets.
+- Verification: **28/28 tests passed** (22 viewer state/view tests + 6 metrics
+  tests), strict viewer typecheck/build passed with **zero TypeScript diagnostics**,
+  and every viewer module remains under 200 LOC.
+- **Canonical advisor mentoring verification:** **PASS** against the canonical
+  `.claude/workflows/advisor-mentoring.md` contract; the viewer remains a
+  validated data consumer and does not invoke model/checkpoint flows or claim
+  mentor quality.
+- Handoff: **Phase 08 — Packaging, CSP, preview, and release inventory**.
+
 ### 2026-09-18 — feat(advisor): complete counsel evaluation protocol and fixtures (Phase 06)
 
 **Status:** Phase 06 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
