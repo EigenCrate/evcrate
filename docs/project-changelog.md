@@ -3,8 +3,19 @@
 ## Unreleased
 
 **Updated:** 2026-09-18
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 04 (4/10 phases, 40%; completed 2026-09-18). Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 05 (5/10 phases, 50%; completed 2026-09-18). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+### 2026-09-18 — feat(advisor): complete browser history traversal and scanner (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-18; 100%); Cycle 2 review approved 9.8/10.  
+**Plan:** [Phase 05 plan](../plans/260917-2308-advisor-visual-metrics/phase-05-browser-history-traversal-and-scanner.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1353-phase-05-browser-history-traversal-cycle-2.md); [suite validation](../plans/reports/tester-260918-1350-phase05-suite-validation.md)
+
+- Completed explicit read-only File System Access selection, deterministic three-level history traversal, bounded four-read scanning, strict record/digest validation, sanitized diagnostics, and duplicate resolution.
+- Completed atomic generation replacement with stale retention for incomplete/cancelled/denied scans, plus read-only policy inspection with legacy-v1 migration-required state.
+- Focused proof passed: viewer 24/24, advisor metrics 6/6, and contract parity 4/4 (34/34 total); all Phase 05 modules remain under 200 lines.
+- Handoff advanced to Phase 06 — Counsel evaluation protocol and fixtures.
+
 
 ### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
 

@@ -391,6 +391,32 @@ Existing list/show/export/prune request shapes, locks, sanitization, and results
 remain unchanged.
 
 
+### Browser viewer history I/O (Phase 05)
+
+Keep browser history access separate from the Node controller boundary:
+
+- Select only explicit user-granted handles with `showDirectoryPicker`/`read`
+  permission. Do not infer HOME, walk parents, persist handles, upload/archive
+  data, or mutate history and policy.
+- Traverse only the selected project/history root's sorted
+  project/task/consultation levels and direct `execution.json`/`outcome.json`
+  files. Treat unexpected entries and concurrent changes as diagnostics.
+- Enforce `history-scan-budget.ts` limits before scheduling reads. Keep the
+  four-worker queue, 64-record yield cadence, 4,096 retained-diagnostic cap, and
+  explicit incomplete status; never present a bounded partial sample as fresh.
+- Decode fatal UTF-8, parse strict JSON, validate through shared v1 contracts,
+  check directory/record identity, and normalize through `advisor-metrics.ts`.
+  The browser digest must hash insertion-order checkpoint JSON with Web Crypto
+  SHA-256 so Node and browser identities remain byte-compatible.
+- `HistoryReader` owns monotonic generation and cancellation. Replace only
+  complete or complete-with-errors scans; retain the prior snapshot as stale for
+  limits, permission/traversal failures, cancellation, or stale generations.
+- `policy-reader.ts` is read-only: enforce the 16 KiB bound, delegate v2/legacy
+  classification to `inspectPolicy`, and expose migration-required/invalid
+  statuses without rewriting the selected file.
+
+The full source map and budget table are in [Browser History Scanner](./browser-history-scanner.md).
+
 See [system architecture](./system-architecture.md) for complete wire shapes,
 limits, closure, adapter boundaries, and support claims.
 
