@@ -89,6 +89,7 @@ stderr.log
 stdout.log
 
 # test/coverage artifacts
+/test-results/
 .coverage
 test_failures.log
 examples/**/test-results/

@@ -1,9 +1,10 @@
 # System Architecture
 
 **Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Advisor metrics explorer:** Phase 06 DONE (6/10 phases, 60%; completed 2026-09-18). Next phase: **Phase 07 — React explorer and view architecture**.
+**Advisor metrics explorer:** Phases 01–10 DONE (10/10 phases, 100%; completed 2026-09-19); documentation cutover and support boundary are complete.
 **Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
-**Updated:** 2026-09-18
+**Updated:** 2026-09-19
+
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -412,22 +413,35 @@ time, or causal effectiveness, and does not alter list/show/export/prune.
 
 #### Phase 05 browser history traversal and scanner
 
-The static viewer has a separate browser-only read boundary documented in [Browser History Scanner](./browser-history-scanner.md): explicit read-only handles, no HOME inference/upload/handle persistence, sorted three-level traversal, bounded reads, and shared history normalization.
-- `history-traversal.ts` and `history-record-reader.ts` enforce sorted project/task/consultation traversal, strict records, identity/digest checks, and bounded workers.
-- `history-scan-budget.ts` owns limits and diagnostics; `browser-digest.ts` matches Node checkpoint-byte SHA-256; `policy-reader.ts` reports v2 or legacy migration-required states.
-- `history-reader.ts` cancels prior generations and replaces only complete scans; limits, failures, cancellation, and stale generations retain the prior snapshot as stale.
-Browser records feed the same metrics kernel and limitation codes; browser races are diagnostics, not deletion evidence.
+Documented in [Browser History Scanner](./browser-history-scanner.md): explicit read-only handles, no HOME inference/upload/persistence, sorted three-level traversal, bounded reads, and shared history normalization (`history-traversal.ts`, `history-record-reader.ts`, `history-scan-budget.ts`, `history-reader.ts`). Limits, failures, or cancellations retain prior snapshots as stale.
 
 #### Phase 06 counsel evaluation protocol and fixtures
 
-The display-only evaluation boundary accepts untrusted external `evcrate-advisor-counsel-evaluation` v1 documents and never joins consultation history or production metrics.
-- `advisor-evaluation.ts` exposes types/constants; `advisor-evaluation-primitives.ts` enforces exact keys, bounds, IDs, text, and score primitives; `advisor-evaluation-validation.ts` validates nested documents and sync/async digests; `advisor-evaluation-comparison.ts` provides pure grouping/aggregation.
-- Rubric and case inputs use sorted-key canonical JSON SHA-256 (`rubric_digest`, `input_digest`); observation matrices are complete and unique; `ADVICE_READY`, `FAILED`, and `MISSING` states remain distinct.
-- Scores enforce human/automated provenance, dimension coverage, partial/full/null aggregate rules, two-decimal averages, and threshold results; comparison keys require both digests and preserve provenance groups.
-- `viewer/src/io/evaluation-reader.ts` uses an explicit read-only multi-file picker with an 8 MiB bound and per-file statuses; it does not write, execute, grade, persist handles, or feed history metrics.
-- `valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and `corpus-nine-cases.json` cover state/provenance/digest/matrix boundaries; derived viewer fixtures contain no `expected_mentor_response` oracle.
-- Verification: **87/87 tests passed**, build/viewer typecheck/release-check passed, all modules stayed below 200 LOC, and Cycle 2 review approved **10/10**; the 33-file controller closure stayed unchanged.
-Phase 07 renders validated evaluation groups beside history/configuration in the React explorer without merging state or metrics.
+Display-only boundary for untrusted external `evcrate-advisor-counsel-evaluation` v1 documents: pure validation, sync/async digests (`rubric_digest`, `input_digest`), complete observation matrices, provenance preservation, and two-decimal score aggregation (`advisor-evaluation*.ts`). Multi-file picker bounds reads to 8 MiB; evaluations never merge with consultation history or production metrics.
+
+#### Phase 07 React explorer and view architecture
+
+The client-side React explorer (`viewer/src/`) provides private, read-only visualization:
+- State machine: tracks directory handles, scan status (`idle`, `scanning`, `fresh`, `stale`, `error`), cancellation, active tabs, filters, and selection without external mutations.
+- Component architecture: structured views for overview metrics, history consultations with master-detail inspection, policy inspection, and evaluation comparison matrices.
+- Accessibility and security: keyboard navigation (Tab/Shift+Tab/Enter/Space), visible focus rings, ARIA roles, responsive layouts, inert text rendering, and zero network calls after asset delivery.
+
+#### Phase 08 packaging, CSP, preview, and release inventory
+
+- Bundle packaging: `viewer/dist/index.html` and hashed assets under `viewer/dist/assets/` are included in platform archives; bundle size is ~298.5 kB (<= 5 MiB ceiling). Sources, configs, tests, maps, and devDependencies are excluded.
+- Loopback preview: `npm run viewer:preview` serves static assets on `127.0.0.1:4173` with strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`). It is a static file server, not a backend API.
+- Inventory parity: root package has zero production dependencies; controller closure remains exactly 33 files; `dist/release/` remains exactly seven assets (viewer is an archive member, never an eighth asset).
+
+#### Phase 09 qualification and performance benchmark
+
+- End-to-end qualification: 14 Playwright tests prove functional scanning, handle revocation, manual Refresh/Cancel, stale data retention, error diagnostics, CSP enforcement, non-loopback interception, and accessibility.
+- Frozen 10k benchmark: across five 10,000-consultation runs, p95 scan was 1,643 ms (<= 5,000 ms), p95 detail was 67 ms (<= 100 ms), cancel latency was 104 ms (<= 250 ms), and 0 long tasks occurred. Web Worker fallback was unneeded per YAGNI.
+- Bounds: qualified on Chromium on Linux; no claims of POSIX filesystem attestation, causal effectiveness, cost, saved time, or universal platform coverage.
+
+#### Phase 10 documentation cutover and support boundary
+
+- README and the five core docs now describe one operator sequence, local read-only privacy, strict CSP/no-network behavior, metric formulas and limitations, the exact 33-file controller closure, and the Chromium/Linux support boundary.
+- Documentation cutover records evidence without expanding support: Windows remains limited to standalone installer lifecycle and `version --json`; live vendor qualification, production HOME publication, npm/GitHub publication, rollout, desktop, and signing environments remain separate gates.
 
 ### 5.3 Compatibility checkpoint wire contract
 
@@ -655,38 +669,13 @@ by the 512/512 full-suite result, exact 29-file closure, `distribute:check`, and
 installed Linux release fixtures. These deterministic checks do not qualify live
 vendors or authorize production HOME publication.
 
+### Advisor Metrics Explorer support boundary (Phases 01–10)
+
+The Advisor Metrics Explorer is qualified on Chromium on Linux (Chrome/Chromium >=120 via File System Access API). Non-Chromium browsers (Firefox, Safari) and platforms without directory picker support are explicitly unsupported. Loopback preview (`127.0.0.1:4173`) provides static asset delivery, not an active backend or history API. Selected data is processed locally without uploads or storage persistence; reload clears handles. Browser validation checks schema structure only; it makes no POSIX filesystem attestation (`0600` mode, ownership, symlink authenticity), complete audit coverage, or causal/cost/saved-time claims.
+
 ### Deterministic Windows fixture and predecessor resolver (Phase 04)
 
-Phase 04 (2026-09-14) adds an internal, deterministic predecessor boundary for
-the later Windows candidate and harness phases. It does not qualify native
-Windows installer/runtime behavior or change the public support boundary.
-
-`buildWindowsTestReleaseSet` builds the Windows archive, sidecar, release
-metadata, and real `install.ps1` entrypoint through `buildReleaseArchives`.
-Shared fixture helpers own code-point-sorted records, inventory/controller/build
-manifest digests, installer bytes, and the fixed
-`FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z`; independent output roots
-therefore contain identical four-file names, sizes, hashes, and bytes.
-
-The resolver fetches bounded pages of non-draft, non-prerelease semver releases
-from the producer's read-only GitHub API. A release is qualified only when it
-has exactly one `Windows x64 Archive` label and one
-`Windows Installer Entrypoint (install.ps1)` label, canonical filenames, and
-all four assets pass `verifyWindowsAssetSet`. Before any qualification history,
-the resolver emits verified `bootstrap-fixture` `1.0.0`/`v1.0.0` bytes with the
-fixed lowercase `a`×40 source identity and requires candidate `>` 1.0.0.
-After qualification history exists, only the latest stable release is usable;
-an unqualified latest, missing/tampered/duplicate asset, or API/token failure
-fails closed without older-release or bootstrap fallback.
-
-`predecessor-downloader.mjs` downloads exactly the ZIP, sidecar, release
-metadata, and `install.ps1` into private staging, bounds response/error bytes,
-strips authorization across origins, verifies before and after promotion, and
-removes staging/partial output on failure. `prepare-windows-predecessor.mjs`
-returns the normalized `{kind, version, tag, sourceCommit, files, directory}`
-handoff consumed by later phases. Phase 09 integrated proof confirmed the irreversible
-predecessor transition (bootstrap initially; fail-closed on tampered or unqualified latest
-release) and final published-byte comparison.
+Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidate and harness phases without altering public support. `buildWindowsTestReleaseSet` builds archive, sidecar, metadata, and `install.ps1` with fixed `FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z` for byte-identical fixtures. The resolver fetches non-draft GitHub releases requiring exact asset labels, canonical filenames, and `verifyWindowsAssetSet` validation. Initial qualification uses `bootstrap-fixture` `1.0.0`; once qualification history exists, missing/tampered assets fail closed without older fallback. `predecessor-downloader.mjs` stages and verifies downloads, returning `{kind, version, tag, sourceCommit, files, directory}` for downstream phases.
 
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
@@ -775,3 +764,4 @@ files, and vendor credentials remain outside the publication authority.
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
 - [Pi-native migration](./pi-native-migration.md)
+- [Browser history scanner](./browser-history-scanner.md)

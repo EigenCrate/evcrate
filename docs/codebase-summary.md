@@ -66,44 +66,11 @@ freshness checks.
 
 ### Scanner and generator behavior
 
-- `scan_commands.py` defines the frozen command-layout contract: root, format
-  (`markdown`, `toml`, or `command-skill`), optional output, managed entries,
-  and target name-map/resolver bindings. Strict parsers require valid metadata,
-  UTF-8, managed-entry coverage, and unique command names.
-- `scan_skills.py` defines the frozen skill-layout contract for root, output,
-  managed entries, exclusions, and source mapping. It preserves arbitrary
-  nesting in skill names and rejects missing, unsafe, symlinked, or duplicate
-  managed entries.
-- Both scanner CLIs resolve roots and adjacent data outputs from
-  `Path(__file__).resolve()`, so repository-root, script-directory, and
-  unrelated temporary-CWD invocation use the same authoritative paths.
-- Scanner writes use an adjacent temporary UTF-8 YAML file followed by atomic
-  replacement; temporary files are removed on success and failure. Generator
-  `--output` writes, flushes, `fsync`s, closes, and atomically replaces the
-  destination only after complete validation. A failed generation leaves an
-  existing destination unchanged.
-
-### Path safety and freshness
-
-`generate_catalogs.py` validates every `source` and `path` as a normalized
-relative POSIX path. It rejects non-strings, empty values, embedded NUL bytes,
-backslashes, absolute paths, `./` prefixes, empty/dot/dot-dot segments, and
-non-canonical POSIX spellings. This embedded-null defense prevents poisoned
-metadata from reaching filesystem operations.
-
-`generate_catalogs.py --freshness` reloads and validates both committed data
-files, scans the authoritative canonical command and skill roots in memory, and
-deep-compares sorted records (including source, native name/path, metadata, and
-flags). It exits successfully only when the committed inputs match the live
-scans; a count, identity, or field mismatch exits 1 with concise stderr and
-does not write output.
-
-`test-scan-catalogs.py` covers canonical counts, all three command formats,
-Unicode and deep nesting, managed allowlists, malformed input, duplicate and
-unsafe identities, NUL-byte paths, sentinel preservation, CWD independence,
-schema validation, freshness, generated totals, and atomic output (7/7 suites
-passed in the Phase 02 evidence). `test-evcrate-help.py` remains independent
-from scanners and generated data (19/19 suites in the same evidence).
+- `scan_commands.py` and `scan_skills.py` define frozen command and skill layout contracts: root, format, managed entries, and path mapping with strict metadata and UTF-8 parsers.
+- Scanners resolve roots from `Path(__file__).resolve()` for CWD independence, write adjacent temporary files, and atomically replace targets.
+- `generate_catalogs.py` validates normalized POSIX paths, rejecting NUL bytes, `./` prefixes, empty/dot/dot-dot segments, and non-canonical spellings.
+- `generate_catalogs.py --freshness` deep-compares sorted records against live scans in memory, exiting 1 on mismatch without modifying data.
+- Deterministic test suites: `test-scan-catalogs.py` (7/7 passed) and `test-evcrate-help.py` (19/19 passed) verify layout, safety, and freshness contracts.
 
 ## Seven-target scanner and catalog adapters (Phase 03)
 
@@ -533,6 +500,14 @@ Phase 08 evidence records **39/39 tests passed** and a **298.5 kB <= 5 MiB**
 viewer bundle. The controller inventory remains exactly 33 files, and
 `dist/release` remains exactly seven top-level assets; viewer files are archive
 contents, not release assets.
+
+## Qualification, benchmarks, and documentation cutover (Phases 09–10)
+
+Phase 09 (2026-09-19) proved all viewer, controller, package, and performance gates:
+- **Browser qualification**: 14 Playwright tests (`tests/viewer/explorer.spec.mjs`, `security-accessibility.spec.mjs`, `performance.spec.mjs`) verify functional scanning, handle revocation, manual Refresh/Cancel, stale retention, exact CSP headers, non-loopback network blocking, keyboard navigation, visible focus, and responsive views.
+- **Frozen 10,000-consultation benchmark**: five consecutive runs produced p95 scan 1,643 ms (<= 5,000 ms), p95 detail 67 ms (<= 100 ms), cancel latency 104 ms (<= 250 ms), and 0 long tasks >200 ms. Web Worker fallback was unneeded per YAGNI.
+- **Package and release boundaries**: 6 package inventory tests and 7 distribution cutover tests prove zero production dependencies, exact 33-file controller closure, and exact seven release assets.
+- **Phase 10 documentation cutover**: updates README, architecture, standards, PDR, roadmap, and codebase summary to reflect the 33-file controller closure and verified read-only viewer while preserving all dated 29/29 historical records.
 
 
 ## Historical advisor state and audit modules (Phases 06–07)
