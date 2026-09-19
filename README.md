@@ -229,6 +229,29 @@ A final standalone `--advice` token activates formal
 reviews (up to three correction cycles). `@advisor` remains ordinary task text.
 The documentation-facing `/cmd-advise` workflow is a separate interview path.
 
+## Advisor Metrics Explorer
+
+Private, client-side, read-only React explorer for retained advisor consultations, aggregated execution metrics, routing configuration, and external counsel evaluations.
+
+### Operator quick start
+
+```bash
+npm run build:all        # Build control plane and viewer bundle
+npm run viewer:preview  # Serve static viewer at http://127.0.0.1:4173/
+```
+
+1. Open `http://127.0.0.1:4173/` in Chromium on Linux (Chrome/Chromium `>=120`; other browsers unsupported).
+2. Click **Choose history directory** to grant read-only access to `~/.evcrate/advisor-history` or project history.
+3. Optionally import policy (`~/.evcrate/advisor-routing.json`) or evaluation JSON fixtures.
+4. Use **Refresh history** to rescan or **Cancel scan** to abort. Reloading requires directory reselection.
+
+### Security, metrics, and limitations
+
+- **Local & private:** Data is read locally via File System Access API without uploads, persistence, or network requests. Loopback preview enforces strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`). All user text renders as inert content.
+- **Metrics kernel:** Delivery rate (accepted/terminal), outcome coverage (valid outcome/`ADVICE_READY`), known-outcome resolution (resolved/known outcomes), and receipt latency p95 (nearest-rank). Zero denominators render as `null` (`—`).
+- **Support boundary:** Chromium/Chrome `>=120` on Linux only; Firefox, Safari, and platforms without File System Access directory pickers are unsupported. The explorer is descriptive and read-only, not a filesystem-permission or advisor-quality verifier.
+- **Boundaries & non-claims:** Retained samples only (no complete audit coverage); no POSIX filesystem attestation (`0600` mode, ownership, symlinks); no causal effectiveness, cost, or saved-time claims.
+
 ## Documented command names
 
 Documentation and target-facing examples use `/cmd-*` slash names:
@@ -257,4 +280,5 @@ follow-up and does not rename canonical source files or invent aliases.
 - [Project changelog](./docs/project-changelog.md) — phase evidence and boundaries.
 - [Project changelog archive](./docs/project-changelog-archive.md) — older detail.
 - [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime/settings notes.
+- [Browser history scanner](./docs/browser-history-scanner.md) — browser history traversal, metrics kernel, and viewer architecture.
 

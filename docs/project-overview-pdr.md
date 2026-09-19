@@ -3,7 +3,7 @@
 **Status:** Current requirements baseline; Hook Materialization Scope Distribution
 is complete through Phase 09, and Windows release qualification is complete through
 Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Updated:** 2026-09-18
+**Updated:** 2026-09-19
 
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -358,6 +358,14 @@ without publication authority. Runtime commands (`publish`, `health`, advisor ex
 process-tree parity), desktop/UAC/SmartScreen/Authenticode/enterprise-policy environments,
 and execution-policy workarounds remain explicitly excluded. Live vendor/runtime
 execution remains Linux-only.
+
+### FR-18: Advisor Metrics Explorer and Browser History Scanner
+
+**Requirement:** Provide a private, client-side, read-only React explorer for inspecting retained advisor consultations, aggregated execution metrics, routing configuration, and external counsel evaluations.
+
+**Status:** Complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19).
+
+**Acceptance:** Operates purely in Chromium on Linux via File System Access API with explicit user-granted directory/file handles; loopback preview (`127.0.0.1:4173`) enforces strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`) with zero outbound network calls after load; all user data renders as inert text; root package has zero production dependencies; bundle size is ~298.5 kB (strictly <= 5 MiB ceiling); granted handles clear upon page reload; frozen 10,000-consultation benchmark passes all thresholds (p95 scan <= 5,000 ms, p95 detail <= 100 ms, cancel <= 250 ms, 0 long tasks >200 ms); makes no POSIX filesystem attestation, complete audit, causal, cost, or saved-time claims; controller closure remains exactly 33 files; release directory remains exactly seven assets.
 ## Non-functional requirements
 
 | Area | Requirement |
@@ -372,10 +380,7 @@ execution remains Linux-only.
 
 ## Observable release gates
 
-**Current status:** Phase 09 integrated Windows proof and final seven-asset byte
-comparison are complete. Phase 10 post-proof documentation and bounded support
-cutover are complete. Deterministic Linux publication/installer evidence remains
-separate from live vendor qualification and production `$HOME/.evcrate/` publication.
+**Current status:** Windows release qualification (Phases 01–10) and Advisor Metrics Explorer (Phases 01–10) are complete. Documentation and bounded support cutover are complete. Deterministic Linux publication/installer evidence and browser benchmarks remain separate from live vendor qualification, production `$HOME/.evcrate/` publication, and npm rollout.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 33-file
@@ -394,6 +399,7 @@ separate from live vendor qualification and production `$HOME/.evcrate/` publica
 9. Phase 10 documentation/support cutover records the exact installer and
    `version --json` Windows boundary; npm/GitHub publication, operator rollout,
    desktop/signing environments, and live runtime/vendor execution remain gated.
+10. Advisor Metrics Explorer passes all 14 Playwright built-preview end-to-end scenarios, 6 package inventory checks, 10k frozen benchmark (p95 scan 1,643 ms, detail 67 ms, cancel 104 ms), exact 33-file controller closure, and exact seven release assets.
 ## Documentation map
 
 - [System architecture](./system-architecture.md) — detailed controller,
@@ -403,3 +409,4 @@ separate from live vendor qualification and production `$HOME/.evcrate/` publica
 - [Project roadmap](./project-roadmap.md) — completed gates, current gaps, and next work.
 - [Project changelog](./project-changelog.md) — historical phase evidence and boundaries.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.
+- [Browser history scanner](./browser-history-scanner.md) — browser history traversal, metrics kernel, and viewer architecture.

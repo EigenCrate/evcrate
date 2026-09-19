@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const projectRoot = fileURLToPath(new URL('..', import.meta.url));
+const projectRoot = typeof __dirname !== 'undefined'
+  ? path.resolve(__dirname, '..')
+  : process.cwd();
 
 export default defineConfig({
   testDir: path.resolve(projectRoot, 'tests', 'viewer'),

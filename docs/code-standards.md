@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard  
-**Updated:** 2026-09-18
+**Updated:** 2026-09-19
 **Applies to:** TypeScript control plane, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
@@ -417,6 +417,16 @@ Keep browser history access separate from the Node controller boundary:
 
 The full source map and budget table are in [Browser History Scanner](./browser-history-scanner.md).
 
+
+### React Explorer, evaluation, and packaging standards (Phases 06–10)
+
+- **Pure client state**: The React viewer (`viewer/src/`) is a client-side state machine. State transitions (`idle`, `scanning`, `fresh`, `stale`, `error`) must never execute model calls, mutate disk files, write to browser persistence or cookies, or infer file paths.
+- **Inert rendering and security**: Render all user-controlled data (prompts, counsel text, error messages, evaluation metadata) as inert text. Never use `dangerouslySetInnerHTML` or create active external links. Strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`) must be enforced on preview and development servers.
+- **Accessibility and responsiveness**: Use semantic HTML, explicit ARIA attributes (`aria-label`, `role="tab"`, `role="tabpanel"`), visible focus rings (`:focus-visible`), and full keyboard navigation (Tab, Shift+Tab, Enter, Space). Layouts must remain functional on both desktop and narrow viewports.
+- **Evaluation reader boundary**: Untrusted `evcrate-advisor-counsel-evaluation` v1 JSON documents are loaded via an explicit multi-file picker bounded to 8 MiB per selection. Evaluations are strictly isolated: they never merge with consultation history, modify disk records, or affect production metrics.
+- **Generated runtime and inventory authority**: Never hand-edit `lib/advisor/generated/*.js`, `src/manifests/controller-inventory.generated.ts`, `viewer/dist/`, or root build manifests. Regenerate via `npm run prebuild` or `npm run generate:all`.
+- **Package and release boundaries**: Root `package.json` must maintain zero production dependencies; viewer dependencies (`react`, `react-dom`, `vite`, `@playwright/test`) remain development-only. Controller inventory remains exactly 33 files. Release directory `dist/release/` remains exactly seven assets; viewer build assets are packaged inside platform release archives, never as a separate release asset.
+- **Explicit non-claims**: The explorer provides descriptive visualization only. It makes no POSIX filesystem attestation (`0600` permissions, ownership, symlink authenticity), complete lifetime audit coverage, causal effectiveness, cost, or saved-time claims.
 See [system architecture](./system-architecture.md) for complete wire shapes,
 limits, closure, adapter boundaries, and support claims.
 
@@ -623,3 +633,4 @@ before reporting success.
 - [Project changelog](./project-changelog.md)
 - [Project changelog archive](./project-changelog-archive.md)
 - [Pi-native migration](./pi-native-migration.md)
+- [Browser history scanner](./browser-history-scanner.md)
