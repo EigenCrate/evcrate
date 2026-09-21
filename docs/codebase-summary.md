@@ -3,7 +3,7 @@
 **Generated:** 2026-09-21
 **Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
 excludes tests, plans, and docs. Release workflow, viewer source, phase evidence,
-and Phase E01 plugin sources checked directly.
+and Phase E01/E02 plugin sources checked directly; worker detail: [E02 guide](./advisor-plugin-worker.md).
 
 
 The repository is a private Node/TypeScript package. `package.json` declares
@@ -453,10 +453,10 @@ provider consumed by the future SDK worker. See the [phase plan](../plans/260920
   evaluation; `provider-cancellation.test.mjs` covers abort/deadline/stale
   retention and FIFO; `provider-source-safety.test.mjs` covers path/link/race
   safety and context isolation.
-- Verification totals **56/56 passing** across 8 files: 9 plugin tests, 38
-  advisor-controller regressions, and 9 domain protocol/parity tests. The exact
-  33-file controller closure is unchanged (inventory delta `0`); plugin files
-  remain outside controller, installer, and distribution projections.
+- E01 verification: **56/56 passing** across 8 files; exact 33-file controller closure unchanged (inventory delta `0`).
+- E02 wraps the provider in the pinned D00 worker (`worker.cjs`,
+  `context-table.cjs`, `request-table.cjs`, `dispatcher.cjs`, `error-mapping.cjs`,
+  local `data-api.cjs`) and deterministic candidate builder; see the [worker guide](./advisor-plugin-worker.md).
 
 ## React Explorer and view architecture (Phase 07)
 
@@ -795,4 +795,4 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.

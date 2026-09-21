@@ -453,6 +453,45 @@ to avoid unconstrained allocations. Current review follow-ups remain to normaliz
 metric-filter failures to `PluginDataApiError` and recursively validate compare
 groups once the UI shape is stable.
 
+### Phase E02 framed Node plugin worker
+
+`plugin/backend/worker.cjs` is the only worker entrypoint. Use the pinned D00
+SDK for four-byte big-endian framing, strict UTF-8 JSON-RPC 2.0 validation, and
+frame limits; never duplicate generic framing or accept batches/numeric IDs.
+Check payload ceilings before allocation. stdout is protocol frames only; all
+operational data goes through the bounded sanitized stderr logger.
+
+Keep the worker private and runner-owned: no listener, shell, child model
+process, arbitrary filesystem discovery, mutation, credentials, or durable grant
+registry. Require Node `>=22.19.0`. `runner.hello` gates all other methods and
+must report protocol/SDK/manifest/data versions plus only implemented
+capabilities. A repeated hello cancels requests and revokes old contexts.
+
+Contexts are ephemeral, target-verified, revision-tagged, and operation-limited:
+maximum 16 contexts/worker, 4 operations/context, 300-second idle TTL by the
+current SDK budget. Every invoke checks context, allowed operation, policy flag,
+and supplied activation/binding/grant revisions; stale revisions cancel work
+and revoke the context. The host remains the durable authorization authority.
+
+Request admission is bounded to 16 active operations and queue 32, with one
+history refresh and one evaluation parse active per worker. Map one request ID
+to one `AbortController`/SDK cancellation token. Deadlines and cancellation
+must settle the original invocation exactly once; queued settlement must not
+decrement active counters. Do not retry or replay after cancellation, reconnect,
+or worker restart.
+
+Map provider/internal failures to the D00 safe error taxonomy. Redact paths,
+long token-like values, credentials, source bytes, raw stderr, and stacks; keep
+only allowlisted detail keys. Domain status unions are valid results, not
+exceptions. Unexpected failures become `WORKER_FAILED` and terminate through
+runner recovery semantics.
+
+`plugin/backend/data-api.cjs` is the package-local E00 validator closure.
+`plugin/manifest.json` inventory and
+`scripts/build-advisor-plugin-candidate.mjs` are generated/validated package
+authority: deterministic backend-only candidate for G1, not E04 release or root
+exact-seven assets. See the [worker guide](./advisor-plugin-worker.md).
+
 ### React Explorer, evaluation, and packaging standards (Phases 06–10)
 
 - **Pure client state**: The React viewer (`viewer/src/`) is a client-side state machine. State transitions (`idle`, `scanning`, `fresh`, `stale`, `error`) must never execute model calls, mutate disk files, write to browser persistence or cookies, or infer file paths.
