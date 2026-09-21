@@ -12,8 +12,10 @@
     "allowImportingTsExtensions": true
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.d.ts"
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../../viewer/src/**/*.ts",
+    "../../viewer/src/**/*.tsx",
+    "../../viewer/src/**/*.d.ts"
   ]
 }

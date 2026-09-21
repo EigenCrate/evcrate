@@ -77,6 +77,7 @@ prompt.md
 # build output
 /dist/
 /viewer/dist/
+/plugin/ui/dist/
 examples/**/dist/
 
 # IDE

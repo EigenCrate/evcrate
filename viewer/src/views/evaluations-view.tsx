@@ -14,7 +14,9 @@ export const EvaluationsView: FC<EvaluationsViewProps> = ({
   onRevealChange
 }) => {
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
-  const { evaluationResults, revealCandidates } = state;
+  const { evaluationResults, evaluationsList, evaluationsComparison, revealCandidates, capabilities } = state;
+
+  const hasEvalPerm = capabilities.length === 0 || capabilities.includes('evaluations.list');
 
   const validDocs = useMemo(() => {
     return evaluationResults
@@ -23,9 +25,12 @@ export const EvaluationsView: FC<EvaluationsViewProps> = ({
   }, [evaluationResults]);
 
   const groups: readonly ComparableEvaluationGroup[] = useMemo(() => {
+    if (evaluationsComparison?.groups && evaluationsComparison.groups.length > 0) {
+      return evaluationsComparison.groups;
+    }
     if (validDocs.length === 0) return [];
     return aggregateEvaluationGroups(validDocs);
-  }, [validDocs]);
+  }, [evaluationsComparison, validDocs]);
 
   const selectedGroup = useMemo(() => {
     if (!selectedGroupKey) return null;
@@ -34,12 +39,27 @@ export const EvaluationsView: FC<EvaluationsViewProps> = ({
 
   const issueResults = evaluationResults.filter((r) => r.status !== 'EVALUATION_READY');
 
-  if (evaluationResults.length === 0) {
+  if (!hasEvalPerm) {
+    return (
+      <section className="view-panel evaluations-empty" id="panel-evaluations" aria-label="Evaluations">
+        <div className="empty-state-card alert-danger">
+          <h3>Evaluation Inspection Forbidden</h3>
+          <p>Evaluation inspection is not permitted under current actor grants.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (evaluationsList?.status === 'not_configured' || (evaluationResults.length === 0 && !evaluationsComparison && !evaluationsList)) {
     return (
       <section className="view-panel evaluations-empty" id="panel-evaluations" aria-label="Evaluations">
         <div className="empty-state-card">
           <h3>No Counsel Evaluations Loaded</h3>
-          <p>Click "Choose Evaluation Files" above to load evaluation JSON documents.</p>
+          <p>
+            {evaluationsList?.status === 'not_configured'
+              ? 'No evaluation source is configured for this target.'
+              : 'Click "Choose Evaluation Files" or select an evaluation source to inspect candidate comparisons.'}
+          </p>
           <div className="empty-state-notice text-muted">
             Evaluation documents are grouped strictly by matching rubric and input digests.
           </div>
@@ -52,7 +72,7 @@ export const EvaluationsView: FC<EvaluationsViewProps> = ({
     <section className="view-panel evaluations-view" id="panel-evaluations" aria-label="Evaluations">
       <div className="evaluations-header">
         <div>
-          <h2 className="view-title">Counsel Evaluations ({validDocs.length} documents)</h2>
+          <h2 className="view-title">Counsel Evaluations ({validDocs.length > 0 ? `${validDocs.length} documents` : `${groups.length} comparable groups`})</h2>
           <p className="text-muted">
             Observations are grouped by exact comparable keys (matching rubric and input digests).
           </p>

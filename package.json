@@ -31,6 +31,7 @@
     "test:advisor-plugin": "node --test tests/protocol/advisor-plugin-data-api.test.mjs tests/protocol/advisor-plugin-domain-parity.test.mjs",
     "build:advisor-plugin-candidate": "node scripts/build-advisor-plugin-candidate.mjs",
     "check:advisor-plugin-candidate": "node scripts/build-advisor-plugin-candidate.mjs --check",
+    "build:advisor-plugin-ui": "tsc -p plugin/ui/tsconfig.json && vite build --config plugin/ui/vite.config.ts",
     "test:advisor-plugin-worker": "node --test tests/plugin/worker.test.mjs tests/plugin/worker-framing.test.mjs tests/plugin/worker-cancellation.test.mjs tests/plugin/integration-candidate.test.mjs",
     "test:protocol": "node --test tests/protocol/*.test.mjs",
     "test:cli": "node --test tests/cli/*.test.mjs tests/context/*.test.mjs",

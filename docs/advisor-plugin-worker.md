@@ -41,9 +41,12 @@ stderr -> bounded sanitized events
 - runner protocol, worker SDK, UI bridge, manifest, and data API contract pins;
 - backend entry `backend/worker.cjs`, runtime `node`, range `>=22.19.0`;
 - exactly eight implemented capabilities (listed below);
-- an inventory of 63 closure files with size, SHA-256, and mode. `manifest.json` itself is not an inventory member.
+- the E02 backend baseline inventory had 63 closure files with size, SHA-256, and
+  mode; the current E03 candidate adds `ui/index.html` as inventory entry 64.
 
-The early candidate intentionally has no UI entrypoint and no navigation. It contains the real backend/data closure so D01–D03 can install and exercise a worker before E03/E04.
+The E02 implementation was intentionally backend-only before E03. Phase E03 now
+adds the embedded UI entrypoint/navigation and a provider-neutral client; this guide
+continues to describe the worker/backend boundary, not the UI package.
 
 ## JSON-RPC streaming framing
 
@@ -162,9 +165,10 @@ Collection order and archive behavior:
 5. Add root `manifest.json` to the archive (not to its inventory).
 6. Write a deterministic USTAR tar stream, PAX path records when needed, normalized modes, gzip level 9, and gzip `mtime: 0`; no `package/` prefix.
 
-Current reviewed artifact: 64 archive entries (63 inventory files plus `manifest.json`), 128,318 bytes, SHA-256 `5a65f4f8b1725604c2765f88c0b7c538947dd3029178e0638d2ea3df608236ad`. This digest identifies the current local candidate bytes; D00/G0 must provide the approved host candidate identity/range before deployment.
-
-The candidate is backend-only and internal. It does not alter the root exact-seven release set, publish an E04 package, add UI/navigation, or authorize standalone viewer retirement.
+The E02 reviewed artifact record is historical backend-only evidence. The current
+E03 candidate may also contain `ui/index.html` and navigation; that extension does
+not change the worker's backend capabilities or authorize G1/G2, E04 publication,
+or standalone viewer retirement.
 
 ## Verification and handoff
 

@@ -7,8 +7,9 @@ import type { ExecutionStatus, OutcomeResult } from '../../../src/protocol/advis
 
 export interface HistoryViewProps {
   readonly state: AppState;
-  readonly onSelectConsultation: (id: string | null) => void;
+  readonly onSelectConsultation: (id: string | null, recordRef?: string) => void;
   readonly onSetFilters: (filters: Partial<UiHistoryFilters>) => void;
+  readonly onRefresh?: () => void;
 }
 
 const PAGE_SIZE = 100;
@@ -16,17 +17,19 @@ const PAGE_SIZE = 100;
 export const HistoryView: FC<HistoryViewProps> = ({
   state,
   onSelectConsultation,
-  onSetFilters
+  onSetFilters,
+  onRefresh
 }) => {
   const [page, setPage] = useState<number>(0);
-  const { snapshot, selectedConsultationId, filters } = state;
+  const { snapshot, selectedConsultationId, filters, historyPageEntries, historyDetail } = state;
+  const hasHistory = snapshot !== null || historyPageEntries.length > 0;
 
-  if (!snapshot) {
+  if (!hasHistory) {
     return (
       <section className="view-panel history-empty" id="panel-history" aria-label="History Records">
         <div className="empty-state-card">
           <h3>No History Loaded</h3>
-          <p>Please select an advisor history directory to browse individual consultation records.</p>
+          <p>Please select an advisor history source or click "Refresh History" to browse consultation records.</p>
         </div>
       </section>
     );
@@ -118,6 +121,7 @@ export const HistoryView: FC<HistoryViewProps> = ({
               ) : (
                 pagedRecords.map((r) => {
                   const isSelected = r.consultation_id === selectedConsultationId;
+                  const recordRef = 'record_ref' in r ? r.record_ref : r.consultation_id;
                   return (
                     <tr key={r.consultation_id} className={isSelected ? 'row-selected' : ''}>
                       <td><span className={`badge badge-${r.status}`}>{r.status}</span></td>
@@ -136,7 +140,7 @@ export const HistoryView: FC<HistoryViewProps> = ({
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
-                          onClick={() => onSelectConsultation(isSelected ? null : r.consultation_id)}
+                          onClick={() => onSelectConsultation(isSelected ? null : r.consultation_id, recordRef)}
                           aria-label={`Inspect consultation ${r.consultation_id.slice(0, 8)}`}
                         >
                           {isSelected ? 'Hide' : 'Inspect'}
@@ -157,10 +161,12 @@ export const HistoryView: FC<HistoryViewProps> = ({
           />
         </div>
 
-        {selectedRecord && (
+        {(selectedRecord || historyDetail?.status !== 'idle') && (
           <HistoryDetail
             record={selectedRecord}
+            detail={historyDetail}
             onClose={() => onSelectConsultation(null)}
+            onRefresh={onRefresh}
           />
         )}
       </div>

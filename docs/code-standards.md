@@ -2,9 +2,9 @@
 
 **Status:** Current implementation standard
 **Updated:** 2026-09-21
-**Applies to:** TypeScript control plane, Phase E00 advisor-plugin domain
-contracts, canonical harness resources, shared advisor controller, generated
-projections, and publication tooling
+**Applies to:** TypeScript control plane, Phase E00 advisor-plugin contracts,
+Phase E03 provider-neutral embedded UI, canonical harness resources, shared advisor
+controller, generated projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
 2026-09-15) for standalone installer lifecycle and `version --json`; live runtime
 commands and vendor qualification remain Linux-only and operator-gated.
@@ -489,8 +489,43 @@ runner recovery semantics.
 `plugin/backend/data-api.cjs` is the package-local E00 validator closure.
 `plugin/manifest.json` inventory and
 `scripts/build-advisor-plugin-candidate.mjs` are generated/validated package
-authority: deterministic backend-only candidate for G1, not E04 release or root
-exact-seven assets. See the [worker guide](./advisor-plugin-worker.md).
+authority: the E02 backend baseline is deterministic for G1; E03 extends the
+current candidate with UI/navigation, not E04 release or root exact-seven assets.
+See the [worker guide](./advisor-plugin-worker.md) and [E03 UI guide](./advisor-plugin-ui.md).
+
+### Phase E03 provider-neutral embedded UI
+
+Keep one `App`/reducer/view tree behind `AdvisorDataProvider`; do not fork plugin
+views or leak acquisition types into shared props. The interface owns the eight E00
+read operations, lifecycle subscription, and `cancel(requestId)`.
+
+- `StandalonePickerProvider` is the only handle-aware adapter. Keep explicit
+  File System Access selection, local readers, and standalone mappers behind it;
+  it is a temporary G4 transition boundary.
+- `DamHopperPortProvider` accepts one validated transferred `MessagePort`, sends
+  the `1.0.0` nonce acknowledgement, waits for `frame.ready`, and carries only
+  bounded E00 requests/responses. Bind frame session and activation generation;
+  ignore late/mismatched messages; reject pending work on revoke/teardown.
+- `bridge-contract.ts` must reject non-object/unknown/malformed envelopes and
+  impossible response shapes. Opaque-origin `null` is not an identity signal.
+- Reducer actions must be generation/session-fenced. Context changes or revocation
+  clear snapshots, cursors, details, policy, evaluations, and selection before
+  accepting new data. Plugin filters request summary plus the first page; do not
+  download all history.
+- Preserve the four shared views: Overview, History/detail, Configuration, and
+  Evaluations. Current account-wide policy, detail changed/missing, unavailable,
+  forbidden, and evaluation issue states remain distinct and observable.
+- `plugin/ui/index.html` is a self-contained opaque-srcdoc package member. The Vite
+  build inlines CSS and IIFE JavaScript, emits no sourcemaps/external assets, and
+  the candidate builder records its size, SHA-256, and mode in the manifest.
+- Embedded code must not call File System Access pickers, fetch/XHR/WebSocket/
+  EventSource, storage/cookies, `eval`, `Function`, or active external links.
+  Render untrusted values as inert text and retain semantic keyboard-accessible
+  tabs, tables, panels, and drawers. Host CSP/sandbox remains authoritative.
+
+Focused bridge, state, four-view, security, and accessibility suites are package
+evidence; they do not substitute for D04/G2 LAN qualification or E04 publication.
+
 
 ### React Explorer, evaluation, and packaging standards (Phases 06–10)
 
@@ -708,3 +743,4 @@ before reporting success.
 - [Project changelog archive](./project-changelog-archive.md)
 - [Pi-native migration](./pi-native-migration.md)
 - [Browser history scanner](./browser-history-scanner.md)
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md)
