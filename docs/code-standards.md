@@ -1,9 +1,10 @@
 # Code Standards and Codebase Structure
 
-**Status:** Current implementation standard  
-**Updated:** 2026-09-19
-**Applies to:** TypeScript control plane, canonical harness resources, shared advisor
-controller, generated projections, and publication tooling
+**Status:** Current implementation standard
+**Updated:** 2026-09-21
+**Applies to:** TypeScript control plane, Phase E00 advisor-plugin domain
+contracts, canonical harness resources, shared advisor controller, generated
+projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
 2026-09-15) for standalone installer lifecycle and `version --json`; live runtime
 commands and vendor qualification remain Linux-only and operator-gated.
@@ -408,7 +409,7 @@ Keep browser history access separate from the Node controller boundary:
   check directory/record identity, and normalize through `advisor-metrics.ts`.
   The browser digest must hash insertion-order checkpoint JSON with Web Crypto
   SHA-256 so Node and browser identities remain byte-compatible.
-- `HistoryReader` owns monotonic generation and cancellation. Replace only
+- `history-reader.ts` owns monotonic generation and cancellation. Replace only
   complete or complete-with-errors scans; retain the prior snapshot as stale for
   limits, permission/traversal failures, cancellation, or stale generations.
 - `policy-reader.ts` is read-only: enforce the 16 KiB bound, delegate v2/legacy
@@ -417,6 +418,40 @@ Keep browser history access separate from the Node controller boundary:
 
 The full source map and budget table are in [Browser History Scanner](./browser-history-scanner.md).
 
+
+### Phase E00 advisor-plugin domain data API
+
+`src/protocol/advisor-plugin-data-api.ts` is the single TypeScript authority for
+`evcrate-advisor-data` v1; `src/protocol/index.ts` is its public barrel. Keep the
+method set exact: `history.refresh`, `history.summary`, `history.page`,
+`history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`,
+and `evaluations.compare`. Domain params never accept actor, installation,
+grant, HOME, target-path, or binding overrides; generic host context supplies
+authorization.
+
+Validators must reject unknown keys before dispatch, preserve discriminated
+changed/missing/unavailable states, check UUID/SHA-256 identity and positive
+safe-integer timestamps, and return frozen values. Keep the published limits
+aligned: opaque IDs 128 bytes, cursors 256 bytes, history pages 500 rows,
+evaluation pages 100 rows, page results 1 MiB, frames 16 MiB, controls 64 KiB,
+evaluation documents 8 MiB, and compare requests 32 items.
+
+`scripts/generate-advisor-plugin-data-schema.mjs` is the only schema-generation
+authority. It writes `plugin/contracts/evcrate-advisor-data-v1.schema.json` and
+`contract-manifest.json`; `--check` must pass before publication. Never hand-edit
+these outputs. Keep positive/negative wire, path/worktree identity, and golden
+insertion-order digest fixtures synchronized with both protocol parity suites.
+
+`plugin/contracts/read-closure-feasibility.json` is the E00 G0 feasibility
+authority, not an extraction implementation. Its read closure permits only
+`node:fs`, `node:path`, and `node:crypto`; mutation, model/process/network, and
+workspace modules stay outside it, and the expected controller inventory delta
+is zero. E01 must revalidate the graph before a clean caller cutover.
+
+Transport/provider code must enforce raw byte ceilings before JSON deserialization
+to avoid unconstrained allocations. Current review follow-ups remain to normalize
+metric-filter failures to `PluginDataApiError` and recursively validate compare
+groups once the UI shape is stable.
 
 ### React Explorer, evaluation, and packaging standards (Phases 06–10)
 

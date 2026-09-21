@@ -1,0 +1,55 @@
+{
+  "valid_roots": [
+    {
+      "input_path": "/home/developer/workspace/project-alpha",
+      "expected_normalized": "/home/developer/workspace/project-alpha",
+      "expected_sha256": "a03f1247daa00311674bcb6eafce77fafaeea33aa11eec7ceabe4796d6384862",
+      "is_worktree": false
+    },
+    {
+      "input_path": "/home/developer/workspace/project-alpha/worktrees/feature-x",
+      "expected_normalized": "/home/developer/workspace/project-alpha/worktrees/feature-x",
+      "expected_sha256": "cc984b82163260149c8f878836d3ed8acc69a28351e150121099bc6522bb1714",
+      "is_worktree": true
+    },
+    {
+      "input_path": "/srv/git/repositories/backend",
+      "expected_normalized": "/srv/git/repositories/backend",
+      "expected_sha256": "863ad7588241d2044a5f5008a7c6d9a45ccbed8317b056059a88ebf069789792",
+      "is_worktree": false
+    }
+  ],
+  "invalid_paths": [
+    {
+      "description": "Relative path",
+      "input_path": "workspace/project-alpha",
+      "expected_rejection": "NOT_ABSOLUTE"
+    },
+    {
+      "description": "Path containing null byte",
+      "input_path": "/home/developer\u0000/workspace",
+      "expected_rejection": "CONTAINS_NULL"
+    },
+    {
+      "description": "Path containing single-dot segment",
+      "input_path": "/home/developer/./workspace",
+      "expected_rejection": "DOT_SEGMENT"
+    },
+    {
+      "description": "Path containing double-dot segment",
+      "input_path": "/home/developer/../workspace",
+      "expected_rejection": "DOT_SEGMENT"
+    },
+    {
+      "description": "Empty string path",
+      "input_path": "",
+      "expected_rejection": "NOT_ABSOLUTE"
+    }
+  ],
+  "worktree_separation_invariants": {
+    "rule": "Worktree paths must hash independently and never merge into parent project ID",
+    "parent_path": "/home/developer/workspace/project-alpha",
+    "worktree_path": "/home/developer/workspace/project-alpha/worktrees/feature-x",
+    "must_not_equal": true
+  }
+}

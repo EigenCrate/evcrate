@@ -1,0 +1,228 @@
+{
+  "protocol": "evcrate-advisor-read-closure-feasibility",
+  "version": 1,
+  "feasibility_gate": "G0",
+  "generated_at": 1726900000000,
+  "summary": {
+    "is_feasible": true,
+    "rationale": "A strictly read-only closure can be constructed using only node:fs, node:path, and node:crypto without importing history mutation (history-store, history-prune), state transitions (task-state, state-human), inference adapters (claude, codex, omp, pi), workspace isolation, or process spawning (child_process).",
+    "expected_controller_inventory_delta": 0
+  },
+  "permitted_node_builtins": [
+    "node:crypto",
+    "node:fs",
+    "node:path"
+  ],
+  "forbidden_node_builtins": [
+    "node:child_process",
+    "node:cluster",
+    "node:dgram",
+    "node:http",
+    "node:https",
+    "node:net",
+    "node:tls",
+    "node:worker_threads"
+  ],
+  "module_classifications": [
+    {
+      "module": "lib/advisor/state-io.cjs",
+      "classification": "read_and_mutate",
+      "read_boundary_exports": ["absolute", "chain", "inspect", "owner", "directory", "regular", "readJsonFile"],
+      "excluded_exports": ["writeJsonAtomic", "stateLocation", "allocateStateFiles"],
+      "in_read_closure": true,
+      "notes": "E01 should separate read-only path/link/file inspection from state writing without breaking controller imports."
+    },
+    {
+      "module": "lib/advisor/history-query.cjs",
+      "classification": "read",
+      "read_boundary_exports": ["scanHistoryDirectory", "readHistoryRecord", "queryHistory"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Safe reader for history directories and files."
+    },
+    {
+      "module": "lib/advisor/history-contract.cjs",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["historyPath", "resolveHistoryPaths"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Layout contract helpers."
+    },
+    {
+      "module": "lib/advisor/contracts-v2.cjs",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["validateCheckpointV2", "validateResultV2", "validateReceiptV2", "validateEnvelopeV2", "validateHistoryExecutionV1", "validateHistoryOutcomeV1", "computeCheckpointDigestV2"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Pure contract validators and SHA-256 digest computation."
+    },
+    {
+      "module": "lib/advisor/policy-schema.cjs",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["parsePolicyFile", "validatePolicyV2", "validatePolicyV1"],
+      "excluded_exports": ["writePolicyFile"],
+      "in_read_closure": true,
+      "notes": "Policy schema parser and validators."
+    },
+    {
+      "module": "lib/advisor/json-document.cjs",
+      "classification": "read",
+      "read_boundary_exports": ["decodeUtf8", "parseJsonDocument"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Bounded UTF-8 decoding and JSON parsing."
+    },
+    {
+      "module": "lib/advisor/errors.cjs",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["createRoutingError", "createContractError"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Deterministic error constructors."
+    },
+    {
+      "module": "lib/advisor/generated/advisor-contract-runtime.js",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["*"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Compiled runtime validators."
+    },
+    {
+      "module": "lib/advisor/generated/advisor-metrics.js",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["normalizeHistoryRecord", "normalizeHistoryFilter", "calculateHistoryMetrics", "filterHistoryRecords"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Pure metric calculation kernel."
+    },
+    {
+      "module": "lib/advisor/generated/canonical-json.js",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["canonicalJson"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Deterministic JSON serialization for evaluations."
+    },
+    {
+      "module": "lib/advisor/generated/json.js",
+      "classification": "validate_and_hash",
+      "read_boundary_exports": ["isPlainObject"],
+      "excluded_exports": [],
+      "in_read_closure": true,
+      "notes": "Plain object check helper."
+    },
+    {
+      "module": "lib/advisor/history-store.cjs",
+      "classification": "mutate",
+      "read_boundary_exports": [],
+      "excluded_exports": ["recordHistoryExecution", "recordHistoryOutcome"],
+      "in_read_closure": false,
+      "notes": "History writing module, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/history-prune.cjs",
+      "classification": "mutate",
+      "read_boundary_exports": [],
+      "excluded_exports": ["pruneHistoryDirectory"],
+      "in_read_closure": false,
+      "notes": "History pruning module, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/task-state.cjs",
+      "classification": "mutate",
+      "read_boundary_exports": [],
+      "excluded_exports": ["executeStateRequest", "initTaskState", "reserveCheckpoint", "recordDisposition", "recordOutcome", "completeTask"],
+      "in_read_closure": false,
+      "notes": "State machine mutator, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/state-human.cjs",
+      "classification": "mutate",
+      "read_boundary_exports": [],
+      "excluded_exports": ["recordHumanDecision", "observeTerminalDecision"],
+      "in_read_closure": false,
+      "notes": "Interactive terminal attestation, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/state-baseline.cjs",
+      "classification": "read_and_mutate",
+      "read_boundary_exports": [],
+      "excluded_exports": ["captureBaseline", "assertBaselineFresh"],
+      "in_read_closure": false,
+      "notes": "Git status checking and baseline recording, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/controller.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["runController"],
+      "in_read_closure": false,
+      "notes": "Controller runtime, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/runner.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["runAdvisorRequest"],
+      "in_read_closure": false,
+      "notes": "Inference runner, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/managed-checkpoint.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["runManagedCheckpoint"],
+      "in_read_closure": false,
+      "notes": "Managed checkpoint flow, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/adapter-registry.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["getAdapter", "registerAdapter"],
+      "in_read_closure": false,
+      "notes": "Model adapter registry, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/adapters/claude.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["invokeClaude"],
+      "in_read_closure": false,
+      "notes": "Model adapter, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/adapters/codex.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["invokeCodex"],
+      "in_read_closure": false,
+      "notes": "Model adapter, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/adapters/omp.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["invokeOmp"],
+      "in_read_closure": false,
+      "notes": "Model adapter, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/adapters/pi.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["invokePi"],
+      "in_read_closure": false,
+      "notes": "Model adapter, excluded from read closure."
+    },
+    {
+      "module": "lib/advisor/isolated-workspace.cjs",
+      "classification": "process_model",
+      "read_boundary_exports": [],
+      "excluded_exports": ["createIsolatedWorkspace"],
+      "in_read_closure": false,
+      "notes": "Git worktree spawner, excluded from read closure."
+    }
+  ]
+}

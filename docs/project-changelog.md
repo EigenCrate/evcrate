@@ -2,9 +2,26 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-19
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 08 (8/10 phases, 80%; completed 2026-09-19). Next phase: Phase 09 — Focused qualification and performance benchmark. Package version: `2.1.0`.
+**Updated:** 2026-09-21
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phase E00 complete (1/6 phases, ~17%; review approved 9.5/10 on 2026-09-21). Next phase: E01 — Owner-safe provider. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
+
+**Status:** Phase E00 DONE (2026-09-21); review approved **9.5/10**.  
+**Plan:** [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md)  
+**Evidence:** [validation](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md); [code review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md)
+
+- Completed the `evcrate-advisor-data` v1 domain contracts, strict schemas,
+  generated manifest, positive/negative wire fixtures, exact path identity,
+  canonical checkpoint digest, metric/evaluation parity fixtures, and reviewed
+  read-closure feasibility artifact.
+- Qualified the E00 verification matrix: build, schema generation check,
+  advisor-plugin tests, advisor metrics, advisor parity, and evaluation tests
+  passed **28/28** with no failures or skips.
+- G0 budget/cancellation/UI-memory assumptions are recorded; E01–E05 remain
+  pending and must consume the approved E00 contracts.
+
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
