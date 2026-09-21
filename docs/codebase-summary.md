@@ -2,7 +2,8 @@
 
 **Generated:** 2026-09-21
 **Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
-excludes tests, plans, and docs. Release workflow, viewer source, and phase evidence checked directly.
+excludes tests, plans, and docs. Release workflow, viewer source, phase evidence,
+and Phase E01 plugin sources checked directly.
 
 
 The repository is a private Node/TypeScript package. `package.json` declares
@@ -422,8 +423,40 @@ Phase E00 completed on 2026-09-21. It freezes `evcrate-advisor-data` v1 for the 
 - `advisor-plugin-data-api.ts` registers exactly eight operations: `history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, and `evaluations.compare`. Validators reject unknown/authority fields, unsafe scalar sizes, invalid IDs, and inconsistent discriminated results; accepted values are frozen.
 - `scripts/generate-advisor-plugin-data-schema.mjs` deterministically emits `plugin/contracts/evcrate-advisor-data-v1.schema.json` (draft-07) and `contract-manifest.json`, including the schema SHA-256, method list, and limits. `--check` fails on stale bytes.
 - Frozen fixtures under `tests/fixtures/advisor-plugin/domain-v1/` cover positive and negative wire shapes, normalized project/worktree identity, insertion-order checkpoint digest (`df2dfc75ff81de80edbf6ca41392d0ebd4faf1177c63821d162f3e34b766eff9`), and tamper rejection. Phase E00 parity passes 28/28 focused assertions.
-- `plugin/contracts/read-closure-feasibility.json` records a feasible G0 read graph: only `node:fs`, `node:path`, and `node:crypto` are permitted; mutators, model adapters, workspace isolation, and process/network built-ins are excluded; expected controller-inventory delta is zero. E01 must re-confirm the graph before extraction.
+- `plugin/contracts/read-closure-feasibility.json` records a feasible G0 read graph: only `node:fs`, `node:path`, and `node:crypto` are permitted; mutators, model adapters, workspace isolation, and process/network built-ins are excluded; expected controller-inventory delta is zero. E01 re-confirmed the graph without adding shared controller modules.
 - Review follow-ups are non-blocking: normalize filter failures to `PluginDataApiError`, deepen compare-group validation when UI shapes stabilize, and enforce raw-I/O byte limits before JSON deserialization.
+
+## Owner-safe plugin read provider (Phase E01)
+
+Phase E01 completed on 2026-09-21; it supplies the read-only, context-bound
+provider consumed by the future SDK worker. See the [phase plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-01-owner-safe-provider.md),
+[verification](../plans/reports/audit-260921-1139-phase-e01-verification.md), and
+[re-review](../plans/reports/code-review-260921-1216-phase-e01-fixes-re-review.md).
+
+| Module | Responsibility |
+|---|---|
+| `plugin/backend/provider.cjs` | Rechecks binding, gates the eight E00 methods, validates params/results, and dispatches operations. |
+| `plugin/backend/provider-errors.cjs` | Internal typed error taxonomy and sanitized error factories. |
+| `plugin/backend/binding.cjs` | Absolute-path, project-identity, owner, non-symlink, realpath, and safe-regular-file checks. |
+| `plugin/backend/snapshot-store.cjs` | Immutable per-context snapshots; 2/context, 128 MiB aggregate, 5-minute TTL, and LRU limits. |
+| `plugin/backend/cursor-manager.cjs` | HMAC snapshot/query cursors, code-point tie breaks, 1..500 pages, and <=1 MiB responses. |
+| `plugin/backend/history-scanner.cjs` | Sorted cooperative traversal, descriptor-pinned bounded reads, validation, normalization, and fingerprints. |
+| `plugin/backend/history-detail.cjs` | Fingerprinted execution/outcome reread with `ready`, `changed`, and `missing` transitions. |
+| `plugin/backend/history-provider.cjs` | Fair FIFO refresh (capacity 32), stale/unavailable handling, summary, page, and detail. |
+| `plugin/backend/policy-provider.cjs` | Capability-gated 16 KiB current account-policy read with revision/status labels. |
+| `plugin/backend/evaluation-provider.cjs` | Explicit descriptor-bound 8 MiB list/read/compare with provenance-preserving groups. |
+
+- Policy/evaluation/history readers use `O_RDONLY | O_NOFOLLOW`, post-open
+  `fstat` owner/single-link/size checks, and descriptor reads to close TOCTOU
+  windows; history fingerprints bind device and inode as well as size/digest.
+- `tests/plugin/provider.test.mjs` covers lifecycle, history, policy, and
+  evaluation; `provider-cancellation.test.mjs` covers abort/deadline/stale
+  retention and FIFO; `provider-source-safety.test.mjs` covers path/link/race
+  safety and context isolation.
+- Verification totals **56/56 passing** across 8 files: 9 plugin tests, 38
+  advisor-controller regressions, and 9 domain protocol/parity tests. The exact
+  33-file controller closure is unchanged (inventory delta `0`); plugin files
+  remain outside controller, installer, and distribution projections.
 
 ## React Explorer and view architecture (Phase 07)
 
