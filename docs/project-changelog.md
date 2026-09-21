@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-21
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phase E00 complete (1/6 phases, ~17%; review approved 9.5/10 on 2026-09-21). Next phase: E01 — Owner-safe provider. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E01 complete (2/6 phases, ~33%; E01 review approved 9.5/10 on 2026-09-21). Next phase: E02 — plugin worker. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
@@ -19,9 +19,38 @@ Older phase records remain in the linked archive.
 - Qualified the E00 verification matrix: build, schema generation check,
   advisor-plugin tests, advisor metrics, advisor parity, and evaluation tests
   passed **28/28** with no failures or skips.
-- G0 budget/cancellation/UI-memory assumptions are recorded; E01–E05 remain
-  pending and must consume the approved E00 contracts.
+- G0 budget/cancellation/UI-memory assumptions are recorded; E01 is complete
+  and E02–E05 remain pending.
 
+
+### 2026-09-21 — feat(plugin): complete Phase E01 owner-safe read provider
+
+**Status:** Phase E01 DONE (2026-09-21; 100%); review approved **9.5/10**.  
+**Plan:** [Phase E01 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-01-owner-safe-provider.md)  
+**Evidence:** [verification](../plans/reports/audit-260921-1139-phase-e01-verification.md); [re-review](../plans/reports/code-review-260921-1216-phase-e01-fixes-re-review.md)
+
+- Delivered a read-only, context-bound provider for all eight E00 operations:
+  history refresh/summary/page/detail, current policy, and evaluation
+  list/read/compare.
+- Backend modules: `provider.cjs` dispatch/validation; `provider-errors.cjs`
+  safe typed errors; `binding.cjs` target/owner identity; `snapshot-store.cjs`
+  bounded retention; `cursor-manager.cjs` signed pagination;
+  `history-scanner.cjs` cooperative scanning; `history-detail.cjs` fingerprinted
+  rereads; `history-provider.cjs` refresh/summary/page/detail;
+  `policy-provider.cjs` current policy; and `evaluation-provider.cjs` bound
+  evaluation operations.
+- Descriptor-pinned TOCTOU protection opens policy, evaluation, and history
+  files with `O_RDONLY | O_NOFOLLOW`, rechecks descriptor ownership, regular-file,
+  single-link, and size invariants, and closes the descriptor. History
+  fingerprints include device/inode identity.
+- Preserved cancellation/deadline behavior, same-context stale retention,
+  cross-context isolation, deterministic code-point ordering, and `<= 1 MiB`
+  pages. No provider mutators, HOME scan, path rebinding, or controller dispatch.
+- The controller closure remains exactly 33 files: inventory delta `0`; no
+  controller, installer, or distribution projection files changed.
+- Verification: **56/56 tests passed** across 8 files: 9 plugin-provider tests,
+  38 advisor-controller regressions, and 9 protocol/parity tests. Handoff:
+  E02 worker/SDK integration; G1 remains unclaimed.
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
