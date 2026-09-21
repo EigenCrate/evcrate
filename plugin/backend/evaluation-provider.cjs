@@ -13,8 +13,9 @@ const fs = require('node:fs');
 const { createHash } = require('node:crypto');
 const { verifySafeRegularFile, isOwner } = require('./binding.cjs');
 const { invalidInput } = require('./provider-errors.cjs');
-const { validateEvaluationDocument } = require('../../dist/protocol/advisor-evaluation-validation.js');
-const { aggregateEvaluationGroups } = require('../../dist/protocol/advisor-evaluation-comparison.js');
+const { resolveProtocolModule } = require('./authorized-backend.cjs');
+const { validateEvaluationDocument } = require(resolveProtocolModule('advisor-evaluation-validation.js'));
+const { aggregateEvaluationGroups } = require(resolveProtocolModule('advisor-evaluation-comparison.js'));
 
 const MAX_EVALUATION_BYTES = 8 * 1024 * 1024; // 8 MiB
 const MAX_PAGE_BYTES = 1024 * 1024; // 1 MiB

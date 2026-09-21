@@ -10,12 +10,13 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { inspectStat, isOwner } = require('./binding.cjs');
 const { cancelled, deadlineExceeded } = require('./provider-errors.cjs');
+const { resolveAdvisorModule } = require('./authorized-backend.cjs');
 const {
   validateHistoryExecutionV1, validateHistoryOutcomeV1,
   MAX_EXECUTION_HISTORY_BYTES, MAX_OUTCOME_HISTORY_BYTES
-} = require('../../.evcrate/source/.evcrate/bin/lib/advisor/history-contract.cjs');
-const { computeCheckpointDigestV2 } = require('../../.evcrate/source/.evcrate/bin/lib/advisor/contracts-v2.cjs');
-const { normalizeHistoryRecord } = require('../../.evcrate/source/.evcrate/bin/lib/advisor/generated/advisor-metrics.js');
+} = require(resolveAdvisorModule('history-contract.cjs'));
+const { computeCheckpointDigestV2 } = require(resolveAdvisorModule('contracts-v2.cjs'));
+const { normalizeHistoryRecord } = require(resolveAdvisorModule('generated/advisor-metrics.js'));
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_SCAN_BYTES = 256 * 1024 * 1024;
