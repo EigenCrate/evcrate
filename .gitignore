@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules/
 examples/**/node_modules/
 /.pnp
 .pnp.*
@@ -34,6 +35,7 @@ yarn-error.log*
 # package manager
 package-lock.json
 !examples/simple-web-testing-demo/package-lock.json
+!plugin/package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
