@@ -1,0 +1,34 @@
+{
+  "domain_package": "evcrate-advisor-data",
+  "domain_version": 1,
+  "schema_file": "evcrate-advisor-data-v1.schema.json",
+  "schema_sha256": "da58ac2266872517e9bf1892630acf92882c6cd3d17c002ac8c660a2f9d7dcc9",
+  "methods": [
+    "history.refresh",
+    "history.summary",
+    "history.page",
+    "history.detail",
+    "policy.readCurrent",
+    "evaluations.list",
+    "evaluations.read",
+    "evaluations.compare"
+  ],
+  "limits": {
+    "max_opaque_id_bytes": 128,
+    "max_cursor_bytes": 256,
+    "max_page_limit": 500,
+    "default_page_limit": 100,
+    "max_evaluation_page_limit": 100,
+    "max_page_result_bytes": 1048576,
+    "max_frame_payload_bytes": 16777216,
+    "max_control_payload_bytes": 65536,
+    "max_evaluation_document_bytes": 8388608,
+    "max_compare_items": 32
+  },
+  "companion_host_candidate": {
+    "package": "@dam-hopper/plugin-sdk",
+    "status": "pending_joint_g0",
+    "version": null,
+    "sha256": null
+  }
+}

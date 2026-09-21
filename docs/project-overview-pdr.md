@@ -1,10 +1,10 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline; Hook Materialization Scope Distribution
-is complete through Phase 09, and Windows release qualification is complete through
-Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Updated:** 2026-09-19
-
+**Status:** Current requirements baseline; Hook Materialization Scope Distribution is
+complete through Phase 09, Windows release qualification through Phase 10, and
+DamHopper Advisor Plugin Phase E00 domain contracts/parity implementation is
+complete (2026-09-21). Downstream plugin gates remain joint-contract dependent.
+**Updated:** 2026-09-21
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
 
@@ -366,6 +366,31 @@ execution remains Linux-only.
 **Status:** Complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19).
 
 **Acceptance:** Operates purely in Chromium on Linux via File System Access API with explicit user-granted directory/file handles; loopback preview (`127.0.0.1:4173`) enforces strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`) with zero outbound network calls after load; all user data renders as inert text; root package has zero production dependencies; bundle size is ~298.5 kB (strictly <= 5 MiB ceiling); granted handles clear upon page reload; frozen 10,000-consultation benchmark passes all thresholds (p95 scan <= 5,000 ms, p95 detail <= 100 ms, cancel <= 250 ms, 0 long tasks >200 ms); makes no POSIX filesystem attestation, complete audit, causal, cost, or saved-time claims; controller closure remains exactly 33 files; release directory remains exactly seven assets.
+### FR-19: DamHopper Advisor Plugin domain data contract (Phase E00)
+
+**Requirement:** Publish `evcrate-advisor-data` v1 as one generated schema,
+TypeScript declaration/validator module, manifest, and frozen parity fixture set.
+Register exactly `history.refresh`, `history.summary`, `history.page`,
+`history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`,
+and `evaluations.compare`. Domain parameters carry no actor, installation, grant,
+HOME, target-path, or binding override; generic host context supplies authority.
+
+**Acceptance:** `src/protocol/advisor-plugin-data-api.ts` and
+`src/protocol/index.ts` expose strict, immutable validators with bounded opaque
+IDs/cursors, positive timestamps, UUID/SHA-256 identity checks, exact query/sort
+shapes, discriminated changed/missing states, and no unknown fields.
+`scripts/generate-advisor-plugin-data-schema.mjs --check` verifies byte-stable
+`plugin/contracts/evcrate-advisor-data-v1.schema.json` and `contract-manifest.json`.
+Fixtures cover eight positive/negative wire operations, normalized project/worktree
+identity, insertion-order checkpoint digest/tamper parity, and metric/evaluation
+semantic parity; Phase E00 validation passes 28/28 focused assertions.
+
+**Read boundary:** `read-closure-feasibility.json` records a feasible G0 graph
+limited to `node:fs`, `node:path`, and `node:crypto`, excludes mutation/model/
+process/network modules, and expects zero controller-inventory delta. E01 must
+reconfirm the graph before extraction; E00 does not claim provider/worker delivery,
+joint G0 approval, or standalone cutover.
+
 ## Non-functional requirements
 
 | Area | Requirement |
@@ -380,7 +405,11 @@ execution remains Linux-only.
 
 ## Observable release gates
 
-**Current status:** Windows release qualification (Phases 01–10) and Advisor Metrics Explorer (Phases 01–10) are complete. Documentation and bounded support cutover are complete. Deterministic Linux publication/installer evidence and browser benchmarks remain separate from live vendor qualification, production `$HOME/.evcrate/` publication, and npm rollout.
+**Current status:** Windows release qualification (Phases 01–10), Advisor Metrics
+Explorer (Phases 01–10), and Phase E00 domain contract/parity implementation are
+complete. Documentation and bounded support cutover are complete. Deterministic
+Linux publication/installer evidence, joint D00/E00 G0 approval, and downstream
+plugin worker/UI qualification remain separate gates.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 33-file
@@ -400,6 +429,11 @@ execution remains Linux-only.
    `version --json` Windows boundary; npm/GitHub publication, operator rollout,
    desktop/signing environments, and live runtime/vendor execution remain gated.
 10. Advisor Metrics Explorer passes all 14 Playwright built-preview end-to-end scenarios, 6 package inventory checks, 10k frozen benchmark (p95 scan 1,643 ms, detail 67 ms, cancel 104 ms), exact 33-file controller closure, and exact seven release assets.
+11. Phase E00 schema/manifest generation check and domain parity suites pass:
+    `npm run check:advisor-plugin-schema` and `npm run test:advisor-plugin` pass;
+    identity/digest/metric/evaluation parity remains aligned with existing
+    protocol fixtures, while the read-closure feasibility artifact remains the
+    E01 extraction prerequisite.
 ## Documentation map
 
 - [System architecture](./system-architecture.md) — detailed controller,

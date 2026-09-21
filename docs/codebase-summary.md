@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Generated:** 2026-09-19
+**Generated:** 2026-09-21
 **Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
 excludes tests, plans, and docs. Release workflow, viewer source, and phase evidence checked directly.
 
@@ -228,7 +228,7 @@ reads/searches stay blocked.
 
 | Area | Responsibility | Representative entry points |
 |---|---|---|
-| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts/metrics/evaluation documents, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-metrics.ts`, `advisor-evaluation.ts`, `advisor-evaluation-validation.ts`, `advisor-evaluation-comparison.ts`, `advisor-settings.ts`, `index.ts` |
+| `src/protocol/` | Versioned JSON, canonical JSON, portable advisor contracts/metrics/evaluation documents, the Phase E00 plugin data API, settings/diagnostic payloads, target IDs, resource/publication/scope wire shapes, and host/portable path validation | `validation.ts`, `advisor-contract-runtime.ts`, `advisor-contracts.ts`, `advisor-metrics.ts`, `advisor-evaluation.ts`, `advisor-evaluation-validation.ts`, `advisor-evaluation-comparison.ts`, `advisor-plugin-data-api.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package/project/home/state/target context and host-native path resolution | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Schema-2 target manifest loading, descriptor types, and controller authorization | `manifest.ts`, `registry.ts`, `controller.ts`, `types.ts` |
 | `src/adapters/` | Seven fixed projection adapters, typed catalog projection, scanner layouts, and resource graph checks | `catalog-data.ts`, `catalog-types.ts`, `registry.ts`, `qualification.ts`, target subdirectories |
@@ -268,6 +268,8 @@ fixtures cover the boundary; Windows standalone installer lifecycle and version 
 | `npm run distribute:pi`, `distribute:omp`, `distribute:copilot` | Select one projection target. |
 | `npm run release:check` | Verifies the current 33-file runtime closure. |
 | `npm run generate:advisor-runtime` | Compiles the exact four-file CommonJS protocol runtime. |
+| `npm run generate:advisor-plugin-schema` / `check:advisor-plugin-schema` | Generate or byte-check the Phase E00 schema and contract manifest; generated outputs are not hand-edited. |
+| `npm run test:advisor-plugin` | Runs the Phase E00 wire-validator and schema-generator tests. |
 | `npm run test:advisor-metrics` / `test:advisor-parity` | Exercises kernel formulas and ESM/generated-CJS/browser digest parity. |
 | `npm run release:candidate` | Builds the immutable semantic-release candidate and receipt. |
 | `npm run release:verify-assets` | Verifies exact release asset sets and expected hashes. |
@@ -412,6 +414,16 @@ documents and prepares the Phase 07 React explorer handoff. See the [Phase 06 pl
 - Fixtures `valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and `corpus-nine-cases.json` cover state/digest/matrix boundaries; derived inputs contain no `expected_mentor_response` oracle.
 - Evidence: **87/87 tests passed**, build/viewer typecheck/release-check passed, modules stayed below 200 LOC, and Cycle 2 review approved **10/10**. The 33-file controller closure stayed unchanged.
 - Handoff: **Phase 07 — React explorer and view architecture**; render evaluation groups alongside history/configuration without merging state or metrics.
+
+## Advisor Plugin domain data API and parity (Phase E00)
+
+Phase E00 completed on 2026-09-21. It freezes `evcrate-advisor-data` v1 for the DamHopper Advisor Plugin and exports the domain module through `src/protocol/index.ts`. See the [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [validation report](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md), and [review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md).
+
+- `advisor-plugin-data-api.ts` registers exactly eight operations: `history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, and `evaluations.compare`. Validators reject unknown/authority fields, unsafe scalar sizes, invalid IDs, and inconsistent discriminated results; accepted values are frozen.
+- `scripts/generate-advisor-plugin-data-schema.mjs` deterministically emits `plugin/contracts/evcrate-advisor-data-v1.schema.json` (draft-07) and `contract-manifest.json`, including the schema SHA-256, method list, and limits. `--check` fails on stale bytes.
+- Frozen fixtures under `tests/fixtures/advisor-plugin/domain-v1/` cover positive and negative wire shapes, normalized project/worktree identity, insertion-order checkpoint digest (`df2dfc75ff81de80edbf6ca41392d0ebd4faf1177c63821d162f3e34b766eff9`), and tamper rejection. Phase E00 parity passes 28/28 focused assertions.
+- `plugin/contracts/read-closure-feasibility.json` records a feasible G0 read graph: only `node:fs`, `node:path`, and `node:crypto` are permitted; mutators, model adapters, workspace isolation, and process/network built-ins are excluded; expected controller-inventory delta is zero. E01 must re-confirm the graph before extraction.
+- Review follow-ups are non-blocking: normalize filter failures to `PluginDataApiError`, deepen compare-group validation when UI shapes stabilize, and enforce raw-I/O byte limits before JSON deserialization.
 
 ## React Explorer and view architecture (Phase 07)
 

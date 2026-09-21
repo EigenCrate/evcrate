@@ -2,8 +2,9 @@
 
 **Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Phases 01–10 DONE (10/10 phases, 100%; completed 2026-09-19); documentation cutover and support boundary are complete.
+**DamHopper Advisor Plugin:** Phase E00 domain contracts and parity DONE (completed 2026-09-21); E01–G4 remain gated on joint D00/E00 approval and downstream implementation.
 **Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
-**Updated:** 2026-09-19
+**Updated:** 2026-09-21
 
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
@@ -68,7 +69,8 @@ presented as a relay to `evcrate-advisor`.
 The source is organized around narrow contracts:
 
 - `src/protocol/`: bounded JSON, canonical JSON, resource, publication, scope,
-  diagnostic, advisor-settings, and portable advisor-contract wire shapes.
+  diagnostic, advisor-settings, portable advisor-contract, and Phase E00 plugin
+  domain-data wire shapes.
 - `src/context/`: package, project, home, state, target, and immutable path context.
 - `src/manifests/`: schema-2 target manifests, resource roots, home bindings,
   patch authorization, and manifest registry loading.
@@ -756,6 +758,36 @@ Phase 09 synchronized the generated release boundary:
 The generated trees, controller closure, manifests, registry, publication journals,
 and installer state are managed artifacts. User policy, unmanaged HOME/project
 files, and vendor credentials remain outside the publication authority.
+## 9. DamHopper advisor plugin replacement
+
+**Status:** Phase E00 is implemented and approved as the domain-contract/parity
+candidate; the replacement remains a downstream design until joint G0 and later
+E01–G4 gates. The standalone browser viewer remains operational until cutover.
+See the [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [cross-repository contract](../plans/260920-1603-dam-hopper-advisor-plugin/cross-repo-contract.md), [validation](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md), and [review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md).
+
+**E00 domain contract:** `evcrate-advisor-data` v1 is exported from
+`src/protocol/index.ts` and registers exactly eight operations:
+`history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, and `evaluations.compare`. Strict validators reject unknown/authority fields, unsafe sizes/IDs, and inconsistent states; accepted values are immutable.
+
+**Generated authorities:** `scripts/generate-advisor-plugin-data-schema.mjs`
+deterministically emits the draft-07 schema and `contract-manifest.json`;
+`--check` compares exact bytes. The manifest pins schema SHA-256
+`da58ac2266872517e9bf1892630acf92882c6cd3d17c002ac8c660a2f9d7dcc9`, methods, and bounded scalar/page/frame/evaluation limits.
+
+**Parity and feasibility:** Fixtures freeze positive/negative wire cases,
+project/worktree identity, and insertion-order checkpoint digest/tamper behavior.
+`read-closure-feasibility.json` marks G0 feasible with only `node:fs`,
+`node:path`, and `node:crypto`; mutators, model adapters, process/network
+built-ins, and workspace isolation are excluded, with inventory delta `0`.
+E01 must re-confirm this graph before implementing extraction.
+
+DamHopper owns authenticated dispatch, grants, framing/SDK, iframe isolation,
+package lifecycle and UI cutover; EVCrate owns versioned data contracts and the
+read-only provider/worker. History, current policy, and evaluation bindings are
+independently observed: no cross-source atomicity, HOME scan, path fallback,
+identity migration, or source mutation is implied. G0 freezes the D00/E00 pair
+and budgets; G1–G4 qualify the worker, isolated four-view UI, package lifecycle, and final standalone retirement.
+
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)
