@@ -16,6 +16,12 @@ const { HistoryProvider } = require('./history-provider.cjs');
 const { PolicyProvider } = require('./policy-provider.cjs');
 const { EvaluationProvider } = require('./evaluation-provider.cjs');
 const { forbidden, invalidInput } = require('./provider-errors.cjs');
+let dataApi;
+try {
+  dataApi = require('./data-api.cjs');
+} catch {
+  dataApi = require('../../' + 'dist/protocol/advisor-plugin-data-api.js');
+}
 const {
   validateHistoryRefreshParams,
   validateHistoryRefreshResult,
@@ -34,7 +40,7 @@ const {
   validateEvaluationsCompareParams,
   validateEvaluationsCompareResult,
   ADVISOR_DATA_METHODS
-} = require('../../dist/protocol/advisor-plugin-data-api.js');
+} = dataApi;
 
 class EVCrateAdvisorProvider {
   /**

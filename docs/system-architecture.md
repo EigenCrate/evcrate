@@ -2,7 +2,7 @@
 
 **Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Phases 01–10 DONE (10/10 phases, 100%; completed 2026-09-19); documentation cutover and support boundary are complete.
-**DamHopper Advisor Plugin:** Phases E00 and E01 DONE (completed 2026-09-21; E01 review approved 9.5/10); E02–E05 remain gated on joint D01–D06/G1–G4 qualification.
+**DamHopper Advisor Plugin:** Phases E00, E01, and E02 DONE (completed 2026-09-21; E02 review approved 9.5/10); E03–E05 remain gated on joint D01–D06/G1–G4 qualification.
 **Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
 **Updated:** 2026-09-21
 
@@ -760,32 +760,31 @@ and installer state are managed artifacts. User policy, unmanaged HOME/project
 files, and vendor credentials remain outside the publication authority.
 ## 9. DamHopper advisor plugin replacement
 
-**Status:** E00 domain contracts/parity and E01 owner-safe provider are implemented and approved; E02–E05 remain downstream gates. The standalone viewer remains operational until G4 cutover.
-**Plans/evidence:** [E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [E01 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-01-owner-safe-provider.md), [E01 verification](../plans/reports/audit-260921-1139-phase-e01-verification.md), [E01 re-review](../plans/reports/code-review-260921-1216-phase-e01-fixes-re-review.md).
+**Status:** E00/E01/E02 implemented and approved; E03–E05 remain downstream gates.
+Standalone viewer remains operational until G4 cutover.
+**Plans/evidence:** [E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md),
+[worker guide](./advisor-plugin-worker.md), [cycle-2 review](../plans/reports/code-review-260921-1441-phase-e02-cycle2.md).
 
-**E00 contract:** `evcrate-advisor-data` v1 exports exactly eight operations (`history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, `evaluations.compare`); accepted values are immutable and strictly validated.
-The G0 graph permits only `node:fs`, `node:path`, and `node:crypto`; expected controller-inventory delta is `0`.
+**E00:** `evcrate-advisor-data` v1 freezes eight read operations and immutable
+validators; the G0 feasible graph permits only `node:fs`, `node:path`, and
+`node:crypto` (controller-inventory delta `0`).
 
-### E01 provider modules
+**E01:** `provider.cjs` gates E00 methods and validates params/results; binding,
+snapshot/cursor, history, policy, and evaluation modules enforce owner/path/link,
+fingerprint, and bounded-read invariants. Descriptor-pinned reads use
+`O_RDONLY | O_NOFOLLOW` plus post-open `fstat`; checks repeat per invoke. E01
+evidence is 56/56 across 8 files; controller closure remains 33 files.
 
-| Module | Responsibility |
-|---|---|
-| `provider.cjs` | Context/method gate, target recheck, dispatch, and E00 result validation. |
-| `provider-errors.cjs` | Typed internal errors with safe diagnostics. |
-| `binding.cjs` | Exact normalized target/project identity, owner, link, realpath, and file checks. |
-| `cursor-manager.cjs` | HMAC snapshot/query cursors and deterministic <=1 MiB pagination. |
-| `snapshot-store.cjs` | Per-context immutable snapshots with bounded TTL/LRU retention. |
-| `history-scanner.cjs` | Cooperative sorted scan, descriptor reads, validation, normalization, fingerprints. |
-| `history-detail.cjs` | Fingerprinted reread and `ready`/`changed`/`missing` transitions. |
-| `history-provider.cjs` | FIFO refresh admission plus summary/page/detail operations. |
-| `policy-provider.cjs` | Capability-gated descriptor-pinned current account policy read. |
-| `evaluation-provider.cjs` | Explicit descriptor-bound evaluation list/read/compare and aggregation. |
-
-Descriptor-pinned policy, evaluation, and history reads use `O_RDONLY | O_NOFOLLOW`, post-open `fstat` owner/regular-file/single-link/size checks, and close the descriptor; history fingerprints include device/inode. Detail returns `changed` for replacement, mutation, outcome add/remove, or reread races, and `missing` only for absent execution.
-Binding/provider checks repeat per invoke. No path rebinding, HOME scan, mutation, model/worker transport, or controller dispatch is in scope; DamHopper owns grants, framing/SDK, iframe isolation, and UI/package lifecycle while EVCrate owns this read-only provider boundary.
-
-Verification covers `tests/plugin/provider.test.mjs`, `provider-cancellation.test.mjs`, `provider-source-safety.test.mjs`, the three advisor-controller regression files, and two domain protocol/parity files: **56/56 passing** across 8 files.
-The controller closure remains exactly 33 files (inventory delta `0`); no controller, installer, or distribution projection changed. E02 wraps this provider in the pinned worker and is required before G1.
+**E02:** The pinned D00 SDK owns four-byte big-endian framing, strict UTF-8
+JSON-RPC 2.0, 16 MiB frame/64 KiB control limits, and stream reassembly.
+`worker.cjs` keeps stdout protocol-only; `dispatcher.cjs` handles handshake,
+eight capabilities, context open/close, invoke, cancel, health, shutdown, and
+revision checks. Contexts/requests are bounded (16 contexts, 4 operations each,
+16 active, queue 32, one scan, one evaluation parse) with deadlines,
+AbortSignal cancellation, safe errors, and exactly-once settlement.
+`data-api.cjs` bundles E00 validators. The candidate builder emits deterministic
+backend-only tarball/inventory for internal G1; not E04 publication or root assets.
+E02 review approved 9.5/10; owner-worker G1 remains downstream.
 
 
 ## Related documents

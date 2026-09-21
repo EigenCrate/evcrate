@@ -2,8 +2,9 @@
 
 **Status:** Current requirements baseline; Hook Materialization Scope Distribution is
 complete through Phase 09, Windows release qualification through Phase 10, and
-DamHopper Advisor Plugin Phase E00 domain contracts/parity implementation is
-complete (2026-09-21). Downstream plugin gates remain joint-contract dependent.
+DamHopper Advisor Plugin Phases E00–E02 implementation is complete
+(2026-09-21; E02 review approved 9.5/10). Joint G1 and downstream plugin gates
+remain contract-dependent.
 **Updated:** 2026-09-21
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -391,6 +392,31 @@ process/network modules, and expects zero controller-inventory delta. E01 must
 reconfirm the graph before extraction; E00 does not claim provider/worker delivery,
 joint G0 approval, or standalone cutover.
 
+### FR-20: Framed Node plugin worker and early G1 candidate (Phase E02)
+
+**Requirement:** Ship an independently versioned, backend-only EVCrate worker
+that wraps E01 in the pinned D00 Worker SDK. The worker must use four-byte
+big-endian length-prefixed strict UTF-8 JSON-RPC 2.0 frames, exact capability
+dispatch, revision-aware ephemeral contexts, bounded admission, cooperative
+cancellation/deadlines, exactly-once settlement, safe D00 errors, and sanitized
+stderr observability. It must not open a listener, run a shell, spawn a model,
+mutate source/policy/history, or own durable grants.
+
+**Acceptance:** Node `>=22.19.0` and SDK/manifest/data versions negotiate before
+context service. Fragmented/coalesced frames work; oversized, invalid UTF-8,
+batch, numeric-ID, malformed, unknown, and EOF-mid-frame inputs fail closed.
+Limits remain 16 contexts/worker, 4 operations/context, 16 active requests,
+queue 32, one refresh, one evaluation parse, 16 MiB frames, and 64 KiB control
+payloads. `request.cancel` returns `accepted`, `alreadySettled`, or `unknown`;
+the original request settles once. Context close/revision mismatch/reconnect/
+shutdown revokes state and cancels work. stdout contains frames only; stderr is
+bounded and redacted.
+
+The candidate builder emits a deterministic backend-only `.tar.gz`, validates
+manifest inventory and SHA-256 closure, and keeps UI/navigation absent. E02
+implementation evidence is repository/fixture evidence, not G1 integration,
+E04 publication, root release assets, or standalone cutover.
+
 ## Non-functional requirements
 
 | Area | Requirement |
@@ -406,10 +432,10 @@ joint G0 approval, or standalone cutover.
 ## Observable release gates
 
 **Current status:** Windows release qualification (Phases 01–10), Advisor Metrics
-Explorer (Phases 01–10), and Phase E00 domain contract/parity implementation are
-complete. Documentation and bounded support cutover are complete. Deterministic
-Linux publication/installer evidence, joint D00/E00 G0 approval, and downstream
-plugin worker/UI qualification remain separate gates.
+Explorer (Phases 01–10), and DamHopper Advisor Plugin Phases E00–E02
+implementation are complete. Documentation/support cutover is complete.
+Deterministic Linux publication evidence, joint G0/G1 qualification, and plugin
+UI/package/cutover gates remain separate.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 33-file
@@ -434,12 +460,17 @@ plugin worker/UI qualification remain separate gates.
     identity/digest/metric/evaluation parity remains aligned with existing
     protocol fixtures, while the read-closure feasibility artifact remains the
     E01 extraction prerequisite.
+12. E02 worker framing, lifecycle, cancellation, safe-error, and candidate
+checks pass; this is internal repository evidence, not owner-runner G1,
+E04 publication, or standalone cutover. See the [worker guide](./advisor-plugin-worker.md).
 ## Documentation map
 
 - [System architecture](./system-architecture.md) — detailed controller,
   distribution, supervision, wire, isolation, and publication contracts.
 - [Code standards](./code-standards.md) — normative implementation and naming rules.
 - [Codebase summary](./codebase-summary.md) — source/module/generated-output map.
+- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing, lifecycle,
+  safe errors, admission, and candidate package boundary.
 - [Project roadmap](./project-roadmap.md) — completed gates, current gaps, and next work.
 - [Project changelog](./project-changelog.md) — historical phase evidence and boundaries.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.

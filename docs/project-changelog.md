@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-21
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E01 complete (2/6 phases, ~33%; E01 review approved 9.5/10 on 2026-09-21). Next phase: E02 — plugin worker. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E02 complete (3/6 phases, 50%; E02 review approved 9.5/10 on 2026-09-21). Next gate: joint G1 owner-worker qualification; next implementation phase: E03 — embedded four-view UI. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
@@ -19,8 +19,8 @@ Older phase records remain in the linked archive.
 - Qualified the E00 verification matrix: build, schema generation check,
   advisor-plugin tests, advisor metrics, advisor parity, and evaluation tests
   passed **28/28** with no failures or skips.
-- G0 budget/cancellation/UI-memory assumptions are recorded; E01 is complete
-  and E02–E05 remain pending.
+- G0 budget/cancellation/UI-memory assumptions are recorded; E01 and E02 are
+  complete; E03–E05 remain pending.
 
 
 ### 2026-09-21 — feat(plugin): complete Phase E01 owner-safe read provider
@@ -49,8 +49,23 @@ Older phase records remain in the linked archive.
 - The controller closure remains exactly 33 files: inventory delta `0`; no
   controller, installer, or distribution projection files changed.
 - Verification: **56/56 tests passed** across 8 files: 9 plugin-provider tests,
-  38 advisor-controller regressions, and 9 protocol/parity tests. Handoff:
-  E02 worker/SDK integration; G1 remains unclaimed.
+  38 advisor-controller regressions, and 9 protocol/parity tests. E02 worker/SDK
+  integration is complete; joint G1 owner-worker qualification remains unclaimed.
+
+### 2026-09-21 — feat(plugin): complete Phase E02 framed Node plugin worker
+
+**Status:** Phase E02 DONE (2026-09-21; implementation closure); Cycle 2 review approved **9.5/10**.  
+**Plan:** [Phase E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260921-1441-phase-e02-cycle2.md); [advisor checkpoint](../plans/reports/advisor-260921-1445-phase-e02-cycle2-checkpoint.json)
+
+- Delivered pinned D00 SDK handshake, strict framed JSON-RPC worker, bounded
+  context/revision lifecycle, capability dispatch, cancellation/settlement,
+  safe error mapping, stdout purity, and process-failure handling.
+- Built deterministic backend-only candidate with exact content-hash inventory;
+  no root runtime dependency or standalone picker/UI.
+- Verification: **53/53 plugin tests passed** (22 focused worker tests +
+  31 plugin tests); candidate check and deterministic build passed. Joint G1
+  owner-worker qualification remains downstream; E03 is next.
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
