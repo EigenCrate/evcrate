@@ -26,8 +26,19 @@
       "runtime": "node",
       "range": ">=22.19.0",
       "entry": "backend/worker.cjs"
+    },
+    "ui": {
+      "entry": "ui/index.html",
+      "mode": "opaque-srcdoc"
     }
   },
+  "navigation": [
+    {
+      "id": "evcrate.advisor.overview",
+      "title": "Advisor Metrics",
+      "route": "/plugins/evcrate.advisor"
+    }
+  ],
   "inventory": [
     {
       "path": "backend/binding.cjs",
@@ -405,6 +416,12 @@
       "path": "package.json",
       "size": 322,
       "sha256": "51b6ed0d4c7c0d230cb659031623967b702464790706d6c78ca1ea2e95370f23",
+      "mode": 420
+    },
+    {
+      "path": "ui/index.html",
+      "size": 328337,
+      "sha256": "bebd28f85c3cbd952df0111a3442fa32fadcf8cf6190033bc00b81011f6ee6a2",
       "mode": 420
     }
   ]

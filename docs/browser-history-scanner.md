@@ -147,7 +147,9 @@ selection, sorting, unexpected entries, unreadable subtrees, limits, cancellatio
 concurrent modification, identity/digest failures, policy states, and generation
 races. Equivalent normalized browser and controller records use the same Phase 02
 metrics kernel. Phase 06 consumes this reader boundary for separate evaluation
-inputs; Phase 07 owns React state and views.
+inputs; Phase 07 established the shared React state/views. Phase E03 adds
+provider-neutral standalone/DamHopper adapters and embedded navigation without
+changing this browser I/O boundary.
 
 ## Related references
 

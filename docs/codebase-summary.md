@@ -3,14 +3,12 @@
 **Generated:** 2026-09-21
 **Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
 excludes tests, plans, and docs. Release workflow, viewer source, phase evidence,
-and Phase E01/E02 plugin sources checked directly; worker detail: [E02 guide](./advisor-plugin-worker.md).
-
+Phase E00–E03 plugin sources checked directly; worker detail: [E02 guide](./advisor-plugin-worker.md); embedded UI detail: [E03 guide](./advisor-plugin-ui.md).
 
 The repository is a private Node/TypeScript package. `package.json` declares
 `evcrate` version `2.1.0`, Node `>=22.19.0`, the `evcrate` bin at
 `dist/cli/evcrate.js`, and the `evcrate-advisor` bin at
 `.evcrate/source/.evcrate/bin/evcrate-advisor`.
-
 
 ## Source-of-truth map
 
@@ -457,15 +455,18 @@ provider consumed by the future SDK worker. See the [phase plan](../plans/260920
 - E02 wraps the provider in the pinned D00 worker (`worker.cjs`,
   `context-table.cjs`, `request-table.cjs`, `dispatcher.cjs`, `error-mapping.cjs`,
   local `data-api.cjs`) and deterministic candidate builder; see the [worker guide](./advisor-plugin-worker.md).
+- E03 adds provider-neutral standalone/MessagePort adapters, generation-fenced
+  reducer state, and the embedded four-view UI; see the [UI guide](./advisor-plugin-ui.md).
 
-## React Explorer and view architecture (Phase 07)
+## React Explorer and embedded provider-neutral UI (Phases 07/E03)
 
 Phase 07 completed on 2026-09-19. The private static React viewer composes
 validated browser snapshots, policy inspection, and counsel-evaluation documents
 without adding a backend, router, global store, model call, persistence, or
-network path. See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md),
-[validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md),
-and [review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md).
+network path. Phase E03 (2026-09-21; review 9.2/10) reuses the same app/views in
+the DamHopper opaque-srcdoc entry through provider-neutral acquisition adapters.
+See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md),
+[E03 UI guide](./advisor-plugin-ui.md), and [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
 
 ### Shell, state, and navigation
 
@@ -490,7 +491,7 @@ and [review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md
 | `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Frozen filters, project/task/consultation table, 100-row pages, and lazy inert detail drawer. |
 | `viewer/src/views/configuration-view.tsx` | Current policy separated from historical route/prompt/build groups; observational-only labels. |
 | `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Exact digest-comparable groups, ready/failed/missing states, provenance, and masked/revealed candidates. |
-| `viewer/src/components/source-controls.tsx`, `status-banner.tsx`, `hash-tabs.tsx` | Explicit pick/refresh/cancel controls, freshness/unsupported guidance, and accessible four-view tabs. |
+| `viewer/src/components/data-controls.tsx`, `status-banner.tsx`, `hash-tabs.tsx` | Provider-neutral refresh/cancel/source controls, freshness/revocation guidance, and accessible four-view tabs. |
 | `viewer/src/components/metric-ratio.tsx`, `diagnostic-panel.tsx`, `pagination-controls.tsx`, `text-block.tsx` | Honest ratio formatting, sanitized diagnostics, paging, and text-only untrusted content. |
 | `viewer/src/io/history-reader.ts`, `policy-reader.ts`, `evaluation-reader.ts` | Consume Phase 05/06 read-only readers; no writes, execution, grading, or handle persistence. |
 | `viewer/src/io/history-traversal.ts`, `history-record-reader.ts`, `history-scan-budget.ts`, `browser-digest.ts`, `file-system-access.d.ts` | Bounded traversal/reads, browser digest parity, budgets, and minimal picker declarations. |
@@ -795,4 +796,4 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — E03 provider/bridge/views/package; [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
