@@ -659,16 +659,15 @@ export function buildManifest(schemaContent) {
     },
     companion_host_candidate: {
       package: '@dam-hopper/plugin-sdk',
-      status: 'pending_joint_g0',
-      version: null,
-      sha256: null
+      status: 'candidate_pinned',
+      version: '0.1.0',
+      sha256: '1bcb63a3578ee48a67b4cdfbbd358df2ae6d30c13814444ba57bea03d718ed5b'
     }
   };
 }
 
 function main() {
   const isCheck = process.argv.includes('--check');
-
   const schema = buildDataApiSchema();
   const schemaText = JSON.stringify(schema, null, 2) + '\n';
   const manifest = buildManifest(schemaText);
