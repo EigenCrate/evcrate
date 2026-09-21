@@ -38,8 +38,13 @@ test('Integration Candidate: candidate package exists and manifest is valid', ()
   assert.equal(validated.publisher, 'evcrate');
   assert.equal(validated.entrypoints.backend.runtime, 'node');
   assert.equal(validated.entrypoints.backend.entry, 'backend/worker.cjs');
-  assert.equal(validated.entrypoints.ui, undefined, 'Early G1 candidate must not include UI entrypoint');
-  assert.equal(validated.navigation, undefined, 'Early G1 candidate must not include navigation items');
+  if (validated.entrypoints.ui !== undefined) {
+    assert.equal(validated.entrypoints.ui.entry, 'ui/index.html');
+    assert.equal(validated.entrypoints.ui.mode, 'opaque-srcdoc');
+    assert.ok(Array.isArray(validated.navigation));
+  } else {
+    assert.equal(validated.navigation, undefined, 'Candidate without UI must not include navigation');
+  }
 
   const expectedCaps = [
     'history.refresh',

@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-21
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E02 complete (3/6 phases, 50%; E02 review approved 9.5/10 on 2026-09-21). Next gate: joint G1 owner-worker qualification; next implementation phase: E03 — embedded four-view UI. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E03 complete (4/6 phases, 66.7%; E03 review approved 9.2/10 on 2026-09-21). Next gates: joint G1 owner-worker and D04/E03 G2 LAN qualification. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
@@ -66,6 +66,34 @@ Older phase records remain in the linked archive.
 - Verification: **53/53 plugin tests passed** (22 focused worker tests +
   31 plugin tests); candidate check and deterministic build passed. Joint G1
   owner-worker qualification remains downstream; E03 is next.
+
+### 2026-09-21 — feat(plugin): complete Phase E03 embedded provider-neutral four-view UI
+
+**Status:** Phase E03 DONE (2026-09-21; implementation closure); review approved **9.2/10**.  
+**Plan:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md)  
+**Evidence:** [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md); [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md)
+
+- Replaced view-owned acquisition with one `AdvisorDataProvider` contract and
+  shared reducer/views. `StandalonePickerProvider` preserves the local File System
+  Access explorer until G4; `DamHopperPortProvider` uses the bounded host
+  `MessagePort` without exposing credentials, paths, sockets, or arbitrary network.
+- Added bridge version `1.0.0`, eight validated envelopes, single-use nonce
+  acknowledgement, frame-session/activation-generation fencing, request
+  cancellation, late-response suppression, availability events, and revocation
+  cleanup.
+- Preserved the four views: Overview; History/detail with 100-row pages and
+  changed/missing states; Configuration with current account-wide policy labeling;
+  and Evaluations with bound-source comparison, provenance, and candidate masking.
+- Added an opaque-srcdoc-compatible `plugin/ui/index.html` built as one inlined
+  CSS/IIFE document (328,337 bytes, <=5 MiB), with no external assets, network
+  clients, filesystem pickers, `eval`, or `Function`.
+- `plugin/manifest.json` now declares `ui/index.html` and
+  `/plugins/evcrate.advisor`; the candidate builder includes the UI and SHA-256
+  inventory entry (64 inventory records).
+- Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer
+  browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced
+  CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain
+  downstream gates.
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 

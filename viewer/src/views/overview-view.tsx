@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import type { AppState } from '../app-state.js';
 import { MetricRatio } from '../components/metric-ratio.js';
-import type { DistributionMetric } from '../../../src/protocol/advisor-metrics.js';
+import type { DistributionMetric, HistoryMetricResultV1 } from '../../../src/protocol/advisor-metrics.js';
 
 export interface OverviewViewProps {
   readonly state: AppState;
@@ -13,35 +13,39 @@ function formatLatencyMs(ms: number | null | undefined): string {
 }
 
 export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
-  const { snapshot, status } = state;
+  const { snapshot, historySummary, status, staleReason } = state;
+  const metricsResult: HistoryMetricResultV1 | null =
+    snapshot?.metricsResult ?? historySummary?.metrics ?? null;
 
-  if (!snapshot) {
+  if (!metricsResult) {
     return (
       <section className="view-panel overview-empty" id="panel-overview" aria-label="Overview">
         <div className="empty-state-card">
           <h3>No Advisor History Loaded</h3>
           <p>
-            Please choose an EVCrate advisor history directory above to inspect diagnostic metrics,
+            Please choose an advisor history source or click "Refresh History" above to inspect diagnostic metrics,
             outcome distributions, latency, and limitations.
           </p>
           <div className="empty-state-notice text-muted">
-            All data is processed strictly client-side in this browser session.
+            All data is processed strictly within this client container.
           </div>
         </div>
       </section>
     );
   }
 
-  const { metricsResult } = snapshot;
-  const { counts, metrics, missingness, limitations } = metricsResult;
+  const { counts, metrics, missingness, limitations, scope } = metricsResult;
   const lat: DistributionMetric = metrics.latency;
 
   return (
     <section className="view-panel overview-view" id="panel-overview" aria-label="Overview">
       <div className="overview-header">
-        <h2 className="view-title">Overview Metrics</h2>
+        <h2 className="view-title">
+          Overview Metrics
+          {status === 'stale' && <span className="badge badge-warning" style={{ marginLeft: 8 }}>Stale Data</span>}
+        </h2>
         <div className="overview-meta text-muted">
-          <span>Scope: <strong>{snapshot.scope.kind}</strong></span>
+          <span>Scope: <strong>{scope.kind}</strong></span>
           <span className="meta-sep">&bull;</span>
           <span>Projects: <strong>{counts.projects}</strong></span>
           <span className="meta-sep">&bull;</span>
@@ -50,6 +54,12 @@ export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
           <span>Consultations: <strong>{counts.consultations}</strong></span>
         </div>
       </div>
+
+      {status === 'stale' && staleReason && (
+        <div className="alert alert-warning" role="alert" style={{ marginBottom: 16 }}>
+          <strong>Stale notice:</strong> {staleReason}
+        </div>
+      )}
 
       <div className="metrics-grid" aria-label="Key Rate Metrics">
         <MetricRatio label="Delivery Rate" metric={metrics.delivery} description="Delivered ADVICE_READY responses over total terminal consultations." />

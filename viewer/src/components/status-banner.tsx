@@ -27,6 +27,12 @@ export const StatusBanner: FC<StatusBannerProps> = ({
           </div>
         )}
 
+        {status === 'revoked' && (
+          <div className="status-message status-error">
+            <strong>Context Revoked:</strong> {staleReason ?? 'Host or session authorization revoked. Prior data cleared.'}
+          </div>
+        )}
+
         {status === 'idle' && (
           <div className="status-message status-info">
             <strong>No history directory selected.</strong> Click "Choose History Directory" to inspect local advisor history.
@@ -41,7 +47,7 @@ export const StatusBanner: FC<StatusBannerProps> = ({
 
         {status === 'scanning' && (
           <div className="status-message status-pending">
-            <strong>Scanning history records...</strong> Please wait while local records are parsed and validated.
+            <strong>Scanning history records...</strong> Please wait while records are parsed and validated.
           </div>
         )}
 
@@ -57,7 +63,7 @@ export const StatusBanner: FC<StatusBannerProps> = ({
 
         {status === 'stale' && (
           <div className="status-message status-warning">
-            <strong>Stale Data Retained:</strong> {staleReason ?? 'Prior snapshot retained due to scan failure or interruption.'}
+            <strong>Stale Data Retained:</strong> {staleReason ?? 'Prior snapshot retained due to scan interruption.'}
             {scan && (
               <span className="status-counts">
                 {' '}(Discovered: {scan.consultations_discovered} consultations, {scan.diagnostics.length} diagnostics)
@@ -70,7 +76,7 @@ export const StatusBanner: FC<StatusBannerProps> = ({
       <div className="status-provenance-notice" aria-label="Privacy notice">
         <span className="notice-badge">Local Diagnostic Only</span>
         <span className="notice-text">
-          Read-only local evaluation. Browser validation proves record structure only; it cannot attest Linux owner, mode, or descriptor guarantees. No data leaves this device.
+          Read-only local evaluation. Browser validation proves record structure only; it cannot attest Linux owner, mode, or descriptor guarantees. No credentials or arbitrary network calls leave this container.
         </span>
       </div>
     </aside>

@@ -2,7 +2,7 @@
 
 **Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Phases 01–10 DONE (10/10 phases, 100%; completed 2026-09-19); documentation cutover and support boundary are complete.
-**DamHopper Advisor Plugin:** Phases E00, E01, and E02 DONE (completed 2026-09-21; E02 review approved 9.5/10); E03–E05 remain gated on joint D01–D06/G1–G4 qualification.
+**DamHopper Advisor Plugin:** Phases E00–E03 DONE (completed 2026-09-21; E03 review approved 9.2/10); joint G1 owner-worker and D04/E03 G2 LAN qualification plus E04–E05 remain downstream.
 **Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
 **Updated:** 2026-09-21
 
@@ -760,32 +760,32 @@ and installer state are managed artifacts. User policy, unmanaged HOME/project
 files, and vendor credentials remain outside the publication authority.
 ## 9. DamHopper advisor plugin replacement
 
-**Status:** E00/E01/E02 implemented and approved; E03–E05 remain downstream gates.
-Standalone viewer remains operational until G4 cutover.
-**Plans/evidence:** [E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md),
-[worker guide](./advisor-plugin-worker.md), [cycle-2 review](../plans/reports/code-review-260921-1441-phase-e02-cycle2.md).
-
+**Status:** E00–E03 implementation complete; E03 review approved 9.2/10. Joint
+G1 owner-worker and D04/E03 G2 LAN qualification remain downstream; E04–E05
+are pending. Standalone viewer remains operational until G4 cutover.
+**Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md),
+[UI guide](./advisor-plugin-ui.md), [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md),
+and [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
 **E00:** `evcrate-advisor-data` v1 freezes eight read operations and immutable
-validators; the G0 feasible graph permits only `node:fs`, `node:path`, and
-`node:crypto` (controller-inventory delta `0`).
-
+validators; the G0 read graph permits only `node:fs`, `node:path`, and `node:crypto`
+(controller-inventory delta `0`).
 **E01:** `provider.cjs` gates E00 methods and validates params/results; binding,
 snapshot/cursor, history, policy, and evaluation modules enforce owner/path/link,
-fingerprint, and bounded-read invariants. Descriptor-pinned reads use
-`O_RDONLY | O_NOFOLLOW` plus post-open `fstat`; checks repeat per invoke. E01
-evidence is 56/56 across 8 files; controller closure remains 33 files.
-
-**E02:** The pinned D00 SDK owns four-byte big-endian framing, strict UTF-8
-JSON-RPC 2.0, 16 MiB frame/64 KiB control limits, and stream reassembly.
-`worker.cjs` keeps stdout protocol-only; `dispatcher.cjs` handles handshake,
-eight capabilities, context open/close, invoke, cancel, health, shutdown, and
-revision checks. Contexts/requests are bounded (16 contexts, 4 operations each,
-16 active, queue 32, one scan, one evaluation parse) with deadlines,
-AbortSignal cancellation, safe errors, and exactly-once settlement.
-`data-api.cjs` bundles E00 validators. The candidate builder emits deterministic
-backend-only tarball/inventory for internal G1; not E04 publication or root assets.
-E02 review approved 9.5/10; owner-worker G1 remains downstream.
-
+fingerprint, descriptor-pinned reads, and bounded-read invariants.
+**E02:** The pinned D00 SDK owns framing, strict UTF-8 JSON-RPC, limits, and stream
+reassembly; the worker keeps stdout protocol-only and bounds contexts, requests,
+cancellation, safe errors, and deterministic candidate output.
+**E03:** `AdvisorDataProvider` feeds one reducer and four views from either the
+temporary File System Access adapter or bounded DamHopper `MessagePort`. The
+version-`1.0.0` bridge validates eight envelopes, acknowledges one nonce, binds
+session/generation, suppresses late responses, and clears state on revocation.
+Views are Overview, History/detail, Configuration, and Evaluations; navigation is
+`/plugins/evcrate.advisor`.
+The Vite entry emits one opaque-srcdoc-compatible `plugin/ui/index.html` with
+inlined CSS/IIFE JavaScript and no external assets, network clients, or picker.
+The candidate builder includes UI, manifest entrypoint/navigation, and content-hash
+inventory. E03 evidence is package/focused-browser evidence, not host CSP/sandbox
+proof, G2 LAN acceptance, E04 publication, or standalone cutover.
 
 ## Related documents
 
@@ -794,5 +794,5 @@ E02 review approved 9.5/10; owner-worker G1 remains downstream.
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
-- [Pi-native migration](./pi-native-migration.md)
-- [Browser history scanner](./browser-history-scanner.md)
+- [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes; [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O.
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — E03 provider/bridge/views/package.

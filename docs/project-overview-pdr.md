@@ -2,9 +2,9 @@
 
 **Status:** Current requirements baseline; Hook Materialization Scope Distribution is
 complete through Phase 09, Windows release qualification through Phase 10, and
-DamHopper Advisor Plugin Phases E00–E02 implementation is complete
-(2026-09-21; E02 review approved 9.5/10). Joint G1 and downstream plugin gates
-remain contract-dependent.
+DamHopper Advisor Plugin Phases E00–E03 implementation is complete
+(2026-09-21; E03 review approved 9.2/10). Joint G1/G2 and downstream plugin
+gates remain contract-dependent.
 **Updated:** 2026-09-21
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -417,6 +417,39 @@ manifest inventory and SHA-256 closure, and keeps UI/navigation absent. E02
 implementation evidence is repository/fixture evidence, not G1 integration,
 E04 publication, root release assets, or standalone cutover.
 
+### FR-21: Embedded provider-neutral four-view UI (Phase E03)
+
+**Requirement:** Provide one React `App`/reducer and four shared views behind the
+E00 `AdvisorDataProvider`, with a temporary File System Access adapter for the
+standalone viewer and a bounded DamHopper `MessagePort` adapter for the embedded
+plugin. Keep transport, actor authority, paths, credentials, and host internals
+outside shared view state.
+
+**Status:** DONE (completed 2026-09-21; review approved 9.2/10). Joint D04/E03
+G2 LAN acceptance, E04 package/lifecycle work, and G4 standalone retirement remain
+downstream.
+
+**Acceptance:** The provider exposes exactly the eight E00 reads plus cancellation
+and lifecycle events; the UI bridge pins version `1.0.0`, validates the eight
+envelope types, acknowledges one single-use nonce, binds frame session and
+activation generation, rejects late/mismatched responses, and clears pending work
+on revocation. Reducer state fences refresh/summary/page results by generation and
+session; context changes clear snapshot, cursor, detail, policy, evaluation, and
+selection state. Filters request a canonical summary and first page rather than
+downloading all history.
+
+Overview, History/detail, Configuration, and Evaluations remain one shared surface.
+The UI exposes honest stale/unavailable/forbidden/migration/changed/missing states,
+current account-wide policy labeling, exact evaluation comparability, inert text,
+semantic keyboard-accessible controls, and no model execution or mutation.
+
+`plugin/ui/index.html` is one opaque-srcdoc-compatible document under 5 MiB with
+inlined CSS/IIFE JavaScript, no external assets, network clients, or filesystem
+pickers. `plugin/manifest.json` declares `ui/index.html` and
+`/plugins/evcrate.advisor`; the candidate builder includes the document and its
+SHA-256 inventory entry. E03 validation records **68/68 tests passed**; this is
+repository/package evidence, not host CSP/sandbox or real LAN qualification.
+
 ## Non-functional requirements
 
 | Area | Requirement |
@@ -432,10 +465,10 @@ E04 publication, root release assets, or standalone cutover.
 ## Observable release gates
 
 **Current status:** Windows release qualification (Phases 01–10), Advisor Metrics
-Explorer (Phases 01–10), and DamHopper Advisor Plugin Phases E00–E02
+Explorer (Phases 01–10), and DamHopper Advisor Plugin Phases E00–E03
 implementation are complete. Documentation/support cutover is complete.
-Deterministic Linux publication evidence, joint G0/G1 qualification, and plugin
-UI/package/cutover gates remain separate.
+Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2
+qualification, plugin package/cutover gates, and E04–E05 remain separate.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 33-file
@@ -463,6 +496,9 @@ UI/package/cutover gates remain separate.
 12. E02 worker framing, lifecycle, cancellation, safe-error, and candidate
 checks pass; this is internal repository evidence, not owner-runner G1,
 E04 publication, or standalone cutover. See the [worker guide](./advisor-plugin-worker.md).
+13. E03 bridge/state/four-view/security suites and the self-contained UI package
+check pass; this is repository evidence, not host-enforced CSP/sandbox or G2 LAN
+qualification. See the [embedded UI guide](./advisor-plugin-ui.md).
 ## Documentation map
 
 - [System architecture](./system-architecture.md) — detailed controller,
@@ -471,6 +507,8 @@ E04 publication, or standalone cutover. See the [worker guide](./advisor-plugin-
 - [Codebase summary](./codebase-summary.md) — source/module/generated-output map.
 - [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing, lifecycle,
   safe errors, admission, and candidate package boundary.
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — E03 provider boundary,
+  bridge, reducer/views, opaque-origin package, and acceptance boundary.
 - [Project roadmap](./project-roadmap.md) — completed gates, current gaps, and next work.
 - [Project changelog](./project-changelog.md) — historical phase evidence and boundaries.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.

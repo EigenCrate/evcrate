@@ -34,6 +34,12 @@ import {
 import {
   ComparableEvaluationGroup,
 } from './advisor-evaluation-comparison.js';
+export type {
+  HistoryExecutionV1,
+  HistoryOutcomeV1,
+  EvaluationDocumentV1,
+  AdvisorPolicyV2,
+};
 
 export const DATA_API_PROTOCOL_V1 = 'evcrate-advisor-data' as const;
 export const DATA_API_VERSION_V1 = 1 as const;

@@ -199,6 +199,12 @@ function collectCandidateRecords() {
     const mode = f === 'worker.cjs' ? 0o755 : 0o644;
     records.push({ path: rel, fullPath, data, mode });
   }
+  // 3b. UI entrypoint (Phase E03)
+  const uiFile = path.join(PLUGIN_DIR, 'ui', 'index.html');
+  if (fs.existsSync(uiFile)) {
+    const data = fs.readFileSync(uiFile);
+    records.push({ path: 'ui/index.html', fullPath: uiFile, data, mode: 0o644 });
+  }
 
   // 4. Installed SDK closure in node_modules/@dam-hopper/plugin-sdk/
   const sdkPkgDir = path.join(PLUGIN_DIR, 'node_modules', '@dam-hopper', 'plugin-sdk');
@@ -233,7 +239,7 @@ function collectCandidateRecords() {
 /**
  * Builds candidate manifest with inventory.
  */
-function buildManifest(inventory) {
+function buildManifest(inventory, hasUi = false) {
   return {
     manifestVersion: 1,
     id: 'evcrate.advisor',
@@ -262,8 +268,23 @@ function buildManifest(inventory) {
         runtime: 'node',
         range: '>=22.19.0',
         entry: 'backend/worker.cjs'
-      }
+      },
+      ...(hasUi ? {
+        ui: {
+          entry: 'ui/index.html',
+          mode: 'opaque-srcdoc'
+        }
+      } : {})
     },
+    ...(hasUi ? {
+      navigation: [
+        {
+          id: 'evcrate.advisor.overview',
+          title: 'Advisor Metrics',
+          route: '/plugins/evcrate.advisor'
+        }
+      ]
+    } : {}),
     inventory
   };
 }
@@ -280,7 +301,8 @@ async function main() {
   const manifestPath = path.join(PLUGIN_DIR, 'manifest.json');
 
   const { records, inventory } = collectCandidateRecords();
-  const manifest = buildManifest(inventory);
+  const hasUi = records.some(r => r.path === 'ui/index.html');
+  const manifest = buildManifest(inventory, hasUi);
 
   // Validate via @dam-hopper/plugin-sdk if available
   try {
