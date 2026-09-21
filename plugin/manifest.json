@@ -41,6 +41,12 @@
   ],
   "inventory": [
     {
+      "path": "backend/authorized-backend.cjs",
+      "size": 1453,
+      "sha256": "59abed9bc978097ff8186c9d904840d3a8cebf0fed0729239ec92960b433faef",
+      "mode": 420
+    },
+    {
       "path": "backend/binding.cjs",
       "size": 5775,
       "sha256": "82bbd8c3f06cc41eefa2f641ac06aa19544e70ba77bfd67270623f6d78639ed3",
@@ -78,32 +84,32 @@
     },
     {
       "path": "backend/evaluation-provider.cjs",
-      "size": 6927,
-      "sha256": "d83ae9711705dc2c478c927a60fc3c272a22785fcb2bbb45ec08a90c9203825c",
+      "size": 7004,
+      "sha256": "c21c8f10b475c3606f46b5e2b13eea17ee3fab0c6bea836c28bc1a02b741ec22",
       "mode": 420
     },
     {
       "path": "backend/history-detail.cjs",
-      "size": 4256,
-      "sha256": "b6924ebdb5e34ec25ab5652f7d9de00b7d81696900b3598f6d02be5926411397",
+      "size": 4301,
+      "sha256": "a1e22fe764b2be72ce62a57a6d5718faebf26630130c18c1b057a806f2539ca0",
       "mode": 420
     },
     {
       "path": "backend/history-provider.cjs",
-      "size": 5293,
-      "sha256": "f6f11b5b6b513824d88c5d279dbd780223d0fb655a7b6bb2500daa581bdba50a",
+      "size": 5338,
+      "sha256": "7a5c02aa504ecea788bb9401ea75b91d79378f8891d7aeb511a9e1fcc96918ad",
       "mode": 420
     },
     {
       "path": "backend/history-scanner.cjs",
-      "size": 7357,
-      "sha256": "b09f2ae923c94ad5ab3099828db3b461b67e11a8136d305784bf6c948d5b612c",
+      "size": 7352,
+      "sha256": "3525f44667686d33a106a5b4a5af14c980020f97927570f881bad9e175e8e956",
       "mode": 420
     },
     {
       "path": "backend/policy-provider.cjs",
-      "size": 4431,
-      "sha256": "c89137f03a3947d7067d19fb19d795d7ebc627638e2ea63b6021e45bf57ecca7",
+      "size": 4476,
+      "sha256": "a1af38fe7035ff4997c5edeb47585ba91af5dc110bb11089860b3c62f115afcc",
       "mode": 420
     },
     {
