@@ -13,7 +13,8 @@ const fs = require('node:fs');
 const { createHash } = require('node:crypto');
 const { verifySafeRegularFile, isOwner } = require('./binding.cjs');
 const { forbidden } = require('./provider-errors.cjs');
-const { inspectPolicy, MAX_POLICY_BYTES } = require('../../.evcrate/source/.evcrate/bin/lib/advisor/policy-schema.cjs');
+const { resolveAdvisorModule } = require('./authorized-backend.cjs');
+const { inspectPolicy, MAX_POLICY_BYTES } = require(resolveAdvisorModule('policy-schema.cjs'));
 
 class PolicyProvider {
   readCurrentPolicy(context) {
