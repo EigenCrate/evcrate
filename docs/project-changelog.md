@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-21
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E03 complete (4/6 phases, 66.7%; E03 review approved 9.2/10 on 2026-09-21). Next gates: joint G1 owner-worker and D04/E03 G2 LAN qualification. Package version: `2.1.0`.
+**Updated:** 2026-09-22
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). Next gate: E05/D06 joint G4 qualification and standalone cutover. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
@@ -94,6 +94,31 @@ Older phase records remain in the linked archive.
   browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced
   CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain
   downstream gates.
+
+### 2026-09-22 — feat(plugin): qualify E04 independent package and Gate G3
+
+**Status:** Phase E04 DONE (2026-09-22); Gate G3 **QUALIFIED**; review approved **9.3/10**.  
+**Plan:** [Phase E04 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-04-independent-package.md)  
+**Evidence:** [G3 qualification receipt](../plans/260920-1603-dam-hopper-advisor-plugin/reports/g3-qualification-receipt.md); [lifecycle review](../plans/reports/code-review-260922-2336-g3-qualification-lifecycle.md)
+
+- Verified the independently installable matched package `evcrate.advisor`
+  v0.1.0: **45 logical members**, **176,842 bytes compressed** (747,008 bytes
+  expanded), code-point-sorted exact closure, and archive SHA-256
+  `1ada5334671ae854e6c406930f8705de02d85e02198adcb07c41936002011f9a`
+  (`1ada5334...`).
+- Verified transactional stage/approve, matched UI/backend activation,
+  update/disable/remove, worker drain and context revocation, crash recovery,
+  and clean restart without DamHopper rebuild or EVCrate source mutation.
+- Verified rollback safety: current revoked grants and disabled intent dominate
+  restored package/settings; activation generations never rewind and restored
+  non-security settings are revalidated.
+- Verified root exact-7 release isolation: plugin staging is excluded from root
+  npm packaging and cannot become an eighth release asset.
+- Qualification evidence: plugin lifecycle **5/5**, package integrity/hostile
+  archive **5/5**, root isolation **1/1**, and companion DamHopper lifecycle
+  **8/8**. Standalone viewer retirement remains gated on E05/D06 G4.
+
+
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
