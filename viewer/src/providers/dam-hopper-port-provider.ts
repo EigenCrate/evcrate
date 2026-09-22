@@ -29,6 +29,9 @@ interface PendingRequest {
   readonly reject: (error: Error) => void;
 }
 
+declare const __FRAME_SESSION__: unknown;
+declare const __ACTIVATION_GENERATION__: unknown;
+
 export class DamHopperPortProvider implements AdvisorDataProvider {
   private _port: MessagePort | null = null;
   private _state: 'uninitialized' | 'bootstrapping' | 'awaiting-ack' | 'ready' | 'revoked' = 'uninitialized';
@@ -38,7 +41,6 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
   private _isAvailable = false;
   private _listeners = new Set<ProviderEventListener>();
   private _pending = new Map<string, PendingRequest>();
-  private _windowListener: ((event: MessageEvent) => void) | null = null;
 
   constructor(autoBootstrap = true) {
     if (autoBootstrap && typeof window !== 'undefined') this._initWindowBootstrap();
@@ -68,26 +70,51 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
   }
 
   private _initWindowBootstrap(): void {
-    if (this._windowListener) return;
+    const frameSession =
+      typeof __FRAME_SESSION__ === 'undefined' ? undefined : __FRAME_SESSION__;
+    const activationGeneration =
+      typeof __ACTIVATION_GENERATION__ === 'undefined' ? undefined : __ACTIVATION_GENERATION__;
+    if (
+      typeof frameSession !== 'string' ||
+      frameSession.length === 0 ||
+      !Number.isSafeInteger(activationGeneration) ||
+      (activationGeneration as number) < 0
+    ) {
+      this._revoke('Host frame identity is unavailable');
+      return;
+    }
+    this._frameSession = frameSession;
+    this._activationGeneration = activationGeneration as number;
     this._state = 'bootstrapping';
-    this._windowListener = (event: MessageEvent) => {
+    const channel = new MessageChannel();
+    this.handleBootstrap = this.handleBootstrap.bind(this);
+    channel.port1.onmessage = (event: MessageEvent) => {
       try {
         const msg = validateBridgeMessage(event.data);
         if (msg.type !== 'host.bootstrap') return;
-        this.handleBootstrap(msg as HostBootstrapMessage, event.ports[0]);
-      } catch {}
+        this.handleBootstrap(msg as HostBootstrapMessage, channel.port1);
+      } catch {
+        this._revoke('Invalid host bootstrap');
+      }
     };
-    window.addEventListener('message', this._windowListener);
+    channel.port1.start();
+    window.parent.postMessage({
+      type: 'frame.ready',
+      frameSession: this._frameSession,
+      bridgeVersion: UI_BRIDGE_VERSION,
+      activationGeneration: this._activationGeneration
+    }, '*', [channel.port2]);
   }
 
   handleBootstrap(msg: HostBootstrapMessage, port?: MessagePort): void {
     if (this._state === 'ready' || this._state === 'awaiting-ack') return;
     if (!port) throw new Error('Bootstrap message missing transferred MessagePort');
-    if (msg.pluginId !== 'evcrate.advisor') throw new Error(`Unexpected pluginId: ${msg.pluginId}`);
-
-    if (this._windowListener && typeof window !== 'undefined') {
-      window.removeEventListener('message', this._windowListener);
-      this._windowListener = null;
+    if (
+      this._frameSession !== null &&
+      (msg.frameSession !== this._frameSession ||
+        msg.activationGeneration !== this._activationGeneration)
+    ) {
+      throw new Error('Bootstrap frame identity mismatch');
     }
 
     this._port = port;
@@ -106,21 +133,19 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
       activationGeneration: this._activationGeneration,
       nonce: msg.nonce
     });
+    this._state = 'ready';
+    this._isAvailable = true;
+    this._emit({ type: 'ready', descriptor: this.descriptor });
   }
 
   private _handlePortMessage(data: unknown): void {
     try {
       const msg = validateBridgeMessage(data);
       if (msg.frameSession !== this._frameSession || msg.activationGeneration !== this._activationGeneration) return;
-      if (msg.type === 'frame.ready') {
-        this._state = 'ready';
-        this._isAvailable = true;
-        this._emit({ type: 'ready', descriptor: this.descriptor });
-      } else if (msg.type === 'context.revoked') {
+      if (msg.type === 'context.revoked') {
         this._revoke(msg.reason ?? 'Host revoked context');
       } else if (msg.type === 'availability.changed') {
         this._isAvailable = msg.available;
-        this._capabilities = Object.freeze([...msg.capabilities]);
         this._emit({ type: 'availability-changed', available: msg.available, capabilities: this._capabilities });
       } else if (msg.type === 'response') {
         const pending = this._pending.get(msg.requestId);
@@ -143,15 +168,15 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
     this._emit({ type: 'revoked', reason });
   }
 
-  private _invoke<T>(operation: string, requestId: string, params?: unknown): Promise<T> {
+  private _invoke<T>(operation: string, requestId: string, payload: unknown = {}): Promise<T> {
     if (this._state !== 'ready' || !this._port) return Promise.reject(new Error(`Provider not ready (state: ${this._state})`));
-    return new Promise<T>((resolve, reject) => {
-      this._pending.set(requestId, { resolve: resolve as (r: unknown) => void, reject });
-      this._port!.postMessage({
-        type: 'request', frameSession: this._frameSession, bridgeVersion: UI_BRIDGE_VERSION,
-        activationGeneration: this._activationGeneration, requestId, operation, params
-      });
+    const { promise, resolve, reject } = Promise.withResolvers<T>();
+    this._pending.set(requestId, { resolve: resolve as (result: unknown) => void, reject });
+    this._port.postMessage({
+      type: 'request', frameSession: this._frameSession, bridgeVersion: UI_BRIDGE_VERSION,
+      activationGeneration: this._activationGeneration, requestId, operation, payload
     });
+    return promise;
   }
 
   refreshHistory(requestId: string): Promise<HistoryRefreshResultV1> { return this._invoke('history.refresh', requestId, {}); }
@@ -174,10 +199,6 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
   }
 
   destroy(): void {
-    if (this._windowListener && typeof window !== 'undefined') {
-      window.removeEventListener('message', this._windowListener);
-      this._windowListener = null;
-    }
     this._revoke('Provider destroyed');
   }
 }
