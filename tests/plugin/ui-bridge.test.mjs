@@ -135,15 +135,10 @@ test('DamHopperPortProvider: completes nonce handshake and transitions to ready'
     nonce: 'cryptographic-nonce-999'
   });
 
-  // Host acknowledges by delivering frame.ready
-  mockPort.deliverMessage({
-    type: 'frame.ready',
-    frameSession: 'session-abc',
-    bridgeVersion: UI_BRIDGE_VERSION,
-    activationGeneration: 2
-  });
+  // Port acknowledgement completes the bootstrap handshake.
 
   assert.equal(readyEmitted, true);
+  assert.equal(mockPort.sent.length, 1);
   assert.equal(provider.descriptor.isAvailable, true);
   assert.equal(provider.descriptor.frameSession, 'session-abc');
   assert.equal(provider.descriptor.activationGeneration, 2);
@@ -165,12 +160,6 @@ test('DamHopperPortProvider: dispatches request and settles on response', async 
     capabilities: ['history.refresh']
   }, mockPort);
 
-  mockPort.deliverMessage({
-    type: 'frame.ready',
-    frameSession: 'session-1',
-    bridgeVersion: UI_BRIDGE_VERSION,
-    activationGeneration: 1
-  });
 
   // Call refreshHistory
   const refreshPromise = provider.refreshHistory('req-100');
@@ -180,6 +169,7 @@ test('DamHopperPortProvider: dispatches request and settles on response', async 
   assert.equal(mockPort.sent[1].type, 'request');
   assert.equal(mockPort.sent[1].requestId, 'req-100');
   assert.equal(mockPort.sent[1].operation, 'history.refresh');
+  assert.deepEqual(mockPort.sent[1].payload, {});
 
   // Simulate host response
   mockPort.deliverMessage({
@@ -216,12 +206,6 @@ test('DamHopperPortProvider: discards late responses from mismatched generation'
     capabilities: ['history.refresh']
   }, mockPort);
 
-  mockPort.deliverMessage({
-    type: 'frame.ready',
-    frameSession: 'session-1',
-    bridgeVersion: UI_BRIDGE_VERSION,
-    activationGeneration: 1
-  });
 
   let settled = false;
   const req = provider.refreshHistory('req-late').then(() => { settled = true; });
@@ -267,12 +251,6 @@ test('DamHopperPortProvider: handles context.revoked and aborts pending requests
     capabilities: ['history.refresh']
   }, mockPort);
 
-  mockPort.deliverMessage({
-    type: 'frame.ready',
-    frameSession: 'session-1',
-    bridgeVersion: UI_BRIDGE_VERSION,
-    activationGeneration: 1
-  });
 
   const pendingReq = provider.refreshHistory('req-revoked');
 

@@ -24,6 +24,19 @@ function singleHtmlPlugin(): Plugin {
         }
       }
 
+      if (!cssCode && jsCode.startsWith('(function(){')) {
+        const injectedStyle = jsCode.match(
+          /^\(function\(\)\{var ([A-Za-z_$][\w$]*)=document\.createElement\(`style`\);\1\.textContent=`([\s\S]*?)`,document\.head\.appendChild\(\1\);/
+        );
+        if (injectedStyle) {
+          if (injectedStyle[2].includes('\\') || injectedStyle[2].includes('${')) {
+            throw new Error('Generated CSS cannot be safely extracted from the inline script');
+          }
+          cssCode = injectedStyle[2].replace('/*$vite$:1*/', '');
+          jsCode = `(function(){${jsCode.slice(injectedStyle[0].length)}`;
+        }
+      }
+
       if (htmlFile) {
         let html = typeof htmlFile.source === 'string' ? htmlFile.source : Buffer.from(htmlFile.source).toString('utf8');
         // Remove external module scripts and stylesheets

@@ -48,7 +48,8 @@ export interface BridgeRequestMessage extends BaseBridgeMessage {
   readonly type: 'request';
   readonly requestId: string;
   readonly operation: string;
-  readonly params?: unknown;
+  readonly payload: unknown;
+  readonly deadlineMs?: number;
 }
 
 export interface BridgeErrorPayload {
@@ -77,7 +78,7 @@ export interface ContextRevokedMessage extends BaseBridgeMessage {
 export interface AvailabilityChangedMessage extends BaseBridgeMessage {
   readonly type: 'availability.changed';
   readonly available: boolean;
-  readonly capabilities: readonly string[];
+  readonly reason?: string;
 }
 
 export type BridgeMessage =
@@ -118,8 +119,8 @@ export function validateBridgeMessage(data: unknown): BridgeMessage {
     throw new BridgeProtocolError('INVALID_INPUT', 'Bridge message must include non-empty frameSession');
   }
 
-  if (typeof obj.bridgeVersion !== 'string' || obj.bridgeVersion.trim().length === 0) {
-    throw new BridgeProtocolError('INVALID_INPUT', 'Bridge message must include non-empty bridgeVersion');
+  if (obj.bridgeVersion !== UI_BRIDGE_VERSION) {
+    throw new BridgeProtocolError('INVALID_INPUT', 'Unsupported bridgeVersion');
   }
 
   if (
@@ -141,6 +142,9 @@ export function validateBridgeMessage(data: unknown): BridgeMessage {
     }
     if (typeof obj.operation !== 'string' || obj.operation.trim().length === 0) {
       throw new BridgeProtocolError('INVALID_INPUT', 'Bridge request must include non-empty operation');
+    }
+    if (!Object.prototype.hasOwnProperty.call(obj, 'payload')) {
+      throw new BridgeProtocolError('INVALID_INPUT', 'Bridge request must include payload');
     }
   } else if (type === 'response') {
     if (typeof obj.requestId !== 'string' || obj.requestId.trim().length === 0) {
@@ -186,8 +190,8 @@ export function validateBridgeMessage(data: unknown): BridgeMessage {
     if (typeof obj.available !== 'boolean') {
       throw new BridgeProtocolError('INVALID_INPUT', 'availability.changed must include boolean available');
     }
-    if (!Array.isArray(obj.capabilities)) {
-      throw new BridgeProtocolError('INVALID_INPUT', 'availability.changed must include capabilities array');
+    if (obj.reason !== undefined && typeof obj.reason !== 'string') {
+      throw new BridgeProtocolError('INVALID_INPUT', 'availability.changed reason must be a string');
     }
   }
 
