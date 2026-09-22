@@ -726,3 +726,42 @@ test('CLI verifier: parseVerifierArgs and main handle standalone invocation and 
     /Unknown argument: "--unknown-flag"/u
   );
 });
+
+test('E04 Root Isolation: plugin package is excluded from root exact-seven release assets and root npm pack', () => {
+  const version = '2.1.0';
+  const expected7 = assetVerification.getExpectedReleaseAssetNames(version);
+  assert.equal(expected7.length, 7, 'Root release assets must be exactly 7 files');
+  for (const name of expected7) {
+    assert.equal(name.includes('plugin'), false, `Plugin asset "${name}" must not leak into root release asset set`);
+  }
+
+  // Verify that an eighth plugin asset is strictly rejected by verifyReleaseAssetSet
+  const tmp = mkdtempSync(join(tmpdir(), 'evcrate-root-isolation-'));
+  try {
+    for (const name of expected7) {
+      writeFileSync(join(tmp, name), 'dummy content\n');
+    }
+    // Add an eighth plugin asset
+    writeFileSync(join(tmp, 'evcrate-advisor-plugin-v0.1.0.tar.gz'), 'plugin binary\n');
+
+    assert.throws(() => {
+      assetVerification.verifyReleaseAssetSet({
+        dir: tmp,
+        version,
+        tag: `v${version}`,
+        sourceCommit: '0'.repeat(40),
+        expectedHashes: {}
+      });
+    }, /Extra unexpected release asset entries found/i);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+  // Verify root npm files allowlist excludes plugin distribution artifacts
+  const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  const files = pkg.files || [];
+  // dist/advisor-plugin/** must be explicitly negated
+  assert.ok(files.includes('!dist/advisor-plugin/**'), 'package.json files must explicitly negate !dist/advisor-plugin/**');
+  assert.ok(files.includes('!dist/release/**'), 'package.json files must explicitly negate !dist/release/**');
+  assert.equal(files.some((f) => f.startsWith('plugin') || f === 'plugin'), false, 'plugin/ must not be included in root package.json files');
+  assert.equal(files.some((f) => f.startsWith('artifacts') || f === 'artifacts'), false, 'artifacts/ must not be included in root package.json files');
+});

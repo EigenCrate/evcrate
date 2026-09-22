@@ -13,8 +13,7 @@ const fs = require('node:fs');
 const { createHash } = require('node:crypto');
 const { verifySafeRegularFile, isOwner } = require('./binding.cjs');
 const { forbidden } = require('./provider-errors.cjs');
-const { resolveAdvisorModule } = require('./authorized-backend.cjs');
-const { inspectPolicy, MAX_POLICY_BYTES } = require(resolveAdvisorModule('policy-schema.cjs'));
+const { inspectPolicy, MAX_POLICY_BYTES } = require('./advisor-lib/policy-schema.cjs');
 
 class PolicyProvider {
   readCurrentPolicy(context) {

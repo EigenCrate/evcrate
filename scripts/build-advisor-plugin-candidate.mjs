@@ -191,7 +191,7 @@ function collectCandidateRecords() {
 
   // 3. Backend files
   const backendDir = path.join(PLUGIN_DIR, 'backend');
-  const backendFiles = fs.readdirSync(backendDir).filter(f => f.endsWith('.cjs'));
+  const backendFiles = walkDir(backendDir).filter(f => f.endsWith('.cjs') || f.endsWith('.json') || f.endsWith('.js'));
   for (const f of backendFiles) {
     const rel = `backend/${f}`;
     const fullPath = path.join(backendDir, f);
