@@ -32,6 +32,10 @@
     "build:advisor-plugin-candidate": "node scripts/build-advisor-plugin-candidate.mjs",
     "check:advisor-plugin-candidate": "node scripts/build-advisor-plugin-candidate.mjs --check",
     "build:advisor-plugin-ui": "tsc -p plugin/ui/tsconfig.json && vite build --config plugin/ui/vite.config.ts",
+    "build:advisor-plugin": "node scripts/plugin/build-package.mjs",
+    "check:advisor-plugin": "node scripts/plugin/build-package.mjs --check",
+    "verify:advisor-plugin": "node scripts/plugin/verify-package.mjs dist/advisor-plugin/evcrate-advisor-plugin-v0.1.0.tar.gz",
+    "test:advisor-plugin-package": "node --test tests/plugin/package.test.mjs",
     "test:advisor-plugin-worker": "node --test tests/plugin/worker.test.mjs tests/plugin/worker-framing.test.mjs tests/plugin/worker-cancellation.test.mjs tests/plugin/integration-candidate.test.mjs",
     "test:protocol": "node --test tests/protocol/*.test.mjs",
     "test:cli": "node --test tests/cli/*.test.mjs tests/context/*.test.mjs",
@@ -90,6 +94,7 @@
   "files": [
     "dist/**",
     "!dist/release/**",
+    "!dist/advisor-plugin/**",
     "viewer/dist/**",
     ".evcrate/build-manifest*.json",
     ".evcrate/registry.json",

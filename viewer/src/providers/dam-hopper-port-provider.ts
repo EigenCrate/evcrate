@@ -170,8 +170,13 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
 
   private _invoke<T>(operation: string, requestId: string, payload: unknown = {}): Promise<T> {
     if (this._state !== 'ready' || !this._port) return Promise.reject(new Error(`Provider not ready (state: ${this._state})`));
-    const { promise, resolve, reject } = Promise.withResolvers<T>();
-    this._pending.set(requestId, { resolve: resolve as (result: unknown) => void, reject });
+    let resolveFn!: (value: T) => void;
+    let rejectFn!: (reason?: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolveFn = res;
+      rejectFn = rej;
+    });
+    this._pending.set(requestId, { resolve: resolveFn as (result: unknown) => void, reject: rejectFn });
     this._port.postMessage({
       type: 'request', frameSession: this._frameSession, bridgeVersion: UI_BRIDGE_VERSION,
       activationGeneration: this._activationGeneration, requestId, operation, payload

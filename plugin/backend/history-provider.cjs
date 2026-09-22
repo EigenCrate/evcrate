@@ -13,8 +13,7 @@ const { randomUUID } = require('node:crypto');
 const { scanHistoryRecords } = require('./history-scanner.cjs');
 const { getHistoryDetail } = require('./history-detail.cjs');
 const { invalidInput, overloaded } = require('./provider-errors.cjs');
-const { resolveAdvisorModule } = require('./authorized-backend.cjs');
-const { calculateHistoryMetrics } = require(resolveAdvisorModule('generated/advisor-metrics.js'));
+const { calculateHistoryMetrics } = require('./advisor-lib/generated/advisor-metrics.js');
 
 class RefreshQueue {
   constructor(maxQueueSize = 32) {

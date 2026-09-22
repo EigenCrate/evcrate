@@ -14,12 +14,18 @@
  * - Clean lifecycle shutdown and graceful termination
  */
 
+let pluginSdk;
+try {
+  pluginSdk = require('@dam-hopper/plugin-sdk');
+} catch {
+  pluginSdk = require('../node_modules/@dam-hopper/plugin-sdk/dist/index.js');
+}
 const {
   encodeFrame,
   FrameDecoder,
   validateJsonRpcMessage,
   PluginErrorCode
-} = require('@dam-hopper/plugin-sdk');
+} = pluginSdk;
 const { WorkerContextTable } = require('./context-table.cjs');
 const { WorkerRequestTable } = require('./request-table.cjs');
 const { WorkerDispatcher, formatErrorResponse } = require('./dispatcher.cjs');

@@ -12,14 +12,13 @@ const { createHash } = require('node:crypto');
 const { inspectStat } = require('./binding.cjs');
 const { readBoundedFile } = require('./history-scanner.cjs');
 const { invalidInput } = require('./provider-errors.cjs');
-const { resolveAdvisorModule } = require('./authorized-backend.cjs');
 const {
   validateHistoryExecutionV1,
   validateHistoryOutcomeV1,
   sanitizeObjectForDisplay,
   MAX_EXECUTION_HISTORY_BYTES,
   MAX_OUTCOME_HISTORY_BYTES
-} = require(resolveAdvisorModule('history-contract.cjs'));
+} = require('./advisor-lib/history-contract.cjs');
 
 function getHistoryDetail(snapshot, recordRef) {
   if (!recordRef || typeof recordRef !== 'string') {

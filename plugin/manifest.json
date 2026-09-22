@@ -41,9 +41,57 @@
   ],
   "inventory": [
     {
-      "path": "backend/authorized-backend.cjs",
-      "size": 1453,
-      "sha256": "59abed9bc978097ff8186c9d904840d3a8cebf0fed0729239ec92960b433faef",
+      "path": "backend/advisor-lib/contracts-v2.cjs",
+      "size": 7553,
+      "sha256": "6dc5ef202d28ae6a04d8a6f46f61e46a3e1ea0cdbf9cc3dc04b68fb2f2824ad3",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/errors.cjs",
+      "size": 11594,
+      "sha256": "2e6e0e9cfe4a90735f566212de8eed25957bfa7ac783017f13e3e8f4dd1c29f1",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/advisor-contract-runtime.js",
+      "size": 25769,
+      "sha256": "de858db5ca271ca033944ceea5fcd67d176fec49664521e6a913829e13502a2b",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/advisor-metrics.js",
+      "size": 15677,
+      "sha256": "a9bbe3253abf8181158b6fdace694f72156d4e664ab26645a2e2a6c450610d24",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/canonical-json.js",
+      "size": 5388,
+      "sha256": "95b2e7cae58b24a00578d7ac90d0ee382c07b95a7d8ea6fde673ed31ee1d5ac1",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/json.js",
+      "size": 6907,
+      "sha256": "97e2eebf64d879c1560a8aecb94eb36865754898ee390b7fee307e4428d2538a",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/history-contract.cjs",
+      "size": 7762,
+      "sha256": "34df1715f7ffa4c26d495dc683b495fdb874838a2fd153cb3fd009e788ca11df",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/json-document.cjs",
+      "size": 3464,
+      "sha256": "f301ca8d84f3802437fa5f314835a5d65aae1dab21aee4c949d1f99aaabd76aa",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/policy-schema.cjs",
+      "size": 7580,
+      "sha256": "34fd9831f99fba9afb63a08da5c31155f16b43c4c1e93ab8070a63b74701d1d7",
       "mode": 420
     },
     {
@@ -84,32 +132,74 @@
     },
     {
       "path": "backend/evaluation-provider.cjs",
-      "size": 7004,
-      "sha256": "c21c8f10b475c3606f46b5e2b13eea17ee3fab0c6bea836c28bc1a02b741ec22",
+      "size": 6917,
+      "sha256": "58422cdecb44cea884a234322a2d27165c89bc3ed1527d90a9b746d6c478f3ba",
       "mode": 420
     },
     {
       "path": "backend/history-detail.cjs",
-      "size": 4301,
-      "sha256": "a1e22fe764b2be72ce62a57a6d5718faebf26630130c18c1b057a806f2539ca0",
+      "size": 4223,
+      "sha256": "72674b9c038738099d21b6cf519ce46470c0362c8068d4ee7d8549909575a10b",
       "mode": 420
     },
     {
       "path": "backend/history-provider.cjs",
-      "size": 5338,
-      "sha256": "7a5c02aa504ecea788bb9401ea75b91d79378f8891d7aeb511a9e1fcc96918ad",
+      "size": 5260,
+      "sha256": "f26f706fe5ef68ba82dbac364000c0edb5437c8f6b2ee7503e1ad06c0feabf59",
       "mode": 420
     },
     {
       "path": "backend/history-scanner.cjs",
-      "size": 7352,
-      "sha256": "3525f44667686d33a106a5b4a5af14c980020f97927570f881bad9e175e8e956",
+      "size": 7258,
+      "sha256": "a766fefeb29829d899f78c969c7de8341eee8adc8e714aff158840934f8a2a39",
       "mode": 420
     },
     {
       "path": "backend/policy-provider.cjs",
-      "size": 4476,
-      "sha256": "a1af38fe7035ff4997c5edeb47585ba91af5dc110bb11089860b3c62f115afcc",
+      "size": 4398,
+      "sha256": "c58cd31600c38c72fc459eaf601217b0d6458e77d056708154e9b610ec88f9f2",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-contract-runtime.js",
+      "size": 25780,
+      "sha256": "dcbb46defaaed722258ec009a9f2290640bb870884d02cbc45fc27002d42f2b5",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation-comparison.js",
+      "size": 5522,
+      "sha256": "ef0d1beeee418c752b899aabcfdd28fcf3ba08801df1df22de1cfb7e30da402d",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation-primitives.js",
+      "size": 9384,
+      "sha256": "470b9406b89361d8fd437a98222f3c150f16190d41aa1af5c96cc5ccbaf05c28",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation-validation.js",
+      "size": 6457,
+      "sha256": "e78730278738d41bb4393e0a9e80531b6b9478da7b393d94200db7544d8ac337",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation.js",
+      "size": 2038,
+      "sha256": "8f43c845c3f45e2adf3d679c47fdbb1b58a0ac26ac20437cf46d433c57e85f14",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/canonical-json.js",
+      "size": 5388,
+      "sha256": "95b2e7cae58b24a00578d7ac90d0ee382c07b95a7d8ea6fde673ed31ee1d5ac1",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/json.js",
+      "size": 6887,
+      "sha256": "ad7d32563ac1e0a9e6a0eafc463e496f96c31a14ab255f1deb47d56f1912e90c",
       "mode": 420
     },
     {
@@ -120,8 +210,8 @@
     },
     {
       "path": "backend/provider.cjs",
-      "size": 4926,
-      "sha256": "645e30e89c7d56a2fdab4ddeb399c76a11c3099cec7a2c458bac8f5947b698ee",
+      "size": 4823,
+      "sha256": "3f92c973e4fa6cf3855785e400b26e0202f6224cf3cb2784cc46d8c682575750",
       "mode": 420
     },
     {
@@ -138,8 +228,8 @@
     },
     {
       "path": "backend/worker.cjs",
-      "size": 6682,
-      "sha256": "fbaa78bdb4ed4eb40bf1b76a1553eb257898292d298de5810623b11a4ea53b75",
+      "size": 6819,
+      "sha256": "368e8562e5c39254304b6d9072338a97c9c196d3097c14998fb030b6bdc230cf",
       "mode": 493
     },
     {
@@ -155,21 +245,9 @@
       "mode": 420
     },
     {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/errors.d.ts",
-      "size": 1670,
-      "sha256": "6dd98b54f17a1700ac062040d7b86a5e69d344d37e80ea48e934feabf1641fac",
-      "mode": 420
-    },
-    {
       "path": "node_modules/@dam-hopper/plugin-sdk/dist/errors.js",
       "size": 1843,
       "sha256": "50387300e183a7709215e90141a17dc54c6421df9d28f2e82d9a9a0ec2d96738",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/framing.d.ts",
-      "size": 1264,
-      "sha256": "f04307673145324c760cd2b4bc42ea66a14199f7405912e24ba16a2cda58d2e1",
       "mode": 420
     },
     {
@@ -179,21 +257,9 @@
       "mode": 420
     },
     {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/index.d.ts",
-      "size": 228,
-      "sha256": "dc962306038dcdf05a27621d9f81ee36f39f93173669f35c6d88d1cdd5868de6",
-      "mode": 420
-    },
-    {
       "path": "node_modules/@dam-hopper/plugin-sdk/dist/index.js",
       "size": 226,
       "sha256": "104a8bdb372bb2763768d0d554b43cd153aab8a4305d93942a56bed0c5b81978",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/manifest.d.ts",
-      "size": 1140,
-      "sha256": "0bd25ec41714d0f342f28992848fa3989e613250d382955296dfb79a64e50b94",
       "mode": 420
     },
     {
@@ -203,21 +269,9 @@
       "mode": 420
     },
     {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/runner-protocol.d.ts",
-      "size": 4357,
-      "sha256": "81aa6006ae1b839da1f1a57cac7f94dac20165aa884076724b1e9df4b8d123e6",
-      "mode": 420
-    },
-    {
       "path": "node_modules/@dam-hopper/plugin-sdk/dist/runner-protocol.js",
       "size": 1743,
       "sha256": "821008a00cc3f14f47d07c90357f4ca4b9c8251e5cc1d552a145a06cbeccb6cb",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/ui-bridge.d.ts",
-      "size": 2128,
-      "sha256": "c33883f69bd55de39e34423adf9cce36c3dbba253ea6ef7ba65608eb87517930",
       "mode": 420
     },
     {
@@ -227,201 +281,15 @@
       "mode": 420
     },
     {
-      "path": "node_modules/@dam-hopper/plugin-sdk/dist/worker-sdk.d.ts",
-      "size": 2085,
-      "sha256": "2061f3dd54afd3972fed46cce9b85f461b7a0e6202ff10355082849b78291120",
-      "mode": 420
-    },
-    {
       "path": "node_modules/@dam-hopper/plugin-sdk/dist/worker-sdk.js",
       "size": 3350,
       "sha256": "a67819d28d557fc68bf2bd29decbf20a6d9dd793103e830ba7471df0cbd26187",
       "mode": 420
     },
     {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/negative/jsonrpc-batch-rejected.json",
-      "size": 132,
-      "sha256": "bab9de9382c0311bc543fb22f665bf86036f5a4b68116ec3ea8ec7f309359b32",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/negative/jsonrpc-numeric-id.json",
-      "size": 82,
-      "sha256": "ab30b8c6648242d482a6ed1d19fb350e91403395e8ffaca044d5b2e92c9194c0",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/negative/manifest-bad-version.json",
-      "size": 484,
-      "sha256": "c78797ce5e40121eb39c4f9aa8ccab62db50016e3075add41460633c004bc7ce",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/negative/manifest-invalid-id.json",
-      "size": 474,
-      "sha256": "86e9def721e9081c5c0f903efd65245e8c9a9f4fb42a9c8e428d738069956585",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/negative/manifest-unknown-field.json",
-      "size": 515,
-      "sha256": "66a7fe99784a427902c9593842f5b969815edd5f781b218e75ee6fe7717ea820",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/opaque-ui/dist/index.html",
-      "size": 197524,
-      "sha256": "6dfb5e43d05f4fedf2b31ee0b4d033e3022bcf6a0b21d2b7dde592ae0ac9a36e",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/opaque-ui/dist/metadata.json",
-      "size": 284,
-      "sha256": "c1e04d0f7b58a7beaf5f1ebb091d73dd224b8aca14f3a612fa641c8ca3382297",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/opaque-ui/index.html",
-      "size": 1070,
-      "sha256": "80322766077414cb00a8ebec6c3d4b6a9c957f1e243da6ea45603a828ecf874f",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/opaque-ui/src/App.tsx",
-      "size": 6023,
-      "sha256": "f1eaf4c4097900d4f0c8814a458389d06fa9a9ae0e1988eda9d6c180df687094",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/opaque-ui/src/main.tsx",
-      "size": 285,
-      "sha256": "dcb680fea42a2df2b37107e746df9ee3337fad271508f4aa38c76bea0b16b5f4",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/positive/jsonrpc-request-valid.json",
-      "size": 366,
-      "sha256": "855ef532cfa5e25df5afca102d79c02a7152ee8e9f86d0dfc8e1d2156a8f3f0d",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/positive/jsonrpc-response-valid.json",
-      "size": 201,
-      "sha256": "91cbf8553ccbfa0efb150b4d87d8c862b970ed4bc68326689600df680e2710dd",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/positive/manifest-valid.json",
-      "size": 1466,
-      "sha256": "3985662059061312e2150c1d39528c80e34d5394f4386429381d163579d25345",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/fixtures/positive/ui-bridge-request-valid.json",
-      "size": 245,
-      "sha256": "9045e3145e3a8b61dceef02c1512d5439bdadff8ebac27a5b2f63e46aed2ddb7",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/LICENSE",
-      "size": 1088,
-      "sha256": "4c90d8028c29108b39d333a0f7e36c74c1ad68b6812fd1ff896f876c777bd6d2",
-      "mode": 420
-    },
-    {
       "path": "node_modules/@dam-hopper/plugin-sdk/package.json",
       "size": 1261,
       "sha256": "2d345dc9224f08dc2dd2e6fa6f820abb637d00e66bd241ceb8e3956a4384b1f5",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/schemas/manifest-v1.schema.json",
-      "size": 3350,
-      "sha256": "55f40aa1adaf2cd1a04c2a403025cce1f5ce7c08508d994328fcef68022ab3b9",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/schemas/runner-protocol-v1.schema.json",
-      "size": 2124,
-      "sha256": "03bf22bb50c6571e1e5ab76861eafc843acfb78d48d1d93dde8a6f3998c5177c",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/schemas/ui-bridge-v1.schema.json",
-      "size": 1638,
-      "sha256": "a27e9063b4aea0cdd5ffe0642921283842141ecf610a43b85f0d477cb248aad9",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/schemas/worker-sdk-v1.schema.json",
-      "size": 1376,
-      "sha256": "3a24e11187281a2e505eed63fe869f854d063ad7958dc2ed30685cc2e1a6c7f7",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/scripts/build-opaque-fixture.mjs",
-      "size": 4017,
-      "sha256": "397a539de080f0b7abc19ada67e9c51829b98ffff316885734b03cb87d45c3d1",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/errors.ts",
-      "size": 2177,
-      "sha256": "e665a2855830130bb6a3b16c63379ca11698ece807c34a39ed74ad810c42c54a",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/framing.ts",
-      "size": 5436,
-      "sha256": "2902f3771541f28851d3be213c1c2f3e5db3becffd598d982d96bfb555830708",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/index.ts",
-      "size": 193,
-      "sha256": "6a2a849481c11fb36396b3aa79249638bb1e6e021995dd39b7fa3b8eff9af5f1",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/manifest.ts",
-      "size": 7260,
-      "sha256": "3244f94add0a90aa87c2df22dd084e85e6ab5b7c6d9885045de6a9d62df043c5",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/runner-protocol.ts",
-      "size": 5422,
-      "sha256": "5f6484ff614dda3d230f562f8d4051deebbfe24c4c929e5d520ccd767e4dc334",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/ui-bridge.ts",
-      "size": 5204,
-      "sha256": "d4f1456c1ed92e2ee55dd4a5da730d6699c2cd175781c51345d65b4d9b885945",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/src/worker-sdk.ts",
-      "size": 3479,
-      "sha256": "2a7eace4cf104005a8b7fdb510a79930ae3f4d39c2c50a5c90e535b56b83b04c",
-      "mode": 420
-    },
-    {
-      "path": "node_modules/@dam-hopper/plugin-sdk/tsconfig.json",
-      "size": 450,
-      "sha256": "dee68800362ec05636857ffcf71c0d4ca2a2d1eec9c0e7877d98a5bcc69a625f",
-      "mode": 420
-    },
-    {
-      "path": "package-lock.json",
-      "size": 638,
-      "sha256": "ea68036dd865c56d4462c493c5363abea60013ab5c9b5c0064fa389d2577db73",
-      "mode": 420
-    },
-    {
-      "path": "package.json",
-      "size": 322,
-      "sha256": "51b6ed0d4c7c0d230cb659031623967b702464790706d6c78ca1ea2e95370f23",
       "mode": 420
     },
     {
