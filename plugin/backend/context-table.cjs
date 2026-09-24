@@ -12,12 +12,13 @@
  * - Safe error mapping via PluginError
  */
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { RESOURCE_BUDGETS, PluginErrorCode, PluginError } = require('@dam-hopper/plugin-sdk');
 const { verifyTargetDirectory } = require('./binding.cjs');
 const { EVCrateAdvisorProvider } = require('./provider.cjs');
 const { toSafePluginError } = require('./error-mapping.cjs');
-
 class WorkerContextTable {
   /**
    * @param {object} [options]
@@ -29,6 +30,7 @@ class WorkerContextTable {
     this.maxContexts = options.maxContexts || RESOURCE_BUDGETS.maxContextsPerWorker || 16;
     this.maxOpsPerContext = options.maxOpsPerContext || RESOURCE_BUDGETS.maxOperationsPerContext || 4;
     this.idleTtlMs = options.idleTtlMs || RESOURCE_BUDGETS.contextIdleTtlMs || 300000;
+    this.historyRootPath = options.historyRootPath || null;
     /** @type {Map<string, object>} */
     this.contexts = new Map();
   }
@@ -88,14 +90,47 @@ class WorkerContextTable {
       );
     }
 
-    // Verify directory target and compute history identity
-    let verifiedTarget;
-    try {
-      verifiedTarget = verifyTargetDirectory(configuredProjectTarget);
-    } catch (err) {
-      throw toSafePluginError(err, PluginErrorCode.SOURCE_MISSING);
+    let scopeKind = 'project';
+    let rootIdentity = null;
+    let sourceRevision = null;
+    const scopeObj = params.scope || params.scopeDescriptor;
+    if (scopeObj && typeof scopeObj === 'object') {
+      if (scopeObj.kind === 'history-root' || scopeObj.kind === 'project') {
+        scopeKind = scopeObj.kind;
+      }
+      rootIdentity = scopeObj.rootIdentity || scopeObj.root_identity || null;
+      sourceRevision = scopeObj.sourceRevision ?? scopeObj.source_revision ?? null;
+    } else if (params.scopeKind === 'history-root' || params.scopeKind === 'project') {
+      scopeKind = params.scopeKind;
     }
 
+    // Verify directory target and compute history identity
+    let verifiedTarget;
+    if (scopeKind === 'history-root') {
+      const historyRoot = this.historyRootPath || path.join(process.env.HOME || '', '.evcrate', 'advisor-history');
+      try {
+        verifiedTarget = verifyTargetDirectory(historyRoot);
+      } catch (err) {
+        throw toSafePluginError(err, PluginErrorCode.SOURCE_MISSING);
+      }
+      if (rootIdentity) {
+        if (typeof rootIdentity !== 'string' || !/^[0-9a-f]{64}$/i.test(rootIdentity)) {
+          throw new PluginError(PluginErrorCode.INVALID_INPUT, 'Invalid rootIdentity: must be 64-char lowercase SHA-256');
+        }
+        if (verifiedTarget.historyIdentity !== rootIdentity.toLowerCase()) {
+          throw new PluginError(
+            PluginErrorCode.SOURCE_NOT_CONFIGURED,
+            'History root does not match approved root identity in scope descriptor'
+          );
+        }
+      }
+    } else {
+      try {
+        verifiedTarget = verifyTargetDirectory(configuredProjectTarget);
+      } catch (err) {
+        throw toSafePluginError(err, PluginErrorCode.SOURCE_MISSING);
+      }
+    }
     const contextId = (typeof requestedContextId === 'string' && requestedContextId.length > 0 && requestedContextId.length <= 128)
       ? requestedContextId
       : `ctx-${randomUUID()}`;
@@ -107,18 +142,39 @@ class WorkerContextTable {
     const now = Date.now();
     const expiresAt = now + this.idleTtlMs;
 
+    let policyDescriptor = params.policy_descriptor || null;
+    if (!policyDescriptor && allowCurrentAccountPolicy) {
+      const defaultPolicyPath = path.join(process.env.HOME || '', '.evcrate', 'advisor-routing.json');
+      if (fs.existsSync(defaultPolicyPath)) {
+        policyDescriptor = { path: defaultPolicyPath };
+      }
+    }
+
+    let evaluationDescriptors = params.evaluation_descriptors || [];
+    if (evaluationDescriptors.length === 0) {
+      const defaultEvalPath = path.join(verifiedTarget.normalized, 'tests', 'fixtures', 'advisor-evaluations', 'corpus-nine-cases.json');
+      if (fs.existsSync(defaultEvalPath)) {
+        evaluationDescriptors = [{ evaluation_ref: 'corpus-nine-cases', path: defaultEvalPath, expected_revision: null }];
+      }
+    }
+
     // Create raw context for E01 EVCrateAdvisorProvider
     const rawContext = {
       context_id: contextId,
+      scope_kind: scopeKind,
       target: verifiedTarget.normalized,
       history_identity: verifiedTarget.historyIdentity,
       binding_revision: bindingRevision,
-      allowed_operations: allowedOperations
+      allowed_operations: allowedOperations,
+      policy_descriptor: policyDescriptor,
+      evaluation_descriptors: evaluationDescriptors
     };
 
     let provider;
     try {
-      provider = new EVCrateAdvisorProvider(rawContext);
+      provider = new EVCrateAdvisorProvider(rawContext, {
+        historyRootPath: this.historyRootPath || undefined
+      });
     } catch (err) {
       throw toSafePluginError(err, PluginErrorCode.SOURCE_NOT_CONFIGURED);
     }
@@ -127,6 +183,9 @@ class WorkerContextTable {
       contextId,
       actorSubject,
       installationId,
+      scopeKind,
+      rootIdentity,
+      sourceRevision,
       configuredProjectTarget: verifiedTarget.normalized,
       historyIdentity: verifiedTarget.historyIdentity,
       worktreePath: worktreePath || null,
@@ -144,11 +203,11 @@ class WorkerContextTable {
       revoked: false,
       revokeReason: null
     };
-
     this.contexts.set(contextId, entry);
 
     return {
       contextId,
+      scopeKind,
       bindingRevision,
       grantRevision,
       activationGeneration,

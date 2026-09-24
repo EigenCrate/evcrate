@@ -62,28 +62,67 @@ function paginateEntries(secret, snapshot, query, cursorStr, limit = 32) {
   const clampedLimit = Math.max(1, Math.min(500, Number(limit) || 32));
 
   let filtered = snapshot.rows;
+  if (query?.project_id) {
+    const pid = query.project_id.toLowerCase();
+    filtered = filtered.filter((r) => r.project_id.toLowerCase() === pid);
+  }
   if (query?.task_run_id) {
-    filtered = filtered.filter((r) => r.task_run_id.toLowerCase() === query.task_run_id.toLowerCase());
+    const tid = query.task_run_id.toLowerCase();
+    filtered = filtered.filter((r) => r.task_run_id.toLowerCase() === tid);
   }
-  if (query?.filters?.status) {
-    filtered = filtered.filter((r) => r.status === query.filters.status);
-  }
-  if (query?.filters?.has_outcome !== undefined && query?.filters?.has_outcome !== null) {
-    filtered = filtered.filter((r) => (r.outcome_state !== 'missing') === query.filters.has_outcome);
-  }
-  if (query?.filters?.outcome_result) {
-    filtered = filtered.filter((r) => r.outcome_result === query.filters.outcome_result);
+  if (query?.filters) {
+    const f = query.filters;
+    if (f.statuses && Array.isArray(f.statuses)) {
+      filtered = filtered.filter((r) => f.statuses.includes(r.status));
+    } else if (f.status) {
+      filtered = filtered.filter((r) => r.status === f.status);
+    }
+
+    if (f.outcome_states && Array.isArray(f.outcome_states)) {
+      filtered = filtered.filter((r) => f.outcome_states.includes(r.outcome_state));
+    } else if (f.has_outcome !== undefined && f.has_outcome !== null) {
+      filtered = filtered.filter((r) => (r.outcome_state !== 'missing') === f.has_outcome);
+    }
+
+    if (f.outcome_results && Array.isArray(f.outcome_results)) {
+      filtered = filtered.filter((r) => r.outcome_result && f.outcome_results.includes(r.outcome_result));
+    } else if (f.outcome_result) {
+      filtered = filtered.filter((r) => r.outcome_result === f.outcome_result);
+    }
+
+    if (f.backends && Array.isArray(f.backends)) {
+      filtered = filtered.filter((r) => r.route && f.backends.includes(r.route.backend));
+    }
+    if (f.models && Array.isArray(f.models)) {
+      filtered = filtered.filter((r) => r.route && f.models.includes(r.route.model));
+    }
+    if (f.efforts && Array.isArray(f.efforts)) {
+      filtered = filtered.filter((r) => r.route && f.efforts.includes(r.route.effort));
+    }
+    if (f.prompt_identities && Array.isArray(f.prompt_identities)) {
+      filtered = filtered.filter((r) => f.prompt_identities.includes(r.prompt_identity));
+    }
+    if (f.build_identities && Array.isArray(f.build_identities)) {
+      filtered = filtered.filter((r) => f.build_identities.includes(r.build_identity));
+    }
+    if (typeof f.started_at_from === 'number') {
+      filtered = filtered.filter((r) => r.started_at >= f.started_at_from);
+    }
+    if (typeof f.started_at_to === 'number') {
+      filtered = filtered.filter((r) => r.started_at <= f.started_at_to);
+    }
   }
 
   const cmpStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-  // Sort tie-breaker: started_at desc, task_run_id asc, consultation_id asc
+  // Sort tie-breaker: started_at desc, project_id asc, task_run_id asc, consultation_id asc
   const sorted = [...filtered].sort((a, b) => {
     if (b.started_at !== a.started_at) return b.started_at - a.started_at;
+    const pcmp = cmpStr(a.project_id, b.project_id);
+    if (pcmp !== 0) return pcmp;
     const tcmp = cmpStr(a.task_run_id, b.task_run_id);
     if (tcmp !== 0) return tcmp;
     return cmpStr(a.consultation_id, b.consultation_id);
   });
-
   let offset = 0;
   if (cursorStr) {
     offset = decodeCursor(secret, snapshot.snapshotId, query, cursorStr);
