@@ -1,7 +1,7 @@
 ---
 title: "All-project advisor history in DamHopper"
 description: "Enable explicitly authorized owner-wide advisor history and project filtering without weakening project, policy or evaluation isolation."
-status: in-progress
+status: complete
 priority: P1
 effort: 32h (provisional; subject to contract and deployment qualification)
 branch: main
@@ -36,9 +36,9 @@ Worker scans eligible owner-controlled SHA-256 project directories into one boun
 | 02 | [Host root authorization and context](./phase-02-host-authorization-context.md) | DONE (2026-09-24) | 7h | Install-bound owner root; authenticated actor admission and runner reauthorization. |
 | 03 | [Worker root history provider](./phase-03-worker-history-provider.md) | DONE (2026-09-24; 354/354 tests; review 9.5/10) | 8h | Safe bounded scan, persisted safe project names, filtered metrics/pages/detail and cursors. |
 | 04 | [Project filter UI and metadata](./phase-04-project-filter-ui.md) | DONE (2026-09-24; 188/188 tests; review 9.8/10) | 4h | All Projects selector, per-project counts/table labels, honest scope. |
-| 05 | [Integrated qualification and release](./phase-05-cross-repo-qualification.md) | Pending | 3h | Negative authorization, real 21-project scenario, paired deployment/rollback. |
+| 05 | [Integrated qualification and release](./phase-05-cross-repo-qualification.md) | DONE (2026-09-24; 273/273 tests, 0 failed/skipped; review 9.8/10; release qualified) | 3h | Negative authorization, real 21-project/237-consultation scan, matched package verification, paired release decision. Evidence: [tests](../reports/tester-260924-2115-phase-05-paired-qualification.md), [review](../reports/code-review-260924-2125-phase-05-paired-qualification.md), [release manifest](../reports/release-evidence-manifest-260924-2140-phase-05.md). |
 
-**Overall status:** In progress; 5/6 phases complete (83.3%). Phase 04 is DONE (2026-09-24); Phase 05 paired qualification and release remains.
+**Overall status:** Complete; 6/6 phases complete (100%). Phase 05 paired qualification and release complete.
 
 ## Dependencies / invariants
 
@@ -63,9 +63,8 @@ Contract parity and rejection fixtures in both repositories; targeted worker, Ru
 ### Action Items
 - [x] Align production auth, owner-root admission, worker name metadata, and provider filtering with confirmed decisions (Phases 00–03).
 - [x] Complete Phase 04 UI source labels and project filtering.
-- [ ] Complete Phase 05 paired integrated qualification and release gate.
+- [x] Complete Phase 05 paired integrated qualification and release gate.
 
-## Unresolved questions
+## Remaining deployment handoff
 
-- Deployment still requires the trusted plugin installation to bind the real owner history root/UID. It must not require manually registering every historical project or granting individual authenticated accounts.
-- Final scan budgets and latency gate still require measured fixture/live evidence before paired release; do not silently raise existing ceilings.
+- Production deployment remains an operator handoff: bind the trusted plugin installation to the actual owner history root/UID and compare scan completeness with contemporaneous data. The final tester report records a direct owner-root provider scan, not a fresh DamHopper browser-session qualification; capture a live owner-runner session before rollout if required by the operator gate. Phase 05 qualifies a matched paired release, not production deployment. No historical project registration or per-account grants are required.
