@@ -2,9 +2,20 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-22
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). Next gate: E05/D06 joint G4 qualification and standalone cutover. Package version: `2.1.0`.
+**Updated:** 2026-09-24
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history Phase 00 is DONE (1/6 phases, 16.7%; review approved 9.4/10 on 2026-09-24); Phase 01 contract freeze is next. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-24 — fix(auth): guard production auth without breaking development
+
+**Status:** Phase 00 DONE (2026-09-24); review approved **9.4/10**; user approved.  
+**Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 00](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md)  
+**Evidence:** [source review](../plans/260924-1055-all-project-advisor-history/reports/summary-review.md)
+
+- Production startup with missing MongoDB configuration is guarded, and missing DB no longer triggers token issuance by itself.
+- Explicit development/test token bootstrap and test-server login remain available; browser default-profile seeding is limited to development/test, and test-server access stays scoped to the fixture actor.
+- Verification: **1,876/1,876 tests passed**.
+
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
 
