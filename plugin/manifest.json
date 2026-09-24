@@ -150,8 +150,8 @@
     },
     {
       "path": "backend/history-scanner.cjs",
-      "size": 13631,
-      "sha256": "986e95eb55a52eef90e1cab22539c4ba225c2be85183e54504f69fd367d72574",
+      "size": 13682,
+      "sha256": "b94235fe8d26f159b0df6e7ba3265e23b0d9a9c00377980f626883c814b1390b",
       "mode": 420
     },
     {

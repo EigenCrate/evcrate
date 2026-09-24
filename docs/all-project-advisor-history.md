@@ -1,8 +1,8 @@
 # All-Project Advisor History Contract
 
-**Status:** Phases 00–04 complete (2026-09-24): Phase 00 auth review **9.4/10**, Phase 01 contract review **9.5/10**, Phase 02 host authorization/context review **8.5/10**, and Phase 03 worker review **9.5/10**. Phase 04 project selector/source-label UI is implemented; Phase 05 paired qualification remains pending.
+**Status:** COMPLETE — Phases 00–05 finished 2026-09-24 (6/6, 100%). Phase 05 paired release qualified; review approved 9.8/10. See the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
 
-This guide records the coordinated EVCrate/DamHopper boundary for reading advisor history across projects. Phase 02 admission/context, Phase 03 root scanning/labels/queries, and Phase 04 snapshot-inventory filtering/identity are implemented; paired qualification remains pending.
+This guide records the coordinated EVCrate/DamHopper boundary for all-project advisor history. Phases 02–04 implement host admission, owner-safe scanning, and snapshot-backed UI filtering; Phase 05 closes paired qualification. Production deployment remains a separate operator action.
 
 ## Versioning and compatibility
 
@@ -27,7 +27,7 @@ Refresh and summary expose the per-project inventory for the same bounded histor
 {"project_id":"<sha256>","label":"Example","count":12}
 ```
 
-The inventory is capped at 500 unique entries. Its `total_projects` and `unfiltered_total_records` describe the snapshot before query filtering; the observed 21 projects / 230 consultations are dataset observations, not contract constants.
+The inventory is capped at 500 unique entries. Its `total_projects` and `unfiltered_total_records` describe the snapshot before query filtering; Phase 05 observed 21 projects / 237 accepted consultations, not contract constants.
 
 ## Versioned owner-safe display metadata
 
@@ -65,7 +65,7 @@ Before each `context.open`, the API reads the enabled installation from the runn
 
 The runner independently checks the persisted enabled installation, root-history capability, and descriptor identity/revision. It rejects missing, symlink, or non-directory roots; on Unix, a non-root runner also requires the directory to be owned by its effective UID. API authorization rechecks actor/session epoch and operation on every invoke, while the runner rechecks source capability, identity, and revision.
 
-Revision-guarded source replacement clears the API source cache and invalidates that installation's contexts; the next open rehydrates the current source from the runner. Phase 02 closes host authorization/context, Phase 03 closes EVCrate root scanning and safe-name persistence, and Phase 04 adds snapshot-inventory project selection, server-filtered summary/page/Overview, and honest independent Configuration/Evaluation source labels. Paired qualification (Phase 05) remains; the observed 21 projects / 230 consultations are not contract constants.
+Revision-guarded source replacement clears the API source cache and invalidates that installation's contexts; the next open rehydrates the current source from the runner. Phases 02–04 complete host authorization, owner-safe scanning/name persistence, and snapshot-backed project filtering/source labels. Phase 05 completed paired qualification; see the evidence summary below. The 21-project / 237-consultation result is an observation, not a contract constant.
 
 **Evidence:** [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md), and [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md).
 
@@ -73,7 +73,7 @@ Revision-guarded source replacement clears the API source cache and invalidates 
 
 The worker uses its configured history root for `history-root` scope; callers cannot supply a scan path. Root scans traverse sorted SHA-256 project IDs and owner-checked, non-symlink directories under shared project/task/consultation, record, and byte budgets. Cap exhaustion marks the snapshot incomplete. Project scope stays bound to its one target.
 
-Bounded reads open files with `O_RDONLY | O_NOFOLLOW`, then validate the opened descriptor's owner, regular-file type, single-link status, and size. Execution/outcome IDs are checked against their enclosing project/task/consultation directories; invalid outcome data does not discard a valid execution record. Detail rereads compare device, inode, size, and content fingerprints before returning data.
+Bounded reads open files with `O_RDONLY | O_NOFOLLOW`, then validate the opened descriptor's owner, regular-file type, single-link status, and size. Execution/outcome IDs are checked against their enclosing project/task/consultation directories; malformed or mismatched outcome data remains `invalid` rather than being misreported as `missing`, without discarding its valid execution record. Detail rereads compare device, inode, size, and content fingerprints before returning data.
 
 Pagination cursors are HMAC-bound to the snapshot, query hash, and offset. Project selection and filters are covered by the query hash; stable ordering is `started_at` descending, then `project_id`, `task_run_id`, and `consultation_id` ascending.
 
@@ -83,10 +83,16 @@ Phase 03 review approved **9.5/10** with no critical/high findings; it records a
 
 **Evidence:** [Phase 03 plan](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md) and [review](../plans/reports/code-review-260924-1628-phase-03-owner-safe-history-worker.md).
 
+## Paired qualification and release decision (Phase 05)
+
+The 2026-09-24 qualification reconciles 273/273 cross-repository test executions (0 failed, 0 skipped), deterministic candidate and distribution package verification, and a 9.8/10 review with no critical findings. The direct history-root provider read accepted 237 of 237 consultations across 21 projects in 191.48 ms with no diagnostics. It was not a new live DamHopper browser session, and production deployment is not claimed.
+
+**Evidence:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [test report](../plans/reports/tester-260924-2115-phase-05-paired-qualification.md), and [code review](../plans/reports/code-review-260924-2125-phase-05-paired-qualification.md).
+
 ## Source map and phase boundary
 
 - EVCrate contract: `src/protocol/advisor-plugin-data-api.ts`, `scripts/generate-advisor-plugin-data-schema.mjs`, `plugin/contracts/evcrate-advisor-data-v2.schema.json`, `plugin/contracts/contract-manifest.json`, and `plugin/backend/data-api.cjs`.
 - Phase 03 worker/provider implementation: `plugin/backend/{binding.cjs,context-table.cjs,history-scanner.cjs,snapshot-store.cjs,cursor-manager.cjs,history-provider.cjs,provider.cjs}`, `.evcrate/source/.evcrate/bin/lib/advisor/history-store.cjs`, and `scripts/build-advisor-plugin-candidate.mjs`.
 - Companion host contract and Phase 02 implementation: `packages/plugin-sdk/src/runner-protocol.ts`; `server/src/plugins/{registry_state.rs,lifecycle.rs,authorization.rs,contract.rs,api_service.rs,worker_supervisor.rs}` and `server/src/api/plugin_admin.rs` in DamHopper's `feat-plugin-platform` workspace.
 - Phase 04 UI: EVCrate `viewer/src/{app.tsx,app-state-types.ts,app-actions.ts,app-state-reducer.ts,app-state-selectors.ts,app-state.ts}`, `viewer/src/views/{history-view,history-detail,overview-view,configuration-view,evaluations-view}.tsx`, and `viewer/src/providers/{advisor-data-provider,dam-hopper-port-provider}.ts`; companion DamHopper `packages/ui/src/plugins/use-plugin-navigation.ts` and `packages/ui/src/components/PluginHostPage.tsx`.
-- Phase boundaries: Phases 00–04 are complete; paired qualification (Phase 05) remains in the [project plan](../plans/260924-1055-all-project-advisor-history/plan.md). See [Phase 01](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md), [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [Phase 03](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md), and [Phase 04](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md).
+- Phase boundaries: Phases 00–05 are complete (6/6, 100%); paired release is qualified. See the [project plan](../plans/260924-1055-all-project-advisor-history/plan.md), [Phase 05](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), and [Phase 01](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md), [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [Phase 03](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md), and [Phase 04](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md).

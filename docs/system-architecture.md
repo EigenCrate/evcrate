@@ -774,7 +774,7 @@ assets, network clients, or picker. E03 recorded 68/68 repository/package tests
 on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current
 release-asset verification.
 
-### Cross-project advisor history (Phases 00–02)
+### Cross-project advisor history (Phases 00–05)
 
 - **Phase 00:** Production token issuance requires configured MongoDB; the explicit development/test token path remains. See the [auth prerequisite](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
 - **Phase 01:** `evcrate-advisor-data` v2 retains v1 schema/behavior and on-disk history v1; query filtering, bounded same-snapshot inventory, owner-safe display metadata, and `ContextScopeKind` / `ContextScopeDescriptor` are frozen.
@@ -783,8 +783,9 @@ release-asset verification.
 - **Context open:** The API validates the actor epoch and enabled installation, hydrates its process-local source cache from runner state before each open (not at startup), and sends the descriptor's kind, root identity, and source revision. The descriptor does not carry the owner path.
 - **Runner verification:** The runner re-reads the persisted installation, checks source capability and descriptor identity/revision, and rejects a missing, symlink, or non-directory root; a non-root Unix runner also checks effective-UID ownership.
 - **Revalidation:** The API rechecks actor/epoch and operation on every invoke; the runner rechecks enabled state, source capability, root identity, and revision. Admin source replacement clears the API source cache and revokes contexts; the next open rehydrates from runner state.
-- **Remaining scope:** Phase 05 paired qualification/release remains; Phase 03 root scanning/name persistence and Phase 04 project filtering/source labels are implemented. The observed 21 projects / 230 consultations are dataset observations, not contract constants. See the [contract guide](./all-project-advisor-history.md), [Phase 03 plan](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md), [Phase 04 plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), and [Phase 05 plan](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md).
-
+- **Phases 03–04:** EVCrate root scanning and safe project-name persistence are paired with same-snapshot project filtering and independent source labels in the UI.
+- **Phase 05:** Paired qualification completed 2026-09-24: **273/273 tests passed**, 0 failed/skipped; candidate and distribution packages verified; review approved **9.8/10** with zero critical issues. The direct history-root provider scan accepted **237/237 consultations across 21 projects in 191.48 ms**, with zero diagnostics. It was not a new live DamHopper browser session.
+- **Release boundary:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records the paired-release decision. Qualification is not production deployment or package publication.
 
 ## Related documents
 

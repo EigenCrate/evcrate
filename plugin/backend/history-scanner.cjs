@@ -272,10 +272,10 @@ async function scanHistoryRecords(historyRootPath, targetOrContext, options = {}
                 outData.consultation_id.toLowerCase() !== cName.toLowerCase()
               ) {
                 recordDiag(scan, 'OUTCOME_ID_MISMATCH', tName, cName);
-                outData = null;
               }
             } catch {
-              outData = null;
+              recordDiag(scan, 'OUTCOME_INVALID_JSON', tName, cName);
+              outData = { invalid: true };
             }
           }
         }

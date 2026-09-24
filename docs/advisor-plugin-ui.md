@@ -1,9 +1,9 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Phase E03 implementation completed 2026-09-21 (review 9.2/10); this guide preserves its historical architecture. All-project history Phase 04 adds the account-wide History selector and honest project/source labels (2026-09-24). Phase 05 paired qualification/release remains pending; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized.
+**Status:** Phase E03 implementation completed 2026-09-21 (review 9.2/10); this guide preserves its historical architecture. All-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%); its paired release is qualified.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
-**Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
+**Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
 
 ## Purpose and boundary
 
