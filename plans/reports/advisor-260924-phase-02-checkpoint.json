@@ -1,0 +1,289 @@
+{
+  "task_run_id": "60147482-d1f8-4eba-8227-458028335a1b",
+  "consultation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+  "checkpoint_id": "checkpoint-review-step-4-1790236113787",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+    "task_run_id": "60147482-d1f8-4eba-8227-458028335a1b",
+    "checkpoint_id": "checkpoint-review-step-4-1790236113787",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "b6c0db6467b86cb3828fb35c62775da0f6ff73afe363aeb68a8d7c6ad23f2da6",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.156.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 29902
+    },
+    "attempts": [
+      {
+        "attempt_id": "087db801-3e04-44c7-b6ae-41543bf62706",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-6-astra",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 29790,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Perform one bounded evidence reconciliation for Phase 02 before requesting approval or marking it complete.",
+      "rationale": "The reported 2,550 passing tests and zero critical findings support completion, but the supplied excerpts do not demonstrate host authorization behavior. The four warnings are unspecified, and validation is not tied to an identifiable implementation revision. Reviewing existing evidence is the least complex next action; broader implementation or refactoring is not yet justified.",
+      "must_fix": [
+        "Provide the four review warnings and their dispositions, resolving any that contradict the authorization invariants before approval.",
+        "Tie the review and test results to the implementation revision under approval and identify the host implementation covered.",
+        "Map existing test evidence to project-mode default deny, authenticated root-history access without registration, anonymous and no-auth denial, and owner-path protection."
+      ],
+      "cautions": [
+        "A review score and aggregate test count do not establish coverage of authorization boundaries.",
+        "The supplied paths and excerpts do not establish whether Phase 02 includes completed host behavior or only contract and planning changes.",
+        "Keep evidence reconciliation within authorized paths; do not introduce UI filtering or unrelated refactoring."
+      ],
+      "assumptions": [
+        "The test and review summaries are reported results, not independently verified evidence.",
+        "Detailed review findings and relevant authorization test results may already exist and should be reused."
+      ],
+      "success_checks": [
+        "Review and validation evidence identify the same implementation revision and confirm all 2,550 tests passed.",
+        "Each authorization invariant has an identifiable test and passing result, including rejection of access outside the authorized owner scope.",
+        "All four warnings have documented dispositions, with no unresolved invariant violations or critical issues.",
+        "The Phase 02 completion claim matches the demonstrated host behavior."
+      ],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  },
+  "fresh_state": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "60147482-d1f8-4eba-8227-458028335a1b",
+      "project_id": "13a81af7a7764e987eeaa234b1f1cde23360d1e411d5fcd1c5819e428ed8aa44",
+      "task_revision": 4,
+      "phase_id": "phase-02",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "DamHopper owner-root authorization and context (Phase 02)",
+        "non_goals": [
+          "Unrelated refactoring",
+          "UI project filter implementation"
+        ],
+        "authorized_paths": [
+          "plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md",
+          "plans/260924-1055-all-project-advisor-history/plan.md",
+          "plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md",
+          "src/protocol/advisor-plugin-data-api.ts"
+        ],
+        "scope_rationale": "Phase 02 host root authorization and context",
+        "invariants": [
+          "Preserve project mode default deny",
+          "Admit authenticated actors for root history without registration",
+          "Deny anonymous and no-auth",
+          "Protect owner paths"
+        ],
+        "success_criteria": [
+          "All test suites pass (2,550 tests)",
+          "Zero critical issues in code review"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md",
+          "digest": "fbccb37e1fa953166d7faf33a8d41fe5690584deb32e4fdd2db30c5d4352a646",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md",
+          "digest": "56af60567c5063f1da228c2ef72116264226e8a23bec94f75003a9398f26ccad",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/260924-1055-all-project-advisor-history/plan.md",
+          "digest": "3442490ed0c1c321e35a833042a6d7ae8e2db0ce8ce9f2334b6a1838a6afc1bc",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "src/protocol/advisor-plugin-data-api.ts",
+          "digest": "e75a8518ef3c2fa03ef35b2be19064024ee195702653ffb21b9d9adec44102b5",
+          "status": "file",
+          "git": {
+            "status": "  ",
+            "identity": "|100644 ffcc3808901dd7eaf77930d469b158b0f4ee0ca8 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md",
+          "plans/260924-1055-all-project-advisor-history/plan.md",
+          "plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md",
+          "src/protocol/advisor-plugin-data-api.ts"
+        ],
+        "rationale": "Phase 02 host root authorization and context",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md",
+          "digest": "fbccb37e1fa953166d7faf33a8d41fe5690584deb32e4fdd2db30c5d4352a646",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md",
+          "digest": "56af60567c5063f1da228c2ef72116264226e8a23bec94f75003a9398f26ccad",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/260924-1055-all-project-advisor-history/plan.md",
+          "digest": "3442490ed0c1c321e35a833042a6d7ae8e2db0ce8ce9f2334b6a1838a6afc1bc",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "src/protocol/advisor-plugin-data-api.ts",
+          "digest": "e75a8518ef3c2fa03ef35b2be19064024ee195702653ffb21b9d9adec44102b5",
+          "status": "file",
+          "git": {
+            "status": "  ",
+            "identity": "|100644 ffcc3808901dd7eaf77930d469b158b0f4ee0ca8 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4-1790236113787",
+        "checkpoint_digest": "b6c0db6467b86cb3828fb35c62775da0f6ff73afe363aeb68a8d7c6ad23f2da6",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "3ce50981d82075e00e9dce96ebc5478dee85db97a176e7f28766a067b53b6910",
+        "envelope_digest": "89e2609c35a853ba3e6f3c50c04c75b2225fc2b3aaf006e39b0a01833dce622c",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.156.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 29902
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "cargo test / pnpm test / npm test"
+        ],
+        "intended_changed_paths": [
+          "plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md",
+          "plans/260924-1055-all-project-advisor-history/plan.md",
+          "plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md",
+          "src/protocol/advisor-plugin-data-api.ts"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "5ddfa7f6-3e91-464c-838f-df5a151b1d6d",
+          "operation": "init",
+          "digest": "10f35ee31768eaf6c89dee052afbf3b915d46c2734a03af02ceaf2b6d8ad5c9b",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "47e9728d-426d-4592-94ae-d22b577f32d4",
+          "operation": "checkpoint",
+          "digest": "91a4e0bc1855ac0b6e816cf64e47bb4e7ab90ea426c3d9642a4287a2653d441b",
+          "revision": 2,
+          "consultation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+          "operation": "attach",
+          "digest": "89e2609c35a853ba3e6f3c50c04c75b2225fc2b3aaf006e39b0a01833dce622c",
+          "revision": 4,
+          "consultation_id": "9bc13049-dc91-45ab-b5f7-8cc5ab7f90ac",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "b6c0db6467b86cb3828fb35c62775da0f6ff73afe363aeb68a8d7c6ad23f2da6",
+          "result_digest": "3ce50981d82075e00e9dce96ebc5478dee85db97a176e7f28766a067b53b6910"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  }
+}

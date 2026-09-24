@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-24
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 33.3% (2/6 phases complete; Phases 00–01 DONE on 2026-09-24; Phase 01 review approved 9.5/10); Phase 02 host authorization is next. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 50% (3/6 phases complete; Phases 00–02 DONE on 2026-09-24); Phase 03 worker history provider is next. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-24 — fix(auth): guard production auth without breaking development
@@ -26,6 +26,17 @@ Older phase records remain in the linked archive.
 - Defined a same-snapshot per-project inventory, capped at 500 entries and independent of active query filters, plus a versioned owner-safe display-name sidecar.
 - Added runner scope contract `ContextScopeKind` (`project` | `history-root`) and `ContextScopeDescriptor` with optional root identity/source revision.
 - Verification: **92/92 test executions passed** (86 test suite + 6 runner); review approved **9.5/10**.
+
+### 2026-09-24 — feat(auth): complete owner-root history authorization and context (Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-24); review complete; user approved.  
+**Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md)  
+**Evidence:** [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md); [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md)
+
+- Bound history access to the durable trusted installation source, with authenticated context admission, on-demand runner-state hydration, and invoke-time root/source reauthorization.
+- Kept project mode default-deny and non-history operations grant-protected; lifecycle invalidation clears cached owner sources and revokes contexts.
+- The original suite report records 2,550 passing executions and one Windows-only skip; subsequent targeted checks covered restart hydration/cache invalidation, ancestor symlink rejection, and wrong-owner UID denial. Phase 03 — Worker root history provider — is next.
+
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
 

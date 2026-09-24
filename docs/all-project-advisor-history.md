@@ -1,8 +1,8 @@
 # All-Project Advisor History Contract
 
-**Status:** Phase 01 contract freeze approved 2026-09-24 (9.5/10); host authorization, root-history provider, UI, and paired release qualification remain downstream phases.
+**Status:** Phase 01 contract freeze approved 2026-09-24 (9.5/10); Phase 02 host root authorization/context implemented and reviewed 2026-09-24 (8.5/10). Worker root provider, project-filter UI, and paired qualification remain downstream.
 
-This guide records the coordinated EVCrate/DamHopper boundary for reading advisor history across projects. It is a contract, not evidence that root-history access is already implemented end to end.
+This guide records the coordinated EVCrate/DamHopper boundary for reading advisor history across projects. Phase 02 implements the host admission/context boundary only; root-history scanning, display, and paired qualification remain incomplete.
 
 ## Versioning and compatibility
 
@@ -55,8 +55,22 @@ interface ContextScopeDescriptor {
 
 `context.open` accepts the optional descriptor; its result may include `scopeKind` identifying the established scope. The matching Rust host contract serializes the scope kind as `project` or `history-root` and uses camel-case descriptor fields. This typed scope distinguishes owner-root history from a single project context; host authorization and revalidation remain the authority.
 
+## Host authorization and context (Phase 02)
+
+DamHopper persists an installation-bound `OwnerHistorySource` with `rootPath`, `rootIdentity` (64-character lowercase SHA-256), positive `sourceRevision`, and `allAuthenticatedHistoryRead`. An administrator supplies it during installation approval or replaces it with an expected security revision; replacement advances registry and security revisions.
+
+An authenticated actor with a valid session epoch may enter `history-root` scope only when the installed source enables account-wide history. Without an explicit user grant, the host permits only `history.refresh`, `history.summary`, `history.page`, and `history.detail`. `--no-auth` remains denied; project scope and policy/evaluation operations retain their existing grant checks. A configured-target `*` grant alone does not authorize root history.
+
+Before each `context.open`, the API reads the enabled installation from the runner and refreshes its process-local source cache when configured. This is per-open hydration, not startup hydration. It sends a typed descriptor containing scope kind, root identity, and source revision; the descriptor does not carry the owner root path.
+
+The runner independently checks the persisted enabled installation, root-history capability, and descriptor identity/revision. It rejects missing, symlink, or non-directory roots; on Unix, a non-root runner also requires the directory to be owned by its effective UID. API authorization rechecks actor/session epoch and operation on every invoke, while the runner rechecks source capability, identity, and revision.
+
+Revision-guarded source replacement clears the API source cache and invalidates that installation's contexts; the next open rehydrates the current source from the runner. Phase 02 closes host authorization/context only: worker root scanning and safe-name persistence, project filtering in the UI, and paired qualification remain later gates. The observed 21 projects / 230 consultations are not contract constants.
+
+**Evidence:** [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md), and [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md).
+
 ## Source map and phase boundary
 
 - EVCrate contract: `src/protocol/advisor-plugin-data-api.ts`, `scripts/generate-advisor-plugin-data-schema.mjs`, `plugin/contracts/evcrate-advisor-data-v2.schema.json`, `plugin/contracts/contract-manifest.json`, and `plugin/backend/data-api.cjs`.
-- Companion host contract: `packages/plugin-sdk/src/runner-protocol.ts` and `server/src/plugins/contract.rs` in the DamHopper plugin-platform workspace.
-- Coordinated freeze: [Phase 01 plan](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md). Host authorization and context, worker root scanning, UI project selection, and paired qualification are tracked as later phases in the [project plan](../plans/260924-1055-all-project-advisor-history/plan.md).
+- Companion host contract and Phase 02 implementation: `packages/plugin-sdk/src/runner-protocol.ts`; `server/src/plugins/{registry_state.rs,lifecycle.rs,authorization.rs,contract.rs,api_service.rs,worker_supervisor.rs}` and `server/src/api/plugin_admin.rs` in DamHopper's `feat-plugin-platform` workspace.
+- Phase boundaries: [Phase 01 plan](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md) and [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md) are complete; worker/UI/paired qualification remain later phases in the [project plan](../plans/260924-1055-all-project-advisor-history/plan.md).
