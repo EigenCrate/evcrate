@@ -229,29 +229,26 @@ A final standalone `--advice` token activates formal
 reviews (up to three correction cycles). `@advisor` remains ordinary task text.
 The documentation-facing `/cmd-advise` workflow is a separate interview path.
 
-## Advisor Metrics Explorer
+## DamHopper Advisor Plugin
 
-Private, client-side, read-only React explorer for retained advisor consultations, aggregated execution metrics, routing configuration, and external counsel evaluations.
+Private, client-side, read-only React interface embedded as an independently installed, owner-safe DamHopper plugin (`evcrate.advisor`) for inspecting retained advisor consultations, aggregated execution metrics, routing configuration, and external counsel evaluations.
 
-### Operator quick start
+### Plugin packaging and verification
 
 ```bash
-npm run build:all        # Build control plane and viewer bundle
-npm run viewer:preview  # Serve static viewer at http://127.0.0.1:4173/
+npm run build:all                  # Build control plane and plugin UI
+npm run build:advisor-plugin       # Build deterministic plugin tarball
+npm run verify:advisor-plugin dist/advisor-plugin/evcrate-advisor-plugin-v0.1.0.tar.gz
 ```
 
-1. Open `http://127.0.0.1:4173/` in Chromium on Linux (Chrome/Chromium `>=120`; other browsers unsupported).
-2. Click **Choose history directory** to grant read-only access to `~/.evcrate/advisor-history` or project history.
-3. Optionally import policy (`~/.evcrate/advisor-routing.json`) or evaluation JSON fixtures.
-4. Use **Refresh history** to rescan or **Cancel scan** to abort. Reloading requires directory reselection.
+The E04/G3-qualified independent package is designed for direct DamHopper installation without a host rebuild. This package-level status does not establish joint G4 qualification/sign-off, authorize standalone retirement, or verify current release assets.
 
 ### Security, metrics, and limitations
 
-- **Local & private:** Data is read locally via File System Access API without uploads, persistence, or network requests. Loopback preview enforces strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`). All user text renders as inert content.
+- **Owner-safe isolation:** All reads are served by a bounded Node worker over framed transport, reauthorized per actor context. The embedded iframe has no host credentials, DOM access, or direct network capability.
 - **Metrics kernel:** Delivery rate (accepted/terminal), outcome coverage (valid outcome/`ADVICE_READY`), known-outcome resolution (resolved/known outcomes), and receipt latency p95 (nearest-rank). Zero denominators render as `null` (`—`).
-- **Support boundary:** Chromium/Chrome `>=120` on Linux only; Firefox, Safari, and platforms without File System Access directory pickers are unsupported. The explorer is descriptive and read-only, not a filesystem-permission or advisor-quality verifier.
-- **Boundaries & non-claims:** Retained samples only (no complete audit coverage); no POSIX filesystem attestation (`0600` mode, ownership, symlinks); no causal effectiveness, cost, or saved-time claims.
-
+- **Four provider-neutral views:** Overview metrics, History & Detail drawers, Configuration (current account policy), and Evaluations (candidate comparisons).
+- **Boundaries & non-claims:** Retained samples only (no complete audit coverage); no causal effectiveness, cost, or saved-time claims. The standalone picker source has been removed from this repository, but joint G4 qualification/sign-off is unverified and standalone retirement is not release-authorized.
 ## Documented command names
 
 Documentation and target-facing examples use `/cmd-*` slash names:
@@ -280,5 +277,5 @@ follow-up and does not rename canonical source files or invent aliases.
 - [Project changelog](./docs/project-changelog.md) — phase evidence and boundaries.
 - [Project changelog archive](./docs/project-changelog-archive.md) — older detail.
 - [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime/settings notes.
-- [Browser history scanner](./docs/browser-history-scanner.md) — browser history traversal, metrics kernel, and viewer architecture.
+- [Advisor plugin UI](./docs/advisor-plugin-ui.md) — embedded four-view plugin UI and bridge architecture.
 

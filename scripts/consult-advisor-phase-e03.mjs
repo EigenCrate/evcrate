@@ -24,6 +24,11 @@ const pickerProviderPath = 'viewer/src/providers/standalone-picker-provider.ts';
 const appPath = 'viewer/src/app.tsx';
 const reducerPath = 'viewer/src/app-state-reducer.ts';
 
+if (!fs.existsSync(pickerProviderPath)) {
+  console.error('Phase E03 consultation replay is historical; standalone picker source was removed. Refusing to mutate advisor task state.');
+  process.exit(2);
+}
+
 const authorizedPaths = [
   portProviderPath,
   pickerProviderPath,

@@ -155,10 +155,8 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.ok(files.includes('dist/cli/evcrate.js'), 'Must include dist/cli/evcrate.js');
   assert.ok(files.includes('dist/index.js'), 'Must include dist/index.js');
   assert.ok(files.includes('dist/index.d.ts'), 'Must include dist/index.d.ts');
-  // Assert built viewer is present in package
-  assert.ok(files.includes('viewer/dist/index.html'), 'Must include viewer/dist/index.html');
-  assert.ok(files.some((f) => f.startsWith('viewer/dist/assets/') && f.endsWith('.js')), 'Must include viewer hashed JS');
-  assert.ok(files.some((f) => f.startsWith('viewer/dist/assets/') && f.endsWith('.css')), 'Must include viewer hashed CSS');
+  // Assert built standalone viewer is excluded from root package (clean cutover to independent plugin)
+  assert.equal(files.some((f) => f.startsWith('viewer/dist/')), false, 'viewer/dist must be excluded from root package');
 
 
   // Assert authoritative controller files present (ADVISOR_CONTROLLER_FILES)

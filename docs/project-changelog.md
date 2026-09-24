@@ -3,8 +3,14 @@
 ## Unreleased
 
 **Updated:** 2026-09-24
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 66.7% (4/6 phases complete; Phases 00–03 DONE on 2026-09-24); Phase 04 project filter UI/metadata is next, followed by Phase 05 paired qualification/release. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 83.3% (5/6 phases complete; Phases 00–04 DONE on 2026-09-24); Phase 05 paired qualification/release is next. The E05/D06 joint G4 qualification and standalone cutover remain a separate gate. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-24 — feat(history): complete account-wide project selector (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-24; review approved **9.8/10**; **188/188 tests passed**). **Plan:** [Phase 04](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md); [validation](../plans/reports/phase04testerfinal-260924-1842-account-wide-project-selector-honest-ui-identity.md); [review](../plans/reports/code-review-260924-2004-phase-04-project-filter-ui-re-review.md)
+- Same-snapshot inventory now drives server-filtered History/Overview; project switches clear cached rows, detail, and cursor. Labels fall back to abbreviated canonical IDs.
+- Configuration identifies current owner policy, Evaluations their bound source; both say they are not filtered by History project. Provider labeling uses the custom/host plugin label rather than implying an account or project identity. Host navigation/page brands EVCrate only for matching plugin metadata.
 
 ### 2026-09-24 — fix(auth): guard production auth without breaking development
 
@@ -105,23 +111,18 @@ Older phase records remain in the linked archive.
 **Plan:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md)  
 **Evidence:** [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md); [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md)
 
-- Replaced view-owned acquisition with one `AdvisorDataProvider` contract and
-  shared reducer/views. `StandalonePickerProvider` preserves the local File System
-  Access explorer until G4; `DamHopperPortProvider` uses the bounded host
-  `MessagePort` without exposing credentials, paths, sockets, or arbitrary network.
-- Added bridge version `1.0.0`, eight validated envelopes, single-use nonce
-  acknowledgement, frame-session/activation-generation fencing, request
-  cancellation, late-response suppression, availability events, and revocation
-  cleanup.
-- Preserved the four views: Overview; History/detail with 100-row pages and
-  changed/missing states; Configuration with current account-wide policy labeling;
-  and Evaluations with bound-source comparison, provenance, and candidate masking.
-- Added an opaque-srcdoc-compatible `plugin/ui/index.html` built as one inlined
-  CSS/IIFE document (328,337 bytes, <=5 MiB), with no external assets, network
-  clients, filesystem pickers, `eval`, or `Function`.
-- `plugin/manifest.json` now declares `ui/index.html` and
-  `/plugins/evcrate.advisor`; the candidate builder includes the UI and SHA-256
-  inventory entry (64 inventory records).
+- Replaced view-owned acquisition with shared provider/reducer/views and a
+  temporary standalone picker (later removed by E05); DamHopper uses bounded
+  `MessagePort` without credentials, paths, sockets, or arbitrary network.
+- Added bridge 1.0.0's eight validated envelopes, single-use nonce ack, session/
+  generation fences, cancellation, late-response suppression, availability,
+  and revocation cleanup.
+- Kept Overview, paged History/detail, current account-wide policy labels, and
+  bound-source Evaluations with provenance and candidate masking.
+- Built `plugin/ui/index.html` as opaque-srcdoc inlined CSS/IIFE (328,337 bytes,
+  <=5 MiB), with no external assets/network/filesystem picker, `eval`, or
+  `Function`. Manifest/candidate include UI, `/plugins/evcrate.advisor`
+  navigation, and its SHA-256 inventory entry (64 records).
 - Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer
   browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced
   CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain

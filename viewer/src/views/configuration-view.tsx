@@ -32,9 +32,9 @@ export const ConfigurationView: FC<ConfigurationViewProps> = ({ state }) => {
 
       <div className="config-grid">
         <div className="config-card policy-card">
-          <h3 className="card-subtitle">Current account-wide policy</h3>
+          <h3 className="card-subtitle">Current owner policy — not filtered by History project</h3>
           <div className="policy-badge-row" style={{ marginBottom: 12 }}>
-            <span className="badge badge-info">Current account-wide policy</span>
+            <span className="badge badge-info">Current owner policy — not filtered by History project</span>
             <span className="badge badge-secondary" style={{ marginLeft: 6 }}>Revision: {revision}</span>
             {observedAt && (
               <span className="text-muted" style={{ marginLeft: 8, fontSize: '0.85em' }}>
@@ -77,7 +77,7 @@ export const ConfigurationView: FC<ConfigurationViewProps> = ({ state }) => {
           )}
 
           <div className="card-disclaimer text-muted" style={{ marginTop: 16 }}>
-            <em>Observational notice:</em> This displays the current account-wide policy configuration only. It is not historical route evidence and does not represent past execution configurations.
+            <em>Observational notice:</em> This displays current account-wide owner policy only (not filtered by History project). It is not historical route evidence and does not represent past execution configurations.
           </div>
         </div>
 

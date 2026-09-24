@@ -28,5 +28,7 @@ export {
   selectSelectedRecord,
   selectSelectedRow,
   extractDomainFilters,
+  extractDomainQuery,
+  formatProjectName,
   formatRatioPercent
 } from './app-state-selectors.ts';

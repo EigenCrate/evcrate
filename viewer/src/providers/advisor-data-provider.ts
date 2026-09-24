@@ -14,9 +14,13 @@
 
 import type {
   HistoryRefreshResultV1,
+  HistoryRefreshResultV2,
   HistorySummaryQueryV1,
+  HistorySummaryQueryV2,
   HistorySummaryResultV1,
+  HistorySummaryResultV2,
   HistoryPageResultV1,
+  HistoryPageResultV2,
   HistoryDetailResultV1,
   PolicyReadCurrentResultV1,
   EvaluationsListResultV1,
@@ -24,14 +28,20 @@ import type {
   EvaluationsCompareResultV1,
   HistoryRowV1,
   EvaluationDescriptorV1,
+  ProjectInventoryV2,
+  ProjectInventoryItemV2,
   PluginErrorCode
 } from '../../../src/protocol/advisor-plugin-data-api.ts';
 
 export type {
   HistoryRefreshResultV1,
+  HistoryRefreshResultV2,
   HistorySummaryQueryV1,
+  HistorySummaryQueryV2,
   HistorySummaryResultV1,
+  HistorySummaryResultV2,
   HistoryPageResultV1,
+  HistoryPageResultV2,
   HistoryDetailResultV1,
   PolicyReadCurrentResultV1,
   EvaluationsListResultV1,
@@ -39,6 +49,8 @@ export type {
   EvaluationsCompareResultV1,
   HistoryRowV1,
   EvaluationDescriptorV1,
+  ProjectInventoryV2,
+  ProjectInventoryItemV2,
   PluginErrorCode
 };
 
@@ -73,24 +85,24 @@ export interface AdvisorDataProvider {
   subscribe(listener: ProviderEventListener): () => void;
 
   /** Refresh history snapshot. In DamHopper, binds context and returns fresh/stale snapshot. */
-  refreshHistory(requestId: string): Promise<HistoryRefreshResultV1>;
+  refreshHistory(requestId: string): Promise<HistoryRefreshResultV1 | HistoryRefreshResultV2>;
 
   /** Fetch summary metrics for a given snapshot and query. */
   getHistorySummary(
     requestId: string,
     snapshotId: string,
-    query: HistorySummaryQueryV1
-  ): Promise<HistorySummaryResultV1>;
+    query: HistorySummaryQueryV1 | HistorySummaryQueryV2
+  ): Promise<HistorySummaryResultV1 | HistorySummaryResultV2>;
 
   /** Fetch a bounded page of history rows (maximum 500, default 100). */
   getHistoryPage(
     requestId: string,
     snapshotId: string,
-    query: HistorySummaryQueryV1,
+    query: HistorySummaryQueryV1 | HistorySummaryQueryV2,
     sort: 'started_at_desc',
     cursor: string | null,
     limit: number
-  ): Promise<HistoryPageResultV1>;
+  ): Promise<HistoryPageResultV1 | HistoryPageResultV2>;
 
   /** Fetch full execution & outcome detail for a specific record. */
   getHistoryDetail(
