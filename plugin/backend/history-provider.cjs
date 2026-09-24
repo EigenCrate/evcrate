@@ -60,16 +60,18 @@ class HistoryProvider {
 
     return this.refreshQueue.enqueue(async () => {
       try {
-        const scanRes = await scanHistoryRecords(this.historyRoot, context.historyIdentity, { signal, deadline });
+        const scanRes = await scanHistoryRecords(this.historyRoot, context, { signal, deadline });
 
         const snapshotId = randomUUID();
         const entry = this.store.commitSnapshot(context.contextId, {
           snapshot_id: snapshotId,
           history_identity: context.historyIdentity,
+          scope_kind: context.scopeKind || 'project',
           state: 'fresh',
           stale_reason: null,
           observed_at: Date.now(),
           scan: scanRes.scan,
+          inventory: scanRes.inventory,
           rows: scanRes.rows,
           raw_records: scanRes.rawRecords,
           normalized_records: scanRes.normalizedRecords
@@ -80,7 +82,8 @@ class HistoryProvider {
           snapshot_id: entry.snapshotId,
           observed_at: entry.observedAt,
           scan: entry.scan,
-          stale_reason: null
+          stale_reason: null,
+          inventory: entry.inventory
         };
       } catch (err) {
         if (err.name === 'ProviderError' && (err.code === 'CANCELLED' || err.code === 'DEADLINE_EXCEEDED')) {
@@ -93,7 +96,8 @@ class HistoryProvider {
               snapshot_id: prior.snapshotId,
               observed_at: prior.observedAt,
               scan: prior.scan,
-              stale_reason: reason
+              stale_reason: reason,
+              inventory: prior.inventory || null
             };
           }
           return {
@@ -106,7 +110,8 @@ class HistoryProvider {
               bytes_discovered: 0, bytes_read: 0, diagnostics: [],
               suppressed_diagnostics: 0, limit_hit: false
             },
-            stale_reason: null
+            stale_reason: null,
+            inventory: null
           };
         }
         throw err;
@@ -117,15 +122,51 @@ class HistoryProvider {
   summary(context, params) {
     if (!params || typeof params !== 'object') throw invalidInput('params required');
     const snapshot = this.store.getSnapshot(context.contextId, params.snapshot_id);
-
     let candidateRecords = snapshot.normalizedRecords || [];
+    const isProjectScope = context.scopeKind === 'project' || !context.scopeKind;
+    if (isProjectScope) {
+      if (params.query?.project_id !== null && params.query?.project_id !== undefined) {
+        if (params.query.project_id.toLowerCase() !== context.historyIdentity.toLowerCase()) {
+          throw invalidInput('project_id in query does not match project context');
+        }
+      }
+    }
+
+    const selectedPid = isProjectScope
+      ? context.historyIdentity.toLowerCase()
+      : (params.query?.project_id ? params.query.project_id.toLowerCase() : null);
+
+    if (selectedPid) {
+      candidateRecords = candidateRecords.filter((r) => r.project_id.toLowerCase() === selectedPid);
+    }
     if (params.query?.task_run_id) {
       const tid = params.query.task_run_id.toLowerCase();
       candidateRecords = candidateRecords.filter((r) => r.task_run_id.toLowerCase() === tid);
     }
 
+    const scope = (context.scopeKind === 'history-root')
+      ? {
+          kind: 'history-root',
+          project_ids: snapshot.inventory?.entries.map((e) => e.project_id) || [],
+          selected_project_id: selectedPid
+        }
+      : {
+          kind: 'project',
+          project_ids: [context.historyIdentity.toLowerCase()],
+          selected_project_id: context.historyIdentity.toLowerCase()
+        };
+
+    const isComplete = snapshot.scan?.status === 'complete';
+    const completeness = {
+      is_complete: isComplete,
+      omitted_records: isComplete ? 0 : null,
+      omitted_bytes: isComplete ? 0 : null
+    };
+
     const metrics = calculateHistoryMetrics({
       records: candidateRecords,
+      scope,
+      completeness,
       scan: snapshot.scan,
       filters: params.query?.filters,
       generated_at: Date.now()
@@ -134,7 +175,8 @@ class HistoryProvider {
     return {
       state: snapshot.state,
       snapshot_id: snapshot.snapshotId,
-      metrics
+      metrics,
+      inventory: snapshot.inventory || Object.freeze({ entries: Object.freeze([]), total_projects: 0, unfiltered_total_records: 0 })
     };
   }
 
@@ -143,10 +185,14 @@ class HistoryProvider {
     if (params.sort && params.sort !== 'started_at_desc') {
       throw invalidInput("sort must be 'started_at_desc'");
     }
+    if ((context.scopeKind === 'project' || !context.scopeKind) && params.query?.project_id !== null && params.query?.project_id !== undefined) {
+      if (params.query.project_id.toLowerCase() !== context.historyIdentity.toLowerCase()) {
+        throw invalidInput('project_id in query does not match project context');
+      }
+    }
     const snapshot = this.store.getSnapshot(context.contextId, params.snapshot_id);
     return this.store.paginate(snapshot, params.query, params.cursor, params.limit);
   }
-
   detail(context, params) {
     if (!params || typeof params !== 'object') throw invalidInput('params required');
     const snapshot = this.store.getSnapshot(context.contextId, params.snapshot_id);

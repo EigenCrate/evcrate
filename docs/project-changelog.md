@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-24
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 50% (3/6 phases complete; Phases 00–02 DONE on 2026-09-24); Phase 03 worker history provider is next. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 66.7% (4/6 phases complete; Phases 00–03 DONE on 2026-09-24); Phase 04 project filter UI/metadata is next, followed by Phase 05 paired qualification/release. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-24 — fix(auth): guard production auth without breaking development
@@ -29,14 +29,14 @@ Older phase records remain in the linked archive.
 
 ### 2026-09-24 — feat(auth): complete owner-root history authorization and context (Phase 02)
 
-**Status:** Phase 02 DONE (2026-09-24); review complete; user approved.  
-**Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md)  
-**Evidence:** [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md); [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md)
+**Status:** Phase 02 DONE (2026-09-24); review complete; user approved. **Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md). **Evidence:** [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md); [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md)
 
-- Bound history access to the durable trusted installation source, with authenticated context admission, on-demand runner-state hydration, and invoke-time root/source reauthorization.
-- Kept project mode default-deny and non-history operations grant-protected; lifecycle invalidation clears cached owner sources and revokes contexts.
-- The original suite report records 2,550 passing executions and one Windows-only skip; subsequent targeted checks covered restart hydration/cache invalidation, ancestor symlink rejection, and wrong-owner UID denial. Phase 03 — Worker root history provider — is next.
+- Bound history to the trusted owner source with authenticated admission, on-demand runner hydration, invoke-time reauthorization, and lifecycle revocation; kept project mode default-deny and non-history operations grant-protected. Original suite report: 2,550 pass, one Windows skip; later targeted checks cover restart/cache, ancestor-symlink, and wrong-owner UID. Phase 03 is DONE; Phase 04 UI/metadata next.
 
+### 2026-09-24 — feat(history): complete owner-safe all-project worker (Phase 03; DONE, 9.5/10 review score)
+
+**Plan:** [Phase 03](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md). **Evidence:** [tests](../plans/reports/testerphase03final-260924-1621-phase-03-owner-safe-history-worker.md) · [review](../plans/reports/code-review-260924-1628-phase-03-owner-safe-history-worker.md). **Results:** 354/354 tests passed (0 failed, 0 skipped); review 9.5/10; canonical advisor checkpoint complete. Candidate manifest check: tester FAIL; later review PASS.
+- Descriptor-pinned owner-root file checks; safe project names persist, and malformed/unknown metadata does not hide records (legacy unnamed projects show abbreviated IDs); HMAC-bound cursors tie-break `started_at DESC → project_id ASC → task_run_id ASC → consultation_id ASC`; candidate inventory reuses `collectPluginPackageRecords`. Phase 04 UI/metadata next; Phase 05 paired qualification/release pending.
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
 

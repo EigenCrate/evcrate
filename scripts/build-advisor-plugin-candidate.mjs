@@ -19,12 +19,15 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { collectPluginPackageRecords } = require('./plugin/package-inventory.cjs');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PLUGIN_DIR = path.join(ROOT_DIR, 'plugin');
-
 function writeOctal(buf, offset, length, value) {
   const str = value.toString(8).padStart(length - 1, '0');
   buf.write(str, offset, length - 1, 'ascii');
@@ -164,76 +167,7 @@ function walkDir(dir, base = '') {
  * Collects all candidate closure records and inventory.
  */
 function collectCandidateRecords() {
-  const records = [];
-
-  // 1. Root package files in plugin/
-  const rootFiles = ['package.json', 'package-lock.json'];
-  for (const f of rootFiles) {
-    const fullPath = path.join(PLUGIN_DIR, f);
-    if (fs.existsSync(fullPath)) {
-      const data = fs.readFileSync(fullPath);
-      records.push({ path: f, fullPath, data, mode: 0o644 });
-    }
-  }
-
-  // 2. Contracts
-  const contractFiles = [
-    'contracts/contract-manifest.json',
-    'contracts/evcrate-advisor-data-v1.schema.json',
-    'contracts/evcrate-advisor-data-v2.schema.json'
-  ];
-  for (const f of contractFiles) {
-    const fullPath = path.join(PLUGIN_DIR, f);
-    if (fs.existsSync(fullPath)) {
-      const data = fs.readFileSync(fullPath);
-      records.push({ path: f, fullPath, data, mode: 0o644 });
-    }
-  }
-
-  // 3. Backend files
-  const backendDir = path.join(PLUGIN_DIR, 'backend');
-  const backendFiles = walkDir(backendDir).filter(f => f.endsWith('.cjs') || f.endsWith('.json') || f.endsWith('.js'));
-  for (const f of backendFiles) {
-    const rel = `backend/${f}`;
-    const fullPath = path.join(backendDir, f);
-    const data = fs.readFileSync(fullPath);
-    const mode = f === 'worker.cjs' ? 0o755 : 0o644;
-    records.push({ path: rel, fullPath, data, mode });
-  }
-  // 3b. UI entrypoint (Phase E03)
-  const uiFile = path.join(PLUGIN_DIR, 'ui', 'index.html');
-  if (fs.existsSync(uiFile)) {
-    const data = fs.readFileSync(uiFile);
-    records.push({ path: 'ui/index.html', fullPath: uiFile, data, mode: 0o644 });
-  }
-
-  // 4. Installed SDK closure in node_modules/@dam-hopper/plugin-sdk/
-  const sdkPkgDir = path.join(PLUGIN_DIR, 'node_modules', '@dam-hopper', 'plugin-sdk');
-  if (fs.existsSync(sdkPkgDir)) {
-    const sdkFiles = walkDir(sdkPkgDir);
-    for (const f of sdkFiles) {
-      // Exclude nested tgz archives, source maps, and vitest tests
-      if (f.endsWith('.tgz') || f.endsWith('.map') || f.includes('.test.')) {
-        continue;
-      }
-      const rel = `node_modules/@dam-hopper/plugin-sdk/${f}`;
-      const fullPath = path.join(sdkPkgDir, f);
-      const data = fs.readFileSync(fullPath);
-      records.push({ path: rel, fullPath, data, mode: 0o644 });
-    }
-  }
-
-  // Sort deterministically by path
-  records.sort((a, b) => a.path.localeCompare(b.path));
-
-  // Build inventory items
-  const inventory = records.map(r => ({
-    path: r.path,
-    size: r.data.length,
-    sha256: crypto.createHash('sha256').update(r.data).digest('hex'),
-    mode: r.mode
-  }));
-
+  const { records, inventory } = collectPluginPackageRecords(PLUGIN_DIR);
   return { records, inventory };
 }
 

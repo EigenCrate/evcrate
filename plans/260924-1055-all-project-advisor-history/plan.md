@@ -34,9 +34,11 @@ Worker scans eligible owner-controlled SHA-256 project directories into one boun
 | 00 | [Production auth guard and development compatibility](./phase-00-secure-auth-prerequisite.md) | DONE (2026-09-24) | 4h | Preserve intentional dev/test token path; prevent missing production MongoDB config from silently enabling it. |
 | 01 | [Freeze scope and data contract](./phase-01-cross-project-contract.md) | DONE (2026-09-24) | 6h | Versioned scope/grant/query/inventory contract, parity fixtures, rollout pairing. |
 | 02 | [Host root authorization and context](./phase-02-host-authorization-context.md) | DONE (2026-09-24) | 7h | Install-bound owner root; authenticated actor admission and runner reauthorization. |
-| 03 | [Worker root history provider](./phase-03-worker-history-provider.md) | Pending | 8h | Safe bounded scan, persisted safe project names, filtered metrics/pages/detail and cursors. |
+| 03 | [Worker root history provider](./phase-03-worker-history-provider.md) | DONE (2026-09-24; 354/354 tests; review 9.5/10) | 8h | Safe bounded scan, persisted safe project names, filtered metrics/pages/detail and cursors. |
 | 04 | [Project filter UI and metadata](./phase-04-project-filter-ui.md) | Pending | 4h | All Projects selector, per-project counts/table labels, honest scope. |
 | 05 | [Integrated qualification and release](./phase-05-cross-repo-qualification.md) | Pending | 3h | Negative authorization, real 21-project scenario, paired deployment/rollback. |
+
+**Overall status:** In progress; 4/6 phases complete (66.7%). Phase 03 is DONE (2026-09-24); Phase 04 is next.
 
 ## Dependencies / invariants
 
@@ -59,9 +61,10 @@ Contract parity and rejection fixtures in both repositories; targeted worker, Ru
 - Configuration and Evaluations remain separately authorized and clearly labeled as current policy or bound evaluation source; History's project selector does not filter them.
 
 ### Action Items
-- [ ] Align host installation/root admission, worker producer name metadata, UI source labels, and development-mode auth gates with these decisions.
+- [x] Align production auth, owner-root admission, worker name metadata, and provider filtering with confirmed decisions (Phases 00–03).
+- [ ] Complete Phase 04 UI source labels and project filtering, then qualify the paired rollout in Phase 05.
 
 ## Unresolved questions
 
 - Deployment still requires the trusted plugin installation to bind the real owner history root/UID. It must not require manually registering every historical project or granting individual authenticated accounts.
-- Final scan budgets and latency gate require measured fixture/live evidence before contract freeze; do not silently raise existing ceilings.
+- Final scan budgets and latency gate still require measured fixture/live evidence before paired release; do not silently raise existing ceilings.

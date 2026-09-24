@@ -4,7 +4,7 @@
 [Plan](./plan.md) · [Phase 01 contract](./phase-01-cross-project-contract.md) · [domain research](./research/history-domain.md) · [provider architecture](../../docs/codebase-summary.md#owner-safe-plugin-read-provider-phase-e01). Depends on contract freeze, integrates with Phase 02.
 
 ## Overview
-2026-09-24; priority P1; estimate 8h; implementation pending; review pending. One bounded snapshot spanning eligible project directories; no local filesystem browsing API.
+2026-09-24; priority P1; estimate 8h. **Status: DONE (2026-09-24).** Verification: 354/354 tests passed (0 failed, 0 skipped); review approved 9.5/10; canonical advisor checkpoint complete. Evidence: [test report](../reports/testerphase03final-260924-1621-phase-03-owner-safe-history-worker.md); [code review](../reports/code-review-260924-1628-phase-03-owner-safe-history-worker.md). One bounded snapshot spanning eligible project directories; no local filesystem browsing API.
 
 ## Key Insights
 `history-scanner.cjs:56-75` only traverses `root/projectId`; `:132-153` record_ref hashes task+consultation but not project. `cursor-manager.cjs:61-76` checks scalar filter fields not accepted plural metric filters. `snapshot-store.cjs:29-37` estimated size ignores normalized records. Root mode increases workload and collision risk.
@@ -26,10 +26,10 @@ At context open `context-table.cjs`/`binding.cjs` validate trusted root scope; p
 4. Exercise future name persistence, malformed/missing/stale metadata, same-name projects, historical fallback, multi-project fixture, bad/duplicate IDs, symlink swaps, partial scans, pagination, ties, concurrent revocation and detail changes.
 
 ## Todo list
-- [ ] Trusted root context plus safe bounded multi-directory scan.
-- [ ] Safe project-name producer and owner-safe reader with historical ID fallback.
-- [ ] Match summary/page/Overview filters, inventory, record refs and signed cursors across projects.
-- [ ] Negative source, identity, cursor, budget and cancellation coverage.
+- [x] Trusted root context plus safe bounded multi-directory scan.
+- [x] Safe project-name producer and owner-safe reader with historical ID fallback.
+- [x] Match summary/page/Overview filters, inventory, record refs and signed cursors across projects.
+- [x] Negative source, identity, cursor, budget and cancellation coverage.
 
 ## Success Criteria
 Authorized refresh enumerates eligible records/projects (230/21 only if data still matches) and filters evcrate to its matching 27 when unchanged. New consultations appear with a safe stored project label; legacy unnamed projects show short IDs without hiding records. Cross-project reads cannot escape root or leak stale detail/cursor; summary/table/Overview agree; incomplete scans are labeled.
