@@ -1,10 +1,10 @@
 # System Architecture
 
 **Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Advisor metrics explorer:** Phases 01–10 DONE (10/10 phases, 100%; completed 2026-09-19); documentation cutover and support boundary are complete.
-**DamHopper Advisor Plugin:** Phases E00–E03 DONE (completed 2026-09-21; E03 review approved 9.2/10); joint G1 owner-worker and D04/E03 G2 LAN qualification plus E04–E05 remain downstream.
+**Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
+**DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
 **Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
-**Updated:** 2026-09-21
+**Updated:** 2026-09-24
 
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
@@ -413,37 +413,21 @@ operation does not claim complete audit coverage, task success, cost, saved
 time, or causal effectiveness, and does not alter list/show/export/prune.
 
 
-#### Phase 05 browser history traversal and scanner
+#### Historical standalone explorer milestones (Phases 05–10; 2026-09-18–19)
 
-Documented in [Browser History Scanner](./browser-history-scanner.md): explicit read-only handles, no HOME inference/upload/persistence, sorted three-level traversal, bounded reads, and shared history normalization (`history-traversal.ts`, `history-record-reader.ts`, `history-scan-budget.ts`, `history-reader.ts`). Limits, failures, or cancellations retain prior snapshots as stale.
+Phase 05 (2026-09-18) recorded explicit-handle history traversal, bounded reads,
+shared normalization, and stale retention; Phase 06 added the display-only
+evaluation protocol and an 8 MiB standalone file picker. Phase 07 built the
+standalone React explorer and E03 reused its shared views in the embedded UI.
+Phase 08 recorded a 298.5 kB bundle and an exact-seven asset boundary; Phase 09
+recorded 14 Playwright checks and five 10,000-record benchmarks (p95 scan 1,643 ms,
+detail 67 ms, cancel 104 ms, zero long tasks above 200 ms); Phase 10 documented
+the tested Chromium/Linux scope and metric limits.
 
-#### Phase 06 counsel evaluation protocol and fixtures
+Those browser picker/reader sources were later removed from this repository. The
+dated milestone records are not current standalone support, current release-asset
+verification, or G4 qualification; source removal does not authorize retirement.
 
-Display-only boundary for untrusted external `evcrate-advisor-counsel-evaluation` v1 documents: pure validation, sync/async digests (`rubric_digest`, `input_digest`), complete observation matrices, provenance preservation, and two-decimal score aggregation (`advisor-evaluation*.ts`). Multi-file picker bounds reads to 8 MiB; evaluations never merge with consultation history or production metrics.
-
-#### Phase 07 React explorer and view architecture
-
-The client-side React explorer (`viewer/src/`) provides private, read-only visualization:
-- State machine: tracks directory handles, scan status (`idle`, `scanning`, `fresh`, `stale`, `error`), cancellation, active tabs, filters, and selection without external mutations.
-- Component architecture: structured views for overview metrics, history consultations with master-detail inspection, policy inspection, and evaluation comparison matrices.
-- Accessibility and security: keyboard navigation (Tab/Shift+Tab/Enter/Space), visible focus rings, ARIA roles, responsive layouts, inert text rendering, and zero network calls after asset delivery.
-
-#### Phase 08 packaging, CSP, preview, and release inventory
-
-- Bundle packaging: `viewer/dist/index.html` and hashed assets under `viewer/dist/assets/` are included in platform archives; bundle size is ~298.5 kB (<= 5 MiB ceiling). Sources, configs, tests, maps, and devDependencies are excluded.
-- Loopback preview: `npm run viewer:preview` serves static assets on `127.0.0.1:4173` with strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`). It is a static file server, not a backend API.
-- Inventory parity: root package has zero production dependencies; controller closure remains exactly 33 files; `dist/release/` remains exactly seven assets (viewer is an archive member, never an eighth asset).
-
-#### Phase 09 qualification and performance benchmark
-
-- End-to-end qualification: 14 Playwright tests prove functional scanning, handle revocation, manual Refresh/Cancel, stale data retention, error diagnostics, CSP enforcement, non-loopback interception, and accessibility.
-- Frozen 10k benchmark: across five 10,000-consultation runs, p95 scan was 1,643 ms (<= 5,000 ms), p95 detail was 67 ms (<= 100 ms), cancel latency was 104 ms (<= 250 ms), and 0 long tasks occurred. Web Worker fallback was unneeded per YAGNI.
-- Bounds: qualified on Chromium on Linux; no claims of POSIX filesystem attestation, causal effectiveness, cost, saved time, or universal platform coverage.
-
-#### Phase 10 documentation cutover and support boundary
-
-- README and the five core docs now describe one operator sequence, local read-only privacy, strict CSP/no-network behavior, metric formulas and limitations, the exact 33-file controller closure, and the Chromium/Linux support boundary.
-- Documentation cutover records evidence without expanding support: Windows remains limited to standalone installer lifecycle and `version --json`; live vendor qualification, production HOME publication, npm/GitHub publication, rollout, desktop, and signing environments remain separate gates.
 
 ### 5.3 Compatibility checkpoint wire contract
 
@@ -671,9 +655,13 @@ by the 512/512 full-suite result, exact 29-file closure, `distribute:check`, and
 installed Linux release fixtures. These deterministic checks do not qualify live
 vendors or authorize production HOME publication.
 
-### Advisor Metrics Explorer support boundary (Phases 01–10)
+### Historical Advisor Metrics Explorer support boundary (Phases 01–10; completed 2026-09-19)
 
-The Advisor Metrics Explorer is qualified on Chromium on Linux (Chrome/Chromium >=120 via File System Access API). Non-Chromium browsers (Firefox, Safari) and platforms without directory picker support are explicitly unsupported. Loopback preview (`127.0.0.1:4173`) provides static asset delivery, not an active backend or history API. Selected data is processed locally without uploads or storage persistence; reload clears handles. Browser validation checks schema structure only; it makes no POSIX filesystem attestation (`0600` mode, ownership, symlink authenticity), complete audit coverage, or causal/cost/saved-time claims.
+At completion, the standalone explorer's tested boundary was Chromium >=120 on
+Linux with File System Access; it did not attest POSIX permissions/ownership,
+complete audit coverage, or causal/cost/saved-time claims. Its picker/reader source
+has since been removed, so this history does not establish current standalone
+support or G4.
 
 ### Deterministic Windows fixture and predecessor resolver (Phase 04)
 
@@ -733,11 +721,13 @@ Phase 09 synchronized the generated release boundary:
    selected snapshot with a symlink. Windows installs under
    `<root>/versions/<snapshot>` and writes `<root>/current.json`; its launcher is
    `<root>/bin/evcrate.cmd`. Both retain prior snapshots for bounded rollback.
-4. **Windows assets and lifecycle.** The verified assets are `install.ps1`,
-   `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar, and
-   `evcrate-v<version>.release.json`. `install`, repeat-install, `repair`, upgrade,
-   `rollback`, `uninstall`, and `version --json` are qualified only on the Section 7
-   matrix. Runtime `publish`, `health`, and advisor execution are not Windows claims.
+4. **Windows assets and lifecycle.** The 2026-09-15 qualification record covered
+   `install.ps1`, `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar,
+   and `evcrate-v<version>.release.json`. `install`, repeat-install, `repair`,
+   upgrade, `rollback`, `uninstall`, and `version --json` were exercised only on the
+   Section 7 matrix. This historical record does not assert current release-asset
+   verification. Runtime `publish`, `health`, and advisor execution are not Windows
+   claims.
 5. **Publication state.** HOME state is `$HOME/.evcrate/publication/`; project
    state is `stateRoot/project-publication/<canonical SHA-256 identity>`. Project
    publication commits the shared HOME controller first and then project harness
@@ -760,32 +750,42 @@ and installer state are managed artifacts. User policy, unmanaged HOME/project
 files, and vendor credentials remain outside the publication authority.
 ## 9. DamHopper advisor plugin replacement
 
-**Status:** E00–E03 implementation complete; E03 review approved 9.2/10. Joint
-G1 owner-worker and D04/E03 G2 LAN qualification remain downstream; E04–E05
-are pending. Standalone viewer remains operational until G4 cutover.
+**Status:** E00–E04 implementation/package work is complete; E04/G3 was qualified
+2026-09-22. E05 source cutover removed standalone picker code, but joint G4
+qualification/sign-off is unverified: external Linux owner-runner and separate-LAN
+evidence are not present here. E05/G4 is not accepted or complete; standalone
+retirement is not release-authorized. Joint G1/G2 qualification remains downstream.
 **Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md),
 [UI guide](./advisor-plugin-ui.md), [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md),
 and [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
-**E00:** `evcrate-advisor-data` v1 freezes eight read operations and immutable
-validators; the G0 read graph permits only `node:fs`, `node:path`, and `node:crypto`
-(controller-inventory delta `0`).
-**E01:** `provider.cjs` gates E00 methods and validates params/results; binding,
-snapshot/cursor, history, policy, and evaluation modules enforce owner/path/link,
-fingerprint, descriptor-pinned reads, and bounded-read invariants.
-**E02:** The pinned D00 SDK owns framing, strict UTF-8 JSON-RPC, limits, and stream
-reassembly; the worker keeps stdout protocol-only and bounds contexts, requests,
-cancellation, safe errors, and deterministic candidate output.
-**E03:** `AdvisorDataProvider` feeds one reducer and four views from either the
-temporary File System Access adapter or bounded DamHopper `MessagePort`. The
-version-`1.0.0` bridge validates eight envelopes, acknowledges one nonce, binds
-session/generation, suppresses late responses, and clears state on revocation.
-Views are Overview, History/detail, Configuration, and Evaluations; navigation is
-`/plugins/evcrate.advisor`.
-The Vite entry emits one opaque-srcdoc-compatible `plugin/ui/index.html` with
-inlined CSS/IIFE JavaScript and no external assets, network clients, or picker.
-The candidate builder includes UI, manifest entrypoint/navigation, and content-hash
-inventory. E03 evidence is package/focused-browser evidence, not host CSP/sandbox
-proof, G2 LAN acceptance, E04 publication, or standalone cutover.
+**E00:** `evcrate-advisor-data` v1 freezes eight reads; G0 permits only
+`node:fs`, `node:path`, and `node:crypto` (controller-inventory delta `0`).
+**E01:** `provider.cjs` validates/gates E00 methods; binding, snapshot/cursor,
+history, policy, and evaluation modules enforce owner/path/fingerprint boundaries.
+**E02:** The pinned D00 SDK owns framing and strict UTF-8 JSON-RPC; the worker
+bounds contexts, requests, cancellation, safe errors, and deterministic output.
+**E03:** Current `AdvisorDataProvider` uses the bounded DamHopper `MessagePort`;
+the temporary E03 local picker/reader source was later removed. The version-`1.0.0`
+bridge validates eight envelopes and fences session/generation, late replies, and
+revocation. The four views are Overview, History/detail, Configuration, and
+Evaluations at `/plugins/evcrate.advisor`.
+The Vite entry emits `plugin/ui/index.html` with inlined CSS/IIFE and no external
+assets, network clients, or picker. E03 recorded 68/68 repository/package tests
+on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current
+release-asset verification.
+
+### Proposed cross-project history design (not implemented)
+
+**Phase 00 (2026-09-24; auth prerequisite complete):** Production startup requires MongoDB configuration; missing DB cannot enable token issuance. Explicit `--no-auth` remains a dev/test-only token path; browser `authType: none` seeding requires dev/test/test-harness signals, and the plugin test server grants only its configured fixture actor. Root-history authorization remains unimplemented.
+
+The proposed feature remains unimplemented: current plugin contexts bind one canonical target and SHA-256 history identity; an existing `*` target grant does not authorize account history.
+The intended design binds EVCrate's owner history root at install; authenticated accounts may read retained histories without historical workspace registration.
+API and runner recheck the install-bound scope and session; worker scans only owner-safe project-ID directories.
+Project selection filters one bounded snapshot across summary/page/detail/cursors/Overview; revocation clears old data.
+Future consultations store safe names keyed by project ID; unnamed history shows abbreviated IDs.
+Configuration/Evaluations keep separately labeled sources.
+See [the plan](../plans/260924-1055-all-project-advisor-history/plan.md) and [Phase 00](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
+
 
 ## Related documents
 
@@ -794,5 +794,4 @@ proof, G2 LAN acceptance, E04 publication, or standalone cutover.
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
-- [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes; [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O.
-- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — E03 provider/bridge/views/package.
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and historical E03 provider boundary.
