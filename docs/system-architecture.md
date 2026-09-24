@@ -774,18 +774,16 @@ assets, network clients, or picker. E03 recorded 68/68 repository/package tests
 on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current
 release-asset verification.
 
-### Cross-project history contract (Phase 01 frozen; runtime integration pending)
+### Cross-project advisor history (Phases 00–02)
 
-**Phase 00:** Production token issuance requires the configured MongoDB path; the explicit development/test token path remains available and the test server stays fixture-actor scoped. See the [auth prerequisite](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
-
-**Phase 01:** `evcrate-advisor-data` v2 is frozen with v1 schema/behavior support and unchanged on-disk history v1. The eight method names remain stable.
-V2 summary/page queries add `project_id: string | null`: null selects All Projects only in owner-root scope; an explicit project ID selects one discovered project, and a single-project context cannot widen scope.
-Refresh/summary expose one bounded inventory from the same snapshot, independently of query filters. The inventory carries project ID, nullable display label, and count; v2 caps it at 500 entries.
-The version-1 metadata sidecar maps project IDs to strictly validated owner-safe names; names are display-only and unknown labels fall back to an abbreviated ID.
-The companion runner contract defines `ContextScopeKind` (`project` | `history-root`) and `ContextScopeDescriptor` (`kind`, optional `rootIdentity`, optional `sourceRevision`); `context.open` may report the established `scopeKind`.
-Root scope is bound to the trusted owner installation and authenticated session, not a configured-target `*` grant or browser-provided path. Host authorization and worker root scanning remain downstream implementation work.
-Configuration and Evaluations retain their separately authorized, labeled sources; History project filters do not apply to them.
-See the [cross-project contract guide](./all-project-advisor-history.md), [Phase 01 plan](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md), and [project plan](../plans/260924-1055-all-project-advisor-history/plan.md).
+- **Phase 00:** Production token issuance requires configured MongoDB; the explicit development/test token path remains. See the [auth prerequisite](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
+- **Phase 01:** `evcrate-advisor-data` v2 retains v1 schema/behavior and on-disk history v1; query filtering, bounded same-snapshot inventory, owner-safe display metadata, and `ContextScopeKind` / `ContextScopeDescriptor` are frozen.
+- **Phase 02 binding:** DamHopper persists `OwnerHistorySource` (`rootPath`, `rootIdentity`, `sourceRevision`, `allAuthenticatedHistoryRead`) on the installation. Admin replacement uses an expected security revision and advances registry/security revisions.
+- **Admission:** Valid authenticated actors may use `history-root` without per-account grants only for `history.refresh`, `history.summary`, `history.page`, and `history.detail`. `--no-auth` stays denied; project scope, policy, and evaluation access retain their grant boundaries.
+- **Context open:** The API validates the actor epoch and enabled installation, hydrates its process-local source cache from runner state before each open (not at startup), and sends the descriptor's kind, root identity, and source revision. The descriptor does not carry the owner path.
+- **Runner verification:** The runner re-reads the persisted installation, checks source capability and descriptor identity/revision, and rejects a missing, symlink, or non-directory root; a non-root Unix runner also checks effective-UID ownership.
+- **Revalidation:** The API rechecks actor/epoch and operation on every invoke; the runner rechecks enabled state, source capability, root identity, and revision. Admin source replacement clears the API source cache and revokes contexts; the next open rehydrates from runner state.
+- **Remaining scope:** Worker root scanning/name persistence, project filtering in the UI, and paired qualification remain later gates; 21 projects / 230 consultations are dataset observations. See the [contract guide](./all-project-advisor-history.md), [Phase 01 plan](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md), [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md), and [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md).
 
 
 ## Related documents

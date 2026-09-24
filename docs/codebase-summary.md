@@ -2,7 +2,7 @@
 
 **Generated:** 2026-09-24
 **Source:** Repomix v1.18.0 compaction; `.repomixignore` excludes tests, plans, and docs.
-Companion runner scope types were checked directly. Contract details: [all-project advisor history](./all-project-advisor-history.md).
+Companion Phase 02 host implementation was inspected directly; it is in DamHopper, not this EVCrate compaction. Contract details: [all-project advisor history](./all-project-advisor-history.md).
 Current UI source map: [E03 guide](./advisor-plugin-ui.md); worker detail: [E02 guide](./advisor-plugin-worker.md).
 
 The repository is a private Node/TypeScript package. `package.json` declares
@@ -422,7 +422,7 @@ The Phase 06 standalone browser reader used an explicit multi-file picker with a
 result and **10/10 review** were recorded in 2026-09-18 and are historical.
 The milestone handed off to Phase 07.
 
-## Advisor Plugin domain data API and cross-project scope (E00/Phase 01)
+## Advisor Plugin domain data API and cross-project scope (E00/Phases 01–02)
 
 E00 completed on 2026-09-21 with `evcrate-advisor-data` v1. Phase 01 froze v2 while preserving v1 schema/behavior support and on-disk history v1. See the [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [E00 validation](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md), [review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md), and [cross-project contract guide](./all-project-advisor-history.md).
 
@@ -431,7 +431,7 @@ E00 completed on 2026-09-21 with `evcrate-advisor-data` v1. Phase 01 froze v2 wh
 - V1 and v2 positive/negative fixtures cover strict wire parity. Phase 01 contract and runner verification recorded 92/92 executions; E00's 28/28 result is dated historical evidence.
 - V2 summary/page queries carry `project_id: string | null`; the bounded inventory has at most 500 project entries with snapshot-consistent counts independent of query filters.
 - The version-1 project metadata sidecar maps SHA-256 project IDs to display names and timestamps. Strict owner-safe name validation prevents path/HOME disclosure; labels never confer access.
-- Companion host runner types define `ContextScopeKind` and `ContextScopeDescriptor`; root authorization and worker/UI implementation remain later phases.
+- Companion host types define `ContextScopeKind` and `ContextScopeDescriptor`; Phase 02 adds installation-bound owner-root admission and runner reauthorization in DamHopper. The API refreshes its process-local owner-source cache from runner state at each context open. Worker root scanning, project-filter UI, and paired qualification remain pending; see the [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md).
 - `plugin/contracts/read-closure-feasibility.json` records a feasible G0 read graph: only `node:fs`, `node:path`, and `node:crypto` are permitted; mutators, model adapters, workspace isolation, and process/network built-ins are excluded; expected controller-inventory delta is zero. E01 re-confirmed the graph without adding shared controller modules.
 - Review follow-ups are non-blocking: normalize filter failures to `PluginDataApiError`, deepen compare-group validation when UI shapes stabilize, and enforce raw-I/O byte limits before JSON deserialization.
 

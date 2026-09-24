@@ -6,7 +6,7 @@ DamHopper Advisor Plugin Phases E00–E04 are complete (E04/G3 qualified on
 2026-09-22). E05 source cutover is applied in the repository; joint G4
 qualification/sign-off is unverified, and standalone retirement is not
 release-authorized. All-project advisor history Phase 01 contract freeze is
-approved (2026-09-24); host/provider/UI/qualification implementation remains pending.
+approved (2026-09-24); Phase 02 host authorization/context is complete; worker/provider, UI, and paired qualification remain pending.
 **Updated:** 2026-09-24
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -470,7 +470,7 @@ and `/plugins/evcrate.advisor`; the E03 candidate builder recorded its inventory
 entry. E03 validation on 2026-09-21 recorded **68/68 tests passed**. This is dated
 repository/package evidence, not host CSP/sandbox, G2 LAN, or G4 qualification.
 
-### FR-22: Cross-project advisor history contract (Phase 01)
+### FR-22: Cross-project advisor history contract (Phases 01–02)
 
 **Requirement:** Permit every authenticated DamHopper account to read retained
 EVCrate advisor histories across projects only through a trusted, owner-root-bound
@@ -489,8 +489,8 @@ A versioned sidecar stores strictly owner-safe display names keyed by project ID
 labels never confer authority and missing labels use an abbreviated ID fallback.
 The host runner contract defines `ContextScopeKind` (`project` |
 `history-root`) and `ContextScopeDescriptor` with optional root identity and
-source revision. Host authorization, worker scanning, UI selection, and paired
-qualification remain subsequent-phase gates. See the [contract guide](./all-project-advisor-history.md).
+source revision. Phase 02 implements install-bound `OwnerHistorySource`, authenticated history-only admission, actor/session reauthorization, and independent runner source checks. The API hydrates its process-local source cache from runner state before each context open; startup hydration is not claimed.
+Worker scanning, name persistence, UI selection, and paired qualification remain later gates. See the [contract guide](./all-project-advisor-history.md), [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), and [Phase 02 validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md).
 
 
 
