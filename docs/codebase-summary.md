@@ -1,14 +1,20 @@
 # Codebase Summary
 
-**Generated:** 2026-09-21
-**Source:** Repomix v1.18.0 compaction at `repomix-output.xml`; `.repomixignore`
-excludes tests, plans, and docs. Release workflow, viewer source, phase evidence,
-Phase E00–E03 plugin sources checked directly; worker detail: [E02 guide](./advisor-plugin-worker.md); embedded UI detail: [E03 guide](./advisor-plugin-ui.md).
+**Generated:** 2026-09-24
+**Source:** Repomix v1.18.0 compaction; `.repomixignore` excludes tests, plans, and docs.
+Companion runner scope types were checked directly. Contract details: [all-project advisor history](./all-project-advisor-history.md).
+Current UI source map: [E03 guide](./advisor-plugin-ui.md); worker detail: [E02 guide](./advisor-plugin-worker.md).
 
 The repository is a private Node/TypeScript package. `package.json` declares
 `evcrate` version `2.1.0`, Node `>=22.19.0`, the `evcrate` bin at
 `dist/cli/evcrate.js`, and the `evcrate-advisor` bin at
 `.evcrate/source/.evcrate/bin/evcrate-advisor`.
+
+**Plugin UI current state:** Standalone picker/reader source has been removed from
+the repository. The shared React app/views and DamHopper MessagePort provider remain.
+The E05 source cutover does not establish joint G4 qualification/sign-off, which is
+unverified; standalone retirement is not release-authorized. This summary does not
+assert current release assets were verified.
 
 ## Source-of-truth map
 
@@ -255,10 +261,10 @@ fixtures cover the boundary; Windows standalone installer lifecycle and version 
 | Script/action | Role |
 |---|---|
 | `npm run build` | Generates the runtime brief, four generated advisor runtime modules, and controller inventory through `prebuild`, then compiles TypeScript. |
-| `npm run build:viewer` | Type-checks `viewer/` with `viewer/tsconfig.json`, then emits the static Vite bundle to `viewer/dist`. |
-| `npm run build:all` | Runs the root TypeScript build followed by the viewer build. |
-| `npm run viewer:preview` | Serves the built viewer on loopback `127.0.0.1:4173` with strict port binding. |
-| `npm run test:advisor-viewer` | Rebuilds the viewer and runs the single Chromium Playwright project against the preview server. |
+| `npm run build:all` | Runs the root TypeScript build followed by the plugin UI build (`build:advisor-plugin-ui`). |
+| `npm run build:advisor-plugin-ui` | Compiles and inlines the self-contained plugin UI document to `plugin/ui/index.html`. |
+| `npm run build:advisor-plugin` | Packages the deterministic plugin tarball with exact inventory closure. |
+| `npm run verify:advisor-plugin` | Validates archive integrity, permissions, member counts, and sidecar digests. |
 | `npm run generate:inventory` | Regenerates the exact controller inventory. |
 | `npm run generate:registry` | Regenerates canonical schema-1 resource records. |
 | `npm run generate:manifests` | Builds target and aggregate schema-2 manifests. |
@@ -390,44 +396,49 @@ fail closed; backup failure is terminal. See the
 Evidence: 140/140 advisor-controller tests and `npm run release:check`.
 
 
-## Browser history scanner (Phase 05)
+## Historical standalone browser history reader (Phase 05; 2026-09-18)
 
-The current Advisor Metrics Explorer Phase 05 adds a browser-only, explicit-handle
-reader; see the [browser scanner guide](./browser-history-scanner.md).
-`history-traversal.ts` and `history-record-reader.ts` perform sorted three-level
-traversal, exact budgets, bounded strict reads, shared validation, identity
-checks, normalization, and four-worker scheduling.
-`browser-digest.ts` uses Web Crypto SHA-256 for Node checkpoint-byte parity;
-`policy-reader.ts` reports validated v2 or legacy-v1 migration-required states.
-`history-reader.ts` replaces only complete scans and retains prior snapshots stale
-for incomplete work; browser races are diagnostics, not deletion evidence.
-Focused Phase 05 proof is recorded in the changelog.
+At Phase 05 completion, the standalone explorer used explicit user-granted handles,
+sorted three-level traversal, bounded strict reads, shared validation, identity
+checks, normalization, and stale retention for incomplete scans. Those picker and
+reader sources have since been removed from this repository. The dated evidence
+remains in the [project changelog](./project-changelog.md); it is not a current
+viewer I/O source map or G4 qualification.
 
 ## Advisor counsel evaluation protocol and fixtures (Phase 06)
 
-Phase 06 completed on 2026-09-18; it defines display-only external counsel comparison
-documents and prepares the Phase 07 React explorer handoff. See the [Phase 06 plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md).
-- `src/protocol/advisor-evaluation.ts` exposes `evcrate-advisor-counsel-evaluation` v1 types/constants; primitives, validation, and comparison modules enforce exact keys, bounds, canonical rubric/input digests, complete observation matrices, immutable documents, and provenance-separated aggregation.
-- Response states remain distinct (`ADVICE_READY`, `FAILED`, `MISSING`); scores enforce human/automated provenance, dimension coverage, partial/full/null rules, two-decimal averages, and thresholds. Evaluation IDs never join consultation history.
-- `viewer/src/io/evaluation-reader.ts` reads explicitly selected files through the browser File System Access API with an 8 MiB bound and per-file status mapping; it never writes, executes, grades, persists handles, or feeds production history metrics.
-- Fixtures `valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and `corpus-nine-cases.json` cover state/digest/matrix boundaries; derived inputs contain no `expected_mentor_response` oracle.
-- Evidence: **87/87 tests passed**, build/viewer typecheck/release-check passed, modules stayed below 200 LOC, and Cycle 2 review approved **10/10**. The 33-file controller closure stayed unchanged.
-- Handoff: **Phase 07 — React explorer and view architecture**; render evaluation groups alongside history/configuration without merging state or metrics.
+Phase 06 completed on 2026-09-18 and froze display-only external counsel comparison
+documents. `src/protocol/advisor-evaluation.ts` and its primitives, validation, and
+comparison modules enforce exact keys, bounds, canonical rubric/input digests,
+complete observation matrices, immutable documents, and provenance-separated
+aggregation. Response states remain distinct (`ADVICE_READY`, `FAILED`, `MISSING`);
+scores preserve provenance, dimension coverage, partial/full/null rules,
+two-decimal averages, and thresholds. Evaluation IDs never join consultation history.
 
-## Advisor Plugin domain data API and parity (Phase E00)
+The Phase 06 standalone browser reader used an explicit multi-file picker with an
+8 MiB per-document bound. That reader source has since been removed. Fixtures
+`valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and
+`corpus-nine-cases.json` remain evidence for protocol boundaries; the **87/87 test**
+result and **10/10 review** were recorded in 2026-09-18 and are historical.
+The milestone handed off to Phase 07.
 
-Phase E00 completed on 2026-09-21. It freezes `evcrate-advisor-data` v1 for the DamHopper Advisor Plugin and exports the domain module through `src/protocol/index.ts`. See the [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [validation report](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md), and [review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md).
+## Advisor Plugin domain data API and cross-project scope (E00/Phase 01)
 
-- `advisor-plugin-data-api.ts` registers exactly eight operations: `history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, and `evaluations.compare`. Validators reject unknown/authority fields, unsafe scalar sizes, invalid IDs, and inconsistent discriminated results; accepted values are frozen.
-- `scripts/generate-advisor-plugin-data-schema.mjs` deterministically emits `plugin/contracts/evcrate-advisor-data-v1.schema.json` (draft-07) and `contract-manifest.json`, including the schema SHA-256, method list, and limits. `--check` fails on stale bytes.
-- Frozen fixtures under `tests/fixtures/advisor-plugin/domain-v1/` cover positive and negative wire shapes, normalized project/worktree identity, insertion-order checkpoint digest (`df2dfc75ff81de80edbf6ca41392d0ebd4faf1177c63821d162f3e34b766eff9`), and tamper rejection. Phase E00 parity passes 28/28 focused assertions.
+E00 completed on 2026-09-21 with `evcrate-advisor-data` v1. Phase 01 froze v2 while preserving v1 schema/behavior support and on-disk history v1. See the [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [E00 validation](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md), [review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md), and [cross-project contract guide](./all-project-advisor-history.md).
+
+- `advisor-plugin-data-api.ts` registers exactly eight operations: `history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, and `evaluations.compare`. Validators reject unknown/authority fields, unsafe scalar sizes, invalid IDs, and inconsistent results; accepted values are frozen.
+- `scripts/generate-advisor-plugin-data-schema.mjs` deterministically emits v1 and v2 draft-07 schemas plus `contract-manifest.json`, which advertises supported versions 1 and 2; `--check` rejects stale generated bytes.
+- V1 and v2 positive/negative fixtures cover strict wire parity. Phase 01 contract and runner verification recorded 92/92 executions; E00's 28/28 result is dated historical evidence.
+- V2 summary/page queries carry `project_id: string | null`; the bounded inventory has at most 500 project entries with snapshot-consistent counts independent of query filters.
+- The version-1 project metadata sidecar maps SHA-256 project IDs to display names and timestamps. Strict owner-safe name validation prevents path/HOME disclosure; labels never confer access.
+- Companion host runner types define `ContextScopeKind` and `ContextScopeDescriptor`; root authorization and worker/UI implementation remain later phases.
 - `plugin/contracts/read-closure-feasibility.json` records a feasible G0 read graph: only `node:fs`, `node:path`, and `node:crypto` are permitted; mutators, model adapters, workspace isolation, and process/network built-ins are excluded; expected controller-inventory delta is zero. E01 re-confirmed the graph without adding shared controller modules.
 - Review follow-ups are non-blocking: normalize filter failures to `PluginDataApiError`, deepen compare-group validation when UI shapes stabilize, and enforce raw-I/O byte limits before JSON deserialization.
 
 ## Owner-safe plugin read provider (Phase E01)
 
-Phase E01 completed on 2026-09-21; it supplies the read-only, context-bound
-provider consumed by the future SDK worker. See the [phase plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-01-owner-safe-provider.md),
+Phase E01 completed on 2026-09-21 and supplied the read-only, context-bound
+provider that Phase E02 wrapped in the pinned D00 worker. See the [phase plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-01-owner-safe-provider.md),
 [verification](../plans/reports/audit-260921-1139-phase-e01-verification.md), and
 [re-review](../plans/reports/code-review-260921-1216-phase-e01-fixes-re-review.md).
 
@@ -451,109 +462,95 @@ provider consumed by the future SDK worker. See the [phase plan](../plans/260920
   evaluation; `provider-cancellation.test.mjs` covers abort/deadline/stale
   retention and FIFO; `provider-source-safety.test.mjs` covers path/link/race
   safety and context isolation.
-- E01 verification: **56/56 passing** across 8 files; exact 33-file controller closure unchanged (inventory delta `0`).
+- Dated E01 verification (2026-09-21) recorded **56/56 passing** across 8 files; the 33-file controller closure remained unchanged (inventory delta `0`).
 - E02 wraps the provider in the pinned D00 worker (`worker.cjs`,
   `context-table.cjs`, `request-table.cjs`, `dispatcher.cjs`, `error-mapping.cjs`,
   local `data-api.cjs`) and deterministic candidate builder; see the [worker guide](./advisor-plugin-worker.md).
-- E03 adds provider-neutral standalone/MessagePort adapters, generation-fenced
-  reducer state, and the embedded four-view UI; see the [UI guide](./advisor-plugin-ui.md).
+- At E03 completion, provider-neutral adapters covered the local picker and
+  MessagePort paths. The local picker/reader source was later removed by the E05
+  repository cutover; see the [UI guide](./advisor-plugin-ui.md). This historical
+  architecture is not G4 qualification.
 
-## React Explorer and embedded provider-neutral UI (Phases 07/E03)
+## React views and embedded provider (Phases 07/E03; current source map)
 
-Phase 07 completed on 2026-09-19. The private static React viewer composes
-validated browser snapshots, policy inspection, and counsel-evaluation documents
-without adding a backend, router, global store, model call, persistence, or
-network path. Phase E03 (2026-09-21; review 9.2/10) reuses the same app/views in
-the DamHopper opaque-srcdoc entry through provider-neutral acquisition adapters.
+Phase 07 completed on 2026-09-19 as a private static React explorer. Phase E03
+(2026-09-21; review 9.2/10) reused the shared app/views in the DamHopper
+opaque-srcdoc entry. The E03 source included a local File System Access picker and
+reader; those standalone sources were later removed in the E05 repository cutover.
+That source change is not joint G4 qualification/sign-off: required external Linux
+owner-runner and separate-LAN evidence are not present here, and standalone
+retirement is not release-authorized.
+
 See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md),
-[E03 UI guide](./advisor-plugin-ui.md), and [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
+[E03 UI guide](./advisor-plugin-ui.md), and
+[E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
 
-### Shell, state, and navigation
+### Current shared React application
 
-- `viewer/index.html` is a local mount; `viewer/src/main.tsx` only calls React
-  `createRoot`. `viewer/src/app.tsx` composes controls, status, tabs, one selected
-  view, diagnostics, and footer.
-- `viewer/src/app-state.ts` owns the immutable `useReducer` model: `idle`,
-  `selecting`, `scanning`, `fresh`, `stale`, and `unsupported`; scan generation,
-  snapshot, filters, diagnostics, policy/evaluations, selection, and reveal state.
-  Late generation actions are ignored; failed/cancelled/incomplete scans retain
-  the prior snapshot as stale.
-- `viewer/src/hash-view.ts` is the router-free hash authority for `#overview`,
-  `#history`, `#configuration`, and `#evaluations`; invalid or empty hashes
-  resolve to overview. File-system handles remain in refs, never reducer state
-  or persistence.
+- `viewer/src/app.tsx` composes controls, status, tabs, the selected view,
+  diagnostics, and footer.
+- `viewer/src/app-state-types.ts`, `app-actions.ts`, `app-state-reducer.ts`,
+  `app-state-selectors.ts`, and `app-state.ts` define the shared immutable state,
+  actions, reducer, and selectors; provider generation/session fences reject late data.
+- `viewer/src/hash-view.ts` maps the hash to Overview, History, Configuration, or
+  Evaluations. File-system picker/reader state is not a current source path.
 
-### Views, components, and browser I/O
+### Current views, provider, and components
 
 | Path | Responsibility |
 |---|---|
-| `viewer/src/views/overview-view.tsx` | n/N/excluded ratios, counts, missingness, latency, and methodological limitations. |
-| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Frozen filters, project/task/consultation table, 100-row pages, and lazy inert detail drawer. |
-| `viewer/src/views/configuration-view.tsx` | Current policy separated from historical route/prompt/build groups; observational-only labels. |
-| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Exact digest-comparable groups, ready/failed/missing states, provenance, and masked/revealed candidates. |
-| `viewer/src/components/data-controls.tsx`, `status-banner.tsx`, `hash-tabs.tsx` | Provider-neutral refresh/cancel/source controls, freshness/revocation guidance, and accessible four-view tabs. |
-| `viewer/src/components/metric-ratio.tsx`, `diagnostic-panel.tsx`, `pagination-controls.tsx`, `text-block.tsx` | Honest ratio formatting, sanitized diagnostics, paging, and text-only untrusted content. |
-| `viewer/src/io/history-reader.ts`, `policy-reader.ts`, `evaluation-reader.ts` | Consume Phase 05/06 read-only readers; no writes, execution, grading, or handle persistence. |
-| `viewer/src/io/history-traversal.ts`, `history-record-reader.ts`, `history-scan-budget.ts`, `browser-digest.ts`, `file-system-access.d.ts` | Bounded traversal/reads, browser digest parity, budgets, and minimal picker declarations. |
-| `viewer/src/styles.css`, `react-ambient.d.ts` | Local responsive/focus/reduced-motion styling and minimal ambient React/DOM types. |
+| `viewer/src/views/overview-view.tsx` | Counts, rates, missingness, latency, and methodological limitations. |
+| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Filtered history table, server-backed pages, and lazy inert detail drawer. |
+| `viewer/src/views/configuration-view.tsx` | Current policy separated from historical route/prompt/build groups. |
+| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Comparable groups, result states, provenance, and masked/revealed candidates. |
+| `viewer/src/providers/advisor-data-provider.ts`, `bridge-contract.ts`, `dam-hopper-port-provider.ts` | Provider contract, validated bridge envelopes, and bounded MessagePort data path. |
+| `viewer/src/components/` | Refresh/cancel controls, status, tabs, diagnostics, pagination, and inert text rendering. |
+| `plugin/ui/plugin-main.tsx`, `plugin-document.html`, `vite.config.ts` | Mounts the shared App with `DamHopperPortProvider` and builds the embedded document. |
 
-All viewer modules stay below 200 LOC. Semantic HTML, keyboard-visible focus,
-responsive tables/drawers, escaped text nodes, no active record links, and no
-remote assets preserve the private diagnostic boundary. Evidence: **28/28 tests
-passed**, strict viewer typecheck/build passed with **zero TypeScript diagnostics**,
-and code review approved **10/10**. Canonical advisor mentoring verification
-remains the `.claude/workflows/advisor-mentoring.md` authority; the viewer only
-renders validated data and makes no mentor-quality or live-vendor claim.
+The Phase 07 standalone explorer acceptance recorded **28/28 tests passed**, strict
+viewer typecheck/build with **zero TypeScript diagnostics**, and a **10/10 review**
+on 2026-09-19. That evidence is historical; it does not verify the removed picker,
+current release assets, or G4. The shared views render validated data and make no
+mentor-quality or live-vendor claim.
 
-## Packaging, CSP, preview, and release inventory (Phase 08)
+## Packaging, CSP, preview, and release inventory (historical Phase 08)
 
-Phase 08 completed on 2026-09-19. The viewer now has an explicit static-build,
-loopback-preview, and package/release boundary; it remains outside the advisor
-controller closure. See the [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md).
+Phase 08 completed on 2026-09-19. At that milestone, the standalone viewer had a
+static-build, loopback-preview, and package boundary outside the advisor controller
+closure. See the [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md).
 
-### Viewer build and preview configuration
+### Current DamHopper Plugin UI build paths
 
 | Path | Responsibility |
 |---|---|
-| `viewer/tsconfig.json` | Strict ES2020/DOM browser typecheck with ESNext, Bundler resolution, `react-jsx`, isolated modules, and `noEmit`. |
-| `viewer/vite.config.ts` | Relative-base static output in `viewer/dist`, empty output, ES2020 target, no sourcemaps, loopback host/port, and exact CSP headers. |
-| `viewer/playwright.config.ts` | One serial Chromium project; starts `viewer:preview` at `http://127.0.0.1:4173` and uses a 15-second server timeout. |
-| `viewer/src/io/history-record-reader.ts` | Bounded browser file reads with fatal UTF-8/JSON validation, shared record validators, checkpoint digest checks, normalization, and four-worker scheduling. |
+| `plugin/ui/tsconfig.json` | Strict ES2020/DOM browser typecheck with Bundler resolution, `react-jsx`, and isolated modules. |
+| `plugin/ui/vite.config.ts` | Inlines styles and classic scripts into `plugin/ui/index.html` with zero external assets. |
+| `plugin/ui/plugin-main.tsx` | Mounts the shared React App with `DamHopperPortProvider` for embedded iframe execution. |
 
-The preview and development server bind to `127.0.0.1:4173` with strict port
-selection. Their HTTP CSP is:
-`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;
-connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`.
-The built index contains no external URLs.
+### Historical package and release boundary
 
-### Package and release boundary
+- The Phase 08 package inventory excluded standalone viewer source from the root
+  package and recorded the then-current exact-seven release-asset contract.
+- Phase 08 evidence recorded **39/39 tests passed** and a **298.5 kB <= 5 MiB**
+  standalone viewer bundle. The controller inventory was 33 files at that time.
+  These dated results do not verify current release assets, G4, or authorize
+  standalone retirement.
 
-- `package.json` keeps viewer libraries development-only, allows only
-  `viewer/dist/**`, and runs `build:all` from `test` and `prepack`.
-- `scripts/prepare-release-assets.cjs` builds the root and viewer before
-  distribution checks, closure verification, and sealed package inventory.
-- `scripts/release/pack-inventory.cjs` parses `npm pack --dry-run --json`,
-  rejects non-regular inventory entries, hashes packed files, and excludes
-  `dist/release` from package records.
-- `tests/viewer/package-inventory.test.mjs` proves dev-only dependencies,
-  viewer allow/deny paths, bundle limits, zero viewer/controller edges, exact
-  seven release assets, exact CSP/loopback settings, and no external URLs.
-- `tests/distribution/private-release-artifacts.test.mjs` proves the packed
-  viewer is present while source/config/test/map paths and `node_modules` stay
-  absent.
+## Historical qualification, benchmarks, and documentation cutover (Phases 09–10)
 
-Phase 08 evidence records **39/39 tests passed** and a **298.5 kB <= 5 MiB**
-viewer bundle. The controller inventory remains exactly 33 files, and
-`dist/release` remains exactly seven top-level assets; viewer files are archive
-contents, not release assets.
-
-## Qualification, benchmarks, and documentation cutover (Phases 09–10)
-
-Phase 09 (2026-09-19) proved all viewer, controller, package, and performance gates:
-- **Browser qualification**: 14 Playwright tests (`tests/viewer/explorer.spec.mjs`, `security-accessibility.spec.mjs`, `performance.spec.mjs`) verify functional scanning, handle revocation, manual Refresh/Cancel, stale retention, exact CSP headers, non-loopback network blocking, keyboard navigation, visible focus, and responsive views.
-- **Frozen 10,000-consultation benchmark**: five consecutive runs produced p95 scan 1,643 ms (<= 5,000 ms), p95 detail 67 ms (<= 100 ms), cancel latency 104 ms (<= 250 ms), and 0 long tasks >200 ms. Web Worker fallback was unneeded per YAGNI.
-- **Package and release boundaries**: 6 package inventory tests and 7 distribution cutover tests prove zero production dependencies, exact 33-file controller closure, and exact seven release assets.
-- **Phase 10 documentation cutover**: updates README, architecture, standards, PDR, roadmap, and codebase summary to reflect the 33-file controller closure and verified read-only viewer while preserving all dated 29/29 historical records.
+Phase 09 reports from 2026-09-19 recorded the following standalone viewer evidence:
+- **Browser qualification:** 14 Playwright tests exercised scanning, handle revocation,
+  manual Refresh/Cancel, stale retention, CSP, network blocking, keyboard navigation,
+  visible focus, and responsive views.
+- **Frozen 10,000-consultation benchmark:** five runs recorded p95 scan 1,643 ms
+  (<= 5,000 ms), p95 detail 67 ms (<= 100 ms), cancel 104 ms (<= 250 ms), and zero
+  long tasks above 200 ms. Web Worker fallback was not needed.
+- **Package/cutover checks:** Historical reports recorded six package inventory
+  tests, seven distribution cutover tests, the 33-file controller closure, and an
+  exact-seven asset boundary; they are not current release-asset verification.
+- **Phase 10 documentation cutover:** The 2026-09-19 docs recorded then-current
+  viewer operation, CSP/network boundaries, metric limits, and Chromium/Linux scope.
+  Later source removal does not convert that evidence into G4 qualification.
 
 
 ## Historical advisor state and audit modules (Phases 06–07)
@@ -796,4 +793,4 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — E03 provider/bridge/views/package; [Browser history scanner](./browser-history-scanner.md) — Phase 05 viewer I/O; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI and historical E03 architecture; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.

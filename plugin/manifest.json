@@ -102,8 +102,8 @@
     },
     {
       "path": "backend/context-table.cjs",
-      "size": 9544,
-      "sha256": "9457ecbb709b68b6cd21ae71e6e8cf3da98641f473c231055e9ed45bd148f804",
+      "size": 10479,
+      "sha256": "175b7e7d8f26f9bdc22a9c8e021ef53e6f151fcb91afde2e2fdbf6faae5b056b",
       "mode": 420
     },
     {
@@ -114,8 +114,8 @@
     },
     {
       "path": "backend/data-api.cjs",
-      "size": 67086,
-      "sha256": "b9c89cec78449524ad073ba60291d2f9a0707849dda82dca571a625ca53fbf66",
+      "size": 80402,
+      "sha256": "11d2bd320b6aec52c6ddf96148b4a1304d168f7410ad6331f307ac0f773f1590",
       "mode": 420
     },
     {
@@ -234,14 +234,20 @@
     },
     {
       "path": "contracts/contract-manifest.json",
-      "size": 1007,
-      "sha256": "b79dfa360b46b35afd5c62e4276f6a8fb1853572d1c10757c1ccacaa53c74534",
+      "size": 1454,
+      "sha256": "1e8cec306e72cc77b1494d1e684b2d66849e83d367a4a07f77b872b5cb4cc024",
       "mode": 420
     },
     {
       "path": "contracts/evcrate-advisor-data-v1.schema.json",
       "size": 28178,
       "sha256": "da58ac2266872517e9bf1892630acf92882c6cd3d17c002ac8c660a2f9d7dcc9",
+      "mode": 420
+    },
+    {
+      "path": "contracts/evcrate-advisor-data-v2.schema.json",
+      "size": 31177,
+      "sha256": "9d4669d0184aef39db8465be5ac1b01cc63eead0a563262a264cddce8afa245f",
       "mode": 420
     },
     {
@@ -294,8 +300,8 @@
     },
     {
       "path": "ui/index.html",
-      "size": 328605,
-      "sha256": "0e46742d37545561ea924a43daab04e6a46672151ebde4fd9e1f7fec866d3ca6",
+      "size": 262707,
+      "sha256": "edf301cc4772edfa01da082191b75b3b77dbe7533c93701e7f060bab6be0aabc",
       "mode": 420
     }
   ]

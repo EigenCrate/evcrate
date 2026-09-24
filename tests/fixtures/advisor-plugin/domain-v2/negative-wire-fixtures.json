@@ -1,0 +1,164 @@
+{
+  "cases": [
+    {
+      "name": "history.summary with unknown query field",
+      "method": "history.summary",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": {
+          "project_id": null,
+          "task_run_id": null,
+          "filters": {},
+          "unknown_field": true
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary with invalid project_id format",
+      "method": "history.summary",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": {
+          "project_id": "not-a-valid-sha256",
+          "task_run_id": null,
+          "filters": {}
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary result missing inventory",
+      "method": "history.summary",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": "snap-1",
+        "metrics": {
+          "metric_definition_version": 1
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary result with duplicate project_id in inventory",
+      "method": "history.summary",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": "snap-1",
+        "metrics": {
+          "metric_definition_version": 1
+        },
+        "inventory": {
+          "entries": [
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "proj1",
+              "count": 10
+            },
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "proj2",
+              "count": 20
+            }
+          ],
+          "total_projects": 2,
+          "unfiltered_total_records": 30
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary result with mismatched total_projects in inventory",
+      "method": "history.summary",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": "snap-1",
+        "metrics": {
+          "metric_definition_version": 1
+        },
+        "inventory": {
+          "entries": [
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "proj1",
+              "count": 10
+            }
+          ],
+          "total_projects": 2,
+          "unfiltered_total_records": 10
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary result with unsanitized label containing path separator",
+      "method": "history.summary",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": "snap-1",
+        "metrics": {
+          "metric_definition_version": 1
+        },
+        "inventory": {
+          "entries": [
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "proj/bad",
+              "count": 10
+            }
+          ],
+          "total_projects": 1,
+          "unfiltered_total_records": 10
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary result with unsanitized label containing tilde",
+      "method": "history.summary",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": "snap-1",
+        "metrics": {
+          "metric_definition_version": 1
+        },
+        "inventory": {
+          "entries": [
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "~/my-project",
+              "count": 10
+            }
+          ],
+          "total_projects": 1,
+          "unfiltered_total_records": 10
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.page with invalid project_id in query",
+      "method": "history.page",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": {
+          "project_id": "not-valid",
+          "task_run_id": null,
+          "filters": {}
+        },
+        "sort": "started_at_desc",
+        "cursor": null,
+        "limit": 50
+      },
+      "expected_error": "INVALID_INPUT"
+    }
+  ]
+}
