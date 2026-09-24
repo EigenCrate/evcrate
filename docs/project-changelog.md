@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-24
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history Phase 00 is DONE (1/6 phases, 16.7%; review approved 9.4/10 on 2026-09-24); Phase 01 contract freeze is next. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 33.3% (2/6 phases complete; Phases 00–01 DONE on 2026-09-24; Phase 01 review approved 9.5/10); Phase 02 host authorization is next. The E05/D06 joint G4 qualification and standalone cutover also remain a separate gate. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-24 — fix(auth): guard production auth without breaking development
@@ -16,6 +16,16 @@ Older phase records remain in the linked archive.
 - Explicit development/test token bootstrap and test-server login remain available; browser default-profile seeding is limited to development/test, and test-server access stays scoped to the fixture actor.
 - Verification: **1,876/1,876 tests passed**.
 
+### 2026-09-24 — feat(history): freeze cross-project advisor data contract (Phase 01)
+
+**Status:** Phase 01 DONE (2026-09-24); review approved **9.5/10**; user approved.  
+**Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 01](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md)
+
+- Froze `evcrate-advisor-data` v2 while preserving strict v1 schema/behavior support, all eight method names, and on-disk execution/outcome history v1.
+- Added `project_id: string | null` to v2 summary/page queries: `null` means All Projects only in owner-root context; single-project context remains bound.
+- Defined a same-snapshot per-project inventory, capped at 500 entries and independent of active query filters, plus a versioned owner-safe display-name sidecar.
+- Added runner scope contract `ContextScopeKind` (`project` | `history-root`) and `ContextScopeDescriptor` with optional root identity/source revision.
+- Verification: **92/92 test executions passed** (86 test suite + 6 runner); review approved **9.5/10**.
 
 ### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
 

@@ -35,6 +35,7 @@ function collectPluginPackageRecords(pluginRoot) {
   const staticFiles = [
     'contracts/contract-manifest.json',
     'contracts/evcrate-advisor-data-v1.schema.json',
+    'contracts/evcrate-advisor-data-v2.schema.json',
     'ui/index.html',
     'node_modules/@dam-hopper/plugin-sdk/package.json'
   ];
