@@ -22,8 +22,8 @@ export const StatusBanner: FC<StatusBannerProps> = ({
       <div className="status-main">
         {status === 'unsupported' && (
           <div className="status-message status-error">
-            <strong>Unsupported Browser Capability:</strong> {unsupportedReason ?? 'File System Access API is not supported in this environment.'}
-            <div className="status-hint">Please open this viewer in a modern Chromium-based browser on Linux or desktop.</div>
+            <strong>Unsupported Environment:</strong> {unsupportedReason ?? 'Required plugin bridge capabilities are not available in this environment.'}
+            <div className="status-hint">Please open this plugin within the DamHopper host interface.</div>
           </div>
         )}
 
@@ -35,13 +35,13 @@ export const StatusBanner: FC<StatusBannerProps> = ({
 
         {status === 'idle' && (
           <div className="status-message status-info">
-            <strong>No history directory selected.</strong> Click "Choose History Directory" to inspect local advisor history.
+            <strong>No history source available.</strong> Waiting for host workspace connection.
           </div>
         )}
 
         {status === 'selecting' && (
           <div className="status-message status-info">
-            <strong>Waiting for directory selection...</strong>
+            <strong>Connecting to workspace source...</strong>
           </div>
         )}
 
@@ -74,9 +74,9 @@ export const StatusBanner: FC<StatusBannerProps> = ({
       </div>
 
       <div className="status-provenance-notice" aria-label="Privacy notice">
-        <span className="notice-badge">Local Diagnostic Only</span>
+        <span className="notice-badge">Plugin Isolation</span>
         <span className="notice-text">
-          Read-only local evaluation. Browser validation proves record structure only; it cannot attest Linux owner, mode, or descriptor guarantees. No credentials or arbitrary network calls leave this container.
+          Bounded owner-safe data provider. No credentials or arbitrary network calls leave this container.
         </span>
       </div>
     </aside>

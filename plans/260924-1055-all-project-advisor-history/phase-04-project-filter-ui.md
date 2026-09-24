@@ -1,10 +1,10 @@
 # Phase 04 — Account-wide project selector and honest UI identity
 
 ## Context links
-[Plan](./plan.md) · [Phase 01 contract](./phase-01-cross-project-contract.md) · [UI guide](../../docs/advisor-plugin-ui.md) · [source review](./reports/summary-review.md). Depends on Phases 01–03 paired contract/worker.
+[Plan](./plan.md) · [Phase 01 contract](./phase-01-cross-project-contract.md) · [UI guide](../../docs/advisor-plugin-ui.md) · [source review](./reports/summary-review.md) · [validation](../reports/phase04testerfinal-260924-1842-account-wide-project-selector-honest-ui-identity.md) · [final review](../reports/code-review-260924-2004-phase-04-project-filter-ui-re-review.md). Depends on Phases 01–03 paired contract/worker.
 
 ## Overview
-2026-09-24; priority P1; estimate 4h; implementation pending; review pending. The iframe remains provider-only; no HOME, file picker or generic network access.
+2026-09-24; priority P1; estimate 4h; **DONE** (2026-09-24). Review approved **9.8/10**; **188/188 tests passed** (0 failed, 0 skipped); implementation and review remediation complete. The iframe remains provider-only; no HOME, file picker or generic network access.
 
 ## Key Insights
 `viewer/src/app-state-types.ts:50-53` already reserves `project_id`; `app-state-selectors.ts:69-82` drops it from domain query; `app.tsx:110-181` fetches summary/page using query without project ID. `history-view.tsx:80-137` lacks project selector, `:145-189` has no project column and uses consultation ID as row key. `dam-hopper-port-provider.ts:49-59` hardcodes `evcrate` label. Current history detail response guard omits cautions/checks-only (`history-detail.tsx:206-251`). Host navigation labels every long ID `EVCrate Advisor` (`use-plugin-navigation.ts:91-99`).
@@ -26,10 +26,14 @@ Provider descriptor/context supplies trusted display scope metadata (versioned b
 4. Cover keyboard selector, ARIA labels, mobile table overflow, empty/partial/expired state, switch while request/detail is in flight, viewer back/forward, anonymous access and disabled/unbound installation.
 
 ## Todo list
-- [ ] Scope inventory and selector/row labels from authorized snapshot.
-- [ ] Server-filtered summary/page/Overview with fences and independent Configuration/Evaluation source labels.
-- [ ] Correct label/response edge cases; test no-subtle digest.
+- [x] Scope inventory and selector/row labels from authorized snapshot.
+- [x] Server-filtered summary/page/Overview with fences and independent Configuration/Evaluation source labels.
+- [x] Correct label/response edge cases; test no-subtle digest.
 
+## Review Findings & Next Steps
+- [x] Fix Critical Issue: Restore `<OverviewView state={state} />` in `viewer/src/app.tsx` main block.
+- [x] Fix Warning 1: Use `selectSelectedRow(state)` instead of `selectSelectedRecord(state)` in `viewer/src/views/history-view.tsx:62`.
+- [x] Fix Warning 2: Enforce single-project UI lock (disabled, no "All Projects") when `scope.kind === 'project'`.
 ## Success Criteria
 All Projects shows aggregate valid count and paginated records for every authenticated account; selecting evcrate yields matching subset and Overview, switching back restores aggregate. Configuration/Evaluations explicitly show their separately bound sources and non-filtered scope. No stale cross-project drawer/cursor or unrelated plugin UUID mislabeled EVCrate.
 

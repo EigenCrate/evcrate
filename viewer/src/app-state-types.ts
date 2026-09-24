@@ -1,23 +1,51 @@
-import type { HistorySnapshot } from './io/history-reader.js';
-import type { PolicyReaderResult } from './io/policy-reader.js';
-import type { EvaluationReaderResult } from './io/evaluation-reader.js';
 import type {
   HistoryMetricScanV1,
-  HistoryMetricFiltersV1
+  HistoryMetricFiltersV1,
+  HistoryMetricScopeV1,
+  NormalizedHistoryRecordV1,
+  HistoryMetricResultV1
 } from '../../src/protocol/advisor-metrics.js';
 import type {
   HistoryRowV1,
   EvaluationDescriptorV1,
   HistorySummaryResultV1,
+  HistorySummaryResultV2,
   HistoryPageResultV1,
   PolicyReadCurrentResultV1,
   EvaluationsListResultV1,
   EvaluationsCompareReadyResultV1,
   HistoryExecutionV1,
   HistoryOutcomeV1,
-  EvaluationDocumentV1
+  EvaluationDocumentV1,
+  ProjectInventoryV2,
+  ProjectInventoryItemV2
 } from '../../src/protocol/advisor-plugin-data-api.ts';
 import type { HashView } from './hash-view.js';
+
+export interface PolicyReaderResult {
+  readonly status: 'POLICY_READY' | 'POLICY_MIGRATION_REQUIRED' | 'POLICY_SELECTION_CANCELLED' | 'POLICY_READ_ERROR';
+  readonly policy?: unknown;
+  readonly migrationRequired?: boolean;
+}
+
+export interface EvaluationReaderResult {
+  readonly status: 'EVALUATION_READY' | 'EVALUATION_SELECTION_CANCELLED' | 'EVALUATION_READ_ERROR' | 'EVALUATION_READ_FAILED';
+  readonly document?: EvaluationDocumentV1;
+  readonly fileName?: string;
+  readonly bytes?: number;
+  readonly issueCode?: string;
+  readonly issuePath?: string;
+  readonly error?: string;
+}
+
+export interface HistorySnapshot {
+  readonly generation: number;
+  readonly scope: HistoryMetricScopeV1;
+  readonly records: readonly NormalizedHistoryRecordV1[];
+  readonly metricsResult: HistoryMetricResultV1;
+  readonly scannedAt: number;
+  readonly stale: boolean;
+}
 
 export type ViewerStatus = 'idle' | 'selecting' | 'scanning' | 'fresh' | 'stale' | 'unsupported' | 'revoked';
 export type DetailStatus = 'idle' | 'loading' | 'ready' | 'changed' | 'missing' | 'error';
@@ -67,7 +95,7 @@ export interface AppState {
   readonly activationGeneration: number;
   readonly isAvailable: boolean;
   readonly snapshotId: string | null;
-  readonly historySummary: HistorySummaryResultV1 | null;
+  readonly historySummary: HistorySummaryResultV1 | HistorySummaryResultV2 | null;
   readonly historyPage: HistoryPageResultV1 | null;
   readonly historyPageCursor: string | null;
   readonly historyPageEntries: readonly HistoryRowV1[];
@@ -76,6 +104,7 @@ export interface AppState {
   readonly evaluationsList: EvaluationsListResultV1 | null;
   readonly selectedEvaluation: EvaluationDetailState;
   readonly evaluationsComparison: EvaluationsCompareReadyResultV1 | null;
+  readonly inventory: ProjectInventoryV2 | null;
 }
 
 export const INITIAL_FILTERS: UiHistoryFilters = Object.freeze({
@@ -141,5 +170,6 @@ export const INITIAL_STATE: AppState = Object.freeze({
   currentPolicy: null,
   evaluationsList: null,
   selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE,
-  evaluationsComparison: null
+  evaluationsComparison: null,
+  inventory: null
 });

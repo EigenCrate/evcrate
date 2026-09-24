@@ -7,11 +7,12 @@ import { TextBlock } from '../components/text-block.js';
 export interface HistoryDetailProps {
   readonly record?: NormalizedHistoryRecordV1 | HistoryRowV1 | null;
   readonly detail?: HistoryDetailState | null;
+  readonly projectName?: string | null;
   readonly onClose: () => void;
   readonly onRefresh?: () => void;
 }
 
-export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, onClose, onRefresh }) => {
+export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, projectName, onClose, onRefresh }) => {
   const consultationId = detail?.consultationId ?? record?.consultation_id ?? null;
   if (!consultationId && !record && !detail) return null;
 
@@ -99,7 +100,15 @@ export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, onClose,
   const outcomeState = record?.outcome_state ?? (outcomeResult ? 'valid' : 'missing');
   const attempts = exec?.attempts ?? ('attempts' in (record ?? {}) ? (record as NormalizedHistoryRecordV1).attempts : []);
   const errorObj = exec?.error ?? ('error' in (record ?? {}) ? (record as NormalizedHistoryRecordV1).error : null);
-
+  const checkpoint = (exec?.checkpoint || (record && 'checkpoint' in record ? (record as unknown as Record<string, unknown>).checkpoint : null)) as Record<string, unknown> | null;
+  const taskGoal = (checkpoint?.task as Record<string, unknown> | undefined)?.goal as string | undefined;
+  const question = checkpoint?.question as string | undefined;
+  const result = (exec?.result || (record && 'result' in record ? (record as unknown as Record<string, unknown>).result : null)) as Record<string, unknown> | null;
+  const recommendation = result?.recommendation as string | undefined;
+  const rationale = result?.rationale as string | undefined;
+  const mustFix = Array.isArray(result?.must_fix) ? (result.must_fix as string[]) : [];
+  const cautions = Array.isArray(result?.cautions) ? (result.cautions as string[]) : [];
+  const successChecks = Array.isArray(result?.success_checks) ? (result.success_checks as string[]) : [];
   return (
     <aside className="history-detail-drawer" aria-label="Consultation Details">
       <div className="drawer-header">
@@ -116,8 +125,8 @@ export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, onClose,
           <dl className="detail-dl">
             <dt>Status:</dt>
             <dd><span className={`badge badge-${status}`}>{status}</span></dd>
-            <dt>Project ID:</dt>
-            <dd><code className="id-text">{projectId}</code></dd>
+            <dt>Project Target:</dt>
+            <dd><strong>{projectName || (projectId.length > 8 ? `${projectId.slice(0, 8)}…` : projectId)}</strong> <code className="id-text" style={{ fontSize: '0.85em', marginLeft: 4 }}>({projectId.length > 16 ? `${projectId.slice(0, 16)}…` : projectId})</code></dd>
             <dt>Task Run ID:</dt>
             <dd><code className="id-text">{taskRunId}</code></dd>
             <dt>Started:</dt>
@@ -177,7 +186,70 @@ export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, onClose,
             </div>
           </section>
         )}
+        {checkpoint && (question || taskGoal) && (
+          <section className="drawer-section">
+            <h4 className="section-label">Checkpoint Request</h4>
+            {taskGoal && (
+              <div style={{ marginBottom: 8 }}>
+                <strong>Task Goal:</strong> <span>{taskGoal}</span>
+              </div>
+            )}
+            {question && (
+              <div className="checkpoint-question">
+                <strong>Question:</strong>
+                <p className="text-muted" style={{ margin: '4px 0 0 0', fontStyle: 'italic' }}>{question}</p>
+              </div>
+            )}
+          </section>
+        )}
 
+        {result && (recommendation || rationale || mustFix.length > 0 || cautions.length > 0 || successChecks.length > 0) && (
+          <section className="drawer-section">
+            <h4 className="section-label">Advisor Response</h4>
+            {recommendation && (
+              <div className="recommendation-block" style={{ marginBottom: 12 }}>
+                <strong>Recommendation:</strong>
+                <p style={{ margin: '4px 0 0 0', fontWeight: 500 }}>{recommendation}</p>
+              </div>
+            )}
+            {rationale && (
+              <div className="rationale-block" style={{ marginBottom: 12 }}>
+                <strong>Rationale:</strong>
+                <p className="text-muted" style={{ margin: '4px 0 0 0' }}>{rationale}</p>
+              </div>
+            )}
+            {mustFix.length > 0 && (
+              <div className="must-fix-block" style={{ marginBottom: 12 }}>
+                <strong className="text-danger">Must Fix ({mustFix.length}):</strong>
+                <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  {mustFix.map((item: string, idx: number) => (
+                    <li key={idx} className="text-danger">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {cautions.length > 0 && (
+              <div className="cautions-block" style={{ marginBottom: 12 }}>
+                <strong className="text-warning">Cautions ({cautions.length}):</strong>
+                <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  {cautions.map((item: string, idx: number) => (
+                    <li key={idx} className="text-warning">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {successChecks.length > 0 && (
+              <div className="checks-block">
+                <strong>Success Checks ({successChecks.length}):</strong>
+                <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  {successChecks.map((item: string, idx: number) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
         {errorObj && (
           <section className="drawer-section">
             <h4 className="section-label text-danger">Sanitized Error</h4>

@@ -35,10 +35,10 @@ Worker scans eligible owner-controlled SHA-256 project directories into one boun
 | 01 | [Freeze scope and data contract](./phase-01-cross-project-contract.md) | DONE (2026-09-24) | 6h | Versioned scope/grant/query/inventory contract, parity fixtures, rollout pairing. |
 | 02 | [Host root authorization and context](./phase-02-host-authorization-context.md) | DONE (2026-09-24) | 7h | Install-bound owner root; authenticated actor admission and runner reauthorization. |
 | 03 | [Worker root history provider](./phase-03-worker-history-provider.md) | DONE (2026-09-24; 354/354 tests; review 9.5/10) | 8h | Safe bounded scan, persisted safe project names, filtered metrics/pages/detail and cursors. |
-| 04 | [Project filter UI and metadata](./phase-04-project-filter-ui.md) | Pending | 4h | All Projects selector, per-project counts/table labels, honest scope. |
+| 04 | [Project filter UI and metadata](./phase-04-project-filter-ui.md) | DONE (2026-09-24; 188/188 tests; review 9.8/10) | 4h | All Projects selector, per-project counts/table labels, honest scope. |
 | 05 | [Integrated qualification and release](./phase-05-cross-repo-qualification.md) | Pending | 3h | Negative authorization, real 21-project scenario, paired deployment/rollback. |
 
-**Overall status:** In progress; 4/6 phases complete (66.7%). Phase 03 is DONE (2026-09-24); Phase 04 is next.
+**Overall status:** In progress; 5/6 phases complete (83.3%). Phase 04 is DONE (2026-09-24); Phase 05 paired qualification and release remains.
 
 ## Dependencies / invariants
 
@@ -62,7 +62,8 @@ Contract parity and rejection fixtures in both repositories; targeted worker, Ru
 
 ### Action Items
 - [x] Align production auth, owner-root admission, worker name metadata, and provider filtering with confirmed decisions (Phases 00–03).
-- [ ] Complete Phase 04 UI source labels and project filtering, then qualify the paired rollout in Phase 05.
+- [x] Complete Phase 04 UI source labels and project filtering.
+- [ ] Complete Phase 05 paired integrated qualification and release gate.
 
 ## Unresolved questions
 

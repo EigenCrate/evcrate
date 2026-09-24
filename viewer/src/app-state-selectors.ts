@@ -1,7 +1,6 @@
 import type { AppState, UiHistoryFilters } from './app-state-types.ts';
 import type { NormalizedHistoryRecordV1, HistoryMetricFiltersV1 } from '../../src/protocol/advisor-metrics.js';
-import type { HistoryRowV1 } from '../../src/protocol/advisor-plugin-data-api.ts';
-
+import type { HistoryRowV1, HistorySummaryQueryV2 } from '../../src/protocol/advisor-plugin-data-api.ts';
 export function selectFilteredRecords(
   state: AppState
 ): readonly (NormalizedHistoryRecordV1 | HistoryRowV1)[] {
@@ -79,6 +78,21 @@ export function extractDomainFilters(filters: UiHistoryFilters): HistoryMetricFi
     started_at_from: filters.started_at_from,
     started_at_to: filters.started_at_to
   };
+};
+
+export function extractDomainQuery(filters: UiHistoryFilters): HistorySummaryQueryV2 {
+  return {
+    project_id: filters.project_id,
+    task_run_id: filters.task_run_id,
+    filters: extractDomainFilters(filters)
+  };
+}
+
+export function formatProjectName(projectId: string, label?: string | null): string {
+  if (label && label.trim().length > 0) {
+    return label.trim();
+  }
+  return projectId.length > 8 ? `${projectId.slice(0, 8)}…` : projectId;
 }
 
 export function formatRatioPercent(value: number | null | undefined): string {

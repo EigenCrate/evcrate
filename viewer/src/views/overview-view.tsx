@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import type { AppState } from '../app-state.js';
 import { MetricRatio } from '../components/metric-ratio.js';
+import { formatProjectName } from '../app-state.js';
 import type { DistributionMetric, HistoryMetricResultV1 } from '../../../src/protocol/advisor-metrics.js';
 
 export interface OverviewViewProps {
@@ -45,7 +46,13 @@ export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
           {status === 'stale' && <span className="badge badge-warning" style={{ marginLeft: 8 }}>Stale Data</span>}
         </h2>
         <div className="overview-meta text-muted">
-          <span>Scope: <strong>{scope.kind}</strong></span>
+          <span>Scope: <strong>{scope.kind === 'history-root' ? (scope.selected_project_id ? 'Filtered Project' : 'All Projects') : scope.kind}</strong></span>
+          {scope.selected_project_id && (
+            <>
+              <span className="meta-sep">&bull;</span>
+              <span>Project: <strong>{formatProjectName(scope.selected_project_id, state.inventory?.entries.find((e) => e.project_id === scope.selected_project_id)?.label)}</strong></span>
+            </>
+          )}
           <span className="meta-sep">&bull;</span>
           <span>Projects: <strong>{counts.projects}</strong></span>
           <span className="meta-sep">&bull;</span>
@@ -54,7 +61,6 @@ export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
           <span>Consultations: <strong>{counts.consultations}</strong></span>
         </div>
       </div>
-
       {status === 'stale' && staleReason && (
         <div className="alert alert-warning" role="alert" style={{ marginBottom: 16 }}>
           <strong>Stale notice:</strong> {staleReason}

@@ -8,8 +8,11 @@ import assert from 'node:assert/strict';
 import {
   appReducer,
   INITIAL_STATE,
+  INITIAL_DETAIL_STATE,
   selectFilteredRecords,
-  selectSelectedRow
+  selectSelectedRow,
+  extractDomainQuery,
+  formatProjectName
 } from '../../viewer/src/app-state.ts';
 
 test('app-state: PROVIDER_READY initializes provider metadata', () => {
@@ -146,6 +149,43 @@ test('app-state: handles HISTORY_DETAIL states (loading, ready, changed, missing
   assert.equal(missing.historyDetail.status, 'missing');
 });
 
+test('app-state: ignores late History detail results after selection or context changes', () => {
+  const selectedA = appReducer(INITIAL_STATE, { type: 'SELECT_CONSULTATION', consultationId: 'c-1', recordRef: 'ref-1' });
+  const loadingA = appReducer(selectedA, { type: 'HISTORY_DETAIL_START', recordRef: 'ref-1', consultationId: 'c-1' });
+  const selectedB = appReducer(loadingA, { type: 'SELECT_CONSULTATION', consultationId: 'c-2', recordRef: 'ref-2' });
+  const loadingB = appReducer(selectedB, { type: 'HISTORY_DETAIL_START', recordRef: 'ref-2', consultationId: 'c-2' });
+  const lateMissing = appReducer(loadingB, {
+    type: 'HISTORY_DETAIL_COMMIT',
+    consultationId: 'c-1',
+    result: { status: 'missing', snapshot_id: 'snap-1', record_ref: 'ref-1', observed_revision: null }
+  });
+  assert.equal(lateMissing, loadingB);
+
+  const lateError = appReducer(loadingB, {
+    type: 'HISTORY_DETAIL_ERROR',
+    recordRef: 'ref-1',
+    consultationId: 'c-1',
+    error: 'late failure'
+  });
+  assert.equal(lateError, loadingB);
+  assert.equal(lateError.historyDetail.status, 'loading');
+  assert.equal(lateError.historyDetail.consultationId, 'c-2');
+
+  const changedContext = appReducer(loadingB, {
+    type: 'CONTEXT_CHANGED',
+    label: 'Other Workspace',
+    capabilities: ['history.detail'],
+    frameSession: 'session-2',
+    activationGeneration: 2
+  });
+  const lateAfterContextChange = appReducer(changedContext, {
+    type: 'HISTORY_DETAIL_COMMIT',
+    consultationId: 'c-2',
+    result: { status: 'missing', snapshot_id: 'snap-1', record_ref: 'ref-2', observed_revision: null }
+  });
+  assert.equal(lateAfterContextChange, changedContext);
+});
+
 test('app-state selectors: selectSelectedRow finds remote page entry', () => {
   const state = {
     ...INITIAL_STATE,
@@ -158,4 +198,157 @@ test('app-state selectors: selectSelectedRow finds remote page entry', () => {
   const found = selectSelectedRow(state);
   assert.ok(found);
   assert.equal(found.consultation_id, 'c-remote-2');
+});
+
+test('app-state: inventory threaded from HISTORY_REFRESH_COMMIT and HISTORY_SUMMARY_COMMIT', () => {
+  const inventoryFixture = {
+    total_projects: 2,
+    unfiltered_total_records: 5,
+    entries: [
+      { project_id: 'a'.repeat(64), label: 'Project Alpha', count: 3 },
+      { project_id: 'b'.repeat(64), label: null, count: 2 }
+    ]
+  };
+
+  const refreshed = appReducer(INITIAL_STATE, {
+    type: 'HISTORY_REFRESH_COMMIT',
+    generation: 0,
+    result: {
+      state: 'fresh',
+      snapshot_id: 'snap-1',
+      observed_at: Date.now(),
+      scan: { status: 'complete', accepted_records: 5, invalid_records: 0 },
+      stale_reason: null,
+      inventory: inventoryFixture
+    }
+  });
+  assert.deepEqual(refreshed.inventory, inventoryFixture);
+
+  const updatedInventory = {
+    total_projects: 2,
+    unfiltered_total_records: 5,
+    entries: [
+      { project_id: 'a'.repeat(64), label: 'Project Alpha Updated', count: 3 },
+      { project_id: 'b'.repeat(64), label: null, count: 2 }
+    ]
+  };
+
+  const summarized = appReducer(refreshed, {
+    type: 'HISTORY_SUMMARY_COMMIT',
+    generation: 0,
+    summary: {
+      state: 'fresh',
+      snapshot_id: 'snap-1',
+      metrics: {
+        metric_definition_version: 1,
+        scan: { status: 'complete', accepted_records: 5, invalid_records: 0 },
+        counts: { projects: 2, tasks: 2, consultations: 5, terminal_statuses: {}, outcome_results: {} },
+        metrics: { delivery: {}, outcome_coverage: {}, known_outcome_resolution: {}, resolution: {}, backup_use: {}, retry_use: {}, latency: {} },
+        missingness: {},
+        completeness: {},
+        limitations: [],
+        scope: { kind: 'history-root', project_ids: ['a'.repeat(64), 'b'.repeat(64)], selected_project_id: null },
+        filters: {}
+      },
+      inventory: updatedInventory
+    }
+  });
+  assert.deepEqual(summarized.inventory, updatedInventory);
+});
+
+test('app-state: SET_FILTERS project_id change resets selected consultation, detail, and cached rows', () => {
+  const activeState = {
+    ...INITIAL_STATE,
+    filters: { ...INITIAL_STATE.filters, project_id: 'a'.repeat(64) },
+    selectedConsultationId: 'c-alpha-1',
+    historyDetail: {
+      status: 'ready',
+      recordRef: 'ref-1',
+      consultationId: 'c-alpha-1',
+      detailRevision: '1',
+      execution: { consultation_id: 'c-alpha-1', project_id: 'a'.repeat(64) },
+      outcome: null,
+      observedRevision: null,
+      error: null
+    },
+    historyPageCursor: 'cursor-1',
+    historyPageEntries: [{ consultation_id: 'c-alpha-1', project_id: 'a'.repeat(64) }],
+    historyPage: { entries: [{ consultation_id: 'c-alpha-1', project_id: 'a'.repeat(64) }], next_cursor: 'cursor-next' }
+  };
+
+  // Switching project to Project B clears detail, selection, cursor, and cached rows
+  const switchedToB = appReducer(activeState, {
+    type: 'SET_FILTERS',
+    filters: { project_id: 'b'.repeat(64) }
+  });
+  assert.equal(switchedToB.filters.project_id, 'b'.repeat(64));
+  assert.equal(switchedToB.selectedConsultationId, null);
+  assert.deepEqual(switchedToB.historyDetail, INITIAL_DETAIL_STATE);
+  assert.equal(switchedToB.historyPageCursor, null);
+  assert.equal(switchedToB.historyPage, null);
+  assert.equal(switchedToB.historyPageEntries.length, 0);
+
+  // Switching back to All Projects (null) also resets selection and cached rows
+  const activeB = {
+    ...switchedToB,
+    selectedConsultationId: 'c-beta-1',
+    historyDetail: { status: 'ready', consultationId: 'c-beta-1', recordRef: 'ref-b' },
+    historyPageEntries: [{ consultation_id: 'c-beta-1', project_id: 'b'.repeat(64) }]
+  };
+  const switchedToAll = appReducer(activeB, {
+    type: 'SET_FILTERS',
+    filters: { project_id: null }
+  });
+  assert.equal(switchedToAll.filters.project_id, null);
+  assert.equal(switchedToAll.selectedConsultationId, null);
+  assert.deepEqual(switchedToAll.historyDetail, INITIAL_DETAIL_STATE);
+  assert.equal(switchedToAll.historyPageEntries.length, 0);
+
+  // Non-project filter change (e.g. status) does NOT clear selection or detail
+  const retainedDetail = appReducer(activeState, {
+    type: 'SET_FILTERS',
+    filters: { statuses: ['ADVICE_READY'] }
+  });
+  assert.equal(retainedDetail.selectedConsultationId, 'c-alpha-1');
+  assert.equal(retainedDetail.historyDetail.status, 'ready');
+  assert.equal(retainedDetail.historyPageCursor, null); // cursor still resets
+});
+
+test('app-state selectors: extractDomainQuery preserves project_id and task_run_id', () => {
+  const filters = {
+    ...INITIAL_STATE.filters,
+    project_id: 'a'.repeat(64),
+    task_run_id: '00000000-0000-4000-8000-000000000001',
+    statuses: ['ADVICE_READY']
+  };
+  const query = extractDomainQuery(filters);
+  assert.equal(query.project_id, 'a'.repeat(64));
+  assert.equal(query.task_run_id, '00000000-0000-4000-8000-000000000001');
+  assert.deepEqual(query.filters.statuses, ['ADVICE_READY']);
+});
+
+test('app-state selectors: formatProjectName handles labels and truncated ID fallbacks', () => {
+  const longId = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+  assert.equal(formatProjectName(longId, 'My Cool Project'), 'My Cool Project');
+  assert.equal(formatProjectName(longId, null), '12345678…');
+  assert.equal(formatProjectName(longId, ''), '12345678…');
+  assert.equal(formatProjectName(longId, '   '), '12345678…');
+  assert.equal(formatProjectName('short', null), 'short');
+});
+
+test('app-state selectors: selectFilteredRecords respects project_id filter in snapshot mode', () => {
+  const state = {
+    ...INITIAL_STATE,
+    filters: { ...INITIAL_STATE.filters, project_id: 'a'.repeat(64) },
+    snapshot: {
+      generation: 1,
+      records: [
+        { consultation_id: 'c-1', project_id: 'a'.repeat(64), status: 'ADVICE_READY', outcome_state: 'valid' },
+        { consultation_id: 'c-2', project_id: 'b'.repeat(64), status: 'ADVICE_READY', outcome_state: 'valid' }
+      ]
+    }
+  };
+  const filtered = selectFilteredRecords(state);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].consultation_id, 'c-1');
 });

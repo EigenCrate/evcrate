@@ -1,6 +1,6 @@
 /**
  * @file data-controls.tsx
- * Provider-neutral data controls for refresh, cancellation, and source selection.
+ * Provider-neutral data controls for refresh and cancellation in Advisor Plugin.
  */
 
 import type { FC } from 'react';
@@ -14,21 +14,14 @@ export interface DataControlsProps {
   readonly isAvailable: boolean;
   readonly onRefresh: () => void;
   readonly onCancel: () => void;
-  readonly onSelectHistory?: () => void;
-  readonly onSelectPolicy?: () => void;
-  readonly onSelectEvaluations?: () => void;
 }
 
 export const DataControls: FC<DataControlsProps> = ({
   status,
-  providerKind,
   sourceLabel,
   isAvailable,
   onRefresh,
-  onCancel,
-  onSelectHistory,
-  onSelectPolicy,
-  onSelectEvaluations
+  onCancel
 }) => {
   const isScanning = status === 'scanning';
   const isSelecting = status === 'selecting';
@@ -37,70 +30,34 @@ export const DataControls: FC<DataControlsProps> = ({
   return (
     <section className="source-controls data-controls" aria-label="Data Controls">
       <div className="source-actions">
-        {providerKind === 'standalone' && onSelectHistory && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onSelectHistory}
-            disabled={isBusy}
-            aria-label="Choose history directory"
-          >
-            {sourceLabel ? 'Change History Directory' : 'Choose History Directory'}
-          </button>
-        )}
-
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-primary"
           onClick={onRefresh}
-          disabled={!isAvailable || isBusy}
+          disabled={isBusy || !isAvailable}
           aria-label="Refresh history"
         >
-          Refresh History
+          {isScanning ? 'Refreshing...' : 'Refresh History'}
         </button>
 
         {isScanning && (
           <button
             type="button"
-            className="btn btn-danger"
+            className="btn btn-secondary btn-cancel"
             onClick={onCancel}
             aria-label="Cancel scan"
           >
-            Cancel Scan
-          </button>
-        )}
-
-        {providerKind === 'standalone' && onSelectPolicy && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onSelectPolicy}
-            disabled={isBusy}
-            aria-label="Choose policy file"
-          >
-            Choose Policy File
-          </button>
-        )}
-
-        {providerKind === 'standalone' && onSelectEvaluations && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onSelectEvaluations}
-            disabled={isBusy}
-            aria-label="Choose evaluation files"
-          >
-            Choose Evaluation Files
+            Cancel
           </button>
         )}
       </div>
 
       {sourceLabel && (
         <div className="source-label" aria-live="polite">
-          <span className="source-label-title">
-            {providerKind === 'dam-hopper' ? 'Target:' : 'History source:'}
-          </span>{' '}
-          <code className="source-label-name">{sourceLabel}</code>
+          <span className="source-label-prefix text-muted">Source:</span>
+          <span className="source-label-name" title={sourceLabel}>
+            {sourceLabel}
+          </span>
         </div>
       )}
     </section>
