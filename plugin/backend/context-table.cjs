@@ -152,9 +152,36 @@ class WorkerContextTable {
 
     let evaluationDescriptors = params.evaluation_descriptors || [];
     if (evaluationDescriptors.length === 0) {
-      const defaultEvalPath = path.join(verifiedTarget.normalized, 'tests', 'fixtures', 'advisor-evaluations', 'corpus-nine-cases.json');
-      if (fs.existsSync(defaultEvalPath)) {
-        evaluationDescriptors = [{ evaluation_ref: 'corpus-nine-cases', path: defaultEvalPath, expected_revision: null }];
+      const candidateDirs = [
+        path.join(process.env.HOME || '', '.evcrate', 'advisor-evaluations'),
+        path.join(process.env.HOME || '', '.evcrate', 'evaluations'),
+        path.join(configuredProjectTarget || '', 'tests', 'fixtures', 'advisor-evaluations'),
+        path.join(verifiedTarget.normalized || '', 'tests', 'fixtures', 'advisor-evaluations'),
+        path.join(process.cwd(), 'tests', 'fixtures', 'advisor-evaluations'),
+      ];
+      const seen = new Set();
+      for (const dir of candidateDirs) {
+        if (dir && fs.existsSync(dir)) {
+          try {
+            const stat = fs.statSync(dir);
+            if (stat.isDirectory()) {
+              const files = fs.readdirSync(dir).sort();
+              for (const file of files) {
+                if (file.endsWith('.json') && !file.includes('mismatch') && !file.includes('invalid')) {
+                  const ref = path.basename(file, '.json');
+                  if (!seen.has(ref)) {
+                    seen.add(ref);
+                    evaluationDescriptors.push({
+                      evaluation_ref: ref,
+                      path: path.join(dir, file),
+                      expected_revision: null
+                    });
+                  }
+                }
+              }
+            }
+          } catch {}
+        }
       }
     }
 

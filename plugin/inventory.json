@@ -61,8 +61,8 @@
   },
   {
     "path": "backend/context-table.cjs",
-    "size": 12212,
-    "sha256": "7f8ed0f34f6de00beec4d0aac77adcf3511a41c6d3e0c79c78e07d9d3d761ff2",
+    "size": 13220,
+    "sha256": "85f93f08a9c267326641518258f8a92abd5b1e90fc41e9971cc69f4b7c1d665c",
     "mode": 420
   },
   {
@@ -259,8 +259,8 @@
   },
   {
     "path": "ui/index.html",
-    "size": 272999,
-    "sha256": "b92b8d6975212ab345f0d7ee7f945e6f04a9d0524e3bf14c920d47d0a7496e75",
+    "size": 273276,
+    "sha256": "493f8b710370c9844d608125f7f6d5da54d21dc08180483cdf8426b73dd0ef21",
     "mode": 420
   }
 ]
