@@ -1,10 +1,10 @@
-import type { HistorySnapshot } from './io/history-reader.js';
-import type { PolicyReaderResult } from './io/policy-reader.js';
-import type { EvaluationReaderResult } from './io/evaluation-reader.js';
+import type { HistorySnapshot, PolicyReaderResult, EvaluationReaderResult } from './app-state-types.js';
 import type { HistoryMetricScanV1 } from '../../src/protocol/advisor-metrics.js';
 import type {
   HistoryRefreshResultV1,
+  HistoryRefreshResultV2,
   HistorySummaryResultV1,
+  HistorySummaryResultV2,
   HistoryPageResultV1,
   HistoryDetailResultV1,
   PolicyReadCurrentResultV1,
@@ -34,8 +34,8 @@ export type AppAction =
   | { type: 'CONTEXT_REVOKED'; reason: string }
   | { type: 'AVAILABILITY_CHANGED'; available: boolean; capabilities: readonly string[] }
   | { type: 'HISTORY_REFRESH_START'; generation: number; frameSession?: string | null }
-  | { type: 'HISTORY_REFRESH_COMMIT'; generation: number; frameSession?: string | null; result: HistoryRefreshResultV1; snapshot?: HistorySnapshot }
-  | { type: 'HISTORY_SUMMARY_COMMIT'; generation: number; frameSession?: string | null; summary: HistorySummaryResultV1 }
+  | { type: 'HISTORY_REFRESH_COMMIT'; generation: number; frameSession?: string | null; result: HistoryRefreshResultV1 | HistoryRefreshResultV2; snapshot?: HistorySnapshot }
+  | { type: 'HISTORY_SUMMARY_COMMIT'; generation: number; frameSession?: string | null; summary: HistorySummaryResultV1 | HistorySummaryResultV2 }
   | { type: 'HISTORY_PAGE_COMMIT'; generation: number; frameSession?: string | null; page: HistoryPageResultV1 }
   | { type: 'HISTORY_DETAIL_START'; recordRef: string; consultationId: string | null }
   | { type: 'HISTORY_DETAIL_COMMIT'; result: HistoryDetailResultV1; consultationId: string | null }

@@ -14,16 +14,19 @@ import type {
   ProviderContextDescriptor,
   ProviderEventListener,
   HistoryRefreshResultV1,
+  HistoryRefreshResultV2,
   HistorySummaryQueryV1,
+  HistorySummaryQueryV2,
   HistorySummaryResultV1,
+  HistorySummaryResultV2,
   HistoryPageResultV1,
+  HistoryPageResultV2,
   HistoryDetailResultV1,
   PolicyReadCurrentResultV1,
   EvaluationsListResultV1,
   EvaluationsReadResultV1,
   EvaluationsCompareResultV1
 } from './advisor-data-provider.ts';
-
 interface PendingRequest {
   readonly resolve: (result: unknown) => void;
   readonly reject: (error: Error) => void;
@@ -39,17 +42,20 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
   private _activationGeneration = 0;
   private _capabilities: readonly string[] = [];
   private _isAvailable = false;
+  private _pluginId: string | null = null;
+  private _customLabel: string | null = null;
   private _listeners = new Set<ProviderEventListener>();
   private _pending = new Map<string, PendingRequest>();
 
-  constructor(autoBootstrap = true) {
+  constructor(autoBootstrap = true, customLabel?: string) {
+    if (customLabel) this._customLabel = customLabel;
     if (autoBootstrap && typeof window !== 'undefined') this._initWindowBootstrap();
   }
 
   get descriptor(): ProviderContextDescriptor {
     return {
       kind: 'dam-hopper',
-      label: 'DamHopper Workspace',
+      label: this._customLabel ?? this._pluginId ?? 'DamHopper Advisor',
       capabilities: this._capabilities,
       frameSession: this._frameSession,
       activationGeneration: this._activationGeneration,
@@ -121,6 +127,7 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
     this._frameSession = msg.frameSession;
     this._activationGeneration = msg.activationGeneration;
     this._capabilities = Object.freeze([...msg.capabilities]);
+    this._pluginId = msg.pluginId || null;
     this._state = 'awaiting-ack';
 
     port.onmessage = (e: MessageEvent) => this._handlePortMessage(e.data);
@@ -184,9 +191,9 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
     return promise;
   }
 
-  refreshHistory(requestId: string): Promise<HistoryRefreshResultV1> { return this._invoke('history.refresh', requestId, {}); }
-  getHistorySummary(requestId: string, snapshotId: string, query: HistorySummaryQueryV1): Promise<HistorySummaryResultV1> { return this._invoke('history.summary', requestId, { snapshot_id: snapshotId, query }); }
-  getHistoryPage(requestId: string, snapshotId: string, query: HistorySummaryQueryV1, sort: 'started_at_desc', cursor: string | null, limit: number): Promise<HistoryPageResultV1> { return this._invoke('history.page', requestId, { snapshot_id: snapshotId, query, sort, cursor, limit }); }
+  refreshHistory(requestId: string): Promise<HistoryRefreshResultV1 | HistoryRefreshResultV2> { return this._invoke('history.refresh', requestId, {}); }
+  getHistorySummary(requestId: string, snapshotId: string, query: HistorySummaryQueryV1 | HistorySummaryQueryV2): Promise<HistorySummaryResultV1 | HistorySummaryResultV2> { return this._invoke('history.summary', requestId, { snapshot_id: snapshotId, query }); }
+  getHistoryPage(requestId: string, snapshotId: string, query: HistorySummaryQueryV1 | HistorySummaryQueryV2, sort: 'started_at_desc', cursor: string | null, limit: number): Promise<HistoryPageResultV1 | HistoryPageResultV2> { return this._invoke('history.page', requestId, { snapshot_id: snapshotId, query, sort, cursor, limit }); }
   getHistoryDetail(requestId: string, snapshotId: string, recordRef: string): Promise<HistoryDetailResultV1> { return this._invoke('history.detail', requestId, { snapshot_id: snapshotId, record_ref: recordRef }); }
   readCurrentPolicy(requestId: string): Promise<PolicyReadCurrentResultV1> { return this._invoke('policy.readCurrent', requestId, {}); }
   listEvaluations(requestId: string, cursor: string | null, limit: number): Promise<EvaluationsListResultV1> { return this._invoke('evaluations.list', requestId, { cursor, limit }); }

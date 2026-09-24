@@ -2,19 +2,17 @@
 
 **Generated:** 2026-09-24
 **Source:** Repomix v1.18.0 compaction; `.repomixignore` excludes tests, plans, and docs.
-Phase 03 EVCrate worker source was inspected directly; the Phase 02 host implementation is in DamHopper, outside this compaction. Contract details: [all-project advisor history](./all-project-advisor-history.md).
-Current UI source map: [E03 guide](./advisor-plugin-ui.md); worker detail: [E02 guide](./advisor-plugin-worker.md).
+Phase 04 EVCrate viewer behavior is summarized below; companion DamHopper host navigation/page source is outside this compaction. Cross-repo contract details: [all-project advisor history](./all-project-advisor-history.md).
+Current UI source map: [Phase 04 guide](./advisor-plugin-ui.md); worker detail: [E02 guide](./advisor-plugin-worker.md).
 
 The repository is a private Node/TypeScript package. `package.json` declares
 `evcrate` version `2.1.0`, Node `>=22.19.0`, the `evcrate` bin at
 `dist/cli/evcrate.js`, and the `evcrate-advisor` bin at
 `.evcrate/source/.evcrate/bin/evcrate-advisor`.
 
-**Plugin UI current state:** Standalone picker/reader source has been removed from
-the repository. The shared React app/views and DamHopper MessagePort provider remain.
-The E05 source cutover does not establish joint G4 qualification/sign-off, which is
-unverified; standalone retirement is not release-authorized. This summary does not
-assert current release assets were verified.
+**Plugin UI current state:** The shared React app and DamHopper provider now carry same-snapshot project inventory into account-wide, server-filtered History/Overview.
+Project names use validated labels or abbreviated canonical IDs; current owner policy and bound evaluations are explicitly outside the History project filter.
+The E05 source cutover removed standalone picker/reader code, but joint G4 qualification/sign-off remains unverified and standalone retirement is not release-authorized; current release assets are not verified here.
 
 ## Source-of-truth map
 
@@ -422,7 +420,7 @@ The Phase 06 standalone browser reader used an explicit multi-file picker with a
 result and **10/10 review** were recorded in 2026-09-18 and are historical.
 The milestone handed off to Phase 07.
 
-## Advisor Plugin data API and cross-project history (E00/Phases 01–03)
+## Advisor Plugin data API and cross-project history (E00/Phases 01–04)
 
 E00 completed with `evcrate-advisor-data` v1; Phase 01 froze v2 while retaining v1 schemas/semantics and on-disk history v1. See the [E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md), [E00 validation](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md), [E00 review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md), and [cross-project contract](./all-project-advisor-history.md).
 - `advisor-plugin-data-api.ts` registers exactly `history.refresh`, `history.summary`, `history.page`, `history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`, and `evaluations.compare`; validators reject unknown/authority fields, unsafe values, invalid IDs, and inconsistent results.
@@ -435,7 +433,9 @@ E00 completed with `evcrate-advisor-data` v1; Phase 01 froze v2 while retaining 
 - `cursor-manager.cjs` HMAC-binds snapshot, query, and offset; stable ordering is `started_at` descending, then project/task/consultation IDs ascending. `snapshot-store.cjs` accounts for normalized records and inventory under cache limits.
 - `scripts/build-advisor-plugin-candidate.mjs` reuses `collectPluginPackageRecords` from `scripts/plugin/package-inventory.cjs`; the candidate and package manifest now share one closure inventory.
 - Phase 03 review approved **9.5/10** and records **354/354 test executions passed** (0 failures, 0 skips); package, candidate-manifest, and distribution checks passed. See the [Phase 03 plan](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md) and [review](../plans/reports/code-review-260924-1628-phase-03-owner-safe-history-worker.md).
-- `plugin/contracts/read-closure-feasibility.json` permits only `node:fs`, `node:path`, and `node:crypto`; E01 confirmed no shared controller-module inventory delta. Review follow-ups remain non-blocking: normalize filter failures, deepen compare-group validation, and enforce raw-I/O byte limits before deserialization.
+- Phase 04 threads same-snapshot inventory through refresh/summary into app state; `project_id` drives server-filtered summary/page and Overview, while project switches reset rows/detail/cursor and fence late responses. Project-only scope stays locked.
+- History labels use validated inventory names with abbreviated canonical-ID fallback. Configuration labels current owner policy; Evaluations label their bound corpus; both disclaim History-project filtering. The provider label uses custom label/bootstrap plugin ID/generic fallback, never account or project identity. DamHopper `use-plugin-navigation.ts` and `PluginHostPage.tsx` brand only EVCrate metadata (`evcrate.advisor` or publisher `evcrate`).
+- `plugin/contracts/read-closure-feasibility.json` permits only `node:fs`, `node:path`, and `node:crypto`; E01 confirmed no shared controller-module inventory delta. E00 review follow-ups remain non-blocking: normalize filter failures to `PluginDataApiError`, deepen compare-group validation, and clarify raw-I/O byte limits before deserialization; see the [E00 review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md).
 
 ## Owner-safe plugin read provider (Phase E01)
 
@@ -484,7 +484,7 @@ owner-runner and separate-LAN evidence are not present here, and standalone
 retirement is not release-authorized.
 
 See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md),
-[E03 UI guide](./advisor-plugin-ui.md), and
+[Phase 04 UI guide](./advisor-plugin-ui.md), and
 [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
 
 ### Current shared React application
@@ -502,9 +502,9 @@ See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-rea
 | Path | Responsibility |
 |---|---|
 | `viewer/src/views/overview-view.tsx` | Counts, rates, missingness, latency, and methodological limitations. |
-| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Filtered history table, server-backed pages, and lazy inert detail drawer. |
-| `viewer/src/views/configuration-view.tsx` | Current policy separated from historical route/prompt/build groups. |
-| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Comparable groups, result states, provenance, and masked/revealed candidates. |
+| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Inventory-backed project selector/counts, canonical project provenance, server-filtered pages, and lazy detail. |
+| `viewer/src/views/configuration-view.tsx` | Current account-wide policy is not filtered by History project; route groups follow the selected history summary. |
+| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Bound evaluation corpus is not filtered by History project; comparable groups, provenance, and masked/revealed candidates. |
 | `viewer/src/providers/advisor-data-provider.ts`, `bridge-contract.ts`, `dam-hopper-port-provider.ts` | Provider contract, validated bridge envelopes, and bounded MessagePort data path. |
 | `viewer/src/components/` | Refresh/cancel controls, status, tabs, diagnostics, pagination, and inert text rendering. |
 | `plugin/ui/plugin-main.tsx`, `plugin-document.html`, `vite.config.ts` | Mounts the shared App with `DamHopperPortProvider` and builds the embedded document. |
@@ -795,4 +795,4 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI and historical E03 architecture; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI, historical E03 architecture, and current all-project Phase 04 behavior; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.

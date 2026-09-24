@@ -58,10 +58,10 @@ export const EvaluationsView: FC<EvaluationsViewProps> = ({
           <p>
             {evaluationsList?.status === 'not_configured'
               ? 'No evaluation source is configured for this target.'
-              : 'Click "Choose Evaluation Files" or select an evaluation source to inspect candidate comparisons.'}
+              : 'The active workspace has not provided an evaluation source.'}
           </p>
           <div className="empty-state-notice text-muted">
-            Evaluation documents are grouped strictly by matching rubric and input digests.
+            Bound evaluation source — not filtered by History project. Evaluation documents are grouped strictly by matching rubric and input digests.
           </div>
         </div>
       </section>
@@ -73,8 +73,11 @@ export const EvaluationsView: FC<EvaluationsViewProps> = ({
       <div className="evaluations-header">
         <div>
           <h2 className="view-title">Counsel Evaluations ({validDocs.length > 0 ? `${validDocs.length} documents` : `${groups.length} comparable groups`})</h2>
+          <div className="evaluations-scope-badge" style={{ marginBottom: 6 }}>
+            <span className="badge badge-info">Bound evaluation source — not filtered by History project</span>
+          </div>
           <p className="text-muted">
-            Observations are grouped by exact comparable keys (matching rubric and input digests).
+            Bound evaluation source — not filtered by History project. Observations are grouped by exact comparable keys (matching rubric and input digests).
           </p>
         </div>
         <div className="evaluations-controls">
