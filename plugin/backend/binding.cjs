@@ -112,6 +112,10 @@ function verifyWorkerContext(context) {
     binding_revision: bindingRevision,
     allowed_operations: allowedOperations
   } = context;
+  const scopeKind = context.scope_kind || context.scopeKind || 'project';
+  if (scopeKind !== 'project' && scopeKind !== 'history-root') {
+    throw invalidInput("scope_kind must be 'project' or 'history-root'");
+  }
 
   if (typeof contextId !== 'string' || contextId.length === 0 || contextId.length > 128) {
     throw invalidInput('Invalid context_id: must be 1..128 characters');
@@ -137,6 +141,7 @@ function verifyWorkerContext(context) {
 
   return Object.freeze({
     contextId,
+    scopeKind,
     target: verifiedTarget.normalized,
     historyIdentity: verifiedTarget.historyIdentity,
     bindingRevision: bindingRevision ?? 1,

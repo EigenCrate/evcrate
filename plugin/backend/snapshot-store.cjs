@@ -33,6 +33,8 @@ class SnapshotStore {
       const count = data.raw_records instanceof Map ? data.raw_records.size : Object.keys(data.raw_records).length;
       bytes += count * 384;
     }
+    if (Array.isArray(data.normalized_records)) bytes += data.normalized_records.length * 512;
+    if (data.inventory?.entries && Array.isArray(data.inventory.entries)) bytes += data.inventory.entries.length * 128;
     return bytes;
   }
 
@@ -86,11 +88,13 @@ class SnapshotStore {
       snapshotId: data.snapshot_id,
       contextId,
       historyIdentity: data.history_identity,
+      scopeKind: data.scope_kind || data.scopeKind || 'project',
       state: data.state,
       staleReason: data.stale_reason,
       observedAt: data.observed_at ?? now,
       lastAccessedAt: now,
       scan: data.scan,
+      inventory: data.inventory || null,
       rows: Object.freeze([...(data.rows || [])]),
       rawRecords: data.raw_records instanceof Map ? data.raw_records : new Map(Object.entries(data.raw_records || {})),
       normalizedRecords: Object.freeze([...(data.normalized_records || [])]),

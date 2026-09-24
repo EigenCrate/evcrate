@@ -26,6 +26,14 @@ const {
   validateHistoryPageResult,
   validateHistoryDetailParams,
   validateHistoryDetailResult,
+  validateHistoryRefreshParamsV2,
+  validateHistoryRefreshResultV2,
+  validateHistorySummaryParamsV2,
+  validateHistorySummaryResultV2,
+  validateHistoryPageParamsV2,
+  validateHistoryPageResultV2,
+  validateHistoryDetailParamsV2,
+  validateHistoryDetailResultV2,
   validatePolicyReadCurrentParams,
   validatePolicyReadCurrentResult,
   validateEvaluationsListParams,
@@ -73,23 +81,49 @@ class EVCrateAdvisorProvider {
 
     const { signal, deadline } = options;
 
+    const isRootScope = this.context.scopeKind === 'history-root';
+
     switch (method) {
       case 'history.refresh': {
+        if (isRootScope) {
+          const validatedParams = validateHistoryRefreshParamsV2(params);
+          const rawResult = await this.historyProvider.refresh(this.context, { signal, deadline });
+          return validateHistoryRefreshResultV2(rawResult);
+        }
         const validatedParams = validateHistoryRefreshParams(params);
         const rawResult = await this.historyProvider.refresh(this.context, { signal, deadline });
-        return validateHistoryRefreshResult(rawResult);
+        const { inventory, ...v1Result } = rawResult;
+        return validateHistoryRefreshResult(v1Result);
       }
       case 'history.summary': {
+        const isV2 = isRootScope || Boolean(params.query && 'project_id' in params.query);
+        if (isV2) {
+          const validatedParams = validateHistorySummaryParamsV2(params);
+          const rawResult = this.historyProvider.summary(this.context, validatedParams);
+          return validateHistorySummaryResultV2(rawResult);
+        }
         const validatedParams = validateHistorySummaryParams(params);
         const rawResult = this.historyProvider.summary(this.context, validatedParams);
-        return validateHistorySummaryResult(rawResult);
+        const { inventory, ...v1Result } = rawResult;
+        return validateHistorySummaryResult(v1Result);
       }
       case 'history.page': {
+        const isV2 = isRootScope || Boolean(params.query && 'project_id' in params.query);
+        if (isV2) {
+          const validatedParams = validateHistoryPageParamsV2(params);
+          const rawResult = this.historyProvider.page(this.context, validatedParams);
+          return validateHistoryPageResultV2(rawResult);
+        }
         const validatedParams = validateHistoryPageParams(params);
         const rawResult = this.historyProvider.page(this.context, validatedParams);
         return validateHistoryPageResult(rawResult);
       }
       case 'history.detail': {
+        if (isRootScope) {
+          const validatedParams = validateHistoryDetailParamsV2(params);
+          const rawResult = this.historyProvider.detail(this.context, validatedParams);
+          return validateHistoryDetailResultV2(rawResult);
+        }
         const validatedParams = validateHistoryDetailParams(params);
         const rawResult = this.historyProvider.detail(this.context, validatedParams);
         return validateHistoryDetailResult(rawResult);

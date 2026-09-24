@@ -66,7 +66,7 @@ test('G3 Scenario 1: Staged E04 artifact passes independent verification and sid
   const verified = verifyPluginPackageArchive(ARTIFACT_PATH, { expectedSha256: expectedSha });
   assert.equal(verified.valid, true);
   assert.equal(verified.version, '0.1.0');
-  assert.equal(verified.fileCount, 45);
+  assert.equal(verified.fileCount, 46);
 });
 
 test('G3 Scenario 2: Matched backend and UI generation pairing', () => {

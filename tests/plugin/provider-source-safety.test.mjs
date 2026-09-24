@@ -153,7 +153,7 @@ test('Detail races: detects deleted execution, modified files, outcome added/rem
     const provider = new EVCrateAdvisorProvider(context, { snapshotStore: store, historyRootPath: tmpHistory });
 
     const refreshRes = await provider.invoke('history.refresh', {});
-    const recordRef = createHash('sha256').update(`${taskRunId}:${consultationId}`, 'utf8').digest('hex').slice(0, 32);
+    const recordRef = createHash('sha256').update(`${projectId}:${taskRunId}:${consultationId}`, 'utf8').digest('hex').slice(0, 32);
 
     // Initial detail -> ready
     const d1 = await provider.invoke('history.detail', { snapshot_id: refreshRes.snapshot_id, record_ref: recordRef });
@@ -179,7 +179,7 @@ test('Detail races: detects deleted execution, modified files, outcome added/rem
     fs.mkdirSync(consultDir2, { recursive: true, mode: 0o700 });
     fs.writeFileSync(path.join(consultDir2, 'execution.json'), JSON.stringify(createValidExecution(projectId, '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000004')));
     const ref2 = await provider.invoke('history.refresh', {});
-    const recordRef2 = createHash('sha256').update('00000000-0000-4000-8000-000000000003:00000000-0000-4000-8000-000000000004', 'utf8').digest('hex').slice(0, 32);
+    const recordRef2 = createHash('sha256').update(`${projectId}:00000000-0000-4000-8000-000000000003:00000000-0000-4000-8000-000000000004`, 'utf8').digest('hex').slice(0, 32);
     // Before outcome added -> ready
     const dPreOutcome = await provider.invoke('history.detail', { snapshot_id: ref2.snapshot_id, record_ref: recordRef2 });
     assert.equal(dPreOutcome.status, 'ready');

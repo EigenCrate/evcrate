@@ -31,7 +31,9 @@ const {
   getHistoryMetrics,
   pruneHistory,
   calculateTotalHistoryBytes,
-  withHistoryLock
+  withHistoryLock,
+  sanitizeSafeProjectName,
+  ensureProjectMetadata
 } = require(path.join(LIB, 'history-store.cjs'));
 
 function makeCheckpoint(taskRunId, pathName = 'source.txt') {
@@ -831,4 +833,63 @@ test('getHistoryMetrics: collector captures diagnostics for invalid execution an
   assert.equal(diagCodes.includes('EXECUTION_INVALID_JSON'), true);
   assert.equal(diagCodes.includes('OUTCOME_INVALID'), true);
   assert.equal(metrics.limitations.includes('INVALID_RECORDS_EXCLUDED'), true);
+});
+test('sanitizeSafeProjectName enforces length, character, and path safety invariants', () => {
+  assert.equal(sanitizeSafeProjectName('/home/user/my-cool-service'), 'my-cool-service');
+  assert.equal(sanitizeSafeProjectName('evcrate'), 'evcrate');
+  assert.equal(sanitizeSafeProjectName('App (v2) - Service_Core'), 'App (v2) - Service_Core');
+  assert.equal(sanitizeSafeProjectName(''), null);
+  assert.equal(sanitizeSafeProjectName('a'.repeat(65)), null);
+  assert.equal(sanitizeSafeProjectName('my~project'), null);
+  assert.equal(sanitizeSafeProjectName('home'), null);
+  assert.equal(sanitizeSafeProjectName('USERPROFILE'), null);
+  assert.equal(sanitizeSafeProjectName('bad\x00name'), null);
+  assert.equal(sanitizeSafeProjectName('bad\\escape'), null);
+  assert.equal(sanitizeSafeProjectName('/'), null);
+});
+
+test('recordStartedExecution records project-metadata.json with safe project name', (t) => {
+  const f = setupFixture(t);
+  const taskRunId = randomUUID();
+  const consultationId = randomUUID();
+  const cp = makeCheckpoint(taskRunId);
+  const digest = createHash('sha256').update(JSON.stringify(cp)).digest('hex');
+
+  const exec = {
+    schema_version: 1,
+    consultation_id: consultationId,
+    task_run_id: taskRunId,
+    project_id: f.projectId,
+    checkpoint_digest: digest,
+    checkpoint: cp,
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    receipt: null,
+    prompt_identity: 'canonical-mentor-brief-v2',
+    build_identity: ADVISOR_BUILD_IDENTITY,
+    attempts: [],
+    status: 'started',
+    result: null,
+    error: null,
+    started_at: 1000,
+    completed_at: null
+  };
+
+  const res = recordStartedExecution(f.context, exec);
+  assert.equal(res.status, 'recorded');
+
+  const metaPath = path.join(f.home, '.evcrate', 'advisor-history', f.projectId, 'project-metadata.json');
+  assert.ok(fs.existsSync(metaPath), 'project-metadata.json should be created');
+
+  const content = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+  assert.equal(content.version, 1);
+  assert.ok(content.projects[f.projectId]);
+  assert.equal(content.projects[f.projectId].name, path.basename(f.project));
+  assert.ok(typeof content.projects[f.projectId].updated_at === 'number');
+
+  // Verify second started call does not overwrite metadata
+  const originalUpdatedAt = content.projects[f.projectId].updated_at;
+  const c2 = randomUUID();
+  recordStartedExecution(f.context, { ...exec, consultation_id: c2 });
+  const content2 = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+  assert.equal(content2.projects[f.projectId].updated_at, originalUpdatedAt);
 });

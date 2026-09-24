@@ -96,20 +96,20 @@
     },
     {
       "path": "backend/binding.cjs",
-      "size": 5775,
-      "sha256": "82bbd8c3f06cc41eefa2f641ac06aa19544e70ba77bfd67270623f6d78639ed3",
+      "size": 6007,
+      "sha256": "d861342a6b5fc81505f10aaddc265584d88d65acfee2d4e927c180ccaf76ccfa",
       "mode": 420
     },
     {
       "path": "backend/context-table.cjs",
-      "size": 10479,
-      "sha256": "175b7e7d8f26f9bdc22a9c8e021ef53e6f151fcb91afde2e2fdbf6faae5b056b",
+      "size": 12212,
+      "sha256": "7f8ed0f34f6de00beec4d0aac77adcf3511a41c6d3e0c79c78e07d9d3d761ff2",
       "mode": 420
     },
     {
       "path": "backend/cursor-manager.cjs",
-      "size": 4448,
-      "sha256": "1626ac782cc96ddad5d0dd9a8e5b2411796da8c8e9bd536c9eab64952e8c165d",
+      "size": 6187,
+      "sha256": "bf80e7c8782fa64c366577e147577240a3935d3bd9077ee645eb8ad461ff032c",
       "mode": 420
     },
     {
@@ -144,14 +144,14 @@
     },
     {
       "path": "backend/history-provider.cjs",
-      "size": 5260,
-      "sha256": "f26f706fe5ef68ba82dbac364000c0edb5437c8f6b2ee7503e1ad06c0feabf59",
+      "size": 7288,
+      "sha256": "c6785ed9eb5a4a6d117afcc294882fddb3cb28130191f4315ff29f496812c9e6",
       "mode": 420
     },
     {
       "path": "backend/history-scanner.cjs",
-      "size": 7258,
-      "sha256": "a766fefeb29829d899f78c969c7de8341eee8adc8e714aff158840934f8a2a39",
+      "size": 13631,
+      "sha256": "986e95eb55a52eef90e1cab22539c4ba225c2be85183e54504f69fd367d72574",
       "mode": 420
     },
     {
@@ -210,8 +210,8 @@
     },
     {
       "path": "backend/provider.cjs",
-      "size": 4823,
-      "sha256": "3f92c973e4fa6cf3855785e400b26e0202f6224cf3cb2784cc46d8c682575750",
+      "size": 6468,
+      "sha256": "42026f1cfda6ff213db4db42a8fc986c12f9e672a153ee8c7103cebe249e3882",
       "mode": 420
     },
     {
@@ -222,8 +222,8 @@
     },
     {
       "path": "backend/snapshot-store.cjs",
-      "size": 6089,
-      "sha256": "7e637a750f8cfe682091cfe805d4dfb084084a7878e096307aaa5e3968caeb5a",
+      "size": 6410,
+      "sha256": "e6e044620534bcf7c8f36d5aebfd38ee25b5a3ecdad1d2d7796b8a6731102990",
       "mode": 420
     },
     {
