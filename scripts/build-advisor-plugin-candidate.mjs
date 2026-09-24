@@ -179,7 +179,8 @@ function collectCandidateRecords() {
   // 2. Contracts
   const contractFiles = [
     'contracts/contract-manifest.json',
-    'contracts/evcrate-advisor-data-v1.schema.json'
+    'contracts/evcrate-advisor-data-v1.schema.json',
+    'contracts/evcrate-advisor-data-v2.schema.json'
   ];
   for (const f of contractFiles) {
     const fullPath = path.join(PLUGIN_DIR, f);

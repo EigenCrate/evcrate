@@ -1,8 +1,8 @@
 # DamHopper Advisor Plugin — Framed Node Worker
 
 **Status:** Phase E02 implementation complete (2026-09-21; review 9.5/10). Joint G1 owner-runner qualification remains downstream.
-**Authority:** `plugin/` worker closure, E00 `evcrate-advisor-data` contracts, and the pinned D00 Worker SDK candidate.
-**Related:** [Phase E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement), [codebase summary](./codebase-summary.md).
+**Authority:** E02 `plugin/` worker closure and pinned D00 Worker SDK; Phase 01 freezes the companion v1/v2 data-contract boundary, but root-history worker behavior remains pending.
+**Related:** [Phase E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement), [codebase summary](./codebase-summary.md), [cross-project contract](./all-project-advisor-history.md).
 
 ## Purpose and boundary
 
@@ -133,7 +133,7 @@ The original request still emits exactly one terminal result, `CANCELLED`, `DEAD
 
 `WorkerContextTable` creates `EVCrateAdvisorProvider` with a normalized target, history identity, binding revision, and allowed operations. `dispatcher.handleInvoke` passes operation/payload plus signal/deadline to `provider.invoke`.
 
-`provider.cjs` gates the eight E00 methods, checks context permissions, rechecks the target, validates method parameters before dispatch, calls the history/policy/evaluation provider, then validates the result. `plugin/backend/data-api.cjs` is a package-local bundled CommonJS copy of the E00 validators/constants. It removes the candidate's runtime dependence on root `dist/`; the development fallback exists only for source-tree loading.
+`provider.cjs` gates the eight E00 methods, checks context permissions, rechecks the target, validates method parameters before dispatch, calls the history/policy/evaluation provider, then validates the result. `plugin/backend/data-api.cjs` is a package-local bundled CommonJS copy of the v1/v2 validators/constants and removes the candidate's runtime dependence on root `dist/`; the development fallback exists only for source-tree loading. The Phase 01 v2 validator/schema freeze does not itself implement the root-history provider; that work remains downstream.
 
 Provider status unions (for example fresh/stale/unavailable or changed/missing detail) are domain results, not thrown worker failures. Context, binding, permission, source, and protocol failures cross the worker boundary only through mapped D00 errors.
 

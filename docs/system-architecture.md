@@ -774,17 +774,18 @@ assets, network clients, or picker. E03 recorded 68/68 repository/package tests
 on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current
 release-asset verification.
 
-### Proposed cross-project history design (not implemented)
+### Cross-project history contract (Phase 01 frozen; runtime integration pending)
 
-**Phase 00 (2026-09-24; auth prerequisite complete):** Production startup requires MongoDB configuration; missing DB cannot enable token issuance. Explicit `--no-auth` remains a dev/test-only token path; browser `authType: none` seeding requires dev/test/test-harness signals, and the plugin test server grants only its configured fixture actor. Root-history authorization remains unimplemented.
+**Phase 00:** Production token issuance requires the configured MongoDB path; the explicit development/test token path remains available and the test server stays fixture-actor scoped. See the [auth prerequisite](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
 
-The proposed feature remains unimplemented: current plugin contexts bind one canonical target and SHA-256 history identity; an existing `*` target grant does not authorize account history.
-The intended design binds EVCrate's owner history root at install; authenticated accounts may read retained histories without historical workspace registration.
-API and runner recheck the install-bound scope and session; worker scans only owner-safe project-ID directories.
-Project selection filters one bounded snapshot across summary/page/detail/cursors/Overview; revocation clears old data.
-Future consultations store safe names keyed by project ID; unnamed history shows abbreviated IDs.
-Configuration/Evaluations keep separately labeled sources.
-See [the plan](../plans/260924-1055-all-project-advisor-history/plan.md) and [Phase 00](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
+**Phase 01:** `evcrate-advisor-data` v2 is frozen with v1 schema/behavior support and unchanged on-disk history v1. The eight method names remain stable.
+V2 summary/page queries add `project_id: string | null`: null selects All Projects only in owner-root scope; an explicit project ID selects one discovered project, and a single-project context cannot widen scope.
+Refresh/summary expose one bounded inventory from the same snapshot, independently of query filters. The inventory carries project ID, nullable display label, and count; v2 caps it at 500 entries.
+The version-1 metadata sidecar maps project IDs to strictly validated owner-safe names; names are display-only and unknown labels fall back to an abbreviated ID.
+The companion runner contract defines `ContextScopeKind` (`project` | `history-root`) and `ContextScopeDescriptor` (`kind`, optional `rootIdentity`, optional `sourceRevision`); `context.open` may report the established `scopeKind`.
+Root scope is bound to the trusted owner installation and authenticated session, not a configured-target `*` grant or browser-provided path. Host authorization and worker root scanning remain downstream implementation work.
+Configuration and Evaluations retain their separately authorized, labeled sources; History project filters do not apply to them.
+See the [cross-project contract guide](./all-project-advisor-history.md), [Phase 01 plan](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md), and [project plan](../plans/260924-1055-all-project-advisor-history/plan.md).
 
 
 ## Related documents

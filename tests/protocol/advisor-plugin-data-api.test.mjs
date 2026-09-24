@@ -33,8 +33,34 @@ import {
   validateEvaluationsCompareResult,
   validateHistoryRowV1,
   validateEvaluationDescriptorV1,
+  DATA_API_PROTOCOL_V2,
+  DATA_API_VERSION_V2,
+  MAX_PROJECT_NAME_CHARS,
+  MAX_PROJECT_INVENTORY_ENTRIES,
+  PROJECT_METADATA_SIDECAR_VERSION_V1,
+  validateProjectDisplayName,
+  validateProjectMetadataSidecarV1,
+  validateProjectInventoryItemV2,
+  validateProjectInventoryV2,
+  validateHistoryRefreshParamsV2,
+  validateHistoryRefreshResultV2,
+  validateHistorySummaryParamsV2,
+  validateHistorySummaryResultV2,
+  validateHistorySummaryQueryV2,
+  validateHistoryPageParamsV2,
+  validateHistoryPageResultV2,
+  validateHistoryDetailParamsV2,
+  validateHistoryDetailResultV2,
+  validatePolicyReadCurrentParamsV2,
+  validatePolicyReadCurrentResultV2,
+  validateEvaluationsListParamsV2,
+  validateEvaluationsListResultV2,
+  validateEvaluationsReadParamsV2,
+  validateEvaluationsReadResultV2,
+  validateEvaluationsCompareParamsV2,
+  validateEvaluationsCompareResultV2,
 } from '../../dist/protocol/advisor-plugin-data-api.js';
-import { buildDataApiSchema, buildManifest } from '../../scripts/generate-advisor-plugin-data-schema.mjs';
+import { buildDataApiSchema, buildDataApiSchemaV1, buildDataApiSchemaV2, buildManifest } from '../../scripts/generate-advisor-plugin-data-schema.mjs';
 
 const positiveFixtures = JSON.parse(
   readFileSync(new URL('../fixtures/advisor-plugin/domain-v1/positive-wire-fixtures.json', import.meta.url), 'utf8')
@@ -44,6 +70,17 @@ const negativeFixtures = JSON.parse(
   readFileSync(new URL('../fixtures/advisor-plugin/domain-v1/negative-wire-fixtures.json', import.meta.url), 'utf8')
 );
 
+const positiveFixturesV2 = JSON.parse(
+  readFileSync(new URL('../fixtures/advisor-plugin/domain-v2/positive-wire-fixtures.json', import.meta.url), 'utf8')
+);
+
+const negativeFixturesV2 = JSON.parse(
+  readFileSync(new URL('../fixtures/advisor-plugin/domain-v2/negative-wire-fixtures.json', import.meta.url), 'utf8')
+);
+
+const sidecarFixtures = JSON.parse(
+  readFileSync(new URL('../fixtures/advisor-plugin/domain-v2/project-sidecar-fixtures.json', import.meta.url), 'utf8')
+);
 test('Domain protocol constants and error codes', () => {
   assert.equal(DATA_API_PROTOCOL_V1, 'evcrate-advisor-data');
   assert.equal(DATA_API_VERSION_V1, 1);
@@ -235,8 +272,12 @@ test('Discriminated union states in detail, policy, and evaluations', () => {
 });
 
 test('Schema generator and manifest builder output matches files on disk', () => {
-  const schemaOnDisk = readFileSync(
+  const schemaV1OnDisk = readFileSync(
     new URL('../../plugin/contracts/evcrate-advisor-data-v1.schema.json', import.meta.url),
+    'utf8'
+  );
+  const schemaV2OnDisk = readFileSync(
+    new URL('../../plugin/contracts/evcrate-advisor-data-v2.schema.json', import.meta.url),
     'utf8'
   );
   const manifestOnDisk = readFileSync(
@@ -244,9 +285,148 @@ test('Schema generator and manifest builder output matches files on disk', () =>
     'utf8'
   );
 
-  const builtSchema = JSON.stringify(buildDataApiSchema(), null, 2) + '\n';
-  const builtManifest = JSON.stringify(buildManifest(builtSchema), null, 2) + '\n';
+  const builtSchemaV1 = JSON.stringify(buildDataApiSchemaV1(), null, 2) + '\n';
+  const builtSchemaV2 = JSON.stringify(buildDataApiSchemaV2(), null, 2) + '\n';
+  const builtManifest = JSON.stringify(buildManifest(builtSchemaV2, builtSchemaV1), null, 2) + '\n';
 
-  assert.equal(schemaOnDisk, builtSchema, 'evcrate-advisor-data-v1.schema.json must match built schema');
+  assert.equal(schemaV1OnDisk, builtSchemaV1, 'evcrate-advisor-data-v1.schema.json must match built schema v1');
+  assert.equal(schemaV2OnDisk, builtSchemaV2, 'evcrate-advisor-data-v2.schema.json must match built schema v2');
   assert.equal(manifestOnDisk, builtManifest, 'contract-manifest.json must match built manifest');
+});
+
+test('Domain protocol v2 constants, limits, and defaults', () => {
+  assert.equal(DATA_API_PROTOCOL_V2, 'evcrate-advisor-data');
+  assert.equal(DATA_API_VERSION_V2, 2);
+  assert.equal(MAX_PROJECT_NAME_CHARS, 64);
+  assert.equal(MAX_PROJECT_INVENTORY_ENTRIES, 500);
+  assert.equal(PROJECT_METADATA_SIDECAR_VERSION_V1, 1);
+});
+
+test('Positive wire fixtures v2 pass validation for all 8 operations', () => {
+  const ops = positiveFixturesV2.operations;
+
+  // 1. history.refresh v2
+  const refParams = validateHistoryRefreshParamsV2(ops['history.refresh'].params);
+  assert.deepEqual(refParams, {});
+  const refRes = validateHistoryRefreshResultV2(ops['history.refresh'].result);
+  assert.equal(refRes.state, 'fresh');
+  assert.ok(refRes.inventory);
+  assert.equal(refRes.inventory.total_projects, 2);
+  assert.equal(refRes.inventory.entries[0].label, 'evcrate');
+
+  // 2. history.summary v2
+  const sumParams = validateHistorySummaryParamsV2(ops['history.summary'].params);
+  assert.equal(sumParams.query.project_id, '78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8');
+  const sumRes = validateHistorySummaryResultV2(ops['history.summary'].result);
+  assert.equal(sumRes.state, 'fresh');
+  assert.equal(sumRes.inventory.total_projects, 2);
+
+  // 3. history.page v2
+  const pageParams = validateHistoryPageParamsV2(ops['history.page'].params);
+  assert.equal(pageParams.query.project_id, null, 'project_id null selects All Projects in root context');
+  const pageRes = validateHistoryPageResultV2(ops['history.page'].result);
+  assert.equal(pageRes.entries.length, 1);
+
+  // 4. history.detail v2
+  const detParams = validateHistoryDetailParamsV2(ops['history.detail'].params);
+  assert.equal(detParams.record_ref, 'rec-001');
+  const detRes = validateHistoryDetailResultV2(ops['history.detail'].result);
+  assert.equal(detRes.status, 'ready');
+
+  // 5. policy.readCurrent v2
+  const polParams = validatePolicyReadCurrentParamsV2(ops['policy.readCurrent'].params);
+  assert.deepEqual(polParams, {});
+  const polRes = validatePolicyReadCurrentResultV2(ops['policy.readCurrent'].result);
+  assert.equal(polRes.status, 'ready');
+
+  // 6. evaluations.list v2
+  const evlParams = validateEvaluationsListParamsV2(ops['evaluations.list'].params);
+  assert.equal(evlParams.limit, 50);
+  const evlRes = validateEvaluationsListResultV2(ops['evaluations.list'].result);
+  assert.equal(evlRes.items.length, 1);
+
+  // 7. evaluations.read v2
+  const evrParams = validateEvaluationsReadParamsV2(ops['evaluations.read'].params);
+  assert.equal(evrParams.evaluation_ref, 'eval-ref-001');
+  const evrRes = validateEvaluationsReadResultV2(ops['evaluations.read'].result);
+  assert.equal(evrRes.status, 'ready');
+
+  // 8. evaluations.compare v2
+  const evcParams = validateEvaluationsCompareParamsV2(ops['evaluations.compare'].params);
+  assert.equal(evcParams.items.length, 1);
+  const evcRes = validateEvaluationsCompareResultV2(ops['evaluations.compare'].result);
+  assert.equal(evcRes.status, 'ready');
+});
+
+test('Negative wire fixtures v2 reject invalid query and inventory parameters', () => {
+  for (const c of negativeFixturesV2.cases) {
+    assert.throws(
+      () => {
+        if (c.method === 'history.summary' && c.target === 'params') {
+          validateHistorySummaryParamsV2(c.payload);
+        } else if (c.method === 'history.summary' && c.target === 'result') {
+          validateHistorySummaryResultV2(c.payload);
+        } else if (c.method === 'history.page' && c.target === 'params') {
+          validateHistoryPageParamsV2(c.payload);
+        }
+      },
+      (err) => {
+        assert.ok(err instanceof PluginDataApiError, `Case "${c.name}" should throw PluginDataApiError`);
+        assert.equal(err.code, c.expected_error, `Case "${c.name}" should have code ${c.expected_error}`);
+        return true;
+      },
+      `Expected case "${c.name}" to fail validation`
+    );
+  }
+});
+
+test('Project metadata sidecar fixtures and display name sanitization', () => {
+  // Positive sidecar cases
+  for (const pos of sidecarFixtures.positive) {
+    const validated = validateProjectMetadataSidecarV1(pos.sidecar);
+    assert.equal(validated.version, 1, `Case "${pos.name}" should have version 1`);
+    assert.ok(typeof validated.projects === 'object');
+  }
+
+  // Negative sidecar cases
+  for (const neg of sidecarFixtures.negative) {
+    assert.throws(
+      () => validateProjectMetadataSidecarV1(neg.sidecar),
+      (err) => {
+        assert.ok(err instanceof PluginDataApiError, `Case "${neg.name}" should throw PluginDataApiError`);
+        assert.equal(err.code, neg.expected_error);
+        return true;
+      },
+      `Expected sidecar case "${neg.name}" to fail validation`
+    );
+  }
+
+  // Direct display name sanitization checks
+  assert.equal(validateProjectDisplayName('my-project'), 'my-project');
+  assert.equal(validateProjectDisplayName('Evcrate (Core)'), 'Evcrate (Core)');
+  assert.throws(() => validateProjectDisplayName(' leading'), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName('trailing '), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName('has/slash'), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName('has\\backslash'), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName('~/home'), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName('a'.repeat(65)), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName(''), { name: 'PluginDataApiError' });
+});
+
+test('All Projects root query vs specific project query in summary and page', () => {
+  // All projects query (project_id: null)
+  const allProjectsQuery = validateHistorySummaryQueryV2({
+    project_id: null,
+    task_run_id: null,
+    filters: {}
+  });
+  assert.equal(allProjectsQuery.project_id, null);
+
+  // Specific project query
+  const singleProjectQuery = validateHistorySummaryQueryV2({
+    project_id: '78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8',
+    task_run_id: null,
+    filters: {}
+  });
+  assert.equal(singleProjectQuery.project_id, '78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8');
 });

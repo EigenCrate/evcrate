@@ -44,6 +44,10 @@ export type {
 export const DATA_API_PROTOCOL_V1 = 'evcrate-advisor-data' as const;
 export const DATA_API_VERSION_V1 = 1 as const;
 
+export const DATA_API_PROTOCOL_V2 = 'evcrate-advisor-data' as const;
+export const DATA_API_VERSION_V2 = 2 as const;
+export const DATA_API_PROTOCOL = DATA_API_PROTOCOL_V2;
+export const DATA_API_VERSION = DATA_API_VERSION_V2;
 export const ADVISOR_DATA_METHODS = Object.freeze([
   'history.refresh',
   'history.summary',
@@ -67,6 +71,9 @@ export const MAX_FRAME_PAYLOAD_BYTES = 16 * 1024 * 1024; // 16 MiB
 export const MAX_CONTROL_PAYLOAD_BYTES = 64 * 1024; // 64 KiB
 export const MAX_EVALUATION_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MiB
 export const MAX_COMPARE_ITEMS = 32;
+export const MAX_PROJECT_NAME_CHARS = 64;
+export const MAX_PROJECT_INVENTORY_ENTRIES = 500;
+export const PROJECT_METADATA_SIDECAR_VERSION_V1 = 1 as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/;
@@ -216,6 +223,149 @@ export interface EvaluationDescriptorV1 {
 }
 
 // ---------------------------------------------------------------------------
+// Domain Types: Project Metadata Sidecar & Project Inventory (v2)
+// ---------------------------------------------------------------------------
+
+export interface ProjectMetadataEntryV1 {
+  readonly name: string;
+  readonly updated_at: number;
+}
+
+export interface ProjectMetadataSidecarV1 {
+  readonly version: 1;
+  readonly projects: Readonly<Record<string, ProjectMetadataEntryV1>>;
+}
+
+export interface ProjectInventoryItemV2 {
+  readonly project_id: string;
+  readonly label: string | null;
+  readonly count: number;
+}
+
+export interface ProjectInventoryV2 {
+  readonly entries: readonly ProjectInventoryItemV2[];
+  readonly total_projects: number;
+  readonly unfiltered_total_records: number;
+}
+
+export function validateProjectDisplayName(raw: unknown, path = 'name'): string {
+  if (typeof raw !== 'string') {
+    fail('INVALID_INPUT', path, 'project display name must be a string');
+  }
+  if (raw.trim() !== raw) {
+    fail('INVALID_INPUT', path, 'project display name must not have leading or trailing whitespace');
+  }
+  if (raw.length === 0 || raw.length > MAX_PROJECT_NAME_CHARS) {
+    fail('INVALID_INPUT', path, `project display name length must be 1..${MAX_PROJECT_NAME_CHARS} characters`);
+  }
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i);
+    if (code < 32 || code === 127 || (code >= 128 && code <= 159)) {
+      fail('INVALID_INPUT', path, 'project display name must not contain control characters');
+    }
+  }
+  if (raw.includes('/') || raw.includes('\\')) {
+    fail('INVALID_INPUT', path, 'project display name must not contain path separators');
+  }
+  if (raw.includes('~')) {
+    fail('INVALID_INPUT', path, 'project display name must not contain tilde (HOME) references');
+  }
+  if (/(?:^|[/\\])(?:home|Users)(?:[/\\]|$)/i.test(raw) || /\b(?:HOME|USERPROFILE)\b/i.test(raw)) {
+    fail('INVALID_INPUT', path, 'project display name must not contain home directory references');
+  }
+  if (raw.includes('\\') || /(?:\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{2})/.test(raw)) {
+    fail('INVALID_INPUT', path, 'project display name must not contain escape sequences');
+  }
+  return raw;
+}
+
+export function validateProjectMetadataSidecarV1(raw: unknown, path = 'sidecar'): ProjectMetadataSidecarV1 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['version', 'projects'], path);
+
+  if (obj.version !== 1) {
+    fail('INVALID_INPUT', `${path}/version`, `version must be 1: ${String(obj.version)}`);
+  }
+
+  const projectsObj = asObj(obj.projects, `${path}/projects`);
+  const validatedProjects: Record<string, ProjectMetadataEntryV1> = {};
+
+  for (const [projectId, entryRaw] of Object.entries(projectsObj)) {
+    const entryPath = `${path}/projects/${projectId}`;
+    if (!SHA256_RE.test(projectId.toLowerCase())) {
+      fail('INVALID_INPUT', entryPath, `project ID key must be a 64-char hex SHA-256: ${projectId}`);
+    }
+    const entryObj = asObj(entryRaw, entryPath);
+    checkNoUnknownKeys(entryObj, ['name', 'updated_at'], entryPath);
+    const name = validateProjectDisplayName(entryObj.name, `${entryPath}/name`);
+    const updatedAt = checkTimestamp(entryObj.updated_at, `${entryPath}/updated_at`);
+    validatedProjects[projectId.toLowerCase()] = Object.freeze({
+      name,
+      updated_at: updatedAt,
+    });
+  }
+
+  return Object.freeze({
+    version: 1,
+    projects: Object.freeze(validatedProjects),
+  });
+}
+
+export function validateProjectInventoryItemV2(raw: unknown, path = 'item'): ProjectInventoryItemV2 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['project_id', 'label', 'count'], path);
+
+  const projectId = checkSha256(obj.project_id, `${path}/project_id`);
+  let label: string | null = null;
+  if (obj.label !== null && obj.label !== undefined) {
+    label = validateProjectDisplayName(obj.label, `${path}/label`);
+  }
+  const count = checkSafeInteger(obj.count, 0, Number.MAX_SAFE_INTEGER, `${path}/count`);
+
+  return Object.freeze({
+    project_id: projectId.toLowerCase(),
+    label,
+    count,
+  });
+}
+
+export function validateProjectInventoryV2(raw: unknown, path = 'inventory'): ProjectInventoryV2 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['entries', 'total_projects', 'unfiltered_total_records'], path);
+
+  if (!Array.isArray(obj.entries)) {
+    fail('INVALID_INPUT', `${path}/entries`, 'entries must be an array');
+  }
+  if (obj.entries.length > MAX_PROJECT_INVENTORY_ENTRIES) {
+    fail('INVALID_INPUT', `${path}/entries`, `entries length must not exceed ${MAX_PROJECT_INVENTORY_ENTRIES}`);
+  }
+
+  const entries: ProjectInventoryItemV2[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < obj.entries.length; i++) {
+    const item = validateProjectInventoryItemV2(obj.entries[i], `${path}/entries/${i}`);
+    if (seen.has(item.project_id)) {
+      fail('INVALID_INPUT', `${path}/entries/${i}`, `duplicate project_id in inventory: ${item.project_id}`);
+    }
+    seen.add(item.project_id);
+    entries.push(item);
+  }
+
+  const totalProjects = checkSafeInteger(obj.total_projects, 0, Number.MAX_SAFE_INTEGER, `${path}/total_projects`);
+  const unfilteredTotal = checkSafeInteger(obj.unfiltered_total_records, 0, Number.MAX_SAFE_INTEGER, `${path}/unfiltered_total_records`);
+
+  if (entries.length !== totalProjects) {
+    fail('INVALID_INPUT', `${path}/total_projects`, `total_projects (${totalProjects}) must match entries length (${entries.length})`);
+  }
+
+  return Object.freeze({
+    entries: Object.freeze(entries),
+    total_projects: totalProjects,
+    unfiltered_total_records: unfilteredTotal,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Method 1: history.refresh
 // ---------------------------------------------------------------------------
 
@@ -289,6 +439,72 @@ export function validateHistoryRefreshResult(raw: unknown, path = 'result'): His
   });
 }
 
+export type HistoryRefreshParamsV2 = HistoryRefreshParamsV1;
+export const validateHistoryRefreshParamsV2 = validateHistoryRefreshParams;
+
+export interface HistoryRefreshResultV2 {
+  readonly state: HistoryRefreshState;
+  readonly snapshot_id: string | null;
+  readonly observed_at: number;
+  readonly scan: HistoryMetricScanV1;
+  readonly stale_reason: StaleReason | null;
+  readonly inventory: ProjectInventoryV2 | null;
+}
+
+export function validateHistoryRefreshResultV2(raw: unknown, path = 'result'): HistoryRefreshResultV2 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['state', 'snapshot_id', 'observed_at', 'scan', 'stale_reason', 'inventory'], path);
+
+  if (typeof obj.state !== 'string' || !HISTORY_REFRESH_STATES.includes(obj.state as HistoryRefreshState)) {
+    fail('INVALID_INPUT', `${path}/state`, `Invalid state: ${String(obj.state)}`);
+  }
+  const state = obj.state as HistoryRefreshState;
+
+  let snapshotId: string | null = null;
+  if (state === 'unavailable') {
+    if (obj.snapshot_id !== null) {
+      fail('INVALID_INPUT', `${path}/snapshot_id`, 'snapshot_id must be null when state is unavailable');
+    }
+  } else {
+    snapshotId = checkOpaqueId(obj.snapshot_id, `${path}/snapshot_id`);
+  }
+
+  const observedAt = checkTimestamp(obj.observed_at, `${path}/observed_at`);
+
+  const scanObj = asObj(obj.scan, `${path}/scan`);
+  checkNoUnknownKeys(scanObj, [
+    'status', 'projects_discovered', 'tasks_discovered', 'consultations_discovered',
+    'accepted_records', 'invalid_records', 'bytes_discovered', 'bytes_read',
+    'diagnostics', 'suppressed_diagnostics', 'limit_hit',
+  ], `${path}/scan`);
+
+  let staleReason: StaleReason | null = null;
+  if (state === 'stale') {
+    if (typeof obj.stale_reason !== 'string' || !STALE_REASONS.includes(obj.stale_reason as StaleReason)) {
+      fail('INVALID_INPUT', `${path}/stale_reason`, `stale_reason required when state is stale: ${String(obj.stale_reason)}`);
+    }
+    staleReason = obj.stale_reason as StaleReason;
+  } else {
+    if (obj.stale_reason !== null) {
+      fail('INVALID_INPUT', `${path}/stale_reason`, 'stale_reason must be null when state is not stale');
+    }
+  }
+
+  let inventory: ProjectInventoryV2 | null = null;
+  if (obj.inventory !== null && obj.inventory !== undefined) {
+    inventory = validateProjectInventoryV2(obj.inventory, `${path}/inventory`);
+  }
+
+  return Object.freeze({
+    state,
+    snapshot_id: snapshotId,
+    observed_at: observedAt,
+    scan: obj.scan as unknown as HistoryMetricScanV1,
+    stale_reason: staleReason,
+    inventory,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Method 2: history.summary
 // ---------------------------------------------------------------------------
@@ -352,6 +568,85 @@ export function validateHistorySummaryResult(raw: unknown, path = 'result'): His
     state: obj.state,
     snapshot_id: snapshotId,
     metrics: obj.metrics as unknown as HistoryMetricResultV1,
+  });
+}
+
+export interface HistorySummaryQueryV2 {
+  readonly project_id: string | null;
+  readonly task_run_id: string | null;
+  readonly filters: HistoryMetricFiltersV1;
+}
+
+export interface HistorySummaryParamsV2 {
+  readonly snapshot_id: string;
+  readonly query: HistorySummaryQueryV2;
+}
+
+export interface HistorySummaryResultV2 {
+  readonly state: 'fresh' | 'stale';
+  readonly snapshot_id: string;
+  readonly metrics: HistoryMetricResultV1;
+  readonly inventory: ProjectInventoryV2;
+}
+
+export function validateHistorySummaryQueryV2(raw: unknown, path = 'query'): HistorySummaryQueryV2 {
+  const queryObj = asObj(raw, path);
+  checkNoUnknownKeys(queryObj, ['project_id', 'task_run_id', 'filters'], path);
+
+  let projectId: string | null = null;
+  if (queryObj.project_id !== null && queryObj.project_id !== undefined) {
+    projectId = checkSha256(queryObj.project_id, `${path}/project_id`).toLowerCase();
+  }
+
+  let taskRunId: string | null = null;
+  if (queryObj.task_run_id !== null && queryObj.task_run_id !== undefined) {
+    taskRunId = checkUuid(queryObj.task_run_id, `${path}/task_run_id`);
+  }
+
+  const filters = normalizeHistoryFilter(queryObj.filters);
+
+  return Object.freeze({
+    project_id: projectId,
+    task_run_id: taskRunId,
+    filters,
+  });
+}
+
+export function validateHistorySummaryParamsV2(raw: unknown, path = 'params'): HistorySummaryParamsV2 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['snapshot_id', 'query'], path);
+
+  const snapshotId = checkOpaqueId(obj.snapshot_id, `${path}/snapshot_id`);
+  const query = validateHistorySummaryQueryV2(obj.query, `${path}/query`);
+
+  return Object.freeze({
+    snapshot_id: snapshotId,
+    query,
+  });
+}
+
+export function validateHistorySummaryResultV2(raw: unknown, path = 'result'): HistorySummaryResultV2 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['state', 'snapshot_id', 'metrics', 'inventory'], path);
+
+  if (obj.state !== 'fresh' && obj.state !== 'stale') {
+    fail('INVALID_INPUT', `${path}/state`, `state must be fresh or stale: ${String(obj.state)}`);
+  }
+
+  const snapshotId = checkOpaqueId(obj.snapshot_id, `${path}/snapshot_id`);
+  const metricsObj = asObj(obj.metrics, `${path}/metrics`);
+
+  if (metricsObj.metric_definition_version !== 1) {
+    fail('INVALID_INPUT', `${path}/metrics/metric_definition_version`, 'metric_definition_version must be 1');
+  }
+
+  const inventory = validateProjectInventoryV2(obj.inventory, `${path}/inventory`);
+
+  return Object.freeze({
+    state: obj.state,
+    snapshot_id: snapshotId,
+    metrics: obj.metrics as unknown as HistoryMetricResultV1,
+    inventory,
   });
 }
 
@@ -506,6 +801,41 @@ export function validateHistoryPageResult(raw: unknown, path = 'result'): Histor
     returned_bytes: returnedBytes,
   });
 }
+
+export interface HistoryPageParamsV2 {
+  readonly snapshot_id: string;
+  readonly query: HistorySummaryQueryV2;
+  readonly sort: 'started_at_desc';
+  readonly cursor: string | null;
+  readonly limit: number;
+}
+
+export type HistoryPageResultV2 = HistoryPageResultV1;
+
+export function validateHistoryPageParamsV2(raw: unknown, path = 'params'): HistoryPageParamsV2 {
+  const obj = asObj(raw, path);
+  checkNoUnknownKeys(obj, ['snapshot_id', 'query', 'sort', 'cursor', 'limit'], path);
+
+  const snapshotId = checkOpaqueId(obj.snapshot_id, `${path}/snapshot_id`);
+  const query = validateHistorySummaryQueryV2(obj.query, `${path}/query`);
+
+  if (obj.sort !== 'started_at_desc') {
+    fail('INVALID_INPUT', `${path}/sort`, "Sort must be exact literal 'started_at_desc'");
+  }
+
+  const cursor = checkCursor(obj.cursor, `${path}/cursor`);
+  const limit = checkSafeInteger(obj.limit, 1, MAX_PAGE_LIMIT, `${path}/limit`);
+
+  return Object.freeze({
+    snapshot_id: snapshotId,
+    query,
+    sort: 'started_at_desc',
+    cursor,
+    limit,
+  });
+}
+
+export const validateHistoryPageResultV2 = validateHistoryPageResult;
 
 // ---------------------------------------------------------------------------
 // Method 4: history.detail
@@ -967,3 +1297,44 @@ export function validateEvaluationsCompareResult(raw: unknown, path = 'result'):
     observed_revision: observedRevision,
   });
 }
+
+// ---------------------------------------------------------------------------
+// V2 Type and Validator Aliases for Methods 4 through 8
+// ---------------------------------------------------------------------------
+
+// Method 4: history.detail (v2)
+export type HistoryDetailParamsV2 = HistoryDetailParamsV1;
+export type HistoryDetailReadyResultV2 = HistoryDetailReadyResultV1;
+export type HistoryDetailChangedOrMissingResultV2 = HistoryDetailChangedOrMissingResultV1;
+export type HistoryDetailResultV2 = HistoryDetailResultV1;
+export const validateHistoryDetailParamsV2 = validateHistoryDetailParams;
+export const validateHistoryDetailResultV2 = validateHistoryDetailResult;
+
+// Method 5: policy.readCurrent (v2)
+export type PolicyReadCurrentParamsV2 = PolicyReadCurrentParamsV1;
+export type PolicyReadCurrentResultV2 = PolicyReadCurrentResultV1;
+export const validatePolicyReadCurrentParamsV2 = validatePolicyReadCurrentParams;
+export const validatePolicyReadCurrentResultV2 = validatePolicyReadCurrentResult;
+
+// Method 6: evaluations.list (v2)
+export type EvaluationsListParamsV2 = EvaluationsListParamsV1;
+export type EvaluationsListResultV2 = EvaluationsListResultV1;
+export const validateEvaluationsListParamsV2 = validateEvaluationsListParams;
+export const validateEvaluationsListResultV2 = validateEvaluationsListResult;
+
+// Method 7: evaluations.read (v2)
+export type EvaluationsReadParamsV2 = EvaluationsReadParamsV1;
+export type EvaluationsReadReadyResultV2 = EvaluationsReadReadyResultV1;
+export type EvaluationsReadChangedOrMissingResultV2 = EvaluationsReadChangedOrMissingResultV1;
+export type EvaluationsReadResultV2 = EvaluationsReadResultV1;
+export const validateEvaluationsReadParamsV2 = validateEvaluationsReadParams;
+export const validateEvaluationsReadResultV2 = validateEvaluationsReadResult;
+
+// Method 8: evaluations.compare (v2)
+export type EvaluationCompareItemRefV2 = EvaluationCompareItemRefV1;
+export type EvaluationsCompareParamsV2 = EvaluationsCompareParamsV1;
+export type EvaluationsCompareReadyResultV2 = EvaluationsCompareReadyResultV1;
+export type EvaluationsCompareChangedOrMissingResultV2 = EvaluationsCompareChangedOrMissingResultV1;
+export type EvaluationsCompareResultV2 = EvaluationsCompareResultV1;
+export const validateEvaluationsCompareParamsV2 = validateEvaluationsCompareParams;
+export const validateEvaluationsCompareResultV2 = validateEvaluationsCompareResult;

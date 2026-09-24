@@ -19,7 +19,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const CONTRACTS_DIR = join(ROOT, 'plugin', 'contracts');
-const SCHEMA_FILE = join(CONTRACTS_DIR, 'evcrate-advisor-data-v1.schema.json');
+const SCHEMA_FILE_V1 = join(CONTRACTS_DIR, 'evcrate-advisor-data-v1.schema.json');
+const SCHEMA_FILE_V2 = join(CONTRACTS_DIR, 'evcrate-advisor-data-v2.schema.json');
+const SCHEMA_FILE = SCHEMA_FILE_V1;
 const MANIFEST_FILE = join(CONTRACTS_DIR, 'contract-manifest.json');
 
 const UUID_PATTERN = '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
@@ -627,14 +629,170 @@ export function buildDataApiSchema() {
   };
 }
 
-export function buildManifest(schemaContent) {
-  const schemaHash = createHash('sha256').update(schemaContent).digest('hex');
+export const buildDataApiSchemaV1 = buildDataApiSchema;
+
+export function buildDataApiSchemaV2() {
+  const v1 = buildDataApiSchema();
+  const v2 = JSON.parse(JSON.stringify(v1));
+
+  v2.$id = 'https://evcrate.org/schemas/advisor/plugin/evcrate-advisor-data-v2.schema.json';
+  v2.title = 'EVCrate Advisor Plugin Domain Data API v2';
+  v2.description = 'Machine-readable schema for EVCrate Advisor Plugin Domain Data API v2 operations, parameters, and results.';
+  v2.properties.version.const = 2;
+
+  v2.definitions.ProjectDisplayName = {
+    type: 'string',
+    minLength: 1,
+    maxLength: 64,
+    pattern: '^[^/\\\\~\\x00-\\x1f\\x7f-\\x9f]+$'
+  };
+
+  v2.definitions.ProjectMetadataEntryV1 = {
+    type: 'object',
+    required: ['name', 'updated_at'],
+    additionalProperties: false,
+    properties: {
+      name: { $ref: '#/definitions/ProjectDisplayName' },
+      updated_at: { $ref: '#/definitions/TimestampMs' }
+    }
+  };
+
+  v2.definitions.ProjectMetadataSidecarV1 = {
+    type: 'object',
+    required: ['version', 'projects'],
+    additionalProperties: false,
+    properties: {
+      version: { type: 'integer', const: 1 },
+      projects: {
+        type: 'object',
+        additionalProperties: { $ref: '#/definitions/ProjectMetadataEntryV1' }
+      }
+    }
+  };
+
+  v2.definitions.ProjectInventoryItemV2 = {
+    type: 'object',
+    required: ['project_id', 'label', 'count'],
+    additionalProperties: false,
+    properties: {
+      project_id: { $ref: '#/definitions/Sha256' },
+      label: {
+        oneOf: [
+          { $ref: '#/definitions/ProjectDisplayName' },
+          { type: 'null' }
+        ]
+      },
+      count: { $ref: '#/definitions/SafeNonNegativeInt' }
+    }
+  };
+
+  v2.definitions.ProjectInventoryV2 = {
+    type: 'object',
+    required: ['entries', 'total_projects', 'unfiltered_total_records'],
+    additionalProperties: false,
+    properties: {
+      entries: {
+        type: 'array',
+        items: { $ref: '#/definitions/ProjectInventoryItemV2' },
+        maxItems: 500
+      },
+      total_projects: { $ref: '#/definitions/SafeNonNegativeInt' },
+      unfiltered_total_records: { $ref: '#/definitions/SafeNonNegativeInt' }
+    }
+  };
+
+  v2.definitions.HistoryRefreshResult.properties.inventory = {
+    oneOf: [
+      { $ref: '#/definitions/ProjectInventoryV2' },
+      { type: 'null' }
+    ]
+  };
+
+  v2.definitions.HistorySummaryParams.properties.query.required = ['project_id', 'task_run_id', 'filters'];
+  v2.definitions.HistorySummaryParams.properties.query.properties.project_id = {
+    oneOf: [
+      { $ref: '#/definitions/Sha256' },
+      { type: 'null' }
+    ]
+  };
+
+  v2.definitions.HistorySummaryResult.required = ['state', 'snapshot_id', 'metrics', 'inventory'];
+  v2.definitions.HistorySummaryResult.properties.inventory = {
+    $ref: '#/definitions/ProjectInventoryV2'
+  };
+
+  v2.definitions.HistoryPageParams.properties.query.required = ['project_id', 'task_run_id', 'filters'];
+  v2.definitions.HistoryPageParams.properties.query.properties.project_id = {
+    oneOf: [
+      { $ref: '#/definitions/Sha256' },
+      { type: 'null' }
+    ]
+  };
+
+  return v2;
+}
+
+export function buildManifest(schemaV2OrV1Content, maybeSchemaV1Content) {
+  const parsed = JSON.parse(schemaV2OrV1Content);
+  if (parsed.properties?.version?.const === 1 && !maybeSchemaV1Content) {
+    const schemaHash = createHash('sha256').update(schemaV2OrV1Content).digest('hex');
+    return {
+      domain_package: 'evcrate-advisor-data',
+      domain_version: 1,
+      schema_file: 'evcrate-advisor-data-v1.schema.json',
+      schema_sha256: schemaHash,
+      methods: [
+        'history.refresh',
+        'history.summary',
+        'history.page',
+        'history.detail',
+        'policy.readCurrent',
+        'evaluations.list',
+        'evaluations.read',
+        'evaluations.compare'
+      ],
+      limits: {
+        max_opaque_id_bytes: 128,
+        max_cursor_bytes: 256,
+        max_page_limit: 500,
+        default_page_limit: 100,
+        max_evaluation_page_limit: 100,
+        max_page_result_bytes: 1048576,
+        max_frame_payload_bytes: 16777216,
+        max_control_payload_bytes: 65536,
+        max_evaluation_document_bytes: 8388608,
+        max_compare_items: 32
+      },
+      companion_host_candidate: {
+        package: '@dam-hopper/plugin-sdk',
+        status: 'candidate_pinned',
+        version: '0.1.0',
+        sha256: '1bcb63a3578ee48a67b4cdfbbd358df2ae6d30c13814444ba57bea03d718ed5b'
+      }
+    };
+  }
+
+  const schemaV2Text = schemaV2OrV1Content;
+  const schemaV1Text = maybeSchemaV1Content || JSON.stringify(buildDataApiSchemaV1(), null, 2) + '\n';
+  const v2Hash = createHash('sha256').update(schemaV2Text).digest('hex');
+  const v1Hash = createHash('sha256').update(schemaV1Text).digest('hex');
 
   return {
     domain_package: 'evcrate-advisor-data',
-    domain_version: 1,
-    schema_file: 'evcrate-advisor-data-v1.schema.json',
-    schema_sha256: schemaHash,
+    domain_version: 2,
+    schema_file: 'evcrate-advisor-data-v2.schema.json',
+    schema_sha256: v2Hash,
+    supported_versions: [1, 2],
+    schemas: {
+      '1': {
+        file: 'evcrate-advisor-data-v1.schema.json',
+        sha256: v1Hash
+      },
+      '2': {
+        file: 'evcrate-advisor-data-v2.schema.json',
+        sha256: v2Hash
+      }
+    },
     methods: [
       'history.refresh',
       'history.summary',
@@ -655,7 +813,9 @@ export function buildManifest(schemaContent) {
       max_frame_payload_bytes: 16777216,
       max_control_payload_bytes: 65536,
       max_evaluation_document_bytes: 8388608,
-      max_compare_items: 32
+      max_compare_items: 32,
+      max_project_name_chars: 64,
+      max_project_inventory_entries: 500
     },
     companion_host_candidate: {
       package: '@dam-hopper/plugin-sdk',
@@ -668,21 +828,28 @@ export function buildManifest(schemaContent) {
 
 function main() {
   const isCheck = process.argv.includes('--check');
-  const schema = buildDataApiSchema();
-  const schemaText = JSON.stringify(schema, null, 2) + '\n';
-  const manifest = buildManifest(schemaText);
+  const schemaV1 = buildDataApiSchemaV1();
+  const schemaV1Text = JSON.stringify(schemaV1, null, 2) + '\n';
+  const schemaV2 = buildDataApiSchemaV2();
+  const schemaV2Text = JSON.stringify(schemaV2, null, 2) + '\n';
+  const manifest = buildManifest(schemaV2Text, schemaV1Text);
   const manifestText = JSON.stringify(manifest, null, 2) + '\n';
 
   if (isCheck) {
-    if (!existsSync(SCHEMA_FILE) || !existsSync(MANIFEST_FILE)) {
+    if (!existsSync(SCHEMA_FILE_V1) || !existsSync(SCHEMA_FILE_V2) || !existsSync(MANIFEST_FILE)) {
       console.error('Error: Generated schema or manifest files do not exist.');
       process.exit(1);
     }
-    const currentSchema = readFileSync(SCHEMA_FILE, 'utf8');
+    const currentSchemaV1 = readFileSync(SCHEMA_FILE_V1, 'utf8');
+    const currentSchemaV2 = readFileSync(SCHEMA_FILE_V2, 'utf8');
     const currentManifest = readFileSync(MANIFEST_FILE, 'utf8');
 
-    if (currentSchema !== schemaText) {
+    if (currentSchemaV1 !== schemaV1Text) {
       console.error('Error: evcrate-advisor-data-v1.schema.json is stale.');
+      process.exit(1);
+    }
+    if (currentSchemaV2 !== schemaV2Text) {
+      console.error('Error: evcrate-advisor-data-v2.schema.json is stale.');
       process.exit(1);
     }
     if (currentManifest !== manifestText) {
@@ -698,9 +865,11 @@ function main() {
     mkdirSync(CONTRACTS_DIR, { recursive: true });
   }
 
-  writeFileSync(SCHEMA_FILE, schemaText, 'utf8');
+  writeFileSync(SCHEMA_FILE_V1, schemaV1Text, 'utf8');
+  writeFileSync(SCHEMA_FILE_V2, schemaV2Text, 'utf8');
   writeFileSync(MANIFEST_FILE, manifestText, 'utf8');
-  console.log(`✓ Wrote schema to ${SCHEMA_FILE}`);
+  console.log(`✓ Wrote schema v1 to ${SCHEMA_FILE_V1}`);
+  console.log(`✓ Wrote schema v2 to ${SCHEMA_FILE_V2}`);
   console.log(`✓ Wrote manifest to ${MANIFEST_FILE}`);
 }
 
