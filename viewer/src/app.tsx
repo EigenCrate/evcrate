@@ -131,7 +131,20 @@ export const App: FC<AppProps> = ({ provider }) => {
       try { dispatch({ type: 'POLICY_COMMIT', policy: await activeProvider.readCurrentPolicy(`pol-${Date.now()}`) }); } catch {}
     }
     if (activeProvider.descriptor.hasEvaluationSource || activeProvider.descriptor.capabilities.includes('evaluations.list')) {
-      try { dispatch({ type: 'EVALUATIONS_LIST_COMMIT', list: await activeProvider.listEvaluations(`eval-${Date.now()}`, null, 100) }); } catch {}
+      try {
+        const evalList = await activeProvider.listEvaluations(`eval-${Date.now()}`, null, 100);
+        dispatch({ type: 'EVALUATIONS_LIST_COMMIT', list: evalList });
+        if (evalList.status === 'ready' && evalList.items.length > 0) {
+          const itemsToCompare = evalList.items.map((it) => ({
+            evaluation_ref: it.evaluation_ref,
+            expected_revision: it.source_revision
+          }));
+          const cmp = await activeProvider.compareEvaluations(`cmp-${Date.now()}`, itemsToCompare, null, 100);
+          if (cmp.status === 'ready') {
+            dispatch({ type: 'EVALUATIONS_COMPARE_COMMIT', comparison: cmp });
+          }
+        }
+      } catch {}
     }
   }, [activeProvider, state.generation, state.frameSession, state.filters]);
 
