@@ -218,9 +218,11 @@ test('E05 local framed-worker 10k workload records actual request and cancellati
       const sample = await client.invoke(contextId, 'history.refresh');
       assert.equal(sample.value.state, 'fresh');
       assert.equal(sample.value.scan.consultations_discovered, corpus.discoveredConsultations);
-      assert.equal(sample.value.scan.accepted_records, 9999);
-      assert.equal(sample.value.scan.invalid_records, 1);
+      assert.equal(sample.value.scan.accepted_records, 9998);
+      assert.equal(sample.value.scan.invalid_records, 98);
       assert.ok(sample.value.scan.diagnostics.some((item) => item.code === 'EXECUTION_INVALID_JSON'));
+      assert.ok(sample.value.scan.diagnostics.some((item) => item.code === 'EXECUTION_ID_MISMATCH'));
+      assert.ok(sample.value.scan.diagnostics.some((item) => item.code === 'OUTCOME_ID_MISMATCH'));
       snapshotId = sample.value.snapshot_id;
       refreshSamplesMs.push(sample.elapsedMs);
     }
@@ -233,7 +235,7 @@ test('E05 local framed-worker 10k workload records actual request and cancellati
         query: HISTORY_QUERY
       });
       const metrics = sample.value.metrics;
-      assert.equal(metrics.counts.consultations, 9997);
+      assert.equal(metrics.counts.consultations, 9998);
       if (index === 0) {
         assert.ok(metrics.counts.outcome_states.valid > 0, 'Fixture must include valid outcomes');
         assert.ok(metrics.counts.outcome_states.missing > 0, 'Fixture must include missing outcomes');
@@ -242,10 +244,11 @@ test('E05 local framed-worker 10k workload records actual request and cancellati
         assert.equal(metrics.metrics.failures.attempts.fatal, metrics.counts.statuses.FAILED);
         assert.ok(metrics.metrics.failures.execution.some((failure) => failure.code === 'PROCESS_FAILED' && failure.category === 'fatal'));
         assert.equal(metrics.scan.consultations_discovered, corpus.discoveredConsultations);
-        assert.equal(metrics.scan.accepted_records, 9997);
-        assert.equal(metrics.scan.invalid_records, 3);
-        assert.ok(metrics.scan.diagnostics.some((item) => item.code === 'DUPLICATE_IDENTITY'));
+        assert.equal(metrics.scan.accepted_records, 9998);
+        assert.equal(metrics.scan.invalid_records, 98);
+        assert.ok(metrics.scan.diagnostics.some((item) => item.code === 'EXECUTION_ID_MISMATCH'));
         assert.ok(metrics.scan.diagnostics.some((item) => item.code === 'EXECUTION_INVALID_JSON'));
+        assert.ok(metrics.scan.diagnostics.some((item) => item.code === 'OUTCOME_ID_MISMATCH'));
         workloadCoverage = {
           outcomeStates: metrics.counts.outcome_states,
           scan: {

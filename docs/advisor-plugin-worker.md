@@ -1,8 +1,8 @@
 # DamHopper Advisor Plugin — Framed Node Worker
 
 **Status:** Phase E02 implementation complete (2026-09-21; review 9.5/10). Joint G1 owner-runner qualification remains downstream.
-**Authority:** E02 `plugin/` worker closure and pinned D00 Worker SDK; Phase 01 freezes the companion v1/v2 data-contract boundary, but root-history worker behavior remains pending.
-**Related:** [Phase E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement), [codebase summary](./codebase-summary.md), [cross-project contract](./all-project-advisor-history.md).
+**Authority:** E02 `plugin/` worker closure and pinned D00 Worker SDK. Root-history behavior is implemented and qualified by All-project advisor history Phases 03–05; that milestone does not imply the separate plugin Replacement G1/G2/G4 gates are complete.
+**Related:** [Phase E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement), [codebase summary](./codebase-summary.md), [cross-project contract and qualification evidence](./all-project-advisor-history.md).
 
 ## Purpose and boundary
 

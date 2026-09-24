@@ -1,12 +1,13 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline; Hook Materialization Scope Distribution is
+**Status:** Current requirements baseline. Hook Materialization Scope Distribution is
 complete through Phase 09, Windows release qualification through Phase 10, and
-DamHopper Advisor Plugin Phases E00–E04 are complete (E04/G3 qualified on
-2026-09-22). E05 source cutover is applied in the repository; joint G4
-qualification/sign-off is unverified, and standalone retirement is not
-release-authorized. All-project advisor history Phase 01 contract freeze is
-approved (2026-09-24); Phase 02 host authorization/context is complete; worker/provider, UI, and paired qualification remain pending.
+All-project advisor history through Phase 05 (6/6 phases, 100%; 2026-09-24).
+Its paired release is qualified; see the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
+DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
+are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
+but joint G4 qualification/sign-off is unverified and standalone retirement is
+not release-authorized.
 **Updated:** 2026-09-24
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
@@ -470,7 +471,7 @@ and `/plugins/evcrate.advisor`; the E03 candidate builder recorded its inventory
 entry. E03 validation on 2026-09-21 recorded **68/68 tests passed**. This is dated
 repository/package evidence, not host CSP/sandbox, G2 LAN, or G4 qualification.
 
-### FR-22: Cross-project advisor history contract (Phases 01–02)
+### FR-22: Cross-project advisor history contract (Phases 00–05)
 
 **Requirement:** Permit every authenticated DamHopper account to read retained
 EVCrate advisor histories across projects only through a trusted, owner-root-bound
@@ -489,8 +490,9 @@ A versioned sidecar stores strictly owner-safe display names keyed by project ID
 labels never confer authority and missing labels use an abbreviated ID fallback.
 The host runner contract defines `ContextScopeKind` (`project` |
 `history-root`) and `ContextScopeDescriptor` with optional root identity and
-source revision. Phase 02 implements install-bound `OwnerHistorySource`, authenticated history-only admission, actor/session reauthorization, and independent runner source checks. The API hydrates its process-local source cache from runner state before each context open; startup hydration is not claimed.
-Worker scanning, name persistence, UI selection, and paired qualification remain later gates. See the [contract guide](./all-project-advisor-history.md), [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), and [Phase 02 validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md).
+source revision. Phases 02–05 completed install-bound admission, owner-safe scanning and display names, snapshot-backed UI filtering, and paired release qualification.
+The Phase 05 evidence records **273/273 tests passed** (0 failed/skipped), candidate and distribution package checks, and a direct history-root provider read of 237 accepted consultations across 21 projects in 191.48 ms with no diagnostics.
+The scan was not a new live DamHopper browser session; production deployment remains separate. See the [contract guide](./all-project-advisor-history.md), [Phase 05 plan](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [test report](../plans/reports/tester-260924-2115-phase-05-paired-qualification.md), and [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
 
 
 
@@ -514,8 +516,7 @@ through E04 are complete. The Explorer's dated standalone-picker evidence is
 historical; its picker/reader source has since been removed. E05 source cutover is
 applied, but joint G4 qualification/sign-off is unverified, and standalone
 retirement is not release-authorized. Documentation/support cutover is complete.
-Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2
-qualification, and the G4 gate remain distinct.
+All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 33-file
