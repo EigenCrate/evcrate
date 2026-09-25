@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { execNpmSync } = require('./npm-runner.cjs');
 const crypto = require('node:crypto');
 const { sha256Bytes } = require('./canonical-json.cjs');
 
@@ -17,7 +18,7 @@ const EXPECTED_TARGETS = Object.freeze([
 ]);
 
 function collectPackInventory(projectRoot) {
-  const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+  const packOutput = execNpmSync(['pack', '--dry-run', '--json'], {
     cwd: projectRoot,
     encoding: 'utf8',
     env: { ...process.env, NO_COLOR: '1' }
