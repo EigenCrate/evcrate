@@ -1,0 +1,535 @@
+{
+  "policy_v1": {
+    "version": 1,
+    "advisor": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high",
+      "timeout_ms": 120000
+    }
+  },
+  "policy_v2": {
+    "version": 2,
+    "advisor": {
+      "primary": {
+        "backend": "claude",
+        "model": "claude-3-5-sonnet-20241022",
+        "effort": "high"
+      },
+      "backup": {
+        "backend": "codex",
+        "model": "o3-mini",
+        "effort": "medium"
+      }
+    },
+    "wait": {
+      "mode": "until_terminal",
+      "warn_after_ms": 10000,
+      "warn_every_ms": 30000
+    },
+    "history": {
+      "retention_days": 30,
+      "max_bytes": 104857600
+    }
+  },
+  "checkpoint_v2": {
+    "protocol": "evcrate-advisor-checkpoint",
+    "version": 2,
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "checkpoint_id": "cp-1",
+    "phase_id": "phase-01",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint": "review:step-4",
+    "kind": "review",
+    "question": "Is this valid?",
+    "task": {
+      "goal": "Test goal",
+      "non_goals": ["None"],
+      "authorized_paths": ["src/index.ts"],
+      "scope_rationale": "Testing scope",
+      "invariants": ["Preserve existing"],
+      "success_criteria": ["Pass tests"]
+    },
+    "proposal": {
+      "next_action": "Proceed to next step",
+      "rationale": "Review passed",
+      "intended_changed_paths": ["src/index.ts"]
+    },
+    "evidence": {
+      "summary": "Evidence summary",
+      "files": [
+        {
+          "path": "src/index.ts",
+          "excerpt": "console.log(1);",
+          "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "validation_results": [
+        {
+          "suite": "test",
+          "command": "npm test",
+          "status": "passed",
+          "passed": 1,
+          "failed": 0,
+          "details": null
+        }
+      ],
+      "artifacts": []
+    },
+    "prior": {
+      "prior_consultation_id": null,
+      "prior_counsel": null,
+      "prior_disposition": null,
+      "observed_outcome": null
+    }
+  },
+  "result_body_v2": {
+    "recommendation": "Accept the proposed plan and proceed with implementation.",
+    "rationale": "All prerequisites and boundaries are satisfied.",
+    "must_fix": [],
+    "cautions": ["Preserve existing tests"],
+    "assumptions": ["Node >=22.19.0"],
+    "success_checks": ["npm run build passes"],
+    "unresolved_questions": []
+  },
+  "result_v2": {
+    "protocol": "evcrate-advisor-result",
+    "version": 2,
+    "checkpoint": "review:step-4",
+    "status": "ADVICE_READY",
+    "recommendation": "Accept the proposed plan and proceed with implementation.",
+    "rationale": "All prerequisites and boundaries are satisfied.",
+    "must_fix": [],
+    "cautions": ["Preserve existing tests"],
+    "assumptions": ["Node >=22.19.0"],
+    "success_checks": ["npm run build passes"],
+    "unresolved_questions": []
+  },
+  "receipt_v2": {
+    "backend": "claude",
+    "model": "claude-3-5-sonnet-20241022",
+    "effort": "high",
+    "controller_version": 2,
+    "adapter_version": "1.0.0",
+    "build_identity": "b1",
+    "elapsed_ms": 1500
+  },
+  "attempt_outcome": {
+    "attempt_id": "00000000-0000-4000-8000-000000000001",
+    "slot": "primary",
+    "route": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high"
+    },
+    "phase": "model",
+    "model_started": true,
+    "elapsed_ms": 1500,
+    "terminal_classification": "success",
+    "retry_delay_ms": null,
+    "cleanup_outcome": "not_needed"
+  },
+  "envelope_ready": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "00000000-0000-4000-8000-000000000002",
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "checkpoint_id": "cp-1",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "1.0.0",
+      "build_identity": "b1",
+      "elapsed_ms": 1500
+    },
+    "attempts": [
+      {
+        "attempt_id": "00000000-0000-4000-8000-000000000001",
+        "slot": "primary",
+        "route": {
+          "backend": "claude",
+          "model": "claude-3-5-sonnet-20241022",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 1500,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "not_needed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Accept the proposed plan and proceed with implementation.",
+      "rationale": "All prerequisites and boundaries are satisfied.",
+      "must_fix": [],
+      "cautions": ["Preserve existing tests"],
+      "assumptions": ["Node >=22.19.0"],
+      "success_checks": ["npm run build passes"],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  },
+  "envelope_failed": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "00000000-0000-4000-8000-000000000003",
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "checkpoint_id": "cp-1",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+    "status": "FAILED",
+    "receipt": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "1.0.0",
+      "build_identity": "b1",
+      "elapsed_ms": 2000
+    },
+    "attempts": [
+      {
+        "attempt_id": "00000000-0000-4000-8000-000000000004",
+        "slot": "primary",
+        "route": {
+          "backend": "claude",
+          "model": "claude-3-5-sonnet-20241022",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 2000,
+        "terminal_classification": "fatal",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "not_needed"
+      }
+    ],
+    "error": {
+      "code": "PROCESS_FAILED",
+      "category": "system",
+      "action": "retry",
+      "message": "Model execution failed cleanly."
+    },
+    "audit_status": "recorded"
+  },
+  "execution_started": {
+    "schema_version": 1,
+    "consultation_id": "00000000-0000-4000-8000-000000000010",
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+    "checkpoint": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [
+          {
+            "path": "src/index.ts",
+            "excerpt": "console.log(1);",
+            "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+        ],
+        "validation_results": [
+          {
+            "suite": "test",
+            "command": "npm test",
+            "status": "passed",
+            "passed": 1,
+            "failed": 0,
+            "details": null
+          }
+        ],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "route": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high"
+    },
+    "receipt": null,
+    "prompt_identity": "prompt-v1",
+    "build_identity": "b1",
+    "attempts": [],
+    "status": "started",
+    "result": null,
+    "error": null,
+    "started_at": 1000,
+    "completed_at": null
+  },
+  "execution_ready": {
+    "schema_version": 1,
+    "consultation_id": "00000000-0000-4000-8000-000000000011",
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+    "checkpoint": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [
+          {
+            "path": "src/index.ts",
+            "excerpt": "console.log(1);",
+            "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+        ],
+        "validation_results": [
+          {
+            "suite": "test",
+            "command": "npm test",
+            "status": "passed",
+            "passed": 1,
+            "failed": 0,
+            "details": null
+          }
+        ],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "route": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high"
+    },
+    "receipt": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "1.0.0",
+      "build_identity": "b1",
+      "elapsed_ms": 1500
+    },
+    "prompt_identity": "prompt-v1",
+    "build_identity": "b1",
+    "attempts": [
+      {
+        "attempt_id": "00000000-0000-4000-8000-000000000001",
+        "slot": "primary",
+        "route": {
+          "backend": "claude",
+          "model": "claude-3-5-sonnet-20241022",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 1500,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "not_needed"
+      }
+    ],
+    "status": "ADVICE_READY",
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Accept the proposed plan and proceed with implementation.",
+      "rationale": "All prerequisites and boundaries are satisfied.",
+      "must_fix": [],
+      "cautions": ["Preserve existing tests"],
+      "assumptions": ["Node >=22.19.0"],
+      "success_checks": ["npm run build passes"],
+      "unresolved_questions": []
+    },
+    "error": null,
+    "started_at": 1000,
+    "completed_at": 2500
+  },
+  "execution_failed": {
+    "schema_version": 1,
+    "consultation_id": "00000000-0000-4000-8000-000000000012",
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "checkpoint_digest": "db8718150039c482d5d120b387d6473ddaff7bea95ff8f059ada42f1a65cfe40",
+    "checkpoint": {
+      "protocol": "evcrate-advisor-checkpoint",
+      "version": 2,
+      "task_run_id": "00000000-0000-4000-8000-000000000000",
+      "checkpoint_id": "cp-1",
+      "phase_id": "phase-01",
+      "task_revision": 1,
+      "evidence_revision": 0,
+      "checkpoint": "review:step-4",
+      "kind": "review",
+      "question": "Is this valid?",
+      "task": {
+        "goal": "Test goal",
+        "non_goals": ["None"],
+        "authorized_paths": ["src/index.ts"],
+        "scope_rationale": "Testing scope",
+        "invariants": ["Preserve existing"],
+        "success_criteria": ["Pass tests"]
+      },
+      "proposal": {
+        "next_action": "Proceed to next step",
+        "rationale": "Review passed",
+        "intended_changed_paths": ["src/index.ts"]
+      },
+      "evidence": {
+        "summary": "Evidence summary",
+        "files": [
+          {
+            "path": "src/index.ts",
+            "excerpt": "console.log(1);",
+            "digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+        ],
+        "validation_results": [
+          {
+            "suite": "test",
+            "command": "npm test",
+            "status": "passed",
+            "passed": 1,
+            "failed": 0,
+            "details": null
+          }
+        ],
+        "artifacts": []
+      },
+      "prior": {
+        "prior_consultation_id": null,
+        "prior_counsel": null,
+        "prior_disposition": null,
+        "observed_outcome": null
+      }
+    },
+    "route": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high"
+    },
+    "receipt": {
+      "backend": "claude",
+      "model": "claude-3-5-sonnet-20241022",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "1.0.0",
+      "build_identity": "b1",
+      "elapsed_ms": 2000
+    },
+    "prompt_identity": "prompt-v1",
+    "build_identity": "b1",
+    "attempts": [
+      {
+        "attempt_id": "00000000-0000-4000-8000-000000000004",
+        "slot": "primary",
+        "route": {
+          "backend": "claude",
+          "model": "claude-3-5-sonnet-20241022",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 2000,
+        "terminal_classification": "fatal",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "not_needed"
+      }
+    ],
+    "status": "FAILED",
+    "result": null,
+    "error": {
+      "code": "PROCESS_FAILED",
+      "category": "system",
+      "action": "retry",
+      "message": "Model execution failed cleanly."
+    },
+    "started_at": 1000,
+    "completed_at": 3000
+  },
+  "outcome_v1": {
+    "schema_version": 1,
+    "consultation_id": "00000000-0000-4000-8000-000000000011",
+    "task_run_id": "00000000-0000-4000-8000-000000000000",
+    "project_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "disposition": {
+      "action": "accept",
+      "rationale": "Accepted counsel to proceed with bounded plan."
+    },
+    "evidence_revision": 0,
+    "actual_changed_paths": ["src/index.ts"],
+    "validation": {
+      "suite": "test",
+      "command": "npm test",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "details": null
+    },
+    "outcome": "resolved",
+    "correction_number": 1,
+    "recorded_at": 3500
+  }
+}

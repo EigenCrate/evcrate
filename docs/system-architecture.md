@@ -1,11 +1,11 @@
 # System Architecture
 
-**Status:** Current implementation reference; Hook Materialization Scope Distribution
-is complete through Phase 09, and Windows release qualification is complete through
-Phase 10 (10/10 phases, 100%; completed 2026-09-15). The bounded Windows support
-cutover covers the standalone installer lifecycle and `version --json`; live vendor
-qualification and production HOME publication remain operator-gated.
-**Updated:** 2026-09-16
+**Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+**Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
+**DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
+**Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
+**Updated:** 2026-09-24
+
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
 This document is the central authority for distribution, advisor supervision, wire
@@ -69,7 +69,8 @@ presented as a relay to `evcrate-advisor`.
 The source is organized around narrow contracts:
 
 - `src/protocol/`: bounded JSON, canonical JSON, resource, publication, scope,
-  diagnostic, and advisor-settings wire shapes.
+  diagnostic, advisor-settings, portable advisor-contract, and Phase E00 plugin
+  domain-data wire shapes.
 - `src/context/`: package, project, home, state, target, and immutable path context.
 - `src/manifests/`: schema-2 target manifests, resource roots, home bindings,
   patch authorization, and manifest registry loading.
@@ -203,7 +204,7 @@ publisher are a separate semantic-release boundary; see [PDR FR-15](./project-ov
 - `tests/distribution/release-orchestration.test.mjs` covers WRQ-042 (workflow boundary), WRQ-043 (fixture/verify/smoke), and WRQ-044 (labels/preserved config).
 
 The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its 29 production files are:
+`.evcrate/source/.evcrate/bin`. Its current 33 production files are:
 
 ```text
 evcrate-advisor
@@ -219,6 +220,10 @@ lib/advisor/contracts-v2.cjs
 lib/advisor/controller-envelope.cjs
 lib/advisor/controller.cjs
 lib/advisor/errors.cjs
+lib/advisor/generated/advisor-contract-runtime.js
+lib/advisor/generated/advisor-metrics.js
+lib/advisor/generated/canonical-json.js
+lib/advisor/generated/json.js
 lib/advisor/history-contract.cjs
 lib/advisor/history-prune.cjs
 lib/advisor/history-query.cjs
@@ -247,6 +252,10 @@ Source and projection entries must be regular non-symlink files with the
 expected entrypoint shebang/mode. The generated inventory and schema-2
 `controller_hashes` are authoritative; missing, extra, stale, or mismatched
 entries block publication.
+Phase 03 keeps installer inventories in lockstep: `install.sh` and `install.ps1`
+embed the same 33 code-point-sorted paths. The manifest suite asserts exact
+count/hash parity and rejects viewer files and external-package requires; this is
+a closure boundary test, not viewer registration.
 
 ## 5. Shared advisor controller
 
@@ -295,9 +304,30 @@ cannot authorize v2 semantics.
 
 ### 5.2 Phase 01 v2 contract freeze
 
-The standalone CJS validator and TypeScript settings/protocol validator remain
-separate closures. They share exact schemas and parity fixtures; CJS cannot
-import `dist/` or projected resources. Phase 01 freezes these versions:
+The standalone CJS validator remains separate from the TypeScript protocol
+runtime. They share exact schemas and parity fixtures; CJS cannot import `dist/`
+or projected resources. The TypeScript runtime has no `node:*` imports, process
+state, HOME access, filesystem access, or crypto dependency.
+
+Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
+
+1. `src/protocol/advisor-contract-runtime.ts` owns portable advisor policy,
+   checkpoint, result, receipt, attempt, envelope, and history types/constants
+   plus deep-freezing and neutral code/path validators.
+2. `src/protocol/advisor-contracts.ts` retains state v1 contracts and re-exports
+   the portable runtime for existing state consumers.
+3. `src/protocol/advisor-settings.ts` delegates shared policy validators and maps
+   runtime violations to the settings <code>SETTINGS_INVALID</code> boundary.
+4. `src/protocol/index.ts` exports the runtime alongside the existing protocol
+   barrels; `src/index.ts` exposes it transitively.
+
+The Phase 01 four-file TypeScript boundary is source/export preparation only.
+Phase 02 adds the exact four-file generated CommonJS runtime beneath
+`lib/advisor/generated/`. The installed advisor controller closure is now exact
+33 files; historical 29-file closure evidence and release records remain dated
+facts and are not rewritten.
+
+The following wire versions remain frozen:
 
 | Contract | Version | Boundary |
 |---|---:|---|
@@ -329,6 +359,75 @@ Phase 01 freezes retry slots (`10/20/30` seconds for primary, one backup),
 cleanup classifications, gate statuses, and correction cap (`3`) for later
 phases. It does not itself activate indefinite generation, retry orchestration,
 task-state commands, or history tooling.
+
+#### Phase 02 checkpoint digest and history metrics
+
+The checkpoint digest is a compatibility byte contract, not canonical JSON:
+validate the v2 object without reconstruction or key sorting, preserve parsed
+property insertion order, UTF-8 encode `JSON.stringify(validatedCheckpoint)`,
+then SHA-256 those bytes and emit lowercase hex. The Node adapter uses
+`createHash('sha256')`; browser consumers hash the same `TextEncoder` bytes with
+Web Crypto. The non-lexicographic golden fixture protects retained history.
+
+`src/protocol/advisor-metrics.ts` is the portable, deterministic kernel. Its
+pure API is `normalizeHistoryRecord`, `normalizeHistoryFilter`,
+`filterHistoryRecords`, `nearestRankPercentile`, and `calculateHistoryMetrics`;
+callers supply `generated_at`, and the kernel performs no filesystem, crypto,
+DOM, process, or locale work. It lowercases identities, excludes invalid
+execution records, excludes every conflicting duplicate identity with a
+`DUPLICATE_IDENTITY` diagnostic, and deep-freezes returned values.
+
+The exact ten-key filter is null/unconstrained, OR-within and AND-across, with
+inclusive positive timestamp bounds. Ratios use numerator/denominator/excluded
+counts, six-decimal rounding, and `null` for zero denominators. Latency uses
+terminal `receipt.elapsed_ms` only and nearest-rank p50/p95; attempt, failure,
+and route groups use stored facts and deterministic code-point ordering. Results
+carry scan diagnostics, counts, missingness, completeness, and stable limitation
+codes so partial or unattested history is not presented as causal evidence.
+#### Phase 04 history metrics CLI integration
+
+`evcrate-advisor history metrics` is a read-only, current-project projection of
+the retained controller history. The request is one bounded
+`evcrate-advisor-history` v1 object with exact keys
+`protocol`, `version`, `operation`, `project_id`, `task_run_id`, and `filters`:
+
+```json
+{"protocol":"evcrate-advisor-history","version":1,"operation":"metrics","project_id":null,"task_run_id":null,"filters":null}
+```
+
+`project_id: null` selects the invocation project; an explicit ID must match it.
+An optional `task_run_id` is applied before the shared kernel's exact ten-key
+filters. Collection is unlocked and non-atomic, reuses bounded descriptor-safe
+history scanning, and never exposes absolute paths or HOME data. Valid execution
+records are normalized through the generated metrics runtime; invalid execution
+records are excluded with sorted relative-path diagnostics, while missing or
+invalid outcomes remain visible as distinct missingness. Scan bytes, accepted and
+invalid counts, completeness, and diagnostic suppression are returned.
+
+The result is the standard `evcrate-advisor-history` v1 envelope with
+`operation: "metrics"`, `status: "HISTORY_READY"`, metric-definition version,
+scope, normalized filters, counts, metrics, missingness, scan facts,
+completeness, and limitation codes. It exits zero only for `HISTORY_READY`;
+malformed requests remain sanitized `FAILED`/`REQUEST_INVALID` results. The
+operation does not claim complete audit coverage, task success, cost, saved
+time, or causal effectiveness, and does not alter list/show/export/prune.
+
+
+#### Historical standalone explorer milestones (Phases 05–10; 2026-09-18–19)
+
+Phase 05 (2026-09-18) recorded explicit-handle history traversal, bounded reads,
+shared normalization, and stale retention; Phase 06 added the display-only
+evaluation protocol and an 8 MiB standalone file picker. Phase 07 built the
+standalone React explorer and E03 reused its shared views in the embedded UI.
+Phase 08 recorded a 298.5 kB bundle and an exact-seven asset boundary; Phase 09
+recorded 14 Playwright checks and five 10,000-record benchmarks (p95 scan 1,643 ms,
+detail 67 ms, cancel 104 ms, zero long tasks above 200 ms); Phase 10 documented
+the tested Chromium/Linux scope and metric limits.
+
+Those browser picker/reader sources were later removed from this repository. The
+dated milestone records are not current standalone support, current release-asset
+verification, or G4 qualification; source removal does not authorize retirement.
+
 
 ### 5.3 Compatibility checkpoint wire contract
 
@@ -556,38 +655,17 @@ by the 512/512 full-suite result, exact 29-file closure, `distribute:check`, and
 installed Linux release fixtures. These deterministic checks do not qualify live
 vendors or authorize production HOME publication.
 
+### Historical Advisor Metrics Explorer support boundary (Phases 01–10; completed 2026-09-19)
+
+At completion, the standalone explorer's tested boundary was Chromium >=120 on
+Linux with File System Access; it did not attest POSIX permissions/ownership,
+complete audit coverage, or causal/cost/saved-time claims. Its picker/reader source
+has since been removed, so this history does not establish current standalone
+support or G4.
+
 ### Deterministic Windows fixture and predecessor resolver (Phase 04)
 
-Phase 04 (2026-09-14) adds an internal, deterministic predecessor boundary for
-the later Windows candidate and harness phases. It does not qualify native
-Windows installer/runtime behavior or change the public support boundary.
-
-`buildWindowsTestReleaseSet` builds the Windows archive, sidecar, release
-metadata, and real `install.ps1` entrypoint through `buildReleaseArchives`.
-Shared fixture helpers own code-point-sorted records, inventory/controller/build
-manifest digests, installer bytes, and the fixed
-`FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z`; independent output roots
-therefore contain identical four-file names, sizes, hashes, and bytes.
-
-The resolver fetches bounded pages of non-draft, non-prerelease semver releases
-from the producer's read-only GitHub API. A release is qualified only when it
-has exactly one `Windows x64 Archive` label and one
-`Windows Installer Entrypoint (install.ps1)` label, canonical filenames, and
-all four assets pass `verifyWindowsAssetSet`. Before any qualification history,
-the resolver emits verified `bootstrap-fixture` `1.0.0`/`v1.0.0` bytes with the
-fixed lowercase `a`×40 source identity and requires candidate `>` 1.0.0.
-After qualification history exists, only the latest stable release is usable;
-an unqualified latest, missing/tampered/duplicate asset, or API/token failure
-fails closed without older-release or bootstrap fallback.
-
-`predecessor-downloader.mjs` downloads exactly the ZIP, sidecar, release
-metadata, and `install.ps1` into private staging, bounds response/error bytes,
-strips authorization across origins, verifies before and after promotion, and
-removes staging/partial output on failure. `prepare-windows-predecessor.mjs`
-returns the normalized `{kind, version, tag, sourceCommit, files, directory}`
-handoff consumed by later phases. Phase 09 integrated proof confirmed the irreversible
-predecessor transition (bootstrap initially; fail-closed on tampered or unqualified latest
-release) and final published-byte comparison.
+Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidate and harness phases without altering public support. `buildWindowsTestReleaseSet` builds archive, sidecar, metadata, and `install.ps1` with fixed `FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z` for byte-identical fixtures. The resolver fetches non-draft GitHub releases requiring exact asset labels, canonical filenames, and `verifyWindowsAssetSet` validation. Initial qualification uses `bootstrap-fixture` `1.0.0`; once qualification history exists, missing/tampered assets fail closed without older fallback. `predecessor-downloader.mjs` stages and verifies downloads, returning `{kind, version, tag, sourceCommit, files, directory}` for downstream phases.
 
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
@@ -627,11 +705,14 @@ Phase 07 history is optional rich audit, not task-state authority:
 
 Phase 09 synchronized the generated release boundary:
 
-1. **Controller closure.** The canonical CommonJS controller has exactly 29 files.
-   Inventory/hash authorities are synchronized across
+1. **Controller closure.** The canonical CommonJS controller has exactly 33
+   files: the prior 29 CJS files plus the four generated runtime modules
+   (`advisor-contract-runtime.js`, `advisor-metrics.js`, `canonical-json.js`,
+   and `json.js`). Inventory/hash authorities are synchronized across
    `generate-controller-inventory.mjs`, `src/manifests/controller.ts`, `install.sh`,
    `install.ps1`, and `scripts/release/runtime-closure.cjs`. The runtime brief is
-   authored once under `.claude`, generated into the closure, and never hand-edited.
+   authored once under `.claude`, generated into the closure, and never
+   hand-edited.
 2. **Target projections.** `npm run distribute:build` generates all seven targets;
    `npm run distribute:check` verifies byte parity. Build manifests and the schema-1
    registry are synchronized by `npm run generate:all`.
@@ -640,11 +721,13 @@ Phase 09 synchronized the generated release boundary:
    selected snapshot with a symlink. Windows installs under
    `<root>/versions/<snapshot>` and writes `<root>/current.json`; its launcher is
    `<root>/bin/evcrate.cmd`. Both retain prior snapshots for bounded rollback.
-4. **Windows assets and lifecycle.** The verified assets are `install.ps1`,
-   `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar, and
-   `evcrate-v<version>.release.json`. `install`, repeat-install, `repair`, upgrade,
-   `rollback`, `uninstall`, and `version --json` are qualified only on the Section 7
-   matrix. Runtime `publish`, `health`, and advisor execution are not Windows claims.
+4. **Windows assets and lifecycle.** The 2026-09-15 qualification record covered
+   `install.ps1`, `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar,
+   and `evcrate-v<version>.release.json`. `install`, repeat-install, `repair`,
+   upgrade, `rollback`, `uninstall`, and `version --json` were exercised only on the
+   Section 7 matrix. This historical record does not assert current release-asset
+   verification. Runtime `publish`, `health`, and advisor execution are not Windows
+   claims.
 5. **Publication state.** HOME state is `$HOME/.evcrate/publication/`; project
    state is `stateRoot/project-publication/<canonical SHA-256 identity>`. Project
    publication commits the shared HOME controller first and then project harness
@@ -665,6 +748,45 @@ Phase 09 synchronized the generated release boundary:
 The generated trees, controller closure, manifests, registry, publication journals,
 and installer state are managed artifacts. User policy, unmanaged HOME/project
 files, and vendor credentials remain outside the publication authority.
+## 9. DamHopper advisor plugin replacement
+
+**Status:** E00–E04 implementation/package work is complete; E04/G3 was qualified
+2026-09-22. E05 source cutover removed standalone picker code, but joint G4
+qualification/sign-off is unverified: external Linux owner-runner and separate-LAN
+evidence are not present here. E05/G4 is not accepted or complete; standalone
+retirement is not release-authorized. Joint G1/G2 qualification remains downstream.
+**Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md),
+[UI guide](./advisor-plugin-ui.md), [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md),
+and [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
+**E00:** `evcrate-advisor-data` v1 freezes eight reads; G0 permits only
+`node:fs`, `node:path`, and `node:crypto` (controller-inventory delta `0`).
+**E01:** `provider.cjs` validates/gates E00 methods; binding, snapshot/cursor,
+history, policy, and evaluation modules enforce owner/path/fingerprint boundaries.
+**E02:** The pinned D00 SDK owns framing and strict UTF-8 JSON-RPC; the worker
+bounds contexts, requests, cancellation, safe errors, and deterministic output.
+**E03:** Current `AdvisorDataProvider` uses the bounded DamHopper `MessagePort`;
+the temporary E03 local picker/reader source was later removed. The version-`1.0.0`
+bridge validates eight envelopes and fences session/generation, late replies, and
+revocation. The four views are Overview, History/detail, Configuration, and
+Evaluations at `/plugins/evcrate.advisor`.
+The Vite entry emits `plugin/ui/index.html` with inlined CSS/IIFE and no external
+assets, network clients, or picker. E03 recorded 68/68 repository/package tests
+on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current
+release-asset verification.
+
+### Cross-project advisor history (Phases 00–05)
+
+- **Phase 00:** Production token issuance requires configured MongoDB; the explicit development/test token path remains. See the [auth prerequisite](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
+- **Phase 01:** `evcrate-advisor-data` v2 retains v1 schema/behavior and on-disk history v1; query filtering, bounded same-snapshot inventory, owner-safe display metadata, and `ContextScopeKind` / `ContextScopeDescriptor` are frozen.
+- **Phase 02 binding:** DamHopper persists `OwnerHistorySource` (`rootPath`, `rootIdentity`, `sourceRevision`, `allAuthenticatedHistoryRead`) on the installation. Admin replacement uses an expected security revision and advances registry/security revisions.
+- **Admission:** Valid authenticated actors may use `history-root` without per-account grants only for `history.refresh`, `history.summary`, `history.page`, and `history.detail`. `--no-auth` stays denied; project scope, policy, and evaluation access retain their grant boundaries.
+- **Context open:** The API validates the actor epoch and enabled installation, hydrates its process-local source cache from runner state before each open (not at startup), and sends the descriptor's kind, root identity, and source revision. The descriptor does not carry the owner path.
+- **Runner verification:** The runner re-reads the persisted installation, checks source capability and descriptor identity/revision, and rejects a missing, symlink, or non-directory root; a non-root Unix runner also checks effective-UID ownership.
+- **Revalidation:** The API rechecks actor/epoch and operation on every invoke; the runner rechecks enabled state, source capability, root identity, and revision. Admin source replacement clears the API source cache and revokes contexts; the next open rehydrates from runner state.
+- **Phases 03–04:** EVCrate root scanning and safe project-name persistence are paired with same-snapshot project filtering and independent source labels in the UI.
+- **Phase 05:** Paired qualification completed 2026-09-24: **273/273 tests passed**, 0 failed/skipped; candidate and distribution packages verified; review approved **9.8/10** with zero critical issues. The direct history-root provider scan accepted **237/237 consultations across 21 projects in 191.48 ms**, with zero diagnostics. It was not a new live DamHopper browser session.
+- **Release boundary:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records the paired-release decision. Qualification is not production deployment or package publication.
+
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)
@@ -672,4 +794,4 @@ files, and vendor credentials remain outside the publication authority.
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
-- [Pi-native migration](./pi-native-migration.md)
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and historical E03 provider boundary.

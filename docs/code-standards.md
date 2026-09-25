@@ -1,12 +1,16 @@
 # Code Standards and Codebase Structure
 
-**Status:** Current implementation standard  
-**Updated:** 2026-09-16
-**Applies to:** TypeScript control plane, canonical harness resources, shared advisor
+**Status:** Current implementation standard
+**Updated:** 2026-09-24
+**Applies to:** TypeScript control plane, Phase E00/01 Advisor Plugin contracts,
+Phase E03 provider-neutral embedded UI, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
 2026-09-15) for standalone installer lifecycle and `version --json`; live runtime
 commands and vendor qualification remain Linux-only and operator-gated.
+
+**Plugin gate:** Standalone picker source is removed; joint G4 qualification/sign-off
+is unverified, and standalone retirement is not release-authorized.
 
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
@@ -245,10 +249,60 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 29
-production files, including the generated runtime mentor brief and Phase 07
-history modules. It reads the user-owned `$HOME/.evcrate/advisor-routing.json`;
-policy is never generated or published.
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 33
+production files: the original 29 CJS files plus four generated CommonJS runtime
+modules under `lib/advisor/generated/`. It reads the user-owned
+`$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
+
+### Portable advisor contract runtime
+Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
+
+- `src/protocol/advisor-contract-runtime.ts` is the portable implementation.
+  Keep it free of `node:*` imports, process/HOME/filesystem access, and crypto;
+  it may use the existing protocol JSON primitives. Validators return
+  deep-frozen values and throw `AdvisorContractError` with stable code/path data.
+- `src/protocol/advisor-contracts.ts` owns state v1 declarations and re-exports
+  the runtime; do not recreate advisor wire types or constants here.
+- `src/protocol/advisor-settings.ts` is the control-plane adapter. Delegate
+  shared route/wait/history/policy validation, then map runtime failures to
+  `<code>SETTINGS_INVALID</code>` without leaking neutral error details.
+- `src/protocol/index.ts` is the public protocol barrel and must export the
+  runtime alongside existing protocol modules. Root `src/index.ts` reaches it
+  transitively.
+
+The Phase 01 boundary is source/export preparation, not a replacement for the
+installed advisor controller closure. Preserve the exact 33-file CJS closure,
+while retaining dated 29-file release evidence unchanged. Keep valid/invalid
+contract fixtures and focused protocol tests synchronized with exported
+validators.
+
+### Phase 02 metrics kernel and generated CJS adapters
+
+- `src/protocol/advisor-metrics.ts` is the single portable history-metrics
+  implementation. Its pure exports are `normalizeHistoryRecord`,
+  `normalizeHistoryFilter`, `filterHistoryRecords`, `nearestRankPercentile`, and
+  `calculateHistoryMetrics`; callers provide `generated_at`.
+- Normalize IDs before grouping. Invalid execution records do not enter a
+  population. Byte-identical duplicate identities may collapse; conflicting
+  copies exclude every copy and emit `DUPLICATE_IDENTITY`. Return values remain
+  deeply frozen.
+- Filters are the exact ten-key wire shape. `null` is unconstrained; values are
+  OR-within and AND-across; positive `started_at_from`/`started_at_to` bounds are
+  inclusive. Ratios and means round to six decimals and use `null` on a zero
+  denominator; latency uses terminal receipt elapsed time and nearest-rank
+  percentiles.
+- The digest compatibility contract is not canonical JSON: validate without
+  reconstruction or key sorting, preserve insertion order, hash UTF-8 bytes of
+  `JSON.stringify(validatedCheckpoint)`, and emit lowercase SHA-256 hex. Node
+  crypto and browser Web Crypto adapters must hash identical bytes.
+- `tsconfig.advisor-runtime.json` and `npm run generate:advisor-runtime` emit
+  exactly `canonical-json.js`, `json.js`, `advisor-contract-runtime.js`, and
+  `advisor-metrics.js` under `lib/advisor/generated/`. Generated output is
+  literal-relative CommonJS, dependency-free, and never hand-edited.
+- `contracts-v2.cjs` retains Node hashing, advice parsing, state delegation,
+  export names, and existing boundary mappings. `policy-schema.cjs` retains
+  enabled-backend decisions, legacy inspection/migration, parse/decode exports,
+  and route error codes while delegating shared validation.
 
 Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 `advisor` has distinct `primary`/`backup` route triples
@@ -322,6 +376,180 @@ dry-run/apply retention and quota cleanup, oldest terminal records first, while
 protecting active or foreign-project records. Never retain credentials, hidden
 reasoning, raw stderr, or raw vendor logs.
 
+### History metrics CLI integration (Phase 04)
+
+Keep `history metrics` read-only, current-project scoped, and unlocked. Parse one
+bounded v1 request with exact keys; `project_id: null` means the invocation
+project, and a supplied ID must match. Apply optional task scope before the
+shared generated metrics kernel, then apply its exact ten-key filters. Do not
+reimplement formulas, sorting, or duplicate handling in CommonJS.
+
+The collector must normalize validated execution/outcome pairs, exclude invalid
+execution records, preserve missing/invalid/unknown outcomes, and return bounded
+relative-path diagnostics plus bytes, counts, completeness, and limitation
+codes. Absolute HOME/cwd paths, raw advice, credentials, stderr, and hidden
+reasoning never cross the output boundary. Return one
+`evcrate-advisor-history` v1 result with `operation: "metrics"` and
+`HISTORY_READY`; malformed requests remain sanitized `REQUEST_INVALID` failures.
+Existing list/show/export/prune request shapes, locks, sanitization, and results
+remain unchanged.
+
+
+### Historical standalone browser history I/O (Phase 05; 2026-09-18)
+
+At Phase 05 completion, the standalone explorer used explicit user-granted handles,
+sorted project/task/consultation traversal, bounded reads, strict validation and
+digest checks, and stale retention for incomplete work. That browser picker/reader
+source has since been removed from this repository. This entry records historical
+behavior, not a current I/O implementation or G4 acceptance. See the
+[project changelog](./project-changelog.md) for the dated milestone record.
+
+
+### Advisor Plugin domain data API (E00 and Phase 01)
+
+`src/protocol/advisor-plugin-data-api.ts` is the TypeScript authority for
+`evcrate-advisor-data` v1 and v2; `src/protocol/index.ts` is its public barrel.
+Version 1 remains supported with unchanged wire semantics. Version 2 adds
+cross-project history scope/query metadata; on-disk execution/outcome history
+remains v1. The [contract guide](./all-project-advisor-history.md) records the
+cross-repository freeze and implementation boundary.
+
+Keep the method set exact: `history.refresh`, `history.summary`, `history.page`,
+`history.detail`, `policy.readCurrent`, `evaluations.list`, `evaluations.read`,
+and `evaluations.compare`. Domain params never accept actor, installation, grant,
+HOME, target-path, or binding overrides; generic host context supplies
+authorization.
+
+Validators must reject unknown keys before dispatch, preserve discriminated
+changed/missing/unavailable states, check UUID/SHA-256 identity and positive
+safe-integer timestamps, and return frozen values. Keep the published limits
+aligned: opaque IDs 128 bytes, cursors 256 bytes, history pages 500 rows,
+evaluation pages 100 rows, page results 1 MiB, frames 16 MiB, controls 64 KiB,
+evaluation documents 8 MiB, and compare requests 32 items.
+
+`scripts/generate-advisor-plugin-data-schema.mjs` is the only schema-generation
+authority. It writes both `evcrate-advisor-data-v1.schema.json` and
+`evcrate-advisor-data-v2.schema.json`, plus `contract-manifest.json`, which
+advertises supported versions 1 and 2. `--check` must pass before publication;
+never hand-edit generated outputs. Keep positive/negative wire fixtures and
+protocol parity suites synchronized.
+
+V2 adds `project_id: string | null` to summary/page queries and a bounded
+per-project inventory (at most 500 entries) from the same snapshot, independent
+of query filters. The version-1 metadata sidecar maps project SHA-256 IDs to
+owner-safe display names; strict validators reject controls, path separators,
+HOME references, and overlength names. A display label is never authority.
+
+The companion runner contract uses `ContextScopeKind` (`project` |
+`history-root`) and `ContextScopeDescriptor` (`kind`, optional `rootIdentity`,
+optional `sourceRevision`). The trusted host installation and authenticated
+session—not a target wildcard or client path—authorize root-history scope.
+
+`plugin/contracts/read-closure-feasibility.json` is the E00 G0 feasibility
+authority, not an extraction implementation. Its read closure permits only
+`node:fs`, `node:path`, and `node:crypto`; mutation, model/process/network, and
+workspace modules stay outside it, and the expected controller inventory delta is
+zero. E01 revalidated the graph without adding shared controller files.
+
+Transport/provider code must enforce raw byte ceilings before JSON deserialization
+to avoid unconstrained allocations. Current review follow-ups remain to normalize
+metric-filter failures to `PluginDataApiError` and recursively validate compare
+groups once the UI shape is stable.
+
+
+### Phase E02 framed Node plugin worker
+
+`plugin/backend/worker.cjs` is the only worker entrypoint. Use the pinned D00
+SDK for four-byte big-endian framing, strict UTF-8 JSON-RPC 2.0 validation, and
+frame limits; never duplicate generic framing or accept batches/numeric IDs.
+Check payload ceilings before allocation. stdout is protocol frames only; all
+operational data goes through the bounded sanitized stderr logger.
+
+Keep the worker private and runner-owned: no listener, shell, child model
+process, arbitrary filesystem discovery, mutation, credentials, or durable grant
+registry. Require Node `>=22.19.0`. `runner.hello` gates all other methods and
+must report protocol/SDK/manifest/data versions plus only implemented
+capabilities. A repeated hello cancels requests and revokes old contexts.
+
+Contexts are ephemeral, target-verified, revision-tagged, and operation-limited:
+maximum 16 contexts/worker, 4 operations/context, 300-second idle TTL by the
+current SDK budget. Every invoke checks context, allowed operation, policy flag,
+and supplied activation/binding/grant revisions; stale revisions cancel work
+and revoke the context. The host remains the durable authorization authority.
+
+Request admission is bounded to 16 active operations and queue 32, with one
+history refresh and one evaluation parse active per worker. Map one request ID
+to one `AbortController`/SDK cancellation token. Deadlines and cancellation
+must settle the original invocation exactly once; queued settlement must not
+decrement active counters. Do not retry or replay after cancellation, reconnect,
+or worker restart.
+
+Map provider/internal failures to the D00 safe error taxonomy. Redact paths,
+long token-like values, credentials, source bytes, raw stderr, and stacks; keep
+only allowlisted detail keys. Domain status unions are valid results, not
+exceptions. Unexpected failures become `WORKER_FAILED` and terminate through
+runner recovery semantics.
+
+`plugin/backend/data-api.cjs` is the package-local E00 validator closure.
+`plugin/manifest.json` inventory and
+`scripts/build-advisor-plugin-candidate.mjs` are generated/validated package
+authority: the E02 backend candidate was deterministic for G1; E03 later extended
+the candidate with UI/navigation. This dated packaging evidence is not E04/G4
+qualification or current release-asset verification.
+See the [worker guide](./advisor-plugin-worker.md) and [E03 UI guide](./advisor-plugin-ui.md).
+
+### Phase E03 provider-neutral embedded UI
+
+Keep one `App`/reducer/view tree behind `AdvisorDataProvider`; do not fork plugin
+views or leak acquisition types into shared props. The interface owns the eight E00
+read operations, lifecycle subscription, and `cancel(requestId)`.
+
+- **Historical E03 adapter:** At E03 completion, the UI had a temporary local File
+  System Access adapter. That source was later removed; its former design is
+  documented in the [advisor plugin UI guide](./advisor-plugin-ui.md) as historical,
+  not as a current module or G4 evidence.
+- `DamHopperPortProvider` accepts one validated transferred `MessagePort`, sends
+  the `1.0.0` nonce acknowledgement, waits for `frame.ready`, and carries only
+  bounded E00 requests/responses. Bind frame session and activation generation;
+  ignore late/mismatched messages; reject pending work on revoke/teardown.
+- `bridge-contract.ts` must reject non-object/unknown/malformed envelopes and
+  impossible response shapes. Opaque-origin `null` is not an identity signal.
+- Reducer actions must be generation/session-fenced. Context changes or revocation
+  clear snapshots, cursors, details, policy, evaluations, and selection before
+  accepting new data. Plugin filters request summary plus the first page; do not
+  download all history.
+- Preserve the four shared views: Overview, History/detail, Configuration, and
+  Evaluations. Current account-wide policy, detail changed/missing, unavailable,
+  forbidden, and evaluation issue states remain distinct and observable.
+- `plugin/ui/index.html` is a self-contained opaque-srcdoc package member. The Vite
+  build inlines CSS and IIFE JavaScript, emits no sourcemaps/external assets, and
+  the candidate builder records its size, SHA-256, and mode in the manifest.
+- Embedded code must not call File System Access pickers, fetch/XHR/WebSocket/
+  EventSource, storage/cookies, `eval`, `Function`, or active external links.
+  Render untrusted values as inert text and retain semantic keyboard-accessible
+  tabs, tables, panels, and drawers. Host CSP/sandbox remains authoritative.
+
+E03 bridge, state, four-view, security, and accessibility suites were recorded on
+2026-09-21 as package evidence; they do not substitute for D04/G2 LAN or G4
+qualification, and source removal does not authorize standalone retirement.
+
+
+### React Explorer, evaluation, and packaging standards (Phases 06–10)
+
+- **Pure client state**: The React viewer (`viewer/src/`) is a client-side state machine. State transitions (`idle`, `scanning`, `fresh`, `stale`, `error`) must never execute model calls, mutate disk files, write to browser persistence or cookies, or infer file paths.
+- **Inert rendering and security**: Render all user-controlled data (prompts, counsel text, error messages, evaluation metadata) as inert text. Never use `dangerouslySetInnerHTML` or create active external links. Strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`) must be enforced on preview and development servers.
+- **Accessibility and responsiveness**: Use semantic HTML, explicit ARIA attributes (`aria-label`, `role="tab"`, `role="tabpanel"`), visible focus rings (`:focus-visible`), and full keyboard navigation (Tab, Shift+Tab, Enter, Space). Layouts must remain functional on both desktop and narrow viewports.
+- **Historical evaluation reader:** Phase 06 used an explicit multi-file picker
+  bounded to 8 MiB per document. That standalone source has since been removed; this
+  is historical behavior, not a current reader or picker API.
+- **Generated runtime/inventory authority:** Never hand-edit
+  `lib/advisor/generated/*.js`, `src/manifests/controller-inventory.generated.ts`,
+  `plugin/ui/dist/`, or root build manifests. Regenerate through the established
+  build and inventory scripts.
+- **Package/release boundary:** Keep React/Vite development-only and the controller
+  inventory at 33 files. Release contents are governed by the current candidate
+  inventory; this document does not assert that current release assets were verified.
+- **Explicit non-claims**: The explorer provides descriptive visualization only. It makes no POSIX filesystem attestation (`0600` permissions, ownership, symlink authenticity), complete lifetime audit coverage, causal effectiveness, cost, or saved-time claims.
 See [system architecture](./system-architecture.md) for complete wire shapes,
 limits, closure, adapter boundaries, and support claims.
 
@@ -374,14 +602,20 @@ atomic apply. It never joins scope or target-publication atomicity.
 ## Build, closure, and release standards
 
 `scripts/generate-controller-inventory.mjs` is the source of the generated
-29-file controller inventory. `scripts/build-manifests.mjs` invokes the
-TypeScript local-build path for each persisted target and the aggregate set.
-Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`,
-`controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
+33-file controller inventory, including the four generated runtime modules.
+`npm run generate:advisor-runtime` runs before inventory generation in `prebuild`.
+`scripts/build-manifests.mjs` invokes the TypeScript local-build path for each
+persisted target and the aggregate set. Build manifests are schema 2 and carry
+`source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`,
+`validation`, and `home_policy`.
 
 Build/check must verify complete validation, current hashes, regular non-symlink
 files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.
 Publication consumes only a current verified build and preserves unmanaged roots.
+`install.sh` and `install.ps1` embed the same code-point-sorted 33-file list;
+changes to the generated inventory require parity updates in both installers.
+The manifest contract suite covers exact count/hash parity and rejects viewer or
+external-package entries; dated 29/29 evidence remains unchanged.
 Linux x64 is the qualification boundary for full CLI runtime behavior. Windows
 qualification is complete through Phase 10 (10/10 phases, 100%; completed
 2026-09-15) and is strictly bounded to the standalone installer lifecycle
@@ -522,3 +756,4 @@ before reporting success.
 - [Project changelog](./project-changelog.md)
 - [Project changelog archive](./project-changelog-archive.md)
 - [Pi-native migration](./pi-native-migration.md)
+- [Advisor plugin UI](./advisor-plugin-ui.md)

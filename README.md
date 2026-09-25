@@ -229,6 +229,26 @@ A final standalone `--advice` token activates formal
 reviews (up to three correction cycles). `@advisor` remains ordinary task text.
 The documentation-facing `/cmd-advise` workflow is a separate interview path.
 
+## DamHopper Advisor Plugin
+
+Private, client-side, read-only React interface embedded as an independently installed, owner-safe DamHopper plugin (`evcrate.advisor`) for inspecting retained advisor consultations, aggregated execution metrics, routing configuration, and external counsel evaluations.
+
+### Plugin packaging and verification
+
+```bash
+npm run build:all                  # Build control plane and plugin UI
+npm run build:advisor-plugin       # Build deterministic plugin tarball
+npm run verify:advisor-plugin dist/advisor-plugin/evcrate-advisor-plugin-v0.1.0.tar.gz
+```
+
+The E04/G3-qualified independent package is designed for direct DamHopper installation without a host rebuild. This package-level status does not establish joint G4 qualification/sign-off, authorize standalone retirement, or verify current release assets.
+
+### Security, metrics, and limitations
+
+- **Owner-safe isolation:** All reads are served by a bounded Node worker over framed transport, reauthorized per actor context. The embedded iframe has no host credentials, DOM access, or direct network capability.
+- **Metrics kernel:** Delivery rate (accepted/terminal), outcome coverage (valid outcome/`ADVICE_READY`), known-outcome resolution (resolved/known outcomes), and receipt latency p95 (nearest-rank). Zero denominators render as `null` (`—`).
+- **Four provider-neutral views:** Overview metrics, History & Detail drawers, Configuration (current account policy), and Evaluations (candidate comparisons).
+- **Boundaries & non-claims:** Retained samples only (no complete audit coverage); no causal effectiveness, cost, or saved-time claims. The standalone picker source has been removed from this repository, but joint G4 qualification/sign-off is unverified and standalone retirement is not release-authorized.
 ## Documented command names
 
 Documentation and target-facing examples use `/cmd-*` slash names:
@@ -257,4 +277,5 @@ follow-up and does not rename canonical source files or invent aliases.
 - [Project changelog](./docs/project-changelog.md) — phase evidence and boundaries.
 - [Project changelog archive](./docs/project-changelog-archive.md) — older detail.
 - [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime/settings notes.
+- [Advisor plugin UI](./docs/advisor-plugin-ui.md) — embedded four-view plugin UI and bridge architecture.
 

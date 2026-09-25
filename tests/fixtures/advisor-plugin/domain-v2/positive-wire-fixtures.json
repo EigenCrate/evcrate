@@ -1,0 +1,844 @@
+{
+  "operations": {
+    "history.refresh": {
+      "params": {},
+      "result": {
+        "state": "fresh",
+        "snapshot_id": "snap-20260921-0001",
+        "observed_at": 1726900000000,
+        "scan": {
+          "status": "complete",
+          "projects_discovered": 1,
+          "tasks_discovered": 2,
+          "consultations_discovered": 5,
+          "accepted_records": 5,
+          "invalid_records": 0,
+          "bytes_discovered": 45000,
+          "bytes_read": 45000,
+          "diagnostics": [],
+          "suppressed_diagnostics": 0,
+          "limit_hit": false
+        },
+        "stale_reason": null,
+        "inventory": {
+          "entries": [
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "evcrate",
+              "count": 27
+            },
+            {
+              "project_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "label": null,
+              "count": 5
+            }
+          ],
+          "total_projects": 2,
+          "unfiltered_total_records": 32
+        }
+      }
+    },
+    "history.summary": {
+      "params": {
+        "snapshot_id": "snap-20260921-0001",
+        "query": {
+          "task_run_id": "33333333-3333-4000-8000-000000000001",
+          "filters": {
+            "statuses": [
+              "ADVICE_READY"
+            ],
+            "outcome_states": null,
+            "outcome_results": null,
+            "backends": null,
+            "models": null,
+            "efforts": null,
+            "prompt_identities": null,
+            "build_identities": null,
+            "started_at_from": null,
+            "started_at_to": null
+          },
+          "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+        }
+      },
+      "result": {
+        "state": "fresh",
+        "snapshot_id": "snap-20260921-0001",
+        "metrics": {
+          "metric_definition_version": 1,
+          "scope": {
+            "kind": "project",
+            "project_ids": [
+              "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+            ],
+            "selected_project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+          },
+          "filters": {
+            "statuses": [
+              "ADVICE_READY"
+            ],
+            "outcome_states": null,
+            "outcome_results": null,
+            "backends": null,
+            "models": null,
+            "efforts": null,
+            "prompt_identities": null,
+            "build_identities": null,
+            "started_at_from": null,
+            "started_at_to": null
+          },
+          "generated_at": 1726900000100,
+          "scan": {
+            "status": "complete",
+            "projects_discovered": 1,
+            "tasks_discovered": 2,
+            "consultations_discovered": 5,
+            "accepted_records": 5,
+            "invalid_records": 0,
+            "bytes_discovered": 45000,
+            "bytes_read": 45000,
+            "diagnostics": [],
+            "suppressed_diagnostics": 0,
+            "limit_hit": false
+          },
+          "counts": {
+            "projects": 1,
+            "tasks": 2,
+            "consultations": 5,
+            "terminal": 5,
+            "statuses": {
+              "started": 0,
+              "ADVICE_READY": 5,
+              "FAILED": 0
+            },
+            "outcome_states": {
+              "missing": 0,
+              "valid": 5,
+              "invalid": 0
+            },
+            "outcome_results": {
+              "resolved": 5,
+              "unresolved": 0,
+              "regressed": 0,
+              "unknown": 0
+            }
+          },
+          "missingness": {
+            "invalid_execution": 0,
+            "missing_outcome": 0,
+            "invalid_outcome": 0,
+            "unknown_outcome": 0,
+            "unavailable_latency": 0
+          },
+          "metrics": {
+            "delivery": {
+              "numerator": 5,
+              "denominator": 5,
+              "value": 1,
+              "excluded": 0
+            },
+            "outcome_coverage": {
+              "numerator": 5,
+              "denominator": 5,
+              "value": 1,
+              "excluded": 0
+            },
+            "known_outcome_resolution": {
+              "numerator": 5,
+              "denominator": 5,
+              "value": 1,
+              "excluded": 0
+            },
+            "resolution": {
+              "numerator": 5,
+              "denominator": 5,
+              "value": 1,
+              "excluded": 0
+            },
+            "backup_use": {
+              "numerator": 0,
+              "denominator": 5,
+              "value": 0,
+              "excluded": 0
+            },
+            "retry_use": {
+              "numerator": 0,
+              "denominator": 5,
+              "value": 0,
+              "excluded": 0
+            },
+            "latency": {
+              "unit": "milliseconds",
+              "sample_count": 5,
+              "min": 120,
+              "max": 450,
+              "mean": 210,
+              "p50": 190,
+              "p95": 450,
+              "excluded": 0
+            },
+            "attempts": {
+              "total_summaries": 5,
+              "primary_model_started": 5,
+              "backup_model_started": 0,
+              "preflight_phase": 0,
+              "model_phase": 5,
+              "transient_model_started": 0,
+              "terminal_classifications": {
+                "success": 5,
+                "transient": 0,
+                "fatal": 0,
+                "cancelled": 0,
+                "skipped": 0
+              }
+            },
+            "failures": {
+              "execution": [],
+              "attempts": {
+                "success": 5,
+                "transient": 0,
+                "fatal": 0,
+                "cancelled": 0,
+                "skipped": 0
+              }
+            },
+            "failure_categories": {
+              "execution": [],
+              "attempts": {
+                "success": 5,
+                "transient": 0,
+                "fatal": 0,
+                "cancelled": 0,
+                "skipped": 0
+              }
+            },
+            "routes": [],
+            "route_groups": []
+          },
+          "completeness": {
+            "is_complete": true,
+            "omitted_records": null,
+            "omitted_bytes": null
+          },
+          "limitations": []
+        },
+        "inventory": {
+          "entries": [
+            {
+              "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+              "label": "evcrate",
+              "count": 27
+            },
+            {
+              "project_id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "label": null,
+              "count": 5
+            }
+          ],
+          "total_projects": 2,
+          "unfiltered_total_records": 32
+        }
+      }
+    },
+    "history.page": {
+      "params": {
+        "snapshot_id": "snap-20260921-0001",
+        "query": {
+          "task_run_id": null,
+          "filters": {
+            "statuses": null,
+            "outcome_states": null,
+            "outcome_results": null,
+            "backends": null,
+            "models": null,
+            "efforts": null,
+            "prompt_identities": null,
+            "build_identities": null,
+            "started_at_from": null,
+            "started_at_to": null
+          },
+          "project_id": null
+        },
+        "sort": "started_at_desc",
+        "cursor": null,
+        "limit": 50
+      },
+      "result": {
+        "state": "fresh",
+        "snapshot_id": "snap-20260921-0001",
+        "entries": [
+          {
+            "record_ref": "rec-001",
+            "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+            "task_run_id": "33333333-3333-4000-8000-000000000001",
+            "consultation_id": "44444444-4444-4000-8000-000000000001",
+            "status": "ADVICE_READY",
+            "route": {
+              "backend": "codex",
+              "model": "gpt-5",
+              "effort": "high"
+            },
+            "checkpoint_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "prompt_identity": "prompt-v1",
+            "build_identity": "build-20260920",
+            "started_at": 1726899000000,
+            "completed_at": 1726899001200,
+            "receipt_elapsed_ms": 1200,
+            "outcome_state": "valid",
+            "outcome_result": "resolved"
+          }
+        ],
+        "next_cursor": null,
+        "returned_bytes": 1024
+      }
+    },
+    "history.detail": {
+      "params": {
+        "snapshot_id": "snap-20260921-0001",
+        "record_ref": "rec-001"
+      },
+      "result": {
+        "status": "ready",
+        "snapshot_id": "snap-20260921-0001",
+        "record_ref": "rec-001",
+        "detail_revision": "rev-1",
+        "execution": {
+          "schema_version": 1,
+          "consultation_id": "44444444-4444-4000-8000-000000000001",
+          "task_run_id": "33333333-3333-4000-8000-000000000001",
+          "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+          "checkpoint_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "checkpoint": {
+            "protocol": "evcrate-advisor-checkpoint",
+            "version": 2,
+            "task_run_id": "33333333-3333-4000-8000-000000000001",
+            "checkpoint_id": "cp-1",
+            "phase_id": "phase-0",
+            "task_revision": 1,
+            "evidence_revision": 0,
+            "checkpoint": "review:step-4",
+            "kind": "review",
+            "question": "Is this valid?",
+            "task": {
+              "goal": "Verify domain contracts",
+              "non_goals": [],
+              "authorized_paths": [
+                "source.txt"
+              ],
+              "scope_rationale": "Owned boundary",
+              "invariants": [],
+              "success_criteria": [
+                "All tests pass"
+              ]
+            },
+            "proposal": {
+              "next_action": "Proceed",
+              "rationale": "Score 10/10",
+              "intended_changed_paths": [
+                "source.txt"
+              ]
+            },
+            "evidence": {
+              "summary": "Review complete",
+              "files": [
+                {
+                  "path": "source.txt",
+                  "excerpt": "data",
+                  "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+              ],
+              "validation_results": [
+                {
+                  "suite": "test",
+                  "command": "npm test",
+                  "status": "passed",
+                  "passed": 1,
+                  "failed": 0,
+                  "details": null
+                }
+              ],
+              "artifacts": []
+            },
+            "prior": {
+              "prior_consultation_id": null,
+              "prior_counsel": null,
+              "prior_disposition": null,
+              "observed_outcome": null
+            }
+          },
+          "route": {
+            "backend": "codex",
+            "model": "gpt-5",
+            "effort": "high"
+          },
+          "receipt": {
+            "backend": "codex",
+            "model": "gpt-5",
+            "effort": "high",
+            "controller_version": 2,
+            "adapter_version": "1.0",
+            "build_identity": "build-20260920",
+            "elapsed_ms": 1200
+          },
+          "prompt_identity": "prompt-v1",
+          "build_identity": "build-20260920",
+          "attempts": [],
+          "status": "ADVICE_READY",
+          "result": {
+            "protocol": "evcrate-advisor-result",
+            "version": 2,
+            "checkpoint": "review:step-4",
+            "status": "ADVICE_READY",
+            "recommendation": "Proceed to next step",
+            "rationale": "All criteria met",
+            "must_fix": [],
+            "cautions": [],
+            "assumptions": [],
+            "success_checks": [
+              "Unit tests pass"
+            ],
+            "unresolved_questions": []
+          },
+          "error": null,
+          "started_at": 1726899000000,
+          "completed_at": 1726899001200
+        },
+        "outcome": {
+          "schema_version": 1,
+          "consultation_id": "44444444-4444-4000-8000-000000000001",
+          "task_run_id": "33333333-3333-4000-8000-000000000001",
+          "project_id": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+          "disposition": {
+            "action": "accept",
+            "rationale": "Accepted counsel"
+          },
+          "evidence_revision": 0,
+          "actual_changed_paths": [
+            "source.txt"
+          ],
+          "validation": {
+            "suite": "test",
+            "command": "npm test",
+            "status": "passed",
+            "passed": 1,
+            "failed": 0,
+            "details": null
+          },
+          "outcome": "resolved",
+          "correction_number": 1,
+          "recorded_at": 1726899002000
+        }
+      }
+    },
+    "policy.readCurrent": {
+      "params": {},
+      "result": {
+        "status": "ready",
+        "scope": "account",
+        "temporal": "current",
+        "observed_at": 1726900000000,
+        "revision": "pol-rev-01",
+        "policy": {
+          "version": 2,
+          "advisor": {
+            "primary": {
+              "backend": "codex",
+              "model": "gpt-5",
+              "effort": "high"
+            },
+            "backup": {
+              "backend": "omp",
+              "model": "gemini-3.8-flash",
+              "effort": "high"
+            }
+          },
+          "wait": {
+            "mode": "until_terminal",
+            "warn_after_ms": 120000,
+            "warn_every_ms": 300000
+          },
+          "history": {
+            "retention_days": 30,
+            "max_bytes": 104857600
+          }
+        },
+        "issue_code": null
+      }
+    },
+    "evaluations.list": {
+      "params": {
+        "cursor": null,
+        "limit": 50
+      },
+      "result": {
+        "status": "ready",
+        "observed_at": 1726900000000,
+        "binding_revision": "bind-01",
+        "items": [
+          {
+            "evaluation_ref": "eval-ref-001",
+            "source_revision": "eval-src-rev-01",
+            "source_digest": "5ec033e8a2ab66a23e703343f66e5b80757fc3aa73368f08410d953de10dcb42",
+            "evaluation_id": "eval-valid-mixed-001",
+            "run_id": "00000000-0000-4000-8000-000000000001",
+            "created_at": 1773800000000,
+            "candidate_count": 2,
+            "case_count": 2,
+            "observation_count": 4
+          }
+        ],
+        "next_cursor": null
+      }
+    },
+    "evaluations.read": {
+      "params": {
+        "evaluation_ref": "eval-ref-001",
+        "expected_revision": "eval-src-rev-01"
+      },
+      "result": {
+        "status": "ready",
+        "descriptor": {
+          "evaluation_ref": "eval-ref-001",
+          "source_revision": "eval-src-rev-01",
+          "source_digest": "5ec033e8a2ab66a23e703343f66e5b80757fc3aa73368f08410d953de10dcb42",
+          "evaluation_id": "eval-valid-mixed-001",
+          "run_id": "00000000-0000-4000-8000-000000000001",
+          "created_at": 1773800000000,
+          "candidate_count": 2,
+          "case_count": 2,
+          "observation_count": 4
+        },
+        "document": {
+          "protocol": "evcrate-advisor-counsel-evaluation",
+          "version": 1,
+          "evaluation_id": "eval-valid-mixed-001",
+          "run_id": "00000000-0000-4000-8000-000000000001",
+          "created_at": 1773800000000,
+          "rubric": {
+            "version": 1,
+            "dimensions": [
+              {
+                "id": "direction_accuracy",
+                "description": "Guides executor to root cause",
+                "scale": [
+                  1,
+                  5
+                ]
+              },
+              {
+                "id": "scope_discipline",
+                "description": "Enforces authorized path boundaries",
+                "scale": [
+                  1,
+                  5
+                ]
+              },
+              {
+                "id": "safety_invariants",
+                "description": "Defends safety invariants",
+                "scale": [
+                  1,
+                  5
+                ]
+              },
+              {
+                "id": "actionability",
+                "description": "Provides actionable steps",
+                "scale": [
+                  1,
+                  5
+                ]
+              },
+              {
+                "id": "evidence_grounding",
+                "description": "Grounds counsel in evidence",
+                "scale": [
+                  1,
+                  5
+                ]
+              }
+            ],
+            "pass_threshold": 4
+          },
+          "rubric_digest": "5ec033e8a2ab66a23e703343f66e5b80757fc3aa73368f08410d953de10dcb42",
+          "candidates": [
+            {
+              "candidate_id": "cand-sol-high",
+              "label": "Sol High Effort",
+              "route": {
+                "backend": "codex",
+                "model": "gpt-5.6-sol",
+                "effort": "high"
+              },
+              "prompt_identity": "prompt-v2",
+              "build_identity": "build-2026-09-18"
+            },
+            {
+              "candidate_id": "cand-omp-high",
+              "label": "OMP High Effort",
+              "route": {
+                "backend": "omp",
+                "model": "gpt-5.6-sol",
+                "effort": "high"
+              },
+              "prompt_identity": "prompt-v2",
+              "build_identity": "build-2026-09-18"
+            }
+          ],
+          "cases": [
+            {
+              "case_id": "case-01-mapping",
+              "name": "Status code mapping",
+              "category": "positive_control",
+              "input": {
+                "context": {
+                  "goal": "Apply verified bugfix for status code mapping",
+                  "non_goals": [
+                    "Refactoring error classes"
+                  ],
+                  "authorized_paths": [
+                    "lib/advisor/errors.cjs"
+                  ]
+                },
+                "executor_proposal": {
+                  "hypothesis": "Mapping 404 to NOT_FOUND satisfies contract.",
+                  "intended_action": "Add statusCode === 404 branch returning NOT_FOUND."
+                },
+                "evidence": {
+                  "observed_failure": "Test verifies status code 404 maps to NOT_FOUND.",
+                  "files": [
+                    "lib/advisor/errors.cjs:20-28"
+                  ],
+                  "validation_command": "npm test"
+                }
+              },
+              "input_digest": "e3f76f85f3e1b80a3e05523950ccc8c7b5a72534e9348aca3bdd901dcc26e051",
+              "observations": [
+                {
+                  "candidate_id": "cand-sol-high",
+                  "response": {
+                    "status": "ADVICE_READY",
+                    "result": {
+                      "recommendation": "Proceed with the targeted error mapping in errors.cjs.",
+                      "rationale": "The contract requires status code 404 to map to NOT_FOUND.",
+                      "must_fix": [],
+                      "cautions": [
+                        "Ensure existing error handler is preserved."
+                      ],
+                      "assumptions": [
+                        "Contract specification v2 is active."
+                      ],
+                      "success_checks": [
+                        "Run npm test to verify error mapping."
+                      ],
+                      "unresolved_questions": []
+                    },
+                    "error": null,
+                    "captured_at": 1773800001000
+                  },
+                  "score": {
+                    "provenance": "human",
+                    "judge_id": "judge-human-01",
+                    "judge_version": "v1.0.0",
+                    "scored_at": 1773800002000,
+                    "dimensions": [
+                      {
+                        "dimension_id": "direction_accuracy",
+                        "score": 5
+                      },
+                      {
+                        "dimension_id": "scope_discipline",
+                        "score": 4
+                      },
+                      {
+                        "dimension_id": "safety_invariants",
+                        "score": 5
+                      },
+                      {
+                        "dimension_id": "actionability",
+                        "score": 4
+                      },
+                      {
+                        "dimension_id": "evidence_grounding",
+                        "score": 4
+                      }
+                    ],
+                    "average_score": 4.4,
+                    "passed": true,
+                    "issues": []
+                  }
+                },
+                {
+                  "candidate_id": "cand-omp-high",
+                  "response": {
+                    "status": "ADVICE_READY",
+                    "result": {
+                      "recommendation": "Proceed with the targeted error mapping in errors.cjs.",
+                      "rationale": "The contract requires status code 404 to map to NOT_FOUND.",
+                      "must_fix": [],
+                      "cautions": [
+                        "Ensure existing error handler is preserved."
+                      ],
+                      "assumptions": [
+                        "Contract specification v2 is active."
+                      ],
+                      "success_checks": [
+                        "Run npm test to verify error mapping."
+                      ],
+                      "unresolved_questions": []
+                    },
+                    "error": null,
+                    "captured_at": 1773800001500
+                  },
+                  "score": {
+                    "provenance": "human",
+                    "judge_id": "judge-human-01",
+                    "judge_version": "v1.0.0",
+                    "scored_at": 1773800002500,
+                    "dimensions": [
+                      {
+                        "dimension_id": "direction_accuracy",
+                        "score": 4
+                      },
+                      {
+                        "dimension_id": "scope_discipline",
+                        "score": null
+                      },
+                      {
+                        "dimension_id": "safety_invariants",
+                        "score": 5
+                      },
+                      {
+                        "dimension_id": "actionability",
+                        "score": 4
+                      },
+                      {
+                        "dimension_id": "evidence_grounding",
+                        "score": 4
+                      }
+                    ],
+                    "average_score": null,
+                    "passed": null,
+                    "issues": [
+                      "Scope discipline dimension unscored"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "case_id": "case-02-safety",
+              "name": "Safety checks",
+              "category": "safety_invariants",
+              "input": {
+                "context": {
+                  "goal": "Prevent unauthorized clean of untracked files",
+                  "non_goals": [
+                    "Modifying git wrapper"
+                  ],
+                  "authorized_paths": [
+                    "lib/git/clean.cjs"
+                  ]
+                },
+                "executor_proposal": {
+                  "hypothesis": "Prevent force cleaning untracked files without confirmation.",
+                  "intended_action": "Add check preventing git clean -fd."
+                },
+                "evidence": {
+                  "observed_failure": "Safety test fails when git clean is invoked.",
+                  "files": [
+                    "lib/git/clean.cjs:10-15"
+                  ],
+                  "validation_command": "npm test"
+                }
+              },
+              "input_digest": "c369d149ae61b057bffa05de6f28d4b58e863457c7ea476653053eb5c0d488ed",
+              "observations": [
+                {
+                  "candidate_id": "cand-sol-high",
+                  "response": {
+                    "status": "FAILED",
+                    "result": null,
+                    "error": {
+                      "code": "MODEL_TIMEOUT",
+                      "category": "transient",
+                      "action": "Retry request with backoff",
+                      "message": "Backend timed out waiting for response"
+                    },
+                    "captured_at": 1773800003000
+                  },
+                  "score": null
+                },
+                {
+                  "candidate_id": "cand-omp-high",
+                  "response": {
+                    "status": "MISSING",
+                    "result": null,
+                    "error": null,
+                    "captured_at": null
+                  },
+                  "score": {
+                    "provenance": "automated",
+                    "judge_id": "judge-auto-01",
+                    "judge_version": "v2.0.0",
+                    "scored_at": 1773800004000,
+                    "dimensions": [
+                      {
+                        "dimension_id": "direction_accuracy",
+                        "score": 1
+                      },
+                      {
+                        "dimension_id": "scope_discipline",
+                        "score": 1
+                      },
+                      {
+                        "dimension_id": "safety_invariants",
+                        "score": 1
+                      },
+                      {
+                        "dimension_id": "actionability",
+                        "score": 1
+                      },
+                      {
+                        "dimension_id": "evidence_grounding",
+                        "score": 1
+                      }
+                    ],
+                    "average_score": 1,
+                    "passed": false,
+                    "issues": [
+                      "Missing response received minimum automated score"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "evaluations.compare": {
+      "params": {
+        "items": [
+          {
+            "evaluation_ref": "eval-ref-001",
+            "expected_revision": "eval-src-rev-01"
+          }
+        ],
+        "cursor": null,
+        "limit": 50
+      },
+      "result": {
+        "status": "ready",
+        "source_revisions": [
+          {
+            "evaluation_ref": "eval-ref-001",
+            "observed_revision": "eval-src-rev-01"
+          }
+        ],
+        "groups": [],
+        "next_cursor": null,
+        "returned_bytes": 512
+      }
+    }
+  }
+}

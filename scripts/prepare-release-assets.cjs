@@ -102,7 +102,7 @@ function main() {
 
   // 1. Build and verify targets upfront
   console.log('Running build and distribution checks...');
-  execFileSync('npm', ['run', 'build'], { cwd: projectRoot, stdio: 'inherit' });
+  execFileSync('npm', ['run', 'build:all'], { cwd: projectRoot, stdio: 'inherit' });
   execFileSync('npm', ['run', 'distribute:check'], { cwd: projectRoot, stdio: 'inherit' });
 
   // 2. Verify runtime closure on fresh build

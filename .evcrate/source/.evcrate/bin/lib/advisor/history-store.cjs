@@ -21,7 +21,8 @@ const {
 const {
   listHistory: listHistoryImpl,
   getHistoryEntry: getHistoryEntryImpl,
-  exportHistory: exportHistoryImpl
+  exportHistory: exportHistoryImpl,
+  getHistoryMetrics: getHistoryMetricsImpl
 } = require('./history-query.cjs');
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -328,6 +329,54 @@ function calculateTotalHistoryBytes(ctx) {
   const records = scanProjectRecords(ctx);
   return records.reduce((sum, r) => sum + r.totalDiskBytes, 0);
 }
+function sanitizeSafeProjectName(projectRoot) {
+  if (typeof projectRoot !== 'string') return null;
+  const base = path.basename(projectRoot).trim();
+  if (!base || base.length === 0 || base.length > 64) return null;
+  if (base.includes('/') || base.includes('\\') || base.includes('~')) return null;
+  if (/(?:^|[/\\])(?:home|Users)(?:[/\\]|$)/i.test(base) || /\b(?:HOME|USERPROFILE)\b/i.test(base)) return null;
+  if (/(?:\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{2})/.test(base)) return null;
+  for (let i = 0; i < base.length; i++) {
+    const code = base.charCodeAt(i);
+    if (code < 32 || code === 127 || (code >= 128 && code <= 159)) return null;
+  }
+  return base;
+}
+
+function ensureProjectMetadata(cDir, ctx, projectId) {
+  try {
+    const metaFile = `${cDir.projectBase}/project-metadata.json`;
+    if (inspect(metaFile)) return;
+
+    const safeName = sanitizeSafeProjectName(ctx.projectRoot);
+    if (!safeName) return;
+
+    const metadata = {
+      version: 1,
+      projects: {
+        [projectId.toLowerCase()]: {
+          name: safeName,
+          updated_at: Date.now()
+        }
+      }
+    };
+
+    const metaBytes = Buffer.from(JSON.stringify(metadata, null, 2), 'utf8');
+    const tmpFile = `${cDir.projectBase}/.meta-${randomBytes(8).toString('hex')}.tmp`;
+    let tmpStat;
+    try {
+      tmpStat = writeExclusive(tmpFile, metaBytes);
+      fs.renameSync(tmpFile, metaFile);
+      tmpStat = undefined;
+      fs.fsyncSync(cDir.projectFd);
+    } finally {
+      if (tmpStat) removeOwned(tmpFile, tmpStat);
+    }
+  } catch {
+    // Metadata failure degrades display name only, never breaks consultation execution/outcome
+  }
+}
+
 
 function recordStartedExecution(dependencies, execution, policy = {}) {
   validateHistoryExecutionV1(execution);
@@ -349,6 +398,7 @@ function recordStartedExecution(dependencies, execution, policy = {}) {
 
     if (!cDir) fail('AUDIT_DEGRADED');
     try {
+      ensureProjectMetadata(cDir, ctx, execution.project_id);
       const execFile = `${cDir.base}/execution.json`;
       if (inspect(execFile)) fail('AUDIT_DEGRADED');
       writeExclusive(execFile, execBytes);
@@ -427,9 +477,9 @@ function recordTerminalExecution(dependencies, execution, policy = {}) {
 
     if (!cDir) fail('AUDIT_DEGRADED');
     try {
+      ensureProjectMetadata(cDir, ctx, execution.project_id);
       const execFile = `${cDir.base}/execution.json`;
       const existing = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
-      if (!existing) fail('AUDIT_DEGRADED');
 
       const parsed = validateHistoryExecutionV1(parseJson(existing.bytes));
       if (parsed.status !== 'started') {
@@ -560,6 +610,10 @@ function getHistoryEntry(dependencies, params) {
 function exportHistory(dependencies, options) {
   return exportHistoryImpl(dependencies, options, queryContextFns);
 }
+function getHistoryMetrics(dependencies, request = {}) {
+  return getHistoryMetricsImpl(dependencies, request, queryContextFns);
+}
+
 
 function pruneHistory(dependencies, policy = {}, options = {}) {
   return withHistoryLock(historyContext(dependencies), () => {
@@ -581,8 +635,11 @@ module.exports = {
   listHistory,
   getHistoryEntry,
   exportHistory,
+  getHistoryMetrics,
   pruneHistory,
   calculateTotalHistoryBytes,
   historyContext,
-  withHistoryLock
+  withHistoryLock,
+  sanitizeSafeProjectName,
+  ensureProjectMetadata
 };

@@ -1,0 +1,153 @@
+{
+  "positive": [
+    {
+      "name": "valid sidecar with multiple projects",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "evcrate",
+            "updated_at": 1726900000000
+          },
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": {
+            "name": "dam-hopper-platform",
+            "updated_at": 1726900001000
+          }
+        }
+      }
+    },
+    {
+      "name": "valid sidecar with empty projects record",
+      "sidecar": {
+        "version": 1,
+        "projects": {}
+      }
+    },
+    {
+      "name": "valid project display name with allowed punctuation",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "Service (v2.1) - Alpha_Core",
+            "updated_at": 1726900000000
+          }
+        }
+      }
+    }
+  ],
+  "negative": [
+    {
+      "name": "invalid version number",
+      "sidecar": {
+        "version": 2,
+        "projects": {}
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "invalid project ID key format",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "not-a-sha256": {
+            "name": "my-project",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "display name containing forward slash",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "path/traversal",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "display name containing backslash",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "path\\escape",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "display name containing tilde",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "~/project",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "display name containing control characters",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "line\nbreak",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "untrimmed display name",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": " padded-name ",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "display name exceeding 64 chars",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "empty display name",
+      "sidecar": {
+        "version": 1,
+        "projects": {
+          "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8": {
+            "name": "",
+            "updated_at": 1726900000000
+          }
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    }
+  ]
+}
