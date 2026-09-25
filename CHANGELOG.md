@@ -1,3 +1,41 @@
+## [2.3.0](https://github.com/EigenCrate/evcrate/compare/v2.2.0...v2.3.0) (2026-09-25)
+
+
+### 🚀 Features
+
+* **advisor-plugin:** implement domain contracts and parity qualification ([3cdcba1](https://github.com/EigenCrate/evcrate/commit/3cdcba1e08bcac42f748f00737e76d5f74efe46f))
+* **advisor-plugin:** implement embedded provider-neutral four-view UI ([f098f8b](https://github.com/EigenCrate/evcrate/commit/f098f8bd92f1cd47b1b7e4c03f6dff96c0adcc24))
+* **advisor-plugin:** implement owner-safe read provider ([a7bf719](https://github.com/EigenCrate/evcrate/commit/a7bf719d1cccc1dd5555c29953f23534880c6cec))
+* **advisor-plugin:** pin D00 companion candidate @dam-hopper/plugin-sdk@0.1.0 in contract manifest ([6a90685](https://github.com/EigenCrate/evcrate/commit/6a90685d6503f20dbb74798c39cdc8c6f65c0e0b))
+* **advisor:** implement checkpoint digest, metrics kernel, and generated CJS adapters ([89bf1a1](https://github.com/EigenCrate/evcrate/commit/89bf1a14e9583a2f1a2a472895cf835414ddd0d8))
+* **advisor:** implement counsel evaluation protocol and fixtures ([6d82482](https://github.com/EigenCrate/evcrate/commit/6d82482139f8b51703d0fdbc4e4bfd91f20295d9))
+* **advisor:** implement portable advisor contract runtime and fixtures ([6e21a8e](https://github.com/EigenCrate/evcrate/commit/6e21a8ebce12d96557f129d0436938e2352f8d4f))
+* **advisor:** integrate history metrics CLI operation and query collector ([5b03810](https://github.com/EigenCrate/evcrate/commit/5b03810871f0f596806d0a7dd7c7890fec6696f0))
+* **advisor:** migrate controller closure to 33 files and enforce inventory parity ([b35d02f](https://github.com/EigenCrate/evcrate/commit/b35d02fea42922765724f9d50a1e34fad81272e8))
+* **plugin:** add DamHopper embedded bridge ([7308981](https://github.com/EigenCrate/evcrate/commit/73089816b474ec2f36fc4e0c5793afce159c69ae))
+* **plugin:** complete paired qualification and release decision ([012c76d](https://github.com/EigenCrate/evcrate/commit/012c76d493dd4498154ad593f06e3d3b072e167c))
+* **plugin:** freeze cross-project scope and domain data contract ([e31bb66](https://github.com/EigenCrate/evcrate/commit/e31bb66b85f39a748ef859917c7a9ba35f62b6a9))
+* **plugin:** implement framed Node worker candidate for DamHopper platform ([dd50529](https://github.com/EigenCrate/evcrate/commit/dd50529c28df944f761d482952b1ef43ba8d21cb))
+* **plugin:** implement owner-safe all-project history worker ([cc0960c](https://github.com/EigenCrate/evcrate/commit/cc0960c0a75efaccca19233c72446295c962466f))
+* **plugin:** implement project filter UI and honest identity ([6d5a524](https://github.com/EigenCrate/evcrate/commit/6d5a5244adfd3a042c3399f5b3d84cfa0ef7e1a3))
+* **plugin:** qualify gate with independent package and lifecycle integration ([9a1b5db](https://github.com/EigenCrate/evcrate/commit/9a1b5dbb8411ce546958deafca6a8dff30472371))
+* **viewer:** auto-discover and compare evaluation documents in advisor plugin ([a975681](https://github.com/EigenCrate/evcrate/commit/a975681939e0212ea3c0fc679005296f58242ad5))
+* **viewer:** implement browser history traversal and scanner ([1999f04](https://github.com/EigenCrate/evcrate/commit/1999f04bc217cde3748d7ad681f70c3568129249))
+* **viewer:** implement React explorer and view architecture ([63d00ec](https://github.com/EigenCrate/evcrate/commit/63d00ece95318238dfaf2c09215278fe74ddc093))
+* **viewer:** package static explorer with strict CSP and release inventory isolation ([e216a14](https://github.com/EigenCrate/evcrate/commit/e216a14b9dbac8b73ca6b37c9a7a814d95a0f0fa))
+
+
+### 🐞 Bug Fixes
+
+* **plugin:** add authorized backend path resolver for worker package ([e2ecb10](https://github.com/EigenCrate/evcrate/commit/e2ecb1086b1829516328e0136ef7a7491c424c93))
+
+
+### 📚 Documentation
+
+* **advisor:** documentation cutover and support for advisor metrics explorer ([d4f4e2a](https://github.com/EigenCrate/evcrate/commit/d4f4e2a9949c3e2d418ef3a0332b3129be70bc8d))
+* **auth:** record completion and production auth architecture ([7cbc816](https://github.com/EigenCrate/evcrate/commit/7cbc816ff4fbba03d2fd67b04258852d4d519d82))
+* **plugins:** record completion and owner-root authorization architecture ([1bb37d1](https://github.com/EigenCrate/evcrate/commit/1bb37d1e8a5916c990a6845985fb777484eb663b))
+
 ## [2.2.0](https://github.com/EigenCrate/evcrate/compare/v2.1.0...v2.2.0) (2026-09-16)
 
 
