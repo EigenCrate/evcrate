@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   validateDiagnosticResult,
   validateResourceResult
 } from '../../dist/protocol/index.js';
 import { detectCounselFields } from './dam-hopper-errors.mjs';
 
-const fixturesDir = new URL('../fixtures/dam-hopper-v1', import.meta.url).pathname;
+const fixturesDir = fileURLToPath(new URL('../fixtures/dam-hopper-v1', import.meta.url));
 
 function readFixture(name) {
   return JSON.parse(readFileSync(join(fixturesDir, name), 'utf8'));
