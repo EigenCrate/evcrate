@@ -7,3 +7,6 @@ export * from './scope-payloads.js';
 export * from './diagnostic.js';
 export * from './publication-payloads.js';
 export * from './advisor-contracts.js';
+export * from './advisor-contract-runtime.js';
+export * from './advisor-evaluation.js';
+export * from './advisor-plugin-data-api.js';

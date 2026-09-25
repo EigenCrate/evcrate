@@ -12,6 +12,7 @@ const {
   MAX_EXECUTION_HISTORY_BYTES,
   MAX_OUTCOME_HISTORY_BYTES
 } = require('./history-contract.cjs');
+const { normalizeHistoryRecord, calculateHistoryMetrics } = require('./generated/advisor-metrics.js');
 
 function fail(code = 'REQUEST_INVALID') {
   throw createRoutingError(code);
@@ -265,8 +266,297 @@ function exportHistory(dependencies, options, fns) {
   }
 }
 
+/**
+ * Collect validated current-project history into the shared metrics kernel.
+ * Unlocked and non-atomic read collector with diagnostics.
+ */
+function getHistoryMetrics(dependencies, request = {}, fns) {
+  const ctx = fns.historyContextFn(dependencies);
+  if (request.project_id && request.project_id.toLowerCase() !== ctx.projectId) {
+    fail('REQUEST_INVALID');
+  }
+  const targetProject = ctx.projectId;
+  const targetTask = request.task_run_id ? request.task_run_id.toLowerCase() : null;
+  const records = fns.scanRecordsFn(ctx, targetProject);
+  const scopedRecords = [];
+
+  for (const r of records) {
+    if (r.projectId !== targetProject) continue;
+    if (targetTask && r.taskRunId !== targetTask) continue;
+    scopedRecords.push(r);
+  }
+
+  const normalizedRecords = [];
+  const diags = [];
+  let invalidRecordsCount = 0;
+  let bytesRead = 0;
+  let bytesDiscovered = 0;
+
+  for (const record of scopedRecords) {
+    bytesDiscovered += record.totalDiskBytes;
+    const relPath = `${record.projectId}/${record.taskRunId}/${record.consultationId}`;
+
+    if (record.execSize > MAX_EXECUTION_HISTORY_BYTES) {
+      diags.push({
+        code: 'EXECUTION_OVERSIZED',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: record.execSize,
+        observed_schema_version: null
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    let execFile = null;
+    try {
+      execFile = fns.readFileFn(record.execPath, MAX_EXECUTION_HISTORY_BYTES);
+    } catch {}
+
+    if (!execFile) {
+      diags.push({
+        code: 'EXECUTION_MISSING',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: null,
+        observed_schema_version: null
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    bytesRead += execFile.bytes.length;
+
+    let rawExec;
+    try {
+      rawExec = JSON.parse(execFile.bytes.toString('utf8'));
+    } catch {
+      diags.push({
+        code: 'EXECUTION_INVALID_JSON',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: execFile.bytes.length,
+        observed_schema_version: null
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    if (!rawExec || typeof rawExec !== 'object' || Array.isArray(rawExec)) {
+      diags.push({
+        code: 'EXECUTION_INVALID',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: execFile.bytes.length,
+        observed_schema_version: null
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    const observedExecVersion = rawExec.schema_version;
+    if (observedExecVersion !== 1) {
+      diags.push({
+        code: 'EXECUTION_UNSUPPORTED_VERSION',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: execFile.bytes.length,
+        observed_schema_version: typeof observedExecVersion === 'number' ? observedExecVersion : null
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    if (
+      (rawExec.project_id && rawExec.project_id.toLowerCase() !== record.projectId) ||
+      (rawExec.task_run_id && rawExec.task_run_id.toLowerCase() !== record.taskRunId) ||
+      (rawExec.consultation_id && rawExec.consultation_id.toLowerCase() !== record.consultationId)
+    ) {
+      diags.push({
+        code: 'EXECUTION_IDENTITY_MISMATCH',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: execFile.bytes.length,
+        observed_schema_version: 1
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    let validExec;
+    try {
+      validExec = validateHistoryExecutionV1(rawExec);
+    } catch {
+      diags.push({
+        code: 'EXECUTION_INVALID',
+        relative_path: `${relPath}/execution.json`,
+        project_id: record.projectId,
+        task_run_id: record.taskRunId,
+        consultation_id: record.consultationId,
+        bytes: execFile.bytes.length,
+        observed_schema_version: 1
+      });
+      invalidRecordsCount++;
+      continue;
+    }
+
+    let rawOutcome = null;
+    if (record.outPath) {
+      if (record.outSize > MAX_OUTCOME_HISTORY_BYTES) {
+        diags.push({
+          code: 'OUTCOME_OVERSIZED',
+          relative_path: `${relPath}/outcome.json`,
+          project_id: record.projectId,
+          task_run_id: record.taskRunId,
+          consultation_id: record.consultationId,
+          bytes: record.outSize,
+          observed_schema_version: null
+        });
+        rawOutcome = { invalid: true };
+      } else {
+        let outFile = null;
+        try {
+          outFile = fns.readFileFn(record.outPath, MAX_OUTCOME_HISTORY_BYTES);
+        } catch {}
+        if (outFile) {
+          bytesRead += outFile.bytes.length;
+          let parsedOut;
+          let parseSuccess = false;
+          try {
+            parsedOut = JSON.parse(outFile.bytes.toString('utf8'));
+            parseSuccess = true;
+          } catch {
+            diags.push({
+              code: 'OUTCOME_INVALID_JSON',
+              relative_path: `${relPath}/outcome.json`,
+              project_id: record.projectId,
+              task_run_id: record.taskRunId,
+              consultation_id: record.consultationId,
+              bytes: outFile.bytes.length,
+              observed_schema_version: null
+            });
+            rawOutcome = { invalid: true };
+          }
+          if (parseSuccess) {
+            if (!parsedOut || typeof parsedOut !== 'object' || Array.isArray(parsedOut)) {
+              diags.push({
+                code: 'OUTCOME_INVALID',
+                relative_path: `${relPath}/outcome.json`,
+                project_id: record.projectId,
+                task_run_id: record.taskRunId,
+                consultation_id: record.consultationId,
+                bytes: outFile.bytes.length,
+                observed_schema_version: null
+              });
+              rawOutcome = { invalid: true };
+            } else if (parsedOut.schema_version !== 1) {
+              diags.push({
+                code: 'OUTCOME_UNSUPPORTED_VERSION',
+                relative_path: `${relPath}/outcome.json`,
+                project_id: record.projectId,
+                task_run_id: record.taskRunId,
+                consultation_id: record.consultationId,
+                bytes: outFile.bytes.length,
+                observed_schema_version: typeof parsedOut.schema_version === 'number' ? parsedOut.schema_version : null
+              });
+              rawOutcome = { invalid: true };
+            } else if (
+              (parsedOut.project_id && parsedOut.project_id.toLowerCase() !== record.projectId) ||
+              (parsedOut.task_run_id && parsedOut.task_run_id.toLowerCase() !== record.taskRunId) ||
+              (parsedOut.consultation_id && parsedOut.consultation_id.toLowerCase() !== record.consultationId)
+            ) {
+              diags.push({
+                code: 'OUTCOME_IDENTITY_MISMATCH',
+                relative_path: `${relPath}/outcome.json`,
+                project_id: record.projectId,
+                task_run_id: record.taskRunId,
+                consultation_id: record.consultationId,
+                bytes: outFile.bytes.length,
+                observed_schema_version: 1
+              });
+              rawOutcome = { invalid: true };
+            } else {
+              try {
+                validateHistoryOutcomeV1(parsedOut);
+                rawOutcome = parsedOut;
+              } catch {
+                diags.push({
+                  code: 'OUTCOME_INVALID',
+                  relative_path: `${relPath}/outcome.json`,
+                  project_id: record.projectId,
+                  task_run_id: record.taskRunId,
+                  consultation_id: record.consultationId,
+                  bytes: outFile.bytes.length,
+                  observed_schema_version: 1
+                });
+                rawOutcome = { invalid: true };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const normRecord = normalizeHistoryRecord(validExec, rawOutcome, {
+      kind: 'controller',
+      relative_path: relPath
+    });
+    normalizedRecords.push(normRecord);
+  }
+
+  const genAt = (dependencies && typeof dependencies.now === 'function')
+    ? dependencies.now()
+    : (dependencies && typeof dependencies.now === 'number' ? dependencies.now : Date.now());
+
+  const metricsResult = calculateHistoryMetrics({
+    scope: {
+      kind: 'project',
+      project_ids: [targetProject],
+      selected_project_id: targetProject
+    },
+    filters: request.filters,
+    completeness: { is_complete: true, omitted_records: 0, omitted_bytes: 0 },
+    scan: {
+      status: diags.length > 0 ? 'complete_with_errors' : 'complete',
+      projects_discovered: 1,
+      tasks_discovered: new Set(scopedRecords.map((r) => r.taskRunId)).size,
+      consultations_discovered: scopedRecords.length,
+      accepted_records: normalizedRecords.length,
+      invalid_records: invalidRecordsCount,
+      bytes_discovered: bytesDiscovered,
+      bytes_read: bytesRead,
+      diagnostics: diags,
+      suppressed_diagnostics: 0,
+      limit_hit: false
+    },
+    records: normalizedRecords,
+    generated_at: genAt
+  });
+
+  return {
+    protocol: 'evcrate-advisor-history',
+    version: 1,
+    operation: 'metrics',
+    status: 'HISTORY_READY',
+    ...metricsResult
+  };
+}
+
 module.exports = {
   listHistory,
   getHistoryEntry,
-  exportHistory
+  exportHistory,
+  getHistoryMetrics
 };

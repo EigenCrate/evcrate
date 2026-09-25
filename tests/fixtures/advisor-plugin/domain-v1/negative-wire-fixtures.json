@@ -1,0 +1,203 @@
+{
+  "cases": [
+    {
+      "name": "history.refresh with unknown parameter actor",
+      "method": "history.refresh",
+      "target": "params",
+      "payload": { "actor": "alice" },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.refresh with unknown parameter target_path",
+      "method": "history.refresh",
+      "target": "params",
+      "payload": { "target_path": "/var/data" },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.refresh result with null snapshot_id when fresh",
+      "method": "history.refresh",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": null,
+        "observed_at": 1726900000000,
+        "scan": {
+          "status": "complete",
+          "projects_discovered": 1,
+          "tasks_discovered": 1,
+          "consultations_discovered": 1,
+          "accepted_records": 1,
+          "invalid_records": 0,
+          "bytes_discovered": 100,
+          "bytes_read": 100,
+          "diagnostics": [],
+          "suppressed_diagnostics": 0,
+          "limit_hit": false
+        },
+        "stale_reason": null
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.refresh result with stale_reason when fresh",
+      "method": "history.refresh",
+      "target": "result",
+      "payload": {
+        "state": "fresh",
+        "snapshot_id": "snap-1",
+        "observed_at": 1726900000000,
+        "scan": {
+          "status": "complete",
+          "projects_discovered": 1,
+          "tasks_discovered": 1,
+          "consultations_discovered": 1,
+          "accepted_records": 1,
+          "invalid_records": 0,
+          "bytes_discovered": 100,
+          "bytes_read": 100,
+          "diagnostics": [],
+          "suppressed_diagnostics": 0,
+          "limit_hit": false
+        },
+        "stale_reason": "incomplete"
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.summary with invalid task_run_id UUID",
+      "method": "history.summary",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": {
+          "task_run_id": "not-a-uuid",
+          "filters": {}
+        }
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.page with limit exceeding 500",
+      "method": "history.page",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": { "task_run_id": null, "filters": {} },
+        "sort": "started_at_desc",
+        "cursor": null,
+        "limit": 501
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.page with limit 0",
+      "method": "history.page",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": { "task_run_id": null, "filters": {} },
+        "sort": "started_at_desc",
+        "cursor": null,
+        "limit": 0
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.page with invalid sort order",
+      "method": "history.page",
+      "target": "params",
+      "payload": {
+        "snapshot_id": "snap-1",
+        "query": { "task_run_id": null, "filters": {} },
+        "sort": "started_at_asc",
+        "cursor": null,
+        "limit": 100
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "history.detail with ready status but missing execution",
+      "method": "history.detail",
+      "target": "result",
+      "payload": {
+        "status": "ready",
+        "snapshot_id": "snap-1",
+        "record_ref": "rec-1",
+        "detail_revision": "rev-1",
+        "outcome": null
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "policy.readCurrent with unknown authority field grant",
+      "method": "policy.readCurrent",
+      "target": "params",
+      "payload": { "grant": "admin" },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "policy.readCurrent with ready status but missing policy document",
+      "method": "policy.readCurrent",
+      "target": "result",
+      "payload": {
+        "status": "ready",
+        "scope": "account",
+        "temporal": "current",
+        "observed_at": 1726900000000,
+        "revision": "rev-1"
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "evaluations.list with limit exceeding 100",
+      "method": "evaluations.list",
+      "target": "params",
+      "payload": {
+        "cursor": null,
+        "limit": 101
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "evaluations.compare with empty items array",
+      "method": "evaluations.compare",
+      "target": "params",
+      "payload": {
+        "items": [],
+        "cursor": null,
+        "limit": 50
+      },
+      "expected_error": "INVALID_INPUT"
+    },
+    {
+      "name": "evaluations.compare with items array exceeding 32",
+      "method": "evaluations.compare",
+      "target": "params",
+      "payload": {
+        "items": [
+          { "evaluation_ref": "r1", "expected_revision": "v1" }, { "evaluation_ref": "r2", "expected_revision": "v1" },
+          { "evaluation_ref": "r3", "expected_revision": "v1" }, { "evaluation_ref": "r4", "expected_revision": "v1" },
+          { "evaluation_ref": "r5", "expected_revision": "v1" }, { "evaluation_ref": "r6", "expected_revision": "v1" },
+          { "evaluation_ref": "r7", "expected_revision": "v1" }, { "evaluation_ref": "r8", "expected_revision": "v1" },
+          { "evaluation_ref": "r9", "expected_revision": "v1" }, { "evaluation_ref": "r10", "expected_revision": "v1" },
+          { "evaluation_ref": "r11", "expected_revision": "v1" }, { "evaluation_ref": "r12", "expected_revision": "v1" },
+          { "evaluation_ref": "r13", "expected_revision": "v1" }, { "evaluation_ref": "r14", "expected_revision": "v1" },
+          { "evaluation_ref": "r15", "expected_revision": "v1" }, { "evaluation_ref": "r16", "expected_revision": "v1" },
+          { "evaluation_ref": "r17", "expected_revision": "v1" }, { "evaluation_ref": "r18", "expected_revision": "v1" },
+          { "evaluation_ref": "r19", "expected_revision": "v1" }, { "evaluation_ref": "r20", "expected_revision": "v1" },
+          { "evaluation_ref": "r21", "expected_revision": "v1" }, { "evaluation_ref": "r22", "expected_revision": "v1" },
+          { "evaluation_ref": "r23", "expected_revision": "v1" }, { "evaluation_ref": "r24", "expected_revision": "v1" },
+          { "evaluation_ref": "r25", "expected_revision": "v1" }, { "evaluation_ref": "r26", "expected_revision": "v1" },
+          { "evaluation_ref": "r27", "expected_revision": "v1" }, { "evaluation_ref": "r28", "expected_revision": "v1" },
+          { "evaluation_ref": "r29", "expected_revision": "v1" }, { "evaluation_ref": "r30", "expected_revision": "v1" },
+          { "evaluation_ref": "r31", "expected_revision": "v1" }, { "evaluation_ref": "r32", "expected_revision": "v1" },
+          { "evaluation_ref": "r33", "expected_revision": "v1" }
+        ],
+        "cursor": null,
+        "limit": 50
+      },
+      "expected_error": "INVALID_INPUT"
+    }
+  ]
+}

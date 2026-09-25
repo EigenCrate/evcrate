@@ -88,11 +88,11 @@ test('local distribution check validates artifact tree without drift', () => {
 test('packaged artifact allowlist is Python-free and contains required runtime assets', () => {
   const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: packageRoot,
-    encoding: 'utf8',
-    shell: true
+    encoding: 'utf8'
   });
-  const jsonIndex = packOutput.search(/[[{]/);
-  const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
+  const jsonIndex = Math.max(packOutput.lastIndexOf('\n{'), packOutput.lastIndexOf('\n['));
+  const jsonText = jsonIndex >= 0 ? packOutput.slice(jsonIndex + 1).trim() : packOutput.trim();
+  const parsed = JSON.parse(jsonText);
   const packMeta = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
   assert.ok(packMeta.files && Array.isArray(packMeta.files));
   assert.equal(packageMetadata.private, true, 'Package must be private: true');

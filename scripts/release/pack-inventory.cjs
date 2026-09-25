@@ -19,9 +19,11 @@ const EXPECTED_TARGETS = Object.freeze([
 function collectPackInventory(projectRoot) {
   const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: projectRoot,
-    encoding: 'utf8'
+    encoding: 'utf8',
+    env: { ...process.env, NO_COLOR: '1' }
   });
-  const jsonIndex = packOutput.search(/[[{]/);
+  const match = packOutput.match(/^[{[]/m);
+  const jsonIndex = match ? match.index : packOutput.search(/[[{]/);
   const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
   const packMeta = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
 

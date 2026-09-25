@@ -2,9 +2,284 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-16
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Package version: `2.1.0`.
+**Updated:** 2026-09-24
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-24 — feat(history): complete paired qualification and release decision (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-24; 100%; paired release qualified; review approved 9.8/10). **Plan:** [Phase 05](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md) · [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md). **Evidence:** [test report](../plans/reports/tester-260924-2115-phase-05-paired-qualification.md) · [review](../plans/reports/code-review-260924-2125-phase-05-paired-qualification.md) · [release manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md)
+- Completed cross-repo qualification matrix across EVCrate and DamHopper, including negative authorization, owner-root admission, multi-project UI tests, and lifecycle revocation. The 10k local framed-worker benchmark stayed within frozen ceilings.
+- Reproducible candidate and distribution packages passed verification against their inventory/checksums. Matched paired release approved; production deployment is not claimed.
+- Direct owner-root provider scan discovered 21 project directories and accepted 237/237 consultations in 191.48ms with zero diagnostics; this was not a new live DamHopper browser-session qualification. The evcrate project filter returned 33 consultations.
+- Validation: **273/273 tests passed** (0 failed, 0 skipped): plugin 65, viewer 27, qualification/performance 3, protocol 54, advisor metrics 6, DamHopper server 55, and DamHopper UI 63.
+### 2026-09-24 — feat(history): complete account-wide project selector (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-24; review approved **9.8/10**; **188/188 tests passed**). **Plan:** [Phase 04](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md); [validation](../plans/reports/phase04testerfinal-260924-1842-account-wide-project-selector-honest-ui-identity.md); [review](../plans/reports/code-review-260924-2004-phase-04-project-filter-ui-re-review.md)
+- Same-snapshot inventory now drives server-filtered History/Overview; project switches clear cached rows, detail, and cursor. Labels fall back to abbreviated canonical IDs.
+- Configuration identifies current owner policy, Evaluations their bound source; both say they are not filtered by History project. Provider labeling uses the custom/host plugin label rather than implying an account or project identity. Host navigation/page brands EVCrate only for matching plugin metadata.
+
+### 2026-09-24 — fix(auth): guard production auth without breaking development
+
+**Status:** Phase 00 DONE (2026-09-24); review approved **9.4/10**; user approved.  
+**Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 00](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md)  
+**Evidence:** [source review](../plans/260924-1055-all-project-advisor-history/reports/summary-review.md)
+
+- Production startup with missing MongoDB configuration is guarded, and missing DB no longer triggers token issuance by itself.
+- Explicit development/test token bootstrap and test-server login remain available; browser default-profile seeding is limited to development/test, and test-server access stays scoped to the fixture actor.
+- Verification: **1,876/1,876 tests passed**.
+
+### 2026-09-24 — feat(history): freeze cross-project advisor data contract (Phase 01)
+
+**Status:** Phase 01 DONE (2026-09-24); review approved **9.5/10**; user approved.  
+**Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 01](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md)
+
+- Froze `evcrate-advisor-data` v2 while preserving strict v1 schema/behavior support, all eight method names, and on-disk execution/outcome history v1.
+- Added `project_id: string | null` to v2 summary/page queries: `null` means All Projects only in owner-root context; single-project context remains bound.
+- Defined a same-snapshot per-project inventory, capped at 500 entries and independent of active query filters, plus a versioned owner-safe display-name sidecar.
+- Added runner scope contract `ContextScopeKind` (`project` | `history-root`) and `ContextScopeDescriptor` with optional root identity/source revision.
+- Verification: **92/92 test executions passed** (86 test suite + 6 runner); review approved **9.5/10**.
+
+### 2026-09-24 — feat(auth): complete owner-root history authorization and context (Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-24); review complete; user approved. **Plan:** [All-project advisor history](../plans/260924-1055-all-project-advisor-history/plan.md) · [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md). **Evidence:** [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md); [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md)
+
+- Bound history to the trusted owner source with authenticated admission, on-demand runner hydration, invoke-time reauthorization, and lifecycle revocation; kept project mode default-deny and non-history operations grant-protected. Original suite report: 2,550 pass, one Windows skip; later targeted checks cover restart/cache, ancestor-symlink, and wrong-owner UID. Phases 03–05 are complete; see their linked completion entries.
+
+### 2026-09-24 — feat(history): complete owner-safe all-project worker (Phase 03; DONE, 9.5/10 review score)
+
+**Plan:** [Phase 03](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md). **Evidence:** [tests](../plans/reports/testerphase03final-260924-1621-phase-03-owner-safe-history-worker.md) · [review](../plans/reports/code-review-260924-1628-phase-03-owner-safe-history-worker.md). **Results:** 354/354 tests passed (0 failed, 0 skipped); review 9.5/10; canonical advisor checkpoint complete. Candidate manifest check: tester FAIL; later review PASS.
+- Descriptor-pinned owner-root file checks; safe project names persist, and malformed/unknown metadata does not hide records (legacy unnamed projects show abbreviated IDs); HMAC-bound cursors tie-break `started_at DESC → project_id ASC → task_run_id ASC → consultation_id ASC`; candidate inventory reuses `collectPluginPackageRecords`. Phase 04 and the paired Phase 05 qualification/release are complete; see the Phase 05 record above.
+
+### 2026-09-21 — feat(plugin): complete Phase E00 domain contracts and parity qualification
+
+**Status:** Phase E00 DONE (2026-09-21); review approved **9.5/10**.  
+**Plan:** [Phase E00 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-00-domain-contracts-and-parity.md)  
+**Evidence:** [validation](../plans/reports/tester-260921-0805-phase-e00-domain-contracts-parity.md); [code review](../plans/reports/code-review-260921-0808-phase-e00-domain-contracts-and-parity.md)
+
+- Completed the `evcrate-advisor-data` v1 domain contracts, strict schemas,
+  generated manifest, positive/negative wire fixtures, exact path identity,
+  canonical checkpoint digest, metric/evaluation parity fixtures, and reviewed
+  read-closure feasibility artifact.
+- Qualified the E00 verification matrix: build, schema generation check,
+  advisor-plugin tests, advisor metrics, advisor parity, and evaluation tests
+  passed **28/28** with no failures or skips.
+- G0 budget/cancellation/UI-memory assumptions are recorded; E01 and E02 are
+  complete; E03–E05 remain pending.
+
+
+### 2026-09-21 — feat(plugin): complete Phase E01 owner-safe read provider
+
+**Status:** Phase E01 DONE (2026-09-21; 100%); review approved **9.5/10**.  
+**Plan:** [Phase E01 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-01-owner-safe-provider.md)  
+**Evidence:** [verification](../plans/reports/audit-260921-1139-phase-e01-verification.md); [re-review](../plans/reports/code-review-260921-1216-phase-e01-fixes-re-review.md)
+
+- Delivered a read-only, context-bound provider for all eight E00 operations:
+  history refresh/summary/page/detail, current policy, and evaluation
+  list/read/compare.
+- Backend modules: `provider.cjs` dispatch/validation; `provider-errors.cjs`
+  safe typed errors; `binding.cjs` target/owner identity; `snapshot-store.cjs`
+  bounded retention; `cursor-manager.cjs` signed pagination;
+  `history-scanner.cjs` cooperative scanning; `history-detail.cjs` fingerprinted
+  rereads; `history-provider.cjs` refresh/summary/page/detail;
+  `policy-provider.cjs` current policy; and `evaluation-provider.cjs` bound
+  evaluation operations.
+- Descriptor-pinned TOCTOU protection opens policy, evaluation, and history
+  files with `O_RDONLY | O_NOFOLLOW`, rechecks descriptor ownership, regular-file,
+  single-link, and size invariants, and closes the descriptor. History
+  fingerprints include device/inode identity.
+- Preserved cancellation/deadline behavior, same-context stale retention,
+  cross-context isolation, deterministic code-point ordering, and `<= 1 MiB`
+  pages. No provider mutators, HOME scan, path rebinding, or controller dispatch.
+- The controller closure remains exactly 33 files: inventory delta `0`; no
+  controller, installer, or distribution projection files changed.
+- Verification: **56/56 tests passed** across 8 files: 9 plugin-provider tests,
+  38 advisor-controller regressions, and 9 protocol/parity tests. E02 worker/SDK
+  integration is complete; joint G1 owner-worker qualification remains unclaimed.
+
+### 2026-09-21 — feat(plugin): complete Phase E02 framed Node plugin worker
+
+**Status:** Phase E02 DONE (2026-09-21; implementation closure); Cycle 2 review approved **9.5/10**.  
+**Plan:** [Phase E02 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-02-plugin-worker.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260921-1441-phase-e02-cycle2.md); [advisor checkpoint](../plans/reports/advisor-260921-1445-phase-e02-cycle2-checkpoint.json)
+
+- Delivered pinned D00 SDK handshake, strict framed JSON-RPC worker, bounded
+  context/revision lifecycle, capability dispatch, cancellation/settlement,
+  safe error mapping, stdout purity, and process-failure handling.
+- Built deterministic backend-only candidate with exact content-hash inventory;
+  no root runtime dependency or standalone picker/UI.
+- Verification: **53/53 plugin tests passed** (22 focused worker tests +
+  31 plugin tests); candidate check and deterministic build passed. Joint G1
+  owner-worker qualification remains downstream; E03 is next.
+
+### 2026-09-21 — feat(plugin): complete Phase E03 embedded provider-neutral four-view UI
+
+**Status:** Phase E03 DONE (2026-09-21; implementation closure); review approved **9.2/10**.  
+**Plan:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md)  
+**Evidence:** [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md); [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md)
+
+- Replaced view-owned acquisition with shared provider/reducer/views and a
+  temporary standalone picker (later removed by E05); DamHopper uses bounded
+  `MessagePort` without credentials, paths, sockets, or arbitrary network.
+- Added bridge 1.0.0's eight validated envelopes, single-use nonce ack, session/
+  generation fences, cancellation, late-response suppression, availability,
+  and revocation cleanup.
+- Kept Overview, paged History/detail, current account-wide policy labels, and
+  bound-source Evaluations with provenance and candidate masking.
+- Built `plugin/ui/index.html` as opaque-srcdoc inlined CSS/IIFE (328,337 bytes,
+  <=5 MiB), with no external assets/network/filesystem picker, `eval`, or
+  `Function`. Manifest/candidate include UI, `/plugins/evcrate.advisor`
+  navigation, and its SHA-256 inventory entry (64 records).
+- Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer
+  browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced
+  CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain
+  downstream gates.
+
+### 2026-09-22 — feat(plugin): qualify E04 independent package and Gate G3
+
+**Status:** Phase E04 DONE (2026-09-22); Gate G3 **QUALIFIED**; review approved **9.3/10**.  
+**Plan:** [Phase E04 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-04-independent-package.md)  
+**Evidence:** [G3 qualification receipt](../plans/260920-1603-dam-hopper-advisor-plugin/reports/g3-qualification-receipt.md); [lifecycle review](../plans/reports/code-review-260922-2336-g3-qualification-lifecycle.md)
+
+- Verified the independently installable matched package `evcrate.advisor`
+  v0.1.0: **45 logical members**, **176,842 bytes compressed** (747,008 bytes
+  expanded), code-point-sorted exact closure, and archive SHA-256
+  `1ada5334671ae854e6c406930f8705de02d85e02198adcb07c41936002011f9a`
+  (`1ada5334...`).
+- Verified transactional stage/approve, matched UI/backend activation,
+  update/disable/remove, worker drain and context revocation, crash recovery,
+  and clean restart without DamHopper rebuild or EVCrate source mutation.
+- Verified rollback safety: current revoked grants and disabled intent dominate
+  restored package/settings; activation generations never rewind and restored
+  non-security settings are revalidated.
+- Verified root exact-7 release isolation: plugin staging is excluded from root
+  npm packaging and cannot become an eighth release asset.
+- Qualification evidence: plugin lifecycle **5/5**, package integrity/hostile
+  archive **5/5**, root isolation **1/1**, and companion DamHopper lifecycle
+  **8/8**. Standalone viewer retirement remains gated on E05/D06 G4.
+
+
+
+### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-19; 100%); **39/39 focused tests passed**.
+**Plan:** [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md)
+**Evidence:** `tests/viewer/package-inventory.test.mjs`; `tests/distribution/private-release-artifacts.test.mjs`
+
+- Added the viewer TypeScript, Vite, and Playwright boundaries: strict ES2020
+  browser typechecking, relative static assets, no sourcemaps, and one Chromium
+  project served from the built preview.
+- Added `build:viewer`, `build:all`, `viewer:preview`, and
+  `test:advisor-viewer`; release preparation now builds the root and viewer
+  together before collecting package inventory.
+- Preview binds strictly to loopback `127.0.0.1:4173` and emits the exact HTTP
+  CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'
+  data:; connect-src 'none'; object-src 'none'; base-uri 'none';
+  frame-ancestors 'none'`.
+- Package inventory includes only built `viewer/dist/**` viewer assets; source,
+  configs, tests, maps, and `node_modules` remain excluded. The measured bundle
+  is **298.5 kB <= 5 MiB**.
+- Exact-seven top-level release assets and the exact 33-file controller closure
+  remain unchanged. The viewer is packed inside platform archives, never added
+  as a release asset.
+- Handoff: **Phase 09 — Focused qualification and performance benchmark**.
+
+### 2026-09-19 — feat(viewer): complete React Explorer and view architecture (Phase 07)
+
+**Status:** Phase 07 DONE (2026-09-19; 100%); code review approved **10/10**.  
+**Plan:** [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md)  
+**Evidence:** [viewer validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md); [architecture review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md)
+
+- Added the private static React explorer under `viewer/src/`: one reducer
+  state machine, explicit File System Access pick/refresh/cancel controls,
+  router-free `#overview`, `#history`, `#configuration`, and `#evaluations`
+  views, and local responsive styling.
+- Overview renders honest n/N/excluded ratios, missingness, latency, attempts,
+  completeness, and limitations. History provides frozen filters, 100-row
+  paging, and lazy inert detail. Configuration separates current policy from
+  historical route/prompt/build comparisons. Evaluations group exact comparable
+  digests, preserve human/automated provenance, and mask candidates until reveal.
+- Handles remain in refs; scans are generation-fenced; failed/cancelled/
+  incomplete refresh retains stale snapshots. No raw HTML, active record links,
+  network calls, model execution, persistence, grading, or external assets.
+- Verification: **28/28 tests passed** (22 viewer state/view tests + 6 metrics
+  tests), strict viewer typecheck/build passed with **zero TypeScript diagnostics**,
+  and every viewer module remains under 200 LOC.
+- **Canonical advisor mentoring verification:** **PASS** against the canonical
+  `.claude/workflows/advisor-mentoring.md` contract; the viewer remains a
+  validated data consumer and does not invoke model/checkpoint flows or claim
+  mentor quality.
+- Handoff: **Phase 08 — Packaging, CSP, preview, and release inventory**.
+
+### 2026-09-18 — feat(advisor): complete counsel evaluation protocol and fixtures (Phase 06)
+
+**Status:** Phase 06 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 06 plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md)  
+**Evidence:** [Cycle 2 validation](../plans/reports/tester-260918-1733-phase06-cycle2-validation.md); [Cycle 2 review](../plans/reports/code-review-260918-1736-phase-06-counsel-evaluation-cycle-2.md)
+
+- Added public `evcrate-advisor-counsel-evaluation` v1 types/facade, strict nested validation, canonical rubric/input SHA-256 checks, immutable documents, response/score invariants, and digest/provenance-separated aggregation.
+- Added explicit read-only browser multi-file evaluation reader with bounded 8 MiB files, per-file statuses, and no persistence, execution, grading, or history-metrics path.
+- Added `valid-mixed`, digest-mismatch, invalid-observations, and oracle-free nine-case fixtures derived from corpus inputs without `expected_mentor_response`.
+- Verification: **87/87 tests passed** across protocol, viewer, metrics, parity, and distribution suites; build, viewer typecheck, and release-check passed; review **10/10**.
+- Controller closure remains 33 files and unchanged. Handoff: **Phase 07 — React explorer and view architecture**.
+
+### 2026-09-18 — feat(advisor): complete browser history traversal and scanner (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-18; 100%); Cycle 2 review approved 9.8/10.  
+**Plan:** [Phase 05 plan](../plans/260917-2308-advisor-visual-metrics/phase-05-browser-history-traversal-and-scanner.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1353-phase-05-browser-history-traversal-cycle-2.md); [suite validation](../plans/reports/tester-260918-1350-phase05-suite-validation.md)
+
+- Completed explicit read-only File System Access selection, deterministic three-level history traversal, bounded four-read scanning, strict record/digest validation, sanitized diagnostics, and duplicate resolution.
+- Completed atomic generation replacement with stale retention for incomplete/cancelled/denied scans, plus read-only policy inspection with legacy-v1 migration-required state.
+- Focused proof passed: viewer 24/24, advisor metrics 6/6, and contract parity 4/4 (34/34 total); all Phase 05 modules remain under 200 lines.
+- Handoff advanced to Phase 06 — Counsel evaluation protocol and fixtures.
+
+
+### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 04 plan](../plans/260917-2308-advisor-visual-metrics/phase-04-history-metrics-cli-integration.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1243-phase-04-history-metrics-cli-integration-cycle-2.md)
+
+- Added the read-only `history metrics` CLI operation with exact request/result
+  envelopes, current-project/task scope, bounded unlocked collection, and
+  sanitized deterministic diagnostics.
+- Reused the finalized Phase 02 normalization and metrics kernel without
+  controller-local formulas; invalid, missing, unknown, and conflicting records
+  remain distinct and reconcile with scan accounting.
+- Focused proof passed: 26/26 history CLI/store/metrics tests, 6/6 advisor-metrics
+  tests, and 11/11 controller-closure tests; existing history operations remain
+  unchanged. Phase 05 is next: browser history traversal and scanner.
+
+### 2026-09-18 — feat(advisor): complete checkpoint digest, metrics kernel, and generated CJS adapters (Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-18; 100%); review approved 10/10.  
+**Plan:** [Phase 02 plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md)  
+**Evidence:** [Phase 02 re-review](../plans/reports/code-review-260918-0244-phase02-re-review.md)
+
+- Completed the portable deterministic metrics kernel, exact history filters/formulas,
+  frozen results, duplicate exclusion, diagnostics, completeness, and limitation codes.
+- Preserved order-sensitive checkpoint digest bytes and proved Node/Web Crypto parity;
+  converted the CJS contract and policy validators to generated-runtime adapters while
+  retaining required exports and boundary error codes.
+- Registered the generated four-file runtime closure in the 33-file controller
+  inventory. Focused proof passed: protocol 31/31, metrics 5/5, parity 4/4,
+  advisor-controller 206/206, distribution check/build `status: "ok"`, and build.
+
+### 2026-09-18 — test(advisor): close controller closure and installer inventory parity (Phase 03)
+
+**Status:** Phase 03 DONE (2026-09-18; 100%); review approved 10/10.  
+**Plan:** [Phase 03 plan](../plans/260917-2308-advisor-visual-metrics/phase-03-controller-closure-and-inventory-migration.md)  
+**Evidence:** [Closure parity evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json); [code review](../plans/reports/code-review-260918-1136-phase-03-controller-closure-inventory-migration.md)
+
+- `install.sh` and `install.ps1` now carry the exact 33-file code-point-sorted
+  controller inventory, including the four generated runtime modules.
+- `tests/manifests/distribution-manifests.test.mjs` asserts exact count/hash parity
+  and rejects an extra `viewer.js` or a foreign `require('lodash')`.
+- Evidence records sequence-identical authority/generated/installer lists, 81
+  validation checks, and zero failures. Historical dated 29/29 evidence remains
+  unchanged; Phase 04 is complete and Phase 05 is next: browser history traversal
+  and scanner.
 
 ### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
 
@@ -223,307 +498,6 @@ and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-determini
 - Clarified agent instructions across all seven target projections (`advisor.md`, `SKILL.md`).
 - Validated zero projection drift across all seven harnesses via `distribute:check` and 100% test pass rate across 230 tests (`test:advisor-controller` 207/207, `test:adapters` 23/23).
 - Independent code review (9.5/10 Approved) and mentor review (`review:hard-fix` with GPT-5.6 Sol high effort: Approved).
-
-## [2.0.0] - 2026-09-09
-
-**Release commit:** `628183eb` (`chore(release): 2.0.0 [skip ci]`)  
-**Status:** Phase 10 deterministic acceptance complete.
-
-- Aligns the v2.0.0 release with the pure TypeScript control plane, seven-target
-  projections, schema-2 manifests, and v2 advisor routing/retry orchestration.
-- Deterministic acceptance: 272/272 tests, 29/29 controller-closure files, and
-  9/9 sanitized mentoring baseline cases passed.
-- Live vendor qualification and production `$HOME/.evcrate/` publication remain
-  operator-gated; no live quality or rollout claim is made.
-
-
-### 2026-09-08 — test(advisor): verify deterministic Phase 10 acceptance and establish synthetic improvement baseline (phase-10)
-
-**Status:** Phase 10 DONE for deterministic acceptance (272/272; 100%). Live
-vendor qualification, empirical paired baseline, and real HOME publication
-remain explicit operator gates.  
-**Plan:** [Phase 10 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-10-acceptance-qualification-and-improvement-evaluation.md)  
-**Evidence:** [QA acceptance report](../plans/reports/qa-260908-1915-phase10-acceptance.md) and
-[acceptance matrix](../plans/260907-1208-advisor-mentoring-recovery-audit/acceptance-matrix.md)
-
-- Added disposable-HOME end-to-end fixtures for controller, state/history, human-gate,
-  capability, command, and mentoring-evaluation behavior.
-- `tests/distribution/phase10-test-helpers.mjs` creates owner-only temporary roots,
-  fake Codex/OMP routes, a Git baseline, bounded subprocess invocation, and a
-  strict child-environment allowlist with token/PAT scrubbing.
-- `tests/fixtures/mentoring-evaluation/corpus.json` defines nine sanitized cases
-  (one positive control and eight failure-oriented cases) over five rubric
-  dimensions: direction accuracy, scope discipline, safety invariants,
-  actionability, and evidence grounding. Passing threshold: average score `4.0`.
-- `evaluator.mjs` supplies deterministic scoring, generic-filler rejection,
-  decision-alignment checks, evidence grounding, and destructive-command safety
-  probes. The corpus is a synthetic baseline, not a live model-quality benchmark.
-
-#### Dedicated acceptance suites
-
-| Suite | Cases | Observable coverage |
-|---|---:|---|
-| `phase10-controller-scenarios.test.mjs` | 7 | Primary success, fatal/malformed input, stream handling, unsupported route, cancellation, and child credential scrubbing |
-| `phase10-state-and-history.test.mjs` | 3 | Stale evidence, idempotent replay/history inspection, and dirty-user-baseline preservation |
-| `phase10-human-gate.test.mjs` | 1 | Three failed corrections enter `needs_human`; fourth remediation is denied |
-| `phase10-commands-and-evaluation.test.mjs` | 4 | Seven-target declarations, V2/`--advice` command contract, corpus pass, and adversarial counsel rejection |
-| **Dedicated total** | **15** | **15/15 passed** |
-
-#### Deterministic evidence
-
-| Command or surface | Result |
-|---|---:|
-| `node --test tests/distribution/phase10-*.test.mjs` | 15/15 |
-| `node tests/advisor-controller/smoke-30s.cjs` | 1/1; 31.28s silent generation, one launch |
-| `npm run test:advisor-controller` | 204/204 |
-| `npm run test:adapters` | 24/24 |
-| `npm run release:check` | 29/29 controller files; closure verified |
-| `npm run test:installer:linux` | 15/15 |
-| `npm run test:cutover && npm run test:validation-rollout` | 13/13 |
-| **Deterministic total** | **272/272; 100%** |
-
-#### Explicit boundary
-
-- Deterministic tests verify repository contracts, state transitions, process
-  behavior, capability declarations, sanitized evaluation, packaging, and
-  disposable-HOME preservation. Fake CLIs do not authenticate vendors or prove
-  paid model quality.
-- All seven targets declare mentoring support with `writeChecks: advisory-only`;
-  generated markers do not establish live host enforcement or a universal
-  pre-edit hard block.
-- No real credentials, external vendor APIs, or empirical paired executor runs
-  were used. Live route/auth/model/effort/no-tool qualification and the paired
-  improvement baseline remain **UNVERIFIED (GATED)**.
-- Tests use disposable HOME only; production `$HOME/.evcrate/` was not modified.
-  HOME publication requires an operator-selected route and explicit authorization
-  before `npm run distribute:all` or an equivalent staged publish/apply action.
-
-This evidence closes the deterministic Phase 10 acceptance surface without
-claiming live qualification, measured quality improvement, or authorized rollout.
-
-### 2026-09-08 — feat(distribution): generate projections, synchronize build manifests, and stage coherent cutover (phase-09)
-
-**Status:** Phase 09 DONE (2026-09-08; 100%); superseded by the Phase 10
-deterministic acceptance entry above; the v2.0.0 milestone is recorded above
-**Plan:** [Phase 09 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-09-projection-publication-and-documentation-cutover.md)  
-**Evidence:** Full controller closure parity (29 files), 24/24 adapter projection tests, 7/7 cutover tests, 11/11 publication recovery tests, 15/15 installer tests, 5/5 private unpack rollout tests, passing `npm run distribute:check` and `npm run release:check`
-
-- Synchronized all seven target projections (`claude`, `codex`, `gemini`, `antigravity`,
-  `pi`, `omp`, `copilot`) from canonical `.claude/` sources via `npm run distribute:build`
-  and verified parity with `distribute:check`.
-- Added `"generate:registry"` script to `package.json` and synchronized `.evcrate/registry.json`
-  and `.evcrate/build-manifest-*.json` via `npm run generate:all`.
-- Synchronized **ADVISOR_CONTROLLER_FILES** across `install.sh`, `install.ps1`,
-  `scripts/generate-controller-inventory.mjs`, and `src/manifests/controller.ts`, establishing
-  strict 29-file closure parity and closing controller closure digest mismatches.
-- Verified standalone unpack installers under Linux network namespace isolation
-  (`tests/distribution/private-unpack-rollout.test.mjs`) and subprocess tests
-  (`tests/installers/*.test.mjs`): package hash invariance, controller closure verification,
-  clean-new/whole-old-backup mutable state semantics, atomic locking, and published target preservation.
-- Verified publication atomic promotion, CAS conflict protection, and crash recovery in
-  disposable HOME (`tests/distribution/publication-apply.test.mjs`,
-  `tests/distribution/publication-recovery.test.mjs`), with reviewer smoke tests confirming
-  active/incomplete task state and history sentinels remain isolated and intact.
-- Documented operator cutover sequence, quiescence, settings workflow, and rollback runbooks
-  across system architecture, codebase summary, and roadmap.
-- Recovery semantics are explicit: `recover` rolls back a valid interrupted
-  `staged`/`promoting` transaction, finalizes a `committed` cleanup window, and
-  returns `none` when idle; it never rolls back a completed release. A completed
-  release rollback uses installer `rollback` to select a prior snapshot, followed
-  by publication `apply` from that snapshot. Post-first-promotion collisions
-  retain the journal and fail closed until the external path is reconciled.
-- The cutover runbook records the exact V2 policy shape and V1 transport boundary,
-  explicit `get -> prepare v2 -> preview -> apply` migration, non-clobbering backup,
-  and quiescence inspection from the original project root/HOME. Live pending
-  processes or unknown inspection status block deployment; HOME apply remains a
-  Phase 10 operator gate.
-
-### 2026-09-08 — feat(advisor): integrate cooperative V2 mentoring gates across commands and harnesses (phase-08)
-
-**Status:** Complete (100%); Lead Mentor approval: 10/10; user approved  
-**Plan:** [Phase 08 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md)  
-**Evidence:** [Phase 08 integration tests](../tests/adapters/phase08-mentoring-integration.test.mjs)
-
-- Added one canonical `evcrate-advisor-checkpoint/v2` dispatcher and state
-  lifecycle for all 16 canonical code/cook/bootstrap/fix consumers:
-  `init` -> checkpoint reserve -> controller claim/attach -> state get ->
-  disposition -> outcome -> complete, with an explicit human-decision branch.
-  Generated projections and manifests retain the canonical source authority.
-- Replaced implicit executor behavior with four explicit dispositions:
-  `accept`, `reject-with-evidence`, `need-evidence`, and `reconcile`, bounded by
-  authorized scope, fresh evidence, and actual changed-path review.
-- Separated the three-cycle executor review cap from durable correction exhaustion.
-  Failed correction outcomes persist exact one-indexed ordinals 1, 2, and 3;
-  the third failure enters `needs_human`, and conversational approval cannot
-  bypass the durable state gate.
-- Preserved the user's baseline and unrelated edits through pre-write baseline
-  checks and post-change actual-path attribution. Concern-free advice supports a
-  validated no-change outcome and completion without invented edits.
-- Added **TARGET_MENTORING_CAPABILITIES** and target projection rendering. The
-  seven-target capability matrix is:
-
-  | Target | Mentoring | Write checks |
-  |---|---|---|
-  | Claude | supported | advisory-only |
-  | Codex | supported | advisory-only |
-  | OMP | supported | advisory-only |
-  | Antigravity | supported | advisory-only |
-  | Gemini | supported | advisory-only |
-  | Copilot | supported | advisory-only |
-  | Pi | supported | advisory-only |
-
-- Real disposable-HOME CLI integration covers bounded correction (Path A),
-  concern-free/no-change completion (Path B), exact 1/2/3 correction ordinals,
-  durable `needs_human` blocking, all 10 workflow JSON examples, all 16
-  dispatcher references, and all seven projections. Aggregate evidence is
-  279/279 tests; this proves fixture-backed lifecycle and projection behavior,
-  not paid inference, live vendor qualification, hostile-process containment,
-  or HOME publication.
-
-
-### 2026-09-08 — feat(advisor): add sanitized audit history and outcome review tools (phase-07)
-
-**Status:** Complete (100%); Phase Lead/Senior Mentor sign-off: unconditional
-approval, 10/10  
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md)  
-**Evidence:** [Phase 07 QA verification](../plans/reports/tester-260908-1344-phase07-final-verification.md)
-
-- Added strict version-1 execution and outcome history contracts with bounded
-  `execution.json` (128 KiB) and `outcome.json` (64 KiB) records under the
-  owner-only `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
-  hierarchy.
-- The controller persists a started snapshot before model launch, updates
-  bounded attempt facts, and settles terminal <code>ADVICE_READY</code>/<code>FAILED</code> execution
-  through compare-and-set (CAS) identity checks. Linked outcomes retain
-  disposition, evidence revision, actual changed paths, validation, result, and
-  correction number.
-- History writes are optional rich audit: storage failure exposes
-  `audit_status: "degraded"` without failing usable inference, launching another
-  model, or resetting required task state. Sanitization excludes credentials,
-  raw stderr, hidden reasoning, and raw vendor logs.
-- Added managed `evcrate-advisor history list|show|export|prune` operations:
-  metadata-only scoped pagination, sanitized inspection, explicit safe
-  non-existing-destination export with redaction review, and dry-run/apply
-  retention/quota pruning that protects active records and unrelated projects.
-- Registered the four history modules in the generated advisor closure, expanding
-  the inventory from 25 to 29 production files.
-- Verification: 204/204 advisor-controller tests passed across 16 files; the
-  targeted Phase 07 history suites passed 19/19. The final mentor review resolved
-  all seven implementation items and approved Phase 07 unconditionally at 10/10.
-
-### 2026-09-08 — feat(advisor): add durable task and correction gates (phase-06)
-
-**Status:** Complete (100%); user-approved 2026-09-08 after two review cycles
-and a senior mentor challenge.
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-06-task-state-scope-and-human-handoff.md)
-
-- Added owner-only 64 KiB task state, selected-file/Git baseline identity,
-  short process-identity locks, atomic CAS writes and bounded replay protection.
-- V2 CLI inference requires a matching reserved checkpoint; terminal linkage
-  persists before advice is emitted. Missing/unsafe state blocks dependent work
-  without relaunching inference or resetting unresolved episodes.
-- Added explicit disposition/outcome/scope/recovery operations. Three failed
-  advised corrections block the next correction; observed continuation permits
-  exactly one additional correction without resetting the counter.
-- Local terminal confirmation is cooperative, not protection against same-user
-  terminal automation. Windows state and authentic per-host event linkage remain
-  unqualified; no host-wide enforcement claim.
-- Verification: 185/185 advisor-controller tests; `npm run build` and
-  `npm run release:check` passed against the generated 25-file controller
-  closure. Disposable-HOME actual CLI smoke ran real syntax validation through
-  three failures, rejected a fourth correction, exercised an automated PTY
-  confirmation, then resolved/completed with sentinel preserved.
-  Cycle 2 resolved C1 (no-correction completion), C2 (ledger capacity headroom),
-  C3 (preflight human decision replay and cancellation), and C4 (compound Git
-  staged rename identity and index metadata attribution). Fixture backend
-  only; no paid inference or real user-authorization claim from the smoke.
-
-### 2026-09-08 — feat(advisor): add bounded primary retry and one-shot backup orchestration (phase-05)
-
-**Status:** Complete (100%)  
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-05-primary-retry-and-backup-orchestration.md)
-
-- Added an explicit sequential consultation state machine with up to four
-  primary model launches. Positively classified transient failures use
-  cancellable 10/20/30-second backoff and stop on the first success.
-- After four primary transient failures, or a route-local preflight skip before
-  any primary model launch, the configured backup is qualified and invoked once.
-  Backup failures are terminal and never retried. Trusted provider cooldowns use
-  the larger of configured backoff and cooldown; excessive cooldowns fail closed.
-- Qualification-to-spawn identity binding rechecks the invocation executable and
-  resolved path before each launch. Drift fails closed without counting a model
-  launch; attempt records retain route, slot, model-started, classification,
-  retry-delay, and cleanup facts.
-- Evidence: 140/140 advisor-controller tests passed; `npm run release:check`
-  exited 0. Astra review sign-off is 8/10, and Sol mentor counsel is recorded.
-- No provider substitution, parallel hedge, backup retry, or paid
-  mentoring-quality claim is made.
-
-### 2026-09-08 — feat(advisor): package canonical mentoring brief and preserve structured V2 advice (phase-04)
-
-**Status:** Complete (100%)  
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-04-mentor-brief-evidence-and-results.md)
-
-- Established
-  `.evcrate/source/.claude/skills/advisor-strategy/references/brief-contract.md`
-  as the single source for runtime mentor instructions. The
-  `brief-contract.md` → `scripts/generate-runtime-brief.mjs` →
-  `runtime-brief.generated.cjs` chain emits the standalone closure artifact
-  with a digest and `evcrate-advisor-v2-*` build identity; the generated file is
-  never hand-edited.
-- `checkpoint-contract.cjs` owns `formatMentorPrompt`: one generated brief is
-  followed by explicitly quoted v2 checkpoint data. Claude, Codex, OMP
-  (`omp-parser`), and Pi receive the same packaged prompt; each adapter only
-  performs transport parsing and sends raw assistant text to the shared parser.
-- `contracts-v2.cjs` strictly parses exactly seven advice-body fields:
-  `recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
-  `success_checks`, and `unresolved_questions`. A body must be one JSON object:
-  markdown fences and leading/trailing prose are rejected, as are unknown or
-  missing fields, malformed lists, control characters, sensitive material, and
-  raw stack frames from Node, Python, Go, or Rust. Ordinary prose that is not a
-  raw frame remains accepted.
-- Public `validateEnvelopeV2` recomputes the checkpoint digest with
-  `computeCheckpointDigestV2`, checks task/checkpoint identity and revisions,
-  requires `expected_build_identity` to equal `receipt.build_identity`, and
-  requires a successful attempt's route effort to equal `receipt.effort`.
-  `receiptV2` and the V2 builders enforce equality with the generated
-  **ADVISOR_BUILD_IDENTITY**.
-- V2 controller envelopes preserve correlation/task/checkpoint identity,
-  revisions, checkpoint digest, receipt/build identity, attempt summaries, and
-  sanitized failures. V1 remains an explicit compatibility path; Phase 04
-  adds no retry or provider-switch behavior.
-- Evidence: 118/118 advisor-controller tests passed in approximately 7.3
-  seconds; `npm run build` and `npm run release:check` exited 0. Astra's
-  post-fix sign-off is 8/10; all four critical correspondence/RAW_STACK
-  issues are resolved. Sol mentor counsel records the Phase 05 preconditions.
-  No paid mentoring-quality claim is made.
-
-### 2026-09-08 — feat(advisor): qualify adapters, enforce strict terminal parsing, and adapt generation limits (phase-03)
-
-**Status:** Complete (100%)  
-**Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-03-adapter-qualification-and-terminal-parsing.md)
-
-- Qualified the fixed Claude, Pi, OMP, and Codex adapter contracts for exact
-  model/effort routes, noninteractive isolated sessions, read-only/no-tool
-  controls, bounded machine-readable output, and typed failures. Antigravity
-  remains an explicit unavailable candidate rather than an inferred backend.
-- Claude now rejects nonempty `permission_denials`, tool/nonterminal stop reasons,
-  model drift, malformed result envelopes, and over-limit output.
-- Pi now requires strict user-then-assistant message sequencing, exact route and
-  workspace attestation, a settled terminal lifecycle, and
-  `stopReason: "stop"` before returning advice.
-- OMP now requires affirmative redacted usage readiness: a matching usable
-  report plus positive provider capacity. Its strict parser rejects tool
-  results, retries, unknown events, and undocumented `advisor_yielded`.
-- Codex now validates exact auth/model/effort capability probes and a complete
-  terminal JSONL thread/item lifecycle with no disallowed tool or side-effect
-  items.
-- All enabled adapters use `resolveInvocationLimits`; generation mode removes
-  `timeoutMs` while retaining bounded streams, output, termination, and warning
-  controls. Probes keep finite deadlines.
-- Focused Claude, Pi, OMP, fixture, runner, and controller coverage records the
-  rejection and generation-limit contracts without claiming live vendor or paid
-  route qualification.
 
 ## Historical entries
 
