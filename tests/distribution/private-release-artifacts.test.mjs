@@ -143,9 +143,10 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: packageRoot,
     encoding: 'utf8',
-    shell: true
+    env: { ...process.env, NO_COLOR: '1' }
   });
-  const jsonIndex = packOutput.search(/[[{]/);
+  const match = packOutput.match(/^[{[]/m);
+  const jsonIndex = match ? match.index : packOutput.search(/[[{]/);
   const parsed = JSON.parse(packOutput.slice(jsonIndex).trim());
   const [packMeta] = Array.isArray(parsed) ? parsed : Object.values(parsed);
   const files = packMeta.files.map((f) => f.path);
@@ -154,6 +155,9 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.ok(files.includes('dist/cli/evcrate.js'), 'Must include dist/cli/evcrate.js');
   assert.ok(files.includes('dist/index.js'), 'Must include dist/index.js');
   assert.ok(files.includes('dist/index.d.ts'), 'Must include dist/index.d.ts');
+  // Assert built standalone viewer is excluded from root package (clean cutover to independent plugin)
+  assert.equal(files.some((f) => f.startsWith('viewer/dist/')), false, 'viewer/dist must be excluded from root package');
+
 
   // Assert authoritative controller files present (ADVISOR_CONTROLLER_FILES)
   for (const entry of ADVISOR_CONTROLLER_FILES) {
@@ -195,6 +199,11 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.equal(files.some((f) => f.startsWith('tests/')), false, 'Must not contain tests/');
   assert.equal(files.some((f) => f.startsWith('src/')), false, 'Must not contain src/');
   assert.equal(files.some((f) => f.includes('node_modules')), false, 'Must not contain node_modules/');
+
+  // Assert no viewer source, config, tests, or sourcemaps in package
+  assert.equal(files.some((f) => f.startsWith('viewer/src/')), false, 'Must not contain viewer/src/');
+  assert.equal(files.some((f) => f.startsWith('viewer/') && f.endsWith('.ts')), false, 'Must not contain viewer configs or TS files');
+  assert.equal(files.some((f) => f.endsWith('.map')), false, 'Must not contain sourcemap files');
 
   // Assert registry-authorized skill resources remain present
   const registry = JSON.parse(readFileSync(join(packageRoot, '.evcrate', 'registry.json'), 'utf8'));
@@ -714,4 +723,43 @@ test('CLI verifier: parseVerifierArgs and main handle standalone invocation and 
     () => assetVerification.parseVerifierArgs(['--unknown-flag', '/fake/dir']),
     /Unknown argument: "--unknown-flag"/u
   );
+});
+
+test('E04 Root Isolation: plugin package is excluded from root exact-seven release assets and root npm pack', () => {
+  const version = '2.1.0';
+  const expected7 = assetVerification.getExpectedReleaseAssetNames(version);
+  assert.equal(expected7.length, 7, 'Root release assets must be exactly 7 files');
+  for (const name of expected7) {
+    assert.equal(name.includes('plugin'), false, `Plugin asset "${name}" must not leak into root release asset set`);
+  }
+
+  // Verify that an eighth plugin asset is strictly rejected by verifyReleaseAssetSet
+  const tmp = mkdtempSync(join(tmpdir(), 'evcrate-root-isolation-'));
+  try {
+    for (const name of expected7) {
+      writeFileSync(join(tmp, name), 'dummy content\n');
+    }
+    // Add an eighth plugin asset
+    writeFileSync(join(tmp, 'evcrate-advisor-plugin-v0.1.0.tar.gz'), 'plugin binary\n');
+
+    assert.throws(() => {
+      assetVerification.verifyReleaseAssetSet({
+        dir: tmp,
+        version,
+        tag: `v${version}`,
+        sourceCommit: '0'.repeat(40),
+        expectedHashes: {}
+      });
+    }, /Extra unexpected release asset entries found/i);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+  // Verify root npm files allowlist excludes plugin distribution artifacts
+  const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  const files = pkg.files || [];
+  // dist/advisor-plugin/** must be explicitly negated
+  assert.ok(files.includes('!dist/advisor-plugin/**'), 'package.json files must explicitly negate !dist/advisor-plugin/**');
+  assert.ok(files.includes('!dist/release/**'), 'package.json files must explicitly negate !dist/release/**');
+  assert.equal(files.some((f) => f.startsWith('plugin') || f === 'plugin'), false, 'plugin/ must not be included in root package.json files');
+  assert.equal(files.some((f) => f.startsWith('artifacts') || f === 'artifacts'), false, 'artifacts/ must not be included in root package.json files');
 });

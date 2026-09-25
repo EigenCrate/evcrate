@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2020",
+    "rootDir": "src/protocol",
+    "outDir": ".evcrate/source/.evcrate/bin/lib/advisor/generated",
+    "declaration": false
+  },
+  "files": [
+    "src/protocol/canonical-json.ts",
+    "src/protocol/json.ts",
+    "src/protocol/advisor-contract-runtime.ts",
+    "src/protocol/advisor-metrics.ts"
+  ]
+}

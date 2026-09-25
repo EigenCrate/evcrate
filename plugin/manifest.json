@@ -1,0 +1,308 @@
+{
+  "manifestVersion": 1,
+  "id": "evcrate.advisor",
+  "version": "0.1.0",
+  "publisher": "evcrate",
+  "hostVersionRange": ">=0.4.0",
+  "contracts": {
+    "runnerProtocol": "^1.0.0",
+    "workerSdk": "^1.0.0",
+    "uiBridge": "^1.0.0",
+    "manifest": 1,
+    "dataApi": "^1.0.0"
+  },
+  "capabilities": [
+    "history.refresh",
+    "history.summary",
+    "history.page",
+    "history.detail",
+    "policy.readCurrent",
+    "evaluations.list",
+    "evaluations.read",
+    "evaluations.compare"
+  ],
+  "entrypoints": {
+    "backend": {
+      "runtime": "node",
+      "range": ">=22.19.0",
+      "entry": "backend/worker.cjs"
+    },
+    "ui": {
+      "entry": "ui/index.html",
+      "mode": "opaque-srcdoc"
+    }
+  },
+  "navigation": [
+    {
+      "id": "evcrate.advisor.overview",
+      "title": "Advisor Metrics",
+      "route": "/plugins/evcrate.advisor"
+    }
+  ],
+  "inventory": [
+    {
+      "path": "backend/advisor-lib/contracts-v2.cjs",
+      "size": 7553,
+      "sha256": "6dc5ef202d28ae6a04d8a6f46f61e46a3e1ea0cdbf9cc3dc04b68fb2f2824ad3",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/errors.cjs",
+      "size": 11594,
+      "sha256": "2e6e0e9cfe4a90735f566212de8eed25957bfa7ac783017f13e3e8f4dd1c29f1",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/advisor-contract-runtime.js",
+      "size": 25769,
+      "sha256": "de858db5ca271ca033944ceea5fcd67d176fec49664521e6a913829e13502a2b",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/advisor-metrics.js",
+      "size": 15677,
+      "sha256": "a9bbe3253abf8181158b6fdace694f72156d4e664ab26645a2e2a6c450610d24",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/canonical-json.js",
+      "size": 5388,
+      "sha256": "95b2e7cae58b24a00578d7ac90d0ee382c07b95a7d8ea6fde673ed31ee1d5ac1",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/generated/json.js",
+      "size": 6907,
+      "sha256": "97e2eebf64d879c1560a8aecb94eb36865754898ee390b7fee307e4428d2538a",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/history-contract.cjs",
+      "size": 7762,
+      "sha256": "34df1715f7ffa4c26d495dc683b495fdb874838a2fd153cb3fd009e788ca11df",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/json-document.cjs",
+      "size": 3464,
+      "sha256": "f301ca8d84f3802437fa5f314835a5d65aae1dab21aee4c949d1f99aaabd76aa",
+      "mode": 420
+    },
+    {
+      "path": "backend/advisor-lib/policy-schema.cjs",
+      "size": 7580,
+      "sha256": "34fd9831f99fba9afb63a08da5c31155f16b43c4c1e93ab8070a63b74701d1d7",
+      "mode": 420
+    },
+    {
+      "path": "backend/binding.cjs",
+      "size": 6007,
+      "sha256": "d861342a6b5fc81505f10aaddc265584d88d65acfee2d4e927c180ccaf76ccfa",
+      "mode": 420
+    },
+    {
+      "path": "backend/context-table.cjs",
+      "size": 13220,
+      "sha256": "85f93f08a9c267326641518258f8a92abd5b1e90fc41e9971cc69f4b7c1d665c",
+      "mode": 420
+    },
+    {
+      "path": "backend/cursor-manager.cjs",
+      "size": 6187,
+      "sha256": "bf80e7c8782fa64c366577e147577240a3935d3bd9077ee645eb8ad461ff032c",
+      "mode": 420
+    },
+    {
+      "path": "backend/data-api.cjs",
+      "size": 80402,
+      "sha256": "11d2bd320b6aec52c6ddf96148b4a1304d168f7410ad6331f307ac0f773f1590",
+      "mode": 420
+    },
+    {
+      "path": "backend/dispatcher.cjs",
+      "size": 10655,
+      "sha256": "7fc8fb2a23a07afa011411a3036dffb35562166bb6d43109f4411f82c922c6d3",
+      "mode": 420
+    },
+    {
+      "path": "backend/error-mapping.cjs",
+      "size": 5206,
+      "sha256": "008297cf59896962a7db4124503fcadee2722f9c5b32303ed56a17856e14dbbd",
+      "mode": 420
+    },
+    {
+      "path": "backend/evaluation-provider.cjs",
+      "size": 6917,
+      "sha256": "58422cdecb44cea884a234322a2d27165c89bc3ed1527d90a9b746d6c478f3ba",
+      "mode": 420
+    },
+    {
+      "path": "backend/history-detail.cjs",
+      "size": 4223,
+      "sha256": "72674b9c038738099d21b6cf519ce46470c0362c8068d4ee7d8549909575a10b",
+      "mode": 420
+    },
+    {
+      "path": "backend/history-provider.cjs",
+      "size": 7288,
+      "sha256": "c6785ed9eb5a4a6d117afcc294882fddb3cb28130191f4315ff29f496812c9e6",
+      "mode": 420
+    },
+    {
+      "path": "backend/history-scanner.cjs",
+      "size": 13682,
+      "sha256": "b94235fe8d26f159b0df6e7ba3265e23b0d9a9c00377980f626883c814b1390b",
+      "mode": 420
+    },
+    {
+      "path": "backend/policy-provider.cjs",
+      "size": 4398,
+      "sha256": "c58cd31600c38c72fc459eaf601217b0d6458e77d056708154e9b610ec88f9f2",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-contract-runtime.js",
+      "size": 25780,
+      "sha256": "dcbb46defaaed722258ec009a9f2290640bb870884d02cbc45fc27002d42f2b5",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation-comparison.js",
+      "size": 5522,
+      "sha256": "ef0d1beeee418c752b899aabcfdd28fcf3ba08801df1df22de1cfb7e30da402d",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation-primitives.js",
+      "size": 9384,
+      "sha256": "470b9406b89361d8fd437a98222f3c150f16190d41aa1af5c96cc5ccbaf05c28",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation-validation.js",
+      "size": 6457,
+      "sha256": "e78730278738d41bb4393e0a9e80531b6b9478da7b393d94200db7544d8ac337",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/advisor-evaluation.js",
+      "size": 2038,
+      "sha256": "8f43c845c3f45e2adf3d679c47fdbb1b58a0ac26ac20437cf46d433c57e85f14",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/canonical-json.js",
+      "size": 5388,
+      "sha256": "95b2e7cae58b24a00578d7ac90d0ee382c07b95a7d8ea6fde673ed31ee1d5ac1",
+      "mode": 420
+    },
+    {
+      "path": "backend/protocol-lib/json.js",
+      "size": 6887,
+      "sha256": "ad7d32563ac1e0a9e6a0eafc463e496f96c31a14ab255f1deb47d56f1912e90c",
+      "mode": 420
+    },
+    {
+      "path": "backend/provider-errors.cjs",
+      "size": 3433,
+      "sha256": "bb99ce4b83114062d89db1c00a87317ab859fa471c3bd121b51d29326e9e21f0",
+      "mode": 420
+    },
+    {
+      "path": "backend/provider.cjs",
+      "size": 6468,
+      "sha256": "42026f1cfda6ff213db4db42a8fc986c12f9e672a153ee8c7103cebe249e3882",
+      "mode": 420
+    },
+    {
+      "path": "backend/request-table.cjs",
+      "size": 9269,
+      "sha256": "2745e926659ac785a59eee0c115fb9f8e6413182a4a47e1d75c441883a03c5bf",
+      "mode": 420
+    },
+    {
+      "path": "backend/snapshot-store.cjs",
+      "size": 6410,
+      "sha256": "e6e044620534bcf7c8f36d5aebfd38ee25b5a3ecdad1d2d7796b8a6731102990",
+      "mode": 420
+    },
+    {
+      "path": "backend/worker.cjs",
+      "size": 6819,
+      "sha256": "368e8562e5c39254304b6d9072338a97c9c196d3097c14998fb030b6bdc230cf",
+      "mode": 493
+    },
+    {
+      "path": "contracts/contract-manifest.json",
+      "size": 1454,
+      "sha256": "1e8cec306e72cc77b1494d1e684b2d66849e83d367a4a07f77b872b5cb4cc024",
+      "mode": 420
+    },
+    {
+      "path": "contracts/evcrate-advisor-data-v1.schema.json",
+      "size": 28178,
+      "sha256": "da58ac2266872517e9bf1892630acf92882c6cd3d17c002ac8c660a2f9d7dcc9",
+      "mode": 420
+    },
+    {
+      "path": "contracts/evcrate-advisor-data-v2.schema.json",
+      "size": 31177,
+      "sha256": "9d4669d0184aef39db8465be5ac1b01cc63eead0a563262a264cddce8afa245f",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/errors.js",
+      "size": 1843,
+      "sha256": "50387300e183a7709215e90141a17dc54c6421df9d28f2e82d9a9a0ec2d96738",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/framing.js",
+      "size": 4807,
+      "sha256": "b8b72ef0d49d418f3f1b47eb0639e2834ac4c8b5d34e31895130347218cdcc90",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/index.js",
+      "size": 226,
+      "sha256": "104a8bdb372bb2763768d0d554b43cd153aab8a4305d93942a56bed0c5b81978",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/manifest.js",
+      "size": 6181,
+      "sha256": "05f9eb70e4b3c0001a3d1d3b2322452d17e316851ef047b97d2331d7db9c1183",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/runner-protocol.js",
+      "size": 1743,
+      "sha256": "821008a00cc3f14f47d07c90357f4ca4b9c8251e5cc1d552a145a06cbeccb6cb",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/ui-bridge.js",
+      "size": 3555,
+      "sha256": "3fdc240465bfe28d868bcc9d459da4b5ee428362720fa5bb60b36e5a51efb165",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/dist/worker-sdk.js",
+      "size": 3350,
+      "sha256": "a67819d28d557fc68bf2bd29decbf20a6d9dd793103e830ba7471df0cbd26187",
+      "mode": 420
+    },
+    {
+      "path": "node_modules/@dam-hopper/plugin-sdk/package.json",
+      "size": 1261,
+      "sha256": "2d345dc9224f08dc2dd2e6fa6f820abb637d00e66bd241ceb8e3956a4384b1f5",
+      "mode": 420
+    },
+    {
+      "path": "ui/index.html",
+      "size": 273276,
+      "sha256": "493f8b710370c9844d608125f7f6d5da54d21dc08180483cdf8426b73dd0ef21",
+      "mode": 420
+    }
+  ]
+}

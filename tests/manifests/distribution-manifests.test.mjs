@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import {
-  buildManifestBytes, controllerHashes, loadSelectedManifests,
+  ADVISOR_CONTROLLER_FILES, buildManifestBytes, controllerHashes, loadSelectedManifests,
   loadTargetManifest, loadTargetManifestRegistry, manifestAdapterHashes, manifestSourceHashes,
   readBuildManifest, validateAdvisorControllerProjection, validateAdvisorControllerSource, validateBuildManifest, validateManifestSet, verifyBuild
 } from '../../dist/index.js';
@@ -62,6 +62,20 @@ test('controller verifier rejects an extra production tree entry', () => {
   writeFileSync(join(copy, 'lib', 'advisor', 'extra.cjs'), 'module.exports = {}');
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
+test('controller closure enforces exact 33 files, regular files, and require boundaries', () => {
+  assert.equal(ADVISOR_CONTROLLER_FILES.length, 33);
+  const hashes = controllerHashes(controllerRoot);
+  assert.equal(Object.keys(hashes).length, 33);
+  const root = temporaryDirectory();
+  const copy = join(root, 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+  writeFileSync(join(copy, 'viewer.js'), 'export const viewer = true;');
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+  rmSync(join(copy, 'viewer.js'));
+  writeFileSync(join(copy, 'lib', 'advisor', 'runner.cjs'), "require('lodash');\n");
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+});
+
 
 test('controller projection requires an executable entrypoint', () => {
   if (process.platform === 'win32') return;
@@ -148,19 +162,11 @@ test('build manifest reader accepts documents up to its declared bound', () => {
 test('build manifest validator rejects unsafe keys and incomplete shape', () => {
   const digest = 'a'.repeat(64);
   const value = {
-    schema_version: 2,
-    source_hashes: { '../escape': digest },
-    adapter_hashes: {},
-    controller_hashes: {},
-    owners: {},
-    output_hashes: {},
-    validation: {},
-    home_policy: {}
+    schema_version: 2, source_hashes: { '../escape': digest }, adapter_hashes: {},
+    controller_hashes: {}, owners: {}, output_hashes: {}, validation: {}, home_policy: {}
   };
   assert.throws(() => validateBuildManifest(value), code('PROTOCOL_INVALID'));
-  const valid = {
-    ...value, source_hashes: { 'source/file': digest }, controller_hashes: controllerHashes(controllerRoot)
-  };
+  const valid = { ...value, source_hashes: { 'source/file': digest }, controller_hashes: controllerHashes(controllerRoot) };
   assert.equal(validateBuildManifest(valid).schema_version, 2);
 });
 test('resource roots reject sensitive metadata declarations', () => {

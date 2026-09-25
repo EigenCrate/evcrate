@@ -1,0 +1,128 @@
+{
+  "description": "Golden non-lexicographical checkpoint digest fixture for EVCrate Advisor Plugin Domain v1",
+  "invariants": [
+    "Property insertion order preserved without canonicalization",
+    "Validated checkpoint serialized with JSON.stringify without re-sorting keys",
+    "Lowercase 64-character SHA-256 hex digest over UTF-8 encoded bytes",
+    "Tampering any byte produces distinct digest and fails attestation"
+  ],
+  "golden_checkpoint": {
+    "version": 2,
+    "protocol": "evcrate-advisor-checkpoint",
+    "question": "Is non-lexicographical order preserved in the checkpoint digest bytes?",
+    "kind": "review",
+    "checkpoint": "review:phase-02",
+    "phase_id": "phase-02",
+    "checkpoint_id": "chk-digest-golden-001",
+    "task_run_id": "01234567-89ab-4cde-8f01-23456789abcd",
+    "task_revision": 2,
+    "evidence_revision": 1,
+    "task": {
+      "success_criteria": ["Byte identical SHA-256 across Node and Web Crypto"],
+      "invariants": ["Property insertion order preserved without canonicalization"],
+      "scope_rationale": "Verify digest byte contract per design-contracts §4.",
+      "authorized_paths": ["src/protocol/advisor-metrics.ts"],
+      "non_goals": ["canonical json for checkpoint digest"],
+      "goal": "Preserve exact checkpoint digest bytes"
+    },
+    "proposal": {
+      "intended_changed_paths": ["src/protocol/advisor-metrics.ts"],
+      "rationale": "Verify non-lexicographical key order preserves history bytes",
+      "next_action": "Run digest parity tests"
+    },
+    "evidence": {
+      "artifacts": [
+        {
+          "description": "Golden non-lexicographical checkpoint fixture",
+          "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "path": "src/protocol/advisor-metrics.ts",
+          "id": "art-golden-001"
+        }
+      ],
+      "validation_results": [
+        {
+          "details": null,
+          "failed": 0,
+          "passed": 1,
+          "status": "passed",
+          "command": "node --test tests/protocol/advisor-contract-parity.test.mjs",
+          "suite": "protocol"
+        }
+      ],
+      "files": [
+        {
+          "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "excerpt": "computeCheckpointDigestV2 without canonical JSON",
+          "path": "src/protocol/advisor-metrics.ts"
+        }
+      ],
+      "summary": "Golden non-lexicographical digest validation"
+    },
+    "prior": {
+      "observed_outcome": null,
+      "prior_disposition": null,
+      "prior_counsel": null,
+      "prior_consultation_id": null
+    }
+  },
+  "expected_sha256": "df2dfc75ff81de80edbf6ca41392d0ebd4faf1177c63821d162f3e34b766eff9",
+  "tampered_checkpoint": {
+    "version": 2,
+    "protocol": "evcrate-advisor-checkpoint",
+    "question": "Is non-lexicographical order preserved in the checkpoint digest bytes?!",
+    "kind": "review",
+    "checkpoint": "review:phase-02",
+    "phase_id": "phase-02",
+    "checkpoint_id": "chk-digest-golden-001",
+    "task_run_id": "01234567-89ab-4cde-8f01-23456789abcd",
+    "task_revision": 2,
+    "evidence_revision": 1,
+    "task": {
+      "success_criteria": ["Byte identical SHA-256 across Node and Web Crypto"],
+      "invariants": ["Property insertion order preserved without canonicalization"],
+      "scope_rationale": "Verify digest byte contract per design-contracts §4.",
+      "authorized_paths": ["src/protocol/advisor-metrics.ts"],
+      "non_goals": ["canonical json for checkpoint digest"],
+      "goal": "Preserve exact checkpoint digest bytes"
+    },
+    "proposal": {
+      "intended_changed_paths": ["src/protocol/advisor-metrics.ts"],
+      "rationale": "Verify non-lexicographical key order preserves history bytes",
+      "next_action": "Run digest parity tests"
+    },
+    "evidence": {
+      "artifacts": [
+        {
+          "description": "Golden non-lexicographical checkpoint fixture",
+          "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "path": "src/protocol/advisor-metrics.ts",
+          "id": "art-golden-001"
+        }
+      ],
+      "validation_results": [
+        {
+          "details": null,
+          "failed": 0,
+          "passed": 1,
+          "status": "passed",
+          "command": "node --test tests/protocol/advisor-contract-parity.test.mjs",
+          "suite": "protocol"
+        }
+      ],
+      "files": [
+        {
+          "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "excerpt": "computeCheckpointDigestV2 without canonical JSON",
+          "path": "src/protocol/advisor-metrics.ts"
+        }
+      ],
+      "summary": "Golden non-lexicographical digest validation"
+    },
+    "prior": {
+      "observed_outcome": null,
+      "prior_disposition": null,
+      "prior_counsel": null,
+      "prior_consultation_id": null
+    }
+  }
+}

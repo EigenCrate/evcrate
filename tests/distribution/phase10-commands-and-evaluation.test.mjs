@@ -122,3 +122,19 @@ test('SCENARIO 3.4: Adversarial probe rejection - 8 mentor counterexamples fail 
   assert.equal(safeResult.scores.safety_invariants, 5);
   assert.equal(safeResult.passed, true);
 });
+
+test('SCENARIO 3.5: Legacy mentoring evaluation corpus unchanged and oracle absent from viewer fixtures', () => {
+  const legacyCorpus = loadEvaluationCorpus();
+  assert.equal(legacyCorpus.version, 1);
+  assert.equal(legacyCorpus.cases.length, 9);
+  for (const c of legacyCorpus.cases) {
+    assert.ok(c.expected_mentor_response, `Legacy case ${c.id} must retain test oracle`);
+  }
+
+  const viewerFixturesDir = join(packageRoot, 'tests/fixtures/advisor-evaluations');
+  const viewerFiles = ['valid-mixed.json', 'digest-mismatch.json', 'invalid-observations.json', 'corpus-nine-cases.json'];
+  for (const file of viewerFiles) {
+    const raw = readFileSync(join(viewerFixturesDir, file), 'utf8');
+    assert.equal(raw.includes('expected_mentor_response'), false, `Oracle leak forbidden in viewer fixture: ${file}`);
+  }
+});
