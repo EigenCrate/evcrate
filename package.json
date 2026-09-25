@@ -1,6 +1,6 @@
 {
   "name": "evcrate",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "A comprehensive boilerplate template for Claude Code, GitHub Copilot CLI, OpenCode, OMP, and native Pi coding agents.",
   "main": "dist/index.js",
