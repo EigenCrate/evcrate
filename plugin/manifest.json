@@ -96,14 +96,14 @@
     },
     {
       "path": "backend/binding.cjs",
-      "size": 6007,
-      "sha256": "d861342a6b5fc81505f10aaddc265584d88d65acfee2d4e927c180ccaf76ccfa",
+      "size": 6116,
+      "sha256": "b39789a23b585804600bb471cfd608783ea4ed38a2f19df9b430cb6dd9a076f0",
       "mode": 420
     },
     {
       "path": "backend/context-table.cjs",
-      "size": 13220,
-      "sha256": "85f93f08a9c267326641518258f8a92abd5b1e90fc41e9971cc69f4b7c1d665c",
+      "size": 14884,
+      "sha256": "22123121c8364c79fc2b2e9e53c36589e358f7bd6a3c2450da5c2c5042e95bd4",
       "mode": 420
     },
     {
