@@ -24,6 +24,7 @@ import { buildReleaseArchives } from '../../scripts/release/archive-writers.cjs'
 import { ADVISOR_CONTROLLER_FILES, PERSISTED_TARGETS } from '../../dist/index.js';
 import assetVerification from '../../scripts/release/asset-verification.cjs';
 import semanticReleaseAssetPrepare from '../../scripts/release/semantic-release-asset-prepare.cjs';
+import { execNpmSync } from '../../scripts/release/npm-runner.cjs';
 
 // Import negative fixtures suite so authoritative command runs all tests
 import './private-release-negative-fixtures.mjs';
@@ -140,7 +141,7 @@ test('archive writers produce verified tar.gz, zip, sidecars, and metadata inclu
 });
 
 test('packed artifact allowlist is Python-free, plan-free, test-free, and contains runtime assets', () => {
-  const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+  const packOutput = execNpmSync(['pack', '--dry-run', '--json'], {
     cwd: packageRoot,
     encoding: 'utf8',
     env: { ...process.env, NO_COLOR: '1' }
