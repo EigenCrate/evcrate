@@ -14,11 +14,37 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, createHash } = require('node:crypto');
 const { RESOURCE_BUDGETS, PluginErrorCode, PluginError } = require('@dam-hopper/plugin-sdk');
 const { verifyTargetDirectory } = require('./binding.cjs');
 const { EVCrateAdvisorProvider } = require('./provider.cjs');
 const { toSafePluginError } = require('./error-mapping.cjs');
+function findHistoryRoot(preferredPath, rootIdentity) {
+  if (preferredPath && fs.existsSync(preferredPath)) {
+    return preferredPath;
+  }
+  if (process.env.ADVISOR_HISTORY_ROOT && fs.existsSync(process.env.ADVISOR_HISTORY_ROOT)) {
+    return process.env.ADVISOR_HISTORY_ROOT;
+  }
+  const defaultHome = path.join(process.env.HOME || '', '.evcrate', 'advisor-history');
+  if (fs.existsSync(defaultHome)) {
+    return defaultHome;
+  }
+  try {
+    const homeEntries = fs.readdirSync('/home');
+    for (const entry of homeEntries) {
+      const candidate = path.join('/home', entry, '.evcrate', 'advisor-history');
+      if (fs.existsSync(candidate)) {
+        if (!rootIdentity) return candidate;
+        const candidateHash = createHash('sha256').update(candidate, 'utf8').digest('hex');
+        if (candidateHash.toLowerCase() === rootIdentity.toLowerCase()) {
+          return candidate;
+        }
+      }
+    }
+  } catch {}
+  return defaultHome;
+}
 class WorkerContextTable {
   /**
    * @param {object} [options]
@@ -107,7 +133,7 @@ class WorkerContextTable {
     // Verify directory target and compute history identity
     let verifiedTarget;
     if (scopeKind === 'history-root') {
-      const historyRoot = this.historyRootPath || path.join(process.env.HOME || '', '.evcrate', 'advisor-history');
+      const historyRoot = findHistoryRoot(this.historyRootPath, rootIdentity);
       try {
         verifiedTarget = verifyTargetDirectory(historyRoot);
       } catch (err) {
@@ -144,15 +170,28 @@ class WorkerContextTable {
 
     let policyDescriptor = params.policy_descriptor || null;
     if (!policyDescriptor && allowCurrentAccountPolicy) {
-      const defaultPolicyPath = path.join(process.env.HOME || '', '.evcrate', 'advisor-routing.json');
+      let defaultPolicyPath = path.join(process.env.HOME || '', '.evcrate', 'advisor-routing.json');
+      if (!fs.existsSync(defaultPolicyPath) && verifiedTarget?.normalized) {
+        const candidate = path.join(
+          scopeKind === 'history-root' ? path.dirname(verifiedTarget.normalized) : path.join(process.env.HOME || '', '.evcrate'),
+          'advisor-routing.json'
+        );
+        if (fs.existsSync(candidate)) {
+          defaultPolicyPath = candidate;
+        }
+      }
       if (fs.existsSync(defaultPolicyPath)) {
         policyDescriptor = { path: defaultPolicyPath };
       }
     }
-
     let evaluationDescriptors = params.evaluation_descriptors || [];
     if (evaluationDescriptors.length === 0) {
+      const evcrateDir = (scopeKind === 'history-root' && verifiedTarget?.normalized)
+        ? path.dirname(verifiedTarget.normalized)
+        : path.join(process.env.HOME || '', '.evcrate');
       const candidateDirs = [
+        path.join(evcrateDir, 'advisor-evaluations'),
+        path.join(evcrateDir, 'evaluations'),
         path.join(process.env.HOME || '', '.evcrate', 'advisor-evaluations'),
         path.join(process.env.HOME || '', '.evcrate', 'evaluations'),
         path.join(configuredProjectTarget || '', 'tests', 'fixtures', 'advisor-evaluations'),
@@ -200,7 +239,7 @@ class WorkerContextTable {
     let provider;
     try {
       provider = new EVCrateAdvisorProvider(rawContext, {
-        historyRootPath: this.historyRootPath || undefined
+        historyRootPath: this.historyRootPath || (scopeKind === 'history-root' ? verifiedTarget.normalized : undefined)
       });
     } catch (err) {
       throw toSafePluginError(err, PluginErrorCode.SOURCE_NOT_CONFIGURED);
