@@ -1,3 +1,10 @@
+## [2.3.1](https://github.com/EigenCrate/evcrate/compare/v2.3.0...v2.3.1) (2026-09-26)
+
+
+### 🐞 Bug Fixes
+
+* **ci:** support cross-platform npm execution in Windows smoke and release scripts ([ffa8280](https://github.com/EigenCrate/evcrate/commit/ffa8280b4092adf1e235152ffe11677f2d8a90d6))
+
 ## [2.3.0](https://github.com/EigenCrate/evcrate/compare/v2.2.0...v2.3.0) (2026-09-25)
 
 
