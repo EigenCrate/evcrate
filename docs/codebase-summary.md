@@ -248,9 +248,7 @@ reads/searches stay blocked.
 `src/protocol/validation.ts` owns persisted targets `claude`, `codex`, `gemini`,
 `antigravity`, `pi`, `omp`, `copilot`; `agy` is an input alias only. `safePath`
 is host-native on win32; `normalizeRelativePath` remains slash-relative POSIX metadata.
-`src/context/path-resolution.ts` uses `lexicalAbsoluteWindows`, then shared
-`assertNoSymlinkAncestors` from `src/filesystem/paths.ts`; URL-derived Phase 01
-fixtures cover the boundary; Windows standalone installer lifecycle and version verification are qualified (Phases 01–10).
+`src/context/path-resolution.ts` uses `lexicalAbsoluteWindows`, then shared `assertNoSymlinkAncestors` from `src/filesystem/paths.ts`; URL-derived Phase 01 fixtures cover the boundary; Windows standalone installer lifecycle and version verification are qualified (Phases 01–10). Native Windows advisor compatibility Phase 01 feasibility is proven ([plan](../plans/260926-1522-windows-advisor-support/plan.md); 67/67 checks passed, review approved 9.3/10); controller lifecycle and production Windows runtime qualification remain pending.
 
 ## CLI and build tooling
 

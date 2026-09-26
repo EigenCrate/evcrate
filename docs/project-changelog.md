@@ -2,9 +2,22 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-24
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Package version: `2.1.0`.
+**Updated:** 2026-09-26
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor compatibility Phase 01 feasibility complete (1/4 phases, 25%; completed 2026-09-26; review approved 9.3/10; production Windows runtime qualification not claimed). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-26 — feat(windows): prove native Windows advisor compatibility primitives (Phase 01)
+
+**Status:** Phase 01 DONE (2026-09-26; feasibility gate passed; review approved **9.3/10**).  
+**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 01](../plans/260926-1522-windows-advisor-support/phase-01-windows-primitives.md)  
+**Evidence:** [native proof evidence](../plans/260926-1522-windows-advisor-support/reports/phase-01-native-proof-evidence.md) · [code review](../plans/reports/code-review-260926-1740-phase-01-windows-primitives.md)
+
+- Proved native Win32 compatibility primitives required for advisor execution without weakening Linux invariants or requiring WSL/Git Bash.
+- **Filesystem & ownership:** Validated handle-based SID/DACL inspection, protected directory creation, junction and hardlink rejection, directory handle pinning preventing rename/delete races, and full-chain mutation with `NtSetInformationFile(FileRenameInformation)` atomic replacement under strict `FILE_SHARE_READ`.
+- **Process supervision:** Validated decimal creation token identity, suspended process launch with pre-assignment `PROC_THREAD_ATTRIBUTE_JOB_LIST` assignment, kill-on-close Job termination, grandchild containment, and control-pipe EOF teardown.
+- **Bounded transport & console:** Validated write-only pipe inheritance via `PROC_THREAD_ATTRIBUTE_HANDLE_LIST`, separated control/provider framing, flood byte capping with immediate Job kill, backpressure pacing, and direct CONIN$/CONOUT$ console challenge matching with fail-closed headless detachment (`FreeConsole`).
+- Verification: **67/67 checks passed** (0 failed) across Windows PowerShell 5.1 and verified official PowerShell 7.6.6 runtime.
+- **Boundary:** Records Win32 primitive and native bridge feasibility only; production controller lifecycle integration (Phase 02), prompt invocation/publication (Phase 03), and production Windows runtime qualification (Phase 04) remain pending.
 
 ### 2026-09-24 — feat(history): complete paired qualification and release decision (Phase 05)
 

@@ -3,12 +3,13 @@
 **Status:** Current requirements baseline. Hook Materialization Scope Distribution is
 complete through Phase 09, Windows release qualification through Phase 10, and
 All-project advisor history through Phase 05 (6/6 phases, 100%; 2026-09-24).
+Native Windows advisor support Phase 01 feasibility is proven (2026-09-26; 67/67 checks passed, review approved 9.3/10; production Windows runtime qualification not claimed).
 Its paired release is qualified; see the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
 DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
 not release-authorized.
-**Updated:** 2026-09-24
+**Updated:** 2026-09-26
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
 
@@ -516,7 +517,7 @@ through E04 are complete. The Explorer's dated standalone-picker evidence is
 historical; its picker/reader source has since been removed. E05 source cutover is
 applied, but joint G4 qualification/sign-off is unverified, and standalone
 retirement is not release-authorized. Documentation/support cutover is complete.
-All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates.
+All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates. Native Windows advisor support completed Phase 01 compatibility primitives feasibility (67/67 checks passed, review 9.3/10); controller lifecycle (Phase 02), prompt invocation (Phase 03), and production Windows runtime qualification (Phase 04) remain pending.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 33-file
@@ -556,6 +557,7 @@ All-project advisor history (Phases 00–05) is complete and its paired release 
 14. E05/G4 cannot be accepted from source removal alone. Joint external Linux
     owner-runner and separate-LAN qualification evidence plus sign-off are
     required; they are not present in this workspace.
+15. Native Windows advisor support Phase 01 feasibility evidence (2026-09-26) recorded 67/67 checks passed across Windows PowerShell 5.1 and PowerShell 7.6.6 for handle-pinned filesystem operations, `NtSetInformationFile` atomic replacement, suspended Job Object launch, bounded transport, and CONIN$/CONOUT$ console observation. This proves Win32 primitive feasibility only; controller lifecycle (Phase 02), prompt invocation (Phase 03), and production Windows runtime qualification (Phase 04) remain pending.
 
 ## Documentation map
 
