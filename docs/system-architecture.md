@@ -191,8 +191,10 @@ publisher are a separate semantic-release boundary; see [PDR FR-15](./project-ov
 - The matrix is `windows-2025` x64, `fail-fast: false`, four PowerShell/Node rows
   without checkout/npm; any non-success blocks publication.
 - `publish` is the sole writer after matrix success, checks out the producer SHA,
-  copies seven assets, re-verifies receipt/hash/run identity, and runs
-  semantic-release in `verify` mode.
+  copies seven CLI assets, re-verifies receipt/hash/run identity, and runs
+  semantic-release in `verify` mode after installing the plugin SDK, building the UI, and building/verifying `dist/advisor-plugin/`.
+- GitHub releases also attach `evcrate-advisor-plugin-v<plugin-version>.tar.gz` and
+  its `.sha256` sidecar; these remain separate from the exact-seven CLI receipt.
 - Phase 09 proved integrated routing and final seven-file byte equality; Phase 10
   completed the bounded documentation/support cutover.
 

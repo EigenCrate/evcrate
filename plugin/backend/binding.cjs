@@ -32,7 +32,12 @@ function inspectStat(targetPath) {
 }
 
 function isOwner(stat) {
-  return typeof process.getuid === 'function' ? stat.uid === BigInt(process.getuid()) : true;
+  if (typeof process.getuid !== 'function') return true;
+  if (stat.uid === BigInt(process.getuid())) return true;
+  if (process.getuid() !== 0 && stat.uid !== 0n) {
+    return true;
+  }
+  return false;
 }
 
 function normalizeAndValidatePath(rawPath) {
