@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { execNpmSync } from '../../scripts/release/npm-runner.cjs';
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -86,7 +87,7 @@ test('local distribution check validates artifact tree without drift', () => {
   });
 });
 test('packaged artifact allowlist is Python-free and contains required runtime assets', () => {
-  const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+  const packOutput = execNpmSync(['pack', '--dry-run', '--json'], {
     cwd: packageRoot,
     encoding: 'utf8'
   });

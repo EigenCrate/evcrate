@@ -11,6 +11,7 @@ const projectRoot = path.resolve(import.meta.dirname, '..', '..');
 const { validateRuntimeClosure } = require('../../scripts/release/runtime-closure.cjs');
 const { ADVISOR_CONTROLLER_FILES } = require('../../dist/manifests/controller-inventory.generated.js');
 const assetVerification = require('../../scripts/release/asset-verification.cjs');
+const { execNpmSync } = require('../../scripts/release/npm-runner.cjs');
 
 test('AME-028: package.json has zero production dependencies and dev-only viewer deps', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
@@ -22,7 +23,7 @@ test('AME-028: package.json has zero production dependencies and dev-only viewer
 });
 
 test('AME-029: pack inventory excludes standalone viewer and excludes sources, configs, maps', () => {
-  const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
+  const packOutput = execNpmSync(['pack', '--dry-run', '--json'], {
     cwd: projectRoot,
     encoding: 'utf8',
     env: { ...process.env, NO_COLOR: '1' }

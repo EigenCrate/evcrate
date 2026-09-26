@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { execNpmSync } = require('./release/npm-runner.cjs');
 
 const { MUTABLE_PATHS } = require('./release/release-contract.cjs');
 const { validateRuntimeClosure } = require('./release/runtime-closure.cjs');
@@ -102,8 +103,8 @@ function main() {
 
   // 1. Build and verify targets upfront
   console.log('Running build and distribution checks...');
-  execFileSync('npm', ['run', 'build:all'], { cwd: projectRoot, stdio: 'inherit' });
-  execFileSync('npm', ['run', 'distribute:check'], { cwd: projectRoot, stdio: 'inherit' });
+  execNpmSync(['run', 'build:all'], { cwd: projectRoot, stdio: 'inherit' });
+  execNpmSync(['run', 'distribute:check'], { cwd: projectRoot, stdio: 'inherit' });
 
   // 2. Verify runtime closure on fresh build
   console.log('Validating runtime closure...');
