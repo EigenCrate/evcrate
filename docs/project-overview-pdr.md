@@ -495,7 +495,13 @@ source revision. Phases 02–05 completed install-bound admission, owner-safe sc
 The Phase 05 evidence records **273/273 tests passed** (0 failed/skipped), candidate and distribution package checks, and a direct history-root provider read of 237 accepted consultations across 21 projects in 191.48 ms with no diagnostics.
 The scan was not a new live DamHopper browser session; production deployment remains separate. See the [contract guide](./all-project-advisor-history.md), [Phase 05 plan](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [test report](../plans/reports/tester-260924-2115-phase-05-paired-qualification.md), and [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
 
+### FR-23: Native Windows advisor lifecycle implementation (Phase 02)
 
+**Requirement:** Integrate Windows-specific home/project identity, environment, provider launch, state/history/baseline, process, workspace, and console boundaries into the shared advisor controller without changing public schemas or Linux behavior.
+
+**Status and evidence:** Phase 02 DONE (2026-09-26; parent-approved after Cycle 3 conditional review, 7.4/10). The [review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md) records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests; the exact closure is 36 files.
+
+**Acceptance boundary:** Two findings remain approved Phase 03/04 follow-ups: capture each child’s creation token at spawn before Windows termination, and thread file/directory paths through `state-io.cjs` and `history-store.cjs` ownership checks. Phase 02 does not establish PID-reuse-safe termination, complete state/history ownership verification, Phase 03 host prompt invocation/publication, or Phase 04 production Windows runtime qualification.
 
 ## Non-functional requirements
 
@@ -517,11 +523,11 @@ through E04 are complete. The Explorer's dated standalone-picker evidence is
 historical; its picker/reader source has since been removed. E05 source cutover is
 applied, but joint G4 qualification/sign-off is unverified, and standalone
 retirement is not release-authorized. Documentation/support cutover is complete.
-All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates. Native Windows advisor support completed Phase 01 compatibility primitives feasibility (67/67 checks passed, review 9.3/10); controller lifecycle (Phase 02), prompt invocation (Phase 03), and production Windows runtime qualification (Phase 04) remain pending.
+All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates. Native Windows advisor support is 50% (Phases 01–02 complete): Phase 02 controller lifecycle is DONE (2026-09-26) with approved follow-ups; Phase 03 prompt invocation/publication is unblocked and Phase 04 qualification remains pending. Phase 02 completion does not widen the bounded Windows installer/version support claim or qualify production runtime.
 
 1. Source and target manifests validate with schema-2 rules.
-2. Local build/check completes with a current complete manifest and exact 33-file
-   controller closure; prior dated 29/29 evidence remains historical.
+2. Local build/check completes with a current complete manifest and exact 36-file
+   controller closure; historical 29/33-file evidence remains dated.
 3. Publication dry-run reports only authorized target, HOME, and project changes.
 4. Apply and recovery preserve unmanaged files, enforce scope isolation, and reject
    CAS changes.
@@ -557,7 +563,7 @@ All-project advisor history (Phases 00–05) is complete and its paired release 
 14. E05/G4 cannot be accepted from source removal alone. Joint external Linux
     owner-runner and separate-LAN qualification evidence plus sign-off are
     required; they are not present in this workspace.
-15. Native Windows advisor support Phase 01 feasibility evidence (2026-09-26) recorded 67/67 checks passed across Windows PowerShell 5.1 and PowerShell 7.6.6 for handle-pinned filesystem operations, `NtSetInformationFile` atomic replacement, suspended Job Object launch, bounded transport, and CONIN$/CONOUT$ console observation. This proves Win32 primitive feasibility only; controller lifecycle (Phase 02), prompt invocation (Phase 03), and production Windows runtime qualification (Phase 04) remain pending.
+15. Native Windows advisor Phase 01 proved compatibility primitives (67/67 checks, review 9.3/10). Phase 02 controller lifecycle is parent-approved DONE after Cycle 3 conditional review (7.4/10); its review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The runner spawn-token and state/history ownership-path findings remain approved Phase 03/04 follow-ups; no production Windows runtime qualification is claimed.
 
 ## Documentation map
 

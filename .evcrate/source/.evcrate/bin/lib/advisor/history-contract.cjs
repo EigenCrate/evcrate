@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('node:path');
+const { isUnsafeWindowsPath } = require('./windows-platform.cjs');
 const { createRoutingError } = require('./errors.cjs');
 const { decodeUtf8, parseJsonDocument } = require('./json-document.cjs');
 const {
@@ -125,10 +127,18 @@ function parseHistoryRequest(input, expectedOperation) {
     }
   } else if (parsed.operation === 'export') {
     if (typeof parsed.destination !== 'string' || !parsed.destination.trim()
-      || !parsed.destination.startsWith('/') || parsed.destination.length > 1024
-      || parsed.destination.includes('\0')
-      || parsed.destination.split('/').some((p) => p === '.' || p === '..')) {
+      || parsed.destination.length > 1024
+      || parsed.destination.includes('\0')) {
       fail('REQUEST_INVALID');
+    }
+    if (process.platform === 'win32') {
+      if (isUnsafeWindowsPath(parsed.destination)) fail('REQUEST_INVALID');
+      const parts = parsed.destination.split(path.sep);
+      if (parts.some((p) => p === '.' || p === '..')) fail('REQUEST_INVALID');
+    } else {
+      if (!parsed.destination.startsWith('/') || parsed.destination.split('/').some((p) => p === '.' || p === '..')) {
+        fail('REQUEST_INVALID');
+      }
     }
     if (parsed.project_id !== null && (typeof parsed.project_id !== 'string' || !SHA256_PATTERN.test(parsed.project_id))) {
       fail('REQUEST_INVALID');

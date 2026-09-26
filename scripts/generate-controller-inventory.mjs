@@ -40,7 +40,10 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   'lib/advisor/state-contract.cjs',
   'lib/advisor/state-human.cjs',
   'lib/advisor/state-io.cjs',
-  'lib/advisor/task-state.cjs'
+  'lib/advisor/task-state.cjs',
+  'lib/advisor/windows-native.cs',
+  'lib/advisor/windows-native.ps1',
+  'lib/advisor/windows-platform.cjs'
 ]);
 
 function main() {

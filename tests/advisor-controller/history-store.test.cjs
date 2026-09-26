@@ -238,8 +238,10 @@ test('recordStartedExecution creates isolated private directory and file', (t) =
 
   const execPath = path.join(f.home, '.evcrate', 'advisor-history', f.projectId, taskRunId, consultationId, 'execution.json');
   assert(fs.existsSync(execPath));
-  assert.equal(fs.statSync(execPath).mode & 0o777, 0o600);
-  assert.equal(fs.statSync(path.dirname(execPath)).mode & 0o777, 0o700);
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(execPath).mode & 0o777, 0o600);
+    assert.equal(fs.statSync(path.dirname(execPath)).mode & 0o777, 0o700);
+  }
 
   // Cannot record started twice
   assert.throws(() => recordStartedExecution(f.context, execution), (err) => err.code === 'AUDIT_DEGRADED');

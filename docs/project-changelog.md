@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-09-26
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor compatibility Phase 01 feasibility complete (1/4 phases, 25%; completed 2026-09-26; review approved 9.3/10; production Windows runtime qualification not claimed). Package version: `2.1.0`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26, Phase 03 unblocked; production Windows runtime qualification not claimed). Package version: `2.1.0`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-26 — feat(windows): prove native Windows advisor compatibility primitives (Phase 01)
@@ -17,7 +17,17 @@ Older phase records remain in the linked archive.
 - **Process supervision:** Validated decimal creation token identity, suspended process launch with pre-assignment `PROC_THREAD_ATTRIBUTE_JOB_LIST` assignment, kill-on-close Job termination, grandchild containment, and control-pipe EOF teardown.
 - **Bounded transport & console:** Validated write-only pipe inheritance via `PROC_THREAD_ATTRIBUTE_HANDLE_LIST`, separated control/provider framing, flood byte capping with immediate Job kill, backpressure pacing, and direct CONIN$/CONOUT$ console challenge matching with fail-closed headless detachment (`FreeConsole`).
 - Verification: **67/67 checks passed** (0 failed) across Windows PowerShell 5.1 and verified official PowerShell 7.6.6 runtime.
-- **Boundary:** Records Win32 primitive and native bridge feasibility only; production controller lifecycle integration (Phase 02), prompt invocation/publication (Phase 03), and production Windows runtime qualification (Phase 04) remain pending.
+- **Boundary:** Records Win32 primitive and native bridge feasibility only. Phase 02 controller lifecycle is now complete with approved Phase 03/04 follow-ups; Phase 03 invocation/publication is unblocked; Phase 04 qualification remains pending. Production Windows runtime qualification is not claimed.
+### 2026-09-26 — feat(windows): complete native advisor controller lifecycle (Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-26; parent-approved after Cycle 3 conditional review, score **7.4/10**). Phase 03 unblocked.  
+**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 02](../plans/260926-1522-windows-advisor-support/phase-02-controller-lifecycle.md)  
+**Evidence:** [Cycle 3 code review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md)
+
+- Integrated the native Windows controller lifecycle boundaries, including Windows environment canonicalization, package-bin resolution without shell invocation, IPC cancellation, and the inventoried 36-file controller closure.
+- The dated review recorded **213/213 advisor-controller tests**, **16/16 viewer/manifest and package-inventory tests**, and **21/21 settings/filesystem distribution-primitives tests**.
+- Two Cycle 3 findings remain approved follow-ups for Phases 03/04, not claimed as fixed: runner spawn-time process creation-token capture for PID-reuse-safe termination; state/history path-threaded Windows ownership checks.
+- Phase 03 is unblocked. Production Windows runtime qualification remains unclaimed.
 
 ### 2026-09-24 — feat(history): complete paired qualification and release decision (Phase 05)
 

@@ -81,17 +81,19 @@ function pruneOldestTerminalRecords(ctx, records, bytesToFree, retentionCutoffMs
           itemFreed += Number(execStat.size);
         }
 
-        fs.fsyncSync(cDir.fd);
+        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
         freed += itemFreed;
         if (cDir.taskBase) {
           try {
-            fs.closeSync(cDir.fd);
-            fs.rmdirSync(`${cDir.taskBase}/${item.consultationId}`);
-            fs.fsyncSync(cDir.taskFd);
+            if (cDir.fd !== undefined) fs.closeSync(cDir.fd);
+            const consultDir = path.join(cDir.taskBase, item.consultationId);
+            try { fs.rmdirSync(consultDir); } catch {}
+            if (cDir.taskFd !== undefined) fs.fsyncSync(cDir.taskFd);
             if (fs.readdirSync(cDir.taskBase).length === 0) {
-              fs.closeSync(cDir.taskFd);
-              fs.rmdirSync(`${cDir.projectBase}/${item.taskRunId}`);
-              fs.fsyncSync(cDir.projectFd);
+              if (cDir.taskFd !== undefined) fs.closeSync(cDir.taskFd);
+              const taskDir = path.join(cDir.projectBase, item.taskRunId);
+              try { fs.rmdirSync(taskDir); } catch {}
+              if (cDir.projectFd !== undefined) fs.fsyncSync(cDir.projectFd);
             }
           } catch {}
         }
@@ -221,20 +223,21 @@ function pruneHistory(dependencies, policy, options, { historyContextFn, openHis
             removeOwned(execFile, execStat);
             itemFreed += Number(execStat.size);
           }
-
-          fs.fsyncSync(cDir.fd);
+          if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
           freedBytes += itemFreed;
           prunedCount++;
 
           if (cDir.taskBase) {
             try {
-              fs.closeSync(cDir.fd);
-              fs.rmdirSync(`${cDir.taskBase}/${item.consultationId}`);
-              fs.fsyncSync(cDir.taskFd);
+              if (cDir.fd !== undefined) fs.closeSync(cDir.fd);
+              const consultDir = path.join(cDir.taskBase, item.consultationId);
+              try { fs.rmdirSync(consultDir); } catch {}
+              if (cDir.taskFd !== undefined) fs.fsyncSync(cDir.taskFd);
               if (fs.readdirSync(cDir.taskBase).length === 0) {
-                fs.closeSync(cDir.taskFd);
-                fs.rmdirSync(`${cDir.projectBase}/${item.taskRunId}`);
-                fs.fsyncSync(cDir.projectFd);
+                if (cDir.taskFd !== undefined) fs.closeSync(cDir.taskFd);
+                const taskDir = path.join(cDir.projectBase, item.taskRunId);
+                try { fs.rmdirSync(taskDir); } catch {}
+                if (cDir.projectFd !== undefined) fs.fsyncSync(cDir.projectFd);
               }
             } catch {}
           }

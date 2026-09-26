@@ -5,6 +5,15 @@ const path = require('node:path');
 const { createHash, randomBytes } = require('node:crypto');
 const { createRoutingError } = require('./errors.cjs');
 const { decodeUtf8, parseJsonDocument } = require('./json-document.cjs');
+const {
+  canonicalWindowsProjectRoot,
+  resolveWindowsHome,
+  canonicalWindowsProjectId,
+  isUnsafeWindowsPath,
+  getWindowsProcessIdentity,
+  checkWindowsProcessStatus,
+  verifyWindowsFileOwnership
+} = require('./windows-platform.cjs');
 
 const MAX_BYTES = 64 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -19,18 +28,31 @@ function same(a, b) { return a && b && a.dev === b.dev && a.ino === b.ino; }
 function unchanged(a, b) {
   return same(a, b) && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
 }
-function owner(stat) { return typeof process.getuid === 'function' && stat.uid === BigInt(process.getuid()); }
-// Mode checks removed per controller contract; non-mode invariants (ownership, kind, symlinks) preserved.
-function directory(stat, privateMode = false, ancestor = false) {
-  if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail();
-  if (privateMode && !owner(stat)) fail();
+function owner(stat, file = null) {
+  if (process.platform === 'win32') {
+    if (!stat || stat.isSymbolicLink()) return false;
+    if (file) return verifyWindowsFileOwnership(file);
+    return true;
+  }
+  return typeof process.getuid === 'function' && stat.uid === BigInt(process.getuid());
 }
-function regular(stat) {
-  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n || !owner(stat)) fail();
+// Mode checks removed per controller contract; non-mode invariants (ownership, kind, symlinks) preserved.
+function directory(stat, privateMode = false, ancestor = false, file = null) {
+  if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail();
+  if (privateMode && !owner(stat, file)) fail();
+}
+function regular(stat, file = null) {
+  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n || !owner(stat, file)) fail();
 }
 function absolute(value) {
-  if (typeof value !== 'string' || !path.isAbsolute(value) || value.includes('\0')
-    || value.split(path.sep).some((part) => part === '.' || part === '..')) fail();
+  if (typeof value !== 'string' || value.includes('\0')) fail();
+  if (process.platform === 'win32') {
+    if (isUnsafeWindowsPath(value)) fail();
+    const parts = value.split(path.sep);
+    if (parts.some((part) => part === '.' || part === '..')) fail();
+    return path.normalize(value);
+  }
+  if (!path.isAbsolute(value) || value.split(path.sep).some((part) => part === '.' || part === '..')) fail();
   return path.normalize(value);
 }
 function chain(root) {
@@ -54,13 +76,30 @@ function stable(entries) {
 }
 function stateLocation({ cwd = process.cwd(), environment = process.env } = {}, taskRunId) {
   try {
-    if (typeof NOFOLLOW !== 'number' || process.platform !== 'linux'
-      || typeof taskRunId !== 'string' || !UUID.test(taskRunId)) fail('STATE_INVALID');
-    const projectRoot = absolute(cwd);
-    const home = absolute(environment.HOME);
-    if (home === path.parse(home).root) fail();
+    if (process.platform !== 'linux' && process.platform !== 'win32') fail('STATE_INVALID');
+    if (process.platform === 'linux' && typeof NOFOLLOW !== 'number') fail('STATE_INVALID');
+    if (typeof taskRunId !== 'string' || !UUID.test(taskRunId)) fail('STATE_INVALID');
+
+    let projectRoot;
+    let home;
+    let projectId;
+
+    if (process.platform === 'win32') {
+      try {
+        projectRoot = canonicalWindowsProjectRoot(cwd);
+        home = resolveWindowsHome(environment);
+        projectId = canonicalWindowsProjectId(projectRoot);
+      } catch {
+        fail('STATE_INVALID');
+      }
+    } else {
+      projectRoot = absolute(cwd);
+      home = absolute(environment.HOME);
+      if (home === path.parse(home).root) fail();
+      projectId = createHash('sha256').update(projectRoot).digest('hex');
+    }
+
     const entries = [...chain(projectRoot), ...chain(home)];
-    const projectId = createHash('sha256').update(projectRoot).digest('hex');
     const parts = ['.evcrate', 'advisor-state', projectId, taskRunId.toLowerCase()];
     let current = home;
     let missing = false;
@@ -90,7 +129,12 @@ function proc(pid) {
     return end >= 0 && /^\d+$/u.test(fields[19] || '') ? { start: fields[19], state: fields[0] } : null;
   } catch { return null; }
 }
-function processIdentity() { return { pid: process.pid, start: proc(process.pid)?.start ?? null }; }
+function processIdentity() {
+  if (process.platform === 'win32') {
+    return getWindowsProcessIdentity(process.pid);
+  }
+  return { pid: process.pid, start: proc(process.pid)?.start ?? null };
+}
 function validIdentity(identity) {
   return identity && typeof identity === 'object' && !Array.isArray(identity)
     && Object.keys(identity).length === 2 && Object.hasOwn(identity, 'pid') && Object.hasOwn(identity, 'start')
@@ -99,6 +143,9 @@ function validIdentity(identity) {
 }
 function processStatus(identity) {
   if (!validIdentity(identity)) return 'unknown';
+  if (process.platform === 'win32') {
+    return checkWindowsProcessStatus(identity);
+  }
   try { process.kill(identity.pid, 0); }
   catch (error) { return error.code === 'ESRCH' ? 'dead' : 'unknown'; }
   const current = proc(identity.pid);
@@ -106,11 +153,33 @@ function processStatus(identity) {
   if (current.start !== identity.start || current.state === 'Z' || current.state === 'X') return 'dead';
   return 'live';
 }
-
 // Pin each managed directory: /proc/self/fd supplies Linux's descriptor-relative
 // lookup without following attacker-swapped ancestor paths during mutations.
 function openTask(context, create) {
   stable(context.entries);
+  if (process.platform === 'win32') {
+    const entries = [...context.entries];
+    let logical = context.home;
+    for (const [index, part] of context.parts.entries()) {
+      logical = path.join(logical, part);
+      let stat = inspect(logical);
+      if (!stat && create) {
+        stable(entries);
+        try { fs.mkdirSync(logical, { mode: 0o700 }); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        stat = inspect(logical);
+      }
+      if (!stat) fail('STATE_NOT_FOUND');
+      directory(stat, index > 0);
+      entries.push({ path: logical, stat, privateMode: index > 0 });
+    }
+    stable(entries);
+    return {
+      entries,
+      base: logical,
+      close() {}
+    };
+  }
   const descriptors = [];
   const entries = [...context.entries];
   let logical = context.home;
@@ -151,7 +220,10 @@ function readFile(file, limit = MAX_BYTES) {
   if (initial.size > BigInt(limit)) fail('STATE_INVALID');
   let fd;
   try {
-    fd = fs.openSync(file, fs.constants.O_RDONLY | NOFOLLOW | fs.constants.O_NONBLOCK);
+    const flags = process.platform === 'win32'
+      ? fs.constants.O_RDONLY
+      : fs.constants.O_RDONLY | NOFOLLOW | fs.constants.O_NONBLOCK;
+    fd = fs.openSync(file, flags);
     const opened = fs.fstatSync(fd, { bigint: true });
     regular(opened);
     if (!unchanged(initial, opened)) fail();
@@ -172,9 +244,12 @@ function document(bytes, code = 'STATE_INVALID') {
   return parseJsonDocument(decodeUtf8(bytes, code), code, code);
 }
 function writeExclusive(file, bytes) {
-  const fd = fs.openSync(file, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | NOFOLLOW, 0o600);
+  const flags = process.platform === 'win32'
+    ? fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL
+    : fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | NOFOLLOW;
+  const fd = fs.openSync(file, flags, 0o600);
   try {
-    fs.fchmodSync(fd, 0o600);
+    if (process.platform !== 'win32') fs.fchmodSync(fd, 0o600);
     let offset = 0;
     while (offset < bytes.length) {
       const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
@@ -232,15 +307,15 @@ function acquire(task) {
       removeOwned(file, current.stat);
       try { stat = writeExclusive(file, bytes); }
       catch (lockError) { if (lockError.code === 'EEXIST') fail('STATE_LOCKED'); throw lockError; }
-    } finally { removeOwned(recovery, guard); fs.fsyncSync(task.fd); }
+    } finally { removeOwned(recovery, guard); if (task.fd !== undefined) fs.fsyncSync(task.fd); }
   }
-  fs.fsyncSync(task.fd);
+  if (task.fd !== undefined) fs.fsyncSync(task.fd);
   return () => {
     stable(task.entries);
     const current = lockRecord(file);
     if (!unchanged(current.stat, stat) || current.value.token !== value.token) fail('STATE_LOCKED');
     removeOwned(file, stat);
-    fs.fsyncSync(task.fd);
+    if (task.fd !== undefined) fs.fsyncSync(task.fd);
   };
 }
 function transactState(location, { create = false } = {}, callback) {
@@ -277,11 +352,15 @@ function transactState(location, { create = false } = {}, callback) {
         if (!unchanged(inspect(temporary), temporaryStat)) fail();
         if (!previous) {
           // No-replace creation: never clobber a file introduced after the check.
-          fs.linkSync(temporary, file);
-          fs.unlinkSync(temporary);
+          try {
+            fs.linkSync(temporary, file);
+            fs.unlinkSync(temporary);
+          } catch {
+            fs.renameSync(temporary, file);
+          }
         } else fs.renameSync(temporary, file);
         temporaryStat = undefined;
-        fs.fsyncSync(task.fd);
+        if (task.fd !== undefined) fs.fsyncSync(task.fd);
         stable(task.entries);
       } finally { if (temporaryStat) removeOwned(temporary, temporaryStat); }
     }

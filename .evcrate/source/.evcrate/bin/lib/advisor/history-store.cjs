@@ -9,6 +9,11 @@ const {
   readFile, writeExclusive, removeOwned, NOFOLLOW, UUID, processIdentity, processStatus
 } = require('./state-io.cjs');
 const {
+  canonicalWindowsProjectRoot,
+  resolveWindowsHome,
+  canonicalWindowsProjectId
+} = require('./windows-platform.cjs');
+const {
   validateHistoryExecutionV1,
   validateHistoryOutcomeV1,
   MAX_EXECUTION_HISTORY_BYTES,
@@ -42,17 +47,59 @@ function parseJson(bytes, code = 'AUDIT_DEGRADED') {
 }
 
 function historyContext({ cwd = process.cwd(), environment = process.env } = {}) {
-  if (typeof NOFOLLOW !== 'number' || process.platform !== 'linux') fail();
-  const projectRoot = absolute(cwd);
-  const home = absolute(environment.HOME);
-  if (home === path.parse(home).root) fail();
+  if (process.platform !== 'linux' && process.platform !== 'win32') fail();
+  if (process.platform === 'linux' && typeof NOFOLLOW !== 'number') fail();
+
+  let projectRoot;
+  let home;
+  let projectId;
+
+  if (process.platform === 'win32') {
+    try {
+      projectRoot = canonicalWindowsProjectRoot(cwd);
+      home = resolveWindowsHome(environment);
+      projectId = canonicalWindowsProjectId(projectRoot);
+    } catch {
+      fail('AUDIT_DEGRADED');
+    }
+  } else {
+    projectRoot = absolute(cwd);
+    home = absolute(environment.HOME);
+    if (home === path.parse(home).root) fail();
+    projectId = createHash('sha256').update(projectRoot).digest('hex');
+  }
+
   const entries = [...chain(projectRoot), ...chain(home)];
-  const projectId = createHash('sha256').update(projectRoot).digest('hex');
   return { projectRoot, home, projectId, entries };
 }
 
 function openHistoryRoot(ctx, create = false) {
   stable(ctx.entries);
+  if (process.platform === 'win32') {
+    const entries = [...ctx.entries];
+    let logical = ctx.home;
+    for (const part of ['.evcrate', 'advisor-history']) {
+      logical = path.join(logical, part);
+      let stat = inspect(logical);
+      if (!stat && create) {
+        stable(entries);
+        try { fs.mkdirSync(logical, { mode: 0o700 }); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        stat = inspect(logical);
+      }
+      if (!stat) return null;
+      directory(stat, true);
+      entries.push({ path: logical, stat, privateMode: true });
+    }
+    stable(entries);
+    return {
+      fd: undefined,
+      entries,
+      path: logical,
+      base: logical,
+      close() {}
+    };
+  }
   const descriptors = [];
   const entries = [...ctx.entries];
   let logical = ctx.home;
@@ -112,7 +159,7 @@ function acquireHistoryLock(ctx, root) {
       const recVal = JSON.parse(recRecord.bytes.toString('utf8'));
       if (recVal?.process && processStatus(recVal.process) === 'dead') {
         removeOwned(recovery, recRecord.stat);
-        fs.fsyncSync(root.fd);
+        if (root.fd !== undefined) fs.fsyncSync(root.fd);
       } else {
         fail('AUDIT_DEGRADED');
       }
@@ -144,16 +191,16 @@ function acquireHistoryLock(ctx, root) {
       catch { fail('AUDIT_DEGRADED'); }
     } finally {
       removeOwned(recovery, guard);
-      fs.fsyncSync(root.fd);
+      if (root.fd !== undefined) fs.fsyncSync(root.fd);
     }
   }
-  fs.fsyncSync(root.fd);
+  if (root.fd !== undefined) fs.fsyncSync(root.fd);
   return () => {
     stable(root.entries);
     const current = readFile(file, 1024);
     if (current && unchanged(current.stat, stat)) {
       removeOwned(file, stat);
-      fs.fsyncSync(root.fd);
+      if (root.fd !== undefined) fs.fsyncSync(root.fd);
     }
   };
 }
@@ -178,11 +225,51 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
   }
   const root = openHistoryRoot(ctx, create);
   if (!root) return null;
-  const descriptors = [];
   const entries = [...root.entries];
-  let fd = root.fd;
   let logical = root.path;
 
+  if (process.platform === 'win32') {
+    const parts = [projectId.toLowerCase(), taskRunId.toLowerCase(), consultationId.toLowerCase()];
+    let projectBase = '';
+    let taskBase = '';
+    for (const [index, part] of parts.entries()) {
+      logical = path.join(logical, part);
+      let stat = inspect(logical);
+      if (!stat && create) {
+        stable(entries);
+        try { fs.mkdirSync(logical, { mode: 0o700 }); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        stat = inspect(logical);
+      }
+      if (!stat) {
+        root.close();
+        return null;
+      }
+      directory(stat, true);
+      entries.push({ path: logical, stat, privateMode: true });
+      if (index === 0) projectBase = logical;
+      if (index === 1) taskBase = logical;
+    }
+    stable(entries);
+    return {
+      fd: undefined,
+      entries,
+      path: logical,
+      base: logical,
+      taskBase,
+      projectBase,
+      rootBase: root.base,
+      taskFd: undefined,
+      projectFd: undefined,
+      rootFd: undefined,
+      close() {
+        root.close();
+      }
+    };
+  }
+
+  const descriptors = [];
+  let fd = root.fd;
   try {
     const parts = [projectId.toLowerCase(), taskRunId.toLowerCase(), consultationId.toLowerCase()];
     for (const part of parts) {
@@ -331,6 +418,7 @@ function calculateTotalHistoryBytes(ctx) {
 }
 function sanitizeSafeProjectName(projectRoot) {
   if (typeof projectRoot !== 'string') return null;
+  if (!path.isAbsolute(projectRoot) && (projectRoot.includes('/') || projectRoot.includes('\\'))) return null;
   const base = path.basename(projectRoot).trim();
   if (!base || base.length === 0 || base.length > 64) return null;
   if (base.includes('/') || base.includes('\\') || base.includes('~')) return null;
@@ -368,7 +456,7 @@ function ensureProjectMetadata(cDir, ctx, projectId) {
       tmpStat = writeExclusive(tmpFile, metaBytes);
       fs.renameSync(tmpFile, metaFile);
       tmpStat = undefined;
-      fs.fsyncSync(cDir.projectFd);
+      if (cDir.projectFd !== undefined) fs.fsyncSync(cDir.projectFd);
     } finally {
       if (tmpStat) removeOwned(tmpFile, tmpStat);
     }
@@ -402,7 +490,7 @@ function recordStartedExecution(dependencies, execution, policy = {}) {
       const execFile = `${cDir.base}/execution.json`;
       if (inspect(execFile)) fail('AUDIT_DEGRADED');
       writeExclusive(execFile, execBytes);
-      fs.fsyncSync(cDir.fd);
+      if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
       return { status: 'recorded' };
     } finally {
       cDir.close();
@@ -446,7 +534,7 @@ function updateStartedAttempts(dependencies, { projectId, taskRunId, consultatio
         if (!now || !unchanged(now.stat, existing.stat)) fail('AUDIT_DEGRADED');
         fs.renameSync(tmpFile, execFile);
         tmpStat = undefined;
-        fs.fsyncSync(cDir.fd);
+        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
         return { status: 'recorded' };
       } finally {
         if (tmpStat) removeOwned(tmpFile, tmpStat);
@@ -509,7 +597,7 @@ function recordTerminalExecution(dependencies, execution, policy = {}) {
         }
         fs.renameSync(tmpFile, execFile);
         tmpStat = undefined;
-        fs.fsyncSync(cDir.fd);
+        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
         return { status: 'recorded' };
       } finally {
         if (tmpStat) removeOwned(tmpFile, tmpStat);
@@ -578,10 +666,14 @@ function recordOutcome(dependencies, outcome, policy = {}) {
         stable(cDir.entries);
         const now = readFile(outFile, MAX_OUTCOME_HISTORY_BYTES);
         if (now !== null) fail('AUDIT_DEGRADED');
-        fs.linkSync(tmpFile, outFile);
-        fs.unlinkSync(tmpFile);
+        try {
+          fs.linkSync(tmpFile, outFile);
+          fs.unlinkSync(tmpFile);
+        } catch {
+          fs.renameSync(tmpFile, outFile);
+        }
         tmpStat = undefined;
-        fs.fsyncSync(cDir.fd);
+        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
         return { status: 'recorded' };
       } finally {
         if (tmpStat) removeOwned(tmpFile, tmpStat);

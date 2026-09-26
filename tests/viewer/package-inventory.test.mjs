@@ -50,8 +50,8 @@ test('AME-031: plugin UI bundle size adheres to <=5 MiB total', () => {
   assert.ok(size <= 5 * 1024 * 1024, `Plugin UI size must be <= 5 MiB, got ${size} bytes`);
 });
 
-test('AME-007: controller inventory is exactly 33 files with zero viewer or external edges', () => {
-  assert.equal(ADVISOR_CONTROLLER_FILES.length, 33, 'Controller files count must be exactly 33');
+test('AME-007: controller inventory is exactly 36 files with zero viewer or external edges', () => {
+  assert.equal(ADVISOR_CONTROLLER_FILES.length, 36, 'Controller files count must be exactly 36');
   for (const file of ADVISOR_CONTROLLER_FILES) {
     assert.equal(file.includes('viewer'), false, `Controller file ${file} must not reference viewer`);
     assert.equal(file.includes('react'), false, `Controller file ${file} must not reference react`);

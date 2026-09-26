@@ -10,7 +10,11 @@ const { createRoutingError, isRoutingError } = require('./errors.cjs');
 // process controlling a terminal. Piped JSON alone never attests a human event.
 async function observeTerminalDecision(request, signal) {
   if (signal?.aborted) throw createRoutingError('CANCELLED');
-  if (process.platform === 'win32' || !process.stderr.isTTY) {
+  if (process.platform === 'win32') {
+    if (!process.stdin.isTTY || !process.stderr.isTTY) {
+      throw createRoutingError('HUMAN_EVENT_REQUIRED');
+    }
+  } else if (!process.stderr.isTTY) {
     throw createRoutingError('HUMAN_EVENT_REQUIRED');
   }
   let input;
@@ -19,13 +23,18 @@ async function observeTerminalDecision(request, signal) {
   let inputFd;
   let outputFd;
   try {
-    inputFd = fs.openSync('/dev/tty', 'r');
-    outputFd = fs.openSync('/dev/tty', 'w');
-    if (!tty.isatty(inputFd) || !tty.isatty(outputFd)) throw createRoutingError('HUMAN_EVENT_REQUIRED');
-    input = new tty.ReadStream(inputFd);
-    inputFd = undefined;
-    output = new tty.WriteStream(outputFd);
-    outputFd = undefined;
+    if (process.platform === 'win32') {
+      input = process.stdin;
+      output = process.stderr;
+    } else {
+      inputFd = fs.openSync('/dev/tty', 'r');
+      outputFd = fs.openSync('/dev/tty', 'w');
+      if (!tty.isatty(inputFd) || !tty.isatty(outputFd)) throw createRoutingError('HUMAN_EVENT_REQUIRED');
+      input = new tty.ReadStream(inputFd);
+      inputFd = undefined;
+      output = new tty.WriteStream(outputFd);
+      outputFd = undefined;
+    }
     reader = readline.createInterface({ input, output, terminal: true });
     const nonce = randomBytes(6).toString('hex');
     const challenge = `authorize ${request.task_run_id} ${request.expected_revision} ${nonce}`;
@@ -44,8 +53,10 @@ async function observeTerminalDecision(request, signal) {
     throw createRoutingError('HUMAN_EVENT_REQUIRED');
   } finally {
     reader?.close();
-    input?.destroy();
-    output?.destroy();
+    if (process.platform !== 'win32') {
+      input?.destroy();
+      output?.destroy();
+    }
     if (inputFd !== undefined) fs.closeSync(inputFd);
     if (outputFd !== undefined) fs.closeSync(outputFd);
   }

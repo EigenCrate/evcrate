@@ -249,10 +249,24 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The shared controller is authored only at `.evcrate/source/.evcrate/bin/` and
-published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 33
+published once to `$HOME/.evcrate/bin/`. Its generated closure currently has 36
 production files: the original 29 CJS files plus four generated CommonJS runtime
-modules under `lib/advisor/generated/`. It reads the user-owned
+modules under `lib/advisor/generated/`, and three native Windows bridge files
+(`windows-native.cs`, `windows-native.ps1`, `windows-platform.cjs`). It reads the user-owned
 `$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
+
+### Native Windows advisor lifecycle (Phase 02)
+
+Phase 02 is parent-approved DONE (2026-09-26) after a Cycle 3 conditional review (7.4/10); this records controller integration, not production Windows qualification.
+
+- `windows-platform.cjs` owns trusted Windows home/project identity, case-insensitive allowlisted environment, provider executable/package-bin resolution, and owner/process helper access.
+- `windows-native.ps1` dispatches fixed operations from an absolute PowerShell path and argv; use encoded fixed commands, never interpolated shell strings or arbitrary `.cmd` bodies.
+- `windows-native.cs` implements SID/DACL ownership, process creation/status queries, and console input/output challenge observation. Piped JSON is never human approval.
+- Keep Windows behavior behind platform branches; preserve Linux descriptor, locking, and process-group paths and all public request/result schemas.
+- Windows owner checks require an explicit file/directory path. `state-io.cjs` and `history-store.cjs` still omit paths at affected callsites, so complete state/history ownership remains a Phase 03/04 follow-up.
+- `runner.cjs` still lacks spawn-time child creation-token capture; do not describe PID-reuse-safe Windows teardown as complete. Capture the token at spawn and terminate only against that identity.
+- The Cycle 3 review recorded 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The two critical wiring findings remain approved follow-ups; see the [Phase 02 plan](../plans/260926-1522-windows-advisor-support/phase-02-controller-lifecycle.md) and [review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md).
+
 
 ### Portable advisor contract runtime
 Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
@@ -271,7 +285,7 @@ Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
   transitively.
 
 The Phase 01 boundary is source/export preparation, not a replacement for the
-installed advisor controller closure. Preserve the exact 33-file CJS closure,
+Preserve the exact 36-file CJS closure,
 while retaining dated 29-file release evidence unchanged. Keep valid/invalid
 contract fixtures and focused protocol tests synchronized with exported
 validators.
@@ -547,7 +561,7 @@ qualification, and source removal does not authorize standalone retirement.
   `plugin/ui/dist/`, or root build manifests. Regenerate through the established
   build and inventory scripts.
 - **Package/release boundary:** Keep React/Vite development-only and the controller
-  inventory at 33 files. Release contents are governed by the current candidate
+  inventory at 36 files. Release contents are governed by the current candidate
   inventory; this document does not assert that current release assets were verified.
 - **Explicit non-claims**: The explorer provides descriptive visualization only. It makes no POSIX filesystem attestation (`0600` permissions, ownership, symlink authenticity), complete lifetime audit coverage, causal effectiveness, cost, or saved-time claims.
 See [system architecture](./system-architecture.md) for complete wire shapes,
@@ -602,7 +616,7 @@ atomic apply. It never joins scope or target-publication atomicity.
 ## Build, closure, and release standards
 
 `scripts/generate-controller-inventory.mjs` is the source of the generated
-33-file controller inventory, including the four generated runtime modules.
+36-file controller inventory, including the four generated runtime modules.
 `npm run generate:advisor-runtime` runs before inventory generation in `prebuild`.
 `scripts/build-manifests.mjs` invokes the TypeScript local-build path for each
 persisted target and the aggregate set. Build manifests are schema 2 and carry
@@ -612,19 +626,20 @@ persisted target and the aggregate set. Build manifests are schema 2 and carry
 Build/check must verify complete validation, current hashes, regular non-symlink
 files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.
 Publication consumes only a current verified build and preserves unmanaged roots.
-`install.sh` and `install.ps1` embed the same code-point-sorted 33-file list;
+`install.sh` and `install.ps1` embed the same code-point-sorted 36-file list;
 changes to the generated inventory require parity updates in both installers.
 The manifest contract suite covers exact count/hash parity and rejects viewer or
 external-package entries; dated 29/29 evidence remains unchanged.
-Linux x64 is the qualification boundary for full CLI runtime behavior. Windows
-qualification is complete through Phase 10 (10/10 phases, 100%; completed
-2026-09-15) and is strictly bounded to the standalone installer lifecycle
-(`install`, repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and
-`version --json` on hosted `windows-2025` x64 across PowerShell 5.1/7 and Node
-22.19.0/24.21.0. Windows runtime commands (`publish`, `health`, advisor execution,
-and process-tree parity) remain Linux-only operator-gated behavior. Desktop/signing/
-policy environments, live vendor qualification, npm publication, deployment, and
-rollout remain explicitly excluded.
+Linux x64 remains the qualified operator boundary for live installed-CLI checks.
+Windows release qualification is complete through Phase 10 (10/10 phases, 100%;
+completed 2026-09-15) for the standalone installer lifecycle and `version --json`
+on the hosted `windows-2025` x64 matrix (PowerShell 5.1/7; Node 22.19.0/24.21.0).
+Native advisor controller paths are integrated through Phase 02, but that does
+not widen the qualified Windows support matrix. Windows `publish`, `health`,
+provider execution, and process-tree safety remain unqualified pending Phases
+03/04 and operator evidence. Desktop/signing/policy environments, live vendor
+qualification, npm publication, deployment, and rollout remain separate gates.
+
 ### Windows fixture and predecessor standards (Phase 04)
 
 - Build Windows fixtures through `buildReleaseArchives` and the real

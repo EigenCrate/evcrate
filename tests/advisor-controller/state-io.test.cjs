@@ -46,8 +46,10 @@ test('state is isolated, private, bounded and never implicitly initialized by ge
   assert.equal(fs.existsSync(path.join(f.home, '.evcrate')), false);
   assert.equal(initialize(f), 1);
   assert.deepEqual(get(f), { revision: 1, sentinel: 'original' });
-  assert.equal(fs.statSync(f.state).mode & 0o777, 0o600);
-  assert.equal(fs.statSync(f.location.taskDirectory).mode & 0o777, 0o700);
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(f.state).mode & 0o777, 0o600);
+    assert.equal(fs.statSync(f.location.taskDirectory).mode & 0o777, 0o700);
+  }
   const before = fs.readFileSync(f.state);
   rejects(() => transactState(f.location, {}, () => ({ state: { text: 'x'.repeat(65536) }, result: null })), 'STATE_INVALID');
   assert.deepEqual(fs.readFileSync(f.state), before);

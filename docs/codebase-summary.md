@@ -1,7 +1,7 @@
 # Codebase Summary
 
-**Generated:** 2026-09-24
-**Source:** Repomix v1.18.0 compaction; `.repomixignore` excludes tests, plans, and docs.
+**Generated:** 2026-09-26
+**Source:** Repomix v0.2.26 XML compaction; `.repomixignore` excludes tests, plans, and docs.
 Phase 05 all-project advisor history source and UI behavior are summarized below; companion DamHopper host navigation/page source is outside this compaction. Cross-repo contract and qualification: [all-project advisor history](./all-project-advisor-history.md).
 Current UI source map: [Phase 04 guide and Phase 05 qualification](./advisor-plugin-ui.md); worker detail: [E02 guide](./advisor-plugin-worker.md).
 
@@ -248,7 +248,8 @@ reads/searches stay blocked.
 `src/protocol/validation.ts` owns persisted targets `claude`, `codex`, `gemini`,
 `antigravity`, `pi`, `omp`, `copilot`; `agy` is an input alias only. `safePath`
 is host-native on win32; `normalizeRelativePath` remains slash-relative POSIX metadata.
-`src/context/path-resolution.ts` uses `lexicalAbsoluteWindows`, then shared `assertNoSymlinkAncestors` from `src/filesystem/paths.ts`; URL-derived Phase 01 fixtures cover the boundary; Windows standalone installer lifecycle and version verification are qualified (Phases 01–10). Native Windows advisor compatibility Phase 01 feasibility is proven ([plan](../plans/260926-1522-windows-advisor-support/plan.md); 67/67 checks passed, review approved 9.3/10); controller lifecycle and production Windows runtime qualification remain pending.
+`src/context/path-resolution.ts` uses `lexicalAbsoluteWindows` and shared `assertNoSymlinkAncestors`; Windows release installer/version qualification remains separate. Native Windows advisor support is 2/4 phases: Phase 02 controller lifecycle DONE (2026-09-26; parent-approved after Cycle 3 conditional review, 7.4/10); the exact controller closure is 36 files. `windows-platform.cjs` handles Windows home/project identity, environment canonicalization, executable/package-bin resolution, and owner/process bridge calls.
+`windows-native.ps1` dispatches fixed operations to `windows-native.cs`, which implements SID/DACL checks, process creation/status queries, and console challenge observation. The review recorded 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. Runner spawn-time process-token capture and state/history ownership path threading remain approved Phase 03/04 follow-ups; production Windows runtime qualification is not claimed.
 
 ## CLI and build tooling
 
@@ -267,7 +268,7 @@ is host-native on win32; `normalizeRelativePath` remains slash-relative POSIX me
 | `npm run distribute:build` / `distribute:check` | Build and verify projections through the compiled CLI. |
 | `npm run distribute:all` | Build and publish all selected targets. |
 | `npm run distribute:pi`, `distribute:omp`, `distribute:copilot` | Select one projection target. |
-| `npm run release:check` | Verifies the current 33-file runtime closure. |
+| `npm run release:check` | Verifies the current 36-file runtime closure. |
 | `npm run generate:advisor-runtime` | Compiles the exact four-file CommonJS protocol runtime. |
 | `npm run generate:advisor-plugin-schema` / `check:advisor-plugin-schema` | Generate or byte-check the Phase E00 schema and contract manifest; generated outputs are not hand-edited. |
 | `npm run test:advisor-plugin` | Runs the Phase E00 wire-validator and schema-generator tests. |
@@ -326,11 +327,9 @@ enabled-backend and legacy migration behavior while delegating shared validation
 
 ## Controller closure and inventory migration (Phase 03)
 
-`scripts/generate-controller-inventory.mjs` produces `src/manifests/controller-inventory.generated.ts`, authority for the current 33-file CommonJS
-closure under `.evcrate/source/.evcrate/bin/`. Four generated modules live under
+`scripts/generate-controller-inventory.mjs` produces `src/manifests/controller-inventory.generated.ts`, authority for the current 36-file controller closure under `.evcrate/source/.evcrate/bin`: 33 JavaScript files plus three Windows bridge assets. Four generated modules live under
 `lib/advisor/generated/`; imports remain literal-relative CommonJS or Node built-ins, with no `dist/` or external package dependency.
-`install.sh` and `install.ps1` carry the same code-point-sorted list; hashes,
-manifests, staging, publication, and release checks consume it.
+`install.sh` and `install.ps1` carry the same code-point-sorted list; hashes, manifests, staging, publication, and release checks consume it.
 `tests/manifests/distribution-manifests.test.mjs` asserts exact count/hash parity and rejects `viewer.js` and
 `require('lodash')`; [closure evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json) records parity, and generated files are never hand-edited.
 
@@ -565,7 +564,7 @@ The generated controller inventory remains authoritative. See the
 [audit plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md),
 and [audit evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
 Historical evidence remains 185/185 state tests and 204/204 controller tests;
-the current 33-file closure and current metrics explorer evidence are documented
+the current 36-file closure and current metrics explorer evidence are documented
 in their respective sections above.
 
 

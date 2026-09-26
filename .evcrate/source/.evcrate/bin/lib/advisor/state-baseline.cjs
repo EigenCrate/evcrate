@@ -1,5 +1,6 @@
 'use strict';
 
+const { isUnsafeWindowsPath } = require('./windows-platform.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
@@ -30,7 +31,12 @@ function regular(stat) {
 }
 function rootChain(root) {
   if (typeof root !== 'string' || !path.isAbsolute(root) || path.normalize(root) !== root
-    || root.includes('\0') || typeof fs.constants.O_NOFOLLOW !== 'number' || process.platform !== 'linux') fail();
+    || root.includes('\0')) fail();
+  if (process.platform === 'win32') {
+    if (isUnsafeWindowsPath(root)) fail();
+  } else {
+    if (typeof fs.constants.O_NOFOLLOW !== 'number' || process.platform !== 'linux') fail();
+  }
   let current = path.parse(root).root;
   const entries = [];
   for (const component of ['', ...root.slice(current.length).split(path.sep).filter(Boolean)]) {
@@ -46,11 +52,62 @@ function stable(entries) {
   for (const entry of entries) {
     const current = inspect(entry.file);
     directory(current);
-    if (!same(current, entry.stat) || current.uid !== entry.stat.uid) fail();
+    if (!same(current, entry.stat)) fail();
+    if (process.platform !== 'win32' && current.uid !== entry.stat.uid) fail();
   }
 }
 function captureFile(root, selected, roots, budget, observations) {
   stable(roots);
+  if (process.platform === 'win32') {
+    const entries = [...roots];
+    let logical = root;
+    const parts = selected.split('/');
+    for (const part of parts.slice(0, -1)) {
+      logical = path.join(logical, part);
+      const stat = inspect(logical);
+      if (!stat) {
+        stable(entries);
+        observations.push({ file: logical, stat: null, entries });
+        return { path: selected, digest: null, status: 'missing' };
+      }
+      directory(stat);
+      entries.push({ file: logical, stat });
+    }
+    const targetFile = path.join(logical, parts.at(-1));
+    const initial = inspect(targetFile);
+    if (!initial) {
+      stable(entries);
+      observations.push({ file: targetFile, stat: null, entries });
+      return { path: selected, digest: null, status: 'missing' };
+    }
+    regular(initial);
+    if (initial.size > BigInt(MAX_FILE_BYTES) || initial.size > BigInt(budget.remaining)) fail('STATE_INVALID');
+    let input;
+    try {
+      input = fs.openSync(targetFile, fs.constants.O_RDONLY);
+      const opened = fs.fstatSync(input, { bigint: true });
+      regular(opened);
+      if (!unchanged(initial, opened)) fail();
+      const hash = createHash('sha256');
+      const buffer = Buffer.allocUnsafe(64 * 1024);
+      let total = 0;
+      while (total < Number(opened.size)) {
+        const count = fs.readSync(input, buffer, 0, Math.min(buffer.length, Number(opened.size) - total), total);
+        if (!count) fail();
+        total += count;
+        hash.update(buffer.subarray(0, count));
+      }
+      const final = fs.fstatSync(input, { bigint: true });
+      regular(final);
+      if (!unchanged(opened, final) || !unchanged(final, inspect(targetFile))) fail();
+      stable(entries);
+      budget.remaining -= total;
+      observations.push({ file: targetFile, stat: final, entries });
+      return { path: selected, digest: hash.digest('hex'), status: 'file' };
+    } finally {
+      if (input !== undefined) fs.closeSync(input);
+    }
+  }
   const descriptors = [];
   const entries = [...roots];
   let logical = root;
@@ -110,7 +167,8 @@ function captureFile(root, selected, roots, budget, observations) {
 function gitEnvironment() {
   const environment = { ...process.env };
   for (const name of Object.keys(environment)) if (name.startsWith('GIT_')) delete environment[name];
-  return { ...environment, GIT_OPTIONAL_LOCKS: '0', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', LC_ALL: 'C' };
+  const nullDevice = process.platform === 'win32' ? 'NUL' : '/dev/null';
+  return { ...environment, GIT_OPTIONAL_LOCKS: '0', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: nullDevice, LC_ALL: 'C' };
 }
 function git(root, args, environment) {
   const result = spawnSync('git', ['--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'core.untrackedCache=false', '-c', 'safe.directory=*', '-C', root, ...args], {
