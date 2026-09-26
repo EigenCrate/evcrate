@@ -4,7 +4,8 @@
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
 **DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
 **Windows support:** Bounded standalone installer/version cutover is complete; live vendor qualification and production HOME publication remain operator-gated.
-**Updated:** 2026-09-24
+**Proposed, not implemented:** [Native Windows advisor compatibility](../plans/260926-1522-windows-advisor-support/plan.md) preserves Linux routing/state semantics and adds Windows-only launch, safe state I/O, process supervision, and console observation; existing Windows qualification does not cover these paths.
+**Updated:** 2026-09-26
 
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
@@ -634,11 +635,7 @@ and `export` are executable shell syntax, not slash command-resource names.
 
 ## 7. Verification and support boundary
 
-Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitized
-environment, isolated cwd, output lifecycle, timeout/cancellation, descendant
-cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic
-recovery, and selected-target publication. These contracts do not authenticate a
-vendor CLI.
+Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitized environment, isolated cwd, output lifecycle, timeout/cancellation, descendant cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic recovery, and selected-target publication. These contracts do not authenticate a vendor CLI.
 
 Linux x64 is the qualified operator boundary for live installed-CLI checks.
 Windows release qualification is complete through Phase 10 (10/10 phases, 100%;
@@ -657,16 +654,18 @@ vendors or authorize production HOME publication.
 
 ### Historical Advisor Metrics Explorer support boundary (Phases 01–10; completed 2026-09-19)
 
-At completion, the standalone explorer's tested boundary was Chromium >=120 on
-Linux with File System Access; it did not attest POSIX permissions/ownership,
-complete audit coverage, or causal/cost/saved-time claims. Its picker/reader source
-has since been removed, so this history does not establish current standalone
-support or G4.
+At completion, the standalone explorer's tested boundary was Chromium >=120 on Linux with File System Access; it did not attest POSIX permissions/ownership, complete audit coverage, or causal/cost/saved-time claims. Its picker/reader source has since been removed, so this history does not establish current standalone support or G4.
 
 ### Deterministic Windows fixture and predecessor resolver (Phase 04)
 
 Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidate and harness phases without altering public support. `buildWindowsTestReleaseSet` builds archive, sidecar, metadata, and `install.ps1` with fixed `FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z` for byte-identical fixtures. The resolver fetches non-draft GitHub releases requiring exact asset labels, canonical filenames, and `verifyWindowsAssetSet` validation. Initial qualification uses `bootstrap-fixture` `1.0.0`; once qualification history exists, missing/tampered assets fail closed without older fallback. `predecessor-downloader.mjs` stages and verifies downloads, returning `{kind, version, tag, sourceCommit, files, directory}` for downstream phases.
 
+
+### Native Windows advisor primitives feasibility (Phase 01; 2026-09-26)
+
+Phase 01 of [Native Windows advisor compatibility](../plans/260926-1522-windows-advisor-support/plan.md) established Win32 primitive feasibility across six test suites (67/67 checks passed, review score 9.3/10) on Windows 10.0.26200 x64 under Windows PowerShell 5.1 and official PowerShell 7.6.6 runtime. Verified: handle-based SID/DACL inspection, protected directory creation, junction and hardlink rejection, directory handle pinning preventing rename/delete races, full-chain mutation with atomic same-directory rename (`NtSetInformationFile`) preserving file identity and exact bytes under strict `FILE_SHARE_READ`, suspended process creation with atomic `PROC_THREAD_ATTRIBUTE_JOB_LIST` assignment, kill-on-close Job termination, write-only pipe inheritance, and direct CONIN$/CONOUT$ console challenge matching with fail-closed detached console handling.
+
+**Support boundary limit:** This records Win32 primitive and bridge feasibility only. It does not integrate production controller code, bootstrap the Windows state machine, modify production `HOME`, or claim production Windows runtime qualification.
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
 This section preserves historical acceptance context; current contracts are
