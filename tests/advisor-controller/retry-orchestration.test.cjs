@@ -896,7 +896,9 @@ test('C2-W3: real CLI process execution emits exactly one terminal envelope and 
   delete env.EVCRATE_ADVISOR_DEPTH;
 
   try {
-    const res = spawnSync(CONTROLLER_BIN, [], {
+    const spawnExe = process.platform === 'win32' ? process.execPath : CONTROLLER_BIN;
+    const spawnArgs = process.platform === 'win32' ? [CONTROLLER_BIN] : [];
+    const res = spawnSync(spawnExe, spawnArgs, {
       input: CHECKPOINT_V1,
       env,
       encoding: 'utf8',

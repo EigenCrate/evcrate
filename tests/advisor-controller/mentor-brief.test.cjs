@@ -773,7 +773,9 @@ test('real entrypoint: V2 checkpoint through controller produces valid V2 envelo
     fs.writeFileSync(path.join(home, '.evcrate/fake-codex-state.json'), `${JSON.stringify(defaultState)}\n`, { mode: 0o600 });
     const failedCheckpoint = reserve();
 
-    const resultFail = spawnSync(CONTROLLER, [], {
+    const spawnExe = process.platform === 'win32' ? process.execPath : CONTROLLER;
+    const spawnArgs = process.platform === 'win32' ? [CONTROLLER] : [];
+    const resultFail = spawnSync(spawnExe, spawnArgs, {
       input: JSON.stringify(failedCheckpoint),
       env, cwd: root,
       encoding: 'utf8'
@@ -802,7 +804,7 @@ test('real entrypoint: V2 checkpoint through controller produces valid V2 envelo
     fs.writeFileSync(path.join(home, '.evcrate/fake-codex-state.json'), `${JSON.stringify(successState)}\n`, { mode: 0o600 });
     const successfulCheckpoint = reserve();
 
-    const resultSuccess = spawnSync(CONTROLLER, [], {
+    const resultSuccess = spawnSync(spawnExe, spawnArgs, {
       input: JSON.stringify(successfulCheckpoint),
       env, cwd: root,
       encoding: 'utf8'

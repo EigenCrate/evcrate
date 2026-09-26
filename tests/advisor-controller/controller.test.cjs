@@ -54,7 +54,15 @@ function setup({ mode = 'success', backend = 'codex', withPolicy = true } = {}) 
   fs.writeFileSync(path.join(home, `.evcrate/fake-${executable}-mode`), `${mode}\n`, { mode: 0o600 });
   try { fs.chmodSync(fixture, 0o755); } catch {}
   fs.symlinkSync(fixture, path.join(bin, executable));
-  const environment = { ...process.env, HOME: home, TMPDIR: tmp, PATH: `${bin}${path.delimiter}${process.env.PATH || ''}` };
+  const filteredPath = (process.env.PATH || '')
+    .split(path.delimiter)
+    .filter((d) => {
+      const lower = d.toLowerCase();
+      if (lower.includes('openai') || lower.includes('codex') || lower.includes('omp') || lower.includes('.bun')) return false;
+      return true;
+    })
+    .join(path.delimiter);
+  const environment = { ...process.env, HOME: home, TMPDIR: tmp, PATH: `${bin}${path.delimiter}${filteredPath}` };
   delete environment.EVCRATE_ADVISOR_ACTIVE;
   delete environment.EVCRATE_ADVISOR_DEPTH;
   return { root, home, environment };
@@ -65,7 +73,16 @@ function state(fixture, backend = 'codex') {
   const file = path.join(fixture.home, `.evcrate/${name}`);
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
 }
+function spawnController(fixture, options) {
+  if (process.platform === 'win32') {
+    return spawn(process.execPath, [CONTROLLER], { ...options, env: fixture.environment });
+  }
+  return spawn(CONTROLLER, [], { ...options, env: fixture.environment });
+}
 function run(fixture, input = CHECKPOINT) {
+  if (process.platform === 'win32') {
+    return spawnSync(process.execPath, [CONTROLLER], { input, env: fixture.environment, encoding: 'utf8' });
+  }
   return spawnSync(CONTROLLER, [], { input, env: fixture.environment, encoding: 'utf8' });
 }
 function envelope(result) {
@@ -304,8 +321,7 @@ test('strict request validation rejects extras, credentials, invalid UTF-8, and 
 test('oversized open stdin fails closed without waiting for EOF', async () => {
   const fixture = setup();
   try {
-    const child = spawn(CONTROLLER, [], {
-      env: fixture.environment,
+    const child = spawnController(fixture, {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const output = [];
@@ -344,8 +360,7 @@ test('oversized open stdin fails closed without waiting for EOF', async () => {
 test('partial open stdin reaches one bounded timeout envelope', async () => {
   const fixture = setup();
   try {
-    const child = spawn(CONTROLLER, [], {
-      env: fixture.environment,
+    const child = spawnController(fixture, {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const output = [];
@@ -384,10 +399,10 @@ test('partial open stdin reaches one bounded timeout envelope', async () => {
 test('SIGTERM closes open stdin and emits one cancellation envelope', async () => {
   const fixture = setup();
   try {
-    const child = spawn(CONTROLLER, [], {
-      env: fixture.environment,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const stdio = process.platform === 'win32'
+      ? ['pipe', 'pipe', 'pipe', 'ipc']
+      : ['pipe', 'pipe', 'pipe'];
+    const child = spawnController(fixture, { stdio });
     const output = [];
     const errors = [];
     child.stdout.on('data', (chunk) => output.push(chunk));
@@ -412,7 +427,11 @@ test('SIGTERM closes open stdin and emits one cancellation envelope', async () =
         });
       });
       child.stdin.write('{}');
-      setTimeout(() => child.kill('SIGTERM'), 50);
+      if (process.platform === 'win32') {
+        setTimeout(() => { try { child.send('SIGTERM'); } catch {} }, 50);
+      } else {
+        setTimeout(() => child.kill('SIGTERM'), 50);
+      }
     });
     assert.equal(result.signal, null);
     assert.equal(result.stderr, '');
@@ -522,10 +541,10 @@ test('controller generation waits indefinitely without 30s deadline', async () =
 test('SIGINT during active generation cancels child and emits one cancellation envelope', async () => {
   const fixture = setup({ mode: 'timeout' });
   try {
-    const child = spawn(CONTROLLER, [], {
-      env: fixture.environment,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const stdio = process.platform === 'win32'
+      ? ['pipe', 'pipe', 'pipe', 'ipc']
+      : ['pipe', 'pipe', 'pipe'];
+    const child = spawnController(fixture, { stdio });
     const output = [];
     const errors = [];
     child.stdout.on('data', (chunk) => output.push(chunk));
@@ -533,7 +552,11 @@ test('SIGINT during active generation cancels child and emits one cancellation e
     child.stdin.end(CHECKPOINT);
 
     await new Promise((resolve) => setTimeout(resolve, 250));
-    child.kill('SIGINT');
+    if (process.platform === 'win32') {
+      try { child.send('SIGINT'); } catch {}
+    } else {
+      child.kill('SIGINT');
+    }
 
     const result = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {

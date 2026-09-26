@@ -4,6 +4,9 @@ const cancellation = new AbortController();
 const onSignal = () => cancellation.abort();
 process.on('SIGINT', onSignal);
 process.on('SIGTERM', onSignal);
+process.on('message', (msg) => {
+  if (msg === 'SIGINT' || msg === 'SIGTERM') onSignal();
+});
 
 const {
   runController, runQualificationDiagnostic, isDiagnosticRequest

@@ -9,6 +9,12 @@ const {
   assertAdapterAuthKeys,
   validateInvocationShape
 } = require('./adapter-contract.cjs');
+const {
+  assertNoRecursionWindows,
+  canonicalizeWindowsEnvironment,
+  resolveWindowsExecutable,
+  killProcessTreeWindows
+} = require('./windows-platform.cjs');
 
 const INVOCATION_BRAND = Symbol('evcrate-advisor-invocation');
 const RUNNER_FAILURE_BRAND = Symbol('evcrate-advisor-runner-failure');
@@ -183,6 +189,9 @@ function validateContainedCwd(cwd, workspaceRoot) {
 }
 
 function assertNoRecursion({ environment = process.env, requestDepth = 0 } = {}) {
+  if (process.platform === 'win32') {
+    return assertNoRecursionWindows({ environment, requestDepth }, RECURSION_MARKER, RECURSION_DEPTH);
+  }
   if (!environment || typeof environment !== 'object' || Array.isArray(environment)) {
     fail('INVOCATION_INVALID');
   }
@@ -209,12 +218,16 @@ function buildAllowlistedEnvironment({
   if (source === null || typeof source !== 'object' || Array.isArray(source)) fail('INVOCATION_INVALID');
   assertAdapterAuthKeys(adapter, authKeys);
   assertNoRecursion({ environment: source, requestDepth });
-  const environment = {};
-  for (const key of [...new Set([...COMMON_ENV_KEYS, ...authKeys])]) {
-    if (key.startsWith('EVCRATE_')) continue;
-    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-      if (typeof source[key] !== 'string') fail('INVOCATION_INVALID');
-      environment[key] = source[key];
+  let environment = {};
+  if (process.platform === 'win32') {
+    environment = canonicalizeWindowsEnvironment(source, { commonKeys: COMMON_ENV_KEYS, authKeys });
+  } else {
+    for (const key of [...new Set([...COMMON_ENV_KEYS, ...authKeys])]) {
+      if (key.startsWith('EVCRATE_')) continue;
+      if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+        if (typeof source[key] !== 'string') fail('INVOCATION_INVALID');
+        environment[key] = source[key];
+      }
     }
   }
   if (includeRecursionMarker) environment[RECURSION_MARKER] = '1';
@@ -416,6 +429,10 @@ async function terminateChild(child, { kill, setTimeoutImpl, graceMs, closed, fo
       await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
       if (!isClosed()) {
         send('SIGKILL', true);
+        if (process.platform === 'win32' && Number.isInteger(child?.pid) && child.pid > 0) {
+          const token = child.creationToken || getWindowsProcessIdentity(child.pid)?.start;
+          if (token) killProcessTreeWindows(child.pid, token);
+        }
         await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
       }
     }
@@ -469,7 +486,20 @@ function runInvocation(invocation, options = {}) {
     const clearTimeoutImpl = options.clearTimeout || clearTimeout;
     const kill = options.kill || process.kill.bind(process);
     try { startedAt = now(); } catch { startedAt = monotonicMilliseconds(); }
-    const child = spawnImpl(invocation.executable, [...invocation.argv], {
+    let spawnExe = invocation.executable;
+    let spawnArgs = [...invocation.argv];
+    if (process.platform === 'win32') {
+      const envPath = env?.PATH || process.env.PATH;
+      const resolved = resolveWindowsExecutable(invocation.executable, envPath) || invocation.executable;
+      const lower = resolved.toLowerCase();
+      if (lower.endsWith('.js') || lower.endsWith('.cjs')) {
+        spawnExe = process.execPath;
+        spawnArgs = [resolved, ...invocation.argv];
+      } else {
+        spawnExe = resolved;
+      }
+    }
+    const child = spawnImpl(spawnExe, spawnArgs, {
       cwd,
       env,
       shell: false,

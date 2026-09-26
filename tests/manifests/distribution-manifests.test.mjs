@@ -62,10 +62,10 @@ test('controller verifier rejects an extra production tree entry', () => {
   writeFileSync(join(copy, 'lib', 'advisor', 'extra.cjs'), 'module.exports = {}');
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
-test('controller closure enforces exact 33 files, regular files, and require boundaries', () => {
-  assert.equal(ADVISOR_CONTROLLER_FILES.length, 33);
+test('controller closure enforces exact 36 files, regular files, and require boundaries', () => {
+  assert.equal(ADVISOR_CONTROLLER_FILES.length, 36);
   const hashes = controllerHashes(controllerRoot);
-  assert.equal(Object.keys(hashes).length, 33);
+  assert.equal(Object.keys(hashes).length, 36);
   const root = temporaryDirectory();
   const copy = join(root, 'bin');
   cpSync(controllerRoot, copy, { recursive: true });

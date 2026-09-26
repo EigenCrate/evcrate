@@ -184,7 +184,10 @@ function exportHistory(dependencies, options, fns) {
   // Pin parent directory to prevent TOCTOU ancestor swaps
   let parentFd;
   try {
-    parentFd = fs.openSync(destParent, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW);
+    const flags = process.platform === 'win32'
+      ? fs.constants.O_RDONLY
+      : fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW;
+    parentFd = fs.openSync(destParent, flags);
     if (!same(fs.fstatSync(parentFd, { bigint: true }), pStat)) fail('REQUEST_INVALID');
   } catch {
     if (parentFd !== undefined) fs.closeSync(parentFd);
@@ -242,10 +245,13 @@ function exportHistory(dependencies, options, fns) {
       };
     }
 
-    // Write descriptor-relatively to pinned parent
-    const targetDescriptorPath = `/proc/self/fd/${parentFd}/${destBase}`;
+    const targetDescriptorPath = process.platform === 'win32'
+      ? path.join(destParent, destBase)
+      : `/proc/self/fd/${parentFd}/${destBase}`;
     writeExclusive(targetDescriptorPath, Buffer.from(jsonText, 'utf8'));
-    fs.fsyncSync(parentFd);
+    if (process.platform !== 'win32' && parentFd !== undefined) {
+      fs.fsyncSync(parentFd);
+    }
 
     return {
       protocol: 'evcrate-advisor-history',

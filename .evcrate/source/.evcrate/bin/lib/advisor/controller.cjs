@@ -19,6 +19,7 @@ const {
 const { validateCapabilityAttestation, isPlainObject, classifyAttemptFailure } = require('./adapter-contract.cjs');
 const { buildSuccessEnvelope, buildFailureEnvelope } = require('./controller-envelope.cjs');
 const { recordStartedExecution, recordTerminalExecution, updateStartedAttempts } = require('./history-store.cjs');
+const { resolveWindowsExecutable } = require('./windows-platform.cjs');
 const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
 
@@ -75,10 +76,18 @@ function dependency(deps, name, fallback) { return typeof deps[name] === 'functi
 
 function resolveExecutablePath(executable, envPath) {
   if (typeof executable !== 'string' || !executable) return null;
+  if (process.platform === 'win32') {
+    return resolveWindowsExecutable(executable, envPath);
+  }
   const fsImpl = require('node:fs');
   const pathImpl = require('node:path');
   if (pathImpl.isAbsolute(executable)) {
-    try { return fsImpl.realpathSync.native(executable); } catch { return null; }
+    try {
+      const stat = fsImpl.statSync(executable);
+      if (stat.isFile() && (stat.mode & 0o111)) {
+        return fsImpl.realpathSync.native(executable);
+      }
+    } catch { return null; }
   }
   const dirs = (envPath || '').split(pathImpl.delimiter);
   for (const dir of dirs) {
