@@ -1,3 +1,11 @@
+## [2.3.2](https://github.com/EigenCrate/evcrate/compare/v2.3.1...v2.3.2) (2026-09-26)
+
+
+### 🐞 Bug Fixes
+
+* **plugin:** permit non-root workspace targets when running under unprivileged service runner ([d2dcc6c](https://github.com/EigenCrate/evcrate/commit/d2dcc6cb2c6db8378abb95dec97132b791f8c499))
+* **plugin:** resolve history root and advisor policy paths under service runner ([90a5eaf](https://github.com/EigenCrate/evcrate/commit/90a5eafdd73b99fd148e0365e84c7c8e7dc976e9))
+
 ## [2.3.1](https://github.com/EigenCrate/evcrate/compare/v2.3.0...v2.3.1) (2026-09-26)
 
 
