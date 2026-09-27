@@ -11,7 +11,9 @@ const {
 const {
   canonicalWindowsProjectRoot,
   resolveWindowsHome,
-  canonicalWindowsProjectId
+  canonicalWindowsProjectId,
+  writePinnedFileWindows,
+  verifyPinnedDirectoryWindows
 } = require('./windows-platform.cjs');
 const {
   validateHistoryExecutionV1,
@@ -76,29 +78,46 @@ function historyContext({ cwd = process.cwd(), environment = process.env } = {})
 function openHistoryRoot(ctx, create = false) {
   stable(ctx.entries);
   if (process.platform === 'win32') {
+    const descriptors = [];
     const entries = [...ctx.entries];
     let logical = ctx.home;
-    for (const part of ['.evcrate', 'advisor-history']) {
-      logical = path.join(logical, part);
-      let stat = inspect(logical);
-      if (!stat && create) {
-        stable(entries);
-        try { fs.mkdirSync(logical); }
-        catch (error) { if (error.code !== 'EEXIST') throw error; }
-        stat = inspect(logical);
+    try {
+      let fd = fs.openSync(logical, fs.constants.O_RDONLY);
+      descriptors.push(fd);
+      if (!same(fs.fstatSync(fd, { bigint: true }), inspect(logical))) fail();
+      for (const part of ['.evcrate', 'advisor-history']) {
+        logical = path.join(logical, part);
+        let stat = inspect(logical);
+        if (!stat && create) {
+          stable(entries);
+          try { fs.mkdirSync(logical); }
+          catch (error) { if (error.code !== 'EEXIST') throw error; }
+          stat = inspect(logical);
+        }
+        if (!stat) {
+          for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+          return null;
+        }
+        directory(stat);
+        const next = fs.openSync(logical, fs.constants.O_RDONLY);
+        descriptors.push(next);
+        if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
+        entries.push({ path: logical, stat });
       }
-      if (!stat) return null;
-      directory(stat);
-      entries.push({ path: logical, stat });
+      stable(entries);
+      return {
+        fd: undefined,
+        entries,
+        path: logical,
+        base: logical,
+        close() {
+          for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+        }
+      };
+    } catch (error) {
+      for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+      throw error;
     }
-    stable(entries);
-    return {
-      fd: undefined,
-      entries,
-      path: logical,
-      base: logical,
-      close() {}
-    };
   }
   const descriptors = [];
   const entries = [...ctx.entries];
@@ -229,43 +248,58 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
   let logical = root.path;
 
   if (process.platform === 'win32') {
+    const descriptors = [];
     const parts = [projectId.toLowerCase(), taskRunId.toLowerCase(), consultationId.toLowerCase()];
     let projectBase = '';
     let taskBase = '';
-    for (const [index, part] of parts.entries()) {
-      logical = path.join(logical, part);
-      let stat = inspect(logical);
-      if (!stat && create) {
-        stable(entries);
-        try { fs.mkdirSync(logical); }
-        catch (error) { if (error.code !== 'EEXIST') throw error; }
-        stat = inspect(logical);
+    try {
+      for (const [index, part] of parts.entries()) {
+        logical = path.join(logical, part);
+        let stat = inspect(logical);
+        if (!stat && create) {
+          stable(entries);
+          try { fs.mkdirSync(logical); }
+          catch (error) { if (error.code !== 'EEXIST') throw error; }
+          stat = inspect(logical);
+        }
+        if (!stat) {
+          for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+          root.close();
+          return null;
+        }
+        directory(stat);
+        const next = fs.openSync(logical, fs.constants.O_RDONLY);
+        descriptors.push(next);
+        if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
+        entries.push({ path: logical, stat });
+        if (index === 0) projectBase = logical;
+        if (index === 1) taskBase = logical;
       }
-      if (!stat) {
-        root.close();
-        return null;
-      }
-      directory(stat);
-      entries.push({ path: logical, stat });
-      if (index === 0) projectBase = logical;
-      if (index === 1) taskBase = logical;
+      stable(entries);
+      return {
+        fd: undefined,
+        entries,
+        path: logical,
+        base: logical,
+        taskBase,
+        projectBase,
+        rootBase: root.base,
+        taskFd: undefined,
+        projectFd: undefined,
+        rootFd: undefined,
+        close() {
+          try {
+            for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+          } finally {
+            root.close();
+          }
+        }
+      };
+    } catch (error) {
+      for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+      root.close();
+      throw error;
     }
-    stable(entries);
-    return {
-      fd: undefined,
-      entries,
-      path: logical,
-      base: logical,
-      taskBase,
-      projectBase,
-      rootBase: root.base,
-      taskFd: undefined,
-      projectFd: undefined,
-      rootFd: undefined,
-      close() {
-        root.close();
-      }
-    };
   }
 
   const descriptors = [];
@@ -524,19 +558,32 @@ function updateStartedAttempts(dependencies, { projectId, taskRunId, consultatio
         ensureHistoryQuota(ctx, growth, policy, scanProjectRecords, readFile, openConsultationDir);
       }
 
-      const tmpFile = `${cDir.base}/.exec-att-${randomBytes(8).toString('hex')}.tmp`;
-      let tmpStat;
-      try {
-        tmpStat = writeExclusive(tmpFile, updatedBytes);
-        stable(cDir.entries);
+      if (process.platform === 'win32') {
         const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
         if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) fail('AUDIT_DEGRADED');
-        fs.renameSync(tmpFile, execFile);
-        tmpStat = undefined;
-        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
+        const res = writePinnedFileWindows(execFile, updatedBytes, {
+          replaceIfExists: true,
+          expectedDev: existing.stat.dev.toString(),
+          expectedIno: existing.stat.ino.toString(),
+          expectedDigest: createHash('sha256').update(existing.bytes).digest('hex')
+        });
+        if (res.status !== 'ok') fail('AUDIT_DEGRADED');
         return { status: 'recorded' };
-      } finally {
-        if (tmpStat) removeOwned(tmpFile, tmpStat);
+      } else {
+        const tmpFile = `${cDir.base}/.exec-att-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = writeExclusive(tmpFile, updatedBytes);
+          stable(cDir.entries);
+          const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
+          if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) fail('AUDIT_DEGRADED');
+          fs.renameSync(tmpFile, execFile);
+          tmpStat = undefined;
+          if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) removeOwned(tmpFile, tmpStat);
+        }
       }
     } finally {
       cDir.close();
@@ -585,21 +632,36 @@ function recordTerminalExecution(dependencies, execution, policy = {}) {
         ensureHistoryQuota(ctx, growth, policy, scanProjectRecords, readFile, openConsultationDir);
       }
 
-      const tmpFile = `${cDir.base}/.exec-term-${randomBytes(8).toString('hex')}.tmp`;
-      let tmpStat;
-      try {
-        tmpStat = writeExclusive(tmpFile, execBytes);
-        stable(cDir.entries);
+      if (process.platform === 'win32') {
         const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
         if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) {
           fail('AUDIT_DEGRADED');
         }
-        fs.renameSync(tmpFile, execFile);
-        tmpStat = undefined;
-        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
+        const res = writePinnedFileWindows(execFile, execBytes, {
+          replaceIfExists: true,
+          expectedDev: existing.stat.dev.toString(),
+          expectedIno: existing.stat.ino.toString(),
+          expectedDigest: createHash('sha256').update(existing.bytes).digest('hex')
+        });
+        if (res.status !== 'ok') fail('AUDIT_DEGRADED');
         return { status: 'recorded' };
-      } finally {
-        if (tmpStat) removeOwned(tmpFile, tmpStat);
+      } else {
+        const tmpFile = `${cDir.base}/.exec-term-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = writeExclusive(tmpFile, execBytes);
+          stable(cDir.entries);
+          const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
+          if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) {
+            fail('AUDIT_DEGRADED');
+          }
+          fs.renameSync(tmpFile, execFile);
+          tmpStat = undefined;
+          if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) removeOwned(tmpFile, tmpStat);
+        }
       }
     } finally {
       cDir.close();
@@ -658,24 +720,38 @@ function recordOutcome(dependencies, outcome, policy = {}) {
 
       ensureHistoryQuota(ctx, outBytes.length, policy, scanProjectRecords, readFile, openConsultationDir);
 
-      const tmpFile = `${cDir.base}/.outcome-${randomBytes(8).toString('hex')}.tmp`;
-      let tmpStat;
-      try {
-        tmpStat = writeExclusive(tmpFile, outBytes);
-        stable(cDir.entries);
+      if (process.platform === 'win32') {
         const now = readFile(outFile, MAX_OUTCOME_HISTORY_BYTES);
         if (now !== null) fail('AUDIT_DEGRADED');
-        try {
-          fs.linkSync(tmpFile, outFile);
-          fs.unlinkSync(tmpFile);
-        } catch {
-          fs.renameSync(tmpFile, outFile);
-        }
-        tmpStat = undefined;
-        if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
+        const res = writePinnedFileWindows(outFile, outBytes, { replaceIfExists: false });
+        if (res.status !== 'ok') fail('AUDIT_DEGRADED');
         return { status: 'recorded' };
-      } finally {
-        if (tmpStat) removeOwned(tmpFile, tmpStat);
+      } else {
+        const tmpFile = `${cDir.base}/.outcome-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = writeExclusive(tmpFile, outBytes);
+          stable(cDir.entries);
+          const now = readFile(outFile, MAX_OUTCOME_HISTORY_BYTES);
+          if (now !== null) fail('AUDIT_DEGRADED');
+          try {
+            fs.linkSync(tmpFile, outFile);
+          } catch (linkError) {
+            if (linkError.code === 'EEXIST') fail('AUDIT_DEGRADED');
+            throw linkError;
+          }
+          try {
+            fs.unlinkSync(tmpFile);
+            tmpStat = undefined;
+          } catch (unlinkError) {
+            tmpStat = undefined;
+            throw unlinkError;
+          }
+          if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) removeOwned(tmpFile, tmpStat);
+        }
       }
     } finally {
       cDir.close();

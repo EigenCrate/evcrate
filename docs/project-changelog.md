@@ -6,6 +6,17 @@
 **Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26; Phase 03 remains NO-GO pending readiness repairs; production Windows runtime qualification not claimed). Filesystem-policy cutover is 100% (Phases 01 and 02 DONE 2026-09-27; cutover review plan complete). Package version: `2.3.2`.
 Older phase records remain in the linked archive.
 
+### 2026-09-28 — fix(advisor): restore Windows advisor storage and cleanup safety (Repair Phase 01)
+
+**Status:** Phase 01 DONE (2026-09-28; review approved 9.5/10; user approved). 1/4 repair phases complete; Phase 02 (Job supervision and console) next.  
+**Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Phase 01](../plans/260927-0005-windows-advisor-readiness/phase-01-storage-safety.md)  
+**Evidence:** 10/10 storage-safety regressions pass (`tests/advisor-controller/storage-safety.test.cjs`); 223/223 advisor-controller tests pass; 112/112 protocol, primitives, and scopes tests pass; release check verified.
+
+- **C1 containment (no-replace publication):** Removed catch-all `linkSync` to `renameSync` fallback in `state-io.cjs` and `history-store.cjs`. On `EEXIST`, transactions fail closed with `STATE_CONFLICT` / `AUDIT_DEGRADED` without clobbering competing destinations (R4 closed).
+- **C2 containment (workspace cleanup object identity):** Captured `dev` and `ino` identity on workspace and root during creation in `isolated-workspace.cjs`. Cleanup validates ancestor root *before* inspecting workspace path, verifies object identity, and fails closed (`CLEANUP_UNCONFIRMED`) on any junction/symlink or device mismatch without deleting outside trees (R5 closed).
+- **H3 native pinned operations:** Implemented narrow Win32 handle-pinned operations in `windows-native.cs`, `windows-native.ps1`, and `windows-platform.cjs`. Root-to-leaf directory pinning with `FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT` rejects reparse points and locks ancestor directories against concurrent renames; `writePinnedFileWindows` performs staging with `CREATE_NEW`, flushes buffers, and executes atomic CAS replacement verifying expected device, inode, and SHA-256 digest on destination handle.
+- **Caller migration:** Migrated `profile.cjs`, `state-baseline.cjs`, `history-query.cjs`, `history-prune.cjs`, `state-io.cjs`, `history-store.cjs`, and `isolated-workspace.cjs` to verified pinned context and native operations without breaking Linux descriptor traversal.
+
 ### 2026-09-27 — fix(filesystem): complete Phase 02 durable cutover and host-specific qualification
 
 **Status:** Phase 02 DONE (2026-09-27; review approved 9.6/10; user approved). Entire filesystem-policy cutover milestone is 100% complete (2/2 phases).  

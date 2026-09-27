@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createRoutingError } = require('./errors.cjs');
+const { verifyPinnedDirectoryWindows } = require('./windows-platform.cjs');
 const { inspect, removeOwned, same } = require('./state-io.cjs');
 const {
   validateHistoryExecutionV1,
@@ -65,6 +66,10 @@ function pruneOldestTerminalRecords(ctx, records, bytesToFree, retentionCutoffMs
       consultationId: item.consultationId
     }, false);
     if (cDir) {
+      if (process.platform === 'win32' && !verifyPinnedDirectoryWindows(cDir.base)) {
+        try { cDir.close(); } catch {}
+        continue;
+      }
       let itemFreed = 0;
       try {
         const outFile = `${cDir.base}/outcome.json`;

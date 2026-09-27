@@ -18,12 +18,13 @@ const {
 } = require('./policy-schema.cjs');
 const {
   isUnsafeWindowsPath,
-  resolveWindowsHome
+  resolveWindowsHome,
+  readPinnedFileWindows,
+  verifyPinnedDirectoryWindows
 } = require('./windows-platform.cjs');
-
 function fail(code) { throw createRoutingError(code); }
 function existingStat(file) {
-  try { return fs.lstatSync(file); }
+  try { return fs.lstatSync(file, { bigint: true }); }
   catch (error) {
     if (error.code === 'ENOENT') return null;
     fail('ROUTE_PATH_UNSAFE');
@@ -35,8 +36,8 @@ function assertDirectorySafety(stat) {
 function assertPolicyFileSafety(stat) {
   if (stat.isSymbolicLink() || !stat.isFile()) fail('ROUTE_PATH_UNSAFE');
 }
-function identity(stat) { return { dev: stat.dev, ino: stat.ino }; }
-function sameIdentity(left, right) { return left.dev === right.dev && left.ino === right.ino; }
+function identity(stat) { return { dev: stat.dev.toString(), ino: stat.ino.toString() }; }
+function sameIdentity(left, right) { return String(left.dev) === String(right.dev) && String(left.ino) === String(right.ino); }
 function realPath(file) {
   try { return fs.realpathSync.native(file); }
   catch { fail('ROUTE_PATH_UNSAFE'); }
@@ -86,13 +87,26 @@ function assertContextStable(context) {
     if (!current || !sameIdentity(identity(current), directory.identity)
       || realPath(directory.path) !== directory.realpath) fail('ROUTE_PATH_UNSAFE');
     assertDirectorySafety(current);
+    if (process.platform === 'win32' && !verifyPinnedDirectoryWindows(directory.path)) fail('ROUTE_PATH_UNSAFE');
   }
 }
 function resolvePolicyPath() { return createContext(platformHome()).policyPath; }
 function readPolicyFile(context, expectedStat) {
+  assertContextStable(context);
+  if (process.platform === 'win32') {
+    const pinned = readPinnedFileWindows(context.policyPath, MAX_POLICY_BYTES);
+    if (!pinned) {
+      const initial = existingStat(context.policyPath);
+      if (initial && initial.size > MAX_POLICY_BYTES) fail('ROUTE_POLICY_OVERSIZED');
+      fail('ROUTE_PATH_UNSAFE');
+    }
+    if (!sameIdentity(identity(pinned.stat), identity(expectedStat))) fail('ROUTE_PATH_UNSAFE');
+    assertPolicyFileSafety(pinned.stat);
+    assertContextStable(context);
+    return decodeUtf8(pinned.bytes, 'ROUTE_POLICY_MALFORMED');
+  }
   const noFollow = fs.constants.O_NOFOLLOW;
   if (typeof noFollow !== 'number' && process.platform !== 'win32') fail('ROUTE_PATH_UNSAFE');
-  assertContextStable(context);
   let descriptor;
   try {
     const flags = process.platform === 'win32'

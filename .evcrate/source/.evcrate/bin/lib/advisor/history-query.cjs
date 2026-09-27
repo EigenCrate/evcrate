@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createRoutingError } = require('./errors.cjs');
+const { writePinnedFileWindows } = require('./windows-platform.cjs');
 const { inspect, directory, absolute, writeExclusive, same, NOFOLLOW } = require('./state-io.cjs');
 const {
   validateHistoryExecutionV1,
@@ -245,14 +246,17 @@ function exportHistory(dependencies, options, fns) {
       };
     }
 
-    const targetDescriptorPath = process.platform === 'win32'
-      ? path.join(destParent, destBase)
-      : `/proc/self/fd/${parentFd}/${destBase}`;
-    writeExclusive(targetDescriptorPath, Buffer.from(jsonText, 'utf8'));
-    if (process.platform !== 'win32' && parentFd !== undefined) {
-      fs.fsyncSync(parentFd);
+    if (process.platform === 'win32') {
+      const targetPath = path.join(destParent, destBase);
+      const writeRes = writePinnedFileWindows(targetPath, Buffer.from(jsonText, 'utf8'), { replaceIfExists: false });
+      if (writeRes.status !== 'ok') fail('REQUEST_INVALID');
+    } else {
+      const targetDescriptorPath = `/proc/self/fd/${parentFd}/${destBase}`;
+      writeExclusive(targetDescriptorPath, Buffer.from(jsonText, 'utf8'));
+      if (parentFd !== undefined) {
+        fs.fsyncSync(parentFd);
+      }
     }
-
     return {
       protocol: 'evcrate-advisor-history',
       version: 1,
