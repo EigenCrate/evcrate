@@ -17,7 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -47,7 +47,7 @@ export async function buildPluginPackage(options = {}) {
   try {
     const sdkPath = path.join(PLUGIN_DIR, 'node_modules', '@dam-hopper', 'plugin-sdk', 'dist', 'manifest.js');
     if (fs.existsSync(sdkPath)) {
-      const { validateManifest } = await import(sdkPath);
+      const { validateManifest } = await import(pathToFileURL(sdkPath).href);
       validateManifest(manifest);
     }
   } catch (err) {

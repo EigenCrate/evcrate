@@ -1,6 +1,6 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline. Hook Materialization Scope Distribution is
+**Status:** Current requirements baseline. Filesystem cutover Phase 01 (launchability and identity) is complete (2026-09-27). Hook Materialization Scope Distribution is
 complete through Phase 09, Windows release qualification through Phase 10, and
 All-project advisor history through Phase 05 (6/6 phases, 100%; 2026-09-24).
 Native Windows advisor support Phase 01 feasibility is proven (2026-09-26; 67/67 checks passed, review approved 9.3/10; production Windows runtime qualification not claimed).
@@ -9,7 +9,7 @@ DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
 not release-authorized.
-**Updated:** 2026-09-26
+**Updated:** 2026-09-27
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
 
@@ -100,13 +100,21 @@ filesystem use; broader Windows runtime equivalence outside the installer/versio
 ### FR-3: Bounded resource registry and imports
 
 **Requirement:** `.evcrate/registry.json` remains a distinct schema-1 canonical
-resource registry. Scans are owner-controlled, deterministic, mode-aware, and
-bounded. Explicit imports use immutable preview descriptors and single-use tokens.
+resource registry. Scans validate canonical and resource-root containment and are
+deterministic and bounded. Resource file identities bind content and physical kind,
+not permission bits; direct-file imports use the same domain-separated hash as
+registry scanning/verification, while generic `hashFile` remains a raw byte digest
+and directory-tree identities remain unchanged. Explicit imports use immutable
+preview descriptors and single-use tokens.
 
-**Acceptance:** Scans reject symlinks/special entries and stale content; preview
-writes no canonical or generated content; apply rechecks source identity, hashes,
-registry/manifest/adapter bindings, approvals, destination, provenance, and expiry.
-Conflicts preserve unmanaged or differently-owned nodes.
+**Acceptance:** Scans reject symlinks/special entries and stale content or kind;
+permission-only changes do not change resource identity. Preview writes no canonical
+or generated content; apply rechecks source identity, hashes, registry/manifest/
+adapter bindings, approvals, destination, provenance, and expiry. The committed
+schema-1 registry is regenerated through `npm run generate:registry`; prior raw-file
+hashes are not silently accepted. Capability signals remain separate from content
+identity; execute-bit capability policy remains unresolved for Phase 02. Conflicts
+preserve unmanaged or differently-owned nodes.
 
 ### FR-4: One-shot TypeScript CLI
 
@@ -263,9 +271,10 @@ command implementation.
 ### FR-13: Sanitized audit history and outcome review
 
 **Requirement:** Store a bounded, versioned execution record and linked outcome
-record for each v2 consultation under the owner-only
+record for each v2 consultation under the cross-platform trusted-files policy in the
 `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`
-hierarchy. Preserve started/attempt/terminal facts, route/build/prompt
+hierarchy (historical owner-only/0700/0600 mode requirements are superseded).
+Preserve started/attempt/terminal facts, route/build/prompt
 identity, disposition, actual changed paths, validation, outcome, and
 correction number without raw reasoning or credentials.
 
@@ -501,7 +510,42 @@ The scan was not a new live DamHopper browser session; production deployment rem
 
 **Status and evidence:** Phase 02 DONE (2026-09-26; parent-approved after Cycle 3 conditional review, 7.4/10). The [review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md) records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests; the exact closure is 36 files.
 
-**Acceptance boundary:** Two findings remain approved Phase 03/04 follow-ups: capture each child’s creation token at spawn before Windows termination, and thread file/directory paths through `state-io.cjs` and `history-store.cjs` ownership checks. Phase 02 does not establish PID-reuse-safe termination, complete state/history ownership verification, Phase 03 host prompt invocation/publication, or Phase 04 production Windows runtime qualification.
+**Acceptance boundary:** The state/history path-threaded ownership check follow-up was superseded by the cross-platform trusted-files policy (all advisor filesystem UID/SID/DACL/mode restrictions removed). Runner spawn-time child creation-token capture remains an approved follow-up. Phase 02 does not establish PID-reuse-safe termination, Phase 03 host prompt invocation/publication, or Phase 04 production Windows runtime qualification.
+
+### FR-24: Launchability and filesystem identity (Phase 01)
+
+**Status:** DONE (2026-09-27). See the [phase plan](../plans/260927-0428-filesystem-cutover-review/phase-01-launchability-and-identity.md) and [review](../plans/reports/code-review-260927-1740-phase-01-launchability-and-identity.md).
+
+**Requirement:** Keep launch permission, capability assessment, content identity, and
+CAS evidence distinct. Publication derives launcher intent from materialized paths,
+published bytes, and explicit launcher roles; it does not use source permission bits
+as publication-plan identity. Resource file roots use a file-kind-separated hash
+shared by canonical registry scanning/verification and direct-file imports. Advisor
+state/history and baseline comparisons tolerate permission-only metadata changes
+without dropping byte, physical-object, index, or lock-ownership checks.
+
+**Acceptance:**
+- A fresh HOME/project publication can materialize shebang-bearing and explicitly
+  recognized launcher files as directly runnable POSIX outputs; content-equal
+  publication remains a no-op. Permission-only plan changes do not create operations.
+- The Linux installer provisions required CLI/advisor launcher roles independently
+  of tar execute bits, verifies the staged CLI shebang, and invokes the staged path
+  directly. Required execute-bit provisioning failure aborts; local-build staging
+  reports its existing sanitized `PUBLICATION_FAILED` error.
+- Advisor state/history CAS ignores ctime and chmod-only drift only while file type,
+  object identity, link count, and bytes remain stable. Lock cleanup remains bound
+  to lock object and token/process identity.
+- Baseline evidence normalizes executable-only Git mode changes while retaining
+  selected bytes, index blob/stage data, conflicts, and rename endpoints. Content,
+  identity, kind, conflict, or rename changes remain stale.
+- Direct resource-file identity cannot alias a directory-tree identity; scanner,
+  registry verification, and direct-file import agree. Generic `hashFile` remains
+  a raw byte hash, and directory tree encodings remain unchanged.
+
+**Boundary:** Mode/suffix/shebang inputs remain separate capability metadata. Phase 01
+does not decide whether execute-bit-only capability transitions are an exception to
+chmod-invariance. Durable journal recovery/migration policy and Windows readiness or
+production-runtime qualification remain outside this phase.
 
 ## Non-functional requirements
 
@@ -509,7 +553,7 @@ The scan was not a new live DamHopper browser session; production deployment rem
 |---|---|
 | Operability | Dry-run/apply, recovery, sanitized receipts/errors, history list/show/export/prune review tools, read-only history metrics, and clear ownership of user-managed state. |
 | Bounded work | Bound documents, paths, files, process streams, deadlines, workspace, and transaction state. |
-| Reproducibility | Canonical JSON, deterministic ordering, SHA-256, mode-aware hashes, and exact closure manifests. |
+| Reproducibility | Canonical JSON, deterministic ordering, SHA-256, domain-separated resource-file/tree identities, and exact closure manifests; permissions are not content hashes. |
 | Isolation | No credentials in policy/checkpoint/results; vendor CLIs own credentials; child processes receive fixed environments. |
 | Compatibility | Preserve explicit target boundaries; never silently synthesize unsupported adapters or aliases. |
 | Operability | Dry-run/apply, recovery, sanitized receipts/errors, history list/show/export/prune review tools, and clear ownership of user-managed state. |
@@ -563,7 +607,7 @@ All-project advisor history (Phases 00–05) is complete and its paired release 
 14. E05/G4 cannot be accepted from source removal alone. Joint external Linux
     owner-runner and separate-LAN qualification evidence plus sign-off are
     required; they are not present in this workspace.
-15. Native Windows advisor Phase 01 proved compatibility primitives (67/67 checks, review 9.3/10). Phase 02 controller lifecycle is parent-approved DONE after Cycle 3 conditional review (7.4/10); its review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The runner spawn-token and state/history ownership-path findings remain approved Phase 03/04 follow-ups; no production Windows runtime qualification is claimed.
+15. Native Windows advisor Phase 01 proved compatibility primitives (67/67 checks, review 9.3/10). Phase 02 controller lifecycle is parent-approved DONE after Cycle 3 conditional review (7.4/10); its review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The state/history ownership-path follow-up was superseded by the cross-platform trusted-files policy; runner spawn-token capture remains an approved follow-up; no production Windows runtime qualification is claimed.
 
 ## Documentation map
 

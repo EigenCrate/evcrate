@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { assertNoSymlinkAncestors, assertOwnerControlledDirectory, assertRealDirectory } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory } from '../filesystem/paths.js';
 import { validateProjectId } from '../protocol/validation.js';
 
 const PROJECT_HASH = /^[a-f0-9]{64}$/u;
@@ -16,7 +16,6 @@ export function canonicalProjectRoot(projectRoot: string): string {
   const root = resolve(projectRoot);
   assertNoSymlinkAncestors(root);
   assertRealDirectory(root);
-  assertOwnerControlledDirectory(root);
   let canonical: string;
   try {
     canonical = realpathSync.native ? realpathSync.native(root) : realpathSync(root);
@@ -25,7 +24,7 @@ export function canonicalProjectRoot(projectRoot: string): string {
     throw new ControlPlaneError('PATH_UNSAFE');
   }
   assertNoSymlinkAncestors(canonical);
-  assertOwnerControlledDirectory(canonical);
+  assertRealDirectory(canonical);
   return canonical;
 }
 

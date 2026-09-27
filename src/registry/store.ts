@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { canonicalJson } from '../protocol/json.js';
 import { PERSISTED_TARGETS } from '../protocol/validation.js';
-import { completeTreeHash, compareCanonicalPaths, hashBytes, hashFileWithMode } from '../filesystem/hashing.js';
+import { completeTreeHash, compareCanonicalPaths, hashBytes, hashFile, resourceFileHash } from '../filesystem/hashing.js';
 import { containedPath, normalizeRelativePath } from '../filesystem/paths.js';
 import { snapshot, type NodeSnapshot } from '../distribution/promotion-recovery.js';
 import { scanCanonicalResources } from './scanner.js';
@@ -19,7 +19,7 @@ function present(path: string): boolean {
 function identity(path: string): RegistryFileRevision {
   const value = snapshot(path, 'PATH_UNSAFE');
   if (!value.present) return { kind: 'absent', identity: 'absent' };
-  return { kind: 'present', identity: `sha256:${value.digest}:${value.dev}:${value.ino}:${value.size}:${value.mode}` };
+  return { kind: 'present', identity: `sha256:${value.digest}:${value.dev}:${value.ino}:${value.size}` };
 }
 function regularFile(path: string): boolean {
   try {
@@ -48,7 +48,7 @@ function destination(record: ResourceRecord, canonicalRoot: string, roots: Resou
 }
 function verifyRecord(record: ResourceRecord, canonicalRoot: string, roots: ResourceRootMap): void {
   const path = destination(record, canonicalRoot, roots);
-  const actual = lstatSync(path).isDirectory() ? completeTreeHash(path) : hashFileWithMode(path);
+  const actual = lstatSync(path).isDirectory() ? completeTreeHash(path) : resourceFileHash(path);
   if (actual !== record.content_hash) invalid('CAS_CONFLICT');
 }
 function verifyRegistry(document: RegistryDocument, canonicalRoot: string, roots: ResourceRootMap): void {

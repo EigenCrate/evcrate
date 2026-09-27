@@ -1,11 +1,11 @@
 # System Architecture
 
-**Status:** Current implementation reference; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+**Status:** Current implementation reference; Phase 01 launchability and identity is complete (2026-09-27); Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
 **DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
 **Windows support:** Installer/version qualification remains the only qualified Windows release boundary; native advisor controller integration is complete through Phase 02, but production runtime qualification remains pending.
-**Native Windows advisor status:** Phases 01–02 of [native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) are complete in source. Two approved Phase 03/04 follow-ups remain; existing Windows qualification does not cover production advisor runtime.
-**Updated:** 2026-09-26
+**Native Windows advisor status:** Phases 01–02 of [native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) are complete in source. The prior state/history Windows ownership follow-up was superseded by the cross-platform trusted-files policy (advisor filesystem UID/SID/DACL/mode restrictions removed); runner spawn-time creation-token capture remains an approved follow-up. Existing Windows qualification does not cover production advisor runtime.
+**Updated:** 2026-09-27
 
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
@@ -16,7 +16,7 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.1.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.3.2`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections. Node `>=22.19.0` is the package engine. The package exposes:
 
@@ -121,15 +121,16 @@ Invocation context uses a strict host/portable path boundary:
 ## 4. Build, hash, and publication
 
 A local build stages canonical resources and selected projections outside the live
-roots, validates each projection, computes hashes, and verifies a schema-2 build
-manifest. The manifest records source, adapter, controller, owner, output, and
-validation metadata. The current build is usable only when validation is complete
-and all current source/adapter/output hashes, ownership, and expected files match.
+roots, validates each projection, and verifies a schema-2 manifest recording source,
+adapter, controller, owner, output, and validation data. Resource file roots use a
+file-domain hash separate from directory-tree identity; generic `hashFile` remains raw
+bytes. A build is current only when validation and expected-file/hash/owner checks match.
 
-Build/check and publication are separate operations. Publication accepts a scalar
-`--scope home|project` parameter (defaulting to `home`). Exactly one neutral,
-verified `VerifiedCurrentBuild` snapshot and digest feeds two ordered logical phases:
-`shared` (phase 1) and `harness` (phase 2).
+Build/check and publication are separate. One neutral verified build snapshot/digest
+feeds ordered shared and harness phases for scalar `--scope home|project` (default
+`home`). `publication-plan.ts` derives launch intent from published path roles and
+shebang bytes, not source mode; mode-only changes are not actions, and new/updated
+POSIX launcher writes receive additive execute bits.
 
 1. **Shared infrastructure**: The advisor controller closure (`.evcrate/bin`) is
    unconditionally published under `--home` (`<home>/.evcrate/bin`) in both scopes.
@@ -156,8 +157,7 @@ verified `VerifiedCurrentBuild` snapshot and digest feeds two ordered logical ph
        and commits harness projections to `--project-root`.
      - The shared HOME commit is never compensated or rolled back if project harness application fails.
 4. **Preflight and safety invariants**:
-   - Complete path validation, non-symlink ancestor checks, owner control, and intra-/cross-target
-     overlap detection run before any destination reads or mutations.
+   - Complete path validation, non-symlink ancestor/kind and containment checks, managed-resource ownership conflict checks, and intra-/cross-target overlap checks before destination reads or mutations.
    - Both destinations must verify same-volume atomicity with their respective staging roots.
 5. **Partial failure semantics (exit code 5)**:
    - Failure before shared commit fails closed as an ordinary resource error.
@@ -180,8 +180,10 @@ and `<root>/bin/evcrate.cmd`. Publication state is separate from either
 installer layout.
 
 The TypeScript engine is authoritative; no root `distribute.py` exists, and stale
-Python commands are not primary procedures. The Windows release candidate and
-publisher are a separate semantic-release boundary; see [PDR FR-15](./project-overview-pdr.md#fr-15-canonical-semantic-release-candidate-and-verify-only-publisher).
+Python commands are not primary procedures. Publication and advisor state/history CAS
+bind kind, object, and bytes rather than permission or ctime metadata; advisor state
+and history also verify bytes and lock identity at final transitions. The Windows
+release candidate and publisher are separate; see [PDR FR-15](./project-overview-pdr.md#fr-15-canonical-semantic-release-candidate-and-verify-only-publisher).
 
 ### 4.1 Release workflow trust boundary (Phases 07–10)
 `.github/workflows/release.yml` implements `release-candidate` →
@@ -254,10 +256,11 @@ lib/advisor/windows-platform.cjs
 contains the instructions, SHA-256 digest, and `evcrate-advisor-v2-*` build
 identity; it is part of the closure and is not hand-edited.
 
-Source and projection entries must be regular non-symlink files with the
-expected entrypoint shebang/mode. Native helper assets remain part of the exact
-closure and are hashed by the generated inventory; `controller_hashes` block
-missing, extra, stale, or mismatched entries.
+The controller closure permits only regular, non-symlink files; `evcrate-advisor` is
+checked for its canonical Node shebang. Closure hashes cover file bytes, not
+permission modes, and reject missing, extra, stale, or mismatched entries. Linux
+`install.sh` grants mandatory CLI/advisor roles execute bits regardless of archive
+mode and runs the staged CLI directly; required chmod failure aborts installation.
 
 Native Windows advisor Phase 02 expands the synchronized `install.sh` and
 `install.ps1` controller inventories to 36 code-point-sorted paths. The manifest
@@ -291,9 +294,9 @@ Wait warnings are bounded to `1000..3600000` ms; history retention is
 output, termination, and adapter probes remain bounded. Policy bytes remain
 bounded to 16 KiB and use fatal-UTF-8/strict-JSON parsing,
 duplicate-key, control-character, credential, unknown-field, unsafe-path, and
-candidate-backend checks. The policy file is regular and user-owned;
-`$HOME` and `.evcrate` ancestors must be real user-controlled directories without
-limiting mode bitmasks or failing closed on standard umask permissions.
+candidate-backend checks. The policy file is regular and user-managed input.
+`$HOME` and `.evcrate` ancestors must be real, path-safe directories; host
+permissions and umask are preserved without UID/SID/ACL or exact-mode checks.
 Candidate backends are `claude`, `codex`, `antigravity`, `pi`, and `omp`;
 enabled backends are `claude`, `codex`, `pi`, and `omp`. `antigravity` is an
 unavailable candidate; Gemini and Copilot are not controller backends.
@@ -339,7 +342,7 @@ The following wire versions remain frozen:
 | `evcrate-advisor-result` | 2 | Controller-normalized structured counsel. |
 | `evcrate-advisor-controller` | 2 | Terminal envelope with attempts and audit status. |
 | Settings request/result, journal, preview | 1 | Existing TS transaction transport; policy payload is v2. |
-| Task state, execution history, outcome | 1 | Owner-only local records; task state remains required gate authority, while history/outcome provide optional rich audit. |
+| Task state, execution history, outcome | 1 | Local records follow the cross-platform trusted-files policy; task state remains required gate authority, while history/outcome provide optional rich audit. |
 
 The v2 checkpoint requires `task_run_id`, `checkpoint_id`, `phase_id`,
 `task_revision`, `evidence_revision`, decision kind, task constraints,
@@ -415,7 +418,6 @@ malformed requests remain sanitized `FAILED`/`REQUEST_INVALID` results. The
 operation does not claim complete audit coverage, task success, cost, saved
 time, or causal effectiveness, and does not alter list/show/export/prune.
 
-
 #### Historical standalone explorer milestones (Phases 05–10; 2026-09-18–19)
 
 Phase 05 (2026-09-18) recorded explicit-handle history traversal, bounded reads,
@@ -430,7 +432,6 @@ the tested Chromium/Linux scope and metric limits.
 Those browser picker/reader sources were later removed from this repository. The
 dated milestone records are not current standalone support, current release-asset
 verification, or G4 qualification; source removal does not authorize retirement.
-
 
 ### 5.3 Compatibility checkpoint wire contract
 
@@ -519,7 +520,7 @@ against same-user automation. Per-host authentic event linkage remains Phase 08.
 Recovery preserves state/work, requires dead or never-started pending identity,
 and never kills or relaunches a process.
 
-State is owner-only, strictly validated and bounded to 64 KiB. A 64-entry operation
+State files follow the cross-platform trusted-files policy (no UID/SID/ACL/0700/0600 private-mode enforcement; preserving OS permissions/errors, kind/symlink/nlink/identity/path/schema/bounds/CAS/process locks, and human approval). State is strictly validated and bounded to 64 KiB. A 64-entry operation
 ledger and 16 human-decision limit fail closed rather than forget replay IDs.
 Selected baseline records retain initial user content digests plus relevant Git
 dirty/index/rename/deletion metadata; current evidence freshness ignores unrelated
@@ -527,17 +528,15 @@ files. Selected exact file paths are bounded to 32 (16 proposed changes), reads
 to 16 MiB/file and 64 MiB total. Digests and declared validation identity do not
 authenticate executor claims or prove semantic/hunk attribution.
 
-Storage uses Linux descriptor-pinned I/O, atomic fsync writes, and short
-process-start/token locks; no lock survives an inference wait. Windows state,
-baseline, and history paths now have platform-specific implementations while
-retaining the existing Linux branches and schemas. The native bridge supports
-SID ownership verification, but `state-io.cjs` and `history-store.cjs` still
-omit file paths at affected owner-check callsites; Windows state/history ownership
-is not complete until the approved Phase 03/04 follow-up threads paths and fails
-closed. Unknown process identity remains preserved for inspection. Optional rich
-audit is not required state authority. V1 callers remain outside this v2 state path
-until the Phase 08 canonical workflow cutover; no universal mediated-write
-enforcement is claimed.
+Storage uses descriptor-pinned I/O, atomic fsync writes, and short
+process-start/token locks; no lock survives an inference wait. Windows and Linux
+state, baseline, and history paths operate under the trusted-files policy while
+retaining platform branches and schemas. Advisor filesystem UID/SID/DACL/mode
+restrictions were removed; the prior Phase 03/04 follow-up requiring path-threaded
+Windows ownership verification is superseded. Unknown process identity remains
+preserved for inspection. Optional rich audit is not required state authority.
+V1 callers remain outside this v2 state path until the Phase 08 canonical workflow
+cutover; no universal mediated-write enforcement is claimed.
 
 ### 5.4 Current v1 compatibility and v2 bounded transaction envelopes
 
@@ -550,8 +549,7 @@ the configured backup once. Backup failure is terminal; there is no provider or
 model substitution, parallel hedge, or local fallback.
 
 The controller generates a correlation UUID, parses the checkpoint, loads policy
-once, probes each selected adapter before its launch, creates one empty owner-only
-workspace, and cleans up after each child exits.
+once, probes each selected adapter before its launch, creates one empty isolated workspace under the trusted-files policy, and cleans up after each child exits.
 
 For a v2 checkpoint, the controller computes the checkpoint digest and uses
 `formatMentorPrompt`: the generated canonical mentor brief is followed by
@@ -603,7 +601,7 @@ later launches.
 The runner uses `shell: false`, fixed allowlisted argv/environment, stdin-only
 prompt delivery, fatal UTF-8 decoding, bounded streams/results, and one
 monotonic deadline. POSIX detached process groups receive TERM, then KILL if
-needed, and descendants are reaped. The workspace is empty, owner-only, outside
+needed, and descendants are reaped. The workspace is empty, isolated, outside
 the repository, checked against symlink/identity changes, and removed after
 child termination.
 
@@ -667,9 +665,9 @@ Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidat
 
 Phase 01 proved Win32 primitives (67/67 checks); Phase 02 controller integration is parent-approved DONE after Cycle 3 conditional review (7.4/10). The dated review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests, plus a 36-file controller closure.
 
-`windows-platform.cjs` coordinates Windows home/project identity, allowlisted environment, provider executable resolution, and native owner/process operations; `windows-native.ps1` dispatches fixed operations to `windows-native.cs` for SID/DACL checks, process identity/status, and console challenge observation.
+`windows-platform.cjs` coordinates Windows home/project identity, allowlisted environment, provider executable resolution, and native process operations; `windows-native.ps1` dispatches fixed operations to `windows-native.cs` for process identity/status and console challenge observation (SID/DACL ownership checks were removed under the cross-platform trusted-files policy).
 
-Two accepted Phase 03/04 follow-ups remain: `runner.cjs` lacks spawn-time child creation-token capture; `state-io.cjs` and `history-store.cjs` omit paths at ownership checks. Do not claim PID-reuse-safe teardown, complete state/history owner verification, or production Windows runtime qualification.
+The prior follow-up for path-threaded state/history Windows ownership checks is superseded by the cross-platform trusted-files policy. One accepted follow-up remains: `runner.cjs` lacks spawn-time child creation-token capture. Do not claim PID-reuse-safe teardown or production Windows runtime qualification.
 
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
@@ -690,8 +688,8 @@ limited to the installer/version subset described in Section 7.
 
 Phase 07 history is optional rich audit, not task-state authority:
 
-- Store owner-only `execution.json` (128 KiB) and `outcome.json` (64 KiB) under
-  `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`.
+- Store version-1 `execution.json` (128 KiB) and `outcome.json` (64 KiB) under
+  `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/` (historical requirement; since superseded by the cross-platform trusted-files policy, removing UID/SID/0600 mode restrictions).
 - Record a started snapshot before model launch; settle terminal
   `ADVICE_READY`/`FAILED` exactly once with CAS identity and byte checks.
 - Link outcomes to task/consultation identity, disposition, evidence revision,
@@ -736,7 +734,7 @@ Phase 09 synchronized the generated release boundary:
    publication commits the shared HOME controller first and then project harness
    output. A harness failure rolls back only project work; `PUBLICATION_FAILED` and
    `ROLLBACK_FAILED` are both exit category 5 outcomes.
-6. **Recovery.** Recovery requires quiescence, validates owner-controlled paths and
+6. **Recovery.** Recovery requires quiescence, validates contained paths and
    canonical project identity, and reads only the requested scope. `staged`/`promoting`
    journals roll back when snapshots match; `committed` journals finalize cleanup;
    no journal returns `action: "none"`. Recovery never rolls back a completed release.
@@ -764,7 +762,7 @@ and [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-vi
 **E00:** `evcrate-advisor-data` v1 freezes eight reads; G0 permits only
 `node:fs`, `node:path`, and `node:crypto` (controller-inventory delta `0`).
 **E01:** `provider.cjs` validates/gates E00 methods; binding, snapshot/cursor,
-history, policy, and evaluation modules enforce owner/path/fingerprint boundaries.
+history, policy, and evaluation modules enforce path, kind, symlink, nlink, size, schema, and fingerprint boundaries under the cross-platform trusted-files policy (filesystem UID gates removed).
 **E02:** The pinned D00 SDK owns framing and strict UTF-8 JSON-RPC; the worker
 bounds contexts, requests, cancellation, safe errors, and deterministic output.
 **E03:** Current `AdvisorDataProvider` uses the bounded DamHopper `MessagePort`;

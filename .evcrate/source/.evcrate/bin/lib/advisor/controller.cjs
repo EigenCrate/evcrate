@@ -84,7 +84,8 @@ function resolveExecutablePath(executable, envPath) {
   if (pathImpl.isAbsolute(executable)) {
     try {
       const stat = fsImpl.statSync(executable);
-      if (stat.isFile() && (stat.mode & 0o111)) {
+      fsImpl.accessSync(executable, fsImpl.constants.X_OK);
+      if (stat.isFile()) {
         return fsImpl.realpathSync.native(executable);
       }
     } catch { return null; }
@@ -95,7 +96,8 @@ function resolveExecutablePath(executable, envPath) {
     const candidate = pathImpl.join(dir, executable);
     try {
       const stat = fsImpl.statSync(candidate);
-      if (stat.isFile() && (stat.mode & 0o111)) {
+      fsImpl.accessSync(candidate, fsImpl.constants.X_OK);
+      if (stat.isFile()) {
         return fsImpl.realpathSync.native(candidate);
       }
     } catch {}

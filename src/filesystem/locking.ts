@@ -1,9 +1,9 @@
-import { constants, chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeSync } from 'node:fs';
+import { constants, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { parseJsonDocument } from '../protocol/json.js';
-import { assertNoSymlinkAncestors, assertOwnerControlledDirectory, assertOwnerOnlyFile, assertRealDirectory } from './paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile } from './paths.js';
 import { canonicalJsonBytes, readBoundedFile } from './hashing.js';
 import { MAX_PUBLICATION_STATE_BYTES } from '../protocol/publication-payloads.js';
 import { writeAtomicFile } from './atomic.js';
@@ -24,14 +24,10 @@ function fail(code: 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never {
 function secureStateDirectory(path: string): string {
   const root = resolve(path);
   assertNoSymlinkAncestors(root);
-  try { assertOwnerControlledDirectory(root); } catch (error) {
-    if (!existsSync(root)) {
-      mkdirSync(root, { recursive: true, mode: 0o700 });
-      chmodSync(root, 0o700);
-    } else throw error;
+  if (!existsSync(root)) {
+    mkdirSync(root, { recursive: true });
   }
   assertRealDirectory(root);
-  if (process.platform !== 'win32') chmodSync(root, 0o700);
   return root;
 }
 
@@ -57,14 +53,14 @@ function processAlive(metadata: LockMetadata): boolean {
 
 function readLockMetadata(path: string): LockState | false {
   try {
-    const initial = assertOwnerOnlyFile(path);
+    const initial = assertRegularFile(path);
     const value = parseJsonDocument(readBoundedFile(path, 4096));
     if (value === null || Array.isArray(value) || typeof value !== 'object') return false;
     const record = value as Record<string, unknown>;
     if (!Number.isSafeInteger(record.pid) || !Number.isSafeInteger(record.startedAt) || typeof record.token !== 'string'
       || !/^[a-f0-9]{32}$/u.test(record.token)
       || (record.processStart !== undefined && record.processStart !== null && typeof record.processStart !== 'string')) return false;
-    const final = assertOwnerOnlyFile(path);
+    const final = assertRegularFile(path);
     if (Number(initial.dev) !== Number(final.dev) || Number(initial.ino) !== Number(final.ino)
       || Number(initial.size) !== Number(final.size)) return false;
     return {
@@ -96,7 +92,7 @@ function acquireLock(stateRoot: string, name: string): () => void {
   const token = randomBytes(16).toString('hex');
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      descriptor = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | NO_FOLLOW, 0o600);
+      descriptor = openSync(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | NO_FOLLOW, 0o666);
       break;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') fail('PUBLICATION_FAILED');
@@ -164,5 +160,5 @@ export function writeReleaseMarker(stateRoot: string, marker: Record<string, unk
   const bytes = canonicalJsonBytes(marker);
   if (bytes.byteLength > MAX_MARKER_BYTES) fail('PUBLICATION_FAILED');
   const path = markerPath(stateRoot);
-  writeAtomicFile(path, bytes, 0o600);
+  writeAtomicFile(path, bytes);
 }

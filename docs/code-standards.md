@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard
-**Updated:** 2026-09-24
+**Updated:** 2026-09-27
 **Applies to:** TypeScript control plane, Phase E00/01 Advisor Plugin contracts,
 Phase E03 provider-neutral embedded UI, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
@@ -230,16 +230,18 @@ valid JSON.
 
 Keep `.evcrate/registry.json` (schema 1) distinct from target/build manifests
 (schema 2). Registry records use stable `kind:canonical-relative-path` IDs,
-canonical source paths, mode-aware content hashes, provenance, all seven target
-compatibility entries, capabilities, bounded optional metadata, and positive
-revisions. IDs and records sort by Unicode code point.
+canonical source paths, file-versus-tree domain-separated content hashes, provenance,
+all seven target compatibility entries, capabilities, bounded optional metadata,
+and positive revisions. IDs and records sort by Unicode code point. Permission bits
+are not content hashes; capability assessment remains separate.
 
-Canonical scans use owner-controlled roots, reject symlink/special entries, and hash
-before discovery. Resource kinds are fixed: skill directories contain `SKILL.md`;
-agents/workflows are root-level Markdown files; commands recurse for Markdown files;
-hooks are root-level files or directories. Imported content is never executed.
+Canonical scans validate canonical-root and resource-root containment, reject
+symlink/special entries, and hash before discovery. Resource kinds are fixed: skill
+directories contain `SKILL.md`; agents/workflows are root-level Markdown files;
+commands recurse for Markdown files; hooks are root-level files or directories.
+Imported content is never executed.
 
-`imports.preview` reads immutable bounded descriptors into an owner-only stage and
+`imports.preview` reads immutable bounded descriptors into a bounded isolated stage and
 writes only a single-use replay token. `imports.apply` rechecks source identity,
 canonical/registry/manifest/adapter/output hashes, destination, provenance,
 approvals, expiry, and resource record before promotion. Same-provenance matches are
@@ -259,13 +261,13 @@ modules under `lib/advisor/generated/`, and three native Windows bridge files
 
 Phase 02 is parent-approved DONE (2026-09-26) after a Cycle 3 conditional review (7.4/10); this records controller integration, not production Windows qualification.
 
-- `windows-platform.cjs` owns trusted Windows home/project identity, case-insensitive allowlisted environment, provider executable/package-bin resolution, and owner/process helper access.
+- `windows-platform.cjs` owns trusted Windows home/project identity, case-insensitive allowlisted environment, provider executable/package-bin resolution, and native process helpers.
 - `windows-native.ps1` dispatches fixed operations from an absolute PowerShell path and argv; use encoded fixed commands, never interpolated shell strings or arbitrary `.cmd` bodies.
-- `windows-native.cs` implements SID/DACL ownership, process creation/status queries, and console input/output challenge observation. Piped JSON is never human approval.
+- `windows-native.cs` implements process creation/status queries and console input/output challenge observation (SID/DACL checks were removed under the cross-platform trusted-files policy). Piped JSON is never human approval.
 - Keep Windows behavior behind platform branches; preserve Linux descriptor, locking, and process-group paths and all public request/result schemas.
-- Windows owner checks require an explicit file/directory path. `state-io.cjs` and `history-store.cjs` still omit paths at affected callsites, so complete state/history ownership remains a Phase 03/04 follow-up.
+- The prior follow-up for state/history Windows ownership checks is superseded by the cross-platform trusted-files policy (all advisor filesystem UID/SID/DACL/mode restrictions removed).
 - `runner.cjs` still lacks spawn-time child creation-token capture; do not describe PID-reuse-safe Windows teardown as complete. Capture the token at spawn and terminate only against that identity.
-- The Cycle 3 review recorded 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The two critical wiring findings remain approved follow-ups; see the [Phase 02 plan](../plans/260926-1522-windows-advisor-support/phase-02-controller-lifecycle.md) and [review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md).
+- The Cycle 3 review recorded 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The state/history ownership follow-up is superseded; runner child creation-token capture remains an approved follow-up.
 
 
 ### Portable advisor contract runtime
@@ -323,15 +325,16 @@ Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 (`backend`/`model`/`effort`); wait mode is `until_terminal` with warning bounds
 `1000..3600000` ms; history is `1..365` days and
 `1048576..1073741824` bytes. Keep the 16 KiB policy limit and strict
-UTF-8/JSON, duplicate-key, credential, unknown-field, unsafe-path, owner, and
-mode checks. Candidate backends are `claude`, `codex`, `antigravity`, `pi`,
+UTF-8/JSON, duplicate-key, credential, unknown-field, and unsafe-path checks
+under the cross-platform trusted-files policy (UID/SID/0600 mode checks removed;
+SettingsMode is observational numeric metadata). Candidate backends are `claude`, `codex`, `antigravity`, `pi`,
 and `omp`; enabled backends are `claude`, `codex`, `pi`, and `omp`. Gemini and
 Copilot are not controller backends.
 
 Legacy host-v1 and single-target-v1 policy is read-only migration input. Settings
 `get` may return a `migration_required` view; execution rejects legacy policy.
 Use `get -> operator prepares v2 -> preview -> apply`. Preserve revisions,
-single-use preview authorization, owner/mode checks, byte-safe journal recovery,
+single-use preview authorization, path/type checks under the trusted-files policy, byte-safe journal recovery,
 and stale-token rejection. Never auto-write HOME, guess a backup, or place
 credentials in policy. Settings request/result, journal, and preview schemas
 remain v1 while carrying policy v2.
@@ -342,7 +345,7 @@ exactly seven body fields: `recommendation`, `rationale`, `must_fix`,
 `cautions`, `assumptions`, `success_checks`, and `unresolved_questions`. The
 v2 controller envelope carries bounded attempt summaries, build identity,
 sanitized errors, and audit status. State/execution/outcome records are schema
-v1 and owner-only. Keep paths metadata-only; the controller does not read
+v1 under the cross-platform trusted-files policy. Keep paths metadata-only; the controller does not read
 arbitrary checkpoint paths.
 
 The canonical mentor instructions are authored in
@@ -367,12 +370,11 @@ streams, detached POSIX groups, TERM/KILL cancellation, and descendant reaping.
 
 Phase 07 history is optional rich audit, never required task-state authority.
 Keep version-1 `execution.json` and `outcome.json` records strict, sanitized,
-owner-only, and bounded to 128 KiB and 64 KiB respectively. Store them under
+and bounded to 128 KiB and 64 KiB respectively under the cross-platform trusted-files policy
+(historical 0700/0600/owner-only requirements are superseded). Store them under
 `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/`;
-directories are `0700`, files are `0600`, and Linux descriptor pinning prevents
-ancestor swaps. Use the shared state I/O ownership, identity, atomic-write, and
-lock primitives; do not create an append-only stream or database.
-
+Linux descriptor pinning prevents ancestor swaps. Use the shared state I/O
+identity, atomic-write, and lock primitives; do not create an append-only stream or database.
 Record execution as `started` before model launch, update bounded attempt facts,
 then settle exactly once as <code>ADVICE_READY</code> or <code>FAILED</code>.
 Terminal settlement must recheck consultation/task/checkpoint identity and the
@@ -580,13 +582,10 @@ limits, closure, adapter boundaries, and support claims.
 - `assertNoSymlinkAncestors` is the sole ancestor guard. Walk from the parsed
   native root using `sep`, inspect existing components, stop only when a component
   is absent, and fail closed on other filesystem errors. Context resolution reuses it.
-- Require real owner-controlled directories for managed roots and ancestors.
-  Filesystem directories do not restrict or limit user permissions via strict
-  mode bitmasks; they allow standard user permissions without failing closed.
-  Never chmod or replace unrelated HOME or project data.
-- **Preflight before mutation**: Perform complete path normalization, ancestor verification,
-  owner control checks, intra- and cross-target overlap detection, and same-volume
-  verification before any destination reads, writes, or staging.
+- Managed roots and ancestors must be real directories with contained paths and no symlink ancestry. Preserve host permissions; do not require filesystem UID/SID/ACL, private-mode, or exact-mode attributes. Never chmod or replace unrelated HOME or project data.
+- **Preflight before mutation**: Normalize paths, verify ancestors/kinds and
+  containment, detect managed-resource ownership conflicts/target overlap, and verify
+  same-volume staging before destination reads or mutation.
 - **Two-phase project transactions and locking order**:
   1. Acquire HOME publication lock.
   2. Preflight shared controller and project harness destinations.
@@ -596,11 +595,12 @@ limits, closure, adapter boundaries, and support claims.
   6. If harness application fails: roll back only project workspace changes. Shared
      HOME commit is never rolled back or compensated.
   7. Release project lock, then release HOME lock.
-- Stage on the destination volume. Record device/inode/size/mode/digest snapshots
-  and compare them before every backup/promotion rename.
-- Write journals, markers, policy bytes, and lock metadata through owner-only atomic
-  temporary files; flush metadata where supported.
-- **Scope-isolated recovery**: Recover only validated, owner-controlled, contained journal
+- Stage on the destination volume. Publication snapshots bind physical kind,
+  device/inode/size, and content digest; compare these before backup/promotion.
+- Write journals, markers, policy bytes, and lock metadata through bounded atomic
+  temporaries; flush metadata where supported. Follow each component's permission
+  policy and do not infer trust or ownership from mode bits.
+- **Scope-isolated recovery**: Recover only validated, scope-bound, contained journal
   paths matching the requested scope (`--scope home` reads only HOME state;
   `--scope project` validates canonical `projectIdentity` and reads only
   `stateRoot/project-publication/<canonical SHA-256 identity>`). Restore the complete
@@ -610,6 +610,11 @@ limits, closure, adapter boundaries, and support claims.
   release requires matching token and device/inode identity; uncertain release
   leaves state for recovery.
 
+- Advisor state/history metadata comparisons ignore ctime and permission-only drift
+  only while type, object identity, link count, and bytes remain stable at CAS;
+  lock release/reaping also verifies the lock object and token/process identity.
+- Baseline Git evidence normalizes executable-only mode metadata only with matching
+  selected content/index evidence; preserve stages, conflicts, and rename endpoints.
 Advisor settings uses `advisor-settings.lock`, single-use preview tokens, durable
 prepared/backed-up/promoted journals, revision/CAS checks, and whole-document
 atomic apply. It never joins scope or target-publication atomicity.
@@ -623,9 +628,13 @@ persisted target and the aggregate set. Build manifests are schema 2 and carry
 `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`,
 `validation`, and `home_policy`.
 
-Build/check must verify complete validation, current hashes, regular non-symlink
-files, canonical entrypoint mode/shebang, and no missing/extra/foreign closure file.
-Publication consumes only a current verified build and preserves unmanaged roots.
+Build/check verifies complete validation, current hashes, regular non-symlink files,
+canonical controller entrypoint shebang, and exact closure membership; modes are not
+content hashes or publication action/CAS identity. `publication-plan.ts` derives
+launch intent from published paths/shebang bytes and explicit roles, not source mode.
+New or updated POSIX launcher writes receive additive `0111`; content-equal no-ops
+remain no-ops. Linux `install.sh` provisions mandatory roles regardless of archive
+mode; required chmod failures abort, and local-build staging reports `PUBLICATION_FAILED`.
 `install.sh` and `install.ps1` embed the same code-point-sorted 36-file list;
 changes to the generated inventory require parity updates in both installers.
 The manifest contract suite covers exact count/hash parity and rejects viewer or

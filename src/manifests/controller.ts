@@ -1,4 +1,4 @@
-import { accessSync, constants, lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile } from '../filesystem/paths.js';
@@ -68,7 +68,6 @@ export function validateAdvisorControllerSource(root: string): void {
   for (const entry of ADVISOR_CONTROLLER_FILES) assertRegularFile(join(root, entry));
   closure(root);
   if (readFileSync(join(root, 'evcrate-advisor'), 'utf8').split('\n')[0] !== '#!/usr/bin/env node') fail();
-  try { accessSync(join(root, 'evcrate-advisor'), constants.X_OK); } catch { fail(); }
 }
 export function controllerHashes(root: string): Record<string, string> {
   validateAdvisorControllerSource(root);
@@ -83,7 +82,6 @@ export function validateAdvisorControllerProjection(sourceRoot: string, outputRo
   for (const entry of ADVISOR_CONTROLLER_FILES) {
     if (!Buffer.from(readFileSync(join(sourceRoot, entry))).equals(Buffer.from(readFileSync(join(outputRoot, entry))))) fail();
   }
-  try { accessSync(join(outputRoot, 'evcrate-advisor'), constants.X_OK); } catch { fail(); }
   return renderAdvisorControllerMetadata();
 }
 export function controllerHashBytes(root: string): Uint8Array { return canonicalJsonBytes(controllerHashes(root)); }

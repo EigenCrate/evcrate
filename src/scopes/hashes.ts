@@ -1,33 +1,32 @@
-import { lstatSync } from 'node:fs';
+import { lstatSync, type Stats } from 'node:fs';
 import { join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { completeTreeHash, hashBytes, hashFile, hashFileWithMode, sourceTreeHash } from '../filesystem/hashing.js';
+import { completeTreeHash, hashBytes, hashFile, sourceTreeHash } from '../filesystem/hashing.js';
 import { loadSelectedManifests } from '../manifests/registry.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { PersistedTarget } from '../protocol/validation.js';
 import { normalizeRelativePath } from '../filesystem/paths.js';
 function pathHash(path: string): string {
-  let stat: ReturnType<typeof lstatSync>;
+  let stat: Stats;
   try { stat = lstatSync(path); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return hashBytes(new TextEncoder().encode('absent\0'));
     throw new ControlPlaneError('PATH_UNSAFE');
   }
   if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile())) throw new ControlPlaneError('PATH_UNSAFE');
-  const mode = Number(stat.mode) & 0o777;
   let content: string;
-  try { content = stat.isDirectory() ? completeTreeHash(path) : hashFileWithMode(path); }
+  try { content = stat.isDirectory() ? completeTreeHash(path) : hashFile(path); }
   catch (error) {
     if (error instanceof ControlPlaneError) throw error;
     throw new ControlPlaneError('PATH_UNSAFE');
   }
-  let final: ReturnType<typeof lstatSync>;
+  let final: Stats;
   try { final = lstatSync(path); } catch { throw new ControlPlaneError('PATH_UNSAFE'); }
   if (final.isSymbolicLink() || final.dev !== stat.dev || final.ino !== stat.ino
-    || final.size !== stat.size || (Number(final.mode) & 0o777) !== mode) {
+    || final.size !== stat.size) {
     throw new ControlPlaneError('PATH_UNSAFE');
   }
-  return hashBytes(new TextEncoder().encode(`${stat.isDirectory() ? 'directory' : 'file'}\0${mode}\0${content}\n`));
+  return hashBytes(new TextEncoder().encode(`${stat.isDirectory() ? 'directory' : 'file'}\0${content}\n`));
 }
 export interface ScopeChangeHashes {
   readonly selectedTargets: readonly PersistedTarget[];

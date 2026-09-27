@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   PUBLICATION_BINDING_ORDER, PERSISTED_TARGETS, assertPublicationRules, createPublicationPlanSet,
-  loadTargetManifest, mapPublicationPath, publishFile, resolveCurrentPublicationBuild,
+  deriveLaunchIntent, loadTargetManifest, mapPublicationPath, publishFile, resolveCurrentPublicationBuild,
   resolveInvocationContext, runLocalBuild
 } from '../../dist/index.js';
 const bytes = (value) => new TextEncoder().encode(value);
@@ -332,4 +332,23 @@ test('target subset planning preserves untouched logical ownership records', () 
     rmSync(nextFixture.root, { recursive: true, force: true });
     rmSync(fixture.root, { recursive: true, force: true });
   }
+});
+
+test('launch intent is derived from shebang bytes and direct launcher roles (F1 regression)', () => {
+  // Shebang node wrapper (e.g. Gemini .cjs hook)
+  assert.equal(deriveLaunchIntent('hooks/session-start.cjs', bytes('#!/usr/bin/env node\nconsole.log(1);')), true);
+  // Extensionless hook with shebang
+  assert.equal(deriveLaunchIntent('hooks/my-hook', bytes('#!/bin/sh\necho 1')), true);
+  // Python script with shebang
+  assert.equal(deriveLaunchIntent('scripts/tool.py', bytes('#!/usr/bin/env python3\npass')), true);
+  // .sh script without shebang
+  assert.equal(deriveLaunchIntent('scripts/test.sh', bytes('echo test')), true);
+  // Direct advisor launcher role
+  assert.equal(deriveLaunchIntent('evcrate-advisor', bytes('binary')), true);
+  assert.equal(deriveLaunchIntent('bin/evcrate', bytes('binary')), true);
+  // Non-launcher .cjs without shebang
+  assert.equal(deriveLaunchIntent('lib/helper.cjs', bytes('module.exports = {};')), false);
+  // Non-launcher markdown / json / text
+  assert.equal(deriveLaunchIntent('README.md', bytes('# Readme')), false);
+  assert.equal(deriveLaunchIntent('settings.json', bytes('{}')), false);
 });

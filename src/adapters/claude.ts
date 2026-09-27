@@ -1,4 +1,4 @@
-import { chmodSync, lstatSync, mkdirSync, readdirSync, type Dirent, type Stats } from 'node:fs';
+import { lstatSync, mkdirSync, readdirSync, type Dirent, type Stats } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { assertStagedRoot } from '../filesystem/atomic.js';
@@ -41,11 +41,8 @@ function createRoot(context: ProjectionBuildContext, root: string): void {
   const destination = context.stagePath(root);
   assertNoSymlinkAncestors(destination);
   absent(destination);
-  try { mkdirSync(destination, { mode: 0o755 }); }
+  try { mkdirSync(destination); }
   catch { throw new ControlPlaneError('PATH_UNSAFE'); }
-  if (process.platform !== 'win32') {
-    try { chmodSync(destination, 0o755); } catch { throw new ControlPlaneError('PATH_UNSAFE'); }
-  }
 }
 
 function expectedFiles(context: ProjectionBuildContext, root: string): ReadonlyMap<string, ResourceGraphFile> {
@@ -73,8 +70,7 @@ function readOutputFile(path: string, initial: Stats): Uint8Array {
     const final = lstatSync(path);
     if (final.isSymbolicLink() || !final.isFile()
       || Number(final.dev) !== Number(initial.dev) || Number(final.ino) !== Number(initial.ino)
-      || Number(final.size) !== Number(initial.size)
-      || (Number(final.mode) & 0o777) !== (Number(initial.mode) & 0o777)) {
+      || Number(final.size) !== Number(initial.size)) {
       throw new ControlPlaneError('PATH_UNSAFE');
     }
     return bytes;
@@ -112,10 +108,6 @@ function collectOutput(
     } else if (stat.isDirectory()) {
       if (!expectedDirs.has(relativePath)) {
         diagnostics.push({ path: relativePath, kind: 'directory', code: 'unexpected' });
-      } else if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== 0o755) {
-        if ((Number(stat.mode) & 0o777) !== 0o777) {
-          diagnostics.push({ path: relativePath, kind: 'directory', code: 'mode-mismatch', expected: 0o755, actual: Number(stat.mode) & 0o777 });
-        }
       }
       collectOutput(context, path, expected, expectedDirs, seen, diagnostics);
     } else {
@@ -129,10 +121,6 @@ function collectOutput(
         const bytes = readOutputFile(path, stat);
         if (!bytesEqual(bytes, wanted.bytes)) {
           diagnostics.push({ path: relativePath, kind: 'file', code: 'bytes-mismatch', expected: wanted.hash, actual: contentHash(bytes) });
-        } else if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== wanted.mode) {
-          if ((Number(stat.mode) & 0o777) !== 0o777) {
-            diagnostics.push({ path: relativePath, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: Number(stat.mode) & 0o777 });
-          }
         }
       } catch {
         diagnostics.push({ path: relativePath, kind: 'file', code: 'unsafe' });
@@ -170,11 +158,6 @@ function validateClaude(context: ProjectionBuildContext): ProjectionValidation {
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       diagnostics.push({ path: root, kind: 'directory', code: 'kind-mismatch' });
     } else {
-      if (process.platform !== 'win32' && (Number(stat.mode) & 0o777) !== 0o755) {
-        if ((Number(stat.mode) & 0o777) !== 0o777) {
-          diagnostics.push({ path: root, kind: 'directory', code: 'mode-mismatch', expected: 0o755, actual: Number(stat.mode) & 0o777 });
-        }
-      }
       collectOutput(context, destination, expected, expectedDirs, seen, diagnostics);
     }
   } catch {
@@ -195,7 +178,7 @@ function buildClaude(context: ProjectionBuildContext): void {
   const root = claudeRoot(context);
   createRoot(context, root);
   for (const file of context.resources.files) {
-    writeProjectionFile(context, `${root}/${file.path}`, file.bytes, file.mode);
+    writeProjectionFile(context, `${root}/${file.path}`, file.bytes, file.executable ?? false);
   }
 }
 

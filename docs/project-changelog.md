@@ -2,9 +2,65 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-26
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26, Phase 03 unblocked; production Windows runtime qualification not claimed). Package version: `2.1.0`.
+**Updated:** 2026-09-27
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26, Phase 03 unblocked; production Windows runtime qualification not claimed). Filesystem-policy cutover is 50% (Phase 01 DONE 2026-09-27; Phase 02 proposed). Package version: `2.3.2`.
 Older phase records remain in the linked archive.
+### 2026-09-27 — fix(filesystem): complete Phase 01 launchability and identity
+
+**Status:** Phase 01 DONE (2026-09-27; review approved 10/10). Parent filesystem-policy cutover is 50% complete (1/2 phases); Phase 02 remains proposed.  
+**Plan:** [Parent plan](../plans/260927-0428-filesystem-cutover-review/plan.md) · [Phase 01](../plans/260927-0428-filesystem-cutover-review/phase-01-launchability-and-identity.md)  
+**Evidence:** [Code review](../plans/reports/code-review-260927-1740-phase-01-launchability-and-identity.md)
+
+- Completed launch-intent propagation for newly materialized publication files and role-based Linux installer execute provisioning; staged CLI smoke now invokes the real path directly.
+- Removed permission-only drift from advisor evidence/CAS boundaries while retaining byte/object checks; registry and import file identities now distinguish file kind; mandatory staging chmod failures propagate.
+- The dated review recorded 268 targeted tests passing and a successful build, with no critical findings. This is focused Phase 01 evidence, not a full release or Windows-readiness qualification.
+- Phase 02 still owns durable journal recovery/migration policy and host-specific qualification; executable-capability policy and pre-upgrade recovery decisions remain unresolved.
+
+### 2026-09-27 — refactor(repository): complete repository-wide removal of filesystem UID/ownership and mode enforcement
+
+**Status:** IMPLEMENTED and PROVEN (2026-09-27). Replaced all ownership/UID/SID/DACL and private file-mode enforcement across the entire repository with the cross-platform trusted-files policy.  
+**Scope:** Non-advisor runtime (`src/filesystem/`, `src/distribution/`, `src/adapters/`, `src/manifests/`, `src/imports/`, `src/registry/`, `src/scopes/`), standalone installers (`install.sh`, `install.ps1`), release archive pack/verify tools, advisor settings protocol/coordinator, canonical scripts (`.evcrate/source/.claude/scripts/`, `.evcrate/source/.evcrate/bin/`), and test harnesses.
+
+- **Policy transition:** Removed all filesystem UID/SID/ACL/private-mode gates across both Linux and Windows. Default file/directory creation respects host umask; no forced `0o700` or `0o600` permissions.
+- **Executable intent:** Preserved purely as an additive execute bit (`chmod | 0111`) on non-Windows platforms for runnable script assets (`install.sh`, release tar/zip staging, `.evcrate/bin/`, projected bash scripts).
+- **Mode-free digests & verification:** `controllerTreeHash`, `completeTreeHash`, archive inventory digests (`Compute-InventoryDigest`, `computeInventoryDigest`), manifest verification, and publication CAS plans compare only content sha256, byte length, filesystem kind, and presence without mode comparison.
+- **Settings contract clean cutover:** Exact-key schemas completely removed filesystem mode metadata (`SettingsMode` removed from request, result, preview, and journal contracts), rejecting legacy mode-bearing payloads without shims.
+- **Review findings resolved:** Retained named-path device/inode/size check alongside descriptor validation in `hashFile`; propagated OS stat/chmod errors in `install.sh`; enforced additive execution in archive staging under umask 0002; wrapped canonical scanner YAML atomic write/flush/replace in single try/finally cleanup.
+- **Verification evidence:**
+  - Full protocol test suite: **54/54 passed**.
+  - Filesystem & manifests primitives suite: **33/33 passed**.
+  - Projection adapters suite: **13/13 passed**.
+  - Resource registry & imports suite: **23/23 passed**.
+  - Scopes & advisor settings suite: **24/24 passed**.
+  - Advisor controller suite: **214/214 passed** on both Windows host and native Linux (WSL Ubuntu 22.04).
+  - Distribution release & cutover suite: **7/7 passed**.
+  - Distribution validation & rollout suite: **5/5 passed** (1 Linux installer test skipped on Windows host).
+  - Integration suite: **14/14 passed**.
+  - Linux standalone installer suite in WSL: **16/16 passed** (including broad-mode pre-existing directory install, repair, and launch).
+  - Windows release qualification harness suite: **21/21 passed**.
+  - Windows package smoke suite: **3/3 passed**.
+  - Advisor plugin package & worker suites: **27/27 passed**.
+
+### 2026-09-27 — refactor(advisor): replace filesystem UID/SID/DACL/mode restrictions with cross-platform trusted-files policy
+**Status:** IMPLEMENTED and PROVEN (2026-09-27). Replaced advisor owner-only/0700/0600/SID/DACL enforcement with cross-platform trusted-files policy across Linux and Windows.  
+**Scope:** CJS policy, state, history, baseline, and isolated workspace; TypeScript advisor settings read/preview/apply/recovery and locks; native Windows platform and bridge helpers; plugin reader binding, history scanner, policy provider, and evaluation provider.  
+
+- **Policy transition:** Removed all advisor filesystem UID/SID/ACL/private-mode restrictions on both Linux and Windows. Replaced with cross-platform trusted-files policy: preserves OS permissions and errors, file kind, non-symlink invariants, single hardlink checks, file identity, canonical safe paths, JSON schemas, bounds, CAS replacement, process locks, and human approval gates. Preserved host/network owner authorization and unrelated installer/publication/import permission policy.
+- **Settings & native changes:** `SettingsMode` is now observational numeric metadata rather than enforced bitmask validation. Native owner operations (`verifyWindowsFileOwnership`, `getCurrentUserSid`, `GetFileOwnerSid`, `VerifyFileOwnership`) removed from `windows-native.cs` and `windows-platform.cjs`. Prior Phase 03/04 follow-up requiring path-threaded Windows state/history ownership checks is superseded.
+- **Build & contract verification:**
+  - `npm run build`: PASS; corrective TypeScript compilation: PASS; `npm run release:check`: PASS.
+  - Settings, filesystem, and protocol test suites: **87/87 passed on BOTH Windows and Linux**.
+  - Windows full controller suite: **213/214 passed** (sole new history test typo fixed, then affected state/history suite passed **35/35**).
+  - Linux full controller suite: **213/214 passed** (sole existing SIGTERM stdin test received signal instead of envelope; timing suspected not proven, diagnosis uncertain).
+  - Linux root foreign UID state/history suite: **35/35 passed**.
+- **Smoke & runtime proof:**
+  - Windows (Everyone Modify) and Linux (foreign UID 12345, 0777/0666) policy, state, and workspace operations succeeded; settings get/preview/apply after chmod and rollback with shared foreign-owned journal/stage succeeded.
+  - Native Linux actual smoke confirmed `umask 0002` creates advisor settings policy `0664`, runtime state `0664`, and state dir `0775`, while generic non-advisor `writeAtomicFile` retains `0600` file and `0700` parent defaults (assertions passed, confirming no hidden private defaults and unrelated helper defaults preserved).
+  - Actual plugin reader smoke passed on Windows (Everyone Modify) and Linux (foreign UID 12345, 0777/0666): target binding accepted, policy ready, bound evaluation exact ID matched, history scan exact consultation matched; unauthorized policy operation correctly rejected.
+- **Provider & worker test observations:**
+  - Plugin provider suite: Linux **12/12 passed**; Windows **11/12 passed** (sole source-safety failure caused by test target `${normTarget}/./child` vs implementation `split(path.sep)` backslash: unrelated existing mixed-separator check, not an ownership issue).
+  - Separate worker test: cannot load missing `@dam-hopper/plugin-sdk` on either platform (Worker SDK prerequisite exists only as a `plugin/vendor` reference blocked by configured ignore; worker suite not claimed passed).
+- **Known unrelated readiness blockers:** Missing descendant/Job supervision and spawn-time creation-token capture, no-replace rename overwrite fallback, workspace replacement cleanup identity, provider launcher identity, and console approval wiring remain pending follow-ups (no fixes requested).
 
 ### 2026-09-26 — feat(windows): prove native Windows advisor compatibility primitives (Phase 01)
 
@@ -26,7 +82,7 @@ Older phase records remain in the linked archive.
 
 - Integrated the native Windows controller lifecycle boundaries, including Windows environment canonicalization, package-bin resolution without shell invocation, IPC cancellation, and the inventoried 36-file controller closure.
 - The dated review recorded **213/213 advisor-controller tests**, **16/16 viewer/manifest and package-inventory tests**, and **21/21 settings/filesystem distribution-primitives tests**.
-- Two Cycle 3 findings remain approved follow-ups for Phases 03/04, not claimed as fixed: runner spawn-time process creation-token capture for PID-reuse-safe termination; state/history path-threaded Windows ownership checks.
+- Two Cycle 3 findings were recorded as follow-ups for Phases 03/04: runner spawn-time process creation-token capture for PID-reuse-safe termination; state/history path-threaded Windows ownership checks (the latter since superseded by the 2026-09-27 cross-platform trusted-files policy).
 - Phase 03 is unblocked. Production Windows runtime qualification remains unclaimed.
 
 ### 2026-09-24 — feat(history): complete paired qualification and release decision (Phase 05)

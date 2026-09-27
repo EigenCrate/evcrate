@@ -3,11 +3,10 @@
 
 from dataclasses import dataclass
 import json
-import os
 from pathlib import Path
 import re
 import sys
-import tempfile
+import secrets
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 import yaml
 
@@ -41,16 +40,14 @@ def atomic_write_yaml(output_path: Path, data: Any) -> None:
     """Atomically write data as UTF-8 YAML using an adjacent temporary file."""
     out = output_path.resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
-    temp = tempfile.NamedTemporaryFile(dir=out.parent, prefix=f".{out.name}.tmp.", delete=False)
+    temp_path = out.with_name(f".{out.name}.tmp.{secrets.token_hex(16)}")
     try:
-        content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False, width=1000000)
-        temp.write(content.encode("utf-8"))
-        temp.close()
-        os.chmod(temp.name, 0o644)
-        Path(temp.name).replace(out)
+        with temp_path.open("xb") as temp:
+            content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False, width=1000000)
+            temp.write(content.encode("utf-8"))
+        temp_path.replace(out)
     finally:
-        if os.path.exists(temp.name):
-            os.unlink(temp.name)
+        temp_path.unlink(missing_ok=True)
 
 
 def _validate_fields(data: Any, rel_path: str) -> Tuple[str, str]:

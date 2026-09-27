@@ -114,7 +114,10 @@ function buildReleaseArchives(options) {
 
     for (const inst of installers) {
       const sInst = path.join(stagingDir, inst.name);
-      fs.writeFileSync(sInst, inst.data, { mode: inst.name.endsWith('.sh') ? 0o755 : 0o644 });
+      fs.writeFileSync(sInst, inst.data);
+      if (inst.name.endsWith('.sh') && process.platform !== 'win32') {
+        fs.chmodSync(sInst, fs.statSync(sInst).mode | 0o111);
+      }
       stagedFiles.push(inst.name);
     }
 

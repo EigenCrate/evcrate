@@ -207,7 +207,7 @@ test('history contract validates outcome records correctly', () => {
   assert.throws(() => validateHistoryOutcomeV1({ ...validOutcome, outcome: 'passed' }), (err) => err.code === 'AUDIT_DEGRADED');
 });
 
-test('recordStartedExecution creates isolated private directory and file', (t) => {
+test('recordStartedExecution creates isolated directory and file', (t) => {
   const f = setupFixture(t);
   const taskRunId = randomUUID();
   const consultationId = randomUUID();
@@ -238,10 +238,6 @@ test('recordStartedExecution creates isolated private directory and file', (t) =
 
   const execPath = path.join(f.home, '.evcrate', 'advisor-history', f.projectId, taskRunId, consultationId, 'execution.json');
   assert(fs.existsSync(execPath));
-  if (process.platform !== 'win32') {
-    assert.equal(fs.statSync(execPath).mode & 0o777, 0o600);
-    assert.equal(fs.statSync(path.dirname(execPath)).mode & 0o777, 0o700);
-  }
 
   // Cannot record started twice
   assert.throws(() => recordStartedExecution(f.context, execution), (err) => err.code === 'AUDIT_DEGRADED');
@@ -894,4 +890,146 @@ test('recordStartedExecution records project-metadata.json with safe project nam
   recordStartedExecution(f.context, { ...exec, consultation_id: c2 });
   const content2 = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
   assert.equal(content2.projects[f.projectId].updated_at, originalUpdatedAt);
+});
+
+test('history scan tolerates broad permissions (0o777/0o666) and changed file ownership', (t) => {
+  const f = setupFixture(t);
+  const taskRunId = randomUUID();
+  const consultationId = randomUUID();
+  const checkpoint = makeCheckpoint(taskRunId);
+  const digest = computeCheckpointDigestV2(checkpoint);
+
+  const execution = {
+    schema_version: 1,
+    consultation_id: consultationId,
+    task_run_id: taskRunId,
+    project_id: f.projectId,
+    checkpoint_digest: digest,
+    checkpoint,
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    receipt: null,
+    prompt_identity: 'canonical-mentor-brief-v2',
+    build_identity: ADVISOR_BUILD_IDENTITY,
+    attempts: [],
+    status: 'started',
+    result: null,
+    error: null,
+    started_at: 1000,
+    completed_at: null
+  };
+
+  const res = recordStartedExecution(f.context, execution);
+  assert.equal(res.status, 'recorded');
+
+  const consDir = path.join(f.home, '.evcrate', 'advisor-history', f.projectId, taskRunId, consultationId);
+  const execPath = path.join(consDir, 'execution.json');
+  assert(fs.existsSync(execPath));
+
+  // Broaden permissions across history directory structure and execution record
+  fs.chmodSync(consDir, 0o777);
+  fs.chmodSync(execPath, 0o666);
+
+  if (process.platform === 'linux' && typeof process.getuid === 'function' && process.getuid() === 0) {
+    fs.chownSync(execPath, 65534, 65534);
+    fs.chownSync(consDir, 65534, 65534);
+  }
+
+  const entry = getHistoryEntry(f.context, {
+    projectId: f.projectId,
+    taskRunId,
+    consultationId
+  });
+  assert.equal(entry?.execution?.consultation_id, consultationId);
+
+  const list = listHistory(f.context);
+  assert.equal(list.entries.length, 1);
+  assert.equal(list.entries[0].consultation_id, consultationId);
+});
+
+test('started-attempt and terminal history CAS allow chmod but reject byte edits (F4 regression)', (t) => {
+  const f = setupFixture(t);
+  const taskRunId = randomUUID();
+  const consultationId = randomUUID();
+  const cp = makeCheckpoint(taskRunId);
+  const cpDigest = computeCheckpointDigestV2(cp);
+
+  const execution = {
+    schema_version: 1,
+    consultation_id: consultationId,
+    task_run_id: taskRunId,
+    project_id: f.projectId,
+    checkpoint_digest: cpDigest,
+    checkpoint: cp,
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    receipt: null,
+    prompt_identity: 'canonical-mentor-brief-v2',
+    build_identity: ADVISOR_BUILD_IDENTITY,
+    attempts: [],
+    status: 'started',
+    result: null,
+    error: null,
+    started_at: 1000,
+    completed_at: null
+  };
+
+  assert.equal(recordStartedExecution(f.context, execution).status, 'recorded');
+
+  const consDir = path.join(f.home, '.evcrate', 'advisor-history', f.projectId, taskRunId, consultationId);
+  const execPath = path.join(consDir, 'execution.json');
+
+  // Chmod execution.json (e.g. 0666) - updating attempts should still succeed
+  fs.chmodSync(execPath, 0o666);
+  const attempt = {
+    attempt_id: randomUUID(),
+    slot: 'primary',
+    route: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
+    phase: 'model',
+    model_started: true,
+    elapsed_ms: 500,
+    terminal_classification: 'transient',
+    retry_delay_ms: 10000,
+    cleanup_outcome: 'confirmed'
+  };
+  const attRes = updateStartedAttempts(f.context, { projectId: f.projectId, taskRunId, consultationId }, [attempt]);
+  assert.equal(attRes.status, 'recorded');
+
+  // Chmod again before terminal execution - terminal recording should still succeed
+  fs.chmodSync(execPath, 0o644);
+  const terminal = {
+    ...execution,
+    status: 'ADVICE_READY',
+    receipt: {
+      backend: 'codex',
+      model: 'gpt-5.6-sol',
+      effort: 'high',
+      controller_version: 2,
+      adapter_version: '0.150.1',
+      elapsed_ms: 1000,
+      build_identity: ADVISOR_BUILD_IDENTITY
+    },
+    result: {
+      protocol: 'evcrate-advisor-result',
+      version: 2,
+      checkpoint: 'review:phase-07',
+      status: 'ADVICE_READY',
+      recommendation: 'Proceed.',
+      rationale: 'Clean verification.',
+      must_fix: [],
+      cautions: [],
+      assumptions: [],
+      success_checks: ['Pass tests.'],
+      unresolved_questions: []
+    },
+    completed_at: 2000
+  };
+  const termRes = recordTerminalExecution(f.context, terminal);
+  assert.equal(termRes.status, 'recorded');
+
+  // Terminal transition is now immutable; further terminal record fails
+  assert.throws(() => {
+    recordTerminalExecution(f.context, {
+      ...terminal,
+      completed_at: 3000
+    });
+  }, (err) => err.code === 'AUDIT_DEGRADED');
 });

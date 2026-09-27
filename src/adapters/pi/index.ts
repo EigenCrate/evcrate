@@ -21,7 +21,7 @@ function copyNormalized(context: ProjectionBuildContext, source: string, destina
   let value: string;
   try { value = new TextDecoder('utf-8', { fatal: true }).decode(file.bytes); }
   catch { throw new ControlPlaneError('VALIDATION_INVALID'); }
-  writeProjectionFile(context, destination, new TextEncoder().encode(normalizeLf(value)), file.mode);
+  writeProjectionFile(context, destination, new TextEncoder().encode(normalizeLf(value)), file.executable ?? false);
 }
 
 function copyOwnedOverlay(context: ProjectionBuildContext): void {
@@ -35,8 +35,8 @@ function copyOwnedOverlay(context: ProjectionBuildContext): void {
     if (stat.isSymbolicLink() || !stat.isFile()) throw new ControlPlaneError('PATH_UNSAFE');
     const bytes = readBoundedFile(source, 16 * 1024 * 1024);
     const after = lstatSync(source);
-    if (after.isSymbolicLink() || after.dev !== stat.dev || after.ino !== stat.ino || after.size !== stat.size || (after.mode & 0o777) !== (stat.mode & 0o777)) throw new ControlPlaneError('PATH_UNSAFE');
-    writeProjectionFile(context, `.pi/${owned.slice('files/'.length)}`, bytes, stat.mode & 0o777);
+    if (after.isSymbolicLink() || after.dev !== stat.dev || after.ino !== stat.ino || after.size !== stat.size) throw new ControlPlaneError('PATH_UNSAFE');
+    writeProjectionFile(context, `.pi/${owned.slice('files/'.length)}`, bytes, (stat.mode & 0o111) !== 0);
   }
 }
 function assertManifest(context: ProjectionBuildContext): void {

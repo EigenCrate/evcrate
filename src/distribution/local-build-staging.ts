@@ -29,21 +29,22 @@ export interface StagedBuildResult {
   readonly selectedManifests: readonly TargetManifest[];
 }
 
-function sanitizeMode(mode: number, isDirectory: boolean): number {
-  return isDirectory ? (mode & 0o777 & ~0o022) || 0o755 : ((mode & 0o111) !== 0 ? 0o755 : 0o644);
-}
-
 function copyStagedTree(source: string, destination: string): void {
   if (!existsSync(source)) return;
   const stat = lstatSync(source);
   if (stat.isDirectory()) {
-    mkdirSync(destination, { recursive: true, mode: 0o755 });
-    chmodSync(destination, sanitizeMode(stat.mode, true));
+    mkdirSync(destination, { recursive: true });
     for (const entry of readdirSync(source)) copyStagedTree(join(source, entry), join(destination, entry));
   } else if (stat.isFile()) {
-    mkdirSync(dirname(destination), { recursive: true, mode: 0o755 });
+    mkdirSync(dirname(destination), { recursive: true });
     copyFileSync(source, destination);
-    chmodSync(destination, sanitizeMode(stat.mode, false));
+    if (process.platform !== 'win32' && ((stat.mode & 0o111) !== 0 || source.endsWith('.sh'))) {
+      try {
+        chmodSync(destination, (lstatSync(destination).mode & 0o777) | 0o111);
+      } catch (error) {
+        throw new ControlPlaneError('PUBLICATION_FAILED', `Failed to set executable mode on staged file ${destination}: ${(error as Error).message}`);
+      }
+    }
   }
 }
 
@@ -113,16 +114,20 @@ export function assembleLocalStage(
 
   const sourceBin = join(sourceRoot, '.evcrate', 'bin');
   const stageBin = join(stagePath, '.evcrate', 'bin');
-  mkdirSync(stageBin, { recursive: true, mode: 0o755 });
+  mkdirSync(stageBin, { recursive: true });
   for (const entry of ADVISOR_CONTROLLER_FILES) {
     const src = join(sourceBin, entry);
     const dst = join(stageBin, entry);
-    mkdirSync(dirname(dst), { recursive: true, mode: 0o755 });
+    mkdirSync(dirname(dst), { recursive: true });
     copyFileSync(src, dst);
-    chmodSync(dst, entry === 'evcrate-advisor' ? 0o755 : 0o644);
+    if (entry === 'evcrate-advisor' && process.platform !== 'win32') {
+      try {
+        chmodSync(dst, (lstatSync(dst).mode & 0o777) | 0o111);
+      } catch (error) {
+        throw new ControlPlaneError('PUBLICATION_FAILED', `Failed to set executable mode on staged advisor controller ${dst}: ${(error as Error).message}`);
+      }
+    }
   }
-  chmodSync(stageBin, 0o755);
-  chmodSync(join(stagePath, '.evcrate'), 0o755);
   const controllerMetadata = validateAdvisorControllerProjection(sourceBin, stageBin);
 
   const ownersMap = new Map<string, string>();
@@ -171,8 +176,8 @@ export function assembleLocalStage(
   const manifestPath = join(packageRoot, targetRelManifest);
   const stagedManifestPath = join(stagePath, targetRelManifest);
 
-  mkdirSync(dirname(stagedManifestPath), { recursive: true, mode: 0o755 });
-  writeAtomicFile(stagedManifestPath, manifestData, 0o600);
+  mkdirSync(dirname(stagedManifestPath), { recursive: true });
+  writeAtomicFile(stagedManifestPath, manifestData);
 
   return { manifestPath, stagedManifestPath, manifestData, stagedOutputs, localOutputs, selectedManifests: manifests };
 }

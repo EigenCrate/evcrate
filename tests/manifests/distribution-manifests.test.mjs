@@ -77,14 +77,6 @@ test('controller closure enforces exact 36 files, regular files, and require bou
 });
 
 
-test('controller projection requires an executable entrypoint', () => {
-  if (process.platform === 'win32') return;
-  const root = temporaryDirectory();
-  const copy = join(root, 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-  chmodSync(join(copy, 'evcrate-advisor'), 0o600);
-  assert.throws(() => validateAdvisorControllerProjection(controllerRoot, copy), code('PATH_UNSAFE'));
-});
 
 test('manifest adapters must be regular files', () => {
   const root = temporaryDirectory();

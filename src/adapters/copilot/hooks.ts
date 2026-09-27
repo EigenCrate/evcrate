@@ -45,7 +45,7 @@ export function convertHooks(context: ProjectionBuildContext, transform: (value:
   const copiedHooks: string[] = []; for (const file of filesUnder(context, 'hooks')) { const relative = file.path.slice('hooks/'.length); if (isProductionControllerArtifact(relative)) continue; copyFile(context, file.path, `evcrate/hooks/${relative}`, (value) => transform(translate(value, relative))); copiedHooks.push(relative); }
   const copiedScripts: string[] = []; for (const file of filesUnder(context, 'scripts')) { const relative = file.path.slice('scripts/'.length); if (relative.includes('advise-state') || isProductionControllerArtifact(relative) || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue; copyFile(context, file.path, `evcrate/scripts/${relative}`, (value) => transform(renderHarness(value))); copiedScripts.push(relative); }
   copiedScripts.push('commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json');
-  const bridge = textBytes(BRIDGE_SOURCE); writeProjectionFile(context, '.copilot/evcrate/hooks/copilot-hook-bridge.cjs', bridge, 0o755);
+  const bridge = textBytes(BRIDGE_SOURCE); writeProjectionFile(context, '.copilot/evcrate/hooks/copilot-hook-bridge.cjs', bridge, true);
   copyFile(context, '.evcrateignore', 'evcrate/.evcrateignore'); copyFile(context, '.evcrateignore', '.evcrateignore');
   const settings = parseJson(context, 'settings.json'); const events = settings.hooks; if (!events || typeof events !== 'object' || Array.isArray(events)) invalid();
   const shared = context.manifest.sharedJson;

@@ -73,7 +73,7 @@ export function copySkills(context: ProjectionBuildContext): void {
     if (name === 'claude-code/skill.md' || ![...packages].some((pkg) => name === pkg || name.startsWith(`${pkg}/`))) continue;
     const file = graphFile(context, path);
     const bytes = transformed(file.bytes, translatePiSkill);
-    writeProjectionFile(context, `.pi/agent/skills/${name}`, bytes, file.mode);
+    writeProjectionFile(context, `.pi/agent/skills/${name}`, bytes, file.executable ?? false);
   }
 }
 export function copyHooksAndScripts(context: ProjectionBuildContext): void {
@@ -81,13 +81,13 @@ export function copyHooksAndScripts(context: ProjectionBuildContext): void {
     const name = relativeName(path, 'hooks'); if (name.split('/').some((part) => SKIP_PARTS.has(part))) continue;
     const file = graphFile(context, path);
     const bytes = transformed(file.bytes, renderHarnessScriptReferences);
-    writeProjectionFile(context, `.pi/agent/evcrate/hooks/${name}`, bytes, file.mode);
+    writeProjectionFile(context, `.pi/agent/evcrate/hooks/${name}`, bytes, file.executable ?? false);
   }
   for (const path of canonicalFiles(context, 'scripts')) {
     const name = relativeName(path, 'scripts'); if (name.includes('advise-state') || isController(name) || isProductionControllerArtifact(name) || name === 'commands_data.yaml' || name === 'skills_data.yaml') continue;
     const file = graphFile(context, path);
     const bytes = transformed(file.bytes, renderHarnessScriptReferences);
-    writeProjectionFile(context, `.pi/agent/evcrate/scripts/${name}`, bytes, file.mode);
+    writeProjectionFile(context, `.pi/agent/evcrate/scripts/${name}`, bytes, file.executable ?? false);
   }
   copyGraphTree(context, '.evcrateignore', '.pi/agent/evcrate/.evcrateignore');
   const settings = parseJsonDocument(graphFile(context, 'settings.json').bytes);

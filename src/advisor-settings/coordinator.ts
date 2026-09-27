@@ -5,8 +5,8 @@ import type { InvocationContext } from '../context/invocation-context.js';
 import {
   canonicalAdvisorPolicyDigest, createSettingsApplyResult, createSettingsConflictResult,
   createSettingsErrorResult, createSettingsGetResult, createSettingsPreviewResult,
-  validateSettingsMode, type AdvisorPolicy, type AdvisorSettingsRequest,
-  type AdvisorSettingsResult, type SettingsMode, type SettingsRevision
+  type AdvisorPolicy, type AdvisorSettingsRequest,
+  type AdvisorSettingsResult, type SettingsRevision
 } from '../protocol/advisor-settings.js';
 import { withSettingsLock } from '../filesystem/locking.js';
 import { applyAdvisorPolicyUnlocked, type AdvisorPolicyHooks } from './transactions.js';
@@ -35,25 +35,21 @@ function current(context: InvocationContext) {
 }
 function preview(request: AdvisorSettingsRequest, context: InvocationContext, now: () => number): AdvisorSettingsResult {
   const payload = request.payload as unknown as {
-    policy: AdvisorPolicy; currentRevision: SettingsRevision; destination: string; mode: SettingsMode
+    policy: AdvisorPolicy; currentRevision: SettingsRevision; destination: string;
   };
   if (!requestedDestination(context, payload.destination)) throw new ControlPlaneError('PATH_UNSAFE');
   const snapshot = current(context);
   if (!revisionsEqual(snapshot.revision, payload.currentRevision)) throw new ControlPlaneError('CAS_CONFLICT');
-  const mode = validateSettingsMode(payload.mode);
-  if (snapshot.mode === null ? mode.kind !== 'create' : mode.kind !== 'existing' || mode.mode !== snapshot.mode.mode) {
-    throw new ControlPlaneError('SETTINGS_INVALID');
-  }
   const issuedAt = nowValue(now);
   const expiresAt = issuedAt + PREVIEW_LIFETIME_MS;
   const token = randomBytes(32).toString('hex');
   const record: AdvisorSettingsPreviewToken = {
     schema_version: 1, operation: 'advisor-settings.preview', token, destination: destination(context),
-    policy: payload.policy, currentRevision: payload.currentRevision, mode, expiresAt,
+    policy: payload.policy, currentRevision: payload.currentRevision, expiresAt,
     intendedDigest: canonicalAdvisorPolicyDigest(payload.policy)
   };
   saveAdvisorSettingsPreview(context.stateRoot, record);
-  return createSettingsPreviewResult(request, token, expiresAt, snapshot.revision, record.intendedDigest, record.destination, mode, issuedAt);
+  return createSettingsPreviewResult(request, token, expiresAt, snapshot.revision, record.intendedDigest, record.destination, issuedAt);
 }
 function apply(
   request: AdvisorSettingsRequest, context: InvocationContext, now: () => number, hooks?: AdvisorPolicyHooks
@@ -66,9 +62,6 @@ function apply(
     return createSettingsConflictResult(request, record.currentRevision, snapshot.revision);
   }
   if (nowValue(now) >= record.expiresAt) return createSettingsConflictResult(request, record.currentRevision, snapshot.revision);
-  if (snapshot.mode === null ? record.mode.kind !== 'create' : record.mode.kind !== 'existing' || record.mode.mode !== snapshot.mode.mode) {
-    return createSettingsConflictResult(request, record.currentRevision, snapshot.revision);
-  }
   const applied = applyAdvisorPolicyUnlocked(destination(context), record.policy, record.currentRevision, {
     stateRoot: context.stateRoot, hooks
   });
@@ -84,7 +77,7 @@ export function createAdvisorSettingsCoordinator(options: AdvisorSettingsCoordin
         if (request.operation === 'get') {
           return withSettingsLock(context.stateRoot, () => {
             const snapshot = current(context);
-            return createSettingsGetResult(request, snapshot.policy, snapshot.revision, snapshot.mode);
+            return createSettingsGetResult(request, snapshot.policy, snapshot.revision);
           });
         }
         if (request.operation === 'preview') return withSettingsLock(context.stateRoot, () => preview(request, context, now));

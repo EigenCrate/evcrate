@@ -3,7 +3,7 @@ import { join, relative, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { hashBytes, isIgnoredArtifact, readBoundedFile } from '../filesystem/hashing.js';
 import {
-  assertNoSymlinkAncestors, assertOwnerControlledDirectory, containedPath, normalizeRelativePath
+  assertNoSymlinkAncestors, assertRealDirectory, containedPath, normalizeRelativePath
 } from '../filesystem/paths.js';
 
 export const MAX_RESOURCE_FILE_BYTES = 16 * 1024 * 1024;
@@ -16,7 +16,7 @@ export interface ResourceGraphFile {
   readonly path: string;
   readonly bytes: Readonly<Uint8Array>;
   readonly hash: string;
-  readonly mode: number;
+  readonly executable?: boolean;
   readonly kind: 'file';
 }
 
@@ -41,7 +41,7 @@ export function assertResourceGraph(graph: ResourceGraph): void {
     if (file === null || typeof file !== 'object' || file.kind !== 'file'
       || typeof file.path !== 'string' || !/^[^/]+(?:\/[^/]+)*$/u.test(file.path)
       || typeof file.hash !== 'string' || !/^[a-f0-9]{64}$/u.test(file.hash)
-      || !Number.isInteger(file.mode) || file.mode < 0 || file.mode > 0o777
+      || (file.executable !== undefined && typeof file.executable !== 'boolean')
       || !(file.bytes instanceof Uint8Array) || file.bytes.byteLength > MAX_RESOURCE_FILE_BYTES
       || totalBytes > MAX_RESOURCE_BYTES - file.bytes.byteLength
       || hashBytes(file.bytes) !== file.hash) fail();
@@ -80,7 +80,7 @@ export function createResourceGraph(canonicalRoot: string, options: ResourceGrap
   const root = resolve(canonicalRoot);
   const limit = maxFileBytes(options);
   assertNoSymlinkAncestors(root);
-  assertOwnerControlledDirectory(root);
+  assertRealDirectory(root);
   const files: ResourceGraphFile[] = [];
   let totalBytes = 0;
 
@@ -119,15 +119,16 @@ export function createResourceGraph(canonicalRoot: string, options: ResourceGrap
       try { finalStat = lstatSync(path); } catch { fail(); }
       if (finalStat.isSymbolicLink() || !finalStat.isFile()
         || Number(finalStat.dev) !== Number(stat.dev) || Number(finalStat.ino) !== Number(stat.ino)
-        || Number(finalStat.size) !== size || (Number(finalStat.mode) & 0o777) !== (Number(stat.mode) & 0o777)) {
+        || Number(finalStat.size) !== size) {
         fail();
       }
       const immutableBytes = Uint8Array.from(bytes);
+      const isExecutable = (Number(stat.mode) & 0o111) !== 0 || normalized.endsWith('.sh');
       files.push(Object.freeze({
         path: normalized,
         bytes: immutableBytes,
         hash: hashBytes(immutableBytes),
-        mode: Number(stat.mode) & 0o777,
+        executable: isExecutable ? true : undefined,
         kind: 'file' as const
       }));
       totalBytes += immutableBytes.byteLength;

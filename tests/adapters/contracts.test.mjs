@@ -239,18 +239,18 @@ test('registered adapters reject mutated resource graph byte buffers', () => {
 });
 
 test('projection writes reject traversal and preserve graph bytes', () => {
-  const { context } = materialize('claude');
+  const { context } = freshProjection('claude');
   assert.throws(() => writeProjectionFile(context, '../outside', new TextEncoder().encode('escape')), code('PATH_UNSAFE'));
   assert.throws(() => writeProjectionFile(context, 'manual/file.txt', new TextEncoder().encode('escape')), code('PATH_UNSAFE'));
   const expected = new TextEncoder().encode('stable');
   assert.equal(hashBytes(expected).length, 64);
   assert.throws(() => lstatSync(join(context.stage.path, 'outside')), { code: 'ENOENT' });
   assert.throws(() => lstatSync(join(context.stage.path, 'manual')), { code: 'ENOENT' });
-  writeProjectionFile(context, '.claude/manual/file.txt', expected, 0o600);
+  writeProjectionFile(context, '.claude/manual/file.txt', expected);
   assert.deepEqual([...readFileSync(join(context.stage.path, '.claude/manual/file.txt'))], [...expected]);
 });
 
-test('validators reject missing, extra, modified, wrong-mode, symlink, and special outputs', () => {
+test('validators reject missing, extra, modified, symlink, and special outputs while accepting mode changes', () => {
   const missing = freshProjection('gemini');
   rmSync(join(missing.stage.path, '.gemini/agents/advisor.md'));
   assert.equal(missing.adapter.validate(missing.context).diagnostics.some(({ code }) => code === 'missing'), true);
@@ -270,18 +270,16 @@ test('validators reject missing, extra, modified, wrong-mode, symlink, and speci
   const modePath = join(wrongMode.stage.path, '.omp/commands/cmd-advise.md');
   const initialMode = lstatSync(modePath).mode & 0o777;
   chmodSync(modePath, initialMode ^ 0o100);
-  if ((lstatSync(modePath).mode & 0o777) !== 0o777 && (lstatSync(modePath).mode & 0o777) !== initialMode) {
-    assert.equal(wrongMode.adapter.validate(wrongMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
-    const wrongDirectoryMode = freshProjection('gemini');
-    const directoryModePath = join(wrongDirectoryMode.stage.path, '.gemini/agents');
-    chmodSync(directoryModePath, 0o700);
-    assert.equal(wrongDirectoryMode.adapter.validate(wrongDirectoryMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
+  assert.equal(wrongMode.adapter.validate(wrongMode.context).valid, true);
 
-    const claudeDirectoryMode = freshProjection('claude');
-    chmodSync(join(claudeDirectoryMode.stage.path, '.claude'), 0o700);
-    assert.equal(claudeDirectoryMode.adapter.validate(claudeDirectoryMode.context).diagnostics.some(({ code }) => code === 'mode-mismatch'), true);
-  }
+  const wrongDirectoryMode = freshProjection('gemini');
+  const directoryModePath = join(wrongDirectoryMode.stage.path, '.gemini/agents');
+  chmodSync(directoryModePath, 0o700);
+  assert.equal(wrongDirectoryMode.adapter.validate(wrongDirectoryMode.context).valid, true);
 
+  const claudeDirectoryMode = freshProjection('claude');
+  chmodSync(join(claudeDirectoryMode.stage.path, '.claude'), 0o700);
+  assert.equal(claudeDirectoryMode.adapter.validate(claudeDirectoryMode.context).valid, true);
   const symlink = freshProjection('pi');
   const outside = temporaryDirectory();
   const outsidePath = join(outside, 'payload');

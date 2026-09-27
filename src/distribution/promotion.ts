@@ -1,7 +1,7 @@
-import { chmodSync, mkdirSync, mkdtempSync, renameSync, unlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, renameSync, unlinkSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { assertOwnerControlledDirectory, assertOwnerControlledPath, assertNoSymlinkAncestors, assertRealDirectory, isContained } from '../filesystem/paths.js';
+import { assertDirectoryPath, assertNoSymlinkAncestors, assertRealDirectory, isContained } from '../filesystem/paths.js';
 import { canonicalJsonBytes } from '../filesystem/hashing.js';
 import { assertStagedRoot, removePath, sameVolume, syncDirectory, writeAtomicFile, type StagedRoot } from '../filesystem/atomic.js';
 import { withPublishLock } from '../filesystem/locking.js';
@@ -31,7 +31,6 @@ function commonAncestor(paths: readonly string[]): string {
   while (index < count && split.every((parts) => parts[index] === split[0][index])) index += 1;
   const candidate = split[0].slice(0, Math.max(index, 1)).join(sep) || sep;
   assertRealDirectory(candidate);
-  assertOwnerControlledDirectory(candidate);
   return candidate;
 }
 function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOptions, commonParent: string): void {
@@ -49,26 +48,25 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
   for (const [index, pair] of pairs.entries()) {
     const destination = destinations[index];
     assertNoSymlinkAncestors(dirname(destination));
-    assertOwnerControlledPath(commonParent, dirname(destination));
+    assertDirectoryPath(commonParent, dirname(destination));
     if (!relative(commonParent, destination) || (stageRoot && (isContained(stageRoot.path, destination) || isContained(destination, stageRoot.path)))) fail('PATH_UNSAFE');
     if (pair.source !== null) {
       const source = sources[index] as string;
       if (!stageRoot || !isContained(stageRoot.path, source) || source === destination || !sameVolume(source, dirname(destination))) fail('PATH_UNSAFE');
       if (!stageRoot) fail('PATH_UNSAFE');
-      assertOwnerControlledPath(stageRoot.path, dirname(source));
+      assertDirectoryPath(stageRoot.path, dirname(source));
     }
   }
   const sourceSnapshots = sources.map((source) => source === null ? null : snapshot(source, 'PATH_UNSAFE'));
   const destinationSnapshots = destinations.map((destination) => snapshot(destination, 'PATH_UNSAFE'));
   const backupDir = mkdtempSync(join(commonParent, PROMOTION_BACKUP_PREFIX));
-  chmodSync(backupDir, 0o700);
   const journal = {
     backup_dir: relative(commonParent, backupDir).split(sep).join('/'),
     destinations: destinations.map((destination) => relative(commonParent, destination).split(sep).join('/')),
     originally_present: destinationSnapshots.map((destination) => destination.present),
     intended_hashes: sourceSnapshots.map((source) => source?.digest ?? null), committed: false
   };
-  writeAtomicFile(join(commonParent, PROMOTION_JOURNAL_NAME), canonicalJsonBytes(journal), 0o600);
+  writeAtomicFile(join(commonParent, PROMOTION_JOURNAL_NAME), canonicalJsonBytes(journal));
   try {
     for (const [index, pair] of pairs.entries()) {
       const destination = destinations[index];
@@ -77,7 +75,7 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
       assertSnapshot(destination, destinationSnapshots[index], conflictCode);
       if (destinationSnapshots[index].present) {
         const backup = join(backupDir, relative(commonParent, destination));
-        mkdirSync(dirname(backup), { recursive: true, mode: 0o700 });
+        mkdirSync(dirname(backup), { recursive: true });
         assertNoSymlinkAncestors(dirname(backup));
         renameSync(destination, backup);
       }
@@ -90,7 +88,7 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
       }
       options.hooks?.afterPromote?.(pair, index);
     }
-    writeAtomicFile(join(commonParent, PROMOTION_JOURNAL_NAME), canonicalJsonBytes({ ...journal, committed: true }), 0o600);
+    writeAtomicFile(join(commonParent, PROMOTION_JOURNAL_NAME), canonicalJsonBytes({ ...journal, committed: true }));
     unlinkSync(join(commonParent, PROMOTION_JOURNAL_NAME));
     syncDirectory(commonParent);
     removePath(backupDir);

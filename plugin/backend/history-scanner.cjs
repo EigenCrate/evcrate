@@ -8,7 +8,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { inspectStat, isOwner } = require('./binding.cjs');
+const { inspectStat } = require('./binding.cjs');
 const { cancelled, deadlineExceeded } = require('./provider-errors.cjs');
 const {
   validateHistoryExecutionV1, validateHistoryOutcomeV1,
@@ -55,14 +55,14 @@ function readSafeProjectLabel(metadataPath, projectId) {
 }
 function readBoundedFile(filePath, maxBytes) {
   const stat = inspectStat(filePath);
-  if (!stat || !stat.isFile() || stat.isSymbolicLink() || !isOwner(stat) || stat.nlink !== 1n || stat.size > BigInt(maxBytes)) {
+  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n || stat.size > BigInt(maxBytes)) {
     return null;
   }
   let fd;
   try {
     fd = fs.openSync(filePath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
     const openedStat = fs.fstatSync(fd, { bigint: true });
-    if (!openedStat.isFile() || openedStat.isSymbolicLink() || !isOwner(openedStat) || openedStat.nlink !== 1n || openedStat.size > BigInt(maxBytes)) return null;
+    if (!openedStat.isFile() || openedStat.isSymbolicLink() || openedStat.nlink !== 1n || openedStat.size > BigInt(maxBytes)) return null;
     const buf = Buffer.alloc(Number(openedStat.size));
     fs.readSync(fd, buf, 0, buf.length, 0);
     return { bytes: buf, stat: openedStat, hash: createHash('sha256').update(buf).digest('hex'), size: Number(openedStat.size) };
@@ -115,7 +115,7 @@ async function scanHistoryRecords(historyRootPath, targetOrContext, options = {}
   const emptyInventory = Object.freeze({ entries: Object.freeze([]), total_projects: 0, unfiltered_total_records: 0 });
 
   const rootStat = inspectStat(historyRootPath);
-  if (!rootStat || !rootStat.isDirectory() || rootStat.isSymbolicLink() || !isOwner(rootStat)) {
+  if (!rootStat || !rootStat.isDirectory() || rootStat.isSymbolicLink()) {
     return { scan, rows, rawRecords, normalizedRecords, inventory: emptyInventory };
   }
   try {
@@ -159,7 +159,7 @@ async function scanHistoryRecords(historyRootPath, targetOrContext, options = {}
 
     const projDir = path.join(historyRootPath, projId);
     const pStat = inspectStat(projDir);
-    if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink() || !isOwner(pStat)) {
+    if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink()) {
       continue;
     }
     try {
@@ -199,7 +199,7 @@ async function scanHistoryRecords(historyRootPath, targetOrContext, options = {}
 
       const tPath = path.join(projDir, tName);
       const tStat = inspectStat(tPath);
-      if (!tStat || !tStat.isDirectory() || tStat.isSymbolicLink() || !isOwner(tStat)) continue;
+      if (!tStat || !tStat.isDirectory() || tStat.isSymbolicLink()) continue;
       try {
         if (fs.realpathSync.native(tPath) !== tPath) continue;
       } catch { continue; }
@@ -224,7 +224,7 @@ async function scanHistoryRecords(historyRootPath, targetOrContext, options = {}
 
         const cPath = path.join(tPath, cName);
         const cStat = inspectStat(cPath);
-        if (!cStat || !cStat.isDirectory() || cStat.isSymbolicLink() || !isOwner(cStat)) continue;
+        if (!cStat || !cStat.isDirectory() || cStat.isSymbolicLink()) continue;
         try {
           if (fs.realpathSync.native(cPath) !== cPath) continue;
         } catch { continue; }

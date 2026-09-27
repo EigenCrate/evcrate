@@ -5,7 +5,7 @@ import { parseJsonDocument } from '../protocol/json.js';
 import { assertExactKeys, assertSafeBoundedJson, boundedText, validateOpaque } from '../protocol/validation.js';
 import { canonicalJsonBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { removePath, writeAtomicFile } from '../filesystem/atomic.js';
-import { assertOwnerOnlyFile, containedPath } from '../filesystem/paths.js';
+import { assertRegularFile, containedPath } from '../filesystem/paths.js';
 import {
   asPayloadObject, validateApprovals, validateDestination, validateHash, validateHashRecordMap,
   validateProvenance, validateResourceChange, validateResourceKind, validateResourceRecord,
@@ -94,15 +94,15 @@ function nonNegative(value: unknown): number {
 export function saveImportPreview(stateRoot: string, record: ImportPreviewTokenRecord): void {
   const path = tokenPath(stateRoot, record.token);
   assertSafeBoundedJson(jsonRecord(record), MAX_TOKEN_BYTES);
-  writeAtomicFile(path, canonicalJsonBytes(jsonRecord(record)), 0o600);
+  writeAtomicFile(path, canonicalJsonBytes(jsonRecord(record)));
 }
 export function loadImportPreview(stateRoot: string, token: string): ImportPreviewTokenRecord {
   const path = tokenPath(stateRoot, token);
   try {
-    assertOwnerOnlyFile(path);
+    assertRegularFile(path);
     const initial = lstatSync(path);
     const record = parseRecord(parseJsonDocument(readBoundedFile(path, MAX_TOKEN_BYTES)));
-    const final = assertOwnerOnlyFile(path);
+    const final = assertRegularFile(path);
     if (Number(initial.dev) !== Number(final.dev) || Number(initial.ino) !== Number(final.ino)
       || Number(initial.size) !== Number(final.size)) conflict();
     if (record.token !== token) conflict();
@@ -114,7 +114,7 @@ export function loadImportPreview(stateRoot: string, token: string): ImportPrevi
 }
 export function consumeImportPreview(stateRoot: string, token: string): void {
   const path = tokenPath(stateRoot, token);
-  try { assertOwnerOnlyFile(path); removePath(path); }
+  try { assertRegularFile(path); removePath(path); }
   catch (error) {
     if (error instanceof ControlPlaneError && error.code === 'CAS_CONFLICT') throw error;
     conflict();

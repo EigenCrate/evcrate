@@ -111,7 +111,6 @@ function computeInventoryDigest(records) {
   }
 
   const canonicalRecords = sorted.map((rec) => ({
-    mode: rec.mode,
     path: rec.path,
     sha256: rec.sha256,
     size: rec.size

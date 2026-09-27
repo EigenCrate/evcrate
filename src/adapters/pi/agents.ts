@@ -40,7 +40,7 @@ export function convertAgents(context: ProjectionBuildContext, commands: readonl
       if (!body.includes('## Required checkpoint method') || !body.includes('## Checkpoint terminal report')) throw new ControlPlaneError('VALIDATION_INVALID');
     }
     const fields: Record<string, string> = { name, description }; if (tools.mapped.length) fields.tools = tools.mapped.join(', ');
-    writeProjectionFile(context, `.pi/agent/agents/${path.slice('agents/'.length)}`, new TextEncoder().encode(serializeFrontmatter(fields, body)), 0o644);
+    writeProjectionFile(context, `.pi/agent/agents/${path.slice('agents/'.length)}`, new TextEncoder().encode(serializeFrontmatter(fields, body)));
     roles[name] = { role, source: 'canonical-agent-frontmatter' }; audit[name] = { dropped: tools.dropped.sort(), mapped: tools.mapped };
   }
   writeJson(context, '.pi/agent/evcrate/model-roles.json', { agents: roles, schema: 'evcrate-model-roles-v1' });

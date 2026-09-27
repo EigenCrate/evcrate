@@ -34,11 +34,11 @@ export function prepareOutput(context: ProjectionBuildContext): void {
     if (readdirSync(root).length) fail();
   } catch (error) { if (error instanceof ControlPlaneError) throw error; fail(); }
 }
-export function write(context: ProjectionBuildContext, path: string, value: Uint8Array, mode = 0o644): void {
-  writeProjectionFile(context, outputPath(path), value, mode);
+export function write(context: ProjectionBuildContext, path: string, value: Uint8Array, executable = false): void {
+  writeProjectionFile(context, outputPath(path), value, executable);
 }
-export function writeText(context: ProjectionBuildContext, path: string, value: string, mode = 0o644): void {
-  write(context, path, new TextEncoder().encode(normalizeLf(value)), mode);
+export function writeText(context: ProjectionBuildContext, path: string, value: string, executable = false): void {
+  write(context, path, new TextEncoder().encode(normalizeLf(value)), executable);
 }
 export function writeJson(context: ProjectionBuildContext, path: string, value: unknown): void {
   const encoded = canonicalBytes(value);
@@ -50,11 +50,11 @@ export function writeJson(context: ProjectionBuildContext, path: string, value: 
 export function copy(context: ProjectionBuildContext, source: string, target: string, transform?: (value: string) => string): void {
   const sourceFile = file(context, source);
   const raw = Uint8Array.from(sourceFile.bytes);
-  if (!transform || raw.includes(0)) { write(context, target, raw, sourceFile.mode); return; }
+  if (!transform || raw.includes(0)) { write(context, target, raw, sourceFile.executable ?? false); return; }
   let value: string;
   try { value = new TextDecoder('utf-8', { fatal: true }).decode(raw); }
-  catch { write(context, target, raw, sourceFile.mode); return; }
-  writeText(context, target, transform(normalizeLf(value)), sourceFile.mode);
+  catch { write(context, target, raw, sourceFile.executable ?? false); return; }
+  writeText(context, target, transform(normalizeLf(value)), sourceFile.executable ?? false);
 }
 export function relativeTo(path: string, prefix: string): string {
   return path === prefix ? '' : path.slice(prefix.length + 1);

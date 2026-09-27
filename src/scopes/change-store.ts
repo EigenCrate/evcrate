@@ -5,7 +5,7 @@ import { canonicalJson, isPlainObject, parseJsonDocument } from '../protocol/jso
 import { assertExactKeys, assertSafeBoundedJson } from '../protocol/validation.js';
 import { canonicalJsonBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { removePath, writeAtomicFile } from '../filesystem/atomic.js';
-import { assertOwnerOnlyFile, containedPath } from '../filesystem/paths.js';
+import { assertRegularFile, containedPath } from '../filesystem/paths.js';
 import { validateScopeMutationPayload, validateScopeResultPayload, type ChangesPreviewResultPayload, type ScopeMutationPayload } from '../protocol/scope-payloads.js';
 import { validateToken } from '../protocol/resource-payload-validation.js';
 import { validateProjectIdentity } from './identity.js';
@@ -49,14 +49,14 @@ function parseRecord(value: unknown): ScopeChangeTokenRecord {
 }
 export function saveScopeChangePreview(stateRoot: string, record: ScopeChangeTokenRecord): void {
   const normalized = parseRecord(jsonRecord(record));
-  writeAtomicFile(tokenPath(stateRoot, normalized.token), canonicalJsonBytes(jsonRecord(normalized)), 0o600);
+  writeAtomicFile(tokenPath(stateRoot, normalized.token), canonicalJsonBytes(jsonRecord(normalized)));
 }
 export function loadScopeChangePreview(stateRoot: string, token: string): ScopeChangeTokenRecord {
   const path = tokenPath(stateRoot, token);
   try {
-    const initial = assertOwnerOnlyFile(path);
+    const initial = assertRegularFile(path);
     const record = parseRecord(parseJsonDocument(readBoundedFile(path, MAX_TOKEN_BYTES), MAX_TOKEN_BYTES));
-    const final = assertOwnerOnlyFile(path);
+    const final = assertRegularFile(path);
     if (Number(initial.dev) !== Number(final.dev) || Number(initial.ino) !== Number(final.ino)
       || Number(initial.size) !== Number(final.size) || record.token !== token) return conflict();
     return record;
@@ -66,7 +66,7 @@ export function loadScopeChangePreview(stateRoot: string, token: string): ScopeC
   }
 }
 export function consumeScopeChangePreview(stateRoot: string, token: string): void {
-  try { assertOwnerOnlyFile(tokenPath(stateRoot, token)); removePath(tokenPath(stateRoot, token)); }
+  try { assertRegularFile(tokenPath(stateRoot, token)); removePath(tokenPath(stateRoot, token)); }
   catch (error) {
     if (error instanceof ControlPlaneError && error.code === 'CAS_CONFLICT') throw error;
     conflict();

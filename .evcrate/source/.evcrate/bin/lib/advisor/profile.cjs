@@ -18,8 +18,7 @@ const {
 } = require('./policy-schema.cjs');
 const {
   isUnsafeWindowsPath,
-  resolveWindowsHome,
-  verifyWindowsFileOwnership
+  resolveWindowsHome
 } = require('./windows-platform.cjs');
 
 function fail(code) { throw createRoutingError(code); }
@@ -30,17 +29,11 @@ function existingStat(file) {
     fail('ROUTE_PATH_UNSAFE');
   }
 }
-function assertDirectorySafety(stat, file = null) {
+function assertDirectorySafety(stat) {
   if (stat.isSymbolicLink() || !stat.isDirectory()) fail('ROUTE_PATH_UNSAFE');
-  if (process.platform === 'win32') {
-    if (file && !verifyWindowsFileOwnership(file)) fail('ROUTE_PATH_UNSAFE');
-  } else if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) fail('ROUTE_PATH_UNSAFE');
 }
-function assertPolicyFileSafety(stat, file = null) {
+function assertPolicyFileSafety(stat) {
   if (stat.isSymbolicLink() || !stat.isFile()) fail('ROUTE_PATH_UNSAFE');
-  if (process.platform === 'win32') {
-    if (file && !verifyWindowsFileOwnership(file)) fail('ROUTE_PATH_UNSAFE');
-  } else if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) fail('ROUTE_PATH_UNSAFE');
 }
 function identity(stat) { return { dev: stat.dev, ino: stat.ino }; }
 function sameIdentity(left, right) { return left.dev === right.dev && left.ino === right.ino; }
@@ -71,7 +64,7 @@ function platformHome() {
 function stableDirectory(file, missingCode = 'HOME_UNAVAILABLE') {
   const stat = existingStat(file);
   if (!stat) fail(missingCode);
-  assertDirectorySafety(stat, file);
+  assertDirectorySafety(stat);
   return { path: file, identity: identity(stat), realpath: realPath(file) };
 }
 function createContext(home) {
@@ -92,7 +85,7 @@ function assertContextStable(context) {
     const current = existingStat(directory.path);
     if (!current || !sameIdentity(identity(current), directory.identity)
       || realPath(directory.path) !== directory.realpath) fail('ROUTE_PATH_UNSAFE');
-    assertDirectorySafety(current, directory.path);
+    assertDirectorySafety(current);
   }
 }
 function resolvePolicyPath() { return createContext(platformHome()).policyPath; }
@@ -107,7 +100,7 @@ function readPolicyFile(context, expectedStat) {
       : fs.constants.O_RDONLY | noFollow;
     descriptor = fs.openSync(context.policyPath, flags);
     const initial = fs.fstatSync(descriptor);
-    assertPolicyFileSafety(initial, context.policyPath);
+    assertPolicyFileSafety(initial);
     if (!sameIdentity(identity(initial), identity(expectedStat))) fail('ROUTE_PATH_UNSAFE');
     if (initial.size > MAX_POLICY_BYTES) fail('ROUTE_POLICY_OVERSIZED');
     const buffer = Buffer.alloc(initial.size);
@@ -118,7 +111,7 @@ function readPolicyFile(context, expectedStat) {
       || final.size !== initial.size || !current || !sameIdentity(identity(current), identity(final))) {
       fail(final.size > MAX_POLICY_BYTES ? 'ROUTE_POLICY_OVERSIZED' : 'ROUTE_PATH_UNSAFE');
     }
-    assertPolicyFileSafety(final, context.policyPath);
+    assertPolicyFileSafety(final);
     assertContextStable(context);
     return decodeUtf8(buffer, 'ROUTE_POLICY_MALFORMED');
   } catch (error) {

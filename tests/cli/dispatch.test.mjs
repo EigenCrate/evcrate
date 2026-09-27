@@ -69,7 +69,7 @@ test('settings stay on their dedicated handler boundary', async () => {
   const handled = capture(false);
   const handler = {
     handle(request) {
-      return createSettingsGetResult(request, null, { kind: 'absent', identity: 'absent' }, null);
+      return createSettingsGetResult(request, null, { kind: 'absent', identity: 'absent' });
     }
   };
   assert.equal(await main(['advisor', 'settings', 'get'], runtime(handled, { settingsHandler: handler })), 0);

@@ -48,7 +48,6 @@ export interface LegacyAdvisorPolicyView {
 export type SafeAdvisorPolicyView = AdvisorPolicyV2 | LegacyAdvisorPolicyView;
 
 export interface SettingsRevision { kind: 'present' | 'absent'; identity: string; }
-export interface SettingsMode { kind: 'existing' | 'create'; mode: number; }
 export interface SettingsRecovery { kind: 'none' | 'required'; identity: string; }
 
 const POLICY_KEYS_V2 = Object.freeze(['version', 'advisor', 'wait', 'history'] as const);
@@ -63,7 +62,6 @@ const TARGET_KEYS_V1 = Object.freeze(['backend', 'model', 'effort', 'timeout_ms'
 const POLICY_KEYS = POLICY_KEYS_V2;
 const TARGET_KEYS = TARGET_KEYS_V1;
 const REVISION_KEYS = Object.freeze(['kind', 'identity'] as const);
-const MODE_KEYS = Object.freeze(['kind', 'mode'] as const);
 const RECOVERY_KEYS = Object.freeze(['kind', 'identity'] as const);
 const REQUEST_KEYS = Object.freeze(['protocol', 'protocolVersion', 'requestId', 'operation', 'payload'] as const);
 const RESULT_KEYS = Object.freeze(['protocol', 'protocolVersion', 'requestId', 'operation', 'status'] as const);
@@ -234,22 +232,6 @@ export function validateSettingsRevision(value: unknown): SettingsRevision {
   return { kind: revision.kind, identity };
 }
 
-export function validateSettingsMode(value: unknown): SettingsMode {
-  assertExactKeys(value, MODE_KEYS, 'SETTINGS_INVALID');
-  const mode = value as Record<string, unknown>;
-  if ((mode.kind !== 'existing' && mode.kind !== 'create') || !Number.isInteger(mode.mode)
-    || (mode.mode as number) < 0 || (mode.mode as number) > 0o777) throw new ControlPlaneError('SETTINGS_INVALID');
-  if (mode.kind === 'create' && mode.mode !== 0o600) throw new ControlPlaneError('SETTINGS_INVALID');
-  if (process.platform !== 'win32' && mode.kind === 'existing' && ((mode.mode as number) & 0o077) !== 0) {
-    throw new ControlPlaneError('SETTINGS_INVALID');
-  }
-  return { kind: mode.kind, mode: mode.mode as number };
-}
-function assertSettingsModeRevision(revision: SettingsRevision, mode: SettingsMode): void {
-  if ((revision.kind === 'absent') !== (mode.kind === 'create')) {
-    throw new ControlPlaneError('SETTINGS_INVALID');
-  }
-}
 
 export interface AdvisorSettingsRequest {
   protocol: typeof SETTINGS_PROTOCOL; protocolVersion: 1; requestId: string;
@@ -271,12 +253,10 @@ export function validateAdvisorSettingsRequest(value: unknown): AdvisorSettingsR
   if (!isPlainObject(payload)) throw new ControlPlaneError('SETTINGS_INVALID');
   if (request.operation === 'get') assertExactKeys(payload, [], 'SETTINGS_INVALID');
   if (request.operation === 'preview') {
-    assertExactKeys(payload, ['policy', 'currentRevision', 'destination', 'mode'], 'SETTINGS_INVALID');
+    assertExactKeys(payload, ['policy', 'currentRevision', 'destination'], 'SETTINGS_INVALID');
     validateAdvisorPolicy(payload.policy);
-    const revision = validateSettingsRevision(payload.currentRevision);
+    validateSettingsRevision(payload.currentRevision);
     safePath(payload.destination, 4096);
-    const mode = validateSettingsMode(payload.mode);
-    assertSettingsModeRevision(revision, mode);
   }
   if (request.operation === 'apply') {
     assertExactKeys(payload, ['token', 'currentRevision'], 'SETTINGS_INVALID');
@@ -300,11 +280,11 @@ export function createAdvisorSettingsRequest(
 
 export interface SettingsGetResult {
   protocol: typeof SETTINGS_PROTOCOL; protocolVersion: 1; requestId: string; operation: 'get'; status: 'OK';
-  policy: SafeAdvisorPolicyView | null; revision: SettingsRevision; mode: SettingsMode | null;
+  policy: SafeAdvisorPolicyView | null; revision: SettingsRevision;
 }
 export interface SettingsPreviewResult {
   protocol: typeof SETTINGS_PROTOCOL; protocolVersion: 1; requestId: string; operation: 'preview'; status: 'PREVIEW';
-  token: string; issuedAt: number; expiresAt: number; currentRevision: SettingsRevision; intendedDigest: string; destination: string; mode: SettingsMode;
+  token: string; issuedAt: number; expiresAt: number; currentRevision: SettingsRevision; intendedDigest: string; destination: string;
 }
 export interface SettingsApplyResult {
   protocol: typeof SETTINGS_PROTOCOL; protocolVersion: 1; requestId: string; operation: 'apply'; status: 'APPLIED';
@@ -355,25 +335,23 @@ function validateResultBase(value: unknown, operation: AdvisorOperation, status:
 export function validateSettingsGetResult(value: unknown): SettingsGetResult {
   if (!isPlainObject(value)) throw new ControlPlaneError('PROTOCOL_INVALID');
   const result = value as Record<string, unknown>;
-  assertExactKeys(result, [...RESULT_KEYS, 'policy', 'revision', 'mode'], 'PROTOCOL_INVALID');
+  assertExactKeys(result, [...RESULT_KEYS, 'policy', 'revision'], 'PROTOCOL_INVALID');
   validateResultBase(result, 'get', 'OK');
   const policy = result.policy === null ? null : safeAdvisorPolicyView(result.policy);
   const revision = validateSettingsRevision(result.revision);
-  const mode = result.mode === null ? null : validateSettingsMode(result.mode);
-  if ((policy === null) !== (revision.kind === 'absent') || (policy === null) !== (mode === null)) {
+  if ((policy === null) !== (revision.kind === 'absent')) {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
-  if (revision.kind !== 'absent' && mode !== null) assertSettingsModeRevision(revision, mode);
   return {
     protocol: SETTINGS_PROTOCOL, protocolVersion: 1, requestId: validateRequestId(result.requestId),
-    operation: 'get', status: 'OK', policy, revision, mode
+    operation: 'get', status: 'OK', policy, revision
   };
 }
 
 export function validatePreviewMetadata(value: unknown): SettingsPreviewResult {
   if (!isPlainObject(value)) throw new ControlPlaneError('SETTINGS_INVALID');
   const result = value as Record<string, unknown>;
-  assertExactKeys(result, [...RESULT_KEYS, 'token', 'issuedAt', 'expiresAt', 'currentRevision', 'intendedDigest', 'destination', 'mode'], 'PROTOCOL_INVALID');
+  assertExactKeys(result, [...RESULT_KEYS, 'token', 'issuedAt', 'expiresAt', 'currentRevision', 'intendedDigest', 'destination'], 'PROTOCOL_INVALID');
   validateResultBase(result, 'preview', 'PREVIEW');
   if (!Number.isSafeInteger(result.issuedAt) || (result.issuedAt as number) < 0
     || !Number.isSafeInteger(result.expiresAt) || (result.expiresAt as number) <= (result.issuedAt as number)
@@ -382,8 +360,6 @@ export function validatePreviewMetadata(value: unknown): SettingsPreviewResult {
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
   const currentRevision = validateSettingsRevision(result.currentRevision);
-  const mode = validateSettingsMode(result.mode);
-  assertSettingsModeRevision(currentRevision, mode);
   return {
     protocol: SETTINGS_PROTOCOL, protocolVersion: 1, requestId: validateRequestId(result.requestId),
     operation: 'preview', status: 'PREVIEW',
@@ -392,14 +368,13 @@ export function validatePreviewMetadata(value: unknown): SettingsPreviewResult {
     expiresAt: result.expiresAt as number,
     currentRevision,
     intendedDigest: result.intendedDigest,
-    destination: safePath(result.destination, 4096),
-    mode
+    destination: safePath(result.destination, 4096)
   };
 }
 
 export function bindPreviewMetadata(
   request: AdvisorSettingsRequest, token: string, expiresAt: number, revision: SettingsRevision,
-  intendedDigest: string, destination: string, mode: SettingsMode,
+  intendedDigest: string, destination: string,
   issuedAt = expiresAt - MAX_PREVIEW_LIFETIME_MS
 ): SettingsPreviewResult {
   const normalizedRequest = validateAdvisorSettingsRequest(request);
@@ -410,21 +385,18 @@ export function bindPreviewMetadata(
   const payload = normalizedRequest.payload;
   const requestedRevision = validateSettingsRevision(payload.currentRevision);
   const requestedDestination = safePath(payload.destination, 4096);
-  const requestedMode = validateSettingsMode(payload.mode);
   const normalizedRevision = validateSettingsRevision(revision);
   const normalizedDestination = safePath(destination, 4096);
-  const normalizedMode = validateSettingsMode(mode);
   if (requestedRevision.kind !== normalizedRevision.kind
     || requestedRevision.identity !== normalizedRevision.identity
     || requestedDestination !== normalizedDestination
-    || requestedMode.kind !== normalizedMode.kind || requestedMode.mode !== normalizedMode.mode
     || canonicalAdvisorPolicyDigest(payload.policy) !== intendedDigest) {
     throw new ControlPlaneError('SETTINGS_INVALID');
   }
   return validatePreviewMetadata({
     protocol: SETTINGS_PROTOCOL, protocolVersion: 1, requestId: normalizedRequest.requestId,
     operation: 'preview', status: 'PREVIEW', token, issuedAt, expiresAt,
-    currentRevision: normalizedRevision, intendedDigest, destination: normalizedDestination, mode: normalizedMode
+    currentRevision: normalizedRevision, intendedDigest, destination: normalizedDestination
   });
 }
 
@@ -490,22 +462,22 @@ function requireFactoryRequest(request: AdvisorSettingsRequest, operation: Advis
 
 export function createSettingsGetResult(
   request: AdvisorSettingsRequest, policy: SafeAdvisorPolicyView | null,
-  revision: SettingsRevision, mode: SettingsMode | null
+  revision: SettingsRevision
 ): SettingsGetResult {
   const normalizedRequest = requireFactoryRequest(request, 'get');
   return assertSettingsResultSize(validateSettingsGetResult({
     protocol: SETTINGS_PROTOCOL, protocolVersion: 1, requestId: normalizedRequest.requestId,
-    operation: 'get', status: 'OK', policy, revision, mode
+    operation: 'get', status: 'OK', policy, revision
   })) as SettingsGetResult;
 }
 
 export function createSettingsPreviewResult(
   request: AdvisorSettingsRequest, token: string, expiresAt: number, revision: SettingsRevision,
-  intendedDigest: string, destination: string, mode: SettingsMode,
+  intendedDigest: string, destination: string,
   issuedAt?: number
 ): SettingsPreviewResult {
   return assertSettingsResultSize(bindPreviewMetadata(
-    request, token, expiresAt, revision, intendedDigest, destination, mode, issuedAt
+    request, token, expiresAt, revision, intendedDigest, destination, issuedAt
   )) as SettingsPreviewResult;
 }
 

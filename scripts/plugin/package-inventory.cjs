@@ -8,7 +8,7 @@
  * - Code-point sorted path, size, mode, sha256 records
  * - Validation of exact logical members
  * - Generation of standalone inventory.json and manifest.json
- * - Preservation of approved file modes (0755 for backend/worker.cjs, 0644 for all others)
+ * - Inclusion of archive format file modes (0755 for backend/worker.cjs, 0644 for others)
  * - Limits checking: <= 32 MiB compressed, <= 64 MiB expanded, <= 2048 files, UI <= 5 MiB
  */
 

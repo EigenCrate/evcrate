@@ -1,4 +1,4 @@
-import { chmodSync, lstatSync, mkdirSync, readdirSync } from 'node:fs';
+import { lstatSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { parseJsonDocument } from '../protocol/json.js';
@@ -72,31 +72,14 @@ export function ensureProjectionDirectory(context: ProjectionBuildContext, path:
   const name = normalized(path);
   const destination = context.stagePath(name);
   assertNoSymlinkAncestors(destination);
-  try { mkdirSync(destination, { recursive: true, mode: 0o755 }); }
+  try { mkdirSync(destination, { recursive: true }); }
   catch { unsafe(); }
-  if (process.platform !== 'win32') {
-    let current = destination;
-    while (current !== context.stage.path) {
-      try {
-        const currentStat = lstatSync(current);
-        if (currentStat.isSymbolicLink() || !currentStat.isDirectory()) unsafe();
-        chmodSync(current, 0o755);
-      } catch (error) {
-        if (error instanceof ControlPlaneError) throw error;
-        unsafe();
-      }
-      const parent = dirname(current);
-      if (parent === current) unsafe();
-      current = parent;
-    }
-  }
   assertNoSymlinkAncestors(destination);
   const stat = lstatSync(destination);
   if (stat.isSymbolicLink() || !stat.isDirectory()) unsafe();
   registerProjectionExpectation(context, {
     path: name,
-    kind: 'directory',
-    mode: 0o755
+    kind: 'directory'
   });
   return destination;
 }
@@ -105,22 +88,20 @@ export function writeProjectionFile(
   context: ProjectionBuildContext,
   path: string,
   bytes: Uint8Array,
-  mode = 0o644,
+  executable = false,
 ): void {
-  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777) throw new ControlPlaneError('VALIDATION_INVALID');
   const name = normalized(path);
   const destination = context.stagePath(name);
   const parent = relative(context.stage.path, dirname(destination)).split('\\').join('/');
   if (parent) ensureProjectionDirectory(context, parent);
   else assertNoSymlinkAncestors(context.stage.path);
   try {
-    writeAtomicProjectionFile(destination, bytes, mode);
+    writeAtomicProjectionFile(destination, bytes, executable);
     registerProjectionExpectation(context, {
       path: name,
       kind: 'file',
       size: bytes.byteLength,
-      hash: hashBytes(bytes),
-      mode
+      hash: hashBytes(bytes)
     });
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
@@ -130,7 +111,7 @@ export function writeProjectionFile(
 
 export function copyGraphFile(context: ProjectionBuildContext, source: string, destination: string): void {
   const file = graphFile(context, source);
-  writeProjectionFile(context, destination, file.bytes, file.mode);
+  writeProjectionFile(context, destination, file.bytes, file.executable ?? false);
 }
 
 export function copyGraphTree(
@@ -144,7 +125,7 @@ export function copyGraphTree(
     if (file.path !== prefix && !file.path.startsWith(`${prefix}/`)) continue;
     const suffix = file.path === prefix ? '' : file.path.slice(prefix.length + 1);
     const target = suffix ? `${destinationPrefix}/${suffix}` : destinationPrefix;
-    writeProjectionFile(context, target, transform ? transform(file.path, file.bytes) : file.bytes, file.mode);
+    writeProjectionFile(context, target, transform ? transform(file.path, file.bytes) : file.bytes, file.executable ?? false);
   }
 }
 
@@ -152,7 +133,6 @@ type ActualProjectionEntry = {
   readonly kind: 'file' | 'directory';
   readonly size?: number;
   readonly hash?: string;
-  readonly mode?: number;
 };
 
 function collectFiles(
@@ -180,9 +160,8 @@ function collectFiles(
       diagnostics.push({ path: relativePath, kind: 'file', code: 'unsafe' });
       continue;
     }
-    const mode = Number(stat.mode) & 0o777;
     if (stat.isDirectory()) {
-      actual.set(relativePath, { kind: 'directory', mode });
+      actual.set(relativePath, { kind: 'directory' });
       collectFiles(context, path, actual, diagnostics);
       continue;
     }
@@ -192,7 +171,7 @@ function collectFiles(
       const final = lstatSync(path);
       if (final.isSymbolicLink() || !final.isFile()
         || Number(final.dev) !== Number(stat.dev) || Number(final.ino) !== Number(stat.ino)
-        || Number(final.size) !== Number(stat.size) || (Number(final.mode) & 0o777) !== mode) {
+        || Number(final.size) !== Number(stat.size)) {
         throw new ControlPlaneError('PATH_UNSAFE');
       }
     } catch {
@@ -200,7 +179,7 @@ function collectFiles(
       continue;
     }
     const hash = hashBytes(bytes);
-    actual.set(relativePath, { kind: 'file', size: bytes.byteLength, hash, mode });
+    actual.set(relativePath, { kind: 'file', size: bytes.byteLength, hash });
     const rootRelative = relative(context.stage.path, path).split('\\').join('/');
     if (rootRelative.endsWith('/migration-behavior-matrix.json')
       || rootRelative.endsWith('/evcrate/migration-inventory.json')) continue;
@@ -255,14 +234,6 @@ export function validateProjection(context: ProjectionBuildContext): ProjectionV
         diagnostics.push({ path, kind: 'file', code: 'bytes-mismatch', expected: wanted.size, actual: entry.size });
       } else if (wanted.hash !== undefined && wanted.hash !== entry.hash) {
         diagnostics.push({ path, kind: 'file', code: 'hash-mismatch', expected: wanted.hash, actual: entry.hash });
-      } else if (process.platform !== 'win32' && wanted.mode !== undefined && wanted.mode !== entry.mode) {
-        if (entry.mode !== undefined && (entry.mode & 0o777) !== 0o777) {
-          diagnostics.push({ path, kind: 'file', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
-        }
-      }
-    } else if (process.platform !== 'win32' && wanted.mode !== undefined && wanted.mode !== entry.mode) {
-      if (entry.mode !== undefined && (entry.mode & 0o777) !== 0o777) {
-        diagnostics.push({ path, kind: 'directory', code: 'mode-mismatch', expected: wanted.mode, actual: entry.mode });
       }
     }
   }
@@ -272,7 +243,7 @@ export function validateProjection(context: ProjectionBuildContext): ProjectionV
         path,
         kind: entry.kind,
         code: 'missing',
-        expected: entry.hash ?? entry.mode
+        expected: entry.hash
       });
     }
   }

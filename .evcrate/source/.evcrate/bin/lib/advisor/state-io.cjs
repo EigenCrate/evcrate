@@ -11,8 +11,7 @@ const {
   canonicalWindowsProjectId,
   isUnsafeWindowsPath,
   getWindowsProcessIdentity,
-  checkWindowsProcessStatus,
-  verifyWindowsFileOwnership
+  checkWindowsProcessStatus
 } = require('./windows-platform.cjs');
 
 const MAX_BYTES = 64 * 1024;
@@ -24,25 +23,21 @@ function inspect(file) {
   try { return fs.lstatSync(file, { bigint: true }); }
   catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
-function same(a, b) { return a && b && a.dev === b.dev && a.ino === b.ino; }
+function same(a, b) { return Boolean(a && b && a.dev === b.dev && a.ino === b.ino); }
 function unchanged(a, b) {
-  return same(a, b) && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+  return same(a, b)
+    && typeof a.isFile === 'function' && typeof b.isFile === 'function'
+    && a.isFile() && b.isFile()
+    && !a.isSymbolicLink() && !b.isSymbolicLink()
+    && a.nlink === b.nlink
+    && a.size === b.size
+    && a.mtimeNs === b.mtimeNs;
 }
-function owner(stat, file = null) {
-  if (process.platform === 'win32') {
-    if (!stat || stat.isSymbolicLink()) return false;
-    if (file) return verifyWindowsFileOwnership(file);
-    return true;
-  }
-  return typeof process.getuid === 'function' && stat.uid === BigInt(process.getuid());
-}
-// Mode checks removed per controller contract; non-mode invariants (ownership, kind, symlinks) preserved.
-function directory(stat, privateMode = false, ancestor = false, file = null) {
+function directory(stat) {
   if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail();
-  if (privateMode && !owner(stat, file)) fail();
 }
-function regular(stat, file = null) {
-  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n || !owner(stat, file)) fail();
+function regular(stat) {
+  if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n) fail();
 }
 function absolute(value) {
   if (typeof value !== 'string' || value.includes('\0')) fail();
@@ -61,8 +56,8 @@ function chain(root) {
   for (const component of ['', ...root.slice(current.length).split(path.sep).filter(Boolean)]) {
     if (component) current = path.join(current, component);
     const stat = inspect(current);
-    directory(stat, false, current !== root);
-    entries.push({ path: current, stat, ancestor: current !== root });
+    directory(stat);
+    entries.push({ path: current, stat });
   }
   if (fs.realpathSync.native(root) !== root) fail();
   return entries;
@@ -70,7 +65,7 @@ function chain(root) {
 function stable(entries) {
   for (const entry of entries) {
     const stat = inspect(entry.path);
-    directory(stat, entry.privateMode, entry.ancestor);
+    directory(stat);
     if (!same(stat, entry.stat)) fail();
   }
 }
@@ -103,13 +98,13 @@ function stateLocation({ cwd = process.cwd(), environment = process.env } = {}, 
     const parts = ['.evcrate', 'advisor-state', projectId, taskRunId.toLowerCase()];
     let current = home;
     let missing = false;
-    for (const [index, part] of parts.entries()) {
+    for (const part of parts) {
       current = path.join(current, part);
       if (missing) continue;
       const stat = inspect(current);
       if (!stat) { missing = true; continue; }
-      directory(stat, index > 0);
-      entries.push({ path: current, stat, privateMode: index > 0 });
+      directory(stat);
+      entries.push({ path: current, stat });
     }
     const location = Object.freeze({ projectId, projectRoot, taskDirectory: current });
     LOCATIONS.set(location, { home, parts, entries });
@@ -160,18 +155,18 @@ function openTask(context, create) {
   if (process.platform === 'win32') {
     const entries = [...context.entries];
     let logical = context.home;
-    for (const [index, part] of context.parts.entries()) {
+    for (const part of context.parts) {
       logical = path.join(logical, part);
       let stat = inspect(logical);
       if (!stat && create) {
         stable(entries);
-        try { fs.mkdirSync(logical, { mode: 0o700 }); }
+        try { fs.mkdirSync(logical); }
         catch (error) { if (error.code !== 'EEXIST') throw error; }
         stat = inspect(logical);
       }
       if (!stat) fail('STATE_NOT_FOUND');
-      directory(stat, index > 0);
-      entries.push({ path: logical, stat, privateMode: index > 0 });
+      directory(stat);
+      entries.push({ path: logical, stat });
     }
     stable(entries);
     return {
@@ -187,23 +182,23 @@ function openTask(context, create) {
     let fd = fs.openSync(logical, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW);
     descriptors.push(fd);
     if (!same(fs.fstatSync(fd, { bigint: true }), inspect(logical))) fail();
-    for (const [index, part] of context.parts.entries()) {
+    for (const part of context.parts) {
       const child = `/proc/self/fd/${fd}/${part}`;
       let stat = inspect(child);
       if (!stat && create) {
         stable(entries);
-        try { fs.mkdirSync(child, { mode: 0o700 }); }
+        try { fs.mkdirSync(child); }
         catch (error) { if (error.code !== 'EEXIST') throw error; }
         fs.fsyncSync(fd);
         stat = inspect(child);
       }
       if (!stat) fail('STATE_NOT_FOUND');
-      directory(stat, index > 0);
+      directory(stat);
       const next = fs.openSync(child, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW);
       descriptors.push(next);
       if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
       logical = path.join(logical, part);
-      entries.push({ path: logical, stat, privateMode: index > 0 });
+      entries.push({ path: logical, stat });
       fd = next;
     }
     stable(entries);
@@ -247,9 +242,8 @@ function writeExclusive(file, bytes) {
   const flags = process.platform === 'win32'
     ? fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL
     : fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | NOFOLLOW;
-  const fd = fs.openSync(file, flags, 0o600);
+  const fd = fs.openSync(file, flags);
   try {
-    if (process.platform !== 'win32') fs.fchmodSync(fd, 0o600);
     let offset = 0;
     while (offset < bytes.length) {
       const written = fs.writeSync(fd, bytes, offset, bytes.length - offset);
@@ -381,6 +375,6 @@ function transactState(location, { create = false } = {}, callback) {
 
 module.exports = {
   stateLocation, transactState, processIdentity, processStatus,
-  inspect, same, unchanged, owner, directory, regular, absolute, chain, stable,
+  inspect, same, unchanged, directory, regular, absolute, chain, stable,
   readFile, writeExclusive, removeOwned, openTask, NOFOLLOW, UUID, LOCATIONS
 };

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   ControlPlaneError, PERSISTED_TARGETS, getResource, listResources, loadResourceRegistry,
@@ -105,4 +105,41 @@ test('registry ordering and cursors use Unicode code-point order', () => {
   assert.deepEqual(document.resources.map(({ id }) => id), [bmp.id, astral.id]);
   assert.deepEqual(listResources(document, {}, bmp.id, 10).resources.map(({ id }) => id), [astral.id]);
   assert.doesNotThrow(() => resourceDocumentBytes(document));
+});
+
+test('file d\\0\\n vs empty directory yields distinct content hash and registry CAS conflict (F6 regression)', () => {
+  const fixture = createPhase6Fixture();
+  try {
+    const hookPath = join(fixture.canonical, 'hooks', 'd_test');
+    // 1. Create file with bytes "d\0\n"
+    writeFileSync(hookPath, 'd\0\n');
+    const scannedWithFile = scanCanonicalResources(fixture.canonical, RESOURCE_ROOTS);
+    const fileRecord = scannedWithFile.find((r) => r.id === 'hook:hooks/d_test');
+    assert.ok(fileRecord);
+
+    // Save registry with this file
+    const docWithFile = {
+      schema_version: 1,
+      revision: 1,
+      resources: scannedWithFile
+    };
+    writeFileSync(fixture.registryPath, resourceDocumentBytes(docWithFile));
+    const loadedWithFile = loadResourceRegistry(fixture.registryPath, fixture.canonical, RESOURCE_ROOTS);
+    assert.ok(loadedWithFile);
+
+    // 2. Replace the file with an empty directory
+    rmSync(hookPath);
+    mkdirSync(hookPath);
+
+    // Scanner produces a different content_hash for the empty directory
+    const scannedWithDir = scanCanonicalResources(fixture.canonical, RESOURCE_ROOTS);
+    const dirRecord = scannedWithDir.find((r) => r.id === 'hook:hooks/d_test');
+    assert.ok(dirRecord);
+    assert.notEqual(fileRecord.content_hash, dirRecord.content_hash);
+
+    // Registry verification fails with CAS_CONFLICT when file is replaced with empty directory
+    assert.equal(codeOf(() => loadResourceRegistry(fixture.registryPath, fixture.canonical, RESOURCE_ROOTS)), 'CAS_CONFLICT');
+  } finally {
+    closePhase6Fixture(fixture);
+  }
 });

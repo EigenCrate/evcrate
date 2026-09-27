@@ -242,7 +242,7 @@ export function projectCatalogDataAndLayout(
   };
 
   const encoder = new TextEncoder();
-  writeProjectionFile(context, `${mapping.scriptDirectory}/scanner-layout.json`, encoder.encode(JSON.stringify(layout, null, 2) + '\n'), 0o644);
-  writeProjectionFile(context, `${mapping.scriptDirectory}/${commandOut}`, encoder.encode(serializeCommandYaml(validatedCommands)), 0o644);
-  writeProjectionFile(context, `${mapping.scriptDirectory}/${skillOut}`, encoder.encode(serializeSkillYaml(validatedSkills)), 0o644);
+  writeProjectionFile(context, `${mapping.scriptDirectory}/scanner-layout.json`, encoder.encode(JSON.stringify(layout, null, 2) + '\n'));
+  writeProjectionFile(context, `${mapping.scriptDirectory}/${commandOut}`, encoder.encode(serializeCommandYaml(validatedCommands)));
+  writeProjectionFile(context, `${mapping.scriptDirectory}/${skillOut}`, encoder.encode(serializeSkillYaml(validatedSkills)));
 }

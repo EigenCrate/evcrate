@@ -129,6 +129,7 @@
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "commitlint": "^21.2.3",
     "conventional-changelog-conventionalcommits": "^7.0.2",
     "husky": "^8.0.3",
     "pi-subagents": "0.44.0",

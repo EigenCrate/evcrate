@@ -1258,7 +1258,7 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
     const rcpt = JSON.parse(fs.readFileSync(rcptFile, 'utf8'));
 
     // Inject traversal in immutable_files
-    rcpt.immutable_files['../../escaped.txt'] = { size: 10, sha256: '0'.repeat(64), mode: 420 };
+    rcpt.immutable_files['../../escaped.txt'] = { size: 10, sha256: '0'.repeat(64) };
     fs.writeFileSync(rcptFile, JSON.stringify(rcpt, null, 2), 'utf8');
 
     const beforePointer = fs.readFileSync(path.join(dataDir, 'current.json'), 'utf8');

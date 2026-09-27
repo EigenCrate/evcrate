@@ -181,7 +181,6 @@ function computeInventoryDigest(records) {
     seenLower.add(lower);
   }
   const canonicalRecords = sorted.map((rec) => ({
-    mode: rec.mode,
     path: rec.path,
     sha256: rec.sha256,
     size: rec.size
@@ -315,6 +314,11 @@ function decompressTarBounded(archivePath) {
   return zlib.gunzipSync(gzipped, { maxOutputLength: MAX_TOTAL_EXPANDED_BYTES });
 }
 
+function isMandatoryLauncherRole(packageRelative) {
+  return packageRelative === 'dist/cli/evcrate.js' ||
+         packageRelative === '.evcrate/source/.evcrate/bin/evcrate-advisor';
+}
+
 function extractTarArchive(archivePath, targetStageDir) {
   const tar = decompressTarBounded(archivePath);
   let offset = 0;
@@ -395,18 +399,26 @@ function extractTarArchive(archivePath, targetStageDir) {
       throw new Error(`File ${packageRelative} exceeds max file bytes ${MAX_FILE_BYTES}`);
     }
 
-    const normMode = (mode & 0o111) !== 0 ? 0o755 : 0o644;
+    const isMandatory = isMandatoryLauncherRole(packageRelative);
+    const isExec = isMandatory || ((mode & 0o111) !== 0);
     const sha256 = sha256Bytes(fileData);
 
     // Write file into stage
     const fullDest = path.join(targetStageDir, 'package', ...packageRelative.split('/'));
     fs.mkdirSync(path.dirname(fullDest), { recursive: true });
-    fs.writeFileSync(fullDest, fileData, { mode: normMode });
-
+    fs.writeFileSync(fullDest, fileData);
+    if (isExec) {
+      try {
+        fs.chmodSync(fullDest, fs.statSync(fullDest).mode | 0o111);
+      } catch (err) {
+        if (isMandatory) {
+          throw new Error(`Failed to set mandatory execute bit on ${packageRelative}: ${err.message}`);
+        }
+      }
+    }
     records.push({
       path: packageRelative,
       size,
-      mode: normMode,
       sha256
     });
   }
@@ -423,17 +435,9 @@ function resolveRoots(options) {
   const stateRoot = options.stateDir || (process.env.XDG_STATE_HOME ? path.join(process.env.XDG_STATE_HOME, 'evcrate') : path.join(home, '.local', 'state', 'evcrate'));
   const binDir = options.binDir || process.env.EVCRATE_BIN_DIR || path.join(home, '.local', 'bin');
 
-  fs.mkdirSync(dataRoot, { recursive: true, mode: 0o700 });
-  fs.mkdirSync(stateRoot, { recursive: true, mode: 0o700 });
-  fs.mkdirSync(binDir, { recursive: true, mode: 0o755 });
-
-  const currentUid = process.getuid ? process.getuid() : null;
-  for (const [name, dir] of [['data', dataRoot], ['state', stateRoot]]) {
-    const st = fs.statSync(dir);
-    if (currentUid !== null && currentUid !== 0 && st.uid !== currentUid) {
-      throw new Error(`Insecure ${name} directory: not owned by current user (${dir})`);
-    }
-  }
+  fs.mkdirSync(dataRoot, { recursive: true });
+  fs.mkdirSync(stateRoot, { recursive: true });
+  fs.mkdirSync(binDir, { recursive: true });
 
   return {
     dataRoot: path.resolve(dataRoot),
@@ -677,14 +681,24 @@ function executeStagedSmoke(stagedCliPath, expectedVersion) {
     throw new Error(`Staged CLI not found at ${stagedCliPath}`);
   }
 
-  const output = execFileSync(process.execPath, [stagedCliPath, 'version', '--json'], {
+  const header = Buffer.alloc(2);
+  const fd = fs.openSync(stagedCliPath, 'r');
+  try {
+    const bytesRead = fs.readSync(fd, header, 0, 2, 0);
+    if (bytesRead < 2 || header[0] !== 0x23 || header[1] !== 0x21) {
+      throw new Error(`Staged CLI at ${stagedCliPath} is missing required shebang`);
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+
+  const output = execFileSync(stagedCliPath, ['version', '--json'], {
     cwd: os.tmpdir(),
     shell: false,
     timeout: 10000,
     maxBuffer: 1024 * 1024,
     encoding: 'utf8'
   });
-
   let parsed;
   try {
     parsed = JSON.parse(output);
@@ -750,9 +764,9 @@ function performInstall(roots, assets, options, isRepair = false) {
   }
 
   // 5. Stage fresh extraction
-  fs.mkdirSync(roots.stagingDir, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(roots.stagingDir, { recursive: true });
   const stageDir = path.join(roots.stagingDir, `stage-${process.pid}-${Date.now()}`);
-  fs.mkdirSync(stageDir, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(stageDir, { recursive: true });
 
   writeJournal(roots, {
     schema: SCHEMA_JOURNAL,
@@ -818,7 +832,7 @@ function performInstall(roots, assets, options, isRepair = false) {
   executeStagedSmoke(stagedCli, metadata.version);
 
   // Determine generation
-  fs.mkdirSync(roots.snapshotsDir, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(roots.snapshotsDir, { recursive: true });
   const existingSnapshots = fs.readdirSync(roots.snapshotsDir);
   const prefix = `${metadata.version}-${archiveSha}-`;
   let maxGen = 0;
@@ -836,7 +850,7 @@ function performInstall(roots, assets, options, isRepair = false) {
   // Write snapshot receipt
   const immutableFiles = {};
   for (const r of extractedRecords) {
-    immutableFiles[r.path] = { size: r.size, sha256: r.sha256, mode: r.mode };
+    immutableFiles[r.path] = { size: r.size, sha256: r.sha256 };
   }
   const receipt = {
     schema: SCHEMA_RECEIPT,

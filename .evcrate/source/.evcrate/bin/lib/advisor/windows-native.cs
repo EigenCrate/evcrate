@@ -1,32 +1,13 @@
 using System;
-using System.IO;
-using System.Text;
 using System.Runtime.InteropServices;
-using System.ComponentModel;
 using Microsoft.Win32.SafeHandles;
 
 public static class EvcrateNativeBridge {
-    // Access & Security Constants
+    // Native I/O and process constants
     const uint GENERIC_READ = 0x80000000;
     const uint GENERIC_WRITE = 0x40000000;
-    const uint GENERIC_ALL = 0x10000000;
-    const uint FILE_READ_DATA = 0x0001;
-    const uint FILE_WRITE_DATA = 0x0002;
-    const uint FILE_APPEND_DATA = 0x0004;
-    const uint DELETE = 0x00010000;
-    const uint READ_CONTROL = 0x00020000;
-    const uint WRITE_DAC = 0x00040000;
-    const uint WRITE_OWNER = 0x00080000;
     const uint SYNCHRONIZE = 0x00100000;
-    const uint FILE_SHARE_READ = 0x00000001;
-    const uint FILE_SHARE_WRITE = 0x00000002;
-    const uint FILE_SHARE_DELETE = 0x00000004;
     const uint OPEN_EXISTING = 3;
-    const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
-
-    const int SE_FILE_OBJECT = 1;
-    const uint OWNER_SECURITY_INFORMATION = 0x00000001;
-    const uint DACL_SECURITY_INFORMATION = 0x00000004;
 
     const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
     const uint PROCESS_SET_QUOTA = 0x0100;
@@ -39,20 +20,6 @@ public static class EvcrateNativeBridge {
         public uint Low;
         public uint High;
         public ulong ToULong() { return ((ulong)High << 32) | (ulong)Low; }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct ACL_SIZE_INFORMATION {
-        public uint AceCount;
-        public uint AclBytesInUse;
-        public uint AclBytesFree;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct ACE_HEADER {
-        public byte AceType;
-        public byte AceFlags;
-        public ushort AceSize;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -100,23 +67,6 @@ public static class EvcrateNativeBridge {
     static extern SafeFileHandle CreateFileW(
         string name, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
 
-    [DllImport("advapi32.dll", SetLastError = true)]
-    static extern uint GetSecurityInfo(
-        SafeFileHandle handle, int objectType, uint securityInfo,
-        out IntPtr pOwner, out IntPtr pGroup, out IntPtr pDacl, out IntPtr pSacl, out IntPtr pSd);
-
-    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern bool ConvertSidToStringSidW(IntPtr pSid, out IntPtr ptrSidString);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    static extern bool GetAclInformation(IntPtr pAcl, out ACL_SIZE_INFORMATION pAclInfo, uint nAclInfoLength, int aclInfoClass);
-
-    [DllImport("advapi32.dll", SetLastError = true)]
-    static extern bool GetAce(IntPtr pAcl, uint dwAceIndex, out IntPtr pAce);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    static extern IntPtr LocalFree(IntPtr hMem);
-
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, int dwProcessId);
 
@@ -154,77 +104,6 @@ public static class EvcrateNativeBridge {
     static extern bool ReadConsoleInputW(SafeFileHandle handle, out InputRecord record, uint length, out uint read);
 
     // Public API Methods
-
-    public static string GetFileOwnerSid(string filePath) {
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath) && !Directory.Exists(filePath)) return null;
-        using (var h = CreateFileW(filePath, READ_CONTROL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero)) {
-            if (h.IsInvalid) return null;
-            IntPtr pOwner, pGroup, pDacl, pSacl, pSd;
-            if (GetSecurityInfo(h, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION, out pOwner, out pGroup, out pDacl, out pSacl, out pSd) != 0) return null;
-            try {
-                if (pOwner == IntPtr.Zero) return null;
-                IntPtr pStr;
-                if (!ConvertSidToStringSidW(pOwner, out pStr)) return null;
-                string sid = Marshal.PtrToStringUni(pStr);
-                LocalFree(pStr);
-                return sid;
-            } finally {
-                if (pSd != IntPtr.Zero) LocalFree(pSd);
-            }
-        }
-    }
-
-    public static bool VerifyFileOwner(string filePath, string allowedUserSid, bool checkPrivateDacl) {
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath) && !Directory.Exists(filePath)) return false;
-        using (var h = CreateFileW(filePath, READ_CONTROL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero)) {
-            if (h.IsInvalid) return false;
-            IntPtr pOwner, pGroup, pDacl, pSacl, pSd;
-            if (GetSecurityInfo(h, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | (checkPrivateDacl ? DACL_SECURITY_INFORMATION : 0), out pOwner, out pGroup, out pDacl, out pSacl, out pSd) != 0) return false;
-            try {
-                if (pOwner == IntPtr.Zero) return false;
-                IntPtr pStr;
-                if (!ConvertSidToStringSidW(pOwner, out pStr)) return false;
-                string ownerSid = Marshal.PtrToStringUni(pStr);
-                LocalFree(pStr);
-
-                bool isOwner = string.Equals(ownerSid, allowedUserSid, StringComparison.OrdinalIgnoreCase);
-                bool isAdmin = string.Equals(ownerSid, "S-1-5-32-544", StringComparison.OrdinalIgnoreCase);
-                bool isSystem = string.Equals(ownerSid, "S-1-5-18", StringComparison.OrdinalIgnoreCase);
-                if (!isOwner && !isAdmin && !isSystem) return false;
-
-                if (checkPrivateDacl && pDacl != IntPtr.Zero) {
-                    ACL_SIZE_INFORMATION aclInfo;
-                    if (GetAclInformation(pDacl, out aclInfo, (uint)Marshal.SizeOf(typeof(ACL_SIZE_INFORMATION)), 2)) {
-                        uint writeMask = DELETE | FILE_WRITE_DATA | FILE_APPEND_DATA | WRITE_DAC | WRITE_OWNER | GENERIC_WRITE | GENERIC_ALL;
-                        for (uint i = 0; i < aclInfo.AceCount; i++) {
-                            IntPtr pAce;
-                            if (GetAce(pDacl, i, out pAce)) {
-                                ACE_HEADER hdr = (ACE_HEADER)Marshal.PtrToStructure(pAce, typeof(ACE_HEADER));
-                                if (hdr.AceType == 0) { // ACCESS_ALLOWED_ACE_TYPE
-                                    uint mask = (uint)Marshal.ReadInt32(pAce, 4);
-                                    if ((mask & writeMask) != 0) {
-                                        IntPtr pSid = (IntPtr)((long)pAce + 8);
-                                        IntPtr pAceStr;
-                                        if (ConvertSidToStringSidW(pSid, out pAceStr)) {
-                                            string aceSid = Marshal.PtrToStringUni(pAceStr);
-                                            LocalFree(pAceStr);
-                                            bool aceUser = string.Equals(aceSid, allowedUserSid, StringComparison.OrdinalIgnoreCase);
-                                            bool aceAdmin = string.Equals(aceSid, "S-1-5-32-544", StringComparison.OrdinalIgnoreCase);
-                                            bool aceSys = string.Equals(aceSid, "S-1-5-18", StringComparison.OrdinalIgnoreCase);
-                                            if (!aceUser && !aceAdmin && !aceSys) return false;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                return true;
-            } finally {
-                if (pSd != IntPtr.Zero) LocalFree(pSd);
-            }
-        }
-    }
 
     public static string GetProcessCreationTime(int pid) {
         if (pid <= 0) return null;

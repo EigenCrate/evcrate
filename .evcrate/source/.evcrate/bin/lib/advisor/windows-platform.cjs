@@ -149,52 +149,6 @@ function assertNoRecursionWindows({ environment = process.env, requestDepth = 0 
 // 3. Process Identity and Status on Windows
 let cachedSelfIdentity = null;
 
-let cachedUserSid = null;
-function getCurrentUserSid() {
-  if (cachedUserSid) return cachedUserSid;
-  try {
-    const script = `[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value`;
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-    const out = execFileSync(POWERSHELL_EXE, ['-NoProfile', '-EncodedCommand', encoded], {
-      encoding: 'utf8',
-      timeout: 3000,
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'ignore']
-    }).trim();
-    if (/^S-1-\d+(?:-\d+)+$/u.test(out)) {
-      cachedUserSid = out;
-      return cachedUserSid;
-    }
-  } catch {}
-  return null;
-}
-
-const verifiedOwnersCache = new Map();
-const NATIVE_PS1 = path.join(__dirname, 'windows-native.ps1');
-
-function verifyWindowsFileOwnership(filePath) {
-  if (!isWindows) return true;
-  if (typeof filePath !== 'string' || !filePath) return false;
-  const userSid = getCurrentUserSid();
-  if (!userSid) return false;
-
-  try {
-    const real = fs.realpathSync.native(filePath);
-    if (verifiedOwnersCache.has(real)) return verifiedOwnersCache.get(real);
-    const out = execFileSync(POWERSHELL_EXE, ['-NoProfile', '-File', NATIVE_PS1, 'verify-owner', real, userSid], {
-      encoding: 'utf8',
-      timeout: 3000,
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'ignore']
-    }).trim();
-    const isValid = out === 'valid';
-    verifiedOwnersCache.set(real, isValid);
-    return isValid;
-  } catch {
-    return false;
-  }
-}
-
 function queryProcessCreationToken(pid) {
   if (!Number.isSafeInteger(pid) || pid <= 0) return null;
   try {
@@ -361,7 +315,5 @@ module.exports = {
   getWindowsProcessIdentity,
   checkWindowsProcessStatus,
   resolveWindowsExecutable,
-  killProcessTreeWindows,
-  verifyWindowsFileOwnership,
-  getCurrentUserSid
+  killProcessTreeWindows
 };

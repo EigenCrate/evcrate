@@ -27,7 +27,7 @@ function previewRequest(context, sourcePath, kind, destination, approvals = []) 
   });
 }
 
-test('preview is non-mutating, bounded, and stores owner-only replay state', () => {
+test('preview is non-mutating, bounded, and stores replay state', () => {
   const fixture = createPhase6Fixture();
   try {
     const source = writeSource(fixture, 'preview-agent.md', '# Imported agent\n');
@@ -45,7 +45,6 @@ test('preview is non-mutating, bounded, and stores owner-only replay state', () 
     const token = result.payload.token;
     const tokenPath = join(context.stateRoot, 'import-previews', `${token}.json`);
     assert.equal(existsSync(tokenPath), true);
-    assert.equal(statSync(tokenPath).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
     assert.equal(JSON.parse(readFileSync(tokenPath, 'utf8')).source_path, source);
   } finally { closePhase6Fixture(fixture); }
 });

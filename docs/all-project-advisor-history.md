@@ -37,7 +37,7 @@ The sidecar is versioned independently from the data API. Version 1 maps canonic
 {"version":1,"projects":{"<sha256>":{"name":"Example","updated_at":1720000000000}}}
 ```
 
-The EVCrate history writer records a sanitized project basename once in an owner-only `project-metadata.json` sidecar keyed by project ID; metadata failures do not block consultation history. The worker checks the project-local sidecar first, then the root-level map. If neither has a valid name, the label is `null` and the UI can show an abbreviated project ID. Names are display-only, never identity or authorization; strict validation rejects leading/trailing whitespace, control characters, path separators, `~`, HOME/USERPROFILE references, and escaped control sequences. Do not infer labels from filesystem paths or expose absolute HOME paths.
+The EVCrate history writer records a sanitized project basename once in a `project-metadata.json` sidecar keyed by project ID under the cross-platform trusted-files policy (written atomically without UID/SID/0600 mode restrictions; prior owner-only requirement superseded); metadata failures do not block consultation history. The worker checks the project-local sidecar first, then the root-level map. If neither has a valid name, the label is `null` and the UI can show an abbreviated project ID. Names are display-only, never identity or authorization; strict validation rejects leading/trailing whitespace, control characters, path separators, `~`, HOME/USERPROFILE references, and escaped control sequences. Do not infer labels from filesystem paths or expose absolute HOME paths.
 
 ## Host runner scope descriptor
 
@@ -71,9 +71,9 @@ Revision-guarded source replacement clears the API source cache and invalidates 
 
 ## Owner-safe all-project history worker (Phase 03)
 
-The worker uses its configured history root for `history-root` scope; callers cannot supply a scan path. Root scans traverse sorted SHA-256 project IDs and owner-checked, non-symlink directories under shared project/task/consultation, record, and byte budgets. Cap exhaustion marks the snapshot incomplete. Project scope stays bound to its one target.
+The worker uses its configured history root for `history-root` scope; callers cannot supply a scan path. Root scans traverse sorted SHA-256 project IDs and non-symlink directories under shared project/task/consultation, record, and byte budgets, operating under the cross-platform trusted-files policy (filesystem UID gates removed). Cap exhaustion marks the snapshot incomplete. Project scope stays bound to its one target.
 
-Bounded reads open files with `O_RDONLY | O_NOFOLLOW`, then validate the opened descriptor's owner, regular-file type, single-link status, and size. Execution/outcome IDs are checked against their enclosing project/task/consultation directories; malformed or mismatched outcome data remains `invalid` rather than being misreported as `missing`, without discarding its valid execution record. Detail rereads compare device, inode, size, and content fingerprints before returning data.
+Bounded reads open files with `O_RDONLY | O_NOFOLLOW`, then validate the opened descriptor's regular-file type, single-link status, and size under the cross-platform trusted-files policy (descriptor owner UID checks removed). Execution/outcome IDs are checked against their enclosing project/task/consultation directories; malformed or mismatched outcome data remains `invalid` rather than being misreported as `missing`, without discarding its valid execution record. Detail rereads compare device, inode, size, and content fingerprints before returning data.
 
 Pagination cursors are HMAC-bound to the snapshot, query hash, and offset. Project selection and filters are covered by the query hash; stable ordering is `started_at` descending, then `project_id`, `task_run_id`, and `consultation_id` ascending.
 

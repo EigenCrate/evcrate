@@ -25,8 +25,7 @@ function computeDirectoryHash(root) {
       } else if (stat.isFile()) {
         const content = fs.readFileSync(fullPath);
         const hash = crypto.createHash('sha256').update(content).digest('hex');
-        const mode = (stat.mode & 0o777).toString(8);
-        entries.push(`f\0${relPath}\0${mode}\0${hash}\n`);
+        entries.push(`f\0${relPath}\0${hash}\n`);
       }
     }
   }

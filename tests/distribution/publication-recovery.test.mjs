@@ -22,7 +22,7 @@ function fileSnapshot(path, fileHash) {
   const stat = lstatSync(path);
   return {
     present: true, kind: 'file', device: Number(stat.dev), inode: Number(stat.ino),
-    size: Number(stat.size), mode: Number(stat.mode) & 0o777, hash: fileHash
+    size: Number(stat.size), hash: fileHash
   };
 }
 function journalFor(home, state, status, current, retain = false) {
@@ -485,8 +485,7 @@ test('recovery refuses an unproven create promotion even when external content m
       backup: null,
       before: { present: false },
       intended: null,
-      promoted: false,
-      mode: 0o600
+      promoted: false
     };
     journal.operations_digest = hashBytes(canonicalJsonBytes(journal.operations));
     writeAtomicFile(journalPath, canonicalJsonBytes(journal));
@@ -506,33 +505,3 @@ test('recovery refuses an unproven create promotion even when external content m
   }
 });
 
-test('recovery rejects progress evidence with an operation mode mismatch', () => {
-  const fixtureValue = fixture('evcrate-recovery-progress-mode-');
-  try {
-    const { home, state } = fixtureValue;
-    const { destination, transaction } = journalFor(home, state, 'promoting', 'new');
-    const journalPath = join(state, 'publication-journal.json');
-    const journal = JSON.parse(readFileSync(journalPath, 'utf8'));
-    const originalIntended = journal.operations[0].intended;
-    journal.operations[0] = { ...journal.operations[0], promoted: false, intended: null, mode: 0o600 };
-    journal.operations_digest = hashBytes(canonicalJsonBytes(journal.operations));
-    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
-    const progress = directory(join(transaction, 'progress'));
-    const intended = { ...originalIntended, mode: 0o644 };
-    writeAtomicFile(join(progress, '0.json'), canonicalJsonBytes({
-      index: 0, promoted: true, intended
-    }));
-    chmodSync(destination, 0o644);
-
-    assert.throws(
-      () => recoverPublicationUnlocked(state, home),
-      (error) => error?.code === 'RECOVERY_FAILED'
-    );
-    assert.equal(readFileSync(destination, 'utf8'), 'new');
-    assert.equal(lstatSync(destination).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o644);
-    assert.equal(existsSync(transaction), true);
-    assert.equal(existsSync(journalPath), true);
-  } finally {
-    rmSync(fixtureValue.root, { recursive: true, force: true });
-  }
-});

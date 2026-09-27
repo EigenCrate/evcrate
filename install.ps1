@@ -225,7 +225,6 @@ function Compute-InventoryDigest {
         [void]$seenLower.Add($rec.path.ToLowerInvariant())
 
         $canonicalList.Add(@{
-            mode   = [int]$rec.mode
             path   = [string]$rec.path
             sha256 = [string]$rec.sha256
             size   = [long]$rec.size
@@ -1313,20 +1312,9 @@ function Extract-ZipArchiveSafely {
             $fileSha = $sb.ToString()
             $sha.Dispose()
 
-            # Mode handling for Windows:
-            # NOTE: Windows ZIP lacks reliable POSIX mode behavior. If ExternalAttributes is present, use it; otherwise infer executable from entrypoint paths. Full native Windows harness validation will verify this in future plan.
-            $rawMode = ($entry.ExternalAttributes -shr 16) -band 0x1FF
-            $isExec = if ($rawMode -ne 0) {
-                ($rawMode -band 0x49) -ne 0 # 0o111
-            } else {
-                $relPath -eq 'dist/cli/evcrate.js' -or $relPath -eq '.evcrate/source/.evcrate/bin/evcrate-advisor'
-            }
-            $normMode = if ($isExec) { 493 } else { 420 } # 0o755 vs 0o644
-
             $records.Add(@{
                 path   = $relPath
                 size   = $fi.Length
-                mode   = $normMode
                 sha256 = $fileSha
             })
         }
@@ -1565,7 +1553,6 @@ function Perform-Install {
         $immutableFiles[$r.path] = @{
             size   = $r.size
             sha256 = $r.sha256
-            mode   = $r.mode
         }
     }
     $receipt = @{

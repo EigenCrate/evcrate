@@ -7,7 +7,7 @@ import type { ProjectionAdapter, ProjectionValidation } from './types.js';
 export const QUALIFICATION_EVIDENCE_VERSION = 1 as const;
 const SHA256 = /^[a-f0-9]{64}$/u;
 const DIAGNOSTIC_CODES = new Set([
-  'missing', 'unexpected', 'kind-mismatch', 'bytes-mismatch', 'hash-mismatch', 'mode-mismatch', 'unsafe'
+  'missing', 'unexpected', 'kind-mismatch', 'bytes-mismatch', 'hash-mismatch', 'unsafe'
 ]);
 const QUALIFIED_RECORDS = new WeakSet<object>();
 export interface QualificationEvidence {

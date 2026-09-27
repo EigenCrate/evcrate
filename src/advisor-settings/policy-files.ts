@@ -1,14 +1,14 @@
 import { createHash } from 'node:crypto';
-import { constants, fstatSync, lstatSync, openSync, readSync, closeSync, mkdirSync, chmodSync } from 'node:fs';
+import { constants, fstatSync, lstatSync, openSync, readSync, closeSync, mkdirSync } from 'node:fs';
 import type { Stats } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { parseJsonDocument } from '../protocol/json.js';
 import {
   canonicalAdvisorPolicyDigest, safeAdvisorPolicyView, validateAdvisorPolicy,
-  type AdvisorPolicy, type SafeAdvisorPolicyView, type SettingsMode, type SettingsRevision
+  type AdvisorPolicy, type SafeAdvisorPolicyView, type SettingsRevision
 } from '../protocol/advisor-settings.js';
-import { assertNoSymlinkAncestors, assertOwnerOnlyDirectory } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory } from '../filesystem/paths.js';
 
 const MAX_POLICY_BYTES = 16 * 1024;
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
@@ -17,7 +17,6 @@ export interface AdvisorPolicySnapshot {
   readonly policy: SafeAdvisorPolicyView | null;
   readonly bytes: Uint8Array | null;
   readonly revision: SettingsRevision;
-  readonly mode: SettingsMode | null;
 }
 function fail(code: 'PATH_UNSAFE' | 'SETTINGS_INVALID'): never { throw new ControlPlaneError(code); }
 function existing(path: string): Stats | null {
@@ -27,20 +26,17 @@ function existing(path: string): Stats | null {
   }
   return null;
 }
-function modeOf(stat: Stats): number { return Number(stat.mode) & 0o777; }
 function safePolicyFile(stat: Stats): void {
   if (stat.isSymbolicLink() || !stat.isFile()) fail('PATH_UNSAFE');
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) fail('PATH_UNSAFE');
-  if (process.platform !== 'win32' && modeOf(stat) & 0o077) fail('PATH_UNSAFE');
 }
 function identity(stat: Stats, bytes: Uint8Array): string {
-  const metadata = `${Number(stat.dev)}:${Number(stat.ino)}:${Number(stat.size)}:${stat.mtimeMs}:${modeOf(stat)}`;
+  const metadata = `${Number(stat.dev)}:${Number(stat.ino)}:${Number(stat.size)}:${stat.mtimeMs}`;
   return createHash('sha256').update(metadata).update('\0').update(bytes).digest('hex');
 }
 function absent(path: string): AdvisorPolicySnapshot {
   assertNoSymlinkAncestors(dirname(path));
   return Object.freeze({ path, policy: null, bytes: null,
-    revision: { kind: 'absent' as const, identity: 'absent' }, mode: null });
+    revision: { kind: 'absent' as const, identity: 'absent' } });
 }
 function readBytes(path: string, stat: Stats): Uint8Array {
   if (Number(stat.size) > MAX_POLICY_BYTES) fail('SETTINGS_INVALID');
@@ -70,7 +66,7 @@ export function readAdvisorPolicy(pathValue: string): AdvisorPolicySnapshot {
   const path = resolve(pathValue);
   assertNoSymlinkAncestors(path);
   const parent = dirname(path);
-  if (existing(parent)) assertOwnerOnlyDirectory(parent);
+  if (existing(parent)) assertRealDirectory(parent);
   const stat = existing(path);
   if (!stat) return absent(path);
   safePolicyFile(stat);
@@ -84,8 +80,7 @@ export function readAdvisorPolicy(pathValue: string): AdvisorPolicySnapshot {
     fail('SETTINGS_INVALID');
   }
   return Object.freeze({ path, policy, bytes: Uint8Array.from(bytes),
-    revision: { kind: 'present' as const, identity: identity(stat, bytes) },
-    mode: { kind: 'existing' as const, mode: modeOf(stat) } });
+    revision: { kind: 'present' as const, identity: identity(stat, bytes) } });
 }
 export function revisionsEqual(left: SettingsRevision, right: SettingsRevision): boolean {
   return left.kind === right.kind && left.identity === right.identity;
@@ -94,8 +89,7 @@ export function policyDigest(policy: unknown): string { return canonicalAdvisorP
 export function ensureAdvisorPolicyParent(pathValue: string): string {
   const parent = dirname(resolve(pathValue));
   assertNoSymlinkAncestors(parent);
-  mkdirSync(parent, { recursive: true, mode: 0o700 });
-  assertOwnerOnlyDirectory(parent);
-  if (process.platform !== 'win32') chmodSync(parent, 0o700);
+  mkdirSync(parent, { recursive: true });
+  assertRealDirectory(parent);
   return parent;
 }

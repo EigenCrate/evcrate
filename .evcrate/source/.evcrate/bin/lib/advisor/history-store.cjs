@@ -5,7 +5,7 @@ const path = require('node:path');
 const { randomBytes, createHash } = require('node:crypto');
 const { createRoutingError } = require('./errors.cjs');
 const {
-  inspect, same, unchanged, owner, directory, regular, absolute, chain, stable,
+  inspect, same, unchanged, directory, regular, absolute, chain, stable,
   readFile, writeExclusive, removeOwned, NOFOLLOW, UUID, processIdentity, processStatus
 } = require('./state-io.cjs');
 const {
@@ -83,13 +83,13 @@ function openHistoryRoot(ctx, create = false) {
       let stat = inspect(logical);
       if (!stat && create) {
         stable(entries);
-        try { fs.mkdirSync(logical, { mode: 0o700 }); }
+        try { fs.mkdirSync(logical); }
         catch (error) { if (error.code !== 'EEXIST') throw error; }
         stat = inspect(logical);
       }
       if (!stat) return null;
-      directory(stat, true);
-      entries.push({ path: logical, stat, privateMode: true });
+      directory(stat);
+      entries.push({ path: logical, stat });
     }
     stable(entries);
     return {
@@ -113,7 +113,7 @@ function openHistoryRoot(ctx, create = false) {
       let stat = inspect(child);
       if (!stat && create) {
         stable(entries);
-        try { fs.mkdirSync(child, { mode: 0o700 }); }
+        try { fs.mkdirSync(child); }
         catch (error) { if (error.code !== 'EEXIST') throw error; }
         fs.fsyncSync(fd);
         stat = inspect(child);
@@ -122,12 +122,12 @@ function openHistoryRoot(ctx, create = false) {
         for (const item of descriptors.reverse()) fs.closeSync(item);
         return null;
       }
-      directory(stat, true);
+      directory(stat);
       const next = fs.openSync(child, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW);
       descriptors.push(next);
       if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
       logical = path.join(logical, part);
-      entries.push({ path: logical, stat, privateMode: true });
+      entries.push({ path: logical, stat });
       fd = next;
     }
     stable(entries);
@@ -237,7 +237,7 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
       let stat = inspect(logical);
       if (!stat && create) {
         stable(entries);
-        try { fs.mkdirSync(logical, { mode: 0o700 }); }
+        try { fs.mkdirSync(logical); }
         catch (error) { if (error.code !== 'EEXIST') throw error; }
         stat = inspect(logical);
       }
@@ -245,8 +245,8 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
         root.close();
         return null;
       }
-      directory(stat, true);
-      entries.push({ path: logical, stat, privateMode: true });
+      directory(stat);
+      entries.push({ path: logical, stat });
       if (index === 0) projectBase = logical;
       if (index === 1) taskBase = logical;
     }
@@ -277,7 +277,7 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
       let stat = inspect(child);
       if (!stat && create) {
         stable(entries);
-        try { fs.mkdirSync(child, { mode: 0o700 }); }
+        try { fs.mkdirSync(child); }
         catch (error) { if (error.code !== 'EEXIST') throw error; }
         fs.fsyncSync(fd);
         stat = inspect(child);
@@ -287,12 +287,12 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
         root.close();
         return null;
       }
-      directory(stat, true);
+      directory(stat);
       const next = fs.openSync(child, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW);
       descriptors.push(next);
       if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
       logical = path.join(logical, part);
-      entries.push({ path: logical, stat, privateMode: true });
+      entries.push({ path: logical, stat });
       fd = next;
     }
     const projectFd = descriptors[0];
@@ -339,7 +339,7 @@ function scanProjectRecords(ctx, targetProjectId) {
   try {
     const pPath = `${root.base}/${projId}`;
     const pStat = inspect(pPath);
-    if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink() || !owner(pStat)) {
+    if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink()) {
       return [];
     }
 
@@ -351,7 +351,7 @@ function scanProjectRecords(ctx, targetProjectId) {
       if (!UUID.test(tName)) continue;
       const tPath = `${pPath}/${tName}`;
       const tStat = inspect(tPath);
-      if (!tStat || !tStat.isDirectory() || tStat.isSymbolicLink() || !owner(tStat)) {
+      if (!tStat || !tStat.isDirectory() || tStat.isSymbolicLink()) {
         continue;
       }
 
@@ -363,20 +363,19 @@ function scanProjectRecords(ctx, targetProjectId) {
         if (!UUID.test(cName)) continue;
         const cPath = `${tPath}/${cName}`;
         const cStat = inspect(cPath);
-        if (!cStat || !cStat.isDirectory() || cStat.isSymbolicLink() || !owner(cStat)) {
+        if (!cStat || !cStat.isDirectory() || cStat.isSymbolicLink()) {
           continue;
         }
 
         const execUnderBase = `${cPath}/execution.json`;
         const execStat = inspect(execUnderBase);
-        if (!execStat || !execStat.isFile() || execStat.isSymbolicLink() || !owner(execStat) || execStat.nlink !== 1n) {
+        if (!execStat || !execStat.isFile() || execStat.isSymbolicLink() || execStat.nlink !== 1n) {
           continue;
         }
 
         const outUnderBase = `${cPath}/outcome.json`;
         const outStat = inspect(outUnderBase);
-        const hasValidOutcome = outStat && outStat.isFile() && !outStat.isSymbolicLink() && owner(outStat) && outStat.nlink === 1n;
-
+        const hasValidOutcome = outStat && outStat.isFile() && !outStat.isSymbolicLink() && outStat.nlink === 1n;
         // Account for all files in directory to ensure quota captures temp/stray files
         let totalDiskBytes = Number(execStat.size) + (hasValidOutcome ? Number(outStat.size) : 0);
         try {
@@ -531,7 +530,7 @@ function updateStartedAttempts(dependencies, { projectId, taskRunId, consultatio
         tmpStat = writeExclusive(tmpFile, updatedBytes);
         stable(cDir.entries);
         const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
-        if (!now || !unchanged(now.stat, existing.stat)) fail('AUDIT_DEGRADED');
+        if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) fail('AUDIT_DEGRADED');
         fs.renameSync(tmpFile, execFile);
         tmpStat = undefined;
         if (cDir.fd !== undefined) fs.fsyncSync(cDir.fd);
