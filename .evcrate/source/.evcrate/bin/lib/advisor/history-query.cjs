@@ -179,7 +179,7 @@ function exportHistory(dependencies, options, fns) {
   const destParent = path.dirname(destAbs);
   const destBase = path.basename(destAbs);
   const pStat = inspect(destParent);
-  directory(pStat, false);
+  directory(pStat);
 
   // Pin parent directory to prevent TOCTOU ancestor swaps
   let parentFd;

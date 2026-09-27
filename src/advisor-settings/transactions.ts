@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { chmodSync, lstatSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { lstatSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { validateSettingsRevision, canonicalAdvisorPolicy, type AdvisorPolicy, type SettingsRevision } from '../protocol/advisor-settings.js';
-import { assertNoSymlinkAncestors, assertOwnerOnlyDirectory } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory } from '../filesystem/paths.js';
 import { removePath, syncDirectory, writeAtomicFile } from '../filesystem/atomic.js';
 import { withSettingsLock } from '../filesystem/locking.js';
 import { ensureAdvisorPolicyParent, readAdvisorPolicy, revisionsEqual, type AdvisorPolicySnapshot } from './policy-files.js';
@@ -19,7 +19,6 @@ export interface AdvisorPolicyStage {
   readonly stagedPath: string;
   readonly bytes: Uint8Array;
   readonly expectedRevision: SettingsRevision;
-  readonly mode: number;
   readonly journalRoot: string;
 }
 export interface AdvisorPolicyHooks {
@@ -44,8 +43,7 @@ function file(path: string, code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' = 'PU
 }
 function ownedTransactionFile(path: string): ReturnType<typeof lstatSync> | null {
   const stat = file(path, 'ROLLBACK_FAILED');
-  if (stat && (stat.isSymbolicLink() || !stat.isFile()
-    || (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()))) fail('ROLLBACK_FAILED');
+  if (stat && (stat.isSymbolicLink() || !stat.isFile())) fail('ROLLBACK_FAILED');
   return stat;
 }
 function stateRootFor(destination: string, configured?: string): string {
@@ -54,9 +52,8 @@ function stateRootFor(destination: string, configured?: string): string {
 function ensureStateRoot(value: string): string {
   const state = resolve(value);
   assertNoSymlinkAncestors(state);
-  try { mkdirSync(state, { recursive: true, mode: 0o700 }); } catch { fail('PATH_UNSAFE'); }
-  try { assertOwnerOnlyDirectory(state); } catch { fail('PATH_UNSAFE'); }
-  if (process.platform !== 'win32') chmodSync(state, 0o700);
+  try { mkdirSync(state, { recursive: true }); } catch { fail('PATH_UNSAFE'); }
+  try { assertRealDirectory(state); } catch { fail('PATH_UNSAFE'); }
   return state;
 }
 function expected(snapshot: AdvisorPolicySnapshot, revision: SettingsRevision): void {
@@ -74,10 +71,9 @@ function stageUnlocked(destinationValue: string, policy: AdvisorPolicy, revision
   const parent = ensureAdvisorPolicyParent(destination);
   const stagedPath = resolve(parent, `${ADVISOR_SETTINGS_STAGE_PREFIX}${process.pid}-${randomBytes(8).toString('hex')}`);
   const bytes = stageBytes(policy);
-  const targetMode = process.platform === 'win32' ? 0o600 : (snapshot.mode?.mode ?? 0o600);
-  writeAtomicFile(stagedPath, bytes, targetMode);
+  writeAtomicFile(stagedPath, bytes);
   return Object.freeze({ destination, stagedPath, bytes: Uint8Array.from(bytes), expectedRevision: revision,
-    mode: targetMode, journalRoot: state });
+    journalRoot: state });
 }
 
 export function stageAdvisorPolicy(
@@ -125,8 +121,7 @@ function applyUnlocked(destination: string, policy: AdvisorPolicy, revision: Set
     writeAdvisorPolicyJournal(currentStage, backup, 'promoted');
     options.hooks?.afterPromote?.();
     const promoted = readAdvisorPolicy(destination);
-    if (!promoted.bytes || !Buffer.from(promoted.bytes).equals(Buffer.from(currentStage.bytes))
-      || (process.platform !== 'win32' && promoted.mode?.mode !== currentStage.mode)) fail('CAS_CONFLICT');
+    if (!promoted.bytes || !Buffer.from(promoted.bytes).equals(Buffer.from(currentStage.bytes))) fail('CAS_CONFLICT');
   } catch (error) {
     try {
       recoverAdvisorPolicyUnlocked(stateRoot);

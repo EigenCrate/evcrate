@@ -31,7 +31,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-test('policy read, stage, and apply preserve canonical bytes and owner-only mode', () => {
+test('policy read, stage, and apply preserve canonical bytes', () => {
   const root = temporaryDirectory();
   const destination = join(root, 'advisor-routing.json');
   const stateRoot = join(root, 'state');
@@ -45,8 +45,6 @@ test('policy read, stage, and apply preserve canonical bytes and owner-only mode
   const applied = applyAdvisorPolicy(destination, policy, absent.revision, { stateRoot });
   assert.deepEqual(applied.policy, policy);
   assert.deepEqual([...applied.bytes], [...canonicalAdvisorPolicy(policy).bytes]);
-  assert.equal(statSync(destination).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
-  assert.equal(readAdvisorPolicy(destination).mode.mode, process.platform === 'win32' ? 0o666 : 0o600);
 });
 
 test('stale revisions and unsafe policy files fail closed without replacement', () => {
@@ -60,7 +58,8 @@ test('stale revisions and unsafe policy files fail closed without replacement', 
   assert.deepEqual(readFileSync(destination), before);
   if (process.platform !== 'win32') {
     chmodSync(destination, 0o640);
-    assert.throws(() => readAdvisorPolicy(destination), code('PATH_UNSAFE'));
+    const readBack = readAdvisorPolicy(destination);
+    assert.deepEqual(readBack.policy, policy);
   }
 });
 
@@ -143,4 +142,26 @@ test('symlink destinations and malformed policies are rejected', () => {
   writeFileSync(real, '{}'); symlinkSync(real, link);
   assert.throws(() => readAdvisorPolicy(link), code('PATH_UNSAFE'));
   assert.throws(() => applyAdvisorPolicy(join(root, 'new.json'), { version: 1, advisor: { backend: 'gemini', model: 'm', effort: 'high', timeout_ms: 60000 } }, { kind: 'absent', identity: 'absent' }), code('SETTINGS_INVALID'));
+});
+
+test('mode change between read and apply does not block settings update but content modification triggers CAS conflict', () => {
+  const root = temporaryDirectory();
+  const destination = join(root, 'advisor-routing.json');
+  const stateRoot = join(root, 'state');
+  const absent = readAdvisorPolicy(destination);
+  applyAdvisorPolicy(destination, policy, absent.revision, { stateRoot });
+  const snapshot = readAdvisorPolicy(destination);
+
+  if (process.platform !== 'win32') {
+    chmodSync(destination, 0o644);
+  }
+  const updatedPolicy = {
+    ...policy,
+    advisor: { ...policy.advisor, primary: { ...policy.advisor.primary, model: 'updated-model' } }
+  };
+  const applied = applyAdvisorPolicy(destination, updatedPolicy, snapshot.revision, { stateRoot });
+  assert.equal(applied.policy.advisor.primary.model, 'updated-model');
+
+  writeFileSync(destination, JSON.stringify({ ...policy, version: 2 }));
+  assert.throws(() => applyAdvisorPolicy(destination, policy, applied.revision, { stateRoot }), code('CAS_CONFLICT'));
 });

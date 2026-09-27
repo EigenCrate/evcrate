@@ -9,8 +9,8 @@ import {
   type PublicationChangeAction, type PublicationTarget, type PublicationScope
 } from '../protocol/publication-payloads.js';
 import {
-  assertNoSymlinkAncestors, assertOwnerControlledDirectory, assertOwnerOnlyDirectory,
-  assertOwnerOnlyFile, containedPath, normalizeRelativePath
+  assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile,
+  containedPath, normalizeRelativePath
 } from '../filesystem/paths.js';
 import { canonicalJsonBytes, hashBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { removePath, sameVolume, syncDirectory, writeAtomicFile } from '../filesystem/atomic.js';
@@ -27,7 +27,7 @@ export interface PublicationJournalOperation {
   readonly relativePath: string; readonly kind: 'file' | 'directory';
   readonly action: PublicationChangeAction; readonly destination: string; readonly backup: string | null;
   readonly before: PublicationNodeSnapshot; readonly intendedHash: string | null;
-  readonly intended: PublicationNodeSnapshot | null; readonly promoted: boolean; readonly mode: number;
+  readonly intended: PublicationNodeSnapshot | null; readonly promoted: boolean;
 }
 export interface PublicationStateRecord {
   readonly phase: 'shared' | 'harness';
@@ -82,9 +82,7 @@ function snapshot(path: string, controller = false): PublicationNodeSnapshot {
   return publicationSnapshot(path, controller);
 }
 function same(left: PublicationNodeSnapshot, right: PublicationNodeSnapshot): boolean {
-  const keys = process.platform === 'win32'
-    ? ['present', 'kind', 'size', 'hash']
-    : ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash'];
+  const keys = ['present', 'kind', 'device', 'inode', 'size', 'hash'];
   return keys.every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
 }
 function sameContent(left: PublicationNodeSnapshot, right: PublicationNodeSnapshot): boolean {
@@ -175,7 +173,7 @@ function managed(
 }
 function node(value: unknown): PublicationNodeSnapshot {
   if (!isPlainObject(value)) fail();
-  const allowed = ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash'];
+  const allowed = ['present', 'kind', 'device', 'inode', 'size', 'hash'];
   if (Object.keys(value).some((key) => !allowed.includes(key)) || typeof value.present !== 'boolean') fail();
   if (!value.present) {
     if (Object.keys(value).length !== 1) fail();
@@ -185,10 +183,9 @@ function node(value: unknown): PublicationNodeSnapshot {
   const device = safeInteger(value.device, Number.MAX_SAFE_INTEGER);
   const inode = safeInteger(value.inode, Number.MAX_SAFE_INTEGER);
   const size = safeInteger(value.size, Number.MAX_SAFE_INTEGER);
-  const mode = safeInteger(value.mode, 0o777);
   const digest = hash(value.hash);
   if (digest === null) fail();
-  return Object.freeze({ present: true, kind: value.kind, device, inode, size, mode, hash: digest });
+  return Object.freeze({ present: true, kind: value.kind, device, inode, size, hash: digest });
 }
 function mutation(action: PublicationChangeAction): boolean {
   return action !== 'noop' && action !== 'preserve';
@@ -285,7 +282,7 @@ function stringArray(value: unknown, maximum: number, absolute: boolean, minimum
 }
 function readJournal(path: string): PublicationJournal {
   try {
-    assertOwnerOnlyFile(path);
+    assertRegularFile(path);
     const parsed = parseJsonDocument(readBoundedFile(path, MAX_PUBLICATION_STATE_BYTES), MAX_PUBLICATION_STATE_BYTES);
     if (!isPlainObject(parsed)) fail();
     const schemaVersion = parsed.schema_version;
@@ -372,9 +369,8 @@ function readJournal(path: string): PublicationJournal {
     const parsedOperations = operations.map((value, index): PublicationJournalOperation => {
       if (!isPlainObject(value)) fail();
       const keys = ['target', 'binding', 'local_root', 'relative_path', 'kind', 'action', 'destination',
-        'backup', 'before', 'intendedHash', 'intended', 'promoted', 'mode'];
-      const legacyKeys = keys.slice(0, -1);
-      if ((Object.keys(value).length !== keys.length && Object.keys(value).length !== legacyKeys.length)
+        'backup', 'before', 'intendedHash', 'intended', 'promoted'];
+      if (Object.keys(value).length !== keys.length
         || Object.keys(value).some((key) => !keys.includes(key)) || typeof value.target !== 'string') fail();
       const target = value.target === 'advisor-controller' ? value.target : normalizeTarget(value.target);
       if (target !== 'advisor-controller' && !selectedTargets.includes(target)) fail();
@@ -413,10 +409,9 @@ function readJournal(path: string): PublicationJournal {
       if (typeof value.promoted !== 'boolean' || (!mutation(action) && value.promoted)) fail();
       if (value.promoted && intended === null) fail();
       if (mutation(action) && !value.promoted && intended !== null) fail();
-      const mode = value.mode === undefined ? before.mode ?? 0o600 : safeInteger(value.mode, 0o777);
       return Object.freeze({
         target, binding, localRoot, relativePath: relativePathValue, kind: value.kind,
-        action, destination, backup, before, intendedHash, intended, promoted: value.promoted, mode
+        action, destination, backup, before, intendedHash, intended, promoted: value.promoted
       });
     });
     if (schemaVersion === 2) {
@@ -455,11 +450,11 @@ function readProgress(journal: PublicationJournal): PublicationJournal {
     assertNoSymlinkAncestors(transactionRoot);
     const transactionStat = lstatSync(transactionRoot);
     if (!transactionStat.isDirectory() || transactionStat.isSymbolicLink()) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(transactionRoot);
+    assertRealDirectory(transactionRoot);
     assertNoSymlinkAncestors(progressRoot);
     const progressStat = lstatSync(progressRoot);
     if (!progressStat.isDirectory() || progressStat.isSymbolicLink()) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(progressRoot);
+    assertRealDirectory(progressRoot);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return journal;
     if (error instanceof ControlPlaneError) throw error;
@@ -476,7 +471,7 @@ function readProgress(journal: PublicationJournal): PublicationJournal {
     }
     seen.add(index);
     const path = join(progressRoot, name);
-    assertOwnerOnlyFile(path);
+    assertRegularFile(path);
     const parsed = parseJsonDocument(
       readBoundedFile(path, MAX_PUBLICATION_STATE_BYTES), MAX_PUBLICATION_STATE_BYTES
     );
@@ -485,7 +480,7 @@ function readProgress(journal: PublicationJournal): PublicationJournal {
     const operation = operations[index];
     if (!operation || !mutation(operation.action)) fail('RECOVERY_FAILED');
     const intended = parsed.intended === null ? null : node(parsed.intended);
-    if (intended === null || (intended.present && intended.mode !== operation.mode)
+    if (intended === null
       || (operation.intendedHash === null
         ? intended.present
         : !intended.present || intended.kind !== operation.kind || intended.hash !== operation.intendedHash)) {
@@ -555,7 +550,7 @@ export function readPublicationJournal(stateRoot: string): PublicationJournal | 
   try {
     const rootStat = lstatSync(root);
     if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(root);
+    assertRealDirectory(root);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     if (error instanceof ControlPlaneError) throw error;
@@ -662,11 +657,10 @@ function assertLegacyOwnedNode(
   try { stat = lstatSync(path); } catch { fail('PATH_UNSAFE'); }
   if (stat.isSymbolicLink() || (expected === 'file' && !stat.isFile())
     || (expected === 'directory' && !stat.isDirectory())
-    || (!stat.isFile() && !stat.isDirectory())
-    || (process.platform !== 'win32' && (Number(stat.mode) & 0o077) !== 0)) fail('PATH_UNSAFE');
+    || (!stat.isFile() && !stat.isDirectory())) fail('PATH_UNSAFE');
   try {
-    if (stat.isDirectory()) assertOwnerOnlyDirectory(path);
-    else assertOwnerOnlyFile(path);
+    if (stat.isDirectory()) assertRealDirectory(path);
+    else assertRegularFile(path);
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
     fail('PATH_UNSAFE');
@@ -815,7 +809,7 @@ function sameLegacyIdentity(
 function assertLegacyCleanupTarget(plan: LegacyCleanupPlan): void {
   const parent = dirname(plan.workspace_root);
   assertNoSymlinkAncestors(parent);
-  const parentStat = assertOwnerControlledDirectory(parent);
+  const parentStat = assertRealDirectory(parent);
   if (Number(parentStat.dev) !== plan.parent_device || Number(parentStat.ino) !== plan.parent_inode) {
     fail('PATH_UNSAFE');
   }
@@ -847,7 +841,7 @@ function finishLegacyCleanup(stateRoot: string, plan: LegacyCleanupPlan): void {
   assertLegacyCleanupTarget(plan);
   const parent = dirname(plan.workspace_root);
   assertNoSymlinkAncestors(parent);
-  const parentStat = assertOwnerControlledDirectory(parent);
+  const parentStat = assertRealDirectory(parent);
   if (Number(parentStat.dev) !== plan.parent_device || Number(parentStat.ino) !== plan.parent_inode) {
     fail('PATH_UNSAFE');
   }
@@ -894,7 +888,7 @@ function prepareLegacyCleanup(
   if (workspace === null) return null;
   const verified = assertLegacyWorkspaceTree(workspaceRoot);
   const parent = dirname(workspaceRoot);
-  const parentStat = assertOwnerControlledDirectory(parent);
+  const parentStat = assertRealDirectory(parent);
   if (!sameLegacyIdentity(verified, Number(workspace.dev), Number(workspace.ino))
     || !sameVolume(workspaceRoot, parent)) fail('PATH_UNSAFE');
   const quarantineRoot = join(parent, `.${details.workspace_name}.legacy-cleanup`);
@@ -908,7 +902,7 @@ function prepareLegacyCleanup(
     parent_device: cleanupPlanIdentity(parentStat.dev), parent_inode: cleanupPlanIdentity(parentStat.ino),
     project_identity: projectIdentity
   });
-  writeAtomicFile(legacyCleanupPath(stateRoot), canonicalJsonBytes(plan), 0o600);
+  writeAtomicFile(legacyCleanupPath(stateRoot), canonicalJsonBytes(plan));
   syncDirectory(resolve(stateRoot));
   return plan;
 }
@@ -1066,8 +1060,8 @@ function safeBackup(transactionRoot: string, value: string): string {
 }
 function ensureParent(path: string): void {
   const parent = dirname(path);
-  mkdirSync(parent, { recursive: true, mode: 0o700 });
-  assertOwnerControlledDirectory(parent);
+  mkdirSync(parent, { recursive: true });
+  assertRealDirectory(parent);
 }
 function cleanup(stateRoot: string, workspaceRoot: string, retain: boolean): void {
   if (!retain) removePath(workspaceRoot);
@@ -1263,8 +1257,8 @@ export function recoverPublicationUnlocked(
   if (resolve(journal.destination_root) !== resolve(homeRoot)
     || resolve(journal.durable_state_root) !== resolve(stateRoot)) fail('PATH_UNSAFE');
   assertNoSymlinkAncestors(resolve(homeRoot));
-  assertOwnerControlledDirectory(resolve(homeRoot));
-  assertOwnerOnlyDirectory(resolve(stateRoot));
+  assertRealDirectory(resolve(homeRoot));
+  assertRealDirectory(resolve(stateRoot));
   if (journal.scope === 'project') {
     const expectedWorkspace = join(resolve(homeRoot), journal.workspace_name);
     if (resolve(journal.workspace_root) !== expectedWorkspace
@@ -1282,7 +1276,7 @@ export function recoverPublicationUnlocked(
   try {
     const stat = lstatSync(transactionRoot);
     if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(transactionRoot);
+    assertRealDirectory(transactionRoot);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       if (error instanceof ControlPlaneError) throw error;

@@ -395,8 +395,8 @@ function wrapHooks(context: ProjectionBuildContext): void {
       throw error;
     }
     const source = readBoundedFile(context.stagePath(path), 16 * 1024 * 1024);
-    writeProjectionFile(context, `${path}.original.cjs`, source, 0o644);
-    writeProjectionFile(context, path, textBytes(wrapper(hookFile)), 0o755);
+    writeProjectionFile(context, `${path}.original.cjs`, source);
+    writeProjectionFile(context, path, textBytes(wrapper(hookFile)), true);
   }
 }
 function rewriteAll(context: ProjectionBuildContext): void {
@@ -415,7 +415,7 @@ function rewriteAll(context: ProjectionBuildContext): void {
       const rendered = renderHarness(content);
       const finalText = current.toLowerCase().endsWith('.sh') ? rendered.replace(/\r\n?/gu, '\n') : rendered;
       const relativePath = relative(context.stage.path, current).split('\\').join('/');
-      if (rendered !== content || current.toLowerCase().endsWith('.sh')) writeProjectionFile(context, relativePath, textBytes(finalText), stat.mode & 0o777);
+      if (rendered !== content || current.toLowerCase().endsWith('.sh')) writeProjectionFile(context, relativePath, textBytes(finalText), current.toLowerCase().endsWith('.sh') || (stat.mode & 0o111) !== 0);
     }
   };
   visit(root);
@@ -427,7 +427,7 @@ function assertManifest(context: ProjectionBuildContext): void {
 function build(context: ProjectionBuildContext): void {
   assertManifest(context);
   ensureProjectionDirectory(context, '.antigravity');
-  for (const file of context.resources.files) if (shouldCopy(file.path)) writeProjectionFile(context, `.antigravity/${file.path}`, file.bytes, file.mode);
+  for (const file of context.resources.files) if (shouldCopy(file.path)) writeProjectionFile(context, `.antigravity/${file.path}`, file.bytes, file.executable ?? false);
   extractHooks(context);
   const advisor = context.resources.files.find((file) => file.path === 'agents/advisor.md');
   if (advisor) writeProjectionFile(context, '.antigravity/agents/advisor.md', textBytes(projectAdvisor(decode(advisor.bytes))));

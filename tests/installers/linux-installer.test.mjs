@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-import { buildTestReleaseSet } from './fixtures/private-release-fixture.mjs';
+import { buildTestReleaseSet, createMinimalValidRecords } from './fixtures/private-release-fixture.mjs';
 import { createIsolatedEnv, INSTALL_SH } from './fixtures/test-env.mjs';
 
 test('fresh install from adjacent release assets commits pointers and launcher', () => {
@@ -137,6 +137,127 @@ test('upgrade preserves prior snapshot as backup and does not merge mutable path
     const v2RegistryPath = path.join(current2, 'package', '.evcrate', 'registry.json');
     assert.equal(fs.readFileSync(v2RegistryPath, 'utf8').trim(), '{}');
     assert.ok(fs.readFileSync(v1RegistryPath, 'utf8').includes('custom_user_data'));
+  } finally {
+    env.cleanup();
+  }
+});
+test('installation succeeds with pre-existing broad directories and survives chmod on installed files', () => {
+  const env = createIsolatedEnv();
+  try {
+    // 1. Pre-create dataDir, stateDir, and binDir with broad permissions (no try/catch; Linux-only)
+    fs.mkdirSync(env.dataDir, { recursive: true });
+    fs.mkdirSync(env.stateDir, { recursive: true });
+    fs.mkdirSync(env.binDir, { recursive: true });
+    fs.chmodSync(env.dataDir, 0o777);
+    fs.chmodSync(env.stateDir, 0o777);
+
+    // Write a sentinel file in dataDir to verify subsequent repair/install does not overwrite or remove it
+    const sentinelPath = path.join(env.dataDir, 'user-sentinel.txt');
+    fs.writeFileSync(sentinelPath, 'sentinel-payload\n');
+
+    const assets = buildTestReleaseSet({ outputDir: env.assetsDir, version: '1.0.0' });
+    const adjacentInstallSh = path.join(env.assetsDir, 'install.sh');
+    const installArgs = [
+      '--data-dir', env.dataDir,
+      '--state-dir', env.stateDir,
+      '--bin-dir', env.binDir
+    ];
+
+    const stdout = execFileSync(adjacentInstallSh, installArgs, {
+      cwd: env.tmp,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${env.binDir}:${process.env.PATH}` }
+    });
+
+    assert.ok(stdout.includes('Successfully installed EVCrate v1.0.0'));
+
+    const currentPath = path.join(env.dataDir, 'current');
+    assert.ok(fs.existsSync(currentPath));
+    const targetSnapshot = path.resolve(env.dataDir, fs.readlinkSync(currentPath));
+    assert.ok(fs.existsSync(targetSnapshot));
+
+    // 2. Chmod on installed snapshot files (no try/catch)
+    const packageDir = path.join(targetSnapshot, 'package');
+    const pkgJson = path.join(packageDir, 'package.json');
+    fs.chmodSync(pkgJson, 0o666);
+
+    // 3. Repeat-install and repair after chmod
+    const repeatOutput = execFileSync(adjacentInstallSh, installArgs, {
+      cwd: env.tmp,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${env.binDir}:${process.env.PATH}` }
+    });
+    assert.ok(repeatOutput.includes('already installed at snapshot') || repeatOutput.includes('Successfully installed'));
+
+    const repairOutput = execFileSync(adjacentInstallSh, ['repair', ...installArgs], {
+      cwd: env.tmp,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${env.binDir}:${process.env.PATH}` }
+    });
+    assert.ok(repairOutput.includes('Successfully repaired EVCrate v1.0.0'));
+
+    // Launcher continues to work and returns expected version
+    const launcherPath = path.join(env.binDir, 'evcrate');
+    const cliOutput = execFileSync(launcherPath, ['version', '--json'], { encoding: 'utf8' });
+    const parsed = JSON.parse(cliOutput);
+    assert.equal(parsed.status, 'ok');
+    assert.equal(parsed.payload.version, '1.0.0');
+
+    // Verify sentinel was preserved and not overwritten
+    assert.ok(fs.existsSync(sentinelPath));
+    assert.equal(fs.readFileSync(sentinelPath, 'utf8'), 'sentinel-payload\n');
+  } finally {
+    env.cleanup();
+  }
+});
+
+test('all-0644 archive mode installs and repairs with runnable launcher (F2 regression)', () => {
+  const env = createIsolatedEnv();
+  try {
+    // Build records where EVERY file in the archive has mode 0644
+    const records = createMinimalValidRecords('1.0.0').map((r) => ({
+      ...r,
+      mode: 0o644
+    }));
+    const assets = buildTestReleaseSet({ outputDir: env.assetsDir, version: '1.0.0', records });
+    const adjacentInstallSh = path.join(env.assetsDir, 'install.sh');
+
+    const installArgs = [
+      '--data-dir', env.dataDir,
+      '--state-dir', env.stateDir,
+      '--bin-dir', env.binDir
+    ];
+
+    const stdout = execFileSync(adjacentInstallSh, installArgs, {
+      cwd: env.tmp,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${env.binDir}:${process.env.PATH}` }
+    });
+
+    assert.ok(stdout.includes('Successfully installed EVCrate v1.0.0'));
+
+    // Verify direct launcher execution
+    const launcherPath = path.join(env.binDir, 'evcrate');
+    assert.ok(fs.existsSync(launcherPath));
+    const cliOutput = execFileSync(launcherPath, ['version', '--json'], { encoding: 'utf8' });
+    const parsed = JSON.parse(cliOutput);
+    assert.equal(parsed.status, 'ok');
+    assert.equal(parsed.payload.version, '1.0.0');
+
+    // Verify non-launcher files did NOT receive execute bit arbitrarily
+    const currentPath = path.join(env.dataDir, 'current');
+    const targetSnapshot = path.resolve(env.dataDir, fs.readlinkSync(currentPath));
+    const pkgJson = path.join(targetSnapshot, 'package', 'package.json');
+    const pkgMode = fs.statSync(pkgJson).mode & 0o777;
+    assert.equal((pkgMode & 0o111), 0, 'package.json should not be made executable');
+
+    // Verify repair also works cleanly
+    const repairStdout = execFileSync(adjacentInstallSh, ['repair', ...installArgs], {
+      cwd: env.tmp,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${env.binDir}:${process.env.PATH}` }
+    });
+    assert.ok(repairStdout.includes('Successfully repaired EVCrate v1.0.0'));
   } finally {
     env.cleanup();
   }

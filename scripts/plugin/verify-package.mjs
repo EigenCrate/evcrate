@@ -12,7 +12,7 @@
  * 4. Limits: compressed <= 32 MiB, expanded <= 64 MiB, total files <= 2048, UI <= 5 MiB
  * 5. Digest matching: each entry sha256 matches inventory.json, manifest.json inventory, and tar content
  * 6. Manifest structure and capabilities via @dam-hopper/plugin-sdk if present
- * 7. Executable permission restricted to backend/worker.cjs (0755), all others non-executable (0644)
+ * 7. Archive mode values are format metadata (no exact permission gate)
  */
 
 import fs from 'node:fs';
@@ -112,10 +112,6 @@ export function verifyPluginPackageArchive(tarGzPath, options = {}) {
     if (archiveFile.sha256 !== item.sha256) {
       throw new Error(`SHA256 mismatch for ${item.path}: inventory ${item.sha256} !== archive ${archiveFile.sha256}`);
     }
-    const expectedMode = item.path === 'backend/worker.cjs' ? 0o755 : 0o644;
-    if (archiveFile.mode !== expectedMode) {
-      throw new Error(`File mode forbidden for ${item.path}: expected ${expectedMode.toString(8)}, got ${archiveFile.mode.toString(8)}`);
-    }
   }
 
   // 4. Validate UI entrypoint
@@ -131,9 +127,6 @@ export function verifyPluginPackageArchive(tarGzPath, options = {}) {
   const workerEntry = entries.get('backend/worker.cjs');
   if (!workerEntry) {
     throw new Error('Required member backend/worker.cjs missing in archive');
-  }
-  if (workerEntry.mode !== 0o755) {
-    throw new Error(`Worker entrypoint mode must be 0755, got ${workerEntry.mode.toString(8)}`);
   }
 
   // 6. Manifest structure check

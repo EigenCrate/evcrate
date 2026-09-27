@@ -5,7 +5,7 @@ import {
   canonicalJson, decodeUtf8, parseJsonDocument, normalizeTarget, PERSISTED_TARGETS,
   RESOURCE_OPERATIONS, ADVISOR_BACKENDS, safePath, validateResourceRequest, validateResourceResult,
   validateAdvisorPolicy, validateAdvisorSettingsRequest, validateAdvisorSettingsResult,
-  validateSettingsMode, canonicalAdvisorPolicyDigest, bindPreviewMetadata,
+  canonicalAdvisorPolicyDigest, bindPreviewMetadata,
   createSettingsGetResult, createSettingsApplyResult, createSettingsConflictResult,
   createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest,
   validateResourceRequestPayload, validateResourceResultPayload, validateScopeRequestPayload,
@@ -126,7 +126,6 @@ test('proxy fixture matrix rejects counsel fields in every control-plane family'
   for (const request of negativeProxyFixtures.resource) assert.throws(() => validateResourceRequest(request));
   for (const request of negativeProxyFixtures.settings) assert.throws(() => validateAdvisorSettingsRequest(request));
   for (const request of negativeProxyFixtures.diagnostic) assert.throws(() => validateDiagnosticRequest(request));
-  assert.throws(() => validateSettingsMode({ kind: 'create', mode: 0o644 }));
 });
 
 test('stable exit bands and mutation boundaries stay explicit', () => {
@@ -158,8 +157,6 @@ test('stable exit bands and mutation boundaries stay explicit', () => {
   assert.doesNotThrow(() => validateAdvisorPolicy(maximum));
   assert.throws(() => validateAdvisorPolicy({ ...minimum, wait: { ...minimum.wait, warn_after_ms: 999 } }));
   assert.throws(() => validateAdvisorPolicy({ ...maximum, wait: { ...maximum.wait, warn_after_ms: 3600001 } }));
-  assert.doesNotThrow(() => validateSettingsMode({ kind: 'create', mode: 0o600 }));
-  assert.throws(() => validateSettingsMode({ kind: 'create', mode: 0o644 }));
   assert.throws(() => createResourceRequest('oversized', 'version', context, { value: 'x'.repeat(65536) }));
 });
 
@@ -183,7 +180,7 @@ test('settings validates complete policy and diagnostic stays distinct', () => {
   assert.deepEqual(validateAdvisorPolicy(policy), policy);
   assert.throws(() => validateAdvisorPolicy({ version: 2, advisor: { primary: { backend: 'codex' } } }));
   assert.throws(() => validateAdvisorPolicy({ ...policy, credential: 'secret' }));
-  assert.throws(() => validateAdvisorSettingsRequest({ protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'r3', operation: 'preview', payload: { policy: { ...policy, recommendation: 'x' }, currentRevision: { kind: 'present', identity: 'x' }, destination: '/x', mode: { kind: 'create', mode: 384 } } }));
+  assert.throws(() => validateAdvisorSettingsRequest({ protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'r3', operation: 'preview', payload: { policy: { ...policy, recommendation: 'x' }, currentRevision: { kind: 'present', identity: 'x' }, destination: '/x' } }));
   assert.deepEqual(validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify' }).operation, 'qualify');
   assert.throws(() => validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify', question: 'x' }));
 });
@@ -243,7 +240,7 @@ test('settings previews enforce revision correlation and bounded lifetime', () =
   const preview = contractFixtures.settingsResults.find(({ status }) => status === 'PREVIEW');
   assert.ok(preview);
   assert.throws(() => validateAdvisorSettingsResult({
-    ...preview, currentRevision: { kind: 'absent', identity: 'absent' }
+    ...preview, currentRevision: { kind: 'present', identity: 'absent' }
   }));
   assert.throws(() => validateAdvisorSettingsResult({
     ...preview, expiresAt: preview.issuedAt + 900001
@@ -264,15 +261,15 @@ test('settings request size and preview binder stay document-bound', () => {
   assert.equal(digest, preview.intendedDigest);
   assert.deepEqual(bindPreviewMetadata(
     request, preview.token, preview.expiresAt, preview.currentRevision, digest,
-    preview.destination, preview.mode, preview.issuedAt
+    preview.destination, preview.issuedAt
   ), preview);
   assert.throws(() => bindPreviewMetadata(
     request, preview.token, preview.expiresAt,
-    { kind: 'present', identity: 'sha256:other' }, digest, preview.destination, preview.mode, preview.issuedAt
+    { kind: 'present', identity: 'sha256:other' }, digest, preview.destination, preview.issuedAt
   ));
   assert.throws(() => bindPreviewMetadata(
     request, preview.token, preview.expiresAt, preview.currentRevision, 'a'.repeat(64),
-    preview.destination, preview.mode, preview.issuedAt
+    preview.destination, preview.issuedAt
   ));
   assert.throws(() => validateAdvisorSettingsRequest({
     ...contractFixtures.settings,
@@ -289,8 +286,8 @@ test('settings result factories require matching request operations', () => {
   const absent = { kind: 'absent', identity: 'absent' };
   const present = { kind: 'present', identity: 'sha256:factory' };
   const recovery = { kind: 'none', identity: 'none' };
-  assert.doesNotThrow(() => createSettingsGetResult(getRequest, null, absent, null));
-  assert.throws(() => createSettingsGetResult(previewRequest, null, absent, null));
+  assert.doesNotThrow(() => createSettingsGetResult(getRequest, null, absent));
+  assert.throws(() => createSettingsGetResult(previewRequest, null, absent));
   assert.throws(() => createSettingsApplyResult(getRequest, present, recovery));
   assert.throws(() => createSettingsConflictResult(getRequest, present, present));
   assert.throws(() => createSettingsRecoveryResult(getRequest, present, recovery));

@@ -73,7 +73,7 @@ export function projectHooks(context: ProjectionBuildContext): void {
     if (parts.some((part) => ['__pycache__', '__tests__', 'tests', 'fixtures', 'helpers'].includes(part)) || isProductionControllerArtifact(relative)) continue;
     const destination = relative === 'session-end.cjs' ? 'claude-session-end.cjs' : relative;
     const bytes = file.bytes.subarray(0, 1024).includes(0) ? file.bytes : textBytes(applyTargetReplacements(new TextDecoder().decode(file.bytes)));
-    writeProjectionFile(context, `.gemini/hooks/${destination}`, bytes, file.mode);
+    writeProjectionFile(context, `.gemini/hooks/${destination}`, bytes, file.executable ?? false);
   }
   const wrappers: Record<string, [string, 'context' | 'block' | 'passthrough', string]> = {
     'session-start.cjs': ['SessionStart', 'context', '.gemini/hooks/session-init.cjs'],
@@ -82,7 +82,7 @@ export function projectHooks(context: ProjectionBuildContext): void {
     'before-tool-privacy-block.cjs': ['BeforeTool', 'block', '.gemini/hooks/privacy-block.cjs'],
     'session-end.cjs': ['SessionEnd', 'passthrough', '.gemini/hooks/claude-session-end.cjs'],
   };
-  for (const [name, [event, kind, source]] of Object.entries(wrappers)) writeProjectionFile(context, `.gemini/hooks/${name}`, textBytes(bridge(kind, event, source)), 0o755);
+  for (const [name, [event, kind, source]] of Object.entries(wrappers)) writeProjectionFile(context, `.gemini/hooks/${name}`, textBytes(bridge(kind, event, source)), true);
 }
 export function projectScripts(context: ProjectionBuildContext): void {
   ensureProjectionDirectory(context, '.gemini/scripts');
@@ -93,13 +93,13 @@ export function projectScripts(context: ProjectionBuildContext): void {
       || isProductionControllerArtifact(relative) || relative.includes('advise-state') || basename(relative).startsWith('fake-')
       || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue;
     const bytes = file.bytes.subarray(0, 1024).includes(0) ? file.bytes : textBytes(applyTargetReplacements(new TextDecoder().decode(file.bytes)));
-    writeProjectionFile(context, `.gemini/scripts/${relative}`, bytes, file.mode);
+    writeProjectionFile(context, `.gemini/scripts/${relative}`, bytes, file.executable ?? false);
   }
 }
 
 export function projectConfig(context: ProjectionBuildContext): void {
   for (const name of ['.evcrate.json', '.evcrateignore']) {
-    if (context.resources.files.some((file) => file.path === name)) writeProjectionFile(context, `.gemini/${name}`, graphFile(context, name).bytes, graphFile(context, name).mode);
+    if (context.resources.files.some((file) => file.path === name)) writeProjectionFile(context, `.gemini/${name}`, graphFile(context, name).bytes, graphFile(context, name).executable ?? false);
   }
 }
 
@@ -127,11 +127,11 @@ export function projectSettings(context: ProjectionBuildContext): void {
   } };
   settings = merge(source, migration);
   if (settings && typeof settings === 'object') { const result = settings as Record<string, unknown>; for (const event of Object.keys(DROPPED)) if (result.hooks && typeof result.hooks === 'object') delete (result.hooks as Record<string, unknown>)[event]; for (const key of ['effortLevel', 'env', 'includeCoAuthoredBy', 'statusLine']) delete result[key]; }
-  writeProjectionFile(context, '.gemini/settings.json', textBytes(JSON.stringify(settings, null, 2)), 0o644);
+  writeProjectionFile(context, '.gemini/settings.json', textBytes(JSON.stringify(settings, null, 2)));
 }
 
 export function projectDocumentsAndMatrix(context: ProjectionBuildContext): void {
-  if (context.manifest.projectDocs.includes('GEMINI.md') && sourceExists(context, 'CLAUDE.md')) writeProjectionFile(context, 'GEMINI.md', textBytes('# Gemini Project Context\n\nThe authoritative project memory file for this migrated workspace remains `CLAUDE.md`.\nGemini should load native context first and then import the source memory document below.\n\n@./CLAUDE.md\n\n'), 0o644);
+  if (context.manifest.projectDocs.includes('GEMINI.md') && sourceExists(context, 'CLAUDE.md')) writeProjectionFile(context, 'GEMINI.md', textBytes('# Gemini Project Context\n\nThe authoritative project memory file for this migrated workspace remains `CLAUDE.md`.\nGemini should load native context first and then import the source memory document below.\n\n@./CLAUDE.md\n\n'));
   const behaviors: Record<string, unknown>[] = [{ kind: 'memory-file', source: 'CLAUDE.md', classification: 'memory-file', status: sourceExists(context, 'CLAUDE.md') ? 'migrated-wrapper' : 'not-present', target: sourceExists(context, 'CLAUDE.md') ? 'GEMINI.md -> @./CLAUDE.md' : null }];
   const commands = context.resources.files.filter((file) => file.path.startsWith('commands/') && file.path.endsWith('.md'));
   for (const file of commands) behaviors.push({ kind: 'command-prose', source: file.path.slice('commands/'.length), classification: 'command-prose', status: 'migrated', target: file.path.slice('commands/'.length, -3) + '.toml' });

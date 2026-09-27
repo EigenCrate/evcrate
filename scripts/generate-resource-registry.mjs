@@ -41,7 +41,7 @@ async function main() {
   };
 
   const bytes = resourceDocumentBytes(document);
-  writeFileSync(registryPath, bytes, { mode: 0o600 });
+  writeFileSync(registryPath, bytes);
   console.log(`Resource registry regenerated: ${resources.length} resources indexed at .evcrate/registry.json`);
 }
 

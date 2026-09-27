@@ -72,7 +72,7 @@ export function projectAgents(context: ProjectionBuildContext): void {
     for (const key of ['Examples', 'Context', 'user', 'assistant']) delete frontmatter[key];
     for (const [key, value] of Object.entries(frontmatter)) frontmatter[key] = nestedValue(value);
     if (name === 'advisor.md') frontmatter.description = 'Use this high-tier mentor for fresh named checkpoints; Gemini rejects interview relay.';
-    writeProjectionFile(context, `.gemini/agents/${name}`, textBytes(writeMarkdownFrontmatter(frontmatter, body)), file.mode);
+    writeProjectionFile(context, `.gemini/agents/${name}`, textBytes(writeMarkdownFrontmatter(frontmatter, body)), file.executable ?? false);
   }
 }
 
@@ -88,10 +88,10 @@ export function projectCommands(context: ProjectionBuildContext): void {
     if (basename(relative) === 'advise.md') {
       body = renderInlineAdviseCommand(body, 'gemini', 'ask_user'); description = 'Interview-first technical advice with native inline questioning and explicit relay rejection.';
     } else body = applyTargetReplacements(body);
-    writeProjectionFile(context, `.gemini/commands/${relative.slice(0, -3)}.toml`, textBytes(writeToml({ description, prompt: body.trim() })), file.mode);
+    writeProjectionFile(context, `.gemini/commands/${relative.slice(0, -3)}.toml`, textBytes(writeToml({ description, prompt: body.trim() })), file.executable ?? false);
     const skillName = `cmd_${commandPath.replaceAll('/', '_')}`;
     const skillBody = `---\nname: ${skillName}\ndescription: ${description}\n---\n# ${skillName}\n\nCommand Path: /${commandPath}\n\nDescription: ${description}\n\n${body.trim()}\n`;
-    writeProjectionFile(context, `.gemini/skills/${skillName}/SKILL.md`, textBytes(skillBody), file.mode);
+    writeProjectionFile(context, `.gemini/skills/${skillName}/SKILL.md`, textBytes(skillBody), false);
   }
 }
 
@@ -105,7 +105,7 @@ export function projectSkills(context: ProjectionBuildContext): void {
     segments[0] = top.replace(/claude/giu, 'gemini');
     let destination = segments.join('/');
     if (basename(destination).toLowerCase() === 'skill.md') destination = destination.slice(0, -basename(destination).length) + 'SKILL.md';
-    writeProjectionFile(context, `.gemini/skills/${destination}`, transformed(context, file.path, file.bytes), file.mode);
+    writeProjectionFile(context, `.gemini/skills/${destination}`, transformed(context, file.path, file.bytes), file.executable ?? false);
   }
 }
 
@@ -117,6 +117,6 @@ export function projectWorkflows(context: ProjectionBuildContext): void {
     if (basename(file.path) === 'advisory-interview.md') content = renderAdvisoryInterviewWorkflow(content, 'gemini');
     else if (basename(file.path) === 'advisor-mentoring.md') content = applyTargetReplacements(renderMentoringWorkflow(content, 'gemini'));
     else content = applyTargetReplacements(content);
-    writeProjectionFile(context, `.gemini/workflows/${basename(file.path)}`, textBytes(content), graphFile(context, file.path).mode);
+    writeProjectionFile(context, `.gemini/workflows/${basename(file.path)}`, textBytes(content), graphFile(context, file.path).executable ?? false);
   }
 }

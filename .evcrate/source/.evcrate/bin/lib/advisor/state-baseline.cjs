@@ -23,8 +23,43 @@ function inspect(file) {
   try { return fs.lstatSync(file, { bigint: true }); }
   catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
-function same(a, b) { return a && b && a.dev === b.dev && a.ino === b.ino; }
-function unchanged(a, b) { return same(a, b) && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs; }
+function same(a, b) { return Boolean(a && b && a.dev === b.dev && a.ino === b.ino); }
+function unchanged(a, b) {
+  return same(a, b)
+    && typeof a.isFile === 'function' && typeof b.isFile === 'function'
+    && a.isFile() && b.isFile()
+    && !a.isSymbolicLink() && !b.isSymbolicLink()
+    && a.nlink === b.nlink
+    && a.size === b.size
+    && a.mtimeNs === b.mtimeNs;
+}
+function normalizeGitMode(mode) {
+  return mode === '100755' || mode === '100644' ? '100644' : mode;
+}
+function rehashFile(file, expectedStat) {
+  let fd;
+  try {
+    fd = fs.openSync(file, fs.constants.O_RDONLY | (process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK)));
+    const opened = fs.fstatSync(fd, { bigint: true });
+    regular(opened);
+    if (!unchanged(expectedStat, opened)) fail('STALE_EVIDENCE_REVISION');
+    const hash = createHash('sha256');
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let total = 0;
+    while (total < Number(opened.size)) {
+      const count = fs.readSync(fd, buffer, 0, Math.min(buffer.length, Number(opened.size) - total), total);
+      if (!count && total < Number(opened.size)) fail('STALE_EVIDENCE_REVISION');
+      total += count;
+      hash.update(buffer.subarray(0, count));
+    }
+    const final = fs.fstatSync(fd, { bigint: true });
+    regular(final);
+    if (!unchanged(opened, final)) fail('STALE_EVIDENCE_REVISION');
+    return hash.digest('hex');
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+  }
+}
 function directory(stat) { if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail(); }
 function regular(stat) {
   if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n) fail();
@@ -53,7 +88,6 @@ function stable(entries) {
     const current = inspect(entry.file);
     directory(current);
     if (!same(current, entry.stat)) fail();
-    if (process.platform !== 'win32' && current.uid !== entry.stat.uid) fail();
   }
 }
 function captureFile(root, selected, roots, budget, observations) {
@@ -102,8 +136,9 @@ function captureFile(root, selected, roots, budget, observations) {
       if (!unchanged(opened, final) || !unchanged(final, inspect(targetFile))) fail();
       stable(entries);
       budget.remaining -= total;
-      observations.push({ file: targetFile, stat: final, entries });
-      return { path: selected, digest: hash.digest('hex'), status: 'file' };
+      const fileDigest = hash.digest('hex');
+      observations.push({ file: targetFile, stat: final, entries, digest: fileDigest });
+      return { path: selected, digest: fileDigest, status: 'file' };
     } finally {
       if (input !== undefined) fs.closeSync(input);
     }
@@ -160,8 +195,9 @@ function captureFile(root, selected, roots, budget, observations) {
     if (!unchanged(opened, final) || !unchanged(final, inspect(file))) fail();
     stable(entries);
     budget.remaining -= total;
-    observations.push({ file: path.join(logical, parts.at(-1)), stat: final, entries });
-    return { path: selected, digest: hash.digest('hex'), status: 'file' };
+    const fileDigest = hash.digest('hex');
+    observations.push({ file: path.join(logical, parts.at(-1)), stat: final, entries, digest: fileDigest });
+    return { path: selected, digest: fileDigest, status: 'file' };
   } finally { for (const fd of descriptors.reverse()) fs.closeSync(fd); }
 }
 function gitEnvironment() {
@@ -198,10 +234,10 @@ function gitRecords(root, paths, environment) {
   const indexAddsOrDeletes = new Set();
   const stages = git(root, ['ls-files', '--stage', '-z', '--', ...paths], environment);
   for (const entry of stages.split('\0').filter(Boolean)) {
-    const match = /^(\d{6} [a-f0-9]{40,64} [0-3])\t(.+)$/u.exec(entry);
+    const match = /^(\d{6}) ([a-f0-9]{40,64} [0-3])\t(.+)$/u.exec(entry);
     // ls-files is relative to cwd, unlike porcelain-v2 status paths.
-    if (!match || !indices.has(match[2])) fail();
-    indices.get(match[2]).push(match[1]);
+    if (!match || !indices.has(match[3])) fail();
+    indices.get(match[3]).push(`${normalizeGitMode(match[1])} ${match[2]}`);
   }
   const fields = git(root, ['status', '--porcelain=v2', '-z', '--no-renames', '--untracked-files=all', '--ignored=traditional', '--ignore-submodules=all', '--', ...paths], environment).split('\0');
   for (let index = 0; index < fields.length; index += 1) {
@@ -222,8 +258,42 @@ function gitRecords(root, paths, environment) {
     if (!selected) fail();
     if (entry[2] === 'A' || entry[2] === 'D') indexAddsOrDeletes.add(selected);
     const record = records.get(selected);
-    record.status = entry.slice(2, 4).replaceAll('.', ' ');
-    record.identity = entry.slice(0, separator);
+    const parts = entry.slice(0, separator).split(' ');
+    let xy = entry.slice(2, 4);
+    let x = xy[0];
+    let y = xy[1];
+    if (entry[0] === '1' || entry[0] === '2') {
+      const mH = parts[3];
+      const mI = parts[4];
+      const mW = parts[5];
+      const hH = parts[6];
+      const hI = parts[7];
+      if (x === 'M' && hH === hI && (mH === '100644' || mH === '100755') && (mI === '100644' || mI === '100755')) {
+        x = '.';
+      }
+      if (y === 'M' && (mI === '100644' || mI === '100755') && (mW === '100644' || mW === '100755')) {
+        try {
+          const objectHash = git(root, ['hash-object', '--', selected], environment).trim();
+          if (objectHash === hI) {
+            y = '.';
+          }
+        } catch {
+          // If hash-object fails, keep y as M
+        }
+      }
+      parts[3] = normalizeGitMode(parts[3]);
+      parts[4] = normalizeGitMode(parts[4]);
+      parts[5] = normalizeGitMode(parts[5]);
+    } else if (entry[0] === 'u') {
+      parts[3] = normalizeGitMode(parts[3]);
+      parts[4] = normalizeGitMode(parts[4]);
+      parts[5] = normalizeGitMode(parts[5]);
+      parts[6] = normalizeGitMode(parts[6]);
+    }
+    xy = `${x}${y}`;
+    parts[1] = xy;
+    record.status = xy.replaceAll('.', ' ');
+    record.identity = xy === '..' ? null : parts.join(' ');
     if (entry[0] === '2') {
       const source = fields[++index];
       relative(source, 'STATE_IO_FAILED');
@@ -239,10 +309,10 @@ function gitRecords(root, paths, environment) {
     for (let index = 0; index < changes.length; index += 1) {
       const header = changes[index];
       if (!header) continue;
-      const match = /^:\d{6} \d{6} [a-f0-9]{40,64} [a-f0-9]{40,64} ([A-Z])\d*$/u.exec(header);
+      const match = /^:(\d{6}) (\d{6}) ([a-f0-9]{40,64}) ([a-f0-9]{40,64}) ([A-Z]\d*)$/u.exec(header);
       if (!match || !changes[index + 1]) fail();
       const source = changes[++index];
-      if (match[1] !== 'R') continue;
+      if (match[5][0] !== 'R') continue;
       const destination = changes[++index];
       if (!destination) fail();
       const endpoints = [byGitPath.get(source), byGitPath.get(destination)].filter(Boolean);
@@ -251,7 +321,8 @@ function gitRecords(root, paths, environment) {
       relative(destination, 'STATE_IO_FAILED');
       // Bind both endpoint names, including source-only destination retargeting,
       // without widening the persisted paths or the selected content-read set.
-      const linkage = createHash('sha256').update(`${header}\0${source}\0${destination}`).digest('hex');
+      const normHeader = `:${normalizeGitMode(match[1])} ${normalizeGitMode(match[2])} ${match[3]} ${match[4]} ${match[5]}`;
+      const linkage = createHash('sha256').update(`${normHeader}\0${source}\0${destination}`).digest('hex');
       for (const selected of endpoints) {
         const record = records.get(selected);
         const secondChar = record.status[1];
@@ -313,7 +384,12 @@ function captureBaseline(projectRoot, paths) {
     for (const observation of observations) {
       stable(observation.entries);
       const now = inspect(observation.file);
-      if (observation.stat ? !unchanged(observation.stat, now) : now !== null) fail('STALE_EVIDENCE_REVISION');
+      if (observation.stat) {
+        if (!unchanged(observation.stat, now)) fail('STALE_EVIDENCE_REVISION');
+        if (rehashFile(observation.file, now) !== observation.digest) fail('STALE_EVIDENCE_REVISION');
+      } else {
+        if (now !== null) fail('STALE_EVIDENCE_REVISION');
+      }
     }
     if (JSON.stringify([...before]) !== JSON.stringify([...after])) fail('STALE_EVIDENCE_REVISION');
     return validateBaseline(records);

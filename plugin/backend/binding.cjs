@@ -5,7 +5,7 @@
  * Worker context and source binding verifier for EVCrate Advisor Provider (Phase E01).
  *
  * Enforces exact target identity, non-symlink ancestor directory traversal,
- * native realpath equality, and user ownership invariants.
+ * native realpath equality, and file-kind invariants.
  * Re-runs E00 path normalization and worktree separation checks.
  */
 
@@ -29,15 +29,6 @@ function inspectStat(targetPath) {
     if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return null;
     throw err;
   }
-}
-
-function isOwner(stat) {
-  if (typeof process.getuid !== 'function') return true;
-  if (stat.uid === BigInt(process.getuid())) return true;
-  if (process.getuid() !== 0 && stat.uid !== 0n) {
-    return true;
-  }
-  return false;
 }
 
 function normalizeAndValidatePath(rawPath) {
@@ -69,9 +60,6 @@ function verifyTargetDirectory(targetPath) {
   }
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
     throw permissionDenied('Target path must be a non-symlink directory');
-  }
-  if (!isOwner(rootStat)) {
-    throw permissionDenied('Target directory must be owned by the current user');
   }
 
   // Chain traversal of all ancestors
@@ -165,9 +153,6 @@ function verifySafeRegularFile(filePath, maxBytes = 64 * 1024) {
   if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n) {
     throw permissionDenied('File must be a non-symlink regular file with single hard link');
   }
-  if (!isOwner(stat)) {
-    throw permissionDenied('File must be owned by current user');
-  }
   if (stat.size > BigInt(maxBytes)) {
     throw invalidInput(`File size exceeds maximum limit (${maxBytes}B)`);
   }
@@ -176,7 +161,6 @@ function verifySafeRegularFile(filePath, maxBytes = 64 * 1024) {
 
 module.exports = {
   inspectStat,
-  isOwner,
   normalizeAndValidatePath,
   computeHistoryIdentity,
   verifyTargetDirectory,

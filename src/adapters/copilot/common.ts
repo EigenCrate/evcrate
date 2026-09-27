@@ -90,12 +90,12 @@ export function copyFile(context: ProjectionBuildContext, source: string, destin
   let text: string;
   try { text = new TextDecoder('utf-8', { fatal: true }).decode(file.bytes).replace(/\r\n?/gu, '\n'); }
   catch { copyGraphFile(context, source, output); return; }
-  writeProjectionFile(context, output, textBytes(transform(text)), file.mode);
+  writeProjectionFile(context, output, textBytes(transform(text)), file.executable ?? false);
 }
 
 export function copyText(context: ProjectionBuildContext, source: string, destination: string, transform: (text: string) => string): void {
   const file = graphFile(context, source);
-  writeProjectionFile(context, outputPath(destination), textBytes(transform(decode(file.bytes))), file.mode);
+  writeProjectionFile(context, outputPath(destination), textBytes(transform(decode(file.bytes))), file.executable ?? false);
 }
 
 export function sourcePath(prefix: string, file: ResourceGraphFile): string {

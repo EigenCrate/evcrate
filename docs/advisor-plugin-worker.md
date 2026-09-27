@@ -6,7 +6,7 @@
 
 ## Purpose and boundary
 
-E02 wraps the E01 owner-safe read provider in a D00 SDK worker executable. The runner owns process lifecycle, durable installation/source/grant authority, and current actor/session authorization. The worker owns only protocol admission, ephemeral context/request state, capability dispatch, result validation, and safe process events.
+E02 wraps the E01 read provider in a D00 SDK worker executable under the cross-platform trusted-files policy. The runner owns process lifecycle, durable installation/source/grant authority, and current actor/session authorization. The worker owns only protocol admission, ephemeral context/request state, capability dispatch, result validation, and safe process events.
 
 The worker:
 
@@ -150,7 +150,7 @@ Before creating a public error, the mapper:
 
 `formatErrorResponse` places safe `code`, `message`, filtered details, and retryable metadata in the JSON-RPC error. `logOperationalEvent` writes one JSON line to stderr, capped at 1,024 characters, with timestamp, truncated correlation/request/context IDs, operation, safe code, duration, and counts. Logging failure is swallowed; it cannot corrupt stdout or crash the worker.
 
-Signals stop the server after cancellation/revocation. Stream errors, uncaught exceptions, and unhandled rejections log a safe event, cancel/revoke pending state, and exit when executed as the worker entrypoint. The executable is trusted same-UID code, not a malicious-code sandbox.
+Signals stop the server after cancellation/revocation. Stream errors, uncaught exceptions, and unhandled rejections log a safe event, cancel/revoke pending state, and exit when executed as the worker entrypoint. The executable is trusted process code running under the host-managed execution context (advisor filesystem UID gates are removed under the cross-platform trusted-files policy), not a malicious-code sandbox.
 
 ## Deterministic G1 candidate builder
 
@@ -181,9 +181,9 @@ npm run check:advisor-plugin-candidate
 npm run build:advisor-plugin-candidate
 ```
 
-Cycle 2 review records 22/22 focused worker tests, 31/31 all-plugin tests, candidate check PASS, deterministic candidate build PASS, and 63 inventory files. The worker test files cover handshake/order, context limits and revocation, reconnect teardown, revision mismatch, fragmented/coalesced streams, oversized and invalid UTF-8 frames, JSON-RPC batch/numeric-ID rejection, EOF mid-frame, cancellation races, deadlines, queued cancellation, manifest checksums, and archive structure.
+Cycle 2 review records 22/22 focused worker tests, 31/31 all-plugin tests, candidate check PASS, deterministic candidate build PASS, and 63 inventory files (dated historical evidence; the Worker SDK prerequisite currently exists only as a `plugin/vendor` reference blocked by configured ignore, so the worker test suite is not claimed as passing in this workspace). The historical worker test files cover handshake/order, context limits and revocation, reconnect teardown, revision mismatch, fragmented/coalesced streams, oversized and invalid UTF-8 frames, JSON-RPC batch/numeric-ID rejection, EOF mid-frame, cancellation races, deadlines, queued cancellation, manifest checksums, and archive structure.
 
-These are repository/fixture gates, not G1 proof. G1 still needs D01–D03 to install the exact candidate under the real owner runner and prove authenticated refresh/summary, wrong-owner denial, logout/grant-revision revocation, cancellation settlement, worker crash recovery, and malformed/incompatible input fail-closed behavior.
+These are repository/fixture gates, not G1 proof. G1 still needs D01–D03 to install the exact candidate under the real host runner and prove authenticated refresh/summary, host-level wrong-owner denial, logout/grant-revision revocation, cancellation settlement, worker crash recovery, and malformed/incompatible input fail-closed behavior (advisor filesystem UID restrictions inside the provider are removed under the cross-platform trusted-files policy).
 
 ## Unresolved questions
 

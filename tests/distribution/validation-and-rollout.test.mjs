@@ -66,7 +66,7 @@ test('consumer mode verification fails closed if output projection is tampered',
   }
 });
 
-test('installed registry-free unpacked snapshot runs publish dry-run and apply with zero package-root mutation', () => {
+test('installed registry-free unpacked snapshot runs publish dry-run and apply with zero package-root mutation', { skip: process.platform === 'win32' }, () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-val-rollout-'));
   const installRoot = join(root, 'install');
   const dataDir = join(installRoot, 'data');
@@ -159,7 +159,9 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
 
     // Verify advisor controller is executable
     const advisorStat = lstatSync(join(home, '.evcrate', 'bin', 'evcrate-advisor'));
-    assert.ok((advisorStat.mode & 0o111) !== 0, 'evcrate-advisor must be executable');
+    if (process.platform !== 'win32') {
+      assert.ok((advisorStat.mode & 0o111) !== 0, 'evcrate-advisor must be executable');
+    }
     const projectApply = spawnSync(cliPath, [
       'publish', '--apply', '--json', '--scope', 'project', '--home', home, '--state-home', state,
       '--project-root', project, '--target', 'claude', '--target', 'copilot'

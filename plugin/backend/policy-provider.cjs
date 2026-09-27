@@ -11,7 +11,7 @@
 
 const fs = require('node:fs');
 const { createHash } = require('node:crypto');
-const { verifySafeRegularFile, isOwner } = require('./binding.cjs');
+const { verifySafeRegularFile } = require('./binding.cjs');
 const { forbidden } = require('./provider-errors.cjs');
 const { inspectPolicy, MAX_POLICY_BYTES } = require('./advisor-lib/policy-schema.cjs');
 
@@ -56,7 +56,7 @@ class PolicyProvider {
       }
       fd = fs.openSync(initial.path, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
       const openedStat = fs.fstatSync(fd, { bigint: true });
-      if (!openedStat.isFile() || openedStat.isSymbolicLink() || !isOwner(openedStat) || openedStat.nlink !== 1n || openedStat.size > BigInt(MAX_POLICY_BYTES)) {
+      if (!openedStat.isFile() || openedStat.isSymbolicLink() || openedStat.nlink !== 1n || openedStat.size > BigInt(MAX_POLICY_BYTES)) {
         return Object.freeze({
           status: 'invalid',
           scope: 'account',

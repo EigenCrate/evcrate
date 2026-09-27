@@ -13,7 +13,6 @@ export type ProjectionDiagnosticCode =
   | 'kind-mismatch'
   | 'bytes-mismatch'
   | 'hash-mismatch'
-  | 'mode-mismatch'
   | 'unsafe';
 
 export interface ProjectedFileDiagnostic {
@@ -63,7 +62,6 @@ export interface ProjectionExpectedEntry {
   readonly kind: ProjectedFileKind;
   readonly size?: number;
   readonly hash?: string;
-  readonly mode?: number;
 }
 
 const PROJECTION_EXPECTATIONS = new WeakMap<object, Map<string, ProjectionExpectedEntry>>();

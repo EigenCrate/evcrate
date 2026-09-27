@@ -26,14 +26,18 @@ function expectCode(callback, code) { assert.throws(callback, (cause) => cause.c
 function reportContent(extra = '') { return ['# Advice', '## Reframed problem', '## Recommendation', '## Alternatives/tradeoffs', '## Risks', '## Assumptions/evidence gaps', '## Success checks', '## Next actions', '## Unresolved questions', extra].filter(Boolean).join('\n'); }
 function reportPathFor(invocationId, stamp = '20260101-0000') { return `plans/reports/advise-${stamp}-${invocationId}.md`; }
 
-test('initializes owner-only bounded redacted state atomically', () => {
+test('initializes bounded redacted state and resumes shared files atomically', () => {
   const f = fixture();
   try {
     const created = state.init({ projectRoot: f.projectRoot, runtimeRoot: f.runtimeRoot, input: 'token=super-secret Authorization: Bearer bearer-secret Authorization: Bearer "quoted-secret" token: {"value":"nested-secret"} "password":"json-secret"', now: 0 });
     const directory = path.join(f.runtimeRoot, 'v1', created.projectKey, created.invocationId);
     const statePath = path.join(directory, 'state.json');
-    assert.equal(fs.statSync(directory).mode & 0o777, 0o700);
-    assert.equal(fs.statSync(statePath).mode & 0o777, 0o600);
+    fs.chmodSync(directory, 0o777);
+    fs.chmodSync(statePath, 0o666);
+    if (process.platform === 'linux' && process.getuid() === 0) {
+      fs.chownSync(directory, 65534, 65534);
+      fs.chownSync(statePath, 65534, 65534);
+    }
     assert.equal(created.originalInput.includes('super-secret'), false);
     assert.equal(created.originalInput.includes('bearer-secret'), false);
     assert.equal(created.originalInput.includes('quoted-secret'), false);
@@ -41,7 +45,11 @@ test('initializes owner-only bounded redacted state atomically', () => {
     assert.equal(created.originalInput.includes('json-secret'), false);
     assert.equal(created.projectKey.includes(f.projectRoot), false);
     assert.equal(fs.readdirSync(directory).some((name) => name.includes('.tmp-')), false);
-    assert.ok(state.readState({ projectRoot: f.projectRoot, runtimeRoot: f.runtimeRoot, invocationId: created.invocationId }));
+    const options = { projectRoot: f.projectRoot, runtimeRoot: f.runtimeRoot, invocationId: created.invocationId };
+    assert.equal(state.readState(options).invocationId, created.invocationId);
+    state.ask({ ...options, questionId: 'shared', type: 'discovery', text: 'Resume shared state?' });
+    state.answer({ ...options, questionId: 'shared', answer: 'yes' });
+    assert.equal(state.readState(options).questions[0].answer, 'yes');
   } finally { clean(f.root); }
 });
 

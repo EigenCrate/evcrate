@@ -5,13 +5,13 @@
  * Tests:
  * 1. Package build reproducibility and deterministic hashing
  * 2. Independent package verification
- * 3. Exact logical members and permissions
+ * 3. Exact logical members and checksums
  * 4. Negative / hostile archive rejection:
  *    - Directory traversal ('../evil.txt')
  *    - Absolute path ('/etc/passwd')
  *    - Backslash path ('win\\file.txt')
  *    - Case collision ('File.txt' and 'file.txt')
- *    - Executable permission outside worker entrypoint (e.g. ui/index.html with 0755)
+ *    - Archive mode values are format metadata (broad modes accepted)
  *    - Tampered file content / SHA-256 mismatch
  *    - Missing required members (e.g. manifest.json)
  *    - Oversized archive / size caps
@@ -101,7 +101,7 @@ test('Plugin Package: negative fixtures reject path traversal, backslashes, and 
   }
 });
 
-test('Plugin Package: negative fixtures reject case collision and unauthorized executable mode', () => {
+test('Plugin Package: negative fixtures reject case collision, while archive modes are treated as format metadata', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-negative-modes-'));
 
   try {
@@ -118,24 +118,28 @@ test('Plugin Package: negative fixtures reject case collision and unauthorized e
       verifyPluginPackageArchive(badCasePath);
     }, /case collision/i);
 
-    // 2. Executable permission outside worker.cjs
-    const badExecPath = path.join(tmp, 'badexec.tar.gz');
+    // 2. Executable permission outside worker.cjs is accepted as format metadata (not rejected)
+    const broadExecPath = path.join(tmp, 'broadexec.tar.gz');
     const dummyUi = Buffer.from('<html></html>');
     const dummyWorker = Buffer.from('// worker');
     const inv = [
       { path: 'backend/worker.cjs', size: dummyWorker.length, sha256: crypto.createHash('sha256').update(dummyWorker).digest('hex'), mode: 0o755 },
-      { path: 'ui/index.html', size: dummyUi.length, sha256: crypto.createHash('sha256').update(dummyUi).digest('hex'), mode: 0o755 } // Illegal 0755
+      { path: 'ui/index.html', size: dummyUi.length, sha256: crypto.createHash('sha256').update(dummyUi).digest('hex'), mode: 0o755 }
     ];
     createDeterministicTarArchive([
       { path: 'manifest.json', data: Buffer.from('{"id":"evcrate.advisor","version":"0.1.0","entrypoints":{"backend":{"entry":"backend/worker.cjs"},"ui":{"entry":"ui/index.html"}}}'), mode: 0o644 },
       { path: 'inventory.json', data: Buffer.from(JSON.stringify(inv)), mode: 0o644 },
       { path: 'backend/worker.cjs', data: dummyWorker, mode: 0o755 },
       { path: 'ui/index.html', data: dummyUi, mode: 0o755 }
-    ], badExecPath);
+    ], broadExecPath);
 
-    assert.throws(() => {
-      verifyPluginPackageArchive(badExecPath);
-    }, /mode forbidden/i);
+    const verified = verifyPluginPackageArchive(broadExecPath);
+    assert.equal(verified.valid, true);
+    assert.equal(verified.version, '0.1.0');
+    assert.equal(verified.fileCount, 4);
+    assert.ok(verified.compressedSize > 0);
+    assert.ok(verified.expandedSize > 0);
+    assert.equal(verified.archiveSha256, crypto.createHash('sha256').update(fs.readFileSync(broadExecPath)).digest('hex'));
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

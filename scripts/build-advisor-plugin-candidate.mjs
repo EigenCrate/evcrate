@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -241,7 +241,7 @@ async function main() {
 
   // Validate via @dam-hopper/plugin-sdk if available
   try {
-    const { validateManifest } = await import(path.join(PLUGIN_DIR, 'node_modules', '@dam-hopper', 'plugin-sdk', 'dist', 'manifest.js'));
+    const { validateManifest } = await import(pathToFileURL(path.join(PLUGIN_DIR, 'node_modules', '@dam-hopper', 'plugin-sdk', 'dist', 'manifest.js')).href);
     validateManifest(manifest);
   } catch (err) {
     console.error('Manifest validation failed:', err.message);

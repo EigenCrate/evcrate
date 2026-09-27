@@ -1,9 +1,9 @@
-import { chmodSync, lstatSync, mkdirSync } from 'node:fs';
+import { lstatSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { assertExactKeys } from '../protocol/validation.js';
-import { assertNoSymlinkAncestors, assertOwnerOnlyDirectory, assertOwnerOnlyFile, containedPath } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile, containedPath } from '../filesystem/paths.js';
 import { canonicalJsonBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { writeAtomicFile } from '../filesystem/atomic.js';
 import { validateScopeAssignment, validateScopeKind, type ScopeAssignment, type ScopeKind } from '../protocol/scope-payloads.js';
@@ -80,7 +80,7 @@ export function scopePath(packageRoot: string, scope: ScopeKind, projectId?: str
 }
 function ensureDirectory(path: string): void {
   assertNoSymlinkAncestors(path);
-  try { mkdirSync(path, { recursive: true, mode: 0o700 }); chmodSync(path, 0o700); assertOwnerOnlyDirectory(path); }
+  try { mkdirSync(path, { recursive: true }); assertRealDirectory(path); }
   catch (error) { if (error instanceof ControlPlaneError) throw error; invalid('PATH_UNSAFE'); }
 }
 export function readScopeDocument(packageRoot: string, scope: ScopeKind, projectId?: string): ScopeSnapshot {
@@ -89,12 +89,12 @@ export function readScopeDocument(packageRoot: string, scope: ScopeKind, project
   const path = scopePath(packageRoot, normalizedScope, identity);
   try {
     lstatSync(path);
-    const initial = assertOwnerOnlyFile(path);
-    assertOwnerOnlyDirectory(resolve(path, '..'));
+    const initial = assertRegularFile(path);
+    assertRealDirectory(resolve(path, '..'));
     const document = validateScopeDocument(parseJsonDocument(readBoundedFile(path, MAX_SCOPE_BYTES), MAX_SCOPE_BYTES), normalizedScope, identity);
-    const final = assertOwnerOnlyFile(path);
+    const final = assertRegularFile(path);
     if (Number(initial.dev) !== Number(final.dev) || Number(initial.ino) !== Number(final.ino)
-      || Number(initial.size) !== Number(final.size) || (Number(initial.mode) & 0o777) !== (Number(final.mode) & 0o777)) {
+      || Number(initial.size) !== Number(final.size)) {
       invalid('PATH_UNSAFE');
     }
     return Object.freeze({ path, document, present: true });
@@ -126,6 +126,6 @@ export function writeScopeDocument(packageRoot: string, documentValue: ScopeDocu
   }
   ensureDirectory(scopeRoot(packageRoot));
   if (document.scope === 'project') ensureDirectory(resolve(path, '..'));
-  writeAtomicFile(path, bytes, 0o600);
+  writeAtomicFile(path, bytes);
   return Object.freeze({ path, document, present: true });
 }

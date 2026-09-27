@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import assert from 'node:assert/strict';
 import { chmodSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import { rmSync } from 'node:fs';
 import {
-  canonicalJsonBytes, containedPath, createStagedRoot, hashBytes, hashFile,
+  canonicalJsonBytes, completeTreeHash, containedPath, createStagedRoot, hashBytes, hashFile,
   isIgnoredArtifact, normalizeRelativePath, promoteTransaction, readReleaseMarker,
   PROMOTION_JOURNAL_NAME, recoverInterruptedPromotion, sourceTreeHash, treeHash,
   withPublishLock, writeAtomicFile, writeReleaseMarker,
@@ -53,6 +53,41 @@ test('canonical hashes are deterministic and ignore compiler artifacts', () => {
   assert.equal(hashFile(join(root, 'main.js')).length, 64);
 });
 
+test('file hashing rejects pathname replacement while reading the original descriptor', () => {
+  const root = temporaryDirectory();
+  const file = join(root, 'source.txt');
+  writeFileSync(file, 'old');
+  const moduleUrl = new URL('../../dist/filesystem/hashing.js', import.meta.url).href;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    import fs from 'node:fs';
+    import assert from 'node:assert/strict';
+    import { syncBuiltinESMExports } from 'node:module';
+    const file = ${JSON.stringify(file)};
+    const stat = fs.statSync(file);
+    const originalRead = fs.readSync;
+    let swapped = false;
+    fs.readSync = (...args) => {
+      const count = originalRead(...args);
+      if (!swapped) {
+        try {
+          if (fs.fstatSync(args[0]).ino === stat.ino) {
+            swapped = true;
+            fs.renameSync(file, file + '.original');
+            fs.writeFileSync(file, 'new');
+          }
+        } catch {}
+      }
+      return count;
+    };
+    syncBuiltinESMExports();
+    const { hashFile } = await import(${JSON.stringify(moduleUrl)});
+    assert.throws(() => hashFile(file), { code: 'PATH_UNSAFE' });
+    assert.equal(fs.readFileSync(file, 'utf8'), 'new');
+    assert.equal(fs.readFileSync(file + '.original', 'utf8'), 'old');
+  `], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test('tree hashes use the authority global lexical path order', () => {
   const root = temporaryDirectory();
   mkdirSync(join(root, 'a'));
@@ -83,17 +118,46 @@ test('atomic files, staged roots, locks, and release markers are durable boundar
   const destination = join(root, 'nested', 'policy.json');
   writeAtomicFile(destination, new TextEncoder().encode('first'));
   assert.equal(readFileSync(destination, 'utf8'), 'first');
-  assert.equal(statSync(destination).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
   writeAtomicFile(destination, new TextEncoder().encode('second'));
   assert.equal(readFileSync(destination, 'utf8'), 'second');
   const staged = createStagedRoot(root);
-  assert.equal(statSync(staged.path).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o700);
   staged.cleanup();
   const state = join(root, 'state');
-  withPublishLock(state, () => assert.equal(statSync(join(state, 'publish.lock')).mode & 0o777, process.platform === 'win32' ? 0o666 : 0o600));
+  withPublishLock(state, () => assert.equal(statSync(join(state, 'publish.lock')).isFile(), true));
   assert.equal(false, (() => { try { statSync(join(state, 'publish.lock')); return true; } catch { return false; } })());
   writeReleaseMarker(state, { schema_version: 1, status: 'complete', roots: {}, managed_paths: {} });
   assert.equal(readReleaseMarker(state).status, 'complete');
+});
+test('completeTreeHash and filesystem operations operate mode-free and allow broad permissions', () => {
+  const root = temporaryDirectory();
+  const file1 = join(root, 'a.txt');
+  writeFileSync(file1, 'hello');
+  const sub = join(root, 'sub');
+  mkdirSync(sub);
+  const file2 = join(sub, 'b.txt');
+  writeFileSync(file2, 'world');
+
+  const initialHash = completeTreeHash(root);
+
+  if (process.platform !== 'win32') {
+    chmodSync(file1, 0o777);
+    chmodSync(sub, 0o777);
+    chmodSync(file2, 0o600);
+    assert.equal(completeTreeHash(root), initialHash, 'completeTreeHash must be invariant under mode changes');
+  }
+
+  const state = join(root, 'state');
+  mkdirSync(state);
+  if (process.platform !== 'win32') {
+    chmodSync(state, 0o777);
+  }
+  const policy = join(state, 'policy.json');
+  writeAtomicFile(policy, new TextEncoder().encode('content'));
+  assert.equal(readFileSync(policy, 'utf8'), 'content');
+
+  withPublishLock(state, () => {
+    assert.equal(statSync(join(state, 'publish.lock')).isFile(), true);
+  });
 });
 test('staged-root cleanup refuses an inode-replaced directory', () => {
   const root = temporaryDirectory();

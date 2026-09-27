@@ -1,24 +1,21 @@
-import { chmodSync, closeSync, constants, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, renameSync, rmSync, statSync, writeSync } from 'node:fs';
+import { chmodSync, closeSync, constants, fsyncSync, lstatSync, mkdirSync, mkdtempSync, openSync, renameSync, rmSync, statSync, writeSync, type Stats } from 'node:fs';
 import { basename, dirname, join, parse, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { assertNoSymlinkAncestors, assertOwnerOnlyDirectory, assertRealDirectory, safeParent } from './paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory, safeParent } from './paths.js';
 
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 
 function fail(code: 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never {
   throw new ControlPlaneError(code);
 }
-function validateMode(mode: number, ownerOnly = true): void {
-  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777 || (process.platform !== 'win32' && ownerOnly && (mode & 0o077) !== 0)) fail('PATH_UNSAFE');
-}
 
-function ensureParent(path: string, mode = 0o700): string {
+function ensureParent(path: string): string {
   const parent = safeParent(path);
   const missing: string[] = [];
   let current = parent;
   while (true) {
-    let stat: ReturnType<typeof lstatSync> | null;
+    let stat: Stats | null;
     try { stat = lstatSync(current); } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') fail('PATH_UNSAFE');
       stat = null;
@@ -32,12 +29,13 @@ function ensureParent(path: string, mode = 0o700): string {
     if (next === current) break;
     current = next;
   }
-  try { mkdirSync(parent, { recursive: true, mode }); } catch { fail('PATH_UNSAFE'); }
+  try {
+    mkdirSync(parent, { recursive: true });
+  } catch { fail('PATH_UNSAFE'); }
   for (const created of missing) {
     try {
       const stat = lstatSync(created);
       if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE');
-      if (process.platform !== 'win32') chmodSync(created, mode);
     } catch (error) {
       if (error instanceof ControlPlaneError) throw error;
       fail('PATH_UNSAFE');
@@ -48,7 +46,7 @@ function ensureParent(path: string, mode = 0o700): string {
 }
 
 export function removePath(path: string): void {
-  let stat: ReturnType<typeof lstatSync>;
+  let stat: Stats;
   try { stat = lstatSync(path); } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
     fail('PUBLICATION_FAILED');
@@ -71,8 +69,7 @@ export function syncDirectory(path: string): void {
   try { fsyncSync(descriptor); } finally { closeSync(descriptor); }
 }
 
-function writeAtomicFileInternal(path: string, bytes: Uint8Array, mode: number, ownerOnly: boolean): void {
-  validateMode(mode, ownerOnly);
+function writeAtomicFileInternal(path: string, bytes: Uint8Array, executable = false): void {
   const destination = resolve(path);
   const parent = ensureParent(destination);
   assertNoSymlinkAncestors(parent);
@@ -85,14 +82,17 @@ function writeAtomicFileInternal(path: string, bytes: Uint8Array, mode: number, 
   const temporary = join(parent, `.${basename(destination)}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`);
   let descriptor: number | undefined;
   try {
-    descriptor = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | NO_FOLLOW, mode);
+    descriptor = openSync(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | NO_FOLLOW);
     const buffer = Buffer.from(bytes);
     let offset = 0;
     while (offset < buffer.byteLength) offset += writeSync(descriptor, buffer, offset, buffer.byteLength - offset);
     if (shouldSync()) fsyncSync(descriptor);
     closeSync(descriptor);
     descriptor = undefined;
-    chmodSync(temporary, mode);
+    if (executable && process.platform !== 'win32') {
+      const current = lstatSync(temporary);
+      chmodSync(temporary, current.mode | 0o111);
+    }
     assertNoSymlinkAncestors(parent);
     try {
       const current = lstatSync(destination);
@@ -111,13 +111,13 @@ function writeAtomicFileInternal(path: string, bytes: Uint8Array, mode: number, 
   }
 }
 
-export function writeAtomicFile(path: string, bytes: Uint8Array, mode = 0o600): void {
-  writeAtomicFileInternal(path, bytes, mode, true);
+export function writeAtomicFile(path: string, bytes: Uint8Array): void {
+  writeAtomicFileInternal(path, bytes, false);
 }
 
-/** Atomic writer for staged projections; supports target-prescribed modes. */
-export function writeAtomicProjectionFile(path: string, bytes: Uint8Array, mode = 0o644): void {
-  writeAtomicFileInternal(path, bytes, mode, false);
+/** Atomic writer for staged projections; supports optional additive executable bit. */
+export function writeAtomicProjectionFile(path: string, bytes: Uint8Array, executable = false): void {
+  writeAtomicFileInternal(path, bytes, executable);
 }
 
 export function sameVolume(source: string, destinationParent: string): boolean {
@@ -139,7 +139,7 @@ export function assertStagedRoot(value: unknown): asserts value is StagedRoot {
   const identity = STAGED_ROOT_IDENTITIES.get(value);
   if (!identity) fail('PATH_UNSAFE');
   assertNoSymlinkAncestors(stage.path);
-  assertOwnerOnlyDirectory(stage.path);
+  assertRealDirectory(stage.path);
   try {
     const current = lstatSync(stage.path);
     if (Number(current.dev) !== identity.dev || Number(current.ino) !== identity.ino) fail('PATH_UNSAFE');
@@ -154,7 +154,7 @@ function cleanupStagedRoot(path: string, identity: StagedIdentity): void {
     const current = lstatSync(path);
     if (!current.isDirectory() || current.isSymbolicLink()
       || Number(current.dev) !== identity.dev || Number(current.ino) !== identity.ino) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(path);
+    assertRealDirectory(path);
     renameSync(path, quarantine);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
@@ -165,7 +165,7 @@ function cleanupStagedRoot(path: string, identity: StagedIdentity): void {
     const moved = lstatSync(quarantine);
     if (!moved.isDirectory() || moved.isSymbolicLink()
       || Number(moved.dev) !== identity.dev || Number(moved.ino) !== identity.ino) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(quarantine);
+    assertRealDirectory(quarantine);
     removePath(quarantine);
   } catch (error) {
     if (error instanceof ControlPlaneError) throw error;
@@ -189,7 +189,6 @@ export function createStagedRoot(repository: string, prefix = '.evcrate-build-')
     const current = lstatSync(temporary);
     if (!current.isDirectory() || current.isSymbolicLink()) fail('PATH_UNSAFE');
     identity = { dev: Number(current.dev), ino: Number(current.ino) };
-    chmodSync(temporary, 0o700);
     assertNoSymlinkAncestors(temporary);
   } catch {
     if (identity) {

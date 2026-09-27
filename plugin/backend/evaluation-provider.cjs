@@ -11,7 +11,7 @@
 
 const fs = require('node:fs');
 const { createHash } = require('node:crypto');
-const { verifySafeRegularFile, isOwner } = require('./binding.cjs');
+const { verifySafeRegularFile } = require('./binding.cjs');
 const { invalidInput } = require('./provider-errors.cjs');
 const { validateEvaluationDocument } = require('./protocol-lib/advisor-evaluation-validation.js');
 const { aggregateEvaluationGroups } = require('./protocol-lib/advisor-evaluation-comparison.js');
@@ -27,7 +27,7 @@ function loadEvaluationDocument(desc) {
     if (!fileInfo) return null;
     fd = fs.openSync(fileInfo.path, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
     const openedStat = fs.fstatSync(fd, { bigint: true });
-    if (!openedStat.isFile() || openedStat.isSymbolicLink() || !isOwner(openedStat) || openedStat.nlink !== 1n || openedStat.size > BigInt(MAX_EVALUATION_BYTES)) {
+    if (!openedStat.isFile() || openedStat.isSymbolicLink() || openedStat.nlink !== 1n || openedStat.size > BigInt(MAX_EVALUATION_BYTES)) {
       return null;
     }
     const bytes = Buffer.alloc(Number(openedStat.size));

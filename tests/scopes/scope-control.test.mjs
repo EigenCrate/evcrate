@@ -194,7 +194,7 @@ test('scope preview token survives a failed mutation boundary', () => {
   }
 });
 
-test('scope output snapshots bind presence and mode', () => {
+test('scope output snapshots bind presence and ignore permission changes', () => {
   const fixture = createPhase6Fixture('evcrate-scope-output-');
   try {
     const project = fixture.context({ targets: ['codex'], projectId: 'project-1' });
@@ -207,18 +207,20 @@ test('scope output snapshots bind presence and mode', () => {
       expiresInSeconds: 300
     });
     const directoryPreview = preview('scope-output-preview-dir');
-    mkdirSync(root, { recursive: true, mode: 0o700 });
-    chmodSync(root, 0o700);
+    mkdirSync(root, { recursive: true });
     assert.equal(invoke(handler, project, 'scope-output-apply-dir', 'changes.apply', { previewToken: directoryPreview.payload.token }).status, 'conflict');
     rmSync(root, { recursive: true, force: true });
     const filePreview = preview('scope-output-preview-file');
     writeFileSync(root, '');
     assert.equal(invoke(handler, project, 'scope-output-apply-file', 'changes.apply', { previewToken: filePreview.payload.token }).status, 'conflict');
     rmSync(root, { recursive: true, force: true });
+    mkdirSync(root, { recursive: true });
     const modePreview = preview('scope-output-preview-mode');
-    mkdirSync(root, { recursive: true, mode: 0o700 });
-    chmodSync(root, 0o755);
-    assert.equal(invoke(handler, project, 'scope-output-apply-mode', 'changes.apply', { previewToken: modePreview.payload.token }).status, 'conflict');
+    if (process.platform !== 'win32') {
+      chmodSync(root, 0o777);
+    }
+    const applied = invoke(handler, project, 'scope-output-apply-mode', 'changes.apply', { previewToken: modePreview.payload.token });
+    assert.equal(applied.status, 'applied');
   } finally {
     closePhase6Fixture(fixture);
   }

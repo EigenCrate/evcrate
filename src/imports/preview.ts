@@ -155,7 +155,7 @@ export function prepareImport(
       change: result.change, resource: result.resource
     });
     const registryStage = join(stage.path, 'registry.json');
-    writeAtomicFile(registryStage, resourceDocumentBytes(plannedDocument), 0o600);
+    writeAtomicFile(registryStage, resourceDocumentBytes(plannedDocument));
     const cleanupProjections = projections.cleanup;
     let closed = false;
     const cleanup = () => {

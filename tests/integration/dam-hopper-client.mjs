@@ -67,9 +67,13 @@ export class DamHopperSubprocessClient {
     const baseArgs = this.buildBaseArgs(hasTargetInSubcommand ? { targets: [] } : {});
     const args = [...baseArgs, ...subcommandArgs];
     const isJs = this.cliPath.endsWith('.js') || this.cliPath.endsWith('.cjs') || this.cliPath.endsWith('.mjs');
-    const spawnExe = isJs ? this.execPath : this.cliPath;
-    const spawnArgs = isJs ? [this.cliPath, ...args] : args;
-
+    const isWindows = process.platform === 'win32';
+    const spawnExe = isJs
+      ? this.execPath
+      : (isWindows ? (process.env.ComSpec || 'cmd.exe') : this.cliPath);
+    const spawnArgs = isJs
+      ? [this.cliPath, ...args]
+      : (isWindows ? ['/d', '/s', '/c', `${this.cliPath}.cmd`, ...args] : args);
     const result = spawnSync(spawnExe, spawnArgs, {
       cwd: this.cwd,
       env: { ...this.env, ...customEnv },

@@ -60,8 +60,12 @@ export function hashFile(path: string): string {
       offset += count;
     }
     const final = fstatSync(descriptor);
+    assertNoSymlinkAncestors(path);
+    const current = assertRegularFile(path);
     if (Number(final.dev) !== Number(opened.dev) || Number(final.ino) !== Number(opened.ino)
-      || Number(final.size) !== Number(opened.size)) {
+      || Number(final.size) !== Number(opened.size)
+      || Number(current.dev) !== Number(opened.dev) || Number(current.ino) !== Number(opened.ino)
+      || Number(current.size) !== Number(opened.size)) {
       unsafe();
     }
     return digest.digest('hex');
@@ -69,14 +73,16 @@ export function hashFile(path: string): string {
     closeSync(descriptor);
   }
 }
-export function hashFileWithMode(path: string): string {
-  const initial = assertRegularFile(path);
-  const digest = hashFile(path);
-  const final = assertRegularFile(path);
-  if (Number(initial.dev) !== Number(final.dev) || Number(initial.ino) !== Number(final.ino)
-    || Number(initial.size) !== Number(final.size) || (Number(initial.mode) & 0o777) !== (Number(final.mode) & 0o777)) unsafe();
-  return hashBytes(new TextEncoder().encode(`f\0${Number(initial.mode) & 0o777}\0${digest}\n`));
+export function resourceFileHashBytes(bytes: Uint8Array): string {
+  const fileHash = hashBytes(bytes);
+  return hashBytes(new TextEncoder().encode(`f\0\0${fileHash}\n`));
 }
+
+export function resourceFileHash(path: string): string {
+  const fileHash = hashFile(path);
+  return hashBytes(new TextEncoder().encode(`f\0\0${fileHash}\n`));
+}
+
 export function readBoundedFile(path: string, maxBytes: number): Uint8Array {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new RangeError('Invalid byte limit');
   assertNoSymlinkAncestors(path);
@@ -162,9 +168,9 @@ export const COMPLETE_TREE_HASH_LIMITS: CompleteTreeHashLimits = Object.freeze({
 });
 export function completeTreeHash(root: string, limits: CompleteTreeHashLimits = COMPLETE_TREE_HASH_LIMITS): string {
   assertNoSymlinkAncestors(root);
-  const rootStat = assertRealDirectory(root);
+  assertRealDirectory(root);
   let files = 0; let directories = 1; let bytes = 0;
-  const records: Array<{ path: string; value: string }> = [{ path: '', value: `d\0\0${Number(rootStat.mode) & 0o777}\n` }];
+  const records: Array<{ path: string; value: string }> = [{ path: '', value: 'd\0\n' }];
   const visit = (directory: string, depth: number): void => {
     if (depth > limits.maxDepth) unsafe();
     let entries;
@@ -179,13 +185,13 @@ export function completeTreeHash(root: string, limits: CompleteTreeHashLimits = 
       if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) unsafe();
       if (stat.isDirectory()) {
         if (++directories > limits.maxDirectories) unsafe();
-        records.push({ path: relativePath, value: `d\0${relativePath}\0${Number(stat.mode) & 0o777}\n` });
+        records.push({ path: relativePath, value: `d\0${relativePath}\n` });
         visit(path, depth + 1);
       } else {
         const size = Number(stat.size);
         if (++files > limits.maxFiles || size > limits.maxFileBytes || bytes > limits.maxBytes - size) unsafe();
         bytes += size;
-        records.push({ path: relativePath, value: `f\0${relativePath}\0${hashFileWithMode(path)}\n` });
+        records.push({ path: relativePath, value: `f\0${relativePath}\0${hashFile(path)}\n` });
       }
     }
   };

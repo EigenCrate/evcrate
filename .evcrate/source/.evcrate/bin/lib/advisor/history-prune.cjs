@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createRoutingError } = require('./errors.cjs');
-const { inspect, removeOwned, owner, same } = require('./state-io.cjs');
+const { inspect, removeOwned, same } = require('./state-io.cjs');
 const {
   validateHistoryExecutionV1,
   MAX_EXECUTION_HISTORY_BYTES

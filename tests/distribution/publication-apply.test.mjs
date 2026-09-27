@@ -593,7 +593,7 @@ test('post-first-promotion CAS conflict retains promoting journal, fails closed 
     rmSync(home, { recursive: true, force: true });
   }
 });
-test('publishApply auto-creates homeRoot with 0o700 mode when missing on disk', () => {
+test('publishApply auto-creates homeRoot when missing on disk', () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-missing-home-'));
   const home = join(root, 'non-existent-home');
   try {
@@ -605,7 +605,7 @@ test('publishApply auto-creates homeRoot with 0o700 mode when missing on disk', 
 
     const applyResult = publishApply(context);
     assert.equal(existsSync(home), true);
-    assert.equal(Number(lstatSync(home).mode) & 0o777, 0o700);
+    assert.equal(lstatSync(home).isDirectory(), true);
     assert.equal(applyResult.releaseId !== null, true);
   } finally {
     rmSync(root, { recursive: true, force: true });

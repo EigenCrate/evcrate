@@ -40,16 +40,12 @@ function git(f, ...args) {
   return result.stdout;
 }
 
-test('state is isolated, private, bounded and never implicitly initialized by get', (t) => {
+test('state is isolated, bounded and never implicitly initialized by get', (t) => {
   const f = fixture(t);
   rejects(() => get(f), 'STATE_NOT_FOUND');
   assert.equal(fs.existsSync(path.join(f.home, '.evcrate')), false);
   assert.equal(initialize(f), 1);
   assert.deepEqual(get(f), { revision: 1, sentinel: 'original' });
-  if (process.platform !== 'win32') {
-    assert.equal(fs.statSync(f.state).mode & 0o777, 0o600);
-    assert.equal(fs.statSync(f.location.taskDirectory).mode & 0o777, 0o700);
-  }
   const before = fs.readFileSync(f.state);
   rejects(() => transactState(f.location, {}, () => ({ state: { text: 'x'.repeat(65536) }, result: null })), 'STATE_INVALID');
   assert.deepEqual(fs.readFileSync(f.state), before);
@@ -341,4 +337,95 @@ test('compound source-only Git rename baseline retains origin when recreated unt
   assertBaselineFresh(f.project, records);
   git(f, 'mv', 'new.txt', 'retargeted.txt');
   rejects(() => assertBaselineFresh(f.project, records), 'STALE_EVIDENCE_REVISION');
+});
+
+test('state and baseline operations tolerate broad permissions (0o777/0o666) and mixed ownership', (t) => {
+  const f = fixture(t);
+  assert.equal(initialize(f), 1);
+  assert.deepEqual(get(f), { revision: 1, sentinel: 'original' });
+
+  // Broaden permissions across state directory and state file to world-readable/writable
+  fs.chmodSync(f.location.taskDirectory, 0o777);
+  fs.chmodSync(f.state, 0o666);
+
+  const sample = path.join(f.project, 'baseline-test.txt');
+  fs.writeFileSync(sample, 'initial content');
+  fs.chmodSync(sample, 0o666);
+  fs.chmodSync(f.project, 0o777);
+
+  const baseline = captureBaseline(f.project, ['baseline-test.txt']);
+  assertBaselineFresh(f.project, baseline);
+
+  if (process.platform === 'linux' && typeof process.getuid === 'function' && process.getuid() === 0) {
+    fs.chownSync(f.state, 65534, 65534);
+    fs.chownSync(sample, 65534, 65534);
+  }
+
+  assertBaselineFresh(f.project, baseline);
+  assert.deepEqual(get(f), { revision: 1, sentinel: 'original' });
+
+  const updated = transactState(f.location, {}, (curr) => ({
+    state: { revision: curr.revision + 1, sentinel: 'next' },
+    result: 'done'
+  }));
+  assert.equal(updated, 'done');
+  assert.deepEqual(get(f), { revision: 2, sentinel: 'next' });
+});
+
+test('callback chmod of state.json commits next revision while byte mutation conflicts (F4 regression)', (t) => {
+  const f = fixture(t);
+  assert.equal(initialize(f), 1);
+
+  // Chmod during transaction callback should succeed (not conflict due to ctime)
+  const result = transactState(f.location, {}, (curr) => {
+    fs.chmodSync(f.state, 0o666);
+    return {
+      state: { revision: curr.revision + 1, sentinel: 'chmod-ok' },
+      result: 'success'
+    };
+  });
+  assert.equal(result, 'success');
+  assert.deepEqual(get(f), { revision: 2, sentinel: 'chmod-ok' });
+
+  // Same-size byte mutation during transaction callback MUST conflict
+  rejects(() => {
+    transactState(f.location, {}, (curr) => {
+      const raw = fs.readFileSync(f.state, 'utf8');
+      const mutated = raw.replace('chmod-ok', 'mutated!');
+      fs.writeFileSync(f.state, mutated);
+      return {
+        state: { revision: curr.revision + 1, sentinel: 'should-fail' },
+        result: 'fail'
+      };
+    });
+  }, 'STATE_CONFLICT');
+});
+
+test('Git mode-only transitions leave baseline fresh while content edit stays stale (F3 regression)', (t) => {
+  const f = fixture(t);
+  git(f, 'init');
+  git(f, 'config', 'user.name', 'Test');
+  git(f, 'config', 'user.email', 'test@example.com');
+  git(f, 'config', 'core.filemode', 'true');
+  const file = path.join(f.project, 'tracked.txt');
+  fs.writeFileSync(file, 'tracked content\n');
+  git(f, 'add', 'tracked.txt');
+  git(f, 'commit', '-m', 'initial');
+
+  const baseline = captureBaseline(f.project, ['tracked.txt']);
+  assert.equal(baseline.length, 1);
+  assertBaselineFresh(f.project, baseline);
+
+  // Staged mode change (e.g. git update-index --chmod=+x)
+  git(f, 'update-index', '--chmod=+x', 'tracked.txt');
+  assertBaselineFresh(f.project, baseline);
+
+  // Staged mode revert
+  git(f, 'update-index', '--chmod=-x', 'tracked.txt');
+  assertBaselineFresh(f.project, baseline);
+
+  // Content edit in index must trigger stale evidence
+  fs.writeFileSync(file, 'new content edit\n');
+  git(f, 'add', 'tracked.txt');
+  rejects(() => assertBaselineFresh(f.project, baseline), 'STALE_EVIDENCE_REVISION');
 });

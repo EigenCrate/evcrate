@@ -39,8 +39,7 @@ export interface PlannedPublicationOperation {
   readonly beforeHash: string | null;
   readonly beforeSnapshot: PublicationNodeSnapshot;
   readonly intendedHash: string | null;
-  /** Explicit source projection mode; never inferred from destination state. */
-  readonly mode: number;
+  readonly executable?: boolean;
   readonly content: Uint8Array | null;
 }
 
@@ -303,49 +302,58 @@ function plannedOperation(
     }
   });
 }
-function sourceMode(root: string, relativePath: string): number {
-  try {
-    const path = relativePath === '.' ? root : safePublicationChild(root, relativePath);
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink() || !stat.isFile()) fail('PATH_UNSAFE');
-    return Number(stat.mode) & 0o777;
-  } catch (error) {
-    if (error instanceof ControlPlaneError) throw error;
-    fail('PATH_UNSAFE');
-  }
-}
-
-
-
 function actionForFile(
   target: PublicationTarget, binding: string, localRoot: string, relativePath: string,
   destination: string, content: Uint8Array, prior: Set<string>, reject: boolean,
-  mode: number, preserve = false
+  preserve = false, executable = false
 ): PlannedPublicationOperation {
   const current = existing(destination);
   const intendedHash = hashBytes(content);
-  if (!Number.isInteger(mode) || mode < 0 || mode > 0o777) fail('PATH_UNSAFE');
   if (preserve) return plannedOperation({
     target, binding, localRoot, relativePath, destination, action: 'preserve',
-    beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash: current.hash, mode
+    beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash: current.hash, executable
   }, null);
   if (current.directory) return plannedOperation({
     target, binding, localRoot, relativePath, destination, action: 'conflict',
-    beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash, mode
+    beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash, executable
   }, content);
   if (reject && !prior.has(relativePath) && current.hash !== null) {
     return plannedOperation({
       target, binding, localRoot, relativePath, destination, action: 'conflict',
-      beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash, mode
+      beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash, executable
     }, content);
   }
   const action = current.hash === null ? 'create'
-    : current.hash === intendedHash && (process.platform === 'win32' || current.snapshot.mode === mode) ? 'noop' : 'update';
+    : current.hash === intendedHash ? 'noop' : 'update';
   return plannedOperation({
     target, binding, localRoot, relativePath, destination, action, beforeHash: current.hash,
-    beforeSnapshot: current.snapshot, intendedHash, mode
+    beforeSnapshot: current.snapshot, intendedHash, executable
   }, content);
+}
 
+function hasShebang(content: Uint8Array): boolean {
+  return content.length > 1 && content[0] === 0x23 && content[1] === 0x21;
+}
+
+function isDirectLauncherRole(relativePath: string): boolean {
+  const normalized = relativePath.split('\\').join('/');
+  const base = normalized.split('/').pop() ?? '';
+  return normalized.endsWith('.sh')
+    || base === 'evcrate-advisor'
+    || normalized === 'evcrate-advisor'
+    || normalized.startsWith('bin/')
+    || base === 'evcrate';
+}
+
+export function deriveLaunchIntent(
+  publishedPath: string,
+  publishedContent: Uint8Array,
+  sourcePath?: string
+): boolean {
+  if (isDirectLauncherRole(publishedPath) || (sourcePath !== undefined && isDirectLauncherRole(sourcePath))) {
+    return true;
+  }
+  return hasShebang(publishedContent);
 }
 
 function materializeFile(
@@ -374,11 +382,10 @@ function sharedOperation(
   const relativePath = normalizeRelativePath(spec.destination);
   const destination = safePublicationChild(descriptor.destinationRoot, relativePath);
   const current = existing(destination);
-  const mode = sourceMode(descriptor.sourceRoot, spec.fragment);
   if (current.directory) return plannedOperation({
     target: descriptor.target, binding: descriptor.binding, localRoot: descriptor.localRoot,
     relativePath, destination, action: 'conflict', beforeHash: current.hash,
-    beforeSnapshot: current.snapshot, intendedHash: null, mode
+    beforeSnapshot: current.snapshot, intendedHash: null
   }, null);
   let planned: SharedJsonPlan;
   try { planned = planSharedJson(spec, current.content, fragment.content); }
@@ -386,14 +393,14 @@ function sharedOperation(
   if (planned.result === null) return plannedOperation({
     target: descriptor.target, binding: descriptor.binding, localRoot: descriptor.localRoot,
     relativePath, destination, action: 'conflict', beforeHash: current.hash,
-    beforeSnapshot: current.snapshot, intendedHash: null, mode
+    beforeSnapshot: current.snapshot, intendedHash: null
   }, null);
   const content = planned.result;
-  const action = planned.action === 'noop' && current.snapshot.mode !== mode ? 'update' : planned.action;
+  const action = planned.action;
   return plannedOperation({
     target: descriptor.target, binding: descriptor.binding, localRoot: descriptor.localRoot,
     relativePath, destination, action, beforeHash: current.hash,
-    beforeSnapshot: current.snapshot, intendedHash: hashBytes(content), mode
+    beforeSnapshot: current.snapshot, intendedHash: hashBytes(content)
   }, content);
 }
 
@@ -425,11 +432,11 @@ function directoryBinding(
       && (manifest.homePolicy.preservePaths[descriptor.localRoot] ?? [])
         .some((value) => mapPublicationPath(manifest, value) === published.relativePath);
     if (!preserve) managed.push(published.relativePath);
+    const isExecutable = deriveLaunchIntent(published.relativePath, published.content, file.relativePath);
     operations.push(actionForFile(
       descriptor.target, descriptor.binding, descriptor.localRoot, published.relativePath,
       safePublicationChild(descriptor.destinationRoot, published.relativePath), published.content,
-      prior, manifest.homePolicy.rejectUnmanagedCollisions,
-      sourceMode(descriptor.sourceRoot, file.relativePath), preserve
+      prior, manifest.homePolicy.rejectUnmanagedCollisions, preserve, isExecutable
     ));
   }
   for (const stale of [...prior].sort()) {
@@ -440,8 +447,7 @@ function directoryBinding(
     operations.push(plannedOperation({
       target: descriptor.target, binding: descriptor.binding, localRoot: descriptor.localRoot,
       relativePath: stale, destination, action: current.directory ? 'conflict' : 'delete',
-      beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash: null,
-      mode: current.snapshot.mode ?? 0o600
+      beforeHash: current.hash, beforeSnapshot: current.snapshot, intendedHash: null
     }, null));
   }
   if (spec !== null) operations.push(sharedOperation(descriptor, materialization));
@@ -464,10 +470,10 @@ function documentBinding(
   const relativePath = descriptor.binding;
   const destination = safePublicationChild(descriptor.destinationRoot, relativePath);
   const prior = priorPaths(ownership, descriptor);
+  const isExecutable = deriveLaunchIntent(relativePath, content);
   const operation = actionForFile(
     descriptor.target, descriptor.binding, descriptor.localRoot, relativePath, destination,
-    content, prior, manifest.homePolicy.rejectUnmanagedCollisions,
-    sourceMode(descriptor.sourceRoot, '.')
+    content, prior, manifest.homePolicy.rejectUnmanagedCollisions, false, isExecutable
   );
   const operations: PlannedPublicationOperation[] = [operation];
   const managed = [relativePath];
@@ -480,8 +486,7 @@ function documentBinding(
       target: descriptor.target, binding: descriptor.binding, localRoot: descriptor.localRoot,
       relativePath: stale, destination: staleDestination,
       action: current.directory ? 'conflict' : 'delete', beforeHash: current.hash,
-      beforeSnapshot: current.snapshot, intendedHash: null,
-      mode: current.snapshot.mode ?? 0o600
+      beforeSnapshot: current.snapshot, intendedHash: null
     }, null));
   }
   return Object.freeze({
@@ -498,15 +503,15 @@ function controllerBinding(
   validateAdvisorControllerProjection(context.controllerRoot, descriptor.sourceRoot);
   const current = publicationNode(descriptor.destinationRoot);
   if (current.present && current.kind !== 'directory') fail('PATH_UNSAFE');
-  const intendedHash = controllerTreeHash(descriptor.sourceRoot, true);
+  const intendedHash = controllerTreeHash(descriptor.sourceRoot);
   const currentSnapshot = snapshotFor(current, descriptor.destinationRoot, true);
   const beforeHash = currentSnapshot.present ? currentSnapshot.hash as string : null;
   const action = beforeHash === null ? 'create'
-    : beforeHash === intendedHash && (process.platform === 'win32' || currentSnapshot.mode === 0o700) ? 'noop' : 'update';
+    : beforeHash === intendedHash ? 'noop' : 'update';
   const operation: PlannedPublicationOperation = plannedOperation({
     target: 'advisor-controller', binding: descriptor.binding, localRoot: descriptor.localRoot,
     relativePath: descriptor.binding, destination: descriptor.destinationRoot, action,
-    beforeHash, beforeSnapshot: currentSnapshot, intendedHash, mode: 0o700
+    beforeHash, beforeSnapshot: currentSnapshot, intendedHash
   }, null);
   return Object.freeze({
     target: 'advisor-controller', localRoot: descriptor.localRoot, binding: descriptor.binding,

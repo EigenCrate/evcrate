@@ -1,8 +1,8 @@
 import { closeSync, constants, lstatSync, openSync, readSync, readdirSync, type Dirent, type Stats } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { assertOwnerControlledDirectory, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
-import { completeTreeHash, compareCanonicalPaths, hashFileWithMode } from '../filesystem/hashing.js';
+import { assertRealDirectory, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
+import { completeTreeHash, compareCanonicalPaths, hashFile, resourceFileHash } from '../filesystem/hashing.js';
 import { PERSISTED_TARGETS } from '../protocol/validation.js';
 import { IMPORT_CAPABILITIES, type ImportCapability } from '../protocol/resource-payloads.js';
 import { isSensitivePathSegment } from '../protocol/resource-payload-validation.js';
@@ -70,15 +70,16 @@ function compatibility(kind: ResourceKind): RegistryCompatibility {
   }
   return Object.freeze(result) as RegistryCompatibility;
 }
-function resourceDescriptor(kind: ResourceKind, sourcePath: string, absolutePath: string): { kind: ResourceKind; sourcePath: string; absolutePath: string; directory: boolean } {
+interface ResourceDescriptor { readonly kind: ResourceKind; readonly sourcePath: string; readonly absolutePath: string; readonly directory: boolean; }
+function resourceDescriptor(kind: ResourceKind, sourcePath: string, absolutePath: string): ResourceDescriptor {
   const stat = checkEntry(absolutePath);
   if (kind === 'skill' && (!stat.isDirectory() || !optionalFile(join(absolutePath, 'SKILL.md')))) return unsafe();
   if ((kind === 'agent' || kind === 'workflow' || kind === 'command') && (!stat.isFile() || !sourcePath.endsWith('.md'))) return unsafe();
   if (kind === 'hook' && !stat.isFile() && !stat.isDirectory()) return unsafe();
   return { kind, sourcePath, absolutePath, directory: stat.isDirectory() };
 }
-function collectFiles(kind: ResourceKind, root: string, base: string): Array<{ kind: ResourceKind; sourcePath: string; absolutePath: string; directory: boolean }> {
-  const found: Array<{ kind: ResourceKind; sourcePath: string; absolutePath: string; directory: boolean }> = [];
+function collectFiles(kind: ResourceKind, root: string, base: string): ResourceDescriptor[] {
+  const found: ResourceDescriptor[] = [];
   const walkCommands = (current: string): void => {
     for (const entry of entries(current)) {
       if (isSensitivePathSegment(entry.name)) continue;
@@ -111,8 +112,8 @@ function collectFiles(kind: ResourceKind, root: string, base: string): Array<{ k
   }
   return found;
 }
-function recordFor(descriptor: ReturnType<typeof resourceDescriptor>, previous: ResourceRecord | undefined): ResourceRecord {
-  const contentHash = descriptor.directory ? completeTreeHash(descriptor.absolutePath) : hashFileWithMode(descriptor.absolutePath);
+function recordFor(descriptor: ResourceDescriptor, previous: ResourceRecord | undefined): ResourceRecord {
+  const contentHash = descriptor.directory ? completeTreeHash(descriptor.absolutePath) : resourceFileHash(descriptor.absolutePath);
   const revision = previous && previous.content_hash === contentHash ? previous.revision : (previous?.revision ?? 0) + 1;
   return Object.freeze({
     id: `${descriptor.kind}:${descriptor.sourcePath}`, kind: descriptor.kind, source_path: descriptor.sourcePath,
@@ -122,14 +123,14 @@ function recordFor(descriptor: ReturnType<typeof resourceDescriptor>, previous: 
   });
 }
 export function scanCanonicalResources(canonicalRoot: string, resourceRoots: ResourceRootMap, previous: readonly ResourceRecord[] = []): readonly ResourceRecord[] {
-  assertOwnerControlledDirectory(canonicalRoot);
+  assertRealDirectory(canonicalRoot);
   completeTreeHash(canonicalRoot);
   const previousById = new Map(previous.map((record) => [record.id, record]));
-  const found: Array<{ kind: ResourceKind; sourcePath: string; absolutePath: string; directory: boolean }> = [];
+  const found: ResourceDescriptor[] = [];
   for (const kind of RESOURCE_KINDS) {
     const root = normalizeRelativePath(resourceRoots[kind]);
     const absoluteRoot = containedPath(canonicalRoot, root, true);
-    assertOwnerControlledDirectory(absoluteRoot);
+    assertRealDirectory(absoluteRoot);
     found.push(...collectFiles(kind, absoluteRoot, canonicalRoot));
     if (found.length > MAX_RESOURCE_RECORDS) throw new ControlPlaneError('PROTOCOL_INVALID');
   }

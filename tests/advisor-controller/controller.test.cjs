@@ -125,25 +125,12 @@ function assertFailed(result, code) {
   return value;
 }
 
-test('standard sticky temporary roots accept foreign ownership', () => {
-  if (process.platform === 'win32' || typeof process.getuid !== 'function') return;
-  const root = os.tmpdir();
-  const rootStat = fs.lstatSync(root);
-  if (rootStat.uid === process.getuid() || !(rootStat.mode & 0o1000)) return;
-  const workspace = createWorkspace({ environment: { TMPDIR: root } });
-  try {
-    assert.equal(workspace.root, path.resolve(root));
-    const workspaceStat = fs.statSync(workspace.path);
-    assert.equal(workspaceStat.uid, process.getuid());
-    assert.equal(workspaceStat.mode & 0o077, 0);
-  } finally {
-    cleanupWorkspace(workspace);
-  }
-});
-
-test('direct checkpoint succeeds through exactly one final Codex process', () => {
+test('direct checkpoint accepts shared policy and succeeds through exactly one final Codex process', () => {
   const fixture = setup();
   try {
+    fs.chmodSync(fixture.home, 0o777);
+    fs.chmodSync(path.join(fixture.home, '.evcrate'), 0o777);
+    fs.chmodSync(path.join(fixture.home, '.evcrate/advisor-routing.json'), 0o666);
     const result = run(fixture);
     assert.equal(result.status, 0);
     const value = envelope(result);

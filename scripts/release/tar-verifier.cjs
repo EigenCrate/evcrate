@@ -154,10 +154,6 @@ function verifyTarArchive(archivePath, expectedRecords) {
       throw new Error(`Size mismatch for ${entryPath}: got ${fileData.length}, expected ${expected.size}`);
     }
 
-    const expectedNormMode = (expected.mode & 0o111) !== 0 ? 0o755 : 0o644;
-    if ((mode & 0o777) !== expectedNormMode) {
-      throw new Error(`Mode mismatch for ${entryPath}: got ${mode.toString(8)}, expected ${expectedNormMode.toString(8)}`);
-    }
 
     const sha256 = crypto.createHash('sha256').update(fileData).digest('hex');
     if (sha256 !== expected.sha256) {

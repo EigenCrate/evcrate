@@ -1,7 +1,7 @@
-import { chmodSync, lstatSync, mkdirSync, readdirSync, type Dirent, type Stats } from 'node:fs';
+import { lstatSync, mkdirSync, readdirSync, type Dirent, type Stats } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { hashBytes, readBoundedFile, COMPLETE_TREE_HASH_LIMITS, compareCanonicalPaths } from '../filesystem/hashing.js';
+import { hashBytes, readBoundedFile, COMPLETE_TREE_HASH_LIMITS, compareCanonicalPaths, resourceFileHashBytes } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors, containedPath, normalizeRelativePath, isContained } from '../filesystem/paths.js';
 import { writeAtomicProjectionFile } from '../filesystem/atomic.js';
 import { boundedText } from '../protocol/validation.js';
@@ -15,13 +15,12 @@ export const MAX_IMPORT_DEPTH = 32;
 export const MAX_IMPORT_PATH_BYTES = 4096;
 const SCRIPT_SUFFIX = /\.(?:bash|cjs|fish|js|mjs|pl|ps1|rb|sh|zsh)$/iu;
 const MAX_IMPORT_DIRECTORIES = 100_000;
-export interface ImportSourceEntry { readonly path: string; readonly bytes: Uint8Array; readonly mode: number; }
-export interface ImportSourceDirectory { readonly path: string; readonly mode: number; }
+export interface ImportSourceEntry { readonly path: string; readonly bytes: Uint8Array; readonly executable: boolean; }
+export interface ImportSourceDirectory { readonly path: string; }
 export interface ImportSource {
   readonly absolutePath: string;
   readonly kind: ResourceKind;
   readonly directory: boolean;
-  readonly mode: number;
   readonly hash: string;
   readonly identity: string;
   readonly files: readonly ImportSourceEntry[];
@@ -32,17 +31,13 @@ export interface ImportSourceOptions { readonly cwd?: string; readonly protected
 
 function unsafe(): never { throw new ControlPlaneError('PATH_UNSAFE'); }
 function comparePaths(left: string, right: string): number { return compareCanonicalPaths(left, right); }
-function stableMode(stat: Stats): number {
-  return Number(stat.mode) & 0o777;
-}
 function stableIdentity(stat: Stats): string {
-  return `${Number(stat.dev)}:${Number(stat.ino)}:${Number(stat.size)}:${Number(stat.mode) & 0o777}`;
+  return `${Number(stat.dev)}:${Number(stat.ino)}:${Number(stat.size)}`;
 }
 function entry(path: string): Stats {
   let stat: Stats;
   try { stat = lstatSync(path); } catch { return unsafe(); }
   if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) return unsafe();
-  stableMode(stat);
   return stat;
 }
 function readFile(path: string, initial: Stats): Uint8Array {
@@ -50,12 +45,15 @@ function readFile(path: string, initial: Stats): Uint8Array {
   try { bytes = readBoundedFile(path, MAX_IMPORT_FILE_BYTES); } catch { return unsafe(); }
   const final = entry(path);
   if (Number(final.dev) !== Number(initial.dev) || Number(final.ino) !== Number(initial.ino)
-    || Number(final.size) !== Number(initial.size) || (Number(final.mode) & 0o777) !== (Number(initial.mode) & 0o777)) unsafe();
+    || Number(final.size) !== Number(initial.size)) unsafe();
   return Uint8Array.from(bytes);
 }
 function shebang(bytes: Uint8Array): boolean { return bytes.length > 1 && bytes[0] === 0x23 && bytes[1] === 0x21; }
 function capabilityFor(path: string, stat: Stats, bytes: Uint8Array): boolean {
   return (Number(stat.mode) & 0o111) !== 0 || SCRIPT_SUFFIX.test(path) || shebang(bytes);
+}
+function isExecutable(stat: Stats, bytes: Uint8Array): boolean {
+  return (Number(stat.mode) & 0o111) !== 0 || shebang(bytes);
 }
 function protectedPath(path: string, roots: readonly string[]): boolean {
   return roots.some((root) => resolve(root) === path || isContained(root, path));
@@ -77,16 +75,13 @@ export function canonicalImportDestination(
   const relativeDestination = validateDestinationKind(kind, destination);
   return containedPath(canonicalRoot, `${relativeRoot}/${relativeDestination}`);
 }
-function hashTree(rootMode: number, directories: readonly ImportSourceDirectory[], files: readonly ImportSourceEntry[]): string {
-  const records = [
-    `d\0\0${rootMode}\n`,
-    ...directories.map(({ path, mode }) => `d\0${path}\0${mode}\n`),
-    ...files.map(({ path, bytes, mode }) => `f\0${path}\0${mode}\0${hashBytes(bytes)}\n`)
-  ].sort(comparePaths);
-  return hashBytes(new TextEncoder().encode(records.join('')));
-}
-function singleFileHash(bytes: Uint8Array, mode: number): string {
-  return hashBytes(new TextEncoder().encode(`f\0${mode}\0${hashBytes(bytes)}\n`));
+function hashTree(directories: readonly ImportSourceDirectory[], files: readonly ImportSourceEntry[]): string {
+  const records: Array<{ path: string; value: string }> = [
+    { path: '', value: 'd\0\n' },
+    ...directories.map(({ path }) => ({ path, value: `d\0${path}\n` })),
+    ...files.map(({ path, bytes }) => ({ path, value: `f\0${path}\0${hashBytes(bytes)}\n` }))
+  ];
+  return hashBytes(new TextEncoder().encode(records.sort((left, right) => comparePaths(left.path, right.path)).map(({ value }) => value).join('')));
 }
 function list(path: string): Dirent[] {
   try { return readdirSync(path, { withFileTypes: true }).sort((left, right) => comparePaths(left.name, right.name)); }
@@ -116,7 +111,7 @@ export function readImportSource(sourcePath: string, kind: ResourceKind, options
       const stat = entry(childPath);
       if (stat.isDirectory()) {
         if (++directoryCount > MAX_IMPORT_DIRECTORIES) unsafe();
-        directories.push({ path: childRelative, mode: stableMode(stat) });
+        directories.push({ path: childRelative });
         visit(childPath, depth + 1, childRelative);
         continue;
       }
@@ -124,7 +119,7 @@ export function readImportSource(sourcePath: string, kind: ResourceKind, options
         || totalBytes > MAX_IMPORT_BYTES - Number(stat.size)) unsafe();
       const bytes = readFile(childPath, stat);
       if (capabilityFor(childPath, stat, bytes)) capabilities.add('script-execution');
-      files.push({ path: childRelative, bytes, mode: Number(stat.mode) & 0o777 });
+      files.push({ path: childRelative, bytes, executable: isExecutable(stat, bytes) });
       totalBytes += bytes.byteLength;
     }
   };
@@ -132,19 +127,19 @@ export function readImportSource(sourcePath: string, kind: ResourceKind, options
   else {
     const bytes = readFile(absolutePath, root);
     if (capabilityFor(absolutePath, root, bytes)) capabilities.add('script-execution');
-    files.push({ path: '', bytes, mode: Number(root.mode) & 0o777 });
+    files.push({ path: '', bytes, executable: isExecutable(root, bytes) });
     totalBytes = bytes.byteLength;
   }
   if (kind === 'skill' && !files.some(({ path }) => path === 'SKILL.md')) unsafe();
-  const hash = root.isDirectory() ? hashTree(Number(root.mode) & 0o777, directories, files) : singleFileHash(files[0].bytes, Number(root.mode) & 0o777);
+  const hash = root.isDirectory() ? hashTree(directories, files) : resourceFileHashBytes(files[0].bytes);
   return Object.freeze({
-    absolutePath, kind, directory: root.isDirectory(), mode: stableMode(root), hash,
+    absolutePath, kind, directory: root.isDirectory(), hash,
     identity: stableIdentity(root), files: Object.freeze(files), directories: Object.freeze(directories),
     capabilities: Object.freeze(['hook-execution', 'script-execution'].filter((value) => capabilities.has(value as ImportCapability)) as ImportCapability[])
   });
 }
-function mkdir(path: string, mode: number): void {
-  try { mkdirSync(path, { recursive: false, mode }); if (process.platform !== 'win32') chmodSync(path, mode); }
+function mkdir(path: string): void {
+  try { mkdirSync(path, { recursive: false }); }
   catch { unsafe(); }
 }
 function existingNode(path: string): Stats | null {
@@ -158,14 +153,14 @@ function existingNode(path: string): Stats | null {
   }
 }
 function materializeFiles(root: string, files: readonly ImportSourceEntry[]): void {
-  for (const file of files) writeAtomicProjectionFile(file.path ? containedPath(root, file.path) : root, file.bytes, file.mode);
+  for (const file of files) writeAtomicProjectionFile(file.path ? containedPath(root, file.path) : root, file.bytes, file.executable);
 }
 export function materializeImportSource(source: ImportSource, destination: string): void {
   assertNoSymlinkAncestors(destination);
   if (existingNode(destination)) throw new ControlPlaneError('CAS_CONFLICT');
   if (source.directory) {
-    mkdir(destination, source.mode);
-    for (const directory of source.directories) mkdir(containedPath(destination, directory.path), directory.mode);
+    mkdir(destination);
+    for (const directory of source.directories) mkdir(containedPath(destination, directory.path));
     materializeFiles(destination, source.files);
   } else {
     const parent = dirname(destination);
@@ -178,7 +173,7 @@ export function copyTreeBounded(source: string, destination: string): void {
   assertNoSymlinkAncestors(destination);
   const root = entry(source);
   if (!root.isDirectory()) unsafe();
-  mkdir(destination, stableMode(root));
+  mkdir(destination);
   let files = 0; let bytes = 0; let directories = 1;
   const visit = (current: string, target: string, depth: number): void => {
     if (depth > COMPLETE_TREE_HASH_LIMITS.maxDepth) unsafe();
@@ -190,12 +185,13 @@ export function copyTreeBounded(source: string, destination: string): void {
       const stat = entry(sourcePath);
       if (stat.isDirectory()) {
         if (++directories > COMPLETE_TREE_HASH_LIMITS.maxDirectories) unsafe();
-        mkdir(targetPath, stableMode(stat)); visit(sourcePath, targetPath, depth + 1); continue;
+        mkdir(targetPath); visit(sourcePath, targetPath, depth + 1); continue;
       }
       const size = Number(stat.size);
       if (++files > COMPLETE_TREE_HASH_LIMITS.maxFiles || size > COMPLETE_TREE_HASH_LIMITS.maxFileBytes
         || bytes > COMPLETE_TREE_HASH_LIMITS.maxBytes - size) unsafe();
-      writeAtomicProjectionFile(targetPath, readFile(sourcePath, stat), Number(stat.mode) & 0o777);
+      const fileBytes = readFile(sourcePath, stat);
+      writeAtomicProjectionFile(targetPath, fileBytes, (Number(stat.mode) & 0o111) !== 0 || shebang(fileBytes));
       bytes += size;
     }
   };

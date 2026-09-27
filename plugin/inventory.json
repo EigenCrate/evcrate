@@ -55,8 +55,8 @@
   },
   {
     "path": "backend/binding.cjs",
-    "size": 6116,
-    "sha256": "b39789a23b585804600bb471cfd608783ea4ed38a2f19df9b430cb6dd9a076f0",
+    "size": 5661,
+    "sha256": "070b8305a227b3ef65e38e1518cce4b6843277a6ad670c22a7d26cc95b1d567d",
     "mode": 420
   },
   {
@@ -91,8 +91,8 @@
   },
   {
     "path": "backend/evaluation-provider.cjs",
-    "size": 6917,
-    "sha256": "58422cdecb44cea884a234322a2d27165c89bc3ed1527d90a9b746d6c478f3ba",
+    "size": 6884,
+    "sha256": "a85f0bb7ddbc8810fbfa88a1578884aa3ce93726661ac14c44565b4d5a1aa538",
     "mode": 420
   },
   {
@@ -109,14 +109,14 @@
   },
   {
     "path": "backend/history-scanner.cjs",
-    "size": 13682,
-    "sha256": "b94235fe8d26f159b0df6e7ba3265e23b0d9a9c00377980f626883c814b1390b",
+    "size": 13552,
+    "sha256": "22d32dcff16fc99790445378fdc552d418bd5a09fced72b8f92c00c1773e0aef",
     "mode": 420
   },
   {
     "path": "backend/policy-provider.cjs",
-    "size": 4398,
-    "sha256": "c58cd31600c38c72fc459eaf601217b0d6458e77d056708154e9b610ec88f9f2",
+    "size": 4365,
+    "sha256": "2ce1e89480cf28f3b717cc9521443bf4809fd684c3da89c1343a3271475bf144",
     "mode": 420
   },
   {

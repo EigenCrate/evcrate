@@ -12,19 +12,6 @@ if (-not ([System.Management.Automation.PSTypeName]'EvcrateNativeBridge').Type) 
 }
 
 switch ($op) {
-    'get-owner' {
-        if ($args.Count -lt 2) { exit 1 }
-        $res = [EvcrateNativeBridge]::GetFileOwnerSid($args[1])
-        if ($res) { [Console]::Out.WriteLine($res) }
-        else { exit 1 }
-    }
-    'verify-owner' {
-        if ($args.Count -lt 3) { exit 1 }
-        $checkDacl = $args.Count -ge 4 -and $args[3] -eq 'private'
-        $valid = [EvcrateNativeBridge]::VerifyFileOwner($args[1], $args[2], $checkDacl)
-        if ($valid) { [Console]::Out.WriteLine('valid') }
-        else { [Console]::Out.WriteLine('invalid') }
-    }
     'process-start' {
         if ($args.Count -lt 2) { exit 1 }
         $res = [EvcrateNativeBridge]::GetProcessCreationTime([int]$args[1])

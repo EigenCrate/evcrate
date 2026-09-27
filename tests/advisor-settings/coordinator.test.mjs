@@ -41,12 +41,10 @@ test('advisor settings coordinator creates whole policy with independent CAS', (
     const preview = coordinator.handle(request('settings-preview-1', 'preview', {
       policy: POLICY,
       currentRevision: absent.revision,
-      destination: destination(context),
-      mode: { kind: 'create', mode: 0o600 }
+      destination: destination(context)
     }), context);
     assert.equal(preview.status, 'PREVIEW');
     assert.equal(preview.currentRevision.kind, 'absent');
-    assert.equal(preview.mode.kind, 'create');
     assert.match(preview.intendedDigest, /^[a-f0-9]{64}$/u);
 
     const applied = coordinator.handle(request('settings-apply-1', 'apply', {
@@ -56,7 +54,6 @@ test('advisor settings coordinator creates whole policy with independent CAS', (
     assert.equal(applied.recovery.kind, 'none');
     const file = readAdvisorPolicy(destination(context));
     assert.deepEqual(file.policy, POLICY);
-    assert.equal(Number(lstatSync(destination(context)).mode) & 0o777, process.platform === 'win32' ? 0o666 : 0o600);
     assert.equal(JSON.parse(readFileSync(destination(context), 'utf8')).advisor.primary.backend, 'codex');
 
     const replay = coordinator.handle(request('settings-replay-1', 'apply', {
@@ -80,7 +77,7 @@ test('advisor settings coordinator creates whole policy with independent CAS', (
     assert.equal(edited.policy.advisor.primary.model, 'manually-edited');
     const stalePreview = coordinator.handle(request('settings-preview-stale', 'preview', {
       policy: POLICY, currentRevision: staleRevision,
-      destination: destination(context), mode: { kind: 'existing', mode: 0o600 }
+      destination: destination(context)
     }), context);
     assert.equal(stalePreview.status, 'FAILED');
     assert.equal(stalePreview.error.code, 'CAS_CONFLICT');
@@ -96,8 +93,7 @@ test('settings preview token survives a failed publication boundary', () => {
     const coordinator = createAdvisorSettingsCoordinator({ now: () => clock });
     const initial = coordinator.handle(request('settings-retry-get-1', 'get'), context);
     const created = coordinator.handle(request('settings-retry-preview-1', 'preview', {
-      policy: POLICY, currentRevision: initial.revision, destination: destination(context),
-      mode: { kind: 'create', mode: 0o600 }
+      policy: POLICY, currentRevision: initial.revision, destination: destination(context)
     }), context);
     assert.equal(coordinator.handle(request('settings-retry-apply-1', 'apply', {
       token: created.token, currentRevision: created.currentRevision
@@ -111,8 +107,7 @@ test('settings preview token survives a failed publication boundary', () => {
       }
     };
     const preview = coordinator.handle(request('settings-retry-preview-2', 'preview', {
-      policy: replacement, currentRevision: current.revision, destination: destination(context),
-      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 }
+      policy: replacement, currentRevision: current.revision, destination: destination(context)
     }), context);
     const failing = createAdvisorSettingsCoordinator({
       now: () => clock, applyHooks: { beforePromote: () => { throw new Error('injected boundary'); } }
@@ -144,8 +139,7 @@ test('advisor settings expiry conflicts before mutation', () => {
     const preview = coordinator.handle(request('settings-preview-expiry-1', 'preview', {
       policy: POLICY,
       currentRevision: initial.revision,
-      destination: destination(context),
-      mode: { kind: 'create', mode: 0o600 }
+      destination: destination(context)
     }), context);
     clock = preview.expiresAt;
     const expired = coordinator.handle(request('settings-apply-expiry-1', 'apply', {
@@ -182,8 +176,7 @@ test('legacy v1 policy is readable via get with migration_required but cannot be
         advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 60000 }
       },
       currentRevision: result.revision,
-      destination: destination(context),
-      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 }
+      destination: destination(context)
     }), (error) => error.code === 'SETTINGS_INVALID');
   } finally {
     closePhase6Fixture(fixture);
@@ -210,8 +203,7 @@ test('migrates legacy v1 policy to v2 preserving CAS revision and applying new p
     const preview = coordinator.handle(request('settings-migrate-preview-1', 'preview', {
       policy: POLICY,
       currentRevision: legacyGet.revision,
-      destination: dest,
-      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 }
+      destination: dest
     }), context);
     assert.equal(preview.status, 'PREVIEW');
     assert.deepEqual(preview.currentRevision, legacyGet.revision);
@@ -259,7 +251,6 @@ test('stale v1 preview token fails on apply with CAS_CONFLICT', () => {
         advisor: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high', timeout_ms: 60000 }
       },
       current_revision: legacyGet.revision,
-      mode: { kind: 'existing', mode: process.platform === 'win32' ? 0o666 : 0o600 },
       expires_at: Date.now() + 600_000,
       intended_digest: '0'.repeat(64)
     }));
@@ -271,6 +262,50 @@ test('stale v1 preview token fails on apply with CAS_CONFLICT', () => {
     }), context);
     assert.equal(applied.status, 'FAILED');
     assert.equal(applied.error.code, 'CAS_CONFLICT');
+  } finally {
+    closePhase6Fixture(fixture);
+  }
+});
+
+test('shared file settings read, preview, and apply succeed across mode changes while retaining CAS safety', () => {
+  const fixture = createPhase6Fixture('evcrate-settings-shared-');
+  try {
+    const context = settingsContext(fixture);
+    const dest = destination(context);
+    mkdirSync(join(context.homeRoot, '.evcrate'), { recursive: true });
+    writeFileSync(dest, JSON.stringify(POLICY));
+    if (process.platform !== 'win32') {
+      chmodSync(dest, 0o644);
+    }
+    const coordinator = createAdvisorSettingsCoordinator();
+    const getResult = coordinator.handle(request('settings-shared-get', 'get'), context);
+    assert.equal(getResult.status, 'OK');
+    assert.deepEqual(getResult.policy, POLICY);
+
+    const replacement = {
+      ...POLICY,
+      advisor: {
+        ...POLICY.advisor,
+        primary: { ...POLICY.advisor.primary, model: 'shared-replacement' }
+      }
+    };
+    const previewResult = coordinator.handle(request('settings-shared-preview', 'preview', {
+      policy: replacement,
+      currentRevision: getResult.revision,
+      destination: dest
+    }), context);
+    assert.equal(previewResult.status, 'PREVIEW');
+
+    if (process.platform !== 'win32') {
+      chmodSync(dest, 0o664);
+    }
+
+    const applyResult = coordinator.handle(request('settings-shared-apply', 'apply', {
+      token: previewResult.token,
+      currentRevision: previewResult.currentRevision
+    }), context);
+    assert.equal(applyResult.status, 'APPLIED');
+    assert.equal(readAdvisorPolicy(dest).policy.advisor.primary.model, 'shared-replacement');
   } finally {
     closePhase6Fixture(fixture);
   }

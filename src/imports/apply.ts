@@ -19,7 +19,7 @@ function conflict(): never { throw new ControlPlaneError('CAS_CONFLICT'); }
 function registryIdentity(path: string): { kind: 'present' | 'absent'; identity: string } {
   const value = snapshot(path, 'PATH_UNSAFE');
   if (!value.present) return { kind: 'absent', identity: 'absent' };
-  return { kind: 'present', identity: `sha256:${value.digest}:${value.dev}:${value.ino}:${value.size}:${value.mode}` };
+  return { kind: 'present', identity: `sha256:${value.digest}:${value.dev}:${value.ino}:${value.size}` };
 }
 function targetManifestHashes(manifests: readonly ReturnType<typeof loadSelectedManifests>[number][]): Record<string, string> {
   return Object.fromEntries(manifests.map((manifest) => [`${manifest.id}/manifest.json`, hashFile(manifest.manifestPath)]));

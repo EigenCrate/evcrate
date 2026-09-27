@@ -2,7 +2,7 @@ import { lstatSync, renameSync, unlinkSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
-import { assertOwnerControlledDirectory, assertOwnerControlledPath, containedPath, assertNoSymlinkAncestors } from '../filesystem/paths.js';
+import { assertRealDirectory, assertDirectoryPath, containedPath, assertNoSymlinkAncestors } from '../filesystem/paths.js';
 import { canonicalJsonBytes, hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
 import { removePath, syncDirectory } from '../filesystem/atomic.js';
 
@@ -58,13 +58,13 @@ function intendedHashes(data: Record<string, unknown>, length: number): Array<st
   return data.intended_hashes.map((value) => value === null ? null
     : typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value) ? value : fail('ROLLBACK_FAILED'));
 }
-export type NodeSnapshot = { present: boolean; kind?: 'file' | 'directory'; dev?: number; ino?: number; size?: number; mode?: number; digest?: string };
+export type NodeSnapshot = { present: boolean; kind?: 'file' | 'directory'; dev?: number; ino?: number; size?: number; digest?: string };
 export function snapshot(path: string, code: FailureCode): NodeSnapshot {
   const node = ownedNode(path, code);
   if (!node) return { present: false };
   try {
     return { present: true, kind: node.isDirectory() ? 'directory' : 'file', dev: Number(node.dev), ino: Number(node.ino),
-      size: Number(node.size), mode: Number(node.mode) & 0o777, digest: node.isDirectory() ? treeHash(path) : hashFile(path) };
+      size: Number(node.size), digest: node.isDirectory() ? treeHash(path) : hashFile(path) };
   } catch (error) {
     if (error instanceof ControlPlaneError && error.code === code) throw error;
     fail(code);
@@ -74,7 +74,7 @@ export function assertSnapshot(path: string, expected: NodeSnapshot, code: 'PUBL
   if (JSON.stringify(snapshot(path, code)) !== JSON.stringify(expected)) fail(code);
 }
 export function recoverPromotionJournal(commonParent: string): void {
-  assertOwnerControlledDirectory(commonParent);
+  assertRealDirectory(commonParent);
   const path = journalPath(commonParent);
   if (!ownedNode(path, 'ROLLBACK_FAILED')) return;
   const data = journalData(commonParent);
@@ -93,7 +93,7 @@ export function recoverPromotionJournal(commonParent: string): void {
   const intended = intendedHashes(data, destinations.length);
   const committed = data.committed === true;
   for (const destination of destinations) {
-    try { assertNoSymlinkAncestors(dirname(destination)); assertOwnerControlledPath(commonParent, dirname(destination)); }
+    try { assertNoSymlinkAncestors(dirname(destination)); assertDirectoryPath(commonParent, dirname(destination)); }
     catch { fail('ROLLBACK_FAILED'); }
   }
   for (let index = destinations.length - 1; index >= 0; index -= 1) {

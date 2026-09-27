@@ -1,4 +1,4 @@
-import { chmodSync, lstatSync, mkdirSync, readdirSync, renameSync } from 'node:fs';
+import { lstatSync, mkdirSync, readdirSync, renameSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
@@ -22,8 +22,7 @@ import {
 } from '../protocol/publication-payloads.js';
 import { canonicalBytes } from '../protocol/json.js';
 import { canonicalJsonBytes, hashBytes, readBoundedFile } from '../filesystem/hashing.js';
-import { assertNoSymlinkAncestors, assertOwnerControlledDirectory, assertOwnerOnlyDirectory,
-  assertRealDirectory } from '../filesystem/paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory } from '../filesystem/paths.js';
 import { removePath, sameVolume, syncDirectory, writeAtomicFile, writeAtomicProjectionFile } from '../filesystem/atomic.js';
 import { RELEASE_MARKER_NAME, withLock, withPublishLock } from '../filesystem/locking.js';
 import { isPlainObject } from '../protocol/json.js';
@@ -60,7 +59,6 @@ export interface TransactionDescriptor {
   readonly retention: TransactionRetention;
   readonly bindings: readonly string[];
   readonly operations: readonly PlannedPublicationOperation[];
-  readonly modeProvenance: Readonly<Record<string, number>>;
 }
 type EnginePlan = Pick<PublicationPlan, 'bindings' | 'selectedTargets' | 'buildManifestPath' | 'buildManifestDigest'>
   & { readonly managedOwnership?: PriorManagedOwnership };
@@ -73,8 +71,7 @@ function createTransactionDescriptor(
     : join(resolve(durableStateRoot), `release-${releaseId}`);
   const bindings = Object.freeze(plan.bindings.map(({ binding }) => binding));
   const operations = Object.freeze(plan.bindings.flatMap(({ operations }) => operations));
-  const modeProvenance: Record<string, number> = {};
-  operations.forEach((operation, index) => { modeProvenance[String(index)] = operation.mode; });
+
   return Object.freeze({
     logicalPhase, scope, releaseId, destinationRoot: resolve(destinationRoot),
     durableStateRoot: resolve(durableStateRoot), transactionWorkspaceRoot,
@@ -84,7 +81,7 @@ function createTransactionDescriptor(
     lockPaths: Object.freeze([join(resolve(durableStateRoot), 'publish.lock')]),
     lockOrder: Object.freeze(scope === 'project' ? ['home', 'project'] : ['home']),
     retention: scope === 'project' ? 'none' : 'bounded-one-home-release',
-    bindings, operations, modeProvenance: Object.freeze(modeProvenance)
+    bindings, operations
   });
 }
 export class PublicationPartialError extends Error {
@@ -106,9 +103,7 @@ function fail(code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'RECOVERY_FAILED'
 function markerPath(stateRoot: string): string { return join(stateRoot, 'release-marker.json'); }
 function checkAbort(signal?: AbortSignal): void { if (signal?.aborted) fail(); }
 function sameSnapshot(left: PublicationNodeSnapshot, right: PublicationNodeSnapshot): boolean {
-  const keys = process.platform === 'win32'
-    ? ['present', 'kind', 'size', 'hash']
-    : ['present', 'kind', 'device', 'inode', 'size', 'mode', 'hash'];
+  const keys = ['present', 'kind', 'device', 'inode', 'size', 'hash'];
   return keys.every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
 }
 function assertBefore(operation: PlannedPublicationOperation): void {
@@ -123,8 +118,7 @@ function assertIntended(operation: PlannedPublicationOperation): PublicationNode
     return current;
   }
   if (!current.present || current.kind !== (controller ? 'directory' : 'file')
-    || current.hash !== operation.intendedHash
-    || (process.platform !== 'win32' && current.mode !== operation.mode)) {
+    || current.hash !== operation.intendedHash) {
     fail('PUBLICATION_FAILED');
   }
   return current;
@@ -135,15 +129,14 @@ function stateBytes(value: Record<string, unknown>): Uint8Array {
   return bytes;
 }
 function writeJournal(stateRoot: string, journal: Record<string, unknown>): void {
-  writeAtomicFile(join(stateRoot, PUBLICATION_JOURNAL_NAME), stateBytes(journal), 0o600);
+  writeAtomicFile(join(stateRoot, PUBLICATION_JOURNAL_NAME), stateBytes(journal));
 }
 function writeProgress(
   transactionRoot: string, index: number, entry: Record<string, unknown>
 ): void {
   writeAtomicFile(
     join(transactionRoot, 'progress', `${index}.json`),
-    stateBytes({ index, promoted: entry.promoted, intended: entry.intended }),
-    0o600
+    stateBytes({ index, promoted: entry.promoted, intended: entry.intended })
   );
 }
 function refreshJournal(journal: Record<string, unknown>): void {
@@ -197,7 +190,7 @@ function journalFor(
           ? operation.binding : `${operation.binding}/${operation.relativePath}`,
       before, backup: mutates && before.present ? `backups/${index}` : null,
       intendedHash: operation.intendedHash,
-      intended: !mutates && before.present ? before : null, promoted: false, mode: operation.mode
+      intended: !mutates && before.present ? before : null, promoted: false
     };
   });
   const sharedOnlyHome = descriptor.scope === 'home'
@@ -237,7 +230,7 @@ function stageController(
   counts: StageCounts = { files: 0, directories: 0, bytes: 0 }
 ): void {
   if (depth > PUBLICATION_TRAVERSAL_LIMITS.maxDepth || ++counts.directories > PUBLICATION_TRAVERSAL_LIMITS.maxDirectories) fail();
-  mkdirSync(destination, { recursive: true, mode: 0o700 });
+  mkdirSync(destination, { recursive: true });
   for (const entry of readdirSync(source, { withFileTypes: true })) {
     const sourcePath = join(source, entry.name); const destinationPath = join(destination, entry.name);
     if (Buffer.byteLength(relative(root, sourcePath).split('\\').join('/'), 'utf8') > PUBLICATION_TRAVERSAL_LIMITS.maxPathBytes) fail();
@@ -251,24 +244,28 @@ function stageController(
         || counts.bytes > PUBLICATION_TRAVERSAL_LIMITS.maxBytes - size) fail();
       counts.bytes += size;
       const relativePath = relative(root, sourcePath).split('\\').join('/');
-      const mode = relativePath === 'evcrate-advisor' ? 0o755 : Number(stat.mode) & 0o777;
-      writeAtomicProjectionFile(destinationPath, readBoundedFile(sourcePath, MAX_PUBLICATION_FILE_BYTES), mode);
+      const content = readBoundedFile(sourcePath, MAX_PUBLICATION_FILE_BYTES);
+      const isExecutable = relativePath === 'evcrate-advisor'
+        || relativePath.endsWith('/evcrate-advisor')
+        || relativePath.endsWith('.sh')
+        || (content.length > 1 && content[0] === 0x23 && content[1] === 0x21)
+        || (Number(stat.mode) & 0o111) !== 0;
+      writeAtomicProjectionFile(destinationPath, content, isExecutable);
     }
   }
-  chmodSync(destination, 0o700);
 }
 function stageOperation(transaction: string, sourceRoot: string, operation: PlannedPublicationOperation, index: number): void {
   const stage = join(transaction, 'stage');
   if (operation.target === 'advisor-controller') return stageController(sourceRoot, join(stage, 'controller'));
   if (operation.content !== null) writeAtomicProjectionFile(
-    join(stage, String(index)), operation.content, operation.mode
+    join(stage, String(index)), operation.content, operation.executable ?? false
   );
 }
 function backupDestination(transaction: string, operation: PlannedPublicationOperation, index: number): string | null {
   if (!operation.beforeSnapshot.present) return null;
   const backup = join(transaction, 'backups', String(index));
-  mkdirSync(dirname(backup), { recursive: true, mode: 0o700 });
-  assertOwnerControlledDirectory(dirname(backup));
+  mkdirSync(dirname(backup), { recursive: true });
+  assertRealDirectory(dirname(backup));
   renameSync(operation.destination, backup);
   try {
     if (!sameSnapshot(publicationSnapshot(backup, operation.target === 'advisor-controller'), operation.beforeSnapshot)) {
@@ -283,8 +280,8 @@ function backupDestination(transaction: string, operation: PlannedPublicationOpe
   return backup;
 }
 function ensureDestinationParent(path: string): void {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  assertOwnerControlledDirectory(dirname(path));
+  mkdirSync(dirname(path), { recursive: true });
+  assertRealDirectory(dirname(path));
 }
 function promoteOperation(
   transaction: string,
@@ -322,7 +319,7 @@ function transactionBytes(root: string): number {
     if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) fail('PATH_UNSAFE');
     if (stat.isDirectory()) {
       if (++directories > PUBLICATION_TRAVERSAL_LIMITS.maxDirectories) fail('RECOVERY_FAILED');
-      assertOwnerControlledDirectory(path);
+      assertRealDirectory(path);
       for (const entry of readdirSync(path)) visit(join(path, entry), depth + 1);
       return;
     }
@@ -338,7 +335,7 @@ function hasBackups(path: string): boolean {
   try {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE');
-    assertOwnerOnlyDirectory(path);
+    assertRealDirectory(path);
     return readdirSync(path).length > 0;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
@@ -420,7 +417,7 @@ function cleanupReleases(
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(id)) fail('RECOVERY_FAILED');
     const path = join(stateRoot, name);
     try {
-      assertOwnerOnlyDirectory(path);
+      assertRealDirectory(path);
       const age = now - Number(lstatSync(path).mtimeMs);
       const bytes = transactionBytes(path);
       if (!Number.isFinite(age)) fail('RECOVERY_FAILED');
@@ -559,15 +556,15 @@ function restoreNoPromotion(
   removePath(transactionRoot);
   removePath(join(stateRoot, PUBLICATION_JOURNAL_NAME));
   if (previousMarker === null) removePath(markerPath(stateRoot));
-  else writeAtomicFile(markerPath(stateRoot), canonicalJsonBytes(previousMarker), 0o600);
+  else writeAtomicFile(markerPath(stateRoot), canonicalJsonBytes(previousMarker));
   syncDirectory(stateRoot);
 }
-function existingOwnerControlledAncestor(path: string): string {
+function existingRealAncestor(path: string): string {
   let current = resolve(path);
   while (true) {
     try {
       lstatSync(current);
-      assertOwnerControlledDirectory(current);
+      assertRealDirectory(current);
       return current;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -575,7 +572,7 @@ function existingOwnerControlledAncestor(path: string): string {
         fail('PATH_UNSAFE', `failed stating ancestor of "${path}" at "${current}": ${(error as Error).message}`);
       }
       const parent = dirname(current);
-      if (parent === current) fail('PATH_UNSAFE', `reached filesystem root without finding owner controlled ancestor for "${path}"`);
+      if (parent === current) fail('PATH_UNSAFE', `reached filesystem root without finding ancestor for "${path}"`);
       current = parent;
     }
   }
@@ -586,22 +583,20 @@ function ensureHomeDirectory(homeRoot: string): string {
   const existing = lstatSync(resolved, { throwIfNoEntry: false });
   if (existing === undefined) {
     try {
-      mkdirSync(resolved, { recursive: true, mode: 0o700 });
-      if (process.platform !== 'win32') chmodSync(resolved, 0o700);
+      mkdirSync(resolved, { recursive: true });
     } catch (error) {
       if (error instanceof ControlPlaneError) throw error;
       fail('PATH_UNSAFE');
     }
   }
-  assertOwnerControlledDirectory(resolved);
+  assertRealDirectory(resolved);
   return resolved;
 }
 function preflightStateVolume(stateRoot: string, destinationRoot: string): void {
   assertNoSymlinkAncestors(destinationRoot);
   assertRealDirectory(destinationRoot);
-  assertOwnerControlledDirectory(destinationRoot);
   assertNoSymlinkAncestors(stateRoot);
-  const ancestor = existingOwnerControlledAncestor(stateRoot);
+  const ancestor = existingRealAncestor(stateRoot);
   if (!sameVolume(destinationRoot, ancestor)) {
     fail('PATH_UNSAFE', `destinationRoot "${destinationRoot}" and stateRoot ancestor "${ancestor}" are on different volumes`);
   }
@@ -612,17 +607,16 @@ function preflightTransaction(
 ): void {
   assertNoSymlinkAncestors(descriptor.destinationRoot);
   assertRealDirectory(descriptor.destinationRoot);
-  assertOwnerControlledDirectory(descriptor.destinationRoot);
   assertNoSymlinkAncestors(descriptor.durableStateRoot);
-  existingOwnerControlledAncestor(descriptor.durableStateRoot);
+  existingRealAncestor(descriptor.durableStateRoot);
   if (lstatSync(descriptor.durableStateRoot, { throwIfNoEntry: false }) !== undefined) {
-    assertOwnerOnlyDirectory(descriptor.durableStateRoot);
+    assertRealDirectory(descriptor.durableStateRoot);
   }
   assertNoSymlinkAncestors(descriptor.transactionWorkspaceRoot);
   if (lstatSync(descriptor.transactionWorkspaceRoot, { throwIfNoEntry: false }) !== undefined) {
     fail('PATH_UNSAFE', `transactionWorkspaceRoot already exists: "${descriptor.transactionWorkspaceRoot}"`);
   }
-  const workspaceAncestor = existingOwnerControlledAncestor(dirname(descriptor.transactionWorkspaceRoot));
+  const workspaceAncestor = existingRealAncestor(dirname(descriptor.transactionWorkspaceRoot));
   if (!sameVolume(descriptor.destinationRoot, workspaceAncestor)) {
     fail('PATH_UNSAFE', `destinationRoot "${descriptor.destinationRoot}" and workspace ancestor "${workspaceAncestor}" are on different volumes`);
   }
@@ -649,7 +643,7 @@ function applyTransaction(
   try {
     // Persist staged intent before creating the workspace.
     writeJournal(descriptor.durableStateRoot, journal);
-    mkdirSync(join(descriptor.transactionWorkspaceRoot, 'stage'), { recursive: true, mode: 0o700 });
+    mkdirSync(join(descriptor.transactionWorkspaceRoot, 'stage'), { recursive: true });
     const workspace = lstatSync(descriptor.transactionWorkspaceRoot);
     const workspaceParent = lstatSync(dirname(descriptor.transactionWorkspaceRoot));
     const workspaceDevice = Number(workspace.dev);
@@ -668,8 +662,8 @@ function applyTransaction(
       fail('PATH_UNSAFE', `workspace validation failed: dev=${workspaceDevice}, parentDev=${workspaceParentDevice}, ino=${workspaceInode}, parentIno=${workspaceParentInode}`);
     }
     const progressRoot = join(descriptor.transactionWorkspaceRoot, 'progress');
-    mkdirSync(progressRoot, { recursive: true, mode: 0o700 });
-    assertOwnerOnlyDirectory(progressRoot);
+    mkdirSync(progressRoot, { recursive: true });
+    assertRealDirectory(progressRoot);
     syncDirectory(descriptor.transactionWorkspaceRoot);
     mutable.workspace_device = workspaceDevice;
     mutable.workspace_inode = workspaceInode;
@@ -789,7 +783,7 @@ function writeRelease(
   const marker = {
     schema_version: 2, transaction_type: 'target-publication', scope: value.scope, records
   };
-  writeAtomicFile(markerPath(stateRoot), stateBytes(marker), 0o600);
+  writeAtomicFile(markerPath(stateRoot), stateBytes(marker));
 }
 function scopedDryRunPhase(plan: PublicationPhasePlan): DryRunPhaseRecord {
   return Object.freeze({

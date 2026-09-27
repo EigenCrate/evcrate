@@ -4,10 +4,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createRoutingError, isRoutingError } = require('./errors.cjs');
-const { verifyWindowsFileOwnership } = require('./windows-platform.cjs');
 
 function fail(code = 'CWD_UNSAFE') { throw createRoutingError(code); }
-function uid(stat) { return typeof process.getuid === 'function' ? process.getuid() : stat.uid; }
 function rootFor(environment = process.env, tempDirectory = os.tmpdir) {
   const value = environment?.TMPDIR || tempDirectory();
   if (typeof value !== 'string' || !value || !path.isAbsolute(value) || value.includes('\0')) fail('CWD_UNSAFE');
@@ -34,11 +32,6 @@ function verifyWorkspace(workspace) {
   let stat;
   try { stat = fs.lstatSync(workspace.path); } catch { fail('CWD_UNSAFE'); }
   if (!stat.isDirectory() || stat.isSymbolicLink()) fail('CWD_UNSAFE');
-  if (process.platform === 'win32') {
-    if (!verifyWindowsFileOwnership(workspace.path)) fail('CWD_UNSAFE');
-  } else {
-    if (stat.uid !== uid(stat)) fail('CWD_UNSAFE');
-  }
   if (fs.realpathSync.native(workspace.path) !== workspace.realpath) fail('CWD_UNSAFE');
   if (fs.readdirSync(workspace.path).length !== 0) fail('CWD_UNSAFE');
   return workspace;
@@ -50,7 +43,6 @@ function createWorkspace({ environment = process.env, tempDirectory = os.tmpdir,
   try { directory = fsImpl.mkdtempSync(path.join(root, 'evcrate-advisor-')); }
   catch { fail('CWD_UNSAFE'); }
   try {
-    fsImpl.chmodSync(directory, 0o700);
     const workspace = Object.freeze({
       path: directory,
       realpath: fsImpl.realpathSync.native(directory),

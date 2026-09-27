@@ -22,7 +22,7 @@ function source(context: ProjectionBuildContext, path: string): ResourceGraphFil
 function filesUnder(context: ProjectionBuildContext, prefix: string): readonly ResourceGraphFile[] {
   return context.resources.files.filter((file) => file.path.startsWith(`${prefix}/`)).sort((a, b) => a.path.localeCompare(b.path));
 }
-function writeText(context: ProjectionBuildContext, path: string, value: string, mode = 0o644): void { writeProjectionFile(context, path, textBytes(value), mode); }
+function writeText(context: ProjectionBuildContext, path: string, value: string, executable = false): void { writeProjectionFile(context, path, textBytes(value), executable); }
 function knownCommands(context: ProjectionBuildContext): Set<string> {
   const known = new Set<string>();
   for (const file of filesUnder(context, 'commands')) if (file.path.endsWith('.md')) {
@@ -44,7 +44,7 @@ function copyScripts(context: ProjectionBuildContext): void {
     if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionControllerArtifact(relative) || relative.includes('advise-state') || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue;
     const content = transformed(context, file, known);
     const final = relative === 'ev-help.py' ? new TextDecoder().decode(content).replace('("CODEX_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")', '("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")') : content;
-    writeProjectionFile(context, `.codex/scripts/${relative}`, typeof final === 'string' ? textBytes(final) : final, file.mode);
+    writeProjectionFile(context, `.codex/scripts/${relative}`, typeof final === 'string' ? textBytes(final) : final, file.executable ?? false);
   }
 }
 function copyHooks(context: ProjectionBuildContext): void {
@@ -52,7 +52,7 @@ function copyHooks(context: ProjectionBuildContext): void {
   for (const file of filesUnder(context, 'hooks')) {
     const relative = file.path.slice('hooks/'.length); const parts = relative.split('/');
     if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionControllerArtifact(relative)) continue;
-    writeProjectionFile(context, `.codex/hooks/${relative}`, transformed(context, file, known), file.mode);
+    writeProjectionFile(context, `.codex/hooks/${relative}`, transformed(context, file, known), file.executable ?? false);
   }
 }
 function copySkills(context: ProjectionBuildContext): void {
@@ -74,7 +74,7 @@ function copySkills(context: ProjectionBuildContext): void {
         bytes = textBytes(`${markdownFrontmatter(metadata)}\n\n${parsed.body.trimStart()}`);
       } else bytes = textBytes(content);
     }
-    writeProjectionFile(context, `.agents/skills/${target}`, bytes, file.mode);
+    writeProjectionFile(context, `.agents/skills/${target}`, bytes, file.executable ?? false);
   }
   for (const root of roots) ensureProjectionDirectory(context, `.agents/skills/${root.replace(/claude/giu, 'codex')}`);
 }
@@ -123,7 +123,7 @@ function projectDocument(context: ProjectionBuildContext): void {
   writeText(context, 'AGENTS.md', applyReplacements(siblingText(context, 'CLAUDE.md')));
 }
 function copyConfigInputs(context: ProjectionBuildContext): void {
-  for (const name of ['.evcrate.json', '.evcrateignore']) { const file = source(context, name); if (file) writeProjectionFile(context, `.codex/${name}`, file.bytes, file.mode); }
+  for (const name of ['.evcrate.json', '.evcrateignore']) { const file = source(context, name); if (file) writeProjectionFile(context, `.codex/${name}`, file.bytes, file.executable ?? false); }
 }
 function generatedHooks(context: ProjectionBuildContext): void {
   const generated: Readonly<Record<string, string>> = {
@@ -134,8 +134,8 @@ function generatedHooks(context: ProjectionBuildContext): void {
     'permission-request.cjs': permissionHook(),
     'run-node-hook.sh': runNodeHook(),
   };
-  for (const [name, body] of Object.entries(generated)) writeText(context, `.codex/hooks/${name}`, body);
-  writeText(context, '.codex/bin/run-mcp-package.sh', runMcpPackage());
+  for (const [name, body] of Object.entries(generated)) writeText(context, `.codex/hooks/${name}`, body, name.endsWith('.sh'));
+  writeText(context, '.codex/bin/run-mcp-package.sh', runMcpPackage(), true);
   writeText(context, '.codex/hooks.json', hooksJson());
 }
 function globalGuidance(context: ProjectionBuildContext): void {

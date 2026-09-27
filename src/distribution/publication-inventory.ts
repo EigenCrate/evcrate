@@ -6,8 +6,8 @@ import {
   isIgnoredArtifact, compareCanonicalPaths
 } from '../filesystem/hashing.js';
 import {
-  assertNoSymlinkAncestors, assertOwnerControlledDirectory, assertOwnerOnlyFile,
-  assertRealDirectory, containedPath, normalizeRelativePath
+  assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile,
+  containedPath, normalizeRelativePath
 } from '../filesystem/paths.js';
 import { parseJsonDocument, isPlainObject } from '../protocol/json.js';
 import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
@@ -29,7 +29,6 @@ export interface PublicationFile {
   readonly relativePath: string;
   readonly content: Uint8Array;
   readonly hash: string;
-  readonly mode: number;
 }
 export interface PublicationNode {
   readonly present: boolean;
@@ -37,7 +36,6 @@ export interface PublicationNode {
   readonly device?: number;
   readonly inode?: number;
   readonly size?: number;
-  readonly mode?: number;
   readonly hash?: string;
 }
 export interface PublicationNodeSnapshot extends PublicationNode {
@@ -46,7 +44,6 @@ export interface PublicationNodeSnapshot extends PublicationNode {
   readonly device?: number;
   readonly inode?: number;
   readonly size?: number;
-  readonly mode?: number;
   readonly hash?: string;
 }
 
@@ -64,18 +61,16 @@ function safeNumber(value: number | bigint): number {
 
 function nodeMetadata(
   stat: NonNullable<ReturnType<typeof lstatSync>>
-): Pick<PublicationNode, 'device' | 'inode' | 'size' | 'mode'> {
+): Pick<PublicationNode, 'device' | 'inode' | 'size'> {
   return Object.freeze({
-    device: safeNumber(stat.dev), inode: safeNumber(stat.ino), size: safeNumber(stat.size),
-    mode: Number(stat.mode) & 0o777
+    device: safeNumber(stat.dev), inode: safeNumber(stat.ino), size: safeNumber(stat.size)
   });
 }
 function sameMetadata(
-  left: Pick<PublicationNode, 'device' | 'inode' | 'size' | 'mode'>,
-  right: Pick<PublicationNode, 'device' | 'inode' | 'size' | 'mode'>
+  left: Pick<PublicationNode, 'device' | 'inode' | 'size'>,
+  right: Pick<PublicationNode, 'device' | 'inode' | 'size'>
 ): boolean {
-  return left.device === right.device && left.inode === right.inode
-    && left.size === right.size && left.mode === right.mode;
+  return left.device === right.device && left.inode === right.inode && left.size === right.size;
 }
 
 export function listPublicationFiles(root: string): readonly PublicationFile[] {
@@ -112,39 +107,22 @@ export function listPublicationFiles(root: string): readonly PublicationFile[] {
       bytes += size;
       const content = readBoundedFile(path, MAX_PUBLICATION_FILE_BYTES);
       files.push(Object.freeze({
-        relativePath, content, hash: hashBytes(content), mode: Number(stat.mode) & 0o777
+        relativePath, content, hash: hashBytes(content)
       }));
     }
   };
   visit(root, 0);
   return Object.freeze(files);
 }
-export function controllerTreeHash(root: string, source = false): string {
-  let rootMode: number;
-  try {
-    const stat = lstatSync(root);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE');
-    rootMode = (source || process.platform === 'win32') ? 0o700 : Number(stat.mode) & 0o777;
-  } catch (error) {
-    if (error instanceof ControlPlaneError) throw error;
-    fail();
-  }
-  const records = [{ relativePath: '', value: `d\0\0${rootMode}\n` },
-    ...listPublicationFiles(root).map(({ relativePath, hash, mode }) => {
-      const effectiveMode = relativePath === 'evcrate-advisor' ? 0o755 : mode;
-      return { relativePath, value: `f\0${relativePath}\0${hash}\0${effectiveMode}\n` };
-    })];
-  try {
-    const stat = lstatSync(join(root, 'evcrate-advisor'));
-    if (stat.isSymbolicLink() || !stat.isFile()) fail('PATH_UNSAFE');
-    const modeValue = (source || process.platform === 'win32') ? 0o755 : Number(stat.mode) & 0o777;
-    records.push({ relativePath: 'evcrate-advisor\0mode', value: `m\0evcrate-advisor\0${modeValue}\n` });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || source) {
-      if (error instanceof ControlPlaneError) throw error;
-      fail();
-    }
-  }
+export function controllerTreeHash(root: string): string {
+  assertNoSymlinkAncestors(root);
+  assertRealDirectory(root);
+  const records = [
+    { relativePath: '', value: 'd\0\n' },
+    ...listPublicationFiles(root).map(({ relativePath, hash }) => ({
+      relativePath, value: `f\0${relativePath}\0${hash}\n`
+    }))
+  ];
   return hashBytes(new TextEncoder().encode(records
     .sort((left, right) => compareCanonicalPaths(left.relativePath, right.relativePath))
     .map(({ value }) => value).join('')));
@@ -212,7 +190,7 @@ export function validatePublicationAncestors(homeRoot: string, destination: stri
     try {
       const stat = lstatSync(current);
       if (stat.isSymbolicLink() || !stat.isDirectory()) fail('PATH_UNSAFE', `ancestor "${current}" is a symlink or not a directory`);
-      assertOwnerControlledDirectory(current);
+      assertRealDirectory(current);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') break;
       if (error instanceof ControlPlaneError) throw error;
@@ -459,7 +437,7 @@ export function readOptionalPublicationMarker(path: string): Record<string, unkn
   }
   if (!stat.isFile() || stat.isSymbolicLink()) fail('PATH_UNSAFE');
   try {
-    assertOwnerOnlyFile(path);
+    assertRegularFile(path);
     const parsed = parseJsonDocument(
       readBoundedFile(path, MAX_PUBLICATION_STATE_BYTES), MAX_PUBLICATION_STATE_BYTES
     );

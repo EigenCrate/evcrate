@@ -71,47 +71,17 @@ export function assertRealDirectory(path: string): Stats {
   return stat;
 }
 
-export function assertOwnerControlledDirectory(path: string): Stats {
-  const stat = assertRealDirectory(path);
-  if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) {
-    unsafe(`directory not owner controlled: "${path}" (owner=${stat.uid}, current=${process.getuid()})`);
-  }
-  return stat;
-}
-export function assertOwnerOnlyDirectory(path: string): Stats {
-  const stat = assertRealDirectory(path);
-  if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) {
-    unsafe(`directory not owner only: "${path}" (owner=${stat.uid}, current=${process.getuid()})`);
-  }
-  return stat;
-}
-export function assertOwnerControlledPath(rootValue: string, candidateValue: string): void {
+export function assertDirectoryPath(rootValue: string, candidateValue: string): void {
   const root = resolve(rootValue);
   const candidate = resolve(candidateValue);
   const suffix = relative(root, candidate);
   if (suffix === '..' || suffix.startsWith(`..${sep}`) || isAbsolute(suffix)) unsafe();
-  assertOwnerControlledDirectory(root);
+  assertRealDirectory(root);
   let current = root;
   for (const part of suffix ? suffix.split(/[/\\]/u) : []) {
     current = join(current, part);
-    assertOwnerControlledDirectory(current);
+    assertRealDirectory(current);
   }
-}
-
-export function assertOwnerOnlyFile(path: string): Stats {
-  const stat = assertRegularFile(path);
-  if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
-  return stat;
-}
-
-export function assertOwnerControlledFile(path: string, requiredMode = 0o600): Stats {
-  const stat = assertRegularFile(path);
-  if (typeof process.getuid === 'function' && process.getuid() !== 0 && Number(stat.uid) === 0) return stat;
-  if (typeof process.getuid === 'function' && Number(stat.uid) !== process.getuid()) unsafe();
-  return stat;
 }
 
 export function isContained(root: string, candidate: string): boolean {

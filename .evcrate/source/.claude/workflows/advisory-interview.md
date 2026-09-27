@@ -138,8 +138,9 @@ stops the command and retains state.
 The helper creates `${TMPDIR:-/tmp}/evcrate/advice/v1/<project-key>/<invocation-id>/`.
 The project key is the sanitized project basename plus `-` and the first 12
 hex characters of SHA-256(realpath(project root)); raw paths never enter state.
-The invocation ID is a UUID. The directory is `0700`, `state.json` is `0600`,
-and writes use an owner-only temporary file followed by an atomic rename.
+The invocation ID is a UUID. Files and directories use OS-default permissions;
+ownership and permission bits do not gate access. Writes use an exclusively
+created temporary file followed by an atomic rename.
 
 Schema is `evcrate-advise-state/v1`; serialized state is at most 64 KiB. It
 contains only schema/version, project and invocation IDs, timestamps, phase,
