@@ -3,7 +3,7 @@
 **Status:** Current roadmap for package `2.1.0`; Hook Materialization Scope
 Distribution is complete through Phase 09, and Windows release qualification is
 complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Updated:** 2026-09-24
+**Updated:** 2026-09-27
 
 **Advisor metrics explorer progress:** Historical milestone complete through Phase 10 (10/10 phases; completed 2026-09-19). That milestone recorded the 33-file controller closure, read-only browser explorer, strict CSP/no-network policy, frozen 10k benchmarks, and documentation cutover. Standalone picker/reader source was later removed from the repository.
 
@@ -47,6 +47,7 @@ policy; they are not hand edited.
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
+| Documentation validator reliability — Phase 01 | DONE (2026-09-27 15:53:47 ICT; review 9.5/10) | [Plan](../plans/260927-1117-26fdad7-validator-review/plan.md), [phase](../plans/260927-1117-26fdad7-validator-review/phase-01-search-correctness.md), [review](../plans/reports/code-review-260927-1530-phase-01-search-correctness.md); validator search correctness and docs-manager instructions complete; seven target projections/manifests regenerated. Linux verification: 86 passed, one Windows-only CLI test skipped. Phase 02 platform qualification remains pending. |
 
 | Advisor mentoring/recovery/audit — Phase 01 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-01-contracts-and-policy-migration.md) and [review](../plans/reports/code-review-260907-1648-phase-01-v2-contracts-and-policy-migration.md); policy/checkpoint/result/controller v2, task/history v1 records, TS/CJS parity, typed errors, and explicit legacy-policy migration are frozen. No automatic HOME rewrite or later-phase runtime retry/wait/state/history cutover is claimed. |
 | Advisor mentoring/recovery/audit — Phase 02 | DONE (2026-09-07) | [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-02-wait-cancellation-and-cleanup.md); completed at 100% with indefinite generation without a generation deadline, monotonic bounded progress warnings on stderr, cancellation dominance across async boundaries, POSIX process-group termination with leader/group reap verification, observable workspace absence requiring **ENOENT**, and runner/controller tracking of probe cleanup uncertainty. Evidence: 65/65 advisor-controller tests, a real 31.25s smoke pass, `npm run distribute:check`, `npm run release:check`, Sol Cycle 3 sign-off 9/10, and Astra mentor approval. |

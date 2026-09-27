@@ -2,9 +2,17 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-24
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Package version: `2.1.0`.
+**Updated:** 2026-09-27
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Documentation validator reliability Phase 01 is DONE; Phase 02 platform qualification remains pending. Package version: `2.1.0`.
 Older phase records remain in the linked archive.
+
+### 2026-09-27 — fix(docs): complete validator search correctness (Phase 01)
+
+**Status:** Phase 01 DONE (2026-09-27 15:53:47 ICT; 100%); review approved 9.5/10; advisor checkpoint complete. The overall plan remains in progress while Phase 02 platform qualification is pending.
+**Plan:** [Documentation validator reliability](../plans/260927-1117-26fdad7-validator-review/plan.md) · [Phase 01](../plans/260927-1117-26fdad7-validator-review/phase-01-search-correctness.md). **Evidence:** [review](../plans/reports/code-review-260927-1530-phase-01-search-correctness.md)
+- Corrected validator hidden-source handling, heavy-directory exclusions, search-result classification, and docs-manager backend/declaration guidance.
+- Regenerated seven target projections and build manifests from canonical sources. Linux verification: **86 tests passed**; one Windows-only CLI test was skipped. Build and distribution checks passed.
+- Native Windows helper behavior remains unqualified; no broader support claim is made.
 
 ### 2026-09-24 — feat(history): complete paired qualification and release decision (Phase 05)
 

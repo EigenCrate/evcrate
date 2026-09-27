@@ -1,7 +1,7 @@
 # Codebase Summary
 
-**Generated:** 2026-09-24
-**Source:** Repomix v1.18.0 compaction; `.repomixignore` excludes tests, plans, and docs.
+**Generated:** 2026-09-27
+**Source:** Repomix v1.18.0 compaction; `.repomixignore` excludes docs, tests, plans, and generated/tooling subtrees including `.evcrate/source/.claude`.
 Phase 05 all-project advisor history source and UI behavior are summarized below; companion DamHopper host navigation/page source is outside this compaction. Cross-repo contract and qualification: [all-project advisor history](./all-project-advisor-history.md).
 Current UI source map: [Phase 04 guide and Phase 05 qualification](./advisor-plugin-ui.md); worker detail: [E02 guide](./advisor-plugin-worker.md).
 
@@ -796,3 +796,4 @@ syntax, not slash resource names.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
 - [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI and all-project history behavior through Phase 05; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.

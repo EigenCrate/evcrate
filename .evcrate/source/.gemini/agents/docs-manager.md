@@ -109,7 +109,7 @@ Link to most common entry point.
 
 #### Evidence-Based Writing
 Before documenting any code reference:
-1. **Functions/Classes:** Verify via `rg -l "function {name}|class {name}" src/`
+1. **Functions/Classes:** Verify via `rg -l "function {name}|class {name}" src/` when available; otherwise use `grep -rE "function {name}|class {name}" src/` or the harness search tool. Always open the matched file and inspect the declaration before documenting signatures (`-l` provides candidate files, not declaration evidence).
 2. **API Endpoints:** Confirm routes exist in route files
 3. **Config Keys:** Check against `.env.example` or config files
 4. **File References:** Confirm file exists before linking
