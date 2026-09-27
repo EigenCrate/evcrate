@@ -110,7 +110,7 @@ Link to most common entry point.
 
 #### Evidence-Based Writing
 Before documenting any code reference:
-1. **Functions/Classes:** Verify via `grep -r "function {name}\|class {name}" src/`
+1. **Functions/Classes:** Verify via `rg -l "function {name}|class {name}" src/`
 2. **API Endpoints:** Confirm routes exist in route files
 3. **Config Keys:** Check against `.env.example` or config files
 4. **File References:** Confirm file exists before linking
