@@ -1,6 +1,6 @@
 'use strict';
 
-const { isUnsafeWindowsPath } = require('./windows-platform.cjs');
+const { isUnsafeWindowsPath, readPinnedFileWindows } = require('./windows-platform.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
@@ -116,6 +116,15 @@ function captureFile(root, selected, roots, budget, observations) {
     }
     regular(initial);
     if (initial.size > BigInt(MAX_FILE_BYTES) || initial.size > BigInt(budget.remaining)) fail('STATE_INVALID');
+    const pinned = readPinnedFileWindows(targetFile, Math.min(MAX_FILE_BYTES, budget.remaining));
+    if (pinned) {
+      if (!unchanged(initial, pinned.stat) || !unchanged(pinned.stat, inspect(targetFile))) fail();
+      stable(entries);
+      budget.remaining -= Number(pinned.stat.size);
+      const fileDigest = createHash('sha256').update(pinned.bytes).digest('hex');
+      observations.push({ file: targetFile, stat: pinned.stat, entries, digest: fileDigest });
+      return { path: selected, digest: fileDigest, status: 'file' };
+    }
     let input;
     try {
       input = fs.openSync(targetFile, fs.constants.O_RDONLY);

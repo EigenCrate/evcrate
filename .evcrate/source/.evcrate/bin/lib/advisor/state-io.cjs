@@ -11,7 +11,10 @@ const {
   canonicalWindowsProjectId,
   isUnsafeWindowsPath,
   getWindowsProcessIdentity,
-  checkWindowsProcessStatus
+  checkWindowsProcessStatus,
+  readPinnedFileWindows,
+  writePinnedFileWindows,
+  verifyPinnedDirectoryWindows
 } = require('./windows-platform.cjs');
 
 const MAX_BYTES = 64 * 1024;
@@ -153,27 +156,39 @@ function processStatus(identity) {
 function openTask(context, create) {
   stable(context.entries);
   if (process.platform === 'win32') {
+    const descriptors = [];
     const entries = [...context.entries];
     let logical = context.home;
-    for (const part of context.parts) {
-      logical = path.join(logical, part);
-      let stat = inspect(logical);
-      if (!stat && create) {
-        stable(entries);
-        try { fs.mkdirSync(logical); }
-        catch (error) { if (error.code !== 'EEXIST') throw error; }
-        stat = inspect(logical);
+    try {
+      let fd = fs.openSync(logical, fs.constants.O_RDONLY);
+      descriptors.push(fd);
+      if (!same(fs.fstatSync(fd, { bigint: true }), inspect(logical))) fail();
+      for (const part of context.parts) {
+        logical = path.join(logical, part);
+        let stat = inspect(logical);
+        if (!stat && create) {
+          stable(entries);
+          try { fs.mkdirSync(logical); }
+          catch (error) { if (error.code !== 'EEXIST') throw error; }
+          stat = inspect(logical);
+        }
+        if (!stat) fail('STATE_NOT_FOUND');
+        directory(stat);
+        const next = fs.openSync(logical, fs.constants.O_RDONLY);
+        descriptors.push(next);
+        if (!same(stat, fs.fstatSync(next, { bigint: true }))) fail();
+        entries.push({ path: logical, stat });
       }
-      if (!stat) fail('STATE_NOT_FOUND');
-      directory(stat);
-      entries.push({ path: logical, stat });
+      stable(entries);
+      return {
+        entries,
+        base: logical,
+        close() { for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {} }
+      };
+    } catch (error) {
+      for (const item of descriptors.reverse()) try { fs.closeSync(item); } catch {}
+      throw error;
     }
-    stable(entries);
-    return {
-      entries,
-      base: logical,
-      close() {}
-    };
   }
   const descriptors = [];
   const entries = [...context.entries];
@@ -336,27 +351,51 @@ function transactState(location, { create = false } = {}, callback) {
       document(Buffer.from(text));
       const bytes = Buffer.from(text);
       stable(task.entries);
-      const temporary = `${task.base}/.state-${randomBytes(16).toString('hex')}.tmp`;
-      let temporaryStat;
-      try {
-        temporaryStat = writeExclusive(temporary, bytes);
-        stable(task.entries);
+      if (process.platform === 'win32') {
         const now = readFile(file);
         if (previous ? !now || !unchanged(now.stat, previous.stat) || !now.bytes.equals(previous.bytes) : now !== null) fail('STATE_CONFLICT');
-        if (!unchanged(inspect(temporary), temporaryStat)) fail();
-        if (!previous) {
-          // No-replace creation: never clobber a file introduced after the check.
-          try {
-            fs.linkSync(temporary, file);
-            fs.unlinkSync(temporary);
-          } catch {
-            fs.renameSync(temporary, file);
-          }
-        } else fs.renameSync(temporary, file);
-        temporaryStat = undefined;
-        if (task.fd !== undefined) fs.fsyncSync(task.fd);
+        const expectedDigest = previous ? createHash('sha256').update(previous.bytes).digest('hex') : null;
+        const res = writePinnedFileWindows(file, bytes, {
+          replaceIfExists: Boolean(previous),
+          expectedDev: previous?.stat?.dev?.toString() ?? null,
+          expectedIno: previous?.stat?.ino?.toString() ?? null,
+          expectedDigest
+        });
+        if (res.status === 'conflict') fail('STATE_CONFLICT');
+        if (res.status !== 'ok') fail();
         stable(task.entries);
-      } finally { if (temporaryStat) removeOwned(temporary, temporaryStat); }
+      } else {
+        const temporary = `${task.base}/.state-${randomBytes(16).toString('hex')}.tmp`;
+        let temporaryStat;
+        try {
+          temporaryStat = writeExclusive(temporary, bytes);
+          stable(task.entries);
+          const now = readFile(file);
+          if (previous ? !now || !unchanged(now.stat, previous.stat) || !now.bytes.equals(previous.bytes) : now !== null) fail('STATE_CONFLICT');
+          if (!unchanged(inspect(temporary), temporaryStat)) fail();
+          if (!previous) {
+            // No-replace creation: never clobber a file introduced after the check.
+            try {
+              fs.linkSync(temporary, file);
+            } catch (linkError) {
+              if (linkError.code === 'EEXIST') fail('STATE_CONFLICT');
+              throw linkError;
+            }
+            try {
+              fs.unlinkSync(temporary);
+              temporaryStat = undefined;
+            } catch (unlinkError) {
+              temporaryStat = undefined;
+              throw unlinkError;
+            }
+          } else {
+            fs.renameSync(temporary, file);
+            temporaryStat = undefined;
+          }
+          if (task.fd !== undefined) fs.fsyncSync(task.fd);
+          stable(task.entries);
+        } finally { if (temporaryStat) removeOwned(temporary, temporaryStat); }
+      }
     }
     return change.result;
   } catch (error) {

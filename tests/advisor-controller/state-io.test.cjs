@@ -154,7 +154,8 @@ test('live and uncertain locks are never stolen by age', (t) => {
   assert.equal(processStatus({ ...identity, start: `${identity.start}0` }), 'dead');
 });
 
-test('verified crashed lock is recoverable; crash before atomic rename preserves old state', (t) => {
+test('verified crashed lock is recoverable; crash before atomic rename preserves old state (Linux)', (t) => {
+  if (process.platform !== 'linux') return;
   const f = fixture(t);
   initialize(f);
   const result = child(f, `const fs=require('node:fs');fs.renameSync=()=>process.exit(23);transactState(location,{},()=>({state:{revision:2},result:null}));`);
@@ -164,7 +165,8 @@ test('verified crashed lock is recoverable; crash before atomic rename preserves
   assert.equal(fs.existsSync(path.join(f.location.taskDirectory, 'state.lock')), false);
 });
 
-test('crash in no-replace publication leaves linked state fail-closed, never reset', (t) => {
+test('crash in no-replace publication leaves linked state fail-closed, never reset (Linux)', (t) => {
+  if (process.platform !== 'linux') return;
   const f = fixture(t);
   const result = child(f, `const fs=require('node:fs');const unlink=fs.unlinkSync;fs.unlinkSync=function(file){if(file.includes('/.state-'))process.exit(25);return unlink.apply(this,arguments);};transactState(location,{create:true},()=>({state:{revision:1,sentinel:'published'},result:null}));`);
   assert.equal(result.status, 25, result.stderr);

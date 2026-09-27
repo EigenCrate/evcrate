@@ -304,6 +304,90 @@ function killProcessTreeWindows(pid, expectedStartToken) {
   } catch {}
 }
 
+const WINDOWS_NATIVE_PS1 = path.join(__dirname, 'windows-native.ps1');
+
+function readPinnedFileWindows(filePath, maxBytes = 64 * 1024) {
+  if (!isWindows) return null;
+  try {
+    const out = execFileSync(POWERSHELL_EXE, ['-NoProfile', '-File', WINDOWS_NATIVE_PS1, 'read-pinned', filePath, String(maxBytes)], {
+      encoding: 'utf8',
+      timeout: 5000,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+    const data = JSON.parse(out);
+    if (data.status === 'not_found') return null;
+    if (data.status === 'ok') {
+      let mtimeNs = 0n;
+      try {
+        const lst = fs.lstatSync(filePath, { bigint: true });
+        if (lst) mtimeNs = lst.mtimeNs;
+      } catch {}
+      return {
+        stat: {
+          dev: BigInt(data.dev),
+          ino: BigInt(data.ino),
+          size: BigInt(data.size),
+          nlink: 1n,
+          mtimeNs,
+          isFile: () => true,
+          isDirectory: () => false,
+          isSymbolicLink: () => false
+        },
+        bytes: Buffer.from(data.bytes, 'base64')
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writePinnedFileWindows(filePath, bytes, { replaceIfExists = false, expectedDev = null, expectedIno = null, expectedDigest = null } = {}) {
+  if (!isWindows) return { status: 'error', code: 'PLATFORM_NOT_SUPPORTED' };
+  const b64 = Buffer.isBuffer(bytes) ? bytes.toString('base64') : Buffer.from(bytes).toString('base64');
+  try {
+    const args = ['-NoProfile', '-File', WINDOWS_NATIVE_PS1, 'write-pinned', filePath, 'STDIN', String(Boolean(replaceIfExists))];
+    if (expectedDev !== null && expectedDev !== undefined) {
+      args.push(String(expectedDev));
+      if (expectedIno !== null && expectedIno !== undefined) {
+        args.push(String(expectedIno));
+        if (expectedDigest !== null && expectedDigest !== undefined) {
+          args.push(String(expectedDigest));
+        }
+      }
+    }
+    const out = execFileSync(POWERSHELL_EXE, args, {
+      input: b64,
+      encoding: 'utf8',
+      timeout: 5000,
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'ignore']
+    }).trim();
+    const data = JSON.parse(out);
+    return data;
+  } catch (err) {
+    if (err.status === 3) return { status: 'conflict', code: 'STATE_CONFLICT' };
+    return { status: 'error', code: 'WRITE_FAILED' };
+  }
+}
+
+function verifyPinnedDirectoryWindows(dirPath) {
+  if (!isWindows) return false;
+  try {
+    const out = execFileSync(POWERSHELL_EXE, ['-NoProfile', '-File', WINDOWS_NATIVE_PS1, 'verify-pinned', dirPath], {
+      encoding: 'utf8',
+      timeout: 5000,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+    const data = JSON.parse(out);
+    return data.status === 'ok';
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   isWindows,
   isUnsafeWindowsPath,
@@ -315,5 +399,8 @@ module.exports = {
   getWindowsProcessIdentity,
   checkWindowsProcessStatus,
   resolveWindowsExecutable,
-  killProcessTreeWindows
+  killProcessTreeWindows,
+  readPinnedFileWindows,
+  writePinnedFileWindows,
+  verifyPinnedDirectoryWindows
 };
