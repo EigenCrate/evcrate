@@ -141,13 +141,32 @@ function checkCodeRefExists(ref, srcDirs) {
   for (const srcDir of srcDirs) {
     if (!fs.existsSync(srcDir)) continue;
     for (const pattern of patterns) {
-      // Use spawnSync with args array to prevent command injection
-      const result = spawnSync('grep', ['-rl', pattern, srcDir], {
+      // Use rg if available to respect .gitignore and avoid scanning node_modules/target/dist
+      let result = spawnSync('rg', ['-l', '-m', '1', pattern, srcDir], {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 5000
+        timeout: 2000
       });
-      if (result.status === 0 && result.stdout.trim()) {
+      if (result.error || result.status === 127) {
+        // Fallback to grep with explicit exclusions and early exit
+        result = spawnSync('grep', [
+          '-rl',
+          '--exclude-dir=node_modules',
+          '--exclude-dir=dist',
+          '--exclude-dir=target',
+          '--exclude-dir=.git',
+          '--binary-files=without-match',
+          '-m',
+          '1',
+          pattern,
+          srcDir
+        ], {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          timeout: 2000
+        });
+      }
+      if (result.status === 0 && result.stdout && result.stdout.trim()) {
         return true;
       }
     }
