@@ -7,6 +7,7 @@ process.on('SIGTERM', onSignal);
 process.on('message', (msg) => {
   if (msg === 'SIGINT' || msg === 'SIGTERM') onSignal();
 });
+process.on('disconnect', onSignal);
 
 const {
   runController, runQualificationDiagnostic, isDiagnosticRequest

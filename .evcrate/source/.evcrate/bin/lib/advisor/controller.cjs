@@ -318,9 +318,13 @@ async function runController(input, dependencies = {}) {
         requestDepth: 0,
         createInvocation: dependencies.createInvocation
       };
+      if (dependencies.signal?.aborted) fail('CANCELLED');
       const adapterVer = version(await routeAdapter.probeVersion(context));
+      if (dependencies.signal?.aborted) fail('CANCELLED');
       await routeAdapter.probeAuth(context);
+      if (dependencies.signal?.aborted) fail('CANCELLED');
       const capabilitiesRaw = await routeAdapter.probeCapabilities(context);
+      if (dependencies.signal?.aborted) fail('CANCELLED');
       let capabilities;
       try { capabilities = validateCapabilityAttestation(capabilitiesRaw); }
       catch { fail('ADAPTER_CONTRACT_INVALID'); }

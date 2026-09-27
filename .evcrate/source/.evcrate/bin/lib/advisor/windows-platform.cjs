@@ -3,8 +3,9 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
-const { createHash } = require('node:crypto');
+const { spawn, execFileSync } = require('node:child_process');
+const { createHash, randomUUID } = require('node:crypto');
+const { EventEmitter } = require('node:events');
 const { createRoutingError } = require('./errors.cjs');
 
 function fail(code) { throw createRoutingError(code); }
@@ -12,7 +13,7 @@ function fail(code) { throw createRoutingError(code); }
 const isWindows = process.platform === 'win32';
 const SYSTEM_ROOT = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
 const POWERSHELL_EXE = path.join(SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-const TASKKILL_EXE = path.join(SYSTEM_ROOT, 'System32', 'taskkill.exe');
+const WINDOWS_NATIVE_PS1 = path.join(__dirname, 'windows-native.ps1');
 
 // 1. Path safety and Canonical Project/Home Identity
 function isUnsafeWindowsPath(value) {
@@ -186,6 +187,7 @@ function checkWindowsProcessStatus(identity) {
   }
   if (identity.pid === process.pid) {
     const self = getWindowsProcessIdentity(process.pid);
+    if (!self || !self.start) return 'unknown';
     if (identity.start !== self.start) return 'dead';
     return 'live';
   }
@@ -291,20 +293,222 @@ function resolveWindowsExecutable(executable, envPath) {
   return null;
 }
 
-function killProcessTreeWindows(pid, expectedStartToken) {
-  if (!Number.isInteger(pid) || pid <= 0) return;
-  if (!expectedStartToken || typeof expectedStartToken !== 'string') return;
-  const status = checkWindowsProcessStatus({ pid, start: expectedStartToken });
-  if (status !== 'live') return;
-  try {
-    execFileSync(TASKKILL_EXE, ['/PID', String(pid), '/T', '/F'], {
-      windowsHide: true,
-      stdio: 'ignore'
-    });
-  } catch {}
+function quoteWindowsArg(arg) {
+  if (typeof arg !== 'string') arg = String(arg);
+  if (arg.length === 0) return '""';
+  if (!/[\s"\\]/u.test(arg)) return arg;
+  return '"' + arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1') + '"';
 }
 
-const WINDOWS_NATIVE_PS1 = path.join(__dirname, 'windows-native.ps1');
+function buildWindowsCommandLine(executable, argv = []) {
+  const parts = [quoteWindowsArg(executable)];
+  for (const arg of argv) {
+    parts.push(quoteWindowsArg(arg));
+  }
+  return parts.join(' ');
+}
+
+function superviseWindowsInvocation({
+  executable,
+  argv = [],
+  cwd,
+  env = process.env,
+  prompt = null,
+  killGraceMs = 250
+}) {
+  const emitter = new EventEmitter();
+  const cmdLine = buildWindowsCommandLine(executable, argv);
+  let completionResolve;
+  emitter.completionPromise = new Promise((resolve) => {
+    completionResolve = resolve;
+  });
+
+  let child;
+  try {
+    child = spawn(POWERSHELL_EXE, [
+      '-NoProfile',
+      '-NonInteractive',
+      '-File',
+      WINDOWS_NATIVE_PS1,
+      'supervise-invocation'
+    ], {
+      cwd: undefined,
+      env,
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+  } catch (err) {
+    const error = createRoutingError(err?.code === 'ENOENT' ? 'EXECUTABLE_UNAVAILABLE' : 'PROCESS_FAILED');
+    process.nextTick(() => {
+      emitter.emit('error', error);
+      completionResolve({ outcome: 'unconfirmed', activeProcesses: -1 });
+    });
+    emitter.cancel = () => {};
+    emitter.close = () => {};
+    return emitter;
+  }
+
+  emitter.pid = child.pid;
+  let closed = false;
+  let cleanupSeen = false;
+
+  const req = JSON.stringify({
+    app: executable,
+    cmdLine,
+    cwd: cwd || null,
+    prompt: prompt || null,
+    killGraceMs
+  });
+
+  child.stdin.write(req + '\n');
+
+  emitter.cancel = () => {
+    if (closed) return;
+    try {
+      if (child.stdin?.writable) {
+        child.stdin.write('CANCEL\n');
+      }
+    } catch {}
+  };
+
+  emitter.close = () => {
+    if (closed) return;
+    closed = true;
+    try {
+      child.stdin?.end();
+    } catch {}
+  };
+
+  let buffer = '';
+  child.stdout.on('data', (chunk) => {
+    buffer += chunk.toString('utf8');
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line) continue;
+      if (line.startsWith('SPAWNED:')) {
+        const parts = line.slice(8).split(':');
+        const pid = parseInt(parts[0], 10);
+        const startToken = parts[1] || null;
+        emitter.emit('spawned', { pid, startToken });
+      } else if (line.startsWith('O:')) {
+        const data = Buffer.from(line.slice(2), 'base64');
+        emitter.emit('stdout', data);
+      } else if (line.startsWith('E:')) {
+        const data = Buffer.from(line.slice(2), 'base64');
+        emitter.emit('stderr', data);
+      } else if (line.startsWith('CLEANUP:')) {
+        cleanupSeen = true;
+        const parts = line.slice(8).split(':');
+        const outcome = parts[0] === 'confirmed' ? 'confirmed' : 'unconfirmed';
+        const activeProcesses = parseInt(parts[1], 10);
+        emitter.emit('cleanup', { outcome, activeProcesses });
+        completionResolve({ outcome, activeProcesses });
+      } else if (line.startsWith('EXIT:')) {
+        const parts = line.slice(5).split(':');
+        const exitCode = parseInt(parts[0], 10);
+        const signal = parts[1] && parts[1] !== 'null' ? parts[1] : null;
+        emitter.emit('exit', { exitCode, signal });
+      } else if (line.startsWith('ERROR:')) {
+        const parts = line.slice(6).split(':');
+        let code = 'PROCESS_FAILED';
+        if (parts[0] === 'LAUNCH_FAILED') {
+          const errNum = parseInt(parts[1], 10);
+          if (errNum === 2 || errNum === 3) code = 'EXECUTABLE_UNAVAILABLE';
+        }
+        emitter.emit('error', createRoutingError(code));
+      }
+    }
+  });
+
+  child.on('error', (err) => {
+    if (!cleanupSeen) {
+      completionResolve({ outcome: 'unconfirmed', activeProcesses: -1 });
+    }
+    emitter.emit('error', createRoutingError(err?.code === 'ENOENT' ? 'EXECUTABLE_UNAVAILABLE' : 'PROCESS_FAILED'));
+  });
+
+  child.on('close', (code) => {
+    if (!cleanupSeen) {
+      emitter.emit('cleanup', { outcome: 'unconfirmed', activeProcesses: -1 });
+      completionResolve({ outcome: 'unconfirmed', activeProcesses: -1 });
+    }
+    emitter.emit('close', code);
+  });
+
+  return emitter;
+}
+
+function observeConsoleWindows(decisionContext, challenge, signal, timeoutMs) {
+  if (signal?.aborted) return Promise.reject(createRoutingError('CANCELLED'));
+  const effectiveTimeout = timeoutMs !== undefined
+    ? timeoutMs
+    : (Number(process.env.EVCRATE_CONSOLE_TIMEOUT_MS) || 3000);
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const b64Context = Buffer.from(decisionContext || '', 'utf8').toString('base64');
+    let child;
+    try {
+      child = spawn(POWERSHELL_EXE, [
+        '-NoProfile',
+        '-NonInteractive',
+        '-File',
+        WINDOWS_NATIVE_PS1,
+        'console-observe',
+        challenge,
+        String(effectiveTimeout),
+        b64Context
+      ], {
+        windowsHide: false,
+        stdio: ['ignore', 'pipe', 'ignore']
+      });
+    } catch {
+      reject(createRoutingError('HUMAN_EVENT_REQUIRED'));
+      return;
+    }
+
+    let stdout = '';
+    child.stdout.on('data', (d) => { stdout += d.toString('utf8'); });
+
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      try { child.kill(); } catch {}
+      reject(createRoutingError('CANCELLED'));
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+
+    child.on('error', () => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener('abort', onAbort);
+      reject(createRoutingError('HUMAN_EVENT_REQUIRED'));
+    });
+
+    child.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener('abort', onAbort);
+      if (signal?.aborted) {
+        reject(createRoutingError('CANCELLED'));
+        return;
+      }
+      const trimmed = stdout.trim();
+      if (code === 0 && trimmed === 'OBSERVED') {
+        resolve(Object.freeze({
+          event_id: randomUUID(),
+          source: 'local-terminal-confirmation'
+        }));
+      } else if (trimmed === 'CANCELLED') {
+        reject(createRoutingError('CANCELLED'));
+      } else {
+        reject(createRoutingError('HUMAN_EVENT_REQUIRED'));
+      }
+    });
+  });
+}
+
 
 function readPinnedFileWindows(filePath, maxBytes = 64 * 1024) {
   if (!isWindows) return null;
@@ -399,7 +603,9 @@ module.exports = {
   getWindowsProcessIdentity,
   checkWindowsProcessStatus,
   resolveWindowsExecutable,
-  killProcessTreeWindows,
+  buildWindowsCommandLine,
+  superviseWindowsInvocation,
+  observeConsoleWindows,
   readPinnedFileWindows,
   writePinnedFileWindows,
   verifyPinnedDirectoryWindows

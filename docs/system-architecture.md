@@ -1,11 +1,11 @@
 # System Architecture
 
-**Status:** Current implementation reference; Phase 01 launchability and identity is complete (2026-09-27); Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
+**Status:** Current implementation reference; filesystem-policy cutover Phases 01–02 completed 2026-09-27; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
 **DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
 **Windows support:** Installer/version qualification remains the only qualified Windows release boundary; native advisor controller integration is complete through Phase 02, but production runtime qualification remains pending.
-**Native Windows advisor status:** Phases 01–02 of [native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) are complete in source. The prior state/history Windows ownership follow-up was superseded by the cross-platform trusted-files policy (advisor filesystem UID/SID/DACL/mode restrictions removed); runner spawn-time creation-token capture remains an approved follow-up. Existing Windows qualification does not cover production advisor runtime.
-**Updated:** 2026-09-27
+**Native Windows advisor status:** Readiness Repair Phases 01–02 are complete (2026-09-28; Repair Phase 02 review approved 9.2/10). Native Job supervision, process-handle creation identity, and console challenge wiring are in source; Repair Phase 03 provider-launch identity and Phase 04 verification/readiness remain. Manual attached-console matching, Linux runtime, and vendor qualification remain pending; production Windows advisor runtime is not qualified. State/history owner checks were superseded by the cross-platform trusted-files policy.
+**Updated:** 2026-09-28
 
 **Authority:** TypeScript control plane and the canonical advisor controller source
 
@@ -645,10 +645,8 @@ Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitize
 Linux x64 remains the qualified boundary for live installed-CLI checks.
 Windows release qualification covers only installer lifecycle and `version --json`
 on hosted Windows Server 2025 x64 (PowerShell 5.1/7; Node 22.19.0/24.21.0).
-Native advisor code is integrated through Phase 02 but does not widen support:
-Windows `publish`, `health`, provider execution, and safe process-tree cleanup
-remain unqualified pending Phases 03/04; desktop/signing/policy, publication,
-deployment, and vendor qualification remain separate gates.
+Native advisor readiness repairs through Repair Phase 02 are implemented; focused controller tests are implementation evidence, not production qualification.
+Windows `publish`, `health`, provider execution, process-tree cleanup, and console approval remain unqualified as runtime support. Repair Phase 03 owns provider-launch identity; Phase 04 must qualify manual attached-console matching, Linux runtime, and enabled vendors. Desktop/signing/policy environments, publication, and deployment remain separate gates.
 The Hook Materialization Scope Distribution milestone's dated proof recorded
 512/512 tests, a 29-file closure, `distribute:check`, and installed Linux fixtures;
 these do not qualify live vendors or authorize production HOME publication.
@@ -661,13 +659,13 @@ At completion, the standalone explorer's tested boundary was Chromium >=120 on L
 
 Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidate and harness phases without altering public support. `buildWindowsTestReleaseSet` builds archive, sidecar, metadata, and `install.ps1` with fixed `FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z` for byte-identical fixtures. The resolver fetches non-draft GitHub releases requiring exact asset labels, canonical filenames, and `verifyWindowsAssetSet` validation. Initial qualification uses `bootstrap-fixture` `1.0.0`; once qualification history exists, missing/tampered assets fail closed without older fallback. `predecessor-downloader.mjs` stages and verifies downloads, returning `{kind, version, tag, sourceCommit, files, directory}` for downstream phases.
 
-### Native Windows advisor lifecycle (Phases 01–02; 2026-09-26)
+### Native Windows advisor supervision and console repair
 
-Phase 01 proved Win32 primitives (67/67 checks); Phase 02 controller integration is parent-approved DONE after Cycle 3 conditional review (7.4/10). The dated review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests, plus a 36-file controller closure.
+The original Windows primitives and controller-integration phases are dated evidence. Readiness Repair Phase 02 completed 2026-09-28 (review 9.2/10; 9/9 focused tests and 236/236 controller tests, build, and `release:check` recorded); this is not production Windows qualification.
 
-`windows-platform.cjs` coordinates Windows home/project identity, allowlisted environment, provider executable resolution, and native process operations; `windows-native.ps1` dispatches fixed operations to `windows-native.cs` for process identity/status and console challenge observation (SID/DACL ownership checks were removed under the cross-platform trusted-files policy).
+`runner.cjs` routes Windows provider execution through the fixed PowerShell/C# bridge. Native process creation assigns the provider to a kill-on-close Job and captures its creation token from the launch handle. The runner accepts success only after a successful query confirms the Job is empty; unconfirmed cleanup blocks success/retry. Control-channel EOF and cancellation terminate the Job; Windows `taskkill` and teardown PID lookup are removed.
 
-The prior follow-up for path-threaded state/history Windows ownership checks is superseded by the cross-platform trusted-files policy. One accepted follow-up remains: `runner.cjs` lacks spawn-time child creation-token capture. Do not claim PID-reuse-safe teardown or production Windows runtime qualification.
+`state-human.cjs` invokes the fixed console observer after state preflight. It reads via verified `CONIN$`/`CONOUT$`, displays bounded decision context and the nonce challenge independently of piped JSON, and reports only `OBSERVED`, cancellation, or failure. State replay/revision checks remain; POSIX process-group and `/dev/tty` paths are unchanged. State/history owner checks remain superseded by the trusted-files policy.
 
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
