@@ -138,17 +138,34 @@ function checkCodeRefExists(ref, srcDirs) {
     `${name}:`  // object methods
   ];
 
+  let hasIncomplete = false;
   for (const srcDir of srcDirs) {
     if (!fs.existsSync(srcDir)) continue;
     for (const pattern of patterns) {
-      // Use rg if available to respect .gitignore and avoid scanning node_modules/target/dist
-      let result = spawnSync('rg', ['-l', '-m', '1', pattern, srcDir], {
+      // Use rg if available; include hidden source while explicitly excluding heavy directories
+      let result = spawnSync('rg', [
+        '--no-config',
+        '--hidden',
+        '--glob=!node_modules/**',
+        '--glob=!**/node_modules/**',
+        '--glob=!dist/**',
+        '--glob=!**/dist/**',
+        '--glob=!target/**',
+        '--glob=!**/target/**',
+        '--glob=!.git/**',
+        '--glob=!**/.git/**',
+        '-l',
+        '-m',
+        '1',
+        pattern,
+        srcDir
+      ], {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 2000
+        timeout: 5000
       });
-      if (result.error || result.status === 127) {
-        // Fallback to grep with explicit exclusions and early exit
+      // Fallback to grep only when rg is missing (ENOENT or status 127)
+      if (result.error && (result.error.code === 'ENOENT' || result.status === 127)) {
         result = spawnSync('grep', [
           '-rl',
           '--exclude-dir=node_modules',
@@ -163,15 +180,21 @@ function checkCodeRefExists(ref, srcDirs) {
         ], {
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'pipe'],
-          timeout: 2000
+          timeout: 5000
         });
       }
       if (result.status === 0 && result.stdout && result.stdout.trim()) {
-        return true;
+        return 'found';
       }
+      if (!result.error && result.status === 1) {
+        // Clean no-match for this pattern/directory
+        continue;
+      }
+      // Operational failure, spawn error, timeout, signal, or status 2
+      hasIncomplete = true;
     }
   }
-  return false;
+  return hasIncomplete ? 'incomplete' : 'not_found';
 }
 
 /**
@@ -207,6 +230,7 @@ function loadEnvExample(projectRoot) {
 function validate(docsDir, srcDirs, projectRoot) {
   const issues = {
     codeRefs: [],
+    unverifiedCodeRefs: [],
     links: [],
     envVars: []
   };
@@ -216,6 +240,7 @@ function validate(docsDir, srcDirs, projectRoot) {
     linksChecked: 0,
     envVarsChecked: 0,
     codeRefsValid: 0,
+    codeRefsUnverified: 0,
     linksValid: 0,
     envVarsValid: 0
   };
@@ -244,8 +269,12 @@ function validate(docsDir, srcDirs, projectRoot) {
     const codeRefs = extractCodeRefs(content, relPath);
     stats.codeRefsChecked += codeRefs.length;
     for (const { ref, file, line } of codeRefs) {
-      if (checkCodeRefExists(ref, srcDirs)) {
+      const status = checkCodeRefExists(ref, srcDirs);
+      if (status === 'found') {
         stats.codeRefsValid++;
+      } else if (status === 'incomplete') {
+        stats.codeRefsUnverified++;
+        issues.unverifiedCodeRefs.push({ ref, file, line });
       } else {
         issues.codeRefs.push({ ref, file, line });
       }
@@ -279,8 +308,7 @@ function validate(docsDir, srcDirs, projectRoot) {
   console.log(`**Files Checked:** ${stats.filesChecked}`);
   console.log(`**Scan Date:** ${new Date().toISOString().split('T')[0]}\n`);
 
-  const hasIssues = issues.codeRefs.length || issues.links.length || issues.envVars.length;
-
+  const hasIssues = issues.codeRefs.length || issues.unverifiedCodeRefs.length || issues.links.length || issues.envVars.length;
   if (hasIssues) {
     console.log('### Potential Issues\n');
 
@@ -291,6 +319,16 @@ function validate(docsDir, srcDirs, projectRoot) {
       }
       if (issues.codeRefs.length > 10) {
         console.log(`- ... and ${issues.codeRefs.length - 10} more`);
+      }
+      console.log('');
+    }
+    if (issues.unverifiedCodeRefs.length) {
+      console.log(`⚠️ **Unverified Code References** (${issues.unverifiedCodeRefs.length} issues)`);
+      for (const { ref, file, line } of issues.unverifiedCodeRefs.slice(0, 10)) {
+        console.log(`- \`${ref}\` in ${file}:${line} - search failed or incomplete`);
+      }
+      if (issues.unverifiedCodeRefs.length > 10) {
+        console.log(`- ... and ${issues.unverifiedCodeRefs.length - 10} more`);
       }
       console.log('');
     }
