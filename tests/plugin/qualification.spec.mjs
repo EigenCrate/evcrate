@@ -29,9 +29,8 @@ function hashTree(root) {
       if (entry.isDirectory()) {
         walk(fullPath);
       } else if (entry.isFile()) {
-        const mode = fs.statSync(fullPath).mode & 0o777;
         const digest = crypto.createHash('sha256').update(fs.readFileSync(fullPath)).digest('hex');
-        files.push(`${relativePath}\0${mode.toString(8)}\0${digest}`);
+        files.push(`${relativePath}\0${digest}`);
       }
     }
   }
@@ -83,7 +82,7 @@ test('G4 evidence validator rejects all-passed scenarios without raw proof or LA
   assert.ok(validation.errors.some((error) => error.includes('Resource ceilings')));
 });
 
-test('Local history read operations preserve source bytes and modes', async () => {
+test('Local history read operations preserve source bytes and content', async () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-g4-source-'));
   const projectRoot = path.join(tmpRoot, 'project');
   const historyRoot = path.join(tmpRoot, 'advisor-history');

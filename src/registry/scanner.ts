@@ -54,7 +54,7 @@ function capabilities(kind: ResourceKind, path: string): readonly string[] {
       }
       return;
     }
-    if ((Number(stat.mode) & 0o111) !== 0 || SCRIPT_SUFFIX.test(current) || shebang(current)) result.add('script-execution');
+    if (SCRIPT_SUFFIX.test(current) || shebang(current)) result.add('script-execution');
   };
   visit(path);
   return Object.freeze(IMPORT_CAPABILITIES.filter((value) => result.has(value)));

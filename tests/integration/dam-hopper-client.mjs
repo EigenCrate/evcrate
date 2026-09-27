@@ -68,12 +68,14 @@ export class DamHopperSubprocessClient {
     const args = [...baseArgs, ...subcommandArgs];
     const isJs = this.cliPath.endsWith('.js') || this.cliPath.endsWith('.cjs') || this.cliPath.endsWith('.mjs');
     const isWindows = process.platform === 'win32';
-    const spawnExe = isJs
-      ? this.execPath
-      : (isWindows ? (process.env.ComSpec || 'cmd.exe') : this.cliPath);
-    const spawnArgs = isJs
-      ? [this.cliPath, ...args]
-      : (isWindows ? ['/d', '/s', '/c', `${this.cliPath}.cmd`, ...args] : args);
+    if (isWindows && !isJs && !this.cliPath.endsWith('.exe')) {
+      throw new DamHopperClientError(
+        `Direct invocation of "${this.cliPath}" on Windows is unsupported without explicit .js entrypoint or native .exe. Do not use cmd.exe shell execution.`,
+        { code: 'CONFIG_INVALID', category: 'config', action: 'Pass the package JS entrypoint or native executable.' }
+      );
+    }
+    const spawnExe = isJs ? this.execPath : this.cliPath;
+    const spawnArgs = isJs ? [this.cliPath, ...args] : args;
     const result = spawnSync(spawnExe, spawnArgs, {
       cwd: this.cwd,
       env: { ...this.env, ...customEnv },
@@ -81,7 +83,8 @@ export class DamHopperSubprocessClient {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: timeoutMs ?? this.timeoutMs,
-      maxBuffer: MAX_BUFFER
+      maxBuffer: MAX_BUFFER,
+      shell: false
     });
 
     if (result.error) {

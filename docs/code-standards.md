@@ -326,8 +326,7 @@ Policy v2 has exact top-level keys `version`/`advisor`/`wait`/`history`.
 `1000..3600000` ms; history is `1..365` days and
 `1048576..1073741824` bytes. Keep the 16 KiB policy limit and strict
 UTF-8/JSON, duplicate-key, credential, unknown-field, and unsafe-path checks
-under the cross-platform trusted-files policy (UID/SID/0600 mode checks removed;
-SettingsMode is observational numeric metadata). Candidate backends are `claude`, `codex`, `antigravity`, `pi`,
+under the cross-platform trusted-files policy (UID/SID/0600 mode checks and SettingsMode removed). Candidate backends are `claude`, `codex`, `antigravity`, `pi`,
 and `omp`; enabled backends are `claude`, `codex`, `pi`, and `omp`. Gemini and
 Copilot are not controller backends.
 
