@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard
-**Updated:** 2026-09-27
+**Updated:** 2026-09-28
 **Applies to:** TypeScript control plane, Phase E00/01 Advisor Plugin contracts,
 Phase E03 provider-neutral embedded UI, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
@@ -257,17 +257,15 @@ modules under `lib/advisor/generated/`, and three native Windows bridge files
 (`windows-native.cs`, `windows-native.ps1`, `windows-platform.cjs`). It reads the user-owned
 `$HOME/.evcrate/advisor-routing.json`; policy is never generated or published.
 
-### Native Windows advisor lifecycle (Phase 02)
+### Native Windows advisor lifecycle and readiness repair
 
-Phase 02 is parent-approved DONE (2026-09-26) after a Cycle 3 conditional review (7.4/10); this records controller integration, not production Windows qualification.
+Readiness Repair Phase 02 passed review at 9.2/10 on 2026-09-28; this is implementation evidence, not production Windows qualification.
 
-- `windows-platform.cjs` owns trusted Windows home/project identity, case-insensitive allowlisted environment, provider executable/package-bin resolution, and native process helpers.
-- `windows-native.ps1` dispatches fixed operations from an absolute PowerShell path and argv; use encoded fixed commands, never interpolated shell strings or arbitrary `.cmd` bodies.
-- `windows-native.cs` implements process creation/status queries and console input/output challenge observation (SID/DACL checks were removed under the cross-platform trusted-files policy). Piped JSON is never human approval.
-- Keep Windows behavior behind platform branches; preserve Linux descriptor, locking, and process-group paths and all public request/result schemas.
-- The prior follow-up for state/history Windows ownership checks is superseded by the cross-platform trusted-files policy (all advisor filesystem UID/SID/DACL/mode restrictions removed).
-- `runner.cjs` still lacks spawn-time child creation-token capture; do not describe PID-reuse-safe Windows teardown as complete. Capture the token at spawn and terminate only against that identity.
-- The Cycle 3 review recorded 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The state/history ownership follow-up is superseded; runner child creation-token capture remains an approved follow-up.
+- `windows-platform.cjs` invokes fixed operations through the packaged PowerShell bridge; no interpolated shell text, arbitrary `.cmd` body, or caller-supplied executable.
+- `windows-native.cs` assigns the provider to a non-breakaway, kill-on-close Job at process creation and captures its creation token from the launch handle.
+- `runner.cjs` accepts success only after positive empty-Job confirmation; cancellation, probe timeout, output limit, transport error, or controller EOF terminate the Job. Unknown cleanup blocks success/retry; Windows `taskkill` and teardown-time PID lookup are prohibited.
+- `state-human.cjs` uses verified `CONIN$`/`CONOUT$` for exact challenge observation, independent of JSON stdin; piped JSON is never human approval. Existing state replay/revision checks and POSIX process-group/`/dev/tty` paths remain unchanged.
+- Repair Phase 03 owns provider-launch identity; Phase 04 owns manual attached-console, Linux runtime, and vendor qualification. Windows installer lifecycle and `version --json` remain the only qualified Windows release boundary; advisor filesystem owner checks remain removed under the trusted-files policy.
 
 
 ### Portable advisor contract runtime

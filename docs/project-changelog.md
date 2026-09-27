@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-27
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26; Phase 03 remains NO-GO pending readiness repairs; production Windows runtime qualification not claimed). Filesystem-policy cutover is 100% (Phases 01 and 02 DONE 2026-09-27; cutover review plan complete). Package version: `2.3.2`.
+**Updated:** 2026-09-28
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support remains 50% (original Phases 01–02 complete; original Phase 03 remains NO-GO pending readiness repairs; production Windows runtime qualification not claimed). Readiness repairs are 50% (Repair Phases 01–02 DONE; Repair Phase 03 provider-launch identity next; Phase 04 qualification pending). Filesystem-policy cutover is 100% (Phases 01 and 02 DONE 2026-09-27; cutover review plan complete). Package version: `2.3.2`.
 Older phase records remain in the linked archive.
 
 ### 2026-09-28 — fix(advisor): restore Windows advisor storage and cleanup safety (Repair Phase 01)
 
-**Status:** Phase 01 DONE (2026-09-28; review approved 9.5/10; user approved). 1/4 repair phases complete; Phase 02 (Job supervision and console) next.  
+**Status:** Phase 01 DONE (2026-09-28; review approved 9.5/10; user approved). 2/4 repair phases complete; Phase 03 (provider launch identity) next.  
 **Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Phase 01](../plans/260927-0005-windows-advisor-readiness/phase-01-storage-safety.md)  
 **Evidence:** 10/10 storage-safety regressions pass (`tests/advisor-controller/storage-safety.test.cjs`); 223/223 advisor-controller tests pass; 112/112 protocol, primitives, and scopes tests pass; release check verified.
 
@@ -16,6 +16,17 @@ Older phase records remain in the linked archive.
 - **C2 containment (workspace cleanup object identity):** Captured `dev` and `ino` identity on workspace and root during creation in `isolated-workspace.cjs`. Cleanup validates ancestor root *before* inspecting workspace path, verifies object identity, and fails closed (`CLEANUP_UNCONFIRMED`) on any junction/symlink or device mismatch without deleting outside trees (R5 closed).
 - **H3 native pinned operations:** Implemented narrow Win32 handle-pinned operations in `windows-native.cs`, `windows-native.ps1`, and `windows-platform.cjs`. Root-to-leaf directory pinning with `FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT` rejects reparse points and locks ancestor directories against concurrent renames; `writePinnedFileWindows` performs staging with `CREATE_NEW`, flushes buffers, and executes atomic CAS replacement verifying expected device, inode, and SHA-256 digest on destination handle.
 - **Caller migration:** Migrated `profile.cjs`, `state-baseline.cjs`, `history-query.cjs`, `history-prune.cjs`, `state-io.cjs`, `history-store.cjs`, and `isolated-workspace.cjs` to verified pinned context and native operations without breaking Linux descriptor traversal.
+
+### 2026-09-28 — fix(advisor): repair Windows supervision and console observation (Repair Phase 02)
+
+**Status:** Phase 02 DONE (2026-09-28; review approved 9.2/10). Readiness repairs are 2/4 complete; Phase 03 (provider launch identity) is next.  
+**Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Repair Phase 02](../plans/260927-0005-windows-advisor-readiness/phase-02-supervision-console.md)  
+**Evidence:** Review records 9/9 focused supervision-console tests, 236/236 advisor-controller tests, a clean build, and `release:check`.
+
+- Replaced Windows PID-tree teardown with native Job Object supervision: provider launch is assigned atomically to a kill-on-close Job; the creation token comes from the process handle; success requires positive confirmation that the Job is empty. Unconfirmed cleanup blocks success and relaunch.
+- Added a separate supervisor control/lifetime channel and bounded provider output relay. Cancellation, probe timeout, output-limit, transport failure, and controller-channel EOF terminate the Job; removed `taskkill` and teardown-time PID lookup. The POSIX process-group path remains.
+- Wired human-decision state preflight to a fixed console observer using verified `CONIN$`/`CONOUT$`, independent of piped JSON. Only the exact native `OBSERVED` result creates an event; state revision/replay checks remain. Unattended or detached console fails closed.
+- Manual attached-console matching, Linux runtime, and vendor qualification remain Phase 04 prerequisites; provider-launch identity binding is Repair Phase 03.
 
 ### 2026-09-27 — fix(filesystem): complete Phase 02 durable cutover and host-specific qualification
 
@@ -83,7 +94,7 @@ Older phase records remain in the linked archive.
 - **Provider & worker test observations:**
   - Plugin provider suite: Linux **12/12 passed**; Windows **11/12 passed** (sole source-safety failure caused by test target `${normTarget}/./child` vs implementation `split(path.sep)` backslash: unrelated existing mixed-separator check, not an ownership issue).
   - Separate worker test: cannot load missing `@dam-hopper/plugin-sdk` on either platform (Worker SDK prerequisite exists only as a `plugin/vendor` reference blocked by configured ignore; worker suite not claimed passed).
-- **Known unrelated readiness blockers:** Missing descendant/Job supervision and spawn-time creation-token capture, no-replace rename overwrite fallback, workspace replacement cleanup identity, provider launcher identity, and console approval wiring remain pending follow-ups (no fixes requested).
+- **Readiness state at this 2026-09-27 snapshot:** Descendant/Job supervision, spawn-time creation identity, no-replace publication, workspace replacement cleanup, provider-launch identity, and console approval remained open. Repair Phase 01 later closed the storage/cleanup items; Repair Phase 02 later closed Job supervision, creation-token capture, and console integration. Provider-launch identity remains Repair Phase 03.
 
 ### 2026-09-26 — feat(windows): prove native Windows advisor compatibility primitives (Phase 01)
 

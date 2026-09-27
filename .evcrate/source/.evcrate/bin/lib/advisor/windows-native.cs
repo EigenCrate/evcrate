@@ -1,4 +1,7 @@
 using System;
+using System.IO;
+using System.Text;
+using System.Threading;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
@@ -22,6 +25,69 @@ public static class EvcrateNativeBridge {
     const uint PROCESS_TERMINATE = 0x0001;
     const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
     const int JobObjectExtendedLimitInformation = 9;
+    const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+    const uint CREATE_NO_WINDOW = 0x08000000;
+    const uint STARTF_USESTDHANDLES = 0x00000100;
+    const uint HANDLE_FLAG_INHERIT = 1;
+
+    static readonly IntPtr PROC_THREAD_ATTRIBUTE_JOB_LIST = (IntPtr)0x2000D;
+    static readonly IntPtr PROC_THREAD_ATTRIBUTE_HANDLE_LIST = (IntPtr)0x20002;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct JOBOBJECT_BASIC_ACCOUNTING_INFORMATION {
+        public long TotalUserTime;
+        public long TotalKernelTime;
+        public long ThisPeriodUserTime;
+        public long ThisPeriodKernelTime;
+        public uint TotalPageFaultCount;
+        public uint TotalProcesses;
+        public uint ActiveProcesses;
+        public uint TotalTerminatedProcesses;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    struct STARTUPINFO {
+        public int cb;
+        public string lpReserved;
+        public string lpDesktop;
+        public string lpTitle;
+        public int dwX;
+        public int dwY;
+        public int dwXSize;
+        public int dwYSize;
+        public int dwXCountChars;
+        public int dwYCountChars;
+        public int dwFillAttribute;
+        public int dwFlags;
+        public short wShowWindow;
+        public short cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    struct STARTUPINFOEX {
+        public STARTUPINFO StartupInfo;
+        public IntPtr lpAttributeList;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct PROCESS_INFORMATION {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public int dwProcessId;
+        public int dwThreadId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct SECURITY_ATTRIBUTES {
+        public int nLength;
+        public IntPtr lpSecurityDescriptor;
+        [MarshalAs(UnmanagedType.Bool)]
+        public bool bInheritHandle;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     struct FILETIME {
@@ -122,6 +188,36 @@ public static class EvcrateNativeBridge {
 
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern bool TerminateJobObject(IntPtr hJob, uint uExitCode);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool QueryInformationJobObject(IntPtr hJob, int JobObjectInformationClass, out JOBOBJECT_BASIC_ACCOUNTING_INFORMATION lpJobObjectInfo, uint cbJobObjectInfoLength, out uint lpReturnLength);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool CreatePipe(out IntPtr hReadPipe, out IntPtr hWritePipe, ref SECURITY_ATTRIBUTES lpPipeAttributes, uint nSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool SetHandleInformation(IntPtr hObject, uint dwMask, uint dwFlags);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool InitializeProcThreadAttributeList(IntPtr lpAttributeList, int dwAttributeCount, int dwFlags, ref IntPtr lpSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool UpdateProcThreadAttribute(IntPtr lpAttributeList, uint dwFlags, IntPtr Attribute, IntPtr lpValue, IntPtr cbSize, IntPtr lpPreviousValue, IntPtr lpReturnSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool DeleteProcThreadAttributeList(IntPtr lpAttributeList);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern bool CreateProcessW(
+        string lpApplicationName, [In, Out] StringBuilder lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes,
+        bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory,
+        ref STARTUPINFOEX lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation
+    );
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool GetNumberOfConsoleInputEvents(SafeFileHandle hConsoleInput, out uint lpcNumberOfEvents);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern bool GetConsoleMode(SafeFileHandle handle, out uint mode);
@@ -146,6 +242,11 @@ public static class EvcrateNativeBridge {
 
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern bool WriteFile(SafeFileHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+    [DllImport("kernel32.dll", EntryPoint = "ReadFile", SetLastError = true)]
+    static extern bool ReadFile(IntPtr hFile, [Out] byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
+
+    [DllImport("kernel32.dll", EntryPoint = "WriteFile", SetLastError = true)]
+    static extern bool WriteFile(IntPtr hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     static extern bool DeleteFileW(string lpFileName);
@@ -189,45 +290,257 @@ public static class EvcrateNativeBridge {
         }
     }
 
-    public static string ObserveConsole(string challenge, int timeoutMs) {
+    public static string ObserveConsole(string context, string challenge, int timeoutMs) {
         using (var input = CreateFileW("CONIN$", GENERIC_READ, 3, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero))
         using (var output = CreateFileW("CONOUT$", GENERIC_READ | GENERIC_WRITE, 3, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero)) {
             uint mode;
             if (input.IsInvalid || output.IsInvalid || !GetConsoleMode(input, out mode) || !GetConsoleMode(output, out mode)) {
                 return "HUMAN_EVENT_REQUIRED";
             }
-            string prompt = "\r\nHuman decision requested (local cooperative confirmation):\r\nType exactly: " + challenge + "\r\n> ";
+            string prompt = "\r\nHuman decision requested (local cooperative confirmation):\r\n"
+                + (string.IsNullOrEmpty(context) ? "" : (context + "\r\n"))
+                + "Type exactly: " + challenge + "\r\n> ";
             uint written;
             if (!WriteConsoleW(output, prompt, (uint)prompt.Length, out written, IntPtr.Zero)) {
                 return "HUMAN_EVENT_REQUIRED";
             }
-            string answer = "";
+            StringBuilder answer = new StringBuilder();
             var clock = System.Diagnostics.Stopwatch.StartNew();
             while (clock.ElapsedMilliseconds < timeoutMs) {
                 uint wait = WaitForSingleObject(input, 100);
                 if (wait == 258) continue;
                 if (wait != 0) return "HUMAN_EVENT_REQUIRED";
+                uint numEvents;
+                if (!GetNumberOfConsoleInputEvents(input, out numEvents) || numEvents == 0) continue;
                 InputRecord rec; uint count;
                 if (!ReadConsoleInputW(input, out rec, 1, out count)) return "HUMAN_EVENT_REQUIRED";
                 if (count == 0 || rec.Kind != 1 || rec.Down == 0) continue;
                 char ch = rec.Character;
                 if (ch == '\u0003' || ch == '\u001b') return "CANCELLED";
                 if (ch == '\r') {
-                    return answer == challenge ? "OBSERVED" : "HUMAN_EVENT_REQUIRED";
+                    return answer.ToString() == challenge ? "OBSERVED" : "HUMAN_EVENT_REQUIRED";
                 }
                 if (ch == '\b') {
                     if (answer.Length > 0) {
-                        answer = answer.Substring(0, answer.Length - 1);
+                        answer.Length -= 1;
                         WriteConsoleW(output, "\b \b", 3, out written, IntPtr.Zero);
                     }
                 } else if (ch >= 32) {
                     if (answer.Length >= 256) return "HUMAN_EVENT_REQUIRED";
-                    answer += ch;
+                    answer.Append(ch);
                     WriteConsoleW(output, ch.ToString(), 1, out written, IntPtr.Zero);
                 }
             }
             return "HUMAN_EVENT_REQUIRED";
         }
+    }
+
+    static readonly object superviseOutputLock = new object();
+    static void EmitSupervise(string line) {
+        lock (superviseOutputLock) {
+            Console.Out.WriteLine(line);
+            Console.Out.Flush();
+        }
+    }
+
+    public static void SuperviseInvocation(string app, string cmdLine, string cwd, string prompt, int killGraceMs) {
+        IntPtr hJob = CreateJobObjectW(IntPtr.Zero, null);
+        if (hJob == IntPtr.Zero) {
+            EmitSupervise("ERROR:JOB_CREATE_FAILED:" + Marshal.GetLastWin32Error());
+            return;
+        }
+        SetHandleInformation(hJob, HANDLE_FLAG_INHERIT, 0);
+
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
+        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        int size = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+        IntPtr pLimits = Marshal.AllocHGlobal(size);
+        try {
+            Marshal.StructureToPtr(limits, pLimits, false);
+            SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, pLimits, (uint)size);
+        } finally {
+            Marshal.FreeHGlobal(pLimits);
+        }
+
+        SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
+        sa.nLength = Marshal.SizeOf(typeof(SECURITY_ATTRIBUTES));
+        sa.bInheritHandle = true;
+
+        IntPtr hChildInR, hSuperInW;
+        IntPtr hSuperOutR, hChildOutW;
+        IntPtr hSuperErrR, hChildErrW;
+        CreatePipe(out hChildInR, out hSuperInW, ref sa, 0);
+        CreatePipe(out hSuperOutR, out hChildOutW, ref sa, 0);
+        CreatePipe(out hSuperErrR, out hChildErrW, ref sa, 0);
+
+        SetHandleInformation(hSuperInW, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(hSuperOutR, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(hSuperErrR, HANDLE_FLAG_INHERIT, 0);
+
+        IntPtr sizeList = IntPtr.Zero;
+        InitializeProcThreadAttributeList(IntPtr.Zero, 2, 0, ref sizeList);
+        IntPtr pAttrList = Marshal.AllocHGlobal(sizeList);
+        InitializeProcThreadAttributeList(pAttrList, 2, 0, ref sizeList);
+
+        IntPtr pJobHandle = Marshal.AllocHGlobal(IntPtr.Size);
+        Marshal.WriteIntPtr(pJobHandle, hJob);
+        UpdateProcThreadAttribute(pAttrList, 0, PROC_THREAD_ATTRIBUTE_JOB_LIST, pJobHandle, (IntPtr)IntPtr.Size, IntPtr.Zero, IntPtr.Zero);
+
+        IntPtr[] handlesToInherit = new IntPtr[] { hChildInR, hChildOutW, hChildErrW };
+        IntPtr pHandles = Marshal.AllocHGlobal(handlesToInherit.Length * IntPtr.Size);
+        for (int i = 0; i < handlesToInherit.Length; i++) {
+            Marshal.WriteIntPtr(pHandles, i * IntPtr.Size, handlesToInherit[i]);
+        }
+        UpdateProcThreadAttribute(pAttrList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, pHandles, (IntPtr)(handlesToInherit.Length * IntPtr.Size), IntPtr.Zero, IntPtr.Zero);
+
+        STARTUPINFOEX siex = new STARTUPINFOEX();
+        siex.StartupInfo.cb = Marshal.SizeOf(typeof(STARTUPINFOEX));
+        siex.StartupInfo.dwFlags = (int)STARTF_USESTDHANDLES;
+        siex.StartupInfo.hStdInput = hChildInR;
+        siex.StartupInfo.hStdOutput = hChildOutW;
+        siex.StartupInfo.hStdError = hChildErrW;
+        siex.lpAttributeList = pAttrList;
+
+        PROCESS_INFORMATION pi;
+        StringBuilder sbCmd = new StringBuilder(cmdLine);
+        bool ok = false;
+        try {
+            ok = CreateProcessW(
+                string.IsNullOrEmpty(app) ? null : app,
+                sbCmd,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                true,
+                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW,
+                IntPtr.Zero,
+                string.IsNullOrEmpty(cwd) ? null : cwd,
+                ref siex,
+                out pi
+            );
+        } finally {
+            CloseHandle(hChildInR);
+            CloseHandle(hChildOutW);
+            CloseHandle(hChildErrW);
+            DeleteProcThreadAttributeList(pAttrList);
+            Marshal.FreeHGlobal(pAttrList);
+            Marshal.FreeHGlobal(pJobHandle);
+            Marshal.FreeHGlobal(pHandles);
+        }
+        if (!ok) {
+            int err = Marshal.GetLastWin32Error();
+            CloseHandle(hSuperInW);
+            CloseHandle(hSuperOutR);
+            CloseHandle(hSuperErrR);
+            CloseHandle(hJob);
+            EmitSupervise("ERROR:LAUNCH_FAILED:" + err);
+            return;
+        }
+
+        FILETIME c, e, k, u;
+        GetProcessTimes(pi.hProcess, out c, out e, out k, out u);
+        string startToken = c.ToULong().ToString();
+        EmitSupervise("SPAWNED:" + pi.dwProcessId + ":" + startToken);
+
+        if (!string.IsNullOrEmpty(prompt)) {
+            byte[] promptBytes = Encoding.UTF8.GetBytes(prompt);
+            uint written;
+            WriteFile(hSuperInW, promptBytes, (uint)promptBytes.Length, out written, IntPtr.Zero);
+        }
+        CloseHandle(hSuperInW);
+
+        Thread outThread = new Thread(() => {
+            try {
+                byte[] buf = new byte[4096];
+                uint read;
+                while (ReadFile(hSuperOutR, buf, (uint)buf.Length, out read, IntPtr.Zero) && read > 0) {
+                    string b64 = Convert.ToBase64String(buf, 0, (int)read);
+                    EmitSupervise("O:" + b64);
+                }
+            } catch {}
+        });
+        outThread.IsBackground = true;
+        outThread.Start();
+
+        Thread errThread = new Thread(() => {
+            try {
+                byte[] buf = new byte[4096];
+                uint read;
+                while (ReadFile(hSuperErrR, buf, (uint)buf.Length, out read, IntPtr.Zero) && read > 0) {
+                    string b64 = Convert.ToBase64String(buf, 0, (int)read);
+                    EmitSupervise("E:" + b64);
+                }
+            } catch {}
+        });
+        errThread.IsBackground = true;
+        errThread.Start();
+
+        Thread ctlThread = new Thread(() => {
+            try {
+                string line;
+                while ((line = Console.In.ReadLine()) != null) {
+                    line = line.Trim();
+                    if (line == "CANCEL" || line == "ABORT") {
+                        TerminateJobObject(hJob, 1);
+                        break;
+                    }
+                }
+                if (line == null) {
+                    TerminateJobObject(hJob, 1);
+                }
+            } catch {}
+        });
+        ctlThread.IsBackground = true;
+        ctlThread.Start();
+
+        WaitForSingleObject(pi.hProcess, 0xFFFFFFFF);
+        uint exitCode;
+        GetExitCodeProcess(pi.hProcess, out exitCode);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+
+        outThread.Join(500);
+        errThread.Join(500);
+        CloseHandle(hSuperOutR);
+        CloseHandle(hSuperErrR);
+
+        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION acct;
+        uint rlen;
+        bool confirmed = false;
+        int active = -1;
+
+        var pollClock = System.Diagnostics.Stopwatch.StartNew();
+        int targetGrace = Math.Max(50, killGraceMs);
+        while (pollClock.ElapsedMilliseconds < targetGrace) {
+            if (QueryInformationJobObject(hJob, 1, out acct, (uint)Marshal.SizeOf(typeof(JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)), out rlen)) {
+                active = (int)acct.ActiveProcesses;
+                if (active == 0) {
+                    confirmed = true;
+                    break;
+                }
+            }
+            Thread.Sleep(20);
+        }
+
+        if (!confirmed) {
+            TerminateJobObject(hJob, 1);
+            pollClock.Restart();
+            while (pollClock.ElapsedMilliseconds < 1000) {
+                if (QueryInformationJobObject(hJob, 1, out acct, (uint)Marshal.SizeOf(typeof(JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)), out rlen)) {
+                    active = (int)acct.ActiveProcesses;
+                    if (active == 0) {
+                        confirmed = true;
+                        break;
+                    }
+                }
+                Thread.Sleep(20);
+            }
+        }
+
+        CloseHandle(hJob);
+
+        string cleanupOutcome = confirmed ? "confirmed" : "unconfirmed";
+        EmitSupervise("CLEANUP:" + cleanupOutcome + ":" + active);
+        EmitSupervise("EXIT:" + exitCode + ":null");
     }
 
     static System.Collections.Generic.List<SafeFileHandle> PinAncestors(string fullPath, bool isDirectory, bool forWrite, out string error) {

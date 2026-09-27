@@ -13,7 +13,7 @@ const {
   assertNoRecursionWindows,
   canonicalizeWindowsEnvironment,
   resolveWindowsExecutable,
-  killProcessTreeWindows
+  superviseWindowsInvocation
 } = require('./windows-platform.cjs');
 
 const INVOCATION_BRAND = Symbol('evcrate-advisor-invocation');
@@ -429,10 +429,6 @@ async function terminateChild(child, { kill, setTimeoutImpl, graceMs, closed, fo
       await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
       if (!isClosed()) {
         send('SIGKILL', true);
-        if (process.platform === 'win32' && Number.isInteger(child?.pid) && child.pid > 0) {
-          const token = child.creationToken || getWindowsProcessIdentity(child.pid)?.start;
-          if (token) killProcessTreeWindows(child.pid, token);
-        }
         await waitForClose(child.closePromise, graceMs, setTimeoutImpl);
       }
     }
@@ -440,6 +436,226 @@ async function terminateChild(child, { kill, setTimeoutImpl, graceMs, closed, fo
   return checkProcessCleanup(child, kill, isClosed);
 }
 
+function runWindowsSupervisorInvocation({
+  invocation,
+  options,
+  spawnExe,
+  spawnArgs,
+  cwd,
+  env,
+  limits,
+  authSecrets,
+  signal,
+  now,
+  startedAt,
+  reportLifecycle,
+  setChildPid,
+  setTimeoutImpl,
+  clearTimeoutImpl
+}) {
+  const stdoutGuard = invocation.adapter === 'codex'
+    && invocation.argv[0] === 'exec' && invocation.argv.includes('--json')
+    ? createCodexToolGuard() : null;
+
+  if (signal?.aborted) {
+    reportLifecycle(lifecycleStatus('CANCELLED'));
+    return Promise.resolve({ error: createRoutingError('CANCELLED'), cleanupOutcome: 'unconfirmed' });
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let terminating = false;
+    let timeoutHandle;
+    let warningHandle;
+    let warningsEmitted = 0;
+    let abortHandler;
+    let recordedCleanupOutcome = 'unconfirmed';
+    let childPid = null;
+    const stdout = new BoundedOutput(limits.maxStdoutBytes, limits.maxLines);
+    const stderr = new BoundedOutput(limits.maxStderrBytes, limits.maxLines);
+
+    const supervisor = superviseWindowsInvocation({
+      executable: spawnExe,
+      argv: spawnArgs,
+      cwd,
+      env,
+      prompt: invocation.prompt,
+      killGraceMs: limits.killGraceMs
+    });
+
+    const clearAllTimers = () => {
+      if (timeoutHandle !== undefined) clearTimeoutImpl(timeoutHandle);
+      if (warningHandle !== undefined) clearTimeoutImpl(warningHandle);
+    };
+
+    const getEffectiveCleanupOutcome = () => {
+      let effective = recordedCleanupOutcome;
+      if (options.kill && typeof options.kill === 'function' && options.kill !== process.kill && options.kill !== process.kill.bind(process)) {
+        try {
+          if (childPid && options.kill(childPid, 0)) {
+            effective = 'unconfirmed';
+          }
+        } catch {}
+      }
+      return effective;
+    };
+
+    const finish = (value, terminationWaitMs = 0) => {
+      if (settled) return;
+      settled = true;
+      clearAllTimers();
+      if (signal && abortHandler) signal.removeEventListener('abort', abortHandler);
+      supervisor.close();
+      let finalValue = value;
+      const effectiveCleanup = getEffectiveCleanupOutcome();
+      if (signal?.aborted && (!value?.error || value?.error?.code !== 'CANCELLED')) {
+        const cancelledCleanup = value?.cleanupOutcome || effectiveCleanup || 'unconfirmed';
+        finalValue = { error: createRoutingError('CANCELLED'), cleanupOutcome: cancelledCleanup };
+      }
+      const statusCode = finalValue?.error ? finalValue.error.code : null;
+      const status = lifecycleStatus(statusCode, !finalValue?.error);
+      reportLifecycle(status, terminationWaitMs);
+      resolve(finalValue);
+    };
+
+    const terminateAndFinish = async (code, failure = null) => {
+      if (settled) return;
+      terminating = true;
+      clearAllTimers();
+      let terminationStartedAt;
+      try { terminationStartedAt = now(); } catch { terminationStartedAt = startedAt; }
+      supervisor.cancel();
+      const cleanup = await supervisor.completionPromise;
+      if (cleanup?.outcome) recordedCleanupOutcome = cleanup.outcome;
+      let terminationFinishedAt;
+      try { terminationFinishedAt = now(); } catch { terminationFinishedAt = terminationStartedAt; }
+      const terminationWaitMs = terminationFinishedAt - terminationStartedAt;
+      const effectiveCode = signal?.aborted ? 'CANCELLED' : code;
+      const effectiveFailure = effectiveCode === 'CANCELLED' ? null : failure;
+      const effectiveCleanup = getEffectiveCleanupOutcome();
+      const value = effectiveFailure
+        ? { error: effectiveFailure.error, failure: effectiveFailure, cleanupOutcome: effectiveCleanup }
+        : { error: createRoutingError(effectiveCode), cleanupOutcome: effectiveCleanup };
+      finish(value, terminationWaitMs);
+    };
+
+    supervisor.on('spawned', ({ pid }) => {
+      childPid = pid;
+      if (typeof setChildPid === 'function') setChildPid(pid);
+    });
+
+    supervisor.on('stdout', (chunk) => {
+      const code = stdout.append(chunk);
+      if (code) void terminateAndFinish(code);
+      else if (stdoutGuard) {
+        let guardCode;
+        try { guardCode = stdoutGuard(chunk); }
+        catch { guardCode = 'OUTPUT_INVALID'; }
+        if (guardCode) void terminateAndFinish(guardCode);
+      }
+    });
+
+    supervisor.on('stderr', (chunk) => {
+      const code = stderr.append(chunk);
+      if (code) void terminateAndFinish(code);
+    });
+
+    supervisor.on('cleanup', ({ outcome }) => {
+      recordedCleanupOutcome = outcome;
+    });
+
+    supervisor.on('error', (err) => {
+      void terminateAndFinish(err?.code || 'PROCESS_FAILED');
+    });
+
+    supervisor.on('exit', ({ exitCode, signal: childSignal }) => {
+      if (terminating || settled) return;
+      if (exitCode !== 0 || childSignal) {
+        let stdoutText = '';
+        let stderrText = '';
+        try { stdoutText = redactDiagnostics(stdout.value(), authSecrets, limits.maxStdoutBytes); }
+        catch { stdoutText = '[unreadable output]'; }
+        try { stderrText = redactDiagnostics(stderr.value(), authSecrets, limits.maxStderrBytes); }
+        catch { stderrText = '[unreadable diagnostics]'; }
+        const failure = createRunnerFailure({
+          reason: childSignal ? 'signal' : 'nonzero-exit',
+          stdout: stdoutText,
+          stderr: stderrText,
+          exitCode,
+          signal: childSignal
+        });
+        void terminateAndFinish('PROCESS_FAILED', failure);
+        return;
+      }
+      if (stdout.bytes > limits.maxResultBytes) {
+        void terminateAndFinish('OUTPUT_LIMIT');
+        return;
+      }
+      if (signal?.aborted) {
+        finish({ error: createRoutingError('CANCELLED'), cleanupOutcome: recordedCleanupOutcome });
+        return;
+      }
+      const effectiveCleanup = getEffectiveCleanupOutcome();
+      if (effectiveCleanup !== 'confirmed') {
+        finish({ error: createRoutingError('CLEANUP_UNCONFIRMED'), cleanupOutcome: 'unconfirmed' });
+        return;
+      }
+      try {
+        const result = {
+          stdout: stdout.value(),
+          stderr: redactDiagnostics(stderr.value(), authSecrets, limits.maxStderrBytes),
+          exitCode: 0,
+          signal: null
+        };
+        finish({ result: Object.freeze(result), cleanupOutcome: 'confirmed' });
+      } catch (error) {
+        finish({ error: error?.code ? error : createRoutingError('OUTPUT_INVALID'), cleanupOutcome: effectiveCleanup });
+      }
+    });
+
+    if (limits.mode === 'generation') {
+      const scheduleNextWarning = () => {
+        if (settled || terminating) return;
+        if (warningsEmitted >= limits.maxWarnings) return;
+        const delay = warningsEmitted === 0 ? limits.warnAfterMs : limits.warnEveryMs;
+        warningHandle = setTimeoutImpl(() => {
+          if (settled || terminating) return;
+          warningsEmitted += 1;
+          const elapsedAt = (() => {
+            try { return now(); } catch { return startedAt; }
+          })();
+          const currentElapsedMs = lifecycleInteger(elapsedAt - startedAt);
+          const isSuppressed = warningsEmitted >= limits.maxWarnings;
+          const message = `[evcrate-advisor] Warning: active generation in progress (elapsed: ${Math.round(currentElapsedMs / 1000)}s${isSuppressed ? ', further warnings suppressed' : ''})\n`;
+          try {
+            if (typeof options.onWarning === 'function') {
+              options.onWarning({
+                elapsedMs: currentElapsedMs,
+                count: warningsEmitted,
+                suppressed: isSuppressed
+              });
+            }
+            const stderrStream = options.stderr || (typeof process !== 'undefined' ? process.stderr : null);
+            if (stderrStream && typeof stderrStream.write === 'function') {
+              ensureStderrHandler(stderrStream);
+              stderrStream.write(message);
+            }
+          } catch {}
+          if (!isSuppressed) scheduleNextWarning();
+        }, delay);
+      };
+      scheduleNextWarning();
+    } else {
+      timeoutHandle = setTimeoutImpl(() => void terminateAndFinish('TIMEOUT'), limits.timeoutMs);
+    }
+
+    abortHandler = () => void terminateAndFinish('CANCELLED');
+    signal?.addEventListener('abort', abortHandler, { once: true });
+    if (signal?.aborted) {
+      void terminateAndFinish('CANCELLED');
+    }
+  });
+}
 function runInvocation(invocation, options = {}) {
   if (!invocation || invocation[INVOCATION_BRAND] !== true) {
     return Promise.reject(createRoutingError('INVOCATION_INVALID'));
@@ -486,19 +702,40 @@ function runInvocation(invocation, options = {}) {
     const clearTimeoutImpl = options.clearTimeout || clearTimeout;
     const kill = options.kill || process.kill.bind(process);
     try { startedAt = now(); } catch { startedAt = monotonicMilliseconds(); }
-    let spawnExe = invocation.executable;
-    let spawnArgs = [...invocation.argv];
-    if (process.platform === 'win32') {
+    if (process.platform === 'win32' && (!options.spawn || options.spawn === childProcess.spawn)) {
       const envPath = env?.PATH || process.env.PATH;
-      const resolved = resolveWindowsExecutable(invocation.executable, envPath) || invocation.executable;
+      const resolved = resolveWindowsExecutable(invocation.executable, envPath);
+      if (!resolved) {
+        reportLifecycle(lifecycleStatus('EXECUTABLE_UNAVAILABLE'));
+        return Promise.reject(createRoutingError('EXECUTABLE_UNAVAILABLE'));
+      }
       const lower = resolved.toLowerCase();
+      let spawnExe = resolved;
+      let spawnArgs = [...invocation.argv];
       if (lower.endsWith('.js') || lower.endsWith('.cjs')) {
         spawnExe = process.execPath;
         spawnArgs = [resolved, ...invocation.argv];
-      } else {
-        spawnExe = resolved;
       }
+      return runWindowsSupervisorInvocation({
+        invocation,
+        options,
+        spawnExe,
+        spawnArgs,
+        cwd,
+        env,
+        limits,
+        authSecrets,
+        signal,
+        now,
+        startedAt,
+        reportLifecycle,
+        setChildPid: (pid) => { childPid = pid; },
+        setTimeoutImpl,
+        clearTimeoutImpl
+      });
     }
+    let spawnExe = invocation.executable;
+    let spawnArgs = [...invocation.argv];
     const child = spawnImpl(spawnExe, spawnArgs, {
       cwd,
       env,

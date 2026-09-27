@@ -1,9 +1,9 @@
 # Codebase Summary
 
-**Generated:** 2026-09-27  
-**Source:** Repomix v0.2.26 XML compaction (`repomix-output.xml`); `.repomixignore` excludes `docs/`, `plans/`, and `tests/`. This source map was cross-checked against current package metadata and implementation files.
+**Generated:** 2026-09-28  
+**Source:** Fresh Repomix v0.2.26 XML compaction (`repomix-output.xml`); `.repomixignore` excludes `docs/`, `plans/`, and `tests/`, and Repomix's security scan excluded nine credential-pattern matches. This summary was cross-checked against current implementation and phase evidence.
 **Package:** Private npm package `evcrate` 2.3.2; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
-**Phase 01:** Launchability and identity is complete as of 2026-09-27; see the [phase plan](../plans/260927-0428-filesystem-cutover-review/phase-01-launchability-and-identity.md) and [review](../plans/reports/code-review-260927-1740-phase-01-launchability-and-identity.md). Phase 02 recovery/migration and capability-policy decisions remain open.
+**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–02 completed 2026-09-28 (Repair Phase 02 review 9.2/10); Repair Phase 03 provider-launch identity and Phase 04 verification/readiness remain. Production Windows advisor runtime is not qualified. See the [repair phase](../plans/260927-0005-windows-advisor-readiness/phase-02-supervision-console.md) and [review](../plans/reports/code-review-260928-0300-windows-supervision-console.md).
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -48,6 +48,17 @@ The CLI resolves context, validates one invocation, dispatches one operation, wr
 
 The Linux standalone installer unpacks a verified package snapshot and launches its staged CLI for a version smoke. Phase 01 now provisions mandatory launch roles independently of archive permission bits and runs the staged CLI by its real path. The separate Windows qualification boundary remains installer lifecycle and `version --json`; this Phase 01 work does not qualify broader Windows runtime behavior.
 
+## Windows advisor supervision and console repair
+
+Readiness Repair Phase 02 integrates native supervision and human-decision observation into the shared controller. The completion review records 9/9 focused tests, 236/236 advisor-controller tests, build, and `release:check`; these are implementation evidence, not production Windows qualification.
+
+- `runner.cjs` routes Windows provider invocations through `runWindowsSupervisorInvocation`; `windows-platform.cjs` starts the fixed PowerShell bridge, and `windows-native.ps1` dispatches to `windows-native.cs`.
+- The native launcher assigns each provider to a kill-on-close Job at process creation, captures `{pid, startToken}` from the launch handle, frames bounded provider output separately from cleanup/exit records, and uses a distinct control/lifetime input for cancellation and EOF. Cleanup is confirmed only after a successful empty-Job query; unconfirmed cleanup blocks success/retry. Windows `taskkill` and teardown-time PID lookup are removed.
+- `state-human.cjs` keeps state/replay preflight and revision checks around a Windows observer that opens `CONIN$`/`CONOUT$` independently of JSON stdin. Only exact `OBSERVED` creates an event; piped JSON never authorizes a decision. The POSIX process-group and `/dev/tty` paths remain.
+- `tests/advisor-controller/supervision-console.test.cjs` covers descendant cleanup after leader success/failure, timeout, cancellation, output flood, supervisor EOF, spawn-time identity, and unattended-console failure. Manual attached-console matching, Linux runtime, and vendor qualification remain Phase 04 prerequisites; Repair Phase 03 owns provider-launch identity.
+
+See the [system architecture](./system-architecture.md#6-advisor-supervision-and-command-projections), [code standards](./code-standards.md#advisor-controller-standards), and [PDR](./project-overview-pdr.md#fr-23-native-windows-advisor-lifecycle-implementation-phase-02).
+
 ## Phase 01 launchability and identity
 
 Publication execution intent is derived from the published relative path and published shebang bytes (with explicit launcher roles), not from source permission metadata. The plan carries execution intent separately from content hashes and CAS identity: a content-equal no-op stays a no-op, while new or changed POSIX launchers receive the required execute bit. Required staging/install chmod failures are errors rather than successful fallbacks.
@@ -56,7 +67,8 @@ Publication execution intent is derived from the published relative path and pub
 
 Advisor state and history comparisons ignore ctime and permission-only changes while retaining object/type metadata and explicit byte equality at state/history CAS boundaries. Lock ownership continues to bind token/process identity and the lock object. Baseline Git evidence normalizes executable-only mode metadata while preserving content/index, conflict, and rename identity.
 
-The committed schema-1 `.evcrate/registry.json` was regenerated with the new file hashes. Existing records with prior raw-file hashes are not silently reinterpreted; `npm run generate:registry` performs a canonical rescan. Phase 01 did not decide whether execute-bit-only capability changes are an exception to chmod-invariance or set a durable-journal recovery/migration policy.
+The committed schema-1 `.evcrate/registry.json` was regenerated with the new file hashes. Existing records with prior raw-file hashes are not silently reinterpreted; `npm run generate:registry` performs a canonical rescan. Filesystem-policy Phase 02 later completed schema-3 journal writing, authentic schema-1/2 recovery, and mode-free executable-capability derivation from path type and shebang.
+
 
 ## Advisor plugin and support boundaries
 

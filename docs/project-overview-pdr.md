@@ -1,15 +1,15 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline. Filesystem cutover Phase 01 (launchability and identity) is complete (2026-09-27). Hook Materialization Scope Distribution is
+**Status:** Current requirements baseline. Filesystem cutover Phases 01–02 are complete (2026-09-27). Hook Materialization Scope Distribution is
 complete through Phase 09, Windows release qualification through Phase 10, and
 All-project advisor history through Phase 05 (6/6 phases, 100%; 2026-09-24).
-Native Windows advisor support Phase 01 feasibility is proven (2026-09-26; 67/67 checks passed, review approved 9.3/10; production Windows runtime qualification not claimed).
+Native Windows advisor Phase 01 proved primitives (67/67 checks); readiness Repair Phases 01–02 are complete (Repair Phase 02 review 9.2/10). Repair Phase 03/04 and production runtime qualification remain pending.
 Its paired release is qualified; see the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
 DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
 not release-authorized.
-**Updated:** 2026-09-27
+**Updated:** 2026-09-28
 **Scope:** EVCrate package, generated target projections, shared advisor controller,
 and atomic publication
 
@@ -113,8 +113,8 @@ or generated content; apply rechecks source identity, hashes, registry/manifest/
 adapter bindings, approvals, destination, provenance, and expiry. The committed
 schema-1 registry is regenerated through `npm run generate:registry`; prior raw-file
 hashes are not silently accepted. Capability signals remain separate from content
-identity; execute-bit capability policy remains unresolved for Phase 02. Conflicts
-preserve unmanaged or differently-owned nodes.
+identity; executable capability derives from file extensions and shebang bytes, not source permission bits. Filesystem-policy Phase 02 completed journal migration and host-specific qualification.
+Conflicts preserve unmanaged or differently-owned nodes.
 
 ### FR-4: One-shot TypeScript CLI
 
@@ -508,9 +508,9 @@ The scan was not a new live DamHopper browser session; production deployment rem
 
 **Requirement:** Integrate Windows-specific home/project identity, environment, provider launch, state/history/baseline, process, workspace, and console boundaries into the shared advisor controller without changing public schemas or Linux behavior.
 
-**Status and evidence:** Phase 02 DONE (2026-09-26; parent-approved after Cycle 3 conditional review, 7.4/10). The [review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md) records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests; the exact closure is 36 files.
+**Status and evidence:** Original Phase 02 integration is DONE (2026-09-26; review 7.4/10); the dated review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests, with a 36-file closure. Readiness Repair Phase 02 completed 2026-09-28 (review 9.2/10): it integrates native Job supervision, launch-handle creation identity, fail-closed cleanup, and Windows console observation without public-schema changes. See the [repair plan](../plans/260927-0005-windows-advisor-readiness/phase-02-supervision-console.md) and [review](../plans/reports/code-review-260928-0300-windows-supervision-console.md).
 
-**Acceptance boundary:** The state/history path-threaded ownership check follow-up was superseded by the cross-platform trusted-files policy (all advisor filesystem UID/SID/DACL/mode restrictions removed). Runner spawn-time child creation-token capture remains an approved follow-up. Phase 02 does not establish PID-reuse-safe termination, Phase 03 host prompt invocation/publication, or Phase 04 production Windows runtime qualification.
+**Acceptance boundary:** State/history owner checks were superseded by the cross-platform trusted-files policy. Repair Phase 03 provider-launch identity and Phase 04 verification/readiness remain pending. Manual attached-console matching, Linux runtime, and vendor qualification are Phase 04 prerequisites; no production Windows runtime qualification is claimed.
 
 ### FR-24: Launchability and filesystem identity (Phase 01)
 
@@ -567,7 +567,7 @@ through E04 are complete. The Explorer's dated standalone-picker evidence is
 historical; its picker/reader source has since been removed. E05 source cutover is
 applied, but joint G4 qualification/sign-off is unverified, and standalone
 retirement is not release-authorized. Documentation/support cutover is complete.
-All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates. Native Windows advisor support is 50% (Phases 01–02 complete): Phase 02 controller lifecycle is DONE (2026-09-26) with approved follow-ups; Phase 03 prompt invocation/publication is unblocked and Phase 04 qualification remains pending. Phase 02 completion does not widen the bounded Windows installer/version support claim or qualify production runtime.
+All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates. Original Native Windows advisor Phases 01–02 remain complete; readiness Repair Phases 01–02 are now complete (2/4). Repair Phase 03 owns provider-launch identity and Phase 04 verification/readiness remains pending. Repair completion does not widen the bounded Windows installer/version support claim or qualify production runtime.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 36-file
@@ -607,7 +607,7 @@ All-project advisor history (Phases 00–05) is complete and its paired release 
 14. E05/G4 cannot be accepted from source removal alone. Joint external Linux
     owner-runner and separate-LAN qualification evidence plus sign-off are
     required; they are not present in this workspace.
-15. Native Windows advisor Phase 01 proved compatibility primitives (67/67 checks, review 9.3/10). Phase 02 controller lifecycle is parent-approved DONE after Cycle 3 conditional review (7.4/10); its review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests. The state/history ownership-path follow-up was superseded by the cross-platform trusted-files policy; runner spawn-token capture remains an approved follow-up; no production Windows runtime qualification is claimed.
+15. Native Windows advisor Phase 01 proved primitives (67/67 checks, review 9.3/10); original Phase 02 lifecycle is DONE after review 7.4/10, with 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests recorded. Readiness Repair Phase 02 is DONE (2026-09-28; review 9.2/10; 9/9 focused tests, 236/236 advisor-controller tests, build and `release:check` pass). Repair Phase 03 provider-launch identity and Phase 04 verification/readiness remain; manual attached-console matching, Linux runtime, and vendor qualification are pending. No production Windows runtime qualification is claimed.
 
 ## Documentation map
 

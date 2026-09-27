@@ -8,7 +8,23 @@ $op = $args[0]
 $csPath = Join-Path $PSScriptRoot 'windows-native.cs'
 
 if (-not ([System.Management.Automation.PSTypeName]'EvcrateNativeBridge').Type) {
-    Add-Type -Path $csPath
+    $csItem = Get-Item $csPath
+    $cacheName = 'evcrate-bridge-' + $csItem.Length + '-' + $csItem.LastWriteTimeUtc.Ticks + '.dll'
+    $dllPath = Join-Path $env:TEMP $cacheName
+    if (Test-Path $dllPath) {
+        try {
+            Add-Type -Path $dllPath
+        } catch {
+            Add-Type -Path $csPath
+        }
+    } else {
+        try {
+            Add-Type -Path $csPath -OutputAssembly $dllPath
+            Add-Type -Path $dllPath
+        } catch {
+            Add-Type -Path $csPath
+        }
+    }
 }
 
 switch ($op) {
@@ -25,9 +41,23 @@ switch ($op) {
     }
     'console-observe' {
         if ($args.Count -lt 3) { exit 1 }
-        $res = [EvcrateNativeBridge]::ObserveConsole($args[1], [int]$args[2])
+        $ctx = if ($args.Count -ge 4 -and $args[3]) {
+            [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($args[3]))
+        } else { $null }
+        $res = [EvcrateNativeBridge]::ObserveConsole($ctx, $args[1], [int]$args[2])
         [Console]::Out.WriteLine($res)
         if ($res -ne 'OBSERVED') { exit 2 }
+    }
+    'supervise-invocation' {
+        $line = [Console]::In.ReadLine()
+        if (-not $line) { exit 1 }
+        $req = ConvertFrom-Json $line
+        $app = if ($req.app) { $req.app } else { $null }
+        $cmdLine = $req.cmdLine
+        $cwd = if ($req.cwd) { $req.cwd } else { $null }
+        $prompt = if ($req.prompt) { $req.prompt } else { $null }
+        $killGraceMs = if ($req.killGraceMs) { [int]$req.killGraceMs } else { 250 }
+        [EvcrateNativeBridge]::SuperviseInvocation($app, $cmdLine, $cwd, $prompt, $killGraceMs)
     }
     'read-pinned' {
         if ($args.Count -lt 3) { exit 1 }
