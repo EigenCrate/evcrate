@@ -203,7 +203,7 @@ function journalFor(
     ? { harness: harnessRecord } : { shared: sharedRecord, harness: harnessRecord };
   const managedPaths = descriptor.scope === 'project' || !sharedOnlyHome ? harnessOwnership : {};
   return {
-    schema_version: 2, transaction_type: 'target-publication', status: 'staged',
+    schema_version: 3, transaction_type: 'target-publication', status: 'staged',
     logical_phase: descriptor.scope === 'project' ? 'harness' : sharedOnlyHome ? 'shared' : 'combined',
     records, release_id: descriptor.releaseId, home_root: descriptor.destinationRoot,
     transaction_dir: `release-${descriptor.releaseId}`,

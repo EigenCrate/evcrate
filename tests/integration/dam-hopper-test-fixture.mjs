@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -43,7 +43,15 @@ export function getSharedInstallation() {
   });
   if (installResult.status !== 0) throw new Error(`npm install failed: ${installResult.stderr}`);
 
-  const cliPath = join(installRoot, 'node_modules', '.bin', 'evcrate');
+  const pkgDir = join(installRoot, 'node_modules', 'evcrate');
+  let cliPath = join(installRoot, 'node_modules', '.bin', 'evcrate');
+  try {
+    const pkgJson = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+    const binRel = typeof pkgJson.bin === 'string' ? pkgJson.bin : pkgJson.bin?.evcrate;
+    if (binRel && existsSync(join(pkgDir, binRel))) {
+      cliPath = join(pkgDir, binRel);
+    }
+  } catch { /* ignore */ }
   cachedInstall = { root, tarballPath, sha256, cliPath, installRoot };
   process.on('exit', () => {
     try { rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ }

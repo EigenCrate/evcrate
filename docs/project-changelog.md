@@ -3,8 +3,20 @@
 ## Unreleased
 
 **Updated:** 2026-09-27
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26, Phase 03 unblocked; production Windows runtime qualification not claimed). Filesystem-policy cutover is 50% (Phase 01 DONE 2026-09-27; Phase 02 proposed). Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support is 50% (2/4 phases; Phase 02 DONE 2026-09-26; Phase 03 remains NO-GO pending readiness repairs; production Windows runtime qualification not claimed). Filesystem-policy cutover is 100% (Phases 01 and 02 DONE 2026-09-27; cutover review plan complete). Package version: `2.3.2`.
 Older phase records remain in the linked archive.
+
+### 2026-09-27 — fix(filesystem): complete Phase 02 durable cutover and host-specific qualification
+
+**Status:** Phase 02 DONE (2026-09-27; review approved 9.6/10; user approved). Entire filesystem-policy cutover milestone is 100% complete (2/2 phases).  
+**Plan:** [Parent plan](../plans/260927-0428-filesystem-cutover-review/plan.md) · [Phase 02](../plans/260927-0428-filesystem-cutover-review/phase-02-cutover-and-qualification.md)  
+**Evidence:** 279/279 targeted tests pass across publication-recovery, registry, integration, plugin qualification, and advisor controller suites.
+
+- Implemented schema version 3 publication journal writer (`publication.ts`) and bounded authentic schema 1/2 mode-bearing journal migration in recovery (`publication-recovery.ts`). Negative test verifies rejection of schema 3 journals bearing mode fields.
+- Applied absolute chmod-invariance across capabilities in `scanner.ts` and `source.ts`: script-execution capability is derived strictly from script extensions and shebang bytes, never from file mode bits.
+- Fixed Windows integration test client in `dam-hopper-client.mjs` and `dam-hopper-test-fixture.mjs` to resolve package JS entrypoint and invoke Node with direct argv, eliminating `cmd.exe` shell parsing vulnerabilities.
+- Removed `stat.mode` fingerprint false-positive from plugin qualification test (`tests/plugin/qualification.spec.mjs`).
+- Reconciled code standards (`SettingsMode` removed) and roadmap documentation (Windows advisor Phase 03 preserved as NO-GO pending readiness repairs).
 ### 2026-09-27 — fix(filesystem): complete Phase 01 launchability and identity
 
 **Status:** Phase 01 DONE (2026-09-27; review approved 10/10). Parent filesystem-policy cutover is 50% complete (1/2 phases); Phase 02 remains proposed.  

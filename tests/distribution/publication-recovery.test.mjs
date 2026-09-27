@@ -505,3 +505,333 @@ test('recovery refuses an unproven create promotion even when external content m
   }
 });
 
+test('legacy mode-bearing schema-1 journal recovers and rolls back safely (F5 regression)', () => {
+  const fixtureValue = fixture('evcrate-recovery-legacy-1-');
+  const { home, state } = fixtureValue;
+  try {
+    const journalPath = join(state, 'publication-journal.json');
+    const { journal, destination, transaction } = journalFor(home, state, 'staged', 'new');
+    const backup0 = join(transaction, 'backups', '0');
+    const statBackup = lstatSync(backup0);
+    const statDest = lstatSync(destination);
+
+    // Simulate authentic legacy mode-bearing schema-1 journal
+    journal.operations[0] = {
+      ...journal.operations[0],
+      mode: 0o644,
+      before: {
+        present: true, kind: 'file', device: Number(statBackup.dev), inode: Number(statBackup.ino),
+        mode: 0o600, size: Number(statBackup.size), hash: digest('old')
+      },
+      intended: {
+        present: true, kind: 'file', device: Number(statDest.dev), inode: Number(statDest.ino),
+        mode: 0o600, size: Number(statDest.size), hash: digest('new')
+      }
+    };
+    journal.operations_digest = hashBytes(canonicalJsonBytes(journal.operations));
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+
+    const outcome = recoverPublicationUnlocked(state, home);
+    assert.equal(outcome.action, 'rolled-back');
+    assert.equal(readFileSync(destination, 'utf8'), 'old');
+    assert.equal(existsSync(journalPath), false);
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
+
+test('legacy mode-bearing schema-2 journal recovers and rolls back safely (F5 regression)', () => {
+  const fixtureValue = fixture('evcrate-recovery-legacy-2-');
+  const project = directory(join(fixtureValue.root, 'project'));
+  const projectIdentity = 'a'.repeat(64);
+  const projectState = directory(join(project, '.evcrate', 'project-publication', projectIdentity));
+  const id = 'release-1';
+  const workspaceName = `.evcrate-publish-${id}`;
+  const transaction = directory(join(project, workspaceName));
+  const backups = directory(join(transaction, 'backups'));
+  writeAtomicFile(join(backups, '0'), text('old'));
+  const destination = join(project, '.omp', 'agent', 'alpha.md');
+  directory(join(project, '.omp', 'agent'));
+  writeFileSync(destination, 'new');
+  chmodSync(destination, 0o600);
+  const statBackup = lstatSync(join(backups, '0'));
+  const statDest = lstatSync(destination);
+
+  try {
+    const journalPath = join(projectState, 'publication-journal.json');
+    const parentStat = lstatSync(project);
+    const transStat = lstatSync(transaction);
+    const manifestPath = '.evcrate/build-manifest-omp.json';
+    const manifestDigest = 'a'.repeat(64);
+
+    const operations = [{
+      target: 'omp', binding: '.omp', local_root: '.omp', relative_path: 'agent/alpha.md',
+      kind: 'file', action: 'update', destination: '.omp/agent/alpha.md', backup: 'backups/0',
+      before: {
+        present: true, kind: 'file', device: Number(statBackup.dev), inode: Number(statBackup.ino),
+        mode: 0o600, size: Number(statBackup.size), hash: digest('old')
+      },
+      intendedHash: digest('new'),
+      intended: {
+        present: true, kind: 'file', device: Number(statDest.dev), inode: Number(statDest.ino),
+        mode: 0o600, size: Number(statDest.size), hash: digest('new')
+      },
+      promoted: true,
+      mode: 0o644
+    }];
+    const harness = {
+      phase: 'harness', scope: 'project', status: 'promoting',
+      release_id: id, selected_targets: ['omp'],
+      binding_order: ['.omp'], managed_paths: { omp: { '.omp': ['agent/alpha.md'] } },
+      previous_managed_paths: {},
+      build_manifest_path: manifestPath, build_manifest_digest: manifestDigest,
+      transaction_dir: `release-${id}`, retained_release_id: null,
+      destination_root: resolve(project), durable_state_root: resolve(projectState),
+      workspace_root: resolve(transaction), workspace_name: workspaceName,
+      project_identity: projectIdentity, retention: 'none'
+    };
+    const journal = {
+      schema_version: 2,
+      transaction_type: 'target-publication',
+      status: 'staged',
+      release_id: id,
+      home_root: resolve(project),
+      transaction_dir: `release-${id}`,
+      selected_targets: ['omp'],
+      binding_order: ['.omp'],
+      managed_paths: { omp: { '.omp': ['agent/alpha.md'] } },
+      previous_managed_paths: {},
+      build_manifest_path: manifestPath,
+      build_manifest_digest: manifestDigest,
+      retained_release_id: null,
+      retain_transaction: false,
+      operation_count: 1,
+      operations_digest: hashBytes(canonicalJsonBytes(operations)),
+      operations,
+      logical_phase: 'harness',
+      records: { harness },
+      scope: 'project',
+      destination_root: resolve(project),
+      durable_state_root: resolve(projectState),
+      workspace_root: resolve(transaction),
+      workspace_name: workspaceName,
+      workspace_device: Number(transStat.dev),
+      workspace_inode: Number(transStat.ino),
+      workspace_parent_device: Number(parentStat.dev),
+      workspace_parent_inode: Number(parentStat.ino),
+      project_identity: projectIdentity,
+      retention: 'none',
+      lock_paths: [join(projectState, 'publish.lock')],
+      lock_order: ['project']
+    };
+
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+    writeAtomicFile(join(projectState, 'release-marker.json'), canonicalJsonBytes({
+      schema_version: 2, transaction_type: 'target-publication', scope: 'project',
+      records: { harness: { ...harness, status: 'promoting' } }
+    }));
+
+    const outcome = recoverAndMigrateProjectStateUnlocked(projectState, project, projectIdentity);
+    assert.equal(outcome.action, 'rolled-back');
+    assert.equal(readFileSync(destination, 'utf8'), 'old');
+    assert.equal(existsSync(journalPath), false);
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
+
+test('schema-3 mode-free journal recovers and rolls back safely with records preserved (F5 regression)', () => {
+  const fixtureValue = fixture('evcrate-recovery-v3-');
+  const project = directory(join(fixtureValue.root, 'project'));
+  const projectIdentity = 'b'.repeat(64);
+  const projectState = directory(join(project, '.evcrate', 'project-publication', projectIdentity));
+  const id = 'release-1';
+  const workspaceName = `.evcrate-publish-${id}`;
+  const transaction = directory(join(project, workspaceName));
+  const backups = directory(join(transaction, 'backups'));
+  writeAtomicFile(join(backups, '0'), text('old-v3'));
+  const destination = join(project, '.omp', 'agent', 'alpha.md');
+  directory(join(project, '.omp', 'agent'));
+  writeFileSync(destination, 'new-v3');
+  chmodSync(destination, 0o600);
+  const statBackup = lstatSync(join(backups, '0'));
+  const statDest = lstatSync(destination);
+
+  try {
+    const journalPath = join(projectState, 'publication-journal.json');
+    const parentStat = lstatSync(project);
+    const transStat = lstatSync(transaction);
+    const manifestPath = '.evcrate/build-manifest-omp.json';
+    const manifestDigest = 'b'.repeat(64);
+
+    const operations = [{
+      target: 'omp', binding: '.omp', local_root: '.omp', relative_path: 'agent/alpha.md',
+      kind: 'file', action: 'update', destination: '.omp/agent/alpha.md', backup: 'backups/0',
+      before: {
+        present: true, kind: 'file', device: Number(statBackup.dev), inode: Number(statBackup.ino),
+        size: Number(statBackup.size), hash: digest('old-v3')
+      },
+      intendedHash: digest('new-v3'),
+      intended: {
+        present: true, kind: 'file', device: Number(statDest.dev), inode: Number(statDest.ino),
+        size: Number(statDest.size), hash: digest('new-v3')
+      },
+      promoted: true
+    }];
+    const harness = {
+      phase: 'harness', scope: 'project', status: 'promoting',
+      release_id: id, selected_targets: ['omp'],
+      binding_order: ['.omp'], managed_paths: { omp: { '.omp': ['agent/alpha.md'] } },
+      previous_managed_paths: {},
+      build_manifest_path: manifestPath, build_manifest_digest: manifestDigest,
+      transaction_dir: `release-${id}`, retained_release_id: null,
+      destination_root: resolve(project), durable_state_root: resolve(projectState),
+      workspace_root: resolve(transaction), workspace_name: workspaceName,
+      project_identity: projectIdentity, retention: 'none'
+    };
+    const journal = {
+      schema_version: 3,
+      transaction_type: 'target-publication',
+      status: 'staged',
+      release_id: id,
+      home_root: resolve(project),
+      transaction_dir: `release-${id}`,
+      selected_targets: ['omp'],
+      binding_order: ['.omp'],
+      managed_paths: { omp: { '.omp': ['agent/alpha.md'] } },
+      previous_managed_paths: {},
+      build_manifest_path: manifestPath,
+      build_manifest_digest: manifestDigest,
+      retained_release_id: null,
+      retain_transaction: false,
+      operation_count: 1,
+      operations_digest: hashBytes(canonicalJsonBytes(operations)),
+      operations,
+      logical_phase: 'harness',
+      records: { harness },
+      scope: 'project',
+      destination_root: resolve(project),
+      durable_state_root: resolve(projectState),
+      workspace_root: resolve(transaction),
+      workspace_name: workspaceName,
+      workspace_device: Number(transStat.dev),
+      workspace_inode: Number(transStat.ino),
+      workspace_parent_device: Number(parentStat.dev),
+      workspace_parent_inode: Number(parentStat.ino),
+      project_identity: projectIdentity,
+      retention: 'none',
+      lock_paths: [join(projectState, 'publish.lock')],
+      lock_order: ['project']
+    };
+
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+    writeAtomicFile(join(projectState, 'release-marker.json'), canonicalJsonBytes({
+      schema_version: 2, transaction_type: 'target-publication', scope: 'project',
+      records: { harness: { ...harness, status: 'promoting' } }
+    }));
+
+    const outcome = recoverAndMigrateProjectStateUnlocked(projectState, project, projectIdentity);
+    assert.equal(outcome.action, 'rolled-back');
+    assert.equal(readFileSync(destination, 'utf8'), 'old-v3');
+    assert.equal(existsSync(journalPath), false);
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
+
+test('schema-3 journal containing mode property is rejected (F5 regression)', () => {
+  const fixtureValue = fixture('evcrate-recovery-v3-neg-');
+  const project = directory(join(fixtureValue.root, 'project'));
+  const projectIdentity = 'c'.repeat(64);
+  const projectState = directory(join(project, '.evcrate', 'project-publication', projectIdentity));
+  const id = 'release-1';
+  const workspaceName = `.evcrate-publish-${id}`;
+  const transaction = directory(join(project, workspaceName));
+  const backups = directory(join(transaction, 'backups'));
+  writeAtomicFile(join(backups, '0'), text('old-v3'));
+  const destination = join(project, '.omp', 'agent', 'alpha.md');
+  directory(join(project, '.omp', 'agent'));
+  writeFileSync(destination, 'new-v3');
+  chmodSync(destination, 0o600);
+  const statBackup = lstatSync(join(backups, '0'));
+  const statDest = lstatSync(destination);
+
+  try {
+    const journalPath = join(projectState, 'publication-journal.json');
+    const parentStat = lstatSync(project);
+    const transStat = lstatSync(transaction);
+    const manifestPath = '.evcrate/build-manifest-omp.json';
+    const manifestDigest = 'c'.repeat(64);
+
+    // Schema 3 operation MUST NOT contain mode property
+    const operations = [{
+      target: 'omp', binding: '.omp', local_root: '.omp', relative_path: 'agent/alpha.md',
+      kind: 'file', action: 'update', destination: '.omp/agent/alpha.md', backup: 'backups/0',
+      before: {
+        present: true, kind: 'file', device: Number(statBackup.dev), inode: Number(statBackup.ino),
+        size: Number(statBackup.size), hash: digest('old-v3'), mode: 0o644
+      },
+      intendedHash: digest('new-v3'),
+      intended: {
+        present: true, kind: 'file', device: Number(statDest.dev), inode: Number(statDest.ino),
+        size: Number(statDest.size), hash: digest('new-v3')
+      },
+      promoted: true
+    }];
+    const harness = {
+      phase: 'harness', scope: 'project', status: 'promoting',
+      release_id: id, selected_targets: ['omp'],
+      binding_order: ['.omp'], managed_paths: { omp: { '.omp': ['agent/alpha.md'] } },
+      previous_managed_paths: {},
+      build_manifest_path: manifestPath, build_manifest_digest: manifestDigest,
+      transaction_dir: `release-${id}`, retained_release_id: null,
+      destination_root: resolve(project), durable_state_root: resolve(projectState),
+      workspace_root: resolve(transaction), workspace_name: workspaceName,
+      project_identity: projectIdentity, retention: 'none'
+    };
+    const journal = {
+      schema_version: 3,
+      transaction_type: 'target-publication',
+      status: 'staged',
+      release_id: id,
+      home_root: resolve(project),
+      transaction_dir: `release-${id}`,
+      selected_targets: ['omp'],
+      binding_order: ['.omp'],
+      managed_paths: { omp: { '.omp': ['agent/alpha.md'] } },
+      previous_managed_paths: {},
+      build_manifest_path: manifestPath,
+      build_manifest_digest: manifestDigest,
+      retained_release_id: null,
+      retain_transaction: false,
+      operation_count: 1,
+      operations_digest: hashBytes(canonicalJsonBytes(operations)),
+      operations,
+      logical_phase: 'harness',
+      records: { harness },
+      scope: 'project',
+      destination_root: resolve(project),
+      durable_state_root: resolve(projectState),
+      workspace_root: resolve(transaction),
+      workspace_name: workspaceName,
+      workspace_device: Number(transStat.dev),
+      workspace_inode: Number(transStat.ino),
+      workspace_parent_device: Number(parentStat.dev),
+      workspace_parent_inode: Number(parentStat.ino),
+      project_identity: projectIdentity,
+      retention: 'none',
+      lock_paths: [join(projectState, 'publish.lock')],
+      lock_order: ['project']
+    };
+
+    writeAtomicFile(journalPath, canonicalJsonBytes(journal));
+
+    assert.throws(
+      () => recoverAndMigrateProjectStateUnlocked(projectState, project, projectIdentity),
+      (error) => error?.code === 'RECOVERY_FAILED'
+    );
+  } finally {
+    rmSync(fixtureValue.root, { recursive: true, force: true });
+  }
+});
+

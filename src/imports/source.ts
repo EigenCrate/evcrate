@@ -13,7 +13,7 @@ export const MAX_IMPORT_BYTES = 64 * 1024 * 1024;
 export const MAX_IMPORT_FILE_BYTES = 16 * 1024 * 1024;
 export const MAX_IMPORT_DEPTH = 32;
 export const MAX_IMPORT_PATH_BYTES = 4096;
-const SCRIPT_SUFFIX = /\.(?:bash|cjs|fish|js|mjs|pl|ps1|rb|sh|zsh)$/iu;
+const SCRIPT_SUFFIX = /\.(?:bash|cjs|fish|js|mjs|pl|py|ps1|rb|sh|zsh)$/iu;
 const MAX_IMPORT_DIRECTORIES = 100_000;
 export interface ImportSourceEntry { readonly path: string; readonly bytes: Uint8Array; readonly executable: boolean; }
 export interface ImportSourceDirectory { readonly path: string; }
@@ -49,8 +49,8 @@ function readFile(path: string, initial: Stats): Uint8Array {
   return Uint8Array.from(bytes);
 }
 function shebang(bytes: Uint8Array): boolean { return bytes.length > 1 && bytes[0] === 0x23 && bytes[1] === 0x21; }
-function capabilityFor(path: string, stat: Stats, bytes: Uint8Array): boolean {
-  return (Number(stat.mode) & 0o111) !== 0 || SCRIPT_SUFFIX.test(path) || shebang(bytes);
+function capabilityFor(path: string, _stat: Stats, bytes: Uint8Array): boolean {
+  return SCRIPT_SUFFIX.test(path) || shebang(bytes);
 }
 function isExecutable(stat: Stats, bytes: Uint8Array): boolean {
   return (Number(stat.mode) & 0o111) !== 0 || shebang(bytes);
