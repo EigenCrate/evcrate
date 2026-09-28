@@ -16,10 +16,16 @@ const { createWorkspace, cleanupWorkspace, verifyWorkspace } = require('./isolat
 const {
   createRoutingError, isRoutingError, serializeRoutingError, ERROR_CODES
 } = require('./errors.cjs');
-const { validateCapabilityAttestation, isPlainObject, classifyAttemptFailure } = require('./adapter-contract.cjs');
+const { validateCapabilityAttestation, isPlainObject, classifyAttemptFailure, assertBackendEnabled } = require('./adapter-contract.cjs');
 const { buildSuccessEnvelope, buildFailureEnvelope } = require('./controller-envelope.cjs');
 const { recordStartedExecution, recordTerminalExecution, updateStartedAttempts } = require('./history-store.cjs');
-const { resolveWindowsExecutable } = require('./windows-platform.cjs');
+const {
+  isWindows,
+  canonicalWindowsEnvironmentContext,
+  resolveWindowsExecutable,
+  resolveWindowsLaunchRecord,
+  verifyWindowsLaunchRecord
+} = require('./windows-platform.cjs');
 const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
 
@@ -73,6 +79,12 @@ const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
 function fail(code) { throw createRoutingError(code); }
 function codeOf(error) { return isRoutingError(error) ? error.code : error?.code || error?.error?.code; }
 function dependency(deps, name, fallback) { return typeof deps[name] === 'function' ? deps[name] : fallback; }
+function wrapRunnerWithLaunchRecord(runner, launchRecord) {
+  if (!launchRecord || !runner || typeof runner.run !== 'function') return runner;
+  return {
+    run: (inv, opts) => runner.run(inv, { ...opts, launchRecord })
+  };
+}
 
 function resolveExecutablePath(executable, envPath) {
   if (typeof executable !== 'string' || !executable) return null;
@@ -222,11 +234,24 @@ async function runController(input, dependencies = {}) {
     if (checkpoint.version === 2) {
       digest = checkpointDigest(checkpoint);
     }
-    const environment = dependencies.environment || process.env;
-    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(environment?.HOME);
+    const sourceEnvironment = dependencies.environment || process.env;
+    let environment;
+    let trustedHome;
+    if (isWindows) {
+      const winCtx = canonicalWindowsEnvironmentContext(sourceEnvironment, {
+        cwd: dependencies.cwd || process.cwd()
+      });
+      environment = winCtx.canonicalEnv;
+      trustedHome = winCtx.trustedHome;
+      projectId = winCtx.projectId;
+    } else {
+      environment = sourceEnvironment;
+      trustedHome = sourceEnvironment?.HOME;
+      const projectRoot = path.resolve(dependencies.cwd || process.cwd());
+      projectId = createHash('sha256').update(projectRoot).digest('hex');
+    }
+    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(trustedHome);
     selected = targetFromPolicy(loaded?.policy ?? loaded);
-    const projectRoot = path.resolve(dependencies.cwd || process.cwd());
-    projectId = createHash('sha256').update(projectRoot).digest('hex');
 
     async function maybeRecordStarted() {
       if (auditStartedAttempted || checkpoint?.version !== 2 || !selected?.policy?.history) return;
@@ -295,17 +320,26 @@ async function runController(input, dependencies = {}) {
     const generationRunnerFactory = dependencies.createGenerationRunner || createGenerationRunner;
 
     async function qualifyRoute(targetRoute, probeDeadline) {
+      assertBackendEnabled(targetRoute.backend);
       const routeAdapter = registryLookup(dependencies, targetRoute.backend);
       if (!routeAdapter || typeof routeAdapter.probeVersion !== 'function'
         || typeof routeAdapter.probeAuth !== 'function'
         || typeof routeAdapter.probeCapabilities !== 'function') {
         fail('ADAPTER_CONTRACT_INVALID');
       }
-      const probeRunner = probeRunnerFactory({
+      let launchRecord = null;
+      if (isWindows) {
+        launchRecord = resolveWindowsLaunchRecord(targetRoute.backend, environment, targetRoute.backend);
+        if (!launchRecord || !verifyWindowsLaunchRecord(launchRecord)) {
+          fail('EXECUTABLE_UNAVAILABLE');
+        }
+      }
+      const rawProbeRunner = probeRunnerFactory({
         runner: probeTrackingRunner,
         deadline: probeDeadline,
         now
       });
+      const probeRunner = launchRecord ? wrapRunnerWithLaunchRecord(rawProbeRunner, launchRecord) : rawProbeRunner;
       const context = {
         checkpoint,
         prompt: checkpoint.version === 2 ? formatMentorPrompt(checkpoint) : serializeCheckpoint(checkpoint),
@@ -335,7 +369,7 @@ async function runController(input, dependencies = {}) {
       try {
         const testInv = await routeAdapter.buildInvocation(context);
         qualifiedExecutable = testInv.executable;
-        const envPath = environment?.PATH || process.env.PATH;
+        const envPath = Object.prototype.hasOwnProperty.call(environment || {}, 'PATH') ? environment.PATH : process.env.PATH;
         qualifiedExecutablePath = resolveExecutablePath(qualifiedExecutable, envPath);
       } catch {}
       return {
@@ -344,7 +378,8 @@ async function runController(input, dependencies = {}) {
         capabilities,
         context,
         qualifiedExecutable,
-        qualifiedExecutablePath
+        qualifiedExecutablePath,
+        launchRecord
       };
     }
 
@@ -441,11 +476,19 @@ async function runController(input, dependencies = {}) {
 
         if (dependencies.signal?.aborted) fail('CANCELLED');
 
-        const generationRunner = generationRunnerFactory({
+        if (primaryQualified.launchRecord) {
+          if (!verifyWindowsLaunchRecord(primaryQualified.launchRecord)) {
+            fail('EXECUTABLE_UNAVAILABLE');
+          }
+        }
+        const rawGenerationRunner = generationRunnerFactory({
           runner: generationTrackingRunner,
           wait: selected.policy?.wait || {},
           now
         });
+        const generationRunner = primaryQualified.launchRecord
+          ? wrapRunnerWithLaunchRecord(rawGenerationRunner, primaryQualified.launchRecord)
+          : rawGenerationRunner;
 
         let execution;
         let executionError = null;
@@ -456,7 +499,7 @@ async function runController(input, dependencies = {}) {
           if (primaryQualified.qualifiedExecutable && invocation.executable !== primaryQualified.qualifiedExecutable) {
             fail('EXECUTABLE_UNAVAILABLE');
           }
-          const envPath = environment?.PATH || process.env.PATH;
+          const envPath = Object.prototype.hasOwnProperty.call(environment || {}, 'PATH') ? environment.PATH : process.env.PATH;
           const currentExecPath = resolveExecutablePath(invocation.executable, envPath);
           if (primaryQualified.qualifiedExecutablePath && currentExecPath !== primaryQualified.qualifiedExecutablePath) {
             fail('EXECUTABLE_UNAVAILABLE');
@@ -717,11 +760,19 @@ async function runController(input, dependencies = {}) {
         const backupAttemptId = makeUuid();
         attemptChildSpawned = false;
 
-        const generationRunner = generationRunnerFactory({
+        if (backupQualified.launchRecord) {
+          if (!verifyWindowsLaunchRecord(backupQualified.launchRecord)) {
+            fail('EXECUTABLE_UNAVAILABLE');
+          }
+        }
+        const rawGenerationRunner = generationRunnerFactory({
           runner: generationTrackingRunner,
           wait: selected.policy?.wait || {},
           now
         });
+        const generationRunner = backupQualified.launchRecord
+          ? wrapRunnerWithLaunchRecord(rawGenerationRunner, backupQualified.launchRecord)
+          : rawGenerationRunner;
 
         let backupExecution;
         let backupExecutionError = null;
@@ -732,7 +783,7 @@ async function runController(input, dependencies = {}) {
           if (backupQualified.qualifiedExecutable && invocation.executable !== backupQualified.qualifiedExecutable) {
             fail('EXECUTABLE_UNAVAILABLE');
           }
-          const envPath = environment?.PATH || process.env.PATH;
+          const envPath = Object.prototype.hasOwnProperty.call(environment || {}, 'PATH') ? environment.PATH : process.env.PATH;
           const currentExecPath = resolveExecutablePath(invocation.executable, envPath);
           if (backupQualified.qualifiedExecutablePath && currentExecPath !== backupQualified.qualifiedExecutablePath) {
             fail('EXECUTABLE_UNAVAILABLE');
@@ -1195,8 +1246,18 @@ async function runQualificationDiagnostic(input, dependencies = {}) {
     const request = parseDiagnosticRequest(rawRequest);
     if (dependencies.signal?.aborted) fail('CANCELLED');
     const sourceEnvironment = dependencies.environment || process.env;
-    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(sourceEnvironment?.HOME);
+    let trustedHome;
+    if (isWindows) {
+      const winCtx = canonicalWindowsEnvironmentContext(sourceEnvironment, {
+        cwd: dependencies.cwd || process.cwd()
+      });
+      trustedHome = winCtx.trustedHome;
+    } else {
+      trustedHome = sourceEnvironment?.HOME;
+    }
+    const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(trustedHome);
     target = targetFromPolicy(loaded?.policy ?? loaded).target;
+    assertBackendEnabled(target.backend);
     adapter = registryLookup(dependencies, target.backend);
     if (!adapter || typeof adapter.probeVersion !== 'function' || typeof adapter.probeAuth !== 'function'
       || typeof adapter.probeCapabilities !== 'function') fail('ADAPTER_CONTRACT_INVALID');
@@ -1206,13 +1267,18 @@ async function runQualificationDiagnostic(input, dependencies = {}) {
       authKeys: Array.isArray(adapter.authKeys) ? adapter.authKeys : [],
       requestDepth: 0
     });
+    let launchRecord = null;
+    if (isWindows) {
+      launchRecord = resolveWindowsLaunchRecord(target.backend, environment, target.backend);
+    }
     let cwd;
     try { cwd = dependencies.cwd || process.cwd(); } catch { fail('CWD_INVALID'); }
     const workspaceRoot = dependencies.workspaceRoot || cwd;
     const baseRunner = dependencies.runner || createRunner();
     const timeoutMs = Number.isFinite(target.timeout_ms) ? target.timeout_ms : 900_000;
     const deadline = started + timeoutMs;
-    const deadlineRunner = createDeadlineRunner({ runner: baseRunner, deadline, now });
+    const rawDeadlineRunner = createDeadlineRunner({ runner: baseRunner, deadline, now });
+    const deadlineRunner = launchRecord ? wrapRunnerWithLaunchRecord(rawDeadlineRunner, launchRecord) : rawDeadlineRunner;
     const context = {
       request, target, runner: deadlineRunner, environment, signal: dependencies.signal,
       cwd, workspaceRoot, requestDepth: 0, createInvocation: dependencies.createInvocation
