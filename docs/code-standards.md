@@ -6,8 +6,10 @@
 Phase E03 provider-neutral embedded UI, canonical harness resources, shared advisor
 controller, generated projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
-2026-09-15) for standalone installer lifecycle and `version --json`; live runtime
-commands and vendor qualification remain Linux-only and operator-gated.
+2026-09-15) for the standalone installer lifecycle and `version --json`. Native
+Windows advisor invocation and its 36-file closure are implemented and isolated-
+smoked but unqualified; live provider, console-approval, and vendor qualification
+remain gated.
 
 **Plugin gate:** Standalone picker source is removed; joint G4 qualification/sign-off
 is unverified, and standalone retirement is not release-authorized.
@@ -265,7 +267,7 @@ Readiness Repair Phase 02 passed review at 9.2/10 on 2026-09-28; this is impleme
 - `windows-native.cs` assigns the provider to a non-breakaway, kill-on-close Job at process creation and captures its creation token from the launch handle.
 - `runner.cjs` accepts success only after positive empty-Job confirmation; cancellation, probe timeout, output limit, transport error, or controller EOF terminate the Job. Unknown cleanup blocks success/retry; Windows `taskkill` and teardown-time PID lookup are prohibited.
 - `state-human.cjs` uses verified `CONIN$`/`CONOUT$` for exact challenge observation, independent of JSON stdin; piped JSON is never human approval. Existing state replay/revision checks and POSIX process-group/`/dev/tty` paths remain unchanged.
-- Repair Phase 03 owns provider-launch identity; Phase 04 owns manual attached-console, Linux runtime, and vendor qualification. Windows installer lifecycle and `version --json` remain the only qualified Windows release boundary; advisor filesystem owner checks remain removed under the trusted-files policy.
+- Readiness Repairs 03–04 completed provider-launch identity and verification/readiness; their completion does not complete the original Phase 03 invocation/publication plan. Its host-aware caller and exact closure now have isolated smoke evidence at 67% (4/6 checklist entries), but the original plan remains in progress, not DONE, and the production Windows runtime is unqualified. The separate standalone install/publication flow remains unverified. Installer lifecycle and `version --json` remain the only qualified Windows release boundary; advisor filesystem owner checks remain removed under the trusted-files policy.
 
 
 ### Portable advisor contract runtime

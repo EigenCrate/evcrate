@@ -12,6 +12,7 @@ GitHub-hosted Windows Server 2025 (`windows-2025`) x64 across Windows PowerShell
 5.1/PowerShell 7 and Node.js 22.19.0/24.21.0 for the standalone installer
 lifecycle and `version --json`. Runtime/vendor qualification, production HOME
 publication, npm publication, deployment, and rollout remain separate gates.
+**Native Windows advisor status:** Host-aware caller invocation and the exact controller package closure are implemented; isolated `npm pack`/install plus isolated HOME publication was smoke-tested. This does not qualify Windows advisor runtime, and the separate standalone install/publication flow remains unverified. No production HOME was changed.
 
 ## Download and installation
 
@@ -112,14 +113,18 @@ When overriding local assets, provide `Archive`, `Checksum`, and `Metadata`
 together. `RootDir` selects the installation root; `DataDir` is an equivalent
 root/data override when `RootDir` is not supplied.
 
-**Bounded Windows support.** Proven on hosted `windows-2025` x64 with Windows
-PowerShell 5.1 and PowerShell 7, and Node.js 22.19.0 and 24.21.0, for
-`install`, repeat-install, `repair`, upgrade, `rollback`, `uninstall`, and clean
-installation verification with `evcrate version --json`. Runtime commands
-(`publish`, `health`, and advisor execution) remain Linux-only. Desktop/UAC,
-SmartScreen, Authenticode, enterprise-policy, ARM64, self-hosted-runner, and
-execution-policy-workaround behavior is not claimed. PR smoke is diagnostic;
-only the four-row release matrix authorizes publication.
+**Bounded Windows support.** The hosted `windows-2025` x64 matrix with Windows
+PowerShell 5.1/7 and Node.js 22.19.0/24.21.0 qualifies only the standalone
+installer lifecycle and clean-install `evcrate version --json` path. `publish`
+and `health` remain outside the Windows runtime claim. Native Windows advisor
+invocation/packaging are implemented but unqualified: isolated `npm pack`/install
+and HOME-publication smoke verifies closure and state transport only, not
+`ADVICE_READY`, provider execution, or positive attached-console approval. The
+separate standalone install/publication flow remains unverified. Existing POSIX
+invocation is unchanged; WSL state init/get is smoke evidence, not full Linux
+qualification. Desktop/UAC, SmartScreen, Authenticode, enterprise-policy, ARM64,
+self-hosted-runner, and execution-policy-workaround behavior is not claimed.
+PR smoke is diagnostic; only the four-row release matrix authorizes publication.
 
 ## Developer quick start
 

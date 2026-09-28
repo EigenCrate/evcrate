@@ -59,6 +59,10 @@ function resolveAndValidateSpecifier(specifier, currentFile, distRoot, realDistR
     throw new Error(`Native addon (.node) forbidden in runtime closure: ${resolved}`);
   }
 
+  if (/\.(?:cs|ps1|exe|dll|cmd|bat)$/iu.test(resolved)) {
+    throw new Error(`Non-JS native asset (${path.extname(resolved)}) forbidden in runtime closure: ${resolved}`);
+  }
+
   const realResolved = fs.realpathSync(resolved);
   if (!realResolved.startsWith(`${realDistRoot}${path.sep}`) && realResolved !== realDistRoot) {
     throw new Error(`Module ${realResolved} escapes dist boundary ${realDistRoot}`);

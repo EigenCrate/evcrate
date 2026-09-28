@@ -3,8 +3,8 @@
 **Status:** Current implementation reference; filesystem-policy cutover Phases 01–02 completed 2026-09-27; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
 **DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
-**Windows support:** Installer/version qualification remains the only qualified Windows release boundary; native advisor Repair Phases 01–04 are complete, but production runtime readiness remains NO-GO.
-**Native Windows advisor status:** Repair Phase 04 verification completed 2026-09-28: 20/20 focused tests and 390/390 final required-suite runs passed; independent review scored 9.0/10 with no critical findings. Linux runtime, genuine positive attached-console observation, supported Pi/OMP/vendor qualification, and explicit user approval remain unproven; production Windows advisor runtime is not qualified. State/history owner checks were superseded by the cross-platform trusted-files policy.
+**Windows support:** Installer/version qualification remains the only qualified Windows release boundary. Native advisor invocation and packaging are implemented and isolated-smoked, but production Windows advisor runtime remains unqualified.
+**Native Windows advisor status:** Readiness repairs 01–04 are complete; Repair Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 review and no critical findings. Original Phase 03 implementation is in progress at 67% (4/6 checklist entries), not DONE. `ADVICE_READY`, live provider/Pi/OMP, positive attached-console, and explicit approval are unproven; WSL state init/get is only a smoke, not full Linux qualification. State/history owner checks are superseded by the cross-platform trusted-files policy.
 **Updated:** 2026-09-28
 
 **Authority:** TypeScript control plane and the canonical advisor controller source
@@ -262,9 +262,9 @@ permission modes, and reject missing, extra, stale, or mismatched entries. Linux
 `install.sh` grants mandatory CLI/advisor roles execute bits regardless of archive
 mode and runs the staged CLI directly; required chmod failure aborts installation.
 
-Native Windows advisor Phase 02 expands the synchronized `install.sh` and
-`install.ps1` controller inventories to 36 code-point-sorted paths. The manifest
-suite asserts exact count/hash parity and rejects viewer and external-package entries.
+Native Windows advisor Phase 02 synchronizes the `install.sh` and `install.ps1` inventories at exactly 36 code-point-sorted paths; manifests verify exact count/hash parity and reject viewer/external-package assets.
+Phase 03 is in progress at 67% (4/6 implementation checklist entries), not DONE: PowerShell 5.1 uses explicit `HOME`, then `USERPROFILE`/platform profile fallback, invokes Node with the absolute HOME controller, and streams BOM-free UTF-8 stdin; the existing Linux/POSIX caller is unchanged.
+Isolated `npm pack`/install and HOME-publication smoke verified all 36 closure hashes and left routing policy unchanged; PowerShell 5.1 observed Unicode `STATE_READY`. The separate standalone install/publication flow remains unverified. WSL Ubuntu 22.04 on ext4 passed state init/get only; neither proves `ADVICE_READY`, provider/Pi/OMP, positive attached-console, or full runtime qualification.
 
 ## 5. Shared advisor controller
 
@@ -646,7 +646,7 @@ Linux x64 remains the qualified boundary for live installed-CLI checks.
 Windows release qualification covers only installer lifecycle and `version --json`
 on hosted Windows Server 2025 x64 (PowerShell 5.1/7; Node 22.19.0/24.21.0).
 Native advisor readiness repairs 01–04 are complete; Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 independent review and no critical findings. This closes repair verification, not production Windows qualification.
-Linux runtime, genuine positive attached-console observation, supported Pi/OMP/vendor qualification, and explicit user approval remain unproven. Original Phase 03 remains NO-GO; desktop/signing/policy environments, publication, and deployment are separate gates.
+The original Phase 03 implementation is in progress at 67% (4/6 checklist items), remains unaccepted; runtime remains NO-GO pending genuine positive attached-console observation, supported Pi/OMP/provider and Linux qualification, and explicit approval. The separate standalone install/publication flow is unverified. Desktop/signing/policy environments, production publication, and deployment remain separate gates.
 The Hook Materialization Scope Distribution milestone's dated proof recorded
 512/512 tests, a 29-file closure, `distribute:check`, and installed Linux fixtures;
 these do not qualify live vendors or authorize production HOME publication.
