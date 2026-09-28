@@ -4,7 +4,19 @@
 
 **Updated:** 2026-09-28
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete. Windows readiness repairs 4/4 complete, but original Native Windows advisor Phase 03 remains NO-GO pending Linux/runtime, console, vendor/version qualification, and explicit approval; production Windows runtime is not qualified. Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete. Windows readiness repairs 4/4 complete. Original Native Windows advisor Phase 03 is in progress at 67% (4/6 implementation checklist items); runtime qualification remains NO-GO and production Windows advisor runtime remains unqualified. Package version: `2.3.2`.
+
+### 2026-09-28 — feat(windows): smoke native advisor invocation and package closure
+
+**Status:** Original Phase 03 host invocation and package-closure implementation is in progress at **67% (4/6 checklist entries)**, not accepted or DONE. Windows advisor runtime and production HOME publication remain unqualified.
+**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 03](../plans/260926-1522-windows-advisor-support/phase-03-invocation-publication.md)
+**Verification:** Windows build, `distribute:check`, and `release:check` passed; scoped results recorded 357/357, post-fix 20/20, final adapter 9/9, and Windows controller 282/282 serial. Isolated `npm pack`/install and isolated HOME publication verified exactly one 36-file controller closure and all hashes; user routing policy was unchanged. The separate standalone install/publication flow remains unverified.
+
+- The published controller handled a Unicode state request through Windows PowerShell 5.1 and returned `STATE_READY`. PowerShell 5.1 uses explicit `HOME`, then `USERPROFILE`/platform profile fallback, and BOM-free UTF-8 stdin; the Linux/POSIX caller is unchanged.
+- WSL Ubuntu 22.04 on ext4 passed state init/get smoke only; no full Linux suite or qualification is claimed.
+- Third-cycle review scored 9.0/10 with no critical findings. Its accepted low warning notes PowerShell typed comparisons can coerce wire string `"1"`; a concurrent state-CLI timeout's resolution remains unproven.
+- No `ADVICE_READY`, genuine positive attached-console, live provider/Pi/OMP, supported vendor, or production HOME qualification is claimed; no production HOME was changed.
+
 Older phase records remain in the linked archive.
 
 ### 2026-09-28 — test(advisor): complete Windows advisor readiness verification (Repair Phase 04)

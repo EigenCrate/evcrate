@@ -22,8 +22,7 @@ at 16 KiB; total serialized checkpoint JSON must not exceed 32 KiB UTF-8.
 
 ## Checkpoint object
 
-Pass the object directly to `~/.evcrate/bin/evcrate-advisor`. It has the
-fourteen canonical fields and no outer operation object:
+Pass the object directly to the central controller using the host-aware invocation contract in `.copilot/evcrate/workflows/advisor-mentoring.md` (direct path on POSIX, or Node with absolute quoted controller path and BOM-free UTF-8 stdin on Windows). It has the fourteen canonical fields and no outer operation object:
 
 ```json
 {

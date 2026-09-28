@@ -23,7 +23,23 @@ function closure(root: string): void {
   const rootPath = resolve(root);
   for (const entry of ADVISOR_CONTROLLER_FILES) {
     const path = join(root, entry);
-    const source = new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(path));
+    let source: string;
+    try {
+      source = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(readFileSync(path));
+    } catch {
+      fail();
+    }
+    if (source.startsWith('\uFEFF')) fail();
+
+    if (entry.endsWith('.cs') || entry.endsWith('.ps1')) {
+      // Windows native text assets (.cs, .ps1) are owned text data, not JavaScript modules.
+      continue;
+    }
+
+    if (entry !== 'evcrate-advisor' && !entry.endsWith('.cjs') && !entry.endsWith('.js')) {
+      fail();
+    }
+
     const literals = new Map<number, string>();
     for (const match of source.matchAll(LITERAL_REQUIRE)) literals.set(match.index ?? -1, match[2]);
     for (const call of source.matchAll(REQUIRE_CALL)) {
@@ -36,7 +52,8 @@ function closure(root: string): void {
       }
       const importedPath = resolve(dirname(path), specifier);
       const imported = relative(rootPath, importedPath).split('\\').join('/');
-      if (!imported || imported === '..' || imported.startsWith('../') || !allowed.has(imported)) fail();
+      if (!imported || imported === '..' || imported.startsWith('../') || !allowed.has(imported)
+        || imported.endsWith('.cs') || imported.endsWith('.ps1')) fail();
     }
   }
 }

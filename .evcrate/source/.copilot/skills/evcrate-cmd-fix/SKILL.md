@@ -31,8 +31,9 @@ or differently cased text unchanged. Strip the final token into
 trailing `--advice` to the delegated command. If the selected specialist does
 not declare `--advice`, route to `/evcrate-cmd-fix-hard` with the same `WORK_ARGUMENTS` so
 the requested advice gate is not silently dropped. Otherwise pass no mode token.
-Read `.copilot/evcrate/workflows/advisor-mentoring.md` before routing. Its checkpoint
-request goes directly to `~/.evcrate/bin/evcrate-advisor`.
+Read `.copilot/evcrate/workflows/advisor-mentoring.md` before routing. Checkpoint and state
+requests use its authoritative host-aware invocation contract (POSIX direct path or
+Windows PowerShell / Node argv-array).
 
 ## Execution Contract
 
@@ -89,7 +90,8 @@ a route for the user to run manually.
 When explicit advice mode is active, apply the Advice Mode routing rule above
 before selecting a route, then execute the selected command under the contract
 above. Never report an advisor result before the delegated command returns a
-terminal `ADVICE_READY` result from `~/.evcrate/bin/evcrate-advisor`.
+terminal `ADVICE_READY` result from the central controller according to the
+host-aware invocation contract in `.copilot/evcrate/workflows/advisor-mentoring.md`.
 
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail

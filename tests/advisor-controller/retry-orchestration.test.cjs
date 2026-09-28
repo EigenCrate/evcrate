@@ -101,7 +101,28 @@ function setupTestEnv() {
   fs.mkdirSync(path.join(home, '.evcrate'), { recursive: true, mode: 0o700 });
   fs.mkdirSync(tmp, { mode: 0o700 });
   fs.writeFileSync(path.join(home, '.evcrate/advisor-routing.json'), `${mockPolicy()}\n`, { mode: 0o600 });
+  if (process.platform === 'win32') {
+    const bin = path.join(root, 'bin');
+    for (const [command, name] of [
+      ['codex', '@openai/codex'],
+      ['omp', '@oh-my-pi/pi-coding-agent']
+    ]) {
+      const packageDir = path.join(bin, 'node_modules', ...name.split('/'));
+      fs.mkdirSync(path.join(packageDir, 'bin'), { recursive: true });
+      fs.writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({
+        name, version: '1.0.0', bin: { [command]: `bin/${command}.js` }
+      }));
+      fs.writeFileSync(path.join(packageDir, 'bin', `${command}.js`), '#!/usr/bin/env node\n');
+      fs.writeFileSync(path.join(bin, `${command}.cmd`),
+        `@echo off\r\nnode "%~dp0\\node_modules\\${name.replace('/', '\\')}\\bin\\${command}.js" %*\r\n`);
+    }
+  }
   const environment = { ...process.env, HOME: home, TMPDIR: tmp };
+  if (process.platform === 'win32') {
+    const inheritedPath = Object.entries(environment).find(([key]) => key.toLowerCase() === 'path')?.[1] ?? '';
+    for (const key of Object.keys(environment)) if (key.toLowerCase() === 'path') delete environment[key];
+    environment.PATH = `${path.join(root, 'bin')}${path.delimiter}${inheritedPath}`;
+  }
   delete environment.EVCRATE_ADVISOR_ACTIVE;
   delete environment.EVCRATE_ADVISOR_DEPTH;
   return {

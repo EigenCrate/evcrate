@@ -76,10 +76,86 @@ Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher b
 `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`; this contract supplies bounded evidence
 and does not duplicate route or adapter selection.
 
+## Authoritative host-aware controller invocation
+
+The canonical caller workflow dispatches to the central controller according to the host platform and shell environment. Callers must select the native execution transport matching the active host; never assume a POSIX shell on Windows or execute an extensionless file directly without `node`.
+
+### 1. Platform dispatch rules
+
+1. **Linux / POSIX shell**:
+   - Controller executable: `~/.evcrate/bin/evcrate-advisor`.
+   - Execute directly with trailing arguments (`state <op>`, `history <op>`, or empty for checkpoint inference).
+   - Supply JSON payload via standard input heredoc (`<<'JSON'`) or stdin pipe.
+
+2. **Native Windows PowerShell (Windows PowerShell 5.1 and PowerShell 7+)**:
+   - **HOME resolution**: Use explicit `$env:HOME` when set; an invalid explicit HOME is an error, not a reason to fall back. Only when HOME is unset use `$env:USERPROFILE` if non-empty, otherwise `[Environment]::GetFolderPath('UserProfile')`. This matches the controller's Windows `os.homedir()` fallback even when USERPROFILE is overridden. Never search project roots.
+   - **Controller path**: Build the absolute controller script path under that home and invoke it as a quoted argument to `node`, not as an extensionless executable.
+   - **Encoding safety**: PowerShell 5.1's native-command pipeline encoding is not UTF-8 by default. Save `$OutputEncoding`, set it to BOM-free UTF-8 for JSON stdin, and restore it in `finally`.
+   - **Stdin streaming**: Pipe the exact JSON document (`$jsonPayload | & node "$controller" ...`); never interpolate JSON into command arguments or `-Command`.
+
+3. **Windows programmatic caller (Node.js argv-array)**:
+   - Invoke `process.execPath` with `[controller, ...args]` and `shell: false`. Do not emit Bash syntax merely because a harness tool is named `bash`.
+   - Select explicit HOME when set, otherwise `os.homedir()`; an invalid explicit HOME fails controller validation.
+   - Use `['state', op]`, `['history', op]`, or `[]` and write the exact JSON as UTF-8 stdin before closing it. Bound output and observe exit status and the terminal envelope.
+
+### 2. Host invocation syntax reference
+
+| Operation | POSIX shell | Windows PowerShell (5.1 / 7+) | Windows programmatic Node (`shell: false`) |
+| :--- | :--- | :--- | :--- |
+| **Checkpoint inference** | `~/.evcrate/bin/evcrate-advisor <<'JSON'` | `$jsonPayload \| & node "$controller"` | `spawn(process.execPath, [controller], { shell: false })` |
+| **State subcommand** | `~/.evcrate/bin/evcrate-advisor state <op> <<'JSON'` | `$jsonPayload \| & node "$controller" state <op>` | `spawn(process.execPath, [controller, 'state', op], { shell: false })` |
+| **History subcommand** | `~/.evcrate/bin/evcrate-advisor history <op> <<'JSON'` | `$jsonPayload \| & node "$controller" history <op>` | `spawn(process.execPath, [controller, 'history', op], { shell: false })` |
+| **Human decision** | `~/.evcrate/bin/evcrate-advisor state human-decision <<'JSON'` | `$jsonPayload \| & node "$controller" state human-decision` | `spawn(process.execPath, [controller, 'state', 'human-decision'], { shell: false })` |
+
+### 3. Windows PowerShell invocation snippet
+
+```powershell
+# $jsonPayload contains the exact JSON body of the chosen state or checkpoint example below.
+# Match arguments to that body: @('state', 'init'), @('state', 'checkpoint'),
+# @('history', 'list'), or @() for checkpoint inference.
+$arguments = @('state', 'init')
+$homeDir = if (Test-Path Env:HOME) { $env:HOME } elseif ($env:USERPROFILE) { $env:USERPROFILE } else { [Environment]::GetFolderPath('UserProfile') }
+if (-not $homeDir -or -not [System.IO.Path]::IsPathRooted($homeDir)) { throw 'Invalid HOME' }
+$controller = Join-Path $homeDir '.evcrate\bin\evcrate-advisor'
+if (-not (Test-Path -LiteralPath $controller -PathType Leaf)) { throw 'Controller not found' }
+$previousEncoding = $OutputEncoding
+try {
+    $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $output = @($jsonPayload | & node "$controller" @arguments)
+    $exitCode = $LASTEXITCODE
+} finally {
+    $OutputEncoding = $previousEncoding
+}
+if ($exitCode -ne 0) { throw "Advisor exited with status $exitCode" }
+if ($output.Count -ne 1 -or $output[0] -isnot [string]) { throw 'Unexpected advisor stdout framing' }
+$result = $output[0] | ConvertFrom-Json
+if ($result -isnot [pscustomobject]) { throw 'Unexpected advisor response shape' }
+$request = $jsonPayload | ConvertFrom-Json
+# For the state init example: other operations need their own expected envelope.
+if ($result.protocol -ne 'evcrate-advisor-state' -or $result.version -ne 1 -or
+    $result.operation -ne 'init' -or
+    $result.status -ne 'STATE_READY' -or $result.state.task_revision -ne 1 -or
+    $result.state.task_run_id -ne $request.task_run_id) {
+    throw 'Unexpected advisor state response'
+}
+```
+
+### 4. Windows programmatic Node invocation
+
+For each operation use `spawn(process.execPath, [controller, ...args], { shell: false, stdio: ['pipe', 'pipe', 'pipe'] })`, where `controller` is the absolute HOME-owned script. Register bounded output, error, and close handlers before `child.stdin.end(jsonPayload, 'utf8')`; parse and validate the operation's response only after the process closes. Use the exact JSON body shown below as `jsonPayload`; never place it in argv.
+
+### 5. Explicit caller state and counsel agent boundaries
+
+1. **Tool-less counsel agent**: The advisor agent (`advisor.md`) is strictly tool-less (`tools: none`). It cannot bootstrap task state, execute controller CLI commands, or recurse into another advisor. Never instruct the counsel agent to invoke itself or the controller.
+2. **Explicit requests require caller state management**: Both explicit `--advice` command invocations and named checkpoints require active task state. The caller workflow owns the state lifecycle and must execute the state machine (`init` -> `checkpoint` -> controller -> `state get` -> `disposition` -> `outcome` -> `complete`).
+3. **Interactive human decision**: State transition `state human-decision` requires authentic interactive console challenge via `/dev/tty` (POSIX) or verified `CONIN$` / `CONOUT$` (Windows). Conversational approval text in chat cannot satisfy or bypass a `needs_human` durable state gate; headless or detached environments fail closed to `needs_human`.
+4. **Terminal results and error handling**: Only an `ADVICE_READY` envelope completes the advice gate (exit code 0). Any `FAILED` envelope, nonzero exit code, process crash, timeout, or malformed JSON leaves the advice gate incomplete. Dependent mutations must never proceed without valid counsel.
 ## Mandatory task-state lifecycle and controller execution
 
 V2 checkpoint consultations require active task state. The state machine transitions:
 `init` (rev 0 -> 1) -> `checkpoint` reserve (rev 1 -> 2) -> controller claim & attach (rev 2 -> 3 -> 4) -> `state get` (reads rev 4) -> `disposition` (rev 4 -> 5) -> bounded work -> `outcome` (rev 5 -> 6) -> `complete` (rev 6 -> completed).
+
+**Host-aware state execution:** The wire protocol payloads below are identical across platforms. POSIX callers execute the bash snippets as shown. Windows PowerShell and programmatic Node callers follow the host-aware invocation contract above, passing the exact JSON payloads via BOM-free UTF-8 stdin without duplicated schema definitions.
 
 ### 1. Initialize task state
 
@@ -183,7 +259,7 @@ JSON
 
 ### 3. Central controller invocation
 
-Pass the exact reserved checkpoint JSON directly to `evcrate-advisor`:
+Pass the exact reserved checkpoint JSON directly to the central controller via the host-aware invocation contract (POSIX direct path or Windows PowerShell / Node argv-array):
 
 ```bash
 ~/.evcrate/bin/evcrate-advisor <<'JSON'
@@ -419,7 +495,8 @@ JSON
    - **Durable Correction Exhaustion** (`correction_count === 3`, `gate_status === 'needs_human'`):
      conversational approval text CANNOT bypass or complete the durable state gate!
      Callers MUST run `state get`, obtain the fresh `task_revision` (16 in the three-failed-cycle
-     sequence), and execute `state human-decision` via the interactive `/dev/tty` challenge
+     sequence), and execute `state human-decision` via the interactive `/dev/tty`
+     (POSIX) or verified `CONIN$` / `CONOUT$` (Windows) challenge
      (`observeTerminalDecision`) to authorize continuation, scope revision, or abandonment.
      If a controlling terminal is unavailable, the state gate remains `needs_human` and the workflow
      stops for operator intervention.
@@ -453,10 +530,11 @@ JSON
    JSON
    ```
    - *Interaction attestation*: The state CLI observes human authorization via an
-     interactive `/dev/tty` challenge (`observeTerminalDecision`). In non-interactive
-     or headless environments where a controlling terminal is unavailable, the
-     state gate remains `needs_human` and the workflow presents host UI for human
-     direction; conversational approval text is never forged as an attestation event.
+     interactive `/dev/tty` (POSIX) or console `CONIN$` / `CONOUT$` (Windows) challenge
+     (`observeTerminalDecision`). In non-interactive or headless environments where a
+     controlling terminal is unavailable, the state gate remains `needs_human` and the
+     workflow halts for operator intervention; conversational approval text is never forged
+     as an attestation event.
 ## Cooperative timing and boundary verification
 
 1. **Cooperative timing**: In-flight independent work (orientation, research,

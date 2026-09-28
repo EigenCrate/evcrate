@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmodSync, cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
@@ -73,6 +73,40 @@ test('controller closure enforces exact 36 files, regular files, and require bou
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
   rmSync(join(copy, 'viewer.js'));
   writeFileSync(join(copy, 'lib', 'advisor', 'runner.cjs'), "require('lodash');\n");
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+});
+test('controller validator treats native text assets (.cs and .ps1) as owned text data, not JavaScript modules', () => {
+  const root = temporaryDirectory();
+  const copy = join(root, 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+
+  const csPath = join(copy, 'lib', 'advisor', 'windows-native.cs');
+  const originalCs = readFileSync(csPath, 'utf8');
+
+  const ps1Path = join(copy, 'lib', 'advisor', 'windows-native.ps1');
+  const originalPs1 = readFileSync(ps1Path, 'utf8');
+
+  // Reject UTF-8 BOM in native text assets.
+  writeFileSync(csPath, `\uFEFF${originalCs}`);
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+  writeFileSync(csPath, originalCs);
+
+  writeFileSync(ps1Path, `\uFEFF${originalPs1}`);
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+  writeFileSync(ps1Path, originalPs1);
+
+  // 3. Reject requiring a native text asset from a JavaScript module
+  const runnerPath = join(copy, 'lib', 'advisor', 'runner.cjs');
+  const originalRunner = readFileSync(runnerPath, 'utf8');
+  writeFileSync(runnerPath, `${originalRunner}\nrequire('./windows-native.cs');\n`);
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+  writeFileSync(runnerPath, `${originalRunner}\nrequire('./windows-native.ps1');\n`);
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+  writeFileSync(runnerPath, originalRunner);
+
+  // 4. Reject arbitrary executable file kinds in controller (no broad executable allowance)
+  const execPath = join(copy, 'lib', 'advisor', 'helper.exe');
+  writeFileSync(execPath, 'binary');
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
 
