@@ -563,6 +563,26 @@ async function runCandidateRelease(options = {}) {
   if (fs.existsSync(outputDir)) {
     fs.rmSync(outputDir, { recursive: true, force: true });
   }
+  // Preflight tag ancestry check: ensure v<package.json.version> is merged into sourceCommit if it exists (production only)
+  if (!options.semanticReleaseFn) {
+    try {
+      const currentPkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
+      const expectedTag = `v${currentPkg.version}`;
+      const tagList = execFileSync('git', ['tag', '--list', expectedTag], { cwd, encoding: 'utf8' }).trim();
+      if (tagList === expectedTag) {
+        const mergedTags = execFileSync('git', ['tag', '--merged', sourceCommit], { cwd, encoding: 'utf8' })
+          .split(/\r?\n/)
+          .map((t) => t.trim());
+        if (!mergedTags.includes(expectedTag)) {
+          throw new Error(`Tag "${expectedTag}" exists but is not merged into source commit "${sourceCommit}". Remote tags are detached from branch history.`);
+        }
+      }
+    } catch (tagCheckErr) {
+      if (tagCheckErr.message && tagCheckErr.message.includes('detached from branch history')) {
+        throw tagCheckErr;
+      }
+    }
+  }
 
   // 5. Create ephemeral bare mirror under runnerTemp
   const mirror = createLocalReleaseMirror({
@@ -651,6 +671,25 @@ async function runCandidateRelease(options = {}) {
     }
     if (nextRelease.gitTag !== `v${nextRelease.version}`) {
       throw new Error(`Release gitTag "${nextRelease.gitTag}" does not match expected "v${nextRelease.version}"`);
+    }
+
+    // Defensive sanity check: nextRelease.version must be strictly greater than current package.json version (production only)
+    if (!options.semanticReleaseFn) {
+      try {
+        const currentPkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
+        const nextParts = String(nextRelease.version).split('.').map(Number);
+        const currParts = String(currentPkg.version).split('.').map(Number);
+        const isLte = nextParts[0] < currParts[0] ||
+          (nextParts[0] === currParts[0] && nextParts[1] < currParts[1]) ||
+          (nextParts[0] === currParts[0] && nextParts[1] === currParts[1] && nextParts[2] <= currParts[2]);
+        if (isLte) {
+          throw new Error(`semantic-release computed version ${nextRelease.version} which is <= current package.json version ${currentPkg.version}. Ensure git tags are merged into the target branch.`);
+        }
+      } catch (verErr) {
+        if (verErr.message && verErr.message.includes('semantic-release computed version')) {
+          throw verErr;
+        }
+      }
     }
 
     // Verify exact seven release assets in distReleaseDir
