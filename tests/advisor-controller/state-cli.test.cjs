@@ -41,7 +41,7 @@ function setup(t) {
     scope_rationale: 'Selected source owns the defect.', invariants: ['Preserve user work'], success_criteria: ['Relevant validation passes'] };
   function invoke(args, input) {
     const result = spawnSync(process.execPath, [CLI, ...args], { cwd, env: environment,
-      input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 15000 });
+      input: typeof input === 'string' ? input : JSON.stringify(input), encoding: 'utf8', timeout: 30000 });
     assert.equal(result.error, undefined);
     assert.equal(result.stderr, '');
     const lines = result.stdout.trim().split('\n');

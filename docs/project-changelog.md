@@ -4,30 +4,38 @@
 
 **Updated:** 2026-09-28
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete. Windows readiness repairs 4/4 complete. Original Native Windows advisor Phase 03 is in progress at 67% (4/6 implementation checklist items); runtime qualification remains NO-GO and production Windows advisor runtime remains unqualified. Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
 
-### 2026-09-28 — feat(windows): smoke native advisor invocation and package closure
+### 2026-09-28 — test(windows): qualify native advisor and protect Linux (Phase 04)
 
-**Status:** Original Phase 03 host invocation and package-closure implementation is in progress at **67% (4/6 checklist entries)**, not accepted or DONE. Windows advisor runtime and production HOME publication remain unqualified.
-**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 03](../plans/260926-1522-windows-advisor-support/phase-03-invocation-publication.md)
-**Verification:** Windows build, `distribute:check`, and `release:check` passed; scoped results recorded 357/357, post-fix 20/20, final adapter 9/9, and Windows controller 282/282 serial. Isolated `npm pack`/install and isolated HOME publication verified exactly one 36-file controller closure and all hashes; user routing policy was unchanged. The separate standalone install/publication flow remains unverified.
+**Status:** Phase 04 DONE (2026-09-28; review approved 9.2/10).  
+**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 04](../plans/260926-1522-windows-advisor-support/phase-04-qualification.md)  
+**Evidence:** [Qualification report](../plans/260926-1522-windows-advisor-support/reports/phase-04-qualification-evidence.md).
 
-- The published controller handled a Unicode state request through Windows PowerShell 5.1 and returned `STATE_READY`. PowerShell 5.1 uses explicit `HOME`, then `USERPROFILE`/platform profile fallback, and BOM-free UTF-8 stdin; the Linux/POSIX caller is unchanged.
-- WSL Ubuntu 22.04 on ext4 passed state init/get smoke only; no full Linux suite or qualification is claimed.
-- Third-cycle review scored 9.0/10 with no critical findings. Its accepted low warning notes PowerShell typed comparisons can coerce wire string `"1"`; a concurrent state-CLI timeout's resolution remains unproven.
-- No `ADVICE_READY`, genuine positive attached-console, live provider/Pi/OMP, supported vendor, or production HOME qualification is claimed; no production HOME was changed.
+- Native Windows behavioral/security regressions passed **10/10** and lifecycle tests **10/10**; advisor parity passed **4/4**, release tests **34/34**, and `release:check` plus `distribute:check` passed.
+- The canonical controller diagnostic protocol qualified OMP 18.4.1 and Codex 0.155.1. Claude 2.1.92 remains unverified (`AUTH_UNAVAILABLE`); Pi 0.84.1 remains unverified (`PROCESS_FAILED`). No mock credentials or fallback were used.
+- Linux protection was confirmed by the full 400/400 test suite on native ext4 in WSL Ubuntu 22.04. The separate Phase 03 sandbox run observed live OMP inference return `ADVICE_READY`; no Codex, Claude, or Pi inference is claimed.
+- Production HOME publication was not performed.
 
-Older phase records remain in the linked archive.
+### 2026-09-28 — feat(windows): complete native advisor invocation and package closure (Phase 03)
+
+**Status:** Phase 03 DONE (2026-09-28; review approved 9.0/10). Host invocation and both sandbox publication paths completed; no production HOME was modified.  
+**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 03](../plans/260926-1522-windows-advisor-support/phase-03-invocation-publication.md)  
+**Verification:** Windows build, `distribute:check`, and `release:check` passed; scoped results recorded 357/357, post-fix 20/20, final adapter 9/9, and Windows controller 282/282 serial. Isolated `npm pack`/install and standalone `install.ps1` sandbox publication verified exact 36-file controller closures and hashes; routing policy was unchanged.
+
+- The published controller handled Unicode and special-character input through Windows PowerShell 5.1 and returned `STATE_READY`; Linux/POSIX invocation remained unchanged.
+- Full Linux qualification on WSL Ubuntu 22.04 native ext4 passed **400/400** tests. Live Windows OMP inference (`openai-codex/gpt-5.6-sol`) advanced state to revision 4, wrote history, and returned an authentic seven-field `ADVICE_READY` envelope.
+- Third-cycle review scored 9.0/10 with no critical findings. Its accepted low warning notes possible PowerShell coercion of wire string `"1"` and unresolved concurrent state-CLI timeout behavior.
 
 ### 2026-09-28 — test(advisor): complete Windows advisor readiness verification (Repair Phase 04)
 
-**Status:** Repair Phase 04 verification complete; readiness repairs 4/4 complete. Original Phase 03 remains NO-GO and production Windows advisor runtime remains unqualified.  
+**Status:** Repair Phase 04 verification complete; readiness repairs 4/4 complete. At that checkpoint the original advisor plan had not yet completed native qualification; see the separate Phase 04 record above.
 **Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Repair Phase 04](../plans/260927-0005-windows-advisor-readiness/phase-04-verification-readiness.md)  
 **Evidence:** [Test report](../plans/reports/testerphase04-260928-0955-verification-readiness.md) · [Review](../plans/reports/code-review-260928-1008-repair-phase-04-readiness.md). Focused verification **20/20**; final required suites **390/390**, 0 failures and 0 skips; independent review **9.0/10**, no critical findings.
 
 - Added `tests/advisor-controller/verification-regressions.test.cjs` for R1–R5 behavior: Job descendant cleanup, trusted-file permission behavior, provider path selection and rejection, no-clobber state creation under interleaving and competing processes, and replacement-workspace preservation.
 - Added `tests/advisor-controller/verification-lifecycle.test.cjs` for pinned-file CAS, supervisor failure boundaries, launch-record and environment validation, isolated source CLI V2 lifecycle/history operations, and unattended/piped-console rejection.
-- Verification completion is not external readiness approval. Linux runtime, genuine positive attached-console observation, supported Pi/OMP/vendor qualification, and explicit user approval remain unproven.
+- This repair verification did not itself establish external readiness; the subsequent native advisor Phase 04 qualification is recorded above. Production HOME publication remains unclaimed.
 
 ### 2026-09-28 — fix(advisor): restore Windows advisor storage and cleanup safety (Repair Phase 01)
 

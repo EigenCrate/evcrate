@@ -242,7 +242,12 @@ test('Isolated Source CLI: Complete V2 consultation lifecycle (init -> reserve -
       bin: { codex: 'bin/codex.js' }
     }));
     fs.copyFileSync(path.join(FIXTURES_DIR, 'fake-codex.cjs'), path.join(pkgDir, 'bin', 'codex.js'));
-    fs.writeFileSync(path.join(f.bin, 'codex.cmd'), '@echo off\r\nnode "%~dp0\\node_modules\\@openai\\codex\\bin\\codex.js" %*\r\n');
+    if (process.platform === 'win32') {
+      fs.writeFileSync(path.join(f.bin, 'codex.cmd'), '@echo off\r\nnode "%~dp0\\node_modules\\@openai\\codex\\bin\\codex.js" %*\r\n');
+    } else {
+      const launcher = path.join(f.bin, 'codex');
+      fs.writeFileSync(launcher, `#!/bin/sh\nexec "${process.execPath}" "${path.join(pkgDir, 'bin', 'codex.js')}" "$@"\n`, { mode: 0o755 });
+    }
 
     // Configure advisor routing policy
     const evcrateDir = path.join(f.home, '.evcrate');

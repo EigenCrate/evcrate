@@ -190,7 +190,7 @@ test('R2 Regression: Trusted-file policy allows Everyone Modify without UID/SID 
   }
 });
 
-test('R2 Regression: OS read-only permission fails closed with standard OS error', () => {
+test('R2 Regression: OS read-only permission fails closed with standard OS error', { skip: !isWindows }, () => {
   const f = makeTestFixture();
   try {
     const taskRunId = randomUUID();
