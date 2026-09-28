@@ -564,10 +564,15 @@ async function runCandidateRelease(options = {}) {
     fs.rmSync(outputDir, { recursive: true, force: true });
   }
   // Preflight tag ancestry check: ensure v<package.json.version> is merged into sourceCommit if it exists (production only)
-  if (!options.semanticReleaseFn) {
+  let startingPkgVersion = null;
+  try {
+    const currentPkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
+    startingPkgVersion = currentPkg.version;
+  } catch {}
+
+  if (!options.semanticReleaseFn && startingPkgVersion) {
     try {
-      const currentPkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
-      const expectedTag = `v${currentPkg.version}`;
+      const expectedTag = `v${startingPkgVersion}`;
       const tagList = execFileSync('git', ['tag', '--list', expectedTag], { cwd, encoding: 'utf8' }).trim();
       if (tagList === expectedTag) {
         const mergedTags = execFileSync('git', ['tag', '--merged', sourceCommit], { cwd, encoding: 'utf8' })
@@ -673,17 +678,16 @@ async function runCandidateRelease(options = {}) {
       throw new Error(`Release gitTag "${nextRelease.gitTag}" does not match expected "v${nextRelease.version}"`);
     }
 
-    // Defensive sanity check: nextRelease.version must be strictly greater than current package.json version (production only)
-    if (!options.semanticReleaseFn) {
+    // Defensive sanity check: nextRelease.version must be strictly greater than starting package.json version (production only)
+    if (!options.semanticReleaseFn && startingPkgVersion) {
       try {
-        const currentPkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'));
         const nextParts = String(nextRelease.version).split('.').map(Number);
-        const currParts = String(currentPkg.version).split('.').map(Number);
-        const isLte = nextParts[0] < currParts[0] ||
-          (nextParts[0] === currParts[0] && nextParts[1] < currParts[1]) ||
-          (nextParts[0] === currParts[0] && nextParts[1] === currParts[1] && nextParts[2] <= currParts[2]);
+        const startParts = String(startingPkgVersion).split('.').map(Number);
+        const isLte = nextParts[0] < startParts[0] ||
+          (nextParts[0] === startParts[0] && nextParts[1] < startParts[1]) ||
+          (nextParts[0] === startParts[0] && nextParts[1] === startParts[1] && nextParts[2] <= startParts[2]);
         if (isLte) {
-          throw new Error(`semantic-release computed version ${nextRelease.version} which is <= current package.json version ${currentPkg.version}. Ensure git tags are merged into the target branch.`);
+          throw new Error(`semantic-release computed version ${nextRelease.version} which is <= starting package.json version ${startingPkgVersion}. Ensure git tags are merged into the target branch.`);
         }
       } catch (verErr) {
         if (verErr.message && verErr.message.includes('semantic-release computed version')) {
