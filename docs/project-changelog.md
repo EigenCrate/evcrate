@@ -3,8 +3,19 @@
 ## Unreleased
 
 **Updated:** 2026-09-28
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Advisor Metrics Explorer complete through Phase 10 (10/10 phases, 100%; completed 2026-09-19). DamHopper Advisor Plugin Replacement Phases E00–E04 complete (5/6 phases, 83.3%; E04 review approved 9.3/10 on 2026-09-22; Gate G3 qualified). All-project advisor history is 100% complete (6/6 phases complete; Phases 00–05 DONE on 2026-09-24). Native Windows advisor support remains 50% (original Phases 01–02 complete; original Phase 03 remains NO-GO pending readiness repairs; production Windows runtime qualification not claimed). Readiness repairs are 50% (Repair Phases 01–02 DONE; Repair Phase 03 provider-launch identity next; Phase 04 qualification pending). Filesystem-policy cutover is 100% (Phases 01 and 02 DONE 2026-09-27; cutover review plan complete). Package version: `2.3.2`.
+
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete. Windows readiness repairs 4/4 complete, but original Native Windows advisor Phase 03 remains NO-GO pending Linux/runtime, console, vendor/version qualification, and explicit approval; production Windows runtime is not qualified. Package version: `2.3.2`.
 Older phase records remain in the linked archive.
+
+### 2026-09-28 — test(advisor): complete Windows advisor readiness verification (Repair Phase 04)
+
+**Status:** Repair Phase 04 verification complete; readiness repairs 4/4 complete. Original Phase 03 remains NO-GO and production Windows advisor runtime remains unqualified.  
+**Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Repair Phase 04](../plans/260927-0005-windows-advisor-readiness/phase-04-verification-readiness.md)  
+**Evidence:** [Test report](../plans/reports/testerphase04-260928-0955-verification-readiness.md) · [Review](../plans/reports/code-review-260928-1008-repair-phase-04-readiness.md). Focused verification **20/20**; final required suites **390/390**, 0 failures and 0 skips; independent review **9.0/10**, no critical findings.
+
+- Added `tests/advisor-controller/verification-regressions.test.cjs` for R1–R5 behavior: Job descendant cleanup, trusted-file permission behavior, provider path selection and rejection, no-clobber state creation under interleaving and competing processes, and replacement-workspace preservation.
+- Added `tests/advisor-controller/verification-lifecycle.test.cjs` for pinned-file CAS, supervisor failure boundaries, launch-record and environment validation, isolated source CLI V2 lifecycle/history operations, and unattended/piped-console rejection.
+- Verification completion is not external readiness approval. Linux runtime, genuine positive attached-console observation, supported Pi/OMP/vendor qualification, and explicit user approval remain unproven.
 
 ### 2026-09-28 — fix(advisor): restore Windows advisor storage and cleanup safety (Repair Phase 01)
 
