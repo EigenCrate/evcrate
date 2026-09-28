@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync, symlinkSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -16,6 +16,16 @@ function runValidator(cwd, args = ['docs', '--src', 'src']) {
     encoding: 'utf8',
     env: { ...process.env }
   });
+}
+function findSystemGrep() {
+  if (process.platform === 'win32') return null;
+  const check = spawnSync('which', ['grep'], { encoding: 'utf8' });
+  if (check.status === 0 && check.stdout.trim()) {
+    return check.stdout.trim();
+  }
+  if (existsSync('/usr/bin/grep')) return '/usr/bin/grep';
+  if (existsSync('/bin/grep')) return '/bin/grep';
+  return null;
 }
 
 function createFixture(setupFn) {
@@ -180,4 +190,145 @@ test('docs-manager instructions specify rg with fallback and declaration inspect
   assert.match(content, /rg -l "function {name}\|class {name}" src/);
   assert.match(content, /grep -rE "function {name}\|class {name}" src/);
   assert.match(content, /open the matched file and inspect the declaration/);
+});
+
+test('validator falls back to grep when rg is missing and preserves directory exclusion', {
+  skip: process.platform === 'win32' ? 'POSIX grep simulation' : false
+}, () => {
+  const grepPath = findSystemGrep();
+  if (!grepPath) return;
+  const fixture = createFixture(({ dir, docsDir, srcDir }) => {
+    const binDir = join(dir, 'grep-only-bin');
+    mkdirSync(binDir, { recursive: true });
+    symlinkSync(grepPath, join(binDir, 'grep'));
+
+    writeFileSync(join(docsDir, 'guide.md'), '# Guide\nUse `grepFallbackFunc()`.\n');
+    writeFileSync(join(srcDir, 'app.js'), 'function grepFallbackFunc() {}\n');
+
+    const nmDir = join(srcDir, 'node_modules');
+    mkdirSync(nmDir, { recursive: true });
+    writeFileSync(join(nmDir, 'dep.js'), 'function depOnlyFunc() {}\n');
+  });
+  try {
+    const binDir = join(fixture.dir, 'grep-only-bin');
+    const res = spawnSync(process.execPath, [validatorScript, 'docs', '--src', 'src'], {
+      cwd: fixture.dir,
+      encoding: 'utf8',
+      env: { PATH: binDir }
+    });
+    assert.equal(res.status, 0);
+    assert.match(res.stdout, /1 code references validated/);
+    assert.doesNotMatch(res.stdout, /depOnlyFunc/);
+    assert.doesNotMatch(res.stdout, /⚠️ \*\*Unverified Code References\*\*/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('validator handles UTF-16LE with BOM under rg and documents fallback boundary under grep', {
+  skip: process.platform === 'win32' ? 'POSIX grep simulation' : false
+}, () => {
+  const grepPath = findSystemGrep();
+  if (!grepPath) return;
+  const fixture = createFixture(({ dir, docsDir, srcDir }) => {
+    const binDir = join(dir, 'grep-only-bin');
+    mkdirSync(binDir, { recursive: true });
+    symlinkSync(grepPath, join(binDir, 'grep'));
+
+    writeFileSync(join(docsDir, 'guide.md'), '# Guide\nUse `utf16Func()`.\n');
+    const buf = Buffer.concat([Buffer.from([0xFF, 0xFE]), Buffer.from('function utf16Func() {}\n', 'utf16le')]);
+    writeFileSync(join(srcDir, 'utf16.js'), buf);
+  });
+  try {
+    // 1. With rg: UTF-16LE with BOM is recognized and validated (if rg is available)
+    const hasRg = spawnSync('rg', ['--version']).status === 0;
+    if (hasRg) {
+      const resRg = spawnSync(process.execPath, [validatorScript, 'docs', '--src', 'src'], {
+        cwd: fixture.dir,
+        encoding: 'utf8',
+        env: { ...process.env }
+      });
+      assert.equal(resRg.status, 0);
+      assert.match(resRg.stdout, /1 code references validated/);
+    }
+
+    // 2. With grep fallback: grep treats UTF-16LE as binary (--binary-files=without-match), reported not found
+    const binDir = join(fixture.dir, 'grep-only-bin');
+    const resGrep = spawnSync(process.execPath, [validatorScript, 'docs', '--src', 'src'], {
+      cwd: fixture.dir,
+      encoding: 'utf8',
+      env: { PATH: binDir }
+    });
+    assert.equal(resGrep.status, 0);
+    assert.match(resGrep.stdout, /`utf16Func\(\)` in docs\/guide\.md:\d+ - not found in codebase/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('validator documents ignore differences between rg and grep fallback', {
+  skip: process.platform === 'win32' ? 'POSIX grep simulation' : false
+}, () => {
+  const grepPath = findSystemGrep();
+  if (!grepPath) return;
+  const fixture = createFixture(({ dir, docsDir, srcDir }) => {
+    const binDir = join(dir, 'grep-only-bin');
+    mkdirSync(binDir, { recursive: true });
+    symlinkSync(grepPath, join(binDir, 'grep'));
+
+    spawnSync('git', ['init'], { cwd: dir });
+    writeFileSync(join(dir, '.gitignore'), 'ignored.js\n');
+
+    writeFileSync(join(docsDir, 'guide.md'), '# Guide\nUse `ignoredFunc()`.\n');
+    writeFileSync(join(srcDir, 'ignored.js'), 'function ignoredFunc() {}\n');
+  });
+  try {
+    // 1. With rg: respects .gitignore, ignores ignored.js -> not found in codebase (if rg is available)
+    const hasRg = spawnSync('rg', ['--version']).status === 0;
+    if (hasRg) {
+      const resRg = spawnSync(process.execPath, [validatorScript, 'docs', '--src', 'src'], {
+        cwd: fixture.dir,
+        encoding: 'utf8',
+        env: { ...process.env }
+      });
+      assert.equal(resRg.status, 0);
+      assert.match(resRg.stdout, /`ignoredFunc\(\)` in docs\/guide\.md:\d+ - not found in codebase/);
+    }
+
+    // 2. With grep fallback: grep does not parse .gitignore -> finds ignored.js
+    const binDir = join(fixture.dir, 'grep-only-bin');
+    const resGrep = spawnSync(process.execPath, [validatorScript, 'docs', '--src', 'src'], {
+      cwd: fixture.dir,
+      encoding: 'utf8',
+      env: { PATH: binDir }
+    });
+    assert.equal(resGrep.status, 0);
+    assert.match(resGrep.stdout, /1 code references validated/);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test('validator handles paths with spaces and Unicode characters safely', () => {
+  const fixture = createFixture(({ dir }) => {
+    const docsDir = join(dir, 'docs with spaces');
+    const srcDir = join(dir, 'src 特殊路径');
+    mkdirSync(docsDir, { recursive: true });
+    mkdirSync(srcDir, { recursive: true });
+
+    writeFileSync(join(docsDir, 'guide.md'), '# Guide\nUse `unicodePathFunc()`.\n');
+    writeFileSync(join(srcDir, 'app.js'), 'function unicodePathFunc() {}\n');
+  });
+  try {
+    const res = spawnSync(process.execPath, [validatorScript, 'docs with spaces', '--src', 'src 特殊路径'], {
+      cwd: fixture.dir,
+      encoding: 'utf8',
+      env: { ...process.env }
+    });
+    assert.equal(res.status, 0);
+    assert.match(res.stdout, /1 code references validated/);
+    assert.doesNotMatch(res.stdout, /⚠️ \*\*Code References\*\*/);
+  } finally {
+    fixture.cleanup();
+  }
 });
