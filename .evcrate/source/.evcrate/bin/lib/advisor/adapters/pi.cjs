@@ -12,7 +12,7 @@ const EXECUTABLE = 'pi';
 const MODEL_PATTERN = /^([^/\s]+)\/([^/\s]+)$/u;
 const THINKING = new Set(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
-  maxStdoutBytes: 512 * 1024, maxResultBytes: 512 * 1024, maxLines: 256, timeoutMs: 5_000 });
+  maxStdoutBytes: 5 * 1024 * 1024, maxResultBytes: 5 * 1024 * 1024, maxLines: 256, timeoutMs: 5_000 });
 const STATES = new WeakMap();
 const CODES = new Set(['EXECUTABLE_UNAVAILABLE', 'CLI_VERSION_UNSUPPORTED', 'AUTH_UNAVAILABLE', 'MODEL_UNSUPPORTED',
   'EFFORT_UNSUPPORTED', 'READ_ONLY_UNSUPPORTED', 'SESSION_UNSUPPORTED', 'OUTPUT_UNSUPPORTED', 'PROTOCOL_INVALID',
