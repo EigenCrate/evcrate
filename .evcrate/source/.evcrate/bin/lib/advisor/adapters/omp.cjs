@@ -11,6 +11,8 @@ const MODEL_PATTERN = /^([^/\s]+)\/([^/\s]+)$/u;
 const THINKING = new Set(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
   maxStdoutBytes: 512 * 1024, maxResultBytes: 512 * 1024, timeoutMs: 5_000 });
+const GENERATION_LIMITS = Object.freeze({ ...DEFAULT_LIMITS,
+  maxStdoutBytes: 512 * 1024, maxResultBytes: 512 * 1024, maxLines: 8192 });
 const STATES = new WeakMap();
 const CODES = new Set(['EXECUTABLE_UNAVAILABLE', 'CLI_VERSION_UNSUPPORTED', 'AUTH_UNAVAILABLE', 'MODEL_UNSUPPORTED',
   'EFFORT_UNSUPPORTED', 'READ_ONLY_UNSUPPORTED', 'SESSION_UNSUPPORTED', 'OUTPUT_UNSUPPORTED', 'PROTOCOL_INVALID',
@@ -166,7 +168,7 @@ function buildInvocation(context) {
   if (current.capabilities.model !== route.model) fail('MODEL_UNSUPPORTED');
   if (current.capabilities.effort !== route.effort) fail('EFFORT_UNSUPPORTED');
   if (typeof context.prompt !== 'string') fail('REQUEST_INVALID');
-  const limits = resolveInvocationLimits(DEFAULT_LIMITS, context.limits);
+  const limits = resolveInvocationLimits(GENERATION_LIMITS, context.limits);
   return invocation(context, [...CONTROL_ARGV, '--model', route.model, '--thinking', route.effort,
     '--mode', 'json', '-p'], context.prompt, limits);
 }

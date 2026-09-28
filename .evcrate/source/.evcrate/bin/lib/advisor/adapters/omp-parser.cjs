@@ -17,13 +17,13 @@ function target(context) {
 
 const SESSION_KEYS = Object.freeze(['type', 'version', 'id', 'timestamp', 'cwd']);
 const EVENT_KEYS = Object.freeze({
-  agent_end: ['type', 'messages', 'isTerminal'], agent_start: ['type'], message_end: ['type', 'message'],
+  agent_end: ['type', 'messages', 'isTerminal', 'yielded'], agent_start: ['type'], message_end: ['type', 'message'],
   message_start: ['type', 'message'], message_update: ['type', 'assistantMessageEvent'], session: SESSION_KEYS,
   turn_end: ['type', 'message', 'toolResults'], turn_start: ['type'],
 });
 const USER_MESSAGE_KEYS = Object.freeze(['role', 'content', 'attribution', 'timestamp']);
 const ASSISTANT_MESSAGE_KEYS = Object.freeze(['role', 'content', 'api', 'provider', 'model', 'responseModel',
-  'responseId', 'usage', 'stopReason', 'rawStopReason', 'timestamp', 'duration', 'ttft', 'completedAt']);
+  'responseId', 'usage', 'stopReason', 'rawStopReason', 'timestamp', 'duration', 'ttft', 'completedAt', 'credentialId']);
 const TEXT_CONTENT_KEYS = Object.freeze(['type', 'text', 'textSignature']);
 const THINKING_CONTENT_KEYS = Object.freeze(['type', 'thinking', 'thinkingSignature', 'redacted']);
 const USAGE_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'totalTokens', 'cost']);
@@ -136,7 +136,7 @@ function updateShape(event) {
   if (update.type.endsWith('_end') && typeof update.content !== 'string') fail('PROTOCOL_INVALID');
 }
 function parseJsonl(text, route, expectedCwd) {
-  if (typeof text !== 'string' || !text || Buffer.byteLength(text, 'utf8') > 32 * 1024) fail('OUTPUT_LIMIT');
+  if (typeof text !== 'string' || !text || Buffer.byteLength(text, 'utf8') > 256 * 1024) fail('OUTPUT_LIMIT');
   const lines = text.split(/\r?\n/u); if (lines.at(-1) === '') lines.pop();
   if (!lines.length || lines.length > 2048 || lines.some((line) => !line)) fail('PROTOCOL_INVALID');
   let phase = 0; let open; let answer; let finalAssistant; const messages = [];
