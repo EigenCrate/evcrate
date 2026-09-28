@@ -97,6 +97,18 @@ jobs:
         run: |
           rm -rf dist/release
           git checkout -- .
+      - name: Validate release tag ancestry
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          EXPECTED_TAG="v${CURRENT_VERSION}"
+          if git tag --list "$EXPECTED_TAG" | grep -qx "$EXPECTED_TAG"; then
+            if ! git tag --merged "$SOURCE_SHA" | grep -qx "$EXPECTED_TAG"; then
+              echo "::error::Tag $EXPECTED_TAG is not merged into source commit $SOURCE_SHA. Remote tags are detached from branch history."
+              exit 1
+            fi
+          fi
       - name: Run candidate release decision and build
         id: candidate
         env:
