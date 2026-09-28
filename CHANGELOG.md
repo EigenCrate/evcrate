@@ -1,3 +1,38 @@
+## [2.4.0](https://github.com/EigenCrate/evcrate/compare/v2.3.2...v2.4.0) (2026-09-28)
+
+
+### 🚀 Features
+
+* **advisor:** add native Windows invocation guidance and closure checks ([d44fbae](https://github.com/EigenCrate/evcrate/commit/d44fbae9a0ef8f145cfb3492921448935eba1583))
+* **advisor:** complete native Windows controller lifecycle ([9650e3c](https://github.com/EigenCrate/evcrate/commit/9650e3c4f59d0ba51418d8a677b822442eddaac4))
+* **advisor:** repair Windows Job supervision and console observation ([40aad07](https://github.com/EigenCrate/evcrate/commit/40aad07c850657b1c78f075ef8f0809472b71dbd))
+* **release:** attach advisor plugin to workflow release assets ([c1104be](https://github.com/EigenCrate/evcrate/commit/c1104beb12aff7b1c17fa43a4dd725ad4bd81159))
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** increase preflight probe output limit to 5 MiB ([2549a88](https://github.com/EigenCrate/evcrate/commit/2549a88adf68764f95f239f3b7efbda325f69569))
+* **advisor:** restore Windows advisor storage and cleanup safety ([2df3058](https://github.com/EigenCrate/evcrate/commit/2df3058f8091e78ef2c5b4c38e933f2c539bf9df))
+* **advisor:** restore Windows provider launch identity and canonical environment ([4d655a3](https://github.com/EigenCrate/evcrate/commit/4d655a38f47e82f17b8ed6e83a352d76e147777a))
+* **docs:** improve docs validator search scope and failure classification ([ff20667](https://github.com/EigenCrate/evcrate/commit/ff20667a2648df4c6c7046188330e80a41fe585b))
+* **filesystem:** complete durable cutover and qualification ([d25e739](https://github.com/EigenCrate/evcrate/commit/d25e73954dcc47e06b1408a70abdf5d46ef1ca63))
+* **filesystem:** complete launchability and identity cutover ([35f54b5](https://github.com/EigenCrate/evcrate/commit/35f54b562b49760b6cafd7a8e161ffdee80dca91))
+* **release:** add defensive tag ancestry and progression validation ([7eb49e8](https://github.com/EigenCrate/evcrate/commit/7eb49e8c92a8a54a7add0d9d2a1b75e5f48564bc))
+* **release:** compare computed version against starting package.json version ([4f0f4bb](https://github.com/EigenCrate/evcrate/commit/4f0f4bb01a61b8836e2e000e164dc934bcb77147))
+* **scripts:** optimize validate-docs and docs-manager with ripgrep ([bce08bb](https://github.com/EigenCrate/evcrate/commit/bce08bbc7684a840f7342f2a6e0af1017b48fda9))
+
+
+### 📚 Documentation
+
+* record Phase 01 native Windows primitives feasibility completion ([dd10ea6](https://github.com/EigenCrate/evcrate/commit/dd10ea6a7c1a1c01d9b567dc8f9f2dfa3e4c7c3c))
+
+
+### ✅ Tests
+
+* **advisor:** complete repair verification and readiness tests ([2eded71](https://github.com/EigenCrate/evcrate/commit/2eded710102a604131805f82bcc55af367e156c0))
+* **advisor:** qualify Windows support and protect Linux controller lifecycle ([8abbaac](https://github.com/EigenCrate/evcrate/commit/8abbaac9ae424f33a98947e98c3994a01cb9d118))
+* **docs:** add integration tests for grep fallback, encoding, and path boundaries ([3d2cd4e](https://github.com/EigenCrate/evcrate/commit/3d2cd4ef9dfec635a2e7080e0bfb960fe1f881e7))
+
 ## [2.3.2](https://github.com/EigenCrate/evcrate/compare/v2.3.1...v2.3.2) (2026-09-26)
 
 
