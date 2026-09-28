@@ -13,6 +13,8 @@ const {
   assertNoRecursionWindows,
   canonicalizeWindowsEnvironment,
   resolveWindowsExecutable,
+  resolveWindowsLaunchRecord,
+  verifyWindowsLaunchRecord,
   superviseWindowsInvocation
 } = require('./windows-platform.cjs');
 
@@ -703,19 +705,16 @@ function runInvocation(invocation, options = {}) {
     const kill = options.kill || process.kill.bind(process);
     try { startedAt = now(); } catch { startedAt = monotonicMilliseconds(); }
     if (process.platform === 'win32' && (!options.spawn || options.spawn === childProcess.spawn)) {
-      const envPath = env?.PATH || process.env.PATH;
-      const resolved = resolveWindowsExecutable(invocation.executable, envPath);
-      if (!resolved) {
+      let launchRecord = options.launchRecord;
+      if (!launchRecord) {
+        launchRecord = resolveWindowsLaunchRecord(invocation.executable, env, invocation.adapter);
+      }
+      if (!launchRecord || !verifyWindowsLaunchRecord(launchRecord)) {
         reportLifecycle(lifecycleStatus('EXECUTABLE_UNAVAILABLE'));
         return Promise.reject(createRoutingError('EXECUTABLE_UNAVAILABLE'));
       }
-      const lower = resolved.toLowerCase();
-      let spawnExe = resolved;
-      let spawnArgs = [...invocation.argv];
-      if (lower.endsWith('.js') || lower.endsWith('.cjs')) {
-        spawnExe = process.execPath;
-        spawnArgs = [resolved, ...invocation.argv];
-      }
+      const spawnExe = launchRecord.spawnExe;
+      const spawnArgs = [...launchRecord.spawnPrefix, ...invocation.argv];
       return runWindowsSupervisorInvocation({
         invocation,
         options,

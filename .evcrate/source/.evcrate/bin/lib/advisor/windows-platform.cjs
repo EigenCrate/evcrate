@@ -88,37 +88,109 @@ function canonicalWindowsProjectId(projectRoot) {
 function canonicalizeWindowsEnvironment(source, { commonKeys = [], authKeys = [] } = {}) {
   if (source === null || typeof source !== 'object' || Array.isArray(source)) fail('INVOCATION_INVALID');
 
+  const allByLower = new Map();
+  for (const key of Object.keys(source)) {
+    const val = source[key];
+    if (val === undefined) continue;
+    if (typeof val !== 'string') fail('INVOCATION_INVALID');
+    const lower = key.toLowerCase();
+    if (allByLower.has(lower)) {
+      const existing = allByLower.get(lower);
+      if (existing.value !== val) {
+        fail('INVOCATION_INVALID');
+      }
+    } else {
+      allByLower.set(lower, { key, value: val });
+    }
+  }
+
   const allowedKeys = [...new Set([...commonKeys, ...authKeys])];
   const canonicalMap = new Map();
   for (const k of allowedKeys) {
     canonicalMap.set(k.toLowerCase(), k);
   }
 
-  const valuesByLower = new Map();
+  const result = {};
+  for (const [lower, entry] of allByLower) {
+    if (entry.key.startsWith('EVCRATE_')) continue;
+    if (canonicalMap.has(lower)) {
+      result[canonicalMap.get(lower)] = entry.value;
+    }
+  }
+  return result;
+}
+
+function canonicalWindowsEnvironmentContext(source, { commonKeys = [], authKeys = [], cwd = process.cwd() } = {}) {
+  if (source === null || typeof source !== 'object' || Array.isArray(source)) fail('INVOCATION_INVALID');
+
+  const allByLower = new Map();
   for (const key of Object.keys(source)) {
-    if (key.startsWith('EVCRATE_')) continue;
-    const lower = key.toLowerCase();
-    if (!canonicalMap.has(lower)) continue;
     const val = source[key];
     if (val === undefined) continue;
     if (typeof val !== 'string') fail('INVOCATION_INVALID');
-
-    if (valuesByLower.has(lower)) {
-      const existing = valuesByLower.get(lower);
+    const lower = key.toLowerCase();
+    if (allByLower.has(lower)) {
+      const existing = allByLower.get(lower);
       if (existing.value !== val) {
-        // Conflicting alias: e.g. Path !== PATH
         fail('INVOCATION_INVALID');
       }
     } else {
-      valuesByLower.set(lower, { key: canonicalMap.get(lower), value: val });
+      allByLower.set(lower, { key, value: val });
     }
   }
 
-  const result = {};
-  for (const [, entry] of valuesByLower) {
-    result[entry.key] = entry.value;
+  const allowedKeys = [...new Set([...commonKeys, ...authKeys])];
+  const canonicalMap = new Map();
+  for (const k of allowedKeys) {
+    canonicalMap.set(k.toLowerCase(), k);
   }
-  return result;
+
+  const canonicalEnv = {};
+  for (const [lower, entry] of allByLower) {
+    if (entry.key.startsWith('EVCRATE_')) {
+      canonicalEnv[entry.key] = entry.value;
+      continue;
+    }
+    if (canonicalMap.has(lower)) {
+      canonicalEnv[canonicalMap.get(lower)] = entry.value;
+    }
+  }
+
+  let hasExplicitPath = false;
+  let canonicalPath = null;
+  if (allByLower.has('path')) {
+    hasExplicitPath = true;
+    canonicalPath = allByLower.get('path').value;
+    canonicalEnv.PATH = canonicalPath;
+  } else if (source === process.env && process.env.PATH !== undefined) {
+    hasExplicitPath = true;
+    canonicalPath = process.env.PATH;
+    canonicalEnv.PATH = canonicalPath;
+  }
+
+  let trustedHome = null;
+  if (allByLower.has('home')) {
+    const rawHome = allByLower.get('home').value;
+    canonicalEnv.HOME = rawHome;
+    trustedHome = rawHome;
+  } else {
+    try {
+      trustedHome = resolveWindowsHome(source);
+      canonicalEnv.HOME = trustedHome;
+    } catch {}
+  }
+
+  const canonicalProjectRoot = canonicalWindowsProjectRoot(cwd);
+  const projectId = canonicalWindowsProjectId(canonicalProjectRoot);
+
+  return {
+    canonicalEnv: Object.freeze(canonicalEnv),
+    hasExplicitPath,
+    canonicalPath,
+    trustedHome,
+    canonicalProjectRoot,
+    projectId
+  };
 }
 
 function assertNoRecursionWindows({ environment = process.env, requestDepth = 0 } = {}, marker, depthKey) {
@@ -227,23 +299,224 @@ try {
 }
 
 // 4. Windows Executable and Package Bin Resolution
+const SUPPORTED_BACKEND_PACKAGES = Object.freeze({
+  codex: Object.freeze(['@openai/codex', 'codex']),
+  claude: Object.freeze(['@anthropic-ai/claude-code', 'claude-code', 'claude']),
+  pi: Object.freeze(['@earendil-works/pi-coding-agent', '@mariozechner/pi-coding-agent', 'pi-coding-agent', 'pi']),
+  omp: Object.freeze(['@oh-my-pi/pi-coding-agent', 'oh-my-pi', 'omp'])
+});
+
+function detectBackendFromCommand(command) {
+  if (typeof command !== 'string') return null;
+  const lower = command.toLowerCase();
+  if (lower.includes('codex')) return 'codex';
+  if (lower.includes('claude')) return 'claude';
+  if (lower.includes('pi')) return 'pi';
+  if (lower.includes('omp')) return 'omp';
+  return null;
+}
+
+function computeFileSha256(filePath) {
+  const content = fs.readFileSync(filePath);
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function captureFileIdentity(filePath) {
+  if (typeof filePath !== 'string' || !filePath) fail('EXECUTABLE_UNAVAILABLE');
+  let realPath;
+  try {
+    realPath = fs.realpathSync.native(filePath);
+  } catch {
+    fail('EXECUTABLE_UNAVAILABLE');
+  }
+  let stat;
+  try {
+    stat = fs.statSync(realPath);
+  } catch {
+    fail('EXECUTABLE_UNAVAILABLE');
+  }
+  if (!stat.isFile()) fail('EXECUTABLE_UNAVAILABLE');
+  let hash;
+  try {
+    hash = computeFileSha256(realPath);
+  } catch {
+    fail('EXECUTABLE_UNAVAILABLE');
+  }
+  return Object.freeze({
+    path: realPath,
+    size: stat.size,
+    mtimeMs: stat.mtimeMs,
+    ino: stat.ino,
+    dev: stat.dev,
+    hash
+  });
+}
+
+function verifyFileIdentity(captured) {
+  if (!captured || typeof captured !== 'object' || typeof captured.path !== 'string') return false;
+  try {
+    const stat = fs.statSync(captured.path);
+    if (!stat.isFile()) return false;
+    if (stat.size !== captured.size) return false;
+    const currentHash = computeFileSha256(captured.path);
+    if (currentHash !== captured.hash) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function buildWindowsLaunchRecord({
+  backend,
+  command,
+  targetType,
+  launcherPath,
+  scriptPath = null,
+  packagePath = null
+}) {
+  const launcherIdentity = captureFileIdentity(launcherPath);
+  const scriptIdentity = scriptPath ? captureFileIdentity(scriptPath) : null;
+  const packageIdentity = packagePath ? captureFileIdentity(packagePath) : null;
+
+  return Object.freeze({
+    backend,
+    command,
+    targetType,
+    launcherPath: launcherIdentity.path,
+    scriptPath: scriptIdentity ? scriptIdentity.path : null,
+    packagePath: packageIdentity ? packageIdentity.path : null,
+    launcherIdentity,
+    scriptIdentity,
+    packageIdentity,
+    spawnExe: launcherIdentity.path,
+    spawnPrefix: Object.freeze(scriptIdentity ? [scriptIdentity.path] : [])
+  });
+}
+
+function verifyWindowsLaunchRecord(launchRecord) {
+  if (!launchRecord || typeof launchRecord !== 'object') return false;
+  if (!verifyFileIdentity(launchRecord.launcherIdentity)) return false;
+  if (launchRecord.scriptIdentity && !verifyFileIdentity(launchRecord.scriptIdentity)) return false;
+  if (launchRecord.packageIdentity && !verifyFileIdentity(launchRecord.packageIdentity)) return false;
+  return true;
+}
+
+function inspectFileFormat(filePath) {
+  try {
+    const real = fs.realpathSync.native(filePath);
+    const lower = real.toLowerCase();
+    if (lower.endsWith('.exe')) return { type: 'native', realPath: real };
+    if (lower.endsWith('.js') || lower.endsWith('.cjs') || lower.endsWith('.mjs')) {
+      return { type: 'node-script', realPath: real };
+    }
+    const stat = fs.statSync(real);
+    if (!stat.isFile()) return { type: 'unknown', realPath: null };
+    const fd = fs.openSync(real, 'r');
+    const buf = Buffer.alloc(512);
+    const bytesRead = fs.readSync(fd, buf, 0, 512, 0);
+    fs.closeSync(fd);
+    if (bytesRead >= 2 && buf[0] === 0x4D && buf[1] === 0x5A) {
+      return { type: 'native', realPath: real };
+    }
+    const head = buf.toString('utf8', 0, bytesRead).trimStart();
+    if (head.startsWith('#!/bin/sh') || head.startsWith('#!/bin/bash')
+      || head.startsWith('#!/usr/bin/env sh') || head.startsWith('#!/usr/bin/env bash')
+      || head.startsWith('@ECHO') || head.startsWith('@echo')
+      || head.startsWith('rem ') || head.startsWith('REM ')) {
+      return { type: 'shell-or-batch', realPath: real };
+    }
+    if (head.startsWith('#!') && head.includes('node')) {
+      return { type: 'node-script', realPath: real };
+    }
+    return { type: 'unknown', realPath: real };
+  } catch {
+    return { type: 'unknown', realPath: null };
+  }
+}
+
 function resolvePackageBin(candidateCmd, executable) {
   try {
     const dir = path.dirname(candidateCmd);
-    const pkgDir = path.join(dir, 'node_modules', executable);
-    const pkgJsonPath = path.join(pkgDir, 'package.json');
-    if (fs.existsSync(pkgJsonPath)) {
-      const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-      let binRel = null;
-      if (typeof pkg.bin === 'string') {
-        binRel = pkg.bin;
-      } else if (pkg.bin && typeof pkg.bin === 'object' && typeof pkg.bin[executable] === 'string') {
-        binRel = pkg.bin[executable];
-      }
-      if (binRel) {
+    const candidateRoots = [
+      path.join(dir, 'node_modules')
+    ];
+    if (path.basename(dir).toLowerCase() === '.bin') {
+      const parent = path.resolve(dir, '..');
+      candidateRoots.push(parent);
+      candidateRoots.push(path.join(parent, 'node_modules'));
+    }
+    const parent = path.resolve(dir, '..');
+    candidateRoots.push(path.join(parent, 'node_modules'));
+    candidateRoots.push(parent);
+
+    const backend = detectBackendFromCommand(executable);
+    const candidatePackages = SUPPORTED_BACKEND_PACKAGES[backend] || [executable];
+
+    for (const rootDir of candidateRoots) {
+      if (!fs.existsSync(rootDir)) continue;
+      for (const pkgName of candidatePackages) {
+        const pkgDir = path.join(rootDir, pkgName);
+        const pkgJsonPath = path.join(pkgDir, 'package.json');
+        if (!fs.existsSync(pkgJsonPath)) continue;
+
+        let pkg;
+        try {
+          pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+        } catch {
+          continue;
+        }
+
+        if (pkg.name !== pkgName) continue;
+
+        let binRel = null;
+        if (typeof pkg.bin === 'string') {
+          const unqualified = pkgName.includes('/') ? pkgName.split('/').pop() : pkgName;
+          if (unqualified === executable || pkgName === executable) {
+            binRel = pkg.bin;
+          }
+        } else if (pkg.bin && typeof pkg.bin === 'object' && typeof pkg.bin[executable] === 'string') {
+          binRel = pkg.bin[executable];
+        }
+
+        if (!binRel) continue;
+
         const fullBin = path.resolve(pkgDir, binRel);
-        if (fs.existsSync(fullBin) && fs.statSync(fullBin).isFile()) {
-          return fs.realpathSync.native(fullBin);
+        const normPkgDir = path.normalize(pkgDir).toLowerCase();
+        const normFullBin = path.normalize(fullBin).toLowerCase();
+
+        if (!normFullBin.startsWith(normPkgDir + path.sep)) continue;
+
+        let binStat;
+        try {
+          binStat = fs.statSync(fullBin);
+        } catch {
+          continue;
+        }
+        if (!binStat.isFile()) continue;
+
+        let realBin;
+        try {
+          realBin = fs.realpathSync.native(fullBin);
+        } catch {
+          continue;
+        }
+
+        const lowerRealBin = realBin.toLowerCase();
+        if (lowerRealBin.endsWith('.exe')) {
+          return {
+            targetType: 'native',
+            launcherPath: realBin,
+            scriptPath: null,
+            packagePath: fs.realpathSync.native(pkgJsonPath)
+          };
+        }
+        if (lowerRealBin.endsWith('.js') || lowerRealBin.endsWith('.cjs') || lowerRealBin.endsWith('.mjs')) {
+          return {
+            targetType: 'node-script',
+            launcherPath: process.execPath,
+            scriptPath: realBin,
+            packagePath: fs.realpathSync.native(pkgJsonPath)
+          };
         }
       }
     }
@@ -251,46 +524,232 @@ function resolvePackageBin(candidateCmd, executable) {
   return null;
 }
 
-function resolveWindowsExecutable(executable, envPath) {
+function resolveWindowsLaunchRecord(executable, envOrPath, backendHint) {
   if (typeof executable !== 'string' || !executable) return null;
-  const extensions = ['', '.exe', '.js', '.cjs'];
+  const backend = backendHint || detectBackendFromCommand(executable);
 
   if (path.isAbsolute(executable)) {
-    for (const ext of extensions) {
-      const candidate = executable.endsWith(ext) && ext !== '' ? executable : `${executable}${ext}`;
+    const lower = executable.toLowerCase();
+    if (lower.endsWith('.exe')) {
       try {
-        const stat = fs.statSync(candidate);
-        if (stat.isFile()) return fs.realpathSync.native(candidate);
+        const stat = fs.statSync(executable);
+        if (stat.isFile()) {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: path.basename(executable, '.exe'),
+            targetType: 'native',
+            launcherPath: executable
+          });
+        }
+      } catch {}
+      return null;
+    }
+    if (lower.endsWith('.js') || lower.endsWith('.cjs') || lower.endsWith('.mjs')) {
+      try {
+        const stat = fs.statSync(executable);
+        if (stat.isFile()) {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: path.basename(executable, path.extname(executable)),
+            targetType: 'node-script',
+            launcherPath: process.execPath,
+            scriptPath: executable
+          });
+        }
+      } catch {}
+      return null;
+    }
+    if (lower.endsWith('.cmd') || lower.endsWith('.bat')) {
+      const baseName = path.basename(executable, path.extname(executable));
+      const target = resolvePackageBin(executable, baseName);
+      if (target) {
+        return buildWindowsLaunchRecord({
+          backend,
+          command: baseName,
+          targetType: target.targetType,
+          launcherPath: target.launcherPath,
+          scriptPath: target.scriptPath,
+          packagePath: target.packagePath
+        });
+      }
+      return null;
+    }
+    if (fs.existsSync(`${executable}.exe`)) {
+      try {
+        const stat = fs.statSync(`${executable}.exe`);
+        if (stat.isFile()) {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: path.basename(executable),
+            targetType: 'native',
+            launcherPath: `${executable}.exe`
+          });
+        }
       } catch {}
     }
-    if (executable.toLowerCase().endsWith('.cmd') || fs.existsSync(`${executable}.cmd`)) {
-      const cmdPath = executable.toLowerCase().endsWith('.cmd') ? executable : `${executable}.cmd`;
-      const baseName = path.basename(executable, '.cmd');
-      const bin = resolvePackageBin(cmdPath, baseName);
-      if (bin) return bin;
+    if (fs.existsSync(`${executable}.cmd`)) {
+      const target = resolvePackageBin(`${executable}.cmd`, path.basename(executable));
+      if (target) {
+        return buildWindowsLaunchRecord({
+          backend,
+          command: path.basename(executable),
+          targetType: target.targetType,
+          launcherPath: target.launcherPath,
+          scriptPath: target.scriptPath,
+          packagePath: target.packagePath
+        });
+      }
     }
+    for (const ext of ['.js', '.cjs']) {
+      if (fs.existsSync(`${executable}${ext}`)) {
+        try {
+          const stat = fs.statSync(`${executable}${ext}`);
+          if (stat.isFile()) {
+            return buildWindowsLaunchRecord({
+              backend,
+              command: path.basename(executable),
+              targetType: 'node-script',
+              launcherPath: process.execPath,
+              scriptPath: `${executable}${ext}`
+            });
+          }
+        } catch {}
+      }
+    }
+    try {
+      const stat = fs.statSync(executable);
+      if (stat.isFile()) {
+        const inspected = inspectFileFormat(executable);
+        if (inspected.type === 'native') {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: path.basename(executable),
+            targetType: 'native',
+            launcherPath: inspected.realPath
+          });
+        }
+        if (inspected.type === 'node-script') {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: path.basename(executable),
+            targetType: 'node-script',
+            launcherPath: process.execPath,
+            scriptPath: inspected.realPath
+          });
+        }
+      }
+    } catch {}
     return null;
   }
 
-  const dirs = (envPath || '').split(path.delimiter);
+  let dirs;
+  if (typeof envOrPath === 'string') {
+    dirs = envOrPath ? envOrPath.split(path.delimiter) : [];
+  } else if (envOrPath && typeof envOrPath === 'object') {
+    if (envOrPath.PATH !== undefined) {
+      dirs = envOrPath.PATH ? envOrPath.PATH.split(path.delimiter) : [];
+    } else {
+      dirs = [];
+    }
+  } else {
+    dirs = (process.env.PATH || '').split(path.delimiter);
+  }
+
   for (const dir of dirs) {
     if (!dir) continue;
-    for (const ext of extensions) {
-      const candidate = path.join(dir, `${executable}${ext}`);
+
+    const exePath = path.join(dir, `${executable}.exe`);
+    try {
+      if (fs.existsSync(exePath) && fs.statSync(exePath).isFile()) {
+        return buildWindowsLaunchRecord({
+          backend,
+          command: executable,
+          targetType: 'native',
+          launcherPath: exePath
+        });
+      }
+    } catch {}
+
+    const cmdPath = path.join(dir, `${executable}.cmd`);
+    try {
+      if (fs.existsSync(cmdPath) && fs.statSync(cmdPath).isFile()) {
+        const target = resolvePackageBin(cmdPath, executable);
+        if (target) {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: executable,
+            targetType: target.targetType,
+            launcherPath: target.launcherPath,
+            scriptPath: target.scriptPath,
+            packagePath: target.packagePath
+          });
+        }
+      }
+    } catch {}
+
+    for (const ext of ['.js', '.cjs']) {
+      const scriptCandidate = path.join(dir, `${executable}${ext}`);
       try {
-        const stat = fs.statSync(candidate);
-        if (stat.isFile()) return fs.realpathSync.native(candidate);
+        if (fs.existsSync(scriptCandidate) && fs.statSync(scriptCandidate).isFile()) {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: executable,
+            targetType: 'node-script',
+            launcherPath: process.execPath,
+            scriptPath: scriptCandidate
+          });
+        }
       } catch {}
     }
-    const cmdCandidate = path.join(dir, `${executable}.cmd`);
+
+    const bareCandidate = path.join(dir, executable);
     try {
-      if (fs.existsSync(cmdCandidate) && fs.statSync(cmdCandidate).isFile()) {
-        const bin = resolvePackageBin(cmdCandidate, executable);
-        if (bin) return bin;
+      if (fs.existsSync(bareCandidate) && fs.statSync(bareCandidate).isFile()) {
+        const inspected = inspectFileFormat(bareCandidate);
+        if (inspected.type === 'native') {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: executable,
+            targetType: 'native',
+            launcherPath: inspected.realPath
+          });
+        }
+        if (inspected.type === 'node-script') {
+          return buildWindowsLaunchRecord({
+            backend,
+            command: executable,
+            targetType: 'node-script',
+            launcherPath: process.execPath,
+            scriptPath: inspected.realPath
+          });
+        }
+        if (inspected.type === 'shell-or-batch') {
+          if (fs.existsSync(cmdPath) && fs.statSync(cmdPath).isFile()) {
+            const target = resolvePackageBin(cmdPath, executable);
+            if (target) {
+              return buildWindowsLaunchRecord({
+                backend,
+                command: executable,
+                targetType: target.targetType,
+                launcherPath: target.launcherPath,
+                scriptPath: target.scriptPath,
+                packagePath: target.packagePath
+              });
+            }
+          }
+          continue;
+        }
       }
     } catch {}
   }
+
   return null;
+}
+
+function resolveWindowsExecutable(executable, envPath) {
+  const record = resolveWindowsLaunchRecord(executable, envPath);
+  if (!record) return null;
+  return record.targetType === 'node-script' ? record.scriptPath : record.launcherPath;
 }
 
 function quoteWindowsArg(arg) {
@@ -602,7 +1061,13 @@ module.exports = {
   assertNoRecursionWindows,
   getWindowsProcessIdentity,
   checkWindowsProcessStatus,
+  canonicalWindowsEnvironmentContext,
   resolveWindowsExecutable,
+  resolveWindowsLaunchRecord,
+  verifyWindowsLaunchRecord,
+  captureFileIdentity,
+  verifyFileIdentity,
+  SUPPORTED_BACKEND_PACKAGES,
   buildWindowsCommandLine,
   superviseWindowsInvocation,
   observeConsoleWindows,
