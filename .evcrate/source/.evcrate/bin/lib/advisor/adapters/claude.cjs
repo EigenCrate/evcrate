@@ -7,7 +7,7 @@ const { DEFAULT_LIMITS, assertNoRecursion, createInvocation, isRunnerFailure } =
 const { freezeAdapter, isPlainObject, resolveInvocationLimits, validateCapabilityAttestation } = require('../adapter-contract.cjs');
 const EXECUTABLE = 'claude';
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
-  maxStdoutBytes: 512 * 1024, maxResultBytes: 512 * 1024, maxLines: 256, timeoutMs: 5_000 });
+  maxStdoutBytes: 5 * 1024 * 1024, maxResultBytes: 5 * 1024 * 1024, maxLines: 256, timeoutMs: 5_000 });
 const STATES = new WeakMap();
 const RESULT_KEYS = new Set(['type', 'subtype', 'is_error', 'result', 'session_id', 'uuid', 'duration_ms',
   'duration_api_ms', 'total_cost_usd', 'usage', 'permission_denials', 'stop_reason', 'model']);

@@ -13,7 +13,7 @@ const {
 const EXECUTABLE = 'codex';
 const NO_TOOL_INSTRUCTION = 'You are a read-only advisor. Do not use tools, execute commands, inspect files, browse, or call subagents. Use only the checkpoint JSON below. Return one concise recommendation as your final answer.\n\nCheckpoint JSON:\n';
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
-  maxStdoutBytes: 512 * 1024, maxResultBytes: 512 * 1024, maxLines: 256, timeoutMs: 5_000 });
+  maxStdoutBytes: 5 * 1024 * 1024, maxResultBytes: 5 * 1024 * 1024, maxLines: 256, timeoutMs: 5_000 });
 const FINAL_LIMITS = Object.freeze({ ...DEFAULT_LIMITS,
   maxPromptBytes: DEFAULT_LIMITS.maxPromptBytes + Buffer.byteLength(NO_TOOL_INSTRUCTION, 'utf8') });
 const STATES = new WeakMap();
