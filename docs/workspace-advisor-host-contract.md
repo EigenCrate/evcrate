@@ -1,6 +1,6 @@
 # Workspace Advisor Host Admission and Identity
 
-**Status:** Phase 01 implementation completed and approved 2026-09-29. Phases 02–09 and end-to-end Workspace rollout remain pending.
+**Status:** Phase 01 host admission completed and approved (9.2/10); Phase 02 history-scope qualification completed and approved (9.6/10) on 2026-09-29. Phases 03–09 and end-to-end rollout remain pending.
 **Authority:** DamHopper host API/client implementation; see the [Phase 01 record](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md) and [frozen architecture contract](../plans/260929-1346-advisor-workspace-panel/architecture-contract.md).
 
 This document records the selected-project `describeView` API and the trusted identity/authorization boundary between the Workspace host and Advisor. The descriptor is discovery metadata for opening the existing context; it is not an access token and does not authorize later reads by itself.
@@ -74,3 +74,4 @@ The server intersects the active installation's advertised capabilities with the
 The Phase 01 record reports **102 passed, 0 failed** across server integration/authorization, SDK contract, and UI checks. `test_describe_view_api_behavioral` covers unauthenticated denial, unknown and empty project rejection, rejection of forged `projectId`/`root`, canonical ID parity, safe metadata, and stable `authorityKey` across A→B under unchanged global root authority. Authorization tests cover the four implicit history operations, project-only history, policy/evaluation-only access without history, and mixed-context grants.
 
 These checks establish repository/API behavior, not the later Workspace iframe lifecycle, phase-paired history behavior, LAN qualification, production deployment, or the complete Workspace rollout. Phase 01 intentionally leaves runner scope kinds and the existing data API unchanged.
+Phase 02 qualified existing EVCrate history behavior: root All preserves valid-ID unmapped activity without registration or a label join, while project scope remains non-widening; production scanner/provider and v1/v2 schema did not change. See the [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md) and [review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md).

@@ -4,6 +4,7 @@
 **Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,636 files, 9,060,915 tokens, and 34,112,220 characters; `.repomixignore` excludes documentation, plans, tests, and generated/heavy roots. Repomix reported no suspicious files. The cross-repository host contract was checked directly against the active DamHopper source.
 **Package:** Private npm package `evcrate` 2.3.2; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [Repair Phase 04 plan](../plans/260927-0005-windows-advisor-readiness/phase-04-verification-readiness.md), [test report](../plans/reports/testerphase04-260928-0955-verification-readiness.md), and [review](../plans/reports/code-review-260928-1008-repair-phase-04-readiness.md).
+**Workspace Advisor:** Phases 00–02 are complete; Phases 03–09 remain pending. Phase 02 is focused EVCrate history qualification, not Workspace rollout.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -93,6 +94,11 @@ Phase 01 adds the selected-project `describeView` contract in the paired DamHopp
 The server derives `projectId` from the canonical target directory's UTF-8 bytes, never a browser-supplied ID or display label. Root history grants only four history reads; policy and evaluation permissions remain separately grant-protected. `authorityKey` is revision/equality metadata, not a credential, and the descriptor does not replace authorization on asset, open, or invoke requests.
 
 See the [host contract](./workspace-advisor-host-contract.md) and [Phase 01 behavioral evidence](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md). The documented phase record reports 102 passing checks; Phase 01 does not claim Workspace rollout or production deployment.
+
+## Workspace Advisor history scope (Phase 02)
+
+Phase 02 qualified existing EVCrate history behavior with sanitized fixtures: root All (`history-root`, `project_id: null`) includes valid-ID unmapped Project U (no registration or sidecar label), for 7 accepted records across six discovered directories; malformed JSON and directory/payload ID mismatch remain 2 invalid records. Project-bound null queries do not widen, foreign IDs reject, and cursors remain query-bound. Separately granted policy/evaluation reads work without history-root access. No production provider/scanner or v1/v2 schema change was required; the fixture is not a production-history census or end-to-end rollout. Review recorded 59 passing test executions and 9.6/10 approval. See the [Phase 02 plan](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md) and [review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md).
+Fixture sources: `tests/fixtures/advisor-history/workspace-panel-fixtures.mjs` defines the sanitized history root; `tests/plugin/workspace-panel-fixtures.test.mjs` covers Phase 02 scope, unmapped detail, bounded/cancelled scans, independent bound reads, and framed dispatch.
 
 ## Advisor Plugin data API and cross-project history (E00/Phases 01–05)
 

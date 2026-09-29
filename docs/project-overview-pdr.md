@@ -550,7 +550,7 @@ production-runtime qualification remain outside this phase.
 
 ### FR-25: Workspace Advisor host admission and identity (Phase 01)
 
-**Status:** Implementation completed and approved 2026-09-29; Phases 02–09 remain pending.
+**Status:** Phase 01 admission and identity completed and approved 2026-09-29; Phase 02 status is recorded in [FR-26](#fr-26-history-scope-and-unmapped-record-preservation-phase-02).
 
 **Requirement:** An authenticated Workspace user must select a registered, resolvable project/worktree to identify the owning DamHopper connection and profile before Advisor admission. The host returns a server-resolved descriptor with canonical project identity, actual history/context scope, and actor-effective operations. Client-supplied profile, actor, project ID, root path, scope, or permission overrides never establish authority.
 
@@ -560,6 +560,21 @@ production-runtime qualification remain outside this phase.
 - The descriptor distinguishes `historyScope` (`history-root`, `project`, `unavailable`) from the existing runner `contextScope` (`history-root`, `project`). The enabled owner-history source implies only `history.refresh`, `history.summary`, `history.page`, and `history.detail`; policy/evaluation access still requires existing grants and remains available when history is unavailable.
 - `authorityKey` fences authority changes using installation, package, scope, security/source revision, and target-binding identity. It is equality metadata, not a credential; asset reads, context open, and invocation continue to reauthorize.
 - Server integration and authorization checks cover admission failures, forged identity fields, canonical ID parity, global-root A→B key stability, and distinct history/project/policy/evaluation grants. See the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) and [Phase 01 evidence](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md).
+
+### FR-26: History scope and unmapped-record preservation (Phase 02)
+
+**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phases 03–09 remain pending.
+
+**Requirement:** In `history-root` scope, All (`project_id: null`) includes structurally valid records with canonical project IDs even when Workspace registration or display-label metadata is absent. Project scope remains bound to its context and cannot widen. Policy/evaluation reads retain independent profile-bound sources and grants.
+
+**Acceptance:**
+- A valid-ID Project U fixture with no registration or sidecar label appears in root All and has a usable page/detail; `label` remains `null`.
+- The fixture reports 6 discovered directories, 7 accepted records (A=3, worktree=1, B=2, U=1), and 2 invalid records (malformed JSON and directory/payload ID mismatch).
+- Project-scoped null queries remain bound; foreign project IDs reject; pagination cursors remain bound to the exact snapshot/query.
+- Bounded, cancelled, and deadline-limited scans preserve explicit completeness/diagnostic accounting. Separately granted policy/evaluation reads work without a history root.
+- Existing v1 storage/v2 wire and production provider remain unchanged. No ID-less format, exhaustive production-history census, or Workspace rollout is claimed.
+
+**Evidence:** [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md) and [approved review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md).
 
 ## Non-functional requirements
 

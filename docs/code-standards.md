@@ -548,13 +548,18 @@ E03 bridge, state, four-view, security, and accessibility suites were recorded o
 2026-09-21 as package evidence; they do not substitute for D04/G2 LAN or G4
 qualification, and source removal does not authorize standalone retirement.
 
-### Workspace Advisor host descriptor (Phase 01)
+### Workspace Advisor host and history-scope invariants (Phases 01–02)
 
 - Keep `DescribeViewRequest` non-null and limited to `installationId` plus the selected `ServerProjectTarget`; route it through the authenticated host client and registered target resolver. Do not add profile, actor, path, project-ID, scope, or permission authority from the browser.
 - Hash only the server-resolved canonical target directory's exact UTF-8 bytes for `workspaceProject.projectId`; never use lossy conversion, a display label, or browser lexical normalization as identity.
 - Return actual `historyScope` and existing runner `contextScope` separately. Intersect installation capabilities with actor-effective grants; owner-root implicit rights are only the four history reads, while policy/evaluation operations retain explicit grants.
 - Treat `authorityKey` as a stale-work equality/revision value, never as a bearer credential. Describe metadata does not replace authorization on asset read, context open, or invoke.
 - Keep the exact response, identity, rejection, and reauthorization contract synchronized with the [Workspace Advisor host contract](./workspace-advisor-host-contract.md).
+- In `history-root` scope, `project_id: null` means All; project scope stays bound to its canonical context identity, so null never widens and foreign IDs reject.
+- A valid project-ID history directory is not filtered by Workspace registration or display-label sidecars. Labels are presentation metadata and may be `null`; never infer identity from them.
+- Keep cursors bound to the snapshot and exact query/scope. Do not reuse one after switching project queries.
+- Preserve policy/evaluation source binding and grants independently of history scope; permitted reads may work when no history root is available.
+- Reuse the existing v1 storage/v2 wire for evidence-supported valid-ID unmapped records. Do not invent ID-less records or an adapter without verified data and an approved contract change. See the [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md).
 
 
 ### React Explorer, evaluation, and packaging standards (Phases 06–10)

@@ -4,6 +4,7 @@
  *
  * Implements A/B/U/Worktree project topologies, unmapped dirty-history shapes,
  * malformed JSON, and ID mismatch test cases.
+ * Contract review: Phase 02 assertions verify unmapped U discovery, project-bound isolation, and v1/v2 compatibility.
  */
 
 import { createHash } from 'node:crypto';
@@ -73,7 +74,7 @@ export const EXPECTED_METRICS = Object.freeze({
   })
 });
 
-function createRecordFiles(baseDir, projectId, taskRunId, consultId, timestamp, resultKind = 'ACCEPT') {
+export function createRecordFiles(baseDir, projectId, taskRunId, consultId, timestamp, resultKind = 'ACCEPT') {
   const consultDir = path.join(baseDir, projectId, taskRunId, consultId);
   fs.mkdirSync(consultDir, { recursive: true, mode: 0o700 });
   const cp = makeCheckpoint(taskRunId, `chk-${consultId.slice(0, 8)}`);
@@ -110,38 +111,45 @@ function createRecordFiles(baseDir, projectId, taskRunId, consultId, timestamp, 
  *
  * @param {string} rootPath Absolute directory path for the history root
  */
-export function populateWorkspacePanelFixtureRoot(rootPath) {
+export function populateWorkspacePanelFixtureRoot(rootPath, overrides = {}) {
+  const idA = overrides.idProjectA || ID_PROJECT_A;
+  const idWtA = overrides.idWorktreeA || ID_WORKTREE_A;
+  const idB = overrides.idProjectB || ID_PROJECT_B;
+  const idU = overrides.idProjectU || ID_PROJECT_U;
+  const labelA = overrides.labelProjectA !== undefined ? overrides.labelProjectA : LABEL_PROJECT_A;
+  const labelB = overrides.labelProjectB !== undefined ? overrides.labelProjectB : LABEL_PROJECT_B;
+
   // 1. Root metadata sidecar registering Project A and Project B only (NOT U and NOT worktree)
   const rootMetadata = {
     version: 1,
     projects: {
-      [ID_PROJECT_A]: { name: LABEL_PROJECT_A },
-      [ID_PROJECT_B]: { name: LABEL_PROJECT_B }
+      [idA]: { name: labelA },
+      [idB]: { name: labelB }
     }
   };
   fs.writeFileSync(path.join(rootPath, 'project-metadata.json'), JSON.stringify(rootMetadata, null, 2), 'utf8');
 
   // 2. Project A records (3 consultations across 2 tasks)
-  createRecordFiles(rootPath, ID_PROJECT_A, FIXTURE_TASK_A1, FIXTURE_CONSULT_A1_1, 1000);
-  createRecordFiles(rootPath, ID_PROJECT_A, FIXTURE_TASK_A2, FIXTURE_CONSULT_A2_1, 2000);
-  createRecordFiles(rootPath, ID_PROJECT_A, FIXTURE_TASK_A2, FIXTURE_CONSULT_A2_2, 3000);
+  createRecordFiles(rootPath, idA, FIXTURE_TASK_A1, FIXTURE_CONSULT_A1_1, 1000);
+  createRecordFiles(rootPath, idA, FIXTURE_TASK_A2, FIXTURE_CONSULT_A2_1, 2000);
+  createRecordFiles(rootPath, idA, FIXTURE_TASK_A2, FIXTURE_CONSULT_A2_2, 3000);
 
   // 3. Worktree under Project A (1 consultation, 1 task; distinct SHA256)
-  createRecordFiles(rootPath, ID_WORKTREE_A, FIXTURE_TASK_A_WT1, FIXTURE_CONSULT_A_WT1_1, 4000);
+  createRecordFiles(rootPath, idWtA, FIXTURE_TASK_A_WT1, FIXTURE_CONSULT_A_WT1_1, 4000);
 
   // 4. Project B records (2 consultations across 1 task)
-  createRecordFiles(rootPath, ID_PROJECT_B, FIXTURE_TASK_B1, FIXTURE_CONSULT_B1_1, 5000);
-  createRecordFiles(rootPath, ID_PROJECT_B, FIXTURE_TASK_B1, FIXTURE_CONSULT_B1_2, 6000);
+  createRecordFiles(rootPath, idB, FIXTURE_TASK_B1, FIXTURE_CONSULT_B1_1, 5000);
+  createRecordFiles(rootPath, idB, FIXTURE_TASK_B1, FIXTURE_CONSULT_B1_2, 6000);
 
   // 5. Unmapped Project U (1 consultation, 1 task; valid ID, NO sidecar label, not registered)
-  createRecordFiles(rootPath, ID_PROJECT_U, FIXTURE_TASK_U1, FIXTURE_CONSULT_U1_1, 7000);
+  createRecordFiles(rootPath, idU, FIXTURE_TASK_U1, FIXTURE_CONSULT_U1_1, 7000);
 
   // 6. Malformed JSON fixture (corrupted execution.json)
   const malformedDir = path.join(rootPath, ID_PROJECT_MALFORMED, FIXTURE_TASK_MALFORMED, FIXTURE_CONSULT_MALFORMED);
   fs.mkdirSync(malformedDir, { recursive: true, mode: 0o700 });
   fs.writeFileSync(path.join(malformedDir, 'execution.json'), '{"schema_version": 1, "unclosed_json": ...', 'utf8');
 
-  // 7. ID mismatch fixture (execution.json claims ID_PROJECT_A, but folder is ID_PROJECT_MISMATCH)
+  // 7. ID mismatch fixture (execution.json claims idA, but folder is ID_PROJECT_MISMATCH)
   const mismatchDir = path.join(rootPath, ID_PROJECT_MISMATCH, FIXTURE_TASK_MISMATCH, FIXTURE_CONSULT_MISMATCH);
   fs.mkdirSync(mismatchDir, { recursive: true, mode: 0o700 });
   const mismatchCp = makeCheckpoint(FIXTURE_TASK_MISMATCH, 'chk-mis');
@@ -149,7 +157,7 @@ export function populateWorkspacePanelFixtureRoot(rootPath) {
     schema_version: 1,
     consultation_id: FIXTURE_CONSULT_MISMATCH,
     task_run_id: FIXTURE_TASK_MISMATCH,
-    project_id: ID_PROJECT_A, // Mismatch with enclosing directory ID_PROJECT_MISMATCH!
+    project_id: idA, // Mismatch with enclosing directory ID_PROJECT_MISMATCH!
     checkpoint_digest: computeDigest(mismatchCp),
     checkpoint: mismatchCp,
     route: { backend: 'codex', model: 'operator-selected', effort: 'high' },
