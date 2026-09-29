@@ -149,11 +149,20 @@ export const App: FC<AppProps> = ({ provider }) => {
     const reqId = makeRequestId('refresh');
     activeRequestIdRef.current = reqId;
 
-    const hasHistory = s.workspaceContext?.allowedOperations
-      ? s.workspaceContext.allowedOperations.includes('history.refresh')
-      : (activeProvider.descriptor.hasHistorySource || activeProvider.descriptor.capabilities.includes('history.refresh'));
+    const historyAuthorityAvailable = s.workspaceContext
+      ? s.workspaceContext.historyScope !== 'unavailable'
+      : true;
+    const currentQueryCheck = selectHistoryQuery(s);
+    const canRefreshCurrentScope = currentQueryCheck.available || (s.activityScope !== 'all' && historyAuthorityAvailable);
+    const hasHistory = historyAuthorityAvailable && canRefreshCurrentScope && (
+      s.workspaceContext?.allowedOperations
+        ? s.workspaceContext.allowedOperations.includes('history.refresh')
+        : (activeProvider.descriptor.hasHistorySource || activeProvider.descriptor.capabilities.includes('history.refresh'))
+    );
 
-    // 1. History Refresh (if permitted)
+    if (!canRefreshCurrentScope && currentQueryCheck.reason) {
+      setHistoryError(currentQueryCheck.reason);
+    }
     if (hasHistory) {
       dispatch({
         type: 'HISTORY_REFRESH_START',
