@@ -1,7 +1,7 @@
 # Codebase Summary
 
-**Generated:** 2026-09-28  
-**Source:** Fresh Repomix v0.2.26 XML compaction (`repomix-output.xml`); `.repomixignore` excludes `docs/`, `plans/`, and `tests/`, and Repomix's security scan excluded nine credential-pattern matches. This summary was cross-checked against current implementation and phase evidence.
+**Generated:** 2026-09-29
+**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,636 files, 9,060,915 tokens, and 34,112,220 characters; `.repomixignore` excludes documentation, plans, tests, and generated/heavy roots. Repomix reported no suspicious files. The cross-repository host contract was checked directly against the active DamHopper source.
 **Package:** Private npm package `evcrate` 2.3.2; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [Repair Phase 04 plan](../plans/260927-0005-windows-advisor-readiness/phase-04-verification-readiness.md), [test report](../plans/reports/testerphase04-260928-0955-verification-readiness.md), and [review](../plans/reports/code-review-260928-1008-repair-phase-04-readiness.md).
 
@@ -77,13 +77,22 @@ The committed schema-1 `.evcrate/registry.json` was regenerated with the new fil
 
 The plugin worker and shared UI are documented separately in [advisor-plugin-worker.md](./advisor-plugin-worker.md) and [advisor-plugin-ui.md](./advisor-plugin-ui.md). The standalone picker/reader source was removed; joint G4 qualification/sign-off and standalone retirement are not established by source cutover alone. Cross-project history contracts are in [all-project-advisor-history.md](./all-project-advisor-history.md).
 
-Live advisor vendor qualification, HOME rollout, npm publication, deployment, and broader Windows runtime support remain separate operator/release gates. See the [system architecture](./system-architecture.md) for implementation contracts, the [PDR](./project-overview-pdr.md) for requirements, the [code standards](./code-standards.md) for normative rules, the [roadmap](./project-roadmap.md) for current phase status, and the [changelog](./project-changelog.md) for dated evidence.
+Live advisor vendor qualification, HOME rollout, npm publication, deployment, and broader Windows runtime support remain separate operator/release gates. See the [system architecture](./system-architecture.md) for implementation contracts, the [PDR](./project-overview-pdr.md) for requirements, the [code standards](./code-standards.md) for normative rules, the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) for Phase 01 admission/identity, the [roadmap](./project-roadmap.md) for current phase status, and the [changelog](./project-changelog.md) for dated evidence.
+
 The Phase 06 standalone browser reader used an explicit multi-file picker with an
 8 MiB per-document bound. That reader source has since been removed. Fixtures
 `valid-mixed.json`, `digest-mismatch.json`, `invalid-observations.json`, and
 `corpus-nine-cases.json` remain evidence for protocol boundaries; the **87/87 test**
 result and **10/10 review** were recorded in 2026-09-18 and are historical.
 The milestone handed off to Phase 07.
+
+## Workspace Advisor host admission (Phase 01)
+
+Phase 01 adds the selected-project `describeView` contract in the paired DamHopper host. The `packages/ui/src/api/` client and WebSocket transport call `POST /api/plugins/view-context`; the Rust route and plugin service resolve a required configured project/worktree and return safe metadata, canonical `workspaceProject` identity, effective operations, actual history/context scopes, and `authorityKey`.
+
+The server derives `projectId` from the canonical target directory's UTF-8 bytes, never a browser-supplied ID or display label. Root history grants only four history reads; policy and evaluation permissions remain separately grant-protected. `authorityKey` is revision/equality metadata, not a credential, and the descriptor does not replace authorization on asset, open, or invoke requests.
+
+See the [host contract](./workspace-advisor-host-contract.md) and [Phase 01 behavioral evidence](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md). The documented phase record reports 102 passing checks; Phase 01 does not claim Workspace rollout or production deployment.
 
 ## Advisor Plugin data API and cross-project history (E00/Phases 01–05)
 
@@ -93,7 +102,7 @@ E00 completed with `evcrate-advisor-data` v1; Phase 01 froze v2 while retaining 
 - Positive/negative fixtures cover wire parity. V2 summary/page queries carry `project_id: string | null`; the same-snapshot per-project inventory is capped at 500 entries with counts independent of active filters.
 - Phase 02 in DamHopper binds root history to the installation and authenticated history-only admission; the API refreshes its source cache from runner state on each context open.
 - Phase 03 `context-table.cjs` binds root scope to the configured owner history root. `history-scanner.cjs` traverses sorted SHA-256 project IDs under shared budgets and marks cap-limited snapshots incomplete.
-- `.evcrate/source/.evcrate/bin/lib/advisor/history-store.cjs` writes a sanitized basename to an owner-only, version-1 `project-metadata.json` sidecar keyed by project ID; read failures or unknown names retain the record with a null label/abbreviated-ID fallback.
+- `.evcrate/source/.evcrate/bin/lib/advisor/history-store.cjs` writes a sanitized basename to a version-1 `project-metadata.json` sidecar keyed by project ID under the cross-platform trusted-files policy; read failures or unknown names retain the record with a null label/abbreviated-ID fallback.
 - Scanner and detail reads use `O_NOFOLLOW`, post-open descriptor checks, matching directory IDs, and device/inode/size/content fingerprints to prevent unsafe or changed-source reads.
 - `cursor-manager.cjs` HMAC-binds snapshot, query, and offset; stable ordering is `started_at` descending, then project/task/consultation IDs ascending. `snapshot-store.cjs` accounts for normalized records and inventory under cache limits.
 - `scripts/build-advisor-plugin-candidate.mjs` reuses `collectPluginPackageRecords` from `scripts/plugin/package-inventory.cjs`; the candidate and package manifest now share one closure inventory.
@@ -122,9 +131,7 @@ provider that Phase E02 wrapped in the pinned D00 worker. See the [phase plan](.
 | `plugin/backend/policy-provider.cjs` | Capability-gated 16 KiB current account-policy read with revision/status labels. |
 | `plugin/backend/evaluation-provider.cjs` | Explicit descriptor-bound 8 MiB list/read/compare with provenance-preserving groups. |
 
-- Policy/evaluation/history readers use `O_RDONLY | O_NOFOLLOW`, post-open
-  `fstat` owner/single-link/size checks, and descriptor reads to close TOCTOU
-  windows; history fingerprints bind device and inode as well as size/digest.
+- Policy/evaluation/history readers use `O_RDONLY | O_NOFOLLOW`, post-open regular-file, single-link, and size checks, and descriptor reads to close TOCTOU windows; filesystem UID-ownership checks were removed under the cross-platform trusted-files policy. History fingerprints bind device and inode as well as size/digest.
 - `tests/plugin/provider.test.mjs` covers lifecycle, history, policy, and
   evaluation; `provider-cancellation.test.mjs` covers abort/deadline/stale
   retention and FIFO; `provider-source-safety.test.mjs` covers path/link/race

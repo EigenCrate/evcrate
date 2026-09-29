@@ -9,9 +9,8 @@ DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
 not release-authorized.
-**Updated:** 2026-09-28
-**Scope:** EVCrate package, generated target projections, shared advisor controller,
-and atomic publication
+**Updated:** 2026-09-29
+**Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
 EVCrate turns one canonical agent-harness source tree into verified target
 projections and publishes those projections safely. This PDR records observable
@@ -549,6 +548,19 @@ does not decide whether execute-bit-only capability transitions are an exception
 chmod-invariance. Durable journal recovery/migration policy and Windows readiness or
 production-runtime qualification remain outside this phase.
 
+### FR-25: Workspace Advisor host admission and identity (Phase 01)
+
+**Status:** Implementation completed and approved 2026-09-29; Phases 02–09 remain pending.
+
+**Requirement:** An authenticated Workspace user must select a registered, resolvable project/worktree to identify the owning DamHopper connection and profile before Advisor admission. The host returns a server-resolved descriptor with canonical project identity, actual history/context scope, and actor-effective operations. Client-supplied profile, actor, project ID, root path, scope, or permission overrides never establish authority.
+
+**Acceptance:**
+- `plugins:describeView` accepts only the non-null `{installationId, target}` request at `POST /api/plugins/view-context`; unknown authority fields reject. No selection, unavailable target, or unauthenticated access does not fall back to another project, profile, or root.
+- The server resolves the configured target/worktree, canonicalizes its directory, and computes lowercase SHA-256 over exact UTF-8 path bytes. Unsupported encoding and unsafe roots fail; labels remain display-only.
+- The descriptor distinguishes `historyScope` (`history-root`, `project`, `unavailable`) from the existing runner `contextScope` (`history-root`, `project`). The enabled owner-history source implies only `history.refresh`, `history.summary`, `history.page`, and `history.detail`; policy/evaluation access still requires existing grants and remains available when history is unavailable.
+- `authorityKey` fences authority changes using installation, package, scope, security/source revision, and target-binding identity. It is equality metadata, not a credential; asset reads, context open, and invocation continue to reauthorize.
+- Server integration and authorization checks cover admission failures, forged identity fields, canonical ID parity, global-root A→B key stability, and distinct history/project/policy/evaluation grants. See the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) and [Phase 01 evidence](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md).
+
 ## Non-functional requirements
 
 | Area | Requirement |
@@ -622,6 +634,7 @@ All-project advisor history (Phases 00–05) is complete and its paired release 
 - [All-project advisor history contract](./all-project-advisor-history.md) — frozen v2 scope, inventory, metadata, and runner contract.
 - [Embedded advisor plugin UI](./advisor-plugin-ui.md) — E03 provider boundary,
   bridge, reducer/views, opaque-origin package, and acceptance boundary.
+- [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — `describeView`, selected-project admission, canonical identity, and effective permissions.
 - [Project roadmap](./project-roadmap.md) — completed gates, current gaps, and next work.
 - [Project changelog](./project-changelog.md) — historical phase evidence and boundaries.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.

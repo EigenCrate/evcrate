@@ -5,9 +5,9 @@
 **DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
 **Windows support:** Installer/version qualification remains the only qualified Windows release boundary. Native advisor invocation and packaging are implemented and isolated-smoked, but production Windows advisor runtime remains unqualified.
 **Native Windows advisor status:** Readiness repairs 01–04 are complete; Repair Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 review and no critical findings. Original Phase 03 implementation is in progress at 67% (4/6 checklist entries), not DONE. `ADVICE_READY`, live provider/Pi/OMP, positive attached-console, and explicit approval are unproven; WSL state init/get is only a smoke, not full Linux qualification. State/history owner checks are superseded by the cross-platform trusted-files policy.
-**Updated:** 2026-09-28
+**Updated:** 2026-09-29
 
-**Authority:** TypeScript control plane and the canonical advisor controller source
+**Authority:** TypeScript control plane, canonical advisor controller, and paired DamHopper Advisor contracts linked below
 
 This document is the central authority for distribution, advisor supervision, wire
 contracts, isolation, and publication. The [codebase summary](./codebase-summary.md)
@@ -783,11 +783,11 @@ release-asset verification.
 - **Phase 02 binding:** DamHopper persists `OwnerHistorySource` (`rootPath`, `rootIdentity`, `sourceRevision`, `allAuthenticatedHistoryRead`) on the installation. Admin replacement uses an expected security revision and advances registry/security revisions.
 - **Admission:** Valid authenticated actors may use `history-root` without per-account grants only for `history.refresh`, `history.summary`, `history.page`, and `history.detail`. `--no-auth` stays denied; project scope, policy, and evaluation access retain their grant boundaries.
 - **Context open:** The API validates the actor epoch and enabled installation, hydrates its process-local source cache from runner state before each open (not at startup), and sends the descriptor's kind, root identity, and source revision. The descriptor does not carry the owner path.
-- **Runner verification:** The runner re-reads the persisted installation, checks source capability and descriptor identity/revision, and rejects a missing, symlink, or non-directory root; a non-root Unix runner also checks effective-UID ownership.
+- **Runner verification:** The runner re-reads the persisted installation, checks source capability and descriptor identity/revision, and rejects a missing, symlink, or non-directory root. The cross-platform trusted-files policy does not add filesystem UID-ownership gates.
 - **Revalidation:** The API rechecks actor/epoch and operation on every invoke; the runner rechecks enabled state, source capability, root identity, and revision. Admin source replacement clears the API source cache and revokes contexts; the next open rehydrates from runner state.
 - **Phases 03–04:** EVCrate root scanning and safe project-name persistence are paired with same-snapshot project filtering and independent source labels in the UI.
 - **Phase 05:** Paired qualification completed 2026-09-24: **273/273 tests passed**, 0 failed/skipped; candidate and distribution packages verified; review approved **9.8/10** with zero critical issues. The direct history-root provider scan accepted **237/237 consultations across 21 projects in 191.48 ms**, with zero diagnostics. It was not a new live DamHopper browser session.
-- **Release boundary:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records the paired-release decision. Qualification is not production deployment or package publication.
+- **Release boundary:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records paired-release qualification, not deployment/publication. Workspace Advisor Phase 01 implements selected-project admission and identity in DamHopper; see the [host contract](./workspace-advisor-host-contract.md) and [Phase 01 record](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md). Phases 02–09 remain pending.
 
 ## Related documents
 
@@ -796,4 +796,4 @@ release-asset verification.
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
-- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and historical E03 provider boundary.
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and historical E03 provider boundary; [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — Phase 01 admission and identity.
