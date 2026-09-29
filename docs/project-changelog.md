@@ -4,7 +4,17 @@
 
 **Updated:** 2026-09-29
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. Workspace-integrated Advisor: 4/10 phases complete (40%; Phase 03 DONE 2026-09-29; review approved 9.7/10); end-to-end rollout and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. Workspace-integrated Advisor: 5/10 phases complete (50%; Phase 04 DONE 2026-09-29; review approved 9.5/10); end-to-end rollout and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+
+### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 04
+
+**Status:** Phase 04 DONE (2026-09-29; 100%; review approved 9.5/10); Workspace plan 5/10 phases complete (50%). End-to-end rollout and production deployment remain unclaimed.
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 04](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md)
+**Review:** [Code review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md)
+
+- Completed shared Workspace-project/All activity scope, fail-closed history selection, authority/request fencing and revoke clearing, coherent snapshot queries, independent manual refresh, and lazy evaluation reads.
+- Scoped proof: 28/28 targeted tests passed; strict TypeScript check and V-E3 delayed-response/call-count smoke passed. Review found no critical issues.
+- The broader viewer/plugin run recorded 120 passed and one packaged-artifact checksum/size-delta mismatch, deferred to Phase 08 package regeneration. This phase does not claim end-to-end rollout or production deployment.
 
 ### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 03
 

@@ -21,6 +21,38 @@ import type {
   ProjectInventoryItemV2
 } from '../../src/protocol/advisor-plugin-data-api.ts';
 import type { HashView } from './hash-view.js';
+import type { AdvisorWorkspaceContext } from './providers/bridge-contract.ts';
+
+export type ActivityScope = 'workspace-project' | 'all';
+
+export type BoundSourceStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'forbidden'
+  | 'missing'
+  | 'not_configured'
+  | 'changed'
+  | 'error';
+
+export interface BoundPolicyState {
+  readonly status: BoundSourceStatus;
+  readonly policy: PolicyReadCurrentResultV1 | null;
+  readonly error: string | null;
+}
+
+export interface BoundEvaluationsState {
+  readonly status: BoundSourceStatus;
+  readonly list: EvaluationsListResultV1 | null;
+  readonly error: string | null;
+}
+
+export interface BoundComparisonState {
+  readonly status: BoundSourceStatus;
+  readonly comparison: EvaluationsCompareReadyResultV1 | null;
+  readonly cursor: string | null;
+  readonly error: string | null;
+}
 
 export interface PolicyReaderResult {
   readonly status: 'POLICY_READY' | 'POLICY_MIGRATION_REQUIRED' | 'POLICY_SELECTION_CANCELLED' | 'POLICY_READ_ERROR';
@@ -51,7 +83,6 @@ export type ViewerStatus = 'idle' | 'selecting' | 'scanning' | 'fresh' | 'stale'
 export type DetailStatus = 'idle' | 'loading' | 'ready' | 'changed' | 'missing' | 'error';
 
 export interface UiHistoryFilters extends HistoryMetricFiltersV1 {
-  readonly project_id: string | null;
   readonly task_run_id: string | null;
 }
 
@@ -76,6 +107,14 @@ export interface EvaluationDetailState {
 }
 
 export interface AppState {
+  readonly activityScope: ActivityScope;
+  readonly workspaceContext: AdvisorWorkspaceContext | null;
+  readonly contextEpoch: number;
+  readonly historyQueryRevision: number;
+  readonly observedAt: number | null;
+  readonly policyState: BoundPolicyState;
+  readonly evaluationsState: BoundEvaluationsState;
+  readonly comparisonState: BoundComparisonState;
   readonly status: ViewerStatus;
   readonly activeView: HashView;
   readonly generation: number;
@@ -108,7 +147,6 @@ export interface AppState {
 }
 
 export const INITIAL_FILTERS: UiHistoryFilters = Object.freeze({
-  project_id: null,
   task_run_id: null,
   statuses: null,
   outcome_states: null,
@@ -142,9 +180,36 @@ export const INITIAL_EVALUATION_DETAIL_STATE: EvaluationDetailState = Object.fre
   error: null
 });
 
+export const INITIAL_BOUND_POLICY_STATE: BoundPolicyState = Object.freeze({
+  status: 'idle',
+  policy: null,
+  error: null
+});
+
+export const INITIAL_BOUND_EVALUATIONS_STATE: BoundEvaluationsState = Object.freeze({
+  status: 'idle',
+  list: null,
+  error: null
+});
+
+export const INITIAL_BOUND_COMPARISON_STATE: BoundComparisonState = Object.freeze({
+  status: 'idle',
+  comparison: null,
+  cursor: null,
+  error: null
+});
+
 export const INITIAL_STATE: AppState = Object.freeze({
   status: 'idle',
   activeView: 'overview',
+  activityScope: 'workspace-project',
+  workspaceContext: null,
+  contextEpoch: 0,
+  historyQueryRevision: 0,
+  observedAt: null,
+  policyState: INITIAL_BOUND_POLICY_STATE,
+  evaluationsState: INITIAL_BOUND_EVALUATIONS_STATE,
+  comparisonState: INITIAL_BOUND_COMPARISON_STATE,
   generation: 0,
   snapshot: null,
   scan: null,

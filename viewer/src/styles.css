@@ -562,3 +562,53 @@ tr.row-selected {
     transition-duration: 0.01ms !important;
   }
 }
+/* Activity Scope Control */
+.activity-scope-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.scope-button-group {
+  display: inline-flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, #333);
+}
+
+.scope-button-group .btn-scope {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 0;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scope-button-group .btn-scope.active {
+  background-color: var(--color-primary, #2563eb);
+  color: #fff;
+}
+
+.scope-button-group .btn-scope:not(.active) {
+  background-color: var(--bg-card, #1e1e1e);
+  color: var(--text-secondary, #aaa);
+}
+
+.scope-button-group .btn-scope:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scope-notice {
+  font-size: 11px;
+}
+
+.scope-badge {
+  font-size: 11px;
+  opacity: 0.85;
+}

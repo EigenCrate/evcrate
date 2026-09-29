@@ -1,11 +1,13 @@
 import type { FC } from 'react';
-import type { AppState } from '../app-state.js';
+import type { AppState, ActivityScope } from '../app-state.js';
 import { MetricRatio } from '../components/metric-ratio.js';
 import { formatProjectName } from '../app-state.js';
+import { ActivityScopeControl } from '../components/activity-scope-control.js';
 import type { DistributionMetric, HistoryMetricResultV1 } from '../../../src/protocol/advisor-metrics.js';
 
 export interface OverviewViewProps {
   readonly state: AppState;
+  readonly onScopeChange?: (scope: ActivityScope) => void;
 }
 
 function formatLatencyMs(ms: number | null | undefined): string {
@@ -13,7 +15,7 @@ function formatLatencyMs(ms: number | null | undefined): string {
   return `${Math.round(ms)} ms`;
 }
 
-export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
+export const OverviewView: FC<OverviewViewProps> = ({ state, onScopeChange }) => {
   const { snapshot, historySummary, status, staleReason } = state;
   const metricsResult: HistoryMetricResultV1 | null =
     snapshot?.metricsResult ?? historySummary?.metrics ?? null;
@@ -21,6 +23,12 @@ export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
   if (!metricsResult) {
     return (
       <section className="view-panel overview-empty" id="panel-overview" aria-label="Overview">
+        <ActivityScopeControl
+          scope={state.activityScope}
+          workspaceContext={state.workspaceContext}
+          isAvailable={state.isAvailable}
+          onScopeChange={(newScope) => onScopeChange?.(newScope)}
+        />
         <div className="empty-state-card">
           <h3>No Advisor History Loaded</h3>
           <p>
@@ -45,6 +53,12 @@ export const OverviewView: FC<OverviewViewProps> = ({ state }) => {
           Overview Metrics
           {status === 'stale' && <span className="badge badge-warning" style={{ marginLeft: 8 }}>Stale Data</span>}
         </h2>
+        <ActivityScopeControl
+          scope={state.activityScope}
+          workspaceContext={state.workspaceContext}
+          isAvailable={state.isAvailable}
+          onScopeChange={(newScope) => onScopeChange?.(newScope)}
+        />
         <div className="overview-meta text-muted">
           <span>Scope: <strong>{scope.kind === 'history-root' ? (scope.selected_project_id ? 'Filtered Project' : 'All Projects') : scope.kind}</strong></span>
           {scope.selected_project_id && (
