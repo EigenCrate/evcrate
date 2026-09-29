@@ -168,6 +168,32 @@ Distinct visual representations for all system states:
 - Sub-sections: Execution Summary, Advisor Route, Outcome, Model Execution Attempts table, Checkpoint Request (Goal + Question), Advisor Response (Recommendation, Rationale, Must Fix items, Cautions, Success Checks), and Sanitized Error block.
 - Explicit drawer states: `loading`, `changed`, `missing`, `error`, `ready`.
 
+### 3.8 Configuration View (`ConfigurationView`)
+
+- **Semantic Container:** `role="tabpanel"`, `id="panel-configuration"`, `aria-labelledby="tab-configuration"`, `tabIndex={0}`.
+- **Current Owner Policy Card:** Always distinguishes current policy from History-filtered evidence with the badge *"Current owner policy — not filtered by History project"*. Shows the permission/state badge, revision (including its `standalone`/`none` fallback), and observed time when available. When ready, summarizes primary and backup route (`backend / model (effort)`); other states retain explicit feedback for `forbidden`, `missing`, `not_configured`, `migration_required`, `loading`, `changed`, and error/unknown status. Forbidden/missing use danger banners with `role="alert"`; migration is warning-styled, loading/not-configured are info-styled, and remaining non-ready states retain danger feedback.
+- **Policy Disclosure:** In the ready state, native `<details className="policy-disclosure">` is collapsed by default and exposes policy version, primary/backup routes, wait settings, history settings, and raw policy JSON. The observational disclaimer stays visible independently of disclosure state.
+- **Independent Historical Route Groups:** Count and current History-scope badge remain visible. Empty state says no metrics are loaded and suggests refreshing history or selecting an active Workspace project.
+- **Responsive Routes:** Cards are the sole representation below 640px, including narrow 180–260px docks; use one column below 580px and 260px-minimum columns when space permits from 580px. Each card includes route/effort, consultation count, prompt/build identities, delivery and resolution ratios with numerator/denominator, and p50/p95 latency. At >= 640px the cards are hidden and a wide table replaces them, with route/identities/count/delivery/resolution/p50-p95 columns. Long identities/routes wrap; narrow styles prevent horizontal overflow.
+
+### 3.9 Evaluations View (`EvaluationsView`)
+
+- **Semantic Container:** `role="tabpanel"`, `id="panel-evaluations"`, `aria-labelledby="tab-evaluations"`, `tabIndex={0}` in loaded, forbidden, and empty states.
+- **Header Invariants:** Always identifies the bound evaluation source as independent of History project scope. Shows list status (`idle`, `loading`, `ready`, `forbidden`, `missing`, `not_configured`, `changed`, or `error`); shows comparison status when non-idle and an alert when comparison fails. The title uses descriptor count when there are no groups; when groups exist it reports group count and separately reports descriptor count. A descriptor count is never relabeled as a comparison-group count.
+- **Explicit Bounded Compare:** “Compare Available Descriptors” invokes comparison only on user action, is unavailable while comparing or with no descriptors, and sends `evaluation_ref` plus `expected_revision` for the first 32 available descriptors. It does not silently compare the entire descriptor list. Candidate reveal is a separate explicit control.
+- **Descriptor List & Pagination:** The list renders 10 cards per page and shows pagination only above 10 descriptors; the current page is clamped if the list shrinks. Each card shows reference, revision, digest, counts, and creation time. Its explicit **Inspect Descriptor** action reads that descriptor using its expected revision.
+- **Inspected Evaluation Card:** A non-idle inspection renders an inline `role="region"` card. It reports reference/status; loading and error have their own feedback, while ready shows evaluation/run IDs, observed revision, rubric digest, and candidate/case/observation counts.
+- **Comparable Groups:** Cards show comparable key, rubric/input digests, and counts from the returned cases, responses, human scores, and automated scores. **Inspect Group** exposes `aria-expanded`; group-detail disclosure does not itself reveal candidate identity.
+- **Methodological Limits:** In the populated view, keep the visible caveat that grouping requires matching rubric/input digests and is neither an account-wide benchmark nor causal model ranking; candidate blinding is the default.
+
+### 3.10 Evaluation Detail Drawer (`EvaluationDetail`)
+
+- **Accessible Region:** An `<aside className="eval-detail-drawer" role="region" aria-label="Evaluation Group Details">` with an explicit Close button. It presents included cases, candidate response performance, and separate human/automated score provenance.
+- **Escape & Focus:** While mounted, the drawer registers `window` `keydown` in capture phase. Escape calls `preventDefault()` and `stopPropagation()` before closing the drawer, so it does not dismiss the host Advisor panel. On unmount, the handler is removed and focus returns to the `document.activeElement` captured at mount when that element supports `.focus()`. Focus capture/restoration is mount/unmount-only, not repeated on parent renders.
+- **Strict Candidate Blinding:** Reveal starts false and resets on context change, revocation, disconnect, or incompatibility. While blinded, raw candidate IDs, source-provided candidate labels, routes/backend/models/effort, and build/prompt identities must not appear in rendered text, `aria-label`, `title`, or `data-*` attributes; blinded React list keys also omit candidate IDs. Route/build columns are omitted. Only the separate explicit **Reveal Candidate Details** control changes reveal state.
+- **Stable Per-Group Labels:** Build one mapping from sorted unique candidate IDs across response, human-score, and automated-score rows. The same ID receives the same `Candidate A`, `Candidate B`, … label in every section; IDs do not shift according to the order of an individual score array.
+- **Reveal State:** When explicitly revealed, candidate labels/IDs and route/build details may be shown as implemented. Opening or closing the group detail does not toggle reveal state.
+
 ---
 
 ## 4. Accessibility & Interaction Invariants
@@ -176,4 +202,5 @@ Distinct visual representations for all system states:
 2. **Focus Rings:** Visible focus ring via `:focus-visible` using `var(--accent-primary)` (2px offset, 2px solid).
 3. **Screen Readers:** All icon-only or shortened buttons must provide informative `aria-label`s. Dynamic updates use `aria-live="polite"`.
 4. **Contrast Ratios:** Text colors against their respective backgrounds must meet or exceed WCAG 2.1 AA 4.5:1 ratio (large text >= 3:1).
-5. **Escape Key Handling:** Never prevent default or stop propagation on `Escape` key events at the tab or button level.
+5. **Escape Key Handling:** Host tabs and buttons must not prevent default or stop propagation of `Escape`. The mounted `EvaluationDetail` is the deliberate nested exception: it intercepts Escape at `window` capture phase and consumes it to close the drawer while preserving the host panel.
+

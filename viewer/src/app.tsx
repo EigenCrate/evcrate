@@ -705,6 +705,8 @@ export const App: FC<AppProps> = ({ provider }) => {
           <EvaluationsView
             state={state}
             onRevealChange={(rev) => dispatch({ type: 'REVEAL_CANDIDATES', reveal: rev })}
+            onCompareDescriptors={(items) => handleCompareEvaluations(items)}
+            onInspectDescriptor={(ref, rev) => handleReadEvaluation(ref, rev)}
           />
         )}
       </main>

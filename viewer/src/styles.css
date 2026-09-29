@@ -984,3 +984,771 @@ tr.row-selected {
   line-height: 1.35;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   Phase 07: Configuration & Evaluations UI Styles
+   Responsive Container Layouts (180px–260px, 360px–480px, 768px+)
+   ========================================================================== */
+
+/* Configuration View Layout */
+.configuration-view {
+  container-type: inline-size;
+  container-name: config-view;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.config-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.config-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Policy Summary Card */
+.policy-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.policy-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.policy-state-banner {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.policy-routes-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0;
+  min-width: 0;
+}
+
+.policy-route-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  min-width: 0;
+}
+
+.route-role-badge {
+  min-width: 54px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.route-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.route-target-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-primary);
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+/* Policy Disclosure (Native <details>) */
+.policy-disclosure {
+  margin-top: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-card);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.policy-disclosure[open] {
+  border-color: var(--accent-primary);
+}
+
+.policy-disclosure-summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.policy-disclosure-summary:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-card-hover);
+}
+
+.policy-disclosure-summary:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+
+.policy-disclosure-content {
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: disclosureSlideDown 0.2s ease-out;
+}
+
+@keyframes disclosureSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.policy-params-dl {
+  margin-bottom: 8px;
+}
+
+.policy-json-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.json-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.policy-json-block {
+  background-color: var(--bg-primary);
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  overflow-x: auto;
+  max-height: 220px;
+  border: 1px solid var(--border-color);
+}
+
+/* Historical Route Groups Section */
+.routes-section-card {
+  gap: 14px;
+}
+
+.routes-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  min-width: 0;
+}
+
+.routes-title-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.history-scope-badge {
+  font-size: 10px;
+}
+
+.routes-cards-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+
+@media (min-width: 580px) {
+  .routes-cards-list {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+.route-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.route-card:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-card-hover);
+}
+
+.route-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.route-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.route-name {
+  font-size: 12px;
+  color: var(--accent-primary);
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.route-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  min-width: 0;
+}
+
+.metric-rate {
+  color: var(--text-primary);
+  font-feature-settings: "tnum";
+}
+
+/* Route Table Responsive Visibility */
+.routes-table-wrapper {
+  display: none;
+  margin-top: 10px;
+}
+
+@media (min-width: 640px) {
+  .routes-cards-list {
+    display: none;
+  }
+  .routes-table-wrapper {
+    display: block;
+  }
+}
+
+/* ==========================================================================
+   Evaluations View Layout & Components
+   ========================================================================== */
+.evaluations-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .evaluations-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+.evaluations-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.evaluations-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.descriptor-summary {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.evaluations-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.compare-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.compare-limit-hint {
+  font-size: 10px;
+  text-align: center;
+}
+
+/* Descriptors Listing Section */
+.descriptors-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.descriptors-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.descriptors-cards-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .descriptors-cards-list {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+.descriptor-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  transition: border-color 0.15s ease;
+}
+
+.descriptor-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.descriptor-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.descriptor-ref-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.descriptor-ref {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-primary);
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.descriptor-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  min-width: 0;
+}
+
+/* Comparable Groups Section & Cards */
+.evaluations-groups-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.eval-groups-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+
+@media (min-width: 580px) {
+  .eval-groups-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+.eval-group-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.eval-group-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.eval-group-card.card-selected {
+  border-color: var(--accent-primary);
+  border-left: 3px solid var(--accent-primary);
+  background-color: var(--bg-card);
+}
+
+.group-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.group-key-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.group-key-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.key-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.group-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.digest-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.digest-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.digest-label {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.digest-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.group-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  font-size: 11px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+@media (min-width: 400px) {
+  .group-metrics-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.group-metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Evaluation Detail Drawer */
+.eval-detail-drawer {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  animation: drawerFadeIn 0.2s ease-out;
+}
+
+@keyframes drawerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.drawer-digests {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.drawer-digest-divider {
+  opacity: 0.5;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.blinding-badge {
+  font-size: 10px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.eval-cases-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.eval-case-item {
+  background-color: var(--bg-card);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.case-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.eval-candidates-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.eval-candidates-table {
+  width: 100%;
+  font-size: 11px;
+  border-collapse: collapse;
+}
+
+.scores-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+
+@media (min-width: 480px) {
+  .scores-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.score-provenance-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.score-col-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+.score-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-summary-item {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.score-item-header {
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.score-stat-line {
+  font-size: 11px;
+}
+
+.eval-limitations-notice {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   Narrow Viewport / Dock Adaptations (Down to 180px)
+   ========================================================================== */
+@media (max-width: 260px) {
+  .app-container {
+    padding: 6px 4px;
+    gap: 8px;
+  }
+
+  .config-card,
+  .policy-card,
+  .routes-section-card,
+  .eval-detail-drawer,
+  .eval-group-card,
+  .descriptor-card {
+    padding: 8px 6px;
+  }
+
+  .routes-table-wrapper {
+    display: none !important;
+  }
+
+  .routes-cards-list,
+  .eval-groups-grid,
+  .descriptors-cards-list,
+  .scores-columns {
+    grid-template-columns: 1fr !important;
+  }
+
+  .group-metrics-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .btn {
+    font-size: 11px;
+    padding: 4px 8px;
+    min-height: 28px;
+  }
+
+  .policy-route-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .route-role-badge {
+    min-width: 0;
+    align-self: flex-start;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .policy-disclosure-content,
+  .eval-detail-drawer {
+    animation: none !important;
+  }
+}

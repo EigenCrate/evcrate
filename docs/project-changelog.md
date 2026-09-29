@@ -4,7 +4,18 @@
 
 **Updated:** 2026-09-30
 
-**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 7/10 phases complete (70%; Phase 06 DONE 2026-09-30; Cycle 2 review approved 10/10); Phases 07–09, end-to-end rollout, and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.4.0`.
+**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 8/10 phases complete (80%; Phase 07 DONE 2026-09-30; Cycle 2 review approved 9.6/10); Phases 08–09, paired end-to-end rollout, and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.4.0`.
+
+### 2026-09-30 — feat(advisor): complete Workspace-integrated Advisor Phase 07
+
+**Status:** Phase 07 DONE (2026-09-30; 100%; Cycle 2 review approved 9.6/10); Workspace plan 8/10 phases complete (80%). Phases 08–09, paired end-to-end rollout, and production deployment remain unclaimed.
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 07](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md)
+**Review:** [Cycle 2 code review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md)
+
+- Completed bound-source Configuration and Evaluations disclosures: current owner policy remains distinct from History-filtered route metrics; Evaluation comparison and inspection stay explicit and lazy.
+- Preserved candidate blinding, accessible disclosures, responsive narrow layouts, and source/error states.
+- Cycle 2 review records 13/13 Phase 07 tests and 100/100 related tests passing, `tsc` with 0 errors, and a clean plugin UI build.
+- Phase 07 does not claim paired end-to-end qualification or production rollout; Phases 08–09 remain.
 
 ### 2026-09-30 — feat(advisor): complete compact activity views and accessible tabs (Phase 06)
 
