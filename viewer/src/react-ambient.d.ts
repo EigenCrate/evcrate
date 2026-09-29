@@ -15,7 +15,7 @@ declare module 'react' {
   }
 
   export type JSXElementConstructor<P> = (props: P) => ReactElement<any, any> | null;
-  export type FC<P = Record<string, unknown>> = (props: P) => ReactElement<any, any> | null;
+  export type FC<P = Record<string, unknown>> = (props: P & { key?: string | number | null | undefined; children?: ReactNode }) => ReactElement<any, any> | null;
 
   export interface CSSProperties {
     [key: string]: string | number | undefined;

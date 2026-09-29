@@ -8,7 +8,7 @@ Its paired release is qualified; see the [Release Evidence Manifest](../plans/re
 DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
-not release-authorized. Workspace Advisor Phases 00–06 are implemented (7/10, 70%); Phase 06 Cycle 2 review approved 10/10. Phases 07–09, paired end-to-end rollout, explicit user approval, and production deployment remain open.
+not release-authorized. Workspace Advisor Phases 00–07 are implemented (8/10, 80%); Phase 07 Cycle 2 review approved 9.6/10. Phases 08–09, paired end-to-end rollout, explicit user approval, and production deployment remain open.
 **Updated:** 2026-09-30
 **Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
@@ -563,7 +563,7 @@ production-runtime qualification remain outside this phase.
 
 ### FR-26: History scope and unmapped-record preservation (Phase 02)
 
-**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), Phase 04 under [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), Phase 05 under [FR-29](#fr-29-persistent-workspaceadvisorhost-placement-phase-05), and Phases 06–09 remain pending.
+**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), Phase 04 under [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), Phase 05 under [FR-29](#fr-29-persistent-workspaceadvisorhost-placement-phase-05), Phase 06 under [FR-30](#fr-30-compact-activity-views-and-accessible-tabs-phase-06), Phase 07 under [FR-31](#fr-31-configuration-and-evaluations-disclosures-phase-07), and Phases 08–09 remain open.
 
 **Requirement:** In `history-root` scope, All (`project_id: null`) includes structurally valid records with canonical project IDs even when Workspace registration or display-label metadata is absent. Project scope remains bound to its context and cannot widen. Policy/evaluation reads retain independent profile-bound sources and grants.
 
@@ -672,10 +672,26 @@ actions; they do not redefine the Workspace project or All History authority.
 
 **Evidence:** [Phase 06 plan](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md) and [Cycle 2 review](../plans/reports/code-review-260930-0226-phase-06-cycle-2-compact-activity-views.md). Final phase status records 55/55 tests (43 EVCrate viewer and 12 DamHopper browser) plus clean TypeScript checks in both repositories.
 
-**Boundary:** Phase 06 completes the viewer presentation slice; Phases 07–09,
-paired end-to-end rollout, explicit user approval, and production deployment
-remain separate.
+**Boundary:** Phase 06 completes the viewer presentation slice. Phase 07 disclosures are specified under [FR-31](#fr-31-configuration-and-evaluations-disclosures-phase-07); Phases 08–09, paired rollout, explicit approval, and production deployment remain separate.
 
+
+### FR-31: Configuration and Evaluations disclosures (Phase 07)
+
+**Status:** Completed 2026-09-30; Cycle 2 code review approved 9.6/10.
+
+**Requirement:** Keep current owner policy and history-scoped route evidence distinct; make bound-source evaluation descriptors, comparisons, and details inspectable without implicit comparison or candidate-identity reveal.
+
+**Acceptance:**
+- Configuration keeps the owner-policy source/status/revision/observed time separate from history-scoped route metrics. Ready policy details use a native disclosure collapsed by default; permission, loading, missing, migration, changed, and error states remain visible.
+- Historical route groups show the active History scope. Cards serve widths below 640px, including 180–260px docks; at >=640px a wide table replaces the cards without horizontal page overflow.
+- Evaluations identify the History-independent bound source and distinguish descriptor counts from actual group counts. Comparison is explicit and sends no more than the first 32 available descriptor references with their expected revisions.
+- Descriptors page 10 per view with page clamping. Inspect explicitly reads one descriptor at its expected revision and shows loading/error/ready feedback plus ready-document metadata.
+- Comparable group summaries use case, response, human-score, and automated-score collections. Candidate reveal defaults off; sorted unique IDs across those collections map consistently to Candidate A/B labels. Raw identities, routes, effort, build, and prompt details stay absent from rendered text/attributes and blinded React keys until the separate reveal action; context change/revocation/disconnect clears reveal.
+- The selected-group detail region consumes Escape at `window` capture phase so host-panel Escape remains untriggered, then restores mount-time focus on unmount.
+
+**Evidence:** [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md) and [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md). The review reports 13/13 targeted tests, 100/100 related tests, clean TypeScript checking, and a clean UI build.
+
+**Boundary:** Phase 07 completes the EVCrate disclosure UI slice; it does not complete Phase 08 navigation/package cutover, Phase 09 paired qualification, explicit user approval, end-to-end rollout, or production deployment.
 
 ## Non-functional requirements
 

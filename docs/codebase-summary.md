@@ -1,10 +1,10 @@
 # Codebase Summary
 
 **Generated:** 2026-09-30
-**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,637 files, 9,083,169 tokens, and 34,203,857 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
+**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,646 files, 9,102,001 tokens, and 34,274,345 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
 **Package:** Private npm package `evcrate` 2.4.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [system architecture](./system-architecture.md) for the runtime qualification boundary.
-**Workspace Advisor:** Phases 00–06 are implemented (7/10, 70%); Phase 06 Cycle 2 review approved 10/10. Compact Overview/History views and accessible four-view hash tabs are complete. Phases 07–09, paired end-to-end rollout, explicit user approval, and production deployment remain open. See the [Phase 06 record](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md) and [Cycle 2 review](../plans/reports/code-review-260930-0226-phase-06-cycle-2-compact-activity-views.md) for implementation evidence and boundaries.
+**Workspace Advisor:** Phases 00–07 are implemented (8/10, 80%); Phase 07 Cycle 2 review approved 9.6/10. Configuration policy details and Evaluations inspection/comparison are documented against the current viewer in the [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), and [UI design guidelines](./design-guidelines.md). Phases 08–09, paired end-to-end rollout, explicit user approval, and production deployment remain open.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -235,7 +235,7 @@ DamHopper `WorkspacePage` mounts one `WorkspaceAdvisorHost` outside shell-mode b
 Phase 06 completed the shared viewer's compact Overview/History composition and
 four hash-addressable tabs. The Cycle 2 review approved 10/10; final status
 records 55/55 tests (43 EVCrate viewer, 12 DamHopper browser) and clean TypeScript
-checks across both repositories. Phases 07–09 and paired rollout remain open.
+checks across both repositories. Phase 07 then added Configuration/Evaluations disclosures, bounded comparison, descriptor inspection, focus-safe detail, and candidate blinding; Phases 08–09 and paired rollout remain open.
 
 - `HashTabs` preserves `#overview`, `#history`, `#configuration`, and `#evaluations`,
   with tab semantics, `aria-selected`, roving `tabIndex`, arrow/Home/End activation,
@@ -256,6 +256,19 @@ See [`hash-view.ts`](../viewer/src/hash-view.ts), `viewer/src/components/`,
 `tests/viewer/{hash-view,compact-activity-views}.test.mjs` for the implementation
 map. The review evidence does not claim the later paired Phase 09 rollout or
 production deployment.
+
+## Configuration and Evaluations disclosures (Workspace Phase 07)
+
+Phase 07 adds inspectable, responsive policy/history presentations and lazy evaluation comparison/detail without widening either source. The Phase 07 Cycle 2 review approved 9.6/10; its report records 13/13 targeted tests, 100/100 related suites, clean TypeScript checking, and a clean UI build. This is viewer implementation evidence, not paired rollout or production qualification.
+
+- `ConfigurationView` separates the current owner-policy card from history-scope route metrics. Policy status/permission feedback and the visible isolation badge remain outside the collapsed native disclosure; full route/runtime parameters and raw JSON are shown only in the ready-state disclosure.
+- Route metrics use cards below 640px (single column in narrow docks, including 180–260px; 260px-minimum columns when space permits from 580px) and replace them with a six-column table at >=640px. Cards retain route/effort, identities, consultation count, ratios, and p50/p95.
+- `EvaluationsHeader` shows the bound source and list/comparison states. It reports descriptor count until groups exist; the explicit compare action sends only the first 32 available refs with their source revisions. Descriptor cards page 10 at a time, clamp the page after list changes, and invoke revision-checked reads only on Inspect.
+- The inline inspected-evaluation card reports loading/error/ready state and, when ready, IDs/revision/rubric digest and candidate/case/observation counts. Comparable group cards use the returned cases/responses/human/automated-score counts and mount `EvaluationDetail` only for the selected group.
+- The detail region intercepts Escape in the window capture phase and restores focus on unmount. Candidate reveal defaults off: sorted unique IDs across response and both score arrays map deterministically to Candidate A/B labels; identity, route, effort, build, and prompt details stay out of rendered attributes/text until explicit reveal. Context changes, revocation, disconnect, and incompatibility clear reveal state.
+
+Source map: `viewer/src/views/{configuration-view,evaluations-view,evaluation-detail}.tsx`; `viewer/src/components/{policy-summary-card,route-group-card,evaluations-header,evaluation-descriptors-section,evaluation-descriptor-card,evaluation-group-card,comparable-groups-section,candidate-performance-table,score-provenance-card}.tsx`; `viewer/src/styles.css`; targeted contract `tests/viewer/phase-07-configuration-evaluations-ui.test.mjs`. See the [Phase 07 plan](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), and [design guidelines](./design-guidelines.md#accessible-component-specifications).
+
 
 ## Packaging, CSP, preview, and release inventory (historical Phase 08)
 

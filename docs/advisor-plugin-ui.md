@@ -1,12 +1,14 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–05 are implemented through persistent placement (Phase 05 Cycle 2 review-approved 9.8/10); Phases 06–09 and end-to-end rollout remain open.
+**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–07 are implemented through Configuration and Evaluations disclosures (Phase 07 Cycle 2 review 9.6/10); Phases 08–09, end-to-end rollout, and production deployment remain open.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
 **Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [Workspace Advisor host contract](./workspace-advisor-host-contract.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
 **Phase 04 evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md) · [Review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
 
 **Phase 05 placement evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-05-workspace-panel-placement.md) · [Cycle 2 review](../plans/reports/code-review-260929-2332-phase-05-cycle-2-workspace-panel-placements.md) · [Evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md). G5 directly asserts iframe DOM identity with a mocked `PluginHost`; internal FrameSession/snapshot continuity is not measured by that fixture.
+
+**Phase 07 disclosure evidence:** [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md) · [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md) · [UI design guidelines](./design-guidelines.md#accessible-component-specifications).
 
 ## Purpose and boundary
 
@@ -120,8 +122,9 @@ The shared views are:
 |---|---|
 | Overview | Counts, rates, missingness, latency, and methodological limitations; shares the Workspace activity-scope control with History. |
 | History/detail | Shared scope control, task/metric filters, inventory-backed labels/counts, server-filtered pages, lazy detail, and changed/missing states. |
-| Configuration | Current account-wide owner policy and permission/status/revision labels are not filtered by History scope or presented as historical route evidence; historical route groups follow the selected history summary. |
-| Evaluations | Bound evaluation source, explicitly independent from History scope; list, comparison/detail handlers, provenance, and masked/revealed candidates. |
+| Configuration | Current owner policy is independent of History scope; a native disclosure keeps full routing policy/runtime parameters collapsed. History-scoped route metrics use cards below 640px (including 180–260px docks) and a table at >=640px. |
+| Evaluations | Bound evaluation source stays independent from History scope. Header separates descriptor/group counts; descriptors page 10 per view, Inspect shows an inline status/metadata card, and explicit Compare sends at most the first 32 descriptors. Group details use deterministic Candidate A/B labels while blinded; drawer Escape closes only the drawer and focus returns on unmount. |
+
 
 ## Workspace activity scope and identity
 
