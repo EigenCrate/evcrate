@@ -32,7 +32,7 @@ import type {
   ProjectInventoryItemV2,
   PluginErrorCode
 } from '../../../src/protocol/advisor-plugin-data-api.ts';
-
+import type { AdvisorWorkspaceContext, UiIntent } from './bridge-contract.ts';
 export type {
   HistoryRefreshResultV1,
   HistoryRefreshResultV2,
@@ -54,6 +54,8 @@ export type {
   PluginErrorCode
 };
 
+export type { AdvisorWorkspaceContext, UiIntent };
+
 export type ProviderKind = 'standalone' | 'dam-hopper';
 
 export interface ProviderContextDescriptor {
@@ -66,16 +68,16 @@ export interface ProviderContextDescriptor {
   readonly hasHistorySource: boolean;
   readonly hasPolicySource: boolean;
   readonly hasEvaluationSource: boolean;
+  readonly workspaceContext?: AdvisorWorkspaceContext | null;
 }
-
 export type ProviderEvent =
   | { readonly type: 'ready'; readonly descriptor: ProviderContextDescriptor }
   | { readonly type: 'context-changed'; readonly descriptor: ProviderContextDescriptor }
   | { readonly type: 'revoked'; readonly reason: string }
   | { readonly type: 'disconnected' }
   | { readonly type: 'incompatible'; readonly reason: string }
-  | { readonly type: 'availability-changed'; readonly available: boolean; readonly capabilities: readonly string[] };
-
+  | { readonly type: 'availability-changed'; readonly available: boolean; readonly capabilities: readonly string[] }
+  | { readonly type: 'workspace-project-changed'; readonly workspaceContext: AdvisorWorkspaceContext };
 export type ProviderEventListener = (event: ProviderEvent) => void;
 
 export interface AdvisorDataProvider {
@@ -139,6 +141,8 @@ export interface AdvisorDataProvider {
   /** Cancel an in-flight operation by requestId. */
   cancel(requestId: string): void;
 
+  /** Send UI-only intent (activate or dismiss) to host. */
+  sendUiIntent?(intent: UiIntent): void;
   /** Optional lifecycle cleanup when provider is torn down. */
   destroy?(): void;
 }

@@ -8,7 +8,7 @@ Its paired release is qualified; see the [Release Evidence Manifest](../plans/re
 DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
-not release-authorized.
+not release-authorized. Workspace Advisor Phases 00–03 are complete; Phases 04–09 and end-to-end rollout remain pending.
 **Updated:** 2026-09-29
 **Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
@@ -563,7 +563,7 @@ production-runtime qualification remain outside this phase.
 
 ### FR-26: History scope and unmapped-record preservation (Phase 02)
 
-**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phases 03–09 remain pending.
+**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), and Phases 04–09 remain pending.
 
 **Requirement:** In `history-root` scope, All (`project_id: null`) includes structurally valid records with canonical project IDs even when Workspace registration or display-label metadata is absent. Project scope remains bound to its context and cannot widen. Policy/evaluation reads retain independent profile-bound sources and grants.
 
@@ -575,6 +575,24 @@ production-runtime qualification remain outside this phase.
 - Existing v1 storage/v2 wire and production provider remain unchanged. No ID-less format, exhaustive production-history census, or Workspace rollout is claimed.
 
 **Evidence:** [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md) and [approved review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md).
+
+### FR-27: Negotiated Workspace bridge and reusable host (Phase 03)
+
+**Status:** Completed and approved 2026-09-29 (review 9.7/10).
+
+**Requirement:** The Advisor SDK, DamHopper host, and EVCrate viewer negotiate the Workspace bridge extension and share one lifecycle for generic plugin routes and future Workspace embedding. Trusted context becomes usable only after the host opens the authorized context; bridge messages do not grant or widen data permissions.
+
+**Acceptance:**
+- The `1.0.0` bridge negotiates `workspace-advisor-v1`; generic plugins retain the base handshake. Envelopes are fenced by bridge version, frame session, and activation generation, with strict context/operation validation and bounded payloads.
+- `host.contextReady` follows nonce acknowledgement and authorized context open with expected scope/activation. The viewer waits for it before reporting Advisor data readiness.
+- `host.workspaceChanged` accepts only a higher revision under the same `authorityKey`; it updates selected-project metadata without replacing the frame/context. Changed authority or owner revokes and replaces the session before stale content can render.
+- `frame.uiIntent` is limited to `activate` / `dismiss` and accepted only for a negotiated, Ready, visible session. It is UI intent, not a data operation.
+- `usePluginHost` owns metadata/context resolution, asset verification, owner-change fencing, in-place same-authority selection updates, and session disposal. `PluginHost` is reusable presentation; `PluginHostPage` remains a thin route wrapper.
+- Paired tests cover bridge validation/readiness, same-authority selection, owner/authority transitions, pending cancellation, and generic-plugin compatibility.
+
+**Evidence:** [Phase 03 record](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md) and [Cycle 2 review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md). The review records 81 targeted tests and no critical findings; the implementation summary reports 145 passing tests across both repositories.
+
+**Boundary:** Phase 03 completes bridge and reusable-host implementation only. Workspace panel placement, navigation/package cutover, paired end-to-end rollout, and production deployment remain downstream.
 
 ## Non-functional requirements
 

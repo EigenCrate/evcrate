@@ -5,9 +5,14 @@
 
 import {
   UI_BRIDGE_VERSION,
+  ADVISOR_WORKSPACE_EXTENSION_V1,
   validateBridgeMessage,
   type HostBootstrapMessage,
-  type BridgeResponseMessage
+  type HostContextReadyMessage,
+  type HostWorkspaceChangedMessage,
+  type BridgeResponseMessage,
+  type AdvisorWorkspaceContext,
+  type UiIntent,
 } from './bridge-contract.ts';
 import type {
   AdvisorDataProvider,
@@ -32,21 +37,31 @@ interface PendingRequest {
   readonly reject: (error: Error) => void;
 }
 
+interface QueuedRequest {
+  readonly operation: string;
+  readonly requestId: string;
+  readonly payload: unknown;
+  readonly resolve: (result: unknown) => void;
+  readonly reject: (error: Error) => void;
+}
+
 declare const __FRAME_SESSION__: unknown;
 declare const __ACTIVATION_GENERATION__: unknown;
 
 export class DamHopperPortProvider implements AdvisorDataProvider {
   private _port: MessagePort | null = null;
-  private _state: 'uninitialized' | 'bootstrapping' | 'awaiting-ack' | 'ready' | 'revoked' = 'uninitialized';
+  private _state: 'uninitialized' | 'bootstrapping' | 'awaiting-ack' | 'awaiting-ready' | 'ready' | 'revoked' = 'uninitialized';
   private _frameSession: string | null = null;
   private _activationGeneration = 0;
   private _capabilities: readonly string[] = [];
   private _isAvailable = false;
   private _pluginId: string | null = null;
   private _customLabel: string | null = null;
+  private _workspaceContext: AdvisorWorkspaceContext | null = null;
+  private _negotiatedExtension: string | null = null;
   private _listeners = new Set<ProviderEventListener>();
   private _pending = new Map<string, PendingRequest>();
-
+  private _queuedRequests: QueuedRequest[] = [];
   constructor(autoBootstrap = true, customLabel?: string) {
     if (customLabel) this._customLabel = customLabel;
     if (autoBootstrap && typeof window !== 'undefined') this._initWindowBootstrap();
@@ -62,7 +77,8 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
       isAvailable: this._isAvailable && this._state === 'ready',
       hasHistorySource: this._capabilities.includes('history.refresh'),
       hasPolicySource: this._capabilities.includes('policy.readCurrent'),
-      hasEvaluationSource: this._capabilities.includes('evaluations.list')
+      hasEvaluationSource: this._capabilities.includes('evaluations.list'),
+      workspaceContext: this._workspaceContext,
     };
   }
 
@@ -113,7 +129,7 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
   }
 
   handleBootstrap(msg: HostBootstrapMessage, port?: MessagePort): void {
-    if (this._state === 'ready' || this._state === 'awaiting-ack') return;
+    if (this._state === 'ready' || this._state === 'awaiting-ack' || this._state === 'awaiting-ready') return;
     if (!port) throw new Error('Bootstrap message missing transferred MessagePort');
     if (
       this._frameSession !== null &&
@@ -128,7 +144,19 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
     this._activationGeneration = msg.activationGeneration;
     this._capabilities = Object.freeze([...msg.capabilities]);
     this._pluginId = msg.pluginId || null;
-    this._state = 'awaiting-ack';
+
+    const hasAdvisorExtension =
+      (msg.extensions && msg.extensions.includes(ADVISOR_WORKSPACE_EXTENSION_V1)) ||
+      !!msg.workspaceContext;
+
+    if (hasAdvisorExtension) {
+      this._negotiatedExtension = ADVISOR_WORKSPACE_EXTENSION_V1;
+      this._workspaceContext = msg.workspaceContext ? { ...msg.workspaceContext } : null;
+      this._state = 'awaiting-ready';
+      this._isAvailable = false;
+    } else {
+      this._state = 'awaiting-ack';
+    }
 
     port.onmessage = (e: MessageEvent) => this._handlePortMessage(e.data);
     port.onmessageerror = () => this._revoke('MessagePort serialization error');
@@ -140,9 +168,12 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
       activationGeneration: this._activationGeneration,
       nonce: msg.nonce
     });
-    this._state = 'ready';
-    this._isAvailable = true;
-    this._emit({ type: 'ready', descriptor: this.descriptor });
+
+    if (!hasAdvisorExtension) {
+      this._state = 'ready';
+      this._isAvailable = true;
+      this._emit({ type: 'ready', descriptor: this.descriptor });
+    }
   }
 
   private _handlePortMessage(data: unknown): void {
@@ -154,6 +185,28 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
       } else if (msg.type === 'availability.changed') {
         this._isAvailable = msg.available;
         this._emit({ type: 'availability-changed', available: msg.available, capabilities: this._capabilities });
+      } else if (msg.type === 'host.contextReady') {
+        const readyMsg = msg as HostContextReadyMessage;
+        this._workspaceContext = readyMsg.workspaceContext;
+        this._state = 'ready';
+        this._isAvailable = true;
+        this._emit({ type: 'ready', descriptor: this.descriptor });
+        this._flushQueuedRequests();
+      } else if (msg.type === 'host.workspaceChanged') {
+        if (this._state !== 'ready' || !this._workspaceContext) return;
+        const changedMsg = msg as HostWorkspaceChangedMessage;
+        if (
+          changedMsg.workspaceContext.authorityKey !== this._workspaceContext.authorityKey ||
+          changedMsg.workspaceContext.revision <= this._workspaceContext.revision
+        ) {
+          this._revoke('Invalid workspaceChanged revision or authorityKey');
+          return;
+        }
+        this._workspaceContext = changedMsg.workspaceContext;
+        this._emit({
+          type: 'workspace-project-changed',
+          workspaceContext: this._workspaceContext,
+        });
       } else if (msg.type === 'response') {
         const pending = this._pending.get(msg.requestId);
         if (pending) {
@@ -166,17 +219,53 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
     } catch {}
   }
 
+  private _flushQueuedRequests(): void {
+    if (!this._port || this._state !== 'ready') return;
+    const queued = this._queuedRequests;
+    this._queuedRequests = [];
+    for (const q of queued) {
+      this._pending.set(q.requestId, { resolve: q.resolve, reject: q.reject });
+      this._port.postMessage({
+        type: 'request',
+        frameSession: this._frameSession,
+        bridgeVersion: UI_BRIDGE_VERSION,
+        activationGeneration: this._activationGeneration,
+        requestId: q.requestId,
+        operation: q.operation,
+        payload: q.payload,
+      });
+    }
+  }
+
   private _revoke(reason: string): void {
     this._state = 'revoked';
     this._isAvailable = false;
     for (const [, req] of this._pending) req.reject(new Error(`Operation cancelled: ${reason}`));
     this._pending.clear();
+    for (const q of this._queuedRequests) q.reject(new Error(`Operation cancelled: ${reason}`));
+    this._queuedRequests = [];
     if (this._port) { try { this._port.close(); } catch {}; this._port = null; }
     this._emit({ type: 'revoked', reason });
   }
 
   private _invoke<T>(operation: string, requestId: string, payload: unknown = {}): Promise<T> {
-    if (this._state !== 'ready' || !this._port) return Promise.reject(new Error(`Provider not ready (state: ${this._state})`));
+    if (this._state === 'revoked') {
+      return Promise.reject(new Error('Cannot invoke on revoked DamHopperPortProvider'));
+    }
+    if (this._state === 'awaiting-ready' || this._state === 'bootstrapping' || this._state === 'awaiting-ack') {
+      return new Promise<T>((resolve, reject) => {
+        this._queuedRequests.push({
+          operation,
+          requestId,
+          payload,
+          resolve: resolve as (val: unknown) => void,
+          reject,
+        });
+      });
+    }
+    if (!this._port || this._state !== 'ready') {
+      return Promise.reject(new Error(`Provider not ready (state: ${this._state})`));
+    }
     let resolveFn!: (value: T) => void;
     let rejectFn!: (reason?: unknown) => void;
     const promise = new Promise<T>((res, rej) => {
@@ -185,8 +274,13 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
     });
     this._pending.set(requestId, { resolve: resolveFn as (result: unknown) => void, reject: rejectFn });
     this._port.postMessage({
-      type: 'request', frameSession: this._frameSession, bridgeVersion: UI_BRIDGE_VERSION,
-      activationGeneration: this._activationGeneration, requestId, operation, payload
+      type: 'request',
+      frameSession: this._frameSession,
+      bridgeVersion: UI_BRIDGE_VERSION,
+      activationGeneration: this._activationGeneration,
+      requestId,
+      operation,
+      payload,
     });
     return promise;
   }
@@ -201,12 +295,35 @@ export class DamHopperPortProvider implements AdvisorDataProvider {
   compareEvaluations(requestId: string, items: readonly { evaluation_ref: string; expected_revision: string }[], cursor: string | null, limit: number): Promise<EvaluationsCompareResultV1> { return this._invoke('evaluations.compare', requestId, { items, cursor, limit }); }
 
   cancel(requestId: string): void {
+    const queuedIdx = this._queuedRequests.findIndex((q) => q.requestId === requestId);
+    if (queuedIdx !== -1) {
+      const [cancelled] = this._queuedRequests.splice(queuedIdx, 1);
+      cancelled.reject(new Error('Operation cancelled by user'));
+      return;
+    }
     if (!this._port || this._state !== 'ready') return;
     const req = this._pending.get(requestId);
-    if (req) { req.reject(new Error('Operation cancelled by user')); this._pending.delete(requestId); }
+    if (req) {
+      req.reject(new Error('Operation cancelled by user'));
+      this._pending.delete(requestId);
+    }
     this._port.postMessage({
-      type: 'cancel', frameSession: this._frameSession, bridgeVersion: UI_BRIDGE_VERSION,
-      activationGeneration: this._activationGeneration, requestId
+      type: 'cancel',
+      frameSession: this._frameSession,
+      bridgeVersion: UI_BRIDGE_VERSION,
+      activationGeneration: this._activationGeneration,
+      requestId,
+    });
+  }
+
+  sendUiIntent(intent: UiIntent): void {
+    if (this._state !== 'ready' || !this._port) return;
+    this._port.postMessage({
+      type: 'frame.uiIntent',
+      frameSession: this._frameSession,
+      bridgeVersion: UI_BRIDGE_VERSION,
+      activationGeneration: this._activationGeneration,
+      intent,
     });
   }
 

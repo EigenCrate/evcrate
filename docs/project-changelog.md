@@ -4,7 +4,18 @@
 
 **Updated:** 2026-09-29
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. Workspace-integrated Advisor: 3/10 phases complete (30%; Phase 02 DONE 2026-09-29; review approved 9.6/10); end-to-end rollout and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. Workspace-integrated Advisor: 4/10 phases complete (40%; Phase 03 DONE 2026-09-29; review approved 9.7/10); end-to-end rollout and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+
+### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 03
+
+**Status:** Phase 03 DONE (2026-09-29; review approved 9.7/10); Workspace plan 4/10 phases complete (40%). End-to-end rollout and production deployment remain unclaimed.  
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 03](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md)  
+**Review:** [Cycle 2 code review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md)
+
+- Completed the paired `workspace-advisor-v1` extension across SDK, host, and viewer: authorized context-ready sequencing, trusted workspace-selection updates, and gated UI-intent messages.
+- Extracted the shared `usePluginHost`/`PluginHost` lifecycle with owner-change fencing, same-root in-place selection updates, verified assets, and session disposal; `PluginHostPage` remains a thin route wrapper.
+- The implementation summary reports 145 test passes across EVCrate and DamHopper suites. Cycle 2 independently verifies all five Cycle 1 must-fix items and records 81 targeted tests passed; one SDK envelope-guard consistency suggestion remains non-blocking.
+- Phase 04 and Phase 05 are unblocked. No navigation cutover, end-to-end rollout, or production deployment is claimed.
 
 ### 2026-09-29 — test(advisor): qualify Workspace Advisor history scope (Phase 02)
 

@@ -1,9 +1,9 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Phase E03 implementation completed 2026-09-21 (review 9.2/10); this guide preserves its historical architecture. All-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%); its paired release is qualified.
+**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). The later Workspace Advisor Phase 03 bridge/reusable-host contract completed 2026-09-29 (review 9.7/10); it extends the host bridge without changing the four-view data API.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
-**Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
+**Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [Workspace Advisor host contract](./workspace-advisor-host-contract.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
 
 ## Purpose and boundary
 
@@ -33,12 +33,14 @@ separate-LAN evidence/sign-off are not present in this workspace.
 
 `viewer/src/providers/advisor-data-provider.ts` exports the immutable context
 descriptor (`kind`, safe label, capabilities, frame session, activation generation,
-availability, and source flags), lifecycle subscription, and the eight E00 data
-operations:
+availability, source flags, and optional trusted `workspaceContext`), lifecycle
+subscription, and the eight E00 data operations:
 
 - `refreshHistory`, `getHistorySummary`, `getHistoryPage`, `getHistoryDetail`;
 - `readCurrentPolicy`, `listEvaluations`, `readEvaluation`, `compareEvaluations`;
-- `cancel(requestId)` and optional `destroy()`.
+- `cancel(requestId)` and optional `destroy()`;
+- a `workspace-project-changed` provider event and optional `sendUiIntent(intent)`
+  for the host's `activate` / `dismiss` UI intents.
 
 The contract returns E00 domain values and does not expose actor tokens, cookies,
 absolute paths, runner sockets, source bindings, or arbitrary network functions.
@@ -53,22 +55,27 @@ mode.
 
 ## Bridge and lifecycle
 
-`bridge-contract.ts` pins `UI_BRIDGE_VERSION` to `1.0.0` and validates the eight
-bridge envelope types: `host.bootstrap`, `frame.portAck`, `frame.ready`, `request`,
-`cancel`, `response`, `context.revoked`, and `availability.changed`.
+`bridge-contract.ts` pins the UI bridge protocol to `1.0.0` and recognizes 11 envelope
+types: `host.bootstrap`, `frame.ready`, `frame.portAck`, `request`, `cancel`,
+`response`, `context.revoked`, `availability.changed`, `host.contextReady`,
+`host.workspaceChanged`, and `frame.uiIntent`. The Workspace Advisor negotiates the
+`workspace-advisor-v1` extension; generic plugins retain the base handshake.
 
 The port provider:
 
 1. waits for a validated host bootstrap containing plugin ID, capabilities, nonce,
-   frame session, and activation generation;
-2. binds the transferred port once, removes the window listener, and sends the exact
-   nonce in `frame.portAck`;
-3. dispatches only after `frame.ready`; every request carries session, bridge version,
-   generation, request ID, operation, and parameters;
-4. ignores responses for another session/generation, forwards cancellation by request
-   ID, and rejects pending work on revocation or port errors;
-5. publishes availability/context events to the reducer and closes the port on
-   teardown.
+   frame session, activation generation, and any negotiated extension/context;
+2. binds the transferred port once and acknowledges the exact nonce in
+   `frame.portAck`;
+3. for the Advisor extension, stays unavailable and queues data requests until
+   `host.contextReady` confirms that the host opened the authorized context. Generic
+   plugins retain the base ready-after-ack path;
+4. binds every request to bridge version, frame session, generation, request ID,
+   operation, and payload; the host accepts only operations in its effective allowlist;
+5. emits `workspace-project-changed` only for a higher revision with the same
+   `authorityKey`. A change to authority requires host revocation and a new session;
+6. sends `frame.uiIntent` only for `activate` or `dismiss`; cancellation, revocation,
+   and port errors reject queued/pending requests, and teardown closes the port.
 
 Opaque-origin `origin: null` is not treated as identity. Host-owned WindowProxy,
 nonce acknowledgement, transferred-port binding, and generation checks are the
