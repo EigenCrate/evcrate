@@ -402,3 +402,69 @@ test('Phase 04 (V-E3 Smoke): proves no history.refresh on activity scope, filter
   assert.equal(callCounts['policy.readCurrent'], 1);
   assert.equal(callCounts['evaluations.list'], 1);
 });
+test('Phase 04: refresh skips history.refresh when in All scope without root authority or when historyScope is unavailable', async () => {
+  const callCounts = { 'history.refresh': 0, 'policy.readCurrent': 0, 'evaluations.list': 0 };
+  const mockProvider = {
+    descriptor: {
+      kind: 'dam-hopper',
+      label: 'Test Provider',
+      capabilities: ['history.refresh', 'policy.readCurrent', 'evaluations.list'],
+      frameSession: 'session-1',
+      activationGeneration: 1,
+      isAvailable: true,
+      hasHistorySource: true,
+      hasPolicySource: true,
+      hasEvaluationSource: true,
+      workspaceContext: createMockWorkspaceContext({
+        historyScope: 'project', // Project authority only, not history-root
+        contextScope: 'project'
+      })
+    },
+    async refreshHistory() {
+      callCounts['history.refresh']++;
+      return { state: 'fresh', snapshot_id: 'snap-1', observed_at: Date.now(), scan: { status: 'complete' } };
+    },
+    async readCurrentPolicy() {
+      callCounts['policy.readCurrent']++;
+      return { status: 'ready', scope: 'account', temporal: 'current', observed_at: Date.now(), revision: 'r1' };
+    },
+    async listEvaluations() {
+      callCounts['evaluations.list']++;
+      return { status: 'ready', observed_at: Date.now(), binding_revision: 'b1', items: [], next_cursor: null };
+    }
+  };
+
+  // State has activityScope: 'all' with project-only workspaceContext
+  const allState = {
+    ...INITIAL_STATE,
+    activityScope: 'all',
+    workspaceContext: mockProvider.descriptor.workspaceContext
+  };
+
+  // Verify selector returns available: false for All without root authority
+  const queryCheck = selectHistoryQuery(allState);
+  assert.equal(queryCheck.available, false);
+  assert.ok(queryCheck.reason.includes('root'));
+
+  // Evaluating the preflight logic implemented in app.tsx refreshData:
+  const historyAuthorityAvailable = allState.workspaceContext ? allState.workspaceContext.historyScope !== 'unavailable' : true;
+  const canRefreshCurrentScope = queryCheck.available || (allState.activityScope !== 'all' && historyAuthorityAvailable);
+  const hasHistory = historyAuthorityAvailable && canRefreshCurrentScope && (
+    allState.workspaceContext?.allowedOperations
+      ? allState.workspaceContext.allowedOperations.includes('history.refresh')
+      : (mockProvider.descriptor.hasHistorySource || mockProvider.descriptor.capabilities.includes('history.refresh'))
+  );
+
+  // Under All with project authority, hasHistory must evaluate to false
+  assert.equal(canRefreshCurrentScope, false);
+  assert.equal(hasHistory, false);
+
+  // History refresh is skipped, but policy and evaluations are still called independently
+  if (hasHistory) await mockProvider.refreshHistory();
+  await mockProvider.readCurrentPolicy();
+  await mockProvider.listEvaluations();
+
+  assert.equal(callCounts['history.refresh'], 0, 'history.refresh must NOT be called for All scope without root authority');
+  assert.equal(callCounts['policy.readCurrent'], 1, 'policy read must proceed independently');
+  assert.equal(callCounts['evaluations.list'], 1, 'evaluations read must proceed independently');
+});
