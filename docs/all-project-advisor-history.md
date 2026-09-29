@@ -63,7 +63,7 @@ An authenticated actor with a valid session epoch may enter `history-root` scope
 
 Before each `context.open`, the API reads the enabled installation from the runner and refreshes its process-local source cache when configured. This is per-open hydration, not startup hydration. It sends a typed descriptor containing scope kind, root identity, and source revision; the descriptor does not carry the owner root path.
 
-The runner independently checks the persisted enabled installation, root-history capability, and descriptor identity/revision. It rejects missing, symlink, or non-directory roots; on Unix, a non-root runner also requires the directory to be owned by its effective UID. API authorization rechecks actor/session epoch and operation on every invoke, while the runner rechecks source capability, identity, and revision.
+The runner independently checks the persisted enabled installation, root-history capability, and descriptor identity/revision. It rejects missing, symlink, or non-directory roots. The cross-platform trusted-files policy has no filesystem UID-ownership gate.
 
 Revision-guarded source replacement clears the API source cache and invalidates that installation's contexts; the next open rehydrates the current source from the runner. Phases 02–04 complete host authorization, owner-safe scanning/name persistence, and snapshot-backed project filtering/source labels. Phase 05 completed paired qualification; see the evidence summary below. The 21-project / 237-consultation result is an observation, not a contract constant.
 

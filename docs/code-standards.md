@@ -1,10 +1,10 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard
-**Updated:** 2026-09-28
-**Applies to:** TypeScript control plane, Phase E00/01 Advisor Plugin contracts,
-Phase E03 provider-neutral embedded UI, canonical harness resources, shared advisor
-controller, generated projections, and publication tooling
+**Updated:** 2026-09-29
+**Applies to:** TypeScript control plane, Advisor Plugin contracts/provider/UI,
+Workspace Advisor host API and identity contract, canonical harness resources,
+shared advisor controller, generated projections, and publication tooling
 **Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
 2026-09-15) for the standalone installer lifecycle and `version --json`. Native
 Windows advisor invocation and its 36-file closure are implemented and isolated-
@@ -548,6 +548,14 @@ E03 bridge, state, four-view, security, and accessibility suites were recorded o
 2026-09-21 as package evidence; they do not substitute for D04/G2 LAN or G4
 qualification, and source removal does not authorize standalone retirement.
 
+### Workspace Advisor host descriptor (Phase 01)
+
+- Keep `DescribeViewRequest` non-null and limited to `installationId` plus the selected `ServerProjectTarget`; route it through the authenticated host client and registered target resolver. Do not add profile, actor, path, project-ID, scope, or permission authority from the browser.
+- Hash only the server-resolved canonical target directory's exact UTF-8 bytes for `workspaceProject.projectId`; never use lossy conversion, a display label, or browser lexical normalization as identity.
+- Return actual `historyScope` and existing runner `contextScope` separately. Intersect installation capabilities with actor-effective grants; owner-root implicit rights are only the four history reads, while policy/evaluation operations retain explicit grants.
+- Treat `authorityKey` as a stale-work equality/revision value, never as a bearer credential. Describe metadata does not replace authorization on asset read, context open, or invoke.
+- Keep the exact response, identity, rejection, and reauthorization contract synchronized with the [Workspace Advisor host contract](./workspace-advisor-host-contract.md).
+
 
 ### React Explorer, evaluation, and packaging standards (Phases 06–10)
 
@@ -779,4 +787,4 @@ before reporting success.
 - [Project changelog](./project-changelog.md)
 - [Project changelog archive](./project-changelog-archive.md)
 - [Pi-native migration](./pi-native-migration.md)
-- [Advisor plugin UI](./advisor-plugin-ui.md)
+- [Advisor plugin UI](./advisor-plugin-ui.md); [Workspace Advisor host contract](./workspace-advisor-host-contract.md)

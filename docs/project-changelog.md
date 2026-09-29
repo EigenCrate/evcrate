@@ -6,9 +6,19 @@
 
 **Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
 
+### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 01
+
+**Status:** Phase 01 DONE (2026-09-29; review approved 9.2/10); 2/10 phases complete (20%).  
+**Plan:** [Workspace-integrated Advisor panel](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 01](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md)  
+**Evidence:** [Phase 01 implementation and verification record](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md).
+
+- Completed selected-project host admission, canonical trusted identity, per-operation authorization, actual scope/revision descriptor, and revalidation preservation across DamHopper server/API/SDK/host client.
+- The phase record reports 102 passed and 0 failed across server integration/authorization, SDK contracts, and UI checks. Review recorded zero critical issues; two non-blocking warnings are tracked for Phase 02.
+- Phase 02 (history scope and unmapped records) is next. No end-to-end Workspace rollout or production deployment is claimed.
+
 ### 2026-09-29 — docs(advisor): close Workspace-integrated Advisor Phase 00
 
-**Status:** Phase 00 DONE; 1/10 phases complete (10%). Phases 01–09 pending; Phase 01 handoff remains gated on required user approval.
+**Status:** Phase 00 DONE (10% at that checkpoint); Phase 01 completion and approval are recorded in the following entry.
 **Plan:** [Workspace-integrated Advisor panel](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 00](../plans/260929-1346-advisor-workspace-panel/phase-00-evidence-and-contract-freeze.md)
 **Evidence:** [Contract freeze](../plans/260929-1346-advisor-workspace-panel/reports/phase-00-contract-freeze.md) · [Review](../plans/260929-1346-advisor-workspace-panel/reports/code-review-260929-1543-phase-00-evidence-and-contract-freeze.md).
 
