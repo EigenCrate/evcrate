@@ -16,7 +16,7 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.3.2`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.4.0`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections. Node `>=22.19.0` is the package engine. The package exposes:
 
@@ -766,15 +766,12 @@ and [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-vi
 history, policy, and evaluation modules enforce path, kind, symlink, nlink, size, schema, and fingerprint boundaries under the cross-platform trusted-files policy (filesystem UID gates removed).
 **E02:** The pinned D00 SDK owns framing and strict UTF-8 JSON-RPC; the worker
 bounds contexts, requests, cancellation, safe errors, and deterministic output.
-**E03:** Current `AdvisorDataProvider` uses the bounded DamHopper `MessagePort`;
-the temporary E03 local picker/reader source was later removed. The version-`1.0.0`
-bridge validates eight envelopes and fences session/generation, late replies, and
-revocation. The four views are Overview, History/detail, Configuration, and
-Evaluations at `/plugins/evcrate.advisor`.
-The Vite entry emits `plugin/ui/index.html` with inlined CSS/IIFE and no external
-assets, network clients, or picker. E03 recorded 68/68 repository/package tests
-on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current
-release-asset verification.
+**E03:** Current provider uses bounded DamHopper `MessagePort`; the temporary local picker/reader source was later removed.
+The version-`1.0.0` base bridge remains generic-compatible; Workspace Advisor Phase 03 negotiates `workspace-advisor-v1`.
+`host.contextReady` follows authorized context open; `host.workspaceChanged` carries increasing same-authority revisions; `frame.uiIntent` is limited to `activate` / `dismiss`; messages fence session/generation.
+The four views are Overview, History/detail, Configuration, and Evaluations at `/plugins/evcrate.advisor`.
+The Vite document inlines CSS/IIFE without external assets or network clients.
+E03 recorded 68/68 repository/package tests on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current release verification.
 
 ### Cross-project advisor history (Phases 00–05)
 
@@ -787,7 +784,7 @@ release-asset verification.
 - **Revalidation:** The API rechecks actor/epoch and operation on every invoke; the runner rechecks enabled state, source capability, root identity, and revision. Admin source replacement clears the API source cache and revokes contexts; the next open rehydrates from runner state.
 - **Phases 03–04:** EVCrate root scanning and safe project-name persistence are paired with same-snapshot project filtering and independent source labels in the UI.
 - **Phase 05:** Paired qualification completed 2026-09-24: **273/273 tests passed**, 0 failed/skipped; candidate and distribution packages verified; review approved **9.8/10** with zero critical issues. The direct history-root provider scan accepted **237/237 consultations across 21 projects in 191.48 ms**, with zero diagnostics. It was not a new live DamHopper browser session.
-- **Release boundary:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records the older paired-release qualification, not deployment/publication. Workspace Advisor Phases 01–02 are complete; Phase 02 qualified existing history-root All retention of valid-ID unmapped records without a registration/label join and project-scope non-widening, with no production-code/schema change. See the [host contract](./workspace-advisor-host-contract.md), [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md), and [review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md). Phases 03–09, end-to-end rollout, and deployment remain unclaimed.
+- **Release boundary:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records older paired qualification, not deployment/publication. Workspace Advisor Phases 01–03 are complete (Phase 03 review 9.7/10); Phase 02 retained existing root All/project non-widening without production code/schema change, and Phase 03 added the negotiated bridge and reusable host. Phases 04–09, panel placement/cutover, end-to-end rollout, and deployment remain pending or unclaimed. See the [host contract](./workspace-advisor-host-contract.md), [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md), [Phase 03 record](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md), and [Phase 03 review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md).
 
 ## Related documents
 
@@ -796,4 +793,4 @@ release-asset verification.
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
-- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and historical E03 provider boundary; [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — Phase 01 admission and identity.
+- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and bridge/provider boundary; [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — Phases 01–03 admission, identity, bridge, and reusable host.
