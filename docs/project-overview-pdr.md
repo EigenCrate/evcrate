@@ -8,8 +8,8 @@ Its paired release is qualified; see the [Release Evidence Manifest](../plans/re
 DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
-not release-authorized. Workspace Advisor Phases 00–04 are complete (Phase 04 review approved 9.5/10); Phases 05–09 and end-to-end rollout remain pending.
-**Updated:** 2026-09-29
+not release-authorized. Workspace Advisor Phases 00–06 are implemented (7/10, 70%); Phase 06 Cycle 2 review approved 10/10. Phases 07–09, paired end-to-end rollout, explicit user approval, and production deployment remain open.
+**Updated:** 2026-09-30
 **Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
 EVCrate turns one canonical agent-harness source tree into verified target
@@ -563,7 +563,7 @@ production-runtime qualification remain outside this phase.
 
 ### FR-26: History scope and unmapped-record preservation (Phase 02)
 
-**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), Phase 04 under [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), and Phases 05–09 remain pending.
+**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), Phase 04 under [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), Phase 05 under [FR-29](#fr-29-persistent-workspaceadvisorhost-placement-phase-05), and Phases 06–09 remain pending.
 
 **Requirement:** In `history-root` scope, All (`project_id: null`) includes structurally valid records with canonical project IDs even when Workspace registration or display-label metadata is absent. Project scope remains bound to its context and cannot widen. Policy/evaluation reads retain independent profile-bound sources and grants.
 
@@ -592,7 +592,7 @@ production-runtime qualification remain outside this phase.
 
 **Evidence:** [Phase 03 record](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md) and [Cycle 2 review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md). The review records 81 targeted tests and no critical findings; the implementation summary reports 145 passing tests across both repositories.
 
-**Boundary:** Phase 03 completes bridge and reusable-host implementation only. Workspace panel placement, navigation/package cutover, paired end-to-end rollout, and production deployment remain downstream.
+**Boundary:** Phase 03 completes bridge and reusable-host implementation. Phase 05 now owns persistent Workspace placement; navigation/package cutover, paired end-to-end rollout, and production deployment remain downstream.
 
 ### FR-28: Workspace Advisor viewer scope and request state (Phase 04)
 
@@ -627,8 +627,55 @@ and fences asynchronous data commits across scope and authority changes.
   [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md),
   and [UI guide](./advisor-plugin-ui.md).
 
-**Boundary:** Phase 04 proves viewer state behavior, not Workspace placement,
-paired end-to-end rollout, or production deployment; Phases 05–09 remain.
+**Boundary:** Phase 04 proves viewer state behavior. Phase 05 separately implements persistent Workspace placement; neither phase claims paired end-to-end rollout or production deployment. Phases 06–09 remain.
+
+### FR-29: Persistent WorkspaceAdvisorHost placement (Phase 05)
+
+**Status:** Implementation Cycle 2 review-approved on 2026-09-29 (9.8/10). Explicit user approval, paired end-to-end rollout, and production deployment remain separate.
+
+**Requirement:** Keep one selected-project Advisor host and frame mounted at Workspace scope while projecting it into the active IDE, Terminal, or compact Workspace placement. Visual hide/show and mode changes must not change authority, re-prepare the session, or start data refreshes.
+
+**Acceptance:**
+- `WorkspacePage` mounts one `WorkspaceAdvisorHost` outside shell-mode branches. IDE, Terminal, and compact `AdvisorPanelSlot`s register geometry and activation only; they do not own or reparent an iframe.
+- IDE, Terminal, and compact placements use their measured content rectangle and default z-indexes 15, 25, and 35. Terminal reserves its floating resize-grip inset. Measurement follows slot resize, viewport resize/scroll, app zoom, and floating-panel layout changes with coalesced work and effect cleanup; no idle polling.
+- A hidden host remains mounted but hidden, pointer-disabled, `inert`, and `aria-hidden`. Hiding returns focus to the launcher when available; Escape and negotiated `activate` intent route to Workspace panel actions.
+- No selected project passes null project/target/connection; `use-plugin-host.ts` revokes stale authority and returns `unavailable/no-project` before preparation. Project/profile/owner/authority changes remain revocation boundaries, not placement transitions.
+- The G5 Chromium fixture asserts one unchanged iframe DOM node through IDE → Terminal → compact → IDE and hide/reopen. The fixture mocks `PluginHost`; it does not directly assert a live `FrameSession` identifier, viewer snapshot, history-refresh count, or the no-project API-call count. See the [Phase 05 contract](./workspace-advisor-host-contract.md#phase-05-persistent-workspace-panel-placement), [evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md), and [Cycle 2 review](../plans/reports/code-review-260929-2332-phase-05-cycle-2-workspace-panel-placements.md).
+
+**Boundary:** Phase 05 qualifies persistent placement behavior at the UI implementation boundary; it does not complete Phases 06–09, paired end-to-end rollout, or production deployment.
+
+### FR-30: Compact activity views and accessible tabs (Phase 06)
+
+**Status:** Completed 2026-09-30; Cycle 2 code review approved 10/10.
+
+**Requirement:** Provide compact Overview and History views and accessible
+navigation among the four existing views without changing the history API, host
+bridge, or manual-refresh lifecycle. Compact layouts preserve information and
+actions; they do not redefine the Workspace project or All History authority.
+
+**Acceptance:**
+- Preserve `#overview`, `#history`, `#configuration`, and `#evaluations`. Tabs
+  expose tablist/tab semantics, selection state, roving keyboard focus, and
+  Arrow/Home/End navigation; Escape remains available to the host panel.
+- Share the Workspace Project/All History control between Overview and History.
+  Explain and disable All when project, root-history authority, or provider is
+  unavailable; never expose an independent project picker or infer All without a project.
+- Preserve all six Overview rate metrics, latency quantiles and sample counts,
+  outcome/missingness/diagnostic limitations; compact cards change composition only.
+- Preserve History filters, stable cursor paging, all row fields, Inspect/detail
+  access, and loading/changed/missing/error/ready detail states.
+- Distinguish empty, loading, unavailable, error, stale-prior-snapshot, and
+  incomplete-snapshot states; scope changes must not present prior-scope metrics.
+- Tab, scope, filter, detail, and disclosure interactions never invoke history
+  refresh. Refresh and Cancel remain explicit controls; narrow containers avoid
+  page-level horizontal overflow and keep keyboard focus visible.
+
+**Evidence:** [Phase 06 plan](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md) and [Cycle 2 review](../plans/reports/code-review-260930-0226-phase-06-cycle-2-compact-activity-views.md). Final phase status records 55/55 tests (43 EVCrate viewer and 12 DamHopper browser) plus clean TypeScript checks in both repositories.
+
+**Boundary:** Phase 06 completes the viewer presentation slice; Phases 07–09,
+paired end-to-end rollout, explicit user approval, and production deployment
+remain separate.
+
 
 ## Non-functional requirements
 

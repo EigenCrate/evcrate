@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standard
-**Updated:** 2026-09-29
+**Updated:** 2026-09-30
 **Applies to:** TypeScript control plane, Advisor Plugin contracts/provider/UI,
 Workspace Advisor host API and identity contract, canonical harness resources,
 shared advisor controller, generated projections, and publication tooling
@@ -548,7 +548,7 @@ E03 bridge, state, four-view, security, and accessibility suites were recorded o
 2026-09-21 as package evidence; they do not substitute for D04/G2 LAN or G4
 qualification, and source removal does not authorize standalone retirement.
 
-### Workspace Advisor host and history-scope invariants (Phases 01–02)
+### Workspace Advisor host, history-scope, placement, and compact-view invariants (Phases 01–06)
 
 - Keep `DescribeViewRequest` non-null and limited to `installationId` plus the selected `ServerProjectTarget`; route it through the authenticated host client and registered target resolver. Do not add profile, actor, path, project-ID, scope, or permission authority from the browser.
 - Hash only the server-resolved canonical target directory's exact UTF-8 bytes for `workspaceProject.projectId`; never use lossy conversion, a display label, or browser lexical normalization as identity.
@@ -560,14 +560,18 @@ qualification, and source removal does not authorize standalone retirement.
 - Keep cursors bound to the snapshot and exact query/scope. Do not reuse one after switching project queries.
 - Preserve policy/evaluation source binding and grants independently of history scope; permitted reads may work when no history root is available.
 - Reuse the existing v1 storage/v2 wire for evidence-supported valid-ID unmapped records. Do not invent ID-less records or an adapter without verified data and an approved contract change. See the [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md).
+- Mount exactly one `WorkspaceAdvisorHost` outside Workspace mode branches; IDE, Terminal, and compact slots register geometry/chrome only. Never reparent or remount the iframe for placement or visibility changes.
+- Project the connected, nonzero slot rectangle and remeasure on resize, scroll, app zoom, and floating-layout changes with coalesced work and cleanup. Do not poll while idle.
+- Keep the host mounted for visual placement/visibility transitions without revocation; retain existing project/profile/owner/authority/connection lifecycle fences. See the [Phase 05 host contract](./workspace-advisor-host-contract.md#phase-05-persistent-workspace-panel-placement).
+- Compact Overview/History recompose rather than discard six rates, latency/outcome/missingness caveats, filters, cursor paging, record fields, or detail states. Share project/All scope; keep refresh explicit and never refresh on tab/scope/filter/detail changes.
 
 
 ### React Explorer, evaluation, and packaging standards (Phases 06–10)
 
 - **Pure client state**: The React viewer (`viewer/src/`) is a client-side state machine. State transitions (`idle`, `scanning`, `fresh`, `stale`, `error`) must never execute model calls, mutate disk files, write to browser persistence or cookies, or infer file paths.
 - **Inert rendering and security**: Render all user-controlled data (prompts, counsel text, error messages, evaluation metadata) as inert text. Never use `dangerouslySetInnerHTML` or create active external links. Strict CSP (`connect-src 'none'; object-src 'none'; frame-ancestors 'none'`) must be enforced on preview and development servers.
-- **Accessibility and responsiveness**: Use semantic HTML, explicit ARIA attributes (`aria-label`, `role="tab"`, `role="tabpanel"`), visible focus rings (`:focus-visible`), and full keyboard navigation (Tab, Shift+Tab, Enter, Space). Layouts must remain functional on both desktop and narrow viewports.
-- **Historical evaluation reader:** Phase 06 used an explicit multi-file picker
+- **Accessibility and responsiveness**: Use semantic HTML and accurate ARIA relationships; `HashTabs` keeps four hash routes, tab semantics, selection state, and roving `tabIndex`; Arrow/Home/End navigation preserves focus visibility and Escape bubbles to Workspace. Verify layouts at narrow container widths, not only full-page viewports.
+- **Historical evaluation reader:** The earlier metrics-explorer Phase 06 used an explicit multi-file picker
   bounded to 8 MiB per document. That standalone source has since been removed; this
   is historical behavior, not a current reader or picker API.
 - **Generated runtime/inventory authority:** Never hand-edit

@@ -1,10 +1,10 @@
 # Codebase Summary
 
-**Generated:** 2026-09-29
-**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,637 files, 9,074,629 tokens, and 34,172,013 characters; `.repomixignore` excludes documentation, plans, tests, and generated/heavy roots. Repomix reported no suspicious files.
+**Generated:** 2026-09-30
+**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,637 files, 9,083,169 tokens, and 34,203,857 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
 **Package:** Private npm package `evcrate` 2.4.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [system architecture](./system-architecture.md) for the runtime qualification boundary.
-**Workspace Advisor:** Phases 00–04 are complete; Phase 04 review approved 9.5/10. Phases 05–09, Workspace placement/cutover, and end-to-end rollout remain pending. See the [Phase 04 UI review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
+**Workspace Advisor:** Phases 00–06 are implemented (7/10, 70%); Phase 06 Cycle 2 review approved 10/10. Compact Overview/History views and accessible four-view hash tabs are complete. Phases 07–09, paired end-to-end rollout, explicit user approval, and production deployment remain open. See the [Phase 06 record](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md) and [Cycle 2 review](../plans/reports/code-review-260930-0226-phase-06-cycle-2-compact-activity-views.md) for implementation evidence and boundaries.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -78,7 +78,7 @@ The committed schema-1 `.evcrate/registry.json` was regenerated with the new fil
 
 The plugin worker and shared UI are documented separately in [advisor-plugin-worker.md](./advisor-plugin-worker.md) and [advisor-plugin-ui.md](./advisor-plugin-ui.md). The standalone picker/reader source was removed; joint G4 qualification/sign-off and standalone retirement are not established by source cutover alone. Cross-project history contracts are in [all-project-advisor-history.md](./all-project-advisor-history.md).
 
-Live advisor vendor qualification, HOME rollout, npm publication, deployment, and broader Windows runtime support remain separate operator/release gates. See the [system architecture](./system-architecture.md) for implementation contracts, the [PDR](./project-overview-pdr.md) for requirements, the [code standards](./code-standards.md) for normative rules, the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) for Phases 01–03 admission, identity, bridge, and reusable host, the [roadmap](./project-roadmap.md) for current phase status, and the [changelog](./project-changelog.md) for dated evidence.
+Live advisor vendor qualification, HOME rollout, npm publication, deployment, and broader Windows runtime support remain separate operator/release gates. See the [system architecture](./system-architecture.md) for implementation contracts, the [PDR](./project-overview-pdr.md) for requirements, the [code standards](./code-standards.md) for normative rules, the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) for Phases 01–05 admission, identity, bridge, reusable host, and placement, the [roadmap](./project-roadmap.md) for current phase status, and the [changelog](./project-changelog.md) for dated evidence.
 
 The Phase 06 standalone browser reader used an explicit multi-file picker with an
 8 MiB per-document bound. That reader source has since been removed. Fixtures
@@ -110,7 +110,7 @@ Phase 03 completes the paired `workspace-advisor-v1` extension across the DamHop
 - DamHopper `usePluginHost` owns selection/connection fencing, metadata and asset verification, frame-session lifecycle, and teardown. `PluginHost` is reusable presentation; `PluginHostPage` is the thin route wrapper. Same-authority project changes update the current frame instead of reopening it.
 - EVCrate `AdvisorDataProvider` adds trusted workspace context/events and optional UI intent while keeping the eight E00 data operations unchanged. The host contract documents full envelope and lifecycle boundaries.
 
-Implementation map: DamHopper `packages/plugin-sdk/src/ui-bridge.ts`, `packages/ui/src/plugins/{bridge-validators,bridge-host,use-plugin-host}.ts`, and `packages/ui/src/components/{PluginHost,PluginHostPage}.tsx`; EVCrate `viewer/src/providers/{bridge-contract,advisor-data-provider,dam-hopper-port-provider}.ts`. See the [Phase 03 plan](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md), [review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md), and [host contract](./workspace-advisor-host-contract.md). Workspace placement/cutover and paired rollout remain unclaimed.
+Implementation map: DamHopper `packages/plugin-sdk/src/ui-bridge.ts`, `packages/ui/src/plugins/{bridge-validators,bridge-host,use-plugin-host}.ts`, and `packages/ui/src/components/{PluginHost,PluginHostPage}.tsx`; EVCrate `viewer/src/providers/{bridge-contract,advisor-data-provider,dam-hopper-port-provider}.ts`. See the [Phase 03 plan](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md), [review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md), and [host contract](./workspace-advisor-host-contract.md). The Phase 03 record predates Phase 05 placement, now documented below; paired end-to-end rollout remains unclaimed.
 
 ## Advisor Plugin data API and cross-project history (E00/Phases 01–05)
 
@@ -216,6 +216,46 @@ TypeScript checking with zero errors, and a passing V-E3 call-count smoke provin
 scope/filter/view transitions do not call `history.refresh`. See the
 [phase record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md)
 and [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
+
+## Persistent Workspace Advisor placement (Phase 05)
+
+DamHopper `WorkspacePage` mounts one `WorkspaceAdvisorHost` outside shell-mode branches. It owns the persistent `PluginHost`/iframe; IDE, Terminal, and compact shells render `AdvisorPanelSlot`s that register geometry and activation rather than owning or moving a frame.
+
+- IDE right tool, Terminal floating panel, and compact full-height Workspace surface use modes `ide`, `terminal`, and `compact`, with default z-indexes 15, 25, and 35. The Terminal slot reserves `pb-8 pr-8` for the floating resize grip.
+- The host projects a rounded, connected, nonzero slot rectangle into a fixed container. ResizeObserver, viewport resize/scroll, app zoom, and `workspace:layout-change` trigger coalesced measurements; observers, event listeners, and pending work are cleaned up with the active slot effect.
+- With no active slot, the host stays mounted but is hidden, pointer-disabled, `inert`, and `aria-hidden`; focus returns to a connected launcher when possible. Placement does not alter project, editor, or terminal selection.
+- The G5 Chromium fixture asserts one unchanged iframe DOM node across IDE → Terminal → compact → IDE and hide/reopen. It mocks `PluginHost`, so it does not directly observe live FrameSession, snapshot, or history-refresh identity. `use-plugin-host.ts` applies visibility to the session and revokes on unmount; direct internal session continuity remains an inference from production lifecycle and stable placement.
+- Phase 05 review reports **106 unit + 12 browser tests passed**, clean `tsc --noEmit`, and 9.8/10 approval. The evidence handoff maps projectless admission and cleanup guarantees, distinguishing source behavior from direct test assertions.
+
+**Source map:** DamHopper `packages/ui/src/components/pages/WorkspacePage.tsx`, `components/organisms/{WorkspaceAdvisorHost,AdvisorPanelSlot}.tsx`, `contexts/WorkspaceAdvisorContext.tsx`, `lib/workspace-advisor-placement.ts`, `organisms/TerminalFloatingToolPanel.tsx`, and `plugins/use-plugin-host.ts`. See the [Phase 05 plan](../plans/260929-1346-advisor-workspace-panel/phase-05-workspace-panel-placement.md), [contract](./workspace-advisor-host-contract.md#phase-05-persistent-workspace-panel-placement), and [evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md).
+
+
+## Compact activity views and accessible tabs (Phase 06)
+
+Phase 06 completed the shared viewer's compact Overview/History composition and
+four hash-addressable tabs. The Cycle 2 review approved 10/10; final status
+records 55/55 tests (43 EVCrate viewer, 12 DamHopper browser) and clean TypeScript
+checks across both repositories. Phases 07–09 and paired rollout remain open.
+
+- `HashTabs` preserves `#overview`, `#history`, `#configuration`, and `#evaluations`,
+  with tab semantics, `aria-selected`, roving `tabIndex`, arrow/Home/End activation,
+  and focused-tab scrolling. Escape remains available to the host shell.
+- `ActivityScopeControl` is shared by Overview and History; it uses the selected
+  Workspace project, disables All History when authority/provider/project is absent,
+  and does not provide an independent project picker.
+- Overview retains six rate ratios, latency quantiles/sample counts, outcome and
+  missingness counts, and observational limitations. Narrow layouts stack cards.
+- History retains status/outcome filters, cursor paging, all row fields, an Inspect
+  action, and explicit detail transitions. Narrow cards and the wide table preserve
+  the same data; details retain loading/changed/missing/error/ready states.
+- Tab, scope, filter, disclosure, and row-selection actions do not trigger
+  `history.refresh`; explicit Refresh/Cancel remains the scan control.
+
+See [`hash-view.ts`](../viewer/src/hash-view.ts), `viewer/src/components/`,
+`viewer/src/views/`, `viewer/src/styles.css`, and
+`tests/viewer/{hash-view,compact-activity-views}.test.mjs` for the implementation
+map. The review evidence does not claim the later paired Phase 09 rollout or
+production deployment.
 
 ## Packaging, CSP, preview, and release inventory (historical Phase 08)
 
@@ -497,5 +537,5 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI and all-project history behavior through Phase 05; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI and all-project history behavior; [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — selected-project authority through Phase 05 placement; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
 - Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.

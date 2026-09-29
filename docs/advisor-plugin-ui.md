@@ -1,10 +1,12 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–04 are complete through viewer scope/request state (Phase 04 review 9.5/10); Phases 05–09 and end-to-end rollout remain open.
+**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–05 are implemented through persistent placement (Phase 05 Cycle 2 review-approved 9.8/10); Phases 06–09 and end-to-end rollout remain open.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
 **Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [Workspace Advisor host contract](./workspace-advisor-host-contract.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
 **Phase 04 evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md) · [Review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
+
+**Phase 05 placement evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-05-workspace-panel-placement.md) · [Cycle 2 review](../plans/reports/code-review-260929-2332-phase-05-cycle-2-workspace-panel-placements.md) · [Evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md). G5 directly asserts iframe DOM identity with a mocked `PluginHost`; internal FrameSession/snapshot continuity is not measured by that fixture.
 
 ## Purpose and boundary
 

@@ -1,5 +1,5 @@
-import type { FC } from 'react';
-import { VALID_HASH_VIEWS, formatHash, type HashView } from '../hash-view.js';
+import { useRef, useCallback, type FC, type KeyboardEvent } from 'react';
+import { VALID_HASH_VIEWS, formatHash, getNextRovingHashView, type HashView } from '../hash-view.js';
 
 export interface HashTabsProps {
   readonly activeView: HashView;
@@ -22,6 +22,39 @@ export const HashTabs: FC<HashTabsProps> = ({
   onSelectView,
   counts
 }) => {
+  const tabRefs = useRef<Record<HashView, HTMLAnchorElement | null>>({
+    overview: null,
+    history: null,
+    configuration: null,
+    evaluations: null
+  });
+
+  const activateTab = useCallback(
+    (view: HashView) => {
+      onSelectView(view);
+      if (typeof window !== 'undefined') {
+        window.location.hash = formatHash(view);
+      }
+      const target = tabRefs.current[view];
+      if (target) {
+        target.focus();
+        target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      }
+    },
+    [onSelectView]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLAnchorElement>, currentView: HashView) => {
+      const nextView = getNextRovingHashView(currentView, e.key);
+      if (nextView !== null) {
+        e.preventDefault();
+        activateTab(nextView);
+      }
+    },
+    [activateTab]
+  );
+
   return (
     <nav className="hash-tabs-nav" aria-label="Explorer views">
       <ul className="hash-tabs-list" role="tablist">
@@ -38,18 +71,21 @@ export const HashTabs: FC<HashTabsProps> = ({
           return (
             <li key={view} className="hash-tab-item" role="presentation">
               <a
+                ref={(el: HTMLAnchorElement | null) => {
+                  tabRefs.current[view] = el;
+                }}
                 href={formatHash(view)}
                 role="tab"
                 id={`tab-${view}`}
+                tabIndex={isActive ? 0 : -1}
                 aria-selected={isActive}
                 aria-controls={`panel-${view}`}
-                aria-current={isActive ? 'page' : undefined}
                 className={`hash-tab-link ${isActive ? 'active' : ''}`}
                 onClick={(e: { preventDefault: () => void }) => {
                   e.preventDefault();
-                  onSelectView(view);
-                  window.location.hash = formatHash(view);
+                  activateTab(view);
                 }}
+                onKeyDown={(e: KeyboardEvent<HTMLAnchorElement>) => handleKeyDown(e, view)}
               >
                 <span className="tab-label">{label}</span>
                 {badge !== null && <span className="tab-badge">{badge}</span>}

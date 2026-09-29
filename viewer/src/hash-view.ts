@@ -34,3 +34,23 @@ export function setWindowHash(view: HashView): void {
   }
   window.location.hash = formatHash(view);
 }
+
+export function getNextRovingHashView(currentView: HashView, key: string): HashView | null {
+  // Invariant: Do NOT intercept or steal Escape — host panel needs it for close/dismiss
+  if (key === 'Escape') return null;
+  const idx = VALID_HASH_VIEWS.indexOf(currentView);
+  if (idx === -1) return null;
+  if (key === 'ArrowRight' || key === 'ArrowDown') {
+    return VALID_HASH_VIEWS[(idx + 1) % VALID_HASH_VIEWS.length];
+  }
+  if (key === 'ArrowLeft' || key === 'ArrowUp') {
+    return VALID_HASH_VIEWS[(idx - 1 + VALID_HASH_VIEWS.length) % VALID_HASH_VIEWS.length];
+  }
+  if (key === 'Home') {
+    return VALID_HASH_VIEWS[0];
+  }
+  if (key === 'End') {
+    return VALID_HASH_VIEWS[VALID_HASH_VIEWS.length - 1];
+  }
+  return null;
+}
