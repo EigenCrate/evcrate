@@ -4,7 +4,17 @@
 
 **Updated:** 2026-09-29
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. Workspace-integrated Advisor: 3/10 phases complete (30%; Phase 02 DONE 2026-09-29; review approved 9.6/10); end-to-end rollout and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+
+### 2026-09-29 — test(advisor): qualify Workspace Advisor history scope (Phase 02)
+
+**Status:** Phase 02 DONE; review approved 9.6/10. The Workspace plan is 3/10 phases complete; end-to-end rollout and production deployment remain unclaimed.  
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 02](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md)  
+**Evidence:** [Code review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md)
+
+- Root All keeps valid-ID unmapped Project U despite missing registration and label; the fixture expects six discovered directories, seven accepted records, and two malformed/mismatched records accounted as invalid.
+- Project-bound null queries do not widen, foreign IDs reject, cursor/query binding holds, and permitted policy/evaluation reads work without a history root. Bounded scan cancellation/deadline and framed dispatch scenarios were qualified.
+- Existing production provider/scanner and v1/v2 data contracts did not change; no ID-less adapter or production-history census is claimed. Review records 59 passing test executions and zero failures.
 
 ### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 01
 
@@ -14,7 +24,7 @@
 
 - Completed selected-project host admission, canonical trusted identity, per-operation authorization, actual scope/revision descriptor, and revalidation preservation across DamHopper server/API/SDK/host client.
 - The phase record reports 102 passed and 0 failed across server integration/authorization, SDK contracts, and UI checks. Review recorded zero critical issues; two non-blocking warnings are tracked for Phase 02.
-- Phase 02 (history scope and unmapped records) is next. No end-to-end Workspace rollout or production deployment is claimed.
+- Phase 02 (history scope and unmapped records) was next at the Phase 01 checkpoint; it completed later on 2026-09-29 (see the newer entry above). No end-to-end Workspace rollout or production deployment is claimed.
 
 ### 2026-09-29 — docs(advisor): close Workspace-integrated Advisor Phase 00
 
