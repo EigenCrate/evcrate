@@ -3,7 +3,7 @@
 **Status:** Current roadmap for package `2.3.2`; Hook Materialization Scope
 Distribution is complete through Phase 09, and Windows release qualification is
 complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Updated:** 2026-09-28
+**Updated:** 2026-09-29
 **Filesystem-policy cutover progress:** 100% (2/2 phases complete; Phase 01 DONE 2026-09-27; Phase 02 DONE 2026-09-27; review approved 9.6/10; user approved). Cutover plan complete; broader operator release deployment matrix remains release-gated.
 
 **Advisor metrics explorer progress:** Historical milestone complete through Phase 10 (10/10 phases; completed 2026-09-19). That milestone recorded the 33-file controller closure, read-only browser explorer, strict CSP/no-network policy, frozen 10k benchmarks, and documentation cutover. Standalone picker/reader source was later removed from the repository.
@@ -15,6 +15,9 @@ complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Native Windows advisor support progress:** 100% (4/4 phases complete; Phase 04 DONE 2026-09-28; review approved 9.2/10). [Plan](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 04](../plans/260926-1522-windows-advisor-support/phase-04-qualification.md) · [Evidence](../plans/260926-1522-windows-advisor-support/reports/phase-04-qualification-evidence.md) · [Review](../plans/260926-1522-windows-advisor-support/reports/code-review-260928-1929-phase-04-qualification.md). Phase 04 evidence: 58/58 relevant tests, `release:check` and `distribute:check` passed; OMP/Codex qualified, Claude/Pi explicitly unverified. Full Linux qualification (400/400 on WSL Ubuntu 22.04/ext4) and live Windows `ADVICE_READY` are recorded in Phase 03. Production HOME publication and release authorization remain operator-gated.
 **Native Windows advisor readiness repairs:** 100% (4/4 phases complete; Phase 04 DONE 2026-09-28). [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Phase 04](../plans/260927-0005-windows-advisor-readiness/phase-04-verification-readiness.md) · [Test report](../plans/reports/testerphase04-260928-0955-verification-readiness.md) · [Review](../plans/reports/code-review-260928-1008-repair-phase-04-readiness.md). Final required suites reported 390/390 passed; review approved 9.0/10 with no critical findings. The repair track is complete and distinct from the original feature plan above.
 01–10 DONE on 2026-09-15).
+
+**Workspace-integrated Advisor panel progress:** 10% (1/10 phases complete; Phase 00 DONE 2026-09-29). [Plan](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 00](../plans/260929-1346-advisor-workspace-panel/phase-00-evidence-and-contract-freeze.md). Phases 01–09 remain pending; Phase 01 handoff awaits required user approval. No feature rollout or production change is claimed.
+
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts,
 the [system architecture](./system-architecture.md), [Phase 09 integrated qualification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md),
 [Phase 09 suite validation](../plans/reports/tester-260915-1119-phase-09-suite-validation.md), and the [Phase 10 support cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md)

@@ -2,9 +2,19 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-28
+**Updated:** 2026-09-29
 
 **Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+
+### 2026-09-29 — docs(advisor): close Workspace-integrated Advisor Phase 00
+
+**Status:** Phase 00 DONE; 1/10 phases complete (10%). Phases 01–09 pending; Phase 01 handoff remains gated on required user approval.
+**Plan:** [Workspace-integrated Advisor panel](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 00](../plans/260929-1346-advisor-workspace-panel/phase-00-evidence-and-contract-freeze.md)
+**Evidence:** [Contract freeze](../plans/260929-1346-advisor-workspace-panel/reports/phase-00-contract-freeze.md) · [Review](../plans/260929-1346-advisor-workspace-panel/reports/code-review-260929-1543-phase-00-evidence-and-contract-freeze.md).
+
+- G0-data, G0-auth and G0-wire are frozen; reviewed EVCrate code and sanitized fixtures support the reported valid-ID unmapped shape within existing v1/v2 contracts, without claiming an exhaustive production-history census.
+- Sanitized A/B/U/worktree and invalid-record fixtures are prepared; review reports focused fixture/provider/schema checks passing.
+- No application feature rollout, production change or live UI qualification is claimed.
 
 ### 2026-09-28 — test(windows): qualify native advisor and protect Linux (Phase 04)
 
