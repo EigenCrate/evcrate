@@ -21,20 +21,52 @@ export const OverviewView: FC<OverviewViewProps> = ({ state, onScopeChange }) =>
     snapshot?.metricsResult ?? historySummary?.metrics ?? null;
 
   if (!metricsResult) {
+    const hasProject = Boolean(state.workspaceContext?.project?.projectId);
+    const isScanning = status === 'scanning' || status === 'selecting';
+
     return (
-      <section className="view-panel overview-empty" id="panel-overview" aria-label="Overview">
+      <section
+        className="view-panel overview-empty"
+        id="panel-overview"
+        role="tabpanel"
+        aria-labelledby="tab-overview"
+      >
         <ActivityScopeControl
           scope={state.activityScope}
           workspaceContext={state.workspaceContext}
           isAvailable={state.isAvailable}
           onScopeChange={(newScope) => onScopeChange?.(newScope)}
         />
-        <div className="empty-state-card">
-          <h3>No Advisor History Loaded</h3>
-          <p>
-            Please choose an advisor history source or click "Refresh History" above to inspect diagnostic metrics,
-            outcome distributions, latency, and limitations.
-          </p>
+        <div className="empty-state-card" aria-live="polite">
+          {isScanning ? (
+            <>
+              <h3>Scanning History Records...</h3>
+              <p>Please wait while consultation records are discovered, parsed, and validated.</p>
+            </>
+          ) : status === 'revoked' ? (
+            <>
+              <h3>Context Revoked</h3>
+              <p>{staleReason ?? 'Session or host authorization was revoked. Prior data cleared.'}</p>
+            </>
+          ) : !state.isAvailable ? (
+            <>
+              <h3>History Provider Unavailable</h3>
+              <p>The history data provider is currently unavailable or disconnected.</p>
+            </>
+          ) : !hasProject ? (
+            <>
+              <h3>No Project Selected</h3>
+              <p>Please select a project in Workspace to load and inspect advisor consultations.</p>
+            </>
+          ) : (
+            <>
+              <h3>No Advisor History Loaded</h3>
+              <p>
+                No consultation records found for this scope. Click "Refresh History" above to inspect diagnostic metrics,
+                outcome distributions, latency, and limitations.
+              </p>
+            </>
+          )}
           <div className="empty-state-notice text-muted">
             All data is processed strictly within this client container.
           </div>
@@ -42,16 +74,23 @@ export const OverviewView: FC<OverviewViewProps> = ({ state, onScopeChange }) =>
       </section>
     );
   }
-
   const { counts, metrics, missingness, limitations, scope } = metricsResult;
   const lat: DistributionMetric = metrics.latency;
 
   return (
-    <section className="view-panel overview-view" id="panel-overview" aria-label="Overview">
+    <section
+      className="view-panel overview-view"
+      id="panel-overview"
+      role="tabpanel"
+      aria-labelledby="tab-overview"
+    >
       <div className="overview-header">
         <h2 className="view-title">
           Overview Metrics
           {status === 'stale' && <span className="badge badge-warning" style={{ marginLeft: 8 }}>Stale Data</span>}
+          {metricsResult.completeness && !metricsResult.completeness.is_complete && (
+            <span className="badge badge-warning" style={{ marginLeft: 8 }}>Incomplete Snapshot</span>
+          )}
         </h2>
         <ActivityScopeControl
           scope={state.activityScope}
@@ -59,20 +98,24 @@ export const OverviewView: FC<OverviewViewProps> = ({ state, onScopeChange }) =>
           isAvailable={state.isAvailable}
           onScopeChange={(newScope) => onScopeChange?.(newScope)}
         />
-        <div className="overview-meta text-muted">
-          <span>Scope: <strong>{scope.kind === 'history-root' ? (scope.selected_project_id ? 'Filtered Project' : 'All Projects') : scope.kind}</strong></span>
+        <div className="overview-meta text-muted" aria-label="Scope and record counts">
+          <span className="meta-item">
+            Scope: <strong>{scope.kind === 'history-root' ? (scope.selected_project_id ? 'Filtered Project' : 'All Projects') : scope.kind}</strong>
+          </span>
           {scope.selected_project_id && (
             <>
-              <span className="meta-sep">&bull;</span>
-              <span>Project: <strong>{formatProjectName(scope.selected_project_id, state.inventory?.entries.find((e) => e.project_id === scope.selected_project_id)?.label)}</strong></span>
+              <span className="meta-sep" aria-hidden="true">&bull;</span>
+              <span className="meta-item">
+                Project: <strong>{formatProjectName(scope.selected_project_id, state.inventory?.entries.find((e) => e.project_id === scope.selected_project_id)?.label)}</strong>
+              </span>
             </>
           )}
-          <span className="meta-sep">&bull;</span>
-          <span>Projects: <strong>{counts.projects}</strong></span>
-          <span className="meta-sep">&bull;</span>
-          <span>Tasks: <strong>{counts.tasks}</strong></span>
-          <span className="meta-sep">&bull;</span>
-          <span>Consultations: <strong>{counts.consultations}</strong></span>
+          <span className="meta-sep" aria-hidden="true">&bull;</span>
+          <span className="meta-item">Projects: <strong>{counts.projects}</strong></span>
+          <span className="meta-sep" aria-hidden="true">&bull;</span>
+          <span className="meta-item">Tasks: <strong>{counts.tasks}</strong></span>
+          <span className="meta-sep" aria-hidden="true">&bull;</span>
+          <span className="meta-item">Consultations: <strong>{counts.consultations}</strong></span>
         </div>
       </div>
       {status === 'stale' && staleReason && (
@@ -80,7 +123,11 @@ export const OverviewView: FC<OverviewViewProps> = ({ state, onScopeChange }) =>
           <strong>Stale notice:</strong> {staleReason}
         </div>
       )}
-
+      {status === 'scanning' && (
+        <div className="alert alert-info" role="status" style={{ marginBottom: 16 }}>
+          Refreshing consultation records...
+        </div>
+      )}
       <div className="metrics-grid" aria-label="Key Rate Metrics">
         <MetricRatio label="Delivery Rate" metric={metrics.delivery} description="Delivered ADVICE_READY responses over total terminal consultations." />
         <MetricRatio label="Outcome Coverage" metric={metrics.outcome_coverage} description="Valid executor outcome reports recorded for consultations." />

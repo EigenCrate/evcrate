@@ -33,6 +33,14 @@ export const ActivityScopeControl: FC<ActivityScopeControlProps> = ({
         ? 'History provider is currently unavailable'
         : null;
 
+  const noticeId = !hasProject
+    ? 'scope-notice-no-project'
+    : !rootAuthority
+      ? 'scope-notice-no-root'
+      : !isAvailable
+        ? 'scope-notice-unavailable'
+        : undefined;
+
   return (
     <div className="activity-scope-control" role="region" aria-label="Activity Scope">
       <div className="scope-button-group" role="group" aria-label="History activity scope">
@@ -42,10 +50,15 @@ export const ActivityScopeControl: FC<ActivityScopeControlProps> = ({
           disabled={!hasProject || !isAvailable}
           onClick={() => onScopeChange('workspace-project')}
           aria-pressed={scope === 'workspace-project'}
+          aria-describedby={!hasProject || !isAvailable ? noticeId : undefined}
           title={hasProject ? `Scope to workspace project (${projectLabel})` : 'No workspace project selected'}
         >
           <span className="scope-title">Workspace Project</span>
-          {hasProject && <span className="scope-badge">({projectLabel})</span>}
+          {hasProject && (
+            <span className="scope-badge" title={projectLabel}>
+              ({projectLabel})
+            </span>
+          )}
         </button>
 
         <button
@@ -54,6 +67,7 @@ export const ActivityScopeControl: FC<ActivityScopeControlProps> = ({
           disabled={!allAvailable}
           onClick={() => onScopeChange('all')}
           aria-pressed={scope === 'all'}
+          aria-describedby={!allAvailable ? noticeId : undefined}
           title={allUnavailableReason ?? 'View all accessible consultation history across projects'}
         >
           <span className="scope-title">All History</span>
@@ -61,14 +75,20 @@ export const ActivityScopeControl: FC<ActivityScopeControlProps> = ({
       </div>
 
       {!hasProject && (
-        <div className="scope-notice text-muted" aria-live="polite">
+        <div id="scope-notice-no-project" className="scope-notice text-muted" aria-live="polite">
           Please select a project in Workspace to inspect advisor consultations.
         </div>
       )}
 
       {hasProject && !rootAuthority && scope === 'workspace-project' && (
-        <div className="scope-notice text-muted" title={allUnavailableReason ?? undefined}>
+        <div id="scope-notice-no-root" className="scope-notice text-muted" title={allUnavailableReason ?? undefined}>
           Scoped to selected workspace project. All History is unavailable for this session.
+        </div>
+      )}
+
+      {hasProject && !isAvailable && (
+        <div id="scope-notice-unavailable" className="scope-notice text-warning">
+          History provider is currently unavailable.
         </div>
       )}
     </div>

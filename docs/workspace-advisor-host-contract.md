@@ -1,9 +1,9 @@
-# Workspace Advisor Host Admission, Identity, and UI Bridge
+# Workspace Advisor Admission, Identity, UI Bridge, and Persistent Placement
 
-**Status:** Phase 01 admission (9.2/10), Phase 02 history scope (9.6/10), Phase 03 bridge/reusable host (9.7/10), and Phase 04 EVCrate viewer scope/request state (9.5/10) completed and approved on 2026-09-29. Phases 05–09, Workspace placement/cutover, end-to-end rollout, and production deployment remain pending.
-**Authority:** DamHopper host API/SDK and paired EVCrate viewer implementation; see the [Phase 01 record](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md), [Phase 03 record](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md), [Phase 03 review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md), [Phase 04 record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md), [Phase 04 review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md), and [frozen architecture contract](../plans/260929-1346-advisor-workspace-panel/architecture-contract.md).
+**Status:** Phase 01 admission (9.2/10), Phase 02 history scope (9.6/10), Phase 03 bridge/reusable host (9.7/10), and Phase 04 EVCrate viewer scope/request state (9.5/10) completed and approved on 2026-09-29. Phase 05 persistent placement is Cycle 2 review-approved (9.8/10); Phases 06–09, end-to-end rollout, and production deployment remain open.
+**Authority:** DamHopper host API/SDK and paired EVCrate viewer implementation; see the [Phase 01 record](../plans/260929-1346-advisor-workspace-panel/phase-01-host-admission-and-identity.md), [Phase 03 record](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md), [Phase 03 review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md), [Phase 04 record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md), [Phase 04 review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md), [Phase 05 record](../plans/260929-1346-advisor-workspace-panel/phase-05-workspace-panel-placement.md), [Phase 05 review](../plans/reports/code-review-260929-2332-phase-05-cycle-2-workspace-panel-placements.md), [Phase 05 evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md), and [frozen architecture contract](../plans/260929-1346-advisor-workspace-panel/architecture-contract.md).
 
-This document records selected-project `describeView` admission and the trusted identity/authorization boundary between the Workspace host and Advisor, plus the negotiated UI bridge and reusable host lifecycle. Descriptors and bridge context are not access tokens; every asset read, context open, and operation remains subject to host authorization.
+This document records selected-project `describeView` admission and the trusted identity/authorization boundary between the Workspace host and Advisor, the negotiated UI bridge and reusable host lifecycle, and Phase 05 persistent Workspace placement. Descriptors and bridge context are not access tokens; every asset read, context open, and operation remains subject to host authorization.
 
 ## API
 
@@ -103,11 +103,11 @@ interface AdvisorWorkspaceContext {
 
 When a new selection has the same authority key, the hook keeps the current iframe, MessagePort, and backend context and sends a revisioned `host.workspaceChanged`. If authority differs, it revokes the old session before preparing the replacement. Visibility changes update the session's visible gate without re-preparing it.
 
-`PluginHost` is the reusable presentation component. It accepts installation identity and optional project, target, connection, visibility, UI-intent callback, class, and title overrides. `PluginHostPage` is a thin `AppLayout` route wrapper around it. The reusable lifecycle does not itself implement Workspace panel placement, Advisor navigation cutover, or end-to-end rollout.
+`PluginHost` is the reusable presentation component. It accepts installation identity and optional project, target, connection, visibility, UI-intent callback, class, and title overrides. `PluginHostPage` is a thin `AppLayout` route wrapper around it. Phase 05 composes this lifecycle in one persistent Workspace-level host; shell slots provide placement geometry, not another frame lifecycle. Navigation cutover and end-to-end rollout remain separate.
 
 Implementation map: DamHopper `packages/ui/src/plugins/{bridge-host,bridge-validators,use-plugin-host}.ts` and `packages/ui/src/components/{PluginHost,PluginHostPage}.tsx`; EVCrate `viewer/src/providers/{bridge-contract,advisor-data-provider,dam-hopper-port-provider}.ts`.
 
-Phase 03 is DONE with a 9.7/10 Cycle 2 review. The implementation summary reports 145 test passes across EVCrate and DamHopper; the review records 81 targeted unit, browser, and SDK tests and no critical findings. This repository/browser evidence does not establish Workspace placement, paired end-to-end rollout, or production deployment.
+Phase 03 is DONE with a 9.7/10 Cycle 2 review. Its implementation summary reports 145 test passes across EVCrate and DamHopper; the review records 81 targeted unit, browser, and SDK tests and no critical findings. This Phase 03 evidence predates and does not establish Phase 05 Workspace placement, paired end-to-end rollout, or production deployment.
 
 ## Behavioral evidence and limits
 
@@ -116,3 +116,29 @@ The Phase 01 record reports **102 passed, 0 failed** across server integration/a
 These checks establish repository/API behavior, not the later Workspace iframe lifecycle, phase-paired history behavior, LAN qualification, production deployment, or the complete Workspace rollout. Phase 01 intentionally leaves runner scope kinds and the existing data API unchanged.
 Phase 02 qualified existing EVCrate history behavior: root All preserves valid-ID unmapped activity without registration or a label join, while project scope remains non-widening; production scanner/provider and v1/v2 schema did not change. See the [Phase 02 record](../plans/260929-1346-advisor-workspace-panel/phase-02-history-scope-and-unmapped-records.md) and [review](../plans/reports/code-review-260929-1850-phase-02-history-scope-and-unmapped-records.md).
 Phase 04 adds viewer-only activity-scope and request fencing over these unchanged host authorities; see the [Phase 04 record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md) and [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
+
+## Phase 05 — Persistent Workspace panel placement
+
+`WorkspaceAdvisorPlacementProvider` owns slot registration and launcher focus state. `WorkspacePage` mounts exactly one `WorkspaceAdvisorHost` outside the compact, Terminal, and IDE shell branches. That host owns the one `PluginHost`/iframe; `AdvisorPanelSlot` elements in the shell trees register viewport geometry and activation callbacks. Visual mode changes select a slot and project the host over it; they do not reparent or recreate the iframe.
+
+The three placements are:
+
+- **IDE right-side tool:** mode `ide`, default z-index 15.
+- **Terminal floating tool:** mode `terminal`, default z-index 25. The slot reserves `pb-8 pr-8` for the floating panel's resize grip; the tool uses the existing floating-panel layout and chrome.
+- **Compact Workspace surface:** mode `compact`, default z-index 35, rendered as a full-height overlay with Back/close to the previous surface.
+
+`measureAdvisorSlotGeometry` returns no geometry when the slot is absent, hidden, disconnected, or has zero dimensions. Otherwise, it rounds the slot's viewport rectangle and resolves an explicit z-index before the mode default. The host applies that rectangle to a fixed-position container.
+
+Measurement starts immediately on slot activation. A `ResizeObserver`, window resize, passive capture scroll, app-zoom change, and `workspace:layout-change` schedule a coalesced animation-frame measurement. Terminal floating-panel drag/resize dispatches the custom layout event so translation-only changes also reposition the fixed host. Slot removal cancels pending work, disconnects the observer, and removes each listener; there is no idle polling loop.
+
+When there is no active visible slot, the host remains mounted but becomes offscreen, hidden, pointer-disabled, `inert`, and `aria-hidden`. The frame therefore stays out of focus traversal while its selected-project authority remains valid. If hiding removes focus from inside the host, focus returns to a connected launcher or the old active element is blurred. Escape closes through the Workspace action; the negotiated `activate` intent activates the current slot. Placement never changes editor, project, or terminal selection. Project/profile/owner/authority changes still follow the existing revoke/replacement rules.
+
+### Phase 05 verification and limits
+
+Cycle 2 review records 106 passing unit tests across 10 files, 12 passing Chromium browser tests across four files, and `tsc --noEmit` with zero errors; it approves the phase at 9.8/10. The two Cycle 1 warnings were resolved. The review reports no critical, high, or medium findings and retains an optional low-priority suggestion for IDE-tab launcher focus wiring.
+
+The G5 Chromium fixture asserts one iframe DOM element across IDE → Terminal → compact → IDE and hide/reopen, and asserts hidden/inert host state. It mocks `PluginHost`; it does not read a production `FrameSession` identifier, viewer snapshot, authorized context, or history-refresh count. The production stable mount and `use-plugin-host.ts` visibility/unmount paths support session continuity, but internal session/snapshot preservation is not directly measured by that fixture.
+
+The three checkpoint invariants and their source/test coverage boundaries are mapped in the [Phase 05 evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md). In particular, `WorkspaceAdvisorHost.test.tsx` supplies `project={null}` to a mocked `PluginHost`; it does not assert zero API calls through `use-plugin-host.ts`. The slot tests check unregister-on-unmount; host tests check geometry, inert state, layout-event remeasurement, Escape, and focus, while effect cleanup code removes observers/listeners.
+
+Phase 05's review approval is not user approval, paired end-to-end rollout, or production deployment. The supplied review/checkpoint do not identify an immutable DamHopper commit SHA.

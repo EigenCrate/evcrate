@@ -43,17 +43,49 @@ export const HistoryView: FC<HistoryViewProps> = ({
   }, [contextKey, filters]);
 
   if (!hasHistory) {
+    const hasProject = Boolean(state.workspaceContext?.project?.projectId);
+    const isScanning = state.status === 'scanning' || state.status === 'selecting';
+
     return (
-      <section className="view-panel history-empty" id="panel-history" aria-label="History Records">
+      <section
+        className="view-panel history-empty"
+        id="panel-history"
+        role="tabpanel"
+        aria-labelledby="tab-history"
+      >
         <ActivityScopeControl
           scope={state.activityScope}
           workspaceContext={state.workspaceContext}
           isAvailable={state.isAvailable}
           onScopeChange={(newScope) => onScopeChange?.(newScope)}
         />
-        <div className="empty-state-card">
-          <h3>No History Loaded</h3>
-          <p>Click "Refresh History" to load consultation records from the active workspace.</p>
+        <div className="empty-state-card" aria-live="polite">
+          {isScanning ? (
+            <>
+              <h3>Scanning History Records...</h3>
+              <p>Please wait while consultations are being loaded and parsed from the workspace.</p>
+            </>
+          ) : state.status === 'revoked' ? (
+            <>
+              <h3>Context Revoked</h3>
+              <p>{state.staleReason ?? 'Session or host authorization was revoked. Prior data cleared.'}</p>
+            </>
+          ) : !state.isAvailable ? (
+            <>
+              <h3>History Provider Unavailable</h3>
+              <p>The history data provider is currently unavailable or disconnected.</p>
+            </>
+          ) : !hasProject ? (
+            <>
+              <h3>No Project Selected</h3>
+              <p>Please select a project in Workspace to load consultation history.</p>
+            </>
+          ) : (
+            <>
+              <h3>No History Loaded</h3>
+              <p>No consultation records available for this scope. Click "Refresh History" to load consultations from the active workspace.</p>
+            </>
+          )}
         </div>
       </section>
     );
@@ -87,7 +119,12 @@ export const HistoryView: FC<HistoryViewProps> = ({
   };
 
   return (
-    <section className="view-panel history-view" id="panel-history" aria-label="History Records">
+    <section
+      className="view-panel history-view"
+      id="panel-history"
+      role="tabpanel"
+      aria-labelledby="tab-history"
+    >
       <div className="history-header">
         <h2 className="view-title">Consultation History ({totalItems})</h2>
         <ActivityScopeControl
@@ -154,71 +191,157 @@ export const HistoryView: FC<HistoryViewProps> = ({
       </div>
 
       <div className="history-content-layout">
-        <div className="history-table-container">
-          <table className="history-table" aria-label="Consultations list">
-            <thead>
-              <tr>
-                <th scope="col">Status</th>
-                <th scope="col">Started</th>
-                <th scope="col">Project</th>
-                <th scope="col">Route</th>
-                <th scope="col">Outcome</th>
-                <th scope="col">Latency</th>
-                <th scope="col">ID</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading || loadError !== null ? (
-                <tr><td colSpan={8} className="text-center text-muted">{loadError ?? 'Loading consultation records…'}</td></tr>
-              ) : records.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center text-muted">
-                    No consultation records match the active filters.
-                  </td>
-                </tr>
-              ) : (
-                records.map((r) => {
-                  const isSelected = r.consultation_id === selectedConsultationId;
-                  const recordRef = 'record_ref' in r ? r.record_ref : r.consultation_id;
-                  const rowKey = 'record_ref' in r && r.record_ref ? r.record_ref : `${r.project_id}:${r.consultation_id}`;
-                  const projectEntry = state.inventory?.entries.find((e) => e.project_id === r.project_id);
-                  const projectLabel = formatProjectName(r.project_id, projectEntry?.label);
-                  return (
-                    <tr key={rowKey} className={isSelected ? 'row-selected' : ''}>
-                      <td><span className={`badge badge-${r.status}`}>{r.status}</span></td>
-                      <td>{new Date(r.started_at).toLocaleString()}</td>
-                      <td>
-                        <span className="project-cell" title={r.project_id}>
-                          {projectLabel}
-                        </span>
-                      </td>
-                      <td><code>{r.route.backend}/{r.route.model}</code></td>
-                      <td>
+        <div className="history-list-pane">
+          {/* Narrow Card Mode (for narrow dock / compact viewports) */}
+          <div className="history-cards-list" role="feed" aria-label="Consultations cards">
+            {loading || loadError !== null ? (
+              <div className="history-status-card text-muted">
+                {loadError ?? 'Loading consultation records…'}
+              </div>
+            ) : records.length === 0 ? (
+              <div className="history-status-card text-muted">
+                No consultation records match the active filters.
+              </div>
+            ) : (
+              records.map((r) => {
+                const isSelected = r.consultation_id === selectedConsultationId;
+                const recordRef = 'record_ref' in r ? r.record_ref : r.consultation_id;
+                const rowKey = 'record_ref' in r && r.record_ref ? r.record_ref : `${r.project_id}:${r.consultation_id}`;
+                const projectEntry = state.inventory?.entries.find((e) => e.project_id === r.project_id);
+                const projectLabel = formatProjectName(r.project_id, projectEntry?.label);
+                const taskRunId = r.task_run_id ? r.task_run_id : null;
+                return (
+                  <article
+                    key={rowKey}
+                    className={`history-card ${isSelected ? 'card-selected' : ''}`}
+                    aria-label={`Consultation ${r.consultation_id.slice(0, 8)}`}
+                  >
+                    <div className="card-header">
+                      <div className="card-header-main">
+                        <span className={`badge badge-${r.status}`}>{r.status}</span>
                         {r.outcome_result ? (
                           <span className={`badge badge-result-${r.outcome_result}`}>{r.outcome_result}</span>
                         ) : (
-                          <span className="text-muted">{r.outcome_state}</span>
+                          <span className="card-outcome-state text-muted">{r.outcome_state}</span>
                         )}
-                      </td>
-                      <td>{r.receipt_elapsed_ms !== null ? `${r.receipt_elapsed_ms} ms` : '—'}</td>
-                      <td><code className="id-cell">{r.consultation_id.slice(0, 8)}…</code></td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => onSelectConsultation(isSelected ? null : r.consultation_id, recordRef)}
-                          aria-label={`Inspect consultation ${r.consultation_id.slice(0, 8)}`}
-                        >
-                          {isSelected ? 'Hide' : 'Inspect'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm btn-inspect"
+                        onClick={() => onSelectConsultation(isSelected ? null : r.consultation_id, recordRef)}
+                        aria-label={`Inspect consultation ${r.consultation_id.slice(0, 8)}`}
+                        aria-expanded={isSelected}
+                      >
+                        {isSelected ? 'Hide' : 'Inspect'}
+                      </button>
+                    </div>
+
+                    <div className="card-meta">
+                      <span className="card-time">{new Date(r.started_at).toLocaleString()}</span>
+                      <span className="card-latency">
+                        {r.receipt_elapsed_ms !== null ? `${r.receipt_elapsed_ms} ms` : '—'}
+                      </span>
+                    </div>
+
+                    <div className="card-body">
+                      <div className="card-field">
+                        <span className="field-label text-muted">Project:</span>
+                        <span className="field-value project-cell" title={r.project_id}>
+                          {projectLabel}
+                        </span>
+                      </div>
+                      <div className="card-field">
+                        <span className="field-label text-muted">Route:</span>
+                        <code className="field-value route-code">{r.route.backend}/{r.route.model}</code>
+                      </div>
+                      <div className="card-field">
+                        <span className="field-label text-muted">ID:</span>
+                        <code className="field-value id-code" title={r.consultation_id}>
+                          {r.consultation_id.slice(0, 8)}…
+                        </code>
+                      </div>
+                      {taskRunId && (
+                        <div className="card-field">
+                          <span className="field-label text-muted">Task Run:</span>
+                          <code className="field-value id-code" title={taskRunId}>
+                            {taskRunId.slice(0, 8)}…
+                          </code>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
+
+          {/* Wide Table Mode (for wide / expanded viewports) */}
+          <div className="history-table-container">
+            <table className="history-table" aria-label="Consultations list">
+              <thead>
+                <tr>
+                  <th scope="col">Status</th>
+                  <th scope="col">Started</th>
+                  <th scope="col">Project</th>
+                  <th scope="col">Route</th>
+                  <th scope="col">Outcome</th>
+                  <th scope="col">Latency</th>
+                  <th scope="col">ID</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading || loadError !== null ? (
+                  <tr><td colSpan={8} className="text-center text-muted">{loadError ?? 'Loading consultation records…'}</td></tr>
+                ) : records.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center text-muted">
+                      No consultation records match the active filters.
+                    </td>
+                  </tr>
+                ) : (
+                  records.map((r) => {
+                    const isSelected = r.consultation_id === selectedConsultationId;
+                    const recordRef = 'record_ref' in r ? r.record_ref : r.consultation_id;
+                    const rowKey = 'record_ref' in r && r.record_ref ? r.record_ref : `${r.project_id}:${r.consultation_id}`;
+                    const projectEntry = state.inventory?.entries.find((e) => e.project_id === r.project_id);
+                    const projectLabel = formatProjectName(r.project_id, projectEntry?.label);
+                    return (
+                      <tr key={rowKey} className={isSelected ? 'row-selected' : ''}>
+                        <td><span className={`badge badge-${r.status}`}>{r.status}</span></td>
+                        <td>{new Date(r.started_at).toLocaleString()}</td>
+                        <td>
+                          <span className="project-cell" title={r.project_id}>
+                            {projectLabel}
+                          </span>
+                        </td>
+                        <td><code>{r.route.backend}/{r.route.model}</code></td>
+                        <td>
+                          {r.outcome_result ? (
+                            <span className={`badge badge-result-${r.outcome_result}`}>{r.outcome_result}</span>
+                          ) : (
+                            <span className="text-muted">{r.outcome_state}</span>
+                          )}
+                        </td>
+                        <td>{r.receipt_elapsed_ms !== null ? `${r.receipt_elapsed_ms} ms` : '—'}</td>
+                        <td><code className="id-cell">{r.consultation_id.slice(0, 8)}…</code></td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => onSelectConsultation(isSelected ? null : r.consultation_id, recordRef)}
+                            aria-label={`Inspect consultation ${r.consultation_id.slice(0, 8)}`}
+                          >
+                            {isSelected ? 'Hide' : 'Inspect'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
           <PaginationControls
             page={page}
@@ -227,7 +350,6 @@ export const HistoryView: FC<HistoryViewProps> = ({
             onPageChange={(nextPage) => { void changePage(nextPage); }}
           />
         </div>
-
         {(selectedRecord || historyDetail?.status !== 'idle') && (() => {
           const selectedProjectId = selectedRecord?.project_id ?? historyDetail?.execution?.project_id;
           const projectEntry = selectedProjectId ? state.inventory?.entries.find((e) => e.project_id === selectedProjectId) : undefined;

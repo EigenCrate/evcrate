@@ -53,10 +53,24 @@ export const StatusBanner: FC<StatusBannerProps> = ({
 
         {status === 'fresh' && (
           <div className="status-message status-success">
-            <strong>Fresh Snapshot</strong> — Scanned {scan?.accepted_records ?? 0} records successfully
-            {scannedAt ? ` at ${new Date(scannedAt).toLocaleTimeString()}` : ''}.
+            {scan?.status === 'incomplete' || scan?.limit_hit ? (
+              <>
+                <strong className="status-badge-inline badge-warning">Incomplete Snapshot</strong> — Limit reached; scanned {scan?.accepted_records ?? 0} records
+                {scannedAt ? ` at ${new Date(scannedAt).toLocaleTimeString()}` : ''}.
+              </>
+            ) : scan?.status === 'complete_with_errors' ? (
+              <>
+                <strong>Fresh Snapshot (With Warnings)</strong> — Scanned {scan?.accepted_records ?? 0} records
+                {scannedAt ? ` at ${new Date(scannedAt).toLocaleTimeString()}` : ''}.
+              </>
+            ) : (
+              <>
+                <strong>Fresh Snapshot</strong> — Scanned {scan?.accepted_records ?? 0} records
+                {scannedAt ? ` at ${new Date(scannedAt).toLocaleTimeString()}` : ''}.
+              </>
+            )}
             {scan && scan.diagnostics.length > 0 && (
-              <span className="status-warning-inline"> ({scan.diagnostics.length} diagnostics reported)</span>
+              <span className="status-warning-inline"> ({scan.diagnostics.length} diagnostics{scan.suppressed_diagnostics > 0 ? `, ${scan.suppressed_diagnostics} suppressed` : ''})</span>
             )}
           </div>
         )}
@@ -64,6 +78,7 @@ export const StatusBanner: FC<StatusBannerProps> = ({
         {status === 'stale' && (
           <div className="status-message status-warning">
             <strong>Stale Data Retained:</strong> {staleReason ?? 'Prior snapshot retained due to scan interruption.'}
+            {scannedAt && <span className="status-timestamp text-muted"> (Observed: {new Date(scannedAt).toLocaleTimeString()})</span>}
             {scan && (
               <span className="status-counts">
                 {' '}(Discovered: {scan.consultations_discovered} consultations, {scan.diagnostics.length} diagnostics)

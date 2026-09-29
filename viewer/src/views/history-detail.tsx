@@ -85,6 +85,38 @@ export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, projectN
     );
   }
 
+  // Explicit drawer state: error
+  if (detail?.status === 'error') {
+    return (
+      <aside className="history-detail-drawer" aria-label="Consultation Details">
+        <div className="drawer-header">
+          <div className="drawer-title-group">
+            <h3 className="drawer-title text-danger">Detail Error</h3>
+            <code className="drawer-id">{consultationId}</code>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm btn-drawer-close"
+            onClick={onClose}
+            aria-label="Close detail view"
+          >
+            &larr; Back / Close
+          </button>
+        </div>
+        <div className="drawer-content" style={{ padding: 24 }}>
+          <div className="alert alert-danger" role="alert">
+            <strong>Failed to load detail:</strong> {detail.error ?? 'An unexpected error occurred while reading consultation detail.'}
+          </div>
+          {onRefresh && (
+            <button type="button" className="btn btn-primary" onClick={onRefresh} style={{ marginTop: 12 }}>
+              Refresh History
+            </button>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
   // Ready detail from provider or fallback from normalized record
   const exec = detail?.execution;
   const status = exec?.status ?? record?.status ?? 'started';
@@ -116,7 +148,14 @@ export const HistoryDetail: FC<HistoryDetailProps> = ({ record, detail, projectN
           <h3 className="drawer-title">Consultation Detail</h3>
           <code className="drawer-id">{consultationId}</code>
         </div>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Close detail view">&times; Close</button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm btn-drawer-close"
+          onClick={onClose}
+          aria-label="Close detail view"
+        >
+          &larr; Back / Close
+        </button>
       </div>
 
       <div className="drawer-content">

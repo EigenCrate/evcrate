@@ -14,6 +14,7 @@ export interface DataControlsProps {
   readonly isAvailable: boolean;
   readonly onRefresh: () => void;
   readonly onCancel: () => void;
+  readonly observedAt?: number | null;
 }
 
 export const DataControls: FC<DataControlsProps> = ({
@@ -21,7 +22,8 @@ export const DataControls: FC<DataControlsProps> = ({
   sourceLabel,
   isAvailable,
   onRefresh,
-  onCancel
+  onCancel,
+  observedAt
 }) => {
   const isScanning = status === 'scanning';
   const isSelecting = status === 'selecting';
@@ -52,12 +54,19 @@ export const DataControls: FC<DataControlsProps> = ({
         )}
       </div>
 
-      {sourceLabel && (
-        <div className="source-label" aria-live="polite">
-          <span className="source-label-prefix text-muted">Source:</span>
-          <span className="source-label-name" title={sourceLabel}>
-            {sourceLabel}
-          </span>
+      {(sourceLabel || observedAt) && (
+        <div className="source-metadata" aria-live="polite">
+          {sourceLabel && (
+            <div className="source-label" title={sourceLabel}>
+              <span className="source-label-prefix text-muted">Source: </span>
+              <span className="source-label-name">{sourceLabel}</span>
+            </div>
+          )}
+          {observedAt && (
+            <div className="source-observed-at text-muted">
+              Updated: {new Date(observedAt).toLocaleTimeString()}
+            </div>
+          )}
         </div>
       )}
     </section>

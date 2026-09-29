@@ -2,9 +2,38 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-29
+**Updated:** 2026-09-30
 
-**Status:** Hook Materialization Scope Distribution complete through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows advisor support Phases 01–04 complete (Phase 04 review approved 9.2/10). Phase 04 passed Windows behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP and Codex diagnostics qualified, Claude and Pi remain unverified. Linux suite: 400/400 on WSL ext4; Phase 03 separately observed live OMP `ADVICE_READY`. Workspace-integrated Advisor: 5/10 phases complete (50%; Phase 04 DONE 2026-09-29; review approved 9.5/10); end-to-end rollout and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.3.2`.
+**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 7/10 phases complete (70%; Phase 06 DONE 2026-09-30; Cycle 2 review approved 10/10); Phases 07–09, end-to-end rollout, and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.4.0`.
+
+### 2026-09-30 — feat(advisor): complete compact activity views and accessible tabs (Phase 06)
+
+**Status:** Phase 06 DONE (2026-09-30; 100%; Cycle 2 review approved 10/10); Workspace plan 7/10 phases complete (70%). Phases 07–09, paired end-to-end rollout, and production deployment remain unclaimed.
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 06](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md)
+**Review:** [Cycle 2 code review](../plans/reports/code-review-260930-0226-phase-06-cycle-2-compact-activity-views.md)
+
+- Completed compact Overview/History composition and four keyboard-operable,
+  hash-addressable tabs while preserving the existing tab routes.
+- Shared Workspace Project/All scope, scan status, and manual Refresh/Cancel;
+  tab, scope, filter, detail, and disclosure interactions do not call
+  `history.refresh`.
+- Preserved all six rate metrics, latency/outcome/missingness details, history
+  fields, filters, cursor paging, and inspection states in narrow cards and wide
+  layouts.
+- Final phase status records 55/55 tests passed (43 EVCrate viewer and 12
+  DamHopper browser); TypeScript checks are clean across both repositories.
+- Compact-view implementation does not change backend/bridge contracts or claim
+  the later paired qualification, end-to-end rollout, or production deployment.
+
+### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 05
+
+**Status:** Phase 05 DONE (2026-09-29; 100%; Cycle 2 review approved 9.8/10); Workspace plan 6/10 phases complete (60%). End-to-end rollout and production deployment remain unclaimed.
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 05](../plans/260929-1346-advisor-workspace-panel/phase-05-workspace-panel-placement.md)
+**Review:** [Cycle 2 code review](../plans/reports/code-review-260929-2332-phase-05-cycle-2-workspace-panel-placements.md)
+
+- Completed persistent single-iframe placement across IDE dock, Terminal float and compact Workspace overlay. Checked-in browser assertions verify one iframe DOM node across placements and hide/reopen with inert/hidden state; the fixture mocks `PluginHost`, so it does not establish real `FrameSession`, snapshot or refresh-call continuity.
+- Cycle 2 review records 106/106 unit tests, 12/12 Chromium tests, `tsc --noEmit` with 0 errors, and no critical issues or warnings. Source has a no-project early return before API preparation, but the host test passes `project={null}` with a mocked `PluginHost` and does not assert zero API calls; slot unregistration is tested while observer/listener cleanup is implemented but not directly asserted.
+- Phases 06–09 remain pending; no end-to-end feature rollout or production deployment is claimed.
 
 ### 2026-09-29 — feat(advisor): complete Workspace-integrated Advisor Phase 04
 
