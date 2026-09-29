@@ -12,7 +12,8 @@ import {
   selectFilteredRecords,
   selectSelectedRow,
   extractDomainQuery,
-  formatProjectName
+  formatProjectName,
+  selectHistoryQuery
 } from '../../viewer/src/app-state.ts';
 
 test('app-state: PROVIDER_READY initializes provider metadata', () => {
@@ -256,10 +257,11 @@ test('app-state: inventory threaded from HISTORY_REFRESH_COMMIT and HISTORY_SUMM
   assert.deepEqual(summarized.inventory, updatedInventory);
 });
 
-test('app-state: SET_FILTERS project_id change resets selected consultation, detail, and cached rows', () => {
+test('app-state: SET_ACTIVITY_SCOPE switches scope, increments query revision, and clears scoped rows', () => {
   const activeState = {
     ...INITIAL_STATE,
-    filters: { ...INITIAL_STATE.filters, project_id: 'a'.repeat(64) },
+    activityScope: 'workspace-project',
+    historyQueryRevision: 1,
     selectedConsultationId: 'c-alpha-1',
     historyDetail: {
       status: 'ready',
@@ -276,52 +278,103 @@ test('app-state: SET_FILTERS project_id change resets selected consultation, det
     historyPage: { entries: [{ consultation_id: 'c-alpha-1', project_id: 'a'.repeat(64) }], next_cursor: 'cursor-next' }
   };
 
-  // Switching project to Project B clears detail, selection, cursor, and cached rows
-  const switchedToB = appReducer(activeState, {
-    type: 'SET_FILTERS',
-    filters: { project_id: 'b'.repeat(64) }
+  // Switching scope to 'all' increments query revision and resets selection and cached rows
+  const switchedToAll = appReducer(activeState, {
+    type: 'SET_ACTIVITY_SCOPE',
+    scope: 'all'
   });
-  assert.equal(switchedToB.filters.project_id, 'b'.repeat(64));
-  assert.equal(switchedToB.selectedConsultationId, null);
-  assert.deepEqual(switchedToB.historyDetail, INITIAL_DETAIL_STATE);
-  assert.equal(switchedToB.historyPageCursor, null);
-  assert.equal(switchedToB.historyPage, null);
-  assert.equal(switchedToB.historyPageEntries.length, 0);
-
-  // Switching back to All Projects (null) also resets selection and cached rows
-  const activeB = {
-    ...switchedToB,
-    selectedConsultationId: 'c-beta-1',
-    historyDetail: { status: 'ready', consultationId: 'c-beta-1', recordRef: 'ref-b' },
-    historyPageEntries: [{ consultation_id: 'c-beta-1', project_id: 'b'.repeat(64) }]
-  };
-  const switchedToAll = appReducer(activeB, {
-    type: 'SET_FILTERS',
-    filters: { project_id: null }
-  });
-  assert.equal(switchedToAll.filters.project_id, null);
+  assert.equal(switchedToAll.activityScope, 'all');
+  assert.equal(switchedToAll.historyQueryRevision, 2);
   assert.equal(switchedToAll.selectedConsultationId, null);
   assert.deepEqual(switchedToAll.historyDetail, INITIAL_DETAIL_STATE);
+  assert.equal(switchedToAll.historyPageCursor, null);
+  assert.equal(switchedToAll.historyPage, null);
   assert.equal(switchedToAll.historyPageEntries.length, 0);
+});
 
-  // Non-project filter change (e.g. status) does NOT clear selection or detail
-  const retainedDetail = appReducer(activeState, {
+test('app-state: WORKSPACE_PROJECT_CHANGED invalidates scoped history but keeps All as All', () => {
+  const projA = 'a'.repeat(64);
+  const projB = 'b'.repeat(64);
+  const baseCtx = {
+    revision: 1,
+    authorityKey: 'auth-key-1',
+    project: { projectId: projA, label: 'Project A' },
+    historyScope: 'history-root',
+    contextScope: 'history-root',
+    allowedOperations: ['history.refresh']
+  };
+
+  const scopedState = {
+    ...INITIAL_STATE,
+    activityScope: 'workspace-project',
+    workspaceContext: baseCtx,
+    historyQueryRevision: 1,
+    selectedConsultationId: 'c-1',
+    historyDetail: { status: 'ready', consultationId: 'c-1', recordRef: 'c-1' },
+    historyPageEntries: [{ consultation_id: 'c-1', project_id: projA }]
+  };
+
+  const nextCtx = {
+    ...baseCtx,
+    revision: 2,
+    project: { projectId: projB, label: 'Project B' }
+  };
+
+  // Project change under workspace-project scope invalidates scoped history
+  const switchedScoped = appReducer(scopedState, {
+    type: 'WORKSPACE_PROJECT_CHANGED',
+    workspaceContext: nextCtx
+  });
+  assert.equal(switchedScoped.workspaceContext?.project.projectId, projB);
+  assert.equal(switchedScoped.historyQueryRevision, 2);
+  assert.equal(switchedScoped.selectedConsultationId, null);
+  assert.equal(switchedScoped.historyPageEntries.length, 0);
+
+  // Project change under 'all' scope: All remains All, query revision and rows kept
+  const allState = {
+    ...scopedState,
+    activityScope: 'all'
+  };
+  const switchedAll = appReducer(allState, {
+    type: 'WORKSPACE_PROJECT_CHANGED',
+    workspaceContext: nextCtx
+  });
+  assert.equal(switchedAll.workspaceContext?.project.projectId, projB);
+  assert.equal(switchedAll.historyQueryRevision, 1);
+  assert.equal(switchedAll.selectedConsultationId, 'c-1');
+  assert.equal(switchedAll.historyPageEntries.length, 1);
+});
+
+test('app-state: SET_FILTERS increments query revision and resets query page state while retaining scan and observedAt', () => {
+  const activeState = {
+    ...INITIAL_STATE,
+    historyQueryRevision: 3,
+    observedAt: 12345678,
+    scan: { status: 'complete', accepted_records: 5, invalid_records: 0 },
+    selectedConsultationId: 'c-alpha-1',
+    historyPageCursor: 'cursor-1',
+    historyPageEntries: [{ consultation_id: 'c-alpha-1', project_id: 'a'.repeat(64) }]
+  };
+
+  const updated = appReducer(activeState, {
     type: 'SET_FILTERS',
     filters: { statuses: ['ADVICE_READY'] }
   });
-  assert.equal(retainedDetail.selectedConsultationId, 'c-alpha-1');
-  assert.equal(retainedDetail.historyDetail.status, 'ready');
-  assert.equal(retainedDetail.historyPageCursor, null); // cursor still resets
+  assert.equal(updated.historyQueryRevision, 4);
+  assert.equal(updated.observedAt, 12345678);
+  assert.deepEqual(updated.scan, activeState.scan);
+  assert.equal(updated.selectedConsultationId, null);
+  assert.equal(updated.historyPageCursor, null);
+  assert.equal(updated.historyPageEntries.length, 0);
 });
 
 test('app-state selectors: extractDomainQuery preserves project_id and task_run_id', () => {
   const filters = {
     ...INITIAL_STATE.filters,
-    project_id: 'a'.repeat(64),
     task_run_id: '00000000-0000-4000-8000-000000000001',
     statuses: ['ADVICE_READY']
   };
-  const query = extractDomainQuery(filters);
+  const query = extractDomainQuery(filters, 'a'.repeat(64));
   assert.equal(query.project_id, 'a'.repeat(64));
   assert.equal(query.task_run_id, '00000000-0000-4000-8000-000000000001');
   assert.deepEqual(query.filters.statuses, ['ADVICE_READY']);
@@ -336,19 +389,219 @@ test('app-state selectors: formatProjectName handles labels and truncated ID fal
   assert.equal(formatProjectName('short', null), 'short');
 });
 
-test('app-state selectors: selectFilteredRecords respects project_id filter in snapshot mode', () => {
+test('app-state selectors: selectFilteredRecords respects activityScope in snapshot mode', () => {
+  const projA = 'a'.repeat(64);
+  const projB = 'b'.repeat(64);
   const state = {
     ...INITIAL_STATE,
-    filters: { ...INITIAL_STATE.filters, project_id: 'a'.repeat(64) },
+    activityScope: 'workspace-project',
+    workspaceContext: {
+      revision: 1,
+      authorityKey: 'key',
+      project: { projectId: projA, label: 'Project A' },
+      historyScope: 'history-root',
+      contextScope: 'history-root',
+      allowedOperations: ['history.refresh']
+    },
     snapshot: {
       generation: 1,
       records: [
-        { consultation_id: 'c-1', project_id: 'a'.repeat(64), status: 'ADVICE_READY', outcome_state: 'valid' },
-        { consultation_id: 'c-2', project_id: 'b'.repeat(64), status: 'ADVICE_READY', outcome_state: 'valid' }
+        { consultation_id: 'c-1', project_id: projA, status: 'ADVICE_READY', outcome_state: 'valid' },
+        { consultation_id: 'c-2', project_id: projB, status: 'ADVICE_READY', outcome_state: 'valid' }
       ]
     }
   };
-  const filtered = selectFilteredRecords(state);
-  assert.equal(filtered.length, 1);
-  assert.equal(filtered[0].consultation_id, 'c-1');
+  // Under workspace-project scope: only projA record returned
+  const scoped = selectFilteredRecords(state);
+  assert.equal(scoped.length, 1);
+  assert.equal(scoped[0].consultation_id, 'c-1');
+
+  // Under all scope: both records returned
+  const all = selectFilteredRecords({ ...state, activityScope: 'all' });
+  assert.equal(all.length, 2);
+});
+
+test('app-state selectors: selectHistoryQuery fail-closed states and query assembly', () => {
+  const projA = 'a'.repeat(64);
+
+  // 1. Unresolved workspace ID or no context -> unavailable
+  const noCtx = { ...INITIAL_STATE, workspaceContext: null };
+  assert.equal(selectHistoryQuery(noCtx).available, false);
+
+  const badId = {
+    ...INITIAL_STATE,
+    workspaceContext: {
+      revision: 1,
+      authorityKey: 'k',
+      project: { projectId: 'not-hex', label: null },
+      historyScope: 'history-root',
+      contextScope: 'history-root',
+      allowedOperations: ['history.refresh']
+    }
+  };
+  assert.equal(selectHistoryQuery(badId).available, false);
+
+  // 2. History authority unavailable -> unavailable
+  const unavailCtx = {
+    ...INITIAL_STATE,
+    workspaceContext: {
+      revision: 1,
+      authorityKey: 'k',
+      project: { projectId: projA, label: null },
+      historyScope: 'unavailable',
+      contextScope: 'project',
+      allowedOperations: []
+    }
+  };
+  assert.equal(selectHistoryQuery(unavailCtx).available, false);
+
+  // 3. 'all' without root authority (historyScope: 'project') -> unavailable
+  const projOnlyCtx = {
+    ...INITIAL_STATE,
+    activityScope: 'all',
+    workspaceContext: {
+      revision: 1,
+      authorityKey: 'k',
+      project: { projectId: projA, label: null },
+      historyScope: 'project',
+      contextScope: 'project',
+      allowedOperations: ['history.refresh']
+    }
+  };
+  const projOnlyRes = selectHistoryQuery(projOnlyCtx);
+  assert.equal(projOnlyRes.available, false);
+  assert.ok(projOnlyRes.reason.includes('root'));
+
+  // 4. 'all' with root authority -> available with project_id: null
+  const rootCtx = {
+    ...INITIAL_STATE,
+    activityScope: 'all',
+    workspaceContext: {
+      revision: 1,
+      authorityKey: 'k',
+      project: { projectId: projA, label: null },
+      historyScope: 'history-root',
+      contextScope: 'history-root',
+      allowedOperations: ['history.refresh']
+    }
+  };
+  const allRes = selectHistoryQuery(rootCtx);
+  assert.equal(allRes.available, true);
+  assert.equal(allRes.query?.project_id, null);
+
+  // 5. 'workspace-project' -> available with project_id: projA (even if absent from inventory)
+  const scopedRes = selectHistoryQuery({ ...rootCtx, activityScope: 'workspace-project' });
+  assert.equal(scopedRes.available, true);
+  assert.equal(scopedRes.query?.project_id, projA);
+});
+
+test('app-state: CONTEXT_REVOKED increments contextEpoch and clears bound sources and reveal', () => {
+  const activeState = {
+    ...INITIAL_STATE,
+    contextEpoch: 1,
+    status: 'fresh',
+    snapshotId: 'snap-1',
+    currentPolicy: { status: 'ready', scope: 'account', temporal: 'current', observed_at: 100, revision: 'rev-1' },
+    evaluationsList: { status: 'ready', observed_at: 100, binding_revision: 'b-1', items: [], next_cursor: null },
+    revealCandidates: true
+  };
+
+  const revoked = appReducer(activeState, {
+    type: 'CONTEXT_REVOKED',
+    reason: 'Authority expired'
+  });
+  assert.equal(revoked.status, 'revoked');
+  assert.equal(revoked.contextEpoch, 2);
+  assert.equal(revoked.snapshotId, null);
+  assert.equal(revoked.currentPolicy, null);
+  assert.equal(revoked.evaluationsList, null);
+  assert.equal(revoked.revealCandidates, false);
+  assert.equal(revoked.policyState.status, 'idle');
+});
+
+test('app-state: discards late query responses from mismatched queryRevision or contextEpoch (A→All→B race)', () => {
+  const state = {
+    ...INITIAL_STATE,
+    status: 'fresh',
+    contextEpoch: 2,
+    historyQueryRevision: 5,
+    frameSession: 'session-1'
+  };
+
+  // Response with old query revision 4 (from earlier query) is rejected
+  const ignoredRev = appReducer(state, {
+    type: 'HISTORY_QUERY_PAIR_COMMIT',
+    generation: state.generation,
+    frameSession: 'session-1',
+    queryRevision: 4,
+    contextEpoch: 2,
+    summary: { metrics: { scan: { status: 'complete' } } },
+    page: { entries: [{ consultation_id: 'late-c' }], next_cursor: null }
+  });
+  assert.equal(ignoredRev.historyPageEntries.length, 0);
+
+  // Response with old context epoch 1 (from prior connection) is rejected
+  const ignoredEpoch = appReducer(state, {
+    type: 'HISTORY_QUERY_PAIR_COMMIT',
+    generation: state.generation,
+    frameSession: 'session-1',
+    queryRevision: 5,
+    contextEpoch: 1,
+    summary: { metrics: { scan: { status: 'complete' } } },
+    page: { entries: [{ consultation_id: 'late-c' }], next_cursor: null }
+  });
+  assert.equal(ignoredEpoch.historyPageEntries.length, 0);
+});
+
+test('app-state: HISTORY_REFRESH_START invalidates old detail and resets query state', () => {
+  const state = {
+    ...INITIAL_STATE,
+    status: 'fresh',
+    historyQueryRevision: 2,
+    selectedConsultationId: 'c-1',
+    historyDetail: { status: 'ready', consultationId: 'c-1', recordRef: 'ref-1' },
+    historyPageEntries: [{ consultation_id: 'c-1' }]
+  };
+
+  const refreshing = appReducer(state, {
+    type: 'HISTORY_REFRESH_START',
+    generation: 3,
+    contextEpoch: 0
+  });
+  assert.equal(refreshing.status, 'scanning');
+  assert.equal(refreshing.historyQueryRevision, 3);
+  assert.equal(refreshing.selectedConsultationId, null);
+  assert.deepEqual(refreshing.historyDetail, INITIAL_DETAIL_STATE);
+  assert.equal(refreshing.historyPageEntries.length, 0);
+});
+
+test('app-state: bound policy and evaluations commit independently and reject commits when revoked', () => {
+  const revokedState = {
+    ...INITIAL_STATE,
+    status: 'revoked',
+    contextEpoch: 5
+  };
+
+  // Policy commit refused when revoked
+  const rejectedPolicy = appReducer(revokedState, {
+    type: 'POLICY_COMMIT',
+    policy: { status: 'ready', scope: 'account', temporal: 'current', observed_at: 1, revision: 'r' },
+    contextEpoch: 5
+  });
+  assert.equal(rejectedPolicy.currentPolicy, null);
+
+  // When available, policy commits even if history is not available
+  const availableState = {
+    ...INITIAL_STATE,
+    status: 'idle',
+    isAvailable: true,
+    contextEpoch: 1
+  };
+  const policyCommitted = appReducer(availableState, {
+    type: 'POLICY_COMMIT',
+    policy: { status: 'ready', scope: 'account', temporal: 'current', observed_at: 1, revision: 'r' },
+    contextEpoch: 1
+  });
+  assert.equal(policyCommitted.currentPolicy?.status, 'ready');
+  assert.equal(policyCommitted.policyState.status, 'ready');
 });

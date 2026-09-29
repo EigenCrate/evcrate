@@ -1,9 +1,10 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). The later Workspace Advisor Phase 03 bridge/reusable-host contract completed 2026-09-29 (review 9.7/10); it extends the host bridge without changing the four-view data API.
+**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–04 are complete through viewer scope/request state (Phase 04 review 9.5/10); Phases 05–09 and end-to-end rollout remain open.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
 **Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [Workspace Advisor host contract](./workspace-advisor-host-contract.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
+**Phase 04 evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md) · [Review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
 
 ## Purpose and boundary
 
@@ -85,54 +86,76 @@ identity boundary. Host authorization remains required for every operation.
 
 `app-state-types.ts`, `app-actions.ts`, `app-state-reducer.ts`,
 `app-state-selectors.ts`, and `app-state.ts` form one immutable `useReducer` model.
-It tracks provider metadata, frame/session generation, snapshot IDs, canonical
-filters, same-snapshot project inventory, remote summary/page entries, detail states
-(`loading`, `ready`, `changed`, `missing`, `error`), current policy, evaluations,
-selection, and candidate reveal. Late refresh/summary/page actions are ignored when
-generation or frame session no longer matches. Context changes and revocation clear
-snapshots, inventory, cursors, detail, policy, evaluations, and selection before
-new data is accepted. History project/metric filters request a server-filtered
-summary and first page, clearing old page/detail state; they do not fetch or
-aggregate all history in the browser.
+`AppState.activityScope` is separate from editable filters and starts at
+`'workspace-project'`; the available values are `'workspace-project'` and `'all'`.
+`UiHistoryFilters` contains task-run and metric filters only; it has no editable
+`project_id`. `selectHistoryQuery` evaluates the trusted Workspace context and
+returns an explicit unavailable reason instead of guessing identity or widening scope.
+
+The selector fails closed for a missing/unadmitted project, malformed project ID,
+revoked/unavailable provider, missing history permission, unavailable history
+scope, or All without `history-root` authority. It returns no query and a reason.
+For Workspace history, scope/filter changes clear page, cursor, selection, and
+detail, increment `historyQueryRevision`, then request summary and first page
+from the same snapshot; they do not refresh it.
+
+App creates request IDs from a prefix, timestamp, and per-instance increasing
+sequence. Provider identity and `contextEpoch` fence responses, errors, and
+loading cleanup; the reducer also checks epoch and, for history, frame session,
+generation, and query revision. Context change, revocation, disconnect, or
+incompatibility advances the epoch and clears old-domain data and candidate reveal.
+
+Refresh is manual. It starts authorized history, policy, and evaluation-list
+requests independently; failure in one does not block another. No provider
+refresh runs automatically on mount, tab change, scope/filter change, selection
+change, or timer. The history permission gates history only; policy/evaluations
+use their independent host grants and bound sources. Without a selected Workspace
+project, Refresh makes no provider calls.
 
 The shared views are:
 
 | View | Observable behavior |
 |---|---|
-| Overview | Counts, delivery/outcome ratios, latency, missingness, diagnostics, stale/unavailable status, and limitations. |
-| History/detail | Owner-root history starts at All Projects with inventory-backed counts/labels and server-filtered 100-row pages; single-project contexts stay locked; detail exposes project identity and changed/missing states. |
-| Configuration | Current account-wide owner policy and permission/status/revision labels are not filtered by History project or presented as historical route evidence; historical route groups follow the selected History scope. |
-| Evaluations | Bound evaluation source, explicitly not filtered by History project; list/read/compare, exact digest groups, provenance, separate issue/empty states, candidate masking/reveal. |
+| Overview | Counts, rates, missingness, latency, and methodological limitations; shares the Workspace activity-scope control with History. |
+| History/detail | Shared scope control, task/metric filters, inventory-backed labels/counts, server-filtered pages, lazy detail, and changed/missing states. |
+| Configuration | Current account-wide owner policy and permission/status/revision labels are not filtered by History scope or presented as historical route evidence; historical route groups follow the selected history summary. |
+| Evaluations | Bound evaluation source, explicitly independent from History scope; list, comparison/detail handlers, provenance, and masked/revealed candidates. |
 
-## Account-wide history and identity
+## Workspace activity scope and identity
 
-In owner-root mode the selector starts at **All Projects** (`project_id: null`);
-choosing a project sends its canonical ID with both summary and page requests.
-The bounded inventory belongs to that snapshot and supplies per-project accepted
-counts and display names; the All Projects count uses the unfiltered snapshot
-total, not the currently loaded page. Overview shows the same server-filtered
-summary as History. A project-scoped context shows its current project in a
-disabled selector and cannot be widened.
+`ActivityScopeControl` is shared by Overview and History. It presents the host-selected
+Workspace project or All History; it is not a project picker and never changes the
+Workspace selection. The initial state is `'workspace-project'`. The selected
+project ID comes from the trusted `AdvisorWorkspaceContext`, not a form field.
 
-Project IDs remain identity; only validated inventory labels are displayed, with
-an abbreviated ID when a label is missing. The History table and detail retain
-project provenance. Changing projects clears cached rows, selected detail, and
-cursor; request-sequence plus frame/session-generation fences discard late
-responses. These controls filter only already-authorized history and do not
-change host/runner authorization.
+- `'workspace-project'` sends the selected canonical ID as `project_id`.
+- `'all'` sends `project_id: null` and is usable only with root-history authority.
+- Root All includes valid-ID retained activity without requiring Workspace
+  registration or display-label metadata; labels never supply identity.
+- All is unavailable without an admitted project, root-history scope, or an
+  available provider; the query selector additionally checks the history grant.
+- Project IDs are identity. Inventory labels are presentation only, with an
+  abbreviated ID when a label is missing. The table and detail retain provenance.
 
-Configuration continues to show current owner policy; Evaluations show their
-bound source, and both explicitly say they are not filtered by History project.
-The companion DamHopper host's `packages/ui/src/plugins/use-plugin-navigation.ts`
-and `packages/ui/src/components/PluginHostPage.tsx` use plugin ID/publisher
-metadata: only EVCrate metadata receives the “EVCrate Advisor” label; other
-plugins retain their own identity rather than inheriting an EVCrate label.
+For the Workspace provider, Overview and History use the same server-filtered summary.
+Scope and filter changes reuse the current snapshot and request its summary/first page;
+a new history scan requires explicit Refresh. Query revisions discard older replies.
+These controls filter already-authorized history and do not change host authorization.
 
-`data-controls.tsx` exposes provider-neutral refresh/cancel controls and the current
-source label. `status-banner.tsx` reports readiness, stale retention, revocation,
-unsupported capability, scan facts, and the local diagnostic/privacy boundary.
-Rendering remains inert text with semantic tables, labeled tabs/panels/drawers,
-visible focus, and keyboard controls.
+Refresh independently requests authorized history, current policy, and the
+evaluation list. Policy and evaluations remain bound to their separately granted
+sources and are not filtered by History scope. Changing tabs, scope, or filters
+does not auto-refresh any domain. No selected Workspace project means no provider
+calls, because the selected project identifies the profile.
+
+The component is `viewer/src/components/activity-scope-control.tsx`; it shows the
+selected project label, disabled states, and a reason when All History is unavailable.
+`data-controls.tsx` exposes provider-neutral manual Refresh/Cancel controls and the
+current source label. `status-banner.tsx` reports readiness, stale retention,
+revocation, unsupported capability, scan facts, and the local diagnostic/privacy
+boundary. Rendering remains inert text with semantic tables, labeled
+tabs/panels/drawers, visible focus, and keyboard controls.
+
 
 ## Embedded package
 
@@ -169,13 +192,20 @@ E03 validation recorded on 2026-09-21: **68/68 tests passed** (23 focused UI tes
 review found zero critical blockers. These are historical repository/package checks,
 not G2/G4 qualification. G4 remains unverified, and standalone retirement is not
 release-authorized.
+Workspace Advisor Phase 04 review records **28/28 targeted tests**, strict
+TypeScript checking with zero errors, and a passing V-E3 call-count smoke. The
+smoke confirms view/scope/filter changes do not call `history.refresh`; see the
+[phase record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md)
+and [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
 
 ## Source map
 
 - Providers: `viewer/src/providers/{advisor-data-provider,bridge-contract,dam-hopper-port-provider}.ts`
 - State/app: `viewer/src/{app,app-actions,app-state,app-state-reducer,app-state-selectors,app-state-types}.ts*`
-- Views/components: `viewer/src/views/{overview-view,history-view,history-detail,configuration-view,evaluations-view}.tsx`, `viewer/src/components/{data-controls,status-banner}.tsx`
+- Views/components: `viewer/src/views/{overview-view,history-view,history-detail,configuration-view,evaluations-view}.tsx`, `viewer/src/components/{activity-scope-control,data-controls,status-banner}.tsx`
 - Embedded entry/build: `plugin/ui/{plugin-document.html,plugin-main.tsx,vite.config.ts}`, `scripts/build-advisor-plugin-candidate.mjs`
+- Phase 04 state regressions: `tests/plugin/ui-state.test.mjs` and
+  `tests/viewer/phase-04-viewer-scope-and-requests.test.mjs`.
 
 ## Unresolved questions
 

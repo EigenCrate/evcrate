@@ -1,9 +1,16 @@
-import type { AppState } from './app-state-types.ts';
+import type { AppState, BoundSourceStatus } from './app-state-types.ts';
 import type { AppAction } from './app-actions.ts';
-import { INITIAL_DETAIL_STATE, INITIAL_EVALUATION_DETAIL_STATE } from './app-state-types.ts';
+import {
+  INITIAL_DETAIL_STATE,
+  INITIAL_EVALUATION_DETAIL_STATE,
+  INITIAL_BOUND_POLICY_STATE,
+  INITIAL_BOUND_EVALUATIONS_STATE,
+  INITIAL_BOUND_COMPARISON_STATE
+} from './app-state-types.ts';
 
-function matchesGen(state: AppState, gen?: number, session?: string | null): boolean {
-  if (gen !== undefined && gen !== state.generation && gen !== state.activationGeneration) return false;
+function matchesContext(state: AppState, epoch?: number, session?: string | null): boolean {
+  if (state.status === 'revoked' || state.status === 'unsupported' || !state.isAvailable) return false;
+  if (epoch !== undefined && epoch !== state.contextEpoch) return false;
   if (session !== undefined && session !== null && state.frameSession !== null && session !== state.frameSession) return false;
   return true;
 }
@@ -29,18 +36,53 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return action.generation === state.generation ? { ...state, status: state.snapshot ? 'stale' : 'idle', staleReason: action.reason } : state;
     case 'SCAN_CANCEL':
       return action.generation === state.generation ? { ...state, status: state.snapshot ? 'stale' : 'idle', staleReason: 'Scan cancelled by user' } : state;
+    case 'SET_ACTIVITY_SCOPE': {
+      if (action.scope === state.activityScope) return state;
+      return {
+        ...state,
+        activityScope: action.scope,
+        historyQueryRevision: state.historyQueryRevision + 1,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([]),
+        historyPage: null,
+        historySummary: null,
+        selectedConsultationId: null,
+        historyDetail: INITIAL_DETAIL_STATE
+      };
+    }
+    case 'SET_WORKSPACE_CONTEXT': {
+      return {
+        ...state,
+        workspaceContext: action.context
+      };
+    }
+    case 'WORKSPACE_PROJECT_CHANGED': {
+      const isAll = state.activityScope === 'all';
+      return {
+        ...state,
+        workspaceContext: action.workspaceContext,
+        ...(isAll ? {} : {
+          historyQueryRevision: state.historyQueryRevision + 1,
+          historyPageCursor: null,
+          historyPageEntries: Object.freeze([]),
+          historyPage: null,
+          historySummary: null,
+          selectedConsultationId: null,
+          historyDetail: INITIAL_DETAIL_STATE
+        })
+      };
+    }
     case 'SET_FILTERS': {
-      const projectChanged = action.filters.project_id !== undefined && action.filters.project_id !== state.filters.project_id;
       return {
         ...state,
         filters: { ...state.filters, ...action.filters },
+        historyQueryRevision: state.historyQueryRevision + 1,
         historyPageCursor: null,
-        ...(projectChanged ? {
-          selectedConsultationId: null,
-          historyDetail: INITIAL_DETAIL_STATE,
-          historyPageEntries: Object.freeze([]),
-          historyPage: null
-        } : {})
+        historyPageEntries: Object.freeze([]),
+        historyPage: null,
+        historySummary: null,
+        selectedConsultationId: null,
+        historyDetail: INITIAL_DETAIL_STATE
       };
     }
     case 'SET_VIEW':
@@ -63,56 +105,262 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, revealCandidates: action.reveal };
     case 'PROVIDER_READY':
       return {
-        ...state, providerKind: action.providerKind, historySourceLabel: action.label, capabilities: action.capabilities,
-        frameSession: action.frameSession, activationGeneration: action.activationGeneration, generation: action.activationGeneration,
-        isAvailable: true, staleReason: null, unsupportedReason: null
+        ...state,
+        providerKind: action.providerKind,
+        historySourceLabel: action.label,
+        capabilities: action.capabilities,
+        frameSession: action.frameSession,
+        activationGeneration: action.activationGeneration,
+        generation: action.activationGeneration,
+        isAvailable: true,
+        staleReason: null,
+        unsupportedReason: null,
+        workspaceContext: action.workspaceContext !== undefined ? action.workspaceContext : state.workspaceContext
       };
-    case 'CONTEXT_CHANGED':
+    case 'CONTEXT_CHANGED': {
+      const nextEpoch = state.contextEpoch + 1;
       return {
-        ...state, historySourceLabel: action.label, capabilities: action.capabilities, frameSession: action.frameSession,
-        activationGeneration: action.activationGeneration, generation: action.activationGeneration, isAvailable: true,
-        status: 'idle', snapshot: null, snapshotId: null, scan: null, staleReason: null, unsupportedReason: null, selectedConsultationId: null,
-        historySummary: null, historyPage: null, historyPageCursor: null, historyPageEntries: Object.freeze([]),
-        historyDetail: INITIAL_DETAIL_STATE, currentPolicy: null, evaluationsList: null, selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE, evaluationsComparison: null,
-        inventory: null
+        ...state,
+        historySourceLabel: action.label,
+        capabilities: action.capabilities,
+        frameSession: action.frameSession,
+        activationGeneration: action.activationGeneration,
+        generation: action.activationGeneration,
+        contextEpoch: nextEpoch,
+        isAvailable: true,
+        status: 'idle',
+        snapshot: null,
+        snapshotId: null,
+        scan: null,
+        observedAt: null,
+        staleReason: null,
+        unsupportedReason: null,
+        selectedConsultationId: null,
+        historySummary: null,
+        historyPage: null,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([]),
+        historyDetail: INITIAL_DETAIL_STATE,
+        policyResult: null,
+        currentPolicy: null,
+        policyState: INITIAL_BOUND_POLICY_STATE,
+        evaluationResults: Object.freeze([]),
+        evaluationsList: null,
+        evaluationsState: INITIAL_BOUND_EVALUATIONS_STATE,
+        selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE,
+        evaluationsComparison: null,
+        comparisonState: INITIAL_BOUND_COMPARISON_STATE,
+        inventory: null,
+        revealCandidates: false,
+        workspaceContext: action.workspaceContext ?? null
       };
-    case 'CONTEXT_REVOKED':
+    }
+    case 'CONTEXT_REVOKED': {
+      const nextEpoch = state.contextEpoch + 1;
       return {
-        ...state, status: 'revoked', staleReason: action.reason, snapshot: null, snapshotId: null, selectedConsultationId: null,
-        historySummary: null, historyPage: null, historyPageCursor: null, historyPageEntries: Object.freeze([]),
-        historyDetail: INITIAL_DETAIL_STATE, currentPolicy: null, evaluationsList: null, selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE, evaluationsComparison: null,
-        inventory: null
+        ...state,
+        status: 'revoked',
+        staleReason: action.reason,
+        contextEpoch: nextEpoch,
+        snapshot: null,
+        snapshotId: null,
+        scan: null,
+        observedAt: null,
+        historySourceLabel: null,
+        selectedConsultationId: null,
+        historySummary: null,
+        historyPage: null,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([]),
+        historyDetail: INITIAL_DETAIL_STATE,
+        policyResult: null,
+        currentPolicy: null,
+        policyState: INITIAL_BOUND_POLICY_STATE,
+        evaluationResults: Object.freeze([]),
+        evaluationsList: null,
+        evaluationsState: INITIAL_BOUND_EVALUATIONS_STATE,
+        selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE,
+        evaluationsComparison: null,
+        comparisonState: INITIAL_BOUND_COMPARISON_STATE,
+        inventory: null,
+        revealCandidates: false,
+        workspaceContext: null
       };
+    }
+    case 'DISCONNECTED': {
+      const nextEpoch = state.contextEpoch + 1;
+      return {
+        ...state,
+        status: 'idle',
+        isAvailable: false,
+        staleReason: action.reason ?? 'Provider disconnected',
+        contextEpoch: nextEpoch,
+        snapshot: null,
+        snapshotId: null,
+        scan: null,
+        observedAt: null,
+        historySourceLabel: null,
+        selectedConsultationId: null,
+        historySummary: null,
+        historyPage: null,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([]),
+        historyDetail: INITIAL_DETAIL_STATE,
+        policyResult: null,
+        currentPolicy: null,
+        policyState: INITIAL_BOUND_POLICY_STATE,
+        evaluationResults: Object.freeze([]),
+        evaluationsList: null,
+        evaluationsState: INITIAL_BOUND_EVALUATIONS_STATE,
+        selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE,
+        evaluationsComparison: null,
+        comparisonState: INITIAL_BOUND_COMPARISON_STATE,
+        inventory: null,
+        revealCandidates: false,
+        workspaceContext: null
+      };
+    }
+    case 'INCOMPATIBLE': {
+      const nextEpoch = state.contextEpoch + 1;
+      return {
+        ...state,
+        status: 'unsupported',
+        unsupportedReason: action.reason,
+        contextEpoch: nextEpoch,
+        snapshot: null,
+        snapshotId: null,
+        scan: null,
+        observedAt: null,
+        historySourceLabel: null,
+        selectedConsultationId: null,
+        historySummary: null,
+        historyPage: null,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([]),
+        historyDetail: INITIAL_DETAIL_STATE,
+        policyResult: null,
+        currentPolicy: null,
+        policyState: INITIAL_BOUND_POLICY_STATE,
+        evaluationResults: Object.freeze([]),
+        evaluationsList: null,
+        evaluationsState: INITIAL_BOUND_EVALUATIONS_STATE,
+        selectedEvaluation: INITIAL_EVALUATION_DETAIL_STATE,
+        evaluationsComparison: null,
+        comparisonState: INITIAL_BOUND_COMPARISON_STATE,
+        inventory: null,
+        revealCandidates: false,
+        workspaceContext: null
+      };
+    }
     case 'AVAILABILITY_CHANGED':
       return { ...state, isAvailable: action.available, capabilities: action.capabilities };
-    case 'HISTORY_REFRESH_START':
-      return { ...state, status: 'scanning', generation: action.generation, staleReason: null };
+    case 'HISTORY_REFRESH_START': {
+      if (state.status === 'revoked' || !state.isAvailable) return state;
+      return {
+        ...state,
+        status: 'scanning',
+        generation: action.generation,
+        historyQueryRevision: state.historyQueryRevision + 1,
+        staleReason: null,
+        selectedConsultationId: null,
+        historyDetail: INITIAL_DETAIL_STATE,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([]),
+        historyPage: null,
+        historySummary: null
+      };
+    }
     case 'HISTORY_REFRESH_COMMIT': {
-      if (!matchesGen(state, action.generation, action.frameSession)) return state;
+      if (!matchesContext(state, action.contextEpoch, action.frameSession)) return state;
+      if (action.generation !== undefined && action.generation !== state.generation && action.generation !== state.activationGeneration) return state;
       const res = action.result;
       const snapshot = action.snapshot ?? state.snapshot;
       const inventory = ('inventory' in res && res.inventory) ? res.inventory : state.inventory;
-      if (res.state === 'fresh') return { ...state, status: 'fresh', snapshot, snapshotId: res.snapshot_id, scan: res.scan, inventory, staleReason: null };
+      const isIncomplete = Boolean(res.scan && res.scan.status === 'incomplete');
+      if (res.state === 'fresh') {
+        return {
+          ...state,
+          status: 'fresh',
+          snapshot,
+          snapshotId: res.snapshot_id,
+          scan: res.scan,
+          inventory,
+          observedAt: action.observedAt ?? res.observed_at ?? Date.now(),
+          staleReason: isIncomplete ? 'Incomplete snapshot; scan bounded' : null,
+          selectedConsultationId: null,
+          historyDetail: INITIAL_DETAIL_STATE
+        };
+      }
       if (res.state === 'stale') {
         const hasPrior = snapshot !== null || state.snapshotId !== null;
         return {
-          ...state, status: hasPrior ? 'stale' : 'idle', snapshot, snapshotId: res.snapshot_id ?? state.snapshotId,
-          scan: res.scan, inventory, staleReason: res.stale_reason ? `Stale: ${res.stale_reason}` : 'Scan incomplete; retained prior data'
+          ...state,
+          status: hasPrior ? 'stale' : 'idle',
+          snapshot,
+          snapshotId: res.snapshot_id ?? state.snapshotId,
+          scan: res.scan,
+          inventory,
+          observedAt: state.observedAt ?? res.observed_at ?? null,
+          staleReason: res.stale_reason ? `Stale: ${res.stale_reason}` : (isIncomplete ? 'Incomplete snapshot; scan interrupted' : 'Scan incomplete; retained prior data'),
+          selectedConsultationId: null,
+          historyDetail: INITIAL_DETAIL_STATE
         };
       }
-      return { ...state, status: 'idle', snapshot: null, snapshotId: null, scan: res.scan, inventory: null, staleReason: 'History source unavailable' };
+      return {
+        ...state,
+        status: 'idle',
+        snapshot: null,
+        snapshotId: null,
+        scan: res.scan,
+        inventory: null,
+        observedAt: null,
+        staleReason: 'History source unavailable',
+        selectedConsultationId: null,
+        historyDetail: INITIAL_DETAIL_STATE
+      };
+    }
+    case 'HISTORY_QUERY_PAIR_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch, action.frameSession)) return state;
+      if (action.queryRevision !== undefined && action.queryRevision !== state.historyQueryRevision) return state;
+      const inv = ('inventory' in action.summary && action.summary.inventory) ? action.summary.inventory : state.inventory;
+      return {
+        ...state,
+        historySummary: action.summary,
+        historyPage: action.page,
+        historyPageCursor: action.page.next_cursor,
+        historyPageEntries: action.page.entries,
+        scan: action.summary.metrics.scan,
+        inventory: inv
+      };
+    }
+    case 'HISTORY_QUERY_ERROR': {
+      if (!matchesContext(state, action.contextEpoch, action.frameSession)) return state;
+      if (action.queryRevision !== undefined && action.queryRevision !== state.historyQueryRevision) return state;
+      return {
+        ...state,
+        historySummary: null,
+        historyPage: null,
+        historyPageCursor: null,
+        historyPageEntries: Object.freeze([])
+      };
     }
     case 'HISTORY_SUMMARY_COMMIT': {
-      if (!matchesGen(state, action.generation, action.frameSession)) return state;
+      if (!matchesContext(state, action.contextEpoch, action.frameSession)) return state;
+      if (action.queryRevision !== undefined && action.queryRevision !== state.historyQueryRevision) return state;
       const inv = ('inventory' in action.summary && action.summary.inventory) ? action.summary.inventory : state.inventory;
       return { ...state, historySummary: action.summary, scan: action.summary.metrics.scan, inventory: inv };
     }
-    case 'HISTORY_PAGE_COMMIT':
-      if (!matchesGen(state, action.generation, action.frameSession)) return state;
+    case 'HISTORY_PAGE_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch, action.frameSession)) return state;
+      if (action.queryRevision !== undefined && action.queryRevision !== state.historyQueryRevision) return state;
       return { ...state, historyPage: action.page, historyPageCursor: action.page.next_cursor, historyPageEntries: action.page.entries };
-    case 'HISTORY_DETAIL_START':
+    }
+    case 'HISTORY_DETAIL_START': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
       return { ...state, historyDetail: { ...INITIAL_DETAIL_STATE, status: 'loading', recordRef: action.recordRef, consultationId: action.consultationId } };
+    }
     case 'HISTORY_DETAIL_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
       if (action.consultationId === null || state.historyDetail.consultationId !== action.consultationId) return state;
       const res = action.result;
       if (res.status === 'ready') {
@@ -132,16 +380,67 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         }
       };
     }
-    case 'HISTORY_DETAIL_ERROR':
+    case 'HISTORY_DETAIL_ERROR': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
       if (action.consultationId === null || state.historyDetail.consultationId !== action.consultationId) return state;
       return { ...state, historyDetail: { ...INITIAL_DETAIL_STATE, status: 'error', recordRef: action.recordRef, consultationId: action.consultationId, error: action.error } };
-    case 'POLICY_COMMIT':
-      return { ...state, currentPolicy: action.policy };
-    case 'EVALUATIONS_LIST_COMMIT':
-      return { ...state, evaluationsList: action.list };
-    case 'EVALUATION_READ_START':
+    }
+    case 'POLICY_START': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        policyState: { status: 'loading', policy: null, error: null }
+      };
+    }
+    case 'POLICY_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      const status: BoundSourceStatus = action.policy.status === 'ready' ? 'ready'
+        : action.policy.status === 'not_configured' ? 'not_configured'
+        : 'error';
+      return {
+        ...state,
+        currentPolicy: action.policy,
+        policyState: { status, policy: action.policy, error: null }
+      };
+    }
+    case 'POLICY_ERROR': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        policyState: { status: action.status ?? 'error', policy: null, error: action.error }
+      };
+    }
+    case 'EVALUATIONS_LIST_START': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        evaluationsState: { status: 'loading', list: null, error: null }
+      };
+    }
+    case 'EVALUATIONS_LIST_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      const status: BoundSourceStatus = action.list.status === 'ready' ? 'ready'
+        : action.list.status === 'not_configured' ? 'not_configured'
+        : 'error';
+      return {
+        ...state,
+        evaluationsList: action.list,
+        evaluationsState: { status, list: action.list, error: null }
+      };
+    }
+    case 'EVALUATIONS_LIST_ERROR': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        evaluationsState: { status: action.status ?? 'error', list: null, error: action.error }
+      };
+    }
+    case 'EVALUATION_READ_START': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
       return { ...state, selectedEvaluation: { ...INITIAL_EVALUATION_DETAIL_STATE, status: 'loading', evaluationRef: action.evaluationRef } };
+    }
     case 'EVALUATION_READ_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
       const res = action.result;
       if (res.status === 'ready') {
         return {
@@ -160,8 +459,40 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         }
       };
     }
-    case 'EVALUATIONS_COMPARE_COMMIT':
-      return { ...state, evaluationsComparison: action.comparison };
+    case 'EVALUATION_READ_ERROR': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        selectedEvaluation: {
+          ...INITIAL_EVALUATION_DETAIL_STATE,
+          status: 'error',
+          evaluationRef: action.evaluationRef,
+          error: action.error
+        }
+      };
+    }
+    case 'EVALUATIONS_COMPARE_START': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        comparisonState: { status: 'loading', comparison: null, cursor: null, error: null }
+      };
+    }
+    case 'EVALUATIONS_COMPARE_COMMIT': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        evaluationsComparison: action.comparison,
+        comparisonState: { status: 'ready', comparison: action.comparison, cursor: action.cursor ?? null, error: null }
+      };
+    }
+    case 'EVALUATIONS_COMPARE_ERROR': {
+      if (!matchesContext(state, action.contextEpoch)) return state;
+      return {
+        ...state,
+        comparisonState: { status: 'error', comparison: null, cursor: null, error: action.error }
+      };
+    }
     default:
       return state;
   }

@@ -1,10 +1,10 @@
 # Codebase Summary
 
 **Generated:** 2026-09-29
-**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,636 files, 9,064,570 tokens, and 34,127,581 characters; `.repomixignore` excludes documentation, plans, tests, and generated/heavy roots. Repomix reported no suspicious files. The paired host contract was checked directly against the active DamHopper source.
+**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,637 files, 9,074,629 tokens, and 34,172,013 characters; `.repomixignore` excludes documentation, plans, tests, and generated/heavy roots. Repomix reported no suspicious files.
 **Package:** Private npm package `evcrate` 2.4.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [system architecture](./system-architecture.md) for the runtime qualification boundary.
-**Workspace Advisor:** Phases 00–03 are complete (Phase 03 review 9.7/10); Phases 04–09 remain pending. Phase 02 was focused EVCrate history qualification; Phase 03 delivers the paired bridge and reusable host, not Workspace placement, navigation cutover, or end-to-end rollout.
+**Workspace Advisor:** Phases 00–04 are complete; Phase 04 review approved 9.5/10. Phases 05–09, Workspace placement/cutover, and end-to-end rollout remain pending. See the [Phase 04 UI review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -182,8 +182,14 @@ See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-rea
 - `viewer/src/app.tsx` composes controls, status, tabs, the selected view,
   diagnostics, and footer.
 - `viewer/src/app-state-types.ts`, `app-actions.ts`, `app-state-reducer.ts`,
-  `app-state-selectors.ts`, and `app-state.ts` define the shared immutable state,
-  actions, reducer, and selectors; provider generation/session fences reject late data.
+  `app-state-selectors.ts`, and `app-state.ts` define shared immutable state,
+  actions, reducer, and selectors. `activityScope` separates Workspace Project/All
+  from metric filters; `selectHistoryQuery` derives scoped `project_id` from trusted
+  Workspace context and rejects unavailable queries. Context epochs and query revisions
+  fence late commits.
+- `viewer/src/app.tsx` owns monotonic request IDs and independently refreshes
+  authorized history, policy, and evaluation-list sources only on user action.
+  Tab, scope, and filter changes do not trigger history refresh.
 - `viewer/src/hash-view.ts` maps the hash to Overview, History, Configuration, or
   Evaluations. File-system picker/reader state is not a current source path.
 
@@ -191,12 +197,13 @@ See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-rea
 
 | Path | Responsibility |
 |---|---|
-| `viewer/src/views/overview-view.tsx` | Counts, rates, missingness, latency, and methodological limitations. |
-| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Inventory-backed project selector/counts, canonical project provenance, server-filtered pages, and lazy detail. |
-| `viewer/src/views/configuration-view.tsx` | Current account-wide policy is not filtered by History project; route groups follow the selected history summary. |
-| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Bound evaluation corpus is not filtered by History project; comparable groups, provenance, and masked/revealed candidates. |
+| `viewer/src/views/overview-view.tsx` | Counts, rates, missingness, latency, methodological limitations, and activity-scope control. |
+| `viewer/src/views/history-view.tsx`, `history-detail.tsx` | Workspace Project/All scope, inventory-backed labels/counts, server-filtered pages, and lazy detail. |
+| `viewer/src/views/configuration-view.tsx` | Current account-wide policy is not filtered by History scope; route groups follow the selected history summary. |
+| `viewer/src/views/evaluations-view.tsx`, `evaluation-detail.tsx` | Bound evaluation corpus is independent of History scope; comparable groups, provenance, and masked/revealed candidates. |
 | `viewer/src/providers/advisor-data-provider.ts`, `bridge-contract.ts`, `dam-hopper-port-provider.ts` | Provider contract, validated bridge envelopes, and bounded MessagePort data path. |
-| `viewer/src/components/` | Refresh/cancel controls, status, tabs, diagnostics, pagination, and inert text rendering. |
+| `viewer/src/components/activity-scope-control.tsx` | Shared ActivityScopeControl in Overview and History; labels the selected Workspace project and gates All History. |
+| `viewer/src/components/` | Manual Refresh/Cancel controls, status, tabs, diagnostics, pagination, and inert text rendering. |
 | `plugin/ui/plugin-main.tsx`, `plugin-document.html`, `vite.config.ts` | Mounts the shared App with `DamHopperPortProvider` and builds the embedded document. |
 
 The Phase 07 standalone explorer acceptance recorded **28/28 tests passed**, strict
@@ -204,6 +211,11 @@ viewer typecheck/build with **zero TypeScript diagnostics**, and a **10/10 revie
 on 2026-09-19. That evidence is historical; it does not verify the removed picker,
 current release assets, or G4. The shared views render validated data and make no
 mentor-quality or live-vendor claim.
+Workspace Advisor Phase 04 review records **28/28 focused tests**, strict
+TypeScript checking with zero errors, and a passing V-E3 call-count smoke proving
+scope/filter/view transitions do not call `history.refresh`. See the
+[phase record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md)
+and [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md).
 
 ## Packaging, CSP, preview, and release inventory (historical Phase 08)
 

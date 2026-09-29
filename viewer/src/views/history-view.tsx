@@ -1,7 +1,8 @@
 import { useEffect, useState, type FC } from 'react';
-import type { AppState, UiHistoryFilters } from '../app-state.js';
+import type { AppState, UiHistoryFilters, ActivityScope } from '../app-state.js';
 import { selectFilteredRecords, selectSelectedRow, formatProjectName } from '../app-state.js';
 import { PaginationControls } from '../components/pagination-controls.js';
+import { ActivityScopeControl } from '../components/activity-scope-control.js';
 import { HistoryDetail } from './history-detail.js';
 import type { ExecutionStatus, OutcomeResult } from '../../../src/protocol/advisor-contract-runtime.js';
 
@@ -9,6 +10,7 @@ export interface HistoryViewProps {
   readonly state: AppState;
   readonly onSelectConsultation: (id: string | null, recordRef?: string) => void;
   readonly onSetFilters: (filters: Partial<UiHistoryFilters>) => void;
+  readonly onScopeChange?: (scope: ActivityScope) => void;
   readonly onRefresh?: () => void;
   readonly onPageRequest: (cursor: string | null) => Promise<boolean>;
   readonly loading: boolean;
@@ -22,6 +24,7 @@ export const HistoryView: FC<HistoryViewProps> = ({
   state,
   onSelectConsultation,
   onSetFilters,
+  onScopeChange,
   onRefresh,
   onPageRequest,
   loading,
@@ -32,7 +35,7 @@ export const HistoryView: FC<HistoryViewProps> = ({
   const [cursorHistory, setCursorHistory] = useState<readonly (string | null)[]>([null]);
   const { snapshot, selectedConsultationId, filters, historyPageEntries, historyPage, historySummary, historyDetail } = state;
   const serverPagination = state.providerKind === 'dam-hopper';
-  const hasHistory = snapshot !== null || historySummary !== null || historyPageEntries.length > 0;
+  const hasHistory = snapshot !== null || state.snapshotId !== null || historySummary !== null || historyPageEntries.length > 0;
 
   useEffect(() => {
     setPage(0);
@@ -42,6 +45,12 @@ export const HistoryView: FC<HistoryViewProps> = ({
   if (!hasHistory) {
     return (
       <section className="view-panel history-empty" id="panel-history" aria-label="History Records">
+        <ActivityScopeControl
+          scope={state.activityScope}
+          workspaceContext={state.workspaceContext}
+          isAvailable={state.isAvailable}
+          onScopeChange={(newScope) => onScopeChange?.(newScope)}
+        />
         <div className="empty-state-card">
           <h3>No History Loaded</h3>
           <p>Click "Refresh History" to load consultation records from the active workspace.</p>
@@ -81,39 +90,13 @@ export const HistoryView: FC<HistoryViewProps> = ({
     <section className="view-panel history-view" id="panel-history" aria-label="History Records">
       <div className="history-header">
         <h2 className="view-title">Consultation History ({totalItems})</h2>
+        <ActivityScopeControl
+          scope={state.activityScope}
+          workspaceContext={state.workspaceContext}
+          isAvailable={state.isAvailable}
+          onScopeChange={(newScope) => onScopeChange?.(newScope)}
+        />
         <div className="history-filters-bar" aria-label="History filters">
-          {state.historySummary?.metrics.scope.kind === 'project' ? (
-            <label className="filter-label">
-              Project:
-              <select className="form-select" disabled aria-label="Current project">
-                <option value="">
-                  {formatProjectName(state.historySummary.metrics.scope.project_ids[0] ?? state.inventory?.entries[0]?.project_id ?? 'Current Project', state.inventory?.entries[0]?.label)} ({state.historySummary.metrics.counts.consultations})
-                </option>
-              </select>
-            </label>
-          ) : (state.inventory && state.inventory.total_projects > 0) && (
-            <label className="filter-label">
-              Project:
-              <select
-                className="form-select"
-                aria-label="Filter by project"
-                value={filters.project_id ?? ''}
-                onChange={(e: { target: { value: string } }) => {
-                  const val = e.target.value;
-                  onSetFilters({ project_id: val ? val : null });
-                  setPage(0);
-                  setCursorHistory([null]);
-                }}
-              >
-                <option value="">All Projects ({state.inventory.unfiltered_total_records})</option>
-                {state.inventory.entries.map((entry) => (
-                  <option key={entry.project_id} value={entry.project_id}>
-                    {formatProjectName(entry.project_id, entry.label)} ({entry.count})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
 
           <label className="filter-label">
             Status:
@@ -154,12 +137,12 @@ export const HistoryView: FC<HistoryViewProps> = ({
             </select>
           </label>
 
-          {(filters.project_id || filters.statuses || filters.outcome_results) && (
+          {(filters.statuses || filters.outcome_results || filters.task_run_id) && (
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() => {
-                onSetFilters({ project_id: null, statuses: null, outcome_results: null });
+                onSetFilters({ statuses: null, outcome_results: null, task_run_id: null });
                 setPage(0);
                 setCursorHistory([null]);
               }}

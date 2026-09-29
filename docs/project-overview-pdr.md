@@ -8,7 +8,7 @@ Its paired release is qualified; see the [Release Evidence Manifest](../plans/re
 DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
 are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
 but joint G4 qualification/sign-off is unverified and standalone retirement is
-not release-authorized. Workspace Advisor Phases 00–03 are complete; Phases 04–09 and end-to-end rollout remain pending.
+not release-authorized. Workspace Advisor Phases 00–04 are complete (Phase 04 review approved 9.5/10); Phases 05–09 and end-to-end rollout remain pending.
 **Updated:** 2026-09-29
 **Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
@@ -563,7 +563,7 @@ production-runtime qualification remain outside this phase.
 
 ### FR-26: History scope and unmapped-record preservation (Phase 02)
 
-**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), and Phases 04–09 remain pending.
+**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), Phase 04 under [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), and Phases 05–09 remain pending.
 
 **Requirement:** In `history-root` scope, All (`project_id: null`) includes structurally valid records with canonical project IDs even when Workspace registration or display-label metadata is absent. Project scope remains bound to its context and cannot widen. Policy/evaluation reads retain independent profile-bound sources and grants.
 
@@ -593,6 +593,42 @@ production-runtime qualification remain outside this phase.
 **Evidence:** [Phase 03 record](../plans/260929-1346-advisor-workspace-panel/phase-03-bridge-and-reusable-host.md) and [Cycle 2 review](../plans/reports/code-review-260929-2056-phase-03-bridge-and-reusable-host-cycle-2.md). The review records 81 targeted tests and no critical findings; the implementation summary reports 145 passing tests across both repositories.
 
 **Boundary:** Phase 03 completes bridge and reusable-host implementation only. Workspace panel placement, navigation/package cutover, paired end-to-end rollout, and production deployment remain downstream.
+
+### FR-28: Workspace Advisor viewer scope and request state (Phase 04)
+
+**Status:** Completed 2026-09-29; review approved 9.5/10.
+
+**Requirement:** The shared viewer keeps activity scope separate from Workspace
+selection and metric filters, uses trusted Workspace identity for history queries,
+and fences asynchronous data commits across scope and authority changes.
+
+**Acceptance:**
+- `AppState.activityScope` is `'workspace-project' | 'all'` and defaults to the
+  Workspace project. `ActivityScopeControl` is shared by Overview and History;
+  it does not change Workspace selection.
+- `UiHistoryFilters` has no editable `project_id`. `selectHistoryQuery` derives
+  it from the admitted Workspace context and returns no query for missing or
+  malformed identity, unavailable/revoked context, absent history permission, or
+  All without `history-root` authority.
+- For Workspace history, scope/filter changes invalidate the old page, cursor,
+  selection, and detail, advance the query revision, and request a summary plus
+  first page from the existing snapshot. They do not start a new history refresh.
+- App-generated request IDs use a monotonically increasing sequence. Captured
+  `contextEpoch` fences response/error/loading commits; authority/context loss
+  advances the epoch and clears retained data, bound-source wrappers, and
+  candidate reveal before new results are accepted.
+- User-triggered Refresh independently requests authorized history, current
+  policy, and the evaluation list. Missing Workspace selection makes no provider
+  calls. Tab, scope, filter, selection, and timer changes do not auto-refresh.
+  Policy/evaluations keep their independent bound sources and grants.
+- Phase 04 review reports 28/28 focused tests, clean strict TypeScript checking,
+  and a passing V-E3 smoke proving no `history.refresh` on scope/filter/view
+  transitions. See the [phase record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md),
+  [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md),
+  and [UI guide](./advisor-plugin-ui.md).
+
+**Boundary:** Phase 04 proves viewer state behavior, not Workspace placement,
+paired end-to-end rollout, or production deployment; Phases 05–09 remain.
 
 ## Non-functional requirements
 
