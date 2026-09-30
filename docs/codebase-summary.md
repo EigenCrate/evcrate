@@ -1,9 +1,11 @@
 # Codebase Summary
 
 **Generated:** 2026-09-30
-**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,646 files, 9,101,875 tokens, and 34,273,896 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
-**Package:** Private npm package `evcrate` 2.4.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
-**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [system architecture](./system-architecture.md) for the runtime qualification boundary.
+**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,610 files, 9,099,945 tokens, and 34,268,846 characters. `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots; Repomix excluded nine suspicious files during its security check.
+**Package:** Private npm package `evcrate` 2.5.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). Advisor Plugin package: 0.1.0, `dataApi: ^1.0.0`; domain API v2 supports v1 and v2 with eight read-only methods.
+**Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
+**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28.
+**Controller closure:** Exactly 36 files; earlier 29- and 33-file counts below are dated historical inventories.
 **Workspace Advisor:** Phases 00–09 are completed (10/10, 100%); Phase 08 review approved 9.8/10 and Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. See [Phase 09 qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md) and [architecture contract](../plans/260929-1346-advisor-workspace-panel/architecture-contract.md); production rollout and deployment remain subject to operator authorization.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
@@ -49,6 +51,14 @@ The CLI resolves context, validates one invocation, dispatches one operation, wr
 
 The Linux standalone installer unpacks a verified package snapshot and launches its staged CLI for a version smoke. Phase 01 now provisions mandatory launch roles independently of archive permission bits and runs the staged CLI by its real path. The separate Windows qualification boundary remains installer lifecycle and `version --json`; this Phase 01 work does not qualify broader Windows runtime behavior.
 
+Release inventory: the exact-seven core receipt contains the Linux/Windows
+archives and sidecars, release metadata, and both installer entrypoints.
+The separate plugin assets are `dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz`
+and `dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz.sha256`.
+`.releaserc.json` remains the active semantic-release config (`npmPublish: false`); its GitHub
+assets include the seven core paths, both plugin paths, and `CHANGELOG.md`.
+Its prepare command delegates to `scripts/release/semantic-release-asset-prepare.cjs`.
+
 ## Windows advisor supervision, console repair, and verification
 
 Readiness Repair Phase 02 integrates native supervision and human-decision observation into the shared controller. The completion review records 9/9 focused tests, 236/236 advisor-controller tests, build, and `release:check`; these are implementation evidence, not production Windows qualification.
@@ -59,7 +69,7 @@ Readiness Repair Phase 02 integrates native supervision and human-decision obser
 - `tests/advisor-controller/verification-regressions.test.cjs` covers R1–R5 behavior: Job descendant cleanup after either leader outcome, standard OS-permission policy behavior, provider package selection/containment, no-clobber state creation under controlled and competing-process races, and replacement-workspace preservation.
 - `tests/advisor-controller/verification-lifecycle.test.cjs` covers pinned-file CAS, supervisor output/timeout/cancellation, launcher tampering and Windows environment aliases, a fixture-backed isolated source CLI V2 lifecycle plus history operations, and unattended/piped-console rejection; it is not live vendor qualification.
 - Phase 04 verification: **20/20** focused tests and **390/390** final required-suite runs across focused, advisor-controller, primitives, and protocol suites; independent review **9.0/10**, zero critical findings. Coverage instrumentation was not collected. These are implementation checks, not production Windows runtime qualification.
-- `tests/advisor-controller/supervision-console.test.cjs` covers descendant cleanup after leader success/failure, timeout, cancellation, output flood, supervisor EOF, spawn-time identity, and unattended-console failure. Repair Phase 04 adds focused verification; genuine positive attached-console observation, Linux runtime, supported vendor qualification, and explicit approval remain readiness gates.
+- Repair Phase 04 verification closed the separate repair track (20/20 focused tests, 390/390 final required-suite runs, 9.0/10 review). Native advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY` and full Linux qualification passed 400/400; Phase 04 qualified OMP/Codex diagnostics. Claude/Pi remain unverified, and broad Windows runtime support remains outside the release boundary.
 
 See the [system architecture](./system-architecture.md#6-advisor-supervision-and-command-projections), [code standards](./code-standards.md#advisor-controller-standards), and [PDR](./project-overview-pdr.md#fr-23-native-windows-advisor-lifecycle-implementation-phase-02).
 
@@ -325,7 +335,7 @@ The generated controller inventory remains authoritative. See the
 [audit plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md),
 and [audit evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
 Historical evidence remains 185/185 state tests and 204/204 controller tests;
-the current 33-file closure and current metrics explorer evidence are documented
+the current 36-file closure and current metrics-explorer implementation are documented
 in their respective sections above.
 
 

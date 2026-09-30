@@ -5,11 +5,11 @@
 **Applies to:** TypeScript control plane, Advisor Plugin contracts/provider/UI,
 Workspace Advisor host API and identity contract, canonical harness resources,
 shared advisor controller, generated projections, and publication tooling
-**Windows qualification:** Complete through Phase 10 (10/10 phases, 100%; completed
-2026-09-15) for the standalone installer lifecycle and `version --json`. Native
-Windows advisor invocation and its 36-file closure are implemented and isolated-
-smoked but unqualified; live provider, console-approval, and vendor qualification
-remain gated.
+**Windows release boundary:** Qualification covers only standalone installer lifecycle and clean-install `version --json`.
+Native Windows advisor Phases 01–04 are complete: Phase 03 observed OMP
+`ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain
+unverified. This evidence does not establish broad Windows runtime parity or
+authorize production release.
 
 **Plugin gate:** E05 picker removal and Workspace Phase 08 standalone navigation/direct-route cutover are implemented; joint G4 qualification/sign-off remains unverified, and production release is not authorized.
 
@@ -260,14 +260,12 @@ modules under `lib/advisor/generated/`, and three native Windows bridge files
 
 ### Native Windows advisor lifecycle and readiness repair
 
-Readiness Repair Phase 02 passed review at 9.2/10 on 2026-09-28; this is implementation evidence, not production Windows qualification.
+Native Windows advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This is implementation/diagnostic evidence, not broad Windows runtime qualification.
 
 - `windows-platform.cjs` invokes fixed operations through the packaged PowerShell bridge; no interpolated shell text, arbitrary `.cmd` body, or caller-supplied executable.
 - `windows-native.cs` assigns the provider to a non-breakaway, kill-on-close Job at process creation and captures its creation token from the launch handle.
 - `runner.cjs` accepts success only after positive empty-Job confirmation; cancellation, probe timeout, output limit, transport error, or controller EOF terminate the Job. Unknown cleanup blocks success/retry; Windows `taskkill` and teardown-time PID lookup are prohibited.
 - `state-human.cjs` uses verified `CONIN$`/`CONOUT$` for exact challenge observation, independent of JSON stdin; piped JSON is never human approval. Existing state replay/revision checks and POSIX process-group/`/dev/tty` paths remain unchanged.
-- Readiness Repairs 03–04 completed provider-launch identity and verification/readiness; their completion does not complete the original Phase 03 invocation/publication plan. Its host-aware caller and exact closure now have isolated smoke evidence at 67% (4/6 checklist entries), but the original plan remains in progress, not DONE, and the production Windows runtime is unqualified. The separate standalone install/publication flow remains unverified. Installer lifecycle and `version --json` remain the only qualified Windows release boundary; advisor filesystem owner checks remain removed under the trusted-files policy.
-
 
 ### Portable advisor contract runtime
 Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
@@ -285,11 +283,11 @@ Phase 01 prepares an exact four-file TypeScript protocol closure boundary:
   runtime alongside existing protocol modules. Root `src/index.ts` reaches it
   transitively.
 
-The Phase 01 boundary is source/export preparation, not a replacement for the
-Preserve the exact 36-file CJS closure,
-while retaining dated 29-file release evidence unchanged. Keep valid/invalid
-contract fixtures and focused protocol tests synchronized with exported
-validators.
+The Phase 01 boundary is source/export preparation; it does not replace the exact
+36-file CJS controller closure. Preserve dated 29- and 33-file inventories as
+historical evidence.
+Keep valid/invalid contract fixtures and focused protocol tests synchronized with
+exported validators.
 
 ### Phase 02 metrics kernel and generated CJS adapters
 
@@ -658,11 +656,12 @@ Linux x64 remains the qualified operator boundary for live installed-CLI checks.
 Windows release qualification is complete through Phase 10 (10/10 phases, 100%;
 completed 2026-09-15) for the standalone installer lifecycle and `version --json`
 on the hosted `windows-2025` x64 matrix (PowerShell 5.1/7; Node 22.19.0/24.21.0).
-Native advisor controller paths are integrated through Phase 02, but that does
-not widen the qualified Windows support matrix. Windows `publish`, `health`,
-provider execution, and process-tree safety remain unqualified pending Phases
-03/04 and operator evidence. Desktop/signing/policy environments, live vendor
-qualification, npm publication, deployment, and rollout remain separate gates.
+Native advisor Phases 01–04 are complete: Phase 03 observed OMP `ADVICE_READY`;
+Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified.
+This does not widen Windows support beyond installer lifecycle and
+`version --json`; `publish`, `health`, broad runtime parity, desktop/signing/policy
+environments, live vendor qualification, production publication, deployment, and
+rollout remain unqualified or separately gated.
 
 ### Windows fixture and predecessor standards (Phase 04)
 

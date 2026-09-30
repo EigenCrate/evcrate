@@ -3,8 +3,8 @@
 **Status:** Current implementation reference; filesystem-policy cutover Phases 01–02 completed 2026-09-27; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
 **DamHopper Advisor Plugin:** E00–E04 package work is complete (E04/G3 qualified 2026-09-22); E05 removed the standalone picker. Workspace Advisor Phases 00–09 are completed (10/10, 100%; Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, 13/13 DamHopper browser tests); production rollout and deployment remain subject to operator authorization.
-**Windows support:** Installer/version qualification remains the only qualified Windows release boundary. Native advisor invocation and packaging are implemented and isolated-smoked, but production Windows advisor runtime remains unqualified.
-**Native Windows advisor status:** Readiness repairs 01–04 are complete; Repair Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 review and no critical findings. Original Phase 03 implementation is in progress at 67% (4/6 checklist entries), not DONE. `ADVICE_READY`, live provider/Pi/OMP, positive attached-console, and explicit approval are unproven; WSL state init/get is only a smoke, not full Linux qualification. State/history owner checks are superseded by the cross-platform trusted-files policy.
+**Windows support:** The qualified Windows release boundary remains standalone installer lifecycle and clean-install `version --json`; native advisor evidence does not establish broad Windows runtime parity.
+**Native Windows advisor:** Phases 01–04 complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Readiness Repairs 01–04 are also complete; general Linux qualification passed 400/400. Production rollout remains operator-gated.
 **Updated:** 2026-09-30
 
 **Authority:** TypeScript control plane, canonical advisor controller, and paired DamHopper Advisor contracts linked below
@@ -16,7 +16,7 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.4.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.5.0`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections. Node `>=22.19.0` is the package engine. The package exposes:
 
@@ -263,8 +263,8 @@ permission modes, and reject missing, extra, stale, or mismatched entries. Linux
 mode and runs the staged CLI directly; required chmod failure aborts installation.
 
 Native Windows advisor Phase 02 synchronizes the `install.sh` and `install.ps1` inventories at exactly 36 code-point-sorted paths; manifests verify exact count/hash parity and reject viewer/external-package assets.
-Phase 03 is in progress at 67% (4/6 implementation checklist entries), not DONE: PowerShell 5.1 uses explicit `HOME`, then `USERPROFILE`/platform profile fallback, invokes Node with the absolute HOME controller, and streams BOM-free UTF-8 stdin; the existing Linux/POSIX caller is unchanged.
-Isolated `npm pack`/install and HOME-publication smoke verified all 36 closure hashes and left routing policy unchanged; PowerShell 5.1 observed Unicode `STATE_READY`. The separate standalone install/publication flow remains unverified. WSL Ubuntu 22.04 on ext4 passed state init/get only; neither proves `ADVICE_READY`, provider/Pi/OMP, positive attached-console, or full runtime qualification.
+Native Windows advisor Phases 01–04 are complete. Phase 03 used the absolute HOME controller through PowerShell 5.1, observed Unicode `STATE_READY`, and returned live OMP `ADVICE_READY`; isolated npm-pack and `install.ps1` sandbox publications verified all 36 closure hashes without changing routing policy.
+Phase 04 qualified OMP/Codex diagnostic paths; Claude/Pi remain unverified. Linux/POSIX invocation is unchanged, and WSL Ubuntu 22.04/ext4 qualification passed 400/400. This does not qualify broad Windows runtime parity; only installer lifecycle and `version --json` are in the release support boundary.
 
 ## 5. Shared advisor controller
 
@@ -646,7 +646,7 @@ Linux x64 remains the qualified boundary for live installed-CLI checks.
 Windows release qualification covers only installer lifecycle and `version --json`
 on hosted Windows Server 2025 x64 (PowerShell 5.1/7; Node 22.19.0/24.21.0).
 Native advisor readiness repairs 01–04 are complete; Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 independent review and no critical findings. This closes repair verification, not production Windows qualification.
-The original Phase 03 implementation is in progress at 67% (4/6 checklist items), remains unaccepted; runtime remains NO-GO pending genuine positive attached-console observation, supported Pi/OMP/provider and Linux qualification, and explicit approval. The separate standalone install/publication flow is unverified. Desktop/signing/policy environments, production publication, and deployment remain separate gates.
+Native Windows advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY` and Linux qualification passed 400/400; Phase 04 qualified OMP/Codex diagnostic paths, while Claude/Pi remain unverified. The release boundary remains installer lifecycle and `version --json`; broader Windows runtime, production publication, deployment, and approval remain separate gates.
 The Hook Materialization Scope Distribution milestone's dated proof recorded
 512/512 tests, a 29-file closure, `distribute:check`, and installed Linux fixtures;
 these do not qualify live vendors or authorize production HOME publication.
@@ -661,7 +661,7 @@ Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidat
 
 ### Native Windows advisor supervision and console repair
 
-Readiness Repair Phase 02 completed 2026-09-28 (review 9.2/10; 9/9 focused tests and 236/236 controller tests, build, and `release:check` recorded); this is not production Windows qualification. Repair Phase 04 verification completed 2026-09-28 (20/20 focused tests, 390/390 final required-suite runs, 9.0/10 review, zero critical findings); runtime readiness remains NO-GO pending Linux, attached-console, vendor, and approval evidence.
+Native advisor Phases 01–04 are complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Full Linux qualification passed 400/400. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`; production publication and approval remain separate gates.
 
 `runner.cjs` routes Windows provider execution through the fixed PowerShell/C# bridge. Native process creation assigns the provider to a kill-on-close Job and captures its creation token from the launch handle. The runner accepts success only after a successful query confirms the Job is empty; unconfirmed cleanup blocks success/retry. Control-channel EOF and cancellation terminate the Job; Windows `taskkill` and teardown PID lookup are removed.
 Repair Phase 03 canonicalizes the Windows environment and resolves trusted HOME/project context before policy or executable lookup. Windows aliases are case-insensitive: equal values deduplicate; conflicts fail with `INVOCATION_INVALID`. The canonical environment preserves absent custom-environment `PATH` as omitted and explicit `PATH: ""` as empty; initial route resolution gets no PATH search directories in either case.
@@ -759,8 +759,8 @@ Separate external G1/G2/G4 owner-runner, host-enforced sandbox/CSP, and separate
 **Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [UI guide](./advisor-plugin-ui.md), and [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md);
 [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [Phase 08 record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md),
 and [Phase 08 review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md).
-**E00:** `evcrate-advisor-data` v1 freezes eight reads; G0 permits only
-`node:fs`, `node:path`, and `node:crypto` (controller-inventory delta `0`).
+**E00 baseline:** `evcrate-advisor-data` v1 established eight read-only methods. **Current domain contract:** v2 supports v1 and v2 with the same eight-method set. The plugin package is v0.1.0 and pins `dataApi: ^1.0.0`; that contract range is distinct from the domain API version.
+**Viewer activity scope:** `ActivityScope` is `workspace-project` or `all`; project identity comes from trusted Workspace context, and `all` requires root-history authority. Scope is separate from metric filters.
 **E01:** `provider.cjs` validates/gates E00 methods; binding, snapshot/cursor,
 history, policy, and evaluation modules enforce path, kind, symlink, nlink, size, schema, and fingerprint boundaries under the cross-platform trusted-files policy (filesystem UID gates removed).
 **E02:** The pinned D00 SDK owns framing and strict UTF-8 JSON-RPC; the worker

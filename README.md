@@ -1,9 +1,10 @@
 # EVCrate
 
-EVCrate is a private Node/TypeScript package that authors one canonical
-agent-harness source tree, builds verified projections for seven targets, and
-publishes managed output with ownership, hashing, locking, and recovery rules.
-It also ships one shared checkpoint advisor controller.
+EVCrate 2.5.0 is a private Node/TypeScript package that authors one canonical
+agent-harness source tree and builds verified projections for seven targets:
+`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, and `pi`.
+It publishes managed output with ownership, hashing, locking, and recovery rules,
+and ships one shared checkpoint advisor controller.
 
 ## Download and installation
 
@@ -104,17 +105,15 @@ When overriding local assets, provide `Archive`, `Checksum`, and `Metadata`
 together. `RootDir` selects the installation root; `DataDir` is an equivalent
 root/data override when `RootDir` is not supplied.
 
-**Bounded Windows support.** The hosted `windows-2025` x64 matrix with Windows
-PowerShell 5.1/7 and Node.js 22.19.0/24.21.0 qualifies only the standalone
-installer lifecycle and clean-install `evcrate version --json` path. `publish`
-and `health` remain outside the Windows runtime claim. Native Windows advisor
-invocation/packaging are implemented but unqualified: isolated `npm pack`/install
-and HOME-publication smoke verifies closure and state transport only, not
-`ADVICE_READY`, provider execution, or positive attached-console approval. The
-separate standalone install/publication flow remains unverified. Existing POSIX
-invocation is unchanged; WSL state init/get is smoke evidence, not full Linux
-qualification. Desktop/UAC, SmartScreen, Authenticode, enterprise-policy, ARM64,
+**Bounded Windows support.** The hosted four-row `windows-2025` x64 matrix
+qualifies only standalone installer lifecycle and clean-install `version --json`.
+`publish`, `health`, and general Windows runtime parity remain outside release
+support. Native Windows Advisor Phases 01–04 are complete: Phase 03 observed live
+OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi
+remain unverified. The Linux qualification suite passed 400/400 on WSL Ubuntu
+22.04/ext4. Desktop/UAC, SmartScreen, Authenticode, enterprise-policy, ARM64,
 self-hosted-runner, and execution-policy-workaround behavior is not claimed.
+Production HOME publication and release authorization remain operator-gated.
 PR smoke is diagnostic; only the four-row release matrix authorizes publication.
 
 ## Developer quick start
@@ -132,6 +131,25 @@ node dist/cli/evcrate.js version --json
 `build` compiles the TypeScript control plane and regenerates controller
 inventory. Distribution build/check generates and verifies local projections.
 The compiled CLI is `dist/cli/evcrate.js`; installed packages expose `evcrate`.
+
+### CLI reference
+
+```text
+evcrate distribute build|check|publish|all|recover
+evcrate publish --dry-run|--apply
+evcrate health
+evcrate version
+evcrate resources list|get
+evcrate imports preview|apply
+evcrate scopes list|get|assign|remove|enable|disable
+evcrate changes preview|apply
+```
+
+### Release test gate
+
+Before release, run `npm test`, `npm run release:check`, and
+`npm run distribute:check`. These repository gates do not replace live vendor
+qualification or release authorization.
 
 ## Publication and recovery
 
@@ -239,6 +257,10 @@ npm run verify:advisor-plugin dist/advisor-plugin/evcrate-advisor-plugin-v0.1.0.
 
 The E04/G3-qualified independent package is designed for direct DamHopper installation without a host rebuild. This package-level status does not establish joint G4 qualification/sign-off, authorize standalone retirement, or verify current release assets.
 
+`plugin/manifest.json` remains package version `0.1.0` with `dataApi: ^1.0.0`;
+the domain API is v2 with v1/v2 support and eight read-only methods.
+GitHub attaches `evcrate-advisor-plugin-v0.1.0.tar.gz` and `evcrate-advisor-plugin-v0.1.0.tar.gz.sha256` separately from the seven core assets.
+
 ### Security, metrics, and limitations
 
 - **Owner-safe isolation:** All reads are served by a bounded Node worker over framed transport, reauthorized per actor context. The embedded iframe has no host credentials, DOM access, or direct network capability.
@@ -263,15 +285,12 @@ follow-up and does not rename canonical source files or invent aliases.
 
 ## Documentation map
 
-- [System architecture](./docs/system-architecture.md) — central distribution,
-  advisor, wire, isolation, and publication contracts.
-- [Project overview and PDR](./docs/project-overview-pdr.md) — intent,
-  requirements, acceptance criteria, and release gates.
+- [System architecture](./docs/system-architecture.md) — distribution, advisor, wire, and publication contracts.
+- [Project overview and PDR](./docs/project-overview-pdr.md) — requirements, acceptance criteria, and release gates.
 - [Code standards](./docs/code-standards.md) — implementation and review rules.
 - [Codebase summary](./docs/codebase-summary.md) — source/module map from Repomix.
 - [Project roadmap](./docs/project-roadmap.md) — phases, gates, and gaps.
 - [Project changelog](./docs/project-changelog.md) — phase evidence and boundaries.
-- [Project changelog archive](./docs/project-changelog-archive.md) — older detail.
-- [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime/settings notes.
+- [Project changelog archive](./docs/project-changelog-archive.md) — older phase detail.
+- [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime and settings notes.
 - [Advisor plugin UI](./docs/advisor-plugin-ui.md) — embedded four-view plugin UI and bridge architecture.
-

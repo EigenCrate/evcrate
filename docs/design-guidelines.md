@@ -144,7 +144,7 @@ Distinct visual representations for all system states:
 
 ### 3.6 History Records View (`HistoryView`)
 - **Dual Representation (Responsive Card / Table):**
-  - **Narrow Viewport (< 600px):** Renders individual History Cards. Each card displays:
+  - **Narrow Viewport (< 640px):** Renders individual History Cards. Each card displays:
     - Status badge (`ADVICE_READY`, `FAILED`, `started`).
     - Timestamp (localized short format).
     - Project label or short ID.
@@ -153,7 +153,7 @@ Distinct visual representations for all system states:
     - Latency/Elapsed duration.
     - Consultation ID (shortened).
     - Accessible `Inspect` action button.
-  - **Wide Viewport (>= 600px):** Renders full structured data table with sticky headers and horizontal scroll safety.
+  - **Wide Viewport (>= 640px):** Renders full structured data table with sticky headers and horizontal scroll safety.
 - **Filtering Bar:**
   - Status select (`ADVICE_READY`, `FAILED`, `started`).
   - Outcome select (`resolved`, `unresolved`, `regressed`, `unknown`).

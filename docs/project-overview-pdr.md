@@ -1,14 +1,21 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline. Filesystem cutover Phases 01–02 are complete (2026-09-27). Hook Materialization Scope Distribution is
-complete through Phase 09, Windows release qualification through Phase 10, and
-All-project advisor history through Phase 05 (6/6 phases, 100%; 2026-09-24).
-Native Windows advisor Phase 01 proved primitives (67/67 checks); readiness Repairs 01–04 are complete, but original Phase 03 host-invocation/packaging is in progress at 67% (4/6 checklist entries) and not DONE; Windows advisor runtime qualification remains open.
-Its paired release is qualified; see the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
-DamHopper Advisor Plugin Replacement remains a separate milestone: Phases E00–E04
-are complete (E04/G3 qualified on 2026-09-22), and the E05 picker removal is
-applied; joint G4 qualification/sign-off remains unverified. Workspace Advisor
-Phases 00–09 are completed (10/10, 100%; Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, 13/13 DamHopper browser tests); production rollout and deployment remain subject to operator authorization.
+**Status:** Current requirements baseline. Filesystem cutover Phases 01–02 and
+Hook Materialization Scope Distribution Phase 09 are complete; Windows release
+qualification is complete through Phase 10. Native Windows advisor Phases 01–04
+are complete: Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified
+OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not establish
+broad Windows runtime parity; standalone installer lifecycle and `version --json`
+remain the qualified Windows release boundary. Readiness Repairs 01–04 are also
+complete.
+All-project advisor history Phases 00–05 are complete; its paired release is
+qualified. See the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
+DamHopper Advisor Plugin Replacement Phases E00–E04 are complete (E04/G3
+qualified 2026-09-22). E05 picker removal is applied; joint G4 qualification and
+sign-off remain unverified. Workspace Advisor Phases 00–09 are complete (10/10,
+100%); Phase 09 paired qualification verified 11/11 browser scenarios, four
+screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. Production
+rollout and deployment remain subject to operator authorization.
 **Updated:** 2026-09-30
 **Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
@@ -58,10 +65,11 @@ counsel bounded and fail-closed.
 - Provider switching, model substitution, local fallback, or native callback relay
   outside the managed v2 controller flow.
 - Copilot as a controller backend.
-- Full Windows runtime equivalence (including `publish`, `health`, controller-backed
-  inference, and process-tree parity) remains outside this baseline and unqualified.
-  The native advisor caller/package path is implemented evidence only, not support
-  qualification. Desktop/non-admin/UAC/SmartScreen/enterprise environments,
+- Broad Windows runtime equivalence (`publish`, `health`, general CLI/process
+  parity) remains outside this baseline and unqualified. Native advisor Phases
+  01–04 include an observed OMP `ADVICE_READY` and OMP/Codex diagnostics, but
+  Claude/Pi remain unverified; this evidence does not expand Windows release
+  support. Desktop/non-admin/UAC/SmartScreen/enterprise environments,
   Authenticode signing, live vendor qualification, npm publication, deployment, or
   operator rollout claims remain outside this baseline. (The bounded Windows
   installer lifecycle and `version --json` qualification is in scope under FR-17.)
@@ -170,7 +178,7 @@ digests. The request stays within 32 KiB, with bounded question/task/evidence,
 four files, and sixteen changed paths. Portable validators expose stable
 neutral code/path failures and deep-freeze accepted values; protocol barrels
 export the runtime; Phase 03 registers generated adapters in the exact current
-33-file controller closure while preserving dated 29-file release evidence.
+36-file controller closure while preserving dated 29-file release evidence.
 No automatic route/executable override is accepted.
 
 ### FR-7: Versioned counsel transaction
@@ -220,8 +228,9 @@ environment, bounded streams, stdin-only prompts, detached POSIX process groups,
 deadlines, cancellation, and descendant reaping.
 This remains live vendor/runtime qualification and is repeated after vendor CLI
 upgrades on Linux only. The separate Windows qualification covers standalone
-installer lifecycle and `version --json` under FR-17; the implemented Windows
-advisor caller does not qualify adapter execution or an `ADVICE_READY` result.
+installer lifecycle and `version --json` under FR-17. Native Windows Phase 03
+observed OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while
+Claude/Pi and broad Windows runtime parity remain unverified.
 ### FR-10: Publication and recovery
 
 **Requirement:** Build/check, publication, and recovery are separate operations.
@@ -509,9 +518,9 @@ The scan was not a new live DamHopper browser session; production deployment rem
 
 **Requirement:** Integrate Windows-specific home/project identity, environment, provider launch, state/history/baseline, process, workspace, and console boundaries into the shared advisor controller without changing public schemas or Linux behavior.
 
-**Status and evidence:** Original Phase 02 integration is DONE (2026-09-26; review 7.4/10); the dated review records 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests, with a 36-file closure. Readiness Repairs 01–04 are complete; Repair Phase 04 verification recorded 20/20 focused tests, 390/390 final required-suite runs, and a 9.0/10 review with no critical findings. Original Phase 03 host-aware invocation and package closure are implemented and smoke-tested; see the [original Phase 03 plan](../plans/260926-1522-windows-advisor-support/phase-03-invocation-publication.md).
+**Status and evidence:** Native Windows advisor Phases 01–04 are complete. Phase 03 isolated npm-pack and `install.ps1` sandbox publications verified the exact 36-file closure and unchanged routing policy, and observed live OMP `ADVICE_READY`; Phase 04 records 58/58 relevant tests, `release:check`/`distribute:check` success, and OMP/Codex diagnostic qualification. Claude/Pi remain unverified. Readiness Repairs 01–04 are complete; Repair Phase 04 recorded 20/20 focused tests, 390/390 required-suite runs, and a 9.0/10 review with no critical findings.
 
-**Acceptance boundary:** Original Phase 03 implementation is in progress at 67% (4/6 checklist entries), but remains unaccepted and not DONE. Isolated `npm pack`/install and HOME-publication hash checks plus PowerShell 5.1 Unicode `STATE_READY` prove packaging/state transport only; the separate standalone install/publication flow remains unverified. WSL Ubuntu 22.04 ext4 state init/get is not full Linux qualification. `ADVICE_READY`, live provider/Pi/OMP execution, genuine positive attached-console observation, and production HOME publication remain unproven. State/history owner checks were superseded by the cross-platform trusted-files policy.
+**Acceptance boundary:** The evidence completes implementation and the stated OMP/Codex diagnostic qualification, not broad Windows runtime parity or support. Claude/Pi and production HOME publication remain unverified or operator-gated. The Windows release boundary remains installer lifecycle and `version --json`; WSL Ubuntu 22.04/ext4 full Linux qualification passed 400/400. State/history owner checks were superseded by the cross-platform trusted-files policy.
 
 ### FR-24: Launchability and filesystem identity (Phase 01)
 
@@ -561,7 +570,6 @@ The focused Workspace Advisor acceptance criteria and evidence are maintained in
 | Reproducibility | Canonical JSON, deterministic ordering, SHA-256, domain-separated resource-file/tree identities, and exact closure manifests; permissions are not content hashes. |
 | Isolation | No credentials in policy/checkpoint/results; vendor CLIs own credentials; child processes receive fixed environments. |
 | Compatibility | Preserve explicit target boundaries; never silently synthesize unsupported adapters or aliases. |
-| Operability | Dry-run/apply, recovery, sanitized receipts/errors, history list/show/export/prune review tools, and clear ownership of user-managed state. |
 | Maintainability | One parser, path policy, hashing policy, lock protocol, and error serializer per boundary. |
 
 ## Observable release gates
@@ -572,7 +580,7 @@ through E04 are complete. The Explorer's dated standalone-picker evidence is
 historical; its picker/reader source has since been removed. E05 source cutover is
 applied, but joint G4 qualification/sign-off is unverified, and standalone
 retirement is not release-authorized. Documentation/support cutover is complete.
-All-project advisor history (Phases 00–05) is complete and its paired release is qualified; production deployment remains a separate operator action. Deterministic Linux publication evidence, joint G0/G1 and D04/E03 G2 qualification, and the G4 gate remain distinct plugin gates. Original Native Windows advisor Phases 01–02 remain complete; original Phase 03 invocation/packaging implementation is in progress at 67% (4/6), not DONE. Readiness Repairs 01–04 are complete. The isolated package/HOME smoke does not verify the separate standalone install/publication flow, and neither implementation nor repair completion qualifies Windows advisor runtime or production release.
+All-project advisor history Phases 00–05 and Workspace Advisor Phases 00–09 are complete, with paired qualification evidence; production deployment remains an operator action. Deterministic Linux publication evidence and plugin gates G0/G1, D04/E03 G2, and G4 remain distinct. Native Windows advisor Phases 01–04 and readiness repairs 01–04 are complete; Phase 03 observed OMP `ADVICE_READY`, and Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not widen Windows support beyond installer lifecycle and `version --json`; production HOME publication and release authorization remain gated.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 36-file
@@ -612,7 +620,7 @@ All-project advisor history (Phases 00–05) is complete and its paired release 
 14. E05/G4 cannot be accepted from source removal alone. Joint external Linux
     owner-runner and separate-LAN qualification evidence plus sign-off are
     required; they are not present in this workspace.
-15. Native Windows advisor Phase 01 proved primitives (67/67 checks, review 9.3/10); original Phase 02 lifecycle is DONE after review 7.4/10, with 213/213 advisor-controller, 16/16 viewer/manifest/package-inventory, and 21/21 settings/filesystem distribution-primitives tests recorded. Readiness Repairs 01–04 are complete; Repair Phase 04 recorded 20/20 focused tests, 390/390 final required-suite runs, and a 9.0/10 review with no critical findings. Original Phase 03 caller/packaging implementation is in progress at 67% (4/6 checklist entries), not DONE; isolated HOME/package smoke does not verify the separate standalone install/publication flow. No Windows `ADVICE_READY`, provider/Pi/OMP, positive attached-console, production HOME, or full Linux qualification is claimed.
+15. Native Windows advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY`, and full Linux qualification passed 400/400 on WSL Ubuntu 22.04/ext4. Phase 04 records 58/58 relevant tests, clean `release:check`/`distribute:check`, and OMP/Codex diagnostic qualification; Claude/Pi remain unverified. Readiness Repairs 01–04 are complete (20/20 focused and 390/390 final required-suite runs; 9.0/10 review). General Windows runtime parity is not claimed; the release boundary remains installer lifecycle and `version --json`, with production HOME publication operator-gated.
 
 ## Documentation map
 
