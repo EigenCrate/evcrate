@@ -2,7 +2,7 @@
 
 **Status:** Current implementation reference; filesystem-policy cutover Phases 01–02 completed 2026-09-27; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
-**DamHopper Advisor Plugin:** E00–E04 implementation/package work is complete (E04/G3 qualified 2026-09-22). E05 source cutover is applied; joint G4 qualification/sign-off is unverified, and standalone retirement is not release-authorized. Joint G1 owner-worker and D04/E03 G2 LAN qualifications remain downstream.
+**DamHopper Advisor Plugin:** E00–E04 package work is complete (E04/G3 qualified 2026-09-22); E05 removed the standalone picker. Workspace Advisor Phase 08 removes exact `evcrate.advisor` from standalone navigation and retires its route with fail-closed `not-visible`. Phase 09 paired qualification remains; joint G4 sign-off, G1/G2 qualification, and release authorization are still outstanding.
 **Windows support:** Installer/version qualification remains the only qualified Windows release boundary. Native advisor invocation and packaging are implemented and isolated-smoked, but production Windows advisor runtime remains unqualified.
 **Native Windows advisor status:** Readiness repairs 01–04 are complete; Repair Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 review and no critical findings. Original Phase 03 implementation is in progress at 67% (4/6 checklist entries), not DONE. `ADVICE_READY`, live provider/Pi/OMP, positive attached-console, and explicit approval are unproven; WSL state init/get is only a smoke, not full Linux qualification. State/history owner checks are superseded by the cross-platform trusted-files policy.
 **Updated:** 2026-09-30
@@ -753,13 +753,13 @@ files, and vendor credentials remain outside the publication authority.
 ## 9. DamHopper advisor plugin replacement
 
 **Status:** E00–E04 implementation/package work is complete; E04/G3 was qualified
-2026-09-22. E05 source cutover removed standalone picker code, but joint G4
-qualification/sign-off is unverified: external Linux owner-runner and separate-LAN
-evidence are not present here. E05/G4 is not accepted or complete; standalone
-retirement is not release-authorized. Joint G1/G2 qualification remains downstream.
-**Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md),
-[UI guide](./advisor-plugin-ui.md), [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md),
-and [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
+2026-09-22. E05 removed the standalone picker; Phase 08 filters exact
+`evcrate.advisor` from standalone navigation and fails closed as
+`PluginUnavailableState reason="not-visible"` before list/asset/frame preparation.
+Phase 09 remains; G1/G2/G4 evidence and joint sign-off are unverified; no release is authorized.
+**Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [UI guide](./advisor-plugin-ui.md), and [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md);
+[E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [Phase 08 record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md),
+and [Phase 08 review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md).
 **E00:** `evcrate-advisor-data` v1 freezes eight reads; G0 permits only
 `node:fs`, `node:path`, and `node:crypto` (controller-inventory delta `0`).
 **E01:** `provider.cjs` validates/gates E00 methods; binding, snapshot/cursor,
@@ -769,7 +769,7 @@ bounds contexts, requests, cancellation, safe errors, and deterministic output.
 **E03:** Current provider uses bounded DamHopper `MessagePort`; the temporary local picker/reader source was later removed.
 The version-`1.0.0` base bridge remains generic-compatible; Workspace Advisor Phase 03 negotiates `workspace-advisor-v1`.
 `host.contextReady` follows authorized context open; `host.workspaceChanged` carries increasing same-authority revisions; `frame.uiIntent` is limited to `activate` / `dismiss`; messages fence session/generation.
-The four views are Overview, History/detail, Configuration, and Evaluations at `/plugins/evcrate.advisor`.
+The four views are presented inside Workspace only; standalone navigation omits the exact Advisor ID, and `/plugins/evcrate.advisor` now fails closed before plugin preparation.
 The Vite document inlines CSS/IIFE without external assets or network clients.
 E03 recorded 68/68 repository/package tests on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current release verification.
 
@@ -785,9 +785,9 @@ E03 recorded 68/68 repository/package tests on 2026-09-21; this is not host CSP/
 - **Phases 03–04:** EVCrate root scanning and safe project-name persistence are paired with same-snapshot project filtering and independent source labels in the UI.
 - **Phase 05:** Paired qualification completed 2026-09-24: **273/273 tests passed**, 0 failed/skipped; candidate and distribution packages verified; review approved **9.8/10** with zero critical issues. The direct history-root provider scan accepted **237/237 consultations across 21 projects in 191.48 ms**, with zero diagnostics. It was not a new live DamHopper browser session; the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records qualification, not production deployment/publication.
 
-### Workspace-integrated Advisor (Phases 00–07)
+### Workspace-integrated Advisor (Phases 00–08)
 
-Workspace Advisor Phases 01–07 are implemented; Phase 05 review approved 9.8/10, Phase 06 Cycle 2 review 10/10, and Phase 07 Cycle 2 review 9.6/10. Phase 06 compacts Overview/History while preserving six rate metrics, shared scope, history fields, manual Refresh, and keyboard-operable hash tabs. Phase 07 keeps owner policy and evaluations bound-source data independent of History scope; Configuration uses route cards below 640px (including 180–260px docks) and the wide route table from 640px, while Evaluations pages 10 descriptors and compares only the first 32 on explicit action. Inspected descriptor status is shown inline. The group-detail drawer consumes Escape in capture phase and restores focus on unmount; candidate IDs map deterministically to blinded Candidate A/B labels until explicit reveal. Phases 08–09, explicit user approval, paired rollout, and production deployment remain open. See the [Phase 06 plan](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md), [Phase 07 plan](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [Phase 07 Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), [UI design guidelines](./design-guidelines.md), [embedded UI guide](./advisor-plugin-ui.md), and [host contract](./workspace-advisor-host-contract.md#phase-05-persistent-workspace-panel-placement).
+Workspace Advisor Phases 01–08 are implemented (9/10); Phase 09 paired qualification remains open. Phase 05 review approved 9.8/10, Phase 06 Cycle 2 review 10/10, Phase 07 Cycle 2 review 9.6/10, and Phase 08 review 9.8/10. Phases 06–07 deliver compact views, independent bound-source disclosures, and accessible inspection; Phase 08 cuts over standalone navigation/package metadata while preserving generic plugin hosting. Explicit user approval, paired rollout, and production deployment remain separate. See the [Phase 06 plan](../plans/260929-1346-advisor-workspace-panel/phase-06-compact-activity-views.md), [Phase 07 plan](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [Phase 08 plan](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md), [Phase 08 review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md), and [host contract](./workspace-advisor-host-contract.md).
 
 ## Related documents
 
