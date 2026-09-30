@@ -4,7 +4,28 @@
 
 **Updated:** 2026-09-30
 
-**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 9/10 phases complete (90%; Phase 08 DONE 2026-09-30; review approved 9.8/10); Phase 09 paired qualification remains open. Explicit user approval, rollout, production deployment, and HOME publication are not claimed. No Codex/Claude/Pi inference is claimed. Package version: `2.4.0`.
+**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 10/10 phases complete (100%; Phase 09 DONE 2026-09-30); paired qualification verified across 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. Production rollout and deployment remain subject to operator authorization.
+
+### 2026-09-30 — feat(advisor): paired qualification, documentation, and release handoff (Phase 09)
+
+**Status:** Phase 09 DONE (2026-09-30; 100%); Workspace plan 10/10 phases complete (100%). Paired qualification verified across 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests; production rollout and deployment remain subject to operator authorization.
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 09](../plans/260929-1346-advisor-workspace-panel/phase-09-paired-qualification.md)
+**Evidence:** [Qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md)
+
+- Executed consolidated verification command groups V-E1, V-E2, V-E3, V-P1 in EVCrate and V-D1, V-D2, V-D3, V-D4 in DamHopper.
+- Ran full browser qualification harness (`plugin:test-client`) against authenticated `dam-hopper-plugin-test-server`:
+  - `authenticated remote plugin load`: PASSED (1,978 ms)
+  - `opaque frame storage and network isolation`: PASSED (localStorage, sessionStorage, cookies, fetch all blocked with SecurityError/TypeError)
+  - `embedded E03 identity`: PASSED
+  - `overview refresh`: PASSED (captured `01-overview.png`)
+  - `history list and detail`: PASSED (captured `02-history-detail.png`)
+  - `current policy configuration`: PASSED (captured `03-configuration.png`)
+  - `counsel evaluations`: PASSED (captured `04-evaluations.png`)
+  - `protected inert asset`: PASSED (authenticated 200, anonymous 401, digest `2111bae2...` verified)
+  - `same-route connection reuse`: PASSED (1 WebSocket connection maintained)
+  - `profile owner switch revocation`: PASSED (stale frame immediately revoked on owner switch)
+  - `reload creates fresh frame fence`: PASSED (fresh frame session generated on full reload)
+- Synchronized documentation across EVCrate and DamHopper, established rollback handoff instructions, and confirmed all 16 verification matrix scenarios satisfied.
 
 ### 2026-09-30 — feat(advisor): cut over standalone navigation and regenerate package (Phase 08)
 

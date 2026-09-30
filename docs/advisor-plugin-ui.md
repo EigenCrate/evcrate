@@ -1,6 +1,6 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–08 are implemented (9/10; Phase 08 navigation/package cutover review approved 9.8/10); Phase 09 paired qualification, rollout, and production deployment remain open.
+**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–09 are completed (10/10, 100%; Phase 09 paired qualification passed 11/11 browser scenarios, 4 verified screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests); production rollout and deployment remain subject to operator authorization.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
 **Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [Workspace Advisor host contract](./workspace-advisor-host-contract.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
@@ -11,6 +11,8 @@
 **Phase 07 disclosure evidence:** [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md) · [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md) · [UI design guidelines](./design-guidelines.md#accessible-component-specifications).
 
 **Phase 08 navigation/package evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md) · [Review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md) (9.8/10; 41/41 tests across EVCrate and DamHopper).
+
+**Phase 09 qualification evidence:** [Phase 09 qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md) (11/11 scenarios passed, 4 screenshots: overview, history detail, configuration, counsel evaluations).
 
 ## Purpose and boundary
 
