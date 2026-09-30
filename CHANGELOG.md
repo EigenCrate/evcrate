@@ -1,3 +1,32 @@
+## [2.5.0](https://github.com/EigenCrate/evcrate/compare/v2.4.0...v2.5.0) (2026-09-30)
+
+
+### 🚀 Features
+
+* **advisor-plugin:** cut over standalone navigation and regenerate package ([dbc3fb7](https://github.com/EigenCrate/evcrate/commit/dbc3fb72bdb3f3cfae50a688985ed8037a25376f))
+* **advisor-plugin:** qualify history scope and unmapped-record preservation for Phase 02 ([639b9b6](https://github.com/EigenCrate/evcrate/commit/639b9b64a6d2637dd1432a6ce775caf2653422b5))
+* **advisor:** freeze Phase 00 contracts and add workspace panel fixtures ([858604d](https://github.com/EigenCrate/evcrate/commit/858604dbf5d2859c961a95d9ccea4725df253fd9))
+* **advisor:** implement bridge extension, port provider, and reusable host docs ([2eb229c](https://github.com/EigenCrate/evcrate/commit/2eb229c73d82e98e9384d6b40db73b0718f65847))
+* **viewer:** implement activity scope, epoch fencing, and manual request state ([8eeec3d](https://github.com/EigenCrate/evcrate/commit/8eeec3d487f1a7e6d343c32d819ae2f56c626aec))
+* **viewer:** implement compact activity views, responsive cards, and accessible tabs ([3ae4315](https://github.com/EigenCrate/evcrate/commit/3ae431515c5a32a6528733e0d11b51373ece51ac))
+* **viewer:** implement configuration and evaluations disclosures (Phase 07) ([ddb893e](https://github.com/EigenCrate/evcrate/commit/ddb893eec2e0e291a737c5bf8ac4bb337d88f47f))
+
+
+### 🐞 Bug Fixes
+
+* **viewer:** guard refreshHistory against unavailable history scope and non-root All scope ([c16848c](https://github.com/EigenCrate/evcrate/commit/c16848c4aafe9e62f565b0ef9fec397d17355d7f))
+
+
+### 📚 Documentation
+
+* **advisor:** paired qualification, documentation, and release handoff (Phase 09) ([ac07ba3](https://github.com/EigenCrate/evcrate/commit/ac07ba357432306feb9879f2a7ae9a47f3c8dee9))
+* **advisor:** update architecture, roadmap, and host contract for Phase 01 ([335635f](https://github.com/EigenCrate/evcrate/commit/335635fb5ec1df7345cd7a1edd3e26fc0228ac72))
+
+
+### ✅ Tests
+
+* **viewer:** add test for unavailable-All and unavailable historyScope refresh gating ([6c98fed](https://github.com/EigenCrate/evcrate/commit/6c98fedccfc5c906296a49a974acf436bc0f4486))
+
 ## [2.4.0](https://github.com/EigenCrate/evcrate/compare/v2.3.2...v2.4.0) (2026-09-28)
 
 
