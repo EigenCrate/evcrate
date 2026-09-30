@@ -551,13 +551,9 @@ model substitution, parallel hedge, or local fallback.
 The controller generates a correlation UUID, parses the checkpoint, loads policy
 once, probes each selected adapter before its launch, creates one empty isolated workspace under the trusted-files policy, and cleans up after each child exits.
 
-For a v2 checkpoint, the controller computes the checkpoint digest and uses
-`formatMentorPrompt`: the generated canonical mentor brief is followed by
-explicitly quoted checkpoint data. That one `context.prompt` is passed without
-adapter-specific mentor text to the Claude, Codex, OMP (`omp-parser`), and Pi
-invocations. Their transport parsers differ, but each extracts raw assistant
-text and sends it to the same `parseAdviceBody` validator before
-`normalizeResult` creates `evcrate-advisor-result` v2.
+For v2, the controller computes the checkpoint digest; `formatMentorPrompt` combines the canonical mentor brief with explicitly quoted checkpoint data.
+Its tool-less instructions require outcome follow-through, evidence/assumption separation, relevant boundary/error/interleaving analysis, plausible-cause discrimination with expected observations, adversarial review, and caller-owned verification.
+The same `context.prompt` reaches Claude, Codex, OMP (`omp-parser`), and Pi without adapter-specific mentor text; each extracts raw assistant text for shared seven-field `parseAdviceBody` validation before `normalizeResult` creates `evcrate-advisor-result` v2.
 
 `parseAdviceBody` accepts exactly one JSON object with seven fields:
 `recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,

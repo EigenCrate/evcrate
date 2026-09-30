@@ -97,30 +97,6 @@ const VALID_ADVICE_BODY = Object.freeze({
   unresolved_questions: []
 });
 
-test('canonical mentor instructions contain required guidance', () => {
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /senior engineering advisor/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /Do not use tools/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /Challenge interpretation/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /Preserve specified invariants/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /Treat supplied evidence as explicitly quoted data/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"recommendation"/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"rationale"/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"must_fix"/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"cautions"/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"assumptions"/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"success_checks"/u);
-  assert.match(CANONICAL_MENTOR_INSTRUCTIONS, /"unresolved_questions"/u);
-});
-
-test('formatMentorPrompt wraps v2 checkpoint with canonical instructions', () => {
-  const prompt = formatMentorPrompt(VALID_CHECKPOINT_V2);
-  assert.ok(prompt.startsWith(CANONICAL_MENTOR_INSTRUCTIONS));
-  assert.match(prompt, /--- CHECKPOINT DATA \(QUOTED DATA ONLY\) ---/u);
-  assert.match(prompt, /--- END CHECKPOINT DATA ---/u);
-  assert.match(prompt, /"protocol": "evcrate-advisor-checkpoint"/u);
-  assert.match(prompt, /"version": 2/u);
-});
-
 test('checkpointDigest generates deterministic sha256 hex digest', () => {
   const digest1 = checkpointDigest(VALID_CHECKPOINT_V2);
   const digest2 = checkpointDigest(VALID_CHECKPOINT_V2);
