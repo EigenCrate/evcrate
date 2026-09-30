@@ -132,32 +132,89 @@ function createMatcher(patterns) {
 }
 
 /**
+ * Relativize an absolute or drive-relative path against the project root.
+ * Returns null if the path is outside the project root.
+ *
+ * @param {string} testPath - Path to relativize
+ * @param {string} [projectRoot] - Project root directory
+ * @returns {string | null} Normalized project-relative path, or null if outside project
+ */
+function relativizeToProject(testPath, projectRoot) {
+  if (!testPath || typeof testPath !== 'string') return null;
+  const root = projectRoot || process.env.COPILOT_PROJECT_DIR || process.env.COPILOT_PROJECT_DIR || process.cwd();
+
+  const isWindowsAbsolute = /^[A-Za-z]:[/\\]/.test(testPath);
+  const isSlashLeading = testPath.startsWith('/') || testPath.startsWith('\\');
+
+  if (!isWindowsAbsolute && !isSlashLeading && !path.isAbsolute(testPath)) {
+    let rel = testPath.replace(/\\/g, '/');
+    while (rel.startsWith('./')) rel = rel.slice(2);
+    return rel;
+  }
+
+  let resolved;
+  if (isWindowsAbsolute) {
+    resolved = path.win32.resolve(testPath);
+    const rel = path.win32.relative(root, resolved);
+    if (rel.startsWith('..') || path.win32.isAbsolute(rel)) {
+      return null;
+    }
+    return rel.replace(/\\/g, '/');
+  }
+
+  if (isSlashLeading) {
+    if (process.platform === 'win32' || /^[A-Za-z]:/.test(root)) {
+      resolved = path.win32.resolve(root, testPath);
+      const rel = path.win32.relative(root, resolved);
+      if (rel.startsWith('..') || path.win32.isAbsolute(rel)) {
+        return null;
+      }
+      return rel.replace(/\\/g, '/');
+    }
+    resolved = path.posix.resolve(testPath);
+    const rel = path.posix.relative(root, resolved);
+    if (rel.startsWith('..') || path.posix.isAbsolute(rel)) {
+      return null;
+    }
+    return rel.replace(/\\/g, '/');
+  }
+
+  resolved = path.resolve(root, testPath);
+  const rel = path.relative(root, resolved);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    return null;
+  }
+  return rel.replace(/\\/g, '/');
+}
+
+/**
  * Check if a path should be blocked
  *
  * @param {Object} matcher - Matcher object from createMatcher
  * @param {string} testPath - Path to test
+ * @param {string} [projectRoot] - Optional project root
  * @returns {Object} { blocked: boolean, pattern?: string }
  */
-function matchPath(matcher, testPath) {
+function matchPath(matcher, testPath, projectRoot) {
   if (!testPath || typeof testPath !== 'string') {
     return { blocked: false };
   }
 
-  // Normalize path separators (Windows backslash to forward slash)
-  let normalized = testPath.replace(/\\/g, '/');
-
-  // Remove leading ./ if present
-  if (normalized.startsWith('./')) {
-    normalized = normalized.slice(2);
+  const normalized = relativizeToProject(testPath, projectRoot);
+  if (normalized === null || normalized === '') {
+    return { blocked: false };
   }
 
   // Check if path is ignored (blocked)
-  const blocked = matcher.ig.ignores(normalized);
-
-  if (blocked) {
-    // Find which original pattern matched for error message
-    const matchedPattern = findMatchingPattern(matcher.original, normalized);
-    return { blocked: true, pattern: matchedPattern };
+  try {
+    const blocked = matcher.ig.ignores(normalized);
+    if (blocked) {
+      // Find which original pattern matched for error message
+      const matchedPattern = findMatchingPattern(matcher.original, normalized);
+      return { blocked: true, pattern: matchedPattern };
+    }
+  } catch {
+    return { blocked: false };
   }
 
   return { blocked: false };
@@ -174,11 +231,15 @@ function findMatchingPattern(originalPatterns, path) {
   for (const p of originalPatterns) {
     if (p.startsWith('!')) continue; // Skip negations
 
-    const tempIg = Ignore();
-    tempIg.add(normalizePattern(p));
+    try {
+      const tempIg = Ignore();
+      tempIg.add(normalizePattern(p));
 
-    if (tempIg.ignores(path)) {
-      return p;
+      if (tempIg.ignores(path)) {
+        return p;
+      }
+    } catch {
+      continue;
     }
   }
 

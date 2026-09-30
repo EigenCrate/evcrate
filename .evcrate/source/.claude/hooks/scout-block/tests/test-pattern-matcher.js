@@ -135,5 +135,15 @@ assertTest('Empty path falls back to DEFAULT_PATTERNS', emptyFallback === DEFAUL
 const nonexistentFallback = loadPatterns('/nonexistent/path/.evcrateignore');
 assertTest('Nonexistent file falls back to DEFAULT_PATTERNS', nonexistentFallback === DEFAULT_PATTERNS);
 
+// === 7. Leading Slashes and Temp File Safety ===
+console.log('\n--- 7. Leading Slashes and Temp File Safety ---');
+assertTest('Leading backslash path does not throw RangeError', matchPath(standardMatcher, '\\Local\\Temp\\1790759856711-copilot-tool-output-674e060c7f0f45029339dc964f3ad433.txt').blocked === false);
+assertTest('Leading forward slash path does not throw RangeError', matchPath(standardMatcher, '/Local/Temp/1790759856711-copilot-tool-output-674e060c7f0f45029339dc964f3ad433.txt').blocked === false);
+assertTest('Windows absolute temp file path is allowed', matchPath(standardMatcher, 'C:\\Users\\f2s1\\AppData\\Local\\Temp\\1790759856711-copilot-tool-output-674e060c7f0f45029339dc964f3ad433.txt', 'C:\\Users\\f2s1\\my-project').blocked === false);
+assertTest('POSIX absolute temp file path is allowed', matchPath(standardMatcher, '/tmp/1790759856711-copilot-tool-output-674e060c7f0f45029339dc964f3ad433.txt', '/home/user/my-project').blocked === false);
+assertTest('Blocked relative path containing copilot-tool-output in name remains blocked', matchPath(standardMatcher, 'node_modules/copilot-tool-output.txt').blocked === true);
+assertTest('Blocked absolute path containing copilot-tool-output in name remains blocked', matchPath(standardMatcher, 'C:\\Users\\f2s1\\my-project\\node_modules\\copilot-tool-output.txt', 'C:\\Users\\f2s1\\my-project').blocked === true);
+assertTest('Blocked POSIX absolute path containing copilot-tool-output in name remains blocked', matchPath(standardMatcher, '/home/user/my-project/dist/copilot-tool-output.txt', '/home/user/my-project').blocked === true);
+
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

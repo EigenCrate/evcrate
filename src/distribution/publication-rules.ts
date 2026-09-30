@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path';
+import { dirname, join, posix } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { normalizeRelativePath } from '../filesystem/paths.js';
@@ -105,7 +105,9 @@ function rewriteCopilotCommand(command: string, destinationRoot: string, child: 
   const marker = `path.resolve(root,'.copilot','evcrate',${child})`;
   const assignment = 'const root=process.env.COPILOT_PROJECT_DIR||process.cwd();';
   if (countOccurrences(command, marker) !== 1 || countOccurrences(command, assignment) !== 1) fail();
-  return command.replace(assignment, `const root=${JSON.stringify(dirname(destinationRoot))};`);
+  const dir = posix.dirname(destinationRoot.replace(/\\/g, '/'));
+  const escaped = dir.replace(/'/g, "\\'");
+  return command.replace(assignment, `const root='${escaped}';`);
 }
 
 function rewriteCopilotHooks(content: Uint8Array, destinationRoot: string): Uint8Array {
