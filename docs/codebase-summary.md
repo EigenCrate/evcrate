@@ -4,7 +4,7 @@
 **Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,646 files, 9,101,875 tokens, and 34,273,896 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
 **Package:** Private npm package `evcrate` 2.4.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [system architecture](./system-architecture.md) for the runtime qualification boundary.
-**Workspace Advisor:** Phases 00–08 are implemented (9/10, 90%); Phase 07 Cycle 2 review approved 9.6/10 and Phase 08 review approved 9.8/10. Configuration policy and Evaluations disclosures are documented in the [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), and [UI design guidelines](./design-guidelines.md). Phase 08 navigation/package cutover is in the [phase record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md) and [review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md); Phase 09 paired qualification, user approval, rollout, and production deployment remain open.
+**Workspace Advisor:** Phases 00–09 are completed (10/10, 100%); Phase 08 review approved 9.8/10 and Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. See [Phase 09 qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md) and [architecture contract](../plans/260929-1346-advisor-workspace-panel/architecture-contract.md); production rollout and deployment remain subject to operator authorization.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -235,7 +235,7 @@ DamHopper `WorkspacePage` mounts one `WorkspaceAdvisorHost` outside shell-mode b
 Phase 06 completed the shared viewer's compact Overview/History composition and
 four hash-addressable tabs. The Cycle 2 review approved 10/10; final status
 records 55/55 tests (43 EVCrate viewer, 12 DamHopper browser) and clean TypeScript
-checks across both repositories. Phase 07 then added Configuration/Evaluations disclosures, bounded comparison, descriptor inspection, focus-safe detail, and candidate blinding. Workspace Phase 08 completed standalone navigation/package cutover; Phase 09 paired qualification and rollout remain open.
+checks across both repositories. Phase 07 then added Configuration/Evaluations disclosures, bounded comparison, descriptor inspection, focus-safe detail, and candidate blinding. Phase 08 completed standalone navigation/package cutover; Phase 09 subsequently qualified the paired candidate with 11/11 browser scenarios and four screenshots. Production rollout remains subject to operator authorization.
 
 - `HashTabs` preserves `#overview`, `#history`, `#configuration`, and `#evaluations`,
   with tab semantics, `aria-selected`, roving `tabIndex`, arrow/Home/End activation,
@@ -254,8 +254,7 @@ checks across both repositories. Phase 07 then added Configuration/Evaluations d
 See [`hash-view.ts`](../viewer/src/hash-view.ts), `viewer/src/components/`,
 `viewer/src/views/`, `viewer/src/styles.css`, and
 `tests/viewer/{hash-view,compact-activity-views}.test.mjs` for the implementation
-map. The review evidence does not claim the later paired Phase 09 rollout or
-production deployment.
+map. The Phase 06 review did not claim then-future Phase 09 paired qualification or production deployment. Phase 09 has since qualified the paired candidate; production deployment remains subject to explicit operator authorization.
 
 ## Configuration and Evaluations disclosures (Workspace Phase 07)
 
@@ -272,7 +271,7 @@ Source map: `viewer/src/views/{configuration-view,evaluations-view,evaluation-de
 
 ## Standalone navigation and package cutover (Workspace Advisor Phase 08)
 
-Phase 08 completed on 2026-09-30; the 9.8/10 review records 41/41 passing tests across EVCrate and DamHopper, package archive verification, and `cargo check`. DamHopper filters exact installation ID `evcrate.advisor` from standalone navigation and returns `PluginUnavailableState reason="not-visible"` on the retired route before host list/asset/frame preparation; generic plugin hosting remains. The regenerated EVCrate manifest uses `navigation: []` and `hostVersionRange: ">=0.7.0"`. Qualification server/client use `workspace_url`/`workspaceUrl` and launch through the Workspace Activity Bar; archive digests are in the [changelog](./project-changelog.md). Phase 09 paired qualification remains open.
+Phase 08 completed on 2026-09-30; the 9.8/10 review records 41/41 passing tests across EVCrate and DamHopper, package archive verification, and `cargo check`. DamHopper filters exact installation ID `evcrate.advisor` from standalone navigation and returns `PluginUnavailableState reason="not-visible"` on the retired route before host list/asset/frame preparation; generic plugin hosting remains. The regenerated EVCrate manifest uses `navigation: []` and `hostVersionRange: ">=0.7.0"`. Qualification server/client use `workspace_url`/`workspaceUrl` and launch through the Workspace Activity Bar; archive digests are in the [changelog](./project-changelog.md). Phase 09 paired qualification later passed 11/11 browser scenarios; production rollout remains subject to operator authorization.
 
 ## Historical packaging, CSP, preview, and release inventory (Advisor Metrics Explorer Phase 08)
 
@@ -550,6 +549,7 @@ syntax, not slash resource names.
 
 - [System architecture](./system-architecture.md) — central contracts.
 - [Project overview and PDR](./project-overview-pdr.md) — requirements.
+- [Workspace Advisor Product Requirements](./workspace-advisor-pdr.md) — detailed Phase 01–09 requirements and acceptance criteria.
 - [Code standards](./code-standards.md) — implementation rules.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
