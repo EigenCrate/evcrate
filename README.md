@@ -5,15 +5,6 @@ agent-harness source tree, builds verified projections for seven targets, and
 publishes managed output with ownership, hashing, locking, and recovery rules.
 It also ships one shared checkpoint advisor controller.
 
-**Package:** `2.1.0`  
-**Windows status:** Qualification is complete through Phase 10 (10/10 phases,
-100%; completed 2026-09-15). One immutable release candidate was proven on
-GitHub-hosted Windows Server 2025 (`windows-2025`) x64 across Windows PowerShell
-5.1/PowerShell 7 and Node.js 22.19.0/24.21.0 for the standalone installer
-lifecycle and `version --json`. Runtime/vendor qualification, production HOME
-publication, npm publication, deployment, and rollout remain separate gates.
-**Native Windows advisor status:** Host-aware caller invocation and the exact controller package closure are implemented; isolated `npm pack`/install plus isolated HOME publication was smoke-tested. This does not qualify Windows advisor runtime, and the separate standalone install/publication flow remains unverified. No production HOME was changed.
-
 ## Download and installation
 
 EVCrate provides registry-free unpack installers for Linux and Windows.
