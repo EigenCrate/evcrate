@@ -4,7 +4,18 @@
 
 **Updated:** 2026-09-30
 
-**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 8/10 phases complete (80%; Phase 07 DONE 2026-09-30; Cycle 2 review approved 9.6/10); Phases 08–09, paired end-to-end rollout, and production deployment remain unclaimed. No production HOME publication or Codex/Claude/Pi inference is claimed. Package version: `2.4.0`.
+**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 9/10 phases complete (90%; Phase 08 DONE 2026-09-30; review approved 9.8/10); Phase 09 paired qualification remains open. Explicit user approval, rollout, production deployment, and HOME publication are not claimed. No Codex/Claude/Pi inference is claimed. Package version: `2.4.0`.
+
+### 2026-09-30 — feat(advisor): cut over standalone navigation and regenerate package (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-30; 100%; review approved 9.8/10); Workspace plan 9/10 phases complete (90%). Phase 09 paired qualification remains open; explicit user approval, end-to-end rollout, and production deployment are not claimed.
+**Plan:** [Workspace-integrated Advisor](../plans/260929-1346-advisor-workspace-panel/plan.md) · [Phase 08](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md)
+**Review:** [Code review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md)
+
+- DamHopper filters only the exact installation ID `evcrate.advisor` from standalone navigation while preserving other plugins, including other `evcrate` publishers. Retired `/plugins/evcrate.advisor` returns `PluginUnavailableState reason="not-visible"` before metadata/list, asset, token, or frame preparation; generic `/plugins/:installationId` hosting remains.
+- Regenerated EVCrate manifest uses `navigation: []` and `hostVersionRange: '>=0.7.0'`. Deterministic package: SHA-256 `ccd515bff7ec038b2e87a0c5f01b3d14a0d0f56d6e05d0c6779218a2737ea3d9` (46 members); candidate: SHA-256 `f76ec1afd670912e7df86bb49c0149b98117582a890e4fd4333cd35c76f1a73b` (44 inventory entries plus `manifest.json`).
+- Qualification test server/client migrated `plugin_url`/`pluginUrl` to `workspace_url`/`workspaceUrl`; the client launches Advisor through the explicit Workspace Activity Bar launcher.
+- Review records **41/41 tests passing** across EVCrate and DamHopper; package archive verification and `cargo check` passed.
 
 ### 2026-09-30 — feat(advisor): complete Workspace-integrated Advisor Phase 07
 

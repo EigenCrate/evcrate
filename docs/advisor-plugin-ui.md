@@ -1,6 +1,6 @@
 # DamHopper Advisor Plugin — Embedded UI
 
-**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–07 are implemented through Configuration and Evaluations disclosures (Phase 07 Cycle 2 review 9.6/10); Phases 08–09, end-to-end rollout, and production deployment remain open.
+**Status:** Original embedded UI Phase E03 completed 2026-09-21 (review 9.2/10); all-project advisor history Phases 00–05 completed 2026-09-24 (6/6, 100%; paired release qualified). Workspace Advisor Phases 00–08 are implemented (9/10; Phase 08 navigation/package cutover review approved 9.8/10); Phase 09 paired qualification, rollout, and production deployment remain open.
 **Scope:** Provider-neutral React application, D00 UI bridge client, and opaque-origin package entry
 **Authority:** `viewer/src/providers/`, shared viewer state/views, `plugin/ui/`, and `plugin/manifest.json`
 **Related:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [Phase 04 all-project history plan](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md), [Phase 05 qualification](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md), [Workspace Advisor host contract](./workspace-advisor-host-contract.md), [system architecture](./system-architecture.md#9-damhopper-advisor-plugin-replacement)
@@ -9,6 +9,8 @@
 **Phase 05 placement evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-05-workspace-panel-placement.md) · [Cycle 2 review](../plans/reports/code-review-260929-2332-phase-05-cycle-2-workspace-panel-placements.md) · [Evidence handoff](../plans/reports/docs-manager-260929-2357-phase-05-persistent-workspace-placement.md). G5 directly asserts iframe DOM identity with a mocked `PluginHost`; internal FrameSession/snapshot continuity is not measured by that fixture.
 
 **Phase 07 disclosure evidence:** [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md) · [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md) · [UI design guidelines](./design-guidelines.md#accessible-component-specifications).
+
+**Phase 08 navigation/package evidence:** [Implementation record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md) · [Review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md) (9.8/10; 41/41 tests across EVCrate and DamHopper).
 
 ## Purpose and boundary
 
@@ -30,9 +32,9 @@ supplied by the DamHopper host through `DamHopperPortProvider`.
 
 At E03 completion, the architecture also included a local File System Access
 adapter (`StandalonePickerProvider`) for the standalone viewer. That picker/reader
-source was subsequently removed from this repository. The cutover is an implemented
-source change, not G4 acceptance: the required external Linux owner-runner and
-separate-LAN evidence/sign-off are not present in this workspace.
+source was subsequently removed. Workspace Advisor Phase 08 also completed the
+standalone navigation and direct-route cutover; joint G4 qualification/sign-off
+still requires external Linux owner-runner and separate-LAN evidence.
 
 ## Provider contract
 
@@ -178,25 +180,30 @@ evidence, not a current rebuild or release-asset verification.
 ```
 
 At the E03 package build, the candidate builder conditionally included
-`ui/index.html`, added the UI entrypoint/navigation to the generated manifest, and
-recorded size/SHA-256/mode in its 64-entry inventory. This is dated E03 package
-evidence only; it does not verify current release assets or G4.
+`ui/index.html`, added standalone UI navigation to the generated manifest, and
+recorded size/SHA-256/mode in its 64-entry inventory. This is historical E03 evidence.
+The current Phase 08 package retains the opaque-srcdoc UI entry but sets
+`navigation: []` and `hostVersionRange: ">=0.7.0"`. DamHopper launches Advisor in
+Workspace; the retired `/plugins/evcrate.advisor` route returns `not-visible` before
+plugin list, asset, token, or frame preparation. Generic plugin hosting remains.
 
 ## Security and acceptance boundary
 
-The focused bridge/state suites cover handshake, request/response, cancellation,
+Focused bridge/state suites cover handshake, request/response, cancellation,
 late-message suppression, context revocation, stale/detail transitions, and provider
-metadata. Four-view/package checks verify the self-contained document, manifest,
-navigation, and inventory. Security/accessibility checks reject external assets,
-`eval`/`Function`, fetch/WebSocket/XHR/EventSource, filesystem pickers, `<base>`, and
-external form actions. These are static/package checks; host sandbox, CSP, hash
-policy, authenticated byte delivery, and real LAN behavior remain D04/G2 gates.
+metadata. Package checks verify the self-contained document, manifest, inventory,
+and empty standalone-navigation contract. DamHopper tests confirm the retired Advisor
+route fails closed before plugin list/asset/frame preparation while generic routes
+remain. Security/accessibility checks reject external assets, `eval`/`Function`,
+network clients, filesystem pickers, `<base>`, and external form actions. These static
+and repository checks do not replace D04/G2 LAN host sandbox, CSP, or asset gates.
 
 E03 validation recorded on 2026-09-21: **68/68 tests passed** (23 focused UI tests,
 14 viewer browser/build tests, 22 worker tests, and 9 plugin contract tests); the
-review found zero critical blockers. These are historical repository/package checks,
-not G2/G4 qualification. G4 remains unverified, and standalone retirement is not
-release-authorized.
+review found zero critical blockers. This is historical repository/package evidence,
+not G2/G4 qualification. Phase 08 has implemented the standalone cutover; joint G4
+qualification/sign-off remains unverified, and source cutover does not authorize
+production release.
 Workspace Advisor Phase 04 review records **28/28 targeted tests**, strict
 TypeScript checking with zero errors, and a passing V-E3 call-count smoke. The
 smoke confirms view/scope/filter changes do not call `history.refresh`; see the
@@ -214,8 +221,9 @@ and [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-
 
 ## Unresolved questions
 
-- D04 must confirm host-enforced sandbox/CSP, authenticated inert byte delivery, and
-  navigation/direct-load behavior during joint G2 LAN acceptance.
+- D04 must confirm host-enforced sandbox/CSP and authenticated inert byte delivery;
+  joint G2 LAN acceptance must also confirm generic-plugin navigation/direct-load
+  behavior. The Advisor-specific retired route is deliberately fail-closed.
 - The external Linux owner-runner and separate-LAN evidence plus joint sign-off
-  required for G4 are not available in this workspace. The source cutover does not
-  establish G4 acceptance or authorize standalone retirement.
+  required for G4 are not available. The Phase 08 source/package cutover does not
+  establish joint G4 qualification or production release authorization.

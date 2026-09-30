@@ -11,8 +11,7 @@ Windows advisor invocation and its 36-file closure are implemented and isolated-
 smoked but unqualified; live provider, console-approval, and vendor qualification
 remain gated.
 
-**Plugin gate:** Standalone picker source is removed; joint G4 qualification/sign-off
-is unverified, and standalone retirement is not release-authorized.
+**Plugin gate:** E05 picker removal and Workspace Phase 08 standalone navigation/direct-route cutover are implemented; joint G4 qualification/sign-off remains unverified, and production release is not authorized.
 
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)

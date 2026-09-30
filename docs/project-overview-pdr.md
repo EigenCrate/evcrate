@@ -5,10 +5,12 @@ complete through Phase 09, Windows release qualification through Phase 10, and
 All-project advisor history through Phase 05 (6/6 phases, 100%; 2026-09-24).
 Native Windows advisor Phase 01 proved primitives (67/67 checks); readiness Repairs 01–04 are complete, but original Phase 03 host-invocation/packaging is in progress at 67% (4/6 checklist entries) and not DONE; Windows advisor runtime qualification remains open.
 Its paired release is qualified; see the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
-DamHopper Advisor Plugin Replacement is a separate milestone: Phases E00–E04
-are complete (E04/G3 qualified on 2026-09-22); E05 source cutover is applied,
-but joint G4 qualification/sign-off is unverified and standalone retirement is
-not release-authorized. Workspace Advisor Phases 00–07 are implemented (8/10, 80%); Phase 07 Cycle 2 review approved 9.6/10. Phases 08–09, paired end-to-end rollout, explicit user approval, and production deployment remain open.
+DamHopper Advisor Plugin Replacement remains a separate milestone: Phases E00–E04
+are complete (E04/G3 qualified on 2026-09-22), and the E05 picker removal is
+applied; joint G4 qualification/sign-off remains unverified. Workspace Advisor
+Phases 00–08 are implemented (9/10, 90%; Phase 08 review approved 9.8/10);
+Phase 09 paired qualification, explicit user approval, rollout, and production
+deployment remain open.
 **Updated:** 2026-09-30
 **Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
 
@@ -563,7 +565,7 @@ production-runtime qualification remain outside this phase.
 
 ### FR-26: History scope and unmapped-record preservation (Phase 02)
 
-**Status:** Completed and approved 2026-09-29 (review 9.6/10); Phase 03 is complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), Phase 04 under [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), Phase 05 under [FR-29](#fr-29-persistent-workspaceadvisorhost-placement-phase-05), Phase 06 under [FR-30](#fr-30-compact-activity-views-and-accessible-tabs-phase-06), Phase 07 under [FR-31](#fr-31-configuration-and-evaluations-disclosures-phase-07), and Phases 08–09 remain open.
+**Status:** Phase 02 completed and approved 2026-09-29 (review 9.6/10); Phases 03–07 are complete under [FR-27](#fr-27-negotiated-workspace-bridge-and-reusable-host-phase-03), [FR-28](#fr-28-workspace-advisor-viewer-scope-and-request-state-phase-04), [FR-29](#fr-29-persistent-workspaceadvisorhost-placement-phase-05), [FR-30](#fr-30-compact-activity-views-and-accessible-tabs-phase-06), and [FR-31](#fr-31-configuration-and-evaluations-disclosures-phase-07). Phase 08 is complete under [FR-32](#fr-32-standalone-navigation-and-package-cutover-phase-08); Phase 09 paired qualification remains open.
 
 **Requirement:** In `history-root` scope, All (`project_id: null`) includes structurally valid records with canonical project IDs even when Workspace registration or display-label metadata is absent. Project scope remains bound to its context and cannot widen. Policy/evaluation reads retain independent profile-bound sources and grants.
 
@@ -692,6 +694,23 @@ actions; they do not redefine the Workspace project or All History authority.
 **Evidence:** [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md) and [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md). The review reports 13/13 targeted tests, 100/100 related tests, clean TypeScript checking, and a clean UI build.
 
 **Boundary:** Phase 07 completes the EVCrate disclosure UI slice; it does not complete Phase 08 navigation/package cutover, Phase 09 paired qualification, explicit user approval, end-to-end rollout, or production deployment.
+
+### FR-32: Standalone navigation and package cutover (Phase 08)
+
+**Status:** Completed 2026-09-30; review approved 9.8/10; 41/41 tests passed across EVCrate and DamHopper.
+
+**Requirement:** Make `evcrate.advisor` available through Workspace placement only. Remove its standalone navigation and direct-route admission without changing generic plugin hosting or hiding other plugins.
+
+**Acceptance:**
+- DamHopper excludes only exact installation ID `evcrate.advisor` from standalone navigation and preserves other plugin IDs, including other `evcrate` publishers.
+- `/plugins/evcrate.advisor` returns `PluginUnavailableState reason="not-visible"` before metadata/list, asset, token, or frame preparation; generic `/plugins/:installationId` remains available.
+- The generated EVCrate manifest uses `navigation: []` and `hostVersionRange: '>=0.7.0'`, retaining the opaque-srcdoc UI entry and all eight read capabilities.
+- Qualification server/client use `workspace_url`/`workspaceUrl` and launch Advisor through the explicit Workspace Activity Bar launcher.
+- The deterministic package archive and candidate are regenerated; their SHA-256 identities are recorded in the [changelog](./project-changelog.md).
+
+**Evidence:** [Phase 08 record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md) and [review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md), which records the archive verification, `cargo check`, and 41/41 passing tests.
+
+**Boundary:** Phase 08 completes the source and package cutover; Phase 09 paired qualification, explicit approval, and production deployment remain separate.
 
 ## Non-functional requirements
 

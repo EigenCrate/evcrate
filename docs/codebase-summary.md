@@ -1,10 +1,10 @@
 # Codebase Summary
 
 **Generated:** 2026-09-30
-**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,646 files, 9,102,001 tokens, and 34,274,345 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
+**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,646 files, 9,101,875 tokens, and 34,273,896 characters; `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots. Repomix reported no suspicious files.
 **Package:** Private npm package `evcrate` 2.4.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`).
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27. Windows advisor readiness Repair Phases 01–04 completed 2026-09-28; Phase 04 verification passed, but production Windows runtime remains unqualified and readiness NO-GO. See the [system architecture](./system-architecture.md) for the runtime qualification boundary.
-**Workspace Advisor:** Phases 00–07 are implemented (8/10, 80%); Phase 07 Cycle 2 review approved 9.6/10. Configuration policy details and Evaluations inspection/comparison are documented against the current viewer in the [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), and [UI design guidelines](./design-guidelines.md). Phases 08–09, paired end-to-end rollout, explicit user approval, and production deployment remain open.
+**Workspace Advisor:** Phases 00–08 are implemented (9/10, 90%); Phase 07 Cycle 2 review approved 9.6/10 and Phase 08 review approved 9.8/10. Configuration policy and Evaluations disclosures are documented in the [Phase 07 record](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), and [UI design guidelines](./design-guidelines.md). Phase 08 navigation/package cutover is in the [phase record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md) and [review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md); Phase 09 paired qualification, user approval, rollout, and production deployment remain open.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -76,7 +76,7 @@ The committed schema-1 `.evcrate/registry.json` was regenerated with the new fil
 
 ## Advisor plugin and support boundaries
 
-The plugin worker and shared UI are documented separately in [advisor-plugin-worker.md](./advisor-plugin-worker.md) and [advisor-plugin-ui.md](./advisor-plugin-ui.md). The standalone picker/reader source was removed; joint G4 qualification/sign-off and standalone retirement are not established by source cutover alone. Cross-project history contracts are in [all-project-advisor-history.md](./all-project-advisor-history.md).
+The plugin worker and shared UI are documented separately in [advisor-plugin-worker.md](./advisor-plugin-worker.md) and [advisor-plugin-ui.md](./advisor-plugin-ui.md). The standalone picker/reader source was removed; Phase 08 also filtered the exact Advisor ID from standalone navigation and retired its direct route. Joint G4 qualification/sign-off remains unverified; source cutover alone does not establish release authorization. Cross-project history contracts are in [all-project-advisor-history.md](./all-project-advisor-history.md).
 
 Live advisor vendor qualification, HOME rollout, npm publication, deployment, and broader Windows runtime support remain separate operator/release gates. See the [system architecture](./system-architecture.md) for implementation contracts, the [PDR](./project-overview-pdr.md) for requirements, the [code standards](./code-standards.md) for normative rules, the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) for Phases 01–05 admission, identity, bridge, reusable host, and placement, the [roadmap](./project-roadmap.md) for current phase status, and the [changelog](./project-changelog.md) for dated evidence.
 
@@ -126,7 +126,7 @@ E00 completed with `evcrate-advisor-data` v1; Phase 01 froze v2 while retaining 
 - `scripts/build-advisor-plugin-candidate.mjs` reuses `collectPluginPackageRecords` from `scripts/plugin/package-inventory.cjs`; the candidate and package manifest now share one closure inventory.
 - Phase 03 review approved **9.5/10** and records **354/354 test executions passed** (0 failures, 0 skips); package, candidate-manifest, and distribution checks passed. See the [Phase 03 plan](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md) and [review](../plans/reports/code-review-260924-1628-phase-03-owner-safe-history-worker.md).
 - Phase 04 threads same-snapshot inventory through refresh/summary into app state; `project_id` drives server-filtered summary/page and Overview, while project switches reset rows/detail/cursor and fence late responses. Project-only scope stays locked.
-- History labels use validated inventory names with abbreviated canonical-ID fallback. Configuration labels current owner policy; Evaluations label their bound corpus; both disclaim History-project filtering. The provider label uses custom label/bootstrap plugin ID/generic fallback, never account or project identity. DamHopper `use-plugin-navigation.ts` and `PluginHostPage.tsx` brand only EVCrate metadata (`evcrate.advisor` or publisher `evcrate`).
+- History labels use validated inventory names with abbreviated canonical-ID fallback. Configuration labels current owner policy; Evaluations label their bound corpus; both disclaim History-project filtering. The provider label uses custom label/bootstrap plugin ID/generic fallback, never account or project identity. DamHopper filters exact ID `evcrate.advisor` from standalone navigation while preserving all other plugin IDs, including other `evcrate` publishers; its retired route returns `PluginUnavailableState reason="not-visible"` before plugin list, asset, or frame preparation.
 - Phase 05 preserves malformed or identity-mismatched outcomes as `invalid` rather than `missing`; the local framed-worker benchmark checks 10,000 discovered records, accepted/invalid accounting, and cancellation samples. Paired qualification, artifact digests, and release decision are recorded in the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
 
 ## Owner-safe plugin read provider (Phase E01)
@@ -235,7 +235,7 @@ DamHopper `WorkspacePage` mounts one `WorkspaceAdvisorHost` outside shell-mode b
 Phase 06 completed the shared viewer's compact Overview/History composition and
 four hash-addressable tabs. The Cycle 2 review approved 10/10; final status
 records 55/55 tests (43 EVCrate viewer, 12 DamHopper browser) and clean TypeScript
-checks across both repositories. Phase 07 then added Configuration/Evaluations disclosures, bounded comparison, descriptor inspection, focus-safe detail, and candidate blinding; Phases 08–09 and paired rollout remain open.
+checks across both repositories. Phase 07 then added Configuration/Evaluations disclosures, bounded comparison, descriptor inspection, focus-safe detail, and candidate blinding. Workspace Phase 08 completed standalone navigation/package cutover; Phase 09 paired qualification and rollout remain open.
 
 - `HashTabs` preserves `#overview`, `#history`, `#configuration`, and `#evaluations`,
   with tab semantics, `aria-selected`, roving `tabIndex`, arrow/Home/End activation,
@@ -270,7 +270,11 @@ Phase 07 adds inspectable, responsive policy/history presentations and lazy eval
 Source map: `viewer/src/views/{configuration-view,evaluations-view,evaluation-detail}.tsx`; `viewer/src/components/{policy-summary-card,route-group-card,evaluations-header,evaluation-descriptors-section,evaluation-descriptor-card,evaluation-group-card,comparable-groups-section,candidate-performance-table,score-provenance-card}.tsx`; `viewer/src/styles.css`; targeted contract `tests/viewer/phase-07-configuration-evaluations-ui.test.mjs`. See the [Phase 07 plan](../plans/260929-1346-advisor-workspace-panel/phase-07-bound-source-disclosures.md), [Cycle 2 review](../plans/reports/code-review-260930-0400-phase-07-cycle-2-disclosures.md), and [design guidelines](./design-guidelines.md#accessible-component-specifications).
 
 
-## Packaging, CSP, preview, and release inventory (historical Phase 08)
+## Standalone navigation and package cutover (Workspace Advisor Phase 08)
+
+Phase 08 completed on 2026-09-30; the 9.8/10 review records 41/41 passing tests across EVCrate and DamHopper, package archive verification, and `cargo check`. DamHopper filters exact installation ID `evcrate.advisor` from standalone navigation and returns `PluginUnavailableState reason="not-visible"` on the retired route before host list/asset/frame preparation; generic plugin hosting remains. The regenerated EVCrate manifest uses `navigation: []` and `hostVersionRange: ">=0.7.0"`. Qualification server/client use `workspace_url`/`workspaceUrl` and launch through the Workspace Activity Bar; archive digests are in the [changelog](./project-changelog.md). Phase 09 paired qualification remains open.
+
+## Historical packaging, CSP, preview, and release inventory (Advisor Metrics Explorer Phase 08)
 
 Phase 08 completed on 2026-09-19. At that milestone, the standalone viewer had a
 static-build, loopback-preview, and package boundary outside the advisor controller

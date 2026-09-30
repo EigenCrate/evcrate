@@ -102,7 +102,7 @@ function buildCanonicalManifest(inventory, packageJson) {
     id: 'evcrate.advisor',
     version,
     publisher: 'evcrate',
-    hostVersionRange: '>=0.4.0',
+    hostVersionRange: '>=0.7.0',
     contracts: {
       runnerProtocol: '^1.0.0',
       workerSdk: '^1.0.0',
@@ -131,13 +131,7 @@ function buildCanonicalManifest(inventory, packageJson) {
         mode: 'opaque-srcdoc'
       }
     },
-    navigation: [
-      {
-        id: 'evcrate.advisor.overview',
-        title: 'Advisor Metrics',
-        route: '/plugins/evcrate.advisor'
-      }
-    ],
+    navigation: [],
     inventory
   };
 }

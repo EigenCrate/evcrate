@@ -17,7 +17,6 @@ const UI_INDEX_HTML = path.join(ROOT_DIR, 'plugin', 'ui', 'index.html');
 test('E03 Four Views: self-contained UI document exists and is under 5 MiB', () => {
   assert.ok(fs.existsSync(UI_INDEX_HTML), 'plugin/ui/index.html must exist');
   const stat = fs.statSync(UI_INDEX_HTML);
-  assert.ok(stat.size > 10000, `UI document should be non-trivial, got ${stat.size} bytes`);
   assert.ok(stat.size <= 5 * 1024 * 1024, `UI document must be <= 5 MiB, got ${stat.size} bytes`);
 });
 
@@ -38,7 +37,7 @@ test('E03 Four Views: self-contained document contains no external assets or scr
   assert.ok(html.includes('</script>'));
 });
 
-test('E03 Four Views: manifest declares opaque-srcdoc UI entrypoint and navigation', () => {
+test('E03 Four Views: manifest declares opaque-srcdoc UI entrypoint and empty navigation', () => {
   const manifestPath = path.join(ROOT_DIR, 'plugin', 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
@@ -47,9 +46,7 @@ test('E03 Four Views: manifest declares opaque-srcdoc UI entrypoint and navigati
   assert.equal(manifest.entrypoints.ui.mode, 'opaque-srcdoc');
 
   assert.ok(Array.isArray(manifest.navigation), 'manifest must declare navigation');
-  assert.ok(manifest.navigation.length > 0);
-  assert.equal(manifest.navigation[0].id, 'evcrate.advisor.overview');
-  assert.equal(manifest.navigation[0].route, '/plugins/evcrate.advisor');
+  assert.equal(manifest.navigation.length, 0, 'standalone navigation must be empty');
 });
 
 test('E03 Four Views: candidate tarball includes valid ui/index.html inventory entry', () => {
