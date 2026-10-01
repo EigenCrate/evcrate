@@ -107,3 +107,5 @@ patches
 .pi-subagents
 /ext/
 /.omp
+WATCHDOG.yml
+WATCHDOG.yaml
