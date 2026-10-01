@@ -26,7 +26,7 @@ function inspectStat(targetPath) {
   try {
     return fs.lstatSync(targetPath, { bigint: true });
   } catch (err) {
-    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return null;
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR' || err.code === 'EACCES' || err.code === 'EPERM') return null;
     throw err;
   }
 }
