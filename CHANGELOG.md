@@ -1,3 +1,16 @@
+## [2.6.0](https://github.com/EigenCrate/evcrate/compare/v2.5.0...v2.6.0) (2026-10-01)
+
+
+### 🚀 Features
+
+* **advisor:** strengthen canonical mentor brief ([1919f99](https://github.com/EigenCrate/evcrate/commit/1919f99e850d99e89266a8e4c8924c297cfe3ef4))
+
+
+### 📚 Documentation
+
+* **readme:** remove informal Windows status notes from header ([c504611](https://github.com/EigenCrate/evcrate/commit/c5046114af5e18384f7edc1f5b06d60b1cb99f45))
+* synchronize documentation and README ([ac4303d](https://github.com/EigenCrate/evcrate/commit/ac4303d35a52bc22f6449b318ebe993a32a5d487))
+
 ## [2.5.0](https://github.com/EigenCrate/evcrate/compare/v2.4.0...v2.5.0) (2026-09-30)
 
 
