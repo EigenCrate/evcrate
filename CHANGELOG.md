@@ -1,3 +1,15 @@
+## [2.6.1](https://github.com/EigenCrate/evcrate/compare/v2.6.0...v2.6.1) (2026-10-01)
+
+
+### 🐞 Bug Fixes
+
+* **plugin:** gracefully handle EACCES and EPERM in inspectStat ([3b4e458](https://github.com/EigenCrate/evcrate/commit/3b4e458ff744183cfa6e1067b6f41f195b7e3f55))
+
+
+### 📚 Documentation
+
+* **advisor:** add root identity generation guide and host configuration ([dd802c6](https://github.com/EigenCrate/evcrate/commit/dd802c6ce58e914574a2f976b122733316e52930))
+
 ## [2.6.0](https://github.com/EigenCrate/evcrate/compare/v2.5.0...v2.6.0) (2026-10-01)
 
 
