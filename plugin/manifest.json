@@ -90,8 +90,8 @@
     },
     {
       "path": "backend/binding.cjs",
-      "size": 5661,
-      "sha256": "070b8305a227b3ef65e38e1518cce4b6843277a6ad670c22a7d26cc95b1d567d",
+      "size": 5710,
+      "sha256": "9e6ee145bf484897cf2cf3f092992a3e1c29deae6b05e6c4bc319a2868b0e16f",
       "mode": 420
     },
     {
@@ -294,8 +294,8 @@
     },
     {
       "path": "ui/index.html",
-      "size": 331264,
-      "sha256": "2111bae23c2f55bbf1344c062534062dd193477a987028333a65a61ec6bc1cd7",
+      "size": 331734,
+      "sha256": "bce8d06dcd50613ab8d52a2a095bb7397b9fe1bbe06a49d5985b34f9cc5bae90",
       "mode": 420
     }
   ]
