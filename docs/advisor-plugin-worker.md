@@ -101,6 +101,8 @@ Export, prune, policy write, model execution, arbitrary file access, exec, sourc
 - timestamps/idle deadline and provider instance.
 
 The target is checked by E01 binding rules before provider creation. The allowed operation list is copied and frozen. `policy.readCurrent` additionally requires the explicit account-policy flag. An operation slot is acquired before request admission and released in a `finally` path, so context capacity includes work waiting in the worker queue.
+When `scope.kind` is `'history-root'`, `WorkerContextTable` resolves the history root (`findHistoryRoot`), performs non-symlink ancestor canonicalization (`verifyTargetDirectory`), and strictly verifies that `verifiedTarget.historyIdentity` matches `scope.rootIdentity` (lowercase 64-char SHA-256). Mismatches fail closed with `SOURCE_NOT_CONFIGURED`, and missing paths throw `SOURCE_MISSING`. See the [All-Project Advisor History Contract](./all-project-advisor-history.md#root-identity-sha-256-generation-and-host-configuration-guide) for identity generation and host provisioning.
+
 
 Each invoke gets the current context and operation authorization. The dispatcher validates supplied activation, binding, and grant revisions against the context; a mismatch cancels context requests, revokes the context, and returns `CONTEXT_REVOKED`. E01 rechecks target directory invariants on every provider invoke and validates domain parameters/results. Host API/runner authorization remains required on every invoke; a context-open result is not a durable grant.
 
