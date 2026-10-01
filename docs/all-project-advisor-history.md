@@ -69,6 +69,100 @@ Revision-guarded source replacement clears the API source cache and invalidates 
 
 **Evidence:** [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md), and [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md).
 
+## Root Identity (SHA-256) generation and host configuration guide
+
+Root Identity authorises account-wide `history-root` scope for plugin access without leaking host filesystem paths across the sandboxed UI/worker boundary.
+
+### Root Identity vs. Project ID
+
+- **Root Identity (`rootIdentity`)**: SHA-256 digest of the canonical advisor history root directory path (`~/.evcrate/advisor-history`). Binds `OwnerHistorySource` on the DamHopper installation; authorises account-wide history reads across all projects.
+- **Project ID (`projectId`)**: SHA-256 digest of an individual project workspace path. Partitions consultation history on disk (`~/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>`) and indexes names in `project-metadata.json`.
+
+### Canonical requirements and invariants
+
+1. **Path normalization**: The history root must be an existing, absolute, canonical directory without symlink or ancestor symlink components (`fs::canonicalize(path) == path`).
+2. **Ownership safety**: On Unix, the directory must not be owned by `root` (UID 0).
+3. **Digest format**: Lowercase hexadecimal string of length exactly 64 (`/^[0-9a-f]{64}$/`).
+
+### How to generate Root Identity
+
+#### Bash / CLI
+```bash
+# Resolve canonical path (no symlinks, no dot segments)
+CANONICAL_ROOT=$(realpath -e "$HOME/.evcrate/advisor-history")
+
+# Generate 64-char lowercase SHA-256 hex digest
+ROOT_IDENTITY=$(printf '%s' "$CANONICAL_ROOT" | sha256sum | awk '{print $1}')
+
+echo "Path:     $CANONICAL_ROOT"
+echo "Identity: $ROOT_IDENTITY"
+```
+
+#### Rust (DamHopper host / runner)
+```rust
+use sha2::{Digest, Sha256};
+use std::path::Path;
+
+pub fn compute_root_identity(raw_path: &Path) -> Result<(String, String), std::io::Error> {
+    let canonical = raw_path.canonicalize()?;
+    let path_str = canonical.display().to_string();
+
+    let mut hasher = Sha256::new();
+    hasher.update(path_str.as_bytes());
+    let root_identity = hex::encode(hasher.finalize());
+
+    Ok((path_str, root_identity))
+}
+```
+
+#### Node.js / TypeScript (Tooling / worker)
+```typescript
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+
+export function computeRootIdentity(rawPath: string): { canonicalPath: string; rootIdentity: string } {
+  const canonicalPath = fs.realpathSync.native(rawPath);
+  const rootIdentity = createHash('sha256').update(canonicalPath, 'utf8').digest('hex');
+  return { canonicalPath, rootIdentity };
+}
+```
+
+### Provisioning in DamHopper
+
+DamHopper stores this configuration in `OwnerHistorySource`:
+- `rootPath`: Canonical absolute path (e.g. `/home/user/.evcrate/advisor-history`). Kept host-side; never sent to iframe/UI.
+- `rootIdentity`: 64-character lowercase SHA-256 digest.
+- `sourceRevision`: Positive integer (initially `1`).
+- `allAuthenticatedHistoryRead`: `true` to allow all authenticated accounts to access history-root.
+
+#### Method 1: DamHopper Admin REST API
+Update an existing plugin installation:
+```http
+PUT /api/plugins/admin/installations/evcrate.advisor/owner-history-source HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer <ADMIN_SESSION_TOKEN>
+
+{
+  "expectedSecurityRevision": 1,
+  "ownerHistorySource": {
+    "rootPath": "/home/user/.evcrate/advisor-history",
+    "rootIdentity": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8",
+    "sourceRevision": 1,
+    "allAuthenticatedHistoryRead": true
+  }
+}
+```
+Updating the source advances the host security revision, clears the API-level in-memory cache, and revokes active contexts immediately.
+
+#### Method 2: Staged installation approval
+Supply `OwnerHistorySource` during stage approval via `LifecycleCoordinator::approve_and_install_stage` in DamHopper server.
+
+### Verification and fail-closed runtime flow
+
+1. **Context Open (`api_service.rs`)**: DamHopper API checks authenticated session and installation capability, strips `rootPath`, and sends `ContextScopeDescriptor { kind: "history-root", rootIdentity, sourceRevision }` to the runner.
+2. **Runner Supervisor (`worker_supervisor.rs`)**: Verifies `root_path.canonicalize() == root_path`, non-symlink, non-UID-0, and checks `req.root_identity == owner_source.root_identity`.
+3. **Worker Admission (`context-table.cjs`, `binding.cjs`)**: Locates the history root (`findHistoryRoot`), computes `sha256(fs.realpathSync.native(dir))`, and verifies exact equality with `scopeDescriptor.rootIdentity`. Rejects with `SOURCE_NOT_CONFIGURED` if hashes mismatch.
+
 ## Owner-safe all-project history worker (Phase 03)
 
 The worker uses its configured history root for `history-root` scope; callers cannot supply a scan path. Root scans traverse sorted SHA-256 project IDs and non-symlink directories under shared project/task/consultation, record, and byte budgets, operating under the cross-platform trusted-files policy (filesystem UID gates removed). Cap exhaustion marks the snapshot incomplete. Project scope stays bound to its one target.
