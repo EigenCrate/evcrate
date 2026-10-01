@@ -34,15 +34,15 @@ body {
   min-height: 100vh;
 }
 
-/* Scrollbar decoration */
+/* Modern Floating Scrollbar */
 html, body, * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(51, 65, 85, 0.8) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -50,17 +50,19 @@ html, body, * {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.6);
+  background-color: rgba(148, 163, 184, 0.24);
+  border: 2px solid transparent;
   border-radius: 9999px;
-  transition: background-color 0.15s ease;
+  background-clip: padding-box;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.9);
+  background-color: rgba(148, 163, 184, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(148, 163, 184, 1);
+  background-color: rgba(148, 163, 184, 0.8);
 }
 
 ::-webkit-scrollbar-corner {
