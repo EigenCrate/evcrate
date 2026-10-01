@@ -32,8 +32,13 @@ and does not duplicate route or adapter selection.
 A final standalone `--advice` activates explicit review mentoring.
 Before assigning positional arguments, read
 `.copilot/evcrate/workflows/advisor-mentoring.md` and derive `WORK_ARGUMENTS` plus
-explicit/default advice mode. Apply its default stuck-escalation contract
-throughout this command.
+explicit/default advice mode. Apply the canonical `## Caller lifecycle binding`
+in `.copilot/evcrate/workflows/advisor-mentoring.md` and the shared default stuck-escalation
+contract throughout this command:
+- **Durable state ownership**: The parent command is the sole owner of the task-state lifecycle. Child subagents (`evcrate-project-manager`, `evcrate-ui-ux-designer`, `evcrate-tester`, `evcrate-debugger`, `evcrate-code-reviewer`, `evcrate-docs-manager`, `evcrate-git-manager`) report terminal artifacts, evidence, and actual changed paths; they never operate controller state or stage/commit behind the parent.
+- **Run identity & handoff**: If entering with an existing active run (from prior direction/decision/stuck run or router handoff), retain `task_run_id`, phase, root, current state revision, and prior counsel/disposition/outcome. Resume an already-active action without duplicating it: complete its authorized bounded work, execute actual declared validation, and record a truthful matching outcome advancing the baseline before the next review reservation. Before new authorized bounded writes, require `accept` with a registered correction action. For disputed counsel (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action, collect read-only evidence or an explicit resolution while preserving the captured baseline unchanged, and obtain fresh same-run counsel before mutation or a resolved outcome; never invent an action or outcome to reserve that consultation. Never initialize a new UUID to bypass stale evidence or correction counters.
+- **Fresh first review**: If no prior active advice run exists, do NOT initialize state at command start just to track implementation. Implementation (Step 2), actual validation (Step 3), reviewer output (Step 4), and planned finalization artifacts settle first (writer barrier). Build `baseline_paths` as the union of authorized writable paths and selected read-only `evidence.files`/artifacts (`authorized_paths` contains only writable paths). Call `state init` immediately before reservation in Step 4, with no intervening file edits or git status/index changes.
+- **Baseline stability**: Freeze all baseline paths (not only current citations) during reservation, inference, disposition, and from final outcome to completion.
 
 ## Arguments
 - $PLAN: first positional token from `WORK_ARGUMENTS` (specific or auto-detected plan; default: latest plan)
@@ -125,11 +130,13 @@ Mark Step 3 complete in `TodoWrite`, mark Step 4 in_progress.
 
 Call `evcrate-code-reviewer` subagent: "Review code changes in **Step 2** of plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
-In explicit advice mode, every terminal reviewer result must be followed by
-exactly one blocking `evcrate-advisor` call at `review:<workflow-step>` before logging,
-fixing, auto-approving, or escalating that review. Supply the bounded evidence,
-relevant prior counsel, and owner disposition from the shared mentoring contract.
-A missing, partial, interrupted, cancelled, or failed advisor result fails Step 4.
+**Advice gate & lifecycle placement:** In explicit advice mode:
+- **Cycle 1 reservation**: After reviewer terminal output arrives and before logging, fixing, auto-approving, or escalating:
+  - If a fresh review run: initialize task state immediately before reservation (`baseline_paths` = authorized writable paths UNION selected read-only `evidence.files`/artifacts, with read-only files omitted from `authorized_paths`).
+  - If an active run has a registered action, finish its bounded work, actual validation, and matching truthful outcome before reservation without duplicating the action. Disputed counsel without an active action uses read-only evidence/resolution and fresh same-run consultation before writes or a resolved correction outcome; do not invent an outcome to reserve that consultation.
+  - Enter the canonical checkpoint dispatcher exactly once at `review:step-4` for this review cycle. Supply bounded evidence, declared validation commands/output, relevant prior counsel, and owner disposition per `## Caller lifecycle binding`.
+  - Freeze all baseline paths during reservation, inference, and disposition.
+  - A dispatcher failure or non-`ADVICE_READY` result fails Step 4. Include advisor must-fix guidance in the findings.
 
 **Auto-Handling Logic (max 3 cycles):**
 
@@ -164,12 +171,18 @@ LOOP:
   13. ELSE IF review_must_fix AND review_cycles < 3:
      → Output: "⚙ Step 4: Evaluating [must_fix_count] must-fix items (cycle [review_cycles]/3)"
      → Executor evaluates each reviewer critical issue and advisor must-fix item.
-     → Record explicit executor disposition for each item (accept, reject-with-evidence, need-evidence, reconcile) with causal rationale.
-     → Only apply accepted corrections that are within authorized scope and preserve user baseline.
-     → Out-of-scope refactorings or unverified advice must NOT be auto-applied.
-     → Passing self-tests do not automatically override an evidence-backed reviewer/advisor concern.
-     → Re-run tester to verify no regressions
-     → GOTO LOOP
+     → Record causal executor decisions for individual findings; only accepted, authorized corrections may be applied.
+     → IF explicit advice mode AND counsel is disputed:
+       - Record reject-with-evidence, need-evidence, or reconcile without correction metadata.
+       - Collect read-only evidence or an explicit resolution, preserving captured state; obtain fresh same-run counsel before any corrective mutation or resolved correction outcome.
+       - GOTO LOOP within the review cap; do not register invented work or record a corrective outcome for this evidence-only branch.
+     → ELSE (accepted corrections, or DEFAULT mode):
+       - In explicit advice mode, record accept with one bounded action and declared validation command before writes; resume an already-active action rather than registering it twice.
+       - Apply only accepted corrections within authorized scope that preserve the user baseline. Never auto-apply out-of-scope refactorings or unverified guidance.
+       - Passing self-tests do not override an evidence-backed concern; re-run actual declared validation with tester.
+       - In explicit advice mode, record the matching truthful state outcome with actual changed paths and validation status before the next reservation.
+       - DEFAULT mode retains its correction/test/review loop without controller operations.
+       - GOTO LOOP
   14. ELSE IF review_must_fix AND review_cycles >= 3:
      → ESCALATE TO USER (review cap reached)
      → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
@@ -199,19 +212,35 @@ Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
 
 ## Step 5: Finalize
 
+- In explicit advice mode: follow the substantive finalization lifecycle in `## Caller lifecycle binding`. Planned docs, status, and onboarding paths are authorized writable paths. Parent records `state disposition` for finalization (registering the bounded action and declared validation command) BEFORE executing any finalization writes or Git index transitions. All substantive finalization changes (docs, status, summary reports, and auto-commit staging/commit) are executed under this registered action.
+- In default mode: preserve ordinary approved/validated completed status without durable controller dependencies or controller state operations.
+
 1. **STATUS UPDATE - BOTH MANDATORY - PARALLEL EXECUTION:**
-- **Call** `evcrate-project-manager` sub-agent: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
+- **Call** `evcrate-project-manager` sub-agent:
+  - In explicit advice mode: "Update plan status in [plan-path]. Record implementation and finalization settled, with durable completion pending. Do NOT mark phase as DONE prematurely. Update roadmap."
+  - In default mode: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
 - **Call** `evcrate-docs-manager` sub-agent: "Update docs for plan phase [phase-name]. Changed files: [list]."
 
-2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps.
+2. **ONBOARDING CHECK & SUBSTANTIVE REPORTS:** Detect onboarding requirements (API keys, env vars, config) + generate any substantive summary report or onboarding files with next steps before the final outcome (authorized in baseline manifest and registered under finalization disposition).
 - If this is the last phase: use `user input` tool to ask if user wants to set up onboarding requirements.
 
-3. **AUTO-COMMIT (after steps 1 and 2 completes):**
+3. **AUTO-COMMIT (after steps 1 and 2 complete):**
 - **Call** `evcrate-git-manager` subagent to handle git operation.
 - Run only if: Steps 1 and 2 successful + Tests passed
 - Auto-stage, commit with conventional commit message based on actual changes
+- In explicit advice mode: staging and commit transitions settle before recording the final outcome.
+- In default mode: preserve standard commit behavior without durable controller operations.
 
-**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met.
+4. **CONTROLLER OUTCOME & COMPLETION (Explicit Advice Mode):**
+- In explicit advice mode:
+  - Enforce writer barrier: all documentation/roadmap writes, substantive summary reports, onboarding configuration, and auto-commit staging/commit settle before recording final outcome.
+  - Run declared validation across all finalized deliverables.
+  - Parent records ONE truthful `state outcome` matching the registered finalization action, reporting actual changed paths and declared validation status. (A no-change outcome is valid ONLY if zero actual files were changed, declared validation passed, disposition was accept, and no must-fix/unresolved-question items remain).
+  - Parent executes `state complete` to seal the task run. The durable completion receipt is authoritative; only then is the phase durably DONE.
+  - After sealing, freeze all captured baseline paths: never mutate sealed evidence, documentation, reports, or index after completion, and never prescribe copying DONE into captured files after completion. Any post-completion administrative receipt must remain OUTSIDE the captured baseline snapshot, identify the approved snapshot, and not claim unreviewed edits.
+- In default mode: no controller state operations (`state disposition`, `state outcome`, `state complete`); phase is completed upon successful validation, and marked DONE with timestamp in Step 1.
+
+**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met. In explicit advice mode, `state complete` must succeed before phase completion.
 
 Mark Step 5 complete in `TodoWrite`.
 
@@ -221,11 +250,13 @@ If $ALL_PHASES is `No`, wait for user confirmation before proceeding to the next
 - Use `user input` tool to ask if user wants to proceed to the next phase: "**Phase workflow finished. Ready for next plan phase.**"
 
 ## Summary report
-If this is the last phase, generate a concise summary report.
-Use `user input` tool to ask these questions:
-- If user wants to preview the report with `/preview` slash command.
-- If user wants to archive the plan with `/evcrate-cmd-plan-archive` slash command.
-
+All substantive summary-report files must be produced before the final outcome (during Step 5 finalization, authorized in the baseline manifest).
+After sealing the task run via `state complete`, summary output is strictly read-only terminal output or an uncaptured administrative receipt outside the captured baseline snapshot identifying the sealed snapshot without claiming later unreviewed edits.
+If this is the last phase:
+- In explicit advice mode, offer only read-only viewing of the sealed report. Do not invoke `/evcrate-cmd-plan-archive` or any preview operation that writes captured files or changes selected Git state; the sealed snapshot remains unchanged.
+- In default mode, use `user input` tool to ask:
+  - If user wants to preview the report with `/preview` slash command.
+  - If user wants to archive the plan with `/evcrate-cmd-plan-archive` slash command.
 ---
 
 ## Critical Enforcement Rules
@@ -251,7 +282,9 @@ Use `user input` tool to ask these questions:
 
 **Blocking gates:**
 - Step 3: Tests must be 100% passing
-- Step 4: Critical issues must be 0
+- Step 4: Critical issues must be 0 (or user approved on escalation)
+- Step 5: Both `evcrate-project-manager` and `evcrate-docs-manager` must complete successfully; in explicit advice mode, `state complete` must succeed before phase completion
+
 
 **REMEMBER:**
 - Do not skip steps. Do not proceed if validation fails.

@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
+import { setupTestEnvironment, defaultPolicyV2 } from '../distribution/phase10-test-helpers.mjs';
 import {
   createProjectionBuildContext,
   createStagedRoot,
@@ -61,80 +60,281 @@ test('renderMentoringCapabilities rejects malformed or invalid inputs', () => {
   assert.throws(() => renderMentoringCapabilities(`${MENTORING_START}\n${CANONICAL_MENTORING}\n${MENTORING_END}\n${MENTORING_START}`, 'codex'), isInvalid);
 });
 
-test('all canonical consuming commands use evcrate-advisor-checkpoint/v2 dispatcher without legacy contradictions', () => {
-  const commands = [
-    'commands/code.md',
-    'commands/code/auto.md',
-    'commands/code/no-test.md',
-    'commands/code/parallel.md',
-    'commands/cook.md',
-    'commands/cook/auto.md',
-    'commands/cook/auto/fast.md',
-    'commands/cook/auto/parallel.md',
-    'commands/fix/hard.md',
-    'commands/fix/logs.md',
-    'commands/fix/parallel.md',
-    'commands/fix/test.md',
-    'commands/bootstrap.md',
-    'commands/bootstrap/auto.md',
-    'commands/bootstrap/auto/fast.md',
-    'commands/bootstrap/auto/parallel.md',
+test('caller lifecycle captures settled evidence, retains one run through finalization, and seals the delivered snapshot', (t) => {
+  const env = setupTestEnvironment('evcrate-phase8-caller-lifecycle-');
+  t.after(env.cleanup);
+  env.writePolicy(defaultPolicyV2());
+
+  for (const directory of ['src', 'contracts', 'reports', 'artifacts', 'scripts', 'docs']) {
+    mkdirSync(join(env.cwd, directory), { recursive: true });
+  }
+  const taskRunId = randomUUID();
+  const task = {
+    goal: 'Implement and review the advice-mode change',
+    non_goals: ['Modify the advisor controller'],
+    authorized_paths: ['src/answer.mjs', 'docs/final.md', 'reports/final-report.json'],
+    scope_rationale: 'Only implementation and planned final deliverables are writable.',
+    invariants: ['Keep cited contracts and validation artifacts read-only.', 'Retain the active run across reviews.'],
+    success_criteria: ['Node validation passes', 'Final selected outputs are recorded before completion']
+  };
+  const sourcePath = 'src/answer.mjs';
+  const sourceCommand = `node ${sourcePath}`;
+  const finalCommand = 'node scripts/verify-final.mjs';
+  const readOnlyPaths = [
+    'contracts/advice-contract.txt',
+    'review-terminal.md',
+    'scripts/verify-final.mjs',
+    'artifacts/node-validation.json'
   ];
 
-  for (const cmd of commands) {
-    const content = readFileSync(join(canonicalRoot, cmd), 'utf8');
-    assert.ok(
-      content.includes('Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block'),
-      `${cmd} missing canonical V2 dispatcher reference`
-    );
-    assert.ok(
-      !content.includes('evcrate-advisor-checkpoint/v1'),
-      `${cmd} still contains legacy v1 reference`
-    );
+  writeFileSync(join(env.cwd, sourcePath), "process.stdout.write('initial implementation\\n');\n");
+  writeFileSync(join(env.cwd, 'contracts/advice-contract.txt'), 'Only authorized paths may be changed.\\n');
+  writeFileSync(join(env.cwd, 'scripts/verify-final.mjs'), [
+    "import { readFileSync } from 'node:fs';",
+    "import { execFileSync } from 'node:child_process';",
+    "const expected = ['docs/final.md', 'reports/final-report.json', 'src/answer.mjs'];",
+    "const staged = execFileSync('git', ['diff', '--cached', '--name-only'], { encoding: 'utf8' }).trim().split('\\n').sort();",
+    "if (JSON.stringify(staged) !== JSON.stringify(expected)) throw new Error('selected staged paths differ');",
+    "if (readFileSync('docs/final.md', 'utf8') !== '# Final implementation\\n') throw new Error('final document differs');",
+    "const report = JSON.parse(readFileSync('reports/final-report.json', 'utf8'));",
+    "if (report.status !== 'finalization-settled' || report.controller_completion !== 'pending') throw new Error('report overstates completion');",
+    "process.stdout.write('final snapshot verified\\n');"
+  ].join('\n') + '\n');
+
+  function executeNode(args) {
+    const result = spawnSync(process.execPath, args, {
+      cwd: env.cwd, env: env.env, encoding: 'utf8', timeout: 10000
+    });
+    assert.equal(result.error, undefined);
+    return result;
   }
-});
-
-test('canonical advisor-mentoring.md examples pass runtime schema validation for all 10 blocks', async () => {
-  const { parseStateRequest } = await import('../../.evcrate/source/.evcrate/bin/lib/advisor/state-contract.cjs');
-  const { validateCheckpointV2 } = await import('../../.evcrate/source/.evcrate/bin/lib/advisor/contracts-v2.cjs');
-
-  const workflowContent = readFileSync(join(canonicalRoot, 'workflows/advisor-mentoring.md'), 'utf8');
-
-  // Robust extraction of all json documents, including heredoc bodies
-  const jsonBlocks = [];
-  const regex = /^[ \t]*```(?:json|bash)\r?\n([\s\S]*?)\r?\n[ \t]*```/gmu;
-  for (const match of workflowContent.matchAll(regex)) {
-    const raw = match[1].trim();
-    const jsonStart = raw.indexOf('{');
-    const jsonEnd = raw.lastIndexOf('}');
-    if (jsonStart >= 0 && jsonEnd > jsonStart) {
-      const jsonText = raw.slice(jsonStart, jsonEnd + 1);
-      try {
-        jsonBlocks.push(JSON.parse(jsonText));
-      } catch (e) {
-        assert.fail(`Failed to parse extracted JSON block: ${jsonText}\n${e.message}`);
-      }
-    }
+  function validation(suite, command, result) {
+    const passed = result.status === 0;
+    return {
+      suite, command, status: passed ? 'passed' : 'failed',
+      passed: passed ? 1 : 0, failed: passed ? 0 : 1,
+      details: passed ? result.stdout.trim() || null : (result.stderr || result.stdout).trim().slice(0, 4096) || 'validation failed'
+    };
   }
+  const hashText = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
+  const readEvidence = (path) => {
+    const content = readFileSync(join(env.cwd, path), 'utf8');
+    return { path, excerpt: content.trim(), digest: hashText(content) };
+  };
+  const makeCheckpoint = ({ taskRevision, evidenceRevision, checkpointId, name, kind = 'review', question, changedPaths, prior, validationResults }) => ({
+    protocol: 'evcrate-advisor-checkpoint', version: 2,
+    task_run_id: taskRunId, checkpoint_id: checkpointId, phase_id: 'advice-mode-lifecycle',
+    task_revision: taskRevision, evidence_revision: evidenceRevision,
+    checkpoint: name, kind, question, task,
+    proposal: {
+      next_action: 'Apply the bounded action selected from the advice.',
+      rationale: 'The proposal follows the supplied evidence and remains within authorized paths.',
+      intended_changed_paths: changedPaths
+    },
+    evidence: {
+      summary: 'Implementation and terminal validation evidence are settled before the review reservation.',
+      files: [sourcePath, 'review-terminal.md', 'contracts/advice-contract.txt', 'scripts/verify-final.mjs'].map(readEvidence),
+      validation_results: validationResults,
+      artifacts: [{
+        id: 'node-source-validation',
+        path: 'artifacts/node-validation.json',
+        digest: hashText(readFileSync(join(env.cwd, 'artifacts/node-validation.json'), 'utf8')),
+        description: 'Actual Node source command output recorded before capture.'
+      }]
+    },
+    prior
+  });
+  const stateRequest = (operation, expectedRevision, payload = {}) => ({
+    protocol: 'evcrate-advisor-state', version: 1, operation, task_run_id: taskRunId,
+    operation_id: operation === 'get' ? null : randomUUID(),
+    expected_revision: operation === 'get' ? null : expectedRevision,
+    payload
+  });
+  const callState = (operation, expectedRevision, payload = {}) => {
+    const result = env.invoke(['state', operation], stateRequest(operation, expectedRevision, payload));
+    assert.equal(result.status, 0, `${operation}: ${result.stdout} ${result.stderr}`);
+    return result.json;
+  };
 
-  assert.equal(jsonBlocks.length, 10, `Expected exactly 10 JSON examples, found ${jsonBlocks.length}`);
+  // Fresh caller: perform implementation validation and write its terminal report before capturing any paths.
+  const initialRun = executeNode([sourcePath]);
+  assert.equal(initialRun.status, 0, initialRun.stderr);
+  assert.equal(initialRun.stdout, 'initial implementation\n');
+  const initialValidation = validation('node-output', sourceCommand, initialRun);
+  writeFileSync(join(env.cwd, 'review-terminal.md'), `Terminal validation report\n${JSON.stringify(initialValidation)}\n`);
+  writeFileSync(join(env.cwd, 'artifacts/node-validation.json'), `${JSON.stringify({
+    command: sourceCommand, status: initialValidation.status, stdout: initialRun.stdout
+  })}\n`);
+  assert.equal(existsSync(join(env.cwd, 'review-terminal.md')), true);
+  assert.equal(existsSync(join(env.cwd, 'artifacts/node-validation.json')), true);
+  const baselinePaths = [...new Set([...task.authorized_paths, ...readOnlyPaths])].sort();
 
-  for (const doc of jsonBlocks) {
-    if (doc.protocol === 'evcrate-advisor-checkpoint') {
-      assert.doesNotThrow(() => validateCheckpointV2(doc));
-      assert.ok(Array.isArray(doc.evidence?.files) && doc.evidence.files.length > 0);
-      assert.ok(doc.evidence.files.every((f) => typeof f === 'object' && f !== null && f.path && f.excerpt && f.digest));
-    } else if (doc.protocol === 'evcrate-advisor-state') {
-      assert.doesNotThrow(() => parseStateRequest(doc, doc.operation));
-      if (doc.operation === 'checkpoint' && doc.payload?.checkpoint) {
-        assert.doesNotThrow(() => validateCheckpointV2(doc.payload.checkpoint));
-        assert.ok(Array.isArray(doc.payload.checkpoint.evidence?.files) && doc.payload.checkpoint.evidence.files.length > 0);
-        assert.ok(doc.payload.checkpoint.evidence.files.every((f) => typeof f === 'object' && f !== null && f.path && f.excerpt && f.digest));
-      }
-    } else {
-      assert.fail(`Unexpected protocol in extracted document: ${doc.protocol}`);
-    }
+  assert.equal(new Set(baselinePaths).size, baselinePaths.length);
+  assert.ok(task.authorized_paths.every((path) => baselinePaths.includes(path)));
+  assert.ok(readOnlyPaths.every((path) => baselinePaths.includes(path)));
+  const initialState = callState('init', 0, {
+    phase_id: 'advice-mode-lifecycle', task, baseline_paths: baselinePaths
+  }).state;
+  assert.equal(initialState.task_run_id, taskRunId);
+  assert.equal(initialState.task_revision, 1);
+  assert.deepEqual(initialState.initial_baseline.map(({ path }) => path), baselinePaths);
+  assert.ok(readOnlyPaths.every((path) => !initialState.scope.authorized_paths.includes(path)));
+  assert.ok(readOnlyPaths.every((path) => initialState.initial_baseline.find((record) => record.path === path)?.status === 'file'));
+  assert.equal(initialState.initial_baseline.find((record) => record.path === 'docs/final.md')?.status, 'missing');
+  assert.equal(initialState.initial_baseline.find((record) => record.path === 'reports/final-report.json')?.status, 'missing');
+
+  const firstCheckpoint = makeCheckpoint({
+    taskRevision: initialState.task_revision, evidenceRevision: initialState.evidence_revision,
+    checkpointId: 'initial-direction', name: 'direction:implementation', kind: 'direction',
+    question: 'Does the settled implementation need a bounded correction?',
+    changedPaths: [sourcePath],
+    prior: { prior_consultation_id: null, prior_counsel: null, prior_disposition: null, observed_outcome: null },
+    validationResults: [initialValidation]
+  });
+  const firstReservation = callState('checkpoint', initialState.task_revision, { checkpoint: firstCheckpoint });
+  const firstConsultationId = firstReservation.consultation_id;
+  assert.ok(firstConsultationId);
+  env.setFakeCodexState({
+    finalCount: 0, calls: [],
+    returnJson: JSON.stringify({
+      recommendation: 'Replace the initial output with the corrected implementation.',
+      rationale: 'The captured Node result identifies the bounded change.',
+      must_fix: ['Change the implementation output.'], cautions: [], assumptions: [],
+      success_checks: [sourceCommand], unresolved_questions: []
+    })
+  });
+  const firstAdvice = env.invoke([], firstCheckpoint);
+  assert.equal(firstAdvice.status, 0, `${firstAdvice.stdout} ${firstAdvice.stderr}`);
+  assert.equal(firstAdvice.json.status, 'ADVICE_READY');
+  const firstCounsel = firstAdvice.json.result;
+  let active = callState('get').state;
+  const firstDisposition = {
+    consultation_id: firstConsultationId, evidence_revision: active.evidence_revision,
+    action: 'accept', rationale: 'Apply the bounded implementation correction.',
+    correction: { action_id: randomUUID(), episode_id: 'implementation-output', validation_command: sourceCommand }
+  };
+  active = callState('disposition', active.task_revision, firstDisposition).state;
+
+  // Record disposition before changing the authorized implementation; validate the real Node output.
+  writeFileSync(join(env.cwd, sourcePath), "process.stdout.write('corrected implementation\\n');\n");
+  const correctedRun = executeNode([sourcePath]);
+  assert.equal(correctedRun.status, 0, correctedRun.stderr);
+  assert.equal(correctedRun.stdout, 'corrected implementation\n');
+  const correctedValidation = validation('node-output', sourceCommand, correctedRun);
+  const finalValidationPending = {
+    suite: 'final-snapshot', command: finalCommand, status: 'skipped', passed: 0, failed: 0,
+    details: 'Final documentation and report are pending before snapshot validation.'
+  };
+  const firstOutcome = {
+    consultation_id: firstConsultationId, action_id: firstDisposition.correction.action_id,
+    episode_id: firstDisposition.correction.episode_id, result: 'resolved',
+    validation: correctedValidation, actual_changed_paths: [sourcePath]
+  };
+  active = callState('outcome', active.task_revision, firstOutcome).state;
+  assert.equal(active.task_run_id, taskRunId);
+  assert.equal(active.phase_id, 'advice-mode-lifecycle');
+  assert.equal(active.evidence_revision, 1);
+  assert.equal(active.outcome.correction_number, 1);
+  assert.equal(active.correction_count, 0);
+  assert.ok(active.operation_ledger.some((entry) =>
+    entry.operation === 'outcome' && entry.consultation_id === firstConsultationId
+      && entry.action_id === firstDisposition.correction.action_id));
+  assert.equal(active.current_baseline.find((record) => record.path === sourcePath)?.digest, hashText(readFileSync(join(env.cwd, sourcePath), 'utf8')));
+
+  const firstDispositionRecord = JSON.stringify(firstDisposition);
+  const firstOutcomeRecord = JSON.stringify(firstOutcome);
+  const secondPrior = {
+    prior_consultation_id: firstConsultationId,
+    prior_counsel: JSON.stringify(firstCounsel),
+    prior_disposition: firstDispositionRecord,
+    observed_outcome: firstOutcomeRecord
+  };
+  const secondCheckpoint = makeCheckpoint({
+    taskRevision: active.task_revision, evidenceRevision: active.evidence_revision,
+    checkpointId: 'finalization-review', name: 'review:finalization',
+    question: 'Are the final documentation and report ready to be delivered?',
+    changedPaths: ['docs/final.md', 'reports/final-report.json', sourcePath],
+    prior: secondPrior, validationResults: [correctedValidation, finalValidationPending]
+  });
+  const secondReservation = callState('checkpoint', active.task_revision, { checkpoint: secondCheckpoint });
+  const secondConsultationId = secondReservation.consultation_id;
+  assert.notEqual(secondConsultationId, firstConsultationId);
+  assert.equal(secondCheckpoint.task_run_id, firstCheckpoint.task_run_id);
+  assert.equal(secondCheckpoint.phase_id, firstCheckpoint.phase_id);
+  assert.equal(secondCheckpoint.task_revision, active.task_revision);
+  assert.deepEqual(secondCheckpoint.prior, {
+    prior_consultation_id: firstConsultationId,
+    prior_counsel: JSON.stringify(firstCounsel),
+    prior_disposition: firstDispositionRecord,
+    observed_outcome: firstOutcomeRecord
+  });
+  const providerState = JSON.parse(readFileSync(join(env.home, '.evcrate/fake-codex-state.json'), 'utf8'));
+  env.setFakeCodexState({
+    ...providerState,
+    returnJson: JSON.stringify({
+      recommendation: 'Create and stage the final documentation and report before recording the final outcome.',
+      rationale: 'The active run retains its prior advice and corrected implementation baseline.',
+      must_fix: ['Deliver the planned documentation and final report.'], cautions: [], assumptions: [],
+      success_checks: [finalCommand], unresolved_questions: []
+    })
+  });
+  const secondAdvice = env.invoke([], secondCheckpoint);
+  assert.equal(secondAdvice.status, 0, `${secondAdvice.stdout} ${secondAdvice.stderr}`);
+  assert.equal(secondAdvice.json.status, 'ADVICE_READY');
+  active = callState('get').state;
+  assert.equal(active.task_run_id, taskRunId);
+  assert.equal(active.project_id, initialState.project_id);
+  assert.equal(active.phase_id, initialState.phase_id);
+  assert.equal(active.last_consultation_id, secondConsultationId);
+  const secondDisposition = {
+    consultation_id: secondConsultationId, evidence_revision: active.evidence_revision,
+    action: 'accept', rationale: 'Create and validate the planned final outputs.',
+    correction: { action_id: randomUUID(), episode_id: 'final-deliverables', validation_command: finalCommand }
+  };
+  active = callState('disposition', active.task_revision, secondDisposition).state;
+
+  // Final documentation, report, and their selected index identities settle before outcome/completion.
+  const finalDocument = '# Final implementation\n';
+  const finalReport = `${JSON.stringify({
+    status: 'finalization-settled', controller_completion: 'pending',
+    source_output: correctedRun.stdout.trim()
+  })}\n`;
+  writeFileSync(join(env.cwd, 'docs/final.md'), finalDocument);
+  writeFileSync(join(env.cwd, 'reports/final-report.json'), finalReport);
+  const stage = spawnSync('git', ['add', '--', sourcePath, 'docs/final.md', 'reports/final-report.json'], {
+    cwd: env.cwd, env: env.env, encoding: 'utf8'
+  });
+  assert.equal(stage.status, 0, stage.stderr);
+  const finalRun = executeNode(['scripts/verify-final.mjs']);
+  assert.equal(finalRun.status, 0, finalRun.stderr);
+  assert.equal(finalRun.stdout, 'final snapshot verified\n');
+  const finalValidation = validation('final-snapshot', finalCommand, finalRun);
+  const finalOutcome = {
+    consultation_id: secondConsultationId, action_id: secondDisposition.correction.action_id,
+    episode_id: secondDisposition.correction.episode_id, result: 'resolved',
+    validation: finalValidation,
+    actual_changed_paths: ['docs/final.md', 'reports/final-report.json', sourcePath]
+  };
+  active = callState('outcome', active.task_revision, finalOutcome).state;
+  assert.equal(active.evidence_revision, 2);
+  assert.deepEqual(active.outcome.actual_changed_paths, finalOutcome.actual_changed_paths);
+  const initialGitIdentity = new Map(initialState.initial_baseline.map((record) => [record.path, record.git]));
+  for (const path of finalOutcome.actual_changed_paths) {
+    const record = active.current_baseline.find((item) => item.path === path);
+    assert.equal(record?.status, 'file');
+    assert.ok(record?.git?.identity, `${path} must have its selected index identity captured`);
+    assert.notDeepEqual(record.git, initialGitIdentity.get(path), `${path} selected Git identity must advance`);
+    assert.notEqual(record?.git?.status, '  ', `${path} index transition must be in the final baseline`);
   }
+  assert.equal(active.current_baseline.find((record) => record.path === 'docs/final.md')?.digest, hashText(finalDocument));
+  assert.equal(active.current_baseline.find((record) => record.path === 'reports/final-report.json')?.digest, hashText(finalReport));
+
+  const deliveredReport = readFileSync(join(env.cwd, 'reports/final-report.json'), 'utf8');
+  const complete = callState('complete', active.task_revision);
+  assert.equal(complete.state.gate_status, 'completed');
+  assert.equal(complete.state.task_run_id, taskRunId);
+  assert.equal(complete.state.last_consultation_id, secondConsultationId);
+  assert.equal(readFileSync(join(env.cwd, 'reports/final-report.json'), 'utf8'), deliveredReport);
 });
 
 test('state CLI executes real lifecycle Path A (bounded correction) with exact transitions 1 -> 2 -> 4 -> 5 -> 6 -> completed', (t) => {

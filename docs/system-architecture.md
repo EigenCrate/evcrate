@@ -5,7 +5,7 @@
 **DamHopper Advisor Plugin:** E00–E04 package work is complete (E04/G3 qualified 2026-09-22); E05 removed the standalone picker. Workspace Advisor Phases 00–09 are completed (10/10, 100%; Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, 13/13 DamHopper browser tests); production rollout and deployment remain subject to operator authorization.
 **Windows support:** The qualified Windows release boundary remains standalone installer lifecycle and clean-install `version --json`; native advisor evidence does not establish broad Windows runtime parity.
 **Native Windows advisor:** Phases 01–04 complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Readiness Repairs 01–04 are also complete; general Linux qualification passed 400/400. Production rollout remains operator-gated.
-**Updated:** 2026-09-30
+**Updated:** 2026-10-01
 
 **Authority:** TypeScript control plane, canonical advisor controller, and paired DamHopper Advisor contracts linked below
 
@@ -535,8 +535,16 @@ retaining platform branches and schemas. Advisor filesystem UID/SID/DACL/mode
 restrictions were removed; the prior Phase 03/04 follow-up requiring path-threaded
 Windows ownership verification is superseded. Unknown process identity remains
 preserved for inspection. Optional rich audit is not required state authority.
-V1 callers remain outside this v2 state path until the Phase 08 canonical workflow
-cutover; no universal mediated-write enforcement is claimed.
+Legacy v1 callers remain outside this v2 durable state path; canonical advice-mode callers use it. This caller-side binding does not change controller API, freshness checks, or routing policy, and claims no universal mediated-write enforcement.
+#### Canonical caller lifecycle
+
+[Caller lifecycle binding](../.evcrate/source/.claude/workflows/advisor-mentoring.md#caller-lifecycle-binding) is the single caller-side authority for explicit advice mode and named checkpoints.
+- **Fresh first review:** Settle implementation, actual declared validation, terminal reviewer output, selected documentation/artifacts, and all relevant writers before the writer barrier; the parent initializes once immediately before the first checkpoint reservation.
+- **Active run/handoff:** Preserve advice mode, `task_run_id`, phase/project root, revisions, prior context, and correction accounting; the parent alone owns state. Accepted registered work must finish actual validation and its matching outcome before the next checkpoint, without duplicating an existing action. Disputed counsel without active work uses a supported disposition, read-only evidence/resolution, and fresh same-run counsel before corrective writes or a resolved outcome; never invent work/outcomes or replace the run to refresh evidence.
+- **Baseline and freeze:** Capture `task.authorized_paths ∪ evidence.files[*].path ∪ evidence.artifacts[*].path`; only `authorized_paths` grants write authority. Keep read-only evidence in the baseline, and freeze the full manifest plus selected Git index/status identity from evidence/baseline capture through reservation, inference, and disposition, and from final outcome through completion.
+- **Finalization:** Whole-phase scope includes planned documentation, reports, status, and selected Git index transitions. Authorize each in advance, record disposition, perform bounded changes, run declared validation, then record a truthful outcome with actual paths before `complete`; never mutate captured evidence after the final outcome or seal.
+- **No-change:** Require no file or selected index/status changes, passed declared validation, `accept`, and no `must_fix` items or unresolved questions. Cautions and assumptions alone require no invented edits. Only the durable completion receipt authorizes `DONE`.
+- **Separate limits and recovery:** The three reviewer/advisor-cycle cap is distinct from `correction_count`, which tracks unsuccessful completed correction/validation attempts and reaches `needs_human` at three. A stale init-only run still requires authentic operator abandonment through the human gate; this separate path was not exercised by the fixture smoke.
 
 ### 5.4 Current v1 compatibility and v2 bounded transaction envelopes
 
@@ -603,13 +611,10 @@ child termination.
 
 ## 6. Advisor supervision and command projections
 
-A final standalone `--advice` token requests explicit checkpoint counsel for the
-bootstrap, code, cook, and fix workflows. It is case-sensitive, whitespace-delimited,
-standalone, final (trailing whitespace allowed), and duplicate flags reject. Quoted,
-embedded, suffixed, differently-cased, or non-final forms remain ordinary task text.
-The workflow preserves one final `--advice` token through <code>WORK_ARGUMENTS</code> handoffs,
-or no mode token in default mode; it never recreates `@advisor`. Only an outer
-<code>ADVICE_READY</code> envelope completes the gate.
+A final standalone `--advice` enables explicit checkpoint mentoring for bootstrap, code, cook, and fix. Parsing is case-sensitive and whitespace-delimited: only a final token activates; duplicate tokens reject.
+Quoted, embedded, suffixed, differently-cased, or non-final forms remain work text. See the [canonical argument-mode and caller lifecycle](../.evcrate/source/.claude/workflows/advisor-mentoring.md#argument-mode).
+Handoffs preserve explicit mode, `WORK_ARGUMENTS`, and active run identity/context; default mode carries no token, and `@advisor` is never recreated.
+An outer <code>ADVICE_READY</code> envelope satisfies the inference step only; disposition, required work and validation, outcome, and successful `state complete` remain mandatory before `DONE`.
 
 The inline advice workflow is a separate main-session feature. It interviews the
 user and writes its own report; it does not use checkpoint routing policy or act as

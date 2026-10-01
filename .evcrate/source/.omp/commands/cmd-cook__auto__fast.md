@@ -15,12 +15,23 @@ and does not duplicate route or adapter selection.
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/cmd-code`.
-Before scouting, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and derive
-`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
-task input and apply the shared default stuck-escalation contract.
-For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
-`--advice` in explicit mode and otherwise pass no `--advice` token.
+Before scouting, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` (specifically
+`## Argument mode` and `## Caller lifecycle binding`) and derive `WORK_ARGUMENTS`
+plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the task input and
+apply the shared default stuck-escalation contract.
 
+If an active advisor run context is already present from an earlier named
+checkpoint (such as a direction, decision, or stuck checkpoint in this session),
+retain its identity and context: `task_run_id`, active phase, project root,
+current state revision, prior consultation, counsel, disposition, and outcome.
+Pass that same active run context forward to `/cmd-code`. Never initialize a new
+UUID or create redundant consultations. If no prior advice checkpoint exists,
+`/cmd-cook__auto__fast` remains stateless: never initialize state at command start
+just to track scout or fast preflight.
+
+For every fallback handoff, pass `WORK_ARGUMENTS`, preserve any active run
+context, append exactly one trailing `--advice` in explicit mode, and otherwise
+pass no `--advice` token.
 ---
 
 ## Role Responsibilities
@@ -41,9 +52,9 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 ## Workflow
 
 - **Scout**: Use `scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
-- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cmd-cook` with `WORK_ARGUMENTS` and the same explicit advice mode.
+- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cmd-cook` with `WORK_ARGUMENTS`, preserving any active run context and the same explicit advice mode.
 - **Plan**: Trigger slash command `/cmd-plan__fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight.
-- **Implementation**: Trigger slash command `/cmd-code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none.
-- **Fallback handoff**: If `/cmd-code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cmd-cook` or `/cmd-fix__hard` using `WORK_ARGUMENTS`; append exactly one trailing `--advice` in explicit mode and otherwise pass no `--advice` token.
+- **Implementation**: Trigger slash command `/cmd-code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none. Pass any active run context forward. `/cmd-code` is the sole durable-state owner and enforces the full lifecycle per `## Caller lifecycle binding`. Root `/cmd-cook__auto__fast` delegates ownership to `/cmd-code`; do not mutate captured plan, report, or doc files after `/cmd-code` seals the run, and do not duplicate substantive finalization.
+- **Fallback handoff**: If `/cmd-code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cmd-cook` or `/cmd-fix__hard` using `WORK_ARGUMENTS`, preserving any active run context; append exactly one trailing `--advice` in explicit mode and otherwise pass no `--advice` token. Preserve scoped approval and commit behavior (no actual commit now).
 
 **OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

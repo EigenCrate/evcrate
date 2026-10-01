@@ -13,12 +13,32 @@ and does not duplicate route or adapter selection.
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before planning, read `{{evcrate:workflows/advisor-mentoring.md}}` and derive
-`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
-tasks input and apply the shared default stuck-escalation contract.
-For every fallback handoff, pass `WORK_ARGUMENTS`; append exactly one trailing
-`--advice` in explicit mode and otherwise pass no `--advice` token.
+Before planning, read `{{evcrate:workflows/advisor-mentoring.md}}` (specifically
+`## Argument mode` and `## Caller lifecycle binding`) and derive `WORK_ARGUMENTS`
+plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the tasks input.
+Apply the shared default stuck-escalation contract.
 
+If an active advisor run context is already present from an earlier named
+checkpoint (such as a direction, decision, or stuck checkpoint in this session),
+retain its identity and context: `task_run_id`, active phase, project root,
+current state revision, prior consultation, counsel, disposition, and outcome.
+Never initialize a new UUID or create redundant consultations. If entering with an
+active run, inspect active counsel and action before first mutating instructions:
+resume an already-registered action without duplicating it; otherwise require
+current `accept` with registered correction (`action_id`, `episode_id`,
+`validation_command`) within `task.authorized_paths` before writers touch files.
+For disputed guidance without an active action (`reject-with-evidence`,
+`need-evidence`, `reconcile`), collect read-only evidence or an explicit
+resolution while keeping the baseline unchanged, and obtain fresh same-run
+counsel before corrective mutation or a resolved correction outcome (never force
+an invented action or outcome prerequisite). Finish registered work and declared
+validation/truthful outcome before the next reservation. If no prior advice
+checkpoint exists, this command remains stateless until implementation,
+validation, and reviewer evidence settle: never initialize state at command start
+just to track planning or early implementation.
+For every fallback handoff, pass `WORK_ARGUMENTS`, preserve any active run
+context, append exactly one trailing `--advice` in explicit mode, and otherwise
+pass no `--advice` token.
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
 ## Positioning
@@ -44,6 +64,9 @@ Use this only when work can be split into independent phases with clear dependen
 - Do not proceed if any parallel phase has overlapping file ownership
 
 ### 3. Parallel Implementation
+- Parent orchestrator is the sole durable-state owner. Child agents never operate
+  controller state or stage files behind the parent; they return terminal
+  artifacts and actual changed paths.
 - Read `plan.md` for dependency graph
 - Launch multiple `fullstack-developer` agents in PARALLEL for concurrent phases
   - Example: "Phases 1-3 parallel" → launch 3 agents simultaneously
@@ -51,31 +74,102 @@ Use this only when work can be split into independent phases with clear dependen
   - Include environment info
 - Wait for all parallel phases complete before dependent phases
 - Sequential phases: launch one agent at a time
+- Writer barrier: wait for all parallel agents to complete and settle their file
+  edits and terminal artifacts before validation and review capture.
 
 ### 4. Testing
 - Use `tester` subagent for full test suite
 - NO fake data/mocks/cheats
-- If fail: use `debugger`, fix, repeat
+- Must pass actual declared validation. If fail: use `debugger`, fix, repeat
+  until 100% passing.
 
-### 5. Code Review
-- Use `code-reviewer` for all changes
-- In explicit advice mode, after every terminal reviewer result and before any
-  fix or approval, enter the canonical checkpoint dispatcher exactly once at
-  `review:<workflow-step>` with the bounded evidence required by the shared
-  mentoring contract. Dispatcher failure leaves the review gate incomplete.
+### 5. Code Review & Advice Gate ⏸ BLOCKING GATE
+- Use `code-reviewer` for all changes; wait for terminal reviewer report.
+- Settle reviewer report and terminal artifacts before checkpoint reservation.
+- In explicit advice mode, after reviewer terminal result and before fixing
+  issues or requesting approval, enter the canonical checkpoint dispatcher
+  following `## Caller lifecycle binding` in `{{evcrate:workflows/advisor-mentoring.md}}`:
+  - **Fresh first review with no active run**:
+    - Implementation, actual validation, reviewer report, and selected artifacts
+      settle first.
+    - Enforce the writer barrier: all file writes and terminal artifacts must
+      settle before initialization.
+    - Set `baseline_paths = authorized writable paths UNION selected evidence.files/artifacts`
+      (read-only references are captured for freshness verification without
+      granting write authority).
+    - Call `init` immediately before reservation, with no intervening captured
+      path or git index mutations.
+    - Reserve checkpoint at `review:parallel-implementation` with bounded evidence.
+  - **Existing active direction/decision/stuck run (repeat review cycle)**:
+    - Retain `task_run_id`, active phase, project root, current state revision,
+      and prior consultation/counsel/disposition/outcome.
+    - Inspect active counsel and action:
+      * If prior counsel was accepted with registered work (or resuming an existing active action): execute authorized bounded work within authorized scope, run actual declared validation (`tester`), and record a truthful matching `state outcome` (with `actual_changed_paths` and validation status) advancing the baseline BEFORE the review reservation.
+      * If prior counsel was disputed (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action: collect read-only evidence or an explicit resolution while keeping captured baseline paths unchanged; do NOT fabricate an action, corrective writes, or baseline-advancing outcome. Reserve the review checkpoint under the same run with fresh evidence/resolution to obtain fresh counsel before any corrective mutations or resolved outcome.
+      * Do not duplicate an existing active action or consultation if already registered; finish authorized work once.
+    - Never initialize a new UUID to bypass stale evidence or counters.
+    - Reserve review checkpoint under the same run using actual returned revisions and pass the exact reserved checkpoint JSON to inference.
+- Wait for terminal `ADVICE_READY`. Any `FAILED` envelope, nonzero exit, timeout,
+  or malformed JSON leaves the review gate incomplete.
 - Review/advisor cycle cap: at most three terminal reviewer/advisor cycles. At
   the cap, stop without another reviewer/advisor call or cycle reset and ask the
   user if issues remain.
-- If critical issues: fix, retest, rerun review
+- Fix cycles:
+  - For bounded corrections (critical review issues or accepted counsel): record
+    canonical owner disposition `accept`, perform bounded fixes within authorized scope,
+    re-run `tester`, record truthful outcome with actual changed paths advancing baseline,
+    and re-enter review checkpoint under same run.
+  - For disputed guidance: record supported canonical disposition `reject-with-evidence`
+    (record causal rationale and evidence), `need-evidence` (missing facts identified; collect
+    evidence and re-consult), or `reconcile` (resolve contradictory findings or boundary
+    mismatches), following the existing followup lifecycle (fresh consultation before a
+    resolved outcome can complete the gate). Never use unsupported dispositions (such as
+    `modify`) or schema extensions.
+  - No-change outcome: requires no actual changed paths, passed declared validation,
+    `accept` disposition, and NO `must_fix` or `unresolved_questions`. Cautions and
+    assumptions alone do not require invented edits.
 
-### 6. Project Management & Docs
-- If approved: use `project-manager` + `docs-manager` in parallel
-- Update plan files, docs, roadmap
-- If rejected: fix and repeat
-
+### 6. Project Management, Documentation & Substantive Finalization
+- Whole-phase substantive finalization: planned doc/report/status writes (e.g.
+  plan files, docs, roadmap), phase-owned configuration/onboarding, and selected
+  Git transitions are part of the substantive phase deliverable.
+- Approval/rejection gate: User approval or rejection must occur before finalization outcome and sealing:
+  - If rejected or critical issues remain: fix and repeat under the active run before recording final outcome or sealing.
+  - If approved: proceed with whole-phase substantive finalization.
+- Parent is the implementation owner and owns all durable state operations:
+  - In explicit advice mode: parent records `state disposition` for finalization
+    (`action: "accept"` with canonical `correction: { action_id, episode_id, validation_command }`)
+    before executing finalization writes or Git transitions.
+  - Use `project-manager` + `docs-manager` in parallel to update plan files, docs, and roadmap.
+  - Settle all planned updates, phase-owned configuration/onboarding, and terminal
+    artifacts before recording the final outcome.
+  - Parallel commit (Explicit Advice Mode): clarify commit preference and execute
+    selected Git decisions/transitions via `git-manager` BEFORE final validation,
+    outcome, and completion. Staging and commit transitions must settle before
+    recording the outcome.
+  - Run declared validation (`tester`) after all finalization changes and Git transitions.
+  - Parent records the final truthful `state outcome` reporting actual changed paths
+    (including any git index/status updates) and passed validation, advancing the baseline.
+  - Call `complete` to seal the durable run. The durable controller completion
+    receipt is authoritative; only then is the phase durably DONE.
+  - Do not mark durable phase DONE prematurely or mutate captured evidence after
+    complete. Do NOT prescribe copying DONE into captured files after sealing.
+  - After `complete` seals the run, there is NO rejected-fix path: approval/rejection
+    occurred before seal; afterwards emit only a readonly receipt strictly outside
+    the captured baseline snapshot that identifies the approved snapshot without
+    claiming unreviewed edits.
 ### 7. Final Report
 - Summary of all parallel phases
 - Guide to get started
-- Ask to commit (use `git-manager` if yes)
-
+- Postimplementation and commit handling:
+  - In explicit advice mode: selected Git transitions and commits were executed
+    during pre-outcome finalization in Step 6 prior to sealing. After `complete`
+    seals the run, provide readonly guidance only; do not execute git commit/push
+    commands or mutate captured paths. Any post-completion administrative receipt
+    must remain strictly outside the captured baseline snapshot and identify the
+    approved snapshot without claiming unreviewed edits.
+  - In default mode: explicitly preserve existing default-mode postimplementation
+    behavior: ask user if they want to commit to git repository (use `git-manager`
+    subagent if yes). Preserve scoped approval and commit behavior; do not execute
+    an automatic commit without explicit user confirmation.
 **Example:** Phases 1-3 parallel → Launch 3 fullstack-developer agents → Wait → Phase 4 sequential

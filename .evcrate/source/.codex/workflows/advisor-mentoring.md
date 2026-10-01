@@ -150,6 +150,103 @@ For each operation use `spawn(process.execPath, [controller, ...args], { shell: 
 2. **Explicit requests require caller state management**: Both explicit `--advice` command invocations and named checkpoints require active task state. The caller workflow owns the state lifecycle and must execute the state machine (`init` -> `checkpoint` -> controller -> `state get` -> `disposition` -> `outcome` -> `complete`).
 3. **Interactive human decision**: State transition `state human-decision` requires authentic interactive console challenge via `/dev/tty` (POSIX) or verified `CONIN$` / `CONOUT$` (Windows). Conversational approval text in chat cannot satisfy or bypass a `needs_human` durable state gate; headless or detached environments fail closed to `needs_human`.
 4. **Terminal results and error handling**: Only an `ADVICE_READY` envelope completes the advice gate (exit code 0). Any `FAILED` envelope, nonzero exit code, process crash, timeout, or malformed JSON leaves the advice gate incomplete. Dependent mutations must never proceed without valid counsel.
+
+## Caller lifecycle binding
+
+This is the single caller-side lifecycle for explicit advice mode and named
+checkpoints. The controller remains authoritative for freshness, authorized
+scope, revisions, correction accounting, and human gates; callers must not
+weaken or bypass those checks.
+
+### Fresh first review (no active run)
+
+1. Finish implementation and its actual declared validation, then wait for
+   terminal reviewer output and settle all selected substantive pre-review
+   documentation and artifacts. Apply a writer barrier for every writer that
+   can affect selected evidence or artifacts. The parent gathers child terminal
+   artifacts and actual changed paths before capture; children do not call state
+   APIs or stage behind the parent.
+2. The parent builds one snapshot manifest:
+   `baseline_paths = task.authorized_paths ∪ evidence.files[*].path ∪ evidence.artifacts[*].path`.
+   Baseline membership captures freshness; it does not grant write permission.
+   Only `task.authorized_paths` authorize writes. Keep selected read-only
+   references in the baseline and evidence, never in writable scope. Declare
+   planned substantive report, documentation, and status paths in
+   `task.authorized_paths` if they may be written later, and include them in
+   `baseline_paths` even when a planned output does not exist yet.
+3. Run `state init` exactly once for the new run, immediately before the first
+   checkpoint reservation. Do not mutate any captured path or selected Git
+   index/status identity between capture and reservation. If no earlier advice
+   checkpoint exists, do not initialize at command entry merely to track
+   implementation work.
+
+### Active run and handoffs
+
+If `state get` shows an active direction, decision, or stuck run, continue that
+run: retain its `task_run_id`, phase and project root, current task/evidence
+revisions, prior consultation/counsel, disposition, outcome, and correction
+accounting. Handoffs preserve explicit advice mode and this context without
+repeating consultations; ordinary stateless routers stay stateless until a
+named checkpoint requires state. `get` reads state; it does not refresh a stale
+baseline. Never initialize a replacement UUID to bypass stale evidence, scope,
+or counters.
+
+One parent owns all durable state operations and integrates child results.
+Before authorized bounded writes, require `accept` with a registered correction
+action for the current counsel. Finish an already-active action without duplicating
+it: complete its bounded work (including authorized reports or documents), run its
+declared validation, and record a truthful matching `outcome` with actual changed
+paths. A successful outcome advances the baseline; use its returned revisions and
+the same run for the next checkpoint. Never reserve while that action is unfinished.
+
+For `reject-with-evidence`, `need-evidence`, or `reconcile` without an active action,
+collect read-only evidence or an explicit resolution while keeping the captured
+baseline unchanged, then obtain fresh same-run counsel before corrective mutation
+or a resolved correction outcome. This evidence-only consultation does not require
+an invented work/outcome cycle. Register accepted work only after that counsel.
+
+Freeze every path in the current baseline—not just files cited in the current
+checkpoint—and the selected Git index/status identity from evidence/baseline
+capture through reservation, inference, and disposition. After the final outcome,
+freeze the same captured snapshot through `state complete`. Ignored planned files must
+be listed explicitly in the manifest; `git diff` alone is not a complete
+inventory.
+
+### Finalization and completion
+
+Default approval scope is the whole phase, including planned substantive
+documentation, reports, status files, and selected Git index transitions.
+Treat each finalization write or index transition as real bounded work: it must
+be authorized and registered by disposition with its declared validation
+command. Perform it only after disposition, then run that validation and record
+the matching outcome/action identifiers and every actual changed path. If
+changed evidence warrants another review, keep the same run and follow existing
+review and correction caps. Do not change captured paths or selected index
+state after the final outcome or after completion.
+
+A no-change outcome is truthful only when there were no actual changes,
+including no selected index/status transition; the declared validation really
+passed; disposition is `accept`; and counsel has no `must_fix` items or
+`unresolved_questions`. Cautions or assumptions alone do not require invented
+edits. If substantive finalization changes are still needed, no-change is not
+an acceptable substitute.
+
+Call `state complete` only after all phase-owned work, finalization, validation,
+and its matching outcome have settled and the durable state permits completion.
+The completion receipt is authoritative. Captured reports may say finalization
+is settled and controller completion is pending, but must not claim `DONE`
+before that receipt; never rewrite captured evidence after completion to add
+`DONE`. An optional administrative receipt must be outside the captured
+snapshot, identify the approved snapshot, and make no claim that later
+substantive edits were reviewed. A review-only run is permissible only when its
+declared scope explicitly excludes later substantive finalization; it is not
+whole-phase approval.
+
+If a run is stale, stop rather than reinitialize, implicitly refresh, or use
+scope revision as refresh. A stale init-only run requires authentic operator
+abandonment through the existing human gate before a new run may start. Never
+use a replacement UUID to bypass that handling.
+
 ## Mandatory task-state lifecycle and controller execution
 
 V2 checkpoint consultations require active task state. The state machine transitions:
@@ -159,7 +256,9 @@ V2 checkpoint consultations require active task state. The state machine transit
 
 ### 1. Initialize task state
 
-Initialize the task run and capture baseline for authorized paths (advances revision from 0 to 1):
+Initialize the task run and capture all selected paths in the baseline manifest (advances revision from 0 to 1). Baseline membership records evidence; only `task.authorized_paths` grant write authority:
+
+For this example, `source.txt` contains `initial user work` plus one final newline and `contract.txt` contains `checked read-only contract` plus one final newline; the digests below hash those complete bytes. `contract.txt` is read-only evidence, not write authority.
 
 ```bash
 ~/.evcrate/bin/evcrate-advisor state init <<'JSON'
@@ -180,7 +279,7 @@ Initialize the task run and capture baseline for authorized paths (advances revi
       "invariants": ["Preserve existing tests and user baseline"],
       "success_criteria": ["All relevant validation tests pass"]
     },
-    "baseline_paths": ["source.txt"]
+    "baseline_paths": ["source.txt", "contract.txt"]
   }
 }
 JSON
@@ -231,6 +330,11 @@ Before invoking inference, reserve the checkpoint gate (advances revision from 1
             "path": "source.txt",
             "excerpt": "initial user work",
             "digest": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+          },
+          {
+            "path": "contract.txt",
+            "excerpt": "checked read-only contract",
+            "digest": "d6fbcd17e94584132e555b6ce1b1d37cff67b54aad1f99ab0a9f6bc0dc6b7dd9"
           }
         ],
         "validation_results": [
@@ -294,6 +398,11 @@ Pass the exact reserved checkpoint JSON directly to the central controller via t
         "path": "source.txt",
         "excerpt": "initial user work",
         "digest": "78be05fd4e2291fb9eb0b5f9e1cf560bc8e14f7d78406d29a5d86f878ceb69f8"
+      },
+      {
+        "path": "contract.txt",
+        "excerpt": "checked read-only contract",
+        "digest": "d6fbcd17e94584132e555b6ce1b1d37cff67b54aad1f99ab0a9f6bc0dc6b7dd9"
       }
     ],
     "validation_results": [
@@ -378,8 +487,8 @@ Record the correction choice linking `action_id`, `episode_id`, and a declared `
 JSON
 ```
 
-**Path B: Concern-free no-change outcome (advice accepted, no code changes required)**:
-When the advisor returns `ADVICE_READY` with no concerns and existing code is accepted without modification, disposition records `correction: null` (advances revision from 4 to 5):
+**Path B: No-change outcome (advice accepted; no changes required)**:
+Use `correction: null` only when the existing state is accepted without modification. Cautions or assumptions alone do not require invented edits, but the no-change outcome is valid only with zero actual changes, passed declared validation, `accept` disposition, and no `must_fix` items or `unresolved_questions`.
 
 ```bash
 ~/.evcrate/bin/evcrate-advisor state disposition <<'JSON'
@@ -394,7 +503,7 @@ When the advisor returns `ADVICE_READY` with no concerns and existing code is ac
     "consultation_id": "11111111-1111-4000-8000-111111111111",
     "evidence_revision": 0,
     "action": "accept",
-    "rationale": "Direction verified safe; no code modifications needed.",
+    "rationale": "Only cautions and assumptions; no must_fix or unresolved_questions; accepted with no changes.",
     "correction": null
   }
 }
@@ -435,7 +544,7 @@ After applying bounded edits and running validation (advances revision from 5 to
 JSON
 ```
 
-**Path B (No code changes required)**: Reuses `consultation_id`, with `action_id: null`, `episode_id: null`, and `actual_changed_paths: []`:
+**Path B (No changes required)**: Reuses `consultation_id`, with `action_id: null`, `episode_id: null`, and `actual_changed_paths: []`:
 
 ```bash
 ~/.evcrate/bin/evcrate-advisor state outcome <<'JSON'
@@ -469,7 +578,7 @@ JSON
 
 ### 7. Complete task run
 
-When all workflow tasks settle (advances revision from 6 to `completed`):
+When all workflow tasks and substantive finalization settle, `state complete` advances the same run from its latest revision to `completed`. Complete only after the final validation and matching outcome; after that outcome, freeze every captured path and selected Git index/status identity through this operation:
 
 ```bash
 ~/.evcrate/bin/evcrate-advisor state complete <<'JSON'
@@ -487,19 +596,9 @@ JSON
 
 ## Review caps, correction state machine, and human handoff
 
-1. **Executor Review Cap vs Durable Human Continuation**:
-   - **Executor Review Cap** (3 review cycles reached, `correction_count < 3`): executor stops
-     and asks the user via `request_user_input`: "Approve with noted issues" or "Abort workflow".
-     If the user approves, executor records user acknowledgement and completes the workflow
-     without launching another review cycle.
-   - **Durable Correction Exhaustion** (`correction_count === 3`, `gate_status === 'needs_human'`):
-     conversational approval text CANNOT bypass or complete the durable state gate!
-     Callers MUST run `state get`, obtain the fresh `task_revision` (16 in the three-failed-cycle
-     sequence), and execute `state human-decision` via the interactive `/dev/tty`
-     (POSIX) or verified `CONIN$` / `CONOUT$` (Windows) challenge
-     (`observeTerminalDecision`) to authorize continuation, scope revision, or abandonment.
-     If a controlling terminal is unavailable, the state gate remains `needs_human` and the workflow
-     stops for operator intervention.
+1. **Executor review cap is not durable completion authority**:
+   - At the three-review-cycle cap, the executor may ask whether to accept noted issues or abort, but user acknowledgement only stops further review cycles when the durable state permits. It cannot supply a missing disposition, validation, or outcome, override `needs_human`, or substitute for a successful `state complete` receipt.
+   - **Durable Correction Exhaustion** (`correction_count === 3`, `gate_status === 'needs_human'`): conversational approval text CANNOT bypass or complete the durable state gate! Callers MUST run `state get`, obtain the fresh `task_revision` (16 in the three-failed-cycle sequence), and execute `state human-decision` via the interactive `/dev/tty` (POSIX) or verified `CONIN$` / `CONOUT$` (Windows) challenge (`observeTerminalDecision`) to authorize continuation, scope revision, or abandonment. If a controlling terminal is unavailable, the state gate remains `needs_human` and the workflow stops for operator intervention.
 2. **Correction state machine**:
    - Tracks durable completed unsuccessful correction/validation attempts (`correction_count`).
    - Attempt 1: First occurrence -> normal bounded remediation.

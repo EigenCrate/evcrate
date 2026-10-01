@@ -15,15 +15,28 @@ and does not duplicate route or adapter selection.
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/cmd-code`.
-Before discovery or planning, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and
-derive `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS`
-as the tasks input. If explicit mode is active, append exactly one trailing
-`--advice` to the eventual `/cmd-code` handoff; otherwise append none. Apply the
-shared default stuck-escalation contract during `/cmd-cook` discovery and planning.
-Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
-appends exactly one trailing `--advice` when explicit mode is active, and
-otherwise pass no `--advice` token.
+Before discovery or planning, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`
+(specifically `## Argument mode` and `## Caller lifecycle binding`) and derive
+`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
+tasks input.
 
+If an active advisor run context is already present from an earlier named
+checkpoint (such as a direction, decision, or stuck checkpoint in this session),
+retain its identity and context: `task_run_id`, active phase, project root,
+current state revision, prior consultation, counsel, disposition, and outcome.
+Pass that same active run context forward to `/cmd-code`. Never initialize a new
+UUID or create redundant consultations. If no prior advice checkpoint exists,
+`/cmd-cook` remains stateless: never initialize state at command start just to track
+discovery, preflight, or planning.
+
+If explicit mode is active, append exactly one trailing `--advice` to the
+eventual `/cmd-code` handoff; otherwise append none. Apply the shared default
+stuck-escalation contract during `/cmd-cook` discovery and planning. If a stuck
+checkpoint is reached during planning, follow `## Caller lifecycle binding`
+for active run disposition and outcome before proceeding.
+Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
+preserves any active run context, appends exactly one trailing `--advice` when
+explicit mode is active, and otherwise passes no `--advice` token.
 ---
 
 ## Role Responsibilities
@@ -53,9 +66,16 @@ otherwise pass no `--advice` token.
 
 **Boundary:**
 - `/cmd-cook` owns discovery, preflight, research, planning, and handoff.
-- `/cmd-code` owns file edits, compile/typecheck, tests, code review, approval, docs/project updates, and finalization.
+- `/cmd-code` is the sole durable-state owner for implementation and substantive
+  finalization per `## Caller lifecycle binding`. It owns file edits,
+  compile/typecheck, tests, code review, approval, docs/project updates, and
+  finalization.
 - Do not edit code directly from `/cmd-cook`. Use `/cmd-code <plan-path>` after the plan is ready.
-
+- Root `/cmd-cook` delegates ownership to `/cmd-code`; do not mutate captured plan,
+  report, doc files, or Git index state after `/cmd-code` seals the run, and do not
+  duplicate substantive finalization. In explicit advice mode, phase-owned
+  configuration, onboarding, and selected Git decisions belong to `/cmd-code`'s
+  pre-outcome finalization and must be passed to `/cmd-code` before delegation/sealing.
 **Subagent synchronization:** Treat every planner, researcher, scout, tester, debugger, reviewer, project-manager, or docs-manager delegation as a blocking call. Wait for the terminal result, verify the requested report/artifact, and do not hand off, continue, or finalize from partial output. For parallel work, wait for every requested agent and require one result per agent.
 
 ## Workflow
@@ -123,13 +143,21 @@ Before handoff, verify the plan accounts for:
 * Use `/cmd-code <plan-path>` Slash Command to implement the plan step by step. In
   explicit advice mode invoke `/cmd-code <plan-path> --advice`; never pass the token
   into scout, research, preflight, or plan content.
-* Pass the plan path and any unresolved questions to `/cmd-code`.
+* Pass the plan path, any active run context (`task_run_id`, state revision,
+  prior counsel/disposition/outcome), and any unresolved questions to `/cmd-code`.
+* In explicit advice mode, phase-owned configuration, onboarding, and selected Git
+  decisions/execution belong to the implementation owner's pre-outcome finalization.
+  Clarify any onboarding setup or commit preferences with the user and pass such
+  decisions to `/cmd-code` before delegation/sealing.
+* In explicit advice mode, `/cmd-code` also owns required user approval/rejection and
+  any accepted fix cycles before its final outcome and completion. Pass this
+  requirement in the handoff; never return a sealed run to a corrective caller.
 * If the plan includes frontend work, ensure the `/cmd-code` handoff calls `ui-ux-designer` and follows `./docs/design-guidelines.md`.
 * If the plan needs visual assets, include `ai-multimodal` and `media-processing` requirements in the plan.
 
-### 8. Quality Gates
+### 8. Quality Gates & Lifecycle Ownership
 
-`/cmd-code` must enforce:
+`/cmd-code` owns and enforces:
 
 * Compile/typecheck has no syntax errors.
 * Tests cover happy path, edge cases, and error cases.
@@ -138,31 +166,62 @@ Before handoff, verify the plan accounts for:
 * `debugger` subagent investigates failures, then fixes are retested.
 * `code-reviewer` subagent reviews security, performance, architecture, and YAGNI/KISS/DRY.
 * Critical review issues are fixed and retested before completion unless user explicitly approves otherwise.
+* Review checkpoints, terminal artifact barrier, substantive documentation/progress updates, and durable completion per `## Caller lifecycle binding`.
 
 ### 9. Project Management & Documentation
 
-**If user approves the changes:**
-* Use `project-manager` and `docs-manager` subagents in parallel to update the project progress and documentation:
-  * Use `project-manager` subagent to update the project progress and task status in the given plan file.
-  * Use `docs-manager` subagent to update the docs in `./docs` directory if needed.
-  * Use `project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
-* **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
+Substantive plan progress, documentation, and roadmap updates belong to phase
+execution and are owned and finalized inside `/cmd-code` before sealing durable
+completion under `## Caller lifecycle binding`.
 
-**If user rejects the changes:**
-* Ask user to explain the issues and ask main agent to fix all of them and repeat the process.
+* Root `/cmd-cook` delegates this ownership to `/cmd-code` and must not mutate captured
+  plan, report, or doc files after `/cmd-code` seals its run, nor duplicate
+  substantive finalization.
+* In explicit advice mode, all phase-owned configuration, onboarding updates, and
+  selected Git transitions belong to `/cmd-code`'s pre-outcome finalization before
+  `state complete` seals the run. Root `/cmd-cook` delegates sealing to `/cmd-code` and
+  performs no captured mutations or Git commands after seal.
+* Do not mark durable phase DONE prematurely or mutate captured evidence after
+  complete. Do NOT prescribe copying DONE into captured files after sealing.
+* Any optional post-completion administrative receipt at the root workflow level
+  must remain strictly outside the captured snapshot and identify the approved
+  snapshot without claiming later unreviewed edits.
+* In default mode, if the user rejects the changes, ask for the issues and route
+  back to `/cmd-code` with the plan and unresolved questions for a bounded fix cycle.
+* In explicit advice mode, rejection and fixes are handled inside `/cmd-code` before
+  sealing. After its completion receipt, root output is read-only; do not route
+  a completed run back into checkpoint, disposition, correction, or outcome work.
 
 ### 10. Onboarding
 
-* Instruct the user to get started with the feature if needed (for example: grab the API key, set up the environment variables, etc).
-* Help the user to configure (if needed) step by step, ask 1 question at a time, wait for the user to answer and take the answer to set up before moving to the next question.
-* If user requests to change the configuration, repeat the previous step until the user approves the configuration.
+* In explicit advice mode: phase-owned configuration and onboarding setup belong
+  to the implementation owner's pre-outcome finalization and were passed to
+  `/cmd-code` before sealing. After `/cmd-code` seals the run, provide readonly guidance
+  only; perform no mutations to captured workspace paths or configuration files.
+* In default mode: preserve existing default-mode postimplementation behavior:
+  * Instruct the user to get started with the feature if needed (for example: grab
+    the API key, set up the environment variables, etc).
+  * Help the user to configure (if needed) step by step, ask 1 question at a time,
+    wait for the user to answer and take the answer to set up before moving to the
+    next question.
+  * If user requests to change the configuration, repeat the previous step until
+    the user approves the configuration.
 
 ### 11. Final Report
-* Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
-* Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.
+* Report back to user with a summary of the changes and explain everything briefly,
+  guide user to get started and suggest the next steps.
+* In explicit advice mode: selected Git decisions and execution belong to the
+  implementation owner's pre-outcome finalization before sealing. After `/cmd-code`
+  seals the run, do not execute git commit or push commands; emit readonly
+  guidance or an uncaptured administrative receipt strictly outside the captured
+  baseline snapshot only.
+* In default mode: preserve existing default-mode postimplementation behavior:
+  * Ask the user if they want to commit and push to git repository, if yes, use
+    `git-manager` subagent to commit and push to git repository.
+  * Preserve scoped approval and commit behavior; do not execute an automatic
+    commit without explicit user confirmation.
 - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
-
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skill to verify they meet requirements.

@@ -30,6 +30,7 @@
   `--advice` requests one blocking high-tier advisor at each named terminal
   review checkpoint; default mode escalates on the second consecutive matching
   blocker.
+- Explicit advice-mode workflows follow [Caller lifecycle binding](./advisor-mentoring.md#caller-lifecycle-binding): fresh first review initializes after its writer barrier; handoffs retain active context. Accepted registered work (including finalization) requires actual validation and a matching truthful outcome before the next checkpoint; resume existing actions without duplication. Disputed counsel without an active action uses supported disposition, read-only evidence/resolution, and fresh same-run counsel before writes or a resolved outcome, without invented work/outcome. The parent alone owns state; durable completion and human gates are not overridden by review caps.
 
 ## Pre-commit/Push Rules
 - Run linting before commit

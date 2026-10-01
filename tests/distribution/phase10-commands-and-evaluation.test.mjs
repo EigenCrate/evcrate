@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { randomUUID, createHash } from 'node:crypto';
 import {
   TARGET_MENTORING_CAPABILITIES,
   renderMentoringCapabilities,
@@ -10,9 +12,9 @@ import {
   MENTORING_END
 } from '../../dist/index.js';
 import { loadEvaluationCorpus, runCorpusEvaluation, evaluateCaseResponse } from '../fixtures/mentoring-evaluation/evaluator.mjs';
+import { setupTestEnvironment, defaultPolicyV2 } from './phase10-test-helpers.mjs';
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
-const canonicalRoot = join(packageRoot, '.evcrate/source/.claude');
 
 test('SCENARIO 3.1: Honest 7-target capability declarations and projection markers', () => {
   const expectedTargets = ['claude', 'codex', 'omp', 'antigravity', 'gemini', 'copilot', 'pi'];
@@ -30,26 +32,146 @@ test('SCENARIO 3.1: Honest 7-target capability declarations and projection marke
   }
 });
 
-test('SCENARIO 3.2: Canonical commands reference V2 dispatcher and define --advice contract', () => {
-  const commandFiles = [
-    'commands/code.md', 'commands/cook.md', 'commands/fix/hard.md', 'commands/bootstrap.md'
+test('SCENARIO 3.2: CLI no-change close accepts cautions only and rejects must-fix or unresolved counsel', (t) => {
+  const scenarios = [
+    {
+      name: 'cautions-only',
+      counsel: {
+        recommendation: 'Proceed without additional edits.',
+        must_fix: [], cautions: ['Retain the captured review report.'], unresolved_questions: []
+      },
+      closes: true
+    },
+    {
+      name: 'must-fix',
+      counsel: {
+        recommendation: 'A correction is still required.',
+        must_fix: ['Change the reviewed implementation.'], cautions: [], unresolved_questions: []
+      },
+      closes: false
+    },
+    {
+      name: 'unresolved-question',
+      counsel: {
+        recommendation: 'Do not close until the question is answered.',
+        must_fix: [], cautions: [], unresolved_questions: ['Which compatibility target is required?']
+      },
+      closes: false
+    }
   ];
 
-  for (const file of commandFiles) {
-    const fullPath = join(canonicalRoot, file);
-    assert.ok(existsSync(fullPath), `Command file ${file} must exist`);
-    const content = readFileSync(fullPath, 'utf8');
-    assert.ok(
-      content.includes('Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block'),
-      `${file} must reference canonical V2 dispatcher`
-    );
-    assert.ok(!content.includes('evcrate-advisor-checkpoint/v1'), `${file} must not reference deprecated V1`);
-  }
+  for (const scenario of scenarios) {
+    const env = setupTestEnvironment(`evcrate-p10-${scenario.name}-`);
+    t.after(env.cleanup);
+    env.writePolicy(defaultPolicyV2());
+    mkdirSync(join(env.cwd, 'evidence'), { recursive: true });
+    const sourcePath = 'evidence/no-change.mjs';
+    const reportPath = 'evidence/terminal-report.json';
+    const command = `node ${sourcePath}`;
+    writeFileSync(join(env.cwd, sourcePath), "process.stdout.write('no-change validation passed\\n');\n");
+    const runNode = () => spawnSync(process.execPath, [sourcePath], {
+      cwd: env.cwd, env: env.env, encoding: 'utf8', timeout: 10000
+    });
+    const firstRun = runNode();
+    assert.equal(firstRun.status, 0, firstRun.stderr);
+    assert.equal(firstRun.stdout, 'no-change validation passed\n');
+    const validation = {
+      suite: 'node-output', command, status: 'passed', passed: 1, failed: 0,
+      details: firstRun.stdout.trim()
+    };
+    writeFileSync(join(env.cwd, reportPath), `${JSON.stringify(validation)}\n`);
 
-  const workflowDoc = readFileSync(join(canonicalRoot, 'workflows/advisor-mentoring.md'), 'utf8');
-  assert.ok(workflowDoc.includes('count(TOKENS) > 1: reject and stop'));
-  assert.ok(workflowDoc.includes('ADVICE_MODE = explicit'));
-  assert.ok(workflowDoc.includes('ADVICE_MODE = default'));
+    const digest = (path) => createHash('sha256').update(readFileSync(join(env.cwd, path))).digest('hex');
+    const taskRunId = randomUUID();
+    const task = {
+      goal: `Advice-mode no-change case: ${scenario.name}`,
+      non_goals: [], authorized_paths: [],
+      scope_rationale: 'This scenario permits no implementation edits.',
+      invariants: ['Do not invent changed paths.'],
+      success_criteria: ['The real Node validation command passes.']
+    };
+    const request = (operation, expectedRevision, payload = {}) => ({
+      protocol: 'evcrate-advisor-state', version: 1, operation, task_run_id: taskRunId,
+      operation_id: operation === 'get' ? null : randomUUID(),
+      expected_revision: operation === 'get' ? null : expectedRevision,
+      payload
+    });
+    const stateCall = (operation, expectedRevision, payload = {}) => {
+      const result = env.invoke(['state', operation], request(operation, expectedRevision, payload));
+      assert.equal(result.status, 0, `${operation}: ${result.stdout} ${result.stderr}`);
+      return result.json;
+    };
+    env.setFakeCodexState({
+      finalCount: 0, calls: [],
+      returnJson: JSON.stringify({
+        ...scenario.counsel,
+        rationale: `Fixture-backed counsel for ${scenario.name}.`,
+        assumptions: [], success_checks: [command]
+      })
+    });
+    const baselinePaths = [sourcePath, reportPath].sort();
+    const initialized = stateCall('init', 0, {
+      phase_id: 'phase-10-no-change', task, baseline_paths: baselinePaths
+    }).state;
+    assert.deepEqual(initialized.initial_baseline.map(({ path }) => path), baselinePaths);
+    const files = baselinePaths.map((path) => {
+      const excerpt = readFileSync(join(env.cwd, path), 'utf8').trim();
+      return { path, excerpt, digest: digest(path) };
+    });
+    const checkpoint = {
+      protocol: 'evcrate-advisor-checkpoint', version: 2,
+      task_run_id: taskRunId, checkpoint_id: `no-change-${scenario.name}`,
+      phase_id: 'phase-10-no-change', task_revision: initialized.task_revision,
+      evidence_revision: initialized.evidence_revision, checkpoint: `review:no-change-${scenario.name}`,
+      kind: 'review', question: 'Can this advice be accepted without edits?',
+      task, proposal: { next_action: 'Close only if advice permits no-change.', rationale: 'No writable paths are authorized.', intended_changed_paths: [] },
+      evidence: {
+        summary: 'Source output and terminal report were created before baseline capture.',
+        files, validation_results: [validation], artifacts: []
+      },
+      prior: { prior_consultation_id: null, prior_counsel: null, prior_disposition: null, observed_outcome: null }
+    };
+    const reservation = stateCall('checkpoint', initialized.task_revision, { checkpoint });
+    const advice = env.invoke([], checkpoint);
+    assert.equal(advice.status, 0, `${advice.stdout} ${advice.stderr}`);
+    assert.equal(advice.json.status, 'ADVICE_READY');
+    let active = stateCall('get').state;
+    assert.equal(active.last_terminal.has_concerns, !scenario.closes);
+    const disposition = {
+      consultation_id: reservation.consultation_id,
+      evidence_revision: active.evidence_revision,
+      action: 'accept',
+      rationale: 'Accept counsel but do not invent implementation changes.',
+      correction: null
+    };
+    active = stateCall('disposition', active.task_revision, disposition).state;
+
+    const finalRun = runNode();
+    assert.equal(finalRun.status, 0, finalRun.stderr);
+    assert.equal(finalRun.stdout, 'no-change validation passed\n');
+    const outcome = env.invoke(['state', 'outcome'], request('outcome', active.task_revision, {
+      consultation_id: reservation.consultation_id, action_id: null, episode_id: null,
+      result: 'resolved',
+      validation: { ...validation, details: finalRun.stdout.trim() },
+      actual_changed_paths: []
+    }));
+    if (scenario.closes) {
+      assert.equal(outcome.status, 0, `${outcome.stdout} ${outcome.stderr}`);
+      active = outcome.json.state;
+      assert.equal(active.gate_status, 'open');
+      assert.deepEqual(active.outcome.actual_changed_paths, []);
+      const complete = stateCall('complete', active.task_revision);
+      assert.equal(complete.state.gate_status, 'completed');
+    } else {
+      assert.notEqual(outcome.status, 0, `${scenario.name} must not close as a no-change outcome`);
+      assert.equal(outcome.json.error.code, 'STATE_GATE_BLOCKED');
+      active = stateCall('get').state;
+      assert.notEqual(active.gate_status, 'open');
+      const complete = env.invoke(['state', 'complete'], request('complete', active.task_revision));
+      assert.notEqual(complete.status, 0, `${scenario.name} must keep completion blocked`);
+      assert.equal(complete.json.error.code, 'STATE_GATE_BLOCKED');
+    }
+  }
 });
 
 test('SCENARIO 3.3: 9-case mentoring evaluation corpus integrity and rubric pass for grounded counsel', () => {

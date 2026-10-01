@@ -16,8 +16,13 @@ and does not duplicate route or adapter selection.
 A final standalone `--advice` activates explicit review mentoring.
 Before interpreting the plan, read `.claude/workflows/advisor-mentoring.md` and
 derive `WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments.
-Use `WORK_ARGUMENTS` as the plan input everywhere below. Apply the shared default
-stuck-escalation contract throughout this command.
+Use `WORK_ARGUMENTS` as the plan input everywhere below. Apply the canonical
+`## Caller lifecycle binding` in `.claude/workflows/advisor-mentoring.md` and the
+shared default stuck-escalation contract throughout this command:
+- **Durable state ownership**: The parent command is the sole owner of the task-state lifecycle. Child subagents (`tester`, `debugger`, `code-reviewer`, `project-manager`, `docs-manager`, `git-manager`, `ui-ux-designer`) report terminal artifacts, evidence, and actual changed paths; they never operate controller state or stage/commit behind the parent.
+- **Run identity & handoff**: If entering with an existing active run (from prior direction/decision/stuck run or router handoff), retain `task_run_id`, phase, root, current state revision, and prior counsel/disposition/outcome. Resume an already-active action without duplicating it: complete its authorized bounded work, execute actual declared validation, and record a truthful matching outcome advancing the baseline before the next review reservation. Before new authorized bounded writes, require `accept` with a registered correction action. For disputed counsel (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action, collect read-only evidence or an explicit resolution while preserving the captured baseline unchanged, and obtain fresh same-run counsel before mutation or a resolved outcome; never invent an action or outcome to reserve that consultation. Never initialize a new UUID to bypass stale evidence or correction counters.
+- **Fresh first review**: If no prior active advice run exists, do NOT initialize state at command start just to track implementation. Implementation (Step 2), actual validation (Step 3), reviewer output (Step 4), and planned finalization artifacts settle first (writer barrier). Build `baseline_paths` as the union of authorized writable paths and selected read-only `evidence.files`/artifacts (`authorized_paths` contains only writable paths). Call `state init` immediately before reservation in Step 4, with no intervening file edits or git status/index changes.
+- **Baseline stability**: Freeze all baseline paths (not only current citations) during reservation, inference, disposition, and from final outcome to completion.
 
 ---
 
@@ -111,13 +116,13 @@ Call exactly one `code-reviewer` subagent per review cycle: "Review changes for 
 
 **Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
-**Advice gate:** In explicit advice mode, after the reviewer terminal result and
-before displaying findings, fixing issues, or requesting approval, enter the
-canonical checkpoint dispatcher exactly once at `review:<workflow-step>` for
-this review cycle. Supply the bounded evidence, relevant prior counsel, and
-owner disposition required by the shared mentoring contract. Wait for its
-terminal result and include its must-fix guidance in the findings. A dispatcher
-failure leaves Step 4 incomplete.
+**Advice gate & lifecycle placement:** In explicit advice mode:
+- **Cycle 1 reservation**: After reviewer terminal output arrives and before displaying findings or requesting approval:
+  - If a fresh review run: initialize task state immediately before reservation (`baseline_paths` = authorized writable paths UNION selected read-only `evidence.files`/artifacts, with read-only files omitted from `authorized_paths`).
+  - If an active run has a registered action, finish its bounded work, actual validation, and matching truthful outcome before reservation without duplicating the action. Disputed counsel without an active action uses read-only evidence/resolution and fresh same-run consultation before writes or a resolved correction outcome; do not invent an outcome to reserve that consultation.
+  - Enter the canonical checkpoint dispatcher exactly once at `review:step-4` for this review cycle. Supply bounded evidence, declared validation commands/output, relevant prior counsel, and owner disposition per `## Caller lifecycle binding`.
+  - Freeze all baseline paths during reservation, inference, and disposition.
+  - A dispatcher failure or non-`ADVICE_READY` result leaves Step 4 incomplete. Include advisor must-fix guidance in the findings.
 
 **Interactive Review-Fix Cycle (max 3 cycles):**
 
@@ -162,6 +167,7 @@ LOOP:
      IF critical_count > 0 OR advisor has must-fix items:
        - "Fix critical issues" → implement fixes, re-run tester, GOTO LOOP
        - "Fix all issues" → implement all fixes, re-run tester, GOTO LOOP
+       - "Dispute advisor findings with evidence" → collect read-only evidence/resolution, GOTO LOOP
        - "Approve anyway" → PROCEED to Step 5
        - "Abort" → stop workflow
      ELSE:
@@ -169,13 +175,21 @@ LOOP:
        - "Fix warnings/suggestions" → implement fixes, re-run tester, GOTO LOOP
        - "Abort" → stop workflow
 
-  9. IF user selects any fix option:
+  9. IF user selects any fix or dispute option:
      IF review_cycles >= 3:
        → Output: "⚠ 3 review cycles completed. Final decision required."
        → AskUserQuestion: "Approve with noted issues" / "Abort workflow"
        → STOP; do not run another fix/test/reviewer/advisor sequence
-     ELSE:
-       → implement fixes, re-run tester, GOTO LOOP
+     ELSE IF explicit advice mode AND counsel is disputed:
+       → Record reject-with-evidence, need-evidence, or reconcile without correction metadata
+       → Collect read-only evidence or an explicit resolution, preserving captured baseline
+       → Obtain fresh same-run counsel before any corrective mutation or resolved correction outcome
+       → GOTO LOOP within the review cap; do not register invented work or record a corrective outcome for this evidence-only branch
+     ELSE (accepted corrections, or DEFAULT mode):
+       → In explicit advice mode, record accept with one bounded action and declared validation command before writes; resume an already-active action rather than registering it twice
+       → Implement accepted fixes within authorized scope, re-run tester to verify no regressions
+       → In explicit advice mode, parent records matching truthful state outcome with actual changed paths and declared test results, advancing baseline
+       → GOTO LOOP
 ```
 
 **Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.
@@ -195,17 +209,33 @@ Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
 
 **Prerequisites:** User approved in Step 4 (verified above).
 
+- In explicit advice mode: follow the substantive finalization lifecycle in `## Caller lifecycle binding`. Planned docs, status, and onboarding paths are authorized writable paths. Parent records `state disposition` for finalization (registering the bounded action and declared validation command) BEFORE executing any finalization writes or Git index transitions.
+- In default mode: preserve ordinary approved/validated completed status without durable controller dependencies or controller state operations.
+
 1. **STATUS UPDATE - BOTH MANDATORY - PARALLEL EXECUTION:**
-- **Call** `project-manager` sub-agent: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
+- **Call** `project-manager` sub-agent:
+  - In explicit advice mode: "Update plan status in [plan-path]. Record implementation and finalization settled, with durable completion pending. Do NOT mark phase as DONE prematurely. Update roadmap."
+  - In default mode: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
 - **Call** `docs-manager` sub-agent: "Update docs for plan phase [phase-name]. Changed files: [list]."
 
-2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps.
+2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps. (In explicit advice mode, substantive reports settle before final outcome under registered finalization action).
 
-3. **AUTO-COMMIT (after steps 1 and 2 completes):**
+3. **AUTO-COMMIT (after steps 1 and 2 complete):**
 - Run only if: Steps 1 and 2 successful + User approved + Tests passed
 - Auto-stage, commit with conventional commit message based on actual changes
+- In explicit advice mode: staging and commit transitions settle before recording the final outcome.
+- In default mode: preserve standard commit behavior without durable controller operations.
 
-**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met.
+4. **CONTROLLER OUTCOME & COMPLETION (Explicit Advice Mode):**
+- In explicit advice mode:
+  - Enforce writer barrier: all documentation/roadmap writes, onboarding configuration, and selected Git staging/commit settle before recording final outcome.
+  - Run declared validation across all finalized deliverables.
+  - Parent records ONE truthful `state outcome` matching the registered finalization action, reporting actual changed paths and declared validation status. (A no-change outcome is valid ONLY if zero actual files were changed, declared validation passed, disposition was accept, and no must-fix/unresolved-question items remain).
+  - Parent executes `state complete` to seal the task run. The durable completion receipt is authoritative; only then is the phase durably DONE.
+  - After sealing, freeze all captured baseline paths: never mutate sealed evidence, documentation, reports, or index after completion, and never prescribe copying DONE into captured files after completion. Any post-completion administrative receipt must remain OUTSIDE the captured baseline snapshot, identify the approved snapshot, and not claim unreviewed edits.
+- In default mode: no controller state operations (`state disposition`, `state outcome`, `state complete`); phase is completed upon approval and validation, and marked DONE with timestamp in Step 1.
+
+**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met. In explicit advice mode, `state complete` must succeed before phase completion.
 
 Mark Step 5 complete in TodoWrite.
 
@@ -237,7 +267,8 @@ Mark Step 5 complete in TodoWrite.
 **Blocking gates:**
 - Step 3: Tests must be 100% passing
 - Step 4: User must explicitly approve (via AskUserQuestion)
-- Step 5: Both `project-manager` and `docs-manager` must complete successfully
+- Step 5: Both `project-manager` and `docs-manager` must complete successfully; in explicit advice mode, `state complete` must succeed before phase completion
+
 
 **REMEMBER:**
 - Do not skip steps. Do not proceed if validation fails. Do not assume approval without user response.

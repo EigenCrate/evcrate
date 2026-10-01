@@ -2,9 +2,15 @@
 
 ## Unreleased
 
-**Updated:** 2026-09-30
-
+**Updated:** 2026-10-01
 **Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 10/10 phases complete (100%; Phase 09 DONE 2026-09-30); paired qualification verified across 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. Production rollout and deployment remain subject to operator authorization.
+
+### 2026-10-01 — docs(advisor): bind advice-mode callers to durable state
+
+- Documented fresh/active ownership, mode and run-identity handoff, read-only baseline authority, writer/freeze barriers, finalization/index ordering, no-change requirements, distinct review/correction limits, and durable completion authority; linked the canonical caller lifecycle.
+- Parent fixture-backed Node source/CLI smoke reached `STATE_READY` → `ADVICE_READY` → disposition → no-change outcome → completed with `correction_count: 0`; captured contract/artifact remained read-only, no edits were invented, and temporary storage was removed.
+- This initial smoke was not live vendor counsel; live counsel was still pending at that smoke checkpoint. Later repair-run counsel and completion receipts are separate. Stale init-only authentic abandonment is separate and was not exercised.
+- No controller API, freshness, or routing-policy change; no HOME publication or commit.
 
 ### 2026-09-30 - docs(advisor): strengthen tool-less mentor discipline
 

@@ -14,24 +14,23 @@ and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
-A final standalone `--advice` activates explicit review mentoring.
+A final standalone `--advice` activates explicit review mentoring in `/cmd-code`.
 Before analysis, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments. Use
 `WORK_ARGUMENTS` as the issue input and apply the shared default stuck-escalation
-contract throughout this command.
+contract throughout discovery and planning.
 
-In explicit advice mode, wait until the required terminal reviewer or test
-evidence exists. Before displaying findings, fixing issues, or requesting approval,
-enter the canonical checkpoint dispatcher at `review:hard-fix` with bounded evidence,
-prior counsel, and owner disposition (`accept`, `reject-with-evidence`, `need-evidence`,
-or `reconcile`). Wait for its terminal result and include its must-fix guidance in the
-findings. All resulting dispositions, bounded corrections, and outcomes use the shared
-task-state lifecycle (`state disposition` -> `state outcome` -> `state complete`).
-Review/advisor cycle cap: at most three terminal reviewer/advisor cycles; at the cap,
-stop without another review/advisor call or cycle reset, then ask the user if issues remain.
-If durable correction exhaustion occurs (`correction_count === 3`), the state transitions to
-`needs_human` and requires an interactive terminal authorization; conversational approval
-cannot forge completion.
+`/cmd-fix__hard` coordinates analysis, research, and planning, and delegates canonical
+implementation, review, and durable task-state lifecycle ownership to `/cmd-code`
+under `## Caller lifecycle binding` in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`.
+To avoid duplicate counsel and state conflict, `/cmd-fix__hard` must not initialize a
+separate task run, invoke a duplicate review checkpoint, or double advice
+checkpoint/init before `/cmd-code`.
+
+When the caller provides an active advice run context (`task_run_id`, active
+phase, project root, state revision, prior counsel/disposition/outcome),
+`/cmd-fix__hard` preserves that active caller context across the handoff to `/cmd-code`.
+Never initialize a new UUID or drop the active run state.
 ## Workflow:
 
 If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.
@@ -52,15 +51,18 @@ Analyze the skills catalog and activate other skills that are needed for the tas
 1. Use `debugger` subagent to find the root cause of the issues and report back to main agent.
 2. Use `researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
 3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
-4. Then use `/cmd-code` OMP command to implement the plan step by step. This fallback
-   handoff uses `WORK_ARGUMENTS`; append exactly one trailing `--advice` in explicit
-   mode and otherwise pass no `--advice` token.
+4. Then use `/cmd-code <plan-path>` OMP command to implement the plan step by step.
+   This fallback handoff uses `WORK_ARGUMENTS`; append exactly one trailing
+   `--advice` in explicit mode and otherwise pass no `--advice` token. Forward
+   any active caller context (`task_run_id`, phase, state revision, prior
+   counsel/disposition/outcome) so `/cmd-code` continues as the single durable-state
+   owner without doubling advice initialization or consultations.
 5. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
-  * Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.
+  * Durable completion and any selected Git index transitions for captured paths are owned by `/cmd-code` (which executes index transitions, matching validation, truthful outcome, and `state complete` under `## Caller lifecycle binding`); do not mutate captured baseline state, stage/commit captured paths, or fabricate completion after `/cmd-code` seals the run.
+  * Any optional post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits.
   - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
-
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skills on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skills to verify they meet requirements.

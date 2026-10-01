@@ -2,6 +2,7 @@
 
 **Generated:** 2026-09-30
 **Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,610 files, 9,099,945 tokens, and 34,268,846 characters. `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots; Repomix excluded nine suspicious files during its security check.
+**Updated:** 2026-10-01
 **Package:** Private npm package `evcrate` 2.5.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). Advisor Plugin package: 0.1.0, `dataApi: ^1.0.0`; domain API v2 supports v1 and v2 with eight read-only methods.
 **Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28.
@@ -473,11 +474,18 @@ vendor authentication, or universal host enforcement. All seven targets remain
 
 ## Advisor invocation modes
 
-A final standalone `--advice` token activates formal checkpoint mentoring through
-`evcrate-advisor-checkpoint/v2` during reviews, for up to three correction cycles.
-The documentation-facing `/cmd-advise` name (the `/advise` command) is a separate
-interview-first main-session workflow; it does not use checkpoint routing policy
-or invoke the shared checkpoint controller.
+A final standalone `--advice` enables explicit checkpoint mentoring. Handoffs
+preserve the mode and active run identity; default mode carries no advice token.
+The main-session `/cmd-advise` interview remains separate from checkpoint routing.
+See the [canonical argument-mode and caller lifecycle](../.evcrate/source/.claude/workflows/advisor-mentoring.md#argument-mode).
+
+- **Fresh review:** The parent settles implementation, actual declared validation, reviewer output, selected documentation/artifacts, and relevant writers behind a writer barrier, then initializes once immediately before the first checkpoint.
+- **Active run:** Retain run/phase/project identity, revisions, prior context, and correction accounting; the parent alone owns state. Accepted registered work requires validation and its matching outcome before the next checkpoint; resume existing actions without duplication. Disputed counsel without active work uses a supported disposition, read-only evidence/resolution, and fresh same-run counsel before writes or a resolved outcome, without invented work/outcome. No replacement ID or implicit refresh.
+- **Baseline:** `baseline_paths` is the union of authorized writable paths and selected evidence files/artifacts. Read-only evidence remains captured, but only `authorized_paths` grants write permission.
+- **Freeze:** Keep the complete baseline and selected Git index/status identity unchanged from evidence/baseline capture through reservation, inference, and disposition, and from final outcome through completion.
+- **Finalization:** Whole-phase approval includes planned docs, reports, status, and selected index transitions. Authorize them, record disposition, perform bounded work, validate, then record a truthful outcome with actual paths before `complete`.
+- **No-change:** Require no file/index/status changes, passed declared validation, `accept`, and no `must_fix` or unresolved questions; cautions/assumptions alone need no edits. Only the durable completion receipt authorizes `DONE`.
+- **Limits and recovery:** The three reviewer/advisor-cycle cap differs from durable `correction_count` (unsuccessful completed corrections; the third failure requires `needs_human`). Stale init-only authentic abandonment is separate and was not exercised in the fixture smoke.
 
 ## Distribution publication rules
 
