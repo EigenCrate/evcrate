@@ -1,3 +1,11 @@
+## [2.6.2](https://github.com/EigenCrate/evcrate/compare/v2.6.1...v2.6.2) (2026-10-01)
+
+
+### 💄 Styles
+
+* **ui:** decorate scrollbar with dark color-scheme and slim styling ([552ab53](https://github.com/EigenCrate/evcrate/commit/552ab53a141bf806995256705c671b59b70f1812))
+* **ui:** modernize scrollbars with floating inset pill design and smooth opacity transitions ([203ea32](https://github.com/EigenCrate/evcrate/commit/203ea32d901f71322fb0c4abe404586c6cf39229))
+
 ## [2.6.1](https://github.com/EigenCrate/evcrate/compare/v2.6.0...v2.6.1) (2026-10-01)
 
 
