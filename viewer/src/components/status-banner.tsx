@@ -22,8 +22,8 @@ export const StatusBanner: FC<StatusBannerProps> = ({
       <div className="status-main">
         {status === 'unsupported' && (
           <div className="status-message status-error">
-            <strong>Unsupported Environment:</strong> {unsupportedReason ?? 'Required plugin bridge capabilities are not available in this environment.'}
-            <div className="status-hint">Please open this plugin within the DamHopper host interface.</div>
+            <strong>Unsupported Environment:</strong> {unsupportedReason ?? 'Required advisor data capabilities are not available in this environment.'}
+            <div className="status-hint">Please configure an active advisor history source.</div>
           </div>
         )}
 
@@ -89,7 +89,7 @@ export const StatusBanner: FC<StatusBannerProps> = ({
       </div>
 
       <div className="status-provenance-notice" aria-label="Privacy notice">
-        <span className="notice-badge">Plugin Isolation</span>
+        <span className="notice-badge">Local Isolation</span>
         <span className="notice-text">
           Bounded owner-safe data provider. No credentials or arbitrary network calls leave this container.
         </span>

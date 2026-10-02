@@ -30,9 +30,23 @@ import type {
   EvaluationDescriptorV1,
   ProjectInventoryV2,
   ProjectInventoryItemV2,
-  PluginErrorCode
-} from '../../../src/protocol/advisor-plugin-data-api.ts';
-import type { AdvisorWorkspaceContext, UiIntent } from './bridge-contract.ts';
+  AdvisorDataErrorCode
+} from '../../../src/protocol/advisor-data-api.ts';
+export interface AdvisorWorkspaceProject {
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly pathSha256?: string;
+}
+
+export interface AdvisorWorkspaceContext {
+  readonly revision: number;
+  readonly authorityKey: string;
+  readonly project: AdvisorWorkspaceProject;
+  readonly historyScope?: string;
+  readonly allowedOperations?: readonly string[];
+}
+
+export type UiIntent = 'activate' | 'dismiss';
 export type {
   HistoryRefreshResultV1,
   HistoryRefreshResultV2,
@@ -51,12 +65,12 @@ export type {
   EvaluationDescriptorV1,
   ProjectInventoryV2,
   ProjectInventoryItemV2,
-  PluginErrorCode
+  AdvisorDataErrorCode
 };
 
 export type { AdvisorWorkspaceContext, UiIntent };
 
-export type ProviderKind = 'standalone' | 'dam-hopper';
+export type ProviderKind = 'standalone';
 
 export interface ProviderContextDescriptor {
   readonly kind: ProviderKind;

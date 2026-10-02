@@ -1,13 +1,13 @@
 # System Architecture
 
-**Status:** Current implementation reference; filesystem-policy cutover Phases 01–02 completed 2026-09-27; Hook Materialization Scope Distribution is complete through Phase 09; Windows release qualification is complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15).
-**Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; the dated standalone browser/picker evidence remains historical, and its picker/reader source was later removed.
-**DamHopper Advisor Plugin:** E00–E04 package work is complete (E04/G3 qualified 2026-09-22); E05 removed the standalone picker. Workspace Advisor Phases 00–09 are completed (10/10, 100%; Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, 13/13 DamHopper browser tests); production rollout and deployment remain subject to operator authorization.
+**Status:** Current EVCrate core implementation reference; filesystem-policy cutover Phases 01–02, Hook Materialization Scope Distribution through Phase 09, and Windows release qualification through Phase 10 remain documented milestones.
+**Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; standalone picker/reader source was later removed.
+**DamHopper Advisor integration:** The former plugin runtime and paired host integration were retired on 2026-10-02. EVCrate core CLI/controller and shared viewer source remain; historical plugin-era qualification below does not qualify the native DamHopper integration.
 **Windows support:** The qualified Windows release boundary remains standalone installer lifecycle and clean-install `version --json`; native advisor evidence does not establish broad Windows runtime parity.
 **Native Windows advisor:** Phases 01–04 complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Readiness Repairs 01–04 are also complete; general Linux qualification passed 400/400. Production rollout remains operator-gated.
-**Updated:** 2026-10-01
+**Updated:** 2026-10-02
 
-**Authority:** TypeScript control plane, canonical advisor controller, and paired DamHopper Advisor contracts linked below
+**Authority:** TypeScript control plane and canonical Advisor controller. The former DamHopper plugin integration pages are historical.
 
 This document is the central authority for distribution, advisor supervision, wire
 contracts, isolation, and publication. The [codebase summary](./codebase-summary.md)
@@ -16,7 +16,7 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.5.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.6.0`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections. Node `>=22.19.0` is the package engine. The package exposes:
 
@@ -64,6 +64,16 @@ Copilot is a staging/projection target, not a controller backend. Its adapter
 namespaces resources, emits a migration inventory, routes safety hooks through a
 fail-closed bridge, and merges only declared settings keys. It must not be
 presented as a relay to `evcrate-advisor`.
+
+### Snyk specialist composition: local porting boundary
+
+Canonical `.claude/agents/snyk-expert.md` orchestrates two canonical task packages: `skills/snyk-fix/` and independently reusable read-only `skills/dependency-upgrade-review/`. Existing resource import, registry and projection adapters own integration; no second generator or routing mechanism is introduced. The sealed standalone `ext/snyk-expert/` authoring snapshot is retained unchanged.
+
+The parent supplies a canonical absolute installed resource root distinct from the target root. The consuming context explicitly reads both entrypoints and all five references; serialized preload metadata is not reference-consumption evidence. Approval stays main-owned and bound to exact proposal/intent, scope and complete current baseline. Missing execution authority stops mutation; prompt instructions and tool lists are not an OS sandbox.
+
+All seven local projections include both skill packages. Antigravity intentionally omits the general specialist agent. Codex, Pi, OMP and Copilot omit Claude agent preload/permission metadata; Gemini retains it without verified native semantics. Pi drops the requested web tools; OMP maps `WebFetch` to `read`; Codex tool lists remain migration comments. Copilot namespaces packages and rebases relative Markdown sibling skill links, preserving handoffs from entrypoints and nested references.
+
+Generation, resolved local links and constructed explicit-read procedure behavior are distinct from native child discovery, permission enforcement and live remediation. No all-target parity, production publication or fixed-finding claim follows from local porting. See the [qualification matrix](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md); Phase 05 live qualification remains incomplete.
 
 ## 3. TypeScript control plane
 
@@ -193,10 +203,9 @@ release candidate and publisher are separate; see [PDR FR-15](./project-overview
 - The matrix is `windows-2025` x64, `fail-fast: false`, four PowerShell/Node rows
   without checkout/npm; any non-success blocks publication.
 - `publish` is the sole writer after matrix success, checks out the producer SHA,
-  copies seven CLI assets, re-verifies receipt/hash/run identity, and runs
-  semantic-release in `verify` mode after installing the plugin SDK, building the UI, and building/verifying `dist/advisor-plugin/`.
-- GitHub releases also attach `evcrate-advisor-plugin-v<plugin-version>.tar.gz` and
-  its `.sha256` sidecar; these remain separate from the exact-seven CLI receipt.
+  copies the release candidate assets, re-verifies receipt/hash/run identity, and
+  checks the exact seven core release files. It does not install the plugin SDK,
+  build a plugin package, or attach plugin tarballs.
 - Phase 09 proved integrated routing and final seven-file byte equality; Phase 10
   completed the bounded documentation/support cutover.
 
@@ -752,49 +761,33 @@ Phase 09 synchronized the generated release boundary:
 The generated trees, controller closure, manifests, registry, publication journals,
 and installer state are managed artifacts. User policy, unmanaged HOME/project
 files, and vendor credentials remain outside the publication authority.
-## 9. DamHopper advisor plugin replacement
+## 9. Historical DamHopper Advisor plugin integration (retired 2026-10-02)
 
-**Status:** E00–E04 implementation/package work is complete; E04/G3 was qualified 2026-09-22. E05 removed the standalone picker; Phase 08 hides exact `evcrate.advisor` from standalone navigation and fails closed as `PluginUnavailableState reason="not-visible"` before list/asset/frame preparation.
-Workspace Advisor Phase 09 paired qualification passed 11/11 authenticated test-server/browser scenarios with four screenshots; see the [qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md).
-Separate external G1/G2/G4 owner-runner, host-enforced sandbox/CSP, and separate-LAN gates remain unverified; Phase 09 does not discharge them, and explicit operator approval remains required for production release.
+> The E00–E05 and Workspace Advisor Phase 00–09 material in this section is a
+> historical record of the former plugin integration. It is not a current
+> runtime, release, or qualification contract.
 
-**Plans/evidence:** [E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md), [UI guide](./advisor-plugin-ui.md), and [E03 validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md);
-[E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md), [Phase 08 record](../plans/260929-1346-advisor-workspace-panel/phase-08-navigation-and-package-cutover.md),
-and [Phase 08 review](../plans/reports/code-review-260930-0707-phase-08-standalone-navigation-cutover.md).
-**E00 baseline:** `evcrate-advisor-data` v1 established eight read-only methods. **Current domain contract:** v2 supports v1 and v2 with the same eight-method set. The plugin package is v0.1.0 and pins `dataApi: ^1.0.0`; that contract range is distinct from the domain API version.
-**Viewer activity scope:** `ActivityScope` is `workspace-project` or `all`; project identity comes from trusted Workspace context, and `all` requires root-history authority. Scope is separate from metric filters.
-**E01:** `provider.cjs` validates/gates E00 methods; binding, snapshot/cursor,
-history, policy, and evaluation modules enforce path, kind, symlink, nlink, size, schema, and fingerprint boundaries under the cross-platform trusted-files policy (filesystem UID gates removed).
-**E02:** The pinned D00 SDK owns framing and strict UTF-8 JSON-RPC; the worker
-bounds contexts, requests, cancellation, safe errors, and deterministic output.
-**E03:** Current provider uses bounded DamHopper `MessagePort`; the temporary local picker/reader source was later removed.
-The version-`1.0.0` base bridge remains generic-compatible; Workspace Advisor Phase 03 negotiates `workspace-advisor-v1`.
-`host.contextReady` follows authorized context open; `host.workspaceChanged` carries increasing same-authority revisions; `frame.uiIntent` is limited to `activate` / `dismiss`; messages fence session/generation.
-The four views are presented inside Workspace only; standalone navigation omits the exact Advisor ID, and `/plugins/evcrate.advisor` now fails closed before plugin preparation.
-The Vite document inlines CSS/IIFE without external assets or network clients.
-E03 recorded 68/68 repository/package tests on 2026-09-21; this is not host CSP/sandbox, G2/G4 qualification, or current release verification.
+The former paired design joined an Evcrate plugin/worker and shared viewer to a
+DamHopper runner, SDK, and MessagePort bridge. Its Phase 09 qualification on
+2026-09-30 applies only to that plugin-era candidate and does not qualify the
+native-only migration.
 
-### Cross-project advisor history (Phases 00–05)
+The 2026-10-02 cutover removed the plugin runtime/backend, package, worker, and
+plugin release artifacts. EVCrate's core CLI, `evcrate-advisor` controller, and
+shared viewer source remain. DamHopper's current Native Advisor owns its native
+API and Workspace integration and does not require a plugin runner, plugin
+package, bridge, or standalone picker.
 
-- **Phase 00:** Production token issuance requires configured MongoDB; the explicit development/test token path remains. See the [auth prerequisite](../plans/260924-1055-all-project-advisor-history/phase-00-secure-auth-prerequisite.md).
-- **Phase 01:** `evcrate-advisor-data` v2 retains v1 schema/behavior and on-disk history v1; query filtering, bounded same-snapshot inventory, owner-safe display metadata, and `ContextScopeKind` / `ContextScopeDescriptor` are frozen.
-- **Phase 02 binding:** DamHopper persists `OwnerHistorySource` (`rootPath`, `rootIdentity`, `sourceRevision`, `allAuthenticatedHistoryRead`) on the installation. Admin replacement uses an expected security revision and advances registry/security revisions.
-- **Admission:** Valid authenticated actors may use `history-root` without per-account grants only for `history.refresh`, `history.summary`, `history.page`, and `history.detail`. `--no-auth` stays denied; project scope, policy, and evaluation access retain their grant boundaries.
-- **Context open:** The API validates the actor epoch and enabled installation, hydrates its process-local source cache from runner state before each open (not at startup), and sends the descriptor's kind, root identity, and source revision. The descriptor does not carry the owner path.
-- **Runner verification:** The runner re-reads the persisted installation, checks source capability and descriptor identity/revision, and rejects a missing, symlink, or non-directory root. The cross-platform trusted-files policy does not add filesystem UID-ownership gates.
-- **Revalidation:** The API rechecks actor/epoch and operation on every invoke; the runner rechecks enabled state, source capability, root identity, and revision. Admin source replacement clears the API source cache and revokes contexts; the next open rehydrates from runner state.
-- **Phases 03–04:** EVCrate root scanning and safe project-name persistence are paired with same-snapshot project filtering and independent source labels in the UI.
-- **Phase 05:** Paired qualification completed 2026-09-24: **273/273 tests passed**, 0 failed/skipped; candidate and distribution packages verified; review approved **9.8/10** with zero critical issues. The direct history-root provider scan accepted **237/237 consultations across 21 projects in 191.48 ms**, with zero diagnostics. It was not a new live DamHopper browser session; the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md) records qualification, not production deployment/publication.
+Historical requirements and evidence remain in the [Workspace Advisor PDR](./workspace-advisor-pdr.md),
+[host contract](./workspace-advisor-host-contract.md), and
+[all-project advisor history record](./all-project-advisor-history.md).
 
-### Workspace-integrated Advisor (Phases 00–09)
-
-Workspace Advisor Phases 00–09 are completed (10/10, 100%); Phase 08 review approved 9.8/10 and Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. Phases 06–07 delivered compact views, independent bound-source disclosures, and accessible inspection; Phase 08 cut over standalone navigation and package metadata; Phase 09 qualified the integrated pair under authenticated test-server and test-client runs. Explicit operator release decision remains separate from qualification. See the [Phase 09 plan](../plans/260929-1346-advisor-workspace-panel/phase-09-paired-qualification.md) and [Phase 09 qualification report](../plans/reports/phase-09-qualification.md).
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)
-- [Workspace Advisor Product Requirements](./workspace-advisor-pdr.md) — Phase 01–09 requirements and acceptance criteria.
+- [Workspace Advisor Product Requirements](./workspace-advisor-pdr.md) — historical plugin-era requirements.
 - [Code standards](./code-standards.md)
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
-- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — current shared UI and bridge/provider boundary; [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — Phases 01–05 admission, identity, bridge, reusable host, and persistent placement.
+- [Historical Workspace Advisor host contract](./workspace-advisor-host-contract.md)

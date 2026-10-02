@@ -55,6 +55,9 @@ export function replaceKnownNames(value: string, agents: SimpleMap, skills: Simp
     rendered = rendered.replace(new RegExp(String.raw`(subagent_type\s*=\s*["'])${escaped}(["'])`, 'giu'), `$1${target}$2`);
     rendered = rendered.replace(new RegExp(String.raw`(skills?/)${escaped}(?=[/\s\x60)]|$)`, 'giu'), `$1${target}`);
   }
+  for (const [source, target] of Object.entries(skills)) {
+    rendered = rendered.replace(new RegExp(String.raw`(\]\((?:\.\./)+)${escapeRegex(source)}(?=/)`, 'giu'), `$1${target}`);
+  }
   return restore(rendered, guarded.protected);
 }
 

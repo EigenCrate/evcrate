@@ -2,8 +2,20 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-01
-**Status:** Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; Advisor Metrics Explorer through Phase 10; DamHopper plugin E00–E04 (G3 qualified); all-project advisor history 6/6 complete; filesystem-policy cutover 2/2 complete; Windows readiness repairs 4/4 complete; Native Windows Advisor Phases 01–04 complete (Phase 04 review 9.2/10). Phase 04 passed behavioral/security and lifecycle suites (10/10 each), parity (4/4), and release (34/34); OMP/Codex diagnostics qualified, Claude/Pi unverified. Linux WSL/ext4 suite: 400/400; Phase 03 separately observed OMP `ADVICE_READY`. Workspace Advisor: 10/10 phases complete (100%; Phase 09 DONE 2026-09-30); paired qualification verified across 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. Production rollout and deployment remain subject to operator authorization.
+**Updated:** 2026-10-02
+**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+
+### 2026-10-02 — refactor(advisor): retire Dam-Hopper plugin platform integration
+
+- Retired the Dam-Hopper plugin runtime/backend, manifest, worker, and plugin distribution artifacts; preserved the core Advisor CLI/controller and shared viewer source (not the former standalone picker or plugin host).
+- Updated the release workflow to publish only the seven core assets. E00–E05 and Workspace Advisor Phase 00–09 qualification records are historical plugin-era evidence, not qualification of the current native Dam-Hopper integration.
+
+### 2026-10-02 — feat(snyk): integrate specialist and reusable task skills locally
+
+- Imported `snyk-expert`, `snyk-fix` and `dependency-upgrade-review` through existing preview/apply machinery into canonical `.evcrate/source/.claude/`; retained the sealed standalone bundle unchanged. Neutral upgrade review remains read-only and usable without a Snyk report; concrete remediation remains Maven/Spring-only.
+- Reproduced three broken Copilot sibling skill links, repaired relative Markdown link namespacing in the existing converter, and retained a path-resolution regression covering entrypoint/nested handoffs, external URLs and agent-only names.
+- Local `generate:all`, seven-target distribution build and distribution check passed. Generated-resource smoke resolved 91 local links across 55 resource documents; Antigravity supplies the skills but not the general specialist agent.
+- Local porting is not full behavioral parity or live remediation qualification. Native child loading, permission enforcement and Phase 05 graph/runtime/comparable-rescan gates remain unverified. No user HOME publication, real target edit, credential repair, commit or push. See the [qualification report](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for actual behavioral/suite evidence and limitations.
 
 ### 2026-10-02 — fix(workflows): separate live progress from sealed phase evidence
 
@@ -155,8 +167,8 @@
 ### 2026-09-28 — test(windows): qualify native advisor and protect Linux (Phase 04)
 
 **Status:** Phase 04 DONE (2026-09-28; review approved 9.2/10).  
-**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 04](../plans/260926-1522-windows-advisor-support/phase-04-qualification.md)  
-**Evidence:** [Qualification report](../plans/260926-1522-windows-advisor-support/reports/phase-04-qualification-evidence.md).
+**Plan:** Native Windows advisor support — Phase 04 (historical plan artifacts are not retained in this repository).
+**Evidence:** The implementation and qualification results are summarized below; the original qualification report is not retained in this repository.
 
 - Native Windows behavioral/security regressions passed **10/10** and lifecycle tests **10/10**; advisor parity passed **4/4**, release tests **34/34**, and `release:check` plus `distribute:check` passed.
 - The canonical controller diagnostic protocol qualified OMP 18.4.1 and Codex 0.155.1. Claude 2.1.92 remains unverified (`AUTH_UNAVAILABLE`); Pi 0.84.1 remains unverified (`PROCESS_FAILED`). No mock credentials or fallback were used.
@@ -166,7 +178,7 @@
 ### 2026-09-28 — feat(windows): complete native advisor invocation and package closure (Phase 03)
 
 **Status:** Phase 03 DONE (2026-09-28; review approved 9.0/10). Host invocation and both sandbox publication paths completed; no production HOME was modified.  
-**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 03](../plans/260926-1522-windows-advisor-support/phase-03-invocation-publication.md)  
+**Plan:** Native Windows advisor support — Phase 03 (historical plan artifacts are not retained in this repository).
 **Verification:** Windows build, `distribute:check`, and `release:check` passed; scoped results recorded 357/357, post-fix 20/20, final adapter 9/9, and Windows controller 282/282 serial. Isolated `npm pack`/install and standalone `install.ps1` sandbox publication verified exact 36-file controller closures and hashes; routing policy was unchanged.
 
 - The published controller handled Unicode and special-character input through Windows PowerShell 5.1 and returned `STATE_READY`; Linux/POSIX invocation remained unchanged.
@@ -176,8 +188,7 @@
 ### 2026-09-28 — test(advisor): complete Windows advisor readiness verification (Repair Phase 04)
 
 **Status:** Repair Phase 04 verification complete; readiness repairs 4/4 complete. At that checkpoint the original advisor plan had not yet completed native qualification; see the separate Phase 04 record above.
-**Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Repair Phase 04](../plans/260927-0005-windows-advisor-readiness/phase-04-verification-readiness.md)  
-**Evidence:** [Test report](../plans/reports/testerphase04-260928-0955-verification-readiness.md) · [Review](../plans/reports/code-review-260928-1008-repair-phase-04-readiness.md). Focused verification **20/20**; final required suites **390/390**, 0 failures and 0 skips; independent review **9.0/10**, no critical findings.
+**Plan and evidence:** Windows advisor readiness Repair Phase 04 (historical plans and reports are not retained in this repository). Focused verification **20/20**; final required suites **390/390**, 0 failures and 0 skips; independent review **9.0/10**, no critical findings.
 
 - Added `tests/advisor-controller/verification-regressions.test.cjs` for R1–R5 behavior: Job descendant cleanup, trusted-file permission behavior, provider path selection and rejection, no-clobber state creation under interleaving and competing processes, and replacement-workspace preservation.
 - Added `tests/advisor-controller/verification-lifecycle.test.cjs` for pinned-file CAS, supervisor failure boundaries, launch-record and environment validation, isolated source CLI V2 lifecycle/history operations, and unattended/piped-console rejection.
@@ -186,8 +197,7 @@
 ### 2026-09-28 — fix(advisor): restore Windows advisor storage and cleanup safety (Repair Phase 01)
 
 **Status:** Phase 01 DONE (2026-09-28; review approved 9.5/10; user approved). 2/4 repair phases complete; Phase 03 (provider launch identity) next.  
-**Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Phase 01](../plans/260927-0005-windows-advisor-readiness/phase-01-storage-safety.md)  
-**Evidence:** 10/10 storage-safety regressions pass (`tests/advisor-controller/storage-safety.test.cjs`); 223/223 advisor-controller tests pass; 112/112 protocol, primitives, and scopes tests pass; release check verified.
+**Plan and evidence:** Windows advisor readiness Repair Phase 01 (historical plan and report artifacts are not retained in this repository). 10/10 storage-safety regressions pass (`tests/advisor-controller/storage-safety.test.cjs`); 223/223 advisor-controller tests pass; 112/112 protocol, primitives, and scopes tests pass; release check verified.
 
 - **C1 containment (no-replace publication):** Removed catch-all `linkSync` to `renameSync` fallback in `state-io.cjs` and `history-store.cjs`. On `EEXIST`, transactions fail closed with `STATE_CONFLICT` / `AUDIT_DEGRADED` without clobbering competing destinations (R4 closed).
 - **C2 containment (workspace cleanup object identity):** Captured `dev` and `ino` identity on workspace and root during creation in `isolated-workspace.cjs`. Cleanup validates ancestor root *before* inspecting workspace path, verifies object identity, and fails closed (`CLEANUP_UNCONFIRMED`) on any junction/symlink or device mismatch without deleting outside trees (R5 closed).
@@ -197,8 +207,7 @@
 ### 2026-09-28 — fix(advisor): repair Windows supervision and console observation (Repair Phase 02)
 
 **Status:** Phase 02 DONE (2026-09-28; review approved 9.2/10). Readiness repairs are 2/4 complete; Phase 03 (provider launch identity) is next.  
-**Plan:** [Readiness plan](../plans/260927-0005-windows-advisor-readiness/plan.md) · [Repair Phase 02](../plans/260927-0005-windows-advisor-readiness/phase-02-supervision-console.md)  
-**Evidence:** Review records 9/9 focused supervision-console tests, 236/236 advisor-controller tests, a clean build, and `release:check`.
+**Plan and evidence:** Windows advisor readiness Repair Phase 02 (historical plan and review artifacts are not retained in this repository). Review records 9/9 focused supervision-console tests, 236/236 advisor-controller tests, a clean build, and `release:check`.
 
 - Replaced Windows PID-tree teardown with native Job Object supervision: provider launch is assigned atomically to a kill-on-close Job; the creation token comes from the process handle; success requires positive confirmation that the Job is empty. Unconfirmed cleanup blocks success and relaunch.
 - Added a separate supervisor control/lifetime channel and bounded provider output relay. Cancellation, probe timeout, output-limit, transport failure, and controller-channel EOF terminate the Job; removed `taskkill` and teardown-time PID lookup. The POSIX process-group path remains.
@@ -208,8 +217,7 @@
 ### 2026-09-27 — fix(filesystem): complete Phase 02 durable cutover and host-specific qualification
 
 **Status:** Phase 02 DONE (2026-09-27; review approved 9.6/10; user approved). Entire filesystem-policy cutover milestone is 100% complete (2/2 phases).  
-**Plan:** [Parent plan](../plans/260927-0428-filesystem-cutover-review/plan.md) · [Phase 02](../plans/260927-0428-filesystem-cutover-review/phase-02-cutover-and-qualification.md)  
-**Evidence:** 279/279 targeted tests pass across publication-recovery, registry, integration, plugin qualification, and advisor controller suites.
+**Plan and evidence:** Filesystem-policy cutover Phase 02 (historical plan and review artifacts are not retained in this repository). 279/279 targeted tests pass across publication-recovery, registry, integration, plugin qualification, and advisor controller suites.
 
 - Implemented schema version 3 publication journal writer (`publication.ts`) and bounded authentic schema 1/2 mode-bearing journal migration in recovery (`publication-recovery.ts`). Negative test verifies rejection of schema 3 journals bearing mode fields.
 - Applied absolute chmod-invariance across capabilities in `scanner.ts` and `source.ts`: script-execution capability is derived strictly from script extensions and shebang bytes, never from file mode bits.
@@ -219,8 +227,8 @@
 ### 2026-09-27 — fix(filesystem): complete Phase 01 launchability and identity
 
 **Status:** Phase 01 DONE (2026-09-27; review approved 10/10). Parent filesystem-policy cutover is 50% complete (1/2 phases); Phase 02 remains proposed.  
-**Plan:** [Parent plan](../plans/260927-0428-filesystem-cutover-review/plan.md) · [Phase 01](../plans/260927-0428-filesystem-cutover-review/phase-01-launchability-and-identity.md)  
-**Evidence:** [Code review](../plans/reports/code-review-260927-1740-phase-01-launchability-and-identity.md)
+**Plan:** Filesystem-policy cutover Phase 01 (historical plan and review artifacts are not retained in this repository).
+**Evidence:** The dated local summary records review approval 10/10 and 268 targeted tests plus a successful build.
 
 - Completed launch-intent propagation for newly materialized publication files and role-based Linux installer execute provisioning; staged CLI smoke now invokes the real path directly.
 - Removed permission-only drift from advisor evidence/CAS boundaries while retaining byte/object checks; registry and import file identities now distinguish file kind; mandatory staging chmod failures propagate.
@@ -276,8 +284,8 @@
 ### 2026-09-26 — feat(windows): prove native Windows advisor compatibility primitives (Phase 01)
 
 **Status:** Phase 01 DONE (2026-09-26; feasibility gate passed; review approved **9.3/10**).  
-**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 01](../plans/260926-1522-windows-advisor-support/phase-01-windows-primitives.md)  
-**Evidence:** [native proof evidence](../plans/260926-1522-windows-advisor-support/reports/phase-01-native-proof-evidence.md) · [code review](../plans/reports/code-review-260926-1740-phase-01-windows-primitives.md)
+**Plan:** Native Windows advisor support — Phase 01 (historical plan artifacts are not retained in this repository).
+**Evidence:** The local historical summary records native proof feasibility and its verification; the original proof report and code review are not retained in this repository.
 
 - Proved native Win32 compatibility primitives required for advisor execution without weakening Linux invariants or requiring WSL/Git Bash.
 - **Filesystem & ownership:** Validated handle-based SID/DACL inspection, protected directory creation, junction and hardlink rejection, directory handle pinning preventing rename/delete races, and full-chain mutation with `NtSetInformationFile(FileRenameInformation)` atomic replacement under strict `FILE_SHARE_READ`.
@@ -288,8 +296,7 @@
 ### 2026-09-26 — feat(windows): complete native advisor controller lifecycle (Phase 02)
 
 **Status:** Phase 02 DONE (2026-09-26; parent-approved after Cycle 3 conditional review, score **7.4/10**). Phase 03 unblocked.  
-**Plan:** [Native Windows advisor support](../plans/260926-1522-windows-advisor-support/plan.md) · [Phase 02](../plans/260926-1522-windows-advisor-support/phase-02-controller-lifecycle.md)  
-**Evidence:** [Cycle 3 code review](../plans/reports/code-review-260926-2156-phase-02-cycle-3.md)
+**Plan and evidence:** Native Windows advisor support — Phase 02 (historical plan and review artifacts are not retained in this repository). The review summary recorded 213/213 advisor-controller tests, 16/16 viewer/manifest and package-inventory tests, and a 36-file controller closure.
 
 - Integrated the native Windows controller lifecycle boundaries, including Windows environment canonicalization, package-bin resolution without shell invocation, IPC cancellation, and the inventoried 36-file controller closure.
 - The dated review recorded **213/213 advisor-controller tests**, **16/16 viewer/manifest and package-inventory tests**, and **21/21 settings/filesystem distribution-primitives tests**.
@@ -447,8 +454,6 @@
 - Qualification evidence: plugin lifecycle **5/5**, package integrity/hostile
   archive **5/5**, root isolation **1/1**, and companion DamHopper lifecycle
   **8/8**. Standalone viewer retirement remains gated on E05/D06 G4.
-
-
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
@@ -642,8 +647,6 @@
 - `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes
   29/29; build and CLI help checks pass. Native Windows execution and live
   npm/GitHub publication remain downstream gates.
-
-
 
 ### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
 

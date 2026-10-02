@@ -1,5 +1,5 @@
 import { useState, useMemo, type FC } from 'react';
-import type { EvaluationDescriptorV1 } from '../../../src/protocol/advisor-plugin-data-api.js';
+import type { EvaluationDescriptorV1 } from '../../../src/protocol/advisor-data-api.js';
 import { EvaluationDescriptorCard } from './evaluation-descriptor-card.js';
 import { PaginationControls } from './pagination-controls.js';
 

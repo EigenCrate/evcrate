@@ -19,9 +19,9 @@ import type {
   EvaluationDocumentV1,
   ProjectInventoryV2,
   ProjectInventoryItemV2
-} from '../../src/protocol/advisor-plugin-data-api.ts';
+} from '../../src/protocol/advisor-data-api.ts';
 import type { HashView } from './hash-view.js';
-import type { AdvisorWorkspaceContext } from './providers/bridge-contract.ts';
+import type { AdvisorWorkspaceContext, ProviderKind } from './providers/advisor-data-provider.js';
 
 export type ActivityScope = 'workspace-project' | 'all';
 
@@ -128,7 +128,7 @@ export interface AppState {
   readonly filters: UiHistoryFilters;
   readonly selectedConsultationId: string | null;
   readonly revealCandidates: boolean;
-  readonly providerKind: 'standalone' | 'dam-hopper';
+  readonly providerKind: ProviderKind;
   readonly capabilities: readonly string[];
   readonly frameSession: string | null;
   readonly activationGeneration: number;

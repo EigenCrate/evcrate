@@ -1,6 +1,6 @@
 /**
- * @file advisor-plugin-domain-parity.test.mjs
- * Domain parity tests for EVCrate Advisor Plugin (Phase E00).
+ * @file advisor-domain-parity.test.mjs
+ * Domain parity tests for EVCrate Advisor.
  *
  * Verifies exact path identity, golden checkpoint digest parity across Node/CJS/WebCrypto,
  * metric calculation schema parity, and evaluation digest/provenance parity.
@@ -21,7 +21,7 @@ import {
 import {
   validateHistorySummaryResult,
   validateEvaluationsCompareResult,
-} from '../../dist/protocol/advisor-plugin-data-api.js';
+} from '../../dist/protocol/advisor-data-api.js';
 import {
   validateEvaluationDocument,
 } from '../../dist/protocol/advisor-evaluation-validation.js';

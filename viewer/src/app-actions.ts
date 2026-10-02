@@ -18,9 +18,9 @@ import type {
   EvaluationsListResultV1,
   EvaluationsReadResultV1,
   EvaluationsCompareReadyResultV1
-} from '../../src/protocol/advisor-plugin-data-api.ts';
+} from '../../src/protocol/advisor-data-api.ts';
 import type { HashView } from './hash-view.js';
-import type { AdvisorWorkspaceContext } from './providers/bridge-contract.ts';
+import type { AdvisorWorkspaceContext, ProviderKind } from './providers/advisor-data-provider.js';
 export type AppAction =
   | { type: 'CAPABILITY_UNSUPPORTED'; reason: string }
   | { type: 'SELECT_START' }
@@ -38,7 +38,7 @@ export type AppAction =
   | { type: 'SET_POLICY'; result: PolicyReaderResult }
   | { type: 'SET_EVALUATIONS'; results: readonly EvaluationReaderResult[] }
   | { type: 'REVEAL_CANDIDATES'; reveal: boolean }
-  | { type: 'PROVIDER_READY'; providerKind: 'standalone' | 'dam-hopper'; label: string; capabilities: readonly string[]; frameSession: string | null; activationGeneration: number; workspaceContext?: AdvisorWorkspaceContext | null; contextEpoch?: number }
+  | { type: 'PROVIDER_READY'; providerKind: ProviderKind; label: string; capabilities: readonly string[]; frameSession: string | null; activationGeneration: number; workspaceContext?: AdvisorWorkspaceContext | null; contextEpoch?: number }
   | { type: 'CONTEXT_CHANGED'; label: string; capabilities: readonly string[]; frameSession: string | null; activationGeneration: number; workspaceContext?: AdvisorWorkspaceContext | null; contextEpoch?: number }
   | { type: 'CONTEXT_REVOKED'; reason: string; contextEpoch?: number }
   | { type: 'DISCONNECTED'; reason?: string; contextEpoch?: number }

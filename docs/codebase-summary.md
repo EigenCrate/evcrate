@@ -2,12 +2,12 @@
 
 **Generated:** 2026-09-30
 **Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,610 files, 9,099,945 tokens, and 34,268,846 characters. `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots; Repomix excluded nine suspicious files during its security check.
-**Updated:** 2026-10-01
-**Package:** Private npm package `evcrate` 2.5.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). Advisor Plugin package: 0.1.0, `dataApi: ^1.0.0`; domain API v2 supports v1 and v2 with eight read-only methods.
+**Updated:** 2026-10-02
+**Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
 **Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28.
 **Controller closure:** Exactly 36 files; earlier 29- and 33-file counts below are dated historical inventories.
-**Workspace Advisor:** Phases 00–09 are completed (10/10, 100%); Phase 08 review approved 9.8/10 and Phase 09 paired qualification verified 11/11 browser scenarios, 4 screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. See [Phase 09 qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md) and [architecture contract](../plans/260929-1346-advisor-workspace-panel/architecture-contract.md); production rollout and deployment remain subject to operator authorization.
+**Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
 
@@ -22,7 +22,7 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 | `.evcrate/registry.json` | Schema-1 canonical resource records | Regenerate from the canonical scan; distinct from target/build manifests. |
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `scripts/` | Generation, package, and release tooling | Follow each script's declared authority; generated outputs are not edited by hand. |
-| `plugin/`, `viewer/src/` | Advisor plugin backend/package and shared UI | See the worker and UI guides for their separate qualification boundaries. |
+| `viewer/src/` | Shared Advisor UI source retained after plugin retirement | Maintain only against current consumers; the former `plugin/` backend/package was removed. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
 
@@ -52,13 +52,9 @@ The CLI resolves context, validates one invocation, dispatches one operation, wr
 
 The Linux standalone installer unpacks a verified package snapshot and launches its staged CLI for a version smoke. Phase 01 now provisions mandatory launch roles independently of archive permission bits and runs the staged CLI by its real path. The separate Windows qualification boundary remains installer lifecycle and `version --json`; this Phase 01 work does not qualify broader Windows runtime behavior.
 
-Release inventory: the exact-seven core receipt contains the Linux/Windows
-archives and sidecars, release metadata, and both installer entrypoints.
-The separate plugin assets are `dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz`
-and `dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz.sha256`.
-`.releaserc.json` remains the active semantic-release config (`npmPublish: false`); its GitHub
-assets include the seven core paths, both plugin paths, and `CHANGELOG.md`.
-Its prepare command delegates to `scripts/release/semantic-release-asset-prepare.cjs`.
+The release workflow verifies an exact set of seven core assets. The plugin
+archive and checksum under `dist/advisor-plugin/` were removed; current release
+assembly does not build or publish them.
 
 ## Windows advisor supervision, console repair, and verification
 
@@ -85,11 +81,16 @@ Advisor state and history comparisons ignore ctime and permission-only changes w
 The committed schema-1 `.evcrate/registry.json` was regenerated with the new file hashes. Existing records with prior raw-file hashes are not silently reinterpreted; `npm run generate:registry` performs a canonical rescan. Filesystem-policy Phase 02 later completed schema-3 journal writing, authentic schema-1/2 recovery, and mode-free executable-capability derivation from path type and shebang.
 
 
-## Advisor plugin and support boundaries
+## Historical Advisor plugin and host integration
 
-The plugin worker and shared UI are documented separately in [advisor-plugin-worker.md](./advisor-plugin-worker.md) and [advisor-plugin-ui.md](./advisor-plugin-ui.md). The standalone picker/reader source was removed; Phase 08 also filtered the exact Advisor ID from standalone navigation and retired its direct route. Joint G4 qualification/sign-off remains unverified; source cutover alone does not establish release authorization. Cross-project history contracts are in [all-project-advisor-history.md](./all-project-advisor-history.md).
-
-Live advisor vendor qualification, HOME rollout, npm publication, deployment, and broader Windows runtime support remain separate operator/release gates. See the [system architecture](./system-architecture.md) for implementation contracts, the [PDR](./project-overview-pdr.md) for requirements, the [code standards](./code-standards.md) for normative rules, the [Workspace Advisor host contract](./workspace-advisor-host-contract.md) for Phases 01–05 admission, identity, bridge, reusable host, and placement, the [roadmap](./project-roadmap.md) for current phase status, and the [changelog](./project-changelog.md) for dated evidence.
+The former plugin worker and embedded host are retired; their design and Phase
+E00–E05 / Workspace Phase 00–09 evidence below are historical. The standalone
+picker/reader source and plugin package were removed, and the old Phase 09
+qualification does not establish current native integration status. EVCrate
+still maintains its core CLI/controller and shared viewer source. See the
+[system architecture](./system-architecture.md), [historical all-project
+history contract](./all-project-advisor-history.md), and [Workspace host
+contract](./workspace-advisor-host-contract.md).
 
 The Phase 06 standalone browser reader used an explicit multi-file picker with an
 8 MiB per-document bound. That reader source has since been removed. Fixtures
@@ -166,29 +167,28 @@ provider that Phase E02 wrapped in the pinned D00 worker. See the [phase plan](.
   retention and FIFO; `provider-source-safety.test.mjs` covers path/link/race
   safety and context isolation.
 - Dated E01 verification (2026-09-21) recorded **56/56 passing** across 8 files; the 33-file controller closure remained unchanged (inventory delta `0`).
-- E02 wraps the provider in the pinned D00 worker (`worker.cjs`,
-  `context-table.cjs`, `request-table.cjs`, `dispatcher.cjs`, `error-mapping.cjs`,
-  local `data-api.cjs`) and deterministic candidate builder; see the [worker guide](./advisor-plugin-worker.md).
+- The historical E02 worker wrapped this provider in the former D00 worker SDK;
+  the plugin package and worker source were removed in the 2026-10-02 cutover.
+  See the [historical integration record](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02).
 - At E03 completion, provider-neutral adapters covered the local picker and
   MessagePort paths. The local picker/reader source was later removed by the E05
-  repository cutover; see the [UI guide](./advisor-plugin-ui.md). This historical
-  architecture is not G4 qualification.
+  repository cutover; the old source and qualification boundary are retained in the
+  [historical integration record](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02).
 
-## React views and embedded provider (Phases 07/E03; current source map)
+## Historical React views and embedded provider (Phases 07/E03)
 
 Phase 07 completed on 2026-09-19 as a private static React explorer. Phase E03
-(2026-09-21; review 9.2/10) reused the shared app/views in the DamHopper
-opaque-srcdoc entry. The E03 source included a local File System Access picker and
-reader; those standalone sources were later removed in the E05 repository cutover.
-That source change is not joint G4 qualification/sign-off: required external Linux
-owner-runner and separate-LAN evidence are not present here, and standalone
-retirement is not release-authorized.
+(2026-09-21; review 9.2/10) reused the shared app/views in the former DamHopper
+opaque-srcdoc entry. The E03 source included a local File System Access picker
+and reader; those standalone sources were later removed in the E05 cutover.
+These dated design details do not describe a current plugin package, host
+integration, or release qualification.
 
 See the [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md),
-[Phase 04 UI guide](./advisor-plugin-ui.md), and
-[E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
+[historical integration record](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02),
+and [E03 review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md).
 
-### Current shared React application
+### Retained shared React source
 
 - `viewer/src/app.tsx` composes controls, status, tabs, the selected view,
   diagnostics, and footer.
@@ -574,5 +574,5 @@ syntax, not slash resource names.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
-- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing/lifecycle/candidate; [Embedded UI guide](./advisor-plugin-ui.md) — current shared UI and all-project history behavior; [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — selected-project authority through Phase 05 placement; [Pi-native migration](./pi-native-migration.md) — Pi-specific notes.
+- [Historical Advisor integration records](./all-project-advisor-history.md), [Workspace host contract](./workspace-advisor-host-contract.md), and [Workspace Advisor PDR](./workspace-advisor-pdr.md) — former plugin-era contracts and evidence.
 - Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.

@@ -12,6 +12,7 @@ import {
   writeProjectionFile,
 } from '../../dist/index.js';
 import { projectionExpectations, registerProjectionExpectation } from '../../dist/adapters/types.js';
+import { replaceKnownNames } from '../../dist/adapters/copilot/prompts.js';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
   cpSync,
@@ -27,7 +28,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { after, afterEach, before, test } from 'node:test';
 
 const repository = process.cwd();
@@ -154,6 +155,23 @@ test('brainstormer model projects through each target contract', () => {
 
   const antigravity = materialize('antigravity').stage.path;
   assert.throws(() => lstatSync(join(antigravity, '.antigravity/agents/brainstormer.md')), { code: 'ENOENT' });
+});
+
+test('Copilot relative skill handoffs resolve across package and reference nesting', () => {
+  const skills = { review: 'evcrate-review' };
+  const root = temporaryDirectory();
+  for (const [document, link] of [
+    ['fix/SKILL.md', '../review/SKILL.md'],
+    ['fix/references/procedure.md', '../../review/SKILL.md'],
+  ]) {
+    const rendered = replaceKnownNames(`[Review](${link}#decision)`, {}, skills);
+    const destination = rendered.match(/\]\(([^#)]+)#decision\)/u)?.[1];
+    assert.equal(resolve(dirname(join(root, document)), destination), join(root, 'evcrate-review/SKILL.md'));
+  }
+  const unrelated = '[Remote](https://example.test/review/SKILL.md) [Local](references/review/SKILL.md)';
+  assert.equal(replaceKnownNames(unrelated, {}, skills), unrelated);
+  const agentOnly = '[Agent](../review/SKILL.md)';
+  assert.equal(replaceKnownNames(agentOnly, skills, {}), agentOnly);
 });
 
 

@@ -2,7 +2,7 @@ import { useState, useMemo, type FC } from 'react';
 import type { AppState } from '../app-state.js';
 import { aggregateEvaluationGroups, type ComparableEvaluationGroup } from '../../../src/protocol/advisor-evaluation-comparison.js';
 import type { EvaluationDocumentV1 } from '../../../src/protocol/advisor-evaluation.js';
-import type { EvaluationDescriptorV1 } from '../../../src/protocol/advisor-plugin-data-api.js';
+import type { EvaluationDescriptorV1 } from '../../../src/protocol/advisor-data-api.js';
 import { EvaluationsHeader } from '../components/evaluations-header.js';
 import { EvaluationDescriptorsSection } from '../components/evaluation-descriptors-section.js';
 import { ComparableGroupsSection } from '../components/comparable-groups-section.js';

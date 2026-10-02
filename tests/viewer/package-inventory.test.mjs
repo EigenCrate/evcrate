@@ -43,12 +43,6 @@ test('AME-029: pack inventory excludes standalone viewer and excludes sources, c
   assert.equal(files.some((f) => f.includes('node_modules')), false, 'node_modules must be excluded');
 });
 
-test('AME-031: plugin UI bundle size adheres to <=5 MiB total', () => {
-  const pluginUiPath = path.join(projectRoot, 'plugin', 'ui', 'index.html');
-  assert.ok(fs.existsSync(pluginUiPath), 'plugin/ui/index.html must exist before size check');
-  const size = fs.statSync(pluginUiPath).size;
-  assert.ok(size <= 5 * 1024 * 1024, `Plugin UI size must be <= 5 MiB, got ${size} bytes`);
-});
 
 test('AME-007: controller inventory is exactly 36 files with zero viewer or external edges', () => {
   assert.equal(ADVISOR_CONTROLLER_FILES.length, 36, 'Controller files count must be exactly 36');

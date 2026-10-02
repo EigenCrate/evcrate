@@ -1,23 +1,9 @@
 # Project Overview and Product Development Requirements
 
-**Status:** Current requirements baseline. Filesystem cutover Phases 01–02 and
-Hook Materialization Scope Distribution Phase 09 are complete; Windows release
-qualification is complete through Phase 10. Native Windows advisor Phases 01–04
-are complete: Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified
-OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not establish
-broad Windows runtime parity; standalone installer lifecycle and `version --json`
-remain the qualified Windows release boundary. Readiness Repairs 01–04 are also
-complete.
-All-project advisor history Phases 00–05 are complete; its paired release is
-qualified. See the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
-DamHopper Advisor Plugin Replacement Phases E00–E04 are complete (E04/G3
-qualified 2026-09-22). E05 picker removal is applied; joint G4 qualification and
-sign-off remain unverified. Workspace Advisor Phases 00–09 are complete (10/10,
-100%); Phase 09 paired qualification verified 11/11 browser scenarios, four
-screenshots, 49/49 EVCrate UI tests, and 13/13 DamHopper browser tests. Production
-rollout and deployment remain subject to operator authorization.
-**Updated:** 2026-09-30
-**Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and documented paired DamHopper Advisor contracts
+**Status:** Current requirements baseline for EVCrate core CLI/controller, generated projections, and release. Filesystem cutover Phases 01–02, Hook Materialization Scope Distribution Phase 09, Windows release qualification Phase 10, and readiness repairs 01–04 remain recorded milestones. Native Windows evidence remains bounded to the installer and diagnostics described below.
+**Former DamHopper plugin integration:** The plugin runtime, worker/package, and paired host integration were retired 2026-10-02. E00–E05 and Workspace Advisor Phase 00–09 requirements and qualification are historical plugin-era evidence, not current architecture or native-migration qualification.
+**Updated:** 2026-10-02
+**Scope:** EVCrate package and generated projections, shared advisor controller, atomic publication, and historical paired DamHopper Advisor contracts
 
 EVCrate turns one canonical agent-harness source tree into verified target
 projections and publishes those projections safely. This PDR records observable
@@ -403,6 +389,10 @@ granted handles cleared on reload; and the frozen 10,000-consultation benchmark
 met its scan/detail/cancel/long-task thresholds. The milestone made no POSIX
 filesystem attestation, complete-audit, causal, cost, or saved-time claims. These
 dated results do not establish current standalone operation or G4.
+**Historical requirements:** FR-19–FR-22 below describe the retired plugin API,
+worker, embedded UI, and cross-project plugin host integration. Their acceptance
+criteria and dated test evidence are retained for traceability only, not as
+current product or release gates.
 ### FR-19: DamHopper Advisor Plugin domain data contract (Phase E00)
 
 **Requirement:** Publish `evcrate-advisor-data` v1 as one generated schema,
@@ -451,9 +441,9 @@ bounded and redacted.
 
 The E02 candidate builder emitted a deterministic backend-only `.tar.gz` and
 validated its manifest inventory/SHA-256 closure without UI/navigation. This is
-repository/fixture evidence, not G1 integration or E04/G4 qualification. The later
-E05 source cutover does not provide missing G4 evidence or authorize standalone
-retirement.
+historical repository/fixture evidence. The plugin runtime, worker, and package
+were retired 2026-10-02; former G1/G4 gates no longer define current requirements
+and this evidence does not qualify native DamHopper integration.
 
 ### FR-21: Embedded provider-neutral four-view UI (Phase E03)
 
@@ -463,12 +453,10 @@ adapter for the standalone viewer and a bounded DamHopper `MessagePort` adapter
 for the embedded plugin. Keep transport, actor authority, paths, credentials, and
 host internals outside shared view state.
 
-**E03 status:** DONE (completed 2026-09-21; review approved 9.2/10). Joint
-D04/E03 G2 LAN acceptance and E04 package/lifecycle work were downstream at that
-time; E04/G3 was qualified on 2026-09-22. The repository later removed standalone
-picker code in the E05 source cutover. Joint G4 qualification/sign-off remains
-unverified, so E05/G4 is not accepted or complete and standalone retirement is
-not release-authorized.
+**Historical status:** E03 completed 2026-09-21 (review 9.2/10). The
+plugin-era E04/G3 and E05/G4 gates are retained in dated records only; the
+plugin package and host integration were retired 2026-10-02. This history does
+not establish current native integration qualification.
 
 **Historical E03 acceptance:** The provider exposed the eight E00 reads plus
 cancellation and lifecycle events; the UI bridge pinned version `1.0.0`, validated
@@ -524,7 +512,7 @@ The scan was not a new live DamHopper browser session; production deployment rem
 
 ### FR-24: Launchability and filesystem identity (Phase 01)
 
-**Status:** DONE (2026-09-27). See the [phase plan](../plans/260927-0428-filesystem-cutover-review/phase-01-launchability-and-identity.md) and [review](../plans/reports/code-review-260927-1740-phase-01-launchability-and-identity.md).
+**Status:** DONE (2026-09-27). Historical implementation and review details are summarized in the [project changelog](./project-changelog.md); the original plan and review artifacts are not retained in this repository.
 
 **Requirement:** Keep launch permission, capability assessment, content identity, and
 CAS evidence distinct. Publication derives launcher intent from materialized paths,
@@ -557,9 +545,11 @@ does not decide whether execute-bit-only capability transitions are an exception
 chmod-invariance. Durable journal recovery/migration policy and Windows readiness or
 production-runtime qualification remain outside this phase.
 
-### Workspace Advisor requirements (FR-25–FR-33)
+### Historical Workspace Advisor requirements (FR-25–FR-33)
 
-The focused Workspace Advisor acceptance criteria and evidence are maintained in the [Workspace Advisor Product Requirements](./workspace-advisor-pdr.md). This PDR keeps the package-wide requirements baseline and release gates.
+The FR-25–FR-33 acceptance criteria describe the former plugin host integration,
+retired 2026-10-02. The detailed PDR and evidence are retained as history; they
+are not the current Native Advisor contract.
 
 ## Non-functional requirements
 
@@ -574,13 +564,16 @@ The focused Workspace Advisor acceptance criteria and evidence are maintained in
 
 ## Observable release gates
 
-**Current status:** Windows release qualification (Phases 01–10), Advisor Metrics
-Explorer (Phases 01–10), and DamHopper Advisor Plugin implementation/package work
-through E04 are complete. The Explorer's dated standalone-picker evidence is
-historical; its picker/reader source has since been removed. E05 source cutover is
-applied, but joint G4 qualification/sign-off is unverified, and standalone
-retirement is not release-authorized. Documentation/support cutover is complete.
-All-project advisor history Phases 00–05 and Workspace Advisor Phases 00–09 are complete, with paired qualification evidence; production deployment remains an operator action. Deterministic Linux publication evidence and plugin gates G0/G1, D04/E03 G2, and G4 remain distinct. Native Windows advisor Phases 01–04 and readiness repairs 01–04 are complete; Phase 03 observed OMP `ADVICE_READY`, and Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not widen Windows support beyond installer lifecycle and `version --json`; production HOME publication and release authorization remain gated.
+**Current status:** EVCrate package `2.6.0` maintains the core CLI, Advisor
+controller, producer history, and seven-asset release workflow. The DamHopper
+plugin runtime/package/worker and paired host integration were retired on
+2026-10-02. E00–E05 and Workspace Advisor Phase 00–09 qualification records are
+historical; their old G0/G1/G2/G4 gates are not current release requirements
+and do not qualify the native DamHopper integration. Current native API/UI and
+integration evidence belong to DamHopper's Native Advisor architecture. The
+former standalone picker/reader source is removed. Native Windows advisor
+Phases 01–04 and readiness repairs 01–04 remain bounded as described above;
+Windows support is limited to installer lifecycle and `version --json`.
 
 1. Source and target manifests validate with schema-2 rules.
 2. Local build/check completes with a current complete manifest and exact 36-file
@@ -605,22 +598,13 @@ All-project advisor history Phases 00–05 and Workspace Advisor Phases 00–09 
     benchmark (p95 scan 1,643 ms, detail 67 ms, cancel 104 ms), the 33-file
     controller closure, and an exact-seven asset check. This is not current
     release-asset verification or G4 evidence.
-11. Phase E00 schema/manifest generation check and domain parity suites pass:
-    `npm run check:advisor-plugin-schema` and `npm run test:advisor-plugin` pass;
-    identity/digest/metric/evaluation parity remains aligned with existing
-    protocol fixtures, while the read-closure feasibility artifact remains the
-    E01 extraction prerequisite.
-12. The 2026-09-21 E02 worker framing, lifecycle, cancellation, safe-error, and
-    candidate checks were repository/fixture evidence, not owner-runner G1,
-    E04 publication, or standalone retirement. See the [worker guide](./advisor-plugin-worker.md).
-13. E03 bridge/state/four-view/security suites and the self-contained UI package
-    check were recorded on 2026-09-21; this is repository evidence, not
-    host-enforced CSP/sandbox or G2 LAN qualification. See the [embedded UI
-    guide](./advisor-plugin-ui.md).
-14. E05/G4 cannot be accepted from source removal alone. Joint external Linux
-    owner-runner and separate-LAN qualification evidence plus sign-off are
-    required; they are not present in this workspace.
-15. Native Windows advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY`, and full Linux qualification passed 400/400 on WSL Ubuntu 22.04/ext4. Phase 04 records 58/58 relevant tests, clean `release:check`/`distribute:check`, and OMP/Codex diagnostic qualification; Claude/Pi remain unverified. Readiness Repairs 01–04 are complete (20/20 focused and 390/390 final required-suite runs; 9.0/10 review). General Windows runtime parity is not claimed; the release boundary remains installer lifecycle and `version --json`, with production HOME publication operator-gated.
+11. Former E00/E02/E03 plugin contract, worker, UI, and G1/G2/G4 evidence is
+    retained in dated records only. The plugin implementation and release
+    gates are retired and must not be treated as current EVCrate requirements.
+12. Former Workspace Advisor Phase 00–09 paired qualification applies only to
+    the retired plugin-host candidate; it is not evidence for current native
+    DamHopper integration.
+13. Native Windows advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY`, and full Linux qualification passed 400/400 on WSL Ubuntu 22.04/ext4. Phase 04 records 58/58 relevant tests, clean `release:check`/`distribute:check`, and OMP/Codex diagnostic qualification; Claude/Pi remain unverified. Readiness Repairs 01–04 are complete (20/20 focused and 390/390 final required-suite runs; 9.0/10 review). General Windows runtime parity is not claimed; the release boundary remains installer lifecycle and `version --json`, with production HOME publication operator-gated.
 
 ## Documentation map
 
@@ -628,13 +612,10 @@ All-project advisor history Phases 00–05 and Workspace Advisor Phases 00–09 
   distribution, supervision, wire, isolation, and publication contracts.
 - [Code standards](./code-standards.md) — normative implementation and naming rules.
 - [Codebase summary](./codebase-summary.md) — source/module/generated-output map.
-- [Advisor plugin worker](./advisor-plugin-worker.md) — E02 framing, lifecycle,
-  safe errors, admission, and candidate package boundary.
-- [All-project advisor history contract](./all-project-advisor-history.md) — frozen v2 scope, inventory, metadata, and runner contract.
-- [Embedded advisor plugin UI](./advisor-plugin-ui.md) — E03 provider boundary,
-  bridge, reducer/views, opaque-origin package, and acceptance boundary.
-- [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — `describeView`, selected-project admission, canonical identity, and effective permissions.
-- [Workspace Advisor Product Requirements](./workspace-advisor-pdr.md) — detailed Phase 01–09 requirements, acceptance criteria, and evidence.
-- [Project roadmap](./project-roadmap.md) — completed gates, current gaps, and next work.
-- [Project changelog](./project-changelog.md) — historical phase evidence and boundaries.
+- [Historical Advisor plugin integration](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02) — retired package/worker and paired host evidence.
+- [All-project advisor history contract](./all-project-advisor-history.md) — producer history format and historical host integration.
+- [Workspace Advisor host contract](./workspace-advisor-host-contract.md) — former `describeView`, identity, and bridge contract.
+- [Workspace Advisor Product Requirements](./workspace-advisor-pdr.md) — historical Phase 01–09 requirements and qualification.
+- [Project roadmap](./project-roadmap.md) — package milestones and current release boundaries.
+- [Project changelog](./project-changelog.md) — dated phase evidence.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.

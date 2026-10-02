@@ -300,15 +300,6 @@ jobs:
             --expected-hash "evcrate-v${CANDIDATE_VERSION}.release.json=${METADATA_SHA}" \
             --expected-hash "install.ps1=${INSTALL_PS1_SHA}"
 
-      - name: Build and verify advisor plugin release assets
-        run: |
-          npm ci --prefix plugin
-          npm run build:advisor-plugin-ui
-          npm run build:advisor-plugin
-          npm run check:advisor-plugin
-          for archive in dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz; do
-            node scripts/plugin/verify-package.mjs "$archive"
-          done
 
       - name: Publish release
         env:

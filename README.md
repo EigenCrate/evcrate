@@ -1,10 +1,12 @@
 # EVCrate
 
-EVCrate 2.5.0 is a private Node/TypeScript package that authors one canonical
+EVCrate 2.6.0 is a private Node/TypeScript package that authors one canonical
 agent-harness source tree and builds verified projections for seven targets:
 `antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, and `pi`.
 It publishes managed output with ownership, hashing, locking, and recovery rules,
-and ships one shared checkpoint advisor controller.
+and ships one shared checkpoint advisor controller. The former DamHopper plugin
+runtime/package and paired host integration were retired 2026-10-02; current
+native integration does not use this package's former worker or bridge.
 
 ## Download and installation
 
@@ -243,30 +245,6 @@ A final standalone `--advice` token activates formal
 reviews (up to three correction cycles). `@advisor` remains ordinary task text.
 The documentation-facing `/cmd-advise` workflow is a separate interview path.
 
-## DamHopper Advisor Plugin
-
-Private, client-side, read-only React interface embedded as an independently installed, owner-safe DamHopper plugin (`evcrate.advisor`) for inspecting retained advisor consultations, aggregated execution metrics, routing configuration, and external counsel evaluations.
-
-### Plugin packaging and verification
-
-```bash
-npm run build:all                  # Build control plane and plugin UI
-npm run build:advisor-plugin       # Build deterministic plugin tarball
-npm run verify:advisor-plugin dist/advisor-plugin/evcrate-advisor-plugin-v0.1.0.tar.gz
-```
-
-The E04/G3-qualified independent package is designed for direct DamHopper installation without a host rebuild. This package-level status does not establish joint G4 qualification/sign-off, authorize standalone retirement, or verify current release assets.
-
-`plugin/manifest.json` remains package version `0.1.0` with `dataApi: ^1.0.0`;
-the domain API is v2 with v1/v2 support and eight read-only methods.
-GitHub attaches `evcrate-advisor-plugin-v0.1.0.tar.gz` and `evcrate-advisor-plugin-v0.1.0.tar.gz.sha256` separately from the seven core assets.
-
-### Security, metrics, and limitations
-
-- **Owner-safe isolation:** All reads are served by a bounded Node worker over framed transport, reauthorized per actor context. The embedded iframe has no host credentials, DOM access, or direct network capability.
-- **Metrics kernel:** Delivery rate (accepted/terminal), outcome coverage (valid outcome/`ADVICE_READY`), known-outcome resolution (resolved/known outcomes), and receipt latency p95 (nearest-rank). Zero denominators render as `null` (`—`).
-- **Four provider-neutral views:** Overview metrics, History & Detail drawers, Configuration (current account policy), and Evaluations (candidate comparisons).
-- **Boundaries & non-claims:** Retained samples only (no complete audit coverage); no causal effectiveness, cost, or saved-time claims. The standalone picker source has been removed from this repository, but joint G4 qualification/sign-off is unverified and standalone retirement is not release-authorized.
 ## Documented command names
 
 Documentation and target-facing examples use `/cmd-*` slash names:
@@ -293,4 +271,4 @@ follow-up and does not rename canonical source files or invent aliases.
 - [Project changelog](./docs/project-changelog.md) — phase evidence and boundaries.
 - [Project changelog archive](./docs/project-changelog-archive.md) — older phase detail.
 - [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime and settings notes.
-- [Advisor plugin UI](./docs/advisor-plugin-ui.md) — embedded four-view plugin UI and bridge architecture.
+- [Advisor integration history](./docs/system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02) — former plugin architecture and qualification, retained as historical evidence.

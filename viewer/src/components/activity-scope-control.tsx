@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import type { ActivityScope } from '../app-state-types.js';
-import type { AdvisorWorkspaceContext } from '../providers/bridge-contract.ts';
+import type { AdvisorWorkspaceContext } from '../providers/advisor-data-provider.js';
 import { formatProjectName } from '../app-state-selectors.js';
 
 export interface ActivityScopeControlProps {

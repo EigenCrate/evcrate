@@ -1,3 +1,11 @@
+## Unreleased
+
+
+### ♻️ Chores & Refactoring
+
+* **advisor:** retire Dam-Hopper plugin runtime, worker, and distribution artifacts in favor of native Dam-Hopper in-process Advisor integration; preserve standalone viewer components and core CLI controller.
+
+
 ## [2.6.0](https://github.com/EigenCrate/evcrate/compare/v2.5.0...v2.6.0) (2026-10-01)
 
 

@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { EvaluationDescriptorV1 } from '../../../src/protocol/advisor-plugin-data-api.js';
+import type { EvaluationDescriptorV1 } from '../../../src/protocol/advisor-data-api.js';
 
 export interface EvaluationDescriptorCardProps {
   readonly descriptor: EvaluationDescriptorV1;

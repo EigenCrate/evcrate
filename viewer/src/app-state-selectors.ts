@@ -1,6 +1,6 @@
 import type { AppState, UiHistoryFilters } from './app-state-types.ts';
 import type { NormalizedHistoryRecordV1, HistoryMetricFiltersV1 } from '../../src/protocol/advisor-metrics.js';
-import type { HistoryRowV1, HistorySummaryQueryV2 } from '../../src/protocol/advisor-plugin-data-api.ts';
+import type { HistoryRowV1, HistorySummaryQueryV2 } from '../../src/protocol/advisor-data-api.ts';
 const SHA256_HEX_PATTERN = /^[a-f0-9]{64}$/;
 
 export type HistoryQueryResult =

@@ -1,17 +1,12 @@
 # Code Standards and Codebase Structure
 
-**Status:** Current implementation standard
-**Updated:** 2026-09-30
-**Applies to:** TypeScript control plane, Advisor Plugin contracts/provider/UI,
-Workspace Advisor host API and identity contract, canonical harness resources,
-shared advisor controller, generated projections, and publication tooling
+**Status:** Current implementation standards for the EVCrate core package; former plugin-specific guidance below is historical.
+**Updated:** 2026-10-02
+**Applies to:** TypeScript control plane, core advisor controller, canonical harness resources, generated projections, and publication tooling.
 **Windows release boundary:** Qualification covers only standalone installer lifecycle and clean-install `version --json`.
-Native Windows advisor Phases 01–04 are complete: Phase 03 observed OMP
-`ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain
-unverified. This evidence does not establish broad Windows runtime parity or
-authorize production release.
+Native Windows advisor Phases 01–04 are complete: Phase 03 observed OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not establish broad Windows runtime parity or authorize production release.
 
-**Plugin gate:** E05 picker removal and Workspace Phase 08 standalone navigation/direct-route cutover are implemented; joint G4 qualification/sign-off remains unverified, and production release is not authorized.
+**Plugin retirement:** DamHopper's former plugin runtime, SDK, and host integration were retired 2026-10-02. Plugin worker, bridge, and host instructions below are non-normative historical records, not current implementation standards.
 
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
@@ -508,7 +503,7 @@ runner recovery semantics.
 authority: the E02 backend candidate was deterministic for G1; E03 later extended
 the candidate with UI/navigation. This dated packaging evidence is not E04/G4
 qualification or current release-asset verification.
-See the [worker guide](./advisor-plugin-worker.md) and [E03 UI guide](./advisor-plugin-ui.md).
+See the [historical plugin integration record](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02).
 
 ### Phase E03 provider-neutral embedded UI
 
@@ -518,7 +513,7 @@ read operations, lifecycle subscription, and `cancel(requestId)`.
 
 - **Historical E03 adapter:** At E03 completion, the UI had a temporary local File
   System Access adapter. That source was later removed; its former design is
-  documented in the [advisor plugin UI guide](./advisor-plugin-ui.md) as historical,
+  documented as historical in the [system architecture](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02),
   not as a current module or G4 evidence.
 - `DamHopperPortProvider` accepts one validated transferred `MessagePort`, sends
   the `1.0.0` nonce acknowledgement, waits for `frame.ready`, and carries only
@@ -794,4 +789,4 @@ before reporting success.
 - [Project changelog](./project-changelog.md)
 - [Project changelog archive](./project-changelog-archive.md)
 - [Pi-native migration](./pi-native-migration.md)
-- [Advisor plugin UI](./advisor-plugin-ui.md); [Workspace Advisor host contract](./workspace-advisor-host-contract.md)
+- [Historical Advisor integration](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02); [Workspace Advisor host contract](./workspace-advisor-host-contract.md)

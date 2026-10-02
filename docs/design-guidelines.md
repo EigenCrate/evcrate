@@ -1,9 +1,8 @@
 # EVCrate Advisor UI/UX Design Guidelines
 
-**Status:** Living Design System Specification  
-**Authority:** `viewer/src/` (embedded Advisor plugin UI)  
-**Target Environments:** DamHopper IDE right-dock (180px–260px), floating terminal panel (360px–480px), and expanded viewports (768px–1280px+)  
-**Accessibility Level:** WCAG 2.1 AA Compliance  
+**Status:** Historical visual/design specification for the former embedded Advisor plugin UI; shared viewer source remains, but these host dimensions and bridge assumptions are not a current integration contract.
+**Authority:** The retained `viewer/src/` source, where applicable.
+**Historical target environments:** DamHopper IDE right-dock, floating terminal panel, and expanded viewports.
 
 ---
 

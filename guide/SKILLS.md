@@ -6,6 +6,7 @@ This guide documents all available skills in the EVCrate project. Skills extend 
 
 - [What Are Skills?](#what-are-skills)
 - [How to Use Skills](#how-to-use-skills)
+- [Dependency Review and Snyk Remediation](#dependency-review-and-snyk-remediation)
 - [Gemini AI Skills](#gemini-ai-skills)
 - [Development Framework Skills](#development-framework-skills)
 - [Infrastructure & DevOps Skills](#infrastructure--devops-skills)
@@ -50,6 +51,18 @@ examples, including `.claude` references. OMP nested names use `__`; Copilot use
 `/evcrate-cmd-*`. Current scanner/parser prefix enforcement remains a follow-up;
 this convention does not rename source commands. See the
 [code standards](../docs/code-standards.md#normative-command-naming).
+
+---
+
+## Dependency Review and Snyk Remediation
+
+- [`dependency-upgrade-review`](../.evcrate/source/.claude/skills/dependency-upgrade-review/SKILL.md): reusable read-only assessment of an exact proposed dependency upgrade. Ordinary upgrades require no Snyk report. Returns `eligible`, `needs-approval` or `blocked`; never chooses releases, mutates a target or grants approval.
+- [`snyk-fix`](../.evcrate/source/.claude/skills/snyk-fix/SKILL.md): finding/path preservation, dependency-owner mapping and scoped remediation. The concrete execution procedure is Maven/Spring only. Analysis is read-only; major, breaking or uncertain changes require an exact main-session human decision against the current complete baseline.
+- [`snyk-expert`](../.evcrate/source/.claude/agents/snyk-expert.md): specialist orchestration using both skills. The parent supplies the canonical absolute installed resource root separately from the authorized target root, effective execution/isolation permissions and single-writer ownership.
+
+Read both skill entrypoints and every bundled reference in the consuming context; resolve relative links from the installed package, not the target cwd. The parent retains human approval ownership. Drift invalidates prior approval; missing graph, affected-consumer runtime or comparable rescan evidence prevents a `fixed` claim.
+
+Local generation covers all seven targets. Copilot names are `evcrate-snyk-expert`, `evcrate-snyk-fix` and `evcrate-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
 
 ---
 

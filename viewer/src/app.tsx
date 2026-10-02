@@ -9,7 +9,6 @@ import {
 } from './app-state.js';
 import { getCurrentHashView, setWindowHash } from './hash-view.js';
 import type { AdvisorDataProvider } from './providers/advisor-data-provider.ts';
-import { DamHopperPortProvider } from './providers/dam-hopper-port-provider.ts';
 import { DataControls } from './components/data-controls.js';
 import { StatusBanner } from './components/status-banner.js';
 import { HashTabs } from './components/hash-tabs.js';
@@ -37,8 +36,8 @@ export const App: FC<AppProps> = ({ provider }) => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
-  if (!defaultProviderRef.current) {
-    defaultProviderRef.current = provider ?? new DamHopperPortProvider(true);
+  if (!defaultProviderRef.current && provider) {
+    defaultProviderRef.current = provider;
   }
   const activeProvider = provider ?? defaultProviderRef.current;
 
@@ -47,6 +46,7 @@ export const App: FC<AppProps> = ({ provider }) => {
   }, []);
 
   useEffect(() => {
+    if (!activeProvider) return;
     const providerChanged = providerRef.current !== null && providerRef.current !== activeProvider;
     if (providerChanged) providerContextRevisionRef.current++;
     providerRef.current = activeProvider;
@@ -137,6 +137,7 @@ export const App: FC<AppProps> = ({ provider }) => {
   }, [activeProvider]);
 
   const refreshData = useCallback(async () => {
+    if (!activeProvider) return;
     const s = stateRef.current;
     const project = s.workspaceContext?.project;
     if (!project || !project.projectId) {
@@ -284,6 +285,7 @@ export const App: FC<AppProps> = ({ provider }) => {
 
   const handleScopeChange = useCallback(
     async (scope: ActivityScope) => {
+      if (!activeProvider) return;
       const s = stateRef.current;
       if (s.activityScope === scope) return;
 
@@ -366,6 +368,7 @@ export const App: FC<AppProps> = ({ provider }) => {
 
   const handleSetFilters = useCallback(
     async (filters: Partial<UiHistoryFilters>) => {
+      if (!activeProvider) return;
       const s = stateRef.current;
       dispatch({ type: 'SET_FILTERS', filters });
 
@@ -451,6 +454,7 @@ export const App: FC<AppProps> = ({ provider }) => {
 
   const handleHistoryPage = useCallback(
     async (cursor: string | null): Promise<boolean> => {
+      if (!activeProvider) return false;
       const s = stateRef.current;
       if (!s.snapshotId) return false;
 
@@ -513,6 +517,7 @@ export const App: FC<AppProps> = ({ provider }) => {
 
   const handleSelectConsultation = useCallback(
     async (id: string | null, recordRef?: string) => {
+      if (!activeProvider) return;
       const s = stateRef.current;
       const epoch = s.contextEpoch;
 
@@ -564,6 +569,7 @@ export const App: FC<AppProps> = ({ provider }) => {
 
   const handleReadEvaluation = useCallback(
     async (evaluationRef: string, expectedRevision: string) => {
+      if (!activeProvider) return;
       const epoch = stateRef.current.contextEpoch;
       dispatch({ type: 'EVALUATION_READ_START', evaluationRef, contextEpoch: epoch });
 
@@ -596,8 +602,8 @@ export const App: FC<AppProps> = ({ provider }) => {
       cursor: string | null = null,
       limit: number = 32
     ) => {
+      if (!activeProvider) return;
       const epoch = stateRef.current.contextEpoch;
-      // Maximum 32 comparison references enforced
       const boundedItems = items.slice(0, 32);
       dispatch({ type: 'EVALUATIONS_COMPARE_START', contextEpoch: epoch });
 
@@ -643,7 +649,7 @@ export const App: FC<AppProps> = ({ provider }) => {
       <header className="app-header">
         <div className="header-brand">
           <h1 className="brand-title">EVCrate Advisor Metrics Explorer</h1>
-          <p className="brand-subtitle text-muted">DamHopper Advisor Plugin</p>
+          <p className="brand-subtitle text-muted">Advisor Metrics Explorer</p>
         </div>
         <DataControls
           status={state.status}
@@ -652,7 +658,7 @@ export const App: FC<AppProps> = ({ provider }) => {
           isAvailable={state.isAvailable}
           onRefresh={refreshData}
           onCancel={() => {
-            if (activeRequestIdRef.current) activeProvider.cancel(activeRequestIdRef.current);
+            if (activeRequestIdRef.current) activeProvider?.cancel(activeRequestIdRef.current);
           }}
         />
       </header>
@@ -720,7 +726,7 @@ export const App: FC<AppProps> = ({ provider }) => {
         </section>
       )}
       <footer className="app-footer text-muted">
-        <span>EVCrate 2.1.0 &bull; DamHopper Plugin &bull; No Remote Network Access</span>
+        <span>EVCrate &bull; Advisor Metrics &bull; No Remote Network Access</span>
       </footer>
     </div>
   );

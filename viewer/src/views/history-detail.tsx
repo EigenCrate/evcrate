@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import type { NormalizedHistoryRecordV1 } from '../../../src/protocol/advisor-metrics.js';
-import type { HistoryRowV1 } from '../../../src/protocol/advisor-plugin-data-api.ts';
+import type { HistoryRowV1 } from '../../../src/protocol/advisor-data-api.ts';
 import type { HistoryDetailState } from '../app-state.js';
 import { TextBlock } from '../components/text-block.js';
 

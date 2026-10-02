@@ -1,8 +1,7 @@
 /**
- * @file advisor-plugin-data-api.test.mjs
- * Unit tests for EVCrate Advisor Plugin Domain Data API v1.
+ * @file advisor-data-api.test.mjs
+ * Unit tests for EVCrate Advisor Domain Data API.
  */
-
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,11 +9,11 @@ import {
   DATA_API_PROTOCOL_V1,
   DATA_API_VERSION_V1,
   ADVISOR_DATA_METHODS,
-  PLUGIN_ERROR_CODES,
+  ADVISOR_DATA_ERROR_CODES,
   MAX_PAGE_LIMIT,
   MAX_OPAQUE_ID_BYTES,
   MAX_CURSOR_BYTES,
-  PluginDataApiError,
+  AdvisorDataApiError,
   validateHistoryRefreshParams,
   validateHistoryRefreshResult,
   validateHistorySummaryParams,
@@ -59,8 +58,7 @@ import {
   validateEvaluationsReadResultV2,
   validateEvaluationsCompareParamsV2,
   validateEvaluationsCompareResultV2,
-} from '../../dist/protocol/advisor-plugin-data-api.js';
-import { buildDataApiSchema, buildDataApiSchemaV1, buildDataApiSchemaV2, buildManifest } from '../../scripts/generate-advisor-plugin-data-schema.mjs';
+} from '../../dist/protocol/advisor-data-api.js';
 
 const positiveFixtures = JSON.parse(
   readFileSync(new URL('../fixtures/advisor-plugin/domain-v1/positive-wire-fixtures.json', import.meta.url), 'utf8')
@@ -94,12 +92,12 @@ test('Domain protocol constants and error codes', () => {
   assert.ok(ADVISOR_DATA_METHODS.includes('evaluations.read'));
   assert.ok(ADVISOR_DATA_METHODS.includes('evaluations.compare'));
 
-  assert.ok(PLUGIN_ERROR_CODES.includes('INVALID_INPUT'));
-  assert.ok(PLUGIN_ERROR_CODES.includes('FORBIDDEN'));
-  assert.ok(PLUGIN_ERROR_CODES.includes('UNAUTHORIZED'));
-  assert.ok(PLUGIN_ERROR_CODES.includes('SNAPSHOT_EXPIRED'));
-  assert.ok(PLUGIN_ERROR_CODES.includes('DETAIL_CHANGED'));
-  assert.ok(PLUGIN_ERROR_CODES.includes('DETAIL_MISSING'));
+  assert.ok(ADVISOR_DATA_ERROR_CODES.includes('INVALID_INPUT'));
+  assert.ok(ADVISOR_DATA_ERROR_CODES.includes('FORBIDDEN'));
+  assert.ok(ADVISOR_DATA_ERROR_CODES.includes('UNAUTHORIZED'));
+  assert.ok(ADVISOR_DATA_ERROR_CODES.includes('SNAPSHOT_EXPIRED'));
+  assert.ok(ADVISOR_DATA_ERROR_CODES.includes('DETAIL_CHANGED'));
+  assert.ok(ADVISOR_DATA_ERROR_CODES.includes('DETAIL_MISSING'));
 });
 
 test('Positive wire fixtures pass validation for all 8 operations', () => {
@@ -208,7 +206,7 @@ test('Negative wire fixtures reject invalid parameters and results', () => {
       }
     } catch (err) {
       failed = true;
-      assert.ok(err instanceof PluginDataApiError, `Expected PluginDataApiError for ${tc.name}, got ${String(err)}`);
+      assert.ok(err instanceof AdvisorDataApiError, `Expected AdvisorDataApiError for ${tc.name}, got ${String(err)}`);
       assert.equal(err.code, tc.expected_error);
     }
     assert.ok(failed, `Expected failure for case: ${tc.name}`);
@@ -271,28 +269,6 @@ test('Discriminated union states in detail, policy, and evaluations', () => {
   assert.equal(evcMissing.status, 'missing');
 });
 
-test('Schema generator and manifest builder output matches files on disk', () => {
-  const schemaV1OnDisk = readFileSync(
-    new URL('../../plugin/contracts/evcrate-advisor-data-v1.schema.json', import.meta.url),
-    'utf8'
-  );
-  const schemaV2OnDisk = readFileSync(
-    new URL('../../plugin/contracts/evcrate-advisor-data-v2.schema.json', import.meta.url),
-    'utf8'
-  );
-  const manifestOnDisk = readFileSync(
-    new URL('../../plugin/contracts/contract-manifest.json', import.meta.url),
-    'utf8'
-  );
-
-  const builtSchemaV1 = JSON.stringify(buildDataApiSchemaV1(), null, 2) + '\n';
-  const builtSchemaV2 = JSON.stringify(buildDataApiSchemaV2(), null, 2) + '\n';
-  const builtManifest = JSON.stringify(buildManifest(builtSchemaV2, builtSchemaV1), null, 2) + '\n';
-
-  assert.equal(schemaV1OnDisk, builtSchemaV1, 'evcrate-advisor-data-v1.schema.json must match built schema v1');
-  assert.equal(schemaV2OnDisk, builtSchemaV2, 'evcrate-advisor-data-v2.schema.json must match built schema v2');
-  assert.equal(manifestOnDisk, builtManifest, 'contract-manifest.json must match built manifest');
-});
 
 test('Domain protocol v2 constants, limits, and defaults', () => {
   assert.equal(DATA_API_PROTOCOL_V2, 'evcrate-advisor-data');
@@ -371,7 +347,7 @@ test('Negative wire fixtures v2 reject invalid query and inventory parameters', 
         }
       },
       (err) => {
-        assert.ok(err instanceof PluginDataApiError, `Case "${c.name}" should throw PluginDataApiError`);
+        assert.ok(err instanceof AdvisorDataApiError, `Case "${c.name}" should throw AdvisorDataApiError`);
         assert.equal(err.code, c.expected_error, `Case "${c.name}" should have code ${c.expected_error}`);
         return true;
       },
@@ -393,7 +369,7 @@ test('Project metadata sidecar fixtures and display name sanitization', () => {
     assert.throws(
       () => validateProjectMetadataSidecarV1(neg.sidecar),
       (err) => {
-        assert.ok(err instanceof PluginDataApiError, `Case "${neg.name}" should throw PluginDataApiError`);
+        assert.ok(err instanceof AdvisorDataApiError, `Case "${neg.name}" should throw AdvisorDataApiError`);
         assert.equal(err.code, neg.expected_error);
         return true;
       },
@@ -404,13 +380,13 @@ test('Project metadata sidecar fixtures and display name sanitization', () => {
   // Direct display name sanitization checks
   assert.equal(validateProjectDisplayName('my-project'), 'my-project');
   assert.equal(validateProjectDisplayName('Evcrate (Core)'), 'Evcrate (Core)');
-  assert.throws(() => validateProjectDisplayName(' leading'), { name: 'PluginDataApiError' });
-  assert.throws(() => validateProjectDisplayName('trailing '), { name: 'PluginDataApiError' });
-  assert.throws(() => validateProjectDisplayName('has/slash'), { name: 'PluginDataApiError' });
-  assert.throws(() => validateProjectDisplayName('has\\backslash'), { name: 'PluginDataApiError' });
-  assert.throws(() => validateProjectDisplayName('~/home'), { name: 'PluginDataApiError' });
-  assert.throws(() => validateProjectDisplayName('a'.repeat(65)), { name: 'PluginDataApiError' });
-  assert.throws(() => validateProjectDisplayName(''), { name: 'PluginDataApiError' });
+  assert.throws(() => validateProjectDisplayName(' leading'), { name: 'AdvisorDataApiError' });
+  assert.throws(() => validateProjectDisplayName('trailing '), { name: 'AdvisorDataApiError' });
+  assert.throws(() => validateProjectDisplayName('has/slash'), { name: 'AdvisorDataApiError' });
+  assert.throws(() => validateProjectDisplayName('has\\backslash'), { name: 'AdvisorDataApiError' });
+  assert.throws(() => validateProjectDisplayName('~/home'), { name: 'AdvisorDataApiError' });
+  assert.throws(() => validateProjectDisplayName('a'.repeat(65)), { name: 'AdvisorDataApiError' });
+  assert.throws(() => validateProjectDisplayName(''), { name: 'AdvisorDataApiError' });
 });
 
 test('All Projects root query vs specific project query in summary and page', () => {

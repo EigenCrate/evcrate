@@ -1,8 +1,8 @@
 # All-Project Advisor History Contract
 
-**Status:** COMPLETE — Phases 00–05 finished 2026-09-24 (6/6, 100%). Phase 05 paired release qualified; review approved 9.8/10. See the [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).
+**Status:** Historical paired host/runner integration; retired 2026-10-02. The producer's history format and project records remain relevant, but `rootIdentity`, plugin installation bindings, runner descriptors, and old UI scopes below are not current Native Advisor contracts. The 2026-09-24 paired release qualification is historical evidence only.
 
-This guide records the coordinated EVCrate/DamHopper boundary for all-project advisor history. Phases 02–04 implement host admission, owner-safe scanning, and snapshot-backed UI filtering; Phase 05 closes paired qualification. Production deployment remains a separate operator action.
+This guide records the former EVCrate/DamHopper plugin boundary for all-project history. The native DamHopper reader uses the server process `$HOME/.evcrate/advisor-history` and does not require root-identity registration, plugin context, or runner admission.
 
 ## Versioning and compatibility
 
@@ -39,7 +39,7 @@ The sidecar is versioned independently from the data API. Version 1 maps canonic
 
 The EVCrate history writer records a sanitized project basename once in a `project-metadata.json` sidecar keyed by project ID under the cross-platform trusted-files policy (written atomically without UID/SID/0600 mode restrictions; prior owner-only requirement superseded); metadata failures do not block consultation history. The worker checks the project-local sidecar first, then the root-level map. If neither has a valid name, the label is `null` and the UI can show an abbreviated project ID. Names are display-only, never identity or authorization; strict validation rejects leading/trailing whitespace, control characters, path separators, `~`, HOME/USERPROFILE references, and escaped control sequences. Do not infer labels from filesystem paths or expose absolute HOME paths.
 
-## Host runner scope descriptor
+## Historical plugin runner scope descriptor (retired)
 
 The companion runner protocol defines:
 
@@ -55,7 +55,7 @@ interface ContextScopeDescriptor {
 
 `context.open` accepts the optional descriptor; its result may include `scopeKind` identifying the established scope. The matching Rust host contract serializes the scope kind as `project` or `history-root` and uses camel-case descriptor fields. This typed scope distinguishes owner-root history from a single project context; host authorization and revalidation remain the authority.
 
-## Host authorization and context (Phase 02)
+## Historical plugin host authorization and context (retired)
 
 DamHopper persists an installation-bound `OwnerHistorySource` with `rootPath`, `rootIdentity` (64-character lowercase SHA-256), positive `sourceRevision`, and `allAuthenticatedHistoryRead`. An administrator supplies it during installation approval or replaces it with an expected security revision; replacement advances registry and security revisions.
 
@@ -69,9 +69,13 @@ Revision-guarded source replacement clears the API source cache and invalidates 
 
 **Evidence:** [Phase 02 plan](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [validation](../plans/reports/tester-260924-1424-phase02-host-root-authorization-context.md), and [review](../plans/reports/code-review-260924-1436-phase-02-host-root-authorization.md).
 
-## Root Identity (SHA-256) generation and host configuration guide
+## Historical plugin Root Identity (SHA-256) configuration (retired)
 
-Root Identity authorises account-wide `history-root` scope for plugin access without leaking host filesystem paths across the sandboxed UI/worker boundary.
+`rootIdentity` bound an owner history root to the former DamHopper plugin
+installation. Native DamHopper Advisor reads the server process HOME history
+directory directly and has no root-hash admission/configuration field. The
+producer-side `projectId` in history records is a separate domain identifier
+and remains part of the retained history format.
 
 ### Root Identity vs. Project ID
 
@@ -183,10 +187,6 @@ The 2026-09-24 qualification reconciles 273/273 cross-repository test executions
 
 **Evidence:** [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), [test report](../plans/reports/tester-260924-2115-phase-05-paired-qualification.md), and [code review](../plans/reports/code-review-260924-2125-phase-05-paired-qualification.md).
 
-## Source map and phase boundary
-
-- EVCrate contract: `src/protocol/advisor-plugin-data-api.ts`, `scripts/generate-advisor-plugin-data-schema.mjs`, `plugin/contracts/evcrate-advisor-data-v2.schema.json`, `plugin/contracts/contract-manifest.json`, and `plugin/backend/data-api.cjs`.
-- Phase 03 worker/provider implementation: `plugin/backend/{binding.cjs,context-table.cjs,history-scanner.cjs,snapshot-store.cjs,cursor-manager.cjs,history-provider.cjs,provider.cjs}`, `.evcrate/source/.evcrate/bin/lib/advisor/history-store.cjs`, and `scripts/build-advisor-plugin-candidate.mjs`.
-- Companion host contract and Phase 02 implementation: `packages/plugin-sdk/src/runner-protocol.ts`; `server/src/plugins/{registry_state.rs,lifecycle.rs,authorization.rs,contract.rs,api_service.rs,worker_supervisor.rs}` and `server/src/api/plugin_admin.rs` in DamHopper's `feat-plugin-platform` workspace.
-- Phase 04 UI: EVCrate `viewer/src/{app.tsx,app-state-types.ts,app-actions.ts,app-state-reducer.ts,app-state-selectors.ts,app-state.ts}`, `viewer/src/views/{history-view,history-detail,overview-view,configuration-view,evaluations-view}.tsx`, and `viewer/src/providers/{advisor-data-provider,dam-hopper-port-provider}.ts`; companion DamHopper `packages/ui/src/plugins/use-plugin-navigation.ts` and `packages/ui/src/components/PluginHostPage.tsx`.
-- Phase boundaries: Phases 00–05 are complete (6/6, 100%); paired release is qualified. See the [project plan](../plans/260924-1055-all-project-advisor-history/plan.md), [Phase 05](../plans/260924-1055-all-project-advisor-history/phase-05-cross-repo-qualification.md), [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md), and [Phase 01](../plans/260924-1055-all-project-advisor-history/phase-01-cross-project-contract.md), [Phase 02](../plans/260924-1055-all-project-advisor-history/phase-02-host-authorization-context.md), [Phase 03](../plans/260924-1055-all-project-advisor-history/phase-03-worker-history-provider.md), and [Phase 04](../plans/260924-1055-all-project-advisor-history/phase-04-project-filter-ui.md).
+- The EVCrate history producer and on-disk consultation format are the maintained data source; see current package source and the core Advisor controller map in [Codebase Summary](./codebase-summary.md).
+- The plugin contract, backend, runner, SDK, and paired UI source-map paths below were removed; phase plans and reports remain historical.
+- Paired all-project history Phases 00–05 and their 2026-09-24 qualification are historical integration evidence, not current Native Advisor qualification. See the [project plan](../plans/260924-1055-all-project-advisor-history/plan.md) and [Release Evidence Manifest](../plans/reports/release-evidence-manifest-260924-2140-phase-05.md).

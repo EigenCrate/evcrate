@@ -1,9 +1,9 @@
 /**
- * @file advisor-plugin-data-api.ts
- * EVCrate Advisor Plugin Domain Data API (Version 1).
+ * @file advisor-data-api.ts
+ * EVCrate Advisor Domain Data API.
  *
  * Implements the domain contract, strict type definitions, constants, and validators
- * for the eight plugin data operations required by DamHopper Advisor Plugin Phase E00.
+ * for the eight advisor data operations.
  */
 
 import { isPlainObject } from './json.js';
@@ -67,8 +67,6 @@ export const MAX_PAGE_LIMIT = 500;
 export const DEFAULT_PAGE_LIMIT = 100;
 export const MAX_EVALUATION_PAGE_LIMIT = 100;
 export const MAX_PAGE_RESULT_BYTES = 1024 * 1024; // 1 MiB
-export const MAX_FRAME_PAYLOAD_BYTES = 16 * 1024 * 1024; // 16 MiB
-export const MAX_CONTROL_PAYLOAD_BYTES = 64 * 1024; // 64 KiB
 export const MAX_EVALUATION_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MiB
 export const MAX_COMPARE_ITEMS = 32;
 export const MAX_PROJECT_NAME_CHARS = 64;
@@ -78,11 +76,10 @@ export const PROJECT_METADATA_SIDECAR_VERSION_V1 = 1 as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/;
 
-export const PLUGIN_ERROR_CODES = Object.freeze([
+export const ADVISOR_DATA_ERROR_CODES = Object.freeze([
   'UNAUTHORIZED',
   'FORBIDDEN',
   'INCOMPATIBLE',
-  'RUNNER_UNAVAILABLE',
   'RUNTIME_UNAVAILABLE',
   'SOURCE_NOT_CONFIGURED',
   'SOURCE_MISSING',
@@ -91,29 +88,28 @@ export const PLUGIN_ERROR_CODES = Object.freeze([
   'OVERLOADED',
   'DEADLINE_EXCEEDED',
   'CANCELLED',
-  'WORKER_FAILED',
   'CONTEXT_REVOKED',
   'SNAPSHOT_EXPIRED',
   'DETAIL_CHANGED',
   'DETAIL_MISSING',
 ] as const);
 
-export type PluginErrorCode = (typeof PLUGIN_ERROR_CODES)[number];
+export type AdvisorDataErrorCode = (typeof ADVISOR_DATA_ERROR_CODES)[number];
 
-export class PluginDataApiError extends Error {
-  readonly code: PluginErrorCode;
+export class AdvisorDataApiError extends Error {
+  readonly code: AdvisorDataErrorCode;
   readonly path: string;
 
-  constructor(code: PluginErrorCode, path = '', message?: string) {
-    super(message ?? `Plugin Data API validation failed: ${code} at '${path}'`);
-    this.name = 'PluginDataApiError';
+  constructor(code: AdvisorDataErrorCode, path = '', message?: string) {
+    super(message ?? `Advisor Data API validation failed: ${code} at '${path}'`);
+    this.name = 'AdvisorDataApiError';
     this.code = code;
     this.path = path;
   }
 }
 
-function fail(code: PluginErrorCode, path: string, msg?: string): never {
-  throw new PluginDataApiError(code, path, msg);
+function fail(code: AdvisorDataErrorCode, path: string, msg?: string): never {
+  throw new AdvisorDataApiError(code, path, msg);
 }
 
 

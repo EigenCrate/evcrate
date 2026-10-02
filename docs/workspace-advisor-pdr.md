@@ -1,6 +1,6 @@
 # Workspace Advisor Product Requirements
 
-This page contains FR-25–FR-33 from the [Project Overview and PDR](./project-overview-pdr.md). Workspace Advisor Phases 00–09 are complete; Phase 09 paired qualification passed, while production rollout and deployment remain subject to explicit operator authorization. See the [plan](../plans/260929-1346-advisor-workspace-panel/plan.md) and [Phase 09 qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md).
+**Historical PDR:** This page records FR-25–FR-33 for the former plugin-host integration. The plugin runtime and paired host integration were retired 2026-10-02; Phase 09 qualification (2026-09-30) applies only to that candidate, not the current native DamHopper architecture. Retain this page for evidence traceability, not as a current runtime contract. See the [historical plan](../plans/260929-1346-advisor-workspace-panel/plan.md) and [paired qualification report](../plans/260929-1346-advisor-workspace-panel/reports/phase-09-qualification.md).
 
 ### FR-25: Workspace Advisor host admission and identity (Phase 01)
 
@@ -79,7 +79,7 @@ and fences asynchronous data commits across scope and authority changes.
   and a passing V-E3 smoke proving no `history.refresh` on scope/filter/view
   transitions. See the [phase record](../plans/260929-1346-advisor-workspace-panel/phase-04-viewer-scope-and-request-state.md),
   [review](../plans/reports/code-review-260929-2154-phase-04-viewer-scope-and-requests.md),
-  and [UI guide](./advisor-plugin-ui.md).
+  and [historical integration record](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02).
 
 **Boundary:** Phase 04 proves viewer state behavior. Persistent placement was implemented in Phase 05; Phases 06–09 have since completed, including paired candidate qualification under [FR-33](#fr-33-paired-qualification-documentation-and-release-handoff-phase-09). Production deployment remains subject to operator authorization.
 
