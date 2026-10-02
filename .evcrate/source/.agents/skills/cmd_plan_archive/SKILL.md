@@ -39,6 +39,14 @@ Read the plan directory:
 - `plan.md` - Overview and phases list
 - `phase-*.md` - 20 first lines of each phase file to understand the progress and status
 
+Before interpreting completion, apply `Plan progress and phase reconciliation`
+in `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) regardless of the current mode flag.
+For advice-controlled plans, read `progress.md` and reconcile receipts/run scope;
+do not infer completion from frozen phase headers. Do not move, delete, rewrite
+or stage captured plans/evidence or their immutable receipts: exclude those
+plans from the archive candidates and provide read-only links instead. Ordinary
+uncaptured plans retain the confirmation and archive behavior below.
+
 ### Step 2: Summarize the plans and document them with `/journal` slash command
 Use `request_user_input` tool to ask if user wants to document journal entries or not.
 Skip this step if user selects "No".

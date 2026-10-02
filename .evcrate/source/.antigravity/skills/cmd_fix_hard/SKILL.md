@@ -29,13 +29,14 @@ Before analysis, read `.antigravity/workflows/advisor-mentoring.md` if present; 
 `WORK_ARGUMENTS` as the issue input and apply the shared default stuck-escalation
 contract throughout discovery and planning.
 
-`/fix:hard` coordinates analysis, research, and planning, and delegates canonical
-implementation, review, and durable task-state lifecycle ownership to `/code`
-under `## Caller lifecycle binding` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install).
-To avoid duplicate counsel and state conflict, `/fix:hard` must not initialize a
-separate task run, invoke a duplicate review checkpoint, or double advice
-checkpoint/init before `/code`.
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install)); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
 
+`/fix:hard` is a delegate router: it coordinates analysis, research, and planning, and delegates canonical
+implementation, review, and durable task-state lifecycle ownership to `/code`
+under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install).
+separate task run, invoke a duplicate review checkpoint, double advice
+checkpoint/init, or duplicate publication of progress receipts before or alongside `/code`.
+Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
 When the caller provides an active advice run context (`task_run_id`, active
 phase, project root, state revision, prior counsel/disposition/outcome),
 `/fix:hard` preserves that active caller context across the handoff to `/code`.
@@ -67,9 +68,9 @@ Analyze the skills catalog and activate other skills that are needed for the tas
    counsel/disposition/outcome) so `/code` continues as the single durable-state
    owner without doubling advice initialization or consultations.
 5. Final Report:
-  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
-  * Durable completion and any selected Git index transitions for captured paths are owned by `/code` (which executes index transitions, matching validation, truthful outcome, and `state complete` under `## Caller lifecycle binding`); do not mutate captured baseline state, stage/commit captured paths, or fabricate completion after `/code` seals the run.
-  * Any optional post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits.
+  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps. For advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md` (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker); old sealed `plan.md` remains untouched. Normal default plans with no history do not require, read, or output nonexistent progress links.
+  * Durable completion, mandatory outside-snapshot immutable receipts, and live `progress.md` updates are owned by `/code` (which executes index transitions, matching validation, truthful outcome, and `state complete` under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install)); do not mutate captured baseline state, stage/commit captured paths, or fabricate completion after `/code` seals the run. Delegate routers do not duplicate publication or durable operations.
+  * Any post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits. Only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install).
   - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **REMEMBER**:

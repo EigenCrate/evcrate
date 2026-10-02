@@ -20,11 +20,11 @@ A final standalone `--advice` activates explicit review mentoring.
 Before analysis, read `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issue input and apply the shared default stuck-escalation contract.
-
-In explicit advice mode, this command directly implements and validates fixes
-and binds its durable lifecycle to `## Caller lifecycle binding` in
-`.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`.
-
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
+In explicit advice mode (or when an active advice run or named checkpoint
+activates the advice lifecycle), this command directly implements and validates fixes
+and binds its durable lifecycle to `## Caller lifecycle binding` and
+`Plan progress and phase reconciliation` in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`.
 1. **Single durable-state owner**: The main agent owns all state controller
    operations (`init`, `checkpoint`, `disposition`, `outcome`, `complete`). Child
    agents (`debugger`, `scout`, `planner`, `tester`, `code-reviewer`) report
@@ -72,7 +72,7 @@ and binds its durable lifecycle to `## Caller lifecycle binding` in
    - Use `Grep` with `head_limit: 30` to read only last 30 lines (avoid loading entire file)
    - If insufficient context, increase `head_limit` as needed
 3. Use `scout` subagent to analyze the codebase and find the exact location of the issues, then report back to main agent.
-4. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
+4. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
 5. Start implementing the fix based the reports and solutions.
 6. Use `tester` agent to test the fix and make sure it works, then report back to main agent.
 7. Use `code-reviewer` subagent to review the code changes and wait for its
@@ -136,13 +136,25 @@ and binds its durable lifecycle to `## Caller lifecycle binding` in
    - **Durable completion**: Call `state complete` (with `expected_revision`) only
      after the final truthful outcome settles the baseline. Do NOT mark durable
      phase complete or claim DONE prematurely in captured files before `state
-     complete` succeeds.
+     complete` succeeds (controller abandonment sets `gate_status: completed` but
+     is never successful completion; completion requires a matching resolved outcome).
+     After `state complete` succeeds, parent writes mandatory immutable completion receipts
+     outside the captured baseline snapshot and updates the derived live overview `<plan-dir>/progress.md`
+     (uncaptured, outside baseline; never captured or cited as evidence/authorized
+     substantive paths; if already captured, cannot overwrite progress, surface blocker)
+     per shared receipt rules in `Plan progress and phase reconciliation` in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`.
+     Preserved historical snapshot protection applies across runs even without `--advice`;
+     prior sealed paths remain immutable, while current-run registered pre-seal writes
+     within parent-authorized paths remain permitted. Never direct edits to sealed plans
+     or metadata/roadmap after seal.
    - **Sealed baseline**: Do NOT stage, commit, or mutate captured baseline files
-     or their Git index state after `state complete` seals the run.
+     or their Git index state after `state complete` seals the run; only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`.
    - **Administrative reporting**: Respond back to user with a summary of the
      changes and explain everything briefly, guide user to get started, and suggest
-     next steps. Any optional post-completion administrative receipt must be
-     strictly OUTSIDE the captured baseline snapshot, identify the approved
-     snapshot, and cannot claim unreviewed edits.
+     next steps. For advice-controlled plans or preserved snapshots, point output to
+     `<plan-dir>/progress.md`; old sealed `plan.md` remains untouched. Normal default
+     plans with no history do not require, read, or output nonexistent progress links.
+     Any optional post-completion administrative receipt must be strictly OUTSIDE the
+     captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits.
 
 **OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

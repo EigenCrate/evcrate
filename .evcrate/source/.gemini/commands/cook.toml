@@ -30,6 +30,7 @@ eventual `/code` handoff; otherwise append none. Apply the shared default
 stuck-escalation contract during `/cook` discovery and planning. If a stuck
 checkpoint is reached during planning, follow `## Caller lifecycle binding`
 for active run disposition and outcome before proceeding.
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.gemini/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
 Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
 preserves any active run context, appends exactly one trailing `--advice` when
 explicit mode is active, and otherwise passes no `--advice` token.
@@ -118,10 +119,9 @@ Do not hand off to `/code` until the preflight contract and plan are clear.
 
 * Use `planner` subagent to analyze the preflight contract, research reports, and scout reports to create an implementation plan using the progressive disclosure structure:
   - Create a directory using naming pattern from `## Naming` section.
-  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links.
+  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
   - For each phase, add `phase-XX-phase-name.md` files containing sections (Context links, Overview with date/priority/statuses, Key Insights, Requirements, Architecture, Related code files, Implementation Steps, Todo list, Success Criteria, Risk Assessment, Security Considerations, Next steps).
   - Include the preflight contract and side-effect review checklist in the plan.
-
 ### 6. Side-Effect Review Checklist
 
 Before handoff, verify the plan accounts for:
@@ -168,29 +168,39 @@ Before handoff, verify the plan accounts for:
 
 Substantive plan progress, documentation, and roadmap updates belong to phase
 execution and are owned and finalized inside `/code` before sealing durable
-completion under `## Caller lifecycle binding`.
+completion under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.gemini/workflows/advisor-mentoring.md`.
 
-* Root `/cook` delegates this ownership to `/code` and must not mutate captured
-  plan, report, or doc files after `/code` seals its run, nor duplicate
+* Root `/cook` is a delegate router: it delegates this ownership to `/code` and
+  must not duplicate publication or durable controller operations. Do not mutate
+  captured plan, report, or doc files after `/code` seals its run, nor duplicate
   substantive finalization.
-* In explicit advice mode, all phase-owned configuration, onboarding updates, and
+* Preserved historical snapshot protection applies across runs even when `--advice`
+  is omitted; prior sealed paths remain immutable, while current-run registered
+  pre-seal writes within parent-authorized paths remain permitted. Never direct edits
+  to sealed plans or metadata/roadmap after seal.
+* For advice-controlled plans or plans with preserved historical snapshots,
+  `<plan-dir>/progress.md` is the derived current overview (uncaptured, outside
+  baseline; never captured or cited as evidence/authorized substantive paths; if
+  already captured, cannot overwrite progress, surface blocker). Old sealed
+  `plan.md` remains untouched; startup and final output identify the overview
+  instead of relying on stale `plan.md` display.
+* Under advice lifecycle, all phase-owned configuration, onboarding updates, and
   selected Git transitions belong to `/code`'s pre-outcome finalization before
   `state complete` seals the run. Root `/cook` delegates sealing to `/code` and
   performs no captured mutations or Git commands after seal.
 * Do not mark durable phase DONE prematurely or mutate captured evidence after
   complete. Do NOT prescribe copying DONE into captured files after sealing.
-* Any optional post-completion administrative receipt at the root workflow level
-  must remain strictly outside the captured snapshot and identify the approved
-  snapshot without claiming later unreviewed edits.
+* Parent plan-owning completion (`/code`) writes mandatory outside-snapshot
+  immutable phase completion receipts and live `progress.md` per `Plan progress and phase reconciliation` in `.gemini/workflows/advisor-mentoring.md`; root `/cook`
+  does not duplicate publication.
 * In default mode, if the user rejects the changes, ask for the issues and route
   back to `/code` with the plan and unresolved questions for a bounded fix cycle.
-* In explicit advice mode, rejection and fixes are handled inside `/code` before
+* Under advice lifecycle, rejection and fixes are handled inside `/code` before
   sealing. After its completion receipt, root output is read-only; do not route
   a completed run back into checkpoint, disposition, correction, or outcome work.
-
 ### 10. Onboarding
 
-* In explicit advice mode: phase-owned configuration and onboarding setup belong
+* Under advice lifecycle: phase-owned configuration and onboarding setup belong
   to the implementation owner's pre-outcome finalization and were passed to
   `/code` before sealing. After `/code` seals the run, provide readonly guidance
   only; perform no mutations to captured workspace paths or configuration files.
@@ -205,12 +215,15 @@ completion under `## Caller lifecycle binding`.
 
 ### 11. Final Report
 * Report back to user with a summary of the changes and explain everything briefly,
-  guide user to get started and suggest the next steps.
-* In explicit advice mode: selected Git decisions and execution belong to the
+  guide user to get started and suggest the next steps. For advice-controlled plans
+  or plans with preserved historical snapshots, point startup and final output to
+  `<plan-dir>/progress.md`. Normal default plans with no history do not require,
+  read, or output nonexistent progress links.
+* Under advice lifecycle: selected Git decisions and execution belong to the
   implementation owner's pre-outcome finalization before sealing. After `/code`
-  seals the run, do not execute git commit or push commands; emit readonly
-  guidance or an uncaptured administrative receipt strictly outside the captured
-  baseline snapshot only.
+  seals the run, do not execute git commit or push commands or captured-file/selected-index
+  mutations; emit readonly guidance or an uncaptured administrative receipt strictly
+  outside the captured baseline snapshot only per `Plan progress and phase reconciliation` in `.gemini/workflows/advisor-mentoring.md`.
 * In default mode: preserve existing default-mode postimplementation behavior:
   * Ask the user if they want to commit and push to git repository, if yes, use
     `git-manager` subagent to commit and push to git repository.

@@ -34,6 +34,7 @@ Before planning, read `.copilot/evcrate/workflows/advisor-mentoring.md` (specifi
 plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the tasks input.
 Apply the shared default stuck-escalation contract.
 
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.copilot/evcrate/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
 If an active advisor run context is already present from an earlier named
 checkpoint (such as a direction, decision, or stuck checkpoint in this session),
 retain its identity and context: `task_run_id`, active phase, project root,
@@ -77,6 +78,7 @@ Use this only when work can be split into independent phases with clear dependen
   - file ownership matrix
   - side-effect review checklist
   - per-phase success criteria
+- For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched
 - Do not proceed if any parallel phase has overlapping file ownership
 
 ### 3. Parallel Implementation
@@ -102,7 +104,7 @@ Use this only when work can be split into independent phases with clear dependen
 ### 5. Code Review & Advice Gate ⏸ BLOCKING GATE
 - Use `evcrate-code-reviewer` for all changes; wait for terminal reviewer report.
 - Settle reviewer report and terminal artifacts before checkpoint reservation.
-- In explicit advice mode, after reviewer terminal result and before fixing
+- Under advice lifecycle (explicit `--advice`, active run, or named checkpoint), after reviewer terminal result and before fixing
   issues or requesting approval, enter the canonical checkpoint dispatcher
   following `## Caller lifecycle binding` in `.copilot/evcrate/workflows/advisor-mentoring.md`:
   - **Fresh first review with no active run**:
@@ -152,14 +154,15 @@ Use this only when work can be split into independent phases with clear dependen
 - Approval/rejection gate: User approval or rejection must occur before finalization outcome and sealing:
   - If rejected or critical issues remain: fix and repeat under the active run before recording final outcome or sealing.
   - If approved: proceed with whole-phase substantive finalization.
-- Parent is the implementation owner and owns all durable state operations:
-  - In explicit advice mode: parent records `state disposition` for finalization
+- Parent is the implementation owner and owns all durable state operations per `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.copilot/evcrate/workflows/advisor-mentoring.md`:
+  - Under advice lifecycle: parent records `state disposition` for finalization
     (`action: "accept"` with canonical `correction: { action_id, episode_id, validation_command }`)
     before executing finalization writes or Git transitions.
-  - Use `evcrate-project-manager` + `evcrate-docs-manager` in parallel to update plan files, docs, and roadmap.
+  - Child agents (`evcrate-project-manager`, `evcrate-docs-manager`) are advisory children and do not invoke controller operations.
+  - Use `evcrate-project-manager` + `evcrate-docs-manager` in parallel to update plan files, docs, and roadmap for authorized scope.
   - Settle all planned updates, phase-owned configuration/onboarding, and terminal
     artifacts before recording the final outcome.
-  - Parallel commit (Explicit Advice Mode): clarify commit preference and execute
+  - Parallel commit (under advice lifecycle): clarify commit preference and execute
     selected Git decisions/transitions via `evcrate-git-manager` BEFORE final validation,
     outcome, and completion. Staging and commit transitions must settle before
     recording the outcome.
@@ -167,24 +170,28 @@ Use this only when work can be split into independent phases with clear dependen
   - Parent records the final truthful `state outcome` reporting actual changed paths
     (including any git index/status updates) and passed validation, advancing the baseline.
   - Call `complete` to seal the durable run. The durable controller completion
-    receipt is authoritative; only then is the phase durably DONE.
+    receipt is authoritative; only then is the phase durably DONE (controller abandonment sets `gate_status: completed` but is never successful completion; completion requires a matching resolved outcome).
   - Do not mark durable phase DONE prematurely or mutate captured evidence after
     complete. Do NOT prescribe copying DONE into captured files after sealing.
-  - After `complete` seals the run, there is NO rejected-fix path: approval/rejection
-    occurred before seal; afterwards emit only a readonly receipt strictly outside
-    the captured baseline snapshot that identifies the approved snapshot without
-    claiming unreviewed edits.
+  - After `complete` seals the run, parent writes mandatory immutable completion receipts
+    outside the captured snapshot and updates the live overview `<plan-dir>/progress.md`
+    (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths;
+    if already captured, cannot overwrite progress, surface blocker) per `Plan progress and phase reconciliation`
+    in `.copilot/evcrate/workflows/advisor-mentoring.md`.
+  - Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
+  - In default mode on mixed plans with prior advice phases: save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `Plan progress and phase reconciliation` in `.copilot/evcrate/workflows/advisor-mentoring.md`; normal unprotected default plans keep normal `plan.md` status updates.
+  - After sealing, there is NO rejected-fix path: approval/rejection occurred before seal; afterwards emit readonly guidance and output pointing to `progress.md`.
 ### 7. Final Report
-- Summary of all parallel phases
+- Summary of all parallel phases; for advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md`. Normal default plans with no history do not require, read, or output nonexistent progress links.
 - Guide to get started
 - Postimplementation and commit handling:
-  - In explicit advice mode: selected Git transitions and commits were executed
+  - Under advice lifecycle: selected Git transitions and commits were executed
     during pre-outcome finalization in Step 6 prior to sealing. After `complete`
     seals the run, provide readonly guidance only; do not execute git commit/push
-    commands or mutate captured paths. Any post-completion administrative receipt
-    must remain strictly outside the captured baseline snapshot and identify the
-    approved snapshot without claiming unreviewed edits.
-  - In default mode: explicitly preserve existing default-mode postimplementation
+    commands or captured-file/selected-index mutations after seal; only bounded
+    administrative receipt and progress publication outside baseline is permitted
+    per `Plan progress and phase reconciliation` in `.copilot/evcrate/workflows/advisor-mentoring.md`.
+  - In default mode (no active advice lifecycle): explicitly preserve existing default-mode postimplementation
     behavior: ask user if they want to commit to git repository (use `evcrate-git-manager`
     subagent if yes). Preserve scoped approval and commit behavior; do not execute
     an automatic commit without explicit user confirmation.

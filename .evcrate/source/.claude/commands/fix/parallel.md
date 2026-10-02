@@ -16,11 +16,11 @@ A final standalone `--advice` activates explicit review mentoring.
 Before analysis, read `.claude/workflows/advisor-mentoring.md` and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issues input and apply the shared default stuck-escalation contract.
-
-In explicit advice mode, this command directly coordinates parallel fixes and
-binds its durable lifecycle to `## Caller lifecycle binding` in
-`.claude/workflows/advisor-mentoring.md`.
-
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.claude/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
+In explicit advice mode (or when an active advice run or named checkpoint
+activates the advice lifecycle), this command directly coordinates parallel
+fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
+`Plan progress and phase reconciliation` in `.claude/workflows/advisor-mentoring.md`.
 1. **Single durable-state owner**: The parent agent owns all state controller
    operations (`init`, `checkpoint`, `disposition`, `outcome`, `complete`).
    Parallel child agents (`fullstack-developer`, `debugger`, `tester`,
@@ -73,6 +73,7 @@ binds its durable lifecycle to `## Caller lifecycle binding` in
 ### 2. Parallel Fix Planning
 - In explicit advice mode with an active run, ensure plan generation and file ownership boundaries align with an accepted registered correction action within authorized scope (or resumed active action) before mutating plan files. Mutating plan files under disputed or unregistered counsel is forbidden.
 - Trigger `/plan:parallel <detailed-fix-instructions>` for parallel-executable fix plan
+- For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched
 - Wait for plan with dependency graph, execution strategy, file ownership matrix
 - Group independent fixes for parallel execution
 - Sequential fixes for dependent issues
@@ -139,7 +140,8 @@ binds its durable lifecycle to `## Caller lifecycle binding` in
   fixes, revalidate with `tester`, and repeat review without controller operations.
 ### 6. Project Management & Docs
 - If approved: use `project-manager` + `docs-manager` in parallel
-- Update plan files, docs, roadmap
+- Child agents (`project-manager`, `docs-manager`) are advisory children reporting terminal artifacts and actual changed paths within parent-supplied authorized paths; they never operate controller state or stage behind the parent. Prior sealed paths remain immutable, while current-run registered pre-seal writes within authorized paths remain permitted.
+- Update plan files, docs, roadmap for authorized scope
 - All substantive documentation, plan status, and report writes are substantive
   finalization mutations and must settle BEFORE final outcome and completion
 ### 7. Final Report and Completion
@@ -157,11 +159,21 @@ binds its durable lifecycle to `## Caller lifecycle binding` in
 - **Durable completion**: Call `state complete` (with `expected_revision`) only
   after the final truthful outcome settles the baseline. Do NOT mark durable
   phase complete or claim DONE prematurely in captured files before `state
-  complete` succeeds.
+  complete` succeeds (controller abandonment sets `gate_status: completed` but
+  is never successful completion; completion requires a matching resolved outcome).
+  After successful completion, parent writes mandatory immutable completion receipts
+  outside the captured baseline snapshot and updates the derived live overview `<plan-dir>/progress.md`
+  (uncaptured, outside baseline; never captured or cited as evidence/authorized
+  substantive paths; if already captured, cannot overwrite progress, surface blocker)
+  per shared receipt rules in `Plan progress and phase reconciliation` in `.claude/workflows/advisor-mentoring.md`.
+  Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
 - **Sealed baseline**: Do NOT stage, commit, or mutate captured baseline files
-  or their Git index state after `state complete` seals the run.
+  or their Git index state after `state complete` seals the run; only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.claude/workflows/advisor-mentoring.md`.
 - **Administrative reporting**: Report summary of all fixes from parallel phases
-  and verification status per issue. Any optional post-completion administrative
-  receipt must be strictly OUTSIDE the captured baseline snapshot, identify the
-  approved snapshot, and cannot claim unreviewed edits.
+  and verification status per issue. For advice-controlled plans or preserved snapshots,
+  point output to `<plan-dir>/progress.md`; old sealed `plan.md` remains untouched.
+  Normal default plans with no advice history do not require, read, or output
+  nonexistent progress links. Any optional post-completion administrative receipt
+  must be strictly OUTSIDE the captured baseline snapshot, identify the approved
+  snapshot, and cannot claim unreviewed edits.
 **Example:** Fix 1 (auth) + Fix 2 (payments) + Fix 3 (UI) → Launch 3 fullstack-developer agents → Wait → Fix 4 (integration) sequential

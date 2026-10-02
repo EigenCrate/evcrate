@@ -26,14 +26,17 @@ and does not duplicate route or adapter selection.
 A final standalone `--advice` activates explicit review mentoring.
 Before interpreting the plan, read `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) and
 derive `WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments.
-Use `WORK_ARGUMENTS` as the plan input everywhere below. Apply the canonical
-`## Caller lifecycle binding` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) and the
-shared default stuck-escalation contract throughout this command:
+Use `WORK_ARGUMENTS` as the plan input everywhere below.
+Apply the shared default stuck-escalation contract in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) unconditionally across all modes (reaching a second matching blocker activates the named checkpoint / advice lifecycle).
+The advice lifecycle is active when explicit `--advice` is present, an applicable active run exists, or a named checkpoint is activated.
+When the advice lifecycle is active, apply the canonical `## Caller lifecycle binding` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install):
 - **Durable state ownership**: The parent command is the sole owner of the task-state lifecycle. Child subagents (`tester`, `debugger`, `code-reviewer`, `project-manager`, `docs-manager`, `git-manager`, `ui-ux-designer`) report terminal artifacts, evidence, and actual changed paths; they never operate controller state or stage/commit behind the parent.
-- **Run identity & handoff**: If entering with an existing active run (from prior direction/decision/stuck run or router handoff), retain `task_run_id`, phase, root, current state revision, and prior counsel/disposition/outcome. Resume an already-active action without duplicating it: complete its authorized bounded work, execute actual declared validation, and record a truthful matching outcome advancing the baseline before the next review reservation. Before new authorized bounded writes, require `accept` with a registered correction action. For disputed counsel (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action, collect read-only evidence or an explicit resolution while preserving the captured baseline unchanged, and obtain fresh same-run counsel before mutation or a resolved outcome; never invent an action or outcome to reserve that consultation. Never initialize a new UUID to bypass stale evidence or correction counters.
+- **Run identity & handoff**: If entering with an existing active run (from prior direction/decision/stuck run or router handoff), retain `task_run_id`, phase, root, current state revision, and prior counsel/disposition/outcome. Resume an already-active action without duplicating it: complete its authorized bounded work, execute actual declared validation, and record a truthful matching outcome advancing the baseline before the next review reservation. Before new authorized bounded writes, require `accept` with a registered correction action. For disputed counsel (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action, collect read-only evidence or an explicit resolution while preserving the captured baseline unchanged, and obtain fresh same-run counsel before corrective mutation or a resolved correction outcome.
 - **Fresh first review**: If no prior active advice run exists, do NOT initialize state at command start just to track implementation. Implementation (Step 2), actual validation (Step 3), reviewer output (Step 4), and planned finalization artifacts settle first (writer barrier). Build `baseline_paths` as the union of authorized writable paths and selected read-only `evidence.files`/artifacts (`authorized_paths` contains only writable paths). Call `state init` immediately before reservation in Step 4, with no intervening file edits or git status/index changes.
 - **Baseline stability**: Freeze all baseline paths (not only current citations) during reservation, inference, disposition, and from final outcome to completion.
-
+- **Advice lifecycle & plan protection**: A prior completed advice run alone protects historical paths (sealed `plan.md`, historical reports, roadmap, captured git index/status identity) from mutation, but does NOT force fresh advice for a new default phase. Existing sealed paths stay strictly immutable even if the next invocation omits `--advice`.
+- **Derived overview & immutable receipts**: `<plan-dir>/progress.md` is the derived current overview and is NEVER captured or cited as evidence or authorized substantive paths. Mutable progress is never captured; no retroactively removing captured paths. If already captured in the baseline, callers cannot overwrite progress either (surface blocker). New plans link before capture; old sealed plans remain untouched. Immutable phase completion receipts live outside the baseline.
+- **Default operational branch (no active advice lifecycle)**: An untouched ordinary plan without advice history keeps normal `plan.md` tracking without controller state operations. A protected historical plan with a new default phase uses normal validation and approval without durable controller operations, updating `<plan-dir>/progress.md` and an uncaptured default completion receipt outside baseline.
 ---
 
 ## Role Responsibilities
@@ -50,14 +53,17 @@ shared default stuck-escalation contract throughout this command:
 
 ## Step 0: Plan Detection & Phase Selection
 
-**If `WORK_ARGUMENTS` is empty:**
-1. Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
-2. Parse plan for phases and status, auto-select next incomplete (prefer IN_PROGRESS or earliest Planned)
+**Plan resolution:**
+- **If `WORK_ARGUMENTS` is empty:** Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
+- **If `WORK_ARGUMENTS` provided:** Use that plan (or auto-detect plan and requested phase like "phase-2").
 
-**If `WORK_ARGUMENTS` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
+**Mandatory shared Plan progress and phase reconciliation:**
+Before selecting or confirming any phase (including explicit requested phases):
+1. Apply `### Plan progress and phase reconciliation` in `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) to reconcile completed scope, verify execution prerequisites, and preserve any active advice run/action context.
+2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
+3. Emit overview path (`<plan-dir>/progress.md` for advice/protected plans, or `plan.md` for ordinary default plans), reconciled actual scope, and any outstanding prerequisites/blockers. Auto-select next incomplete phase (prefer IN_PROGRESS or earliest Planned).
 
-**Output:** `✓ Step 0: [Plan Name] - [Phase Name]`
-
+**Output:** `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for advice/protected plans)
 **Subagent Pattern (use throughout):**
 ```
 Task(subagent_type="[type]", prompt="[task description]", description="[brief]")
@@ -126,7 +132,7 @@ Call exactly one `code-reviewer` subagent per review cycle: "Review changes for 
 
 **Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
-**Advice gate & lifecycle placement:** In explicit advice mode:
+**Advice gate & lifecycle placement:** When advice lifecycle is active (explicit `--advice` or applicable active/named-checkpoint run):
 - **Cycle 1 reservation**: After reviewer terminal output arrives and before displaying findings or requesting approval:
   - If a fresh review run: initialize task state immediately before reservation (`baseline_paths` = authorized writable paths UNION selected read-only `evidence.files`/artifacts, with read-only files omitted from `authorized_paths`).
   - If an active run has a registered action, finish its bounded work, actual validation, and matching truthful outcome before reservation without duplicating the action. Disputed counsel without an active action uses read-only evidence/resolution and fresh same-run consultation before writes or a resolved correction outcome; do not invent an outcome to reserve that consultation.
@@ -150,9 +156,9 @@ LOOP:
   3. IF the reviewer result is missing, partial, interrupted, cancelled,
      timed-out, or failed: STOP the gate; do not increment review_cycles.
 
-  4. IF explicit advice mode: enter the canonical dispatcher → wait for its terminal result
+  4. IF advice lifecycle is active: enter the canonical dispatcher → wait for its terminal result
 
-  5. IF explicit advice mode and the advisor result is missing, partial,
+  5. IF advice lifecycle is active and the advisor result is missing, partial,
      interrupted, cancelled, timed-out, or failed: STOP the gate; do not
      increment review_cycles.
 
@@ -190,15 +196,15 @@ LOOP:
        → Output: "⚠ 3 review cycles completed. Final decision required."
        → AskUserQuestion: "Approve with noted issues" / "Abort workflow"
        → STOP; do not run another fix/test/reviewer/advisor sequence
-     ELSE IF explicit advice mode AND counsel is disputed:
+     ELSE IF advice lifecycle is active AND counsel is disputed:
        → Record reject-with-evidence, need-evidence, or reconcile without correction metadata
        → Collect read-only evidence or an explicit resolution, preserving captured baseline
        → Obtain fresh same-run counsel before any corrective mutation or resolved correction outcome
        → GOTO LOOP within the review cap; do not register invented work or record a corrective outcome for this evidence-only branch
-     ELSE (accepted corrections, or DEFAULT mode):
-       → In explicit advice mode, record accept with one bounded action and declared validation command before writes; resume an already-active action rather than registering it twice
+     ELSE (accepted corrections, or default operational branch without active advice lifecycle):
+       → When advice lifecycle is active, record accept with one bounded action and declared validation command before writes; resume an already-active action rather than registering it twice
        → Implement accepted fixes within authorized scope, re-run tester to verify no regressions
-       → In explicit advice mode, parent records matching truthful state outcome with actual changed paths and declared test results, advancing baseline
+       → When advice lifecycle is active, parent records matching truthful state outcome with actual changed paths and declared test results, advancing baseline
        → GOTO LOOP
 ```
 
@@ -219,33 +225,40 @@ Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
 
 **Prerequisites:** User approved in Step 4 (verified above).
 
-- In explicit advice mode: follow the substantive finalization lifecycle in `## Caller lifecycle binding`. Planned docs, status, and onboarding paths are authorized writable paths. Parent records `state disposition` for finalization (registering the bounded action and declared validation command) BEFORE executing any finalization writes or Git index transitions.
-- In default mode: preserve ordinary approved/validated completed status without durable controller dependencies or controller state operations.
+- When advice lifecycle is active (explicit `--advice` or applicable active/named-checkpoint run): follow the substantive finalization lifecycle in `## Caller lifecycle binding`. Planned docs, status, and onboarding paths are authorized writable paths. Parent records `state disposition` for finalization (registering the bounded action and declared validation command) BEFORE executing any finalization writes or Git index transitions.
+- When advice lifecycle is not active (default operational branch): preserve ordinary approved/validated completed status without durable controller dependencies or controller state operations.
 
 1. **STATUS UPDATE - BOTH MANDATORY - PARALLEL EXECUTION:**
 - **Call** `project-manager` sub-agent:
-  - In explicit advice mode: "Update plan status in [plan-path]. Record implementation and finalization settled, with durable completion pending. Do NOT mark phase as DONE prematurely. Update roadmap."
-  - In default mode: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
-- **Call** `docs-manager` sub-agent: "Update docs for plan phase [phase-name]. Changed files: [list]."
+  - Advice finalization must NOT assign sealed plan writes to child status writer.
+  - When advice lifecycle is active: "Do NOT write to sealed plan.md or roadmap. Report terminal project status and documentation updates to parent without claiming durable completion."
+  - In default operational branch on an untouched ordinary plan: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
+  - In default operational branch on a protected historical advice plan: "Do NOT mutate captured plan.md, roadmap, or prior sealed paths. Report phase completion and validation evidence to parent for progress.md and default completion receipt update."
+- **Call** `docs-manager` sub-agent:
+  - Supply parent protected path set (prior sealed paths) and authorized destinations: "Update docs for plan phase [phase-name]. Authorized doc paths: [authorized destinations]. Do not touch prior sealed paths: [protected path set]. Changed files: [list]."
 
-2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps. (In explicit advice mode, substantive reports settle before final outcome under registered finalization action).
+2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps. (When advice lifecycle is active, substantive reports settle before final outcome under registered finalization action).
 
 3. **AUTO-COMMIT (after steps 1 and 2 complete):**
 - Run only if: Steps 1 and 2 successful + User approved + Tests passed
-- Auto-stage, commit with conventional commit message based on actual changes
-- In explicit advice mode: staging and commit transitions settle before recording the final outcome.
-- In default mode: preserve standard commit behavior without durable controller operations.
+- Pass parent protected paths and authorized destinations to `git-manager`: stage only authorized current-run deliverables; never stage prior sealed paths, alter their selected index identities, or stage receipts/progress.
+- When advice lifecycle is active: authorized staging and commit transitions settle pre-seal before recording final outcome. After sealing, only shared-contract administrative publication is permitted.
+- In default operational branch: retain standard scoped commit behavior without durable controller operations and with the same protected-path/index restrictions.
 
-4. **CONTROLLER OUTCOME & COMPLETION (Explicit Advice Mode):**
-- In explicit advice mode:
-  - Enforce writer barrier: all documentation/roadmap writes, onboarding configuration, and selected Git staging/commit settle before recording final outcome.
+4. **CONTROLLER OUTCOME & COMPLETION:**
+- When advice lifecycle is active:
+  - Enforce writer barrier: all authorized documentation/roadmap writes, onboarding configuration, and selected Git staging/commit settle before recording final outcome.
   - Run declared validation across all finalized deliverables.
   - Parent records ONE truthful `state outcome` matching the registered finalization action, reporting actual changed paths and declared validation status. (A no-change outcome is valid ONLY if zero actual files were changed, declared validation passed, disposition was accept, and no must-fix/unresolved-question items remain).
   - Parent executes `state complete` to seal the task run. The durable completion receipt is authoritative; only then is the phase durably DONE.
-  - After sealing, freeze all captured baseline paths: never mutate sealed evidence, documentation, reports, or index after completion, and never prescribe copying DONE into captured files after completion. Any post-completion administrative receipt must remain OUTSIDE the captured baseline snapshot, identify the approved snapshot, and not claim unreviewed edits.
-- In default mode: no controller state operations (`state disposition`, `state outcome`, `state complete`); phase is completed upon approval and validation, and marked DONE with timestamp in Step 1.
+  - At complete, parent publishes mandatory immutable phase completion receipt (outside baseline) AND updates mutable overview `<plan-dir>/progress.md` per `### Plan progress and phase reconciliation`. Publication failure does not reopen successful phase.
+  - Preserve all sealed file/index identities; only the bounded receipt/overview publication above is allowed after sealing. Summary and archive branches cannot modify sealed paths. Output identifies `<plan-dir>/progress.md`.
+- When advice lifecycle is not active (default operational branch):
+  - No controller state operations (`state disposition`, `state outcome`, `state complete`).
+  - On untouched ordinary plans: phase is completed upon approval and validation, and marked DONE with timestamp in `plan.md`. Output identifies `plan.md`.
+  - On protected historical advice plans: phase completion is explicitly non-durable; never modify captured `plan.md`, status, roadmap, or prior sealed paths. Parent records uncaptured default completion receipt (with approval/validation evidence) and updates `<plan-dir>/progress.md` per shared contract. Output identifies `<plan-dir>/progress.md`.
 
-**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met. In explicit advice mode, `state complete` must succeed before phase completion.
+**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met. When advice lifecycle is active, `state complete` must succeed before phase completion.
 
 Mark Step 5 complete in TodoWrite.
 
@@ -258,12 +271,12 @@ Mark Step 5 complete in TodoWrite.
 **Step outputs must follow unified format:** `✓ Step [N]: [Brief status] - [Key metrics]`
 
 **Examples:**
-- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]`
+- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for advice/protected plans)
 - Step 1: `✓ Step 1: Found [N] tasks across [M] phases - Ambiguities: [list]`
 - Step 2: `✓ Step 2: Implemented [N] files - [X/Y] tasks complete`
 - Step 3: `✓ Step 3: Tests [X/X passed] - All requirements met`
 - Step 4: `✓ Step 4: Code reviewed - [score]/10 - User approved`
-- Step 5: `✓ Step 5: Finalize - Status updated - Git committed`
+- Step 5: `✓ Step 5: Finalize - Status updated - Git committed` (include `- Overview: [plan-dir]/progress.md` for advice/protected plans)
 
 **If any "✓ Step N:" output missing, that step is INCOMPLETE.**
 
@@ -277,7 +290,7 @@ Mark Step 5 complete in TodoWrite.
 **Blocking gates:**
 - Step 3: Tests must be 100% passing
 - Step 4: User must explicitly approve (via AskUserQuestion)
-- Step 5: Both `project-manager` and `docs-manager` must complete successfully; in explicit advice mode, `state complete` must succeed before phase completion
+- Step 5: Both `project-manager` and `docs-manager` must complete successfully; when advice lifecycle is active, `state complete` must succeed before phase completion and parent publishes immutable receipt + mutable overview
 
 
 **REMEMBER:**

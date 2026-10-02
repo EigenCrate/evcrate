@@ -51,6 +51,14 @@ Read the plan directory:
 - `phase-*.md` - All phase files
 - Look for decision points, assumptions, risks, tradeoffs
 
+Apply `Plan progress and phase reconciliation` in
+`.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) before interpreting current status.
+If a plan is captured by an advice run, do not offer or perform in-place
+frontmatter/summary edits below. Record proposed answers in a separately
+authorized, uncaptured document or terminal output; preserve active-run gates.
+The live progress overview is not a place to amend scope or acceptance criteria.
+Ordinary uncaptured plans retain the normal persistence choices below.
+
 ### Step 2: Extract Question Topics
 
 Scan plan content for:
