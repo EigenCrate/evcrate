@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-02
-**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+**Updated:** 2026-10-04
+**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification evidence recorded for `vscode` on Linux x64; Phase 09 docs/rollout pending parent reconciliation; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+
+### 2026-10-04 — test(vscode): record Phase 08 Native Local qualification
+
+- The [index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md), [project receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/receipt.md), and [HOME receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-home/receipt.md) account for 50 rows / 12 contexts (six contexts marked `QUALIFIED`, five `NOT EXERCISED`, one `UNSUPPORTED`). Reported gates: 8/8 Phase 08 tests, 737/737 full npm tests, [Cycle 2 review](../plans/reports/code-review-261004-0023-phase-08-native-local-qualification-cycle-2.md) 9.4/10. That review reports PreCompact/SubagentStart/SubagentStop exit 2, while the current [project log](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/events-redacted.jsonl) and receipt show 0; the [wrong-harness record](../plans/261002-2213-vscode-local-native-support/reports/native-local/wrong-harness-isolation/events-redacted.jsonl) records a disposition but not an observed relay rejection.
 
 ### 2026-10-02 — refactor(advisor): retire Dam-Hopper plugin platform integration
 
@@ -364,7 +368,6 @@
 - G0 budget/cancellation/UI-memory assumptions are recorded; E01 and E02 are
   complete; E03–E05 remain pending.
 
-
 ### 2026-09-21 — feat(plugin): complete Phase E01 owner-safe read provider
 
 **Status:** Phase E01 DONE (2026-09-21; 100%); review approved **9.5/10**.  
@@ -528,7 +531,6 @@
 - Completed atomic generation replacement with stale retention for incomplete/cancelled/denied scans, plus read-only policy inspection with legacy-v1 migration-required state.
 - Focused proof passed: viewer 24/24, advisor metrics 6/6, and contract parity 4/4 (34/34 total); all Phase 05 modules remain under 200 lines.
 - Handoff advanced to Phase 06 — Counsel evaluation protocol and fixtures.
-
 
 ### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
 
@@ -730,7 +732,6 @@ and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-determini
 - Blocking review corrections covered schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, and same-volume preflight. Existing modes, hashes, CAS, ownership, and unmanaged-data protections remain fail-closed.
 - **Direct local evidence:** `npm run build` passed; `node --test tests/distribution/publication-recovery.test.mjs` passed 19/19; `node --test tests/distribution/publication-apply.test.mjs` passed 12/12; `node --test tests/distribution/publication-plan.test.mjs` passed 6/6; `node --test tests/cli/publication.test.mjs` passed 6/6.
 - The mandatory tester agent could not execute because its provider returned HTTP 429 before commands; no tester-agent execution is claimed. These local checks do not qualify live vendors/operators or authorize HOME publication.
-
 
 ### 2026-09-13 — feat(distribution): generic transaction engine and locking (Phase 05)
 
