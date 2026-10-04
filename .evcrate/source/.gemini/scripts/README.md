@@ -247,7 +247,7 @@ python3 .evcrate/source/.gemini/scripts/generate_catalogs.py --freshness
 ### Regeneration and release gates
 
 `commands_data.yaml`, `skills_data.yaml`, `scanner-layout.json`, projected target
-resources, and the eight schema-2 build manifests (aggregate plus seven targets)
+resources, and the nine schema-2 build manifests (aggregate plus eight targets)
 are generated outputs. Change canonical resources or adapter mappings, then run
 `npm run distribute:build`; never hand-edit a projection, catalog, sidecar, or
 manifest. The adapter projection must read target-native metadata so a scanner
@@ -288,3 +288,24 @@ or failed write leaves the prior adjacent data file unchanged. These gates
 cover catalog/projection integrity only; `ev-help.py` remains independent, and
 live vendor qualification, Windows validation, npm publication, rollout, and
 deployment remain separate operator/release gates.
+
+## VS Code Local Runtime Scripts & Session Context
+
+The VS Code Local projection (`vscode`) includes dedicated runtime support scripts projected into `.evcrate-vscode/evcrate/scripts/`:
+
+- `vscode-session-context.cjs`: Runtime closure providing explicit root resolution, session state access, and bounded lifecycle management.
+- `set-active-plan.cjs`: CLI helper to inspect or set the active plan path for a specific project/session.
+
+### Session Lifecycle and State Contracts
+
+1. **Explicit Root Resolution**: Resolves the installed plugin root independently of the active workspace. Does not fall back to plugin `process.cwd()` or an arbitrary first root.
+2. **Stateless Fallback**: When session context is absent or expired, operations fall back to stateless behavior without throwing unhandled exceptions.
+3. **Atomic CAS State**: Session state uses versioned CAS (Compare-And-Swap) updates, preventing concurrent write collisions.
+4. **Bounded Retention & Capacity**:
+   - TTL: 7 days.
+   - Max sessions per project: 256.
+   - Max sessions per user across projects: 1024.
+5. **Session Management Utilities**:
+   - `inspect`: Read current active session plan, turns, and timestamps.
+   - `forget`: Remove a specific session.
+   - `sweep`: Clean up expired sessions past the 7-day TTL.

@@ -7,7 +7,7 @@ import { completeTreeHash, compareCanonicalPaths, hashBytes, hashFile, resourceF
 import { containedPath, normalizeRelativePath } from '../filesystem/paths.js';
 import { snapshot, type NodeSnapshot } from '../distribution/promotion-recovery.js';
 import { scanCanonicalResources } from './scanner.js';
-import { emptyRegistryDocument, readRegistryDocument, registryDocumentBytes, validateRegistryDocument } from './schema.js';
+import { emptyRegistryDocument, readRegistryDocument, registryDocumentBytes, RESOURCE_REGISTRY_SCHEMA_VERSION, validateRegistryDocument } from './schema.js';
 import type { ResourceKind, ResourceRootMap } from '../manifests/types.js';
 import type { RegistryDocument, RegistryFileRevision, ResourceRecord, ResourceRegistry, ResourceQueryFilters } from './types.js';
 
@@ -92,7 +92,7 @@ export function upsertResource(document: RegistryDocument, record: ResourceRecor
   const resources = [...document.resources];
   if (index < 0) resources.push(record); else resources[index] = record;
   resources.sort((left, right) => compareCanonicalPaths(left.id, right.id));
-  return validateRegistryDocument({ schema_version: 1, revision: document.revision + 1, resources });
+  return validateRegistryDocument({ schema_version: RESOURCE_REGISTRY_SCHEMA_VERSION, revision: document.revision + 1, resources });
 }
 export function resourceDocumentBytes(document: RegistryDocument): Uint8Array { return registryDocumentBytes(document); }
 export function resourceDocumentHash(document: RegistryDocument): string { return hashBytes(resourceDocumentBytes(document)); }

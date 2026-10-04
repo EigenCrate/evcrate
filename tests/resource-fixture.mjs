@@ -63,7 +63,7 @@ export function createPhase6Fixture(prefix = 'evcrate-phase6-') {
   createManifests(root);
   const resources = scanCanonicalResources(canonical, RESOURCE_ROOTS);
   const registryPath = join(root, '.evcrate', 'registry.json');
-  write(registryPath, resourceDocumentBytes({ schema_version: 1, revision: 1, resources }), 0o600);
+  write(registryPath, resourceDocumentBytes({ schema_version: 2, revision: 1, resources }), 0o600);
   return Object.freeze({
     root, canonical, registryPath, resources, source: join(root, 'incoming', 'import.md'),
     home: join(root, 'home'), state: join(root, 'state'),

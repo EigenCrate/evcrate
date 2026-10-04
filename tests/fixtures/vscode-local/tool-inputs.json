@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VS Code Local Native Tool Identities and Argument Schemas",
+  "version": "1.0.0",
+  "tools": {
+    "read_file": {
+      "hook_name": "read_file",
+      "prompt_id": "read_file",
+      "category": "filesystem",
+      "parameters": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "description": "Workspace-relative or absolute file path to read" }
+        }
+      }
+    },
+    "edit_file": {
+      "hook_name": "edit_file",
+      "prompt_id": "edit_file",
+      "category": "filesystem",
+      "parameters": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "description": "Target file path" },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["newText"],
+              "properties": {
+                "range": { "type": "object" },
+                "newText": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "run_in_terminal": {
+      "hook_name": "run_in_terminal",
+      "prompt_id": "run_in_terminal",
+      "category": "terminal",
+      "parameters": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": { "type": "string", "description": "Shell command to execute" },
+          "explanation": { "type": "string", "description": "User-facing rationale for execution" }
+        }
+      }
+    },
+    "grep_search": {
+      "hook_name": "grep_search",
+      "prompt_id": "grep_search",
+      "category": "search",
+      "parameters": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "description": "Regex or string query" },
+          "path": { "type": "string", "description": "Subdirectory to restrict search" },
+          "isCaseSensitive": { "type": "boolean" }
+        }
+      }
+    },
+    "file_search": {
+      "hook_name": "file_search",
+      "prompt_id": "file_search",
+      "category": "search",
+      "parameters": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "description": "File glob or path query" }
+        }
+      }
+    },
+    "runSubagent": {
+      "hook_name": "runSubagent",
+      "prompt_id": "agent/runSubagent",
+      "category": "delegation",
+      "parameters": {
+        "type": "object",
+        "required": ["agent_id", "goal"],
+        "properties": {
+          "agent_id": { "type": "string", "description": "Target subagent identifier" },
+          "goal": { "type": "string", "description": "Subagent prompt or task description" },
+          "context": { "type": "string", "description": "Optional parent context" }
+        }
+      }
+    }
+  },
+  "policy_notes": {
+    "empty_tools_control": "Setting tools: [] in an agent frontmatter explicitly restricts all tool usage.",
+    "subagent_control": "Setting agents: [] in an agent frontmatter prevents subagent delegation even if runSubagent is otherwise available."
+  }
+}

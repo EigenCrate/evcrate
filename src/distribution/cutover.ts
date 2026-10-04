@@ -80,6 +80,15 @@ const DEFAULT_CUTOVER_RECEIPTS: Readonly<Record<PersistedTarget, TargetGateRecei
     schemaVersion: 2,
     cutoverTimestamp: '2026-09-02T00:00:00.000Z',
     notes: 'Copilot target adapter, JSONC merge, and promotion order 40 parity verified in Phase 5 and Phase 8; cutover complete.'
+  }),
+  vscode: Object.freeze({
+    target: 'vscode',
+    authoritativeEngine: 'typescript',
+    parityVerified: false,
+    closureVerified: false,
+    schemaVersion: 2,
+    cutoverTimestamp: '2026-10-02T00:00:00.000Z',
+    notes: 'VS Code Local target pending qualification in Phases 02-08.'
   })
 });
 

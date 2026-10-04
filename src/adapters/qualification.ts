@@ -180,6 +180,7 @@ export function selectProjectionEngine(
     if (error instanceof ControlPlaneError) throw error;
     fail('VALIDATION_INVALID');
   }
+  if (targets.includes('vscode') && !records.has('vscode')) fail('CAPABILITY_UNSUPPORTED');
   const qualifiedCount = targets.reduce((count, target) => count + (records.has(target) ? 1 : 0), 0);
   if (qualifiedCount === targets.length) return 'typescript';
   if (qualifiedCount === 0) return 'python-compatibility';

@@ -1,0 +1,267 @@
+[
+  {
+    "id": "case-session-start",
+    "event": "SessionStart",
+    "description": "Initial prompt starts a Local session with additionalContext in hookSpecificOutput",
+    "sample_input": {
+      "hook_event_name": "SessionStart",
+      "source": "new",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000000000,
+      "cwd": "/path/to/project"
+    },
+    "expected_response": {
+      "continue": true,
+      "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "EVCrate Local qualification context active."
+      }
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-user-prompt-submit",
+    "event": "UserPromptSubmit",
+    "description": "User submits a prompt in chat",
+    "sample_input": {
+      "hook_event_name": "UserPromptSubmit",
+      "prompt": "Inspect the repository structure",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000001000,
+      "cwd": "/path/to/project"
+    },
+    "expected_response": {
+      "continue": true
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-pre-tool-use-allow",
+    "event": "PreToolUse",
+    "description": "PreToolUse hook approves tool invocation with allow decision",
+    "sample_input": {
+      "hook_event_name": "PreToolUse",
+      "tool_name": "read_file",
+      "tool_input": {
+        "path": "sample.txt"
+      },
+      "tool_use_id": "00000000-0000-4000-8000-000000000002",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000002000
+    },
+    "expected_response": {
+      "continue": true,
+      "permissionDecision": "allow"
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-pre-tool-use-deny",
+    "event": "PreToolUse",
+    "description": "PreToolUse hook blocks tool invocation with deny decision",
+    "sample_input": {
+      "hook_event_name": "PreToolUse",
+      "tool_name": "run_in_terminal",
+      "tool_input": {
+        "command": "rm -rf /"
+      },
+      "tool_use_id": "00000000-0000-4000-8000-000000000003",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000003000
+    },
+    "expected_response": {
+      "continue": true,
+      "permissionDecision": "deny"
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-pre-tool-use-ask",
+    "event": "PreToolUse",
+    "description": "PreToolUse hook defers to user confirmation with ask decision",
+    "sample_input": {
+      "hook_event_name": "PreToolUse",
+      "tool_name": "edit_file",
+      "tool_input": {
+        "path": "sensitive.txt"
+      },
+      "tool_use_id": "00000000-0000-4000-8000-000000000004",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000004000
+    },
+    "expected_response": {
+      "continue": true,
+      "permissionDecision": "ask"
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-post-tool-use-success",
+    "event": "PostToolUse",
+    "description": "PostToolUse hook observes successful tool completion and continues",
+    "sample_input": {
+      "hook_event_name": "PostToolUse",
+      "tool_name": "read_file",
+      "tool_input": {
+        "path": "sample.txt"
+      },
+      "tool_response": {
+        "content": "Safe synthetic text"
+      },
+      "tool_use_id": "00000000-0000-4000-8000-000000000002",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000005000
+    },
+    "expected_response": {
+      "continue": true
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-post-tool-use-block",
+    "event": "PostToolUse",
+    "description": "PostToolUse hook blocks further processing with reason",
+    "sample_input": {
+      "hook_event_name": "PostToolUse",
+      "tool_name": "read_file",
+      "tool_input": {
+        "path": "blocked-response.txt"
+      },
+      "tool_response": {
+        "content": "Secret data"
+      },
+      "tool_use_id": "00000000-0000-4000-8000-000000000005",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000006000
+    },
+    "expected_response": {
+      "continue": true,
+      "decision": "block",
+      "reason": "PostToolUse qualification block sentinel"
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-pre-compact",
+    "event": "PreCompact",
+    "description": "PreCompact hook receives auto trigger before context compaction",
+    "sample_input": {
+      "hook_event_name": "PreCompact",
+      "trigger": "auto",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000007000
+    },
+    "expected_response": {
+      "continue": true
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-subagent-start",
+    "event": "SubagentStart",
+    "description": "SubagentStart hook receives agent id and type, returns additionalContext",
+    "sample_input": {
+      "hook_event_name": "SubagentStart",
+      "agent_id": "subagent-worker-1",
+      "agent_type": "contract-reader",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000008000
+    },
+    "expected_response": {
+      "continue": true,
+      "hookSpecificOutput": {
+        "hookEventName": "SubagentStart",
+        "additionalContext": "EVCrate subagent qualification context."
+      }
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-subagent-stop-first",
+    "event": "SubagentStop",
+    "description": "SubagentStop blocks when stop_hook_active is false",
+    "sample_input": {
+      "hook_event_name": "SubagentStop",
+      "agent_id": "subagent-worker-1",
+      "agent_type": "contract-reader",
+      "stop_hook_active": false,
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000009000
+    },
+    "expected_response": {
+      "continue": true,
+      "decision": "block",
+      "reason": "SubagentStop qualification block sentinel"
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-subagent-stop-active",
+    "event": "SubagentStop",
+    "description": "SubagentStop allows stopping when stop_hook_active is true to prevent loop",
+    "sample_input": {
+      "hook_event_name": "SubagentStop",
+      "agent_id": "subagent-worker-1",
+      "agent_type": "contract-reader",
+      "stop_hook_active": true,
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000010000
+    },
+    "expected_response": {
+      "continue": true
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-stop-first",
+    "event": "Stop",
+    "description": "Stop blocks with nested decision when stop_hook_active is false",
+    "sample_input": {
+      "hook_event_name": "Stop",
+      "stop_hook_active": false,
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000011000
+    },
+    "expected_response": {
+      "continue": true,
+      "hookSpecificOutput": {
+        "hookEventName": "Stop",
+        "decision": "block",
+        "reason": "Stop qualification block sentinel"
+      }
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-stop-active",
+    "event": "Stop",
+    "description": "Stop allows stopping when stop_hook_active is true",
+    "sample_input": {
+      "hook_event_name": "Stop",
+      "stop_hook_active": true,
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000012000
+    },
+    "expected_response": {
+      "continue": true
+    },
+    "exit_code": 0
+  },
+  {
+    "id": "case-exit-2-blocking",
+    "event": "PreToolUse",
+    "description": "Hook process exits with code 2 to signal blocking error via stderr",
+    "sample_input": {
+      "hook_event_name": "PreToolUse",
+      "tool_name": "run_in_terminal",
+      "tool_input": {
+        "command": "malicious_script"
+      },
+      "tool_use_id": "00000000-0000-4000-8000-000000000006",
+      "session_id": "00000000-0000-4000-8000-000000000001",
+      "timestamp": 1700000013000
+    },
+    "expected_stderr": "capture-hook: simulated exit code 2\n",
+    "exit_code": 2
+  }
+]

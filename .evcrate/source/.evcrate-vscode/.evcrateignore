@@ -1,0 +1,24 @@
+# evcrate Ignore File - SIZE-based blocking
+# Blocks directories with heavy file counts that fill LLM context
+# Syntax: gitignore-spec | Use ! prefix to allow (e.g., !src/vendor)
+# Heavy directory entries use trailing slash to distinguish directories from command tokens
+
+# JS/TS
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+
+# Python
+__pycache__/
+.venv/
+venv/
+
+# Go/PHP/Rust/Java
+vendor/
+target/
+
+# VCS & Coverage
+.git/
+coverage/

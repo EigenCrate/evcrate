@@ -24,13 +24,32 @@ function absoluteDirectory(value) {
   return typeof value === 'string' && path.isAbsolute(value) ? value : null;
 }
 
-function getEVCrateResourceRoot(value = getEVCrateConfigDirEnv()) {
+function getEVCrateResourceRoot(value = getEVCrateConfigDirEnv(), runtimeRoots) {
+  if (runtimeRoots && typeof runtimeRoots === 'object' && runtimeRoots.resourceRoot) {
+    return absoluteDirectory(runtimeRoots.resourceRoot);
+  }
   if (resolveEVCrateConfigDir(value) !== '.pi') return null;
   return absoluteDirectory(process['env'].EVCRATE_RESOURCE_ROOT)
     || path.join(os.homedir(), '.pi', 'agent', 'evcrate');
 }
 
-function getEVCrateConfigPaths(value = getEVCrateConfigDirEnv()) {
+function getEVCrateConfigPaths(value = getEVCrateConfigDirEnv(), runtimeRoots) {
+  if (runtimeRoots && typeof runtimeRoots === 'object') {
+    const configDir = runtimeRoots.configDir || resolveEVCrateConfigDir(value);
+    const localConfigPath = runtimeRoots.localConfigPath
+      || (runtimeRoots.projectRoot
+        ? path.join(runtimeRoots.projectRoot, configDir, CONFIG_FILE_NAME)
+        : path.join(configDir, CONFIG_FILE_NAME));
+    const globalConfigPath = runtimeRoots.globalConfigPath
+      || (runtimeRoots.globalRoot
+        ? path.join(runtimeRoots.globalRoot, CONFIG_FILE_NAME)
+        : path.join(os.homedir(), configDir, CONFIG_FILE_NAME));
+    return {
+      configDir,
+      localConfigPath,
+      globalConfigPath
+    };
+  }
   const configDir = resolveEVCrateConfigDir(value);
   const globalRoot = configDir === '.pi'
     ? absoluteDirectory(process['env'].EVCRATE_GLOBAL_CONFIG_ROOT)

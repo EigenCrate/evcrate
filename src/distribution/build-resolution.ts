@@ -86,7 +86,12 @@ function expectedOutputPaths(
     for (const document of manifest.projectDocs) names.add(document);
   }
   const result: Record<string, string> = {};
-  for (const name of names) result[name] = containedPath(parent, name, true);
+  for (const name of names) {
+    const full = containedPath(parent, name, false);
+    if (existsSync(full)) {
+      result[name] = containedPath(parent, name, true);
+    }
+  }
   return result;
 }
 function hasAuthoringSources(options: CurrentBuildOptions, manifests: readonly TargetManifest[]): boolean {
@@ -152,16 +157,20 @@ function resolveBuild(
   const snapshot = readBuildManifestSnapshot(manifestPath);
   const manifest = snapshot.manifest;
   assertValidation(manifest);
-  if (!sameJson(manifest.home_policy, expectedPolicy(verifiedManifests))) fail('PUBLICATION_FAILED');
-  assertOwners(manifest, outputPaths, verifiedManifests);
-  if (!sameJson(Object.keys(manifest.output_hashes).sort(), Object.keys(outputPaths).sort())) fail('PUBLICATION_FAILED');
-  const isConsumer = options.mode === 'consumer' || (options.mode !== 'authoring' && !hasAuthoringSources(options, verifiedManifests));
+  const applicableManifests = verifiedManifests.filter((m) => Object.hasOwn(manifest.home_policy, m.name));
+  if (!sameJson(manifest.home_policy, expectedPolicy(applicableManifests))) fail('PUBLICATION_FAILED');
+  const applicableOutputPaths = Object.fromEntries(
+    Object.entries(outputPaths).filter(([k]) => k === '.evcrate' || applicableManifests.some((m) => m.outputRoots.includes(k) || m.projectDocs.includes(k)))
+  );
+  assertOwners(manifest, applicableOutputPaths, applicableManifests);
+  if (!sameJson(Object.keys(manifest.output_hashes).sort(), Object.keys(applicableOutputPaths).sort())) fail('PUBLICATION_FAILED');
+  const isConsumer = options.mode === 'consumer' || (options.mode !== 'authoring' && !hasAuthoringSources(options, applicableManifests));
   if (isConsumer) {
-    verifyBuild({ manifestPath, manifest, outputRoots: outputPaths, controllerRoot: options.controllerRoot });
+    verifyBuild({ manifestPath, manifest, outputRoots: applicableOutputPaths, controllerRoot: options.controllerRoot });
   } else {
-    const sourceHashes = currentSourceHashes(options, verifiedManifests, allTargets);
-    const adapterHashes = manifestAdapterHashes(verifiedManifests, options.packageRoot);
-    verifyBuild({ manifestPath, manifest, outputRoots: outputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
+    const sourceHashes = currentSourceHashes(options, applicableManifests, allTargets);
+    const adapterHashes = manifestAdapterHashes(applicableManifests, options.packageRoot);
+    verifyBuild({ manifestPath, manifest, outputRoots: applicableOutputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
   }
   return Object.freeze({
     manifestPath, manifest, manifestDigest: snapshot.digest,

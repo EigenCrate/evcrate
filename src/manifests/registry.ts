@@ -1,4 +1,4 @@
-import { lstatSync } from 'node:fs';
+import { existsSync, lstatSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
@@ -123,7 +123,10 @@ export function manifestAdapterHashes(manifests: readonly TargetManifest[], repo
   for (const manifest of manifests) {
     for (const path of [manifest.adapter, ...manifest.adapterSources].filter((value): value is string => value !== null)) {
       const normalized = normalizeRelativePath(path);
-      putRecord(values, normalized, hashFile(containedPath(repository, normalized, true)));
+      const full = containedPath(repository, normalized, false);
+      if (existsSync(full)) {
+        putRecord(values, normalized, hashFile(containedPath(repository, normalized, true)));
+      }
     }
   }
   return sortedRecord(values);

@@ -2,9 +2,9 @@
 
 **Overview Path:** `plans/261002-2213-vscode-local-native-support/progress.md`  
 **Plan Path:** `plans/261002-2213-vscode-local-native-support/plan.md`  
-**Last Reconciled:** 2026-10-03  
+**Last Reconciled:** 2026-10-04  
 **Active Advice Lifecycle:** Active (`--advice` explicit mode)  
-**Latest Completed Task Run ID:** `8b1b2c37-7a71-4b55-a731-afd127462626` (Phase 06)
+**Latest Completed Task Run ID:** `20cf9b89-ef3d-4c6c-ab83-35e87913cc5c` (Phase 09)
 
 ---
 
@@ -19,9 +19,9 @@
 | **04** | Session context and lifecycle | Pending | **Completed** | Explicit root resolution, project/session isolation, atomic CAS v1 state, bounded retention (7d, 256/proj, 1024/user), honest lifecycle boundaries, CLI support scripts, 24/24 phase tests passing, 87/87 adapter tests passing (Score 9.3/10). | [Completion Receipt](./reports/phase-04-completion-receipt.md) · [Code Review](./reports/code-review-261003-1604-vscode-phase04-session-context-lifecycle.md) | None (Completed). |
 | **05** | Configuration, MCP, and advisor | Pending | **Completed** | Inert user-owned configuration examples, settings disposition audit map, opt-in MCP with pinned versions and password input variables, exact model mappings (`opus`, `sonnet`, `haiku`), unsupported relay rejection (`ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`), direct HOME advisor caller workflow, 13/13 Phase 05 tests, 73/73 targeted tests, 99/99 adapter tests passing (Score 9.3/10). | [Completion Receipt](./reports/phase-05-completion-receipt.md) · [Code Review](./reports/code-review-261003-1731-vscode-phase05-configuration-mcp-advisor.md) | None (Completed). |
 | **06** | Publication and activation | Pending | **Completed** | Project/HOME publication and recovery; target isolation; collision rejection; scope recovery; aggregate build manifest (5/5 Phase 06 tests passing, 91/91 publication suite passing, Score 9.3/10). | [Completion Receipt](./reports/phase-06-completion-receipt.md) · [Publication Report](./reports/phase-06-publication-report.md) · [Code Review](./reports/code-review-261003-1916-phase-06-publication-and-activation.md) | None (Completed). |
-| **07** | Automated release qualification | Pending | Pending | Regressions, package smoke, release integration | [Phase 07 Spec](./phase-07-automated-release-qualification.md) | Depends on Phase 06. |
-| **08** | Native Local qualification | Pending | Pending | Real Local end-to-end multi-platform evidence | [Phase 08 Spec](./phase-08-native-local-qualification.md) | Depends on Phase 07. |
-| **09** | Documentation and rollout | Pending | Pending | Accurate docs, controlled rollout, rollback | [Phase 09 Spec](./phase-09-documentation-and-rollout.md) | Depends on Phase 08. |
+| **07** | Automated release qualification | Pending | **Completed** | Regressions, package allowlist, release inventory, installed lifecycle assertions, live bridge smoke & tool consumer harness (10/10 vscode-behavior, 3/3 vscode-installed-runtime, 31/31 registry, 6/6 validation-and-rollout passing, 737/737 full npm test gate passing, Score 9.5/10). | [Completion Receipt](./reports/phase-07-completion-receipt.md) · [Code Review](./reports/code-review-261003-2229-phase-07-automated-release-qualification.md) | None (Completed). |
+| **08** | Native Local qualification | Pending | **Completed (Durable)** | Live native scenarios, 8/8 qualification tests passing, 737/737 full npm test gate passing, 12 context receipts, C01-C50 capability matrix reconciled, Score 9.4/10 (Commit `cbd298a4`). | [Completion Receipt](./reports/phase-08-completion-receipt.md) · [Qualification Index](./reports/native-local/qualification-index.md) · [Cycle 2 Code Review](../reports/code-review-261004-0023-phase-08-native-local-qualification-cycle-2.md) | None (Completed). |
+| **09** | Documentation and rollout | Pending | **Completed (Durable)** | Reconciled 6 core docs, user runbooks, package allowlist, support matrix (12 contexts), rollout runbook & lifecycle stop triggers, 35/35 targeted tests, 737/737 npm test gate, Score 9.6/10 (Commit `f9396734`). | [Completion Receipt](./reports/phase-09-completion-receipt.md) · [Rollout Report](./reports/phase-09-rollout-and-lifecycle-report.md) · [Onboarding Summary](./reports/phase-09-onboarding-summary.md) | None (Completed). |
 
 ---
 
@@ -35,5 +35,8 @@
   - `Phase 04`: Explicit session/plan context, atomic CAS v1 state, bounded retention, honest lifecycle boundaries, and CLI support scripts (Completed, Task Run `14edca89-b185-4eb8-a874-ebacf987f8c4`, Score 9.3/10)
   - `Phase 05`: Inert user-owned configuration examples, settings disposition audit map, opt-in MCP with pinned versions and password input variables, exact model mappings, unsupported relay rejection, and direct HOME advisor caller workflow (Completed, Task Run `7c6266e8-ace1-4c29-a915-7355c2214ee8`, Score 9.3/10)
   - `Phase 06`: Publication and activation (Completed, Task Run `8b1b2c37-7a71-4b55-a731-afd127462626`, 5/5 Phase 06 tests, 91/91 publication suite, 99/99 adapter suite, Score 9.3/10)
+  - `Phase 07`: Automated release qualification (Completed, Task Run `76861567-fb4b-4b70-864c-4cc5e1bdeb12`, 737/737 tests passing, Score 9.5/10)
+  - `Phase 08`: Native Local qualification (Completed, Task Run `980efda4-94ae-4a51-aac9-51bb62d1fe62`, 8/8 qualification tests, 737/737 npm test, Score 9.4/10, Commit `cbd298a4`)
+  - `Phase 09`: Documentation and rollout (Completed, Task Run `20cf9b89-ef3d-4c6c-ab83-35e87913cc5c`, Score 9.6/10, Commit `f9396734`)
 - **Next Step:**
-  - `Phase 07`: Automated release qualification (Phase 06 completed; Phase 07 depends on Phase 06).
+  - **Initiative Complete:** All phases (00–09) of VS Code Local Native Support are 100% completed, verified, and durably sealed. Ready for parent closure.

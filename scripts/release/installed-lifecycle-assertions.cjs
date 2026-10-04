@@ -36,9 +36,9 @@ function assertPackageHash(snapshotDir, expectedHash, stage) {
   }
 }
 
-function invokeRuntime(args, cwd, env, label) {
+function invokeRuntime(args, cwd, env, label, input = '{}') {
   const result = spawnSync(process.execPath, args, {
-    cwd, env, input: '{}', encoding: 'utf8', timeout: 60000, maxBuffer: 64 * 1024 * 1024
+    cwd, env, input, encoding: 'utf8', timeout: 60000, maxBuffer: 64 * 1024 * 1024
   });
   if (result.status !== 0) throw new Error(`${label} runtime failed: ${result.stderr || result.stdout}`);
   return result.stdout;
@@ -66,6 +66,11 @@ function verifyMaterializedRuntimes(homeDir, workspaceDir, sandboxEnv) {
   const pi = JSON.parse(invokeRuntime(['--eval', `(async () => { ${piProgram} })()` ], workspaceDir, runtimeEnv({ PI_CODING_AGENT_DIR: path.join(homeDir, '.pi', 'agent') }), 'Pi'));
   if (pi.agentRoot !== path.join(homeDir, '.pi', 'agent') || pi.resourceRoot !== path.join(homeDir, '.pi', 'agent', 'evcrate')) throw new Error('Pi runtime did not retain installed root identity');
   invokeRuntime([path.join(homeDir, '.copilot', 'evcrate', 'hooks', 'copilot-hook-bridge.cjs'), 'session-start'], workspaceDir, runtimeEnv({ COPILOT_PROJECT_DIR: workspaceDir }), 'Copilot');
+  const vscodeBridge = path.join(homeDir, '.evcrate-vscode', 'evcrate', 'runtime', 'local-hook-bridge.cjs');
+  if (fs.existsSync(vscodeBridge)) {
+    const vscode = JSON.parse(invokeRuntime([vscodeBridge, 'SessionStart'], workspaceDir, runtimeEnv({}), 'VSCode', JSON.stringify({ hook_event_name: 'SessionStart' })));
+    if (vscode.hookSpecificOutput?.hookEventName !== 'SessionStart') throw new Error('VSCode runtime lost workspace hook semantics');
+  }
 }
 
 
@@ -126,7 +131,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
   runLauncher(launcherPath, ['publish', '--apply', '--scope', 'home', '--json'], defaultOpts, 'HOME publish apply');
   assertPackageHash(snapshotDir, packageHashBefore, 'HOME publish');
 
-  const expectedTargets = ['.claude', '.copilot', '.omp', '.pi', '.gemini', '.codex', '.agents'];
+  const expectedTargets = ['.claude', '.copilot', '.omp', '.pi', '.gemini', '.codex', '.agents', '.evcrate-vscode'];
   for (const target of expectedTargets) {
     if (!fs.existsSync(path.join(homeDir, target))) throw new Error(`Missing expected HOME target projection: ${target}`);
   }
@@ -136,7 +141,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
   const controllerBin = path.join(homeDir, '.evcrate', 'bin', 'evcrate-advisor');
   if (!fs.existsSync(controllerBin)) throw new Error('Advisor controller binary missing in published HOME');
 
-  const selectedTargets = ['claude', 'codex', 'pi', 'copilot'];
+  const selectedTargets = ['claude', 'codex', 'pi', 'copilot', 'vscode'];
   const projectStateRoot = path.join(stateDir, 'evcrate', 'project-publication');
   const projectReceiptBefore = {
     homeState: computeDirectoryHash(path.join(homeDir, '.evcrate', 'publication')),
@@ -160,7 +165,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
       }
     })}`);
   }
-  const expectedProjectPaths = ['.claude', '.codex', '.agents', 'AGENTS.md', '.pi', '.copilot'];
+  const expectedProjectPaths = ['.claude', '.codex', '.agents', 'AGENTS.md', '.pi', '.copilot', '.evcrate-vscode'];
   for (const target of expectedProjectPaths) {
     if (!fs.existsSync(path.join(projectDir, target))) throw new Error(`Missing expected project publication path: ${target}`);
   }

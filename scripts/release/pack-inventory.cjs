@@ -14,7 +14,8 @@ const EXPECTED_TARGETS = Object.freeze([
   'copilot',
   'gemini',
   'omp',
-  'pi'
+  'pi',
+  'vscode'
 ]);
 
 function collectPackInventory(projectRoot) {

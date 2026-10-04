@@ -132,3 +132,23 @@ Never replace or summarize the script output. Always show it fully, then enhance
 - **`/plan` → Use the matching `cmd_*` skill to run `/code`**: Plan first, then execute the plan
 - **`/cook`**: Standalone - plans internally, no separate `/plan` needed
 - **NEVER** suggest `/plan` → Use the matching `cmd_*` skill to run `/cook` (cook has its own planning)
+
+## Supported Harness Targets
+
+EVCrate projects canonical resources into eight target harness formats:
+1. `codex` (OpenAI Codex CLI CLI)
+2. `codex` (OpenAI Codex CLI with companion `.agents` root)
+3. `gemini` (Google Gemini CLI)
+4. `antigravity` (Antigravity harness)
+5. `pi` (Pi coding agent)
+6. `omp` (OpenCode/OMP with `__` flattened command naming)
+7. `copilot` (GitHub Copilot CLI with `/evcrate-cmd-*` projected commands)
+8. `vscode` (VS Code Local Agent Plugins 1.0 bundle at `.evcrate-vscode/`)
+
+### VS Code Local Support Boundaries
+
+- **Plugin Bundle**: Generated at `.evcrate/source/.evcrate-vscode/`, published to project or HOME `.evcrate-vscode/`.
+- **Plugin Identity**: `evcrate-local`.
+- **Command Syntax**: Projects slash commands as manual skills with mapped names (e.g., `/evcrate-local:cmd-plan`), forwarding arguments directly.
+- **Activation**: User-controlled via VS Code's `chat.pluginLocations` setting; publication never touches editor configuration.
+- **Scope Recovery**: `evcrate recover --scope project|home` restores managed files without touching editor settings or user workspaces.

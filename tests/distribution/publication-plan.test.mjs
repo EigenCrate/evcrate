@@ -25,7 +25,7 @@ function manifest(name, publicationRules = []) {
 
 test('publication rules are closed, explicit, and preserve the frozen order', () => {
   assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
   ]);
   assert.equal(mapPublicationPath(manifest('omp', ['omp-agent-prefix']), 'agents/a.md'), 'agent/agents/a.md');
   assert.equal(mapPublicationPath(manifest('claude', ['claude-skill-root-exclusion']), 'skills/README.md'), null);
@@ -136,11 +136,11 @@ test('publication plan set shares one aggregate build across fixed shared and sc
     assert.deepEqual(homePlan.shared.bindingOrder, ['.evcrate/bin']);
     assert.deepEqual(homePlan.shared.selectedTargets, []);
     assert.deepEqual(homePlan.harness.bindingOrder, [
-      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
     assert.deepEqual(projectPlan.harness.bindingOrder, [
       '.antigravity', '.claude', '.codex', '.agents', 'AGENTS.md',
-      '.copilot', '.gemini', 'GEMINI.md', '.omp', '.pi'
+      '.copilot', '.gemini', 'GEMINI.md', '.omp', '.pi', '.evcrate-vscode'
     ]);
     assert.equal(projectPlan.shared.destinationRoot, fixture.home);
     assert.equal(projectPlan.shared.bindings[0].destinationRoot, join(fixture.home, '.evcrate', 'bin'));
