@@ -1,3 +1,10 @@
+## [2.8.0](https://github.com/EigenCrate/evcrate/compare/v2.7.0...v2.8.0) (2026-10-04)
+
+
+### 🚀 Features
+
+* **advisor:** migrate to explicit Node launch and cross-platform runtime qualification ([#16](https://github.com/EigenCrate/evcrate/issues/16)) ([5d54a98](https://github.com/EigenCrate/evcrate/commit/5d54a98995ece22283a2365d52d4dc1671ff5dcd))
+
 ## [2.7.0](https://github.com/EigenCrate/evcrate/compare/v2.6.0...v2.7.0) (2026-10-04)
 
 
