@@ -13,3 +13,5 @@ export * from './promotion.js';
 export * from './cutover.js';
 export * from './local-build-staging.js';
 export * from './local-build.js';
+export * from './manifest-view-derivation.js';
+export * from './local-staging-fs.js';

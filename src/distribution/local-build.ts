@@ -27,13 +27,26 @@ function isSamePathTree(staged: string, local: string): boolean {
   return treeHash(staged) === treeHash(local);
 }
 
+export interface LocalBuildOptions {
+  readonly emitAllManifests?: boolean;
+}
+
+export interface VerifiedAllManifestsBuild {
+  readonly aggregateBuild: VerifiedCurrentBuild;
+  readonly targetBuilds: ReadonlyMap<PersistedTarget, VerifiedCurrentBuild>;
+  readonly allManifestPaths: readonly string[];
+}
+
 export function runLocalBuild(
   packageRoot: string,
-  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS
+  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS,
+  options: LocalBuildOptions = {}
 ): VerifiedCurrentBuild {
   const stage = createStagedRoot(packageRoot, '.evcrate-build-');
   try {
-    const result = assembleLocalStage(packageRoot, stage, selectedTargets);
+    const result = assembleLocalStage(packageRoot, stage, selectedTargets, {
+      emitAllManifests: options.emitAllManifests
+    });
     const pairs: PromotionPair[] = [];
 
     for (const [name, stagedPath] of result.stagedOutputs) {
@@ -42,7 +55,13 @@ export function runLocalBuild(
       pairs.push({ source: stagedPath, destination: localPath });
     }
 
-    pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
+    if (result.allStagedManifests && result.allStagedManifests.length > 0) {
+      for (const entry of result.allStagedManifests) {
+        pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+      }
+    } else {
+      pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
+    }
 
     promoteTransaction(pairs, { stageRoot: stage, lockRoot: join(packageRoot, '.evcrate-publish-state') });
     const manifest = readBuildManifest(result.manifestPath);
@@ -52,6 +71,68 @@ export function runLocalBuild(
       manifestDigest: hashBytes(result.manifestData),
       selectedManifests: result.selectedManifests,
       outputPaths: Object.freeze(Object.fromEntries(result.localOutputs))
+    });
+  } finally {
+    stage.cleanup();
+  }
+}
+
+export function runAllManifestsBuild(packageRoot: string): VerifiedAllManifestsBuild {
+  const stage = createStagedRoot(packageRoot, '.evcrate-build-');
+  try {
+    const result = assembleLocalStage(packageRoot, stage, PERSISTED_TARGETS, {
+      emitAllManifests: true
+    });
+    const pairs: PromotionPair[] = [];
+
+    for (const [name, stagedPath] of result.stagedOutputs) {
+      if (name === '.evcrate') continue;
+      const localPath = result.localOutputs.get(name)!;
+      pairs.push({ source: stagedPath, destination: localPath });
+    }
+
+    for (const entry of result.allStagedManifests!) {
+      pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+    }
+
+    promoteTransaction(pairs, { stageRoot: stage, lockRoot: join(packageRoot, '.evcrate-publish-state') });
+
+    const aggregateManifest = readBuildManifest(result.manifestPath);
+    const aggregateBuild: VerifiedCurrentBuild = Object.freeze({
+      manifestPath: result.manifestPath,
+      manifest: aggregateManifest,
+      manifestDigest: hashBytes(result.manifestData),
+      selectedManifests: result.selectedManifests,
+      outputPaths: Object.freeze(Object.fromEntries(result.localOutputs))
+    });
+
+    const targetBuilds = new Map<PersistedTarget, VerifiedCurrentBuild>();
+    for (const entry of result.allStagedManifests!) {
+      if (entry.target === 'aggregate') continue;
+      const targetManifest = readBuildManifest(entry.manifestPath);
+      const manifestDef = result.selectedManifests.find((s) => s.id === entry.target)!;
+      const targetOutputs: Record<string, string> = {
+        '.evcrate': join(packageRoot, '.evcrate', 'source', '.evcrate')
+      };
+      for (const root of manifestDef.outputRoots) {
+        targetOutputs[root] = join(packageRoot, '.evcrate', 'source', root);
+      }
+      for (const doc of manifestDef.projectDocs) {
+        targetOutputs[doc] = join(packageRoot, '.evcrate', 'source', doc);
+      }
+      targetBuilds.set(entry.target, Object.freeze({
+        manifestPath: entry.manifestPath,
+        manifest: targetManifest,
+        manifestDigest: hashBytes(entry.manifestData),
+        selectedManifests: Object.freeze([manifestDef]),
+        outputPaths: Object.freeze(targetOutputs)
+      }));
+    }
+
+    return Object.freeze({
+      aggregateBuild,
+      targetBuilds,
+      allManifestPaths: Object.freeze(result.allStagedManifests!.map((m) => m.manifestPath))
     });
   } finally {
     stage.cleanup();

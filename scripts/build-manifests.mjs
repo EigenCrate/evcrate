@@ -5,14 +5,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
 async function main() {
-  const { runLocalBuild, PERSISTED_TARGETS } = await import('../dist/index.js');
-  for (const target of PERSISTED_TARGETS) {
-    console.log(`Building manifest for target: ${target}`);
-    runLocalBuild(ROOT, [target]);
-  }
-  console.log('Building aggregate manifest for all targets');
-  runLocalBuild(ROOT, PERSISTED_TARGETS);
-  console.log('All manifests successfully built and verified.');
+  const { runAllManifestsBuild } = await import('../dist/index.js');
+  console.log('Building target projections and generating all manifests in single-pass');
+  const result = runAllManifestsBuild(ROOT);
+  console.log(`Successfully generated and verified ${result.allManifestPaths.length} manifests across ${result.targetBuilds.size} targets.`);
 }
 
 main().catch((err) => {

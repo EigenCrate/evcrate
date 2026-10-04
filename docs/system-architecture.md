@@ -214,7 +214,19 @@ bind kind, object, and bytes rather than permission or ctime metadata; advisor s
 and history also verify bytes and lock identity at final transitions. The Windows
 release candidate and publisher are separate; see [PDR FR-15](./project-overview-pdr.md#fr-15-canonical-semantic-release-candidate-and-verify-only-publisher).
 
-### 4.1 Release workflow trust boundary (Phases 07–10)
+### 4.1 Single-projection manifest reuse
+
+Full-workspace build and manifest generation (`scripts/build-manifests.mjs`, `runAllManifestsBuild`) eliminates redundant staging and projection cycles by executing target projection exactly once per persisted target:
+
+1. **Single-Pass Staging**: `assembleLocalStage(packageRoot, stage, PERSISTED_TARGETS, { emitAllManifests: true })` collects `SharedBuildInputs` (canonical harness tree hash, `CLAUDE.md` hash, target registry, advisor controller closure hashes). For each target, `buildAndStageTarget` invokes the target adapter (`vscodeAdapter` for VS Code Local; `getProjectionAdapter` for the remaining seven), validates the build context, stages outputs via `copyStagedTree`, and records `TargetBuildFacts` (output roots, staged outputs, local outputs, baseline owners with normalized POSIX paths via `collectBaselineOwners`, adapter hashes, and source hashes).
+2. **In-Memory Metadata Derivation**: `deriveManifestView` (`src/distribution/manifest-view-derivation.ts`) derives metadata views for all 8 targets plus the aggregate manifest entirely in memory:
+   - Target policies are constructed by `buildTargetPolicies`, which injects the mandatory `advisor-controller` entry (`bindings: { '.evcrate/bin': '.evcrate/bin' }`, `preserve_paths: {}`, `promotion_order: 5`).
+   - Source hashes for `.evcrate/targets` are selectively included only in the aggregate manifest and omitted from single-target manifests.
+   - All 9 manifests (`build-manifest.json` and 8 `build-manifest-<target>.json`) are written atomically into stage (`writeAtomicFile`).
+3. **Atomic Single-Transaction Promotion**: Promotion pairs for all staged target outputs and all 9 manifests commit in a single atomic transaction via `promoteTransaction`. Staging or preflight failures leave prior workspace state completely untouched.
+4. **Verified Return Envelope**: `runAllManifestsBuild` returns `VerifiedAllManifestsBuild` containing `aggregateBuild`, `targetBuilds` (map of `PersistedTarget` to `VerifiedCurrentBuild`), and `allManifestPaths`. Selective builds (`runLocalBuild`) preserve isolated single-target staging and manifests.
+
+### 4.2 Release workflow trust boundary (Phases 07–10)
 `.github/workflows/release.yml` implements `release-candidate` →
 `windows-qualification` → `publish`.
 - The producer is read-only/non-canceling, keeps Ubuntu/Node 24.21.0 gates, uploads
@@ -228,7 +240,7 @@ release candidate and publisher are separate; see [PDR FR-15](./project-overview
 - Phase 09 proved integrated routing and final seven-file byte equality; Phase 10
   completed the bounded documentation/support cutover.
 
-### 4.2 Unprivileged Windows PR smoke (Phase 08)
+### 4.3 Unprivileged Windows PR smoke (Phase 08)
 `.github/workflows/windows-smoke.yml` triggers only `pull_request` and manual dispatch; `contents: read` plus canceling concurrency keep PR execution unprivileged.
 - On `windows-2025` x64 with Node `22.19.0`, it runs `npm ci` after pinned checkout/setup-node actions.
 - It reads the checked-in version and current 40-hex SHA, builds diagnostic fixture assets with `--allow-fixture-identity`, verifies exact-seven files, and invokes the same smoke harness with explicit `--powershell pwsh.exe`.
@@ -463,7 +475,6 @@ time, or causal effectiveness, and does not alter list/show/export/prune.
 Historical milestones recorded explicit-handle history traversal, React explorer builds, benchmarks (p95 scan 1,643 ms), and Chromium/Linux limits. These browser sources were subsequently removed; the dated records do not establish current standalone support or G4 qualification.
 
 ### 5.3 Compatibility checkpoint wire contract
-
 The existing compatibility helper still accepts the v1 direct checkpoint. The
 executable receives it directly on stdin; no outer operation, active-host field,
 route override, executable, argv, credential, debug, or fallback field is
