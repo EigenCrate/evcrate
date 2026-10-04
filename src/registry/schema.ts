@@ -5,13 +5,12 @@ import { canonicalJsonBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors } from '../filesystem/paths.js';
 import { PERSISTED_TARGETS } from '../protocol/validation.js';
 import { validateResourceRecord } from '../protocol/resource-payload-validation.js';
+import { readLegacyRegistryDocument } from './legacy-registry-reader.js';
 import type { RegistryDocument, ResourceRecord } from './types.js';
 
-export const RESOURCE_REGISTRY_SCHEMA_VERSION = 1;
+export const RESOURCE_REGISTRY_SCHEMA_VERSION = 2;
 export const MAX_RESOURCE_REGISTRY_BYTES = 4 * 1024 * 1024;
 export const MAX_RESOURCE_RECORDS = 10_000;
-
-function invalid(): never { throw new ControlPlaneError('PROTOCOL_INVALID'); }
 function compareCodePoints(left: string, right: string): number {
   const a = Array.from(left, (value) => value.codePointAt(0) as number);
   const b = Array.from(right, (value) => value.codePointAt(0) as number);
@@ -24,29 +23,38 @@ function sortedStrings(values: readonly string[]): boolean {
 function normalizeRecord(value: unknown): ResourceRecord {
   try {
     const record = validateResourceRecord(value);
-    if (!sortedStrings(record.capabilities)) invalid();
+    if (!sortedStrings(record.capabilities)) throw new ControlPlaneError('PROTOCOL_INVALID');
     if (Object.keys(record.compatibility).length !== PERSISTED_TARGETS.length
-      || PERSISTED_TARGETS.some((target) => !Object.hasOwn(record.compatibility, target))) invalid();
+      || PERSISTED_TARGETS.some((target) => !Object.hasOwn(record.compatibility, target))) {
+      throw new ControlPlaneError('PROTOCOL_INVALID');
+    }
     return record;
   } catch (error) {
     if (error instanceof ControlPlaneError && error.code === 'PROTOCOL_INVALID') throw error;
-    invalid();
+    throw new ControlPlaneError('PROTOCOL_INVALID');
   }
 }
 export function validateRegistryDocument(value: unknown): RegistryDocument {
-  if (!isPlainObject(value)) invalid();
+  if (!isPlainObject(value)) throw new ControlPlaneError('PROTOCOL_INVALID');
   const raw = value as Record<string, unknown>;
-  try { assertExactKeys(raw, ['schema_version', 'revision', 'resources'], 'PROTOCOL_INVALID'); } catch { invalid(); }
+  try { assertExactKeys(raw, ['schema_version', 'revision', 'resources'], 'PROTOCOL_INVALID'); } catch { throw new ControlPlaneError('PROTOCOL_INVALID'); }
+  if (raw.schema_version === 1) {
+    return readLegacyRegistryDocument(raw);
+  }
   if (raw.schema_version !== RESOURCE_REGISTRY_SCHEMA_VERSION || !Number.isSafeInteger(raw.revision)
-    || (raw.revision as number) < 0 || !Array.isArray(raw.resources) || raw.resources.length > MAX_RESOURCE_RECORDS) invalid();
+    || (raw.revision as number) < 0 || !Array.isArray(raw.resources) || raw.resources.length > MAX_RESOURCE_RECORDS) {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
   const records = raw.resources.map(normalizeRecord);
   const ids = records.map((record) => record.id);
   const paths = records.map((record) => record.source_path);
-  if (!sortedStrings(ids) || new Set(ids).size !== ids.length || new Set(paths).size !== paths.length) invalid();
-  return Object.freeze({ schema_version: 1, revision: raw.revision as number, resources: Object.freeze(records) });
+  if (!sortedStrings(ids) || new Set(ids).size !== ids.length || new Set(paths).size !== paths.length) {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+  return Object.freeze({ schema_version: 2, revision: raw.revision as number, resources: Object.freeze(records) });
 }
 export function emptyRegistryDocument(): RegistryDocument {
-  return Object.freeze({ schema_version: 1, revision: 0, resources: Object.freeze([]) });
+  return Object.freeze({ schema_version: 2, revision: 0, resources: Object.freeze([]) });
 }
 export function readRegistryDocument(path: string): RegistryDocument {
   try {
@@ -55,7 +63,7 @@ export function readRegistryDocument(path: string): RegistryDocument {
   } catch (error) {
     if (error instanceof ControlPlaneError && error.code === 'PROTOCOL_INVALID') throw error;
     if (error instanceof ControlPlaneError) throw error;
-    invalid();
+    throw new ControlPlaneError('PROTOCOL_INVALID');
   }
 }
 export function registryDocumentBytes(document: RegistryDocument): Uint8Array {

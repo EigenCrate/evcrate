@@ -123,13 +123,14 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     // Verify promotion order: shared controller, then HOME harness bindings
     assert.deepEqual([...dryRunResult.payload.phases[0].bindingOrder], ['.evcrate/bin']);
     assert.deepEqual([...dryRunResult.payload.phases[1].bindingOrder], [
-      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
 
     // Ensure home directory remains empty after dry-run
     assert.deepEqual(existsSync(join(home, '.claude')), false);
     assert.deepEqual(existsSync(join(home, '.copilot')), false);
     assert.deepEqual(existsSync(join(home, '.omp')), false);
+    assert.deepEqual(existsSync(join(home, '.evcrate-vscode')), false);
 
     // 2. Publish apply
     const apply = spawnSync(cliPath, [
@@ -156,6 +157,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.ok(existsSync(join(home, '.gemini')), 'gemini home exists');
     assert.ok(existsSync(join(home, '.codex')), 'codex home exists');
     assert.ok(existsSync(join(home, '.agents')), 'agents home exists');
+    assert.ok(existsSync(join(home, '.evcrate-vscode')), 'vscode home exists');
 
     // Verify advisor controller is executable
     const advisorStat = lstatSync(join(home, '.evcrate', 'bin', 'evcrate-advisor'));
@@ -232,12 +234,17 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
 
 test('all target manifests and cutover receipts validate schema 2 with TypeScript authority', () => {
   const receipts = getAllTargetGateReceipts();
-  assert.equal(receipts.length, 7);
+  assert.equal(receipts.length, 8);
   for (const receipt of receipts) {
     assert.ok(PERSISTED_TARGETS.includes(receipt.target));
     assert.equal(receipt.authoritativeEngine, 'typescript');
-    assert.equal(receipt.parityVerified, true);
-    assert.equal(receipt.closureVerified, true);
+    if (receipt.target === 'vscode') {
+      assert.equal(receipt.parityVerified, false);
+      assert.equal(receipt.closureVerified, false);
+    } else {
+      assert.equal(receipt.parityVerified, true);
+      assert.equal(receipt.closureVerified, true);
+    }
     assert.equal(receipt.schemaVersion, 2);
   }
 });

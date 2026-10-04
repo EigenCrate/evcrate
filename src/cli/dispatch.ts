@@ -37,6 +37,7 @@ import { createResourceHandler, defaultResourceHandler } from '../imports/handle
 import type { ResourceHandler } from '../imports/handler.js';
 import { createAdvisorSettingsCoordinator, defaultAdvisorSettingsCoordinator } from '../advisor-settings/coordinator.js';
 import type { CliRuntime } from './types.js';
+import { coordinateVscodeSettingsRegistration } from './vscode-settings-registration.js';
 
 export interface DispatchOutcome {
   readonly result: CliResult;
@@ -453,56 +454,75 @@ export async function dispatchInvocation(
   request?: JsonValue,
   requestId = runtime.requestId?.() ?? 'request-1'
 ): Promise<DispatchOutcome> {
-  if (request !== undefined || invocation.command.kind === 'request-file') {
-    if (request === undefined) throw new ControlPlaneError('PROTOCOL_INVALID');
-    return dispatchRequest(request, invocation, context, runtime);
+  if (invocation.options.registerVscodeSettings !== undefined && !context.selectedTargetIds.includes('vscode')) {
+    throw new ControlPlaneError('USAGE_INVALID', '--register-vscode-settings requires vscode among selected targets');
   }
-  switch (invocation.command.kind) {
-    case 'version': {
-      const result = versionResult(requestId, version(context, runtime));
-      return { result, exitCode: 0 };
+  const outcome = await (async (): Promise<DispatchOutcome> => {
+    if (request !== undefined || invocation.command.kind === 'request-file') {
+      if (request === undefined) throw new ControlPlaneError('PROTOCOL_INVALID');
+      return dispatchRequest(request, invocation, context, runtime);
     }
-    case 'health': {
-      const result = await runHealth(
-        context, runtime, createDiagnosticRequest(requestId), invocation.options.timeoutMs
-      );
-      return { result, exitCode: exitCodeForResult(result) };
-    }
-    case 'advisor-settings': {
-      if (invocation.command.operation !== 'get') {
-        const result = unsupportedSettingsResult(requestId, invocation.command.operation);
+    switch (invocation.command.kind) {
+      case 'version': {
+        const result = versionResult(requestId, version(context, runtime));
+        return { result, exitCode: 0 };
+      }
+      case 'health': {
+        const result = await runHealth(
+          context, runtime, createDiagnosticRequest(requestId), invocation.options.timeoutMs
+        );
         return { result, exitCode: exitCodeForResult(result) };
       }
-      const requestValue = createAdvisorSettingsRequest(requestId, 'get');
-      const result = await settingsResult(requestValue, context, runtime);
-      return { result, exitCode: exitCodeForResult(result) };
+      case 'advisor-settings': {
+        if (invocation.command.operation !== 'get') {
+          const result = unsupportedSettingsResult(requestId, invocation.command.operation);
+          return { result, exitCode: exitCodeForResult(result) };
+        }
+        const requestValue = createAdvisorSettingsRequest(requestId, 'get');
+        const result = await settingsResult(requestValue, context, runtime);
+        return { result, exitCode: exitCodeForResult(result) };
+      }
+      case 'distribute': {
+        const result = await runCompatibilityDistribution(invocation, context, {
+          ...runtime, requestId: () => requestId
+        });
+        return { result, exitCode: exitCodeForResult(result) };
+      }
+      case 'publish': {
+        const operation = invocation.command.action === 'dry-run' ? 'publish.dry-run' : 'publish.apply';
+        const requestValue = createResourceRequest(requestId, operation, resourceContext(context), {
+          scope: invocation.options.scope, selectedTargets: [...context.selectedTargetIds]
+        });
+        return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
+      }
+      case 'recover': {
+        const scope = invocation.options.scope;
+        const requestValue = createResourceRequest(requestId, 'recover', resourceContext(context), {
+          scope, projectIdentity: scope === 'project' ? projectIdentity(context.projectRoot) : null, releaseId: null
+        });
+        return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
+      }
+      case 'resources':
+      case 'imports':
+      case 'scopes':
+      case 'changes': {
+        const requestValue = cliResourceRequest(requestId, invocation, context);
+        return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
+      }
     }
-    case 'distribute': {
-      const result = await runCompatibilityDistribution(invocation, context, {
-        ...runtime, requestId: () => requestId
-      });
-      return { result, exitCode: exitCodeForResult(result) };
-    }
-    case 'publish': {
-      const operation = invocation.command.action === 'dry-run' ? 'publish.dry-run' : 'publish.apply';
-      const requestValue = createResourceRequest(requestId, operation, resourceContext(context), {
-        scope: invocation.options.scope, selectedTargets: [...context.selectedTargetIds]
-      });
-      return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
-    }
-    case 'recover': {
-      const scope = invocation.options.scope;
-      const requestValue = createResourceRequest(requestId, 'recover', resourceContext(context), {
-        scope, projectIdentity: scope === 'project' ? projectIdentity(context.projectRoot) : null, releaseId: null
-      });
-      return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
-    }
-    case 'resources':
-    case 'imports':
-    case 'scopes':
-    case 'changes': {
-      const requestValue = cliResourceRequest(requestId, invocation, context);
-      return dispatchRequest(requestValue as unknown as JsonValue, invocation, context, runtime);
+  })();
+
+  if (outcome.result && outcome.result.protocol === 'evcrate-resource-control') {
+    const exitCodeOverride = await coordinateVscodeSettingsRegistration(
+      invocation,
+      context,
+      outcome.result as ResourceResult,
+      runtime,
+      requestId
+    );
+    if (exitCodeOverride !== undefined && outcome.exitCode === 0) {
+      return { result: outcome.result, exitCode: exitCodeOverride };
     }
   }
+  return outcome;
 }

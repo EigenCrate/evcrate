@@ -41,7 +41,8 @@
             "antigravity": { "status": "native" },
             "pi": { "status": "native" },
             "omp": { "status": "native" },
-            "copilot": { "status": "native" }
+            "copilot": { "status": "native" },
+            "vscode": { "status": "native" }
           },
           "capabilities": [],
           "revision": 1

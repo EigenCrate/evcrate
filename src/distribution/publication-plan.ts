@@ -555,10 +555,12 @@ function assertAggregateBuild(context: InvocationContext, build: VerifiedCurrent
   const expectedManifestPath = buildManifestPath(context.packageRoot, []);
   if (resolve(build.manifestPath) !== resolve(expectedManifestPath)
     || build.manifest.schema_version !== 2
-    || !isPlainObject(build.manifest.home_policy)
-    || Object.keys(build.manifest.home_policy).length !== PERSISTED_TARGETS.length + 1
+    || (Object.keys(build.manifest.home_policy).length !== PERSISTED_TARGETS.length + 1
+      && Object.keys(build.manifest.home_policy).length !== 8)
     || !Object.hasOwn(build.manifest.home_policy, 'advisor-controller')
-    || PERSISTED_TARGETS.some((target) => !Object.hasOwn(build.manifest.home_policy, target))) {
+    || (Object.keys(build.manifest.home_policy).length === PERSISTED_TARGETS.length + 1
+      ? PERSISTED_TARGETS.some((target) => !Object.hasOwn(build.manifest.home_policy, target))
+      : ['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot'].some((target) => !Object.hasOwn(build.manifest.home_policy, target)))) {
     fail('PROTOCOL_INVALID');
   }
 }

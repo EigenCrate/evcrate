@@ -26,6 +26,7 @@ export interface CliOptions {
   readonly projectRoot?: string;
   readonly scope: PublicationScope;
   readonly targets: readonly PersistedTarget[];
+  readonly registerVscodeSettings?: boolean;
   readonly id?: string;
   readonly kind?: string;
   readonly importSource?: string;
@@ -140,6 +141,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
   let debug = false;
   let dryRun = false;
   let apply = false;
+  let registerVscodeSettings: boolean | undefined;
   const seen = new Set<string>();
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -163,6 +165,12 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
       seen.add(token);
       if (token === '--dry-run') dryRun = true;
       else apply = true;
+      continue;
+    }
+    if (token === '--register-vscode-settings' || token === '--no-register-vscode-settings') {
+      if (seen.has('--register-vscode-settings') || seen.has('--no-register-vscode-settings')) fail('USAGE_INVALID');
+      seen.add(token);
+      registerVscodeSettings = token === '--register-vscode-settings';
       continue;
     }
     const equals = token.indexOf('=');
@@ -193,6 +201,12 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
   const acceptsScope = command.kind === 'publish' || command.kind === 'recover'
     || (command.kind === 'distribute' && ['publish', 'all', 'recover'].includes(command.action));
   if (values.scope !== undefined && !acceptsScope) fail('USAGE_INVALID');
+  if (registerVscodeSettings !== undefined) {
+    const acceptsRegistration = (command.kind === 'publish' && (command.action === 'apply' || command.action === 'dry-run'))
+      || (command.kind === 'distribute' && (command.action === 'publish' || command.action === 'all'))
+      || command.kind === 'request-file';
+    if (!acceptsRegistration) fail('USAGE_INVALID');
+  }
   const timeoutMs = values.timeoutMs === undefined
     ? MAX_CLI_TIMEOUT_MS : boundedInteger(values.timeoutMs, MAX_CLI_TIMEOUT_MS);
   const options: CliOptions = Object.freeze({
@@ -203,6 +217,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     projectRoot: values.projectroot,
     scope,
     targets: Object.freeze([...targets]),
+    registerVscodeSettings,
     id: values.id,
     kind: values.kind,
     importSource: values.importsource,

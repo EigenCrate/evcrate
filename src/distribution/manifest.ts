@@ -7,7 +7,7 @@ import { assertNoSymlinkAncestors, normalizeRelativePath } from '../filesystem/p
 import { ADVISOR_CONTROLLER_FILES, controllerHashes } from '../manifests/controller.js';
 import type { BuildManifest } from '../manifests/types.js';
 
-export const MAX_BUILD_MANIFEST_BYTES = 4 * 1024 * 1024;
+export const MAX_BUILD_MANIFEST_BYTES = 8 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/u;
 const MANIFEST_KEYS = ['schema_version', 'source_hashes', 'adapter_hashes', 'controller_hashes', 'owners', 'output_hashes', 'validation', 'home_policy'] as const;
 function fail(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never { throw new ControlPlaneError(code); }

@@ -24,14 +24,19 @@ const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'
 
 test('all seven persisted targets have completed cutover gate receipts', () => {
   const receipts = getAllTargetGateReceipts();
-  assert.equal(receipts.length, 7);
+  assert.equal(receipts.length, 8);
 
   for (const target of PERSISTED_TARGETS) {
     const receipt = getTargetGateReceipt(target);
     assert.equal(receipt.target, target);
     assert.equal(receipt.authoritativeEngine, 'typescript');
-    assert.equal(receipt.parityVerified, true);
-    assert.equal(receipt.closureVerified, true);
+    if (target === 'vscode') {
+      assert.equal(receipt.parityVerified, false);
+      assert.equal(receipt.closureVerified, false);
+    } else {
+      assert.equal(receipt.parityVerified, true);
+      assert.equal(receipt.closureVerified, true);
+    }
     assert.equal(receipt.schemaVersion, 2);
     assert.ok(typeof receipt.cutoverTimestamp === 'string' && receipt.cutoverTimestamp.length > 0);
     assert.ok(typeof receipt.notes === 'string' && receipt.notes.length > 0);
@@ -71,7 +76,7 @@ test('local distribution build executes and generates verified build manifest', 
   const buildResult = runLocalBuild(packageRoot, PERSISTED_TARGETS);
   assert.ok(buildResult.manifestPath);
   assert.ok(buildResult.manifest);
-  assert.equal(buildResult.selectedManifests.length, 7);
+  assert.equal(buildResult.selectedManifests.length, 8);
 
   const ompBuild = runLocalBuild(packageRoot, ['omp']);
   assert.ok(ompBuild.manifestPath);

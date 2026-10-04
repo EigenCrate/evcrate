@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "name": "vscode",
+  "adapter": "dist/adapters/vscode/index.js",
+  "adapter_sources": [],
+  "output_root": ".evcrate-vscode",
+  "additional_roots": [],
+  "project_docs": [],
+  "patches": [],
+  "shared_json": null,
+  "home_policy": {
+    "bindings": {
+      ".evcrate-vscode": ".evcrate-vscode"
+    },
+    "preserve_paths": {
+      ".evcrate-vscode": [
+        ".evcrate.json"
+      ]
+    },
+    "promotion_order": 50,
+    "reject_unmanaged_collisions": true,
+    "publication_rules": []
+  }
+}

@@ -1,11 +1,11 @@
 # Codebase Summary
 
-**Generated:** 2026-09-30
-**Source:** Fresh Repomix v1.18.0 XML compaction (`repomix-output.xml`): 2,610 files, 9,099,945 tokens, and 34,268,846 characters. `.repomixignore` excludes docs, plans, tests, assets/build outputs, and selected generated projection roots; Repomix excluded nine suspicious files during its security check.
-**Updated:** 2026-10-02
+**Generated:** 2026-09-30 (full-repository baseline); Phase 08 source-map refresh: 2026-10-04
+**Source:** Full Repomix v1.18.0 snapshot dated 2026-09-30 (2,610 files, 9,099,945 tokens, 34,268,846 characters; `.repomixignore` exclusions; nine files omitted by the security check). Phase 08 target/qualification details cross-checked against a scoped 2026-10-04 Repomix compaction of target/adapters, manifests, qualification scripts, and package allowlist; temporary output stayed outside the repository.
+**Updated:** 2026-10-04
 **Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28.
+**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28; VS Code Local qualification evidence for Linux x64 is indexed, with Phase 09 pending parent reconciliation.
 **Controller closure:** Exactly 36 files; earlier 29- and 33-file counts below are dated historical inventories.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
@@ -19,6 +19,7 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 | `.evcrate/source/.evcrate/bin/` | Shared advisor controller source | Maintain the source closure; generated files come from their generators. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlays | Change target policy or declared overlays, then rebuild. |
 | `.evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/` | Generated target projections | Regenerate; never treat as authoring roots. |
+| `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
 | `.evcrate/registry.json` | Schema-1 canonical resource records | Regenerate from the canonical scan; distinct from target/build manifests. |
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `scripts/` | Generation, package, and release tooling | Follow each script's declared authority; generated outputs are not edited by hand. |
@@ -26,7 +27,7 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
 
-The persisted projection targets are `claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, and `copilot`. `.agents` is a Codex companion output root, not an eighth adapter. Generated projections and manifests are build artifacts.
+The persisted target IDs are `claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. `.agents` is a Codex companion output root, not an additional target. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
 
 ## TypeScript module map
 
@@ -35,7 +36,7 @@ The persisted projection targets are `claude`, `codex`, `gemini`, `antigravity`,
 | `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Target manifest loading, build metadata, controller closure | `manifest.ts`, `registry.ts`, `controller.ts` |
-| `src/adapters/` | Seven fixed target projections and resource/catalog transforms | `registry.ts`, `qualification.ts`, target subdirectories |
+| `src/adapters/` | Eight target projection adapters (seven shared-registry adapters plus VS Code Local native adapter in `vscode/`) | `registry.ts`, `qualification.ts`, `vscode/` (`adapter.ts`, `hook-protocol.ts`, `policy.ts`, `session-context.ts`, `advisory-caller.ts`) |
 | `src/distribution/` | Local build/check, publication planning, staging, apply, and recovery | `local-build.ts`, `publication-plan.ts`, `publication.ts`, `publication-recovery.ts` |
 | `src/filesystem/` | Host/portable paths, hashing, atomic writes, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/registry/` | Canonical resource scan, schema, validation, and queries | `scanner.ts`, `schema.ts`, `store.ts` |
@@ -56,6 +57,32 @@ The release workflow verifies an exact set of seven core assets. The plugin
 archive and checksum under `dist/advisor-plugin/` were removed; current release
 assembly does not build or publish them.
 
+## VS Code Local target, qualification, and Phase 09 rollout
+
+Schema-2 persists eight target IDs, including `vscode`; its target manifest writes
+to `.evcrate-vscode`. `src/adapters/vscode/` contains native conversion and runtime
+modules. `local-build-staging.ts` selects `vscodeAdapter` for this target; the other
+seven adapters use the shared registry. The npm allowlist includes the generated
+`.evcrate/source/.evcrate-vscode/**` bundle, but core release assets remain exactly
+seven. Activation stays user-controlled through manual `chat.pluginLocations`
+registration.
+
+Phase 08 completed real VS Code Local qualification on Linux x64 (VS Code 1.140.0;
+Copilot Chat 0.68.0), verified via the [qualification index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md),
+[Linux project receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/receipt.md),
+and [Linux HOME receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-home/receipt.md).
+The matrix reconciles all 50 capabilities (C01–C50) across 12 declared contexts: 6 qualified
+on Linux x64, 5 unexercised due to physical workstation requirements, and 1 explicitly unsupported
+(`other-remote-web`). Gates passed at 8/8 qualification tests, 737/737 full test suite, and score 9.4/10
+(commit `cbd298a4`).
+
+Phase 09 establishes documentation, controlled rollout, and lifecycle governance:
+- Clear separation between GitHub Copilot CLI (`copilot`) and VS Code Local (`vscode`).
+- User quickstart and manual registration guidance via `chat.pluginLocations`.
+- Scoped recovery without editor settings mutation (`evcrate recover`).
+- Coexistence rules for project and HOME plugin installations.
+- Privacy boundaries (fail-closed security bridge, ask/deny human confirmation).
+- Explicit stop-trigger criteria for version drift and announced upstream Local retirement.
 ## Windows advisor supervision, console repair, and verification
 
 Readiness Repair Phase 02 integrates native supervision and human-decision observation into the shared controller. The completion review records 9/9 focused tests, 236/236 advisor-controller tests, build, and `release:check`; these are implementation evidence, not production Windows qualification.

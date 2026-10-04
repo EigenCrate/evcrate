@@ -2,7 +2,7 @@
   "name": "evcrate",
   "version": "2.6.0",
   "private": true,
-  "description": "A comprehensive boilerplate template for Claude Code, GitHub Copilot CLI, OpenCode, OMP, and native Pi coding agents.",
+  "description": "A comprehensive boilerplate template for Claude Code, GitHub Copilot CLI, VS Code Local, OpenCode, OMP, and native Pi coding agents.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -28,7 +28,7 @@
     "test:primitives": "node --test tests/filesystem/distribution-primitives.test.mjs tests/manifests/distribution-manifests.test.mjs tests/advisor-settings/distribution-primitives.test.mjs",
     "distribute": "node dist/cli/evcrate.js distribute all",
     "test:adapters": "node --test tests/adapters/*.test.mjs",
-    "test:registry": "node --test tests/registry/resource-registry.test.mjs tests/imports/import-preview.test.mjs tests/imports/import-apply.test.mjs tests/cli/resource-commands.test.mjs tests/cli/request-file.test.mjs",
+    "test:registry": "node --test tests/registry/resource-registry.test.mjs tests/registry/target-schema-migration.test.mjs tests/imports/import-preview.test.mjs tests/imports/import-apply.test.mjs tests/cli/resource-commands.test.mjs tests/cli/request-file.test.mjs",
     "test:scopes": "node --test tests/scopes/*.test.mjs tests/advisor-settings/*.test.mjs",
     "test:publication": "node --test tests/protocol/contracts.test.mjs tests/cli/arguments.test.mjs tests/cli/publication.test.mjs tests/distribution/publication-*.test.mjs tests/distribution/shared-json.test.mjs",
     "test:integration": "node --test tests/integration/*.test.mjs",
@@ -71,7 +71,8 @@
     "development-template",
     "boilerplate",
     "automation",
-    "cli-tools"
+    "cli-tools",
+    "vscode-local"
   ],
   "license": "MIT",
   "bugs": {
@@ -97,6 +98,7 @@
     ".evcrate/source/.antigravity/**",
     ".evcrate/source/.codex/**",
     ".evcrate/source/.agents/**",
+    ".evcrate/source/.evcrate-vscode/**",
     ".evcrate/source/CLAUDE.md",
     ".evcrate/source/AGENTS.md",
     ".evcrate/source/GEMINI.md",

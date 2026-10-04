@@ -332,7 +332,7 @@ test('diagnostic failures use the stable routing error catalog', () => {
 });
 test('Phase 8 publication payloads enforce scope, phase order, identity, and empty recovery', () => {
   assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
   ]);
   assert.deepEqual(validatePublishRequestPayload({
     scope: 'home', selectedTargets: ['agy']

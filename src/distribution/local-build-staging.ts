@@ -1,6 +1,7 @@
 import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { getProjectionAdapter } from '../adapters/registry.js';
+import { vscodeAdapter } from '../adapters/vscode/index.js';
 import { createProjectionBuildContext } from '../adapters/types.js';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { createStagedRoot, writeAtomicFile, type StagedRoot } from '../filesystem/atomic.js';
@@ -11,7 +12,7 @@ import type { TargetManifest } from '../manifests/types.js';
 import type { PersistedTarget } from '../protocol/validation.js';
 
 const LEGACY_LOCAL_ROOTS = Object.freeze([
-  '.claude', '.gemini', '.antigravity', '.codex', '.agents', '.pi', '.omp', '.copilot'
+  '.claude', '.gemini', '.antigravity', '.codex', '.agents', '.pi', '.omp', '.copilot', '.evcrate-vscode'
 ] as const);
 
 export function assertLegacyRootClean(packageRoot: string): void {
@@ -100,7 +101,7 @@ export function assembleLocalStage(
   for (const manifest of manifests) {
     const targetStage = createStagedRoot(packageRoot, `.evcrate-target-${manifest.id}-`);
     try {
-      const adapter = getProjectionAdapter(manifest.id);
+      const adapter = manifest.id === 'vscode' ? vscodeAdapter : getProjectionAdapter(manifest.id);
       const buildContext = createProjectionBuildContext(manifest, canonicalHarnessRoot, targetStage);
       adapter.build(buildContext);
       const validation = adapter.validate(buildContext);

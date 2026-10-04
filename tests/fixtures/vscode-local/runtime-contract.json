@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VS Code Local Runtime Contract Specification",
+  "version": "1.0.0",
+  "target": "vscode-local",
+  "packaging": "Agent Plugins 1.0",
+  "plugin_root": ".evcrate-vscode",
+  "events": {
+    "SessionStart": {
+      "timing": "First user prompt in a new conversation",
+      "input_fields": {
+        "required": ["hook_event_name"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "SessionStart" },
+          "source": { "type": "string", "enum": ["new"] },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" },
+          "cwd": { "type": "string" },
+          "transcript_path": { "type": "string" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "systemMessage": { "type": "string" },
+          "hookSpecificOutput": {
+            "type": "object",
+            "required": ["hookEventName", "additionalContext"],
+            "properties": {
+              "hookEventName": { "type": "string", "const": "SessionStart" },
+              "additionalContext": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "UserPromptSubmit": {
+      "timing": "User submits a prompt in chat",
+      "input_fields": {
+        "required": ["hook_event_name", "prompt"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "UserPromptSubmit" },
+          "prompt": { "type": "string" },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" },
+          "cwd": { "type": "string" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "systemMessage": { "type": "string" }
+        }
+      }
+    },
+    "PreToolUse": {
+      "timing": "Before tool invocation by the agent",
+      "input_fields": {
+        "required": ["hook_event_name", "tool_name", "tool_input"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "PreToolUse" },
+          "tool_name": { "type": "string" },
+          "tool_input": { "type": "object" },
+          "tool_use_id": { "type": "string" },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "permissionDecision": { "type": "string", "enum": ["allow", "deny", "ask"] },
+          "updatedInput": { "type": "object" },
+          "additionalContext": { "type": "string" },
+          "systemMessage": { "type": "string" }
+        }
+      },
+      "decision_precedence": ["deny", "ask", "allow"]
+    },
+    "PostToolUse": {
+      "timing": "After successful tool completion (never for failed tool)",
+      "input_fields": {
+        "required": ["hook_event_name", "tool_name", "tool_input", "tool_response"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "PostToolUse" },
+          "tool_name": { "type": "string" },
+          "tool_input": { "type": "object" },
+          "tool_response": {},
+          "tool_use_id": { "type": "string" },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "decision": { "type": "string", "enum": ["block"] },
+          "reason": { "type": "string" },
+          "additionalContext": { "type": "string" }
+        }
+      }
+    },
+    "PreCompact": {
+      "timing": "Before Local conversation context compaction",
+      "input_fields": {
+        "required": ["hook_event_name", "trigger"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "PreCompact" },
+          "trigger": { "type": "string", "enum": ["auto"] },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "systemMessage": { "type": "string" }
+        }
+      }
+    },
+    "SubagentStart": {
+      "timing": "Local subagent execution begins",
+      "input_fields": {
+        "required": ["hook_event_name", "agent_id", "agent_type"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "SubagentStart" },
+          "agent_id": { "type": "string" },
+          "agent_type": { "type": "string" },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "hookSpecificOutput": {
+            "type": "object",
+            "required": ["hookEventName", "additionalContext"],
+            "properties": {
+              "hookEventName": { "type": "string", "const": "SubagentStart" },
+              "additionalContext": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "SubagentStop": {
+      "timing": "Local subagent execution is about to stop",
+      "input_fields": {
+        "required": ["hook_event_name", "agent_id", "agent_type", "stop_hook_active"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "SubagentStop" },
+          "agent_id": { "type": "string" },
+          "agent_type": { "type": "string" },
+          "stop_hook_active": { "type": "boolean" },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "decision": { "type": "string", "enum": ["block"] },
+          "reason": { "type": "string" },
+          "systemMessage": { "type": "string" }
+        }
+      }
+    },
+    "Stop": {
+      "timing": "Main agent execution is about to stop",
+      "input_fields": {
+        "required": ["hook_event_name", "stop_hook_active"],
+        "properties": {
+          "hook_event_name": { "type": "string", "const": "Stop" },
+          "stop_hook_active": { "type": "boolean" },
+          "session_id": { "type": "string" },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "output_envelope": {
+        "properties": {
+          "continue": { "type": "boolean", "default": true },
+          "systemMessage": { "type": "string" },
+          "hookSpecificOutput": {
+            "type": "object",
+            "properties": {
+              "hookEventName": { "type": "string", "const": "Stop" },
+              "decision": { "type": "string", "enum": ["block"] },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "exit_code_contract": {
+    "0": "Process stdout parsed as valid JSON response; agent execution honors returned directives.",
+    "2": "Blocking error; process stderr surfaced to model and blocks further execution.",
+    "other": "Non-blocking warning; error is logged to user notifications; execution continues."
+  },
+  "unsupported_capabilities": [
+    {
+      "name": "SessionEnd",
+      "reason": "Absent from VS Code Local event specification. Stop only signals execution pause, not session teardown."
+    },
+    {
+      "name": "StatusLine",
+      "reason": "No documented native statusline API exists in VS Code Local plugin architecture."
+    },
+    {
+      "name": "MatcherProperties",
+      "reason": "Local hooks do not support declarative matcher filtering in hook JSON. Filtering must be performed inside hook script."
+    }
+  ]
+}

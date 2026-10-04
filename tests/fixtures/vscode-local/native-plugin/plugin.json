@@ -1,0 +1,17 @@
+{
+  "name": "evcrate-local",
+  "version": "1.0.0",
+  "description": "EVCrate VS Code Local qualification plugin fixture",
+  "rules": [
+    "com.github.copilot/rules/bootstrap.instructions.md"
+  ],
+  "agents": [
+    "com.github.copilot/agents/contract-deny-all.agent.md",
+    "com.github.copilot/agents/contract-reader.agent.md"
+  ],
+  "skills": [
+    "skills/contract-echo",
+    "skills/contract-auto"
+  ],
+  "hooks": "com.github.copilot/hooks/hooks.json"
+}

@@ -1,0 +1,47 @@
+# Development Rules
+
+**IMPORTANT:** Analyze the skills catalog and activate the skills that are needed for the task during the process.
+**IMPORTANT:** You ALWAYS follow these principles: **YAGNI (You Aren't Gonna Need It) - KISS (Keep It Simple, Stupid) - DRY (Don't Repeat Yourself)**
+
+## General
+- **File Naming**: Use kebab-case for file names with a meaningful name that describes the purpose of the file, doesn't matter if the file name is long, just make sure when LLMs read the file names while using Grep or other tools, they can understand the purpose of the file right away without reading the file content.
+- **File Size Management**: Keep individual code files under 200 lines for optimal context management
+  - Split large files into smaller, focused components/modules
+  - Use composition over inheritance for complex widgets
+  - Extract utility functions into separate modules
+  - Create dedicated service classes for business logic
+- When looking for docs, activate `docs-seeker` skill (`context7` reference) for exploring latest docs.
+- Use `gh` bash command to interact with Github features if needed
+- Use `psql` bash command to query Postgres database for debugging if needed
+- Use `ai-multimodal` skill for describing details of images, videos, documents, etc. if needed
+- Use `ai-multimodal` skill and `imagemagick` skill for generating and editing images, videos, documents, etc. if needed
+- Use `sequential-thinking` and `debugging` skills for sequential thinking, analyzing code, debugging, etc. if needed
+- **[IMPORTANT]** Follow the codebase structure and code standards in `./docs` during implementation.
+- **[IMPORTANT]** Do not just simulate the implementation or mocking them, always implement the real code.
+
+## Code Quality Guidelines
+- Read and follow codebase structure and code standards in `./docs`
+- Don't be too harsh on code linting, but **make sure there are no syntax errors and code are compilable**
+- Prioritize functionality and readability over strict style enforcement and code formatting
+- Use reasonable code quality standards that enhance developer productivity
+- Use try catch error handling & cover security standards
+- Use `code-reviewer` agent to review code after every implementation
+- Implementation commands follow `advisor-mentoring.md`: a final standalone
+  `--advice` requests one blocking high-tier advisor at each named terminal
+  review checkpoint; default mode escalates on the second consecutive matching
+  blocker.
+- Explicit advice-mode workflows follow [Caller lifecycle binding](./advisor-mentoring.md#caller-lifecycle-binding) and [Plan progress and phase reconciliation](./advisor-mentoring.md#plan-progress-and-phase-reconciliation): fresh first review initializes after its writer barrier; handoffs retain active context. Accepted registered work (including finalization) requires actual validation and a matching truthful outcome before the next checkpoint; resume existing actions without duplication. Disputed counsel without an active action uses supported disposition, read-only evidence/resolution, and fresh same-run counsel before writes or a resolved outcome, without invented work/outcome. Preserved historical snapshot paths remain immutable even if the current command omits `--advice`, while current-run registered pre-seal writes within parent-authorized paths remain permitted. For advice-controlled plans, live progress is maintained via uncaptured `<plan-dir>/progress.md` (never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker) and mandatory immutable completion receipts outside baseline, not `plan.md` overwrites (operator abandonment is never successful completion). The parent alone owns controller state and receipt publication; child status writers are advisory; durable completion and human gates are not overridden by review caps. Do not execute Git commands or captured-file/selected-index mutations after seal; only bounded administrative receipt and progress publication outside baseline is permitted. Ordinary default plans retain normal `plan.md` status updates and do not require nonexistent progress links.
+
+## Pre-commit/Push Rules
+- Run linting before commit
+- Run tests before push (DO NOT ignore failed tests just to pass the build or github actions)
+- Keep commits focused on the actual code changes
+- **DO NOT** commit and push any confidential information (such as dotenv files, API keys, database credentials, etc.) to git repository!
+- Create clean, professional commit messages without AI references. Use conventional commit format.
+
+## Code Implementation
+- Write clean, readable, and maintainable code
+- Follow established architectural patterns
+- Implement features according to specifications
+- Handle edge cases and error scenarios
+- **DO NOT** create new enhanced files, update to the existing files directly.

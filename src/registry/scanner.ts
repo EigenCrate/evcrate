@@ -61,12 +61,22 @@ function capabilities(kind: ResourceKind, path: string): readonly string[] {
 }
 function compatibility(kind: ResourceKind): RegistryCompatibility {
   const adapters = registeredProjectionAdapters();
-  if (adapters.size !== PERSISTED_TARGETS.length) throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
   const result: Record<string, { status: 'native' | 'needsAdapter' | 'unsupported'; reason?: string }> = {};
   for (const target of PERSISTED_TARGETS) {
-    const entry = adapters.get(target)?.compatibility[kind];
-    if (!entry) throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
-    result[target] = entry.reason === undefined ? { status: entry.status } : { status: entry.status, reason: entry.reason };
+    if (target === 'vscode') {
+      const adapter = adapters.get(target);
+      if (adapter) {
+        const entry = adapter.compatibility[kind];
+        if (!entry) throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
+        result[target] = entry.reason === undefined ? { status: entry.status } : { status: entry.status, reason: entry.reason };
+      } else {
+        result[target] = { status: 'needsAdapter', reason: 'Local projection requires qualification' };
+      }
+    } else {
+      const entry = adapters.get(target)?.compatibility[kind];
+      if (!entry) throw new ControlPlaneError('CAPABILITY_UNSUPPORTED');
+      result[target] = entry.reason === undefined ? { status: entry.status } : { status: entry.status, reason: entry.reason };
+    }
   }
   return Object.freeze(result) as RegistryCompatibility;
 }

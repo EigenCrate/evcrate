@@ -33,7 +33,7 @@ counsel bounded and fail-closed.
 
 - Strict bounded JSON/protocol contracts and sanitized errors.
 - Schema-2 target manifests/build manifests and schema-1 resource registry.
-- Seven fixed projection adapters with no discovery or fallback adapter.
+- Eight fixed projection adapters (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`) with no discovery or fallback adapter.
 - CAS-aware import, scope, advisor-settings, build, publication, and recovery flows.
 - Scope-aware publication (`--scope home|project`) with unconditional shared controller
   publication to `<home>/.evcrate/bin` and independent project harness materialization.
@@ -74,7 +74,7 @@ out of scope.
 `.evcrate/source/.evcrate/bin/`. Target manifests and overlays select generated
 outputs.
 
-**Acceptance:** A build reads the canonical roots, registers all seven fixed target
+**Acceptance:** A build reads the canonical roots, registers all eight fixed target
 adapters, rejects missing/duplicate/unsupported target adapters, and emits validated
 projections. A generated output is never treated as an authoring source.
 
@@ -544,6 +544,12 @@ without dropping byte, physical-object, index, or lock-ownership checks.
 does not decide whether execute-bit-only capability transitions are an exception to
 chmod-invariance. Durable journal recovery/migration policy and Windows readiness or
 production-runtime qualification remain outside this phase.
+
+### FR-25: VS Code Local native support
+
+**Requirement:** Add a distinct persisted `vscode` target for VS Code Local as an isolated Agent Plugins 1.0 bundle (`evcrate-local`), generated at `.evcrate/source/.evcrate-vscode/` and published to project or HOME `.evcrate-vscode/`. User-controlled registration via VS Code's `chat.pluginLocations` setting; publication never writes editor settings. Standalone `--agent` relay is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`. Native hook protocol covers eight Agent Plugins 1.0 events with scout and privacy policies (no lexical trust, fail-closed unqualified tools, bare command operand inspection) and CommonJS runtime closure. Explicit session context uses atomic CAS v1 state with bounded retention (7d, 256/proj, 1024/user). Coexistence preserves Copilot CLI target (`copilot`) and opt-in `.claude` discoveries. Opt-in MCP examples remain inert templates.
+
+**Acceptance:** Live qualification on Linux x64 with VS Code 1.140.0 and Copilot Chat 0.68.0 verified with 12 context receipts (6 qualified, 5 unexercised workstation-dependent, 1 unsupported browser web). Core release assets remain exactly seven files.
 
 ### Historical Workspace Advisor requirements (FR-25–FR-33)
 

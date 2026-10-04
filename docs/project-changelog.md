@@ -2,8 +2,29 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-02
-**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+**Updated:** 2026-10-04
+**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64 (commit `cbd298a4`); Phase 09 documentation, controlled rollout, and lifecycle governance completed; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+
+### 2026-10-04 — feat(vscode): add opt-in settings.json registration flow to VS Code publish
+
+- Added surgical JSONC detection and updating for `chat.pluginLocations` in VS Code settings files (`src/distribution/vscode-settings.ts`). Supports both workspace `.vscode/settings.json` (`--scope project`) and platform User settings (`--scope home`) across Linux, macOS, and Windows.
+- Preserves comments, indentation, BOM, newlines, and unrelated keys without destructively rewriting configuration files; creates 0600 mode file on POSIX when newly created.
+- Integrated first-time registration prompting into `evcrate publish` when running on interactive TTYs with absent registration.
+- Added explicit CLI flags: `--register-vscode-settings` (forces registration without prompting; works in non-TTY/CI/JSON) and `--no-register-vscode-settings` (suppresses detection and registration entirely).
+- Maintained publication atomicity and recovery boundaries: `evcrate recover` remains strictly scoped to published artifacts and never mutates user `settings.json`.
+- Added 21 unit and CLI integration tests in `tests/distribution/vscode-settings.test.mjs` and `tests/cli/vscode-settings-registration.test.mjs` (112/112 test suite passing).
+
+### 2026-10-04 — docs(vscode): complete Phase 09 documentation, controlled rollout, and lifecycle governance
+
+- Reconciled core architecture and documentation: updated system architecture (`docs/system-architecture.md`), codebase summary (`docs/codebase-summary.md`), code standards (`docs/code-standards.md`), project overview PDR (`docs/project-overview-pdr.md`, FR-25), roadmap (`docs/project-roadmap.md`), and README/guide.
+- Established eighth persisted target `vscode` with isolated Agent Plugins 1.0 bundle (`evcrate-local`) at `.evcrate/source/.evcrate-vscode/` and published `.evcrate-vscode/`. Schema-2 manifests and build resolutions manage 8 targets; schema-1 registry maintains exact-seven read-only normalization for backward compatibility. Core release assets remain exactly seven files.
+- Documented clear separation between GitHub Copilot CLI (`copilot`) and VS Code Local (`vscode`), user-controlled manual activation via `chat.pluginLocations`, and opt-in MCP examples without default activation or credential assumptions.
+- Documented native hook protocol across eight Agent Plugins 1.0 events, fail-closed scout and privacy policies, atomic CAS v1 session context with 7-day bounded retention, direct HOME advisor caller (`~/.evcrate/bin/evcrate-advisor`), and explicit rejection of standalone `--agent` relay (`ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`).
+- Documented coexistence guidelines (project vs HOME scope), scope-isolated recovery runbook (`evcrate recover` without editor settings mutation), and lifecycle stop-trigger criteria for version drift and announced upstream Local retirement.
+
+### 2026-10-04 — test(vscode): record Phase 08 Native Local qualification
+
+- The [index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md), [project receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/receipt.md), and [HOME receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-home/receipt.md) account for 50 rows / 12 contexts (six contexts marked `QUALIFIED`, five `NOT EXERCISED`, one `UNSUPPORTED`). Reported gates: 8/8 Phase 08 tests, 737/737 full npm tests, [Cycle 2 review](../plans/reports/code-review-261004-0023-phase-08-native-local-qualification-cycle-2.md) 9.4/10. That review reports PreCompact/SubagentStart/SubagentStop exit 2, while the current [project log](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/events-redacted.jsonl) and receipt show 0; the [wrong-harness record](../plans/261002-2213-vscode-local-native-support/reports/native-local/wrong-harness-isolation/events-redacted.jsonl) records a disposition but not an observed relay rejection.
 
 ### 2026-10-02 — refactor(advisor): retire Dam-Hopper plugin platform integration
 
@@ -364,7 +385,6 @@
 - G0 budget/cancellation/UI-memory assumptions are recorded; E01 and E02 are
   complete; E03–E05 remain pending.
 
-
 ### 2026-09-21 — feat(plugin): complete Phase E01 owner-safe read provider
 
 **Status:** Phase E01 DONE (2026-09-21; 100%); review approved **9.5/10**.  
@@ -528,7 +548,6 @@
 - Completed atomic generation replacement with stale retention for incomplete/cancelled/denied scans, plus read-only policy inspection with legacy-v1 migration-required state.
 - Focused proof passed: viewer 24/24, advisor metrics 6/6, and contract parity 4/4 (34/34 total); all Phase 05 modules remain under 200 lines.
 - Handoff advanced to Phase 06 — Counsel evaluation protocol and fixtures.
-
 
 ### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
 
@@ -730,7 +749,6 @@ and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-determini
 - Blocking review corrections covered schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, and same-volume preflight. Existing modes, hashes, CAS, ownership, and unmanaged-data protections remain fail-closed.
 - **Direct local evidence:** `npm run build` passed; `node --test tests/distribution/publication-recovery.test.mjs` passed 19/19; `node --test tests/distribution/publication-apply.test.mjs` passed 12/12; `node --test tests/distribution/publication-plan.test.mjs` passed 6/6; `node --test tests/cli/publication.test.mjs` passed 6/6.
 - The mandatory tester agent could not execute because its provider returned HTTP 429 before commands; no tester-agent execution is claimed. These local checks do not qualify live vendors/operators or authorize HOME publication.
-
 
 ### 2026-09-13 — feat(distribution): generic transaction engine and locking (Phase 05)
 

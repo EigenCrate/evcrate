@@ -10,6 +10,14 @@ export interface CliOutput {
   write(value: string): void;
 }
 
+export interface VscodeSettingsConsole {
+  readonly isInputTTY?: boolean;
+  readonly isOutputTTY?: boolean;
+  readonly isErrorTTY?: boolean;
+  readonly confirm: (question: string, signal?: AbortSignal) => Promise<boolean>;
+  readonly writeNotice?: (text: string) => void;
+}
+
 export interface AdvisorSettingsHandler {
   handle(
     request: AdvisorSettingsRequest,
@@ -40,6 +48,8 @@ export interface CliRuntime {
   readonly publicationHandler?: PublicationHandler;
   readonly publicationOptions?: PublicationOptions;
   readonly engineSelectionOptions?: EngineSelectionOptions;
+  readonly vscodeSettingsConsole?: VscodeSettingsConsole;
+  readonly platform?: NodeJS.Platform;
 }
 
 export type RuntimeProcessOptions = Omit<RunBoundedProcessOptions, 'signal'> & {

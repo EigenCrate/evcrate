@@ -35,7 +35,7 @@ async function main() {
 
   const resources = scanCanonicalResources(canonicalRoot, targetRegistry.resourceRoots, previous);
   const document = {
-    schema_version: 1,
+    schema_version: 2,
     revision,
     resources
   };

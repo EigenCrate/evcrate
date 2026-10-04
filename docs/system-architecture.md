@@ -17,8 +17,9 @@ turns these contracts into requirements.
 ## 1. System shape
 
 EVCrate is a private npm package (`evcrate`, version `2.6.0`) for building and
-publishing one canonical agent-harness source tree into seven persisted target
-projections. Node `>=22.19.0` is the package engine. The package exposes:
+publishing one canonical agent-harness source tree into eight persisted target
+projections (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`,
+and `vscode`). Node `>=22.19.0` is the package engine. The package exposes:
 
 - `evcrate` → `dist/cli/evcrate.js`, the one-shot TypeScript control-plane CLI.
 - `evcrate-advisor` → `.evcrate/source/.evcrate/bin/evcrate-advisor`, the shared
@@ -49,21 +50,30 @@ flowchart TD
 | Canonical harness resources | `.evcrate/source/.claude/` | Author here; do not hand-edit projections. |
 | Shared advisor controller | `.evcrate/source/.evcrate/bin/` | Author the controller closure here. |
 | Target policy | `.evcrate/targets/*/manifest.json` and declared overlays | Change policy/overlays, then rebuild. |
-| Generated projections | `.evcrate/source/.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`, `.omp`, `.copilot` | Generated output; never hand-edit. |
+| Generated projections | `.evcrate/source/.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`, `.omp`, `.copilot`, `.evcrate-vscode` | Generated output; never hand-edit. |
 | Controller publication | `$HOME/.evcrate/bin/` | Publisher owns one shared copy; no target owns a copy. |
 | Advisor routing policy | `$HOME/.evcrate/advisor-routing.json` | User-owned input; never generated, published, replaced, or chmodded by EVCrate. |
 | Resource registry | `.evcrate/registry.json` | Schema-1 resource records; separate from schema-2 target/build manifests. |
 
-The target registry persists exactly `claude`, `codex`, `gemini`, `antigravity`,
-`pi`, `omp`, and `copilot`. `agy` is accepted only as an input alias for
-`antigravity`; it is not persisted. Projection registration is fixed and
-exhaustive: Claude, Gemini, Antigravity, Codex, Pi, OMP, and Copilot each register
+The target registry persists eight targets: `claude`, `codex`, `gemini`, `antigravity`,
+`pi`, `omp`, `copilot`, and `vscode`. `agy` is accepted only as an input alias for
+`antigravity`; it is not persisted. Projection registration is fixed and exhaustive:
+Claude, Gemini, Antigravity, Codex, Pi, OMP, Copilot, and VS Code Local each register
 one real adapter. There is no discovery or fallback adapter.
 
-Copilot is a staging/projection target, not a controller backend. Its adapter
-namespaces resources, emits a migration inventory, routes safety hooks through a
-fail-closed bridge, and merges only declared settings keys. It must not be
-presented as a relay to `evcrate-advisor`.
+Legacy schema-1 registries perform exact-seven read-only normalization for backward
+compatibility, while schema-2 writes persist all eight targets under original-byte CAS.
+Wire version 1 is additive, requiring older strict clients to upgrade when encountering
+the eighth target.
+
+`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`,
+published to project/HOME `.evcrate-vscode/`, with plugin identity `evcrate-local`.
+Registration is strictly user-controlled via VS Code's `chat.pluginLocations` setting;
+EVCrate publication never mutates user editor settings. Copilot CLI (`copilot`) and
+VS Code Local (`vscode`) remain distinct targets with separate formats, hook protocols,
+and runtime lifecycles. Neither target is a controller backend; both direct advisor workflows
+to the shared controller at `$HOME/.evcrate/bin/evcrate-advisor`. Standalone `--agent` relay
+on `vscode` is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`.
 
 ### Snyk specialist composition: local porting boundary
 
@@ -85,7 +95,8 @@ The source is organized around narrow contracts:
 - `src/context/`: package, project, home, state, target, and immutable path context.
 - `src/manifests/`: schema-2 target manifests, resource roots, home bindings,
   patch authorization, and manifest registry loading.
-- `src/adapters/`: seven target projection adapters, resource graph validation,
+- `src/adapters/`: eight target projection adapters (seven shared-registry adapters plus the
+  VS Code Local native adapter in `src/adapters/vscode/`), resource graph validation,
   qualification, and target-specific transforms.
 - `src/registry/`: schema-1 canonical resource scan, compatibility records, and
   deterministic queries.
@@ -150,14 +161,16 @@ POSIX launcher writes receive additive execute bits.
 2. **Harness destinations**:
    - **HOME scope (`--scope home`)**: Target manifests specify `homePolicy.bindings`
      beneath `--home`. Neutral source roots map to target HOME directories (`.claude`,
-     `.agents`, `.codex`, `.gemini`, `.pi`, `.omp`, `.copilot`), with Antigravity
+     `.agents`, `.codex`, `.gemini`, `.pi`, `.omp`, `.copilot`, and `.evcrate-vscode`), with Antigravity
      mapping to `<home>/.gemini/config`. Root documents (`AGENTS.md`, `GEMINI.md`) are
      excluded from HOME.
    - **Project scope (`--scope project`)**: Harness projections bind under
      `--project-root`. Target manifests declare `output_roots`, `additional_roots`,
      and `project_docs` in deterministic declaration order. Installed wrappers resolve
      internal resources from their own installation location, while runtime environment
-     and `process.cwd()` remain active project workspace data.
+     and `process.cwd()` remain active project workspace data. Explicit session context
+     uses atomic CAS v1 state with bounded retention (7d, 256/proj, 1024/user) and CLI
+     support scripts (`set-active-plan.cjs`).
 3. **Transaction models**:
    - **HOME scope**: Executes as a single atomic transaction on the HOME destination volume.
      Shared and harness records share a single `releaseId` and bounded retention cleanup.
@@ -726,7 +739,7 @@ Phase 09 synchronized the generated release boundary:
    `install.ps1`, and `scripts/release/runtime-closure.cjs`. The runtime brief is
    authored once under `.claude`, generated into the closure, and never
    hand-edited.
-2. **Target projections.** `npm run distribute:build` generates all seven targets;
+2. **Target projections.** `npm run distribute:build` generates all eight targets;
    `npm run distribute:check` verifies byte parity. Build manifests and the schema-1
    registry are synchronized by `npm run generate:all`.
 3. **Installer layouts.** Linux installs snapshots under
