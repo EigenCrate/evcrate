@@ -244,17 +244,21 @@ function serializeLocalHookResult(event, output) {
   }
 
   if (event === 'PreToolUse') {
-    if (output.permissionDecision) {
-      normalized.permissionDecision = output.permissionDecision;
-    }
-    if (output.updatedInput && typeof output.updatedInput === 'object') {
-      normalized.updatedInput = output.updatedInput;
-    }
-    if (output.additionalContext) {
-      normalized.additionalContext = output.additionalContext;
-    }
-    if (output.hookSpecificOutput && typeof output.hookSpecificOutput === 'object') {
-      normalized.hookSpecificOutput = output.hookSpecificOutput;
+    const hookSpecific = {
+      hookEventName: 'PreToolUse'
+    };
+    const decision = (output.hookSpecificOutput && output.hookSpecificOutput.permissionDecision) || output.permissionDecision;
+    if (decision) hookSpecific.permissionDecision = decision;
+    const reason = (output.hookSpecificOutput && (output.hookSpecificOutput.permissionDecisionReason || output.hookSpecificOutput.reason))
+      || output.permissionDecisionReason
+      || output.reason;
+    if (reason) hookSpecific.permissionDecisionReason = String(reason);
+    const updated = (output.hookSpecificOutput && output.hookSpecificOutput.updatedInput) || output.updatedInput;
+    if (updated && typeof updated === 'object') hookSpecific.updatedInput = updated;
+    const context = (output.hookSpecificOutput && output.hookSpecificOutput.additionalContext) || output.additionalContext;
+    if (context) hookSpecific.additionalContext = String(context);
+    if (Object.keys(hookSpecific).length > 1 || output.hookSpecificOutput) {
+      normalized.hookSpecificOutput = hookSpecific;
     }
   } else if (event === 'SessionStart') {
     if (output.hookSpecificOutput && typeof output.hookSpecificOutput === 'object') {
@@ -1000,22 +1004,20 @@ function runBridge(expectedEvent, stdinBytes) {
       if (policyResult.decision === 'deny') {
         output = {
           continue: true,
-          permissionDecision: 'deny',
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
             permissionDecision: 'deny',
-            reason: policyResult.reason
+            permissionDecisionReason: policyResult.reason
           },
           systemMessage: policyResult.reason
         };
       } else if (policyResult.decision === 'ask') {
         output = {
           continue: true,
-          permissionDecision: 'ask',
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
             permissionDecision: 'ask',
-            reason: policyResult.reason
+            permissionDecisionReason: policyResult.reason
           },
           systemMessage: policyResult.reason
         };

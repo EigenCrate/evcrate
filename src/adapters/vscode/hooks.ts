@@ -30,7 +30,7 @@ export function convertVscodeHooks(context: ProjectionBuildContext): VscodeHookA
     hooksConfig[event] = [
       {
         type: 'command',
-        command: `node evcrate/runtime/local-hook-bridge.cjs ${event}`,
+        command: `node "\${PLUGIN_ROOT}/evcrate/runtime/local-hook-bridge.cjs" ${event}`,
         timeout: 30
       }
     ];

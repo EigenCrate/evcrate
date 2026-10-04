@@ -51,7 +51,10 @@
     },
     "expected_response": {
       "continue": true,
-      "permissionDecision": "allow"
+      "hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "allow"
+      }
     },
     "exit_code": 0
   },
@@ -71,7 +74,10 @@
     },
     "expected_response": {
       "continue": true,
-      "permissionDecision": "deny"
+      "hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny"
+      }
     },
     "exit_code": 0
   },
@@ -91,7 +97,10 @@
     },
     "expected_response": {
       "continue": true,
-      "permissionDecision": "ask"
+      "hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "ask"
+      }
     },
     "exit_code": 0
   },

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -172,6 +172,53 @@ test('session-state: retention sweep and capacity limits', () => {
 
     const afterCounts = countUserSessions(userDir);
     assert.equal(afterCounts.total, 1);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+test('session-state: adversarial security checks on pre-existing directories and symlinks', () => {
+  const base = createTempDir('vscode-adversarial-');
+  try {
+    const projectDir = join(base, 'proj');
+    const pluginDir = join(projectDir, '.evcrate-vscode');
+    mkdirSync(join(pluginDir, 'evcrate', 'runtime'), { recursive: true });
+    const selfFile = join(pluginDir, 'evcrate', 'runtime', 'bridge.cjs');
+    writeFileSync(selfFile, '//');
+    const roots = resolveInstallationRoots(selfFile, { projectRoot: projectDir });
+
+    // Case 1: Pre-existing symlink in directory hierarchy
+    const maliciousTarget = join(base, 'malicious-target');
+    mkdirSync(maliciousTarget, { recursive: true });
+    const symlinkAncestor = join(base, 'evcrate');
+    symlinkSync(maliciousTarget, symlinkAncestor);
+
+    const ctxSymlink = createSessionContext({ sessionId: 'sess-symlink', cwd: projectDir }, roots, { tmpDir: base });
+    assert.throws(() => {
+      initSessionState(ctxSymlink, null, 1000);
+    }, (err) => err instanceof SessionStateError && err.code === 'SESSION_CONTEXT_UNAVAILABLE');
+
+    rmSync(symlinkAncestor, { force: true });
+
+    // Case 2: Pre-existing file where directory expected
+    const blockerFile = join(base, 'evcrate');
+    writeFileSync(blockerFile, 'not-a-directory');
+    const ctxFile = createSessionContext({ sessionId: 'sess-file', cwd: projectDir }, roots, { tmpDir: base });
+    assert.throws(() => {
+      initSessionState(ctxFile, null, 1000);
+    }, (err) => err instanceof SessionStateError && err.code === 'SESSION_CONTEXT_UNAVAILABLE');
+
+    rmSync(blockerFile, { force: true });
+
+    // Case 3: Insecure permissions (world/group writable directory) on POSIX
+    if (process.platform !== 'win32') {
+      const insecureDir = join(base, 'evcrate');
+      mkdirSync(insecureDir, { mode: 0o777 });
+      chmodSync(insecureDir, 0o777); // Ensure mode is 0777 despite umask
+      const ctxPerm = createSessionContext({ sessionId: 'sess-perm', cwd: projectDir }, roots, { tmpDir: base });
+      assert.throws(() => {
+        initSessionState(ctxPerm, null, 1000);
+      }, (err) => err instanceof SessionStateError && err.code === 'SESSION_CONTEXT_UNAVAILABLE');
+    }
   } finally {
     rmSync(base, { recursive: true, force: true });
   }

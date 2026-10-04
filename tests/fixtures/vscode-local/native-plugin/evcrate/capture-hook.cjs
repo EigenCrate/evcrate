@@ -82,11 +82,15 @@ function computeResponse(eventName, payload) {
       const decision = process.env.EVCRATE_PRE_TOOL_DECISION || 'allow';
       const result = {
         continue: true,
-        permissionDecision: decision
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: decision,
+          permissionDecisionReason: decision === 'deny' ? 'Blocked by diagnostic policy' : undefined
+        }
       };
       if (process.env.EVCRATE_REPLACE_TOOL_INPUT) {
         try {
-          result.updatedInput = JSON.parse(process.env.EVCRATE_REPLACE_TOOL_INPUT);
+          result.hookSpecificOutput.updatedInput = JSON.parse(process.env.EVCRATE_REPLACE_TOOL_INPUT);
         } catch {}
       }
       return result;

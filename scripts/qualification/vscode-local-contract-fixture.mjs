@@ -21,21 +21,10 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 export const FIXTURE_PLUGIN_JSON = {
+  $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
   name: 'evcrate-local',
   version: '1.0.0',
-  description: 'EVCrate VS Code Local qualification plugin fixture',
-  rules: [
-    'com.github.copilot/rules/bootstrap.instructions.md'
-  ],
-  agents: [
-    'com.github.copilot/agents/contract-deny-all.agent.md',
-    'com.github.copilot/agents/contract-reader.agent.md'
-  ],
-  skills: [
-    'skills/contract-echo',
-    'skills/contract-auto'
-  ],
-  hooks: 'com.github.copilot/hooks/hooks.json'
+  description: 'EVCrate VS Code Local qualification plugin fixture'
 };
 
 export const FIXTURE_HOOKS_JSON = {
@@ -264,11 +253,15 @@ function computeResponse(eventName, payload) {
       const decision = process.env.EVCRATE_PRE_TOOL_DECISION || 'allow';
       const result = {
         continue: true,
-        permissionDecision: decision
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: decision,
+          permissionDecisionReason: decision === 'deny' ? 'Blocked by diagnostic policy' : undefined
+        }
       };
       if (process.env.EVCRATE_REPLACE_TOOL_INPUT) {
         try {
-          result.updatedInput = JSON.parse(process.env.EVCRATE_REPLACE_TOOL_INPUT);
+          result.hookSpecificOutput.updatedInput = JSON.parse(process.env.EVCRATE_REPLACE_TOOL_INPUT);
         } catch {}
       }
       return result;

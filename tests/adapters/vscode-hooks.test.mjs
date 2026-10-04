@@ -139,11 +139,10 @@ test('hook-protocol: rejects oversized payloads exceeding 1 MiB limit', () => {
 test('hook-protocol: serializes valid output envelopes and error diagnostics', () => {
   const result = serializeLocalHookResult('PreToolUse', {
     continue: true,
-    permissionDecision: 'deny',
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      reason: 'blocked by policy'
+      permissionDecisionReason: 'blocked by policy'
     }
   });
 
@@ -151,9 +150,10 @@ test('hook-protocol: serializes valid output envelopes and error diagnostics', (
   assert.equal(result.stderr, '');
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.continue, true);
-  assert.equal(parsed.permissionDecision, 'deny');
-  assert.equal(parsed.hookSpecificOutput.reason, 'blocked by policy');
-
+  assert.equal(parsed.permissionDecision, undefined);
+  assert.equal(parsed.hookSpecificOutput.hookEventName, 'PreToolUse');
+  assert.equal(parsed.hookSpecificOutput.permissionDecision, 'deny');
+  assert.equal(parsed.hookSpecificOutput.permissionDecisionReason, 'blocked by policy');
   // Error serialization
   const err = new LocalHookProtocolError('TEST_CODE', 'A test error occurred');
   const errResult = serializeLocalHookError(err);
@@ -185,7 +185,7 @@ test('vscode-hooks: convertVscodeHooks emits hooks.json, runtime closure scripts
       assert.ok(hooksData.hooks[ev], `Missing hook registration for ${ev}`);
       assert.equal(hooksData.hooks[ev][0].type, 'command');
       assert.equal(hooksData.hooks[ev][0].timeout, 30);
-      assert.ok(hooksData.hooks[ev][0].command.includes(`local-hook-bridge.cjs ${ev}`));
+      assert.equal(hooksData.hooks[ev][0].command, `node "\${PLUGIN_ROOT}/evcrate/runtime/local-hook-bridge.cjs" ${ev}`);
     }
 
     // 2. Runtime CJS closure files
@@ -266,9 +266,9 @@ test('vscode-hooks: subprocess execution of local-hook-bridge.cjs', () => {
     assert.equal(resScoutDeny.status, 0);
     const outScoutDeny = JSON.parse(resScoutDeny.stdout);
     assert.equal(outScoutDeny.continue, true);
-    assert.equal(outScoutDeny.permissionDecision, 'deny');
-    assert.ok(outScoutDeny.hookSpecificOutput.reason.includes('Scout policy blocked'));
-
+    assert.equal(outScoutDeny.permissionDecision, undefined);
+    assert.equal(outScoutDeny.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(outScoutDeny.hookSpecificOutput.permissionDecisionReason.includes('Scout policy blocked'));
     // Scenario D: PreToolUse privacy ask (.env)
     const resPrivacyAsk = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
       input: JSON.stringify({
@@ -281,9 +281,9 @@ test('vscode-hooks: subprocess execution of local-hook-bridge.cjs', () => {
     assert.equal(resPrivacyAsk.status, 0);
     const outPrivacyAsk = JSON.parse(resPrivacyAsk.stdout);
     assert.equal(outPrivacyAsk.continue, true);
-    assert.equal(outPrivacyAsk.permissionDecision, 'ask');
-    assert.ok(outPrivacyAsk.hookSpecificOutput.reason.includes('privacy-sensitive'));
-
+    assert.equal(outPrivacyAsk.permissionDecision, undefined);
+    assert.equal(outPrivacyAsk.hookSpecificOutput.permissionDecision, 'ask');
+    assert.ok(outPrivacyAsk.hookSpecificOutput.permissionDecisionReason.includes('privacy-sensitive'));
     // Scenario E: Fail closed on malformed input (exit code 2)
     const resMalformed = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
       input: '{ malformed json }',

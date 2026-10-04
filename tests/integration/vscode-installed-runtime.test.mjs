@@ -99,7 +99,7 @@ test('vscode-installed-runtime: live bridge smoke handles all 8 events from fore
     assert.equal(resPreAllow.status, 0);
     const outPreAllow = JSON.parse(resPreAllow.stdout);
     assert.equal(outPreAllow.continue, true);
-    assert.notEqual(outPreAllow.permissionDecision, 'deny');
+    assert.notEqual(outPreAllow.hookSpecificOutput?.permissionDecision, 'deny');
 
     // 4. PreToolUse - Scout blocked directory (node_modules)
     const resPreDeny = runBridge('PreToolUse', {
@@ -111,8 +111,9 @@ test('vscode-installed-runtime: live bridge smoke handles all 8 events from fore
     assert.equal(resPreDeny.status, 0);
     const outPreDeny = JSON.parse(resPreDeny.stdout);
     assert.equal(outPreDeny.continue, true);
-    assert.equal(outPreDeny.permissionDecision, 'deny');
-
+    assert.equal(outPreDeny.permissionDecision, undefined);
+    assert.equal(outPreDeny.hookSpecificOutput?.permissionDecision, 'deny');
+    assert.ok(outPreDeny.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
     // 5. PostToolUse
     const resPost = runBridge('PostToolUse', {
       hook_event_name: 'PostToolUse',
@@ -241,11 +242,13 @@ test('vscode-installed-runtime: tool-consumer executes allowed and suppresses de
 
         try {
           const parsed = JSON.parse(res.stdout);
-          if (parsed.permissionDecision === 'deny') {
-            return { permitted: false, decision: 'deny', reason: parsed.hookSpecificOutput?.reason };
+          const decision = parsed.hookSpecificOutput?.permissionDecision;
+          const reason = parsed.hookSpecificOutput?.permissionDecisionReason;
+          if (decision === 'deny') {
+            return { permitted: false, decision: 'deny', reason };
           }
-          if (parsed.permissionDecision === 'ask') {
-            return { permitted: false, decision: 'ask', reason: parsed.hookSpecificOutput?.reason };
+          if (decision === 'ask') {
+            return { permitted: false, decision: 'ask', reason };
           }
           return { permitted: true, decision: 'none' };
         } catch {
@@ -321,5 +324,80 @@ test('vscode-installed-runtime: tool-consumer executes allowed and suppresses de
     assert.equal(consumer.operationCallCounts.read, 2);
   } finally {
     env.cleanup();
+  }
+});
+test('vscode-installed-runtime: executes hook commands configured in hooks.json from foreign CWD with PLUGIN_ROOT containing spaces', () => {
+  const root = createTempDir('vscode-plugin-spaces-');
+  try {
+    const foreignWorkspace = join(root, 'foreign workspace');
+    const installedPluginDir = join(root, 'installed plugins', 'my evcrate plugin');
+    mkdirSync(foreignWorkspace, { recursive: true });
+    mkdirSync(installedPluginDir, { recursive: true });
+
+    // Copy plugin files to installedPluginDir
+    const sourceVscode = join(repository, '.evcrate/source/.evcrate-vscode');
+    cpSync(sourceVscode, installedPluginDir, { recursive: true });
+
+    // Read generated hooks.json
+    const hooksJsonPath = join(installedPluginDir, 'com.github.copilot', 'hooks', 'hooks.json');
+    assert.ok(existsSync(hooksJsonPath), 'hooks.json must exist');
+    const hooksConfig = JSON.parse(readFileSync(hooksJsonPath, 'utf8'));
+
+    // Check SessionStart hook command
+    const sessionStartEntry = hooksConfig.hooks.SessionStart[0];
+    assert.ok(sessionStartEntry.command.includes('${PLUGIN_ROOT}'), 'Command must use ${PLUGIN_ROOT}');
+
+    // Expand ${PLUGIN_ROOT} as VS Code host does
+    const expandedCommand = sessionStartEntry.command.replaceAll('${PLUGIN_ROOT}', installedPluginDir);
+
+    // Execute via shell from foreign workspace CWD with PLUGIN_ROOT in env
+    const res = spawnSync(expandedCommand, {
+      shell: true,
+      cwd: foreignWorkspace,
+      input: JSON.stringify({
+        hook_event_name: 'SessionStart',
+        source: 'new',
+        session_id: 'installed-test-session',
+        cwd: foreignWorkspace
+      }),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PLUGIN_ROOT: installedPluginDir,
+        VSCODE_PROJECT_DIR: foreignWorkspace
+      }
+    });
+
+    assert.equal(res.status, 0, `Execution failed: ${res.stderr}`);
+    const parsed = JSON.parse(res.stdout);
+    assert.equal(parsed.continue, true);
+    assert.equal(parsed.hookSpecificOutput?.hookEventName, 'SessionStart');
+
+    // Also test PreToolUse hook command
+    const preToolEntry = hooksConfig.hooks.PreToolUse[0];
+    const expandedPreCommand = preToolEntry.command.replaceAll('${PLUGIN_ROOT}', installedPluginDir);
+    const preRes = spawnSync(expandedPreCommand, {
+      shell: true,
+      cwd: foreignWorkspace,
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'read_file',
+        tool_input: { path: 'any.txt' },
+        cwd: foreignWorkspace
+      }),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PLUGIN_ROOT: installedPluginDir,
+        VSCODE_PROJECT_DIR: foreignWorkspace
+      }
+    });
+
+    assert.equal(preRes.status, 0, `PreToolUse execution failed: ${preRes.stderr}`);
+    const preParsed = JSON.parse(preRes.stdout);
+    assert.equal(preParsed.continue, true);
+    assert.equal(preParsed.permissionDecision, undefined);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

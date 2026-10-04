@@ -44,11 +44,12 @@ test('vscode-local: materializeFixture creates all 9 plugin components with expe
 
     // Verify plugin.json contents
     const pluginData = JSON.parse(fs.readFileSync(path.join(tmpDir, 'plugin.json'), 'utf8'));
+    assert.equal(pluginData.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
     assert.equal(pluginData.name, 'evcrate-local');
-    assert.equal(pluginData.rules.length, 1);
-    assert.equal(pluginData.agents.length, 2);
-    assert.equal(pluginData.skills.length, 2);
-
+    assert.equal(pluginData.version, '1.0.0');
+    assert.equal(pluginData.rules, undefined);
+    assert.equal(pluginData.agents, undefined);
+    assert.equal(pluginData.skills, undefined);
     // Verify hooks.json contents
     const hooksData = JSON.parse(fs.readFileSync(path.join(tmpDir, 'com.github.copilot/hooks/hooks.json'), 'utf8'));
     const hookEvents = Object.keys(hooksData.hooks);
@@ -109,8 +110,8 @@ test('vscode-local: capture-hook processes all 8 lifecycle events correctly', ()
     assert.equal(resPreTool.status, 0);
     const outPreTool = JSON.parse(resPreTool.stdout);
     assert.equal(outPreTool.continue, true);
-    assert.equal(outPreTool.permissionDecision, 'allow');
-
+    assert.equal(outPreTool.permissionDecision, undefined);
+    assert.equal(outPreTool.hookSpecificOutput?.permissionDecision, 'allow');
     // 4. PreToolUse - deny via env var
     const resPreDeny = spawnSync(process.execPath, [hookScript], {
       input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'run_in_terminal', tool_input: { command: 'bad' } }),
@@ -119,7 +120,9 @@ test('vscode-local: capture-hook processes all 8 lifecycle events correctly', ()
     });
     assert.equal(resPreDeny.status, 0);
     const outPreDeny = JSON.parse(resPreDeny.stdout);
-    assert.equal(outPreDeny.permissionDecision, 'deny');
+    assert.equal(outPreDeny.continue, true);
+    assert.equal(outPreDeny.permissionDecision, undefined);
+    assert.equal(outPreDeny.hookSpecificOutput?.permissionDecision, 'deny');
 
     // 5. PostToolUse - default
     const resPost = spawnSync(process.execPath, [hookScript], {
