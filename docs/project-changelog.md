@@ -5,6 +5,15 @@
 **Updated:** 2026-10-04
 **Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64 (commit `cbd298a4`); Phase 09 documentation, controlled rollout, and lifecycle governance completed; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
 
+### 2026-10-04 — feat(vscode): add opt-in settings.json registration flow to VS Code publish
+
+- Added surgical JSONC detection and updating for `chat.pluginLocations` in VS Code settings files (`src/distribution/vscode-settings.ts`). Supports both workspace `.vscode/settings.json` (`--scope project`) and platform User settings (`--scope home`) across Linux, macOS, and Windows.
+- Preserves comments, indentation, BOM, newlines, and unrelated keys without destructively rewriting configuration files; creates 0600 mode file on POSIX when newly created.
+- Integrated first-time registration prompting into `evcrate publish` when running on interactive TTYs with absent registration.
+- Added explicit CLI flags: `--register-vscode-settings` (forces registration without prompting; works in non-TTY/CI/JSON) and `--no-register-vscode-settings` (suppresses detection and registration entirely).
+- Maintained publication atomicity and recovery boundaries: `evcrate recover` remains strictly scoped to published artifacts and never mutates user `settings.json`.
+- Added 21 unit and CLI integration tests in `tests/distribution/vscode-settings.test.mjs` and `tests/cli/vscode-settings-registration.test.mjs` (112/112 test suite passing).
+
 ### 2026-10-04 — docs(vscode): complete Phase 09 documentation, controlled rollout, and lifecycle governance
 
 - Reconciled core architecture and documentation: updated system architecture (`docs/system-architecture.md`), codebase summary (`docs/codebase-summary.md`), code standards (`docs/code-standards.md`), project overview PDR (`docs/project-overview-pdr.md`, FR-25), roadmap (`docs/project-roadmap.md`), and README/guide.
