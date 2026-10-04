@@ -280,20 +280,31 @@ Live native qualification was verified on:
 
 ### Publishing and activation
 
-Publishing creates or updates the target projection without modifying editor settings:
+Publishing creates or updates the target projection with opt-in, non-destructive `settings.json` registration:
 
 ```bash
-# Preview publication in project scope
+# Preview publication in project scope (inert; never writes settings)
 evcrate publish --dry-run --scope project --project-root /path/to/project --target vscode --json
 
-# Apply publication to project scope
-evcrate publish --apply --scope project --project-root /path/to/project --target vscode --json
+# Apply publication to project scope (prompts to register in .vscode/settings.json on interactive TTY if absent)
+evcrate publish --apply --scope project --project-root /path/to/project --target vscode
 
-# Apply publication to user HOME scope
-evcrate publish --apply --scope home --target vscode --json
+# Explicit automated registration (registers without asking; suitable for scripts and CI)
+evcrate publish --apply --scope project --project-root /path/to/project --target vscode --register-vscode-settings
+
+# Skip settings registration explicitly
+evcrate publish --apply --scope project --project-root /path/to/project --target vscode --no-register-vscode-settings
+
+# Apply publication to user HOME scope (targets platform User settings.json)
+evcrate publish --apply --scope home --target vscode
 ```
 
-**User-controlled activation**: EVCrate never writes to your VS Code configuration. To activate the published plugin in VS Code, manually register its absolute path in your user or workspace `settings.json`:
+**Settings registration and activation**:
+- **Interactive First-Time Prompt**: On an interactive terminal, if the published plugin directory is not already registered under `chat.pluginLocations`, the CLI prompts:
+  `Register this plugin in VS Code settings? [y/N]`
+  Confirming writes only `chat.pluginLocations: { "<path>": true }` to `.vscode/settings.json` (for `--scope project`) or User `settings.json` (for `--scope home`), preserving existing comments, formatting, and unrelated settings.
+- **Automated / CI Environments**: In non-interactive environments (pipes, CI, `--json`), the CLI skips the prompt and does not register unless `--register-vscode-settings` is provided. Use `--no-register-vscode-settings` to disable detection and registration entirely.
+- **Manual Registration**: You can also manually add the path to `chat.pluginLocations` in `.vscode/settings.json` (workspace) or user `settings.json`:
 
 ```json
 {
@@ -302,7 +313,6 @@ evcrate publish --apply --scope home --target vscode --json
   }
 }
 ```
-
 ### Coexistence and one-copy policy
 
 - **Single Active Copy**: Do not enable both HOME (`~/.evcrate-vscode`) and project-level (`.evcrate-vscode`) plugin registrations in the same workspace to prevent duplicate command and hook registrations.

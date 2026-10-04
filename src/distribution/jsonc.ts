@@ -153,41 +153,76 @@ export function decodeJsonc(raw: Uint8Array, label: string): { text: string; val
   }
 }
 
-export function topLevelMembers(text: string): { rootStart: number; rootEnd: number; members: Record<string, [number, number]> } {
+export interface JsoncMemberSpan {
+  readonly key: string;
+  readonly keySpan: readonly [number, number];
+  readonly valueSpan: readonly [number, number];
+}
+
+export interface JsoncObjectScan {
+  readonly start: number;
+  readonly end: number;
+  readonly members: ReadonlyMap<string, JsoncMemberSpan>;
+}
+
+export function scanJsonObject(
+  text: string,
+  startOffset = 0,
+  options: { requireEndOfDocument?: boolean } = {}
+): JsoncObjectScan {
   if (Buffer.byteLength(text, 'utf8') > MAX_JSONC_TEXT_BYTES) throw new JsoncError('JSONC document is oversized');
   const cleaned = withoutTrailingCommas(withoutComments(text));
-  const start = skipWhitespace(cleaned, 0);
-  if (cleaned[start] !== '{') throw new JsoncError('Managed JSON root must be an object');
-  const members: Record<string, [number, number]> = {};
+  const start = skipWhitespace(cleaned, startOffset);
+  if (cleaned[start] !== '{') throw new JsoncError('JSON root must be an object');
+  const members = new Map<string, JsoncMemberSpan>();
   const state: ScanState = { nodes: 1 };
   let index = skipWhitespace(cleaned, start + 1);
   if (cleaned[index] === '}') {
-    if (skipWhitespace(cleaned, index + 1) !== cleaned.length) throw new JsoncError('Trailing JSON data');
-    return { rootStart: start, rootEnd: index, members };
+    const end = index + 1;
+    if (options.requireEndOfDocument && skipWhitespace(cleaned, end) !== cleaned.length) {
+      throw new JsoncError('Trailing JSON data');
+    }
+    return { start, end, members };
   }
   while (true) {
     if (cleaned[index] !== '"') throw new JsoncError('Object key must be a string');
+    const keyStart = index;
     const keyEnd = stringEnd(cleaned, index);
     const key = JSON.parse(cleaned.slice(index, keyEnd)) as string;
-    if (Object.hasOwn(members, key)) throw new JsoncError(`Duplicate JSON key: ${key}`);
+    if (members.has(key)) throw new JsoncError(`Duplicate JSON key: ${key}`);
     index = skipWhitespace(cleaned, keyEnd);
-    if (cleaned[index] !== ':') throw new JsoncError(`Missing colon after top-level key: ${key}`);
+    if (cleaned[index] !== ':') throw new JsoncError(`Missing colon after key: ${key}`);
     index = skipWhitespace(cleaned, index + 1);
     const valueStart = index;
     const valueFinish = valueEnd(cleaned, index, state, 1);
-    members[key] = [valueStart, valueFinish];
+    members.set(key, { key, keySpan: [keyStart, keyEnd], valueSpan: [valueStart, valueFinish] });
     index = skipWhitespace(cleaned, valueFinish);
     if (cleaned[index] === '}') {
-      if (skipWhitespace(cleaned, index + 1) !== cleaned.length) throw new JsoncError('Trailing JSON data');
-      return { rootStart: start, rootEnd: index, members };
+      const end = index + 1;
+      if (options.requireEndOfDocument && skipWhitespace(cleaned, end) !== cleaned.length) {
+        throw new JsoncError('Trailing JSON data');
+      }
+      return { start, end, members };
     }
-    if (cleaned[index] !== ',') throw new JsoncError(`Expected comma after top-level key: ${key}`);
+    if (cleaned[index] !== ',') throw new JsoncError(`Expected comma after key: ${key}`);
     index = skipWhitespace(cleaned, index + 1);
     if (cleaned[index] === '}') {
-      if (skipWhitespace(cleaned, index + 1) !== cleaned.length) throw new JsoncError('Trailing JSON data');
-      return { rootStart: start, rootEnd: index, members };
+      const end = index + 1;
+      if (options.requireEndOfDocument && skipWhitespace(cleaned, end) !== cleaned.length) {
+        throw new JsoncError('Trailing JSON data');
+      }
+      return { start, end, members };
     }
   }
+}
+
+export function topLevelMembers(text: string): { rootStart: number; rootEnd: number; members: Record<string, [number, number]> } {
+  const scan = scanJsonObject(text, 0, { requireEndOfDocument: true });
+  const members: Record<string, [number, number]> = {};
+  for (const [key, span] of scan.members) {
+    members[key] = [span.valueSpan[0], span.valueSpan[1]];
+  }
+  return { rootStart: scan.start, rootEnd: scan.end - 1, members };
 }
 
 export function jsoncNewline(text: string): string {

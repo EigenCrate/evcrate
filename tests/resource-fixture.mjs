@@ -10,7 +10,7 @@ import { scanCanonicalResources } from '../dist/registry/scanner.js';
 export const RESOURCE_ROOTS = Object.freeze({
   agent: 'agents', command: 'commands', hook: 'hooks', skill: 'skills', workflow: 'workflows'
 });
-export const TARGETS = Object.freeze(['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot']);
+export const TARGETS = Object.freeze(['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot', 'vscode']);
 
 function directory(path, mode = 0o755) {
   mkdirSync(path, { recursive: true, mode });
