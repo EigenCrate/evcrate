@@ -101,13 +101,71 @@ Reference [spec](../document-skills/docx/spec.md).`;
   assert.match(output, /\[spec\]\(\.\.\/docx\/spec\.md\)/);
 });
 
-test('references: replaceWorkflowReferences rewrites workflow paths', () => {
+test('references: replaceWorkflowReferences rewrites workflow paths with published install fallback', () => {
   const input = 'Follow .claude/workflows/primary-workflow.md or ~/.claude/workflows/development-rules.md';
   const output = replaceWorkflowReferences(input);
   assert.equal(
     output,
-    'Follow .evcrate-vscode/evcrate/workflows/primary-workflow.md or ~/.evcrate-vscode/evcrate/workflows/development-rules.md'
+    'Follow .evcrate-vscode/evcrate/workflows/primary-workflow.md if present; otherwise read ~/.evcrate-vscode/evcrate/workflows/primary-workflow.md (the published install) or ~/.evcrate-vscode/evcrate/workflows/development-rules.md'
   );
+
+  // Quoted with ./
+  const quotedInput = 'Read `./.claude/workflows/advisor-mentoring.md` for guidance.';
+  const quotedOutput = replaceWorkflowReferences(quotedInput);
+  assert.equal(
+    quotedOutput,
+    'Read `./.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) for guidance.'
+  );
+
+  // Legacy docs alias rewrite
+  const docsInput = 'Follow `./docs/development-rules.md` file.';
+  const docsOutput = replaceWorkflowReferences(docsInput);
+  assert.equal(
+    docsOutput,
+    'Follow `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) file.'
+  );
+
+  // HOME-qualified forms preserve rebase without fallback
+  const homeInput = 'Check $HOME/.claude/workflows/advisor-mentoring.md and ${HOME}/.claude/workflows/primary-workflow.md';
+  const homeOutput = replaceWorkflowReferences(homeInput);
+  assert.equal(
+    homeOutput,
+    'Check $HOME/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md and ${HOME}/.evcrate-vscode/evcrate/workflows/primary-workflow.md'
+  );
+
+  // Markdown link destination
+  const linkInput = 'Follow [rules](./.claude/workflows/development-rules.md) carefully.';
+  const linkOutput = replaceWorkflowReferences(linkInput);
+  assert.equal(
+    linkOutput,
+    'Follow [rules](./.evcrate-vscode/evcrate/workflows/development-rules.md) if present; otherwise read ~/.evcrate-vscode/evcrate/workflows/development-rules.md (the published install) carefully.'
+  );
+
+  // URI shielding
+  const urlInput = 'Visit https://example.com/.claude/workflows/primary-workflow.md for info';
+  assert.equal(replaceWorkflowReferences(urlInput), urlInput);
+  // Already-projected local and HOME paths
+  const projectedLocal = 'See .evcrate-vscode/evcrate/workflows/primary-workflow.md for steps';
+  assert.equal(
+    replaceWorkflowReferences(projectedLocal),
+    'See .evcrate-vscode/evcrate/workflows/primary-workflow.md if present; otherwise read ~/.evcrate-vscode/evcrate/workflows/primary-workflow.md (the published install) for steps'
+  );
+  const projectedHome = 'See ~/.evcrate-vscode/evcrate/workflows/primary-workflow.md for steps';
+  assert.equal(replaceWorkflowReferences(projectedHome), projectedHome);
+
+  // Unquoted docs alias
+  const unquotedDocs = 'Consult ./docs/development-rules.md today';
+  assert.equal(
+    replaceWorkflowReferences(unquotedDocs),
+    'Consult ./.evcrate-vscode/evcrate/workflows/development-rules.md if present; otherwise read ~/.evcrate-vscode/evcrate/workflows/development-rules.md (the published install) today'
+  );
+
+  // Idempotence
+  assert.equal(replaceWorkflowReferences(output), output);
+  assert.equal(replaceWorkflowReferences(quotedOutput), quotedOutput);
+  assert.equal(replaceWorkflowReferences(docsOutput), docsOutput);
+  assert.equal(replaceWorkflowReferences(linkOutput), linkOutput);
+  assert.equal(replaceWorkflowReferences(replaceWorkflowReferences(projectedLocal)), replaceWorkflowReferences(projectedLocal));
 });
 
 test('references: replaceInstructionReferences rewrites CLAUDE.md to bootstrap rule', () => {
