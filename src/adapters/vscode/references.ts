@@ -1,4 +1,5 @@
 import type { VscodeCommandMapEntry, VscodeSkillMapEntry } from './names.js';
+import { restoreIndexedTokens } from '../uri-restoration.js';
 
 const URI_PATTERN = /(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu;
 
@@ -21,9 +22,7 @@ function protectSegments(value: string): {
 }
 
 function restoreSegments(value: string, saved: readonly [string, string][]): string {
-  let result = value;
-  for (const [token, original] of saved) result = result.replaceAll(token, original);
-  return result;
+  return restoreIndexedTokens(value, '__EVCRATE_VSCODE_URI_', saved);
 }
 
 export function replaceCommandPaths(

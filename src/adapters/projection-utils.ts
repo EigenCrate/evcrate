@@ -264,3 +264,5 @@ export function textBytes(value: string): Uint8Array {
 }
 
 export function contentHash(value: Uint8Array): string { return hashBytes(value); }
+
+export { restoreIndexedTokens } from './uri-restoration.js';

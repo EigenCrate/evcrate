@@ -7,7 +7,8 @@ import {
   ensureProjectionDirectory,
   textBytes,
   writeProjectionFile,
-  validateProjection
+  validateProjection,
+  restoreIndexedTokens
 } from './projection-utils.js';
 import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js';
 import { renderMentoringWorkflow } from './advisory.js';
@@ -203,7 +204,7 @@ function renderHarness(text: string): string {
     return `${base} / ${quote}${renderResourcePath(global ? 'global' : 'local', suffix).split('/').join(`${quote} / ${quote}`)}${quote}`;
   });
   rendered = rendered.replace(/(?<![A-Za-z0-9_])\.claude(?=(?:[/\\'"`()\]\}]|\s|$))/gu, '.antigravity');
-  return protectedUrls.reduce((result, url, index) => result.replaceAll(`__EVCRATE_HARNESS_URL_${index}__`, url), rendered);
+  return restoreIndexedTokens(rendered, '__EVCRATE_HARNESS_URL_', protectedUrls);
 }
 function wrapper(hookFile: string): string {
   return String.raw`#!/usr/bin/env node

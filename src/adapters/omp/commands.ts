@@ -3,6 +3,7 @@ import type { ProjectionBuildContext } from '../types.js';
 import { copy, file, filesUnder, relativeTo, writeJson, writeText } from './resources.js';
 import { serializeFrontmatter, splitFrontmatter } from './frontmatter.js';
 import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
+import { restoreIndexedTokens } from '../uri-restoration.js';
 export interface CommandRecord { readonly source: string; readonly sourceName: string; readonly target: string; readonly targetName: string; }
 export type CommandMap = Readonly<Record<string, CommandRecord>>;
 const URI = /(?<![A-Za-z0-9_./:])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/giu;
@@ -16,7 +17,7 @@ function protectUris(value: string): { rendered: string; values: string[] } {
   return { rendered, values };
 }
 function restoreUris(value: string, values: readonly string[]): string {
-  return values.reduce((current, original, index) => current.replaceAll(`__OMP_URI_${index}__`, original), value);
+  return restoreIndexedTokens(value, '__OMP_URI_', values);
 }
 export function buildCommandMap(context: ProjectionBuildContext): CommandMap {
   const records: Record<string, CommandRecord> = {};

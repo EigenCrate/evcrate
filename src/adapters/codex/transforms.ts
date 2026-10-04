@@ -1,3 +1,4 @@
+import { restoreIndexedTokens } from '../uri-restoration.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 
 const URL_REFERENCE = /https?:\/\/[^\s<>()]+/giu;
@@ -94,7 +95,7 @@ export function applyReplacements(value: string): string {
   const urls: string[] = []; let result = value.replace(URL_REFERENCE, (url) => { urls.push(url); return `__EVCRATE_GLOBAL_URL_${urls.length - 1}__`; });
   for (const [pattern, replacement] of REPLACEMENTS) result = result.replace(pattern, replacement);
   result = result.replace(/\.Codex/gu, '.codex');
-  return result.replace(/__EVCRATE_GLOBAL_URL_(\d+)__/gu, (_, index: string) => urls[Number(index)] ?? '');
+  return restoreIndexedTokens(result, '__EVCRATE_GLOBAL_URL_', urls);
 }
 
 export function canonicalCommandPath(path: string): string { return path.startsWith('/') ? `/${path.slice(1).replaceAll('/', ':')}` : path; }
@@ -138,7 +139,7 @@ export function renderHarnessScriptReferences(text: string): string {
   result = result.replace(/(?<![A-Za-z0-9_])\.claude(?=[/\\'"`()\]\}]|\s|$)/gu, '.codex');
   result = result.replace(/^(\s*)claude_dir\s*=\s*skills_dir\.parent(\s*#.*)?$/gmu, '$1harness_dir = skills_dir.parent.parent / ".codex"$2').replaceAll('claude_dir', 'harness_dir');
   result = result.replace(/^\s*const\s+claudeDir\s*=\s*path\.resolve\(skillsDir,\s*['"]\.\.['"]\);.*$/gmu, "const harnessDir = path.resolve(skillsDir, '..', '..', '.codex');").replaceAll('claudeDir', 'harnessDir');
-  for (const [index, url] of urls.entries()) result = result.replaceAll(`__EVCRATE_HARNESS_URL_${index}__`, url); return result;
+  return restoreIndexedTokens(result, '__EVCRATE_HARNESS_URL_', urls);
 }
 
 export function tomlValue(key: string, value: string | boolean): string {

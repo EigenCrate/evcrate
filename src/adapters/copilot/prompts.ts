@@ -1,4 +1,5 @@
 import { renderHarness } from './text.js';
+import { restoreIndexedTokens } from '../uri-restoration.js';
 
 export interface NameMapEntry { source: string; sourceName: string; target: string; targetName: string; description?: string; descriptionSource?: string; argumentHint?: string }
 export interface NameMap { readonly [key: string]: NameMapEntry }
@@ -16,9 +17,7 @@ function protect(value: string): { text: string; protected: [string, string][] }
   return { text, protected: saved };
 }
 function restore(value: string, saved: readonly [string, string][]): string {
-  let result = value;
-  for (const [token, original] of saved) result = result.replaceAll(token, original);
-  return result;
+  return restoreIndexedTokens(value, '__EVCRATE_COPILOT_URI_', saved);
 }
 
 export function replaceCommandPaths(value: string, commandMap: NameMap): string {
