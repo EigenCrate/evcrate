@@ -70,21 +70,12 @@ function build(context: ProjectionBuildContext): void {
   // 8. Hooks (Agent Plugins 1.0 native hooks and runtime bridge)
   const hookAudit = convertVscodeHooks(context);
 
-  // 9. Plugin descriptor (plugin.json)
+  // 9. Plugin descriptor (plugin.json) conforming to Agent Plugins 1.0
   const pluginDescriptor = {
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
     name: 'evcrate-local',
     version: '1.0.0',
-    description: 'EVCrate VS Code Local Plugin Bundle',
-    rules: [
-      'com.github.copilot/rules/bootstrap.instructions.md'
-    ],
-    agents: Object.values(discovered.agents)
-      .map((a) => a.target)
-      .sort(),
-    skills: [...discovered.skillDirectoryNames]
-      .map((dir) => `skills/${dir}`)
-      .sort(),
-    hooks: 'com.github.copilot/hooks/hooks.json'
+    description: 'EVCrate VS Code Local Plugin Bundle'
   };
   writeJson(context, 'plugin.json', pluginDescriptor);
 

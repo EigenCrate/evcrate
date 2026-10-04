@@ -1,3 +1,32 @@
+## [2.7.0](https://github.com/EigenCrate/evcrate/compare/v2.6.0...v2.7.0) (2026-10-04)
+
+
+### 🚀 Features
+
+* **vscode:** add opt-in settings.json registration flow to publish ([7110a67](https://github.com/EigenCrate/evcrate/commit/7110a676c439ce4b139a995ec08bf147b2dd2863))
+* **vscode:** complete native target implementation, projections, hooks, lifecycle, and qualification ([768fbb5](https://github.com/EigenCrate/evcrate/commit/768fbb5e9bd91f5a3b301c63bd02b47785c8e94c))
+* **vscode:** publication and activation ([efd84ee](https://github.com/EigenCrate/evcrate/commit/efd84ee68fda6e3266a4300c82bb7c52c718dc9e))
+* **vscode:** real native local qualification ([f43d89b](https://github.com/EigenCrate/evcrate/commit/f43d89b2d6b9d5873aaf427ee306975deedece43))
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** repair advice-mode caller lifecycle ([68e3d85](https://github.com/EigenCrate/evcrate/commit/68e3d853c1b6a0896f15921772edbf085e8226fe))
+* **plugin:** gracefully handle EACCES and EPERM in inspectStat ([6d03d7d](https://github.com/EigenCrate/evcrate/commit/6d03d7d7354250da11d0d750aab3e21d36e66eed))
+* **vscode:** resolve PR review findings for plugin format, hooks path, and security contracts ([6bec0d2](https://github.com/EigenCrate/evcrate/commit/6bec0d261389f48051c4cf21a0c5d3adb0753bb2))
+* **workflows:** reconcile phase progress, preserve sealed evidence ([fb3be6e](https://github.com/EigenCrate/evcrate/commit/fb3be6e7b1cbe106457359d52969b829b54547c0))
+
+
+### 📚 Documentation
+
+* **advisor:** add root identity generation guide and host configuration ([2adcce2](https://github.com/EigenCrate/evcrate/commit/2adcce261da68b6d92d55811f8017cdad173c8d7))
+* **vscode:** documentation, controlled rollout, and lifecycle governance ([0930f80](https://github.com/EigenCrate/evcrate/commit/0930f8004505cd5692cb2e8d3ac7f274bf05365b))
+
+
+### ♻️ Code Refactoring
+
+* **advisor:** retire dam-hopper plugin integration and release assets ([c395305](https://github.com/EigenCrate/evcrate/commit/c39530514aea6a280389d5b9abd76ebf268c7f97))
+
 ## Unreleased
 
 

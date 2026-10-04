@@ -34,11 +34,14 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const pluginJsonPath = join(stageRoot, 'plugin.json');
     assert.ok(existsSync(pluginJsonPath), 'plugin.json must exist');
     const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+    assert.equal(pluginJson.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
     assert.equal(pluginJson.name, 'evcrate-local');
-    assert.deepEqual(pluginJson.rules, ['com.github.copilot/rules/bootstrap.instructions.md']);
-    assert.equal(pluginJson.agents.length, 19, 'Must contain exactly 19 agents');
-    assert.equal(pluginJson.skills.length, 116, 'Must contain exactly 116 skills (40 skills + 70 commands + 6 styles)');
-
+    assert.equal(pluginJson.version, '1.0.0');
+    assert.equal(pluginJson.description, 'EVCrate VS Code Local Plugin Bundle');
+    assert.equal(pluginJson.rules, undefined);
+    assert.equal(pluginJson.agents, undefined);
+    assert.equal(pluginJson.skills, undefined);
+    assert.equal(pluginJson.hooks, undefined);
     // 2. Verify bootstrap instructions
     const instructionsPath = join(stageRoot, 'com.github.copilot/rules/bootstrap.instructions.md');
     assert.ok(existsSync(instructionsPath), 'bootstrap.instructions.md must exist');

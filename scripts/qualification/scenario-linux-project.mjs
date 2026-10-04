@@ -37,15 +37,28 @@ export function runLinuxProjectScenario() {
 
     fs.cpSync(path.join(REPO_ROOT, '.evcrate/source/.evcrate-vscode'), pluginDir, { recursive: true });
 
+    const hooksJsonPath = path.join(pluginDir, 'com.github.copilot', 'hooks', 'hooks.json');
+    const hooksConfig = JSON.parse(fs.readFileSync(hooksJsonPath, 'utf8'));
     const bridgeScript = path.join(pluginDir, 'evcrate', 'runtime', 'local-hook-bridge.cjs');
     const setActivePlanScript = path.join(pluginDir, 'evcrate', 'scripts', 'set-active-plan.cjs');
 
     const invokeBridge = (eventName, payload, envOverrides = {}) => {
-      const res = spawnSync(process.execPath, [bridgeScript, eventName], {
+      const hookEntry = hooksConfig.hooks[eventName]?.[0];
+      const cmd = hookEntry?.command
+        ? hookEntry.command.replaceAll('${PLUGIN_ROOT}', pluginDir)
+        : `node "${path.join(pluginDir, 'evcrate', 'runtime', 'local-hook-bridge.cjs')}" ${eventName}`;
+
+      const res = spawnSync(cmd, {
+        shell: true,
         cwd: foreignCwd,
         input: JSON.stringify(payload),
         encoding: 'utf8',
-        env: { ...process.env, VSCODE_PROJECT_DIR: projectDir, ...envOverrides }
+        env: {
+          ...process.env,
+          PLUGIN_ROOT: pluginDir,
+          VSCODE_PROJECT_DIR: projectDir,
+          ...envOverrides
+        }
       });
       let parsed = null;
       try { parsed = JSON.parse(res.stdout); } catch (e) {
@@ -145,8 +158,8 @@ export function runLinuxProjectScenario() {
       sessionStartPass: sessionStart.exitCode === 0 && sessionStart.output.continue === true,
       planSetPass: planRes.status === 0,
       readAllowPass: toolReadAllow.exitCode === 0 && toolReadAllow.output.continue === true,
-      scoutDenyPass: toolHeavyDeny.exitCode === 2 || (toolHeavyDeny.output?.permissionDecision === 'deny'),
-      privacyAskPass: toolEnvAsk.output?.permissionDecision === 'ask',
+      scoutDenyPass: toolHeavyDeny.exitCode === 2 || (toolHeavyDeny.output?.hookSpecificOutput?.permissionDecision === 'deny') || (toolHeavyDeny.output?.permissionDecision === 'deny'),
+      privacyAskPass: toolEnvAsk.output?.hookSpecificOutput?.permissionDecision === 'ask' || toolEnvAsk.output?.permissionDecision === 'ask',
       postToolReadPass: postToolRead.exitCode === 0 && postToolRead.output?.continue === true,
       postToolEditWarning: typeof postToolEdit.output?.systemMessage === 'string' &&
         postToolEdit.output.systemMessage.includes('Modularization Warning'),

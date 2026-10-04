@@ -61,22 +61,20 @@ function runBridge(expectedEvent, stdinBytes) {
       if (policyResult.decision === 'deny') {
         output = {
           continue: true,
-          permissionDecision: 'deny',
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
             permissionDecision: 'deny',
-            reason: policyResult.reason
+            permissionDecisionReason: policyResult.reason
           },
           systemMessage: policyResult.reason
         };
       } else if (policyResult.decision === 'ask') {
         output = {
           continue: true,
-          permissionDecision: 'ask',
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
             permissionDecision: 'ask',
-            reason: policyResult.reason
+            permissionDecisionReason: policyResult.reason
           },
           systemMessage: policyResult.reason
         };

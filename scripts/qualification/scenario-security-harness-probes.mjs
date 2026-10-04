@@ -154,7 +154,7 @@ export function runDiagnosticProtocolProbes() {
       encoding: 'utf8'
     });
     const outPreDeny = resPreDeny.status === 0 ? JSON.parse(resPreDeny.stdout) : null;
-    const preDenyPass = resPreDeny.status === 0 && outPreDeny?.permissionDecision === 'deny';
+    const preDenyPass = resPreDeny.status === 0 && (outPreDeny?.hookSpecificOutput?.permissionDecision === 'deny' || outPreDeny?.permissionDecision === 'deny');
     rawEvents.push({ probe: 'PreToolDeny', status: resPreDeny.status, output: outPreDeny, pass: preDenyPass });
 
     const allPassed = stopBlockPass && stopLoopPass && preDenyPass;

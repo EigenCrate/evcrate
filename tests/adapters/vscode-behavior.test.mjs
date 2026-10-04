@@ -296,5 +296,7 @@ test('vscode-behavior: bridge returns deny permissionDecision on scout-blocked P
   assert.equal(denyRes.status, 0);
   const parsed = JSON.parse(denyRes.stdout);
   assert.equal(parsed.continue, true);
-  assert.equal(parsed.permissionDecision, 'deny');
+  assert.equal(parsed.permissionDecision, undefined);
+  assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsed.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
 });

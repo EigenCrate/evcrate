@@ -114,12 +114,16 @@ export interface UserPromptSubmitOutput extends BaseHookOutput {}
 
 export interface PreToolUseOutput extends BaseHookOutput {
   permissionDecision?: PermissionDecision;
+  permissionDecisionReason?: string;
+  reason?: string;
   updatedInput?: Record<string, unknown>;
   additionalContext?: string;
   hookSpecificOutput?: {
     hookEventName: 'PreToolUse';
-    permissionDecision?: 'deny' | 'ask';
+    permissionDecision?: PermissionDecision;
+    permissionDecisionReason?: string;
     reason?: string;
+    updatedInput?: Record<string, unknown>;
     additionalContext?: string;
   };
 }
@@ -334,23 +338,44 @@ export function serializeLocalHookResult(
   // Event-specific validation & normalization
   if (event === 'PreToolUse') {
     const preOutput = output as PreToolUseOutput;
-    if (preOutput.permissionDecision) {
-      if (!['allow', 'deny', 'ask'].includes(preOutput.permissionDecision)) {
-        throw new LocalHookProtocolError('INVALID_DECISION', `Invalid permissionDecision: ${preOutput.permissionDecision}`);
+    const hookSpecific: Record<string, unknown> = {
+      hookEventName: 'PreToolUse'
+    };
+
+    const decision = preOutput.hookSpecificOutput?.permissionDecision ?? preOutput.permissionDecision;
+    if (decision !== undefined) {
+      if (!['allow', 'deny', 'ask'].includes(decision)) {
+        throw new LocalHookProtocolError('INVALID_DECISION', `Invalid permissionDecision: ${decision}`);
       }
-      normalized.permissionDecision = preOutput.permissionDecision;
+      hookSpecific.permissionDecision = decision;
     }
-    if (preOutput.updatedInput && isPlainObject(preOutput.updatedInput)) {
-      normalized.updatedInput = preOutput.updatedInput;
+
+    const reason = preOutput.hookSpecificOutput?.permissionDecisionReason
+      ?? preOutput.hookSpecificOutput?.reason
+      ?? preOutput.permissionDecisionReason
+      ?? preOutput.reason;
+    if (reason !== undefined) {
+      hookSpecific.permissionDecisionReason = String(reason);
     }
-    if (preOutput.additionalContext) {
-      normalized.additionalContext = preOutput.additionalContext;
+
+    const updated = preOutput.hookSpecificOutput?.updatedInput ?? preOutput.updatedInput;
+    if (updated !== undefined && isPlainObject(updated)) {
+      hookSpecific.updatedInput = updated;
     }
+
+    const context = preOutput.hookSpecificOutput?.additionalContext ?? preOutput.additionalContext;
+    if (context !== undefined) {
+      hookSpecific.additionalContext = String(context);
+    }
+
     if (preOutput.hookSpecificOutput) {
       if (preOutput.hookSpecificOutput.hookEventName !== 'PreToolUse') {
         throw new LocalHookProtocolError('ENVELOPE_EVENT_MISMATCH', 'hookSpecificOutput.hookEventName must be PreToolUse');
       }
-      normalized.hookSpecificOutput = preOutput.hookSpecificOutput;
+    }
+
+    if (Object.keys(hookSpecific).length > 1 || preOutput.hookSpecificOutput) {
+      normalized.hookSpecificOutput = hookSpecific;
     }
   } else if (event === 'SessionStart') {
     const startOutput = output as SessionStartOutput;
