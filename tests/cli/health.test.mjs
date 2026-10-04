@@ -95,3 +95,57 @@ test('health rejects inconsistent exit status and malformed UTF-8', async () => 
     (error) => error.code === 'DIAGNOSTIC_INVALID'
   );
 });
+
+test('health executes controller in packageRoot cwd even when projectRoot differs', async () => {
+  const value = fixture();
+  const cwdLog = join(value.root, 'cwd.log');
+  value.context.projectRoot = join(value.root, 'different-project-root');
+  mkdirSync(value.context.projectRoot, { recursive: true });
+  writeFileSync(value.script, qualifiedScript(value.log, `fs.writeFileSync(${JSON.stringify(cwdLog)}, process.cwd());`), { mode: 0o700 });
+  const result = await runHealth(value.context, {
+    execPath: process.execPath, requestId: () => 'health-cwd'
+  });
+  assert.equal(result.status, 'QUALIFIED');
+  assert.equal(readFileSync(cwdLog, 'utf8'), value.context.packageRoot);
+  assert.notEqual(readFileSync(cwdLog, 'utf8'), value.context.projectRoot);
+});
+
+test('health succeeds with non-executable controller script via explicit Node launch', async () => {
+  const value = fixture();
+  writeFileSync(value.script, qualifiedScript(value.log), { mode: 0o644 });
+  const result = await runHealth(value.context, {
+    execPath: process.execPath, requestId: () => 'health-nonexec'
+  });
+  assert.equal(result.status, 'QUALIFIED');
+});
+
+test('health fails closed when Node runtime executable is unlaunchable or missing', async () => {
+  const value = fixture();
+  writeFileSync(value.script, qualifiedScript(value.log), { mode: 0o700 });
+  await assert.rejects(
+    runHealth(value.context, {
+      execPath: join(value.root, 'missing-node-binary'),
+      requestId: () => 'health-bad-runtime'
+    }),
+    (error) => error.code === 'DIAGNOSTIC_INVALID'
+  );
+});
+
+test('health succeeds with Unicode and space-containing package and controller paths', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-health-sp ace-🚀-'));
+  const controllerRoot = join(root, 'ctrl-dir-📦');
+  mkdirSync(controllerRoot, { recursive: true });
+  const script = join(controllerRoot, 'evcrate-advisor');
+  const log = join(root, 'request.json');
+  const context = {
+    packageRoot: root, canonicalHarnessRoot: root, canonicalSourceRoot: root,
+    controllerRoot, registryPath: join(root, 'manifest.json'), selectedTargets: [],
+    selectedTargetIds: [], targetManifestPaths: [], generatedRoots: [], homeBindings: [],
+    homeRoot: root, stateRoot: root, projectRoot: root, projectId: null
+  };
+  writeFileSync(script, qualifiedScript(log), { mode: 0o644 });
+  const result = await runHealth(context, {
+    execPath: process.execPath, requestId: () => 'health-unicode'
+  });
+  assert.equal(result.status, 'QUALIFIED');
+});
