@@ -1,0 +1,36 @@
+{
+  "schema": "evcrate-darwin-native-artifacts/v1",
+  "bridge_abi": 1,
+  "napi_version": 8,
+  "deployment_target": "11.0.0",
+  "apple_source_revision": "xnu-8792.81.2",
+  "sdk_layout": {
+    "rusage_info_v0_size": 96,
+    "ri_proc_start_abstime_offset": 80
+  },
+  "toolchain": {
+    "compiler": "clang 22.1.8",
+    "linker": "ld64.lld (rust-lld)",
+    "host": "linux x64"
+  },
+  "source_digests": {
+    "advisor-native.h": "5000624ea9b8c896fb5d8ee8ab526a5d70ea1cd629343c4a5118dfa302dfb3d0",
+    "advisor-native.c": "2d923800bb46a0584b05db2099be93bbbdcd12e7ec8c0bab7478cc0824f9b817",
+    "storage.c": "f99f358349cf8fa322f537c4b129119f83764937125d6531e035d036d1846794",
+    "process.c": "e2c61744181a6238bff94f13a7dfb0f2d497889b5558eb9f75eed6f8443ef342"
+  },
+  "aggregate_source_digest": "1b4fbe703e3cb0e6a7183c1eccfb64843a63c8d53feb53fab51da6de3d74192a",
+  "artifacts": {
+    "darwin-arm64": {
+      "relative_path": "lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node",
+      "size": 54256,
+      "sha256": "d548569f249ee40e10d2a32332e0a49ee778d6fb3d8b8492a6a267c00c86596a"
+    },
+    "darwin-x64": {
+      "relative_path": "lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node",
+      "size": 33184,
+      "sha256": "3894eab004c17a496c856e060fbb323a5bb20a65bf43d6d423b39e0f6ad8896b"
+    }
+  },
+  "built_at": "2026-10-04T09:59:31.948Z"
+}

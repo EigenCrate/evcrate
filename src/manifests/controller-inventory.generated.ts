@@ -12,6 +12,7 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/contracts-v2.cjs",
   "lib/advisor/controller-envelope.cjs",
   "lib/advisor/controller.cjs",
+  "lib/advisor/darwin-platform.cjs",
   "lib/advisor/errors.cjs",
   "lib/advisor/generated/advisor-contract-runtime.js",
   "lib/advisor/generated/advisor-metrics.js",
@@ -24,6 +25,13 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/isolated-workspace.cjs",
   "lib/advisor/json-document.cjs",
   "lib/advisor/managed-checkpoint.cjs",
+  "lib/advisor/native/darwin/advisor-native.c",
+  "lib/advisor/native/darwin/advisor-native.h",
+  "lib/advisor/native/darwin/prebuilt/artifacts.json",
+  "lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node",
+  "lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node",
+  "lib/advisor/native/darwin/process.c",
+  "lib/advisor/native/darwin/storage.c",
   "lib/advisor/policy-schema.cjs",
   "lib/advisor/profile.cjs",
   "lib/advisor/runner.cjs",
@@ -36,6 +44,19 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   "lib/advisor/windows-native.cs",
   "lib/advisor/windows-native.ps1",
   "lib/advisor/windows-platform.cjs"
+] as const);
+export const ADVISOR_CONTROLLER_BINARY_FILES = Object.freeze([
+  "lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node",
+  "lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node"
+] as const);
+export const ADVISOR_CONTROLLER_TEXT_DATA_FILES = Object.freeze([
+  "lib/advisor/native/darwin/advisor-native.c",
+  "lib/advisor/native/darwin/advisor-native.h",
+  "lib/advisor/native/darwin/prebuilt/artifacts.json",
+  "lib/advisor/native/darwin/process.c",
+  "lib/advisor/native/darwin/storage.c",
+  "lib/advisor/windows-native.cs",
+  "lib/advisor/windows-native.ps1"
 ] as const);
 export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
   "_http_agent",

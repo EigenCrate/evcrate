@@ -37,10 +37,24 @@ export function createMinimalValidRecords(version = '1.0.0') {
 
   for (const file of ADVISOR_CONTROLLER_FILES) {
     const isExecutable = file === 'evcrate-advisor';
+    let data;
+    if (isExecutable) {
+      data = advisorEntry;
+    } else if (file.endsWith('.node')) {
+      const nodeBuf = Buffer.alloc(1024);
+      nodeBuf.writeUInt32LE(0xfeedfacf, 0);
+      data = nodeBuf;
+    } else if (file.endsWith('.json')) {
+      data = dummyJson;
+    } else if (file.endsWith('.c') || file.endsWith('.h') || file.endsWith('.cs') || file.endsWith('.ps1')) {
+      data = Buffer.from('/* native text asset */\n');
+    } else {
+      data = dummyJs;
+    }
     records.push({
       path: `.evcrate/source/.evcrate/bin/${file}`,
       mode: isExecutable ? 0o755 : 0o644,
-      data: isExecutable ? advisorEntry : dummyJs
+      data
     });
   }
 
