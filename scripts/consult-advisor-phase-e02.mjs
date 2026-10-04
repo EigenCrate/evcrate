@@ -3,7 +3,12 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const bin = path.join(process.env.HOME, '.evcrate', 'bin', 'evcrate-advisor');
+const home = process.env.HOME;
+if (!home || !path.isAbsolute(home)) {
+  console.error('Invalid HOME');
+  process.exit(1);
+}
+const bin = path.join(home, '.evcrate', 'bin', 'evcrate-advisor');
 const taskRunId = crypto.randomUUID();
 const opInit = crypto.randomUUID();
 const opCheckpoint = crypto.randomUUID();
@@ -73,7 +78,7 @@ const initPayload = {
 };
 
 console.log('1. Initializing task state...');
-const resInit = spawnSync(bin, ['state', 'init'], {
+const resInit = spawnSync(process.execPath, [bin, 'state', 'init'], {
   input: JSON.stringify(initPayload),
   encoding: 'utf8'
 });
@@ -191,7 +196,7 @@ const cpPayload = {
 };
 
 console.log('2. Reserving checkpoint...');
-const resCp = spawnSync(bin, ['state', 'checkpoint'], {
+const resCp = spawnSync(process.execPath, [bin, 'state', 'checkpoint'], {
   input: JSON.stringify(cpPayload),
   encoding: 'utf8'
 });
@@ -204,7 +209,7 @@ console.log('Checkpoint reserved, consultation_id:', cpState.state.pending_consu
 
 // 3. Central Controller Invocation
 console.log('3. Invoking central advisor controller for advice (timeout 120s)...');
-const resCtrl = spawnSync(bin, [], {
+const resCtrl = spawnSync(process.execPath, [bin], {
   input: JSON.stringify(cp),
   encoding: 'utf8',
   timeout: 120000
@@ -219,7 +224,7 @@ console.log('Advice received! Status:', envelope.status, 'Correlation ID:', enve
 
 // 4. Get Fresh State
 console.log('4. Reading fresh task state...');
-const resGet = spawnSync(bin, ['state', 'get'], {
+const resGet = spawnSync(process.execPath, [bin, 'state', 'get'], {
   input: JSON.stringify({
     protocol: 'evcrate-advisor-state',
     version: 1,

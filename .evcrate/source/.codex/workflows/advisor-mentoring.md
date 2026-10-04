@@ -78,34 +78,33 @@ and does not duplicate route or adapter selection.
 
 ## Authoritative host-aware controller invocation
 
-The canonical caller workflow dispatches to the central controller according to the host platform and shell environment. Callers must select the native execution transport matching the active host; never assume a POSIX shell on Windows or execute an extensionless file directly without `node`.
+The canonical caller workflow dispatches to the central controller according to the host platform and shell environment. All maintained callers invoke Node with the absolute script path; never execute an extensionless file directly without `node`, assume direct POSIX execution fallback, or use `.cmd` shims.
 
 ### 1. Platform dispatch rules
 
 1. **Linux / POSIX shell**:
-   - Controller executable: `~/.evcrate/bin/evcrate-advisor`.
-   - Execute directly with trailing arguments (`state <op>`, `history <op>`, or empty for checkpoint inference).
+   - **HOME resolution**: Validate `$HOME` before constructing the script path; an invalid or missing HOME is an error. Never fall back to another profile or project search.
+   - **Controller path**: Absolute quoted script path: `"$HOME/.evcrate/bin/evcrate-advisor"`.
+   - **Invocation**: `node "$HOME/.evcrate/bin/evcrate-advisor" ...` with trailing arguments (`state <op>`, `history <op>`, or empty for checkpoint inference).
    - Supply JSON payload via standard input heredoc (`<<'JSON'`) or stdin pipe.
-
 2. **Native Windows PowerShell (Windows PowerShell 5.1 and PowerShell 7+)**:
    - **HOME resolution**: Use explicit `$env:HOME` when set; an invalid explicit HOME is an error, not a reason to fall back. Only when HOME is unset use `$env:USERPROFILE` if non-empty, otherwise `[Environment]::GetFolderPath('UserProfile')`. This matches the controller's Windows `os.homedir()` fallback even when USERPROFILE is overridden. Never search project roots.
    - **Controller path**: Build the absolute controller script path under that home and invoke it as a quoted argument to `node`, not as an extensionless executable.
    - **Encoding safety**: PowerShell 5.1's native-command pipeline encoding is not UTF-8 by default. Save `$OutputEncoding`, set it to BOM-free UTF-8 for JSON stdin, and restore it in `finally`.
    - **Stdin streaming**: Pipe the exact JSON document (`$jsonPayload | & node "$controller" ...`); never interpolate JSON into command arguments or `-Command`.
 
-3. **Windows programmatic caller (Node.js argv-array)**:
-   - Invoke `process.execPath` with `[controller, ...args]` and `shell: false`. Do not emit Bash syntax merely because a harness tool is named `bash`.
+3. **Programmatic Node callers on all hosts (Node.js argv-array)**:
+   - Invoke `process.execPath` with `[controller, ...args]` and `shell: false`. Do not emit Bash syntax merely because a harness tool is named `bash`. A Bun-hosted tool must resolve actual supported Node explicitly; its own `process.execPath` is not Node by definition.
    - Select explicit HOME when set, otherwise `os.homedir()`; an invalid explicit HOME fails controller validation.
-   - Use `['state', op]`, `['history', op]`, or `[]` and write the exact JSON as UTF-8 stdin before closing it. Bound output and observe exit status and the terminal envelope.
-
+   - Use `['state', op]`, `['history', op]`, or `[]` (empty inference argv is `[controller]`, not omitting the script) and write the exact JSON as UTF-8 stdin before closing it. Bound output and observe exit status and the terminal envelope.
 ### 2. Host invocation syntax reference
 
-| Operation | POSIX shell | Windows PowerShell (5.1 / 7+) | Windows programmatic Node (`shell: false`) |
+| Operation | POSIX shell (Bash) | Windows PowerShell (5.1 / 7+) | Programmatic Node (`shell: false`) |
 | :--- | :--- | :--- | :--- |
-| **Checkpoint inference** | `~/.evcrate/bin/evcrate-advisor <<'JSON'` | `$jsonPayload \| & node "$controller"` | `spawn(process.execPath, [controller], { shell: false })` |
-| **State subcommand** | `~/.evcrate/bin/evcrate-advisor state <op> <<'JSON'` | `$jsonPayload \| & node "$controller" state <op>` | `spawn(process.execPath, [controller, 'state', op], { shell: false })` |
-| **History subcommand** | `~/.evcrate/bin/evcrate-advisor history <op> <<'JSON'` | `$jsonPayload \| & node "$controller" history <op>` | `spawn(process.execPath, [controller, 'history', op], { shell: false })` |
-| **Human decision** | `~/.evcrate/bin/evcrate-advisor state human-decision <<'JSON'` | `$jsonPayload \| & node "$controller" state human-decision` | `spawn(process.execPath, [controller, 'state', 'human-decision'], { shell: false })` |
+| **Checkpoint inference** | `node "$controller" <<'JSON'` | `$jsonPayload \| & node "$controller"` | `spawn(process.execPath, [controller], { shell: false })` |
+| **State subcommand** | `node "$controller" state <op> <<'JSON'` | `$jsonPayload \| & node "$controller" state <op>` | `spawn(process.execPath, [controller, 'state', op], { shell: false })` |
+| **History subcommand** | `node "$controller" history <op> <<'JSON'` | `$jsonPayload \| & node "$controller" history <op>` | `spawn(process.execPath, [controller, 'history', op], { shell: false })` |
+| **Human decision** | `node "$controller" state human-decision <<'JSON'` | `$jsonPayload \| & node "$controller" state human-decision` | `spawn(process.execPath, [controller, 'state', 'human-decision'], { shell: false })` |
 
 ### 3. Windows PowerShell invocation snippet
 
@@ -140,10 +139,9 @@ if ($result.protocol -ne 'evcrate-advisor-state' -or $result.version -ne 1 -or
 }
 ```
 
-### 4. Windows programmatic Node invocation
+### 4. Programmatic Node invocation across hosts
 
-For each operation use `spawn(process.execPath, [controller, ...args], { shell: false, stdio: ['pipe', 'pipe', 'pipe'] })`, where `controller` is the absolute HOME-owned script. Register bounded output, error, and close handlers before `child.stdin.end(jsonPayload, 'utf8')`; parse and validate the operation's response only after the process closes. Use the exact JSON body shown below as `jsonPayload`; never place it in argv.
-
+For each operation use `spawn(process.execPath, [controller, ...args], { shell: false, stdio: ['pipe', 'pipe', 'pipe'] })`, where `controller` is the absolute HOME-owned script. Register bounded output, error, and close handlers before `child.stdin.end(jsonPayload, 'utf8')`; parse and validate the operation's response only after the process closes. Use the exact JSON body shown below as `jsonPayload`; never place it in argv. For Bun-hosted harnesses, resolve the system Node executable path rather than `process.execPath`.
 ### 5. Explicit caller state and counsel agent boundaries
 
 1. **Tool-less counsel agent**: The advisor agent (`advisor.md`) is strictly tool-less (`tools: none`). It cannot bootstrap task state, execute controller CLI commands, or recurse into another advisor. Never instruct the counsel agent to invoke itself or the controller.
@@ -368,7 +366,7 @@ Initialize the task run and capture all selected paths in the baseline manifest 
 For this example, `source.txt` contains `initial user work` plus one final newline and `contract.txt` contains `checked read-only contract` plus one final newline; the digests below hash those complete bytes. `contract.txt` is read-only evidence, not write authority.
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state init <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state init <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -397,7 +395,7 @@ JSON
 Before invoking inference, reserve the checkpoint gate (advances revision from 1 to 2 and returns a unique `consultation_id`). Evidence MUST include declared validation commands:
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state checkpoint <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state checkpoint <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -470,10 +468,10 @@ JSON
 
 ### 3. Central controller invocation
 
-Pass the exact reserved checkpoint JSON directly to the central controller via the host-aware invocation contract (POSIX direct path or Windows PowerShell / Node argv-array):
+Pass the exact reserved checkpoint JSON directly to the central controller via the host-aware invocation contract (explicit Node invocation on all hosts):
 
 ```bash
-~/.evcrate/bin/evcrate-advisor <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" <<'JSON'
 {
   "protocol": "evcrate-advisor-checkpoint",
   "version": 2,
@@ -544,7 +542,7 @@ missing output, malformed output, or timeout leaves the gate incomplete.
 Read the fresh state to inspect `task_revision` (now 4) and `last_consultation_id` (matching the envelope's `correlation_id`):
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state get <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state get <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -571,7 +569,7 @@ disposition using `state.task_revision` (4) and returned `consultation_id`:
 Record the correction choice linking `action_id`, `episode_id`, and a declared `validation_command` (advances revision from 4 to 5):
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state disposition <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state disposition <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -598,7 +596,7 @@ JSON
 Use `correction: null` only when the existing state is accepted without modification. Cautions or assumptions alone do not require invented edits, but the no-change outcome is valid only with zero actual changes, passed declared validation, `accept` disposition, and no `must_fix` items or `unresolved_questions`.
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state disposition <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state disposition <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -624,7 +622,7 @@ After applying bounded edits and running validation (advances revision from 5 to
 **Path A (Correction applied)**: Reuses `consultation_id`, `action_id`, and `episode_id`:
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state outcome <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state outcome <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -654,7 +652,7 @@ JSON
 **Path B (No changes required)**: Reuses `consultation_id`, with `action_id: null`, `episode_id: null`, and `actual_changed_paths: []`:
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state outcome <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state outcome <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -688,7 +686,7 @@ JSON
 When all workflow tasks and substantive finalization settle, `state complete` advances the same run from its latest revision to `completed`. Complete only after the final validation and matching outcome; after that outcome, freeze every captured path and selected Git index/status identity through this operation:
 
 ```bash
-~/.evcrate/bin/evcrate-advisor state complete <<'JSON'
+node "$HOME/.evcrate/bin/evcrate-advisor" state complete <<'JSON'
 {
   "protocol": "evcrate-advisor-state",
   "version": 1,
@@ -719,7 +717,7 @@ JSON
    - In the illustrated three-cycle sequence, init (rev 1) -> cycle 1 (revs 2-6) -> cycle 2 (revs 7-11) -> cycle 3 (revs 12-16)
      leaves `task_revision` at 16. When durable state enters `needs_human`, `human-decision` authorizes continuation:
    ```bash
-   ~/.evcrate/bin/evcrate-advisor state human-decision <<'JSON'
+   node "$HOME/.evcrate/bin/evcrate-advisor" state human-decision <<'JSON'
    {
      "protocol": "evcrate-advisor-state",
      "version": 1,

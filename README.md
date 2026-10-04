@@ -244,6 +244,10 @@ A final standalone `--advice` token activates formal
 `evcrate-advisor-checkpoint/v2` mentoring for bootstrap, code, cook, and fix
 reviews (up to three correction cycles). `@advisor` remains ordinary task text.
 The documentation-facing `/cmd-advise` workflow is a separate interview path.
+Direct controller invocation requires Node with valid absolute HOME and exact JSON
+on stdin: `node "$HOME/.evcrate/bin/evcrate-advisor" state <operation>` (or empty
+subcommand for checkpoint inference); see [canonical workflow](./.evcrate/source/.claude/workflows/advisor-mentoring.md)
+for authoritative host-aware lifecycle syntax.
 
 ## Documented command names
 
