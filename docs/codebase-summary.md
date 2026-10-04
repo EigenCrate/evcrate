@@ -1,11 +1,11 @@
 # Codebase Summary
 
-**Generated:** 2026-10-04 (Repomix v1.18.0; Phase 05 Darwin documentation refresh)
-**Source:** `repomix-output.xml` (3,382 included files, 11,731,786 tokens, 44,525,944 characters; `.repomixignore` exclusions; two Mach-O binaries excluded from text output). Darwin details cross-checked against the generated controller inventory, adapter/source, provenance manifest, and Phase 05 review context.
+**Generated:** 2026-10-04 (Repomix v1.18.0; Phase 06 package/Linux qualification)
+**Source:** `repomix-output.xml` (3,382 included files, 11,731,858 tokens, 44,526,238 characters; `.repomixignore` exclusions; two Mach-O binaries excluded from text output). Phase 06 helper and qualification details cross-checked against source and review evidence.
 **Updated:** 2026-10-04
 **Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete; Darwin Phase 04 build and Phase 05 source integration are present. Cycle 3 is static review plus Linux evidence; macOS remains untested/unqualified.
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete; Advisor Node-only launch Phases 01–05 are sealed and Phase 06 package/Linux work is pending controller seal. The current parent report states 758 tests passed; the earlier review's 778-total result is separate. Native Windows Phase 07 and documentation handoff Phase 08 remain pending; macOS remains untested/unqualified.
 **Controller closure:** Exactly 44 files (36 prior entries plus eight Darwin assets); earlier 29-, 33-, and 36-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
@@ -56,6 +56,19 @@ The Linux standalone installer unpacks a verified package snapshot and launches 
 The release workflow verifies an exact set of seven core assets. The plugin
 archive and checksum under `dist/advisor-plugin/` were removed; current release
 assembly does not build or publish them.
+
+## Phase 06 package and Linux qualification
+
+Phase 06 regenerated the eight-target projections and prepared an internal qualification bundle for the native Windows follow-on; controller seal remains pending. This bundle is separate from an npm release artifact.
+
+| Helper | Role and boundary |
+|---|---|
+| `tests/advisor-controller/qualification-bundle.cjs` | The freeze, verify-archive, and verify CLI commands write `candidate.zip`, an external sorted manifest, an external receipt, and a SHA-256 sidecar. Verification checks ZIP contents and extracted roots against expected paths, file sizes/hashes, and unexpected files. It reuses `scripts/release/canonical-json.cjs`, `path-policy.cjs`, `zip-writer.cjs`, and `zip-verifier.cjs`. |
+| `tests/advisor-controller/native-windows-qualification.cjs` | Authored for Phase 07, not executed on Windows in Phase 06. Its CLI takes `--bundle`, absolute `--powershell`, external `--evidence`, and `--mode automated|console`; it requires native Windows x64, stages the controller under a temporary HOME, and runs Windows-focused suites plus lifecycle/PowerShell checks in automated mode. |
+
+The [current parent terminal report](../plans/reports/project-manager-261004-2248-phase-06-terminal-status.md) states 758 tests passed, `release:check` and `distribute:check` passed, and bundle/archive/extracted-root checks passed; its exact command, Node version/architecture, and logs still need binding to the final receipt. The earlier code review is separate: Linux x64/Node `v24.16.0`, 778 total (753 passed, 25 expected Win32 skips), and planned `22.19.0`/`24.21.0` rows not run at that checkpoint. Do not merge these counts or attribute the earlier version evidence to the current result.
+
+The earlier archive round trip verified 7,410 files / 132,964,705 expanded bytes. The receipt is unsigned, so its hashes establish integrity, not producer authentication. Publishable docs are in the qualification payload; these documentation edits change its bytes, so any pre-edit frozen candidate must be re-frozen and Linux-requalified before Phase 07 transfer.
 
 ## Darwin native runtime integration (Phase 04 build; Phase 05 source integration)
 

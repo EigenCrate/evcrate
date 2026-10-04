@@ -722,24 +722,28 @@ and `export` are executable shell syntax, not slash command-resource names.
 
 Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitized environment, isolated cwd, output lifecycle, timeout/cancellation, descendant cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic recovery, and selected-target publication. These contracts do not authenticate a vendor CLI.
 
-Linux x64 remains the qualified boundary for live installed-CLI checks. Windows release support remains limited to installer lifecycle and `version --json`; native advisor diagnostics are not broader qualification.
-Readiness Repair verification records 20/20 focused tests and 390/390 suite runs. Historical Hook Materialization Scope Distribution records 512/512 and a 29-file closure; none of these results qualifies vendors or authorizes production HOME publication.
-### Approved proposed cross-platform advisor support boundary (Phase 01)
+### Phase 06 package and Linux qualification
+Phase 06 package and Linux qualification work produced an internal immutable transfer bundle for Phase 07. Controller seal remains pending; this is not a sealed phase result, release, or publication artifact.
+- The [current parent terminal report](../plans/reports/project-manager-261004-2248-phase-06-terminal-status.md) states 758 tests passed, `release:check` and `distribute:check` passed, and the bundle/archive/extracted-root checks passed. Its exact test command, Node version/architecture, and logs still need binding to the final receipt.
+- The earlier review separately reports Linux x64 on Node `v24.16.0`, 778 total (753 passed, 25 expected Win32 skips), passing release/distribution checks, and a 31-second fake-backed smoke; its planned `22.19.0` and `24.21.0` Linux rows were not run then. Keep the counts distinct and do not attribute that earlier Node version or pin caveat to the current 758 result.
+- `tests/advisor-controller/qualification-bundle.cjs` provides the CLI commands freeze, verify-archive, and verify, reusing canonical JSON, release path policy, and the existing ZIP writer/verifier. Freeze emits `candidate.zip` plus an external manifest, receipt, and SHA-256 sidecar; verification compares archive/extracted files against manifest paths, sizes, and hashes and rejects unexpected files.
+- The earlier reviewed archive round trip verified 7,410 files and 132,964,705 expanded bytes. The receipt is marked unsigned; hashes establish byte integrity, not producer authentication.
+- `tests/advisor-controller/native-windows-qualification.cjs` was authored for Phase 07. It requires native Windows x64, uses the running Node executable and an absolute PowerShell executable, copies the controller into an isolated HOME, and can run bundled suites plus installed-lifecycle and PowerShell-pipeline exercises. Phase 06 did not execute it on Windows.
+- **Runner limitation:** Console mode currently returns `skipped` without a TTY or a `completed` marker with one; it does not exercise the human-decision flow. Failed suite exits are logged but do not prevent a `passed` receipt, and unknown modes are not rejected. Do not treat that receipt alone as qualification evidence.
+- Publishable docs are in the qualification payload. These documentation edits change its bytes; any pre-edit frozen candidate must be re-frozen and Linux-requalified before Phase 07 transfer.
 
-- **Linux x64**: Primary qualified boundary for advisor controller, process groups, descriptor pinning, and installed-CLI checks.
-- **Native Windows x64**: Release qualification covers installer lifecycle and `version --json` on the hosted PowerShell/Node matrix; broader runtime equivalence remains outside support.
-- **macOS (Darwin)**: Phase 05 source integration is present for `arm64`/`x64`, but native behavior remains untested/unqualified. The phase boundary prohibits addon/controller/provider execution, automated tests, and CI; build/source presence is not a support claim.
+### Current cross-platform advisor boundary
+- **Linux x64** has package test evidence, but Phase 06 remains pending controller seal.
+- **Native Windows x64** still requires Phase 07 execution against the same final frozen candidate. Windows release support remains limited to installer lifecycle and `version --json`; broad advisor/runtime equivalence is not qualified.
+- **macOS (Darwin)** source integration and packaged `arm64`/`x64` assets are present, but native behavior remains untested and unqualified. Addon/controller/provider execution, tests, and CI remain prohibited.
 
 ### Historical Advisor Metrics Explorer support boundary (Phases 01–10; completed 2026-09-19)
-
 Historical standalone explorer testing covered Chromium >=120 on Linux with File System Access; picker/reader sources are removed and do not establish current support.
 
 ### Deterministic Windows fixture and predecessor resolver (Phase 04)
-
 Historical fixture and predecessor details remain recorded in the [code standards](./code-standards.md); they do not widen Windows support.
 
 ### Native Windows advisor supervision and console repair
-
 The fixed PowerShell/C# bridge, Job cleanup, launch identity, environment handling, and console rules are implementation evidence only. Windows support remains the installer/version boundary above; see the [codebase summary](./codebase-summary.md) for the current source map.
 
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)

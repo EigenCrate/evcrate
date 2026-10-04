@@ -21,7 +21,7 @@ function decodeUtf8(buf) {
   }
 }
 
-function verifyZipArchive(archivePath, expectedRecords) {
+function verifyZipArchive(archivePath, expectedRecords, options = {}) {
   const stat = fs.statSync(archivePath);
   if (stat.size > MAX_ARCHIVE_BYTES) {
     throw new Error(`ZIP size ${stat.size} exceeds maximum ${MAX_ARCHIVE_BYTES}`);
@@ -78,7 +78,7 @@ function verifyZipArchive(archivePath, expectedRecords) {
     }
 
     const packageRelative = name.slice('package/'.length);
-    validateInventoryPath(packageRelative);
+    validateInventoryPath(packageRelative, options);
 
     const expected = expectedRecords[i];
     if (packageRelative !== expected.path) {
