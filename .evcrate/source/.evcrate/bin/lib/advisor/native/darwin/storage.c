@@ -110,6 +110,7 @@ napi_value export_openRoot(napi_env env, napi_callback_info info) {
     current_cap->ino = root_st.st_ino;
     current_cap->closed = false;
     current_cap->created = false;
+    current_cap->owns_parent = true;
     current_cap->parent = NULL;
     current_cap->leaf_name = NULL;
 
@@ -265,6 +266,7 @@ napi_value export_openRoot(napi_env env, napi_callback_info info) {
         next_cap->ino = next_st.st_ino;
         next_cap->closed = false;
         next_cap->created = false;
+        next_cap->owns_parent = true;
         next_cap->parent = current_cap;
         next_cap->leaf_name = strdup(comp);
 
@@ -369,6 +371,7 @@ napi_value export_openDirectory(napi_env env, napi_callback_info info) {
     child->ino = st.st_ino;
     child->closed = false;
     child->created = created;
+    child->owns_parent = false;
     child->parent = parent;
     child->leaf_name = strdup(leaf);
 
@@ -535,7 +538,8 @@ napi_value export_openRegular(napi_env env, napi_callback_info info) {
     file_cap->ino = st.st_ino;
     file_cap->closed = false;
     file_cap->created = false;
-    file_cap->parent = dir;
+    file_cap->owns_parent = false;
+    file_cap->parent = NULL;
     file_cap->leaf_name = strdup(leaf);
 
     return create_capability_js(env, file_cap);
@@ -608,7 +612,11 @@ napi_value export_writeExclusive(napi_env env, napi_callback_info info) {
 
     int fd = openat(dir->fd, leaf, DARWIN_O_WRONLY | DARWIN_O_CREAT | DARWIN_O_EXCL | DARWIN_O_NOFOLLOW | DARWIN_O_CLOEXEC, 0644);
     if (fd < 0) {
-        throw_advisor_error(env, "STATE_IO_FAILED", "openat exclusive create failed");
+        if (darwin_errno == DARWIN_EEXIST) {
+            throw_advisor_error(env, "STATE_CONFLICT", "openat exclusive create failed: file already exists");
+        } else {
+            throw_advisor_error(env, "STATE_IO_FAILED", "openat exclusive create failed");
+        }
         return NULL;
     }
 
@@ -812,8 +820,8 @@ napi_value export_list(napi_env env, napi_callback_info info) {
 napi_value export_removeEmptyDirectory(napi_env env, napi_callback_info info) {
     size_t argc = 3;
     napi_value argv[3];
-    if (napi_get_cb_info(env, info, &argc, argv, NULL, NULL) != napi_ok || argc < 3) {
-        throw_advisor_error(env, "STATE_IO_FAILED", "removeEmptyDirectory requires parent, leaf, expectedIdentity");
+    if (napi_get_cb_info(env, info, &argc, argv, NULL, NULL) != napi_ok || argc < 2) {
+        throw_advisor_error(env, "STATE_IO_FAILED", "removeEmptyDirectory requires parent, leaf");
         return NULL;
     }
 
@@ -884,6 +892,23 @@ napi_value export_close(napi_env env, napi_callback_info info) {
         cap->closed = true;
     }
 
+    if (cap->owns_parent) {
+        AdvisorCap *p = cap->parent;
+        while (p) {
+            AdvisorCap *next_p = p->owns_parent ? p->parent : NULL;
+            if (!p->closed && p->fd >= 0) {
+                close(p->fd);
+                p->closed = true;
+            }
+            if (p->leaf_name) {
+                free(p->leaf_name);
+                p->leaf_name = NULL;
+            }
+            free(p);
+            p = next_p;
+        }
+    }
+    cap->parent = NULL;
     napi_value bool_val;
     napi_get_boolean(env, true, &bool_val);
     return bool_val;

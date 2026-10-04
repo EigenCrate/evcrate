@@ -1,6 +1,7 @@
 'use strict';
 
 const { isUnsafeWindowsPath, readPinnedFileWindows } = require('./windows-platform.cjs');
+const darwin = require('./darwin-platform.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
@@ -60,6 +61,33 @@ function rehashFile(file, expectedStat) {
     if (fd !== undefined) fs.closeSync(fd);
   }
 }
+function darwinRehashFile(dirCap, leaf, expectedStat) {
+  const initial = darwin.statEntry(dirCap, leaf);
+  if (!initial) fail('STALE_EVIDENCE_REVISION');
+  regular(initial);
+  if (!unchanged(expectedStat, initial)) fail('STALE_EVIDENCE_REVISION');
+  const fileCap = darwin.openRegular(dirCap, leaf, MAX_FILE_BYTES);
+  try {
+    const opened = darwin.statHandle(fileCap);
+    regular(opened);
+    if (!unchanged(expectedStat, opened)) fail('STALE_EVIDENCE_REVISION');
+    const hash = createHash('sha256');
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let total = 0;
+    while (total < Number(opened.size)) {
+      const count = darwin.readInto(fileCap, buffer, 0, Math.min(buffer.length, Number(opened.size) - total), total);
+      if (!count && total < Number(opened.size)) fail('STALE_EVIDENCE_REVISION');
+      total += count;
+      hash.update(buffer.subarray(0, count));
+    }
+    const final = darwin.statHandle(fileCap);
+    regular(final);
+    if (!unchanged(opened, final) || !unchanged(final, darwin.statEntry(dirCap, leaf))) fail('STALE_EVIDENCE_REVISION');
+    return hash.digest('hex');
+  } finally {
+    darwin.close(fileCap);
+  }
+}
 function directory(stat) { if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail(); }
 function regular(stat) {
   if (!stat || !stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1n) fail();
@@ -69,6 +97,10 @@ function rootChain(root) {
     || root.includes('\0')) fail();
   if (process.platform === 'win32') {
     if (isUnsafeWindowsPath(root)) fail();
+  } else if (process.platform === 'darwin') {
+    const res = darwin.openRoot(root);
+    darwin.verifyChain(res.directory);
+    darwin.close(res.directory);
   } else {
     if (typeof fs.constants.O_NOFOLLOW !== 'number' || process.platform !== 'linux') fail();
   }
@@ -92,6 +124,94 @@ function stable(entries) {
 }
 function captureFile(root, selected, roots, budget, observations) {
   stable(roots);
+  if (process.platform === 'darwin') {
+    const entries = [...roots];
+    let logical = root;
+    const parts = selected.split('/');
+    const rootRes = darwin.openRoot(root);
+    const rootCap = rootRes.directory;
+    const caps = [rootCap];
+    try {
+      darwin.verifyChain(rootCap);
+      let curCap = rootCap;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        logical = path.join(logical, part);
+        const childCap = darwin.openDirectory(curCap, part, false);
+        if (!childCap) {
+          stable(entries);
+          observations.push({
+            isDarwin: true,
+            parentPath: path.dirname(logical),
+            missingLeaf: part,
+            remainingParts: parts.slice(i),
+            file: logical,
+            stat: null,
+            entries
+          });
+          return { path: selected, digest: null, status: 'missing' };
+        }
+        caps.push(childCap);
+        darwin.verifyChain(childCap);
+        const stat = darwin.statHandle(childCap);
+        if (!stat || !stat.isDirectory() || stat.isSymbolicLink()) fail();
+        entries.push({ file: logical, stat });
+        curCap = childCap;
+      }
+      const targetLeaf = parts.at(-1);
+      const targetFile = path.join(logical, targetLeaf);
+      const initial = darwin.statEntry(curCap, targetLeaf);
+      if (!initial) {
+        stable(entries);
+        observations.push({
+          isDarwin: true,
+          parentPath: logical,
+          missingLeaf: targetLeaf,
+          remainingParts: [targetLeaf],
+          file: targetFile,
+          stat: null,
+          entries
+        });
+        return { path: selected, digest: null, status: 'missing' };
+      }
+      regular(initial);
+      if (initial.size > BigInt(MAX_FILE_BYTES) || initial.size > BigInt(budget.remaining)) fail('STATE_INVALID');
+      const fileCap = darwin.openRegular(curCap, targetLeaf, Math.min(MAX_FILE_BYTES, budget.remaining));
+      caps.push(fileCap);
+      const opened = darwin.statHandle(fileCap);
+      regular(opened);
+      if (!unchanged(initial, opened)) fail();
+      const hash = createHash('sha256');
+      const buffer = Buffer.allocUnsafe(64 * 1024);
+      let total = 0;
+      while (total < Number(opened.size)) {
+        const count = darwin.readInto(fileCap, buffer, 0, Math.min(buffer.length, Number(opened.size) - total), total);
+        if (!count && total < Number(opened.size)) fail();
+        total += count;
+        hash.update(buffer.subarray(0, count));
+      }
+      const final = darwin.statHandle(fileCap);
+      regular(final);
+      if (!unchanged(opened, final) || !unchanged(final, darwin.statEntry(curCap, targetLeaf))) fail();
+      stable(entries);
+      budget.remaining -= total;
+      const fileDigest = hash.digest('hex');
+      observations.push({
+        isDarwin: true,
+        parentPath: logical,
+        targetLeaf,
+        file: targetFile,
+        stat: final,
+        entries,
+        digest: fileDigest
+      });
+      return { path: selected, digest: fileDigest, status: 'file' };
+    } finally {
+      for (const c of caps.slice().reverse()) {
+        try { darwin.close(c); } catch {}
+      }
+    }
+  }
   if (process.platform === 'win32') {
     const entries = [...roots];
     let logical = root;
@@ -224,11 +344,30 @@ function git(root, args, environment) {
 }
 function repository(root) {
   for (let current = root;; current = path.dirname(current)) {
-    const marker = inspect(path.join(current, '.git'));
-    if (marker) {
-      if (marker.isSymbolicLink() || (!marker.isDirectory() && !marker.isFile())
-        || (marker.isFile() && marker.nlink !== 1n)) fail();
-      return current;
+    if (process.platform === 'darwin') {
+      try {
+        const res = darwin.openRoot(current);
+        const dirCap = res.directory;
+        try {
+          const marker = darwin.statEntry(dirCap, '.git');
+          if (marker) {
+            if (marker.isSymbolicLink() || (!marker.isDirectory() && !marker.isFile())
+              || (marker.isFile() && marker.nlink !== 1n)) fail();
+            return current;
+          }
+        } finally {
+          darwin.close(dirCap);
+        }
+      } catch (error) {
+        if (error.name === 'AdvisorRoutingError') throw error;
+      }
+    } else {
+      const marker = inspect(path.join(current, '.git'));
+      if (marker) {
+        if (marker.isSymbolicLink() || (!marker.isDirectory() && !marker.isFile())
+          || (marker.isFile() && marker.nlink !== 1n)) fail();
+        return current;
+      }
     }
     if (path.dirname(current) === current) return null;
   }
@@ -392,14 +531,36 @@ function captureBaseline(projectRoot, paths) {
     stable(roots);
     for (const observation of observations) {
       stable(observation.entries);
-      const now = inspect(observation.file);
-      if (observation.stat) {
-        if (!unchanged(observation.stat, now)) fail('STALE_EVIDENCE_REVISION');
-        if (rehashFile(observation.file, now) !== observation.digest) fail('STALE_EVIDENCE_REVISION');
+      if (observation.isDarwin) {
+        let parentCap;
+        try {
+          const rootRes = darwin.openRoot(observation.parentPath);
+          parentCap = rootRes.directory;
+          darwin.verifyChain(parentCap);
+          if (observation.stat) {
+            const now = darwin.statEntry(parentCap, observation.targetLeaf);
+            if (!now || !unchanged(observation.stat, now)) fail('STALE_EVIDENCE_REVISION');
+            if (darwinRehashFile(parentCap, observation.targetLeaf, now) !== observation.digest) fail('STALE_EVIDENCE_REVISION');
+          } else {
+            const now = darwin.statEntry(parentCap, observation.missingLeaf);
+            if (now !== null) fail('STALE_EVIDENCE_REVISION');
+          }
+        } finally {
+          if (parentCap) {
+            try { darwin.close(parentCap); } catch {}
+          }
+        }
       } else {
-        if (now !== null) fail('STALE_EVIDENCE_REVISION');
+        const now = inspect(observation.file);
+        if (observation.stat) {
+          if (!unchanged(observation.stat, now)) fail('STALE_EVIDENCE_REVISION');
+          if (rehashFile(observation.file, now) !== observation.digest) fail('STALE_EVIDENCE_REVISION');
+        } else {
+          if (now !== null) fail('STALE_EVIDENCE_REVISION');
+        }
       }
     }
+
     if (JSON.stringify([...before]) !== JSON.stringify([...after])) fail('STALE_EVIDENCE_REVISION');
     return validateBaseline(records);
   } catch (error) {

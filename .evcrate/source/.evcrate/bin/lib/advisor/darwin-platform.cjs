@@ -81,21 +81,43 @@ function getDarwinProcessIdentity(pid = process.pid) {
   }
 }
 
-function checkDarwinProcessStatus(identity) {
+function evaluateDarwinProcessSnapshot(identity, snapshot) {
   if (!validIdentity(identity) || identity.start === null) {
     return 'unknown';
+  }
+  if (!snapshot || typeof snapshot !== 'object') {
+    return 'unknown';
+  }
+  if (snapshot.kind === 'missing') {
+    return 'dead';
+  }
+  if (snapshot.kind === 'present') {
+    if (typeof snapshot.start !== 'string' || !/^\d{1,32}$/u.test(snapshot.start)) {
+      return 'unknown';
+    }
+    return snapshot.start === identity.start ? 'live' : 'dead';
+  }
+  return 'unknown';
+}
+
+function checkDarwinProcessStatus(identity, snapshotProvider = null) {
+  if (!validIdentity(identity) || identity.start === null) {
+    return 'unknown';
+  }
+  if (snapshotProvider) {
+    try {
+      const snapshot = snapshotProvider(identity.pid);
+      return evaluateDarwinProcessSnapshot(identity, snapshot);
+    } catch {
+      return 'unknown';
+    }
   }
   if (process.platform !== 'darwin' || !nativeAddon) {
     return 'unknown';
   }
   try {
     const snapshot = nativeAddon.processSnapshot(identity.pid);
-    if (!snapshot) return 'unknown';
-    if (snapshot.kind === 'missing') return 'dead';
-    if (snapshot.kind === 'present') {
-      return snapshot.start === identity.start ? 'live' : 'dead';
-    }
-    return 'unknown';
+    return evaluateDarwinProcessSnapshot(identity, snapshot);
   } catch {
     return 'unknown';
   }
@@ -145,8 +167,15 @@ function readInto(file, buffer, offset, length, position) {
 
 function writeExclusive(directory, leaf, bytes) {
   const native = getNativeAddon();
-  const raw = native.writeExclusive(directory, leaf, bytes);
-  return wrapStat(raw);
+  try {
+    const raw = native.writeExclusive(directory, leaf, bytes);
+    return wrapStat(raw);
+  } catch (error) {
+    if (error?.code === 'STATE_IO_FAILED' && error?.message?.includes('exclusive create failed')) {
+      error.code = 'STATE_CONFLICT';
+    }
+    throw error;
+  }
 }
 
 function commit(directory, tempLeaf, tempStat, targetLeaf, expected) {
@@ -177,13 +206,21 @@ function sync(capability) {
 
 function close(capability) {
   const native = getNativeAddon();
-  return native.close(capability);
+  try {
+    return native.close(capability);
+  } catch (err) {
+    if (err?.code === 'STATE_IO_FAILED' && err?.message?.includes('Capability is closed')) {
+      return true;
+    }
+    throw err;
+  }
 }
 
 module.exports = {
   abiVersion: 1,
   getDarwinProcessIdentity,
   checkDarwinProcessStatus,
+  evaluateDarwinProcessSnapshot,
   openRoot,
   openDirectory,
   verifyChain,

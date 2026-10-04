@@ -3,8 +3,11 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { randomBytes } = require('node:crypto');
 const { createRoutingError, isRoutingError } = require('./errors.cjs');
 const { verifyPinnedDirectoryWindows } = require('./windows-platform.cjs');
+const darwin = require('./darwin-platform.cjs');
+const DARWIN_WORKSPACE_PINS = new WeakMap();
 function fail(code = 'CWD_UNSAFE') { throw createRoutingError(code); }
 function rootFor(environment = process.env, tempDirectory = os.tmpdir) {
   const value = environment?.TMPDIR || tempDirectory();
@@ -12,6 +15,23 @@ function rootFor(environment = process.env, tempDirectory = os.tmpdir) {
   return path.normalize(value);
 }
 function assertRoot(root) {
+  if (process.platform === 'darwin') {
+    let res;
+    try {
+      res = darwin.openRoot(root);
+      darwin.verifyChain(res.directory);
+      const st = darwin.statHandle(res.directory);
+      if (!st || !st.isDirectory() || st.isSymbolicLink()) fail('CWD_UNSAFE');
+      return res.canonicalPath;
+    } catch (err) {
+      if (err.name === 'AdvisorRoutingError') throw err;
+      fail('CWD_UNSAFE');
+    } finally {
+      if (res?.directory) {
+        try { darwin.close(res.directory); } catch {}
+      }
+    }
+  }
   let stat;
   try { stat = fs.lstatSync(root); } catch { fail('CWD_UNSAFE'); }
   if (!stat.isDirectory() || stat.isSymbolicLink()) fail('CWD_UNSAFE');
@@ -87,7 +107,108 @@ function safeRemoveTree(targetPath, expectedDev, fsImpl = fs) {
   }
 }
 
+function darwinSafeRemoveTree(dirCap, expectedDev) {
+  let entries;
+  try {
+    entries = darwin.list(dirCap, 10000);
+  } catch {
+    throw createRoutingError('CLEANUP_UNCONFIRMED');
+  }
+  for (const entry of entries) {
+    const leaf = typeof entry === 'string' ? entry : entry.name;
+    let st;
+    try {
+      st = darwin.statEntry(dirCap, leaf);
+    } catch {
+      throw createRoutingError('CLEANUP_UNCONFIRMED');
+    }
+    if (!st || st.isSymbolicLink() || (expectedDev !== undefined && st.dev.toString() !== expectedDev)) {
+      throw createRoutingError('CLEANUP_UNCONFIRMED');
+    }
+    if (st.isDirectory()) {
+      let childCap;
+      try {
+        childCap = darwin.openDirectory(dirCap, leaf, false);
+      } catch {
+        throw createRoutingError('CLEANUP_UNCONFIRMED');
+      }
+      if (!childCap) throw createRoutingError('CLEANUP_UNCONFIRMED');
+      try {
+        darwin.verifyChain(childCap);
+        darwinSafeRemoveTree(childCap, expectedDev);
+      } finally {
+        try { darwin.close(childCap); } catch {}
+      }
+      try {
+        darwin.removeEmptyDirectory(dirCap, leaf);
+      } catch {
+        throw createRoutingError('CLEANUP_UNCONFIRMED');
+      }
+    } else if (st.isFile()) {
+      try {
+        darwin.removeOwned(dirCap, leaf, st);
+      } catch {
+        throw createRoutingError('CLEANUP_UNCONFIRMED');
+      }
+    } else {
+      throw createRoutingError('CLEANUP_UNCONFIRMED');
+    }
+  }
+}
 function createWorkspace({ environment = process.env, tempDirectory = os.tmpdir, fsImpl = fs } = {}) {
+  if (process.platform === 'darwin') {
+    const root = rootFor(environment, tempDirectory);
+    const canonicalRoot = assertRoot(root);
+    let rootCap;
+    let wsCap;
+    let leaf;
+    try {
+      const rootRes = darwin.openRoot(canonicalRoot);
+      rootCap = rootRes.directory;
+      darwin.verifyChain(rootCap);
+      const rootStat = darwin.statHandle(rootCap);
+      leaf = 'evcrate-advisor-' + randomBytes(16).toString('hex');
+      wsCap = darwin.openDirectory(rootCap, leaf, true);
+      if (!wsCap || !wsCap.created) {
+        fail('CWD_UNSAFE');
+      }
+      darwin.verifyChain(wsCap);
+      const initialStat = darwin.statHandle(wsCap);
+      if (!initialStat || !initialStat.isDirectory() || initialStat.isSymbolicLink()) fail('CWD_UNSAFE');
+      if (initialStat.dev !== rootStat.dev) fail('CWD_UNSAFE');
+      const entries = darwin.list(wsCap);
+      if (entries.length !== 0) fail('CWD_UNSAFE');
+      const directory = path.join(canonicalRoot, leaf);
+      const workspace = Object.freeze({
+        isDarwin: true,
+        path: directory,
+        realpath: directory,
+        root: canonicalRoot,
+        leaf,
+        identity: Object.freeze({
+          dev: initialStat.dev.toString(),
+          ino: initialStat.ino.toString(),
+          rootDev: rootStat.dev.toString(),
+          rootIno: rootStat.ino.toString()
+        })
+      });
+      DARWIN_WORKSPACE_PINS.set(workspace, { rootCap, wsCap, leaf });
+      return workspace;
+    } catch (error) {
+      if (wsCap) {
+        try {
+          darwinSafeRemoveTree(wsCap);
+          darwin.close(wsCap);
+          darwin.removeEmptyDirectory(rootCap, leaf);
+        } catch {}
+      }
+      if (rootCap) {
+        try { darwin.close(rootCap); } catch {}
+      }
+      if (error.name === 'AdvisorRoutingError') throw error;
+      fail('CWD_UNSAFE');
+    }
+  }
   const root = rootFor(environment, tempDirectory);
   assertRoot(root);
   let directory;
@@ -129,7 +250,45 @@ function createWorkspace({ environment = process.env, tempDirectory = os.tmpdir,
 
 function cleanupWorkspace(workspace, fsImpl = fs) {
   if (!workspace || typeof workspace.path !== 'string') return { outcome: 'not_needed' };
+  if (workspace.isDarwin || DARWIN_WORKSPACE_PINS.has(workspace)) {
+    const pins = DARWIN_WORKSPACE_PINS.get(workspace);
+    try {
+      if (!pins || !pins.rootCap || !pins.wsCap) {
+        return { outcome: 'unconfirmed', error: createRoutingError('CLEANUP_UNCONFIRMED') };
+      }
+      darwin.verifyChain(pins.rootCap);
+      const rootStat = darwin.statHandle(pins.rootCap);
+      if (!rootStat || rootStat.dev.toString() !== workspace.identity?.rootDev || rootStat.ino.toString() !== workspace.identity?.rootIno) {
+        return { outcome: 'unconfirmed', error: createRoutingError('CLEANUP_UNCONFIRMED') };
+      }
+      darwin.verifyChain(pins.wsCap);
+      const wsStat = darwin.statHandle(pins.wsCap);
+      if (!wsStat || wsStat.dev.toString() !== workspace.identity?.dev || wsStat.ino.toString() !== workspace.identity?.ino) {
+        return { outcome: 'unconfirmed', error: createRoutingError('CLEANUP_UNCONFIRMED') };
+      }
+      darwinSafeRemoveTree(pins.wsCap, wsStat.dev.toString());
+      const remaining = darwin.list(pins.wsCap);
+      if (remaining.length !== 0) {
+        return { outcome: 'unconfirmed', error: createRoutingError('CLEANUP_UNCONFIRMED') };
+      }
+      darwin.close(pins.wsCap);
+      darwin.removeEmptyDirectory(pins.rootCap, pins.leaf);
+      darwin.sync(pins.rootCap);
+      const checkRemoved = darwin.statEntry(pins.rootCap, pins.leaf);
+      if (checkRemoved === null) {
+        return { outcome: 'confirmed' };
+      }
+      return { outcome: 'unconfirmed', error: createRoutingError('CLEANUP_UNCONFIRMED') };
+    } catch (err) {
+      return { outcome: 'unconfirmed', error: isRoutingError(err) ? err : createRoutingError('CLEANUP_UNCONFIRMED') };
+    } finally {
+      if (pins?.wsCap) { try { darwin.close(pins.wsCap); } catch {} }
+      if (pins?.rootCap) { try { darwin.close(pins.rootCap); } catch {} }
+      DARWIN_WORKSPACE_PINS.delete(workspace);
+    }
+  }
   try {
+
     // Verify ancestor root FIRST before touching or checking workspace.path
     if (workspace.identity?.rootDev && workspace.identity?.rootIno && workspace.root) {
       let rootStat;

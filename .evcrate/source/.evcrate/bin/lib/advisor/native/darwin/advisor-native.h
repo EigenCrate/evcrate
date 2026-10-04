@@ -152,6 +152,7 @@ typedef struct AdvisorCap {
     uint64_t ino;
     bool closed;
     bool created;
+    bool owns_parent;
     struct AdvisorCap *parent;
     char *leaf_name;
 } AdvisorCap;

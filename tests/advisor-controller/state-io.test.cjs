@@ -431,3 +431,59 @@ test('Git mode-only transitions leave baseline fresh while content edit stays st
   git(f, 'add', 'tracked.txt');
   rejects(() => assertBaselineFresh(f.project, baseline), 'STALE_EVIDENCE_REVISION');
 });
+
+test('Darwin process decision logic handles uint64 precision, matching token, changed token, and malformed inputs host-independently', () => {
+  const darwinPlatform = require(path.join(path.dirname(MODULE), 'darwin-platform.cjs'));
+  const { evaluateDarwinProcessSnapshot, checkDarwinProcessStatus, getDarwinProcessIdentity } = darwinPlatform;
+
+  // 1. Valid identity with 20-digit uint64 start token
+  const maxUint64 = '18446744073709551615';
+  const identity = { pid: 1234, start: maxUint64 };
+
+  // Matching snapshot -> live
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'present', start: maxUint64 }), 'live');
+
+  // Different start token for same PID -> dead
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'present', start: '18446744073709551614' }), 'dead');
+
+  // Missing process -> dead
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'missing' }), 'dead');
+
+  // Malformed or invalid snapshot -> unknown
+  assert.equal(evaluateDarwinProcessSnapshot(identity, null), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(identity, undefined), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(identity, {}), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'unknown' }), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'present', start: null }), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'present', start: 'not-digits' }), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(identity, { kind: 'present', start: '1'.repeat(33) }), 'unknown');
+
+  // Invalid identity inputs -> unknown
+  assert.equal(evaluateDarwinProcessSnapshot({ pid: 1234, start: null }, { kind: 'present', start: maxUint64 }), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot(null, { kind: 'present', start: maxUint64 }), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot({ pid: -1, start: maxUint64 }, { kind: 'present', start: maxUint64 }), 'unknown');
+  assert.equal(evaluateDarwinProcessSnapshot({ pid: 0, start: maxUint64 }, { kind: 'present', start: maxUint64 }), 'unknown');
+
+  // Injected snapshot provider in checkDarwinProcessStatus
+  const provider = (pid) => (pid === 1234 ? { kind: 'present', start: maxUint64 } : { kind: 'missing' });
+  assert.equal(checkDarwinProcessStatus(identity, provider), 'live');
+  assert.equal(checkDarwinProcessStatus({ pid: 9999, start: maxUint64 }, provider), 'dead');
+
+  // On non-Darwin hosts, getDarwinProcessIdentity returns null start and checkDarwinProcessStatus returns unknown
+  if (process.platform !== 'darwin') {
+    assert.deepEqual(getDarwinProcessIdentity(process.pid), { pid: process.pid, start: null });
+    assert.equal(checkDarwinProcessStatus(identity), 'unknown');
+  }
+});
+
+test('Darwin process identity returns null start token on non-Darwin host and status evaluates to unknown', () => {
+  const darwinPlatform = require(path.join(path.dirname(MODULE), 'darwin-platform.cjs'));
+  const { getDarwinProcessIdentity, checkDarwinProcessStatus } = darwinPlatform;
+
+  const self = getDarwinProcessIdentity();
+  assert.equal(typeof self.pid, 'number');
+  if (process.platform !== 'darwin') {
+    assert.equal(self.start, null);
+    assert.equal(checkDarwinProcessStatus(self), 'unknown');
+  }
+});

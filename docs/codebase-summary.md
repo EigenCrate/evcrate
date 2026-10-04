@@ -1,12 +1,12 @@
 # Codebase Summary
 
-**Generated:** 2026-09-30 (full-repository baseline); Phase 08 source-map refresh: 2026-10-04
-**Source:** Full Repomix v1.18.0 snapshot dated 2026-09-30 (2,610 files, 9,099,945 tokens, 34,268,846 characters; `.repomixignore` exclusions; nine files omitted by the security check). Phase 08 target/qualification details cross-checked against a scoped 2026-10-04 Repomix compaction of target/adapters, manifests, qualification scripts, and package allowlist; temporary output stayed outside the repository.
+**Generated:** 2026-10-04 (Repomix v1.18.0; Phase 05 Darwin documentation refresh)
+**Source:** `repomix-output.xml` (3,382 included files, 11,731,786 tokens, 44,525,944 characters; `.repomixignore` exclusions; two Mach-O binaries excluded from text output). Darwin details cross-checked against the generated controller inventory, adapter/source, provenance manifest, and Phase 05 review context.
 **Updated:** 2026-10-04
 **Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28; VS Code Local qualification evidence for Linux x64 is indexed, with Phase 09 pending parent reconciliation.
-**Controller closure:** Exactly 36 files; earlier 29- and 33-file counts below are dated historical inventories.
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete; Darwin Phase 04 build and Phase 05 source integration are present. Cycle 3 is static review plus Linux evidence; macOS remains untested/unqualified.
+**Controller closure:** Exactly 44 files (36 prior entries plus eight Darwin assets); earlier 29-, 33-, and 36-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
@@ -16,7 +16,7 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 | Path | Role | Editing rule |
 |---|---|---|
 | `.evcrate/source/.claude/` | Canonical harness resources | Author here; do not hand-edit generated target copies. |
-| `.evcrate/source/.evcrate/bin/` | Shared advisor controller source | Maintain the source closure; generated files come from their generators. |
+| `.evcrate/source/.evcrate/bin/` | Shared advisor controller source, Darwin native sources and prebuilt assets | Maintain the generated closure; the Darwin integration is present but actual macOS runtime remains untested/unqualified. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlays | Change target policy or declared overlays, then rebuild. |
 | `.evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/` | Generated target projections | Regenerate; never treat as authoring roots. |
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
@@ -56,6 +56,25 @@ The Linux standalone installer unpacks a verified package snapshot and launches 
 The release workflow verifies an exact set of seven core assets. The plugin
 archive and checksum under `dist/advisor-plugin/` were removed; current release
 assembly does not build or publish them.
+
+## Darwin native runtime integration (Phase 04 build; Phase 05 source integration)
+
+The controller closure is exactly 44 files: the prior 36 shared/Windows entries plus eight Darwin entries (one loader, five C/provenance text files, and two prebuilt Mach-O addons). The generated inventory classifies the addons as binary and validates Mach-O magic. `darwin-platform.cjs` selects only the matching `arm64` or `x64` Node-API 8, bridge ABI 1 binary. The approved build authority is `node scripts/build-darwin-advisor-native.mjs`; it is not an install-time compiler or downloader.
+
+Phase 05 connects the native bridge to:
+- `state-io.cjs`: Canonical project/HOME capabilities (`openRoot`), state transaction and lock dispatch (`openDirectory`, `openRegular`, `removeOwned`), self-token verification before lock/recovery writes, and conservative Darwin process identity (`getDarwinProcessIdentity`, `checkDarwinProcessStatus`).
+- `state-baseline.cjs`: Pinned directory/file capture capabilities, final rehash with stat checks, and safe rewalk of missing paths without unverified pathname traversal.
+- `history-store.cjs`: Capability traversal for history root and consultation directories, self-token verification before `history.lock` writes, and bounded storage sync.
+- `history-query.cjs` & `history-prune.cjs`: Safe reopened read capabilities after scanner closure, bounded query reads, and capability-scoped prune of owned leaves and empty directories.
+- `controller.cjs` & `isolated-workspace.cjs`: Canonical project identity hash convergence, temp-root resolution, descriptor-relative workspace creation (`created=true` verification), and capability-based recursive cleanup.
+
+Key architectural and safety invariants:
+- **Descriptor-relative capabilities:** Darwin managed I/O operates entirely via descriptor-relative capabilities; logical display paths are strictly metadata and never passed to raw Node filesystem mutation.
+- **Scoped capability ownership (`owns_parent`):** `AdvisorCap` in `storage.c`, `advisor-native.c`, and `advisor-native.h` scopes parent descriptor lifecycle. Intermediate ancestor capabilities during `openRoot` walk set `owns_parent = true` to reclaim descriptors on leaf close, while child capabilities derived via `openDirectory` set `owns_parent = false` to preserve the caller's parent descriptor lifetime.
+- **Self-token identity verification:** Valid non-null monotonic start token verification is mandatory before writing state/history locks or persisting pending consultation records.
+- **Platform isolation:** Gated strictly by `process.platform === 'darwin'`, preserving Linux (procfs/kill-0/fd-pinning) and Windows (PowerShell/Job Objects) invariants without cross-platform leakage.
+- **Cycle 3 static review warning:** Static review flags `owns_parent` as uninitialized for `/var` and `/tmp` intermediate capabilities, a potential descriptor leak; no macOS behavior has been tested.
+- **Boundary:** Darwin implementation is present, but macOS addon loading, controller/provider execution, tests, and CI remain prohibited and untested/unqualified. Static review and Linux results do not qualify native behavior. See the [system architecture](./system-architecture.md) and [Phase 05 integration record](../plans/261003-1527-advisor-node-only-launch/phase-05-darwin-runtime-integration.md).
 
 ## VS Code Local target, qualification, and Phase 09 rollout
 
@@ -363,8 +382,8 @@ The generated controller inventory remains authoritative. See the
 [audit plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md),
 and [audit evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
 Historical evidence remains 185/185 state tests and 204/204 controller tests;
-the current 36-file closure and current metrics-explorer implementation are documented
-in their respective sections above.
+the current 44-file closure, including the Darwin native build assets, and current
+metrics-explorer implementation are documented in their respective sections above.
 
 
 ## Cooperative mentoring across commands and harnesses (historical Phase 08)

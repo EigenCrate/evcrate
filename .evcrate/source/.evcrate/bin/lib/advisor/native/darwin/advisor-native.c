@@ -46,6 +46,23 @@ static void finalize_capability(napi_env env, void *finalize_data, void *finaliz
             free(cap->leaf_name);
             cap->leaf_name = NULL;
         }
+        if (cap->owns_parent) {
+            AdvisorCap *p = cap->parent;
+            while (p) {
+                AdvisorCap *next_p = p->owns_parent ? p->parent : NULL;
+                if (!p->closed && p->fd >= 0) {
+                    close(p->fd);
+                    p->closed = true;
+                }
+                if (p->leaf_name) {
+                    free(p->leaf_name);
+                    p->leaf_name = NULL;
+                }
+                free(p);
+                p = next_p;
+            }
+        }
+        cap->parent = NULL;
         free(cap);
     }
 }

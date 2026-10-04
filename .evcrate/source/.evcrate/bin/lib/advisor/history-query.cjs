@@ -4,7 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createRoutingError } = require('./errors.cjs');
 const { writePinnedFileWindows } = require('./windows-platform.cjs');
-const { inspect, directory, absolute, writeExclusive, same, NOFOLLOW } = require('./state-io.cjs');
+const darwin = require('./darwin-platform.cjs');
+const { inspect, directory, absolute, writeExclusive, same, NOFOLLOW, darwinWriteExclusive } = require('./state-io.cjs');
 const {
   validateHistoryExecutionV1,
   validateHistoryOutcomeV1,
@@ -184,17 +185,28 @@ function exportHistory(dependencies, options, fns) {
 
   // Pin parent directory to prevent TOCTOU ancestor swaps
   let parentFd;
-  try {
-    const flags = process.platform === 'win32'
-      ? fs.constants.O_RDONLY
-      : fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW;
-    parentFd = fs.openSync(destParent, flags);
-    if (!same(fs.fstatSync(parentFd, { bigint: true }), pStat)) fail('REQUEST_INVALID');
-  } catch {
-    if (parentFd !== undefined) fs.closeSync(parentFd);
-    fail('REQUEST_INVALID');
+  let parentCap;
+  if (process.platform === 'darwin') {
+    try {
+      const destRes = darwin.openRoot(destParent);
+      parentCap = destRes.directory;
+      darwin.verifyChain(parentCap);
+    } catch {
+      if (parentCap) { try { darwin.close(parentCap); } catch {} }
+      fail('REQUEST_INVALID');
+    }
+  } else {
+    try {
+      const flags = process.platform === 'win32'
+        ? fs.constants.O_RDONLY
+        : fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | NOFOLLOW;
+      parentFd = fs.openSync(destParent, flags);
+      if (!same(fs.fstatSync(parentFd, { bigint: true }), pStat)) fail('REQUEST_INVALID');
+    } catch {
+      if (parentFd !== undefined) fs.closeSync(parentFd);
+      fail('REQUEST_INVALID');
+    }
   }
-
   try {
     // Gather ALL matching records by scanning project directly without 100 limit truncation
     const records = fns.scanRecordsFn(ctx, targetProject);
@@ -246,7 +258,12 @@ function exportHistory(dependencies, options, fns) {
       };
     }
 
-    if (process.platform === 'win32') {
+    if (process.platform === 'darwin') {
+      const leafStat = darwin.statEntry(parentCap, destBase);
+      if (leafStat !== null) fail('REQUEST_INVALID');
+      darwinWriteExclusive(parentCap, destBase, Buffer.from(jsonText, 'utf8'));
+      darwin.sync(parentCap);
+    } else if (process.platform === 'win32') {
       const targetPath = path.join(destParent, destBase);
       const writeRes = writePinnedFileWindows(targetPath, Buffer.from(jsonText, 'utf8'), { replaceIfExists: false });
       if (writeRes.status !== 'ok') fail('REQUEST_INVALID');
@@ -272,8 +289,10 @@ function exportHistory(dependencies, options, fns) {
       redactions: redactionFindings
     };
   } finally {
-    fs.closeSync(parentFd);
+    if (parentCap) { try { darwin.close(parentCap); } catch {} }
+    if (parentFd !== undefined) fs.closeSync(parentFd);
   }
+
 }
 
 /**

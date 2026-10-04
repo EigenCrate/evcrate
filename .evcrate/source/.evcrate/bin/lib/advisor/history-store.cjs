@@ -6,8 +6,10 @@ const { randomBytes, createHash } = require('node:crypto');
 const { createRoutingError } = require('./errors.cjs');
 const {
   inspect, same, unchanged, directory, regular, absolute, chain, stable,
-  readFile, writeExclusive, removeOwned, NOFOLLOW, UUID, processIdentity, processStatus
+  readFile, writeExclusive, removeOwned, NOFOLLOW, UUID, processIdentity, processStatus,
+  darwinReadFile, darwinWriteExclusive, darwinRemoveOwned, darwinLockRecord, darwinStatEntry
 } = require('./state-io.cjs');
+const darwin = require('./darwin-platform.cjs');
 const {
   canonicalWindowsProjectRoot,
   resolveWindowsHome,
@@ -49,7 +51,7 @@ function parseJson(bytes, code = 'AUDIT_DEGRADED') {
 }
 
 function historyContext({ cwd = process.cwd(), environment = process.env } = {}) {
-  if (process.platform !== 'linux' && process.platform !== 'win32') fail();
+  if (process.platform !== 'linux' && process.platform !== 'win32' && process.platform !== 'darwin') fail();
   if (process.platform === 'linux' && typeof NOFOLLOW !== 'number') fail();
 
   let projectRoot;
@@ -64,18 +66,74 @@ function historyContext({ cwd = process.cwd(), environment = process.env } = {})
     } catch {
       fail('AUDIT_DEGRADED');
     }
+  } else if (process.platform === 'darwin') {
+    if (typeof environment.HOME !== 'string' || !environment.HOME || !path.isAbsolute(environment.HOME) || environment.HOME.includes('\0')) {
+      fail('AUDIT_DEGRADED');
+    }
+    const projectRes = darwin.openRoot(absolute(cwd));
+    projectRoot = projectRes.canonicalPath;
+    darwin.close(projectRes.directory);
+
+    const homeRes = darwin.openRoot(absolute(environment.HOME));
+    home = homeRes.canonicalPath;
+    if (home === path.parse(home).root) fail('AUDIT_DEGRADED');
+    darwin.close(homeRes.directory);
+
+    projectId = createHash('sha256').update(projectRoot).digest('hex');
+    const entries = [];
+    return { isDarwin: true, projectRoot, home, projectId, entries };
   } else {
     projectRoot = absolute(cwd);
     home = absolute(environment.HOME);
     if (home === path.parse(home).root) fail();
     projectId = createHash('sha256').update(projectRoot).digest('hex');
   }
-
   const entries = [...chain(projectRoot), ...chain(home)];
   return { projectRoot, home, projectId, entries };
 }
 
 function openHistoryRoot(ctx, create = false) {
+  if (ctx.isDarwin || process.platform === 'darwin') {
+    const caps = [];
+    try {
+      const homeRes = darwin.openRoot(ctx.home);
+      const homeCap = homeRes.directory;
+      caps.push(homeCap);
+      darwin.verifyChain(homeCap);
+      let curCap = homeCap;
+      let logical = ctx.home;
+      for (const part of ['.evcrate', 'advisor-history']) {
+        logical = path.join(logical, part);
+        const childCap = darwin.openDirectory(curCap, part, create);
+        if (!childCap) {
+          for (const c of caps.slice().reverse()) try { darwin.close(c); } catch {}
+          return null;
+        }
+        caps.push(childCap);
+        darwin.verifyChain(childCap);
+        const st = darwin.statHandle(childCap);
+        if (!st || !st.isDirectory() || st.isSymbolicLink()) fail('AUDIT_DEGRADED');
+        curCap = childCap;
+      }
+      return {
+        isDarwin: true,
+        dirCap: curCap,
+        path: logical,
+        base: logical,
+        caps,
+        close() {
+          for (const c of caps.slice().reverse()) {
+            try { darwin.close(c); } catch {}
+          }
+        }
+      };
+    } catch (error) {
+      for (const c of caps.slice().reverse()) {
+        try { darwin.close(c); } catch {}
+      }
+      throw error;
+    }
+  }
   stable(ctx.entries);
   if (process.platform === 'win32') {
     const descriptors = [];
@@ -164,6 +222,68 @@ function openHistoryRoot(ctx, create = false) {
 }
 
 function acquireHistoryLock(ctx, root) {
+  if (root.isDarwin) {
+    const self = processIdentity();
+    if (self.start === null) fail('AUDIT_DEGRADED');
+    const file = 'history.lock';
+    const recovery = 'history-recovery.lock';
+    const value = { token: randomBytes(16).toString('hex'), process: self };
+    const bytes = Buffer.from(JSON.stringify(value));
+    let stat;
+    darwin.verifyChain(root.dirCap);
+    const recInitial = darwin.statEntry(root.dirCap, recovery);
+    if (recInitial) {
+      try {
+        const recRecord = darwinReadFile(root.dirCap, recovery, 1024);
+        if (!recRecord) fail('AUDIT_DEGRADED');
+        const recVal = JSON.parse(recRecord.bytes.toString('utf8'));
+        if (recVal?.process && processStatus(recVal.process) === 'dead') {
+          darwinRemoveOwned(root.dirCap, recovery, recRecord.stat);
+          darwin.sync(root.dirCap);
+        } else {
+          fail('AUDIT_DEGRADED');
+        }
+      } catch {
+        fail('AUDIT_DEGRADED');
+      }
+    }
+    try { stat = darwinWriteExclusive(root.dirCap, file, bytes); }
+    catch (error) {
+      if (error.code !== 'EEXIST' && error.code !== 'STATE_CONFLICT') throw error;
+      let old;
+      try {
+        const record = darwinReadFile(root.dirCap, file, 1024);
+        if (!record) fail('AUDIT_DEGRADED');
+        const val = JSON.parse(record.bytes.toString('utf8'));
+        if (!val || !val.process || !val.token) fail('AUDIT_DEGRADED');
+        old = { ...record, value: val };
+      } catch { fail('AUDIT_DEGRADED'); }
+      if (processStatus(old.value.process) !== 'dead') fail('AUDIT_DEGRADED');
+      let guard;
+      try { guard = darwinWriteExclusive(root.dirCap, recovery, bytes); }
+      catch { fail('AUDIT_DEGRADED'); }
+      try {
+        darwin.verifyChain(root.dirCap);
+        const current = darwinReadFile(root.dirCap, file, 1024);
+        if (!current || !unchanged(current.stat, old.stat)) fail('AUDIT_DEGRADED');
+        darwinRemoveOwned(root.dirCap, file, current.stat);
+        try { stat = darwinWriteExclusive(root.dirCap, file, bytes); }
+        catch { fail('AUDIT_DEGRADED'); }
+      } finally {
+        darwinRemoveOwned(root.dirCap, recovery, guard);
+        darwin.sync(root.dirCap);
+      }
+    }
+    darwin.sync(root.dirCap);
+    return () => {
+      darwin.verifyChain(root.dirCap);
+      const current = darwinReadFile(root.dirCap, file, 1024);
+      if (current && unchanged(current.stat, stat)) {
+        darwinRemoveOwned(root.dirCap, file, stat);
+        darwin.sync(root.dirCap);
+      }
+    };
+  }
   const file = `${root.base}/history.lock`;
   const recovery = `${root.base}/history-recovery.lock`;
   const value = { token: randomBytes(16).toString('hex'), process: processIdentity() };
@@ -242,11 +362,61 @@ function openConsultationDir(ctx, { projectId, taskRunId, consultationId }, crea
   if (!SHA256.test(projectId) || !UUID.test(taskRunId) || !UUID.test(consultationId)) {
     fail('REQUEST_INVALID');
   }
+  if (ctx.isDarwin || process.platform === 'darwin') {
+    const root = openHistoryRoot(ctx, create);
+    if (!root) return null;
+    const parts = [projectId.toLowerCase(), taskRunId.toLowerCase(), consultationId.toLowerCase()];
+    const caps = [...root.caps];
+    let curCap = root.dirCap;
+    let logical = root.path;
+    let projectCap, taskCap, consultationCap;
+    let projectBase = '', taskBase = '';
+    try {
+      for (const [index, part] of parts.entries()) {
+        logical = path.join(logical, part);
+        const childCap = darwin.openDirectory(curCap, part, create);
+        if (!childCap) {
+          for (const c of caps.slice().reverse()) try { darwin.close(c); } catch {}
+          return null;
+        }
+        caps.push(childCap);
+        darwin.verifyChain(childCap);
+        const st = darwin.statHandle(childCap);
+        if (!st || !st.isDirectory() || st.isSymbolicLink()) fail('AUDIT_DEGRADED');
+        curCap = childCap;
+        if (index === 0) { projectCap = childCap; projectBase = logical; }
+        if (index === 1) { taskCap = childCap; taskBase = logical; }
+      }
+      consultationCap = curCap;
+      return {
+        isDarwin: true,
+        dirCap: consultationCap,
+        projectCap,
+        taskCap,
+        rootCap: root.dirCap,
+        path: logical,
+        base: logical,
+        taskBase,
+        projectBase,
+        rootBase: root.base,
+        caps,
+        close() {
+          for (const c of caps.slice().reverse()) {
+            try { darwin.close(c); } catch {}
+          }
+        }
+      };
+    } catch (error) {
+      for (const c of caps.slice().reverse()) {
+        try { darwin.close(c); } catch {}
+      }
+      throw error;
+    }
+  }
   const root = openHistoryRoot(ctx, create);
   if (!root) return null;
   const entries = [...root.entries];
   let logical = root.path;
-
   if (process.platform === 'win32') {
     const descriptors = [];
     const parts = [projectId.toLowerCase(), taskRunId.toLowerCase(), consultationId.toLowerCase()];
@@ -371,6 +541,75 @@ function scanProjectRecords(ctx, targetProjectId) {
   const records = [];
 
   try {
+    if (root.isDarwin) {
+      const pCap = darwin.openDirectory(root.dirCap, projId, false);
+      if (!pCap) return [];
+      try {
+        darwin.verifyChain(pCap);
+        const tasks = darwin.list(pCap);
+        if (tasks.length > MAX_TASKS_PER_PROJECT) fail('AUDIT_DEGRADED');
+        for (const tEntry of tasks) {
+          const tName = typeof tEntry === 'string' ? tEntry : tEntry.name;
+          if (!UUID.test(tName)) continue;
+          const tCap = darwin.openDirectory(pCap, tName, false);
+          if (!tCap) continue;
+          try {
+            darwin.verifyChain(tCap);
+            const consultations = darwin.list(tCap);
+            if (consultations.length > MAX_CONSULTATIONS_PER_TASK) fail('AUDIT_DEGRADED');
+            for (const cEntry of consultations) {
+              const cName = typeof cEntry === 'string' ? cEntry : cEntry.name;
+              if (!UUID.test(cName)) continue;
+              const cCap = darwin.openDirectory(tCap, cName, false);
+              if (!cCap) continue;
+              try {
+                darwin.verifyChain(cCap);
+                const execStat = darwin.statEntry(cCap, 'execution.json');
+                if (!execStat || !execStat.isFile() || execStat.isSymbolicLink() || execStat.nlink !== 1n) {
+                  continue;
+                }
+                const outStat = darwin.statEntry(cCap, 'outcome.json');
+                const hasValidOutcome = outStat && outStat.isFile() && !outStat.isSymbolicLink() && outStat.nlink === 1n;
+                let totalDiskBytes = Number(execStat.size) + (hasValidOutcome ? Number(outStat.size) : 0);
+                try {
+                  const allEntries = darwin.list(cCap);
+                  for (const ent of allEntries) {
+                    const entName = typeof ent === 'string' ? ent : ent.name;
+                    if (entName !== 'execution.json' && entName !== 'outcome.json') {
+                      const entStat = darwin.statEntry(cCap, entName);
+                      if (entStat && entStat.isFile()) totalDiskBytes += Number(entStat.size);
+                    }
+                  }
+                } catch {}
+
+                const dirPath = path.join(root.path, projId, tName, cName);
+                const execLogical = path.join(dirPath, 'execution.json');
+                const outLogical = path.join(dirPath, 'outcome.json');
+
+                records.push({
+                  projectId: projId,
+                  taskRunId: tName,
+                  consultationId: cName,
+                  dirPath,
+                  execPath: execLogical,
+                  execSize: Number(execStat.size),
+                  outPath: hasValidOutcome ? outLogical : null,
+                  outSize: hasValidOutcome ? Number(outStat.size) : 0,
+                  totalDiskBytes
+                });
+              } finally {
+                darwin.close(cCap);
+              }
+            }
+          } finally {
+            darwin.close(tCap);
+          }
+        }
+        return records;
+      } finally {
+        darwin.close(pCap);
+      }
+    }
     const pPath = `${root.base}/${projId}`;
     const pStat = inspect(pPath);
     if (!pStat || !pStat.isDirectory() || pStat.isSymbolicLink()) {
@@ -466,9 +705,34 @@ function sanitizeSafeProjectName(projectRoot) {
 
 function ensureProjectMetadata(cDir, ctx, projectId) {
   try {
+    if (cDir.isDarwin) {
+      if (darwin.statEntry(cDir.projectCap, 'project-metadata.json')) return;
+      const safeName = sanitizeSafeProjectName(ctx.projectRoot);
+      if (!safeName) return;
+      const metadata = {
+        version: 1,
+        projects: {
+          [projectId.toLowerCase()]: {
+            name: safeName,
+            updated_at: Date.now()
+          }
+        }
+      };
+      const metaBytes = Buffer.from(JSON.stringify(metadata, null, 2), 'utf8');
+      const tmpLeaf = `.meta-${randomBytes(8).toString('hex')}.tmp`;
+      let tmpStat;
+      try {
+        tmpStat = darwinWriteExclusive(cDir.projectCap, tmpLeaf, metaBytes);
+        darwin.commit(cDir.projectCap, tmpLeaf, tmpStat, 'project-metadata.json', null);
+        tmpStat = undefined;
+        darwin.sync(cDir.projectCap);
+      } finally {
+        if (tmpStat) darwinRemoveOwned(cDir.projectCap, tmpLeaf, tmpStat);
+      }
+      return;
+    }
     const metaFile = `${cDir.projectBase}/project-metadata.json`;
     if (inspect(metaFile)) return;
-
     const safeName = sanitizeSafeProjectName(ctx.projectRoot);
     if (!safeName) return;
 
@@ -520,6 +784,20 @@ function recordStartedExecution(dependencies, execution, policy = {}) {
     if (!cDir) fail('AUDIT_DEGRADED');
     try {
       ensureProjectMetadata(cDir, ctx, execution.project_id);
+      if (cDir.isDarwin) {
+        if (darwin.statEntry(cDir.dirCap, 'execution.json')) fail('AUDIT_DEGRADED');
+        const tmpLeaf = `.exec-start-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = darwinWriteExclusive(cDir.dirCap, tmpLeaf, execBytes);
+          darwin.commit(cDir.dirCap, tmpLeaf, tmpStat, 'execution.json', null);
+          tmpStat = undefined;
+          darwin.sync(cDir.dirCap);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) darwinRemoveOwned(cDir.dirCap, tmpLeaf, tmpStat);
+        }
+      }
       const execFile = `${cDir.base}/execution.json`;
       if (inspect(execFile)) fail('AUDIT_DEGRADED');
       writeExclusive(execFile, execBytes);
@@ -558,7 +836,21 @@ function updateStartedAttempts(dependencies, { projectId, taskRunId, consultatio
         ensureHistoryQuota(ctx, growth, policy, scanProjectRecords, readFile, openConsultationDir);
       }
 
-      if (process.platform === 'win32') {
+      if (cDir.isDarwin) {
+        const now = darwinReadFile(cDir.dirCap, 'execution.json', MAX_EXECUTION_HISTORY_BYTES);
+        if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) fail('AUDIT_DEGRADED');
+        const tmpLeaf = `.exec-att-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = darwinWriteExclusive(cDir.dirCap, tmpLeaf, updatedBytes);
+          darwin.commit(cDir.dirCap, tmpLeaf, tmpStat, 'execution.json', existing.stat);
+          tmpStat = undefined;
+          darwin.sync(cDir.dirCap);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) darwinRemoveOwned(cDir.dirCap, tmpLeaf, tmpStat);
+        }
+      } else if (process.platform === 'win32') {
         const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
         if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) fail('AUDIT_DEGRADED');
         const res = writePinnedFileWindows(execFile, updatedBytes, {
@@ -632,7 +924,23 @@ function recordTerminalExecution(dependencies, execution, policy = {}) {
         ensureHistoryQuota(ctx, growth, policy, scanProjectRecords, readFile, openConsultationDir);
       }
 
-      if (process.platform === 'win32') {
+      if (cDir.isDarwin) {
+        const now = darwinReadFile(cDir.dirCap, 'execution.json', MAX_EXECUTION_HISTORY_BYTES);
+        if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) {
+          fail('AUDIT_DEGRADED');
+        }
+        const tmpLeaf = `.exec-term-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = darwinWriteExclusive(cDir.dirCap, tmpLeaf, execBytes);
+          darwin.commit(cDir.dirCap, tmpLeaf, tmpStat, 'execution.json', existing.stat);
+          tmpStat = undefined;
+          darwin.sync(cDir.dirCap);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) darwinRemoveOwned(cDir.dirCap, tmpLeaf, tmpStat);
+        }
+      } else if (process.platform === 'win32') {
         const now = readFile(execFile, MAX_EXECUTION_HISTORY_BYTES);
         if (!now || !unchanged(now.stat, existing.stat) || !now.bytes.equals(existing.bytes)) {
           fail('AUDIT_DEGRADED');
@@ -666,6 +974,7 @@ function recordTerminalExecution(dependencies, execution, policy = {}) {
     } finally {
       cDir.close();
     }
+
   });
 }
 
@@ -720,7 +1029,24 @@ function recordOutcome(dependencies, outcome, policy = {}) {
 
       ensureHistoryQuota(ctx, outBytes.length, policy, scanProjectRecords, readFile, openConsultationDir);
 
-      if (process.platform === 'win32') {
+      if (cDir.isDarwin) {
+        const now = darwinReadFile(cDir.dirCap, 'outcome.json', MAX_OUTCOME_HISTORY_BYTES);
+        if (now !== null) fail('AUDIT_DEGRADED');
+        const tmpLeaf = `.outcome-${randomBytes(8).toString('hex')}.tmp`;
+        let tmpStat;
+        try {
+          tmpStat = darwinWriteExclusive(cDir.dirCap, tmpLeaf, outBytes);
+          darwin.verifyChain(cDir.dirCap);
+          const checkAgain = darwinReadFile(cDir.dirCap, 'outcome.json', MAX_OUTCOME_HISTORY_BYTES);
+          if (checkAgain !== null) fail('AUDIT_DEGRADED');
+          darwin.commit(cDir.dirCap, tmpLeaf, tmpStat, 'outcome.json', null);
+          tmpStat = undefined;
+          darwin.sync(cDir.dirCap);
+          return { status: 'recorded' };
+        } finally {
+          if (tmpStat) darwinRemoveOwned(cDir.dirCap, tmpLeaf, tmpStat);
+        }
+      } else if (process.platform === 'win32') {
         const now = readFile(outFile, MAX_OUTCOME_HISTORY_BYTES);
         if (now !== null) fail('AUDIT_DEGRADED');
         const res = writePinnedFileWindows(outFile, outBytes, { replaceIfExists: false });
@@ -759,11 +1085,27 @@ function recordOutcome(dependencies, outcome, policy = {}) {
   });
 }
 
+function safeHistoryReadFile(filePath, limit) {
+  if (process.platform === 'darwin') {
+    const parent = path.dirname(filePath);
+    const leaf = path.basename(filePath);
+    const res = darwin.openRoot(parent);
+    const dirCap = res.directory;
+    try {
+      darwin.verifyChain(dirCap);
+      return darwinReadFile(dirCap, leaf, limit);
+    } finally {
+      darwin.close(dirCap);
+    }
+  }
+  return readFile(filePath, limit);
+}
+
 const queryContextFns = {
   historyContextFn: historyContext,
   scanRecordsFn: scanProjectRecords,
   openConsultationDirFn: openConsultationDir,
-  readFileFn: readFile
+  readFileFn: safeHistoryReadFile
 };
 
 function listHistory(dependencies, filter = {}) {
@@ -781,7 +1123,6 @@ function getHistoryMetrics(dependencies, request = {}) {
   return getHistoryMetricsImpl(dependencies, request, queryContextFns);
 }
 
-
 function pruneHistory(dependencies, policy = {}, options = {}) {
   return withHistoryLock(historyContext(dependencies), () => {
     return pruneHistoryImpl(dependencies, policy, options, {
@@ -789,10 +1130,11 @@ function pruneHistory(dependencies, policy = {}, options = {}) {
       openHistoryRootFn: openHistoryRoot,
       openConsultationDirFn: openConsultationDir,
       scanRecordsFn: scanProjectRecords,
-      readFileFn: readFile
+      readFileFn: safeHistoryReadFile
     });
   });
 }
+
 
 module.exports = {
   recordStartedExecution,

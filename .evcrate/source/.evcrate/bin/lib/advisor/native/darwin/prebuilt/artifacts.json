@@ -14,23 +14,23 @@
     "host": "linux x64"
   },
   "source_digests": {
-    "advisor-native.h": "5000624ea9b8c896fb5d8ee8ab526a5d70ea1cd629343c4a5118dfa302dfb3d0",
-    "advisor-native.c": "2d923800bb46a0584b05db2099be93bbbdcd12e7ec8c0bab7478cc0824f9b817",
-    "storage.c": "f99f358349cf8fa322f537c4b129119f83764937125d6531e035d036d1846794",
+    "advisor-native.h": "b54e2940c44452bb15e157c1aec3a9ec1eec5e331ab70ac0fe46f9ef6d355a83",
+    "advisor-native.c": "36c40ea86a6a7c5b44ec1c2d4cdb864794fd5d1838fbbd06f6aa1ac424c1f19b",
+    "storage.c": "3f0b47fc86c4f692368e148fd467910e674c1511bd09f85bf44e8ce5014cb9c5",
     "process.c": "e2c61744181a6238bff94f13a7dfb0f2d497889b5558eb9f75eed6f8443ef342"
   },
-  "aggregate_source_digest": "1b4fbe703e3cb0e6a7183c1eccfb64843a63c8d53feb53fab51da6de3d74192a",
+  "aggregate_source_digest": "3ab2dc01b09488e471b732258e2669688bbf2c19456d5120c11782e2732da845",
   "artifacts": {
     "darwin-arm64": {
       "relative_path": "lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node",
-      "size": 54256,
-      "sha256": "d548569f249ee40e10d2a32332e0a49ee778d6fb3d8b8492a6a267c00c86596a"
+      "size": 70768,
+      "sha256": "248e7f56b4b8ca41e4d198e19b63773852231e11e3eccb076d261d18ef61e5cc"
     },
     "darwin-x64": {
       "relative_path": "lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node",
       "size": 33184,
-      "sha256": "3894eab004c17a496c856e060fbb323a5bb20a65bf43d6d423b39e0f6ad8896b"
+      "sha256": "ab94a0675c24132b68e40da0845337a46187444d1924657fb942d3bdf4a3fd08"
     }
   },
-  "built_at": "2026-10-04T09:59:31.948Z"
+  "built_at": "2026-10-04T13:21:09.443Z"
 }
