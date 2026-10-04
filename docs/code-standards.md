@@ -6,8 +6,8 @@
 **Windows release boundary:** Qualification covers only standalone installer lifecycle and clean-install `version --json`.
 Native Windows advisor Phases 01–04 are complete: Phase 03 observed OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not establish broad Windows runtime parity or authorize production release.
 
-**Plugin retirement:** DamHopper's former plugin runtime, SDK, and host integration were retired 2026-10-02. Plugin worker, bridge, and host instructions below are non-normative historical records, not current implementation standards.
-
+**Plugin architecture:** DamHopper's former plugin runtime, SDK, and host integration were retired 2026-10-02. VS Code Local native support is an isolated Agent Plugins 1.0 bundle (`evcrate-local`) registered via user-controlled `chat.pluginLocations`, completely distinct from the retired DamHopper plugin and VSIX distribution.
+**Linting standard:** Package script `npm run lint` is currently an echo-only check (`echo "Linting passed"`). Code standards and invariants are enforced deterministically via TypeScript compiler checks (`tsc`), runtime closure checks, and the automated test suite.
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
 is the navigation map.
@@ -62,8 +62,9 @@ The following patterns are strictly prohibited across the codebase:
 scoped repository inventory. Do not describe them as alternate engines. The current
 package path is TypeScript; source retains compatibility-engine types for transition
 and validation boundaries, but no root `distribute.py` command is canonical.
-The seven generated target trees are listed above; the persisted adapter IDs remain
-`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, and `copilot`. Do not count
+The eight generated target trees are listed above (`.agents`, `.codex`, `.gemini`,
+`.antigravity`, `.pi`, `.omp`, `.copilot`, and `.evcrate-vscode`); the persisted adapter IDs remain
+`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Do not count
 the `.agents` Codex companion root as an additional adapter.
 
 ### Scout-block ignore policy
@@ -83,9 +84,10 @@ negation behavior. Do not add `!dist`/`!build` command workarounds, infer file
 types from the working tree, or hand-edit generated projections.
 
 The canonical Claude resources are the only authored hook source. Regenerate the
-seven generated target trees (`.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`,
-`.omp`, `.copilot`) and require `npm run distribute:check` before publication.
-`.agents` is Codex's companion output root, not an eighth adapter.
+eight target trees (`.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`, `.omp`,
+`.copilot`, and `.evcrate-vscode`) and require `npm run distribute:check` before publication.
+`.agents` is Codex's companion output root, not a separate adapter; `vscode` is the
+eighth persisted adapter.
 Projected and published OMP runtime behavior must retain the same allow/block
 boundary.
 
@@ -210,7 +212,7 @@ operation-specific exit codes at individual call sites.
 ### Target manifests
 
 The schema-2 target registry persists exactly `antigravity`, `claude`, `codex`,
-`copilot`, `gemini`, `omp`, and `pi`. `agy` is input-only normalization for
+`copilot`, `gemini`, `omp`, `pi`, and `vscode`. `agy` is input-only normalization for
 `antigravity`. Manifests declare exactly the resource roots `skill`, `agent`,
 `workflow`, `command`, and `hook`, plus target output/home policy. Normalize paths;
 reject traversal, backslashes, duplicate lists, symlinked ancestors, equal/nested
@@ -225,12 +227,13 @@ valid JSON.
 ### Resource registry and imports
 
 Keep `.evcrate/registry.json` (schema 1) distinct from target/build manifests
-(schema 2). Registry records use stable `kind:canonical-relative-path` IDs,
-canonical source paths, file-versus-tree domain-separated content hashes, provenance,
-all seven target compatibility entries, capabilities, bounded optional metadata,
-and positive revisions. IDs and records sort by Unicode code point. Permission bits
-are not content hashes; capability assessment remains separate.
-
+(schema 2). Schema 1 performs exact-seven read-only normalization for legacy clients,
+while schema 2 targets and build manifests manage all eight persisted targets.
+Registry records use stable `kind:canonical-relative-path` IDs, canonical source paths,
+file-versus-tree domain-separated content hashes, provenance, compatibility entries,
+capabilities, bounded optional metadata, and positive revisions. IDs and records sort
+by Unicode code point. Permission bits are not content hashes; capability assessment
+remains separate.
 Canonical scans validate canonical-root and resource-root containment, reject
 symlink/special entries, and hash before discovery. Resource kinds are fixed: skill
 directories contain `SKILL.md`; agents/workflows are root-level Markdown files;

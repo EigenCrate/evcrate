@@ -3,7 +3,15 @@
 ## Unreleased
 
 **Updated:** 2026-10-04
-**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification evidence recorded for `vscode` on Linux x64; Phase 09 docs/rollout pending parent reconciliation; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64 (commit `cbd298a4`); Phase 09 documentation, controlled rollout, and lifecycle governance completed; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+
+### 2026-10-04 — docs(vscode): complete Phase 09 documentation, controlled rollout, and lifecycle governance
+
+- Reconciled core architecture and documentation: updated system architecture (`docs/system-architecture.md`), codebase summary (`docs/codebase-summary.md`), code standards (`docs/code-standards.md`), project overview PDR (`docs/project-overview-pdr.md`, FR-25), roadmap (`docs/project-roadmap.md`), and README/guide.
+- Established eighth persisted target `vscode` with isolated Agent Plugins 1.0 bundle (`evcrate-local`) at `.evcrate/source/.evcrate-vscode/` and published `.evcrate-vscode/`. Schema-2 manifests and build resolutions manage 8 targets; schema-1 registry maintains exact-seven read-only normalization for backward compatibility. Core release assets remain exactly seven files.
+- Documented clear separation between GitHub Copilot CLI (`copilot`) and VS Code Local (`vscode`), user-controlled manual activation via `chat.pluginLocations`, and opt-in MCP examples without default activation or credential assumptions.
+- Documented native hook protocol across eight Agent Plugins 1.0 events, fail-closed scout and privacy policies, atomic CAS v1 session context with 7-day bounded retention, direct HOME advisor caller (`~/.evcrate/bin/evcrate-advisor`), and explicit rejection of standalone `--agent` relay (`ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`).
+- Documented coexistence guidelines (project vs HOME scope), scope-isolated recovery runbook (`evcrate recover` without editor settings mutation), and lifecycle stop-trigger criteria for version drift and announced upstream Local retirement.
 
 ### 2026-10-04 — test(vscode): record Phase 08 Native Local qualification
 

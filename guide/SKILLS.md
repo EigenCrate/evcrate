@@ -48,9 +48,10 @@ Skills work seamlessly with slash commands:
 
 Project documentation uses the `/cmd-*` naming convention for slash command/resource
 examples, including `.claude` references. OMP nested names use `__`; Copilot uses
-`/evcrate-cmd-*`. Current scanner/parser prefix enforcement remains a follow-up;
-this convention does not rename source commands. See the
-[code standards](../docs/code-standards.md#normative-command-naming).
+`/evcrate-cmd-*`; VS Code Local maps slash commands as manual skills with mapped names
+(such as `/cmd-plan`, or `/evcrate-local:cmd-plan` when qualified), forwarding arguments directly. Current scanner/parser
+prefix enforcement remains a follow-up; this convention does not rename source commands.
+See the [code standards](../docs/code-standards.md#normative-command-naming).
 
 ---
 
@@ -62,7 +63,7 @@ this convention does not rename source commands. See the
 
 Read both skill entrypoints and every bundled reference in the consuming context; resolve relative links from the installed package, not the target cwd. The parent retains human approval ownership. Drift invalidates prior approval; missing graph, affected-consumer runtime or comparable rescan evidence prevents a `fixed` claim.
 
-Local generation covers all seven targets. Copilot names are `evcrate-snyk-expert`, `evcrate-snyk-fix` and `evcrate-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
+Local generation covers all eight targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`). Copilot names are `evcrate-snyk-expert`, `evcrate-snyk-fix` and `evcrate-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
 
 ---
 

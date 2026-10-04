@@ -1,8 +1,8 @@
 # EVCrate
 
 EVCrate 2.6.0 is a private Node/TypeScript package that authors one canonical
-agent-harness source tree and builds verified projections for seven targets:
-`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, and `pi`.
+agent-harness source tree and builds verified projections for eight targets:
+`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, `pi`, and `vscode`.
 It publishes managed output with ownership, hashing, locking, and recovery rules,
 and ships one shared checkpoint advisor controller. The former DamHopper plugin
 runtime/package and paired host integration were retired 2026-10-02; current
@@ -194,7 +194,7 @@ interrupted harness transaction. They are not interchangeable.
    - Commands: `.evcrate/source/.claude/commands/`
    - Skills: `.evcrate/source/.claude/skills/`
    - Controller: `.evcrate/source/.evcrate/bin/`
-2. Regenerate and verify all seven target trees:
+2. Regenerate and verify all eight target trees:
    ```bash
    npm run distribute:build
    npm run distribute:check
@@ -260,6 +260,71 @@ OMP nested names use `__`; Copilot projects them as `/evcrate-cmd-fix-hard`.
 `evcrate/command-name-map.json` is authoritative for target translations.
 This is a documentation convention; scanner/parser prefix enforcement remains a
 follow-up and does not rename canonical source files or invent aliases.
+
+## VS Code Local native support
+
+EVCrate provides native support for VS Code Local as an isolated Agent Plugins 1.0 bundle (`evcrate-local`), distinct from the GitHub Copilot CLI target (`copilot`).
+
+### Separation from Copilot CLI
+
+- **Copilot CLI (`copilot`)**: Publishes Markdown prompt and skill files to `.copilot/` for the standalone CLI.
+- **VS Code Local (`vscode`)**: Publishes a complete Agent Plugins 1.0 bundle to `.evcrate-vscode/`, including `plugin.json`, `hooks.json`, 19 custom agents, 70 commands (mapped as manual skills), 40 skills, 6 styles, and runtime hook closures.
+
+### Qualified runtime prerequisites
+
+Live native qualification was verified on:
+- **VS Code**: `1.140.0` (commit `07f806f999227108933c2e30515b26eecc1fda74`)
+- **Copilot Chat Extension**: `0.68.0`
+- **Host Platform**: Linux x86_64 (`linux-x64`)
+- **Evidence**: [Qualification Index](plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md) (reconciling C01–C50 across 12 contexts)
+
+### Publishing and activation
+
+Publishing creates or updates the target projection without modifying editor settings:
+
+```bash
+# Preview publication in project scope
+evcrate publish --dry-run --scope project --project-root /path/to/project --target vscode --json
+
+# Apply publication to project scope
+evcrate publish --apply --scope project --project-root /path/to/project --target vscode --json
+
+# Apply publication to user HOME scope
+evcrate publish --apply --scope home --target vscode --json
+```
+
+**User-controlled activation**: EVCrate never writes to your VS Code configuration. To activate the published plugin in VS Code, manually register its absolute path in your user or workspace `settings.json`:
+
+```json
+{
+  "chat.pluginLocations": {
+    "/path/to/project/.evcrate-vscode": true
+  }
+}
+```
+
+### Coexistence and one-copy policy
+
+- **Single Active Copy**: Do not enable both HOME (`~/.evcrate-vscode`) and project-level (`.evcrate-vscode`) plugin registrations in the same workspace to prevent duplicate command and hook registrations.
+- **Copilot CLI Coexistence**: Project `.copilot` and `.evcrate-vscode` trees operate independently without collision.
+
+### Privacy, policy, and advisor boundaries
+
+- **Native Hooks & Policy**: The CommonJS runtime closure inspects 8 lifecycle events (`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `SubagentStart`, `SubagentStop`, `Stop`). Heavy build directories (`node_modules/`, `dist/`, `.git/`) are denied by scout policy; sensitive files (`.env`, credentials) require explicit interactive human approval.
+- **Opt-in MCP**: Example configurations in `evcrate/examples/vscode-settings.example.json` are inert templates with pinned versions; no MCP servers are enabled by default.
+- **Advisor Mentoring**: VS Code Local uses direct HOME advisor caller instructions pointing to `$HOME/.evcrate/bin/evcrate-advisor`. Standalone `--agent` relay is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`.
+
+### Recovery and removal
+
+```bash
+# Recover project scope after an interrupted transaction (preserves user settings)
+evcrate recover --scope project --project-root /path/to/project --json
+
+# Recover HOME scope
+evcrate recover --scope home --json
+```
+
+To deactivate, set `"chat.pluginLocations": { "...": false }` or remove the key in your VS Code settings. File removal deletes only receipt-owned managed files.
 
 ## Documentation map
 

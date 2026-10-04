@@ -36,7 +36,7 @@ The persisted target IDs are `claude`, `codex`, `gemini`, `antigravity`, `pi`, `
 | `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Target manifest loading, build metadata, controller closure | `manifest.ts`, `registry.ts`, `controller.ts` |
-| `src/adapters/` | Seven shared-registry adapters plus the VS Code Local adapter | `registry.ts`, `qualification.ts`, `vscode/` |
+| `src/adapters/` | Eight target projection adapters (seven shared-registry adapters plus VS Code Local native adapter in `vscode/`) | `registry.ts`, `qualification.ts`, `vscode/` (`adapter.ts`, `hook-protocol.ts`, `policy.ts`, `session-context.ts`, `advisory-caller.ts`) |
 | `src/distribution/` | Local build/check, publication planning, staging, apply, and recovery | `local-build.ts`, `publication-plan.ts`, `publication.ts`, `publication-recovery.ts` |
 | `src/filesystem/` | Host/portable paths, hashing, atomic writes, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/registry/` | Canonical resource scan, schema, validation, and queries | `scanner.ts`, `schema.ts`, `store.ts` |
@@ -57,7 +57,7 @@ The release workflow verifies an exact set of seven core assets. The plugin
 archive and checksum under `dist/advisor-plugin/` were removed; current release
 assembly does not build or publish them.
 
-## VS Code Local target and Phase 08 evidence
+## VS Code Local target, qualification, and Phase 09 rollout
 
 Schema-2 persists eight target IDs, including `vscode`; its target manifest writes
 to `.evcrate-vscode`. `src/adapters/vscode/` contains native conversion and runtime
@@ -67,23 +67,22 @@ seven adapters use the shared registry. The npm allowlist includes the generated
 seven. Activation stays user-controlled through manual `chat.pluginLocations`
 registration.
 
-The [qualification index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md),
+Phase 08 completed real VS Code Local qualification on Linux x64 (VS Code 1.140.0;
+Copilot Chat 0.68.0), verified via the [qualification index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md),
 [Linux project receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/receipt.md),
-and [Linux HOME receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-home/receipt.md)
-report Native Local qualification on Linux x64 (VS Code 1.140.0; Copilot Chat
-0.68.0). The index reconciles 50 capabilities / 12 contexts: six contexts marked
-`QUALIFIED`, five `NOT EXERCISED`, one `UNSUPPORTED`. Reported gates are 8/8
-Phase 08 tests and 737/737 full npm tests; the [Cycle 2 review](../plans/reports/code-review-261004-0023-phase-08-native-local-qualification-cycle-2.md)
-scores 9.4/10.
+and [Linux HOME receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-home/receipt.md).
+The matrix reconciles all 50 capabilities (C01–C50) across 12 declared contexts: 6 qualified
+on Linux x64, 5 unexercised due to physical workstation requirements, and 1 explicitly unsupported
+(`other-remote-web`). Gates passed at 8/8 qualification tests, 737/737 full test suite, and score 9.4/10
+(commit `cbd298a4`).
 
-The review reports exit 2 for `PreCompact`, `SubagentStart`, and `SubagentStop`,
-but the current [project event log](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/events-redacted.jsonl)
-and receipt show exit 0; reconcile the review against current records. The
-[wrong-harness record](../plans/261002-2213-vscode-local-native-support/reports/native-local/wrong-harness-isolation/events-redacted.jsonl)
-records a fixed disposition, not observed advisor-relay rejection. The
-[project-manager status handoff](../plans/reports/project-manager-261004-phase-08-status.md)
-keeps durable completion and Phase 09 subject to parent reconciliation.
-
+Phase 09 establishes documentation, controlled rollout, and lifecycle governance:
+- Clear separation between GitHub Copilot CLI (`copilot`) and VS Code Local (`vscode`).
+- User quickstart and manual registration guidance via `chat.pluginLocations`.
+- Scoped recovery without editor settings mutation (`evcrate recover`).
+- Coexistence rules for project and HOME plugin installations.
+- Privacy boundaries (fail-closed security bridge, ask/deny human confirmation).
+- Explicit stop-trigger criteria for version drift and announced upstream Local retirement.
 ## Windows advisor supervision, console repair, and verification
 
 Readiness Repair Phase 02 integrates native supervision and human-decision observation into the shared controller. The completion review records 9/9 focused tests, 236/236 advisor-controller tests, build, and `release:check`; these are implementation evidence, not production Windows qualification.
