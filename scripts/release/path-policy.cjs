@@ -23,7 +23,7 @@ const DOS_DEVICE_NAMES = new Set([
 ]);
 const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/u;
 
-function validateInventoryPath(relativePath) {
+function validateInventoryPath(relativePath, options = {}) {
   if (typeof relativePath !== 'string') {
     throw new TypeError('Inventory path must be a string');
   }
@@ -74,13 +74,19 @@ function validateInventoryPath(relativePath) {
   if (relativePath.startsWith('node_modules/') || relativePath.includes('/node_modules/')) {
     throw new Error(`node_modules path denied: ${relativePath}`);
   }
-  if (relativePath.startsWith('distribution/') || relativePath.startsWith('distribute') ||
-      relativePath.startsWith('migrate_') || relativePath.includes('/__pycache__') ||
-      relativePath.endsWith('.pyc') || relativePath.endsWith('.pyo')) {
-    throw new Error(`Python distribution/migrator/bytecode denied: ${relativePath}`);
-  }
-  if (relativePath.startsWith('tests/') || relativePath.startsWith('src/')) {
-    throw new Error(`Repository test/source directory denied: ${relativePath}`);
+  if (!options?.allowSourceAndTests) {
+    if (relativePath.startsWith('distribution/') || relativePath.startsWith('distribute') ||
+        relativePath.startsWith('migrate_') || relativePath.includes('/__pycache__') ||
+        relativePath.endsWith('.pyc') || relativePath.endsWith('.pyo')) {
+      throw new Error(`Python distribution/migrator/bytecode denied: ${relativePath}`);
+    }
+    if (relativePath.startsWith('tests/') || relativePath.startsWith('src/')) {
+      throw new Error(`Repository test/source directory denied: ${relativePath}`);
+    }
+  } else {
+    if (relativePath.includes('/__pycache__') || relativePath.endsWith('.pyc') || relativePath.endsWith('.pyo')) {
+      throw new Error(`Python bytecode denied: ${relativePath}`);
+    }
   }
   const fileName = segments.at(-1) || '';
   if (fileName === '.env' || (fileName.startsWith('.env.') && fileName !== '.env.example')) {

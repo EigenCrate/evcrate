@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createRoutingError } = require('./errors.cjs');
 const { verifyPinnedDirectoryWindows } = require('./windows-platform.cjs');
+const darwin = require('./darwin-platform.cjs');
 const { inspect, removeOwned, same } = require('./state-io.cjs');
 const {
   validateHistoryExecutionV1,
@@ -66,6 +67,43 @@ function pruneOldestTerminalRecords(ctx, records, bytesToFree, retentionCutoffMs
       consultationId: item.consultationId
     }, false);
     if (cDir) {
+      if (cDir.isDarwin) {
+        let itemFreed = 0;
+        try {
+          const outStat = darwin.statEntry(cDir.dirCap, 'outcome.json');
+          if (outStat) {
+            darwin.removeOwned(cDir.dirCap, 'outcome.json', outStat);
+            itemFreed += Number(outStat.size);
+          }
+          const execStat = darwin.statEntry(cDir.dirCap, 'execution.json');
+          if (execStat) {
+            darwin.removeOwned(cDir.dirCap, 'execution.json', execStat);
+            itemFreed += Number(execStat.size);
+          }
+          darwin.sync(cDir.dirCap);
+          freed += itemFreed;
+          const cEntries = darwin.list(cDir.dirCap);
+          if (cEntries.length === 0) {
+            darwin.close(cDir.dirCap);
+            const idx = cDir.caps.indexOf(cDir.dirCap);
+            if (idx >= 0) cDir.caps.splice(idx, 1);
+            darwin.removeEmptyDirectory(cDir.taskCap, item.consultationId);
+            darwin.sync(cDir.taskCap);
+            const tEntries = darwin.list(cDir.taskCap);
+            if (tEntries.length === 0) {
+              darwin.close(cDir.taskCap);
+              const tIdx = cDir.caps.indexOf(cDir.taskCap);
+              if (tIdx >= 0) cDir.caps.splice(tIdx, 1);
+              darwin.removeEmptyDirectory(cDir.projectCap, item.taskRunId);
+              darwin.sync(cDir.projectCap);
+            }
+          }
+        } catch {}
+        finally {
+          try { cDir.close(); } catch {}
+        }
+        continue;
+      }
       if (process.platform === 'win32' && !verifyPinnedDirectoryWindows(cDir.base)) {
         try { cDir.close(); } catch {}
         continue;
@@ -213,7 +251,46 @@ function pruneHistory(dependencies, policy, options, { historyContextFn, openHis
       }, false);
 
       if (cDir) {
+        if (cDir.isDarwin) {
+          let itemFreed = 0;
+          try {
+            const outStat = darwin.statEntry(cDir.dirCap, 'outcome.json');
+            if (outStat) {
+              darwin.removeOwned(cDir.dirCap, 'outcome.json', outStat);
+              itemFreed += Number(outStat.size);
+            }
+            const execStat = darwin.statEntry(cDir.dirCap, 'execution.json');
+            if (execStat) {
+              darwin.removeOwned(cDir.dirCap, 'execution.json', execStat);
+              itemFreed += Number(execStat.size);
+            }
+            darwin.sync(cDir.dirCap);
+            freedBytes += itemFreed;
+            prunedCount++;
+            const cEntries = darwin.list(cDir.dirCap);
+            if (cEntries.length === 0) {
+              darwin.close(cDir.dirCap);
+              const idx = cDir.caps.indexOf(cDir.dirCap);
+              if (idx >= 0) cDir.caps.splice(idx, 1);
+              darwin.removeEmptyDirectory(cDir.taskCap, item.consultationId);
+              darwin.sync(cDir.taskCap);
+              const tEntries = darwin.list(cDir.taskCap);
+              if (tEntries.length === 0) {
+                darwin.close(cDir.taskCap);
+                const tIdx = cDir.caps.indexOf(cDir.taskCap);
+                if (tIdx >= 0) cDir.caps.splice(tIdx, 1);
+                darwin.removeEmptyDirectory(cDir.projectCap, item.taskRunId);
+                darwin.sync(cDir.projectCap);
+              }
+            }
+          } catch {}
+          finally {
+            try { cDir.close(); } catch {}
+          }
+          continue;
+        }
         let itemFreed = 0;
+
         try {
           const outFile = `${cDir.base}/outcome.json`;
           const outStat = inspect(outFile);

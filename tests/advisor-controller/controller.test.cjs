@@ -74,16 +74,10 @@ function state(fixture, backend = 'codex') {
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
 }
 function spawnController(fixture, options) {
-  if (process.platform === 'win32') {
-    return spawn(process.execPath, [CONTROLLER], { ...options, env: fixture.environment });
-  }
-  return spawn(CONTROLLER, [], { ...options, env: fixture.environment });
+  return spawn(process.execPath, [CONTROLLER], { ...options, env: fixture.environment });
 }
 function run(fixture, input = CHECKPOINT) {
-  if (process.platform === 'win32') {
-    return spawnSync(process.execPath, [CONTROLLER], { input, env: fixture.environment, encoding: 'utf8' });
-  }
-  return spawnSync(CONTROLLER, [], { input, env: fixture.environment, encoding: 'utf8' });
+  return spawnSync(process.execPath, [CONTROLLER], { input, env: fixture.environment, encoding: 'utf8' });
 }
 function envelope(result) {
   assert.equal(result.stderr, '');

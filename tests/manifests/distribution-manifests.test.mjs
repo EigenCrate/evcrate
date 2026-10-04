@@ -62,10 +62,9 @@ test('controller verifier rejects an extra production tree entry', () => {
   writeFileSync(join(copy, 'lib', 'advisor', 'extra.cjs'), 'module.exports = {}');
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
-test('controller closure enforces exact 36 files, regular files, and require boundaries', () => {
-  assert.equal(ADVISOR_CONTROLLER_FILES.length, 36);
+test('controller closure enforces complete inventory, regular files, and require boundaries', () => {
   const hashes = controllerHashes(controllerRoot);
-  assert.equal(Object.keys(hashes).length, 36);
+  assert.equal(Object.keys(hashes).length, ADVISOR_CONTROLLER_FILES.length);
   const root = temporaryDirectory();
   const copy = join(root, 'bin');
   cpSync(controllerRoot, copy, { recursive: true });
@@ -73,6 +72,28 @@ test('controller closure enforces exact 36 files, regular files, and require bou
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
   rmSync(join(copy, 'viewer.js'));
   writeFileSync(join(copy, 'lib', 'advisor', 'runner.cjs'), "require('lodash');\n");
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+});
+test('controller validator accepts valid Mach-O binary assets and rejects truncated or invalid binary', () => {
+  const root = temporaryDirectory();
+  const copy = join(root, 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+
+  const arm64Node = join(copy, 'lib', 'advisor', 'native', 'darwin', 'prebuilt', 'darwin-arm64', 'advisor-native.node');
+  writeFileSync(arm64Node, Buffer.from([0x01, 0x02]));
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+
+  writeFileSync(arm64Node, Buffer.alloc(100));
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+});
+test('controller closure rejects non-loader requiring native .node addon', () => {
+  const root = temporaryDirectory();
+  const copy = join(root, 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+
+  const runnerPath = join(copy, 'lib', 'advisor', 'runner.cjs');
+  const original = readFileSync(runnerPath, 'utf8');
+  writeFileSync(runnerPath, `${original}\nrequire('./native/darwin/prebuilt/darwin-arm64/advisor-native.node');\n`);
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
 test('controller validator treats native text assets (.cs and .ps1) as owned text data, not JavaScript modules', () => {

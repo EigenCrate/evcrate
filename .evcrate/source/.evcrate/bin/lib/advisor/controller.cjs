@@ -244,12 +244,31 @@ async function runController(input, dependencies = {}) {
       environment = winCtx.canonicalEnv;
       trustedHome = winCtx.trustedHome;
       projectId = winCtx.projectId;
+    } else if (process.platform === 'darwin') {
+      const darwin = require('./darwin-platform.cjs');
+      const rawCwd = dependencies.cwd || process.cwd();
+      const projectRes = darwin.openRoot(path.resolve(rawCwd));
+      const projectRoot = projectRes.canonicalPath;
+      darwin.close(projectRes.directory);
+
+      let canonicalHome = sourceEnvironment?.HOME;
+      if (typeof canonicalHome === 'string' && canonicalHome && path.isAbsolute(canonicalHome)) {
+        try {
+          const homeRes = darwin.openRoot(canonicalHome);
+          canonicalHome = homeRes.canonicalPath;
+          darwin.close(homeRes.directory);
+        } catch {}
+      }
+      environment = sourceEnvironment;
+      trustedHome = canonicalHome;
+      projectId = createHash('sha256').update(projectRoot).digest('hex');
     } else {
       environment = sourceEnvironment;
       trustedHome = sourceEnvironment?.HOME;
       const projectRoot = path.resolve(dependencies.cwd || process.cwd());
       projectId = createHash('sha256').update(projectRoot).digest('hex');
     }
+
     const loaded = await dependency(dependencies, 'loadGlobalPolicy', loadGlobalPolicy)(trustedHome);
     selected = targetFromPolicy(loaded?.policy ?? loaded);
 

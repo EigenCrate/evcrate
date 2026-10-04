@@ -1,0 +1,59 @@
+# Advisor Node-only launch — caller inventory
+
+## Scope and outcome
+
+Read-only inventory of `.evcrate/source/.claude`, `src`, `scripts`, and `tests`; the only file authored is this report. `dist/cli/evcrate.js` is out of scope. No checks, tests, builds, formatter, controller invocation, or publication were run.
+
+**Required invariant:** every advisor-controller process launch names Node as executable and passes the absolute HOME-owned `.evcrate/bin/evcrate-advisor` script as an argv element, followed by operation argv. No Linux/POSIX or other direct-execution fallback. Keep JSON on stdin and retain existing operation/state/history protocols, cwd, environment/HOME semantics, and backend/retry behavior. Keep the controller shebang as packaging metadata only.
+
+## Canonical docs and runnable examples
+
+| Path | Evidence / classification | Action map |
+| --- | --- | --- |
+| `.evcrate/source/.claude/workflows/advisor-mentoring.md` | Lines 80–108 define platform guidance/table. Linux lines 85–88 currently say execute the extensionless `~/.evcrate/bin/evcrate-advisor` directly; Windows PowerShell and the Node caller already show `node "$controller"` and `spawn(process.execPath, [controller, ...args], { shell: false })`. Runnable Linux bash examples at lines 371, 400, 476, 547, 574, 601, 627, 657, 691, 722 directly execute the file. PowerShell HOME/encoding/stdin behavior is at 110–137. | Canonical doc edit: change Linux instructions, operation matrix (105–108), and every runnable bash invocation to explicit Node plus absolute controller script and unchanged trailing argv. Keep stdin JSON exact. Retain PowerShell encoding restoration and HOME rules; keep programmatic `shell:false`. Do not describe direct execution as an alternative. |
+| `.evcrate/source/.claude/skills/advisor-strategy/SKILL.md` | Lines 25–29 retain checkpoint/ownership rules; **line 31 explicitly prescribes direct POSIX execution** versus Windows PowerShell/Node. | Required canonical wording migration to explicit Node on every host; preserve tool-less skill/counsel boundary and protocol. |
+| `.evcrate/source/.claude/skills/advisor-strategy/references/brief-contract.md` | **Line 25 explicitly prescribes direct POSIX execution** versus Node on Windows. Lines 28–32 and 79–85 describe unchanged protocol/envelope examples. | Required canonical wording migration. This file feeds `scripts/generate-runtime-brief.mjs`; parent regenerates the brief/build identity at the assigned phase boundary. Preserve checkpoint payload and response examples. |
+| `.evcrate/source/.claude/agents/advisor.md` | Lines 13–17 describe caller-supplied checkpoint/evidence. The workflow says the counsel agent is tool-less (advisor-mentoring.md lines 141–146). | Agent is not a controller launcher; preserve the boundary, do not add CLI instructions. |
+| `.evcrate/source/.claude/commands/bootstrap.md`, `.evcrate/source/.claude/commands/code.md`, `.evcrate/source/.claude/commands/cook.md`, `.evcrate/source/.claude/commands/bootstrap/auto.md`, `.evcrate/source/.claude/commands/bootstrap/auto/fast.md`, `.evcrate/source/.claude/commands/bootstrap/auto/parallel.md`, `.evcrate/source/.claude/commands/code/auto.md`, `.evcrate/source/.claude/commands/code/no-test.md`, `.evcrate/source/.claude/commands/code/parallel.md`, `.evcrate/source/.claude/commands/cook/auto.md`, `.evcrate/source/.claude/commands/cook/auto/fast.md`, `.evcrate/source/.claude/commands/cook/auto/parallel.md`, `.evcrate/source/.claude/commands/fix/hard.md`, `.evcrate/source/.claude/commands/fix/logs.md`, `.evcrate/source/.claude/commands/fix/parallel.md`, `.evcrate/source/.claude/commands/fix/test.md` | Each matching reference points named checkpoints to the canonical workflow; none gives a separate executable example. | Read-only references; do not propagate a second launcher convention. |
+
+The workflow’s PowerShell sample uses `node` with a quoted absolute controller path and preserves exact stdin encoding (110–137). Its documented HOME resolution preserves an invalid explicit `$env:HOME` as an error and falls back only when HOME is unset. Keep those semantics. The Node sample is explicitly a **Node.js caller**; `process.execPath` is not a safe Node selector if the parent can be Bun.
+
+## Active implementation and scripts
+
+| Path | Evidence / classification | Action map |
+| --- | --- | --- |
+| `src/cli/health.ts` | `controllerPath()` validates a regular non-symlink script (17–25); `runHealth()` already launches `runtime.execPath ?? process.execPath` with script argv, diagnostic `cwd: context.packageRoot`, HOME/EVCRATE_HOME/EVCRATE_STATE_HOME and canonical JSON stdin (55–71). `src/cli/evcrate.ts:1` identifies the supported CLI as Node-parent. | **Verify-only normally**, not a mandatory launch rewrite. Retain actual Node-parent invocation and injected Node executable contract, diagnostic package-root cwd, bounded I/O, environment and response handling. No new Bun CLI support is required. The workflow must separately warn Bun-hosted harnesses not to treat Bun's `process.execPath` as Node. |
+| `src/cli/process-runner.ts` | `spawn(options.executable, [...options.args])`, `cwd`, safe env and `shell: false` (119–123). | Existing argv/no-shell transport is the pattern to retain; only change if Node/script arguments need representation. |
+| `src/cli/dispatch.ts` | Diagnostic protocol is dispatched to `runHealth()` (402–405). | Diagnostic route remains unchanged; no new launch path. |
+| `scripts/consult-advisor-phase-e02.mjs` | HOME-owned `bin` at line 6; **four** direct calls: init 76, checkpoint 194, inference 207, **state-get 222**. JSON is stdin; cwd/env are inherited. | Retained runnable transport: migrate all four to `spawnSync(process.execPath, [bin, ...args], ...)` under an explicit Node parent. Require valid absolute explicit HOME using existing policy; no invalid-HOME fallback. Preserve payloads, historical evidence/snapshots, guard, timeout and result handling; never execute as smoke. |
+| `scripts/consult-advisor-phase-e03.mjs` | Same HOME-owned direct shape; **four** calls: init 76, checkpoint 207, inference 220, state-get 235. Historical replay guard (27–29) remains. | Retained runnable transport: migrate all four through Node, not the historical payloads/snapshots. Preserve the guard, stdin, inherited cwd/env, timeout and result handling. Never execute as smoke or revive retired plugin source. |
+| `scripts/generate-controller-inventory.mjs` | Defines the controller file inventory (10–27) and emits `src/manifests/controller-inventory.generated.ts`; generated-file marker at 56–58. | Generator, not a launch caller. No inventory change is implied by transport wording. If inventory ever changes, edit generator and regenerate; never hand-edit generated output. |
+| `src/manifests/controller-inventory.generated.ts` | Generated controller closure listing, not launcher instructions. | No hand edits. Launch wording alone does not change its file list; parent build may regenerate identical inventory. Later Darwin assets require generator-owned additions under the Darwin contract. |
+
+No other advisor-controller process-spawn site was found in the scoped `src` search; `src/cli/health.ts` is the diagnostic launcher and the process runner is generic. Other adapter/hook spawns are unrelated and intentionally excluded.
+
+## Test and gate map
+
+**Direct launches that must migrate with implementation / test harness.** These currently choose direct controller execution on non-Windows, or always execute the extensionless controller:
+
+- `tests/advisor-controller/controller.test.cjs` — `spawnController` and `run` branch to direct controller on non-Windows (76–86); switch both to Node + script argv.
+- `tests/advisor-controller/mentor-brief.test.cjs` — real-entrypoint failure/success launches use platform branch (752–783); make both explicit Node + script argv.
+- `tests/advisor-controller/retry-orchestration.test.cjs` — smoke launch branches at 920–922; make explicit Node + script argv.
+- `tests/advisor-controller/smoke-30s.cjs` — direct `spawn(CONTROLLER, [])` at 49; migrate to explicit Node + script argv.
+
+**Already explicit Node examples (retain; avoid second conventions).** `tests/advisor-controller/history-cli.test.cjs` (110, 387, 399), `tests/advisor-controller/state-cli.test.cjs` (42–44), `tests/advisor-metrics/history-metrics.test.mjs` (403), **`tests/adapters/phase08-mentoring-integration.test.mjs`** (104–106 and 400–402), and **`tests/advisor-controller/verification-lifecycle.test.cjs`** (304–308) launch through `process.execPath` plus argv. Node-parent tests need no launcher rewrite; bounded fixture portability may still be needed. Linux passes over skipped Win32 branches are not Windows evidence.
+
+**Focused current diagnostics and protocol gates.** `tests/cli/health.test.mjs` (31–95) already uses real Node subprocesses for diagnostic success/failure and malformed output. Keep production health verify-only; extend runtime cases for non-executable script copies, spaces/Unicode, missing selected Node/script, HOME/env and diagnostic cwd as needed. Wiring/argv assertions are supplemental only; no permanent source-string or mock-echo launch tests. `tests/advisor-controller/controller.test.cjs` retains real EOF/stream/signal behavior through migrated helpers. `package.json:27,46` confirms `npm run test:cli` and `npm run test:advisor-controller`; `build` includes prebuild brief/runtime/inventory generation.
+
+**Linux verification proposal (future only):** parent runs the Phase 02 coherent build/projection regeneration after workers finish, then Phase 03 focused real-process gates and proposed installed/private-HOME `tests/advisor-controller/node-launch.test.cjs`. Exercise the actual controller and deterministic package-shaped fake providers: v2 state/checkpoint/inference/history lifecycle, malformed input, execute-bit independence, spaces/Unicode, cwd scoping, and selected-Node/script failure without direct fallback. Verify settled envelope/exit/framing and zero state/provider mutation on transport failures, not only requested argv. Never run consult scripts or paid vendors. Phase 03 is interim launch evidence; Phase 06 owns final Darwin-integrated Linux qualification and the identical bundle later transferred to native Windows.
+
+## Portability and unresolved points
+
+- macOS requires actual state/baseline/history/process enablement, not launcher-only behavior. [Darwin runtime contract](../darwin-runtime-contract.md) supersedes older research build-authorization caveats: controlled arm64/x64 native **build-only** packaging is approved; addon/advisor execution, tests and runtime qualification on macOS remain forbidden. Native OS internals remain necessary.
+- Cwd has two scopes: state/history callers preserve canonical project cwd; diagnostic health intentionally uses `context.packageRoot`. Consult scripts inherit caller cwd. Do not silently switch either to HOME/controller directory.
+- Preserve explicit-HOME authority: empty/relative/unsafe explicit HOME fails using existing validation; Windows native profile fallback applies only when HOME is absent. Never use `HOME || os.homedir()`. Bun-hosted harnesses select supported `node`, not Bun `process.execPath`; no Bun support expansion for the Node-only CLI.
+- `README.md:221–246` has policy/advice examples but no direct advisor command in the inspected revision. Phase 02 may add one concise explicit-Node usage note pointing to canonical payloads; migrate any additional maintained executable examples found in the one-time audit. Historic changelog/plans/reports remain immutable.
+
+## Unresolved questions
+
+None for caller scope: both consult scripts remain runnable transports, all eight calls migrate, health stays verify-only normally. Future implementation still needs an owner-approved dirty-source snapshot and the native build/Windows prerequisites recorded in the parent contracts.

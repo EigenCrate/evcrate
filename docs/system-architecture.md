@@ -3,9 +3,9 @@
 **Status:** Current EVCrate core implementation reference; filesystem-policy cutover Phases 01–02, Hook Materialization Scope Distribution through Phase 09, and Windows release qualification through Phase 10 remain documented milestones.
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; standalone picker/reader source was later removed.
 **DamHopper Advisor integration:** The former plugin runtime and paired host integration were retired on 2026-10-02. EVCrate core CLI/controller and shared viewer source remain; historical plugin-era qualification below does not qualify the native DamHopper integration.
-**Windows support:** The qualified Windows release boundary remains standalone installer lifecycle and clean-install `version --json`; native advisor evidence does not establish broad Windows runtime parity.
-**Native Windows advisor:** Phases 01–04 complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Readiness Repairs 01–04 are also complete; general Linux qualification passed 400/400. Production rollout remains operator-gated.
-**Updated:** 2026-10-02
+**Windows support:** The qualified release boundary remains standalone installer lifecycle and clean-install `version --json`; Phase 07 native advisor execution did not qualify broad Windows runtime parity.
+**Native Windows advisor:** Phases 01–04 and readiness Repairs 01–04 are complete. Phase 07 executed one native x64 row (111 passed; formal qualification invalidated by stale `.omp` manifest). Phase 06 regenerated and Linux-requalified replacement candidate `evcrate-candidate-1791140555626` (7,410 files, repaired `.omp` hash, 9/9 extracted root launch tests passed, Cycle 2 native runner fixes, 753/753 Linux tests passed, review approved 9.8/10), ready for Phase 07 requalification. Production rollout remains operator-gated.
+**Updated:** 2026-10-05
 
 **Authority:** TypeScript control plane and canonical Advisor controller. The former DamHopper plugin integration pages are historical.
 
@@ -23,8 +23,12 @@ and `vscode`). Node `>=22.19.0` is the package engine. The package exposes:
 
 - `evcrate` → `dist/cli/evcrate.js`, the one-shot TypeScript control-plane CLI.
 - `evcrate-advisor` → `.evcrate/source/.evcrate/bin/evcrate-advisor`, the shared
-  CommonJS checkpoint controller.
-
+  CommonJS checkpoint controller. The approved Phase 01 target contract requires
+  maintained callers to launch supported Node (`>=22.19.0`), pass the absolute
+  HOME-owned script as `argv[0]`, send exact UTF-8 JSON on stdin, and use canonical
+  project cwd (`packageRoot` for health diagnostics). Direct POSIX execution and
+  retry/fallback are prohibited; baseline direct-exec sites remain for Phase 02
+  migration.
 The control plane resolves an immutable invocation context, validates one request,
 dispatches one operation, writes one result, and exits. It does not run a daemon,
 listener, background broker, or provider router.
@@ -39,7 +43,8 @@ flowchart TD
   SharedPhase --> HomeShared[Shared HOME commit\n~/.evcrate/bin]
   HarnessPhase --> ScopeHome[--scope home\nHOME harness targets]
   HarnessPhase --> ScopeProject[--scope project\nProject workspace targets]
-  Checkpoint[Versioned checkpoint v2\n(v1 compatibility)] --> Advisor[~/.evcrate/bin/evcrate-advisor]
+  Checkpoint[Versioned checkpoint v2\n(v1 compatibility)] --> AdvisorLaunch[node ~/.evcrate/bin/evcrate-advisor\nExplicit Node launch]
+  AdvisorLaunch --> Advisor[~/.evcrate/bin/evcrate-advisor]
   Policy[$HOME/.evcrate/advisor-routing.json] --> Advisor
   Advisor --> Envelope[One terminal controller envelope]
 ```
@@ -153,11 +158,12 @@ feeds ordered shared and harness phases for scalar `--scope home|project` (defau
 shebang bytes, not source mode; mode-only changes are not actions, and new/updated
 POSIX launcher writes receive additive execute bits.
 
-1. **Shared infrastructure**: The advisor controller closure (`.evcrate/bin`) is
-   unconditionally published under `--home` (`<home>/.evcrate/bin`) in both scopes.
-   Target filtering via `--target` applies only to harness projections and never
-   filters or skips shared controller publication. Shared controller materialization
-   never targets a project workspace.
+1. **Shared infrastructure**: `.evcrate/bin` is published unconditionally to
+   `<home>/.evcrate/bin` in both scopes; `--target` filters only harness output.
+   The controller is never materialized under a project root. Shebang, npm `bin`,
+   and execute bits remain packaging metadata, not a direct-execution fallback.
+   Darwin helpers are packaged for both architectures; Phase 05 source integration
+   does not authorize macOS execution or testing.
 2. **Harness destinations**:
    - **HOME scope (`--scope home`)**: Target manifests specify `homePolicy.bindings`
      beneath `--home`. Neutral source roots map to target HOME directories (`.claude`,
@@ -231,7 +237,8 @@ release candidate and publisher are separate; see [PDR FR-15](./project-overview
 - `tests/distribution/release-orchestration.test.mjs` covers WRQ-042 (workflow boundary), WRQ-043 (fixture/verify/smoke), and WRQ-044 (labels/preserved config).
 
 The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its current 36 production files are:
+`.evcrate/source/.evcrate/bin`. Its current 44 entries are the 36 shared/Windows
+files below plus eight Darwin-specific entries:
 
 ```text
 evcrate-advisor
@@ -271,6 +278,18 @@ lib/advisor/windows-native.cs
 lib/advisor/windows-native.ps1
 lib/advisor/windows-platform.cjs
 ```
+Darwin additions:
+
+```text
+lib/advisor/darwin-platform.cjs
+lib/advisor/native/darwin/advisor-native.c
+lib/advisor/native/darwin/advisor-native.h
+lib/advisor/native/darwin/prebuilt/artifacts.json
+lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node
+lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node
+lib/advisor/native/darwin/process.c
+lib/advisor/native/darwin/storage.c
+```
 
 `runtime-brief.generated.cjs` is generated by
 `scripts/generate-runtime-brief.mjs` from the canonical
@@ -284,9 +303,8 @@ permission modes, and reject missing, extra, stale, or mismatched entries. Linux
 `install.sh` grants mandatory CLI/advisor roles execute bits regardless of archive
 mode and runs the staged CLI directly; required chmod failure aborts installation.
 
-Native Windows advisor Phase 02 synchronizes the `install.sh` and `install.ps1` inventories at exactly 36 code-point-sorted paths; manifests verify exact count/hash parity and reject viewer/external-package assets.
-Native Windows advisor Phases 01–04 are complete. Phase 03 used the absolute HOME controller through PowerShell 5.1, observed Unicode `STATE_READY`, and returned live OMP `ADVICE_READY`; isolated npm-pack and `install.ps1` sandbox publications verified all 36 closure hashes without changing routing policy.
-Phase 04 qualified OMP/Codex diagnostic paths; Claude/Pi remain unverified. Linux/POSIX invocation is unchanged, and WSL Ubuntu 22.04/ext4 qualification passed 400/400. This does not qualify broad Windows runtime parity; only installer lifecycle and `version --json` are in the release support boundary.
+Native Windows Phase 02 synchronized installer inventories at its then-current 36-file baseline. The generated controller closure now has 44 entries, including the eight Darwin files above; generated inventory and installer manifests must remain in parity.
+The Windows sandbox publication evidence below is historical 36-file verification, not macOS qualification. The current Darwin support boundary is in Sections 5.6 and 7.
 
 ## 5. Shared advisor controller
 
@@ -442,18 +460,7 @@ time, or causal effectiveness, and does not alter list/show/export/prune.
 
 #### Historical standalone explorer milestones (Phases 05–10; 2026-09-18–19)
 
-Phase 05 (2026-09-18) recorded explicit-handle history traversal, bounded reads,
-shared normalization, and stale retention; Phase 06 added the display-only
-evaluation protocol and an 8 MiB standalone file picker. Phase 07 built the
-standalone React explorer and E03 reused its shared views in the embedded UI.
-Phase 08 recorded a 298.5 kB bundle and an exact-seven asset boundary; Phase 09
-recorded 14 Playwright checks and five 10,000-record benchmarks (p95 scan 1,643 ms,
-detail 67 ms, cancel 104 ms, zero long tasks above 200 ms); Phase 10 documented
-the tested Chromium/Linux scope and metric limits.
-
-Those browser picker/reader sources were later removed from this repository. The
-dated milestone records are not current standalone support, current release-asset
-verification, or G4 qualification; source removal does not authorize retirement.
+Historical milestones recorded explicit-handle history traversal, React explorer builds, benchmarks (p95 scan 1,643 ms), and Chromium/Linux limits. These browser sources were subsequently removed; the dated records do not establish current standalone support or G4 qualification.
 
 ### 5.3 Compatibility checkpoint wire contract
 
@@ -632,6 +639,54 @@ needed, and descendants are reaped. The workspace is empty, isolated, outside
 the repository, checked against symlink/identity changes, and removed after
 child termination.
 
+### 5.6 Approved Node-only launch contract & cross-platform runtime boundary
+
+Status: Approved Node-only launch contract and caller migration (Phases 01–02, 2026-10-04); Phase 06 replacement candidate regenerated (ID: `evcrate-candidate-1791140555626`, review approved 9.8/10); ready for Phase 07 native Windows requalification.
+Standardizes advisor invocation on one cross-platform tuple across Linux, native
+Windows, and macOS, while defining the approved Darwin runtime enablement boundary:
+
+```text
+executable = supported Node executable (engine >=22.19.0)
+argv       = [absolute HOME-owned evcrate-advisor path, ...operation arguments]
+stdin      = exact request JSON encoded as UTF-8, then EOF
+cwd        = canonical caller project directory (packageRoot for health diagnostics)
+```
+
+1. **Invocation and executable resolution**:
+   - Programmatic Node callers running under Node use `process.execPath`.
+   - Shell and harness callers invoke the configured or available supported `node` executable.
+   - Bun-hosted harnesses must not assume Bun `process.execPath` is Node; select actual Node explicitly. No Bun support is added to the Node-only CLI.
+   - Executable resolution is performed once per invocation; launch failure is terminal transport failure, never an implicit fallback to direct execution or alternative interpreter.
+2. **Absolute HOME and controller path resolution**:
+   - The controller path must be an absolute native path under authoritative HOME: `<home>/.evcrate/bin/evcrate-advisor`.
+   - Explicit `HOME` when present must be non-empty, absolute, and safe; empty, invalid, or relative explicit HOME fails closed. Never use `HOME || os.homedir()`.
+   - Windows native-profile fallback (`USERPROFILE` / `UserProfile`) applies only when `HOME` is absent.
+   - Native path joining and argv arrays with `shell: false` are required; never pass unexpanded `~`, JSON in argv, or `node -e` interpolation.
+3. **Stdin and argument contracts**:
+   - Standard input streams exact UTF-8 request JSON followed immediately by EOF.
+   - Argument arrays preserve exact operations: `[]` for checkpoint inference, `['state', op]`, and `['history', op]`. Diagnostic requests use empty argv and their distinct envelope.
+   - Standard output framing, byte limits, cancellation signals, and terminal envelopes (`ADVICE_READY`, `QUALIFIED`, `STATE_READY`, `HISTORY_READY`, `FAILED`) are strictly preserved.
+4. **Platform support and Darwin boundary**:
+   - **Linux**: Primary implementation platform; qualified with real local smoke verification, focused regressions, and full package/projection gates.
+   - **Native Windows**: Phase 07 exercised Windows x64, PowerShell 5.1, Node `v24.21.0`: 111/111 portable/native advisor tests passed, as did installed lifecycle and PowerShell transport. Formal qualification failed when required `node-launch-behavior` hit a stale `.omp` candidate build-manifest hash. Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`) with repaired manifests, Cycle 2 runner fixes, and clean Linux requalification, ready for Phase 07 re-execution.
+   - **macOS (Darwin)**: Phase 05 integrates the packaged Node-API 8/ABI 1 bridge with state, baseline, history, export/prune, and workspace paths. The code is present but untested/unqualified; addon/controller/provider execution, tests, and CI remain prohibited.
+   - **Cycle 3 boundary**: Static review plus Linux results do not qualify native behavior. An outstanding static warning identifies `owns_parent` as uninitialized for `/var` and `/tmp` intermediate capabilities, a potential descriptor leak; no macOS behavior has been tested.
+
+### 5.7 Darwin native runtime architecture and capability model (Phase 05)
+
+Darwin runtime integration introduces a descriptor-relative capability architecture gated strictly by `process.platform === 'darwin'`:
+
+1. **Strict platform isolation**: All Darwin capability and process logic is isolated behind platform checks; Linux (procfs, kill-0, fd-pinning) and Windows (PowerShell/Job Objects) invariants are preserved without shared fallback paths.
+2. **Descriptor-relative capabilities**: Pinned capabilities replace logical path mutations across runtime modules:
+   - `state-io.cjs`: Traverses roots via `openRoot`, performs transactional mutations and locks via `openDirectory`, `openRegular`, and `removeOwned`.
+   - `state-baseline.cjs`: Captures baseline and rehashes files using descriptor-relative capabilities and stat comparisons; safely rewalks missing paths without pathname traversal.
+   - `history-store.cjs`: Manages history roots and consultation directories via capability descriptors; enforces sync and bounds.
+   - `history-query.cjs` & `history-prune.cjs`: Safely re-pins parents for post-scan reads; performs capability-scoped pruning of owned leaves and empty directories.
+   - `isolated-workspace.cjs`: Resolves temp roots and creates workspaces via `openDirectory(..., true)` requiring `created=true` provenance, followed by recursive capability cleanup.
+3. **Scoped parent capability ownership (`owns_parent`)**: In `AdvisorCap` (`storage.c`, `advisor-native.c`, `advisor-native.h`), intermediate directory descriptors opened during `openRoot` set `owns_parent = true` so leaf closure reclaims the ancestor descriptor chain. Child capabilities from `openDirectory` set `owns_parent = false` to preserve the caller's shared parent capability.
+4. **Process identity & self-token verification**: Darwin process status is evaluated from monotonic start tokens (`getDarwinProcessIdentity`, `checkDarwinProcessStatus`). A valid non-null self token is mandatory before writing state locks (`state.lock`), history locks (`history.lock`), recovery guards (`state-recovery.lock`), or persisting pending consultations (`claimCheckpoint`).
+5. **Cycle 3 static review & status boundary**: An outstanding static review warning flags uninitialized `owns_parent` for `/var` and `/tmp` intermediate capabilities. Darwin implementation is present but untested/unqualified; addon loading, controller/provider execution, automated tests, and CI on macOS remain prohibited.
+
 ## 6. Advisor supervision and command projections
 
 A final standalone `--advice` enables explicit checkpoint mentoring for bootstrap, code, cook, and fix. Parsing is case-sensitive and whitespace-delimited: only a final token activates; duplicate tokens reject.
@@ -639,6 +694,7 @@ Quoted, embedded, suffixed, differently-cased, or non-final forms remain work te
 Handoffs preserve explicit mode, `WORK_ARGUMENTS`, and active run identity/context; default mode carries no token, and `@advisor` is never recreated.
 An outer <code>ADVICE_READY</code> envelope satisfies the inference step only; disposition, required work and validation, outcome, and successful `state complete` remain mandatory before `DONE`.
 
+The approved Node-only contract is implemented by maintained canonical workflows (`.claude/workflows/advisor-mentoring.md`), skills (`advisor-strategy`), and command projections: invoke the controller through explicit Node, with no direct POSIX execution or fallback. Preserve the tool-less counsel boundary and exact JSON streaming.
 The inline advice workflow is a separate main-session feature. It interviews the
 user and writes its own report; it does not use checkpoint routing policy or act as
 an alternate controller path. Copilot, Pi, Gemini, and Codex projections may expose
@@ -666,33 +722,29 @@ and `export` are executable shell syntax, not slash command-resource names.
 
 Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitized environment, isolated cwd, output lifecycle, timeout/cancellation, descendant cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic recovery, and selected-target publication. These contracts do not authenticate a vendor CLI.
 
-Linux x64 remains the qualified boundary for live installed-CLI checks.
-Windows release qualification covers only installer lifecycle and `version --json`
-on hosted Windows Server 2025 x64 (PowerShell 5.1/7; Node 22.19.0/24.21.0).
-Native advisor readiness repairs 01–04 are complete; Phase 04 verification recorded 20/20 focused tests and 390/390 final required-suite runs, with a 9.0/10 independent review and no critical findings. This closes repair verification, not production Windows qualification.
-Native Windows advisor Phases 01–04 are complete: Phase 03 observed live OMP `ADVICE_READY` and Linux qualification passed 400/400; Phase 04 qualified OMP/Codex diagnostic paths, while Claude/Pi remain unverified. The release boundary remains installer lifecycle and `version --json`; broader Windows runtime, production publication, deployment, and approval remain separate gates.
-The Hook Materialization Scope Distribution milestone's dated proof recorded
-512/512 tests, a 29-file closure, `distribute:check`, and installed Linux fixtures;
-these do not qualify live vendors or authorize production HOME publication.
+### Phase 06 package and Linux qualification
+Phase 06 regenerated target projections and froze replacement candidate `evcrate-candidate-1791140555626` for native Windows qualification re-execution; it is an internal transfer candidate, not an npm release.
+- **Candidate bundle:** 7,410 files (132,976,902 expanded bytes); archive SHA-256 `6a720dfb136fb80ccd624cdca63dbce3ca18ba08fe75a2ef322c90f3d7a5b3a9`, manifest SHA-256 `365f145bb0deefe9eabad83ac6c9f9e598e7bb80f275c435e54a17321ee7c86a`.
+- **Manifest repair & extracted test:** Output hash in `.evcrate/build-manifest-omp.json` repaired; `node-launch.test.cjs` passed 9/9 directly within extracted candidate root (`/tmp/evcrate-qualification-extracted/package`).
+- **Runner updates:** Cycle 2 fixes in `tests/advisor-controller/native-windows-qualification.cjs` add retry-bounded sandbox cleanup (`maxRetries: 5`), fail-safe receipt writing, and strict argument formatting.
+- **Linux qualification gates:** 753/753 passed (25 win32 skips, 778 total on Node `v24.16.0` Linux x64); health & node-launch passed 17/17; `release:check` and `distribute:check` passed; >30s smoke passed (exit 0).
+- **Code review:** Score 9.8/10, zero critical findings, user approved. Ready for Phase 07 native Windows requalification.
+
+### Phase 07 native Windows advisor execution (2026-10-05)
+The initial run on native Windows x64, Windows PowerShell 5.1, Node `v24.21.0` verified 111/111 native suite assertions and installed lifecycle / PowerShell transport. Required `node-launch-behavior` failed (1 passed, 8 failed) due to candidate `.evcrate/build-manifest-omp.json` stale hash, invalidating qualification under Rule 94.
+- Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`) with repaired manifests, Cycle 2 runner fixes, and clean Linux requalification.
+- Phase 07 is ready for native Windows requalification re-execution against replacement candidate `evcrate-candidate-1791140555626`.
+- Cycle 2 review (8.8/10, no critical issues) identified two attached-TTY defects: initial `continue` is rejected before the console observer, and inherited stdin suppresses the JSON request. Fix both before positive console qualification.
+- Evidence: [Phase 07 report](../plans/261003-1527-advisor-node-only-launch/reports/phase-07-windows-qualification.md), [Cycle 1 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0043-phase-07-native-windows-qualification.md), [Cycle 2 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md), [Phase 06 requalification review](../plans/reports/code-review-261005-0231-phase-06-qualification-regeneration.md).
 
 ### Historical Advisor Metrics Explorer support boundary (Phases 01–10; completed 2026-09-19)
-
-At completion, the standalone explorer's tested boundary was Chromium >=120 on Linux with File System Access; it did not attest POSIX permissions/ownership, complete audit coverage, or causal/cost/saved-time claims. Its picker/reader source has since been removed, so this history does not establish current standalone support or G4.
+Historical standalone explorer testing covered Chromium >=120 on Linux with File System Access; picker/reader sources are removed and do not establish current support.
 
 ### Deterministic Windows fixture and predecessor resolver (Phase 04)
-
-Phase 04 (2026-09-14) adds an internal predecessor boundary for Windows candidate and harness phases without altering public support. `buildWindowsTestReleaseSet` builds archive, sidecar, metadata, and `install.ps1` with fixed `FIXTURE_BUILD_TIMESTAMP = 2026-01-01T00:00:00.000Z` for byte-identical fixtures. The resolver fetches non-draft GitHub releases requiring exact asset labels, canonical filenames, and `verifyWindowsAssetSet` validation. Initial qualification uses `bootstrap-fixture` `1.0.0`; once qualification history exists, missing/tampered assets fail closed without older fallback. `predecessor-downloader.mjs` stages and verifies downloads, returning `{kind, version, tag, sourceCommit, files, directory}` for downstream phases.
+Historical fixture and predecessor details remain recorded in the [code standards](./code-standards.md); they do not widen Windows support.
 
 ### Native Windows advisor supervision and console repair
-
-Native advisor Phases 01–04 are complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Full Linux qualification passed 400/400. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`; production publication and approval remain separate gates.
-
-`runner.cjs` routes Windows provider execution through the fixed PowerShell/C# bridge. Native process creation assigns the provider to a kill-on-close Job and captures its creation token from the launch handle. The runner accepts success only after a successful query confirms the Job is empty; unconfirmed cleanup blocks success/retry. Control-channel EOF and cancellation terminate the Job; Windows `taskkill` and teardown PID lookup are removed.
-Repair Phase 03 canonicalizes the Windows environment and resolves trusted HOME/project context before policy or executable lookup. Windows aliases are case-insensitive: equal values deduplicate; conflicts fail with `INVOCATION_INVALID`. The canonical environment preserves absent custom-environment `PATH` as omitted and explicit `PATH: ""` as empty; initial route resolution gets no PATH search directories in either case.
-The controller freezes a route's physical launch record before provider probes and reuses it for route probes, retries, and generation; diagnostic qualification resolves before its probes and passes the record when available. Runner rechecks the supplied record before launch. It binds the native launcher or Node runtime, optional JS entrypoint/package metadata, file identities, and spawn prefix; changed content at the same path or disappearance fails closed.
-Resolution uses fixed backend/package allowlists and verified `package.json` `bin` metadata for supported npm global/local layouts. It checks command binding and package containment, selects native `.exe` or JS targets, and never executes or parses `.cmd`/`.bat` shim contents.
-
-`state-human.cjs` invokes the fixed console observer after state preflight. It reads via verified `CONIN$`/`CONOUT$`, displays bounded decision context and the nonce challenge independently of piped JSON, and reports only `OBSERVED`, cancellation, or failure. State replay/revision checks remain; POSIX process-group and `/dev/tty` paths are unchanged. State/history owner checks remain superseded by the trusted-files policy.
+The fixed PowerShell/C# bridge, Job cleanup, launch identity, environment handling, and console rules are implementation evidence only. Windows support remains the installer/version boundary above; see the [codebase summary](./codebase-summary.md) for the current source map.
 
 ## 8. Historical advisor mentoring and release qualification (Phases 01–10)
 
@@ -711,89 +763,26 @@ limited to the installer/version subset described in Section 7.
 
 ### 8.1 Sanitized history and outcome review
 
-Phase 07 history is optional rich audit, not task-state authority:
-
-- Store version-1 `execution.json` (128 KiB) and `outcome.json` (64 KiB) under
-  `$HOME/.evcrate/advisor-history/<project-id>/<task-run-id>/<consultation-id>/` (historical requirement; since superseded by the cross-platform trusted-files policy, removing UID/SID/0600 mode restrictions).
-- Record a started snapshot before model launch; settle terminal
-  `ADVICE_READY`/`FAILED` exactly once with CAS identity and byte checks.
-- Link outcomes to task/consultation identity, disposition, evidence revision,
-  actual changed paths, validation, result, and correction number.
-- Retain 30 days/100 MiB by default; protect active records. Storage failure
-  reports `audit_status: "degraded"` without retrying inference or failing usable
-  advice.
-- `evcrate-advisor history list|show|export|prune` provides bounded, project-scoped
-  metadata, sanitized display/export, and dry-run/apply retention cleanup.
-- Never retain credentials, hidden reasoning, raw stderr, raw vendor logs, or
-  unbounded text. Targeted history evidence passed 19/19; the full advisor
-  controller suite passed 204/204.
+Phase 07 history is optional audit, distinct from task-state authority:
+- Version-1 `execution.json` (128 KiB) and `outcome.json` (64 KiB) are bounded, linked records under the project/task/consultation hierarchy.
+- A started record precedes model launch; terminal settlement uses identity/byte CAS. Outcomes link disposition, evidence revision, changed paths, validation, and correction number.
+- Default retention is 30 days/100 MiB; active records remain protected. `history list|show|export|prune` provides bounded, project-scoped review and cleanup.
+- Keep data sanitized; audit degradation must not retry inference or discard otherwise usable advice. Phase 07's 19/19 targeted and 204/204 suite results are historical evidence.
 
 ### 8.2 Generated projections, installers, and publication runbook
 
-Phase 09 synchronized the generated release boundary:
+The Advisor mentoring Phase 09 baseline had a dated 33-file controller closure; later 29-, 36-, and 44-file counts refer to separate inventories. The current 44-entry source authority is described in Section 4 and the [codebase summary](./codebase-summary.md).
 
-1. **Controller closure at that milestone.** The canonical CommonJS controller had exactly 33
-   (`advisor-contract-runtime.js`, `advisor-metrics.js`, `canonical-json.js`,
-   and `json.js`). Inventory/hash authorities are synchronized across
-   `generate-controller-inventory.mjs`, `src/manifests/controller.ts`, `install.sh`,
-   `install.ps1`, and `scripts/release/runtime-closure.cjs`. The runtime brief is
-   authored once under `.claude`, generated into the closure, and never
-   hand-edited.
-2. **Target projections.** `npm run distribute:build` generates all eight targets;
-   `npm run distribute:check` verifies byte parity. Build manifests and the schema-1
-   registry are synchronized by `npm run generate:all`.
-3. **Installer layouts.** Linux installs snapshots under
-   `<data-root>/snapshots/<snapshot>` and points `<data-root>/current` at the
-   selected snapshot with a symlink. Windows installs under
-   `<root>/versions/<snapshot>` and writes `<root>/current.json`; its launcher is
-   `<root>/bin/evcrate.cmd`. Both retain prior snapshots for bounded rollback.
-4. **Windows assets and lifecycle.** The 2026-09-15 qualification record covered
-   `install.ps1`, `evcrate-v<version>-windows-x64.zip`, its `.sha256` sidecar,
-   and `evcrate-v<version>.release.json`. `install`, repeat-install, `repair`,
-   upgrade, `rollback`, `uninstall`, and `version --json` were exercised only on the
-   Section 7 matrix. This historical record does not assert current release-asset
-   verification. Runtime `publish`, `health`, and advisor execution are not Windows
-   claims.
-5. **Publication state.** HOME state is `$HOME/.evcrate/publication/`; project
-   state is `stateRoot/project-publication/<canonical SHA-256 identity>`. Project
-   publication commits the shared HOME controller first and then project harness
-   output. A harness failure rolls back only project work; `PUBLICATION_FAILED` and
-   `ROLLBACK_FAILED` are both exit category 5 outcomes.
-6. **Recovery.** Recovery requires quiescence, validates contained paths and
-   canonical project identity, and reads only the requested scope. `staged`/`promoting`
-   journals roll back when snapshots match; `committed` journals finalize cleanup;
-   no journal returns `action: "none"`. Recovery never rolls back a completed release.
-7. **Operator sequence.** Build/check and dry-run from disposable HOME first; pause
-   consultations and inspect pending processes from the original project root; apply
-   only after review. For interrupted publication, run matching-scope
-   `evcrate recover`. For a completed release rollback, select a prior installer
-   snapshot (`./install.sh rollback <snapshot>` or `.\install.ps1 rollback <snapshot>`)
-   and then re-publish that generation. Advisor-settings recovery is separate:
-   use `evcrate advisor settings get --json` with the same state-root configuration.
+Current builds generate and verify all eight projections and schema-2 manifests. Publication/recovery boundaries are in Section 4; Linux and Windows installer layouts remain separate. Windows lifecycle evidence applies only to the Section 7 installer/version matrix.
 
-The generated trees, controller closure, manifests, registry, publication journals,
-and installer state are managed artifacts. User policy, unmanaged HOME/project
-files, and vendor credentials remain outside the publication authority.
+Generated projections, controller files, manifests, journals, and installer state are managed artifacts. User policy, unmanaged HOME/project files, and vendor credentials remain outside publication authority.
 ## 9. Historical DamHopper Advisor plugin integration (retired 2026-10-02)
 
-> The E00–E05 and Workspace Advisor Phase 00–09 material in this section is a
-> historical record of the former plugin integration. It is not a current
-> runtime, release, or qualification contract.
+> E00–E05 and Workspace Advisor Phase 00–09 records describe the former plugin integration, not current runtime or qualification.
 
-The former paired design joined an Evcrate plugin/worker and shared viewer to a
-DamHopper runner, SDK, and MessagePort bridge. Its Phase 09 qualification on
-2026-09-30 applies only to that plugin-era candidate and does not qualify the
-native-only migration.
+The 2026-10-02 cutover removed the plugin runtime/backend, package, worker, and plugin release artifacts. EVCrate's CLI, controller, and shared viewer source remain. DamHopper owns its current Native Advisor API and Workspace integration; the retired runner, package, bridge, and picker are not dependencies.
 
-The 2026-10-02 cutover removed the plugin runtime/backend, package, worker, and
-plugin release artifacts. EVCrate's core CLI, `evcrate-advisor` controller, and
-shared viewer source remain. DamHopper's current Native Advisor owns its native
-API and Workspace integration and does not require a plugin runner, plugin
-package, bridge, or standalone picker.
-
-Historical requirements and evidence remain in the [Workspace Advisor PDR](./workspace-advisor-pdr.md),
-[host contract](./workspace-advisor-host-contract.md), and
-[all-project advisor history record](./all-project-advisor-history.md).
+Historical requirements and evidence remain in the [Workspace Advisor PDR](./workspace-advisor-pdr.md), [host contract](./workspace-advisor-host-contract.md), and [all-project advisor history record](./all-project-advisor-history.md).
 
 ## Related documents
 

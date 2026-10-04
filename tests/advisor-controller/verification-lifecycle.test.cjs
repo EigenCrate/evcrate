@@ -351,7 +351,12 @@ test('Isolated Source CLI: Complete V2 consultation lifecycle (init -> reserve -
           excerpt: 'clean user code',
           digest: createHash('sha256').update(fs.readFileSync(path.join(f.project, 'source.txt'))).digest('hex')
         }],
-        validation_results: [{ suite: 'smoke', command: 'node --version', status: 'passed', passed: 1, failed: 0, details: null }],
+        validation_results: [(() => {
+          const check = spawnSync(process.execPath, ['--version'], { encoding: 'utf8' });
+          assert.equal(check.status, 0, 'node --version check must succeed');
+          assert.match(check.stdout.trim(), /^v\d+\.\d+\.\d+/, 'node --version output must start with v');
+          return { suite: 'smoke', command: 'node --version', status: 'passed', passed: 1, failed: 0, details: check.stdout.trim() };
+        })()],
         artifacts: []
       },
       prior: { prior_consultation_id: null, prior_counsel: null, prior_disposition: null, observed_outcome: null }
@@ -409,7 +414,12 @@ test('Isolated Source CLI: Complete V2 consultation lifecycle (init -> reserve -
         action_id: null,
         episode_id: null,
         result: 'resolved',
-        validation: { suite: 'smoke', command: 'node --version', status: 'passed', passed: 1, failed: 0, details: null },
+        validation: (() => {
+          const check = spawnSync(process.execPath, ['--version'], { encoding: 'utf8' });
+          assert.equal(check.status, 0, 'node --version check must succeed');
+          assert.match(check.stdout.trim(), /^v\d+\.\d+\.\d+/, 'node --version output must start with v');
+          return { suite: 'smoke', command: 'node --version', status: 'passed', passed: 1, failed: 0, details: check.stdout.trim() };
+        })(),
         actual_changed_paths: []
       }
     });

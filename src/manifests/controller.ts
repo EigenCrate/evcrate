@@ -3,9 +3,24 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile } from '../filesystem/paths.js';
 import { canonicalJsonBytes, hashFile, isIgnoredArtifact } from '../filesystem/hashing.js';
-import { ADVISOR_CONTROLLER_FILES, ADVISOR_CONTROLLER_NODE_BUILTINS } from './controller-inventory.generated.js';
+import {
+  ADVISOR_CONTROLLER_FILES,
+  ADVISOR_CONTROLLER_BINARY_FILES,
+  ADVISOR_CONTROLLER_TEXT_DATA_FILES,
+  ADVISOR_CONTROLLER_NODE_BUILTINS
+} from './controller-inventory.generated.js';
 
-export { ADVISOR_CONTROLLER_FILES };
+export {
+  ADVISOR_CONTROLLER_FILES,
+  ADVISOR_CONTROLLER_BINARY_FILES,
+  ADVISOR_CONTROLLER_TEXT_DATA_FILES
+};
+const IS_BINARY_FILE: Record<string, true> = Object.freeze(
+  Object.fromEntries(ADVISOR_CONTROLLER_BINARY_FILES.map((f) => [f, true as const]))
+);
+const IS_TEXT_DATA_FILE: Record<string, true> = Object.freeze(
+  Object.fromEntries(ADVISOR_CONTROLLER_TEXT_DATA_FILES.map((f) => [f, true as const]))
+);
 const FORBIDDEN_PARTS = new Set(['__tests__', 'tests', 'fixtures', 'helpers']);
 const FORBIDDEN_SUFFIXES = ['.test.cjs', '.test.js', '.test.mjs', '.test.py', '.spec.cjs', '.spec.js'];
 const NODE_BUILTINS = new Set<string>(ADVISOR_CONTROLLER_NODE_BUILTINS);
@@ -23,6 +38,17 @@ function closure(root: string): void {
   const rootPath = resolve(root);
   for (const entry of ADVISOR_CONTROLLER_FILES) {
     const path = join(root, entry);
+
+    if (IS_BINARY_FILE[entry]) {
+      // Binary native assets (.node) are validated by checking non-empty Mach-O format
+      assertRegularFile(path);
+      const buf = readFileSync(path);
+      if (buf.length < 4) fail();
+      const magic = buf.readUInt32LE(0);
+      if (magic !== 0xfeedfacf) fail();
+      continue;
+    }
+
     let source: string;
     try {
       source = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(readFileSync(path));
@@ -31,8 +57,8 @@ function closure(root: string): void {
     }
     if (source.startsWith('\uFEFF')) fail();
 
-    if (entry.endsWith('.cs') || entry.endsWith('.ps1')) {
-      // Windows native text assets (.cs, .ps1) are owned text data, not JavaScript modules.
+    if (IS_TEXT_DATA_FILE[entry]) {
+      // Native text assets (.cs, .ps1, .c, .h, .json) are owned text data, not JavaScript modules.
       continue;
     }
 
@@ -53,7 +79,8 @@ function closure(root: string): void {
       const importedPath = resolve(dirname(path), specifier);
       const imported = relative(rootPath, importedPath).split('\\').join('/');
       if (!imported || imported === '..' || imported.startsWith('../') || !allowed.has(imported)
-        || imported.endsWith('.cs') || imported.endsWith('.ps1')) fail();
+        || IS_TEXT_DATA_FILE[imported]) fail();
+      if (IS_BINARY_FILE[imported] && entry !== 'lib/advisor/darwin-platform.cjs') fail();
     }
   }
 }

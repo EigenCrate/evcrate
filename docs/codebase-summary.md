@@ -1,12 +1,12 @@
 # Codebase Summary
 
-**Generated:** 2026-09-30 (full-repository baseline); Phase 08 source-map refresh: 2026-10-04
-**Source:** Full Repomix v1.18.0 snapshot dated 2026-09-30 (2,610 files, 9,099,945 tokens, 34,268,846 characters; `.repomixignore` exclusions; nine files omitted by the security check). Phase 08 target/qualification details cross-checked against a scoped 2026-10-04 Repomix compaction of target/adapters, manifests, qualification scripts, and package allowlist; temporary output stayed outside the repository.
-**Updated:** 2026-10-04
+**Generated:** 2026-10-05 (Repomix v1.18.0; Phase 06 requalification and native Windows Phase 07 evidence)
+**Source:** `repomix-output.xml` (3,382 included files, 11,731,858 tokens, 44,526,238 characters; `.repomixignore` exclusions; two Darwin Mach-O binaries excluded: `.evcrate/source/.evcrate/bin/lib/advisor/native/darwin/prebuilt/{darwin-arm64,darwin-x64}/advisor-native.node`). Phase 06 candidate facts cross-checked against the requalification review and candidate bundle verification.
+**Updated:** 2026-10-05
 **Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
-**Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy cutover Phases 01–02 completed 2026-09-27; Windows readiness Repairs 01–04 completed 2026-09-28; VS Code Local qualification evidence for Linux x64 is indexed, with Phase 09 pending parent reconciliation.
-**Controller closure:** Exactly 36 files; earlier 29- and 33-file counts below are dated historical inventories.
+**Windows advisor:** Phase 07 exercised one native Windows x64 row (111 passed; formal qualification invalidated by stale `.omp` manifest under Rule 94). Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`, 7,410 files, archive SHA-256 `6a720dfb...`, manifest SHA-256 `365f145b...`) with repaired `.omp` output hash, 9/9 extracted root launch test pass, Cycle 2 native Windows runner fixes, clean Linux qualification (753/753 passed, 25 win32 skips), and code review score 9.8/10; ready for Phase 07 requalification. Broader Windows support remains limited to installer lifecycle and `version --json`.
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Phase 07 native Windows requalification execution and documentation handoff Phase 08 remain. macOS remains untested/unqualified.
+**Controller closure:** Exactly 44 files (36 prior entries plus eight Darwin assets); earlier 29-, 33-, and 36-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
@@ -16,7 +16,7 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 | Path | Role | Editing rule |
 |---|---|---|
 | `.evcrate/source/.claude/` | Canonical harness resources | Author here; do not hand-edit generated target copies. |
-| `.evcrate/source/.evcrate/bin/` | Shared advisor controller source | Maintain the source closure; generated files come from their generators. |
+| `.evcrate/source/.evcrate/bin/` | Shared advisor controller source, Darwin native sources and prebuilt assets | Maintain the generated closure; the Darwin integration is present but actual macOS runtime remains untested/unqualified. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlays | Change target policy or declared overlays, then rebuild. |
 | `.evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/` | Generated target projections | Regenerate; never treat as authoring roots. |
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
@@ -56,6 +56,59 @@ The Linux standalone installer unpacks a verified package snapshot and launches 
 The release workflow verifies an exact set of seven core assets. The plugin
 archive and checksum under `dist/advisor-plugin/` were removed; current release
 assembly does not build or publish them.
+
+## Phase 06 package and Linux qualification
+
+Phase 06 regenerated the eight-target projections and froze replacement candidate bundle `evcrate-candidate-1791140555626` for native Windows qualification re-execution. This bundle is separate from an npm release artifact.
+
+| Helper | Role and boundary |
+|---|---|
+| `tests/advisor-controller/qualification-bundle.cjs` | Freeze, verify-archive, and verify commands produce `candidate.zip`, an external manifest, receipt, and SHA-256 sidecar. Archive and extracted-root checks enforce paths, sizes, hashes, and no unexpected files. |
+| `tests/advisor-controller/native-windows-qualification.cjs` | Phase 07 runner; requires native Windows x64 and takes `--bundle`, absolute `--powershell`, external `--evidence`, and `--mode automated|console`. Staged in an isolated HOME/project sandbox. Updated with Cycle 2 fixes: retry-bounded sandbox cleanup (`maxRetries: 5`), fail-safe receipt writing, and space-separated argument syntax. |
+
+### Candidate regeneration and Linux requalification metrics
+- **Candidate ID:** `evcrate-candidate-1791140555626`
+- **Archive path:** `/tmp/evcrate-qualification-bundle/candidate.zip`
+- **Archive SHA-256:** `6a720dfb136fb80ccd624cdca63dbce3ca18ba08fe75a2ef322c90f3d7a5b3a9`
+- **Manifest SHA-256:** `365f145bb0deefe9eabad83ac6c9f9e598e7bb80f275c435e54a17321ee7c86a`
+- **Total files:** 7,410 entries matching byte-for-byte across archive and extracted filesystem (132,976,902 expanded bytes; 0 missing, 0 unexpected files).
+- **Manifest defect repair:** Repaired `.omp` build manifest output hash in `.evcrate/build-manifest-omp.json`; `distribute:check` and `release:check` passed with `status: "ok"`.
+- **Extracted candidate verification:** `tests/advisor-controller/node-launch.test.cjs` verified **9/9 passed** directly within extracted candidate root (`/tmp/evcrate-qualification-extracted/package`).
+- **Linux qualification gates:** `npm test` passed **753/753** (25 expected platform Win32 skips, 778 total on Node `v24.16.0` Linux x64); health and launch behavior passed **17/17**; `release:check` and `distribute:check` passed; smoke check passed **>30s** (exit 0).
+- **Code review:** Score **9.8/10**, zero critical findings, user approved. Candidate is frozen and verified, ready for Phase 07 native Windows requalification.
+## Phase 07 native Windows execution and handoff
+
+The 2026-10-05 rerun verified 7,433 / 7,433 candidate archive and extracted files (149,783,540 expanded bytes), then ran the updated repository runner against that frozen root. The candidate package remained unchanged; the repository runner SHA differed from the runner embedded in the candidate.
+
+- Host row: native Windows x64, Windows PowerShell 5.1.26100.9444, Node `v24.21.0`, OS release `10.0.26200`.
+- Native suites: provider launch identity/retry **48/48**, supervision/verification lifecycle **19/19**, controller/state/history CLI integration **44/44** — **111 passed, 0 failed, 0 skipped**.
+- Required `node-launch-behavior`: **1 passed, 8 failed** with `PUBLICATION_FAILED` while validating the frozen candidate's `.omp` output hash (`b886...` recorded; `c5b6...` actual). Overall: **120 tests, 112 passed, 8 failed, 0 skipped**; qualification **INVALIDATED**.
+- Installed lifecycle passed: `state init` → `state checkpoint` → central consultation → `state disposition` → `state outcome` → `state complete`; final task revision 7 and `gate_status: completed`.
+- Windows PowerShell 5.1 BOM-free UTF-8 pipeline returned `HISTORY_READY`, exit 0. Headless `state human-decision` rejected piped approval with `HUMAN_EVENT_REQUIRED`.
+- Only PowerShell 5.1 × Node 24.21.0 ran. Node 22.19.0 and PowerShell 7 were unavailable; positive attached-console evidence was blocked.
+- Rule 94 prohibits candidate patching on Windows. Phase 06 completed candidate regeneration and Linux requalification: repaired `.omp` build manifest, updated the native Windows runner with Cycle 2 fixes, passed all Linux gates (753/753 passed, 25 skips), and froze replacement bundle `evcrate-candidate-1791140555626` (review score 9.8/10).
+- Phase 07 is ready for re-execution against replacement candidate `evcrate-candidate-1791140555626` across the native Windows matrix. Cycle 2 review scored 8.8/10 with no critical findings; its two attached-TTY defects make positive console evidence outstanding.
+
+See the [Phase 07 execution report](../plans/261003-1527-advisor-node-only-launch/reports/phase-07-windows-qualification.md), [Cycle 1 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0043-phase-07-native-windows-qualification.md), and [Cycle 2 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md). These documentation changes are included in candidate payloads; freeze and Linux-requalify any replacement candidate before Windows transfer.
+
+## Darwin native runtime integration (Phase 04 build; Phase 05 source integration)
+
+The controller closure is exactly 44 files: the prior 36 shared/Windows entries plus eight Darwin entries (one loader, five C/provenance text files, and two prebuilt Mach-O addons). The generated inventory classifies the addons as binary and validates Mach-O magic. `darwin-platform.cjs` selects only the matching `arm64` or `x64` Node-API 8, bridge ABI 1 binary. The approved build authority is `node scripts/build-darwin-advisor-native.mjs`; it is not an install-time compiler or downloader.
+
+Phase 05 connects the native bridge to:
+- `state-io.cjs`: Canonical project/HOME capabilities (`openRoot`), state transaction and lock dispatch (`openDirectory`, `openRegular`, `removeOwned`), self-token verification before lock/recovery writes, and conservative Darwin process identity (`getDarwinProcessIdentity`, `checkDarwinProcessStatus`).
+- `state-baseline.cjs`: Pinned directory/file capture capabilities, final rehash with stat checks, and safe rewalk of missing paths without unverified pathname traversal.
+- `history-store.cjs`: Capability traversal for history root and consultation directories, self-token verification before `history.lock` writes, and bounded storage sync.
+- `history-query.cjs` & `history-prune.cjs`: Safe reopened read capabilities after scanner closure, bounded query reads, and capability-scoped prune of owned leaves and empty directories.
+- `controller.cjs` & `isolated-workspace.cjs`: Canonical project identity hash convergence, temp-root resolution, descriptor-relative workspace creation (`created=true` verification), and capability-based recursive cleanup.
+
+Key architectural and safety invariants:
+- **Descriptor-relative capabilities:** Darwin managed I/O operates entirely via descriptor-relative capabilities; logical display paths are strictly metadata and never passed to raw Node filesystem mutation.
+- **Scoped capability ownership (`owns_parent`):** `AdvisorCap` in `storage.c`, `advisor-native.c`, and `advisor-native.h` scopes parent descriptor lifecycle. Intermediate ancestor capabilities during `openRoot` walk set `owns_parent = true` to reclaim descriptors on leaf close, while child capabilities derived via `openDirectory` set `owns_parent = false` to preserve the caller's parent descriptor lifetime.
+- **Self-token identity verification:** Valid non-null monotonic start token verification is mandatory before writing state/history locks or persisting pending consultation records.
+- **Platform isolation:** Gated strictly by `process.platform === 'darwin'`, preserving Linux (procfs/kill-0/fd-pinning) and Windows (PowerShell/Job Objects) invariants without cross-platform leakage.
+- **Cycle 3 static review warning:** Static review flags `owns_parent` as uninitialized for `/var` and `/tmp` intermediate capabilities, a potential descriptor leak; no macOS behavior has been tested.
+- **Boundary:** Darwin implementation is present, but macOS addon loading, controller/provider execution, tests, and CI remain prohibited and untested/unqualified. Static review and Linux results do not qualify native behavior. See the [system architecture](./system-architecture.md) and [Phase 05 integration record](../plans/261003-1527-advisor-node-only-launch/phase-05-darwin-runtime-integration.md).
 
 ## VS Code Local target, qualification, and Phase 09 rollout
 
@@ -363,8 +416,8 @@ The generated controller inventory remains authoritative. See the
 [audit plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-07-audit-history-and-outcome-review.md),
 and [audit evidence](../plans/reports/tester-260908-1344-phase07-final-verification.md).
 Historical evidence remains 185/185 state tests and 204/204 controller tests;
-the current 36-file closure and current metrics-explorer implementation are documented
-in their respective sections above.
+the current 44-file closure, including the Darwin native build assets, and current
+metrics-explorer implementation are documented in their respective sections above.
 
 
 ## Cooperative mentoring across commands and harnesses (historical Phase 08)

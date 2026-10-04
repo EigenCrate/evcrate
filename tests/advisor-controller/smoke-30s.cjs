@@ -46,7 +46,7 @@ async function main() {
   delete env.EVCRATE_ADVISOR_DEPTH;
 
   const startedAt = Date.now();
-  const child = spawn(CONTROLLER, [], { env, stdio: ['pipe', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, [CONTROLLER], { env, stdio: ['pipe', 'pipe', 'pipe'] });
   const watchdog = setTimeout(() => {
     try { child.kill('SIGKILL'); } catch {}
     console.error('Smoke scenario watchdog timed out after 45s');

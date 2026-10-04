@@ -16,6 +16,7 @@ const {
   writePinnedFileWindows,
   verifyPinnedDirectoryWindows
 } = require('./windows-platform.cjs');
+const darwin = require('./darwin-platform.cjs');
 
 const MAX_BYTES = 64 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -74,7 +75,7 @@ function stable(entries) {
 }
 function stateLocation({ cwd = process.cwd(), environment = process.env } = {}, taskRunId) {
   try {
-    if (process.platform !== 'linux' && process.platform !== 'win32') fail('STATE_INVALID');
+    if (process.platform !== 'linux' && process.platform !== 'win32' && process.platform !== 'darwin') fail('STATE_INVALID');
     if (process.platform === 'linux' && typeof NOFOLLOW !== 'number') fail('STATE_INVALID');
     if (typeof taskRunId !== 'string' || !UUID.test(taskRunId)) fail('STATE_INVALID');
 
@@ -90,6 +91,74 @@ function stateLocation({ cwd = process.cwd(), environment = process.env } = {}, 
       } catch {
         fail('STATE_INVALID');
       }
+    } else if (process.platform === 'darwin') {
+      if (typeof environment.HOME !== 'string' || !environment.HOME || !path.isAbsolute(environment.HOME) || environment.HOME.includes('\0')) {
+        fail('STATE_INVALID');
+      }
+      let projectCap;
+      let homeCap;
+      const subCaps = [];
+      const parts = ['.evcrate', 'advisor-state'];
+      const existingChain = [];
+      let projectStat;
+      let homeStat;
+      try {
+        const projectRes = darwin.openRoot(absolute(cwd));
+        projectCap = projectRes.directory;
+        projectRoot = projectRes.canonicalPath;
+        projectStat = darwin.statHandle(projectCap);
+
+        const homeRes = darwin.openRoot(absolute(environment.HOME));
+        homeCap = homeRes.directory;
+        home = homeRes.canonicalPath;
+        if (home === path.parse(home).root) fail('STATE_INVALID');
+        homeStat = darwin.statHandle(homeCap);
+
+        projectId = createHash('sha256').update(projectRoot).digest('hex');
+        parts.push(projectId, taskRunId.toLowerCase());
+
+        let curCap = homeCap;
+        let missing = false;
+        for (const part of parts) {
+          if (missing) continue;
+          const childCap = darwin.openDirectory(curCap, part, false);
+          if (!childCap) {
+            missing = true;
+            continue;
+          }
+          subCaps.push(childCap);
+          const st = darwin.statHandle(childCap);
+          if (!st || !st.isDirectory() || st.isSymbolicLink()) fail('STATE_INVALID');
+          existingChain.push({ name: part, dev: st.dev, ino: st.ino });
+          curCap = childCap;
+        }
+      } finally {
+        for (const c of subCaps.reverse()) {
+          try { darwin.close(c); } catch {}
+        }
+        if (homeCap) {
+          try { darwin.close(homeCap); } catch {}
+        }
+        if (projectCap) {
+          try { darwin.close(projectCap); } catch {}
+        }
+      }
+      const taskDirectory = path.join(home, ...parts);
+      const location = Object.freeze({ projectId, projectRoot, taskDirectory });
+      LOCATIONS.set(location, {
+        isDarwin: true,
+        home,
+        projectRoot,
+        parts,
+        projectId,
+        taskDirectory,
+        projectDev: projectStat.dev,
+        projectIno: projectStat.ino,
+        homeDev: homeStat.dev,
+        homeIno: homeStat.ino,
+        existingChain
+      });
+      return location;
     } else {
       projectRoot = absolute(cwd);
       home = absolute(environment.HOME);
@@ -131,6 +200,9 @@ function processIdentity() {
   if (process.platform === 'win32') {
     return getWindowsProcessIdentity(process.pid);
   }
+  if (process.platform === 'darwin') {
+    return darwin.getDarwinProcessIdentity(process.pid);
+  }
   return { pid: process.pid, start: proc(process.pid)?.start ?? null };
 }
 function validIdentity(identity) {
@@ -144,6 +216,9 @@ function processStatus(identity) {
   if (process.platform === 'win32') {
     return checkWindowsProcessStatus(identity);
   }
+  if (process.platform === 'darwin') {
+    return darwin.checkDarwinProcessStatus(identity);
+  }
   try { process.kill(identity.pid, 0); }
   catch (error) { return error.code === 'ESRCH' ? 'dead' : 'unknown'; }
   const current = proc(identity.pid);
@@ -154,6 +229,50 @@ function processStatus(identity) {
 // Pin each managed directory: /proc/self/fd supplies Linux's descriptor-relative
 // lookup without following attacker-swapped ancestor paths during mutations.
 function openTask(context, create) {
+  if (context.isDarwin) {
+    const caps = [];
+    try {
+      const homeRes = darwin.openRoot(context.home);
+      const homeCap = homeRes.directory;
+      caps.push(homeCap);
+      darwin.verifyChain(homeCap);
+      const homeStat = darwin.statHandle(homeCap);
+      if (homeStat.dev !== context.homeDev || homeStat.ino !== context.homeIno) fail('STATE_IO_FAILED');
+
+      let curCap = homeCap;
+      for (let i = 0; i < context.parts.length; i++) {
+        const part = context.parts[i];
+        const existing = context.existingChain[i];
+        const childCap = darwin.openDirectory(curCap, part, create);
+        if (!childCap) {
+          fail('STATE_NOT_FOUND');
+        }
+        caps.push(childCap);
+        darwin.verifyChain(childCap);
+        const childStat = darwin.statHandle(childCap);
+        if (!childStat || !childStat.isDirectory() || childStat.isSymbolicLink()) fail('STATE_IO_FAILED');
+        if (existing) {
+          if (childStat.dev !== existing.dev || childStat.ino !== existing.ino) fail('STATE_IO_FAILED');
+        }
+        curCap = childCap;
+      }
+      return {
+        isDarwin: true,
+        dirCap: curCap,
+        base: context.taskDirectory,
+        close() {
+          for (const c of caps.slice().reverse()) {
+            try { darwin.close(c); } catch {}
+          }
+        }
+      };
+    } catch (error) {
+      for (const c of caps.slice().reverse()) {
+        try { darwin.close(c); } catch {}
+      }
+      throw error;
+    }
+  }
   stable(context.entries);
   if (process.platform === 'win32') {
     const descriptors = [];
@@ -282,6 +401,64 @@ function lockRecord(file) {
   if (!value || Object.keys(value).length !== 2 || !validIdentity(value.process)
     || typeof value.token !== 'string' || !/^[a-f0-9]{32}$/u.test(value.token)) fail('STATE_LOCKED');
   return { ...record, value };
+
+}
+
+function darwinStatEntry(dirCap, leaf) {
+  return darwin.statEntry(dirCap, leaf);
+}
+
+function darwinReadFile(dirCap, leaf, limit = MAX_BYTES) {
+  const initial = darwin.statEntry(dirCap, leaf);
+  if (!initial) return null;
+  regular(initial);
+  if (initial.size > BigInt(limit)) fail('STATE_INVALID');
+  const fileCap = darwin.openRegular(dirCap, leaf, limit);
+  try {
+    const opened = darwin.statHandle(fileCap);
+    regular(opened);
+    if (!unchanged(initial, opened)) fail();
+    const buffer = Buffer.alloc(Number(opened.size));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const length = darwin.readInto(fileCap, buffer, offset, buffer.length - offset, offset);
+      if (!length && offset < buffer.length) fail();
+      offset += length;
+    }
+    const final = darwin.statHandle(fileCap);
+    regular(final);
+    if (!unchanged(opened, final) || !unchanged(final, darwin.statEntry(dirCap, leaf))) fail();
+    return { stat: final, bytes: buffer };
+  } finally {
+    darwin.close(fileCap);
+  }
+}
+
+function darwinWriteExclusive(dirCap, leaf, bytes) {
+  const stat = darwin.writeExclusive(dirCap, leaf, bytes);
+  regular(stat);
+  const entryStat = darwin.statEntry(dirCap, leaf);
+  if (!entryStat || !same(stat, entryStat)) fail();
+  return stat;
+}
+
+function darwinRemoveOwned(dirCap, leaf, stat) {
+  const current = darwin.statEntry(dirCap, leaf);
+  if (!current || !unchanged(current, stat)) fail('STATE_LOCKED');
+  regular(current);
+  darwin.removeOwned(dirCap, leaf, current);
+}
+
+function darwinLockRecord(dirCap, leaf) {
+  let record;
+  try { record = darwinReadFile(dirCap, leaf, 1024); }
+  catch { fail('STATE_LOCKED'); }
+  if (!record) fail('STATE_LOCKED');
+  let value;
+  try { value = document(record.bytes); } catch { fail('STATE_LOCKED'); }
+  if (!value || Object.keys(value).length !== 2 || !validIdentity(value.process)
+    || typeof value.token !== 'string' || !/^[a-f0-9]{32}$/u.test(value.token)) fail('STATE_LOCKED');
+  return { ...record, value };
 }
 function removeOwned(file, stat) {
   const current = inspect(file);
@@ -291,6 +468,52 @@ function removeOwned(file, stat) {
   catch (error) { if (error.code === 'ENOENT') fail('STATE_LOCKED'); throw error; }
 }
 function acquire(task) {
+  if (task.isDarwin) {
+    const self = processIdentity();
+    if (self.start === null) fail('STATE_IO_FAILED');
+    const file = 'state.lock';
+    const recovery = 'state-recovery.lock';
+    const value = { token: randomBytes(16).toString('hex'), process: self };
+    const bytes = Buffer.from(JSON.stringify(value));
+    let stat;
+    darwin.verifyChain(task.dirCap);
+    if (darwin.statEntry(task.dirCap, recovery)) fail('STATE_LOCKED');
+    try { stat = darwinWriteExclusive(task.dirCap, file, bytes); }
+    catch (error) {
+      if (error.code !== 'EEXIST' && error.code !== 'STATE_CONFLICT') throw error;
+      const old = darwinLockRecord(task.dirCap, file);
+      if (processStatus(old.value.process) !== 'dead') fail('STATE_LOCKED');
+      let guard;
+      try { guard = darwinWriteExclusive(task.dirCap, recovery, bytes); }
+      catch (guardError) {
+        if (guardError.code === 'EEXIST' || guardError.code === 'STATE_CONFLICT') fail('STATE_LOCKED');
+        throw guardError;
+      }
+      try {
+        darwin.verifyChain(task.dirCap);
+        const current = darwinLockRecord(task.dirCap, file);
+        if (!unchanged(current.stat, old.stat) || current.value.token !== old.value.token
+          || processStatus(current.value.process) !== 'dead') fail('STATE_LOCKED');
+        darwinRemoveOwned(task.dirCap, file, current.stat);
+        try { stat = darwinWriteExclusive(task.dirCap, file, bytes); }
+        catch (lockError) {
+          if (lockError.code === 'EEXIST' || lockError.code === 'STATE_CONFLICT') fail('STATE_LOCKED');
+          throw lockError;
+        }
+      } finally {
+        darwinRemoveOwned(task.dirCap, recovery, guard);
+        darwin.sync(task.dirCap);
+      }
+    }
+    darwin.sync(task.dirCap);
+    return () => {
+      darwin.verifyChain(task.dirCap);
+      const current = darwinLockRecord(task.dirCap, file);
+      if (!unchanged(current.stat, stat) || current.value.token !== value.token) fail('STATE_LOCKED');
+      darwinRemoveOwned(task.dirCap, file, stat);
+      darwin.sync(task.dirCap);
+    };
+  }
   const file = `${task.base}/state.lock`;
   const recovery = `${task.base}/state-recovery.lock`;
   const value = { token: randomBytes(16).toString('hex'), process: processIdentity() };
@@ -337,7 +560,7 @@ function transactState(location, { create = false } = {}, callback) {
     task = openTask(context, create);
     release = acquire(task);
     const file = `${task.base}/state.json`;
-    const previous = readFile(file);
+    const previous = task.isDarwin ? darwinReadFile(task.dirCap, 'state.json') : readFile(file);
     if (!previous && !create) fail('STATE_NOT_FOUND');
     const current = previous ? document(previous.bytes) : null;
     if (previous && (!current || typeof current !== 'object' || Array.isArray(current))) fail('STATE_INVALID');
@@ -351,7 +574,24 @@ function transactState(location, { create = false } = {}, callback) {
       document(Buffer.from(text));
       const bytes = Buffer.from(text);
       stable(task.entries);
-      if (process.platform === 'win32') {
+      if (task.isDarwin) {
+        darwin.verifyChain(task.dirCap);
+        const temporary = `.state-${randomBytes(16).toString('hex')}.tmp`;
+        let temporaryStat;
+        try {
+          temporaryStat = darwinWriteExclusive(task.dirCap, temporary, bytes);
+          darwin.verifyChain(task.dirCap);
+          const now = darwinReadFile(task.dirCap, 'state.json');
+          if (previous ? !now || !unchanged(now.stat, previous.stat) || !now.bytes.equals(previous.bytes) : now !== null) fail('STATE_CONFLICT');
+          if (!unchanged(darwin.statEntry(task.dirCap, temporary), temporaryStat)) fail();
+          darwin.commit(task.dirCap, temporary, temporaryStat, 'state.json', previous ? previous.stat : null);
+          temporaryStat = undefined;
+          darwin.sync(task.dirCap);
+          darwin.verifyChain(task.dirCap);
+        } finally {
+          if (temporaryStat) darwinRemoveOwned(task.dirCap, temporary, temporaryStat);
+        }
+      } else if (process.platform === 'win32') {
         const now = readFile(file);
         if (previous ? !now || !unchanged(now.stat, previous.stat) || !now.bytes.equals(previous.bytes) : now !== null) fail('STATE_CONFLICT');
         const expectedDigest = previous ? createHash('sha256').update(previous.bytes).digest('hex') : null;
@@ -415,5 +655,6 @@ function transactState(location, { create = false } = {}, callback) {
 module.exports = {
   stateLocation, transactState, processIdentity, processStatus,
   inspect, same, unchanged, directory, regular, absolute, chain, stable,
-  readFile, writeExclusive, removeOwned, openTask, NOFOLLOW, UUID, LOCATIONS
+  readFile, writeExclusive, removeOwned, openTask, NOFOLLOW, UUID, LOCATIONS,
+  darwinStatEntry, darwinReadFile, darwinWriteExclusive, darwinRemoveOwned, darwinLockRecord
 };

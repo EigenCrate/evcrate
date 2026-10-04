@@ -28,7 +28,7 @@ mentoring workflow. It contains no route, CLI, provider, model, effort,
 executable, argv, or execution override. The installed central controller owns
 policy validation, selection, process isolation, and terminal normalization.
 
-The workflow invokes the central controller using the authoritative host-aware invocation contract in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` (direct path on POSIX, or Windows PowerShell / Node argv-array with BOM-free UTF-8 stdin); this skill itself does not invoke the controller. The counsel agent is strictly tool-less and cannot bootstrap task state or invoke the controller; state lifecycle management and invocation belong entirely to the caller.
+The workflow invokes the central controller using the authoritative host-aware invocation contract in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` (Node with absolute controller path on all supported hosts, with UTF-8 JSON stdin); this skill itself does not invoke the controller. The counsel agent is strictly tool-less and cannot bootstrap task state or invoke the controller; state lifecycle management and invocation belong entirely to the caller.
 
 Return a complete terminal report with a recommendation, rationale, must-fix items,
 cautions, assumptions or evidence gaps, success checks, and unresolved

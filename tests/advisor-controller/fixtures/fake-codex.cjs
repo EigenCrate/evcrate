@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const stateRoot = path.join(process.env.HOME || '', '.evcrate');
+const stateRoot = path.join(process.env.HOME || process.env.USERPROFILE || '', '.evcrate');
 const modePath = path.join(stateRoot, 'fake-codex-mode');
 const statePath = path.join(stateRoot, 'fake-codex-state.json');
 const mode = fs.existsSync(modePath) ? fs.readFileSync(modePath, 'utf8').trim() : 'success';
