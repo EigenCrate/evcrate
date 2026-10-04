@@ -19,7 +19,7 @@ test('registry scans declared granularities with deterministic compatibility', (
   const fixture = createPhase6Fixture();
   try {
     const registry = loadResourceRegistry(fixture.registryPath, fixture.canonical, RESOURCE_ROOTS);
-    assert.equal(registry.document.schema_version, 1);
+    assert.equal(registry.document.schema_version, 2);
     assert.equal(registry.document.revision, 1);
     assert.deepEqual(registry.document.resources.map(({ id }) => id), [
       'agent:agents/alpha.md', 'agent:agents/beta.md', 'command:commands/nested/deploy.md',
@@ -57,7 +57,7 @@ test('registry records and scanner reject tampering and unsupported links', () =
   try {
     const recordFixture = JSON.parse(readFileSync(new URL('../fixtures/resource-registry-v1/record.json', import.meta.url), 'utf8'));
     assert.deepEqual(validateResourceRecord(recordFixture), recordFixture);
-    assert.doesNotThrow(() => validateRegistryDocument({ schema_version: 1, revision: 1, resources: [recordFixture] }));
+    assert.doesNotThrow(() => validateRegistryDocument({ schema_version: 2, revision: 1, resources: [recordFixture] }));
     writeFileSync(join(fixture.canonical, 'agents', 'unsupported.txt'), 'ignored\n');
     assert.equal(scanCanonicalResources(fixture.canonical, RESOURCE_ROOTS).some(({ id }) => id.endsWith('unsupported.txt')), false);
     mkdirSync(join(fixture.canonical, 'commands', '.git'), { recursive: true });
@@ -100,7 +100,7 @@ test('registry ordering and cursors use Unicode code-point order', () => {
   const base = JSON.parse(readFileSync(new URL('../fixtures/resource-registry-v1/record.json', import.meta.url), 'utf8'));
   const bmp = { ...base, id: `agent:agents/${String.fromCodePoint(0xe000)}.md`, source_path: `agents/${String.fromCodePoint(0xe000)}.md` };
   const astral = { ...base, id: `agent:agents/${String.fromCodePoint(0x1f600)}.md`, source_path: `agents/${String.fromCodePoint(0x1f600)}.md` };
-  const first = upsertResource({ schema_version: 1, revision: 0, resources: [] }, bmp);
+  const first = upsertResource({ schema_version: 2, revision: 0, resources: [] }, bmp);
   const document = upsertResource(first, astral);
   assert.deepEqual(document.resources.map(({ id }) => id), [bmp.id, astral.id]);
   assert.deepEqual(listResources(document, {}, bmp.id, 10).resources.map(({ id }) => id), [astral.id]);
@@ -119,7 +119,7 @@ test('file d\\0\\n vs empty directory yields distinct content hash and registry 
 
     // Save registry with this file
     const docWithFile = {
-      schema_version: 1,
+      schema_version: 2,
       revision: 1,
       resources: scannedWithFile
     };

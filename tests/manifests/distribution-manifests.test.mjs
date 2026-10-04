@@ -27,9 +27,9 @@ afterEach(() => {
 
 test('schema-2 registry selection and input hashes follow persisted target declarations', () => {
   const registry = loadTargetManifestRegistry(registryPath);
-  assert.deepEqual([...registry.targets.keys()], ['antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi']);
+  assert.deepEqual([...registry.targets.keys()], ['antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi', 'vscode']);
   assert.equal(loadSelectedManifests(registry, ['agy'])[0].name, 'antigravity');
-  assert.equal(loadSelectedManifests(registry).length, 7);
+  assert.equal(loadSelectedManifests(registry).length, 8);
   assert.deepEqual(
     loadSelectedManifests(registry, ['copilot', 'pi', 'claude', 'codex']).map(({ id }) => id),
     ['claude', 'codex', 'copilot', 'pi']

@@ -45,14 +45,14 @@ test('all-target schema-2 build resolves with explicit publication policy parity
   try {
     const { build } = fixture;
     assert.deepEqual(build.selectedManifests.map(({ name }) => name), [
-      'antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi'
+      'antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi', 'vscode'
     ]);
     assert.equal(build.manifest.validation.complete, true);
     assert.deepEqual(build.manifest.home_policy.omp.publication_rules, ['omp-agent-prefix']);
     assert.deepEqual(build.manifest.home_policy.codex.publication_rules, ['codex-home-path-rewrite']);
     assert.deepEqual(build.manifest.home_policy.claude.publication_rules, ['claude-home-path-rewrite', 'claude-skill-root-exclusion']);
     assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-      '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+      '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });

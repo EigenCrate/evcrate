@@ -22,7 +22,7 @@ export type PublicationChangeAction = typeof PUBLICATION_CHANGE_ACTIONS[number];
 export type PublicationTarget = PersistedTarget | 'advisor-controller';
 
 export const PUBLICATION_BINDING_ORDER = Object.freeze([
-  '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot'
+  '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
 ] as const);
 export const PUBLICATION_TARGET_BINDINGS = Object.freeze({
   gemini: Object.freeze(['.gemini']),
@@ -31,8 +31,9 @@ export const PUBLICATION_TARGET_BINDINGS = Object.freeze({
   antigravity: Object.freeze(['.gemini/config']),
   omp: Object.freeze(['.omp']),
   claude: Object.freeze(['.claude']),
-  copilot: Object.freeze(['.copilot'])
-} as const);
+  copilot: Object.freeze(['.copilot']),
+  vscode: Object.freeze(['.evcrate-vscode'])
+});
 export const PUBLICATION_PROJECT_TARGET_BINDINGS = Object.freeze({
   claude: Object.freeze(['.claude']),
   codex: Object.freeze(['.codex', '.agents', 'AGENTS.md']),
@@ -40,10 +41,11 @@ export const PUBLICATION_PROJECT_TARGET_BINDINGS = Object.freeze({
   antigravity: Object.freeze(['.antigravity']),
   pi: Object.freeze(['.pi']),
   omp: Object.freeze(['.omp']),
-  copilot: Object.freeze(['.copilot'])
-} as const);
+  copilot: Object.freeze(['.copilot']),
+  vscode: Object.freeze(['.evcrate-vscode'])
+});
 export const PUBLICATION_LOCAL_ROOTS = Object.freeze([
-  '.evcrate/bin', '.gemini', '.agents', '.codex', '.antigravity', '.pi', '.omp', '.claude', '.copilot'
+  '.evcrate/bin', '.gemini', '.agents', '.codex', '.antigravity', '.pi', '.omp', '.claude', '.copilot', '.evcrate-vscode'
 ] as const);
 export const MAX_PUBLICATION_RESULT_BYTES = 2 * 1024 * 1024;
 export const MAX_PUBLICATION_STATE_BYTES = 16 * 1024 * 1024;
@@ -54,8 +56,9 @@ export const PUBLICATION_TARGET_LOCAL_ROOTS = Object.freeze({
   antigravity: Object.freeze(['.antigravity']),
   omp: Object.freeze(['.omp']),
   claude: Object.freeze(['.claude']),
-  copilot: Object.freeze(['.copilot'])
-} as const);
+  copilot: Object.freeze(['.copilot']),
+  vscode: Object.freeze(['.evcrate-vscode'])
+});
 export const MAX_PUBLICATION_CHANGES = 10_000;
 export const MAX_PUBLICATION_BINDINGS = 16;
 export const MAX_PUBLICATION_RELEASE_ID_BYTES = 256;

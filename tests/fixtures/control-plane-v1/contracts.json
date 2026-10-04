@@ -14,17 +14,282 @@
       "projectRoot": "/workspace",
       "target": "claude"
     },
-    "payload": {"filters": {}, "cursor": null, "limit": 50}
+    "payload": {
+      "filters": {},
+      "cursor": null,
+      "limit": 50
+    }
   },
   "resourceResults": [
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"resources.list","status":"ok","payload":{"resources":[],"nextCursor":null,"registryRevision":0}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"imports.preview","status":"preview","payload":{"token":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","expiresAt":1790000000000,"kind":"agent","destination":"fixture.md","provenance":"fixture","capabilityApprovals":[],"sourceHash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","registryRevision":0,"registryFileRevision":{"kind":"present","identity":"fixture-registry"},"currentCanonicalHash":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","prospectiveCanonicalHash":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","selectedTargets":["claude"],"targetRegistryHash":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","targetManifestHashes":{"claude/manifest.json":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},"adapterHashes":{},"outputHashes":{"claude/.claude":"1111111111111111111111111111111111111111111111111111111111111111"},"change":"create","resource":{"id":"agent:agents/fixture.md","kind":"agent","source_path":"agents/fixture.md","content_hash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","origin":"fixture","compatibility":{"claude":{"status":"native"},"codex":{"status":"native"},"gemini":{"status":"native"},"antigravity":{"status":"native"},"pi":{"status":"native"},"omp":{"status":"native"},"copilot":{"status":"native"}},"capabilities":[],"revision":1}}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"imports.apply","status":"applied","payload":{"changed":true,"change":"create","registryRevision":1,"resource":{"id":"agent:agents/fixture.md","kind":"agent","source_path":"agents/fixture.md","content_hash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","origin":"fixture","compatibility":{"claude":{"status":"native"},"codex":{"status":"native"},"gemini":{"status":"native"},"antigravity":{"status":"native"},"pi":{"status":"native"},"omp":{"status":"native"},"copilot":{"status":"native"}},"capabilities":[],"revision":1}}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"publish.apply","status":"published","payload":{"scope":"home","projectIdentity":null,"buildManifestPath":".evcrate/build-manifest.json","buildManifestDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","phases":[{"phase":"shared","scope":"home","selectedTargets":[],"bindingOrder":[".evcrate/bin"],"changes":[],"status":"committed","releaseId":"release-fixture","retainedReleaseId":null},{"phase":"harness","scope":"home","selectedTargets":["claude"],"bindingOrder":[".claude"],"changes":[],"status":"committed","releaseId":"release-fixture","retainedReleaseId":null}]}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"distribute.publish","status":"activated","payload":{"scope":"home","projectIdentity":null,"buildManifestPath":".evcrate/build-manifest.json","buildManifestDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","phases":[{"phase":"shared","scope":"home","selectedTargets":[],"bindingOrder":[".evcrate/bin"],"changes":[],"status":"committed","releaseId":"release-fixture","retainedReleaseId":null},{"phase":"harness","scope":"home","selectedTargets":["claude"],"bindingOrder":[".claude"],"changes":[],"status":"committed","releaseId":"release-fixture","retainedReleaseId":null}]}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"recover","status":"recovered","payload":{"scope":"home","projectIdentity":null,"action":"none","phases":[]},"recovery":{"kind":"none","identity":"none"}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"resources.get","status":"error","error":{"code":"VALIDATION_INVALID","category":"validation","action":"Correct the invalid value and retry.","message":"Validation failed"}},
-    {"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"fixture-0001","operation":"scopes.assign","status":"conflict","error":{"code":"CAS_CONFLICT","category":"conflict","action":"Refresh the current revision and preview again.","message":"Revision conflict"},"conflict":{"expectedRevision":{"registryRevision":1,"globalScopeRevision":2,"projectScopeRevision":null},"actualRevision":{"registryRevision":1,"globalScopeRevision":3,"projectScopeRevision":null},"retryable":true}}
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "resources.list",
+      "status": "ok",
+      "payload": {
+        "resources": [],
+        "nextCursor": null,
+        "registryRevision": 0
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "imports.preview",
+      "status": "preview",
+      "payload": {
+        "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "expiresAt": 1790000000000,
+        "kind": "agent",
+        "destination": "fixture.md",
+        "provenance": "fixture",
+        "capabilityApprovals": [],
+        "sourceHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "registryRevision": 0,
+        "registryFileRevision": {
+          "kind": "present",
+          "identity": "fixture-registry"
+        },
+        "currentCanonicalHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "prospectiveCanonicalHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "selectedTargets": [
+          "claude"
+        ],
+        "targetRegistryHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "targetManifestHashes": {
+          "claude/manifest.json": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "adapterHashes": {},
+        "outputHashes": {
+          "claude/.claude": "1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "change": "create",
+        "resource": {
+          "id": "agent:agents/fixture.md",
+          "kind": "agent",
+          "source_path": "agents/fixture.md",
+          "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "origin": "fixture",
+          "compatibility": {
+            "claude": {
+              "status": "native"
+            },
+            "codex": {
+              "status": "native"
+            },
+            "gemini": {
+              "status": "native"
+            },
+            "antigravity": {
+              "status": "native"
+            },
+            "pi": {
+              "status": "native"
+            },
+            "omp": {
+              "status": "native"
+            },
+            "copilot": {
+              "status": "native"
+            },
+            "vscode": {
+              "status": "needsAdapter",
+              "reason": "Local projection requires qualification"
+            }
+          },
+          "capabilities": [],
+          "revision": 1
+        }
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "imports.apply",
+      "status": "applied",
+      "payload": {
+        "changed": true,
+        "change": "create",
+        "registryRevision": 1,
+        "resource": {
+          "id": "agent:agents/fixture.md",
+          "kind": "agent",
+          "source_path": "agents/fixture.md",
+          "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "origin": "fixture",
+          "compatibility": {
+            "claude": {
+              "status": "native"
+            },
+            "codex": {
+              "status": "native"
+            },
+            "gemini": {
+              "status": "native"
+            },
+            "antigravity": {
+              "status": "native"
+            },
+            "pi": {
+              "status": "native"
+            },
+            "omp": {
+              "status": "native"
+            },
+            "copilot": {
+              "status": "native"
+            },
+            "vscode": {
+              "status": "needsAdapter",
+              "reason": "Local projection requires qualification"
+            }
+          },
+          "capabilities": [],
+          "revision": 1
+        }
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "publish.apply",
+      "status": "published",
+      "payload": {
+        "scope": "home",
+        "projectIdentity": null,
+        "buildManifestPath": ".evcrate/build-manifest.json",
+        "buildManifestDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "phases": [
+          {
+            "phase": "shared",
+            "scope": "home",
+            "selectedTargets": [],
+            "bindingOrder": [
+              ".evcrate/bin"
+            ],
+            "changes": [],
+            "status": "committed",
+            "releaseId": "release-fixture",
+            "retainedReleaseId": null
+          },
+          {
+            "phase": "harness",
+            "scope": "home",
+            "selectedTargets": [
+              "claude"
+            ],
+            "bindingOrder": [
+              ".claude"
+            ],
+            "changes": [],
+            "status": "committed",
+            "releaseId": "release-fixture",
+            "retainedReleaseId": null
+          }
+        ]
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "distribute.publish",
+      "status": "activated",
+      "payload": {
+        "scope": "home",
+        "projectIdentity": null,
+        "buildManifestPath": ".evcrate/build-manifest.json",
+        "buildManifestDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "phases": [
+          {
+            "phase": "shared",
+            "scope": "home",
+            "selectedTargets": [],
+            "bindingOrder": [
+              ".evcrate/bin"
+            ],
+            "changes": [],
+            "status": "committed",
+            "releaseId": "release-fixture",
+            "retainedReleaseId": null
+          },
+          {
+            "phase": "harness",
+            "scope": "home",
+            "selectedTargets": [
+              "claude"
+            ],
+            "bindingOrder": [
+              ".claude"
+            ],
+            "changes": [],
+            "status": "committed",
+            "releaseId": "release-fixture",
+            "retainedReleaseId": null
+          }
+        ]
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "recover",
+      "status": "recovered",
+      "payload": {
+        "scope": "home",
+        "projectIdentity": null,
+        "action": "none",
+        "phases": []
+      },
+      "recovery": {
+        "kind": "none",
+        "identity": "none"
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "resources.get",
+      "status": "error",
+      "error": {
+        "code": "VALIDATION_INVALID",
+        "category": "validation",
+        "action": "Correct the invalid value and retry.",
+        "message": "Validation failed"
+      }
+    },
+    {
+      "protocol": "evcrate-resource-control",
+      "protocolVersion": 1,
+      "requestId": "fixture-0001",
+      "operation": "scopes.assign",
+      "status": "conflict",
+      "error": {
+        "code": "CAS_CONFLICT",
+        "category": "conflict",
+        "action": "Refresh the current revision and preview again.",
+        "message": "Revision conflict"
+      },
+      "conflict": {
+        "expectedRevision": {
+          "registryRevision": 1,
+          "globalScopeRevision": 2,
+          "projectScopeRevision": null
+        },
+        "actualRevision": {
+          "registryRevision": 1,
+          "globalScopeRevision": 3,
+          "projectScopeRevision": null
+        },
+        "retryable": true
+      }
+    }
   ],
   "settings": {
     "protocol": "evcrate-advisor-settings",
@@ -35,8 +300,16 @@
       "policy": {
         "version": 2,
         "advisor": {
-          "primary": {"backend": "codex", "model": "gpt-5.6-sol", "effort": "high"},
-          "backup": {"backend": "omp", "model": "openai-codex/gpt-5.6-sol", "effort": "high"}
+          "primary": {
+            "backend": "codex",
+            "model": "gpt-5.6-sol",
+            "effort": "high"
+          },
+          "backup": {
+            "backend": "omp",
+            "model": "openai-codex/gpt-5.6-sol",
+            "effort": "high"
+          }
         },
         "wait": {
           "mode": "until_terminal",
@@ -48,18 +321,127 @@
           "max_bytes": 104857600
         }
       },
-      "currentRevision": {"kind":"present","identity":"sha256:fixture"},
+      "currentRevision": {
+        "kind": "present",
+        "identity": "sha256:fixture"
+      },
       "destination": "/home/test/.evcrate/advisor-routing.json"
     }
   },
   "settingsResults": [
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"get","status":"OK","policy":{"version":1,"advisor":{"backend":"codex","model":"gpt-5.6-sol","effort":"high","timeout_ms":900000},"migration_required":true},"revision":{"kind":"present","identity":"sha256:fixture"}},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"get","status":"OK","policy":null,"revision":{"kind":"absent","identity":"absent"}},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"preview","status":"PREVIEW","token":"opaque-preview-token","issuedAt":1789999100000,"expiresAt":1790000000000,"currentRevision":{"kind":"present","identity":"sha256:fixture"},"intendedDigest":"7084ee935b599f7ee2b2c278ef4939b072db0298a6028819a1a2e36145817995","destination":"/home/test/.evcrate/advisor-routing.json"},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"APPLIED","revision":{"kind":"present","identity":"sha256:next"},"recovery":{"kind":"none","identity":"none"}},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"CONFLICT","error":{"code":"CAS_CONFLICT","category":"conflict","action":"Refresh the current revision and preview again.","message":"Revision conflict"},"expectedRevision":{"kind":"present","identity":"sha256:fixture"},"actualRevision":{"kind":"present","identity":"sha256:changed"}},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"FAILED","error":{"code":"SETTINGS_INVALID","category":"validation","action":"Provide one complete version 1 advisor policy.","message":"Advisor settings are invalid"}},
-    {"protocol":"evcrate-advisor-settings","protocolVersion":1,"requestId":"fixture-0002","operation":"apply","status":"RECOVERED","revision":{"kind":"present","identity":"sha256:restored"},"recovery":{"kind":"required","identity":"recovery-fixture"}}
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "get",
+      "status": "OK",
+      "policy": {
+        "version": 1,
+        "advisor": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "timeout_ms": 900000
+        },
+        "migration_required": true
+      },
+      "revision": {
+        "kind": "present",
+        "identity": "sha256:fixture"
+      }
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "get",
+      "status": "OK",
+      "policy": null,
+      "revision": {
+        "kind": "absent",
+        "identity": "absent"
+      }
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "preview",
+      "status": "PREVIEW",
+      "token": "opaque-preview-token",
+      "issuedAt": 1789999100000,
+      "expiresAt": 1790000000000,
+      "currentRevision": {
+        "kind": "present",
+        "identity": "sha256:fixture"
+      },
+      "intendedDigest": "7084ee935b599f7ee2b2c278ef4939b072db0298a6028819a1a2e36145817995",
+      "destination": "/home/test/.evcrate/advisor-routing.json"
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "apply",
+      "status": "APPLIED",
+      "revision": {
+        "kind": "present",
+        "identity": "sha256:next"
+      },
+      "recovery": {
+        "kind": "none",
+        "identity": "none"
+      }
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "apply",
+      "status": "CONFLICT",
+      "error": {
+        "code": "CAS_CONFLICT",
+        "category": "conflict",
+        "action": "Refresh the current revision and preview again.",
+        "message": "Revision conflict"
+      },
+      "expectedRevision": {
+        "kind": "present",
+        "identity": "sha256:fixture"
+      },
+      "actualRevision": {
+        "kind": "present",
+        "identity": "sha256:changed"
+      }
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "apply",
+      "status": "FAILED",
+      "error": {
+        "code": "SETTINGS_INVALID",
+        "category": "validation",
+        "action": "Provide one complete version 1 advisor policy.",
+        "message": "Advisor settings are invalid"
+      }
+    },
+    {
+      "protocol": "evcrate-advisor-settings",
+      "protocolVersion": 1,
+      "requestId": "fixture-0002",
+      "operation": "apply",
+      "status": "RECOVERED",
+      "revision": {
+        "kind": "present",
+        "identity": "sha256:restored"
+      },
+      "recovery": {
+        "kind": "required",
+        "identity": "recovery-fixture"
+      }
+    }
   ],
   "diagnostic": {
     "protocol": "evcrate-advisor-diagnostic",
@@ -72,11 +454,28 @@
     "protocolVersion": 1,
     "requestId": "fixture-0003",
     "status": "QUALIFIED",
-    "target": {"backend":"codex","model":"gpt-5.6-sol","effort":"high"},
+    "target": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high"
+    },
     "probes": {
-      "version": {"status":"passed","value":"0.150.1"},
-      "auth": {"status":"passed"},
-      "capabilities": {"status":"passed","model":"gpt-5.6-sol","effort":"high","noninteractive":true,"session":"isolated","tools":"none","output":"jsonl"}
+      "version": {
+        "status": "passed",
+        "value": "0.150.1"
+      },
+      "auth": {
+        "status": "passed"
+      },
+      "capabilities": {
+        "status": "passed",
+        "model": "gpt-5.6-sol",
+        "effort": "high",
+        "noninteractive": true,
+        "session": "isolated",
+        "tools": "none",
+        "output": "jsonl"
+      }
     }
   }
 }

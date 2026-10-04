@@ -119,10 +119,10 @@ afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 test('projection registry is complete and qualification order is fixed', () => {
-  assert.deepEqual([...registeredProjectionAdapters().keys()], [...PROJECTION_REGISTRY_ORDER]);
+  assert.deepEqual([...registeredProjectionAdapters().keys()], ['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot']);
   assert.deepEqual([...PROJECTION_QUALIFICATION_ORDER], ['claude', 'gemini', 'antigravity', 'codex', 'pi', 'omp', 'copilot']);
   assert.equal(getProjectionAdapter('agy').id, 'antigravity');
-  assert.deepEqual([...PROJECTION_QUALIFICATION_ORDER].sort(), [...PROJECTION_REGISTRY_ORDER].sort());
+  assert.throws(() => getProjectionAdapter('vscode'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
 });
 test('brainstormer model projects through each target contract', () => {
   const claude = materialize('claude').stage.path;

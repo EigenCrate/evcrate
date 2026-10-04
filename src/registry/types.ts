@@ -19,8 +19,9 @@ export interface ResourceRecord {
   readonly model_metadata?: JsonValue;
   readonly revision: number;
 }
+export type RegistrySchemaVersion = 1 | 2;
 export interface RegistryDocument {
-  readonly schema_version: 1;
+  readonly schema_version: RegistrySchemaVersion;
   readonly revision: number;
   readonly resources: readonly ResourceRecord[];
 }

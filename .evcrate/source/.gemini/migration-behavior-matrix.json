@@ -588,6 +588,14 @@
     {
       "classification": "skill-package",
       "kind": "skill-package",
+      "source": "dependency-upgrade-review/SKILL.md",
+      "status": "migrated",
+      "target": "dependency-upgrade-review/SKILL.md",
+      "target_name": "dependency-upgrade-review"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
       "source": "devops/SKILL.md",
       "status": "migrated",
       "target": "devops/SKILL.md",
@@ -736,6 +744,14 @@
       "status": "migrated",
       "target": "sequential-thinking/SKILL.md",
       "target_name": "sequential-thinking"
+    },
+    {
+      "classification": "skill-package",
+      "kind": "skill-package",
+      "source": "snyk-fix/SKILL.md",
+      "status": "migrated",
+      "target": "snyk-fix/SKILL.md",
+      "target_name": "snyk-fix"
     },
     {
       "classification": "skill-package",

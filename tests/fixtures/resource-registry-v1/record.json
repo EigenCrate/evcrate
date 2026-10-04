@@ -11,7 +11,8 @@
     "copilot": {"status": "needsAdapter"},
     "gemini": {"status": "needsAdapter"},
     "omp": {"status": "needsAdapter"},
-    "pi": {"status": "needsAdapter"}
+    "pi": {"status": "needsAdapter"},
+    "vscode": {"status": "needsAdapter"}
   },
   "capabilities": [],
   "revision": 1
