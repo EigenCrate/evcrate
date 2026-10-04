@@ -3,9 +3,9 @@
 **Status:** Current EVCrate core implementation reference; filesystem-policy cutover Phases 01–02, Hook Materialization Scope Distribution through Phase 09, and Windows release qualification through Phase 10 remain documented milestones.
 **Advisor metrics explorer:** Historical Phases 01–10 completed 2026-09-19; standalone picker/reader source was later removed.
 **DamHopper Advisor integration:** The former plugin runtime and paired host integration were retired on 2026-10-02. EVCrate core CLI/controller and shared viewer source remain; historical plugin-era qualification below does not qualify the native DamHopper integration.
-**Windows support:** The qualified Windows release boundary remains standalone installer lifecycle and clean-install `version --json`; native advisor evidence does not establish broad Windows runtime parity.
-**Native Windows advisor:** Phases 01–04 complete. Phase 03 observed live OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. Readiness Repairs 01–04 are also complete; general Linux qualification passed 400/400. Production rollout remains operator-gated.
-**Updated:** 2026-10-04
+**Windows support:** The qualified release boundary remains standalone installer lifecycle and clean-install `version --json`; Phase 07 native advisor execution did not qualify broad Windows runtime parity.
+**Native Windows advisor:** Phases 01–04 and readiness Repairs 01–04 are complete. Phase 07 executed one native x64 row: 111 advisor tests passed, but formal qualification was invalidated by a stale `.omp` candidate manifest hash under Rule 94. Other matrix rows and positive console evidence remain blocked; production rollout remains operator-gated.
+**Updated:** 2026-10-05
 
 **Authority:** TypeScript control plane and canonical Advisor controller. The former DamHopper plugin integration pages are historical.
 
@@ -639,9 +639,9 @@ needed, and descendants are reaped. The workspace is empty, isolated, outside
 the repository, checked against symlink/identity changes, and removed after
 child termination.
 
-### 5.6 Approved proposed Node-only launch contract & cross-platform runtime boundary
+### 5.6 Approved Node-only launch contract & cross-platform runtime boundary
 
-Status: approved proposed architectural contract (Phase 01 baseline, 2026-10-04); Phase 02 caller migration remains pending.
+Status: Approved Node-only launch contract and caller migration (Phases 01–02, 2026-10-04); Phase 07 native Windows qualification remains invalidated pending a corrected candidate and complete matrix.
 Standardizes advisor invocation on one cross-platform tuple across Linux, native
 Windows, and macOS, while defining the approved Darwin runtime enablement boundary:
 
@@ -668,7 +668,7 @@ cwd        = canonical caller project directory (packageRoot for health diagnost
    - Standard output framing, byte limits, cancellation signals, and terminal envelopes (`ADVICE_READY`, `QUALIFIED`, `STATE_READY`, `HISTORY_READY`, `FAILED`) are strictly preserved.
 4. **Platform support and Darwin boundary**:
    - **Linux**: Primary implementation platform; qualified with real local smoke verification, focused regressions, and full package/projection gates.
-   - **Native Windows**: Qualified using the exact Linux-qualified candidate on PowerShell 5.1 and 7 with supported Node versions; no WSL substitution.
+   - **Native Windows**: Phase 07 exercised Windows x64, PowerShell 5.1, Node `v24.21.0`: 111/111 portable/native advisor tests passed, as did installed lifecycle and PowerShell transport. Formal qualification failed because required `node-launch-behavior` checks hit a stale `.omp` candidate build-manifest hash; other matrix rows and positive interactive-console evidence remain blocked. See Section 7.
    - **macOS (Darwin)**: Phase 05 integrates the packaged Node-API 8/ABI 1 bridge with state, baseline, history, export/prune, and workspace paths. The code is present but untested/unqualified; addon/controller/provider execution, tests, and CI remain prohibited.
    - **Cycle 3 boundary**: Static review plus Linux results do not qualify native behavior. An outstanding static warning identifies `owns_parent` as uninitialized for `/var` and `/tmp` intermediate capabilities, a potential descriptor leak; no macOS behavior has been tested.
 
@@ -694,7 +694,7 @@ Quoted, embedded, suffixed, differently-cased, or non-final forms remain work te
 Handoffs preserve explicit mode, `WORK_ARGUMENTS`, and active run identity/context; default mode carries no token, and `@advisor` is never recreated.
 An outer <code>ADVICE_READY</code> envelope satisfies the inference step only; disposition, required work and validation, outcome, and successful `state complete` remain mandatory before `DONE`.
 
-Under the approved Phase 01 target, maintained canonical workflows (`.claude/workflows/advisor-mentoring.md`), skills (`advisor-strategy`), and command projections must invoke the controller via explicit Node, with no direct POSIX execution or fallback. At this baseline, direct-exec instructions remain pending Phase 02 migration; preserve the tool-less counsel boundary and exact JSON streaming.
+The approved Node-only contract is implemented by maintained canonical workflows (`.claude/workflows/advisor-mentoring.md`), skills (`advisor-strategy`), and command projections: invoke the controller through explicit Node, with no direct POSIX execution or fallback. Preserve the tool-less counsel boundary and exact JSON streaming.
 The inline advice workflow is a separate main-session feature. It interviews the
 user and writes its own report; it does not use checkpoint routing policy or act as
 an alternate controller path. Copilot, Pi, Gemini, and Codex projections may expose
@@ -723,19 +723,22 @@ and `export` are executable shell syntax, not slash command-resource names.
 Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitized environment, isolated cwd, output lifecycle, timeout/cancellation, descendant cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic recovery, and selected-target publication. These contracts do not authenticate a vendor CLI.
 
 ### Phase 06 package and Linux qualification
-Phase 06 package and Linux qualification work produced an internal immutable transfer bundle for Phase 07. Controller seal remains pending; this is not a sealed phase result, release, or publication artifact.
-- The [current parent terminal report](../plans/reports/project-manager-261004-2248-phase-06-terminal-status.md) states 758 tests passed, `release:check` and `distribute:check` passed, and the bundle/archive/extracted-root checks passed. Its exact test command, Node version/architecture, and logs still need binding to the final receipt.
-- The earlier review separately reports Linux x64 on Node `v24.16.0`, 778 total (753 passed, 25 expected Win32 skips), passing release/distribution checks, and a 31-second fake-backed smoke; its planned `22.19.0` and `24.21.0` Linux rows were not run then. Keep the counts distinct and do not attribute that earlier Node version or pin caveat to the current 758 result.
-- `tests/advisor-controller/qualification-bundle.cjs` provides the CLI commands freeze, verify-archive, and verify, reusing canonical JSON, release path policy, and the existing ZIP writer/verifier. Freeze emits `candidate.zip` plus an external manifest, receipt, and SHA-256 sidecar; verification compares archive/extracted files against manifest paths, sizes, and hashes and rejects unexpected files.
-- The earlier reviewed archive round trip verified 7,410 files and 132,964,705 expanded bytes. The receipt is marked unsigned; hashes establish byte integrity, not producer authentication.
-- `tests/advisor-controller/native-windows-qualification.cjs` was authored for Phase 07. It requires native Windows x64, uses the running Node executable and an absolute PowerShell executable, copies the controller into an isolated HOME, and can run bundled suites plus installed-lifecycle and PowerShell-pipeline exercises. Phase 06 did not execute it on Windows.
-- **Runner limitation:** Console mode currently returns `skipped` without a TTY or a `completed` marker with one; it does not exercise the human-decision flow. Failed suite exits are logged but do not prevent a `passed` receipt, and unknown modes are not rejected. Do not treat that receipt alone as qualification evidence.
-- Publishable docs are in the qualification payload. These documentation edits change its bytes; any pre-edit frozen candidate must be re-frozen and Linux-requalified before Phase 07 transfer.
+Phase 06 completed package/Linux qualification and froze an internal Windows-transfer candidate; it is not an npm release or publication artifact.
+- The parent terminal report records 758 passing tests plus passing `release:check`, `distribute:check`, and bundle/archive/extracted-root checks. The earlier review's Linux x64/Node `v24.16.0` result (778 total: 753 passed, 25 expected Win32 skips) is separate evidence; do not merge counts.
+- `tests/advisor-controller/qualification-bundle.cjs` freezes `candidate.zip` with an external manifest, receipt, and SHA-256 sidecar; archive and extracted-root verification check paths, sizes, hashes, and unexpected files.
+- The earlier Phase 06 archive round trip verified 7,410 files / 132,964,705 expanded bytes. Its receipt is unsigned: hashes establish byte integrity, not producer authentication.
+- `tests/advisor-controller/native-windows-qualification.cjs` accepts a verified bundle root, absolute PowerShell path, external evidence directory, and `automated|console` mode; it requires native Windows x64.
+- These docs are included in the qualification payload. Their changes require a new freeze and Linux requalification before the next Windows transfer.
 
-### Current cross-platform advisor boundary
-- **Linux x64** has package test evidence, but Phase 06 remains pending controller seal.
-- **Native Windows x64** still requires Phase 07 execution against the same final frozen candidate. Windows release support remains limited to installer lifecycle and `version --json`; broad advisor/runtime equivalence is not qualified.
-- **macOS (Darwin)** source integration and packaged `arm64`/`x64` assets are present, but native behavior remains untested and unqualified. Addon/controller/provider execution, tests, and CI remain prohibited.
+### Phase 07 native Windows advisor execution (2026-10-05)
+The verified candidate archive contained 7,433 files / 149,783,540 expanded bytes. One row ran on native Windows x64, Windows PowerShell 5.1, Node `v24.21.0` (`os_release: 10.0.26200`).
+- Three portable/native suites passed **111/111, 0 failed, 0 skipped**: provider launch/retry (48), supervision/verification lifecycle (19), and controller/state/history CLI integration (44).
+- Required `node-launch-behavior` then failed **8/9** (`PUBLICATION_FAILED`): candidate `.evcrate/build-manifest-omp.json` had a stale output hash. Aggregate: 112 passed, 8 failed; qualification status **INVALIDATED**.
+- Installed lifecycle completed through `state complete` (`task_revision: 7`, `gate_status: completed`); BOM-free PowerShell pipeline returned `HISTORY_READY`; headless human-decision correctly failed with `HUMAN_EVENT_REQUIRED`.
+- Only PowerShell 5.1 × Node 24.21.0 ran. Node 22.19.0 and PowerShell 7 were unavailable; positive attached-console evidence was unavailable.
+- Rule 94 forbids repairing or patching the frozen candidate on Windows. Handoff returns to Phase 06 to regenerate the affected projection/manifest, freeze and Linux-requalify new bytes, then repeat qualification against that candidate.
+- Cycle 2 review (8.8/10, no critical issues) identified two attached-TTY defects: initial `continue` is rejected before the console observer, and inherited stdin suppresses the JSON request. Fix both before positive console qualification.
+- Evidence: [Phase 07 report](../plans/261003-1527-advisor-node-only-launch/reports/phase-07-windows-qualification.md), [Cycle 1 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0043-phase-07-native-windows-qualification.md), [Cycle 2 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md).
 
 ### Historical Advisor Metrics Explorer support boundary (Phases 01–10; completed 2026-09-19)
 Historical standalone explorer testing covered Chromium >=120 on Linux with File System Access; picker/reader sources are removed and do not establish current support.

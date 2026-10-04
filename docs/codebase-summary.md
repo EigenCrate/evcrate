@@ -1,11 +1,11 @@
 # Codebase Summary
 
-**Generated:** 2026-10-04 (Repomix v1.18.0; Phase 06 package/Linux qualification)
-**Source:** `repomix-output.xml` (3,382 included files, 11,731,858 tokens, 44,526,238 characters; `.repomixignore` exclusions; two Mach-O binaries excluded from text output). Phase 06 helper and qualification details cross-checked against source and review evidence.
-**Updated:** 2026-10-04
+**Generated:** 2026-10-05 (Repomix v1.18.1; native Windows Phase 07 evidence)
+**Source:** `repomix-output.xml` (6,722 included files, 23,966,529 tokens, 90,199,792 characters; `.repomixignore` exclusions; four Darwin Mach-O binaries excluded: two source add-ons and two extracted-candidate copies). Phase 07 facts cross-checked against the runner and qualification/review evidence.
+**Updated:** 2026-10-05
 **Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
-**Windows advisor:** Phases 01–04 complete; live OMP `ADVICE_READY` observed, OMP/Codex diagnostics qualified, and Claude/Pi unverified. This evidence does not widen Windows release support beyond installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete; Advisor Node-only launch Phases 01–05 are sealed and Phase 06 package/Linux work is pending controller seal. The current parent report states 758 tests passed; the earlier review's 778-total result is separate. Native Windows Phase 07 and documentation handoff Phase 08 remain pending; macOS remains untested/unqualified.
+**Windows advisor:** Phase 07 exercised one native Windows x64 row. Three suites passed 111/111, and installed lifecycle / PowerShell transport passed; formal qualification was invalidated by required `node-launch-behavior` failures against a stale `.omp` candidate manifest. Broader Windows support remains limited to installer lifecycle and `version --json`.
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–06 are complete; Phase 07 returned to Phase 06 for candidate regeneration, and documentation handoff Phase 08 remains. macOS remains untested/unqualified.
 **Controller closure:** Exactly 44 files (36 prior entries plus eight Darwin assets); earlier 29-, 33-, and 36-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
@@ -59,16 +59,31 @@ assembly does not build or publish them.
 
 ## Phase 06 package and Linux qualification
 
-Phase 06 regenerated the eight-target projections and prepared an internal qualification bundle for the native Windows follow-on; controller seal remains pending. This bundle is separate from an npm release artifact.
+Phase 06 regenerated the eight-target projections and froze an internal candidate for native Windows follow-on. This bundle is separate from an npm release artifact.
 
 | Helper | Role and boundary |
 |---|---|
-| `tests/advisor-controller/qualification-bundle.cjs` | The freeze, verify-archive, and verify CLI commands write `candidate.zip`, an external sorted manifest, an external receipt, and a SHA-256 sidecar. Verification checks ZIP contents and extracted roots against expected paths, file sizes/hashes, and unexpected files. It reuses `scripts/release/canonical-json.cjs`, `path-policy.cjs`, `zip-writer.cjs`, and `zip-verifier.cjs`. |
-| `tests/advisor-controller/native-windows-qualification.cjs` | Authored for Phase 07, not executed on Windows in Phase 06. Its CLI takes `--bundle`, absolute `--powershell`, external `--evidence`, and `--mode automated|console`; it requires native Windows x64, stages the controller under a temporary HOME, and runs Windows-focused suites plus lifecycle/PowerShell checks in automated mode. |
+| `tests/advisor-controller/qualification-bundle.cjs` | Freeze, verify-archive, and verify commands produce `candidate.zip`, an external manifest, receipt, and SHA-256 sidecar. Archive and extracted-root checks enforce paths, sizes, hashes, and no unexpected files. |
+| `tests/advisor-controller/native-windows-qualification.cjs` | Phase 07 runner; requires native Windows x64 and takes `--bundle`, absolute `--powershell`, external `--evidence`, and `--mode automated|console`. It stages the controller in an isolated HOME/project sandbox. |
 
-The [current parent terminal report](../plans/reports/project-manager-261004-2248-phase-06-terminal-status.md) states 758 tests passed, `release:check` and `distribute:check` passed, and bundle/archive/extracted-root checks passed; its exact command, Node version/architecture, and logs still need binding to the final receipt. The earlier code review is separate: Linux x64/Node `v24.16.0`, 778 total (753 passed, 25 expected Win32 skips), and planned `22.19.0`/`24.21.0` rows not run at that checkpoint. Do not merge these counts or attribute the earlier version evidence to the current result.
+The current Phase 06 parent report records 758 tests passed and passing `release:check`, `distribute:check`, and bundle checks. The earlier review separately records Linux x64 / Node `v24.16.0`, 778 tests total (753 passed, 25 expected Win32 skips); do not merge these counts.
 
-The earlier archive round trip verified 7,410 files / 132,964,705 expanded bytes. The receipt is unsigned, so its hashes establish integrity, not producer authentication. Publishable docs are in the qualification payload; these documentation edits change its bytes, so any pre-edit frozen candidate must be re-frozen and Linux-requalified before Phase 07 transfer.
+The earlier archive round trip verified 7,410 files / 132,964,705 expanded bytes. Its receipt is unsigned: hashes establish byte integrity, not producer authentication.
+
+## Phase 07 native Windows execution and handoff
+
+The 2026-10-05 rerun verified 7,433 / 7,433 candidate archive and extracted files (149,783,540 expanded bytes), then ran the updated repository runner against that frozen root. The candidate package remained unchanged; the repository runner SHA differed from the runner embedded in the candidate.
+
+- Host row: native Windows x64, Windows PowerShell 5.1.26100.9444, Node `v24.21.0`, OS release `10.0.26200`.
+- Native suites: provider launch identity/retry **48/48**, supervision/verification lifecycle **19/19**, controller/state/history CLI integration **44/44** — **111 passed, 0 failed, 0 skipped**.
+- Required `node-launch-behavior`: **1 passed, 8 failed** with `PUBLICATION_FAILED` while validating the frozen candidate's `.omp` output hash (`b886...` recorded; `c5b6...` actual). Overall: **120 tests, 112 passed, 8 failed, 0 skipped**; qualification **INVALIDATED**.
+- Installed lifecycle passed: `state init` → `state checkpoint` → central consultation → `state disposition` → `state outcome` → `state complete`; final task revision 7 and `gate_status: completed`.
+- Windows PowerShell 5.1 BOM-free UTF-8 pipeline returned `HISTORY_READY`, exit 0. Headless `state human-decision` rejected piped approval with `HUMAN_EVENT_REQUIRED`.
+- Only PowerShell 5.1 × Node 24.21.0 ran. Node 22.19.0 and PowerShell 7 were unavailable; positive attached-console evidence was blocked.
+- Rule 94 prohibits candidate patching on Windows. Handoff requires Phase 06 to repair/regenerate the `.omp` projection/manifest, package the updated runner, fix the console exercise's invalid initial `continue` and inherited-stdin handling, freeze and Linux-requalify new bytes, then repeat the full Windows matrix.
+- Cycle 2 review scored 8.8/10 with no critical findings; its two attached-TTY defects make positive console evidence outstanding.
+
+See the [Phase 07 execution report](../plans/261003-1527-advisor-node-only-launch/reports/phase-07-windows-qualification.md), [Cycle 1 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0043-phase-07-native-windows-qualification.md), and [Cycle 2 review](../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md). These documentation changes are included in candidate payloads; freeze and Linux-requalify any replacement candidate before Windows transfer.
 
 ## Darwin native runtime integration (Phase 04 build; Phase 05 source integration)
 

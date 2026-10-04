@@ -1,7 +1,7 @@
 ---
 title: "Advisor Node-only launch and cross-platform runtime"
 description: "Standardize advisor invocation on Node; implement on Linux, enable untested macOS behavior, and qualify the same candidate on native Windows."
-status: pending
+status: in-progress
 priority: P2
 effort: not-estimated
 branch: main
@@ -28,7 +28,7 @@ Current-state evidence: [repository baseline](research/repository-baseline.md), 
 
 ## Phases
 
-All implementation/review statuses pending; 0/8 implemented. Planning completion is not runtime verification.
+Phases 01–05 are complete; Phase 06 is reopened for candidate regeneration after the Phase 07 Rule 94 handback. Phase 07 audit is recorded, but formal qualification is incomplete; Phase 08 remains pending.
 
 | Phase | Deliverable | Status / progress |
 |---|---|---|
@@ -37,8 +37,8 @@ All implementation/review statuses pending; 0/8 implemented. Planning completion
 | [03 — Linux launch verification](phase-03-linux-launch-verification.md) | Real isolated lifecycle smoke, launch/error regressions, Windows-safe fixtures prepared | Complete / 100% |
 | [04 — Darwin native build](phase-04-darwin-native-build.md) | Safe native primitive contract, arm64/x64 compile-only artifacts and provenance | Complete / 100% |
 | [05 — Darwin runtime integration](phase-05-darwin-runtime-integration.md) | State/baseline/history/process/workspace integration; Linux regressions, Darwin untested | Complete / 100% |
-| [06 — Package and Linux qualification](phase-06-package-linux-qualification.md) | Generated projections, full Linux gates and hash-identified transfer bundle | Complete / 100% |
-| [07 — Native Windows qualification](phase-07-native-windows-qualification.md) | Same-bundle tests on PowerShell 5.1/7 × Node 22.19.0/24.21.0 | Pending / 0% |
+| [06 — Package and Linux qualification](phase-06-package-linux-qualification.md) | Generated projections, full Linux gates and hash-identified transfer bundle | Reopened — prior candidate rejected; regenerate and requalify / in progress |
+| [07 — Native Windows qualification](phase-07-native-windows-qualification.md) | Same-bundle tests on PowerShell 5.1/7 × Node 22.19.0/24.21.0 | Audit complete; formal qualification invalidated and handed back to Phase 06 under Rule 94 (2026-10-05) |
 | [08 — Documentation and handoff](phase-08-documentation-handoff.md) | Evidence-bounded docs, final gates and precise support labels | Pending / 0% |
 
 ## Execution and dependency rules
@@ -66,4 +66,4 @@ Owner-approved snapshot; native Windows runner access; trusted Apple build produ
 
 ## Planning status
 
-Plan files only; no implementation/tests/builds/publication performed. [Plan-validation receipt](reports/plan-validation.md). Active-plan script could not persist state because `EVCRATE_SESSION_ID` is absent; pass this plan path explicitly to the later implementation command.
+Execution is underway. Phases 01–05 are complete. Phase 06's original task run is sealed, but Phase 06 is reopened to regenerate and Linux-requalify the candidate after Phase 07 found a stale `.omp` build-manifest hash. On 2026-10-05, Phase 07 recorded 111/111 passing native test assertions in the three reachable suites; the separate `node-launch-behavior` gate failed, invalidating formal qualification under Rule 94. The frozen candidate cannot be patched on Windows. Phase 06 owns regeneration and requalification; Phase 08 remains pending. See the [progress overview](progress.md) and [Phase 07 report](reports/phase-07-windows-qualification.md).
