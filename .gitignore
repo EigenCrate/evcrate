@@ -86,6 +86,7 @@ examples/**/dist/
 # tool caches / sync markers
 .codegraph/
 .stfolder/
+/.cache/
 
 # logs
 stderr.log

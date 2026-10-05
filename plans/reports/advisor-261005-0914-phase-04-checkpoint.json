@@ -1,0 +1,391 @@
+{
+  "taskRunId": "3f750eb3-617c-4383-b5af-87ecbb56547a",
+  "consultationId": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+    "task_run_id": "3f750eb3-617c-4383-b5af-87ecbb56547a",
+    "checkpoint_id": "checkpoint-review-step-4",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "d956f2755960c6a37eda1ff440f13611a44f9a556c877d14fb77da188d0242a6",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "omp",
+      "model": "google-antigravity/claude-opus-4-6",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "18.6.1",
+      "build_identity": "evcrate-advisor-v2-16505a41eea260ae",
+      "elapsed_ms": 37525
+    },
+    "attempts": [
+      {
+        "attempt_id": "ae20b346-9b6e-43aa-8b24-df52b75cb0fc",
+        "slot": "primary",
+        "route": {
+          "backend": "omp",
+          "model": "google-antigravity/claude-opus-4-6",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 33536,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Approve proceeding to Step 5 finalization (project status update, documentation, auto-commit of authorized deliverables). All four success criteria and all four invariants are met per supplied evidence; no blocking issues remain.",
+      "rationale": "Evidence directly satisfies every success criterion: 2.89x isolated compile speedup (>2.5x target), 1.53x npm lifecycle speedup (>=1.5x target), 15/15 tests pass with 0 failures, 0 leaked artifacts in npm pack, and code review terminal approval at 9.8/10 with 0 critical issues. The three implementation modules (build-typescript.mjs, typescript-build-cache.mjs, typescript-build-receipt.mjs) have stable digests and the review confirms bounded receipt-based stale output removal, self-healing cache invalidation on missing outputs, and corruption recovery — all matching the task's self-healing output tracking goal. No competing hypothesis or evidence gap warrants delay.",
+      "must_fix": [],
+      "cautions": [
+        ".gitignore was modified (+1 LOC per code review) but is not listed in authorized_paths — verify the commit scope policy permits this supporting change, since it is mechanically required to satisfy the 'zero cache/receipt leakage into git index' invariant.",
+        "The 1.53x end-to-end speedup clears the 1.5x threshold by only ~2%; future dependency or tsconfig changes could regress it below the bar. Consider whether the success criterion should be a tracked regression gate in CI rather than a one-time qualification."
+      ],
+      "assumptions": [
+        "Validation results (15/15 tests, build passes, npm pack check) were executed against the final committed state of all files, not an intermediate snapshot.",
+        "The code review digest (226ecbcf…) corresponds to the terminal review that produced the 9.8/10 score and 0 critical issues, and no further source mutations occurred after that review.",
+        "No other test suites outside the two listed files exist that exercise TypeScript build output or distribution packaging and could surface a regression not covered by the 15 tests."
+      ],
+      "success_checks": [
+        "Run `npm pack --dry-run` post-commit and confirm zero .tsbuildinfo, receipt, or cache files appear in the tarball listing.",
+        "Run `git status --porcelain` after the auto-commit to confirm no unstaged cache/receipt files remain in the working tree outside .gitignore coverage.",
+        "Execute `node --test tests/distribution/typescript-cache-validation.test.mjs tests/distribution/typescript-incremental-caching.test.mjs` one final time from a clean shell to confirm 15/15 pass on the committed tree."
+      ],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "3f750eb3-617c-4383-b5af-87ecbb56547a",
+      "project_id": "13a81af7a7764e987eeaa234b1f1cde23360d1e411d5fcd1c5819e428ed8aa44",
+      "task_revision": 4,
+      "phase_id": "phase-04",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Implement and qualify Phase 04 TypeScript incremental caching with self-healing output tracking",
+        "non_goals": [
+          "Migrate compiler to Bun or alternative runtimes",
+          "Weaken typechecking rules or skip declarations",
+          "Delete unrelated dist or repository artifacts during cache cleanup"
+        ],
+        "authorized_paths": [
+          "tsconfig.json",
+          "tsconfig.advisor-runtime.json",
+          "package.json",
+          "scripts/build-typescript.mjs",
+          "scripts/typescript-build-cache.mjs",
+          "scripts/typescript-build-receipt.mjs",
+          "tests/distribution/typescript-cache-validation.test.mjs",
+          "tests/distribution/typescript-incremental-caching.test.mjs"
+        ],
+        "scope_rationale": "Phase 04 independent TypeScript incremental build caches in tsconfig files, self-healing output driver, and verification tests",
+        "invariants": [
+          "Preserve existing compiler target/module/typecheck behavior and declarations",
+          "Automatic recovery when output directory or individual expected files are missing",
+          "Zero cache or receipt file leakage into distribution packages or git index",
+          "All 15/15 tests pass with zero regressions"
+        ],
+        "success_criteria": [
+          "Incremental compilation delivers >=1.5x end-to-end build speedup and >2.5x isolated compile speedup",
+          "Safe stale output removal on source rename/removal without sweeping dist directory",
+          "Zero leaked artifacts in npm pack dry-run",
+          "Code review completed with terminal approval"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "package.json",
+          "digest": "140d86e171f48c400a9b3ace74ebe42c8e560008e616e626490c647c58f45d6b",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 5daf390f7edd9342b7125dbbd59bf69a85daf69c 5daf390f7edd9342b7125dbbd59bf69a85daf69c|100644 5daf390f7edd9342b7125dbbd59bf69a85daf69c 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-261005-0903-phase-04-typescript-incremental-caching.md",
+          "digest": "226ecbcffbe63aa6801da501a87b922e5708981c040f843b0a2627184cacbec0",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/build-typescript.mjs",
+          "digest": "c7a816ec870b8a4f70fe90bf9f989791241abfd0509ff000dd635f78dfb2d291",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/typescript-build-cache.mjs",
+          "digest": "68ae7b34eb25e8632ecc0f26a7f4e522a97ac8beb5fa5c81214f1d1884f05217",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/typescript-build-receipt.mjs",
+          "digest": "2c4d08159bfd7f5217380fb6bf56ea4e3e4ea42d5abdbd32fb92279303280b4b",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/typescript-cache-validation.test.mjs",
+          "digest": "18de40e213742273557a5e048feb99d23268e5008ba4f21d196749f197c318ec",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/typescript-incremental-caching.test.mjs",
+          "digest": "ff82771046f48fbd38cd99bdc6281fa644cb5c399be25f475e71b3402751dfb1",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tsconfig.advisor-runtime.json",
+          "digest": "3ab0ba950aa881cbd6000b49013c1f6adc4ec8fcfe46d1fcca3287aa69d417d9",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 334bdcb168c0c9468f686683ba73b969c72118bb 334bdcb168c0c9468f686683ba73b969c72118bb|100644 334bdcb168c0c9468f686683ba73b969c72118bb 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tsconfig.json",
+          "digest": "90f1f58550e22312ce70a7b38acddf4277ac882d07d1708d8579073fd62a5d5a",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 7cac736f5d37704d8d6076e5bb43680de53b090e 7cac736f5d37704d8d6076e5bb43680de53b090e|100644 7cac736f5d37704d8d6076e5bb43680de53b090e 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "tsconfig.json",
+          "tsconfig.advisor-runtime.json",
+          "package.json",
+          "scripts/build-typescript.mjs",
+          "scripts/typescript-build-cache.mjs",
+          "scripts/typescript-build-receipt.mjs",
+          "tests/distribution/typescript-cache-validation.test.mjs",
+          "tests/distribution/typescript-incremental-caching.test.mjs"
+        ],
+        "rationale": "Phase 04 independent TypeScript incremental build caches in tsconfig files, self-healing output driver, and verification tests",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "package.json",
+          "digest": "140d86e171f48c400a9b3ace74ebe42c8e560008e616e626490c647c58f45d6b",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 5daf390f7edd9342b7125dbbd59bf69a85daf69c 5daf390f7edd9342b7125dbbd59bf69a85daf69c|100644 5daf390f7edd9342b7125dbbd59bf69a85daf69c 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-261005-0903-phase-04-typescript-incremental-caching.md",
+          "digest": "226ecbcffbe63aa6801da501a87b922e5708981c040f843b0a2627184cacbec0",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/build-typescript.mjs",
+          "digest": "c7a816ec870b8a4f70fe90bf9f989791241abfd0509ff000dd635f78dfb2d291",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/typescript-build-cache.mjs",
+          "digest": "68ae7b34eb25e8632ecc0f26a7f4e522a97ac8beb5fa5c81214f1d1884f05217",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/typescript-build-receipt.mjs",
+          "digest": "2c4d08159bfd7f5217380fb6bf56ea4e3e4ea42d5abdbd32fb92279303280b4b",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/typescript-cache-validation.test.mjs",
+          "digest": "18de40e213742273557a5e048feb99d23268e5008ba4f21d196749f197c318ec",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/typescript-incremental-caching.test.mjs",
+          "digest": "ff82771046f48fbd38cd99bdc6281fa644cb5c399be25f475e71b3402751dfb1",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tsconfig.advisor-runtime.json",
+          "digest": "3ab0ba950aa881cbd6000b49013c1f6adc4ec8fcfe46d1fcca3287aa69d417d9",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 334bdcb168c0c9468f686683ba73b969c72118bb 334bdcb168c0c9468f686683ba73b969c72118bb|100644 334bdcb168c0c9468f686683ba73b969c72118bb 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tsconfig.json",
+          "digest": "90f1f58550e22312ce70a7b38acddf4277ac882d07d1708d8579073fd62a5d5a",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 7cac736f5d37704d8d6076e5bb43680de53b090e 7cac736f5d37704d8d6076e5bb43680de53b090e|100644 7cac736f5d37704d8d6076e5bb43680de53b090e 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4",
+        "checkpoint_digest": "d956f2755960c6a37eda1ff440f13611a44f9a556c877d14fb77da188d0242a6",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "5e83d13248ee64a59a37ddd43994bbc327033d55d80e8c6e2dfb99bda224091e",
+        "envelope_digest": "d4a2c544e02ff864429cb1de0e04e3df56fa5934ea648a944ef2ad7b949e42d0",
+        "receipt": {
+          "backend": "omp",
+          "model": "google-antigravity/claude-opus-4-6",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "18.6.1",
+          "build_identity": "evcrate-advisor-v2-16505a41eea260ae",
+          "elapsed_ms": 37525
+        },
+        "has_concerns": false,
+        "validation_commands": [
+          "node --test tests/distribution/typescript-cache-validation.test.mjs tests/distribution/typescript-incremental-caching.test.mjs",
+          "npm run build:clean",
+          "npm run build"
+        ],
+        "intended_changed_paths": []
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "635d9ccf-2dca-404c-9b3a-2bedf121f8a8",
+          "operation": "init",
+          "digest": "247cf988df24c9157c52350b004513b31493722b1fe7ef5acec3a4ee630a1390",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "d105fa0c-8f74-4d77-ace2-80e19cae864d",
+          "operation": "checkpoint",
+          "digest": "8c73661022345fcfc47d5ac5beb8d5386979c508e028af43a2a4f0c42930f7e0",
+          "revision": 2,
+          "consultation_id": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+          "operation": "attach",
+          "digest": "d4a2c544e02ff864429cb1de0e04e3df56fa5934ea648a944ef2ad7b949e42d0",
+          "revision": 4,
+          "consultation_id": "2c996c9a-14c3-411f-9ba1-e19adc310591",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "d956f2755960c6a37eda1ff440f13611a44f9a556c877d14fb77da188d0242a6",
+          "result_digest": "5e83d13248ee64a59a37ddd43994bbc327033d55d80e8c6e2dfb99bda224091e"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  }
+}

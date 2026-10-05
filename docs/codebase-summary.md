@@ -5,7 +5,7 @@
 **Updated:** 2026-10-05
 **Package:** Private npm package `evcrate` 2.6.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phase 07 exercised one native Windows x64 row (111 passed; formal qualification invalidated by stale `.omp` manifest under Rule 94). Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`, 7,410 files, archive SHA-256 `6a720dfb...`, manifest SHA-256 `365f145b...`) with repaired `.omp` output hash, 9/9 extracted root launch test pass, Cycle 2 native Windows runner fixes, clean Linux qualification (753/753 passed, 25 win32 skips), and code review score 9.8/10; ready for Phase 07 requalification. Broader Windows support remains limited to installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phase 01 (Linear URI Restoration) and Phase 02 (Single-Projection Manifest Reuse) complete 2026-10-05; Phase 03 (Bounded Worker Staging) pending.
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phases 01–04 complete 2026-10-05; Phase 05 (Parity Verification & Benchmarks) pending.
 **Controller closure:** Exactly 44 files (36 prior entries plus eight Darwin assets); earlier 29-, 33-, and 36-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
@@ -22,7 +22,7 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
 | `.evcrate/registry.json` | Schema-1 canonical resource records | Regenerate from the canonical scan; distinct from target/build manifests. |
 | `src/` | TypeScript control plane | Primary package implementation. |
-| `scripts/` | Generation, package, and release tooling | Follow each script's declared authority; generated outputs are not edited by hand. |
+| `scripts/` | Generation, package, release, and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
 | `viewer/src/` | Shared Advisor UI source retained after plugin retirement | Maintain only against current consumers; the former `plugin/` backend/package was removed. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
@@ -49,8 +49,22 @@ The CLI resolves context, validates one invocation, dispatches one operation, wr
 
 ## Build, publication, and installer flow
 
-`npm run build` compiles the TypeScript control plane; its `prebuild` generates the canonical runtime brief, advisor runtime modules, and controller inventory. `npm run distribute:build` creates target projections and verified build manifests; `npm run distribute:check` checks the generated state.
+`npm run build` compiles the TypeScript control plane incrementally via `scripts/build-typescript.mjs -p tsconfig.json`; its `prebuild` generates the canonical runtime brief, advisor runtime modules (`npm run generate:advisor-runtime` via `scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json`), and controller inventory. Full clean builds are supported via `npm run build:clean` (`--clean`). `npm run distribute:build` creates target projections and verified build manifests; `npm run distribute:check` checks the generated state.
 
+### TypeScript incremental build caching architecture
+
+TypeScript builds use a compiler-driven incremental caching subsystem orchestrated by `scripts/build-typescript.mjs`:
+- **Cache locations & configuration**: Both `tsconfig.json` and `tsconfig.advisor-runtime.json` declare `"incremental": true` with build info paths directed to `.cache/evcrate/` (`tsconfig.tsbuildinfo` and `tsconfig.advisor-runtime.tsbuildinfo`). The `.cache/` root is excluded via `.gitignore`.
+- **Compiler execution**: The authoritative TypeScript compiler binary (`node_modules/typescript/bin/tsc`) is invoked directly with `-p <config>` and forwarded arguments via `spawnSync`. Failures propagate non-zero exit codes immediately without downstream mutations.
+- **Cache validation and invalidation (`scripts/typescript-build-cache.mjs`)**:
+  - Dynamically computes expected `.js` and `.d.ts` outputs using official TypeScript compiler APIs (`ts.readConfigFile`, `ts.parseJsonConfigFileContent`, `ts.getOutputFileNames`).
+  - Automatically detects corrupted cache files (zero bytes or invalid JSON via `isBuildInfoCorrupt`) and removes them.
+  - Automatically verifies disk presence for all expected outputs via `validateAndInvalidateCache`. If any output artifact is missing, the `.tsbuildinfo` cache is deleted to force `tsc` to perform full re-emission.
+- **Receipt management and safe stale cleanup (`scripts/typescript-build-receipt.mjs`)**:
+  - Tracks compiler-owned output artifacts in atomic schema version 1 receipts (`<tsBuildInfoPath>.receipt.json` or `.cache/evcrate/<config>.receipt.json`) containing `config`, `outDir`, `timestamp`, and sorted `outputs`.
+  - On successful compilation, `cleanStaleOutputs` diffs current expected outputs against the previous receipt to delete obsolete files (e.g., when sources are deleted or renamed).
+  - Safety invariants: enforces strict boundary containment (`isStrictlyInside(childPath, parentDir)`) preventing path-traversal escapes, never sweeps `outDir`, refuses symlinks (`fs.lstatSync`), and unlinks only compiler-owned regular files recorded in the previous receipt.
+  - Receipts are written atomically via `.tmp.<timestamp>` files and atomic rename.
 For full repository manifest generation, `scripts/build-manifests.mjs` executes `runAllManifestsBuild` using single-projection manifest reuse (`src/distribution/local-build.ts`, `src/distribution/local-build-staging.ts`, `src/distribution/manifest-view-derivation.ts`). Each target projection is staged and validated once across all 8 persisted targets via `buildAndStageTarget`. Shared build inputs (`SharedBuildInputs`) and target build facts (`TargetBuildFacts`) feed in-memory metadata derivation (`deriveManifestView`), constructing 8 single-target manifests (`build-manifest-<target>.json`) and 1 aggregate manifest (`build-manifest.json`) without duplicate projection runs or disk re-reads. Manifest policies enforce the mandatory `advisor-controller` entry via `buildTargetPolicies`. All 9 manifests and staged outputs are committed in a single atomic promotion transaction (`promoteTransaction`), cutting projection passes from 16 to 8 while maintaining 100% byte-for-byte parity.
 
 Publication consumes a verified build and publishes the shared advisor controller under HOME plus target harness files in HOME or project scope. Recovery is scope-isolated.
