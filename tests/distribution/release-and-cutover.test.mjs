@@ -72,23 +72,26 @@ test('mixed-stage atomic transactions spanning python and typescript are rejecte
 });
 
 
-test('local distribution build executes and generates verified build manifest', () => {
-  const buildResult = runLocalBuild(packageRoot, PERSISTED_TARGETS);
+test('local distribution build executes and generates verified build manifest', async () => {
+  const buildResult = await runLocalBuild(packageRoot, PERSISTED_TARGETS);
   assert.ok(buildResult.manifestPath);
   assert.ok(buildResult.manifest);
   assert.equal(buildResult.selectedManifests.length, 8);
 
-  const ompBuild = runLocalBuild(packageRoot, ['omp']);
+  const ompBuild = await runLocalBuild(packageRoot, ['omp']);
   assert.ok(ompBuild.manifestPath);
   assert.ok(ompBuild.manifest);
   assert.equal(ompBuild.selectedManifests.length, 1);
   assert.equal(ompBuild.selectedManifests[0].id, 'omp');
+
+  // Restore full workspace build for subsequent tests
+  await runLocalBuild(packageRoot, PERSISTED_TARGETS);
 });
 
-test('local distribution check validates artifact tree without drift', () => {
+test('local distribution check validates artifact tree without drift', async () => {
   assertLegacyRootClean(packageRoot);
-  assert.doesNotThrow(() => {
-    runLocalCheck(packageRoot, PERSISTED_TARGETS);
+  await assert.doesNotReject(async () => {
+    await runLocalCheck(packageRoot, PERSISTED_TARGETS);
   });
 });
 test('packaged artifact allowlist is Python-free and contains required runtime assets', () => {

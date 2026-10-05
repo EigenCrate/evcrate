@@ -6,7 +6,7 @@ import { withPublishLock } from '../filesystem/locking.js';
 import { hashBytes, hashFile, treeHash } from '../filesystem/hashing.js';
 import { readBuildManifest } from './manifest.js';
 import type { VerifiedCurrentBuild } from './build-resolution.js';
-import { assembleLocalStage } from './local-build-staging.js';
+import { assembleLocalStage, assertLiveInputsUnchanged } from './local-build-staging.js';
 import { promoteTransaction, type PromotionPair } from './promotion.js';
 import { publishApply, recoverPublication, type PublicationOptions } from './publication.js';
 import { PERSISTED_TARGETS, type PersistedTarget } from '../protocol/validation.js';
@@ -27,13 +27,30 @@ function isSamePathTree(staged: string, local: string): boolean {
   return treeHash(staged) === treeHash(local);
 }
 
-export function runLocalBuild(
+export interface LocalBuildOptions {
+  readonly emitAllManifests?: boolean;
+  readonly jobs?: number | string | undefined;
+  readonly workerScriptPath?: string;
+}
+
+export interface VerifiedAllManifestsBuild {
+  readonly aggregateBuild: VerifiedCurrentBuild;
+  readonly targetBuilds: ReadonlyMap<PersistedTarget, VerifiedCurrentBuild>;
+  readonly allManifestPaths: readonly string[];
+}
+
+export async function runLocalBuild(
   packageRoot: string,
-  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS
-): VerifiedCurrentBuild {
+  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS,
+  options: LocalBuildOptions = {}
+): Promise<VerifiedCurrentBuild> {
   const stage = createStagedRoot(packageRoot, '.evcrate-build-');
   try {
-    const result = assembleLocalStage(packageRoot, stage, selectedTargets);
+    const result = await assembleLocalStage(packageRoot, stage, selectedTargets, {
+      emitAllManifests: options.emitAllManifests,
+      jobs: options.jobs,
+      workerScriptPath: options.workerScriptPath
+    });
     const pairs: PromotionPair[] = [];
 
     for (const [name, stagedPath] of result.stagedOutputs) {
@@ -42,9 +59,25 @@ export function runLocalBuild(
       pairs.push({ source: stagedPath, destination: localPath });
     }
 
-    pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
+    if (result.allStagedManifests && result.allStagedManifests.length > 0) {
+      for (const entry of result.allStagedManifests) {
+        pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+      }
+    } else {
+      pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
+    }
 
-    promoteTransaction(pairs, { stageRoot: stage, lockRoot: join(packageRoot, '.evcrate-publish-state') });
+    const hooks = result.snapshotHashes
+      ? {
+          beforeTransaction: () => assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!)
+        }
+      : undefined;
+
+    promoteTransaction(pairs, {
+      stageRoot: stage,
+      lockRoot: join(packageRoot, '.evcrate-publish-state'),
+      hooks
+    });
     const manifest = readBuildManifest(result.manifestPath);
     return Object.freeze({
       manifestPath: result.manifestPath,
@@ -58,13 +91,94 @@ export function runLocalBuild(
   }
 }
 
-export function runLocalCheck(
+export async function runAllManifestsBuild(
   packageRoot: string,
-  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS
-): void {
+  options: LocalBuildOptions = {}
+): Promise<VerifiedAllManifestsBuild> {
+  const stage = createStagedRoot(packageRoot, '.evcrate-build-');
+  try {
+    const result = await assembleLocalStage(packageRoot, stage, PERSISTED_TARGETS, {
+      emitAllManifests: true,
+      jobs: options.jobs,
+      workerScriptPath: options.workerScriptPath
+    });
+    const pairs: PromotionPair[] = [];
+
+    for (const [name, stagedPath] of result.stagedOutputs) {
+      if (name === '.evcrate') continue;
+      const localPath = result.localOutputs.get(name)!;
+      pairs.push({ source: stagedPath, destination: localPath });
+    }
+
+    for (const entry of result.allStagedManifests!) {
+      pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+    }
+
+    const hooks = result.snapshotHashes
+      ? {
+          beforeTransaction: () => assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!)
+        }
+      : undefined;
+
+    promoteTransaction(pairs, {
+      stageRoot: stage,
+      lockRoot: join(packageRoot, '.evcrate-publish-state'),
+      hooks
+    });
+
+    const aggregateManifest = readBuildManifest(result.manifestPath);
+    const aggregateBuild: VerifiedCurrentBuild = Object.freeze({
+      manifestPath: result.manifestPath,
+      manifest: aggregateManifest,
+      manifestDigest: hashBytes(result.manifestData),
+      selectedManifests: result.selectedManifests,
+      outputPaths: Object.freeze(Object.fromEntries(result.localOutputs))
+    });
+
+    const targetBuilds = new Map<PersistedTarget, VerifiedCurrentBuild>();
+    for (const entry of result.allStagedManifests!) {
+      if (entry.target === 'aggregate') continue;
+      const targetManifest = readBuildManifest(entry.manifestPath);
+      const manifestDef = result.selectedManifests.find((s) => s.id === entry.target)!;
+      const targetOutputs: Record<string, string> = {
+        '.evcrate': join(packageRoot, '.evcrate', 'source', '.evcrate')
+      };
+      for (const root of manifestDef.outputRoots) {
+        targetOutputs[root] = join(packageRoot, '.evcrate', 'source', root);
+      }
+      for (const doc of manifestDef.projectDocs) {
+        targetOutputs[doc] = join(packageRoot, '.evcrate', 'source', doc);
+      }
+      targetBuilds.set(entry.target, Object.freeze({
+        manifestPath: entry.manifestPath,
+        manifest: targetManifest,
+        manifestDigest: hashBytes(entry.manifestData),
+        selectedManifests: Object.freeze([manifestDef]),
+        outputPaths: Object.freeze(targetOutputs)
+      }));
+    }
+
+    return Object.freeze({
+      aggregateBuild,
+      targetBuilds,
+      allManifestPaths: Object.freeze(result.allStagedManifests!.map((m) => m.manifestPath))
+    });
+  } finally {
+    stage.cleanup();
+  }
+}
+
+export async function runLocalCheck(
+  packageRoot: string,
+  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS,
+  options: LocalBuildOptions = {}
+): Promise<void> {
   const stage = createStagedRoot(packageRoot, '.evcrate-check-');
   try {
-    assembleLocalStage(packageRoot, stage, selectedTargets);
+    await assembleLocalStage(packageRoot, stage, selectedTargets, {
+      jobs: options.jobs,
+      workerScriptPath: options.workerScriptPath
+    });
   } finally {
     stage.cleanup();
   }
@@ -96,15 +210,15 @@ export async function runLocalDistribution(
 ): Promise<LocalDistributionOutcome> {
   switch (action) {
     case 'build':
-      runLocalBuild(context.packageRoot, context.selectedTargetIds);
+      await runLocalBuild(context.packageRoot, context.selectedTargetIds);
       return { action: 'build', engine: 'typescript' };
     case 'check':
-      runLocalCheck(context.packageRoot, context.selectedTargetIds);
+      await runLocalCheck(context.packageRoot, context.selectedTargetIds);
       return { action: 'check', engine: 'typescript' };
     case 'publish':
       return { action: 'publish', engine: 'typescript', payload: publishApply(context, options, publishRequest(context, request)) };
     case 'all':
-      runLocalBuild(context.packageRoot, context.selectedTargetIds);
+      await runLocalBuild(context.packageRoot, context.selectedTargetIds);
       return { action: 'all', engine: 'typescript', payload: publishApply(context, options, publishRequest(context, request)) };
     case 'recover':
       return { action: 'recover', engine: 'typescript', payload: recoverPublication(context, recoverRequest(request)) };

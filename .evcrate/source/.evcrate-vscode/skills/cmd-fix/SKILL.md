@@ -28,7 +28,7 @@ durable operations and checkpoint invocations belong to the delegated command.
 If the selected specialist does not declare `--advice`, route to `/cmd-fix-hard`
 with the same `WORK_ARGUMENTS` and active caller context so the requested advice
 gate is not silently dropped. Otherwise pass no mode token.
-Read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` before routing. Checkpoint and state
+Read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) before routing. Checkpoint and state
 requests use its authoritative host-aware invocation contract (POSIX direct path or
 Windows PowerShell / Node argv-array).
 
@@ -96,7 +96,7 @@ to the designated specialist without an `--advice` token. Execute the selected
 command under the contract above. Never report an advisor result before the
 delegated command returns a terminal `ADVICE_READY` result from the central
 controller according to the host-aware invocation contract in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail
 - If unclear, ask user for clarification before routing

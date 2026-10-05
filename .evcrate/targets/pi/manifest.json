@@ -6,7 +6,8 @@
     "dist/adapters/pi/agents.js",
     "dist/adapters/pi/frontmatter.js",
     "dist/adapters/pi/resources.js",
-    "dist/adapters/pi/transforms.js"
+    "dist/adapters/pi/transforms.js",
+    "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".pi",
   "additional_roots": [],

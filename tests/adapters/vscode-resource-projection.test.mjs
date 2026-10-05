@@ -71,14 +71,11 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     );
     assert.deepEqual(gitParsed.fields.agents, []);
 
-    // Snyk-expert: permissionMode: default, skills list
-    const snykPath = join(stageRoot, 'com.github.copilot/agents/snyk-expert.agent.md');
-    assert.ok(existsSync(snykPath), 'snyk-expert.agent.md must exist');
-    const snykParsed = parseFrontmatter(readFileSync(snykPath, 'utf8'));
-    assert.equal(snykParsed.fields.name, 'snyk-expert');
-    assert.equal(snykParsed.fields.permissionMode, 'default');
-    assert.deepEqual(snykParsed.fields.skills, ['snyk-fix', 'dependency-upgrade-review']);
-
+    // Code-reviewer: tools mapped, model: opus
+    const reviewerPath = join(stageRoot, 'com.github.copilot/agents/code-reviewer.agent.md');
+    assert.ok(existsSync(reviewerPath), 'code-reviewer.agent.md must exist');
+    const reviewerParsed = parseFrontmatter(readFileSync(reviewerPath, 'utf8'));
+    assert.equal(reviewerParsed.fields.name, 'code-reviewer');
     // 4. Verify commands (70)
     const croCommandPath = join(stageRoot, 'skills/cmd-plan-cro/SKILL.md');
     assert.ok(existsSync(croCommandPath), 'cmd-plan-cro/SKILL.md must exist');
@@ -220,6 +217,34 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const advisorMentoringContent = readFileSync(advisorMentoringWorkflowPath, 'utf8');
     assert.ok(advisorMentoringContent.includes('<!-- EVCRATE_CAPABILITY: mentoring/supported/v2 -->'));
     assert.ok(advisorMentoringContent.includes('<!-- EVCRATE_CAPABILITY: write-checks/vscode/advisory-only/v1 -->'));
+
+    // 12. Verify workflow fallback in staged instructions, agents, and skills
+    assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/primary-workflow.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/primary-workflow.md` (the published install)'));
+    assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)'));
+    assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install)'));
+    assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` (the published install)'));
+    assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/documentation-management.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/documentation-management.md` (the published install)'));
+    assert.equal(instructionsContent.includes('./docs/development-rules.md'), false);
+
+    const plannerAgentContent = readFileSync(join(stageRoot, 'com.github.copilot/agents/planner.agent.md'), 'utf8');
+    assert.equal(plannerAgentContent.includes('./docs/development-rules.md'), false);
+    assert.ok(plannerAgentContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
+    assert.ok(plannerAgentContent.includes('if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)'));
+
+    const uiUxDesignerContent = readFileSync(join(stageRoot, 'com.github.copilot/agents/ui-ux-designer.agent.md'), 'utf8');
+    assert.equal(uiUxDesignerContent.includes('./docs/development-rules.md'), false);
+    assert.ok(uiUxDesignerContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
+
+    const planningSkillContent = readFileSync(join(stageRoot, 'skills/planning/SKILL.md'), 'utf8');
+    assert.equal(planningSkillContent.includes('./docs/development-rules.md'), false);
+    assert.ok(planningSkillContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
+
+    const docMgmtContent = readFileSync(join(stageRoot, 'evcrate/workflows/documentation-management.md'), 'utf8');
+    assert.equal(docMgmtContent.includes('./docs/development-rules.md'), false);
+    assert.ok(docMgmtContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
+
+    assert.ok(advisorMentoringContent.includes('.evcrate-vscode/evcrate/workflows/advisor-mentoring.md'));
+    assert.ok(advisorMentoringContent.includes('if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install)'));
   } finally {
     stage.cleanup();
   }

@@ -11,7 +11,7 @@ import {
 
 const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]$/u, '');
 let builtFixture;
-function sourceDerivedPackage() {
+async function sourceDerivedPackage() {
   if (builtFixture !== undefined) return builtFixture;
   const root = mkdtempSync(join(tmpdir(), 'evcrate-parity-package-'));
   const fixturePackage = join(root, 'package');
@@ -21,12 +21,12 @@ function sourceDerivedPackage() {
   cpSync(join(packageRoot, 'dist'), join(fixturePackage, 'dist'), {
     recursive: true, dereference: true
   });
-  runLocalBuild(fixturePackage, PERSISTED_TARGETS);
+  await runLocalBuild(fixturePackage, PERSISTED_TARGETS);
   builtFixture = { root, fixturePackage };
   return builtFixture;
 }
-function sourceDerivedBuild(targets = []) {
-  const { fixturePackage } = sourceDerivedPackage();
+async function sourceDerivedBuild(targets = []) {
+  const { fixturePackage } = await sourceDerivedPackage();
   const root = mkdtempSync(join(tmpdir(), 'evcrate-parity-session-'));
   const home = join(root, 'home');
   mkdirSync(home);
@@ -40,8 +40,8 @@ test.after(() => {
 });
 
 
-test('all-target schema-2 build resolves with explicit publication policy parity', () => {
-  const fixture = sourceDerivedBuild();
+test('all-target schema-2 build resolves with explicit publication policy parity', async () => {
+  const fixture = await sourceDerivedBuild();
   try {
     const { build } = fixture;
     assert.deepEqual(build.selectedManifests.map(({ name }) => name), [
@@ -59,8 +59,8 @@ test('all-target schema-2 build resolves with explicit publication policy parity
   }
 });
 
-test('build verification rejects a stale source hash before publication planning', () => {
-  const fixture = sourceDerivedBuild(['claude']);
+test('build verification rejects a stale source hash before publication planning', async () => {
+  const fixture = await sourceDerivedBuild(['claude']);
   try {
     const { context, build } = fixture;
     const stale = { ...build.manifest.source_hashes, 'CLAUDE.md': '0'.repeat(64) };

@@ -11,6 +11,7 @@ import {
 export { PROMOTION_BACKUP_PREFIX, PROMOTION_JOURNAL_NAME } from './promotion-recovery.js';
 export interface PromotionPair { readonly source: string | null; readonly destination: string; }
 export interface PromotionHooks {
+  readonly beforeTransaction?: () => void;
   readonly beforeBackup?: (pair: PromotionPair, index: number) => void;
   readonly afterBackup?: (pair: PromotionPair, index: number) => void;
   readonly beforePromote?: (pair: PromotionPair, index: number) => void;
@@ -57,6 +58,8 @@ function promoteUnlocked(pairs: readonly PromotionPair[], options: PromotionOpti
       assertDirectoryPath(stageRoot.path, dirname(source));
     }
   }
+  // Freshness guards must fail before the journal claims destinations for rollback.
+  options.hooks?.beforeTransaction?.();
   const sourceSnapshots = sources.map((source) => source === null ? null : snapshot(source, 'PATH_UNSAFE'));
   const destinationSnapshots = destinations.map((destination) => snapshot(destination, 'PATH_UNSAFE'));
   const backupDir = mkdtempSync(join(commonParent, PROMOTION_BACKUP_PREFIX));

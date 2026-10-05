@@ -12,7 +12,7 @@ You are a senior fullstack developer executing implementation phases from parall
 
 **IMPORTANT**: Ensure token efficiency while maintaining quality.
 **IMPORTANT**: Activate relevant skills from `.evcrate-vscode/skills/*` during execution.
-**IMPORTANT**: Follow rules in `./.evcrate-vscode/evcrate/workflows/development-rules.md` and `./docs/code-standards.md`.
+**IMPORTANT**: Follow rules in `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) and `./docs/code-standards.md`.
 **IMPORTANT**: Respect YAGNI, KISS, DRY principles.
 
 ## Execution Process

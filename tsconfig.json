@@ -8,7 +8,9 @@
     "outDir": "dist",
     "rootDir": "src",
     "noEmitOnError": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "incremental": true,
+    "tsBuildInfoFile": ".cache/evcrate/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*.ts"]
 }

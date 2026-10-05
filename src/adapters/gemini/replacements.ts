@@ -1,3 +1,4 @@
+import { restoreIndexedTokens } from '../uri-restoration.js';
 const URI = /(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu;
 const URL = /https?:\/\/[^\s<>()]+/giu;
 const RESOURCE_SUFFIXES = ['output-styles', 'workflows', 'scripts', 'hooks', 'skills', '.evcrate.json', '.mcp.json', '.env'];
@@ -76,8 +77,7 @@ export function renderHarnessScriptReferences(input: string): string {
   rendered = rendered.replace(/^(\s*)const\s+claudeDir\s*=\s*path\.resolve\(skillsDir,\s*['"]\.\.['"]\);(.*)$/gmu,
     "$1const harnessDir = path.resolve(skillsDir, '..', '..', '.gemini');$2");
   rendered = rendered.replaceAll('claudeDir', 'harnessDir');
-  for (const [index, value] of protectedUrls.entries()) rendered = rendered.replaceAll(`__EVCRATE_HARNESS_URL_${index}__`, value);
-  return rendered;
+  return restoreIndexedTokens(rendered, '__EVCRATE_HARNESS_URL_', protectedUrls);
 }
 
 export function applyTargetReplacements(input: string): string {
@@ -90,8 +90,7 @@ export function applyTargetReplacements(input: string): string {
   text = text.replace(/\bCLAUDE\.md\b/giu, '__SOURCE_MEMORY_DOC__');
   for (const [pattern, replacement] of REPLACEMENTS) text = text.replace(pattern, replacement);
   text = text.replaceAll('__SOURCE_MEMORY_DOC__', 'CLAUDE.md');
-  for (const [index, value] of protectedUrls.entries()) text = text.replaceAll(`__GEMINI_PROTECTED_${index}__`, value);
-  return text;
+  return restoreIndexedTokens(text, '__GEMINI_PROTECTED_', protectedUrls);
 }
 
 export const TOOL_MAPPING: Readonly<Record<string, string>> = {

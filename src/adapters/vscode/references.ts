@@ -1,10 +1,9 @@
 import type { VscodeCommandMapEntry, VscodeSkillMapEntry } from './names.js';
+import { restoreIndexedTokens } from '../uri-restoration.js';
 
 const URI_PATTERN = /(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu;
 
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-}
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 
 function protectSegments(value: string): {
   readonly text: string;
@@ -23,11 +22,7 @@ function protectSegments(value: string): {
 }
 
 function restoreSegments(value: string, saved: readonly [string, string][]): string {
-  let result = value;
-  for (const [token, original] of saved) {
-    result = result.replaceAll(token, original);
-  }
-  return result;
+  return restoreIndexedTokens(value, '__EVCRATE_VSCODE_URI_', saved);
 }
 
 export function replaceCommandPaths(
@@ -139,6 +134,21 @@ export function replaceWorkflowReferences(value: string): string {
       `${replacement}evcrate/workflows/$1`
     );
   }
+
+  // Rewrite legacy docs token to qualified local development-rules workflow
+  rendered = rendered.replace(
+    /(?<![A-Za-z0-9_./~$\\{}-])\.\/docs\/development-rules\.md(?![A-Za-z0-9_/#?%+~$\\{}-]|\.[A-Za-z0-9_.-])/gu,
+    './.evcrate-vscode/evcrate/workflows/development-rules.md'
+  );
+
+  // Append published-install fallback to local relative workflow references
+  const localWorkflowPattern = /(?<![A-Za-z0-9_./~$\\{}-])(?<quote>`?)(?<path>(?:\.\/)?\.evcrate-vscode\/evcrate\/workflows\/(?<name>[A-Za-z0-9_-]+\.md))\k<quote>(?<closingParen>\)?)(?![A-Za-z0-9_/#?%+~$\\{}\x60-]|\.[A-Za-z0-9_.-])/gu;
+
+  rendered = rendered.replace(localWorkflowPattern, (match, quote, path, name, closingParen, offset, whole) => {
+    if (whole.startsWith(' if present; otherwise read ', offset + match.length)) return match;
+    const q = quote || '';
+    return `${q}${path}${q}${closingParen || ''} if present; otherwise read ${q}~/.evcrate-vscode/evcrate/workflows/${name}${q} (the published install)`;
+  });
 
   return restoreSegments(rendered, guarded.protectedEntries);
 }

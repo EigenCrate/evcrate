@@ -102,10 +102,37 @@ boundary.
   `evcrate-advisor` for the existing CommonJS controller.
 - Keep public exports side-effect free. Importing `src/index.ts` must not start a
   process, open a listener, mutate HOME, or run a distribution action.
-- Treat `package.json` scripts as command authority. Prefer `npm run build`,
-  `npm run distribute:build`, `npm run distribute:check`, and target-specific
-  `npm run distribute:*` scripts over stale Python snippets.
+- Treat `package.json` scripts as command authority:
+  - `npm run build`: Incremental TypeScript compilation via `node scripts/build-typescript.mjs -p tsconfig.json`.
+  - `npm run prebuild:clean`: Shares ordinary prebuild lifecycle (`npm run prebuild`), regenerating the runtime brief, advisor runtime, and controller inventory before clean builds.
+  - `npm run build:clean`: Clean build invalidating build info cache (`.tsbuildinfo`) while retaining prior receipt via `node scripts/build-typescript.mjs -p tsconfig.json --clean`.
+  - `npm run generate:advisor-runtime`: Incremental advisor runtime build via `node scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json`.
+  - `npm run generate:all`: Orchestrated sequence: `npm run build && npm run generate:registry && npm run generate:manifests`.
+  - `npm run distribute:build`, `npm run distribute:check`, and target-specific `npm run distribute:*` scripts for target projections.
 
+### TypeScript incremental build caching and receipt safety
+
+TypeScript builds enforce deterministic incremental caching with compiler-owned output tracking:
+- **Cache configuration & layout**: `tsconfig.json` and `tsconfig.advisor-runtime.json` configure `"incremental": true` with build info caches in `.cache/evcrate/` (`tsconfig.tsbuildinfo` and `tsconfig.advisor-runtime.tsbuildinfo`). The `.cache/` root is gitignored (`/.cache/`).
+- **Authoritative compiler driver**: `scripts/build-typescript.mjs` orchestrates compilation:
+  - Exposes `buildTypeScript(options)` and CLI flags `-p`/`--project <config>` and `--clean`.
+  - Resolves outputs and caches via public TypeScript compiler APIs (`ts.readConfigFile`, `ts.parseJsonConfigFileContent`, `ts.createProgram`, `ts.getOutputFileNames`).
+  - Spawns `node_modules/typescript/bin/tsc` via `spawnSync` with `-p <absoluteConfigPath>`.
+  - Non-zero compiler exits halt driver cleanup and receipt updates; compiler emission still follows TypeScript's `noEmitOnError` policy.
+  - **Clean mode semantics**: `--clean` removes only the `.tsbuildinfo` file to force complete compilation. The prior receipt is preserved so `cleanStaleOutputs` can diff against prior ownership.
+  - **Effective CLI flags & noEmit**: CLI arguments are parsed with `ts.parseCommandLine` relative to the compiler working directory (`outDir`, `rootDir`, `declarationDir`, `tsBuildInfoFile`, `baseUrl`). For `--noEmit` (typecheck-only) runs, expected output inventory is empty, cache validation skips missing outputs, and `buildTypeScript` skips emitting-build stale output cleanup and receipt mutation entirely.
+  - **Output override receipt partitioning**: When CLI flags override `outDir` or `declarationDir`, `receiptPath` appends a 16-hex SHA-256 partition hash (`<receiptPath>.<identity>`) to prevent cross-configuration receipt collisions.
+- **Cache validation and invalidation**: `scripts/typescript-build-cache.mjs` ensures build soundness:
+  - **Program closure inventory**: `resolveConfigOutputs` uses `ts.createProgram` to resolve the full emit-eligible program closure (`!source.isDeclarationFile && !program.isSourceFileFromExternalLibrary(source)`), capturing both root and imported non-root modules. Output filenames are computed via `ts.getOutputFileNames`. Live imported module outputs are fully tracked and never deleted as stale.
+  - **Corruption recovery**: `isBuildInfoCorrupt` detects empty or malformed JSON `.tsbuildinfo` files and purges them.
+  - **Missing output recovery**: `validateAndInvalidateCache` checks disk presence for all expected `.js` and `.d.ts` outputs (skipped under `noEmit`). If any artifact is absent or deleted, the `.tsbuildinfo` file is unlinked, forcing full compiler re-emission.
+- **Receipt management and safe stale cleanup**: `scripts/typescript-build-receipt.mjs` tracks compiler-owned outputs in schema version 1 receipts (`<tsBuildInfoPath>.receipt.json`):
+  - **Safe stale cleanup**: `cleanStaleOutputs` diffs current expected outputs against the prior receipt to remove obsolete outputs from renamed or deleted source files.
+  - **Separate declaration directory**: Supports distinct `declarationDir`, tracking declaration artifacts alongside code outputs and recording `declarationDir` in receipt metadata.
+  - **Physical all-ancestor containment & symlink refusal**: `isSafeOutputPath` inspects every path component from the filesystem root through output root ancestors, parent directories, and leaves via `fs.lstatSync`. Symbolic links in ancestors, parent directories, or output leaves are strictly refused (never unlinked or followed). Confirms physical containment of parent directory inside real output root via `fs.realpathSync`.
+  - **No directory sweeping**: Never sweeps `outDir` or unlinks unrecorded files.
+  - **Failed cleanup ledger preservation**: If stale output cleanup encounters errors, `buildTypeScript` halts with exit status 1 without calling `writeReceipt`, preserving the prior receipt on disk for subsequent runs.
+  - **Atomic persistence**: On successful cleanup, `writeReceipt` records `{ version: 1, config, outDir, declarationDir, timestamp, outputs }` using a `.tmp.<timestamp>` file and atomic `fs.renameSync`.
 ### One-shot CLI lifecycle
 
 ```text
@@ -470,99 +497,9 @@ of query filters. The version-1 metadata sidecar maps project SHA-256 IDs to
 owner-safe display names; strict validators reject controls, path separators,
 HOME references, and overlength names. A display label is never authority.
 
-The companion runner contract uses `ContextScopeKind` (`project` |
-`history-root`) and `ContextScopeDescriptor` (`kind`, optional `rootIdentity`,
-optional `sourceRevision`). The trusted host installation and authenticated
-session—not a target wildcard or client path—authorize root-history scope.
+### Historical Advisor plugin and worker architecture (Retired 2026-10-02)
 
-`plugin/contracts/read-closure-feasibility.json` is the E00 G0 feasibility
-authority, not an extraction implementation. Its read closure permits only
-`node:fs`, `node:path`, and `node:crypto`; mutation, model/process/network, and
-workspace modules stay outside it, and the expected controller inventory delta is
-zero. E01 revalidated the graph without adding shared controller files.
-
-Transport/provider code must enforce raw byte ceilings before JSON deserialization
-to avoid unconstrained allocations. Current review follow-ups remain to normalize
-metric-filter failures to `PluginDataApiError` and recursively validate compare
-groups once the UI shape is stable.
-
-
-### Phase E02 framed Node plugin worker
-
-`plugin/backend/worker.cjs` is the only worker entrypoint. Use the pinned D00
-SDK for four-byte big-endian framing, strict UTF-8 JSON-RPC 2.0 validation, and
-frame limits; never duplicate generic framing or accept batches/numeric IDs.
-Check payload ceilings before allocation. stdout is protocol frames only; all
-operational data goes through the bounded sanitized stderr logger.
-
-Keep the worker private and runner-owned: no listener, shell, child model
-process, arbitrary filesystem discovery, mutation, credentials, or durable grant
-registry. Require Node `>=22.19.0`. `runner.hello` gates all other methods and
-must report protocol/SDK/manifest/data versions plus only implemented
-capabilities. A repeated hello cancels requests and revokes old contexts.
-
-Contexts are ephemeral, target-verified, revision-tagged, and operation-limited:
-maximum 16 contexts/worker, 4 operations/context, 300-second idle TTL by the
-current SDK budget. Every invoke checks context, allowed operation, policy flag,
-and supplied activation/binding/grant revisions; stale revisions cancel work
-and revoke the context. The host remains the durable authorization authority.
-
-Request admission is bounded to 16 active operations and queue 32, with one
-history refresh and one evaluation parse active per worker. Map one request ID
-to one `AbortController`/SDK cancellation token. Deadlines and cancellation
-must settle the original invocation exactly once; queued settlement must not
-decrement active counters. Do not retry or replay after cancellation, reconnect,
-or worker restart.
-
-Map provider/internal failures to the D00 safe error taxonomy. Redact paths,
-long token-like values, credentials, source bytes, raw stderr, and stacks; keep
-only allowlisted detail keys. Domain status unions are valid results, not
-exceptions. Unexpected failures become `WORKER_FAILED` and terminate through
-runner recovery semantics.
-
-`plugin/backend/data-api.cjs` is the package-local E00 validator closure.
-`plugin/manifest.json` inventory and
-`scripts/build-advisor-plugin-candidate.mjs` are generated/validated package
-authority: the E02 backend candidate was deterministic for G1; E03 later extended
-the candidate with UI/navigation. This dated packaging evidence is not E04/G4
-qualification or current release-asset verification.
-See the [historical plugin integration record](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02).
-
-### Phase E03 provider-neutral embedded UI
-
-Keep one `App`/reducer/view tree behind `AdvisorDataProvider`; do not fork plugin
-views or leak acquisition types into shared props. The interface owns the eight E00
-read operations, lifecycle subscription, and `cancel(requestId)`.
-
-- **Historical E03 adapter:** At E03 completion, the UI had a temporary local File
-  System Access adapter. That source was later removed; its former design is
-  documented as historical in the [system architecture](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02),
-  not as a current module or G4 evidence.
-- `DamHopperPortProvider` accepts one validated transferred `MessagePort`, sends
-  the `1.0.0` nonce acknowledgement, waits for `frame.ready`, and carries only
-  bounded E00 requests/responses. Bind frame session and activation generation;
-  ignore late/mismatched messages; reject pending work on revoke/teardown.
-- `bridge-contract.ts` must reject non-object/unknown/malformed envelopes and
-  impossible response shapes. Opaque-origin `null` is not an identity signal.
-- Reducer actions must be generation/session-fenced. Context changes or revocation
-  clear snapshots, cursors, details, policy, evaluations, and selection before
-  accepting new data. Plugin filters request summary plus the first page; do not
-  download all history.
-- Preserve the four shared views: Overview, History/detail, Configuration, and
-  Evaluations. Current account-wide policy, detail changed/missing, unavailable,
-  forbidden, and evaluation issue states remain distinct and observable.
-- `plugin/ui/index.html` is a self-contained opaque-srcdoc package member. The Vite
-  build inlines CSS and IIFE JavaScript, emits no sourcemaps/external assets, and
-  the candidate builder records its size, SHA-256, and mode in the manifest.
-- Embedded code must not call File System Access pickers, fetch/XHR/WebSocket/
-  EventSource, storage/cookies, `eval`, `Function`, or active external links.
-  Render untrusted values as inert text and retain semantic keyboard-accessible
-  tabs, tables, panels, and drawers. Host CSP/sandbox remains authoritative.
-
-E03 bridge, state, four-view, security, and accessibility suites were recorded on
-2026-09-21 as package evidence; they do not substitute for D04/G2 LAN or G4
-qualification, and source removal does not authorize standalone retirement.
-
+The former DamHopper plugin worker (`plugin/backend/worker.cjs`), SDK integration, and embedded UI provider were retired on 2026-10-02 in favor of native DamHopper integration and VS Code Local support. Historical wire schemas (v1/v2), contract fixtures, and embedded UI specifications remain documented in the [system architecture](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02) and [cross-project history contract](./all-project-advisor-history.md).
 ### Workspace Advisor host, history-scope, placement, and compact-view invariants (Phases 01–06)
 
 - Keep `DescribeViewRequest` non-null and limited to `installationId` plus the selected `ServerProjectTarget`; route it through the authenticated host client and registered target resolver. Do not add profile, actor, path, project-ID, scope, or permission authority from the browser.
@@ -653,20 +590,23 @@ atomic apply. It never joins scope or target-publication atomicity.
 
 `scripts/generate-controller-inventory.mjs` owns the exact 44-entry closure:
 36 shared/Windows files plus eight Darwin assets (one loader, five source/
-provenance files, and two architecture-specific binaries). `npm run
-generate:advisor-runtime` precedes inventory generation.
+provenance files, and two architecture-specific binaries).
+`npm run generate:advisor-runtime` compiles runtime modules incrementally via `scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json` before inventory generation in `prebuild`. Root control-plane compilation runs via `scripts/build-typescript.mjs -p tsconfig.json` (`npm run build`).
+`scripts/build-manifests.mjs` invokes the TypeScript local-build path (`runAllManifestsBuild`) for each persisted target and the aggregate set. Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
 
-`scripts/build-manifests.mjs` creates schema-2 target/aggregate manifests for
-source, adapter, controller, owner, output, validation, and HOME policy.
-Build/check validates exact membership, current hashes, regular non-symlink
-files, and the canonical entrypoint shebang; modes are not content or publication
-identity.
+### Target manifest derivation, worker staging, and snapshot safety
 
-Publication derives launch intent from paths/shebangs and explicit roles. Linux
-`install.sh` grants mandatory execute bits and fails if chmod fails. Keep
-`install.sh`/`install.ps1` inventories in sync with the generated 44-file list;
-manifest tests reject missing, extra, or external files.
+- **Single-projection manifest reuse & parallel workers**: `scripts/build-manifests.mjs` and `runAllManifestsBuild` execute target projection once per persisted target. `TargetWorkerPool` supports bounded parallel execution (`--jobs <n>`, default 2 workers), maintaining exact bit-for-bit manifest and projection parity with serial execution.
+- **Input snapshot isolation**: `prepareInputSnapshot` creates an isolated staging copy of canonical harness inputs (`.claude`) and compiled runtime (`dist/**/*.js`).
+- **Consumed input identity vs manifest tree hash**: `canonicalInputHash` computes snapshot freshness across all consumed files, including `.gitignore` (which Claude projects); manifest `treeHash` retains its canonical definition excluding `.gitignore`.
+- **Physical safety and pre-filter rejection**: `visitSnapshotInputs` verifies `assertNoSymlinkAncestors` and `assertRealDirectory`. Unsafe entries (symlinks, non-regular files/directories) throw `PATH_UNSAFE` immediately before any ignore filter is evaluated. Traversal filters (`isIgnoredArtifact`) bypass heavy excluded directories (`node_modules/`, `__pycache__/`) without reading or recursing into descendant paths.
+- **Compiled runtime revision binding**: `compiledRuntimeHash` hashes all `.js` outputs in `dist`. The parent compares disk runtime against in-memory `loadedRuntimeHash`; any divergence throws `PUBLICATION_FAILED` across both serial (jobs 1) and worker (jobs 2) execution. Workers execute the snapshot runtime (`sharedInputs.runtimeRoot/distribution/target-worker.js`).
+- **Promotion freshness under lock before journal**: In `promoteUnlocked`, `options.hooks?.beforeTransaction?.()` executes input freshness checks (`assertLiveInputsUnchanged`) while holding the promotion lock, strictly BEFORE writing the journal or claiming destination outputs. Source drift fails safely before journal recording, avoiding spurious `ROLLBACK_FAILED`.
+- **Adapter hash closures**: All 7 translated targets (`antigravity`, `codex`, `copilot`, `gemini`, `omp`, `pi`, `vscode`) declare `dist/adapters/uri-restoration.js` in `adapter_sources`, ensuring changes to URI restoration invalidate target manifest digests.
+- **Codex URL restoration**: `applyReplacements` uses a linear regex callback to restore placeholder URLs literally without string template interpolation (`$&`, `$$`) or cascading token substitution.
+- **Benchmark metric standard**: Build generation benchmark (`scripts/benchmark-build-generation.mjs`) reports post-build parent process RSS (`memoryUsage().rss`), not worker process-tree peak; historical qualification figures remain unchanged.
 
+Publication derives launch intent from paths/shebangs and explicit roles. Linux `install.sh` grants mandatory execute bits and fails if chmod fails. Keep `install.sh`/`install.ps1` inventories in sync with the generated 44-file list; manifest tests reject missing, extra, or external files.
 Linux x64 remains the live installed-CLI boundary. Windows release support remains
 installer lifecycle and `version --json`; native diagnostics do not widen support.
 Darwin includes a prebuilt addon, but runtime remains untested/unqualified and

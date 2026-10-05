@@ -97,7 +97,7 @@ Brief description of what this plan accomplishes.
 - Key dependencies
 
 ### Phase Files (phase-XX-name.md)
-Fully respect the `./docs/development-rules.md` file.
+Fully respect the `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) file.
 Each phase file should contain:
 
 **Context Links**

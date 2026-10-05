@@ -14,20 +14,20 @@ Analyze the skills catalog and activate the skills that are needed for the task 
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before testing, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` and derive
+Before testing, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 issues input and apply the shared default stuck-escalation contract.
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); default branches apply ONLY when no advice lifecycle is active.
 In explicit advice mode (or when an active advice run or named checkpoint
 activates the advice lifecycle), this command directly implements and validates fixes
 and binds its durable lifecycle to `## Caller lifecycle binding` and
-`Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+`Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
 1. **Single durable-state owner**: The main agent owns all state controller
    operations (`init`, `checkpoint`, `disposition`, `outcome`, `complete`). Child
    agents (`tester`, `debugger`, `planner`, `code-reviewer`) report terminal
@@ -140,13 +140,13 @@ and binds its durable lifecycle to `## Caller lifecycle binding` and
      outside the captured baseline snapshot and updates the derived live overview `<plan-dir>/progress.md`
      (uncaptured, outside baseline; never captured or cited as evidence/authorized
      substantive paths; if already captured, cannot overwrite progress, surface blocker)
-     per shared receipt rules in `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+     per shared receipt rules in `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
      Preserved historical snapshot protection applies across runs even without `--advice`;
      prior sealed paths remain immutable, while current-run registered pre-seal writes
      within parent-authorized paths remain permitted. Never direct edits to sealed plans
      or metadata/roadmap after seal.
    - **Sealed baseline**: Do NOT stage, commit, or mutate captured baseline files
-     or their Git index state after `state complete` seals the run; only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+     or their Git index state after `state complete` seals the run; only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
    - **Administrative reporting**: Respond back to user with a summary of the
      changes and explain everything briefly, guide user to get started, and suggest
      next steps. For advice-controlled plans or preserved snapshots, point output to

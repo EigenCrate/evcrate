@@ -16,7 +16,8 @@
     "dist/adapters/copilot/skills.js",
     "dist/adapters/copilot/styles.js",
     "dist/adapters/copilot/support.js",
-    "dist/adapters/copilot/text.js"
+    "dist/adapters/copilot/text.js",
+    "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".copilot",
   "additional_roots": [],

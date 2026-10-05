@@ -4,7 +4,8 @@
   "adapter": "dist/adapters/codex/index.js",
   "adapter_sources": [
     "dist/adapters/codex/hooks.js",
-    "dist/adapters/codex/transforms.js"
+    "dist/adapters/codex/transforms.js",
+    "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".codex",
   "additional_roots": [".agents"],

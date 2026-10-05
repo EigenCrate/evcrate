@@ -439,7 +439,7 @@ test('project recovery rejects a journal bound to another project identity', () 
   }
 });
 
-test('project apply rejects an oversized result before transaction mutation', () => {
+test('project apply rejects an oversized result before transaction mutation', async () => {
   const root = mkdtempSync(join(packageRoot, '.evcrate-project-result-limit-'));
   const fixturePackage = join(root, 'package');
   const home = join(root, 'home');
@@ -476,7 +476,7 @@ test('project apply rejects an oversized result before transaction mutation', ()
         { mode: 0o644 }
       );
     }
-    runLocalBuild(fixturePackage, PERSISTED_TARGETS);
+    await runLocalBuild(fixturePackage, PERSISTED_TARGETS);
     const context = resolveInvocationContext({
       packageRoot: fixturePackage, cwd: fixturePackage, home, projectRoot: project, targets: ['omp']
     });

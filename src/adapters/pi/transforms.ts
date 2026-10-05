@@ -1,3 +1,4 @@
+import { restoreIndexedTokens } from '../uri-restoration.js';
 import { normalizeLf } from './frontmatter.js';
 
 const URL = /https?:\/\/[^\s<>"']+/giu;
@@ -75,8 +76,7 @@ export function translatePrompt(value: string, commands: readonly string[] = [])
   translated = translated.replace(/(?<![A-Za-z0-9_])\.claude(?=(?:[/\\'"`)\}]|\s|$))/gu, '.pi');
   translated = translateNestedCommands(translated, commands);
   for (const [pattern, replacement] of [[/\bAskUserQuestion\b/gu, 'ask_user_question'], [/\bTask\b/gu, 'evcrate_subagent'], [/\bWebSearch\b|\bWebFetch\b/gu, 'web research'], [/\bSkill tool\b/gu, 'Pi skill']] as const) translated = translated.replace(pattern, replacement);
-  urls.forEach((url, index) => { translated = translated.replaceAll(`__PI_URL_${index}__`, url); });
-  return translated;
+  return restoreIndexedTokens(translated, '__PI_URL_', urls);
 }
 
 export function translatePiSkill(value: string): string {
@@ -121,6 +121,5 @@ export function renderHarnessScriptReferences(value: string): string {
     return base + targetPath(global ? 'global' : 'local', suffix).split('/').map((part) => ` / ${quote}${part}${quote}`).join('');
   });
   rendered = rendered.replace(/(?<![A-Za-z0-9_])\.claude(?=(?:[/\\'"`)\}]|\s|$))/gu, '.pi');
-  urls.forEach((url, index) => { rendered = rendered.replaceAll(`__EVCRATE_HARNESS_URL_${index}__`, url); });
-  return rendered;
+  return restoreIndexedTokens(rendered, '__EVCRATE_HARNESS_URL_', urls);
 }

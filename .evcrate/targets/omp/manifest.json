@@ -9,7 +9,8 @@
     "dist/adapters/omp/hooks.js",
     "dist/adapters/omp/resources.js",
     "dist/adapters/omp/skills.js",
-    "dist/adapters/omp/templates.js"
+    "dist/adapters/omp/templates.js",
+    "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".omp",
   "additional_roots": [],

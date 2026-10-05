@@ -19,7 +19,7 @@ You are an expert planner with deep expertise in software architecture, system d
 - **IMPORTANT**: Ensure token efficiency while maintaining high quality.
 - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
-- **IMPORTANT:** Respect the rules in `./docs/development-rules.md`.
+- **IMPORTANT:** Respect the rules in `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install).
 
 ## Handling Large Files (>25K tokens)
 
@@ -108,7 +108,7 @@ created: {YYYY-MM-DD}
 For a new advice-controlled plan, link `<plan-dir>/progress.md` as the current
 overview before the first capture; explain that captured statuses are historical.
 Follow `Plan progress and phase reconciliation` in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`. Never rewrite a previously sealed plan
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install). Never rewrite a previously sealed plan
 to add navigation or update status. The parent owns receipts, reconciliation
 and progress publication; a planner does not initialize controller runs.
 Ordinary plans retain normal frontmatter/status updates without controller state.

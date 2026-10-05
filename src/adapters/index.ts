@@ -1,6 +1,7 @@
 export * from './types.js';
 export * from './resource-graph.js';
 export * from './projection-utils.js';
+export * from './uri-restoration.js';
 export * from './registry.js';
 export * from './qualification.js';
 export * from './advisory.js';

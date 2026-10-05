@@ -11,10 +11,10 @@ Technical question or architecture challenge:
 <questions>$ARGUMENTS</questions>
 
 Current development workflows, system constraints, scale requirements, and business context will be considered:
-- Primary workflow: `./.evcrate-vscode/evcrate/workflows/primary-workflow.md`
-- Development rules: `./.evcrate-vscode/evcrate/workflows/development-rules.md`
-- Orchestration protocols: `./.evcrate-vscode/evcrate/workflows/orchestration-protocol.md`
-- Documentation management: `./.evcrate-vscode/evcrate/workflows/documentation-management.md`
+- Primary workflow: `./.evcrate-vscode/evcrate/workflows/primary-workflow.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/primary-workflow.md` (the published install)
+- Development rules: `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)
+- Orchestration protocols: `./.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` (the published install)
+- Documentation management: `./.evcrate-vscode/evcrate/workflows/documentation-management.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/documentation-management.md` (the published install)
 
 **Project Documentation:**
 ```

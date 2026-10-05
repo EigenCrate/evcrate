@@ -11,18 +11,18 @@ argument-hint: "[tasks] [--advice]"
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before planning, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (specifically
+Before planning, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) (specifically
 `## Argument mode` and `## Caller lifecycle binding`) and derive `WORK_ARGUMENTS`
 plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the tasks input.
 Apply the shared default stuck-escalation contract.
 
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
 If an active advisor run context is already present from an earlier named
 checkpoint (such as a direction, decision, or stuck checkpoint in this session),
 retain its identity and context: `task_run_id`, active phase, project root,
@@ -94,7 +94,7 @@ Use this only when work can be split into independent phases with clear dependen
 - Settle reviewer report and terminal artifacts before checkpoint reservation.
 - Under advice lifecycle (explicit `--advice`, active run, or named checkpoint), after reviewer terminal result and before fixing
   issues or requesting approval, enter the canonical checkpoint dispatcher
-  following `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`:
+  following `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install):
   - **Fresh first review with no active run**:
     - Implementation, actual validation, reviewer report, and selected artifacts
       settle first.
@@ -142,7 +142,7 @@ Use this only when work can be split into independent phases with clear dependen
 - Approval/rejection gate: User approval or rejection must occur before finalization outcome and sealing:
   - If rejected or critical issues remain: fix and repeat under the active run before recording final outcome or sealing.
   - If approved: proceed with whole-phase substantive finalization.
-- Parent is the implementation owner and owns all durable state operations per `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`:
+- Parent is the implementation owner and owns all durable state operations per `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install):
   - Under advice lifecycle: parent records `state disposition` for finalization
     (`action: "accept"` with canonical `correction: { action_id, episode_id, validation_command }`)
     before executing finalization writes or Git transitions.
@@ -165,9 +165,9 @@ Use this only when work can be split into independent phases with clear dependen
     outside the captured snapshot and updates the live overview `<plan-dir>/progress.md`
     (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths;
     if already captured, cannot overwrite progress, surface blocker) per `Plan progress and phase reconciliation`
-    in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+    in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
   - Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
-  - In default mode on mixed plans with prior advice phases: save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; normal unprotected default plans keep normal `plan.md` status updates.
+  - In default mode on mixed plans with prior advice phases: save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); normal unprotected default plans keep normal `plan.md` status updates.
   - After sealing, there is NO rejected-fix path: approval/rejection occurred before seal; afterwards emit readonly guidance and output pointing to `progress.md`.
 ### 7. Final Report
 - Summary of all parallel phases; for advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md`. Normal default plans with no history do not require, read, or output nonexistent progress links.
@@ -178,7 +178,7 @@ Use this only when work can be split into independent phases with clear dependen
     seals the run, provide readonly guidance only; do not execute git commit/push
     commands or captured-file/selected-index mutations after seal; only bounded
     administrative receipt and progress publication outside baseline is permitted
-    per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+    per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
   - In default mode (no active advice lifecycle): explicitly preserve existing default-mode postimplementation
     behavior: ask user if they want to commit to git repository (use `git-manager`
     subagent if yes). Preserve scoped approval and commit behavior; do not execute
