@@ -138,7 +138,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const skillMapPath = join(stageRoot, 'evcrate/skill-map.json');
     assert.ok(existsSync(skillMapPath));
     const skillMapJson = JSON.parse(readFileSync(skillMapPath, 'utf8'));
-    assert.equal(skillMapJson.skills.length, 38);
+    assert.equal(skillMapJson.skills.length, 40);
 
     const resourceMapPath = join(stageRoot, 'evcrate/resource-name-map.json');
     assert.ok(existsSync(resourceMapPath));
@@ -148,9 +148,9 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const inventoryPath = join(stageRoot, 'evcrate/projection-inventory.json');
     assert.ok(existsSync(inventoryPath));
     const inventoryJson = JSON.parse(readFileSync(inventoryPath, 'utf8'));
-    assert.equal(inventoryJson.summary.agents_count, 18);
+    assert.equal(inventoryJson.summary.agents_count, 19);
     assert.equal(inventoryJson.summary.commands_count, 70);
-    assert.equal(inventoryJson.summary.skills_count, 38);
+    assert.equal(inventoryJson.summary.skills_count, 40);
     assert.equal(inventoryJson.summary.styles_count, 6);
     assert.equal(inventoryJson.summary.workflows_count, 6);
 

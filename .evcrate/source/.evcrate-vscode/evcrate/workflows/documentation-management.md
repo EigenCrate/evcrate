@@ -73,7 +73,7 @@ plans/
   - Parent plan-owning completion publishes mandatory outside-snapshot immutable phase completion receipts and updates `progress.md` upon completion per [Plan progress and phase reconciliation](./advisor-mentoring.md#plan-progress-and-phase-reconciliation). Do not execute Git commands or captured-file/selected-index mutations after seal; only bounded administrative receipt and progress publication outside baseline is permitted.
   - Normal plans without advice involvement keep normal `plan.md` status updates and do not require nonexistent progress links; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted.
 ##### Phase Files (phase-XX-name.md)
-Fully respect the `./docs/development-rules.md` file.
+Fully respect the `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) file.
 Each phase file should contain:
 
 **Context Links**

@@ -13,7 +13,7 @@
 ### Essential Documentation Review
 ALWAYS read these files first:
 
-1. **`./docs/development-rules.md`** (IMPORTANT)
+1. **`./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)** (IMPORTANT)
    - File Name Conventions
    - File Size Management
    - Development rules and best practices

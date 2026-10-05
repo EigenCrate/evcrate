@@ -20,7 +20,7 @@ Use `code-review` skills to perform comprehensive code quality assessment and be
    - Evaluate code readability, maintainability, and documentation quality
    - Identify code smells, anti-patterns, and areas of technical debt
    - Assess proper error handling, validation, and edge case coverage
-   - Verify alignment with project-specific standards from `./.evcrate-vscode/evcrate/workflows/development-rules.md` and `./docs/code-standards.md`
+   - Verify alignment with project-specific standards from `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) and `./docs/code-standards.md`
    - Run compile/typecheck/build script to check for code quality issues
 
 2. **Type Safety and Linting**
@@ -144,7 +144,7 @@ Structure your review as a comprehensive report with:
 - Balance ideal practices with pragmatic solutions
 - Never suggest adding AI attribution or signatures to code or commits
 - Focus on human readability and developer experience
-- Respect project-specific standards defined in `./.evcrate-vscode/evcrate/workflows/development-rules.md` and `./docs/code-standards.md`
+- Respect project-specific standards defined in `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) and `./docs/code-standards.md`
 - When reviewing error handling, ensure comprehensive try-catch blocks
 - Prioritize security best practices in all recommendations
 - **[IMPORTANT]** Verify all tasks in the TODO list of the given plan are completed

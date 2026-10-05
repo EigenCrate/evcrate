@@ -73,7 +73,7 @@ credentials, policy contents, raw stderr, stacks, traces, broad dumps, and unrel
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this contract supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this contract supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Authoritative host-aware controller invocation

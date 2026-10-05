@@ -12,13 +12,13 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/cmd-code`.
-Before discovery or planning, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`
+Before discovery or planning, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install)
 (specifically `## Argument mode` and `## Caller lifecycle binding`) and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
 tasks input.
@@ -37,7 +37,7 @@ eventual `/cmd-code` handoff; otherwise append none. Apply the shared default
 stuck-escalation contract during `/cmd-cook` discovery and planning. If a stuck
 checkpoint is reached during planning, follow `## Caller lifecycle binding`
 for active run disposition and outcome before proceeding.
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); default branches apply ONLY when no advice lifecycle is active.
 Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
 preserves any active run context, appends exactly one trailing `--advice` when
 explicit mode is active, and otherwise passes no `--advice` token.
@@ -175,7 +175,7 @@ Before handoff, verify the plan accounts for:
 
 Substantive plan progress, documentation, and roadmap updates belong to phase
 execution and are owned and finalized inside `/cmd-code` before sealing durable
-completion under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+completion under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
 
 * Root `/cmd-cook` is a delegate router: it delegates this ownership to `/cmd-code` and
   must not duplicate publication or durable controller operations. Do not mutate
@@ -198,7 +198,7 @@ completion under `## Caller lifecycle binding` and `Plan progress and phase reco
 * Do not mark durable phase DONE prematurely or mutate captured evidence after
   complete. Do NOT prescribe copying DONE into captured files after sealing.
 * Parent plan-owning completion (`/cmd-code`) writes mandatory outside-snapshot
-  immutable phase completion receipts and live `progress.md` per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; root `/cmd-cook`
+  immutable phase completion receipts and live `progress.md` per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); root `/cmd-cook`
   does not duplicate publication.
 * In default mode, if the user rejects the changes, ask for the issues and route
   back to `/cmd-code` with the plan and unresolved questions for a bounded fix cycle.
@@ -230,7 +230,7 @@ completion under `## Caller lifecycle binding` and `Plan progress and phase reco
   implementation owner's pre-outcome finalization before sealing. After `/cmd-code`
   seals the run, do not execute git commit or push commands or captured-file/selected-index
   mutations; emit readonly guidance or an uncaptured administrative receipt strictly
-  outside the captured baseline snapshot only per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+  outside the captured baseline snapshot only per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
 * In default mode: preserve existing default-mode postimplementation behavior:
   * Ask the user if they want to commit and push to git repository, if yes, use
     `git-manager` subagent to commit and push to git repository.

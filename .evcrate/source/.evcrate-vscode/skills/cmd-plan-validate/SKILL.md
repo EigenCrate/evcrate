@@ -34,7 +34,7 @@ Read the plan directory:
 - Look for decision points, assumptions, risks, tradeoffs
 
 Apply `Plan progress and phase reconciliation` in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` before interpreting current status.
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) before interpreting current status.
 If a plan is captured by an advice run, do not offer or perform in-place
 frontmatter/summary edits below. Record proposed answers in a separately
 authorized, uncaptured document or terminal output; preserve active-run gates.

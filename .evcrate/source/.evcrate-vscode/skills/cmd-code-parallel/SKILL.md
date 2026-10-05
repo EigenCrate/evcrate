@@ -11,21 +11,21 @@ Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
-Before interpreting the plan, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` and
+Before interpreting the plan, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and
 derive `WORK_ARGUMENTS` plus explicit/default advice mode. Execute the plan from
 `WORK_ARGUMENTS`. Apply the shared default stuck-escalation contract in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` unconditionally across all modes
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) unconditionally across all modes
 (reaching a second matching blocker activates the named checkpoint / advice lifecycle).
 The advice lifecycle is active when explicit `--advice` is present, an applicable
 active run exists, or a named checkpoint is activated. When the advice lifecycle is
 active, apply the canonical `## Caller lifecycle binding` in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`:
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install):
 - **Durable state ownership in parallel execution**: The parent command is the sole durable-state owner. Parallel child tasks (`fullstack-developer`, etc.) execute phase implementation within strict file ownership boundaries, reporting terminal artifacts, evidence, and actual changed paths back to the parent. Child tasks NEVER own or execute durable controller operations (`state init`, `checkpoint`, `disposition`, `outcome`, `complete`) and never stage or commit Git changes behind the parent.
 - **Phase identity & context retention**: Phase identity is retained and bounded per its own phase; there is no blind context reset or UUID churn across phases.
 - **Run identity & handoff**: If entering with an existing active run (from prior direction/decision/stuck run or router handoff), retain `task_run_id`, phase, root, current state revision, and prior counsel/disposition/outcome. Resume an already-active action without duplicating it: complete its authorized bounded work across parallel workers, execute actual declared validation, and record a truthful matching outcome advancing the baseline before the next review reservation. Before new authorized bounded writes, require `accept` with a registered correction action. For disputed counsel (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action, collect read-only evidence or an explicit resolution while preserving the captured baseline unchanged, and obtain fresh same-run counsel before corrective mutation or a resolved correction outcome.
@@ -43,7 +43,7 @@ active, apply the canonical `## Caller lifecycle binding` in
 - **Check for:** Dependency graph, Execution strategy, Parallelization Info, File Ownership matrix
 - **Mandatory shared Plan progress and phase reconciliation:**
   Before selecting phases, forming parallel dependency batches, or launching execution:
-  1. Apply `### Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` to reconcile completed scope, verify execution prerequisites, and preserve any active advice run/action context.
+  1. Apply `### Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) to reconcile completed scope, verify execution prerequisites, and preserve any active advice run/action context.
   2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
   3. Emit overview path (`<plan-dir>/progress.md` for advice/protected plans, or `plan.md` for ordinary default plans), reconciled actual scope, and any outstanding prerequisites/blockers.
 - **Decision:** Group incomplete phases into dependency batches. Only phases whose prerequisites are already established and verified with completion evidence belong to the ready batch. IF parallel-executable → Step 2A, ELSE → Step 2B
@@ -55,10 +55,10 @@ active, apply the canonical `## Caller lifecycle binding` in
    - Child subagents report terminal artifacts and actual changed files back to the parent; child agents must never execute controller commands or stage Git changes
 3. Wait for parallel group completion, verify no conflicts; parent retains each phase/run context
 4. The ready batch must finish validation (Step 3), review & approval (Step 4), and finalization/completion (Steps 5–7) with phase-scoped completion evidence BEFORE dispatching dependent phases. Each batch records completion strictly for its own executed and verified phases; never claim all plan phases complete from a narrower batch run.
-5. Before dispatching any dependent batch, re-run `### Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` to verify qualified prerequisites; block unavailable or conflicting prerequisites
+5. Before dispatching any dependent batch, re-run `### Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) to verify qualified prerequisites; block unavailable or conflicting prerequisites
 
 ### 2B. Sequential Execution
-Follow `./.evcrate-vscode/evcrate/workflows/primary-workflow.md`:
+Follow `./.evcrate-vscode/evcrate/workflows/primary-workflow.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/primary-workflow.md` (the published install):
 1. Use main agent phase by phase
 2. Read `plan.md`, implement current phase
 3. If using `project-manager` for status reporting, child must be strictly report-only carrying parent protected path set (prior sealed paths) without mutating `plan.md`, roadmap, or `progress.md`; ordinary DONE updates and administrative progress publication remain reserved to the parent after required testing, review, and approval gates

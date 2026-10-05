@@ -22,7 +22,7 @@ Read the plan directory:
 - `phase-*.md` - 20 first lines of each phase file to understand the progress and status
 
 Before interpreting completion, apply `Plan progress and phase reconciliation`
-in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` regardless of the current mode flag.
+in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) regardless of the current mode flag.
 For advice-controlled plans, read `progress.md` and reconcile receipts/run scope;
 do not infer completion from frozen phase headers. Do not move, delete, rewrite
 or stage captured plans/evidence or their immutable receipts: exclude those

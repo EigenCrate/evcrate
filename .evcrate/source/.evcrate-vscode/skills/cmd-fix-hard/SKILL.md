@@ -12,22 +12,22 @@ Use the orchestration protocol, development rules, and relevant skills to fix:
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring in `/cmd-code`.
-Before analysis, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` and derive
+Before analysis, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and derive
 `WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments. Use
 `WORK_ARGUMENTS` as the issue input and apply the shared default stuck-escalation
 contract throughout discovery and planning.
 
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
+**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
 
 `/cmd-fix-hard` is a delegate router: it coordinates analysis, research, and planning, and delegates canonical
 implementation, review, and durable task-state lifecycle ownership to `/cmd-code`
-under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
 separate task run, invoke a duplicate review checkpoint, double advice
 checkpoint/init, or duplicate publication of progress receipts before or alongside `/cmd-code`.
 Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
@@ -63,8 +63,8 @@ Analyze the skills catalog and activate other skills that are needed for the tas
    owner without doubling advice initialization or consultations.
 5. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps. For advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md` (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker); old sealed `plan.md` remains untouched. Normal default plans with no history do not require, read, or output nonexistent progress links.
-  * Durable completion, mandatory outside-snapshot immutable receipts, and live `progress.md` updates are owned by `/cmd-code` (which executes index transitions, matching validation, truthful outcome, and `state complete` under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`); do not mutate captured baseline state, stage/commit captured paths, or fabricate completion after `/cmd-code` seals the run. Delegate routers do not duplicate publication or durable operations.
-  * Any post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits. Only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`.
+  * Durable completion, mandatory outside-snapshot immutable receipts, and live `progress.md` updates are owned by `/cmd-code` (which executes index transitions, matching validation, truthful outcome, and `state complete` under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); do not mutate captured baseline state, stage/commit captured paths, or fabricate completion after `/cmd-code` seals the run. Delegate routers do not duplicate publication or durable operations.
+  * Any post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits. Only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
   - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **REMEMBER**:

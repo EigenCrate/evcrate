@@ -12,21 +12,21 @@ argument-hint: "[plan] [all-phases-yes-or-no] [--advice] (default: yes)"
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
 and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
 A final standalone `--advice` activates explicit review mentoring.
 Before assigning positional arguments, read
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` and derive `WORK_ARGUMENTS` plus
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and derive `WORK_ARGUMENTS` plus
 explicit/default advice mode. Apply the shared default stuck-escalation
-contract in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` unconditionally across
+contract in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) unconditionally across
 all modes (reaching a second matching blocker activates the named checkpoint /
 advice lifecycle). The advice lifecycle is active when explicit `--advice`
 is present, an applicable active run exists, or a named checkpoint is activated.
 When the advice lifecycle is active, apply the canonical `## Caller lifecycle binding`
-in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`:
+in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install):
 - **Durable state ownership**: The parent command is the sole owner of the task-state lifecycle. Child subagents (`project-manager`, `ui-ux-designer`, `tester`, `debugger`, `code-reviewer`, `docs-manager`, `git-manager`) report terminal artifacts, evidence, and actual changed paths; they never operate controller state or stage/commit behind the parent.
 - **Run identity & handoff**: If entering with an existing active run (from prior direction/decision/stuck run or router handoff), retain `task_run_id`, phase, root, current state revision, and prior counsel/disposition/outcome. Resume an already-active action without duplicating it: complete its authorized bounded work, execute actual declared validation, and record a truthful matching outcome advancing the baseline before the next review reservation. Before new authorized bounded writes, require `accept` with a registered correction action. For disputed counsel (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action, collect read-only evidence or an explicit resolution while preserving the captured baseline unchanged, and obtain fresh same-run counsel before corrective mutation or a resolved correction outcome.
 - **Fresh first review**: If no prior active advice run exists, do NOT initialize state at command start just to track implementation. Implementation (Step 2), actual validation (Step 3), reviewer output (Step 4), and planned finalization artifacts settle first (writer barrier). Build `baseline_paths` as the union of authorized writable paths and selected read-only `evidence.files`/artifacts (`authorized_paths` contains only writable paths). Call `state init` immediately before reservation in Step 4, with no intervening file edits or git status/index changes.
@@ -60,7 +60,7 @@ in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`:
 
 **Mandatory shared Plan progress and phase reconciliation:**
 Before selecting or confirming any phase (including explicit requested phases and loop continuations):
-1. Apply `### Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` to reconcile completed scope, verify execution prerequisites, and preserve any active advice run/action context.
+1. Apply `### Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) to reconcile completed scope, verify execution prerequisites, and preserve any active advice run/action context.
 2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
 3. Emit overview path (`<plan-dir>/progress.md` for advice/protected plans, or `plan.md` for ordinary default plans), reconciled actual scope, and any outstanding prerequisites/blockers. Auto-select next incomplete phase (prefer IN_PROGRESS or earliest Planned).
 

@@ -63,7 +63,7 @@ Load: `references/output-standards.md`
 - Ensure self-contained plans with necessary context
 - Include code snippets/pseudocode when clarifying
 - Provide multiple options with trade-offs when appropriate
-- Fully respect the `./docs/development-rules.md` file.
+- Fully respect the `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) file.
 
 **Plan Directory Structure**
 ```
