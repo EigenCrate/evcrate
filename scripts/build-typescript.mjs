@@ -41,16 +41,14 @@ export function buildTypeScript(options = {}) {
     logger = console,
   } = options;
 
-  const info = resolveConfigOutputs(config, root);
+  const info = resolveConfigOutputs(config, root, extraArgs);
   const currentOutputsSet = new Set(info.expectedOutputs);
 
-  // 1. Explicit clean mode: remove cache and receipt
+  // 1. Explicit clean mode: remove build info cache to force complete compilation.
+  // Note: Old receipt is intentionally preserved so cleanStaleOutputs can read prior ownership.
   if (clean) {
     if (info.tsBuildInfoPath && fs.existsSync(info.tsBuildInfoPath)) {
       fs.rmSync(info.tsBuildInfoPath, { force: true });
-    }
-    if (info.receiptPath && fs.existsSync(info.receiptPath)) {
-      fs.rmSync(info.receiptPath, { force: true });
     }
   } else {
     // 2. Incremental validation: invalidate cache if corrupted or outputs missing
@@ -86,17 +84,39 @@ export function buildTypeScript(options = {}) {
     };
   }
 
-  // 4. Successful compile -> clean stale outputs from previous receipt
-  const { cleaned, errors } = cleanStaleOutputs(info.receiptPath, currentOutputsSet, info.outDir, root);
-  if (errors.length > 0) {
-    for (const err of errors) {
-      logger.warn(`[build-typescript] ${err}`);
-    }
+  // For noEmit runs (typecheck-only), do not mutate emitted-output ownership or delete existing outputs
+  if (info.parsed.options.noEmit) {
+    return {
+      status: 0,
+      cleaned: [],
+      receiptWritten: false,
+    };
   }
 
-  // 5. Write updated receipt
-  writeReceipt(info.receiptPath, info.absoluteConfigPath, info.relativeOutDir, info.expectedOutputs, root);
+  // 4. Successful compile -> clean stale outputs from previous receipt
+  const { cleaned, errors } = cleanStaleOutputs(
+    info.receiptPath,
+    currentOutputsSet,
+    info.outDir,
+    root,
+    info.declarationDir
+  );
+  if (errors.length > 0) {
+    for (const err of errors) {
+      logger.warn?.(`[build-typescript] ${err}`);
+    }
+    return { status: 1, cleaned, receiptWritten: false };
+  }
 
+  // 5. Advance ownership only after every stale output was safely handled.
+  writeReceipt(
+    info.receiptPath,
+    info.absoluteConfigPath,
+    info.relativeOutDir,
+    info.expectedOutputs,
+    root,
+    info.relativeDeclarationDir
+  );
   return {
     status: 0,
     cleaned,

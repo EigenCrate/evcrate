@@ -15,6 +15,7 @@ export interface SharedBuildInputs {
   readonly controllerBinSource: string;
   readonly controllerHashes: Readonly<Record<string, string>>;
   readonly targetsRegistryHash?: string;
+  readonly runtimeRoot: string;
 }
 
 export interface TargetBuildFacts {

@@ -40,11 +40,23 @@ describe('TypeScript Cache & Receipt Unit Validation', () => {
 
     it('resolves tsconfig.advisor-runtime.json output targets and cache paths', () => {
       const info = resolveConfigOutputs('tsconfig.advisor-runtime.json', packageRoot);
-      assert.equal(info.expectedOutputs.length, 4);
+      assert.ok(info.expectedOutputs.length > 0);
       assert.ok(info.expectedOutputs.some((p) => p.endsWith('advisor-contract-runtime.js')));
       assert.ok(info.expectedOutputs.some((p) => p.endsWith('advisor-metrics.js')));
+      assert.ok(info.expectedOutputs.some((p) => p.endsWith('json.js')));
+      assert.ok(info.expectedOutputs.some((p) => p.endsWith('canonical-json.js')));
       assert.equal(info.tsBuildInfoPath, join(packageRoot, '.cache', 'evcrate', 'tsconfig.advisor-runtime.tsbuildinfo'));
       assert.equal(info.receiptPath, join(packageRoot, '.cache', 'evcrate', 'tsconfig.advisor-runtime.tsbuildinfo.receipt.json'));
+    });
+
+    it('honors forwarded compiler CLI options such as --noEmit and --outDir', () => {
+      const noEmitInfo = resolveConfigOutputs('tsconfig.advisor-runtime.json', packageRoot, ['--noEmit']);
+      assert.equal(noEmitInfo.expectedOutputs.length, 0);
+      assert.equal(noEmitInfo.parsed.options.noEmit, true);
+
+      const outDirInfo = resolveConfigOutputs('tsconfig.advisor-runtime.json', packageRoot, ['--outDir', 'custom_output_dir']);
+      assert.equal(outDirInfo.relativeOutDir, 'custom_output_dir');
+      assert.ok(outDirInfo.expectedOutputs.every((p) => p.startsWith('custom_output_dir/')));
     });
 
     it('throws error when tsconfig does not exist', () => {

@@ -95,7 +95,7 @@ export function applyReplacements(value: string): string {
   const urls: string[] = []; let result = value.replace(URL_REFERENCE, (url) => { urls.push(url); return `__EVCRATE_GLOBAL_URL_${urls.length - 1}__`; });
   for (const [pattern, replacement] of REPLACEMENTS) result = result.replace(pattern, replacement);
   result = result.replace(/\.Codex/gu, '.codex');
-  return restoreIndexedTokens(result, '__EVCRATE_GLOBAL_URL_', urls);
+  return result.replace(/__EVCRATE_GLOBAL_URL_(\d+)__/gu, (_, index: string) => urls[Number(index)] ?? '');
 }
 
 export function canonicalCommandPath(path: string): string { return path.startsWith('/') ? `/${path.slice(1).replaceAll('/', ':')}` : path; }

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { restoreIndexedTokens } from '../../dist/adapters/projection-utils.js';
+import { applyReplacements } from '../../dist/adapters/codex/transforms.js';
 
 function legacyRestoreTuples(text, saved) {
   let result = text;
@@ -139,4 +140,53 @@ test('restoreIndexedTokens: scale parity check on 5,000 synthetic URIs', () => {
   assert.ok(actual.startsWith('element_0: https://schemas.openxmlformats.org/spreadsheetml/2006/main/elem_0'));
   assert.ok(actual.endsWith(`element_${count - 1}: https://schemas.openxmlformats.org/spreadsheetml/2006/main/elem_${count - 1}`));
   assert.equal(actual.includes('__EVCRATE_VSCODE_URI_'), false);
+});
+
+test('applyReplacements (Codex): preserves literal valid URL containing $& without replacement-template expansion', () => {
+  const input = 'Documentation at https://example.org/search?q=$& and more text';
+  const expected = 'Documentation at https://example.org/search?q=$& and more text';
+  assert.equal(applyReplacements(input), expected);
+});
+
+test('applyReplacements (Codex): preserves literal valid URL containing $$ without collapsing to single dollar', () => {
+  const input = 'API endpoint https://example.org/$$slots/items and query https://example.org/?val=$$100';
+  const expected = 'API endpoint https://example.org/$$slots/items and query https://example.org/?val=$$100';
+  assert.equal(applyReplacements(input), expected);
+});
+
+test('applyReplacements (Codex): preserves literal valid URLs containing $\' and $`', () => {
+  const input = 'Links: https://example.org/prefix?val=$`&tail=1 and https://example.org/suffix?val=$\'&lead=2';
+  const expected = 'Links: https://example.org/prefix?val=$`&tail=1 and https://example.org/suffix?val=$\'&lead=2';
+  assert.equal(applyReplacements(input), expected);
+});
+
+test('applyReplacements (Codex): URLs containing token patterns do not cascade into other URLs', () => {
+  const input = 'First: https://example.org/__EVCRATE_GLOBAL_URL_1__ and second: https://example.org/resolved';
+  const expected = 'First: https://example.org/__EVCRATE_GLOBAL_URL_1__ and second: https://example.org/resolved';
+  assert.equal(applyReplacements(input), expected);
+});
+
+test('applyReplacements (Codex): preserves base callback edge behavior on authored tokens outside url bounds', () => {
+  const input = 'Authored non-existent token: __EVCRATE_GLOBAL_URL_99__ in text';
+  // Base callback: urls[Number(index)] ?? '', which resolves out-of-bounds indices to empty string
+  const expected = 'Authored non-existent token:  in text';
+  assert.equal(applyReplacements(input), expected);
+});
+
+test('applyReplacements (Codex): preserves protected URLs while performing non-URL canonical replacements', () => {
+  const input = 'Migrate CLAUDE.md to AGENTS.md; see https://example.org/.claude/reference?q=$$test for claude details.';
+  // Surrounding CLAUDE.md -> AGENTS.md, claude -> codex; URL https://example.org/.claude/reference?q=$$test preserved verbatim
+  const expected = 'Migrate AGENTS.md to AGENTS.md; see https://example.org/.claude/reference?q=$$test for codex details.';
+  assert.equal(applyReplacements(input), expected);
+});
+
+test('differential: sequential helper vs literal Codex applyReplacements semantics', () => {
+  const dollarUrl = 'https://example.org/query?val=$$slots';
+  // Sequential helper preserves legacy replaceAll template expansion ($$ -> $)
+  const helperOutput = restoreIndexedTokens('Target: __TOKEN_0__', '__TOKEN_', [dollarUrl]);
+  assert.equal(helperOutput, 'Target: https://example.org/query?val=$slots');
+
+  // Codex applyReplacements preserves literal callback URL bytes ($$ retained)
+  const codexOutput = applyReplacements(`Target: ${dollarUrl}`);
+  assert.equal(codexOutput, 'Target: https://example.org/query?val=$$slots');
 });

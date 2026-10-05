@@ -2,7 +2,9 @@
   "schema_version": 2,
   "name": "antigravity",
   "adapter": "dist/adapters/antigravity.js",
-  "adapter_sources": [],
+  "adapter_sources": [
+    "dist/adapters/uri-restoration.js"
+  ],
   "output_root": ".antigravity",
   "additional_roots": [],
   "project_docs": [],

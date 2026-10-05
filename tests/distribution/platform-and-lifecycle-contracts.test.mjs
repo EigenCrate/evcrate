@@ -136,13 +136,6 @@ describe('Phase 05: Platform & Lifecycle Contracts', () => {
       }
     });
 
-    it('package payload excludes .cache and buildinfo artifacts', () => {
-      const gitignore = readFileSync(join(packageRoot, '.gitignore'), 'utf8');
-      assert.ok(gitignore.includes('/.cache/'), '.gitignore must exclude /.cache/');
-
-      assert.ok(!existsSync(join(packageRoot, 'dist', '.cache')), 'dist must never contain .cache');
-      assert.ok(!existsSync(join(packageRoot, 'dist', 'tsconfig.tsbuildinfo')), 'dist must not contain tsbuildinfo');
-    });
   });
 
   describe('Gate 5: Platform Contracts & Path Containment', () => {

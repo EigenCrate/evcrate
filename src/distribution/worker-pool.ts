@@ -1,5 +1,5 @@
-import { basename, dirname, join, resolve } from 'node:path';
-import { existsSync, lstatSync, mkdirSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
+import { lstatSync, mkdirSync } from 'node:fs';
 import { spawn, type ChildProcess } from 'node:child_process';
 import {
   ControlPlaneError,
@@ -29,34 +29,6 @@ interface ActiveJob {
   readonly closePromise: Promise<number | null>;
 }
 
-export function resolveWorkerScriptPath(packageRoot?: string): string {
-  // 1. Next to current compiled module (dist/distribution/target-worker.js)
-  try {
-    const localJs = join(__dirname, 'target-worker.js');
-    if (existsSync(localJs)) return localJs;
-  } catch {
-    // Ignore
-  }
-
-  // 2. Under packageRoot/dist/distribution/target-worker.js
-  if (packageRoot) {
-    const distJs = join(packageRoot, 'dist', 'distribution', 'target-worker.js');
-    if (existsSync(distJs)) return distJs;
-  }
-
-  // 3. Fallback to ts file for test runners
-  try {
-    const localTs = join(__dirname, 'target-worker.ts');
-    if (existsSync(localTs)) return localTs;
-  } catch {
-    // Ignore
-  }
-
-  throw new ControlPlaneError(
-    'PUBLICATION_FAILED',
-    'Cannot locate target-worker script for worker pool'
-  );
-}
 
 export class TargetWorkerPool {
   private readonly jobs: number;
@@ -71,7 +43,8 @@ export class TargetWorkerPool {
     this.packageRoot = resolve(options.packageRoot);
     this.sharedInputs = options.sharedInputs;
     this.stagePath = resolve(options.stagePath);
-    this.workerScriptPath = options.workerScriptPath ?? resolveWorkerScriptPath(this.packageRoot);
+    this.workerScriptPath = options.workerScriptPath
+      ?? join(this.sharedInputs.runtimeRoot, 'distribution', 'target-worker.js');
   }
 
   async run(targets: readonly PersistedTarget[]): Promise<TargetBuildFacts[]> {

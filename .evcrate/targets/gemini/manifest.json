@@ -6,7 +6,8 @@
     "dist/adapters/gemini/frontmatter.js",
     "dist/adapters/gemini/replacements.js",
     "dist/adapters/gemini/resources.js",
-    "dist/adapters/gemini/runtime.js"
+    "dist/adapters/gemini/runtime.js",
+    "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".gemini",
   "additional_roots": [],

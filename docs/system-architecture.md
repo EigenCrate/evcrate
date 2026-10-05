@@ -214,18 +214,20 @@ bind kind, object, and bytes rather than permission or ctime metadata; advisor s
 and history also verify bytes and lock identity at final transitions. The Windows
 release candidate and publisher are separate; see [PDR FR-15](./project-overview-pdr.md#fr-15-canonical-semantic-release-candidate-and-verify-only-publisher).
 
-### 4.1 Single-projection manifest reuse
+### 4.1 Single-projection manifest reuse and bounded worker staging
 
-Full-workspace build and manifest generation (`scripts/build-manifests.mjs`, `runAllManifestsBuild`) eliminates redundant staging and projection cycles by executing target projection exactly once per persisted target:
+Full-workspace manifest generation (`scripts/build-manifests.mjs`, `runAllManifestsBuild`) eliminates redundant staging cycles by projecting each persisted target once, supporting serial mode and bounded worker pools (`TargetWorkerPool`, `--jobs <n>`, default 2):
 
-1. **Single-Pass Staging**: `assembleLocalStage(packageRoot, stage, PERSISTED_TARGETS, { emitAllManifests: true })` collects `SharedBuildInputs` (canonical harness tree hash, `CLAUDE.md` hash, target registry, advisor controller closure hashes). For each target, `buildAndStageTarget` invokes the target adapter (`vscodeAdapter` for VS Code Local; `getProjectionAdapter` for the remaining seven), validates the build context, stages outputs via `copyStagedTree`, and records `TargetBuildFacts` (output roots, staged outputs, local outputs, baseline owners with normalized POSIX paths via `collectBaselineOwners`, adapter hashes, and source hashes).
-2. **In-Memory Metadata Derivation**: `deriveManifestView` (`src/distribution/manifest-view-derivation.ts`) derives metadata views for all 8 targets plus the aggregate manifest entirely in memory:
-   - Target policies are constructed by `buildTargetPolicies`, which injects the mandatory `advisor-controller` entry (`bindings: { '.evcrate/bin': '.evcrate/bin' }`, `preserve_paths: {}`, `promotion_order: 5`).
-   - Source hashes for `.evcrate/targets` are selectively included only in the aggregate manifest and omitted from single-target manifests.
+1. **Input Snapshot Isolation**: `prepareInputSnapshot(packageRoot)` stages canonical inputs (`.claude`) and compiled runtime (`dist/**/*.js`). `canonicalInputHash` computes snapshot freshness across all consumed files, including `.gitignore` (projected by Claude); manifest `treeHash` retains its canonical definition excluding `.gitignore`.
+2. **Physical Boundary & Traversal Safety**: `visitSnapshotInputs` validates `assertNoSymlinkAncestors` and `assertRealDirectory`. Unsafe entries (symlinks, special files) throw `PATH_UNSAFE` immediately before any filter. Traversal filters (`isIgnoredArtifact`) bypass excluded directories (`node_modules/`, `__pycache__/`) without recursing into descendant paths.
+3. **Runtime Revision Binding**: `compiledRuntimeHash` hashes all `.js` files in `dist/`. The parent verifies disk runtime against in-memory `loadedRuntimeHash`; any divergence throws `PUBLICATION_FAILED` across serial and parallel modes. Workers execute the snapshot runtime (`sharedInputs.runtimeRoot/distribution/target-worker.js`).
+4. **Adapter Hash Closures & URL Restoration**: All 7 translated targets (`antigravity`, `codex`, `copilot`, `gemini`, `omp`, `pi`, `vscode`) declare `dist/adapters/uri-restoration.js` in `adapter_sources`. Codex `applyReplacements` uses a linear regex callback for literal URL restoration, preserving template sequences (`$&`, `$$`) without cascading substitution.
+5. **In-Memory Metadata Derivation**: `deriveManifestView` derives metadata for all 8 targets plus the aggregate manifest entirely in memory:
+   - Target policies inject mandatory `advisor-controller` (`bindings: { '.evcrate/bin': '.evcrate/bin' }`, `preserve_paths: {}`, `promotion_order: 5`).
+   - Source hashes for `.evcrate/targets` are included only in the aggregate manifest and omitted from single-target manifests.
    - All 9 manifests (`build-manifest.json` and 8 `build-manifest-<target>.json`) are written atomically into stage (`writeAtomicFile`).
-3. **Atomic Single-Transaction Promotion**: Promotion pairs for all staged target outputs and all 9 manifests commit in a single atomic transaction via `promoteTransaction`. Staging or preflight failures leave prior workspace state completely untouched.
-4. **Verified Return Envelope**: `runAllManifestsBuild` returns `VerifiedAllManifestsBuild` containing `aggregateBuild`, `targetBuilds` (map of `PersistedTarget` to `VerifiedCurrentBuild`), and `allManifestPaths`. Selective builds (`runLocalBuild`) preserve isolated single-target staging and manifests.
-
+6. **Promotion Freshness & Atomic Promotion**: In `promoteUnlocked`, `options.hooks?.beforeTransaction?.()` verifies live input freshness (`assertLiveInputsUnchanged`) under the promotion lock, strictly BEFORE writing the journal or claiming destination outputs. Source drift aborts safely before journal recording, avoiding `ROLLBACK_FAILED`. Promotion commits all 9 manifests and outputs in a single atomic transaction (`promoteTransaction`).
+7. **Verified Return Envelope & Benchmark Metric**: `runAllManifestsBuild` returns `VerifiedAllManifestsBuild` containing `aggregateBuild`, `targetBuilds`, and `allManifestPaths`. Benchmark harness (`scripts/benchmark-build-generation.mjs`) reports post-build parent process RSS (`memoryUsage().rss`), not worker process-tree peak.
 ### 4.2 Release workflow trust boundary (Phases 07–10)
 `.github/workflows/release.yml` implements `release-candidate` →
 `windows-qualification` → `publish`.
@@ -248,61 +250,9 @@ Full-workspace build and manifest generation (`scripts/build-manifests.mjs`, `ru
 - `.releaserc.json` uses exact post-qualification labels `Windows x64 Archive` and `Windows Installer Entrypoint (install.ps1)`; other asset paths/labels and prepare authority remain unchanged.
 - `tests/distribution/release-orchestration.test.mjs` covers WRQ-042 (workflow boundary), WRQ-043 (fixture/verify/smoke), and WRQ-044 (labels/preserved config).
 
-The controller build is a separate exact closure rooted at
-`.evcrate/source/.evcrate/bin`. Its current 44 entries are the 36 shared/Windows
-files below plus eight Darwin-specific entries:
-
-```text
-evcrate-advisor
-lib/advisor/adapter-contract.cjs
-lib/advisor/adapter-registry.cjs
-lib/advisor/adapters/claude.cjs
-lib/advisor/adapters/codex.cjs
-lib/advisor/adapters/omp.cjs
-lib/advisor/adapters/omp-parser.cjs
-lib/advisor/adapters/pi.cjs
-lib/advisor/checkpoint-contract.cjs
-lib/advisor/contracts-v2.cjs
-lib/advisor/controller-envelope.cjs
-lib/advisor/controller.cjs
-lib/advisor/errors.cjs
-lib/advisor/generated/advisor-contract-runtime.js
-lib/advisor/generated/advisor-metrics.js
-lib/advisor/generated/canonical-json.js
-lib/advisor/generated/json.js
-lib/advisor/history-contract.cjs
-lib/advisor/history-prune.cjs
-lib/advisor/history-query.cjs
-lib/advisor/history-store.cjs
-lib/advisor/isolated-workspace.cjs
-lib/advisor/json-document.cjs
-lib/advisor/managed-checkpoint.cjs
-lib/advisor/policy-schema.cjs
-lib/advisor/profile.cjs
-lib/advisor/runner.cjs
-lib/advisor/runtime-brief.generated.cjs
-lib/advisor/state-baseline.cjs
-lib/advisor/state-contract.cjs
-lib/advisor/state-human.cjs
-lib/advisor/state-io.cjs
-lib/advisor/task-state.cjs
-lib/advisor/windows-native.cs
-lib/advisor/windows-native.ps1
-lib/advisor/windows-platform.cjs
-```
-Darwin additions:
-
-```text
-lib/advisor/darwin-platform.cjs
-lib/advisor/native/darwin/advisor-native.c
-lib/advisor/native/darwin/advisor-native.h
-lib/advisor/native/darwin/prebuilt/artifacts.json
-lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node
-lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node
-lib/advisor/native/darwin/process.c
-lib/advisor/native/darwin/storage.c
-```
-
+The controller build is a separate exact closure rooted at `.evcrate/source/.evcrate/bin` (44 total entries: 36 shared/Windows files plus 8 Darwin-specific entries):
+- **36 shared/Windows entries**: `evcrate-advisor`, `lib/advisor/` (`adapter-contract.cjs`, `adapter-registry.cjs`, `adapters/{claude,codex,omp,omp-parser,pi}.cjs`, `checkpoint-contract.cjs`, `contracts-v2.cjs`, `controller-envelope.cjs`, `controller.cjs`, `errors.cjs`, `generated/{advisor-contract-runtime,advisor-metrics,canonical-json,json}.js`, `history-{contract,prune,query,store}.cjs`, `isolated-workspace.cjs`, `json-document.cjs`, `managed-checkpoint.cjs`, `policy-schema.cjs`, `profile.cjs`, `runner.cjs`, `runtime-brief.generated.cjs`, `state-{baseline,contract,human,io}.cjs`, `task-state.cjs`, `windows-native.{cs,ps1}`, `windows-platform.cjs`).
+- **8 Darwin entries**: `lib/advisor/darwin-platform.cjs`, `lib/advisor/native/darwin/` (`advisor-native.{c,h}`, `prebuilt/artifacts.json`, `prebuilt/{darwin-arm64,darwin-x64}/advisor-native.node`, `process.c`, `storage.c`).
 `runtime-brief.generated.cjs` is generated by
 `scripts/generate-runtime-brief.mjs` from the canonical
 `.claude/skills/advisor-strategy/references/brief-contract.md`. The artifact

@@ -6,9 +6,17 @@ import { hashFile, treeHash } from '../filesystem/hashing.js';
 import { controllerHashes, loadTargetManifestRegistry } from '../manifests/registry.js';
 import type { SharedBuildInputs } from './manifest-view-derivation.js';
 import { copyStagedTree } from './local-staging-fs.js';
+import {
+  canonicalInputHash, compiledRuntimeHash, copyCanonicalInputs, copyCompiledRuntime
+} from './input-snapshot-tree.js';
+
+// A cached parent cannot safely stage with a newly rebuilt runtime on disk.
+const loadedRuntimeHash = compiledRuntimeHash(join(__dirname, '..'));
 
 export interface InputSnapshotHashes {
   readonly canonicalClaudeHash: string;
+  readonly canonicalInputHash: string;
+  readonly compiledRuntimeHash: string;
   readonly claudeMdHash: string;
   readonly targetsRegistryHash?: string | undefined;
   readonly controllerHashes: Readonly<Record<string, string>>;
@@ -25,6 +33,12 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
   const canonicalHarnessRoot = join(sourceRoot, '.claude');
   const controllerBinSource = join(sourceRoot, '.evcrate', 'bin');
   const targetsRegistryPath = join(packageRoot, '.evcrate', 'targets');
+  const runtimeRoot = join(packageRoot, 'dist');
+  const runtimeHash = compiledRuntimeHash(runtimeRoot);
+  if (runtimeHash !== loadedRuntimeHash) {
+    throw new ControlPlaneError('PUBLICATION_FAILED', 'Compiled runtime differs from loaded build code');
+  }
+  const canonicalIdentity = canonicalInputHash(canonicalHarnessRoot);
 
   // 1. Capture live hashes before copy
   const canonicalClaudeHash = treeHash(canonicalHarnessRoot);
@@ -34,6 +48,8 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
 
   const snapshotHashes: InputSnapshotHashes = {
     canonicalClaudeHash,
+    canonicalInputHash: canonicalIdentity,
+    compiledRuntimeHash: runtimeHash,
     claudeMdHash,
     targetsRegistryHash,
     controllerHashes: cHashes
@@ -46,17 +62,25 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
     const snapClaude = join(snapSource, '.claude');
     const snapTargets = join(snapshotStage.path, '.evcrate', 'targets');
     const snapBin = join(snapSource, '.evcrate', 'bin');
+    const snapRuntime = join(snapshotStage.path, 'dist');
 
-    copyStagedTree(canonicalHarnessRoot, snapClaude);
+    copyCanonicalInputs(canonicalHarnessRoot, snapClaude);
     copyFileSync(join(sourceRoot, 'CLAUDE.md'), join(snapSource, 'CLAUDE.md'));
     if (existsSync(targetsRegistryPath)) {
       copyStagedTree(targetsRegistryPath, snapTargets);
     }
     copyStagedTree(controllerBinSource, snapBin);
+    copyCompiledRuntime(runtimeRoot, snapRuntime);
 
     // 3. Verify snapshot copy identity matches pre-copy hashes
     if (treeHash(snapClaude) !== canonicalClaudeHash) {
       throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot canonical harness hash mismatch');
+    }
+    if (canonicalInputHash(snapClaude) !== canonicalIdentity) {
+      throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot consumed-input hash mismatch');
+    }
+    if (compiledRuntimeHash(snapRuntime) !== runtimeHash) {
+      throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot compiled runtime hash mismatch');
     }
     if (hashFile(join(snapSource, 'CLAUDE.md')) !== claudeMdHash) {
       throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot CLAUDE.md hash mismatch');
@@ -84,7 +108,8 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
       registry,
       controllerBinSource: snapBin,
       controllerHashes: cHashes,
-      targetsRegistryHash
+      targetsRegistryHash,
+      runtimeRoot: snapRuntime
     };
 
     return { shared, snapshotStage, snapshotHashes };
@@ -101,9 +126,12 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
 export function assertLiveInputsUnchanged(packageRoot: string, expected: InputSnapshotHashes): void {
   const sourceRoot = join(packageRoot, '.evcrate', 'source');
   const canonicalHarnessRoot = join(sourceRoot, '.claude');
-  const currentClaudeHash = treeHash(canonicalHarnessRoot);
-  if (currentClaudeHash !== expected.canonicalClaudeHash) {
+  const currentClaudeHash = canonicalInputHash(canonicalHarnessRoot);
+  if (currentClaudeHash !== expected.canonicalInputHash) {
     throw new ControlPlaneError('PUBLICATION_FAILED', 'Canonical harness source modified during build');
+  }
+  if (compiledRuntimeHash(join(packageRoot, 'dist')) !== expected.compiledRuntimeHash) {
+    throw new ControlPlaneError('PUBLICATION_FAILED', 'Compiled runtime modified during build');
   }
 
   const currentClaudeMdHash = hashFile(join(sourceRoot, 'CLAUDE.md'));

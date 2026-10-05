@@ -104,7 +104,8 @@ boundary.
   process, open a listener, mutate HOME, or run a distribution action.
 - Treat `package.json` scripts as command authority:
   - `npm run build`: Incremental TypeScript compilation via `node scripts/build-typescript.mjs -p tsconfig.json`.
-  - `npm run build:clean`: Clean build invalidating cache and receipt via `node scripts/build-typescript.mjs -p tsconfig.json --clean`.
+  - `npm run prebuild:clean`: Shares ordinary prebuild lifecycle (`npm run prebuild`), regenerating the runtime brief, advisor runtime, and controller inventory before clean builds.
+  - `npm run build:clean`: Clean build invalidating build info cache (`.tsbuildinfo`) while retaining prior receipt via `node scripts/build-typescript.mjs -p tsconfig.json --clean`.
   - `npm run generate:advisor-runtime`: Incremental advisor runtime build via `node scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json`.
   - `npm run generate:all`: Orchestrated sequence: `npm run build && npm run generate:registry && npm run generate:manifests`.
   - `npm run distribute:build`, `npm run distribute:check`, and target-specific `npm run distribute:*` scripts for target projections.
@@ -115,18 +116,23 @@ TypeScript builds enforce deterministic incremental caching with compiler-owned 
 - **Cache configuration & layout**: `tsconfig.json` and `tsconfig.advisor-runtime.json` configure `"incremental": true` with build info caches in `.cache/evcrate/` (`tsconfig.tsbuildinfo` and `tsconfig.advisor-runtime.tsbuildinfo`). The `.cache/` root is gitignored (`/.cache/`).
 - **Authoritative compiler driver**: `scripts/build-typescript.mjs` orchestrates compilation:
   - Exposes `buildTypeScript(options)` and CLI flags `-p`/`--project <config>` and `--clean`.
-  - Resolves outputs and caches via public TypeScript compiler APIs (`ts.readConfigFile`, `ts.parseJsonConfigFileContent`, `ts.getOutputFileNames`).
+  - Resolves outputs and caches via public TypeScript compiler APIs (`ts.readConfigFile`, `ts.parseJsonConfigFileContent`, `ts.createProgram`, `ts.getOutputFileNames`).
   - Spawns `node_modules/typescript/bin/tsc` via `spawnSync` with `-p <absoluteConfigPath>`.
-  - Non-zero compiler exits halt execution immediately without touching receipts or outputs.
+  - Non-zero compiler exits halt driver cleanup and receipt updates; compiler emission still follows TypeScript's `noEmitOnError` policy.
+  - **Clean mode semantics**: `--clean` removes only the `.tsbuildinfo` file to force complete compilation. The prior receipt is preserved so `cleanStaleOutputs` can diff against prior ownership.
+  - **Effective CLI flags & noEmit**: CLI arguments are parsed with `ts.parseCommandLine` relative to the compiler working directory (`outDir`, `rootDir`, `declarationDir`, `tsBuildInfoFile`, `baseUrl`). For `--noEmit` (typecheck-only) runs, expected output inventory is empty, cache validation skips missing outputs, and `buildTypeScript` skips emitting-build stale output cleanup and receipt mutation entirely.
+  - **Output override receipt partitioning**: When CLI flags override `outDir` or `declarationDir`, `receiptPath` appends a 16-hex SHA-256 partition hash (`<receiptPath>.<identity>`) to prevent cross-configuration receipt collisions.
 - **Cache validation and invalidation**: `scripts/typescript-build-cache.mjs` ensures build soundness:
+  - **Program closure inventory**: `resolveConfigOutputs` uses `ts.createProgram` to resolve the full emit-eligible program closure (`!source.isDeclarationFile && !program.isSourceFileFromExternalLibrary(source)`), capturing both root and imported non-root modules. Output filenames are computed via `ts.getOutputFileNames`. Live imported module outputs are fully tracked and never deleted as stale.
   - **Corruption recovery**: `isBuildInfoCorrupt` detects empty or malformed JSON `.tsbuildinfo` files and purges them.
-  - **Missing output recovery**: `validateAndInvalidateCache` checks disk presence for all expected `.js` and `.d.ts` outputs. If any artifact is absent or deleted, the `.tsbuildinfo` file is unlinked, forcing full compiler re-emission.
+  - **Missing output recovery**: `validateAndInvalidateCache` checks disk presence for all expected `.js` and `.d.ts` outputs (skipped under `noEmit`). If any artifact is absent or deleted, the `.tsbuildinfo` file is unlinked, forcing full compiler re-emission.
 - **Receipt management and safe stale cleanup**: `scripts/typescript-build-receipt.mjs` tracks compiler-owned outputs in schema version 1 receipts (`<tsBuildInfoPath>.receipt.json`):
   - **Safe stale cleanup**: `cleanStaleOutputs` diffs current expected outputs against the prior receipt to remove obsolete outputs from renamed or deleted source files.
-  - **Containment verification**: `isStrictlyInside(childPath, parentDir)` enforces that removed paths reside strictly inside `outDir` without path-traversal escapes.
-  - **Symlink refusal**: Checks entries via `fs.lstatSync`; symbolic links are never unlinked or followed.
-  - **No directory sweeping**: Never performs recursive directory sweeps or deletes unrecorded files.
-  - **Atomic persistence**: `writeReceipt` records `{ version: 1, config, outDir, timestamp, outputs }` using a `.tmp.<timestamp>` file and atomic `fs.renameSync`.
+  - **Separate declaration directory**: Supports distinct `declarationDir`, tracking declaration artifacts alongside code outputs and recording `declarationDir` in receipt metadata.
+  - **Physical all-ancestor containment & symlink refusal**: `isSafeOutputPath` inspects every path component from the filesystem root through output root ancestors, parent directories, and leaves via `fs.lstatSync`. Symbolic links in ancestors, parent directories, or output leaves are strictly refused (never unlinked or followed). Confirms physical containment of parent directory inside real output root via `fs.realpathSync`.
+  - **No directory sweeping**: Never sweeps `outDir` or unlinks unrecorded files.
+  - **Failed cleanup ledger preservation**: If stale output cleanup encounters errors, `buildTypeScript` halts with exit status 1 without calling `writeReceipt`, preserving the prior receipt on disk for subsequent runs.
+  - **Atomic persistence**: On successful cleanup, `writeReceipt` records `{ version: 1, config, outDir, declarationDir, timestamp, outputs }` using a `.tmp.<timestamp>` file and atomic `fs.renameSync`.
 ### One-shot CLI lifecycle
 
 ```text
@@ -586,22 +592,21 @@ atomic apply. It never joins scope or target-publication atomicity.
 36 shared/Windows files plus eight Darwin assets (one loader, five source/
 provenance files, and two architecture-specific binaries).
 `npm run generate:advisor-runtime` compiles runtime modules incrementally via `scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json` before inventory generation in `prebuild`. Root control-plane compilation runs via `scripts/build-typescript.mjs -p tsconfig.json` (`npm run build`).
-`scripts/build-manifests.mjs` invokes the TypeScript local-build path for each
-persisted target and the aggregate set. Build manifests are schema 2 and carry
-`source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`,
-`validation`, and `home_policy`.
+`scripts/build-manifests.mjs` invokes the TypeScript local-build path (`runAllManifestsBuild`) for each persisted target and the aggregate set. Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
 
-`scripts/build-manifests.mjs` creates schema-2 target/aggregate manifests for
-source, adapter, controller, owner, output, validation, and HOME policy.
-Build/check validates exact membership, current hashes, regular non-symlink
-files, and the canonical entrypoint shebang; modes are not content or publication
-identity.
+### Target manifest derivation, worker staging, and snapshot safety
 
-Publication derives launch intent from paths/shebangs and explicit roles. Linux
-`install.sh` grants mandatory execute bits and fails if chmod fails. Keep
-`install.sh`/`install.ps1` inventories in sync with the generated 44-file list;
-manifest tests reject missing, extra, or external files.
+- **Single-projection manifest reuse & parallel workers**: `scripts/build-manifests.mjs` and `runAllManifestsBuild` execute target projection once per persisted target. `TargetWorkerPool` supports bounded parallel execution (`--jobs <n>`, default 2 workers), maintaining exact bit-for-bit manifest and projection parity with serial execution.
+- **Input snapshot isolation**: `prepareInputSnapshot` creates an isolated staging copy of canonical harness inputs (`.claude`) and compiled runtime (`dist/**/*.js`).
+- **Consumed input identity vs manifest tree hash**: `canonicalInputHash` computes snapshot freshness across all consumed files, including `.gitignore` (which Claude projects); manifest `treeHash` retains its canonical definition excluding `.gitignore`.
+- **Physical safety and pre-filter rejection**: `visitSnapshotInputs` verifies `assertNoSymlinkAncestors` and `assertRealDirectory`. Unsafe entries (symlinks, non-regular files/directories) throw `PATH_UNSAFE` immediately before any ignore filter is evaluated. Traversal filters (`isIgnoredArtifact`) bypass heavy excluded directories (`node_modules/`, `__pycache__/`) without reading or recursing into descendant paths.
+- **Compiled runtime revision binding**: `compiledRuntimeHash` hashes all `.js` outputs in `dist`. The parent compares disk runtime against in-memory `loadedRuntimeHash`; any divergence throws `PUBLICATION_FAILED` across both serial (jobs 1) and worker (jobs 2) execution. Workers execute the snapshot runtime (`sharedInputs.runtimeRoot/distribution/target-worker.js`).
+- **Promotion freshness under lock before journal**: In `promoteUnlocked`, `options.hooks?.beforeTransaction?.()` executes input freshness checks (`assertLiveInputsUnchanged`) while holding the promotion lock, strictly BEFORE writing the journal or claiming destination outputs. Source drift fails safely before journal recording, avoiding spurious `ROLLBACK_FAILED`.
+- **Adapter hash closures**: All 7 translated targets (`antigravity`, `codex`, `copilot`, `gemini`, `omp`, `pi`, `vscode`) declare `dist/adapters/uri-restoration.js` in `adapter_sources`, ensuring changes to URI restoration invalidate target manifest digests.
+- **Codex URL restoration**: `applyReplacements` uses a linear regex callback to restore placeholder URLs literally without string template interpolation (`$&`, `$$`) or cascading token substitution.
+- **Benchmark metric standard**: Build generation benchmark (`scripts/benchmark-build-generation.mjs`) reports post-build parent process RSS (`memoryUsage().rss`), not worker process-tree peak; historical qualification figures remain unchanged.
 
+Publication derives launch intent from paths/shebangs and explicit roles. Linux `install.sh` grants mandatory execute bits and fails if chmod fails. Keep `install.sh`/`install.ps1` inventories in sync with the generated 44-file list; manifest tests reject missing, extra, or external files.
 Linux x64 remains the live installed-CLI boundary. Windows release support remains
 installer lifecycle and `version --json`; native diagnostics do not widen support.
 Darwin includes a prebuilt addon, but runtime remains untested/unqualified and

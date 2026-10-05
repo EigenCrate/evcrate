@@ -2,7 +2,9 @@
   "schema_version": 2,
   "name": "vscode",
   "adapter": "dist/adapters/vscode/index.js",
-  "adapter_sources": [],
+  "adapter_sources": [
+    "dist/adapters/uri-restoration.js"
+  ],
   "output_root": ".evcrate-vscode",
   "additional_roots": [],
   "project_docs": [],

@@ -8,6 +8,7 @@
 
 import { dirname, join, relative, resolve } from 'node:path';
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import ts from 'typescript';
 import { toPosixPath } from './typescript-build-receipt.mjs';
 
@@ -18,7 +19,7 @@ import { toPosixPath } from './typescript-build-receipt.mjs';
  * @param {string} root - Project root directory
  * @returns {{ parsed: ts.ParsedCommandLine, absoluteConfigPath: string }} Parsed configuration
  */
-export function parseTsConfig(configPath, root) {
+export function parseTsConfig(configPath, root, extraArgs = []) {
   const absoluteConfigPath = resolve(root, configPath);
   if (!fs.existsSync(absoluteConfigPath)) {
     throw new Error(`Config file not found: ${absoluteConfigPath}`);
@@ -34,13 +35,32 @@ export function parseTsConfig(configPath, root) {
     throw new Error(`Failed to read tsconfig: ${message}`);
   }
 
+  const cmd = extraArgs && extraArgs.length > 0
+    ? ts.parseCommandLine(extraArgs)
+    : { options: {}, errors: [] };
+  // CLI paths are relative to the compiler's working directory, not the config directory.
+  for (const key of ['outDir', 'rootDir', 'declarationDir', 'tsBuildInfoFile', 'baseUrl']) {
+    if (cmd.options[key]) cmd.options[key] = resolve(root, cmd.options[key]);
+  }
+  for (const key of ['rootDirs', 'typeRoots']) {
+    if (cmd.options[key]) cmd.options[key] = cmd.options[key].map((path) => resolve(root, path));
+  }
+
   const parsed = ts.parseJsonConfigFileContent(
     configFile.config,
     ts.sys,
     dirname(absoluteConfigPath),
-    {},
+    cmd.options,
     absoluteConfigPath
   );
+  const errors = [...cmd.errors, ...parsed.errors];
+  if (errors.length > 0) {
+    throw new Error(ts.formatDiagnostics(errors, {
+      getCurrentDirectory: () => root,
+      getCanonicalFileName: (file) => file,
+      getNewLine: () => '\n',
+    }));
+  }
 
   return { parsed, absoluteConfigPath };
 }
@@ -52,17 +72,35 @@ export function parseTsConfig(configPath, root) {
  * @param {string} root - Project root directory
  * @returns {object} Resolved configuration metadata
  */
-export function resolveConfigOutputs(configPath, root) {
-  const { parsed, absoluteConfigPath } = parseTsConfig(configPath, root);
+export function resolveConfigOutputs(configPath, root, extraArgs = []) {
+  const { parsed, absoluteConfigPath } = parseTsConfig(configPath, root, extraArgs);
   const outDir = parsed.options.outDir ? resolve(root, parsed.options.outDir) : null;
+  const declarationDir = parsed.options.declarationDir ? resolve(root, parsed.options.declarationDir) : null;
 
   // Expected output code and declaration files computed using TypeScript public API
   const expectedOutputs = [];
-  for (const fileName of parsed.fileNames) {
-    const outputs = ts.getOutputFileNames(parsed, fileName, false);
-    for (const out of outputs) {
-      const rel = toPosixPath(relative(root, resolve(root, out)));
-      expectedOutputs.push(rel);
+
+  // When noEmit is active, compiler produces no output files
+  if (!parsed.options.noEmit) {
+    const program = ts.createProgram({
+      rootNames: parsed.fileNames,
+      options: parsed.options,
+      projectReferences: parsed.projectReferences,
+      configFileParsingDiagnostics: parsed.errors,
+    });
+    const emitEligibleSourceFiles = program.getSourceFiles()
+      .filter((source) => !source.isDeclarationFile && !program.isSourceFileFromExternalLibrary(source))
+      .map((source) => source.fileName);
+
+    const emitCommandLine = { ...parsed, fileNames: emitEligibleSourceFiles };
+    const ignoreCase = !ts.sys.useCaseSensitiveFileNames;
+
+    for (const fileName of emitEligibleSourceFiles) {
+      const outputs = ts.getOutputFileNames(emitCommandLine, fileName, ignoreCase);
+      for (const out of outputs) {
+        const rel = toPosixPath(relative(root, resolve(root, out)));
+        expectedOutputs.push(rel);
+      }
     }
   }
 
@@ -83,12 +121,19 @@ export function resolveConfigOutputs(configPath, root) {
     const sanitizedName = toPosixPath(relative(root, absoluteConfigPath)).replace(/\//g, '_');
     receiptPath = join(root, '.cache', 'evcrate', `${sanitizedName}.receipt.json`);
   }
+  const cliOptions = ts.parseCommandLine(extraArgs).options;
+  if (receiptPath && (cliOptions.outDir || cliOptions.declarationDir)) {
+    const identity = createHash('sha256').update(JSON.stringify([outDir, declarationDir])).digest('hex').slice(0, 16);
+    receiptPath = `${receiptPath}.${identity}`;
+  }
 
   return {
     parsed,
     absoluteConfigPath,
     outDir,
     relativeOutDir: outDir ? toPosixPath(relative(root, outDir)) : null,
+    declarationDir,
+    relativeDeclarationDir: declarationDir ? toPosixPath(relative(root, declarationDir)) : null,
     expectedOutputs: Array.from(new Set(expectedOutputs)).sort(),
     tsBuildInfoPath,
     receiptPath,
@@ -133,6 +178,11 @@ export function validateAndInvalidateCache(info, root, logger = console) {
     fs.rmSync(info.tsBuildInfoPath, { force: true });
     return { invalidated: true, reason: 'corrupt_build_info' };
   }
+  // If noEmit is configured, skip missing output validation since no outputs are produced
+  if (info.parsed?.options?.noEmit) {
+    return { invalidated: false, reason: null };
+  }
+
 
   // 2. Check for missing expected outputs
   let missingCount = 0;

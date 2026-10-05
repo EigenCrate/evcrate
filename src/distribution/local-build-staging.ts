@@ -90,7 +90,8 @@ export function prepareSharedBuildInputs(packageRoot: string): SharedBuildInputs
     registry,
     controllerBinSource,
     controllerHashes: cHashes,
-    targetsRegistryHash
+    targetsRegistryHash,
+    runtimeRoot: join(packageRoot, 'dist')
   };
 }
 

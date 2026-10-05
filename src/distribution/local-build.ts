@@ -69,11 +69,7 @@ export async function runLocalBuild(
 
     const hooks = result.snapshotHashes
       ? {
-          beforeBackup: (_pair: PromotionPair, index: number) => {
-            if (index === 0) {
-              assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!);
-            }
-          }
+          beforeTransaction: () => assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!)
         }
       : undefined;
 
@@ -120,11 +116,7 @@ export async function runAllManifestsBuild(
 
     const hooks = result.snapshotHashes
       ? {
-          beforeBackup: (_pair: PromotionPair, index: number) => {
-            if (index === 0) {
-              assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!);
-            }
-          }
+          beforeTransaction: () => assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!)
         }
       : undefined;
 

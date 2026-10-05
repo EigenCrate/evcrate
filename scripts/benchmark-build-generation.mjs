@@ -45,7 +45,7 @@ async function runBenchmarkIteration(runAllManifestsBuild, jobs) {
       wallMs: t1 - t0,
       userCpuMs: cpuDiff.user / 1000,
       systemCpuMs: cpuDiff.system / 1000,
-      peakRssMb: mem.rss / (1024 * 1024),
+      parentRssMb: mem.rss / (1024 * 1024),
       manifestCount: result.allManifestPaths.length,
       targetCount: result.targetBuilds.size
     };
@@ -72,14 +72,14 @@ async function main() {
       process.stdout.write(`  Run ${i}/${ITERATIONS}... `);
       const metrics = await runBenchmarkIteration(runAllManifestsBuild, jobs);
       runs.push(metrics);
-      console.log(`${(metrics.wallMs / 1000).toFixed(2)}s (RSS: ${metrics.peakRssMb.toFixed(1)}MB)`);
+      console.log(`${(metrics.wallMs / 1000).toFixed(2)}s (post-build parent RSS: ${metrics.parentRssMb.toFixed(1)}MB)`);
     }
 
     const wallTimes = runs.map((r) => r.wallMs);
     const medianWallMs = median(wallTimes);
     const minWallMs = Math.min(...wallTimes);
     const maxWallMs = Math.max(...wallTimes);
-    const medianRssMb = median(runs.map((r) => r.peakRssMb));
+    const medianRssMb = median(runs.map((r) => r.parentRssMb));
     const medianUserCpu = median(runs.map((r) => r.userCpuMs));
     const medianSystemCpu = median(runs.map((r) => r.systemCpuMs));
 
@@ -108,7 +108,7 @@ async function main() {
     'Range (s)'.padEnd(16) +
     'vs Serial'.padEnd(12) +
     'vs Baseline'.padEnd(14) +
-    'Peak RSS'
+    'Post-build parent RSS'
   );
   console.log('-'.repeat(70));
 

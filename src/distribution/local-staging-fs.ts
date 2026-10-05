@@ -1,14 +1,19 @@
-import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync } from 'node:fs';
+import { chmodSync, copyFileSync, lstatSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
+import { assertNoSymlinkAncestors } from '../filesystem/paths.js';
 
 /**
  * Copies a directory or file recursively into a staged directory, preserving
  * directory structure and POSIX executable permissions.
  */
 export function copyStagedTree(source: string, destination: string): void {
-  if (!existsSync(source)) return;
-  const stat = lstatSync(source);
+  assertNoSymlinkAncestors(source);
+  const stat = lstatSync(source, { throwIfNoEntry: false });
+  if (!stat) return;
+  if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile())) {
+    throw new ControlPlaneError('PATH_UNSAFE');
+  }
   if (stat.isDirectory()) {
     mkdirSync(destination, { recursive: true });
     for (const entry of readdirSync(source)) copyStagedTree(join(source, entry), join(destination, entry));
@@ -34,8 +39,8 @@ export function copyStagedTree(source: string, destination: string): void {
  */
 export function collectBaselineOwners(stagePath: string, rootName: string, owners: Map<string, string>): void {
   const fullRoot = join(stagePath, rootName);
-  if (!existsSync(fullRoot)) return;
-  const stat = lstatSync(fullRoot);
+  const stat = lstatSync(fullRoot, { throwIfNoEntry: false });
+  if (!stat) return;
   if (stat.isFile()) {
     owners.set(rootName, 'baseline');
     return;
