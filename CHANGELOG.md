@@ -1,3 +1,10 @@
+## [2.9.1](https://github.com/EigenCrate/evcrate/compare/v2.9.0...v2.9.1) (2026-10-05)
+
+
+### ⚡ Performance Improvements
+
+* **build:** optimize build and manifest generation performance with linear URI restoration, worker staging, and incremental caching ([#17](https://github.com/EigenCrate/evcrate/issues/17)) ([aba4265](https://github.com/EigenCrate/evcrate/commit/aba4265a502d02dba45251080de2a824662332e6))
+
 ## [2.9.0](https://github.com/EigenCrate/evcrate/compare/v2.8.0...v2.9.0) (2026-10-05)
 
 
