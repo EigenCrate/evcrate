@@ -6,7 +6,7 @@ import { withPublishLock } from '../filesystem/locking.js';
 import { hashBytes, hashFile, treeHash } from '../filesystem/hashing.js';
 import { readBuildManifest } from './manifest.js';
 import type { VerifiedCurrentBuild } from './build-resolution.js';
-import { assembleLocalStage } from './local-build-staging.js';
+import { assembleLocalStage, assertLiveInputsUnchanged } from './local-build-staging.js';
 import { promoteTransaction, type PromotionPair } from './promotion.js';
 import { publishApply, recoverPublication, type PublicationOptions } from './publication.js';
 import { PERSISTED_TARGETS, type PersistedTarget } from '../protocol/validation.js';
@@ -29,6 +29,8 @@ function isSamePathTree(staged: string, local: string): boolean {
 
 export interface LocalBuildOptions {
   readonly emitAllManifests?: boolean;
+  readonly jobs?: number | string | undefined;
+  readonly workerScriptPath?: string;
 }
 
 export interface VerifiedAllManifestsBuild {
@@ -37,15 +39,17 @@ export interface VerifiedAllManifestsBuild {
   readonly allManifestPaths: readonly string[];
 }
 
-export function runLocalBuild(
+export async function runLocalBuild(
   packageRoot: string,
   selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS,
   options: LocalBuildOptions = {}
-): VerifiedCurrentBuild {
+): Promise<VerifiedCurrentBuild> {
   const stage = createStagedRoot(packageRoot, '.evcrate-build-');
   try {
-    const result = assembleLocalStage(packageRoot, stage, selectedTargets, {
-      emitAllManifests: options.emitAllManifests
+    const result = await assembleLocalStage(packageRoot, stage, selectedTargets, {
+      emitAllManifests: options.emitAllManifests,
+      jobs: options.jobs,
+      workerScriptPath: options.workerScriptPath
     });
     const pairs: PromotionPair[] = [];
 
@@ -63,7 +67,21 @@ export function runLocalBuild(
       pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
     }
 
-    promoteTransaction(pairs, { stageRoot: stage, lockRoot: join(packageRoot, '.evcrate-publish-state') });
+    const hooks = result.snapshotHashes
+      ? {
+          beforeBackup: (_pair: PromotionPair, index: number) => {
+            if (index === 0) {
+              assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!);
+            }
+          }
+        }
+      : undefined;
+
+    promoteTransaction(pairs, {
+      stageRoot: stage,
+      lockRoot: join(packageRoot, '.evcrate-publish-state'),
+      hooks
+    });
     const manifest = readBuildManifest(result.manifestPath);
     return Object.freeze({
       manifestPath: result.manifestPath,
@@ -77,11 +95,16 @@ export function runLocalBuild(
   }
 }
 
-export function runAllManifestsBuild(packageRoot: string): VerifiedAllManifestsBuild {
+export async function runAllManifestsBuild(
+  packageRoot: string,
+  options: LocalBuildOptions = {}
+): Promise<VerifiedAllManifestsBuild> {
   const stage = createStagedRoot(packageRoot, '.evcrate-build-');
   try {
-    const result = assembleLocalStage(packageRoot, stage, PERSISTED_TARGETS, {
-      emitAllManifests: true
+    const result = await assembleLocalStage(packageRoot, stage, PERSISTED_TARGETS, {
+      emitAllManifests: true,
+      jobs: options.jobs,
+      workerScriptPath: options.workerScriptPath
     });
     const pairs: PromotionPair[] = [];
 
@@ -95,7 +118,21 @@ export function runAllManifestsBuild(packageRoot: string): VerifiedAllManifestsB
       pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
     }
 
-    promoteTransaction(pairs, { stageRoot: stage, lockRoot: join(packageRoot, '.evcrate-publish-state') });
+    const hooks = result.snapshotHashes
+      ? {
+          beforeBackup: (_pair: PromotionPair, index: number) => {
+            if (index === 0) {
+              assertLiveInputsUnchanged(packageRoot, result.snapshotHashes!);
+            }
+          }
+        }
+      : undefined;
+
+    promoteTransaction(pairs, {
+      stageRoot: stage,
+      lockRoot: join(packageRoot, '.evcrate-publish-state'),
+      hooks
+    });
 
     const aggregateManifest = readBuildManifest(result.manifestPath);
     const aggregateBuild: VerifiedCurrentBuild = Object.freeze({
@@ -139,13 +176,17 @@ export function runAllManifestsBuild(packageRoot: string): VerifiedAllManifestsB
   }
 }
 
-export function runLocalCheck(
+export async function runLocalCheck(
   packageRoot: string,
-  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS
-): void {
+  selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS,
+  options: LocalBuildOptions = {}
+): Promise<void> {
   const stage = createStagedRoot(packageRoot, '.evcrate-check-');
   try {
-    assembleLocalStage(packageRoot, stage, selectedTargets);
+    await assembleLocalStage(packageRoot, stage, selectedTargets, {
+      jobs: options.jobs,
+      workerScriptPath: options.workerScriptPath
+    });
   } finally {
     stage.cleanup();
   }
@@ -177,15 +218,15 @@ export async function runLocalDistribution(
 ): Promise<LocalDistributionOutcome> {
   switch (action) {
     case 'build':
-      runLocalBuild(context.packageRoot, context.selectedTargetIds);
+      await runLocalBuild(context.packageRoot, context.selectedTargetIds);
       return { action: 'build', engine: 'typescript' };
     case 'check':
-      runLocalCheck(context.packageRoot, context.selectedTargetIds);
+      await runLocalCheck(context.packageRoot, context.selectedTargetIds);
       return { action: 'check', engine: 'typescript' };
     case 'publish':
       return { action: 'publish', engine: 'typescript', payload: publishApply(context, options, publishRequest(context, request)) };
     case 'all':
-      runLocalBuild(context.packageRoot, context.selectedTargetIds);
+      await runLocalBuild(context.packageRoot, context.selectedTargetIds);
       return { action: 'all', engine: 'typescript', payload: publishApply(context, options, publishRequest(context, request)) };
     case 'recover':
       return { action: 'recover', engine: 'typescript', payload: recoverPublication(context, recoverRequest(request)) };

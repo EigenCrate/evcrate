@@ -63,7 +63,7 @@ test('Codex rewriting is selected by manifest rule, not destination naming', () 
   assert.equal(text(noRule.content), text(hooks));
 });
 let builtPackage;
-function sourceDerivedFixture(targets = []) {
+async function sourceDerivedFixture(targets = []) {
   if (builtPackage === undefined) {
     const packageRoot = mkdtempSync(join(tmpdir(), 'evcrate-plan-package-'));
     const fixturePackage = join(packageRoot, 'package');
@@ -73,7 +73,7 @@ function sourceDerivedFixture(targets = []) {
     cpSync(join(process.cwd(), 'dist'), join(fixturePackage, 'dist'), {
       recursive: true, dereference: true
     });
-    runLocalBuild(fixturePackage, PERSISTED_TARGETS);
+    await runLocalBuild(fixturePackage, PERSISTED_TARGETS);
     builtPackage = { packageRoot, fixturePackage };
   }
   const root = mkdtempSync(join(tmpdir(), 'evcrate-plan-session-'));
@@ -91,8 +91,8 @@ test.after(() => {
   if (builtPackage !== undefined) rmSync(builtPackage.packageRoot, { recursive: true, force: true });
 });
 
-test('publication plan set shares one aggregate build across fixed shared and scoped harness phases', () => {
-  const fixture = sourceDerivedFixture();
+test('publication plan set shares one aggregate build across fixed shared and scoped harness phases', async () => {
+  const fixture = await sourceDerivedFixture();
   let sourceDestination;
   let originalSourceDestination = null;
   try {
@@ -237,8 +237,8 @@ test('publication plan set shares one aggregate build across fixed shared and sc
     rmSync(fixture.root, { recursive: true, force: true });
   }
 });
-test('project overlap preflight runs before destination inventory reads', () => {
-  const fixture = sourceDerivedFixture();
+test('project overlap preflight runs before destination inventory reads', async () => {
+  const fixture = await sourceDerivedFixture();
   try {
     const build = resolveCurrentPublicationBuild(fixture.context);
     const selectedTargets = fixture.context.selectedTargets.map((target) => {
@@ -271,9 +271,9 @@ test('project overlap preflight runs before destination inventory reads', () => 
 });
 
 
-test('target subset planning preserves untouched logical ownership records', () => {
-  const fixture = sourceDerivedFixture(['copilot']);
-  const nextFixture = sourceDerivedFixture(['omp']);
+test('target subset planning preserves untouched logical ownership records', async () => {
+  const fixture = await sourceDerivedFixture(['copilot']);
+  const nextFixture = await sourceDerivedFixture(['omp']);
   try {
     const build = resolveCurrentPublicationBuild(fixture.context);
     mkdirSync(join(fixture.home, '.copilot'));

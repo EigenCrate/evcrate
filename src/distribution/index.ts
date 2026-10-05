@@ -15,3 +15,8 @@ export * from './local-build-staging.js';
 export * from './local-build.js';
 export * from './manifest-view-derivation.js';
 export * from './local-staging-fs.js';
+export * from './build-jobs.js';
+export * from './input-snapshot.js';
+export * from './worker-pool.js';
+export * from './target-worker.js';
+export * from './worker-stage-verification.js';

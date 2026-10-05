@@ -107,7 +107,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
   });
 
   describe('Parity and projection reuse verification', () => {
-    it('runAllManifestsBuild produces 100% byte-for-byte identical manifests compared to sequential runLocalBuild', () => {
+    it('runAllManifestsBuild produces 100% byte-for-byte identical manifests compared to sequential runLocalBuild', async () => {
       const fixtureA = makeTempDir('evcrate-fixture-legacy-');
       const fixtureB = makeTempDir('evcrate-fixture-singlepass-');
 
@@ -119,12 +119,12 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
 
       // Legacy approach in fixtureA: 8 individual builds + 1 aggregate build (16 projections)
       for (const target of PERSISTED_TARGETS) {
-        runLocalBuild(fixtureA, [target]);
+        await runLocalBuild(fixtureA, [target]);
       }
-      runLocalBuild(fixtureA, PERSISTED_TARGETS);
+      await runLocalBuild(fixtureA, PERSISTED_TARGETS);
 
       // New single-pass approach in fixtureB: 8 projections, 9 manifests promoted in 1 transaction
-      const result = runAllManifestsBuild(fixtureB);
+      const result = await runAllManifestsBuild(fixtureB);
       assert.equal(result.allManifestPaths.length, 9);
       assert.equal(result.targetBuilds.size, 8);
       assert.ok(result.aggregateBuild);
@@ -167,13 +167,13 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
       }
     });
 
-    it('runLocalBuild with emitAllManifests option populates allStagedManifests and produces verified build', () => {
+    it('runLocalBuild with emitAllManifests option populates allStagedManifests and produces verified build', async () => {
       const fixture = makeTempDir('evcrate-fixture-opt-');
       for (const item of ['.evcrate', 'dist', 'package.json']) {
         cpSync(join(packageRoot, item), join(fixture, item), { recursive: true });
       }
 
-      const build = runLocalBuild(fixture, PERSISTED_TARGETS, { emitAllManifests: true });
+      const build = await runLocalBuild(fixture, PERSISTED_TARGETS, { emitAllManifests: true });
       assert.ok(build.manifest);
       assert.equal(build.selectedManifests.length, 8);
 
@@ -186,7 +186,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
   });
 
   describe('Isolation and atomic promotion', () => {
-    it('single target runLocalBuild leaves other target manifests and outputs untouched', () => {
+    it('single target runLocalBuild leaves other target manifests and outputs untouched', async () => {
       const fixture = makeTempDir('evcrate-fixture-isolation-');
       for (const item of ['.evcrate', 'dist', 'package.json']) {
         cpSync(join(packageRoot, item), join(fixture, item), { recursive: true });
@@ -197,7 +197,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
       const priorClaudeBytes = existsSync(otherManifest) ? readFileSync(otherManifest) : null;
 
       // Run build only for omp
-      const ompBuild = runLocalBuild(fixture, ['omp']);
+      const ompBuild = await runLocalBuild(fixture, ['omp']);
       assert.equal(ompBuild.selectedManifests.length, 1);
       assert.equal(ompBuild.selectedManifests[0].id, 'omp');
       assert.ok(existsSync(join(fixture, '.evcrate', 'build-manifest-omp.json')));
@@ -207,7 +207,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
         assert.deepEqual(priorClaudeBytes, afterClaudeBytes, 'Unselected target manifest must not be altered');
       }
     });
-    it('staging failure leaves prior workspace completely unmodified', () => {
+    it('staging failure leaves prior workspace completely unmodified', async () => {
       const fixture = makeTempDir('evcrate-fixture-rollback-');
       for (const item of ['.evcrate', 'dist', 'package.json']) {
         cpSync(join(packageRoot, item), join(fixture, item), { recursive: true });
@@ -217,7 +217,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
 
 
       // 1. Initial build succeeds
-      runLocalBuild(fixture, ['omp']);
+      await runLocalBuild(fixture, ['omp']);
       const ompManifestPath = join(fixture, '.evcrate', 'build-manifest-omp.json');
       assert.ok(existsSync(ompManifestPath));
       const priorOmpBytes = readFileSync(ompManifestPath);
@@ -226,8 +226,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
       writeFileSync(join(fixture, '.claude'), 'unsafe');
 
       // 3. runAllManifestsBuild must throw PATH_UNSAFE
-      assert.throws(() => runAllManifestsBuild(fixture), (err) => err?.code === 'PATH_UNSAFE');
-
+      await assert.rejects(async () => runAllManifestsBuild(fixture), (err) => err?.code === 'PATH_UNSAFE');
       // 4. Prior manifest remains completely identical
       const postOmpBytes = readFileSync(ompManifestPath);
       assert.deepEqual(priorOmpBytes, postOmpBytes, 'Prior manifest must remain unchanged on pre-promotion failure');

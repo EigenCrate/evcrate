@@ -25,7 +25,15 @@ export {
   type SharedBuildInputs,
   type TargetBuildFacts
 } from './manifest-view-derivation.js';
-
+export {
+  assertLiveInputsUnchanged,
+  prepareInputSnapshot,
+  type InputSnapshotHashes,
+  type InputSnapshotResult
+} from './input-snapshot.js';
+import { resolveBuildJobs } from './build-jobs.js';
+import { prepareInputSnapshot, type InputSnapshotHashes } from './input-snapshot.js';
+import { TargetWorkerPool } from './worker-pool.js';
 const LEGACY_LOCAL_ROOTS = Object.freeze([
   '.claude', '.gemini', '.antigravity', '.codex', '.agents', '.pi', '.omp', '.copilot', '.evcrate-vscode'
 ] as const);
@@ -45,6 +53,8 @@ export interface StagedManifestEntry {
 
 export interface AssembleStageOptions {
   readonly emitAllManifests?: boolean;
+  readonly jobs?: number | string | undefined;
+  readonly workerScriptPath?: string;
 }
 
 export interface StagedBuildResult {
@@ -55,6 +65,7 @@ export interface StagedBuildResult {
   readonly localOutputs: ReadonlyMap<string, string>;
   readonly selectedManifests: readonly TargetManifest[];
   readonly allStagedManifests?: readonly StagedManifestEntry[];
+  readonly snapshotHashes?: InputSnapshotHashes;
 }
 
 
@@ -158,92 +169,121 @@ export function buildAndStageTarget(
   };
 }
 
-export function assembleLocalStage(
+export async function assembleLocalStage(
   packageRoot: string,
   stage: StagedRoot,
   selectedTargets: readonly PersistedTarget[] = PERSISTED_TARGETS,
   options: AssembleStageOptions = {}
-): StagedBuildResult {
-  const shared = prepareSharedBuildInputs(packageRoot);
-  const manifests = loadSelectedManifests(shared.registry, selectedTargets);
-  const stagePath = stage.path;
+): Promise<StagedBuildResult> {
+  assertLegacyRootClean(packageRoot);
+  const { shared, snapshotStage, snapshotHashes } = prepareInputSnapshot(packageRoot);
+  try {
+    const manifests = loadSelectedManifests(shared.registry, selectedTargets);
+    const stagePath = stage.path;
 
-  const targetFacts: TargetBuildFacts[] = [];
-  for (const manifest of manifests) {
-    targetFacts.push(buildAndStageTarget(manifest, shared, stagePath));
-  }
+    const effectiveJobs = resolveBuildJobs({
+      explicitJobs: options.jobs,
+      targetCount: selectedTargets.length
+    });
 
-  const stageBin = join(stagePath, '.evcrate', 'bin');
-  const controllerMetadata = stageAdvisorController(shared.controllerBinSource, stageBin);
-
-  const stagedOutputs = new Map<string, string>([['.evcrate', join(stagePath, '.evcrate')]]);
-  const localOutputs = new Map<string, string>([['.evcrate', join(shared.sourceRoot, '.evcrate')]]);
-  for (const fact of targetFacts) {
-    for (const [key, val] of fact.stagedOutputs) stagedOutputs.set(key, val);
-    for (const [key, val] of fact.localOutputs) localOutputs.set(key, val);
-  }
-
-  if (options.emitAllManifests) {
-    if (manifests.length !== shared.registry.targets.size) {
-      throw new ControlPlaneError('PROTOCOL_INVALID');
+    let targetFacts: TargetBuildFacts[];
+    if (effectiveJobs <= 1) {
+      targetFacts = [];
+      for (const manifest of manifests) {
+        targetFacts.push(buildAndStageTarget(manifest, shared, stagePath));
+      }
+    } else {
+      const pool = new TargetWorkerPool({
+        jobs: effectiveJobs,
+        packageRoot,
+        sharedInputs: shared,
+        stagePath,
+        workerScriptPath: options.workerScriptPath
+      });
+      targetFacts = await pool.run(selectedTargets);
     }
 
-    // Derive all 9 manifest views in memory BEFORE writing manifest files into stagePath/.evcrate
-    const singleViews = targetFacts.map((fact) =>
-      deriveManifestView([fact], shared, stagePath, controllerMetadata, fact.manifest.id)
-    );
-    const aggregateView = deriveManifestView(targetFacts, shared, stagePath, controllerMetadata);
+    const stageBin = join(stagePath, '.evcrate', 'bin');
+    const controllerMetadata = stageAdvisorController(shared.controllerBinSource, stageBin);
 
-    // Now write all 9 manifest files atomically into stagePath
-    for (const singleView of singleViews) {
-      mkdirSync(dirname(singleView.stagedManifestPath), { recursive: true });
-      writeAtomicFile(singleView.stagedManifestPath, singleView.manifestData);
+    const liveSourceRoot = join(packageRoot, '.evcrate', 'source');
+    const stagedOutputs = new Map<string, string>([['.evcrate', join(stagePath, '.evcrate')]]);
+    const localOutputs = new Map<string, string>([['.evcrate', join(liveSourceRoot, '.evcrate')]]);
+    for (const fact of targetFacts) {
+      for (const [key, val] of fact.stagedOutputs) stagedOutputs.set(key, val);
+      for (const [key] of fact.localOutputs) localOutputs.set(key, join(liveSourceRoot, key));
     }
-    mkdirSync(dirname(aggregateView.stagedManifestPath), { recursive: true });
-    writeAtomicFile(aggregateView.stagedManifestPath, aggregateView.manifestData);
 
-    const allStagedManifests: StagedManifestEntry[] = [
-      {
-        target: 'aggregate',
+    if (options.emitAllManifests) {
+      if (manifests.length !== shared.registry.targets.size) {
+        throw new ControlPlaneError('PROTOCOL_INVALID');
+      }
+
+      // Derive all 9 manifest views in memory BEFORE writing manifest files into stagePath/.evcrate
+      const singleViews = targetFacts.map((fact) =>
+        deriveManifestView([fact], shared, stagePath, controllerMetadata, fact.manifest.id)
+      );
+      const aggregateView = deriveManifestView(targetFacts, shared, stagePath, controllerMetadata);
+
+      // Now write all 9 manifest files atomically into stagePath
+      for (const singleView of singleViews) {
+        mkdirSync(dirname(singleView.stagedManifestPath), { recursive: true });
+        writeAtomicFile(singleView.stagedManifestPath, singleView.manifestData);
+      }
+      mkdirSync(dirname(aggregateView.stagedManifestPath), { recursive: true });
+      writeAtomicFile(aggregateView.stagedManifestPath, aggregateView.manifestData);
+
+      const allStagedManifests: StagedManifestEntry[] = [
+        {
+          target: 'aggregate',
+          manifestPath: aggregateView.manifestPath,
+          stagedManifestPath: aggregateView.stagedManifestPath,
+          manifestData: aggregateView.manifestData
+        },
+        ...singleViews.map((view, i) => ({
+          target: normalizeTarget(targetFacts[i].manifest.id),
+          manifestPath: view.manifestPath,
+          stagedManifestPath: view.stagedManifestPath,
+          manifestData: view.manifestData
+        }))
+      ];
+
+      return {
         manifestPath: aggregateView.manifestPath,
         stagedManifestPath: aggregateView.stagedManifestPath,
-        manifestData: aggregateView.manifestData
-      },
-      ...singleViews.map((view, i) => ({
-        target: normalizeTarget(targetFacts[i].manifest.id),
-        manifestPath: view.manifestPath,
-        stagedManifestPath: view.stagedManifestPath,
-        manifestData: view.manifestData
-      }))
-    ];
+        manifestData: aggregateView.manifestData,
+        stagedOutputs,
+        localOutputs,
+        selectedManifests: manifests,
+        allStagedManifests,
+        snapshotHashes
+      };
+    }
+
+    const view = deriveManifestView(
+      targetFacts,
+      shared,
+      stagePath,
+      controllerMetadata,
+      selectedTargets.length === 1 ? selectedTargets[0] : undefined
+    );
+    mkdirSync(dirname(view.stagedManifestPath), { recursive: true });
+    writeAtomicFile(view.stagedManifestPath, view.manifestData);
 
     return {
-      manifestPath: aggregateView.manifestPath,
-      stagedManifestPath: aggregateView.stagedManifestPath,
-      manifestData: aggregateView.manifestData,
+      manifestPath: view.manifestPath,
+      stagedManifestPath: view.stagedManifestPath,
+      manifestData: view.manifestData,
       stagedOutputs,
       localOutputs,
       selectedManifests: manifests,
-      allStagedManifests
+      snapshotHashes
     };
+  } finally {
+    try {
+      snapshotStage.cleanup();
+    } catch {
+      // Best effort
+    }
   }
-
-  const view = deriveManifestView(
-    targetFacts,
-    shared,
-    stagePath,
-    controllerMetadata,
-    selectedTargets.length === 1 ? selectedTargets[0] : undefined
-  );
-  mkdirSync(dirname(view.stagedManifestPath), { recursive: true });
-  writeAtomicFile(view.stagedManifestPath, view.manifestData);
-
-  return {
-    manifestPath: view.manifestPath,
-    stagedManifestPath: view.stagedManifestPath,
-    manifestData: view.manifestData,
-    stagedOutputs,
-    localOutputs,
-    selectedManifests: manifests
-  };
 }
