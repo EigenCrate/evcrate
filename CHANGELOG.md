@@ -1,3 +1,10 @@
+## [2.9.0](https://github.com/EigenCrate/evcrate/compare/v2.8.0...v2.9.0) (2026-10-05)
+
+
+### 🚀 Features
+
+* **snyk-expert:** add zero-dependency npm and npx package installer ([bcb7ddd](https://github.com/EigenCrate/evcrate/commit/bcb7ddd8a97cb788142c522f84c9344a183873d9))
+
 ## [2.8.0](https://github.com/EigenCrate/evcrate/compare/v2.7.0...v2.8.0) (2026-10-04)
 
 
