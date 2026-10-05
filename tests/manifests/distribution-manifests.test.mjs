@@ -74,6 +74,17 @@ test('controller closure enforces complete inventory, regular files, and require
   writeFileSync(join(copy, 'lib', 'advisor', 'runner.cjs'), "require('lodash');\n");
   assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
+test('controller closure rejects a missing helper module or invalid helper launch header', () => {
+  const copy = join(temporaryDirectory(), 'bin');
+  cpSync(controllerRoot, copy, { recursive: true });
+  const helper = join(copy, 'evcrate-advice-mode');
+  const source = readFileSync(helper, 'utf8');
+  writeFileSync(helper, source.replace('#!/usr/bin/env node', '#!/bin/sh'));
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+  writeFileSync(helper, source);
+  rmSync(join(copy, 'lib', 'advisor', 'activation.cjs'));
+  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
+});
 test('controller validator accepts valid Mach-O binary assets and rejects truncated or invalid binary', () => {
   const root = temporaryDirectory();
   const copy = join(root, 'bin');
