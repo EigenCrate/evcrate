@@ -105,7 +105,8 @@ patches
 *.tar.gz
 
 .pi-subagents
-/ext/
+/ext/*
+!/ext/snyk-expert/
 /.omp
 WATCHDOG.yml
 WATCHDOG.yaml
