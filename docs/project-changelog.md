@@ -3,7 +3,17 @@
 ## Unreleased
 
 **Updated:** 2026-10-06
-**Status:** Core package `evcrate` 2.9.0; Deterministic Advice Activation Phases 01–04 ordinary user-approved completed 2026-10-06T14:13:41+07:00 / 9.8 review (no durable completion, provider release, or commit claim); Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64; native Windows Advisor evidence remains bounded to installer and diagnostics.
+**Status:** Core package `evcrate` 2.9.0; PR #19 advice activation review repairs & prompt economy complete (2/2 phases DONE 2026-10-06; review approved 9.2/10; warning fixed; user approved); Deterministic Advice Activation Phases 01–04 ordinary user-approved completed 2026-10-06T14:13:41+07:00 / 9.8 review (no durable completion, provider release, or commit claim); Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64; native Windows Advisor evidence remains bounded to installer and diagnostics.
+
+### 2026-10-06 — fix(advisor): repair activation quote parsing, OMP delegated receiving, and prompt duplication (PR #19)
+
+- Repaired quoted-span, ordinary word apostrophe (`don't`), backslash escape (`\`), and unclosed quote parsing in shared evaluator (`.evcrate/source/.evcrate/bin/lib/advisor/activation.cjs`); strictly preserves duplicate flag rejection for eligible standalone `--advice` and byte-preserves task input.
+- Added OMP delegated receiving path (`executeDelegated`) in `src/adapters/omp/activation.ts` and `src/adapters/omp/commands.ts` using the shared HOME helper with caller-supplied child context and handoff, distinguishing native-user admission from direct delegation without synthetic flags or fabricated native headers.
+- Compacted OMP admitted command context to version 2 envelope (`evcrate_omp_command_context`) containing mode, reason, context, run, and source; eliminated duplicate `raw_arguments` and `activation_result.work_arguments` so task prose expands exactly once in prompt body (long input 56,706 -> 34,754 bytes; header 23,113 -> 339 bytes; 11,200-byte input delta yields 11,200-byte output delta vs 33,600 baseline; no tokenizer claims).
+- Scoped canonical `primary-workflow.md` helper admission to supported implementation commands (`code`, `cook`, `bootstrap`, `fix` families); plain tasks and `/plan` retain ordinary off without synthetic helper identities.
+- Preserved known phase path and ID in canonical `cook.md` pre-run handoffs (null only when unknown).
+- Regenerated 9 build/target manifests across all 8 targets (`npm run generate:registry`, `npm run generate:manifests -- --jobs 2`).
+- Verification: review scored 9.2/10, no critical findings; one misleading test-title warning resolved and verified (12/12 OMP tests); focused 6 files 66/66, adapters 142/142, distribution manifests 14/14 (counts overlap 12 OMP tests, not 222 unique); programmatic smoke verified 84 admissions (21 commands × 2 sizes × off/explicit) and 6 routed delegations with unchanged state fixtures. Distinguishes helper/runtime programmatic smoke from live model loops; no live inference or 8-host qualification invoked; no commit/push claims.
 
 ### 2026-10-06 — feat(advisor): implement deterministic advice activation helper, canonical separation, and multi-target projection cutover
 

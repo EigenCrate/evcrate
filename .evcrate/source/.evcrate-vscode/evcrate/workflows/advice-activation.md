@@ -59,6 +59,16 @@ Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; us
 
 Only a final standalone `--advice` or a validated direct-caller handoff activates mentoring. The helper owns exact token counting, stripping and byte preservation. History, active-run files, checkpoint names, repeated blockers, and `@advisor` never choose mode. A supplied invalid handoff fails even alongside a final flag; a matching flag does not replace the inherited binding.
 
+
+### Flag parsing and quote semantics
+
+The helper evaluates eligible `--advice` flags using strict quote-span and whitespace boundaries:
+- **Quoted spans:** Single (`'...'`) and double (`"..."`) quotes define non-evaluating spans. Flags within quoted spans are ignored.
+- **Apostrophes:** A single quote immediately preceded by a word character (`\w`, e.g., `don't`, `user's`, `developers'`) is treated as an ordinary apostrophe, not an opening quote.
+- **Escapes:** A backslash (`\`) escapes the following character (`\"`, `\'`, `\\`). An odd number of backslashes escapes the quote (preventing span boundary opening/closing); an even number does not. Escaped flags (`\--advice` or `--advice` preceded by escaped whitespace `\ `) are not eligible flags.
+- **Unterminated quotes:** An unclosed quote extends to the end of raw arguments; flags within remain suppressed (`off` mode).
+- **Standalone and duplicates:** Eligible `--advice` requires unescaped whitespace delimiters or string boundaries. Two or more eligible flags reject with `ADVICE_MODE_DUPLICATE_FLAG` regardless of position or finality.
+- **Byte preservation:** Original task bytes and quotes are never stripped or shell-evaluated; only the final standalone `--advice` token and preceding whitespace are stripped when resolving `explicit` mode.
 Apply neutral `plan-progress.md` in every mode before selection, dependency batches and auto-next-phase loops. Off mode still honors scope denials, sealed paths, ordinary approvals and destructive-operation gates. On the second consecutive matching terminal blocker with no gate pass/step advance, off mode escalates through ordinary debugger/user handling before another attempt, not a hard checkpoint. Explicit/inherited mode uses the authorized mentoring threshold. No debugger or alternative route bypasses unresolved controlled scope.
 
 ## Direct caller handoffs
@@ -82,3 +92,11 @@ Same-run example (illustrative identity, never usable without actual matching st
 Same-run context must match exactly. The helper uses only identified existing `state get`; UUID/project/phase and all revisions must match, and completed/abandoned runs reject. Get may acquire/release locks and reap provably dead locks; it does not refresh the baseline or recover pending work. Preserve prior consultation, counsel, disposition, outcome and any registered action separately in direct caller context, not extra helper fields. Actual lifecycle operations retain CAS/freshness/human gates; a mode result is not a lease or write permission.
 
 A specialist unable to carry this structured contract routes through the existing hard-fix command with the same direct context; no newly appended flag. Every writer receives exact writable paths, protected paths, documentation ownership/delta destination and parent-state restrictions. Children never operate controller state, publish parent receipts, or stage/commit behind the parent.
+
+### Host admission and delegated receiving (OMP)
+
+Target environments with pre-prompt admission interceptors (such as OMP) distinguish native-user admission from direct delegated execution:
+- **Native-user admission:** Validates via the HOME helper (`handoff: null`) before prompt admission, injecting header metadata with `source: "native-user"`. Generated command prose consumes the validated header without helper re-invocation.
+- **Delegated receiving:** Evaluates the same HOME helper with exact child context and caller handoff (`source: "delegated"`). Routers and direct definition-based delegations pass exact child context and handoffs; they never reuse a parent's native result or fabricate native-user headers.
+- **Compact model metadata:** Host command context (`evcrate_omp_command_context` version 2) excludes duplicate `raw_arguments` and `work_arguments`, retaining `mode`, `reason`, exact `context`, `run`, and `source`. The work input is projected only once in the canonical command body.
+Both paths fail closed on invalid inputs. Handoffs remain cooperative consistency metadata, not authenticated authorization.

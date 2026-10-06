@@ -12,9 +12,12 @@ When advice mode is active (`explicit` or `inherited`), named checkpoints use th
 
 ## Advice Mode
 
-Native command execution validates and resolves advice activation prior to prompt admission, prepending the `evcrate_omp_command_context` header.
-If `evcrate_omp_command_context` is missing or invalid, treat activation as failed and fail closed per the shared activation contract without making native authentication claims.
-Consume the validated `result = evcrate_omp_command_context.activation_result`, validated `context`, `WORK_ARGUMENTS = result.work_arguments`, and `ADVICE_MODE = result.mode`. Do not re-invoke the HOME helper or skip required approvals; use the validated work input everywhere below.
+Native command execution validates and resolves advice activation prior to prompt admission, prepending the compact `evcrate_omp_command_context` header (version 2, source "native-user").
+For a valid version-2 header from this command's admission, consume its validated `ADVICE_MODE = evcrate_omp_command_context.mode`, exact `context`, and `run`; `WORK_ARGUMENTS` is the work input already admitted once in this command body. Do not re-invoke the HOME helper. A header for another command is parent context, never this command's result.
+When delegating directly to this command within a session or reading its definition:
+- If admitted with a delegated header (source "delegated"), consume its validated mode, context, and run.
+- Otherwise, resolve activation by invoking the HOME helper per `./.omp/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advice-activation.md` with the exact child arguments, canonical `context.command: "cook"`, exact child `work_target`, and the direct caller's exact handoff (including null handoff when off). Never reuse a parent command's activation result or synthesize a native header. Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`.
+If `evcrate_omp_command_context` is missing or invalid on native entry, or if helper evaluation fails, treat activation as failed and fail closed per the shared activation contract.
 Apply neutral `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 This command is a stateless router; `/cmd-code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
@@ -124,7 +127,7 @@ Before handoff, verify the plan accounts for:
 * Pass direct structured downstream context per `.omp/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advice-activation.md`:
   - When `ADVICE_MODE` is `off`: pass no activation handoff.
   - When `ADVICE_MODE` is `explicit` or `inherited`:
-    - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path: null, phase_id: null }`, `run: null`). No UUID allocation or state init merely to hand off.
+    - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path, phase_id }`, `run: null`), preserving known phase_path and phase_id selections (null only when unknown). No UUID allocation or state init merely to hand off.
     - If entering with an existing active run: pass same-run handoff (`kind: "same-run"`, exact context and validated `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }`), forwarding existing counsel and registered action context.
 * Never append a synthetic `--advice` flag to stand in for inheritance. Pass the plan path, any active run context, and any unresolved questions to `/cmd-code`.
 * In active advice mode, phase-owned configuration, onboarding, and selected Git decisions/execution belong to the implementation owner's pre-outcome finalization. Clarify any onboarding setup or commit preferences with the user and pass such decisions to `/cmd-code` before delegation/sealing.

@@ -12,9 +12,12 @@ When advice mode is active (`explicit` or `inherited`), named checkpoints use th
 
 ## Advice Mode
 
-Native command execution validates and resolves advice activation prior to prompt admission, prepending the `evcrate_omp_command_context` header.
-If `evcrate_omp_command_context` is missing or invalid, treat activation as failed and fail closed per the shared activation contract without making native authentication claims.
-Consume the validated `result = evcrate_omp_command_context.activation_result`, validated `context`, `WORK_ARGUMENTS = result.work_arguments`, and `ADVICE_MODE = result.mode`. Do not re-invoke the HOME helper or skip required approvals; use the validated work input everywhere below.
+Native command execution validates and resolves advice activation prior to prompt admission, prepending the compact `evcrate_omp_command_context` header (version 2, source "native-user").
+For a valid version-2 header from this command's admission, consume its validated `ADVICE_MODE = evcrate_omp_command_context.mode`, exact `context`, and `run`; `WORK_ARGUMENTS` is the work input already admitted once in this command body. Do not re-invoke the HOME helper. A header for another command is parent context, never this command's result.
+When delegating directly to this command within a session or reading its definition:
+- If admitted with a delegated header (source "delegated"), consume its validated mode, context, and run.
+- Otherwise, resolve activation by invoking the HOME helper per `./.omp/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advice-activation.md` with the exact child arguments, canonical `context.command: "cook/auto/fast"`, exact child `work_target`, and the direct caller's exact handoff (including null handoff when off). Never reuse a parent command's activation result or synthesize a native header. Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`.
+If `evcrate_omp_command_context` is missing or invalid on native entry, or if helper evaluation fails, treat activation as failed and fail closed per the shared activation contract.
 Apply neutral `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 This command is a stateless router; `/cmd-code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.

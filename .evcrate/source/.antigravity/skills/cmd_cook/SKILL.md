@@ -133,7 +133,7 @@ Before handoff, verify the plan accounts for:
 * Pass direct structured downstream context per `.antigravity/workflows/advice-activation.md` if present; otherwise read `~/.gemini/config/workflows/advice-activation.md` (the published install):
   - When `ADVICE_MODE` is `off`: pass no activation handoff.
   - When `ADVICE_MODE` is `explicit` or `inherited`:
-    - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path: null, phase_id: null }`, `run: null`). No UUID allocation or state init merely to hand off.
+    - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path, phase_id }`, `run: null`), preserving known phase_path and phase_id selections (null only when unknown). No UUID allocation or state init merely to hand off.
     - If entering with an existing active run: pass same-run handoff (`kind: "same-run"`, exact context and validated `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }`), forwarding existing counsel and registered action context.
 * Never append a synthetic `--advice` flag to stand in for inheritance. Pass the plan path, any active run context, and any unresolved questions to `/code`.
 * In active advice mode, phase-owned configuration, onboarding, and selected Git decisions/execution belong to the implementation owner's pre-outcome finalization. Clarify any onboarding setup or commit preferences with the user and pass such decisions to `/code` before delegation/sealing.

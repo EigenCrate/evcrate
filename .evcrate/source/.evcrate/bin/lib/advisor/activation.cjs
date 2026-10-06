@@ -79,13 +79,33 @@ function run(value) {
 function parseAdviceArguments(raw) {
   if (typeof raw !== 'string' || !raw.isWellFormed() || raw.includes('\0')) fail();
   if (Buffer.byteLength(raw) > MAX_RAW_BYTES) fail('ADVICE_MODE_OVERSIZED');
+  let quote = null;
+  let boundary = true;
   let start = -1;
-  for (let index = raw.indexOf('--advice'); index !== -1; index = raw.indexOf('--advice', index + 8)) {
-    if ((index === 0 || /\s/u.test(raw[index - 1]))
+  for (let index = 0; index < raw.length; index += 1) {
+    const character = raw[index];
+    if (character === '\\') {
+      index += 1;
+      boundary = false;
+      continue;
+    }
+    if (quote !== null) {
+      if (character === quote) quote = null;
+      boundary = false;
+      continue;
+    }
+    // Word apostrophes are prose, not the start of a quoted argument.
+    if (character === '"' || (character === "'" && (index === 0 || !/\w/u.test(raw[index - 1])))) {
+      quote = character;
+      boundary = false;
+      continue;
+    }
+    if (boundary && raw.startsWith('--advice', index)
       && (index + 8 === raw.length || /\s/u.test(raw[index + 8]))) {
       if (start !== -1) fail('ADVICE_MODE_DUPLICATE_FLAG');
       start = index;
     }
+    boundary = /\s/u.test(character);
   }
   if (start === -1 || /\S/u.test(raw.slice(start + 8))) {
     return Object.freeze({ mode: 'off', reason: 'NO_FINAL_FLAG', work_arguments: raw });

@@ -130,6 +130,229 @@ test('parseAdviceArguments enforces duplicate flag precedence over finality', ()
   assertThrowsCode(() => parseAdviceArguments('--advice   --advice \t\r\n '), 'ADVICE_MODE_DUPLICATE_FLAG');
 });
 
+test('parseAdviceArguments handles quoted multiword spans with zero and one final flag', () => {
+  // Zero final flag in double-quoted multiword span (previously failed as duplicate)
+  assert.deepEqual(parseAdviceArguments('document "use --advice and --advice here"'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'document "use --advice and --advice here"'
+  });
+
+  // Zero final flag in single-quoted multiword span
+  assert.deepEqual(parseAdviceArguments("document 'use --advice and --advice here'"), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: "document 'use --advice and --advice here'"
+  });
+
+  // Zero final flag with multiple distinct quoted multiword spans
+  assert.deepEqual(parseAdviceArguments('task with "multiword quote with --advice" and \'another multiword quote with --advice\''), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'task with "multiword quote with --advice" and \'another multiword quote with --advice\''
+  });
+
+  // One final flag after double-quoted multiword span (previously failed as duplicate)
+  assert.deepEqual(parseAdviceArguments('document "use --advice here" --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'document "use --advice here"'
+  });
+
+  // One final flag after double-quoted multiword span with multiple flags inside
+  assert.deepEqual(parseAdviceArguments('document "use --advice and --advice here" --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'document "use --advice and --advice here"'
+  });
+
+  // One final flag after single-quoted multiword span
+  assert.deepEqual(parseAdviceArguments("document 'use --advice here' --advice"), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: "document 'use --advice here'"
+  });
+
+  // One final flag after mixed single- and double-quoted multiword spans
+  assert.deepEqual(parseAdviceArguments('task with "multiword --advice inside" and \'another --advice\' --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'task with "multiword --advice inside" and \'another --advice\''
+  });
+
+  // Quoted multiword span followed by trailing whitespace after final flag
+  assert.deepEqual(parseAdviceArguments('document "use --advice here" --advice   \t\r\n '), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'document "use --advice here"'
+  });
+});
+
+test('parseAdviceArguments preserves ordinary word apostrophes without opening quotes', () => {
+  // Contractions without final flag
+  assert.deepEqual(parseAdviceArguments("don't use --advice here"), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: "don't use --advice here"
+  });
+
+  // Contraction with final flag
+  assert.deepEqual(parseAdviceArguments("don't fail --advice"), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: "don't fail"
+  });
+
+  // Multiple contractions with final flag
+  assert.deepEqual(parseAdviceArguments("it's true that we shouldn't fail --advice"), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: "it's true that we shouldn't fail"
+  });
+
+  // Singular possessive with final flag
+  assert.deepEqual(parseAdviceArguments("user's request with --advice"), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: "user's request with"
+  });
+
+  // Plural possessive with final flag
+  assert.deepEqual(parseAdviceArguments("developers' guide --advice"), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: "developers' guide"
+  });
+
+  // Contraction alongside quoted multiword span with final flag
+  assert.deepEqual(parseAdviceArguments('user\'s document "use --advice here" --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'user\'s document "use --advice here"'
+  });
+
+  // Unquoted duplicates containing an apostrophe reject
+  assertThrowsCode(() => parseAdviceArguments("don't use --advice and --advice"), 'ADVICE_MODE_DUPLICATE_FLAG');
+});
+
+test('parseAdviceArguments handles escaped quotes, escaped flags, and backslashes', () => {
+  // Escaped double quote inside double quotes: does not close span, flags stay suppressed
+  assert.deepEqual(parseAdviceArguments('document "use \\"--advice\\" here"'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'document "use \\"--advice\\" here"'
+  });
+
+  // Escaped double quote inside double quotes with final flag outside
+  assert.deepEqual(parseAdviceArguments('document "use \\"--advice\\" here" --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'document "use \\"--advice\\" here"'
+  });
+
+  // Escaped single quote inside single quotes with final flag outside
+  assert.deepEqual(parseAdviceArguments("document 'don\\'t use --advice here' --advice"), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: "document 'don\\'t use --advice here'"
+  });
+
+  // Escaped quote outside quotes (literal quotes)
+  assert.deepEqual(parseAdviceArguments('task \\"with literal quote\\" --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'task \\"with literal quote\\"'
+  });
+
+  // Escaped backslash before closing quote (even backslashes do not escape the quote)
+  assert.deepEqual(parseAdviceArguments('task "path\\\\" --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'task "path\\\\"'
+  });
+
+  // Escaped flag (\--advice) is not an eligible flag
+  assert.deepEqual(parseAdviceArguments('task \\--advice'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'task \\--advice'
+  });
+
+  // Escaped flag alongside real final flag
+  assert.deepEqual(parseAdviceArguments('task \\--advice --advice'), {
+    mode: 'explicit',
+    reason: 'EXPLICIT_FINAL_FLAG',
+    work_arguments: 'task \\--advice'
+  });
+
+  // Escaped delimiter before flag (task\ --advice) is not standalone
+  assert.deepEqual(parseAdviceArguments('task\\ --advice'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'task\\ --advice'
+  });
+});
+
+test('parseAdviceArguments handles unterminated quote boundaries', () => {
+  // Unterminated double quote with flags inside: flags suppressed, mode stays off
+  assert.deepEqual(parseAdviceArguments('document "use --advice and --advice here'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'document "use --advice and --advice here'
+  });
+
+  // Unterminated single quote with flags inside: flags suppressed, mode stays off
+  assert.deepEqual(parseAdviceArguments("document 'use --advice and --advice here"), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: "document 'use --advice and --advice here"
+  });
+
+  // Standalone flag followed by unterminated quote: flag is not final
+  assert.deepEqual(parseAdviceArguments('task --advice "unterminated quote'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'task --advice "unterminated quote'
+  });
+
+  assert.deepEqual(parseAdviceArguments("task --advice 'unterminated quote"), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: "task --advice 'unterminated quote"
+  });
+
+  // Unterminated quote followed by flag at the end: flag is inside unclosed quote
+  assert.deepEqual(parseAdviceArguments('task with "unterminated quote --advice'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: 'task with "unterminated quote --advice'
+  });
+
+  // Escaped quote at end leaves quote unterminated: trailing flag is inside quote
+  assert.deepEqual(parseAdviceArguments('"unterminated quote\\" --advice'), {
+    mode: 'off',
+    reason: 'NO_FINAL_FLAG',
+    work_arguments: '"unterminated quote\\" --advice'
+  });
+});
+
+test('parseAdviceArguments enforces real duplicate flags regardless of quoted content', () => {
+  // Real duplicates outside quotes
+  assertThrowsCode(() => parseAdviceArguments('document --advice and --advice'), 'ADVICE_MODE_DUPLICATE_FLAG');
+
+  // Real duplicates with quoted span preceding them
+  assertThrowsCode(() => parseAdviceArguments('"quoted summary" --advice and --advice'), 'ADVICE_MODE_DUPLICATE_FLAG');
+
+  // Real duplicates surrounding a quoted span
+  assertThrowsCode(() => parseAdviceArguments('--advice "quoted --advice" --advice'), 'ADVICE_MODE_DUPLICATE_FLAG');
+
+  // Real duplicates with single-quoted span
+  assertThrowsCode(() => parseAdviceArguments("'quoted' --advice and 'quoted' --advice"), 'ADVICE_MODE_DUPLICATE_FLAG');
+
+  // Real duplicates following a quoted multiword span
+  assertThrowsCode(() => parseAdviceArguments('document "use --advice here" --advice --advice'), 'ADVICE_MODE_DUPLICATE_FLAG');
+});
+
 test('parseAdviceArguments checks byte limits and well-formedness', () => {
   // Exactly 32768 UTF-8 bytes: valid
   const exact = 'a'.repeat(32768);
@@ -240,6 +463,12 @@ test('parseActivationRequest detects duplicate flags in request raw_arguments', 
   assertThrowsCode(() => parseActivationRequest(createRequest({
     raw_arguments: 'task --advice and more --advice'
   })), 'ADVICE_MODE_DUPLICATE_FLAG');
+
+  // Quoted multiword advice in raw_arguments is permitted without duplicate failure
+  const parsed = parseActivationRequest(createRequest({
+    raw_arguments: 'document "use --advice and --advice here"'
+  }));
+  assert.equal(parsed.raw_arguments, 'document "use --advice and --advice here"');
 });
 
 test('parseActivationRequest validates pre-run handoff and known-selection refinement', () => {

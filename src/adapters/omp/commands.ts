@@ -12,14 +12,17 @@ const NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
 const SKILL_MARKERS = ['activate the skills', 'activate needed skills', 'activate only needed skills', 'activate from catalog', 'skills catalog', 'list of skills', 'skill tool'];
 const NO_SKILLS = '**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP\'s normal skill discovery.';
 const ADVICE_MODE_INVOCATION = /## Advice Mode\s*\n\nBefore discovery or routing, resolve the HOME helper per `[^\n`]+` with original `\$ARGUMENTS`, canonical `context\.command: "[^"]+"`, the current root and any direct caller handoff\.\s*\nPreserve known direct-caller selections; use `work_target: "[^"]+"` only when no caller target exists, and null plan\/phase fields only when unknown\.\s*\nSet `WORK_ARGUMENTS = result\.work_arguments` and `ADVICE_MODE = result\.mode`; use the returned work input everywhere below\./u;
-const NATIVE_ADVICE_HEADER = `## Advice Mode
-
-Native command execution validates and resolves advice activation prior to prompt admission, prepending the \`evcrate_omp_command_context\` header.
-If \`evcrate_omp_command_context\` is missing or invalid, treat activation as failed and fail closed per the shared activation contract without making native authentication claims.
-Consume the validated \`result = evcrate_omp_command_context.activation_result\`, validated \`context\`, \`WORK_ARGUMENTS = result.work_arguments\`, and \`ADVICE_MODE = result.mode\`. Do not re-invoke the HOME helper or skip required approvals; use the validated work input everywhere below.`;
-function renderNativeAdviceMode(body: string): string {
+function renderNativeAdviceMode(body: string, canonicalName: string): string {
   if (!ADVICE_MODE_INVOCATION.test(body)) throw new ControlPlaneError('VALIDATION_INVALID');
-  return body.replace(ADVICE_MODE_INVOCATION, NATIVE_ADVICE_HEADER);
+  const adviceProse = `## Advice Mode
+
+Native command execution validates and resolves advice activation prior to prompt admission, prepending the compact \`evcrate_omp_command_context\` header (version 2, source "native-user").
+For a valid version-2 header from this command's admission, consume its validated \`ADVICE_MODE = evcrate_omp_command_context.mode\`, exact \`context\`, and \`run\`; \`WORK_ARGUMENTS\` is the work input already admitted once in this command body. Do not re-invoke the HOME helper. A header for another command is parent context, never this command's result.
+When delegating directly to this command within a session or reading its definition:
+- If admitted with a delegated header (source "delegated"), consume its validated mode, context, and run.
+- Otherwise, resolve activation by invoking the HOME helper per \`./.claude/workflows/advice-activation.md\` with the exact child arguments, canonical \`context.command: "${canonicalName}"\`, exact child \`work_target\`, and the direct caller's exact handoff (including null handoff when off). Never reuse a parent command's activation result or synthesize a native header. Set \`WORK_ARGUMENTS = result.work_arguments\` and \`ADVICE_MODE = result.mode\`.
+If \`evcrate_omp_command_context\` is missing or invalid on native entry, or if helper evaluation fails, treat activation as failed and fail closed per the shared activation contract.`;
+  return body.replace(ADVICE_MODE_INVOCATION, adviceProse);
 }
 
 function protectUris(value: string): { rendered: string; values: string[] } {
@@ -115,7 +118,7 @@ export function convertCommands(context: ProjectionBuildContext, map: CommandMap
     const activation = parsed.body.includes('## Advice Mode');
     let body = parsed.body;
     if (activation) {
-      body = renderNativeAdviceMode(body);
+      body = renderNativeAdviceMode(body, canonicalName);
     }
     if (entry.path === 'commands/advise.md') {
       fields.description = 'Interview-first technical advice; advisor relay is unsupported by OMP.';
