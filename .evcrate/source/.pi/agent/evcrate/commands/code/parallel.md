@@ -10,10 +10,11 @@ When advice mode is active (`explicit` or `inherited`), named checkpoints use th
 
 ## Advice Mode
 
-Before discovery or routing, resolve the HOME helper per `{{evcrate:workflows/advice-activation.md}}` with original `$ARGUMENTS`, canonical `context.command: "code/parallel"`, the current root and any direct caller handoff.
-Preserve known direct-caller selections; use `work_target: "code/parallel"` only when no caller target exists, and null plan/phase fields only when unknown.
+Before discovery or routing, resolve the HOME helper per `{{evcrate:workflows/advice-activation.md}}` with original `$ARGUMENTS`, canonical `context.command: "code/parallel"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "code/parallel"` only when no such target exists, and null plan/phase fields only when unknown.
 Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-Apply neutral `{{evcrate:workflows/plan-progress.md}}` in every mode. Only resolved `explicit` or `inherited` loads `{{evcrate:workflows/advisor-mentoring.md}}` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+
+Apply neutral `{{evcrate:workflows/plan-progress.md}}` in every mode. Only resolved `explicit` or `inherited` loads `{{evcrate:workflows/advisor-mentoring.md}}` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 The implementation parent owns controller state and finalization; child writers receive exact writable/protected paths and documentation ownership, report terminal artifacts, and never operate state or stage/commit behind the parent.
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.

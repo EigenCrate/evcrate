@@ -33,15 +33,21 @@ function metadata(value, max, code) {
   if (typeof value !== 'string' || !value || !value.isWellFormed()
     || Buffer.byteLength(value) > max || CONTROL.test(value)) fail(code);
 }
+// Conservative admission policy (not a Windows behavior claim): reject device stems, case-insensitive,
+// with or without an extension and with optional spaces before it:
+// CON PRN AUX NUL CLOCK$, COM0-9/LPT0-9 incl. superscripts, CONIN$ CONOUT$.
+const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|clock\$|com[0-9\u00B9\u00B2\u00B3]|lpt[0-9\u00B9\u00B2\u00B3]|conin\$|conout\$)(?: *\..*)?$/iu;
+const WINDOWS_RESERVED_CHAR = /[<>"|?*]/u;
 function relativePath(value, code) {
   metadata(value, 1024, code);
-  // Apply the existing sensitive/metadata/traversal policy to each component;
-  // activation paths have a 1 KiB aggregate bound, versus 512-byte evidence paths.
-  try {
-    for (const component of value.split('/')) {
-      validateArtifactRef({ id: 'activation', path: component, digest: '0'.repeat(64), description: 'Selected path' });
-    }
-  } catch { fail(code); }
+  // Selections are never read here: validate shape and traversal only. Sensitive
+  // names are legitimate plan/phase titles; artifact readers keep their own fences.
+  if (value.startsWith('/') || value.includes('\\') || value.includes(':')
+    || WINDOWS_RESERVED_CHAR.test(value)) fail(code);
+  for (const component of value.split('/')) {
+    if (!component || component === '.' || component === '..'
+      || /[. ]$/u.test(component) || WINDOWS_DEVICE.test(component)) fail(code);
+  }
 }
 function context(value, code) {
   keys(value, CONTEXT_KEYS, code);
@@ -94,8 +100,9 @@ function parseAdviceArguments(raw) {
       boundary = false;
       continue;
     }
-    // Word apostrophes are prose, not the start of a quoted argument.
-    if (character === '"' || (character === "'" && (index === 0 || !/\w/u.test(raw[index - 1])))) {
+    // A quote opens a span only at an unescaped token boundary; mid-token quotes
+    // (possessives, inch marks) are ordinary text.
+    if (boundary && (character === '"' || character === "'")) {
       quote = character;
       boundary = false;
       continue;
@@ -178,4 +185,8 @@ function evaluateActivation(request, observedState = null) {
     mode, reason, work_arguments: parsed.work_arguments, context: validated.context, run: binding, error: null });
 }
 
-module.exports = { MAX_INPUT_BYTES, MAX_RAW_BYTES, MAX_OUTPUT_BYTES, parseAdviceArguments, parseActivationRequest, evaluateActivation };
+module.exports = {
+  MAX_INPUT_BYTES, MAX_RAW_BYTES, MAX_OUTPUT_BYTES,
+  COMMAND_NAMES: Object.freeze([...COMMANDS]),
+  parseAdviceArguments, parseActivationRequest, evaluateActivation
+};

@@ -58,19 +58,82 @@ function completeStateFixtureWithBaseline(fixtureContext, state) {
   const reportsDir = path.join(fixtureContext.project, 'plans/test/reports');
   fs.mkdirSync(reportsDir, { recursive: true });
   const completeEntry = completed.operation_ledger.at(-1);
+
+  const planPath = completed.scope.authorized_paths.find((p) => p.endsWith('/plan.md')) || 'plans/test/plan.md';
+  const phasePath = completed.scope.authorized_paths.find((p) => p.endsWith(`/${completed.phase_id}.md`)) || `plans/test/${completed.phase_id}.md`;
+
+  const sealedPathMetadata = completed.current_baseline.map((record) => {
+    const filePath = path.join(fixtureContext.project, record.path);
+    const stat = fs.statSync(filePath);
+    const sha256 = computeStateFileHash(filePath);
+    return {
+      path: record.path,
+      status: record.status,
+      digest: record.digest,
+      sha256,
+      size: stat.size
+    };
+  });
+
   const receiptPath = path.join(reportsDir, 'phase-01-completion-receipt.md');
   fs.writeFileSync(receiptPath, [
     '# Phase 01 Completion Receipt', '',
     `- **Task Run ID:** ${completed.task_run_id}`,
     `- **Project ID:** ${completed.project_id}`,
     `- **Phase ID:** ${completed.phase_id}`,
+    `- **Plan Path:** ${planPath}`,
+    `- **Phase Path:** ${phasePath}`,
     `- **Completion Revision:** ${completeEntry.revision}`,
     `- **Complete Operation ID:** ${completeEntry.operation_id}`,
     `- **Ledger Digest:** ${completeEntry.digest}`,
     `- **Baseline Digest:** ${completed.outcome.baseline_digest}`,
-    `- **Gate Status:** ${completed.gate_status}`, ''
+    `- **Sealed Baseline Digest:** ${completed.outcome.baseline_digest}`,
+    `- **Gate Status:** ${completed.gate_status}`, '',
+    '## Approved Scope',
+    `- **Authorized Paths:** ${completed.scope.authorized_paths.join(', ')}`,
+    `- **Scope Rationale:** ${completed.scope.rationale}`,
+    `- **Scope Revision:** ${completed.scope_revision}`, '',
+    '## Run Identity',
+    `- **Task Run ID:** ${completed.task_run_id}`,
+    `- **Task Revision:** ${completed.task_revision}`,
+    `- **Scope Revision:** ${completed.scope_revision}`,
+    `- **Evidence Revision:** ${completed.evidence_revision}`, '',
+    '## Completion Operation',
+    `- **Operation:** ${completeEntry.operation}`,
+    `- **Complete Operation ID:** ${completeEntry.operation_id}`,
+    `- **Completion Revision:** ${completeEntry.revision}`,
+    `- **Ledger Digest:** ${completeEntry.digest}`, '',
+    '## Evidence Revision',
+    `- **Evidence Revision:** ${completed.evidence_revision}`,
+    `- **Disposition Evidence Revision:** ${completed.disposition.evidence_revision}`,
+    `- **Outcome Evidence Revision:** ${completed.outcome.evidence_revision}`, '',
+    '## Disposition and Outcome',
+    `- **Accepted Disposition Action:** ${completed.disposition.action}`,
+    `- **Disposition Rationale:** ${completed.disposition.rationale}`,
+    `- **Disposition Consultation ID:** ${completed.disposition.consultation_id}`,
+    `- **Resolved Outcome Result:** ${completed.outcome.result}`,
+    `- **Outcome Consultation ID:** ${completed.outcome.consultation_id}`,
+    `- **Outcome Recorded At:** ${completed.outcome.recorded_at}`,
+    `- **Actual Changed Paths:** ${JSON.stringify(completed.outcome.actual_changed_paths)}`, '',
+    '## Retained Reviewed Evidence Paths',
+    ...completed.current_baseline.map((record) =>
+      `- **Path:** \`${record.path}\` (status: ${record.status}, baseline digest: \`${record.digest}\`)`
+    ), '',
+    '## Actual Validation',
+    `- **Suite:** ${completed.outcome.validation.suite}`,
+    `- **Command:** \`${completed.outcome.validation.command}\``,
+    `- **Status:** ${completed.outcome.validation.status}`,
+    `- **Passed:** ${completed.outcome.validation.passed}`,
+    `- **Failed:** ${completed.outcome.validation.failed}`,
+    `- **Details:** ${JSON.stringify(completed.outcome.validation.details)}`, '',
+    '## Sealed-Path Metadata',
+    ...sealedPathMetadata.map((meta) =>
+      `- \`${meta.path}\`: status=${meta.status}, size=${meta.size}, sha256=${meta.sha256}, baseline_digest=${meta.digest}`
+    ), '',
+    '```json sealed-path-metadata',
+    JSON.stringify(sealedPathMetadata, null, 2),
+    '```', ''
   ].join('\n'), 'utf8');
-
   return completed;
 }
 

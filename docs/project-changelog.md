@@ -2,8 +2,13 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-06
+**Updated:** 2026-10-07
 **Status:** Core package `evcrate` 2.9.0; PR #19 advice activation review repairs & prompt economy complete (2/2 phases DONE 2026-10-06; review approved 9.2/10; warning fixed; user approved); Deterministic Advice Activation Phases 01–04 ordinary user-approved completed 2026-10-06T14:13:41+07:00 / 9.8 review (no durable completion, provider release, or commit claim); Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64; native Windows Advisor evidence remains bounded to installer and diagnostics.
+
+### 2026-10-07 — fix(advisor): PR #19 advice activation hardening
+
+- Phases 01–05 hardening & caveats: quote-span/boundary parsing to unescaped token delimiters; 1 KiB relative-POSIX selection paths; root realpath cwd verification (`ADVICE_CONTEXT_MISMATCH` fail closed); off mode decoupled from controller (receipt-attested, never calls `evcrate-advisor`); native-user admission (`handoff: null`, `source: "native-user"`); dead `executeDelegated`/`source: "delegated"` removed; delegated/direct-definition receiving evaluates HOME helper with caller handoff (model headers untrusted); prompt blocks rendered structurally via exported `COMMAND_NAMES`; fail-closed diagnostics; live matrix 8/8 PASS (M3 approval gate NOT QUALIFIED, M2b non-adversarial); manual `typecheck:omp-runtime` gate (not in npm test/CI); OMP blank-line paragraph boundary deferred.
+- OMP advisor parser compatibility: accepts optional `serviceTier` and `usage.premiumRequests` from omp 18.7.0 JSON output; stream caps raised to 1 MiB and 8192 lines.
 
 ### 2026-10-06 — fix(advisor): repair activation quote parsing, OMP delegated receiving, and prompt duplication (PR #19)
 

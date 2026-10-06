@@ -19,10 +19,11 @@ This command supplies bounded evidence and does not duplicate route or adapter s
 
 ## Advice Mode
 
-Before discovery or routing, resolve the HOME helper per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/test"`, the current root and any direct caller handoff.
-Preserve known direct-caller selections; use `work_target: "fix/test"` only when no caller target exists, and null plan/phase fields only when unknown.
+Before discovery or routing, resolve the HOME helper per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/test"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "fix/test"` only when no such target exists, and null plan/phase fields only when unknown.
 Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-Apply neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+
+Apply neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 
 Under `explicit` or `inherited` advice mode, this command directly implements and validates fixes and binds its durable lifecycle to `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install):
@@ -57,7 +58,7 @@ Under `explicit` or `inherited` advice mode, this command directly implements an
    the exact reserved checkpoint JSON to inference.
 ## Workflow:
 0. **Active-run inspection before mutating instructions**:
-   - Under `off` advice mode, apply neutral progress/protection with only separately identified historical get; never initialize state, adopt a discovered run as continuation, or register actions.
+   - Under `off` advice mode, apply neutral progress/protection from immutable in-repo receipts and sealed-path metadata only; never call `evcrate-advisor`, initialize state, adopt a discovered run as continuation, or register actions.
    - Under `explicit` or `inherited` advice mode with an active run (`task_run_id`, active phase, state revision, prior counsel/action/disposition):
      - Inspect active counsel and action via `state get`.
      - **Resume existing action**: If an action is already registered (`action_id`, `episode_id`), resume that action without duplicating it; complete its authorized bounded work, run its declared validation (`tester`), and record a truthful matching `state outcome` (with `actual_changed_paths`) before reserving the next checkpoint.

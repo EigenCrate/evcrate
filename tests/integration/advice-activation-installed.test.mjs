@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import stateFixtures from '../advisor-controller/activation-test-helpers.cjs';
 import { assertFixturePreserved, createInstalledFixture, installScope, invokeInstalledHelper }
@@ -50,6 +50,27 @@ for (const scopes of [['home'], ['project'], ['home', 'project']]) {
     assert.equal(stale.result.mode, null);
     assert.equal(stale.result.run, null);
     assert.deepEqual(readFileSync(f.stateFile), before);
+    assertFixturePreserved(f);
+
+    // Isolation variants: no-flag null-handoff admission with locked/corrupt HOME state
+    // resolves off; state and lock bytes remain unchanged.
+    const lockFile = join(dirname(f.stateFile), 'state.lock');
+    const lockBytes = Buffer.from(JSON.stringify({ token: 'l'.repeat(32), process: { pid: process.pid, start: null } }), 'utf8');
+    writeFileSync(lockFile, lockBytes, { mode: 0o600 });
+
+    ready(f, context, work, null, 'off', 'NO_FINAL_FLAG', work);
+    ready(f, context, `${work} "--advice"`, null, 'off', 'NO_FINAL_FLAG', `${work} "--advice"`);
+    assert.deepEqual(readFileSync(f.stateFile), before);
+    assert.deepEqual(readFileSync(lockFile), lockBytes);
+
+    const corruptBytes = Buffer.from('{ corrupt state json', 'utf8');
+    writeFileSync(f.stateFile, corruptBytes);
+    ready(f, context, work, null, 'off', 'NO_FINAL_FLAG', work);
+    ready(f, context, `${work} "--advice"`, null, 'off', 'NO_FINAL_FLAG', `${work} "--advice"`);
+    assert.deepEqual(readFileSync(f.stateFile), corruptBytes);
+    assert.deepEqual(readFileSync(lockFile), lockBytes);
+    rmSync(lockFile, { force: true });
+    writeFileSync(f.stateFile, before);
     assertFixturePreserved(f);
   });
 }

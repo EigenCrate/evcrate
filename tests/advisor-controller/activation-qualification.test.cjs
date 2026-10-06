@@ -11,11 +11,11 @@ const {
   executeStateGet, computeStateFileHash
 } = require('./activation-qualification-helpers.cjs');
 
-test('A02: exact completed historical phase verified via clean CLI invocation and state get immutability', async (t) => {
+test('A02: CLI off admission plus independent get immutability', async (t) => {
   const f = createBaselineStateFixture(t);
   const completedState = completeStateFixtureWithBaseline(f, f.state);
 
-  // 1. Clean CLI invocation for completed phase resolves to off mode (L=0)
+  // 1. Clean CLI invocation without --advice flag admits off mode
   const request = createRequest({
     raw_arguments: 'plans/test/plan.md phase-01',
     context: createContext({ project_root: f.project, plan_path: 'plans/test/plan.md', phase_id: 'phase-01' })
@@ -27,7 +27,7 @@ test('A02: exact completed historical phase verified via clean CLI invocation an
   assert.equal(parsed.reason, 'NO_FINAL_FLAG');
   assert.equal(parsed.run, null);
 
-  // 2. State get preserves state file bytes and ledger status identically
+  // 2. Independent state get preserves state file bytes and ledger status identically
   const beforeHash = computeStateFileHash(f.stateFile);
   const getResult = executeStateGet(f, completedState.task_run_id);
   assert.equal(getResult.status, 'STATE_READY');
@@ -71,11 +71,12 @@ test('A04: historical UUID in arguments without handoff has zero activation auth
   assert.equal(fs.existsSync(path.join(f.home, '.evcrate')), false);
 });
 
-test('A05: unresolved scope without flag resolves off with zero lifecycle write', async (t) => {
+test('A05: CLI off ignores existing pending state', async (t) => {
   const f = createIsolatedFixture(t);
   const state = initializeStateFixture(f);
   const beforeHash = computeStateFileHash(f.stateFile);
 
+  // CLI invocation without --advice flag resolves to off mode, ignoring existing pending state without modification
   const request = createRequest({
     raw_arguments: 'execute phase-01 work',
     context: createContext({ project_root: f.project, phase_id: state.phase_id }),
@@ -87,12 +88,25 @@ test('A05: unresolved scope without flag resolves off with zero lifecycle write'
   assert.equal(parsed.mode, 'off');
   assert.equal(parsed.reason, 'NO_FINAL_FLAG');
   assert.equal(parsed.run, null);
-  assert.equal(computeStateFileHash(f.stateFile), beforeHash, 'pending state must not be modified without flag');
+  assert.equal(computeStateFileHash(f.stateFile), beforeHash, 'pending state must remain untouched when CLI resolves off');
 });
 
 test('A14: next independent default phase after prior completed advice resolves off without carry-over', async (t) => {
   const f = createBaselineStateFixture(t);
   completeStateFixtureWithBaseline(f, f.state);
+
+  const lockFile = path.join(path.dirname(f.stateFile), 'state.lock');
+  const liveLock = JSON.stringify({ token: 'l'.repeat(32), process: { pid: process.pid, start: null } });
+  fs.writeFileSync(lockFile, liveLock, { mode: 0o600 });
+
+  const past = new Date(Date.now() - 5000);
+  fs.utimesSync(f.stateFile, past, past);
+  fs.utimesSync(lockFile, past, past);
+
+  const stateBytesBefore = fs.readFileSync(f.stateFile);
+  const stateStatBefore = fs.statSync(f.stateFile);
+  const lockBytesBefore = fs.readFileSync(lockFile);
+  const lockStatBefore = fs.statSync(lockFile);
 
   const request = createRequest({
     raw_arguments: 'plans/test/plan.md phase-02',
@@ -105,6 +119,11 @@ test('A14: next independent default phase after prior completed advice resolves 
   assert.equal(parsed.mode, 'off');
   assert.equal(parsed.reason, 'NO_FINAL_FLAG');
   assert.equal(parsed.run, null);
+
+  assert.deepEqual(fs.readFileSync(f.stateFile), stateBytesBefore, 'state.json bytes must be preserved across off invocation');
+  assert.equal(fs.statSync(f.stateFile).mtimeMs, stateStatBefore.mtimeMs, 'state.json mtime must be preserved across off invocation');
+  assert.deepEqual(fs.readFileSync(lockFile), lockBytesBefore, 'state.lock bytes must be preserved across off invocation');
+  assert.equal(fs.statSync(lockFile).mtimeMs, lockStatBefore.mtimeMs, 'state.lock mtime must be preserved across off invocation');
 });
 
 test('A17: abandonment vs genuine complete ledger in same-run rejection', async (t) => {
@@ -149,6 +168,8 @@ test('A17: abandonment vs genuine complete ledger in same-run rejection', async 
   assert.equal(JSON.parse(abandonCliRes.stdout).error.code, 'ADVICE_RUN_COMPLETED');
 });
 
+// A19 verifies controller get behavior under explicit/inherited mode (get reaps dead lock,
+// live lock and corrupt state fail closed). Off mode does not invoke get.
 test('A19: dead lock reaped on get, live lock and corrupt state fail closed', (t) => {
   const f = createIsolatedFixture(t);
   const state = initializeStateFixture(f);

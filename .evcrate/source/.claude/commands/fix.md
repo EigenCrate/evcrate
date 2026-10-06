@@ -7,10 +7,11 @@ argument-hint: "[issues] [--advice]"
 
 ## Advice Mode
 
-Before discovery or routing, resolve the HOME helper per `.claude/workflows/advice-activation.md` with original `$ARGUMENTS`, canonical `context.command: "fix"`, the current root and any direct caller handoff.
-Preserve known direct-caller selections; use `work_target: "fix"` only when no caller target exists, and null plan/phase fields only when unknown.
+Before discovery or routing, resolve the HOME helper per `.claude/workflows/advice-activation.md` with original `$ARGUMENTS`, canonical `context.command: "fix"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "fix"` only when no such target exists, and null plan/phase fields only when unknown.
 Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-Apply neutral `.claude/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.claude/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+
+Apply neutral `.claude/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.claude/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 8. The root router is stateless and must not initialize state runs, record duplicate consultations, perform advisor calls, or publish receipts itself; all durable operations and checkpoint invocations belong to the delegated command.
 ## Execution Contract
@@ -19,8 +20,8 @@ After selecting a route, execute the selected command immediately; do not print 
 
 1. Build one enhanced description from `WORK_ARGUMENTS` and preserve it exactly as the delegated command's input.
 2. In `off` mode, delegate to the specialist with no advice handoff and no appended token.
-3. In `explicit` or `inherited` mode, pass structured direct-caller handoff context to the delegated specialist:
-   - If entering without an active run: pass pre-run handoff (`kind: "pre-run"`, exact selected child `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: null`). Preserve known direct-caller or router-selected plan/phase values; use null only when genuinely unknown, per the shared activation contract.
+3. In `explicit` or `inherited` mode, pass structured exact-call handoff context, built for this delegation, to the delegated specialist:
+   - If entering without an active run: pass pre-run handoff (`kind: "pre-run"`, exact selected child `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: null`). Preserve known router-selected plan/phase values; use null only when genuinely unknown, per the shared activation contract.
    - If entering with an active run: pass same-run handoff (`kind: "same-run"`, `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }}`). Forward prior counsel, disposition, and registered action in direct caller context.
    - NEVER append a synthetic `--advice` token.
 4. All specialists support the shared activation contract. Route directly to the designated specialist by issue type. Use the existing `/fix:hard` route only if a custom execution environment cannot carry the structured handoff contract, not because a command hint lacks a flag.

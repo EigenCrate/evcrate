@@ -12,10 +12,11 @@ This command supplies bounded evidence and does not duplicate route or adapter s
 
 ## Advice Mode
 
-Before discovery or routing, resolve the HOME helper per `{{evcrate:workflows/advice-activation.md}}` with original `$ARGUMENTS`, canonical `context.command: "bootstrap/auto/parallel"`, the current root and any direct caller handoff.
-Preserve known direct-caller selections; use `work_target: "bootstrap/auto/parallel"` only when no caller target exists, and null plan/phase fields only when unknown.
+Before discovery or routing, resolve the HOME helper per `{{evcrate:workflows/advice-activation.md}}` with original `$ARGUMENTS`, canonical `context.command: "bootstrap/auto/parallel"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "bootstrap/auto/parallel"` only when no such target exists, and null plan/phase fields only when unknown.
 Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-Apply neutral `{{evcrate:workflows/plan-progress.md}}` in every mode. Only resolved `explicit` or `inherited` loads `{{evcrate:workflows/advisor-mentoring.md}}` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+
+Apply neutral `{{evcrate:workflows/plan-progress.md}}` in every mode. Only resolved `explicit` or `inherited` loads `{{evcrate:workflows/advisor-mentoring.md}}` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 **YAGNI, KISS, DRY** principles apply.
@@ -88,7 +89,7 @@ Routine stack, plan, and design approvals are excluded unless explicitly classif
 irreversible, security-sensitive, or go/no-go. Otherwise continue the existing
 approval/action without a dispatcher checkpoint.
 ### 5. Parallel Planning & Implementation
-- Trigger {{evcrate:commands/plan:parallel}} <detailed-instruction> for parallel-executable plan. In `explicit` or `inherited` mode, forward structured direct-caller pre-run or same-run context; never append a synthetic `--advice` flag.
+- Trigger {{evcrate:commands/plan:parallel}} <detailed-instruction> for parallel-executable plan. In `explicit` or `inherited` mode, forward structured exact-call pre-run or same-run context built for that delegation; never append a synthetic `--advice` flag.
 - Reconcile plans and phase status via `{{evcrate:workflows/plan-progress.md}}` before planning and before each parallel batch. An explicitly completed phase is a no-op; do not switch phases automatically.
 - For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
 - Read `plan.md` for dependency graph and execution strategy.

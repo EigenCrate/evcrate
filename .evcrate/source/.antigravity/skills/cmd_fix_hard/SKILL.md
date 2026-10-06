@@ -23,10 +23,11 @@ This command supplies bounded evidence and does not duplicate route or adapter s
 
 ## Advice Mode
 
-Before discovery or routing, resolve the HOME helper per `.antigravity/workflows/advice-activation.md` if present; otherwise read `~/.gemini/config/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/hard"`, the current root and any direct caller handoff.
-Preserve known direct-caller selections; use `work_target: "fix/hard"` only when no caller target exists, and null plan/phase fields only when unknown.
+Before discovery or routing, resolve the HOME helper per `.antigravity/workflows/advice-activation.md` if present; otherwise read `~/.gemini/config/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/hard"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "fix/hard"` only when no such target exists, and null plan/phase fields only when unknown.
 Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-Apply neutral `.antigravity/workflows/plan-progress.md` if present; otherwise read `~/.gemini/config/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+
+Apply neutral `.antigravity/workflows/plan-progress.md` if present; otherwise read `~/.gemini/config/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 8. `/fix:hard` is a delegate router: it coordinates analysis, research, and planning, and delegates canonical implementation, review, and durable task-state lifecycle ownership to `/code`. It must not initialize a separate task run, invoke a duplicate review checkpoint, double advice initialization, or duplicate publication of progress receipts before or alongside `/code`. Child agents report terminal artifacts and actual changed paths within parent-authorized paths; they receive strict ownership, writable path, protected path, and delta destination constraints, and never operate controller state or stage behind the parent.
 ## Workflow:
@@ -51,9 +52,9 @@ Analyze the skills catalog and activate other skills that are needed for the tas
 3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
 4. Then use `/code <plan-path>` SlashCommand to implement the plan step by step:
    - In `off` mode, invoke `/code <plan-path>` with no advice handoff and no appended token.
-   - In `explicit` or `inherited` mode, pass structured direct-caller handoff context to `/code`:
+   - In `explicit` or `inherited` mode, pass structured exact-call handoff context, built for this delegation, to `/code`:
      * Pre-run handoff: use the activation contract's exact `{ kind, context, run }` object with selected child `command: "code"`, current project root and plan target, genuinely known selections, and `run: null`.
-     * Same-run handoff: if invoked with an active advice run context (`task_run_id`, project_id, revisions, prior counsel/disposition/outcome), forward that exact matching binding and context so `/code` continues as the single durable-state owner without doubling advice initialization or consultations.
+     * Same-run handoff: if this exact call supplies an active advice run context (`task_run_id`, project_id, revisions, prior counsel/disposition/outcome), forward that exact matching binding and context so `/code` continues as the single durable-state owner without doubling advice initialization or consultations.
      * NEVER append a synthetic `--advice` token.
 5. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps. For advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md` (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker); old sealed `plan.md` remains untouched. Normal default plans with no history do not require, read, or output nonexistent progress links.

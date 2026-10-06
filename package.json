@@ -22,6 +22,7 @@
     "prebuild:clean": "npm run prebuild",
     "build:clean": "node scripts/build-typescript.mjs -p tsconfig.json --clean",
     "generate:advisor-runtime": "node scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json",
+    "typecheck:omp-runtime": "node scripts/build-typescript.mjs -p tsconfig.omp-runtime.json",
     "build:all": "npm run build",
     "test:advisor-metrics": "node --test tests/advisor-metrics/*.test.mjs",
     "test:advisor-parity": "node --test tests/protocol/advisor-contract-parity.test.mjs",

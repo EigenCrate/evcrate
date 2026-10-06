@@ -18,6 +18,31 @@ const {
   completeStateFixture,
   spawnCli
 } = require('./activation-test-helpers.cjs');
+const { createBaselineStateFixture, completeStateFixtureWithBaseline } = require('./activation-qualification-helpers.cjs');
+
+const POSIX_ONLY = { skip: process.platform === 'win32' ? 'symlink fixtures are POSIX-only' : false };
+const STATE_KEYS = ['task_run_id', 'project_id', 'task_revision', 'scope_revision', 'evidence_revision'];
+
+// Records type, mode, size, mtime, inode, bytes and directory entries so any write,
+// touch, repair or unlink performed by an observed invocation is detectable.
+function snapshotTree(root) {
+  const snapshot = {};
+  const visit = (entry, label) => {
+    const stat = fs.lstatSync(entry, { bigint: true });
+    const record = { mode: stat.mode, size: stat.size, mtimeNs: stat.mtimeNs, ino: stat.ino };
+    if (stat.isDirectory()) {
+      record.entries = fs.readdirSync(entry).sort();
+      snapshot[label] = record;
+      for (const name of record.entries) visit(path.join(entry, name), `${label}/${name}`);
+    } else if (stat.isSymbolicLink()) {
+      snapshot[label] = { ...record, target: fs.readlinkSync(entry) };
+    } else {
+      snapshot[label] = { ...record, bytes: fs.readFileSync(entry).toString('base64') };
+    }
+  };
+  visit(root, '.');
+  return snapshot;
+}
 
 test('CLI rejects empty stdin with ADVICE_MODE_INVALID and exit code 1', async () => {
   const result = await spawnCli('');
@@ -82,6 +107,58 @@ test('CLI rejects context project_root mismatching invocation cwd', async (t) =>
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.status, 'FAILED');
   assert.equal(parsed.error?.code, 'ADVICE_CONTEXT_MISMATCH');
+});
+
+test('CLI accepts a symlinked project_root resolving to cwd in off and explicit modes', POSIX_ONLY, async (t) => {
+  const f = createIsolatedFixture(t);
+  const link = path.join(f.root, 'project-link');
+  fs.symlinkSync(f.project, link);
+  for (const [raw_arguments, mode, reason] of [
+    ['work', 'off', 'NO_FINAL_FLAG'], ['work --advice', 'explicit', 'EXPLICIT_FINAL_FLAG']
+  ]) {
+    const context = createContext({ project_root: link });
+    const result = await spawnCli(JSON.stringify(createRequest({ raw_arguments, context })), {
+      cwd: f.project, env: { ...process.env, HOME: f.home }
+    });
+    assert.equal(result.status, 0);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.status, 'MODE_READY');
+    assert.equal(parsed.mode, mode);
+    assert.equal(parsed.reason, reason);
+    assert.equal(parsed.work_arguments, 'work');
+    // The caller's logical root is reported unchanged, never rewritten to the real path.
+    assert.deepEqual(parsed.context, context);
+  }
+  // The reverse direction: real project_root while the process runs from the link.
+  const reverse = await spawnCli(JSON.stringify(createRequest({ raw_arguments: 'work', context: createContext({ project_root: f.project }) })), {
+    cwd: link, env: { ...process.env, HOME: f.home }
+  });
+  assert.equal(reverse.status, 0);
+  assert.equal(JSON.parse(reverse.stdout).mode, 'off');
+});
+
+test('CLI rejects project_root that resolves to a different or unresolvable directory', POSIX_ONLY, async (t) => {
+  const f = createIsolatedFixture(t);
+  const other = path.join(f.root, 'other-real');
+  fs.mkdirSync(other);
+  const otherLink = path.join(f.root, 'other-link');
+  fs.symlinkSync(other, otherLink);
+  const danglingLink = path.join(f.root, 'dangling-link');
+  fs.symlinkSync(path.join(f.root, 'does-not-exist'), danglingLink);
+  for (const project_root of [other, otherLink, path.join(f.root, 'missing-root'), danglingLink]) {
+    for (const raw_arguments of ['work', 'work --advice']) {
+      const result = await spawnCli(JSON.stringify(createRequest({
+        raw_arguments, context: createContext({ project_root })
+      })), { cwd: f.project, env: { ...process.env, HOME: f.home } });
+      assert.equal(result.status, 1);
+      const parsed = JSON.parse(result.stdout);
+      assert.equal(parsed.status, 'FAILED');
+      assert.equal(parsed.error.code, 'ADVICE_CONTEXT_MISMATCH');
+      assert.equal(parsed.mode, null);
+      assert.equal(parsed.work_arguments, null);
+    }
+  }
+  assert.equal(fs.existsSync(path.join(f.home, '.evcrate')), false);
 });
 
 test('CLI delivers large complete stdout on boundary work text', async (t) => {
@@ -435,4 +512,82 @@ test('CLI reports failed delivery when the stdout consumer has closed', async (t
   child.stdin.end(JSON.stringify(createRequest({ context: createContext({ project_root: f.project }) })));
   assert.deepEqual(await closed, { code: 1, signal: null });
   assert.equal(Buffer.concat(stderr).toString('utf8'), '');
+});
+
+function plantLiveLock(f) {
+  const lockFile = path.join(path.dirname(f.stateFile), 'state.lock');
+  fs.writeFileSync(lockFile, JSON.stringify({ token: 'l'.repeat(32), process: { pid: process.pid, start: null } }), { mode: 0o600 });
+  return lockFile;
+}
+
+// Each row builds hostile durable state with real controller operations; setup
+// writes finish before the single snapshot taken ahead of the observed invocation.
+const HOSTILE_OFF_ROWS = [
+  ['live lock', (t) => { const f = createIsolatedFixture(t); initializeStateFixture(f); plantLiveLock(f); return f; }],
+  ['corrupt state', (t) => {
+    const f = createIsolatedFixture(t); initializeStateFixture(f);
+    fs.writeFileSync(f.stateFile, '{ corrupt json'); return f;
+  }],
+  ['genuinely completed state with receipt', (t) => {
+    const f = createBaselineStateFixture(t);
+    const completed = completeStateFixtureWithBaseline(f, f.state);
+    assert.equal(completed.gate_status, 'completed');
+    assert.equal(fs.existsSync(path.join(f.project, 'plans/test/reports/phase-01-completion-receipt.md')), true);
+    return f;
+  }],
+  ['missing state and no store', (t) => createIsolatedFixture(t)],
+  ['interrupted run with pending gate', (t) => {
+    const f = createIsolatedFixture(t);
+    const pending = reserveStateFixture(f, initializeStateFixture(f));
+    assert.equal(pending.gate_status, 'in_consultation');
+    return f;
+  }]
+];
+
+test('CLI off mode ignores hostile controller state without touching state, locks or entries', async (t) => {
+  for (const [row, build] of HOSTILE_OFF_ROWS) {
+    const f = build(t);
+    const lockFile = f.stateFile === undefined ? null : path.join(path.dirname(f.stateFile), 'state.lock');
+    const lockBefore = lockFile !== null && fs.existsSync(lockFile);
+    const raw_arguments = 'plans/test/plan.md  phase-01 "keep exact" bytes ';
+    const request = createRequest({ raw_arguments, context: createContext({ project_root: f.project }), handoff: null });
+    const before = snapshotTree(f.root);
+    const result = await spawnCli(JSON.stringify(request), { cwd: f.project, env: { ...process.env, HOME: f.home } });
+    assert.equal(result.status, 0, row);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.status, 'MODE_READY', row);
+    assert.equal(parsed.mode, 'off', row);
+    assert.equal(parsed.reason, 'NO_FINAL_FLAG', row);
+    assert.equal(parsed.run, null, row);
+    assert.equal(parsed.error, null, row);
+    assert.equal(parsed.work_arguments, raw_arguments, row);
+    assert.deepEqual(snapshotTree(f.root), before, `${row}: off invocation must not change any byte, mtime or entry`);
+    // Lock absence stays absence; an existing live lock is never reaped.
+    if (lockFile !== null) assert.equal(fs.existsSync(lockFile), lockBefore, row);
+  }
+});
+
+test('CLI keeps strict same-run failures for live lock and corrupt state without repair', async (t) => {
+  for (const [row, harm, expected] of [
+    ['live lock', (f) => plantLiveLock(f), 'STATE_LOCKED'],
+    ['corrupt state', (f) => fs.writeFileSync(f.stateFile, '{ corrupt json'), 'STATE_INVALID']
+  ]) {
+    const f = createIsolatedFixture(t);
+    const state = initializeStateFixture(f);
+    const context = createContext({ project_root: f.project, phase_id: state.phase_id });
+    const run = Object.fromEntries(STATE_KEYS.map((key) => [key, state[key]]));
+    harm(f);
+    const lockFile = path.join(path.dirname(f.stateFile), 'state.lock');
+    const before = [fs.readFileSync(f.stateFile), fs.existsSync(lockFile) ? fs.readFileSync(lockFile) : null];
+    const result = await spawnCli(JSON.stringify(createRequest({
+      raw_arguments: 'continue --advice', context, handoff: { kind: 'same-run', context, run }
+    })), { cwd: f.project, env: { ...process.env, HOME: f.home } });
+    assert.equal(result.status, 1, row);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.status, 'FAILED', row);
+    assert.equal(parsed.error.code, expected, row);
+    assert.equal(parsed.run, null, row);
+    assert.deepEqual(fs.readFileSync(f.stateFile), before[0], row);
+    assert.deepEqual(fs.existsSync(lockFile) ? fs.readFileSync(lockFile) : null, before[1], row);
+  }
 });

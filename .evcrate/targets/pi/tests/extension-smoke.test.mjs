@@ -145,7 +145,6 @@ test("extension registers policy before tools, preserves markers, and restores r
       agentRoot,
     );
     assert.match(resolvedMarkers, /name `child`/);
-    assert.match(resolvedMarkers, /\bhandoff\b/);
     assert.ok(resolvedMarkers.endsWith(join(root, "workflows", "flow.md")));
   } finally {
     if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;

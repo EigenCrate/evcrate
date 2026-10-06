@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const cancellation = new AbortController();
 const onSignal = () => cancellation.abort();
@@ -76,9 +77,13 @@ async function main() {
     const request = parseActivationRequest(await readStdin(cancellation.signal));
     if (cancellation.signal.aborted) throw createRoutingError('CANCELLED');
     // Never let caller context silently redirect retrieval to another project.
-    if (path.resolve(request.context.project_root) !== process.cwd()) {
-      throw createRoutingError('ADVICE_CONTEXT_MISMATCH');
-    }
+    // Compare physical identities so a logical symlink root for this cwd matches;
+    // an unresolvable or different root is a mismatch, never a fallback.
+    let sameRoot = false;
+    try {
+      sameRoot = fs.realpathSync(path.resolve(request.context.project_root)) === fs.realpathSync(process.cwd());
+    } catch { /* unresolvable root stays a mismatch */ }
+    if (!sameRoot) throw createRoutingError('ADVICE_CONTEXT_MISMATCH');
     let state = null;
     if (request.handoff?.kind === 'same-run') {
       // Lazy get-only import: ordinary and pre-run modes never load the dispatcher.

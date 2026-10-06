@@ -235,6 +235,38 @@ test('parseAdviceArguments preserves ordinary word apostrophes without opening q
   assertThrowsCode(() => parseAdviceArguments("don't use --advice and --advice"), 'ADVICE_MODE_DUPLICATE_FLAG');
 });
 
+test('parseAdviceArguments treats mid-token quotes as ordinary text, including Unicode possessives', () => {
+  const explicit = (raw, work) => assert.deepEqual(parseAdviceArguments(raw), {
+    mode: 'explicit', reason: 'EXPLICIT_FINAL_FLAG', work_arguments: work
+  });
+  // Possessives after non-ASCII letters or astral characters must not open a span.
+  for (const work of [
+    "café's", "日本's guide", "😀's request", "Zoë's and Jürgen's plan",
+    "user's request", "developers' guide", "it's true that we shouldn't fail"
+  ]) explicit(`${work} --advice`, work);
+  // Inch marks: escaped or bare mid-token quotes are ordinary text.
+  explicit('5\\" bezel --advice', '5\\" bezel');
+  explicit('5" bezel --advice', '5" bezel');
+  explicit("5' pole --advice", "5' pole");
+  explicit('say"hi there --advice', 'say"hi there');
+  // Boundary-opened spans still protect flags and may follow a possessive.
+  explicit('café\'s "use --advice here" --advice', 'café\'s "use --advice here"');
+  explicit("日本's 'use --advice here' --advice", "日本's 'use --advice here'");
+  // Non-final flags stay ordinary text after a possessive.
+  assert.deepEqual(parseAdviceArguments("café's --advice more"), {
+    mode: 'off', reason: 'NO_FINAL_FLAG', work_arguments: "café's --advice more"
+  });
+  // Duplicate rejection still sees real flags next to possessives.
+  assertThrowsCode(() => parseAdviceArguments("😀's --advice and --advice"), 'ADVICE_MODE_DUPLICATE_FLAG');
+  // A mid-token quote does not hide a later standalone span opened at a boundary.
+  assert.deepEqual(parseAdviceArguments('5" bezel "--advice"'), {
+    mode: 'off', reason: 'NO_FINAL_FLAG', work_arguments: '5" bezel "--advice"'
+  });
+  // Mid-token quote after `=` or `(` is ordinary text, so the inner flag is an eligible duplicate.
+  assertThrowsCode(() => parseAdviceArguments('key="x --advice y" --advice'), 'ADVICE_MODE_DUPLICATE_FLAG');
+  assertThrowsCode(() => parseAdviceArguments('("use --advice here") --advice'), 'ADVICE_MODE_DUPLICATE_FLAG');
+});
+
 test('parseAdviceArguments handles escaped quotes, escaped flags, and backslashes', () => {
   // Escaped double quote inside double quotes: does not close span, flags stay suppressed
   assert.deepEqual(parseAdviceArguments('document "use \\"--advice\\" here"'), {
@@ -672,18 +704,86 @@ test('evaluateActivation with same-run checks observed state, revisions, and com
   assertThrowsCode(() => evaluateActivation(abandonedReq, abandonedState), 'ADVICE_RUN_COMPLETED');
 });
 
-test('context paths reuse sensitive-path fences and enforce aggregate UTF-8 limits', () => {
-  for (const plan_path of ['.git/config', 'plans/.env', 'plans/secrets.md', 'plans//plan.md', 'C:/plan.md']) {
+test('selection paths accept sensitive-sounding and Unicode names in off and explicit modes', () => {
+  const selections = [
+    ['plans/token-refresh/plan.md', 'plans/token-refresh/phase-01.md'],
+    ['plans/secrets-rotation/plan.md', 'plans/secrets-rotation/phase-02.md'],
+    ['plans/fix-credentials-leak/plan.md', 'plans/fix-credentials-leak/phase-03.md'],
+    ['plans/雪/plan.md', 'plans/café/phase-01.md'],
+    // Metadata-only selections are never read by activation.
+    ['.git/config', 'plans/.env/phase-01.md'],
+    ['plans/.env', null]
+  ];
+  for (const [plan_path, phase_path] of selections) {
+    for (const [raw_arguments, mode] of [['work', 'off'], ['work --advice', 'explicit']]) {
+      const result = evaluateActivation(createRequest({
+        raw_arguments, context: createContext({ plan_path, phase_path, phase_id: null })
+      }));
+      assert.equal(result.mode, mode);
+      assert.equal(result.context.plan_path, plan_path);
+      assert.equal(result.context.phase_path, phase_path);
+      assert.equal(result.work_arguments, 'work');
+    }
+  }
+  // Null selections stay valid.
+  assert.equal(evaluateActivation(createRequest({
+    context: createContext({ plan_path: null, phase_path: null, phase_id: null })
+  })).context.plan_path, null);
+});
+
+test('selection paths reject traversal, absolute, drive, device, backslash and control forms', () => {
+  const unsafe = [
+    '', '.', '..', '../plan.md', 'plans/../plan.md', 'plans/./plan.md', 'plans//plan.md',
+    'plans/plan.md/', '/plans/plan.md', '//host/share/plan.md', 'C:/plan.md', 'C:plan.md',
+    'plans\\plan.md', '\\\\.\\pipe\\plan', '//./pipe/plan', 'plans/plan.md:stream',
+    'plans/CON/plan.md', 'plans/nul.md', 'plans/LPT1', 'plans/plan.md.', 'plans/plan.md ',
+    'plans/plan\u0000.md', 'plans/plan\n.md', 'plans/plan\u007f.md', 'plans/pla\uD800n.md',
+    // Reserved filename characters.
+    'plans/a<b/plan.md', 'plans/a>b/plan.md', 'plans/a"b/plan.md', 'plans/a|b/plan.md',
+    'plans/a?b/plan.md', 'plans/a*b/plan.md',
+    // Device stems, any case, with or without extension, in any component.
+    'plans/COM0/plan.md', 'plans/com9', 'plans/LPT9', 'plans/lpt0.txt', 'plans/aux.tar.gz',
+    'plans/COM\u00B9', 'plans/com\u00B2/plan.md', 'plans/LPT\u00B3/plan.md', 'plans/lpt\u00B3.txt',
+    'plans/CONIN$', 'plans/conin$.md', 'plans/CONOUT$/plan.md', 'plans/conout$.md', 'plans/prn.x/plan.md',
+    'plans/CLOCK$/plan.md', 'plans/clock$.md', 'plans/nul .txt', 'plans/con  .md'
+  ];
+  for (const value of unsafe) {
     assertThrowsCode(() => parseActivationRequest(createRequest({
-      context: createContext({ plan_path })
+      context: createContext({ plan_path: value })
+    })), 'ADVICE_MODE_INVALID');
+    assertThrowsCode(() => parseActivationRequest(createRequest({
+      context: createContext({ phase_path: value })
     })), 'ADVICE_MODE_INVALID');
   }
+});
+
+test('selection paths accept ordinary names that only resemble device or reserved forms', () => {
+  for (const value of [
+    'plans/com10/plan.md', 'plans/console/plan.md', 'plans/a$b/plan.md', 'plans/conin/plan.md',
+    'plans/conin$x/plan.md', 'plans/lpt10.md', 'plans/auxiliary/plan.md', 'plans/com/plan.md',
+    'plans/nullable.md', 'plans/prn-1/plan.md', 'plans/COM\u2074/plan.md',
+    'plans/clock$x.md', 'plans/con notes.md', 'plans/nulx .txt'
+  ]) {
+    assert.equal(parseActivationRequest(createRequest({
+      context: createContext({ plan_path: value, phase_path: value })
+    })).context.plan_path, value);
+  }
+});
+
+test('selection paths enforce the 1 KiB UTF-8 bound and work_target keeps its own bound', () => {
   const planPath = Array(4).fill('p'.repeat(200)).join('/') + '/' + 'x'.repeat(220);
   assert.equal(Buffer.byteLength(planPath), 1024);
   const request = createRequest({ context: createContext({ plan_path: planPath, work_target: '雪'.repeat(1365) + 'a' }) });
   assert.equal(parseActivationRequest(request).context.plan_path, planPath);
   assertThrowsCode(() => parseActivationRequest({ ...request,
     context: { ...request.context, plan_path: planPath + 'x' } }), 'ADVICE_MODE_INVALID');
+  // Multi-byte boundary: 341 three-byte characters + 1 ASCII byte = 1024; one more byte exceeds.
+  const wide = '雪'.repeat(341) + 'a';
+  assert.equal(Buffer.byteLength(wide), 1024);
+  assert.equal(parseActivationRequest(createRequest({ context: createContext({ phase_path: wide }) })).context.phase_path, wide);
+  assertThrowsCode(() => parseActivationRequest(createRequest({
+    context: createContext({ phase_path: wide + 'a' })
+  })), 'ADVICE_MODE_INVALID');
   assertThrowsCode(() => parseActivationRequest({ ...request,
     context: { ...request.context, work_target: request.context.work_target + 'x' } }), 'ADVICE_MODE_INVALID');
   const escaped = createRequest({ raw_arguments: '\u0001'.repeat(12000) });

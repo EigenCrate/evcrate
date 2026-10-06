@@ -24,10 +24,11 @@ This command supplies bounded evidence and does not duplicate route or adapter s
 
 ## Advice Mode
 
-Before discovery or routing, resolve the HOME helper per `.gemini/workflows/advice-activation.md` with original `{{args}}`, canonical `context.command: "fix/ui"`, the current root and any direct caller handoff.
-Preserve known direct-caller selections; use `work_target: "fix/ui"` only when no caller target exists, and null plan/phase fields only when unknown.
+Before discovery or routing, resolve the HOME helper per `.gemini/workflows/advice-activation.md` with original `{{args}}`, canonical `context.command: "fix/ui"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "fix/ui"` only when no such target exists, and null plan/phase fields only when unknown.
 Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-Apply neutral `.gemini/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.gemini/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+
+Apply neutral `.gemini/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.gemini/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 ## Workflow
 **FIRST**: Run `ui-ux-pro-max` searches to understand context and common issues:
