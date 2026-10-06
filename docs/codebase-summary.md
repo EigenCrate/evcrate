@@ -2,11 +2,11 @@
 
 **Maintained:** 2026-10-05 (PR #17 remediation).
 **Source:** Current repository declarations and implementation modules; [Linux remediation verification](../plans/reports/implementation-261005-1303-pr17-verification.md). Historical candidate qualification evidence remains dated separately.
-**Updated:** 2026-10-05
-**Package:** Private npm package `evcrate` 2.8.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
+**Updated:** 2026-10-06
+**Package:** Private npm package `evcrate` 2.9.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The controller closure also packages the HOME helper asset `evcrate-advice-mode` (`.evcrate/source/.evcrate/bin/evcrate-advice-mode`), invoked explicitly with supported Node (not an npm CLI binary). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phase 07 exercised one native Windows x64 row (111 passed; formal qualification invalidated by stale `.omp` manifest under Rule 94). Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`, 7,410 files, archive SHA-256 `6a720dfb...`, manifest SHA-256 `365f145b...`) with repaired `.omp` output hash, 9/9 extracted root launch test pass, Cycle 2 native Windows runner fixes, clean Linux qualification (753/753 passed, 25 win32 skips), and code review score 9.8/10; ready for Phase 07 requalification. Broader Windows support remains limited to installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phases 01–05 complete 2026-10-05 (single-projection manifest reuse, bounded worker pool with snapshot isolation, compiler incremental caching, parity verification, and post-build parent RSS benchmark metrics).
-**Controller closure:** Exactly 44 files (36 prior entries plus eight Darwin assets); earlier 29-, 33-, and 36-file inventories are dated counts.
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phases 01–05 complete 2026-10-05. Deterministic advice activation Phases 01–03 are ordinary user-approved complete with no durable parent run or receipt (CommonJS activation helper, 30 canonical workflows/commands, and 8-target projection cutover); Phase 04 behavioral qualification and docs integration complete for exercised fixture gates with bounded observed native qualification on Linux x64 (OMP six scenario classes capped at Step 0; prerequisite gate and workflow limits retained; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim).
+**Controller closure:** Exactly 46 files (36 prior shared/Windows entries, eight Darwin assets, plus two deterministic advice activation assets: `evcrate-advice-mode` and `lib/advisor/activation.cjs`); earlier 29-, 33-, 36-, and 44-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness source tree. The TypeScript CLI is the package control plane; the shared advisor controller remains a separate CommonJS runtime.
@@ -15,8 +15,8 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 
 | Path | Role | Editing rule |
 |---|---|---|
-| `.evcrate/source/.claude/` | Canonical harness resources | Author here; do not hand-edit generated target copies. |
-| `.evcrate/source/.evcrate/bin/` | Shared advisor controller source, Darwin native sources and prebuilt assets | Maintain the generated closure; the Darwin integration is present but actual macOS runtime remains untested/unqualified. |
+| `.evcrate/source/.claude/` | Canonical harness resources | Author here; includes 30 canonical paths (22 commands, 6 workflows including neutral `advice-activation.md` and `plan-progress.md`, 2 agents). Do not hand-edit generated target copies. |
+| `.evcrate/source/.evcrate/bin/` | Shared advisor controller source, helper, Darwin native sources and prebuilt assets | Maintain the 46-file generated closure (`evcrate-advisor`, `evcrate-advice-mode`, `lib/advisor/activation.cjs`, Darwin assets). The Darwin integration is present but actual macOS runtime remains untested/unqualified. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlays | Change target policy or declared overlays, then rebuild. |
 | `.evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/` | Generated target projections | Regenerate; never treat as authoring roots. |
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
@@ -35,8 +35,8 @@ The persisted target IDs are `claude`, `codex`, `gemini`, `antigravity`, `pi`, `
 |---|---|---|
 | `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts`, `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
-| `src/manifests/` | Target manifest loading, build metadata, controller closure | `manifest.ts`, `registry.ts`, `controller.ts` |
-| `src/adapters/` | Eight target projection adapters (seven shared-registry adapters plus VS Code Local native adapter in `vscode/`; all 7 translated adapters hash `dist/adapters/uri-restoration.js`; Codex linear regex callback URL restoration) | `registry.ts`, `qualification.ts`, `vscode/` (`adapter.ts`, `hook-protocol.ts`, `policy.ts`, `session-context.ts`, `advisory-caller.ts`), `codex/` (`transforms.ts`) |
+| `src/manifests/` | Target manifest loading, build metadata, controller closure | `manifest.ts`, `registry.ts`, `controller.ts` (validates 46-file closure and Node shebangs on both `evcrate-advisor` and `evcrate-advice-mode`) |
+| `src/adapters/` | Eight target projection adapters (seven shared-registry adapters plus VS Code Local native adapter in `vscode/`; OMP native custom-command gate in `omp/activation.ts` and `omp/commands.ts`; Pi extension ESM boundary and TypeBox bindings in `pi/`; Copilot conditional activation reads in `copilot/prompts.ts`; Gemini standalone transformed files in `gemini/runtime.ts`; all 7 translated adapters hash `dist/adapters/uri-restoration.js`; Codex linear regex callback URL restoration) | `registry.ts`, `qualification.ts`, `vscode/` (`adapter.ts`, `hook-protocol.ts`, `policy.ts`, `session-context.ts`, `advisory-caller.ts`), `codex/` (`transforms.ts`) |
 | `src/distribution/` | Local build/check, single-projection manifest reuse, bounded worker pool (`worker-pool.ts`), input snapshot isolation (`input-snapshot.ts`, `input-snapshot-tree.ts`), publication planning, staging, atomic promotion, and recovery | `local-build.ts`, `local-build-staging.ts`, `manifest-view-derivation.ts`, `local-staging-fs.ts`, `worker-pool.ts`, `input-snapshot.ts`, `publication-plan.ts`, `publication.ts` |
 | `src/filesystem/` | Host/portable paths, hashing, atomic writes, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/registry/` | Canonical resource scan, schema, validation, and queries | `scanner.ts`, `schema.ts`, `store.ts` |
@@ -583,10 +583,9 @@ vendor authentication, or universal host enforcement. All seven targets remain
 
 ## Advisor invocation modes
 
-A final standalone `--advice` enables explicit checkpoint mentoring. Handoffs
-preserve the mode and active run identity; default mode carries no advice token.
+Deterministic advice activation is governed by the neutral [advice-activation.md](../.evcrate/source/.claude/workflows/advice-activation.md) contract; neutral historical progress inspection is governed by [plan-progress.md](../.evcrate/source/.claude/workflows/plan-progress.md). A final standalone `--advice` enables explicit checkpoint mentoring. Handoffs preserve the mode and active run identity; default mode carries no advice token.
 The main-session `/cmd-advise` interview remains separate from checkpoint routing.
-See the [canonical argument-mode and caller lifecycle](../.evcrate/source/.claude/workflows/advisor-mentoring.md#argument-mode).
+For explicit or inherited advice runs only, see the [caller lifecycle binding](../.evcrate/source/.claude/workflows/advisor-mentoring.md#caller-lifecycle-binding).
 
 - **Fresh review:** The parent settles implementation, actual declared validation, reviewer output, selected documentation/artifacts, and relevant writers behind a writer barrier, then initializes once immediately before the first checkpoint.
 - **Active run:** Retain run/phase/project identity, revisions, prior context, and correction accounting; the parent alone owns state. Accepted registered work requires validation and its matching outcome before the next checkpoint; resume existing actions without duplication. Disputed counsel without active work uses a supported disposition, read-only evidence/resolution, and fresh same-run counsel before writes or a resolved outcome, without invented work/outcome. No replacement ID or implicit refresh.

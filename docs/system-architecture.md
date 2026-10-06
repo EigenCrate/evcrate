@@ -16,19 +16,24 @@ turns these contracts into requirements.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.6.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `2.9.0`) for building and
 publishing one canonical agent-harness source tree into eight persisted target
 projections (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`,
-and `vscode`). Node `>=22.19.0` is the package engine. The package exposes:
+and `vscode`). Node `>=22.19.0` is the package engine. The package exposes two npm CLI binaries:
 
 - `evcrate` → `dist/cli/evcrate.js`, the one-shot TypeScript control-plane CLI.
 - `evcrate-advisor` → `.evcrate/source/.evcrate/bin/evcrate-advisor`, the shared
-  CommonJS checkpoint controller. The approved Phase 01 target contract requires
-  maintained callers to launch supported Node (`>=22.19.0`), pass the absolute
-  HOME-owned script as `argv[0]`, send exact UTF-8 JSON on stdin, and use canonical
-  project cwd (`packageRoot` for health diagnostics). Direct POSIX execution and
-  retry/fallback are prohibited; baseline direct-exec sites remain for Phase 02
-  migration.
+  CommonJS checkpoint controller. Launch with supported Node (`>=22.19.0`), pass
+  absolute HOME script as `argv[0]`, send exact UTF-8 JSON on stdin, and use
+  canonical project cwd (`packageRoot` for health diagnostics). Direct POSIX
+  execution and retry/fallback are prohibited.
+
+Separately, the controller build closure packages the HOME-owned helper asset:
+- `evcrate-advice-mode` → `.evcrate/source/.evcrate/bin/evcrate-advice-mode`, the
+  deterministic CommonJS advice activation helper. It is not an npm CLI binary on
+  PATH; maintained callers invoke it strictly via supported Node (`>=22.19.0`) using
+  its absolute HOME path (`node "$HOME/.evcrate/bin/evcrate-advice-mode"`), with zero
+  positional options, bounded JSON stdin/stdout, and canonical project cwd.
 The control plane resolves an immutable invocation context, validates one request,
 dispatches one operation, writes one result, and exits. It does not run a daemon,
 listener, background broker, or provider router.
@@ -52,8 +57,8 @@ flowchart TD
 
 | Area | Owner | Editing rule |
 |---|---|---|
-| Canonical harness resources | `.evcrate/source/.claude/` | Author here; do not hand-edit projections. |
-| Shared advisor controller | `.evcrate/source/.evcrate/bin/` | Author the controller closure here. |
+| Canonical harness resources | `.evcrate/source/.claude/` | Author here; includes 30 canonical paths (22 commands, 6 workflows including neutral `advice-activation.md` and `plan-progress.md`, 2 agents). Do not hand-edit projections. |
+| Shared advisor controller | `.evcrate/source/.evcrate/bin/` | Author the 46-file controller closure here (`evcrate-advisor`, `evcrate-advice-mode`, Darwin assets). |
 | Target policy | `.evcrate/targets/*/manifest.json` and declared overlays | Change policy/overlays, then rebuild. |
 | Generated projections | `.evcrate/source/.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`, `.omp`, `.copilot`, `.evcrate-vscode` | Generated output; never hand-edit. |
 | Controller publication | `$HOME/.evcrate/bin/` | Publisher owns one shared copy; no target owns a copy. |
@@ -250,8 +255,8 @@ Full-workspace manifest generation (`scripts/build-manifests.mjs`, `runAllManife
 - `.releaserc.json` uses exact post-qualification labels `Windows x64 Archive` and `Windows Installer Entrypoint (install.ps1)`; other asset paths/labels and prepare authority remain unchanged.
 - `tests/distribution/release-orchestration.test.mjs` covers WRQ-042 (workflow boundary), WRQ-043 (fixture/verify/smoke), and WRQ-044 (labels/preserved config).
 
-The controller build is a separate exact closure rooted at `.evcrate/source/.evcrate/bin` (44 total entries: 36 shared/Windows files plus 8 Darwin-specific entries):
-- **36 shared/Windows entries**: `evcrate-advisor`, `lib/advisor/` (`adapter-contract.cjs`, `adapter-registry.cjs`, `adapters/{claude,codex,omp,omp-parser,pi}.cjs`, `checkpoint-contract.cjs`, `contracts-v2.cjs`, `controller-envelope.cjs`, `controller.cjs`, `errors.cjs`, `generated/{advisor-contract-runtime,advisor-metrics,canonical-json,json}.js`, `history-{contract,prune,query,store}.cjs`, `isolated-workspace.cjs`, `json-document.cjs`, `managed-checkpoint.cjs`, `policy-schema.cjs`, `profile.cjs`, `runner.cjs`, `runtime-brief.generated.cjs`, `state-{baseline,contract,human,io}.cjs`, `task-state.cjs`, `windows-native.{cs,ps1}`, `windows-platform.cjs`).
+The controller build is a separate exact closure rooted at `.evcrate/source/.evcrate/bin` (46 total entries: 36 shared/Windows files, 8 Darwin-specific entries, plus 2 deterministic advice activation assets: `evcrate-advice-mode` and `lib/advisor/activation.cjs`):
+- **38 shared/Windows entries**: `evcrate-advisor`, `evcrate-advice-mode`, `lib/advisor/` (`activation.cjs`, `adapter-contract.cjs`, `adapter-registry.cjs`, `adapters/{claude,codex,omp,omp-parser,pi}.cjs`, `checkpoint-contract.cjs`, `contracts-v2.cjs`, `controller-envelope.cjs`, `controller.cjs`, `errors.cjs`, `generated/{advisor-contract-runtime,advisor-metrics,canonical-json,json}.js`, `history-{contract,prune,query,store}.cjs`, `isolated-workspace.cjs`, `json-document.cjs`, `managed-checkpoint.cjs`, `policy-schema.cjs`, `profile.cjs`, `runner.cjs`, `runtime-brief.generated.cjs`, `state-{baseline,contract,human,io}.cjs`, `task-state.cjs`, `windows-native.{cs,ps1}`, `windows-platform.cjs`).
 - **8 Darwin entries**: `lib/advisor/darwin-platform.cjs`, `lib/advisor/native/darwin/` (`advisor-native.{c,h}`, `prebuilt/artifacts.json`, `prebuilt/{darwin-arm64,darwin-x64}/advisor-native.node`, `process.c`, `storage.c`).
 `runtime-brief.generated.cjs` is generated by
 `scripts/generate-runtime-brief.mjs` from the canonical
@@ -259,13 +264,13 @@ The controller build is a separate exact closure rooted at `.evcrate/source/.evc
 contains the instructions, SHA-256 digest, and `evcrate-advisor-v2-*` build
 identity; it is part of the closure and is not hand-edited.
 
-The controller closure permits only regular, non-symlink files; `evcrate-advisor` is
-checked for its canonical Node shebang. Closure hashes cover file bytes, not
+The controller closure permits only regular, non-symlink files; both `evcrate-advisor` and `evcrate-advice-mode`
+are checked for their canonical Node shebang (`#!/usr/bin/env node`). Closure hashes cover file bytes, not
 permission modes, and reject missing, extra, stale, or mismatched entries. Linux
 `install.sh` grants mandatory CLI/advisor roles execute bits regardless of archive
 mode and runs the staged CLI directly; required chmod failure aborts installation.
 
-Native Windows Phase 02 synchronized installer inventories at its then-current 36-file baseline. The generated controller closure now has 44 entries, including the eight Darwin files above; generated inventory and installer manifests must remain in parity.
+Native Windows Phase 02 synchronized installer inventories at its then-current 36-file baseline; Phase 05 Darwin expanded this to 44 entries; and deterministic advice activation brings the generated controller closure to exactly 46 entries. Generated inventory and installer manifests remain in parity.
 The Windows sandbox publication evidence below is historical 36-file verification, not macOS qualification. The current Darwin support boundary is in Sections 5.6 and 7.
 
 ## 5. Shared advisor controller
@@ -527,15 +532,18 @@ Windows ownership verification is superseded. Unknown process identity remains
 preserved for inspection. Optional rich audit is not required state authority.
 Legacy v1 callers remain outside this v2 durable state path; canonical advice-mode callers use it. This caller-side binding does not change controller API, freshness checks, or routing policy, and claims no universal mediated-write enforcement.
 #### Canonical caller lifecycle
-[Caller lifecycle binding](../.evcrate/source/.claude/workflows/advisor-mentoring.md#caller-lifecycle-binding) is the single caller-side authority for explicit advice mode and named checkpoints.
-- **Fresh first review:** Settle implementation, actual declared validation, terminal reviewer output, selected documentation/artifacts, and all relevant writers before the writer barrier; the parent initializes once immediately before the first checkpoint reservation.
-- **Active run/handoff:** Preserve advice mode, `task_run_id`, phase/project root, revisions, prior context, and correction accounting; the parent alone owns state. Accepted registered work must finish actual validation and its matching outcome before the next checkpoint, without duplicating an existing action. Disputed counsel without active work uses a supported disposition, read-only evidence/resolution, and fresh same-run counsel before corrective writes or a resolved outcome; never invent work/outcomes or replace the run to refresh evidence.
-- **Baseline and freeze:** Capture `task.authorized_paths ∪ evidence.files[*].path ∪ evidence.artifacts[*].path`; only `authorized_paths` grants write authority. Keep read-only evidence in the baseline, and freeze the full manifest plus selected Git index/status identity from evidence/baseline capture through reservation, inference, and disposition, and from final outcome through completion.
-- **Finalization:** Whole-phase scope includes planned documentation, reports, status, and selected Git index transitions. Authorize each in advance, record disposition, perform bounded changes, run declared validation, then record a truthful outcome with actual paths before `complete`; never mutate captured evidence after the final outcome or seal.
-- **No-change:** Require no file or selected index/status changes, passed declared validation, `accept`, and no `must_fix` items or unresolved questions. Cautions and assumptions alone require no invented edits. Advice completion requires successful durable completion; ordinary default completion retains normal approval/validation.
-- **Separate limits and recovery:** The three reviewer/advisor-cycle cap is distinct from `correction_count`, which tracks unsuccessful completed correction/validation attempts and reaches `needs_human` at three. A stale init-only run still requires authentic operator abandonment through the human gate; this separate path was not exercised by the fixture smoke.
-- **Current versus captured status:** [Plan progress and phase reconciliation](../.evcrate/source/.claude/workflows/advisor-mentoring.md#plan-progress-and-phase-reconciliation) makes `progress.md` a derived live overview for advice-controlled plans. Parent publishes immutable scope/run-specific receipts outside the snapshot after successful completion; captured plan/status wording stays historical. Ordinary plans still update `plan.md`. A later default phase in a protected plan uses approval/validation evidence explicitly distinguished from durable advice completion.
-- **Continuation:** Reconcile project/plan/phase/run/scope, completion operation and matching resolved outcome before each phase or dependency batch; `completed` alone also denotes abandonment. Preserve applicable active runs even without `--advice`; missing/conflicting/unavailable evidence blocks dependent execution, not permission to repeat completed work. Failed administrative publication is repaired from evidence without reopening implementation. Overview/receipt publication never authorizes captured-file or selected-index edits.
+Canonical workflow architecture separates activation, neutral historical inspection, and authorized mentoring into three distinct contracts:
+1. **Neutral activation (`advice-activation.md`)**: Invokes `$HOME/.evcrate/bin/evcrate-advice-mode` with supported Node before any state initialization or mentoring load. Evaluates raw arguments and optional structured direct handoff to resolve mode (`off`, `explicit`, `inherited`).
+2. **Neutral historical reconciliation (`plan-progress.md`)**: Inspects progress using identified `state get` only. Never initializes state, claims runs, or writes durable ledgers. Permits existing lock acquisition/release and provably dead lock reaping. Association requires matching project identity, repo-relative plan/phase paths, controller phase, and snapshot digest (UUID alone is not authority). Completed scope is a verified no-op; controlled unresolved scope pauses cleanly without automatic resumption, replacement UUID, or gate bypass.
+3. **Authorized mentoring (`advisor-mentoring.md`)**: Loaded conditionally ONLY upon resolved `explicit` or `inherited` mode. Off mode forbids eager mentoring through navigation, loops, or fallback prompts; off mode preserves ordinary debugging, review corrections, validation, approvals, and command-scoped Git policy without advice lifecycle calls (L=0).
+
+For active advice runs, [caller lifecycle binding](../.evcrate/source/.claude/workflows/advisor-mentoring.md#caller-lifecycle-binding) governs checkpoints:
+- **Fresh first review:** Settle implementation, declared validation, reviewer output, documentation, and writers before the writer barrier; parent initializes once immediately before first checkpoint reservation.
+- **Active run/handoff:** Preserve advice mode, `task_run_id`, phase/project root, revisions, prior context, and correction accounting; parent alone owns state. Accepted registered work must finish actual validation and matching outcome before next checkpoint.
+- **Baseline and freeze:** Capture `task.authorized_paths ∪ evidence.files[*].path ∪ evidence.artifacts[*].path`; only `authorized_paths` grants write authority. Freeze full manifest plus selected Git index/status identity from baseline capture through completion.
+- **Finalization:** Whole-phase scope includes planned documentation, reports, status, and selected Git index transitions. Authorize each in advance, record disposition, perform bounded changes, run declared validation, then record truthful outcome before `complete`.
+- **No-change:** Require no file or selected index changes, passed declared validation, `accept`, and no `must_fix` items or unresolved questions.
+- **Current versus captured status:** `progress.md` is a derived live overview for advice-controlled plans. Parent publishes immutable scope/run-specific receipts outside the snapshot after successful completion; captured plan/status wording stays historical. Ordinary plans update `plan.md`.
 
 ### 5.4 Current v1 compatibility and v2 bounded transaction envelopes
 
@@ -650,17 +658,28 @@ Darwin runtime integration introduces a descriptor-relative capability architect
 
 ## 6. Advisor supervision and command projections
 
-A final standalone `--advice` enables explicit checkpoint mentoring for bootstrap, code, cook, and fix. Parsing is case-sensitive and whitespace-delimited: only a final token activates; duplicate tokens reject.
-Quoted, embedded, suffixed, differently-cased, or non-final forms remain work text. See the [canonical argument-mode and caller lifecycle](../.evcrate/source/.claude/workflows/advisor-mentoring.md#argument-mode).
-Handoffs preserve explicit mode, `WORK_ARGUMENTS`, and active run identity/context; default mode carries no token, and `@advisor` is never recreated.
-An outer <code>ADVICE_READY</code> envelope satisfies the inference step only; disposition, required work and validation, outcome, and successful `state complete` remain mandatory before `DONE`.
+Deterministic advice activation is governed by the packaged Node helper `evcrate-advice-mode` (`$HOME/.evcrate/bin/evcrate-advice-mode`) executed with supported Node (`>=22.19.0`) before any state initialization or full mentoring load:
+- **Wire and execution limits:** Strict bounded JSON stdin (`protocol: "evcrate-advice-mode"`, version 1, max 64 KiB), raw arguments (max 32 KiB), terminal output (max 256 KiB), and 2-second input/output deadlines. Invoked with zero positional options from canonical `project_root`.
+- **Token parsing:** Exactly one case-sensitive, standalone, whitespace-delimited final `--advice` token activates explicit mode (`EXPLICIT_FINAL_FLAG`); duplicate tokens reject (`ADVICE_MODE_DUPLICATE_FLAG`). Trailing whitespace is stripped; the original prefix text is preserved without shell escaping loss. Quoted, embedded, suffixed, or non-final tokens remain ordinary work text.
+- **Modes:**
+  - `off` (`NO_FINAL_FLAG`): Helper performs zero state init, zero get (`L=0`), and never loads mentoring. Canonical workflow in off mode preserves ordinary execution; neutral historical progress inspection can perform identified `state get` via `plan-progress.md` without activating advice.
+  - `explicit` (`EXPLICIT_FINAL_FLAG`): Mentoring loads only after helper confirms explicit mode; fresh init at existing lifecycle barrier.
+  - `inherited`: Structured caller handoff without synthetic flags or eager run creation. Reasons: `INHERITED_PRE_RUN` (routers `/cmd-cook`, `/cmd-fix` forward context with `run: null`, preserving known plan/phase selections) or `INHERITED_SAME_RUN` (forwards verified binding; lazy get validates project/phase/revisions; completed/abandoned runs fail closed with `ADVICE_RUN_COMPLETED`).
+- **Fail-closed:** Missing/unreadable helper, unsupported Node, nonzero exit, malformed output, context mismatch, or stale revisions halt routing immediately with a sanitized four-key diagnostic (`{ code, category, action, message }`). No alternate parser, automatic install, retry loop, or heuristic mode inference.
+- **No provenance guarantee:** Native user invocations have `handoff: null` and initial null plan/phase selections; context header is cooperative metadata, not authenticated user intent or session-token provenance. No V1/direct API or CAS schema changes.
+- **Multi-target packaging and transports:**
+  - *OMP:* Native custom-command gate (`commands/<cmd-name>/index.ts`) executes HOME helper before model turn, instruction resources under `evcrate/commands/<mapped-name>.md`, headless stderr diagnostics.
+  - *Pi:* Installation-root contained resources, manifest-owned `type: module` package boundary for extension `.js`, static TypeBox imports, zero production dependencies.
+  - *Copilot:* Removed unconditional workflow preload in favor of conditional activation reads.
+  - *Gemini:* Standalone transformed instruction files (`GEMINI.md`).
+  - *Claude, Codex, Antigravity, VS Code Local:* Neutral workflows projected; shared workflow lookup.
+- **Qualification scope:** Linux x64 bounded native qualification observed on OMP 18.6.1 across six scenario classes (`s01`, `s02`, `s03`, `s05`, `s07`, `s11`) capped at Step 0; prerequisite gates (`s10` diagnostic uncaptured, `s12` timed out) remain explicit native limits; incomplete A02/A22 historical artifact evidence, A12 retained-record reconciliation without compiler loops, and unexercised A13/A16 native branches. Other vendor model loops remain unqualified; native Windows and macOS are excluded by user direction, while preserving unrelated historical Windows/Darwin documentation; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim.
 
-The approved Node-only contract is implemented by maintained canonical workflows (`.claude/workflows/advisor-mentoring.md`), skills (`advisor-strategy`), and command projections: invoke the controller through explicit Node, with no direct POSIX execution or fallback. Preserve the tool-less counsel boundary and exact JSON streaming.
+The approved Node-only contract is implemented across maintained canonical workflows (`.claude/workflows/advice-activation.md`, `plan-progress.md`, `advisor-mentoring.md`), skills (`advisor-strategy`), and command projections: invoke the controller through explicit Node, with no direct POSIX execution or fallback. Preserve the tool-less counsel boundary and exact JSON streaming.
 The inline advice workflow is a separate main-session feature. It interviews the
 user and writes its own report; it does not use checkpoint routing policy or act as
 an alternate controller path. Copilot, Pi, Gemini, and Codex projections may expose
 an inline capability but do not gain controller relay authority.
-
 ### Documented command naming convention
 
 Documentation and target-facing examples use a literal `cmd` prefix for every slash
@@ -732,7 +751,7 @@ Phase 07 history is optional audit, distinct from task-state authority:
 
 ### 8.2 Generated projections, installers, and publication runbook
 
-The Advisor mentoring Phase 09 baseline had a dated 33-file controller closure; later 29-, 36-, and 44-file counts refer to separate inventories. The current 44-entry source authority is described in Section 4 and the [codebase summary](./codebase-summary.md).
+The Advisor mentoring Phase 09 baseline had a dated 33-file controller closure; later 29-, 36-, and 44-file counts refer to separate inventories. The current 46-entry source authority is described in Section 4 and the [codebase summary](./codebase-summary.md).
 
 Current builds generate and verify all eight projections and schema-2 manifests. Publication/recovery boundaries are in Section 4; Linux and Windows installer layouts remain separate. Windows lifecycle evidence applies only to the Section 7 installer/version matrix.
 

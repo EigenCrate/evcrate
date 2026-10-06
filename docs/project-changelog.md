@@ -2,8 +2,21 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-04
-**Status:** Core package `evcrate` 2.6.0; Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64 (commit `cbd298a4`); Phase 09 documentation, controlled rollout, and lifecycle governance completed; native Windows Advisor evidence remains bounded to the installer and diagnostics described below.
+**Updated:** 2026-10-06
+**Status:** Core package `evcrate` 2.9.0; Deterministic Advice Activation Phases 01–04 ordinary user-approved completed 2026-10-06T14:13:41+07:00 / 9.8 review (no durable completion, provider release, or commit claim); Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64; native Windows Advisor evidence remains bounded to installer and diagnostics.
+
+### 2026-10-06 — feat(advisor): implement deterministic advice activation helper, canonical separation, and multi-target projection cutover
+
+- Added packaged `evcrate-advice-mode` CommonJS Node helper (`$HOME/.evcrate/bin/evcrate-advice-mode`) and shared parser/evaluator (`lib/advisor/activation.cjs`) for deterministic advice activation.
+- Strict bounded JSON wire protocol (`protocol: "evcrate-advice-mode"`, version 1, max 64 KiB stdin, 32 KiB raw arguments, 256 KiB output, 2-second deadlines). Standalone final `--advice` token activates explicit mode (`EXPLICIT_FINAL_FLAG`); duplicate tokens reject (`ADVICE_MODE_DUPLICATE_FLAG`); quoted, embedded, suffixed, or non-final tokens remain ordinary work text.
+- Separated canonical workflow advice activation, neutral historical inspection, and authorized mentoring across 30 canonical paths (`.evcrate/source/.claude/`). All 21 implementation commands resolve the helper before loading full mentoring.
+- Off mode preserves ordinary debugging, reviewer corrections, validation, approvals, and command-scoped Git policy without advice lifecycle calls (L=0).
+- Added neutral workflows `advice-activation.md` and `plan-progress.md`; identified historical `state get` does not activate advice, initialize state, or alter durable ledgers, while retaining existing lock creation, release, and provably dead lock reaping.
+- Structured caller handoffs: pre-run (`INHERITED_PRE_RUN`) preserves known plan/phase context without synthetic flags or eager router state init (`run: null`); same-run (`INHERITED_SAME_RUN`) forwards verified binding validated by lazy get against durable state; completed or abandoned runs fail closed (`ADVICE_RUN_COMPLETED`).
+- Multi-target projection cutover across all 8 targets: OMP native custom-command admission gate before model discovery with headless stderr reporting; Pi extension architecture with installation-root isolation, manifest-owned ESM boundary (`type: module`), and static TypeBox imports; removed Copilot unconditional workflow preload; converted Gemini projections to standalone transformed instruction files.
+- Synchronized exact 46-file controller closure across generated inventory, manifests, and installers. Both `evcrate-advisor` and `evcrate-advice-mode` enforce canonical Node shebangs.
+- Preserved V1 compatibility, direct APIs, V2 CAS/claim/evidence/human gates, and existing lock behavior without schema changes or new global authority.
+- Qualification scope: Linux x64 bounded native qualification observed on OMP 18.6.1 across six scenario classes (Step 0 cap, prerequisite gate limits including uncaptured `s10` diagnostic and timed-out `s12`, incomplete A02/A22 historical proof, A12 retained-record escalation, A13/A16 native branches unexercised, other vendor model loops unqualified); native Windows and macOS excluded by user direction; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim.
 
 ### 2026-10-04 — feat(vscode): add opt-in settings.json registration flow to VS Code publish
 
@@ -708,98 +721,61 @@ and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-determini
 
 ### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
 
-**Status:** Phase 09 DONE (2026-09-13; 100%). Live operator and architecture documentation updated after full implementation proof, release gate verification, 14-suite `npm test` success (512/512), exact 29-file closure verification, and installed Linux release proof.
-**Plan:** [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
-
-- Reconciled code and design contracts against Phase 08 evidence.
-- Updated `README.md` with operator CLI examples (`--scope home|project`, `--home`, `--project-root`, `--target`, recovery), the seven-target destination matrix, shared controller HOME invariant, partial failure semantics (`PUBLICATION_FAILED`/`ROLLBACK_FAILED`, exit 5), quiescence runbook, and the explicit distinction between standalone installer rollback (`install.sh rollback`) and harness publication recovery.
-- Updated `docs/system-architecture.md` with the updated build-to-publication dataflow diagram, two-phase transaction execution, HOME-then-project lock ordering, preflight-before-mutation checks, schema-2 state roots, and scope-isolated recovery.
-- Updated `docs/project-overview-pdr.md` with observable functional requirements for scope-aware publication (FR-10), partial exit codes, and Linux-only qualification status.
-- Updated `docs/code-standards.md` with enforceable architectural bans (no project controller, no reverse lock acquisition, no arbitrary wrapper body rewriting, no ancestor project searches, no cross-volume atomicity fiction, no hand-editing generated files, no cross-scope recovery) and two-phase transaction standards.
-- Updated `docs/codebase-summary.md` with exact current symbols, test suites, descriptor types, and the comprehensive scope distribution architecture summary.
-- Updated `docs/pi-native-migration.md` with scope-aware publication commands, extension-derived EVCrate root derivation, and `PI_CODING_AGENT_DIR` runtime variable semantics.
-- Updated `docs/project-roadmap.md` and `docs/project-changelog.md` with complete evidence traceability for Phases 01 through 09.
-- Verification: [Cycle 2 validation](../plans/reports/tester-260913-1742-phase-09-cycle-2-test-suite-validation.md) records `npm run build`, `npm run distribute:check`, and `npm test` passing; [Cycle 2 review](../plans/reports/code-review-260913-1758-phase-09-operator-docs-cycle-2.md) approved the documentation set at 10/10.
+- Reconciled code and design contracts against Phase 08 evidence. [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md).
+- Updated `README.md` with operator CLI examples (`--scope home|project`, `--home`, `--project-root`, `--target`, recovery), seven-target destination matrix, shared controller HOME invariant, partial failure semantics (`PUBLICATION_FAILED`/`ROLLBACK_FAILED`, exit 5), quiescence runbook, and standalone installer rollback distinction (`install.sh rollback`).
+- Updated `docs/system-architecture.md` with build-to-publication dataflow diagram, two-phase transaction execution, HOME-then-project lock ordering, preflight-before-mutation checks, schema-2 state roots, and scope-isolated recovery.
+- Updated `docs/project-overview-pdr.md` (FR-10), `docs/code-standards.md`, `docs/codebase-summary.md`, `docs/pi-native-migration.md`, `docs/project-roadmap.md`, and `docs/project-changelog.md`.
+- Verification: Cycle 2 validation records `npm run build`, `npm run distribute:check`, and `npm test` (512/512) passing; review approved at 10/10.
 
 ### 2026-09-13 — feat(distribution): installed Linux release fixtures and regeneration (Phase 08)
 
-**Status:** Phase 08 DONE (2026-09-13; 100%). Installed Linux fixtures and checked-in regeneration verified.
-**Plan:** [Phase 08 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-08-installed-release-fixtures-and-regeneration.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
-
-- Extended `verifyInstalledLauncherAndInvariance` to prove HOME non-mutation on install, all-seven HOME publication with shared controller, project publication to separate project directory without project controller, runtime entrypoint execution across all seven targets from third workspace, partial failure rollback and recovery isolation, and package snapshot byte invariance throughout.
+- Extended `verifyInstalledLauncherAndInvariance` to prove HOME non-mutation on install, all-seven HOME publication with shared controller, project publication to separate project directory without project controller, runtime entrypoint execution across all seven targets from third workspace, partial failure rollback and recovery isolation, and package snapshot byte invariance throughout. [Phase 08 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-08-installed-release-fixtures-and-regeneration.md).
 - Modularized installed assertions into `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC).
-- All release gates passed sequentially: `npm run distribute:build`, `npm run generate:registry`, `npm run generate:manifests`, `npm run distribute:check`, `npm run test:release` (10/10), `npm run test:installer:linux` (15/15), `npm run test:validation-rollout` (6/6), `npm run test:distribution:rollout` (5/5), and full test suite (512/512).
-- Terminal code review approved (Verdict: PASS) with zero blockers and full A43–A49 compliance.
+- All release gates passed sequentially: `npm run distribute:build`, `generate:registry`, `generate:manifests`, `distribute:check`, `test:release` (10/10), `test:installer:linux` (15/15), `test:validation-rollout` (6/6), `test:distribution:rollout` (5/5), and full test suite (512/512). Review PASS.
 
 ### 2026-09-13 — feat(distribution): focused contract and runtime proof for scope distribution (Phase 07)
 
-**Status:** Phase 07 DONE (2026-09-13; 100%). Focused proof gate passed across all protocol, adapter, publication, and recovery suites.
-**Plan:** [Phase 07 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-07-focused-contract-and-runtime-proof.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
-
-- Focused gates passed: build; protocol 21/21; CLI/context 47/47; primitives 31/31; adapters 26/26; publication 77/77; integration 14/14; cutover 7/7; and direct `distribute:check` returned `status: "ok"`.
+- Focused gates passed: build; protocol 21/21; CLI/context 47/47; primitives 31/31; adapters 26/26; publication 77/77; integration 14/14; cutover 7/7; and direct `distribute:check` returned `status: "ok"`. [Phase 07 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-07-focused-contract-and-runtime-proof.md).
 - Tester passed five targeted checks; terminal code review approved with no findings; advisor reconciliation approved finalization.
 - Canonical regeneration ran through `distribute:build`, `generate:registry`, and `generate:manifests` to restore controller-manifest hash integrity.
+
 ### 2026-09-13 — feat(distribution): schema-2 state migration and scope-isolated recovery (Phase 06)
 
-**Status:** Phase 06 DONE (2026-09-13; 100%). Blocking review corrections resolved and implementation approved. Generated `.evcrate` artifacts remain Phase 08-owned; `docs/system-architecture.md` remains Phase 09-owned.
-**Plan:** [Phase 06 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-06-state-migration-recovery-and-partial-orchestration.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
-
-- Schema 2 separates shared controller state from HOME harness state. Valid schema-1 in-progress state is recovered first under the HOME lock; valid terminal state migrates atomically, while ambiguous ownership remains untouched and fails closed.
-- Recovery is scope-isolated: HOME recovery reads only HOME state; project recovery validates the canonical project identity and reads only its identity-keyed project state. Project publication commits shared HOME first, then applies harness independently; harness failure rolls back only project work and returns a top-level `partial` (exit category 5), using `PUBLICATION_FAILED` after successful rollback or preserving the journal with `ROLLBACK_FAILED` when rollback fails.
-- Blocking review corrections covered schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, and same-volume preflight. Existing modes, hashes, CAS, ownership, and unmanaged-data protections remain fail-closed.
-- **Direct local evidence:** `npm run build` passed; `node --test tests/distribution/publication-recovery.test.mjs` passed 19/19; `node --test tests/distribution/publication-apply.test.mjs` passed 12/12; `node --test tests/distribution/publication-plan.test.mjs` passed 6/6; `node --test tests/cli/publication.test.mjs` passed 6/6.
-- The mandatory tester agent could not execute because its provider returned HTTP 429 before commands; no tester-agent execution is claimed. These local checks do not qualify live vendors/operators or authorize HOME publication.
+- Schema 2 separates shared controller state from HOME harness state. Valid schema-1 in-progress state is recovered first under the HOME lock; valid terminal state migrates atomically, while ambiguous ownership remains untouched and fails closed. [Phase 06 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-06-state-migration-recovery-and-partial-orchestration.md).
+- Recovery is scope-isolated: HOME recovery reads only HOME state; project recovery validates canonical project identity and reads only its identity-keyed project state. Project publication commits shared HOME first, then applies harness independently; harness failure rolls back only project work and returns a top-level `partial` (exit category 5).
+- Blocking review corrections covered schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, and same-volume preflight.
+- Direct local evidence: `npm run build` passed; `publication-recovery.test.mjs` (19/19); `publication-apply.test.mjs` (12/12); `publication-plan.test.mjs` (6/6); `cli/publication.test.mjs` (6/6). External provider 429 blocked tester agent.
 
 ### 2026-09-13 — feat(distribution): generic transaction engine and locking (Phase 05)
 
-**Status:** Phase 05 DONE (2026-09-13; 100%). Generic transaction descriptor and execution engine implemented.
-**Plan:** [Phase 05 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-05-generic-transaction-engine.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
-
-- Generic immutable transaction descriptor/engine covering HOME and project publication with preflight-before-mutation, HOME-then-project locking, durable journal-before-workspace ordering, workspace identity/containment and same-volume checks, fsync/marker ordering, bounded HOME retention with project no-retention cleanup, and distinct recovery/error outcomes.
+- Generic immutable transaction descriptor/engine covering HOME and project publication with preflight-before-mutation, HOME-then-project locking, durable journal-before-workspace ordering, workspace identity/containment and same-volume checks, fsync/marker ordering, bounded HOME retention with project no-retention cleanup, and distinct recovery/error outcomes. [Phase 05 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-05-generic-transaction-engine.md).
 - Existing schema-1 HOME recovery compatibility preserved.
 - Direct evidence: `npm run build` passed; `npm run test:publication` passed 66/66; `npm run test:integration` passed 14/14; focused recovery and oversized-result regressions passed.
+
 ### 2026-09-12 — feat(distribution): one-snapshot shared and harness phase planning (Phase 04)
 
-**Status:** Phase 04 DONE (2026-09-12; 100%). Final authorized-scope review approved with no findings. Live operator documentation (`docs/system-architecture.md`) remains unchanged until Phase 09; generated outputs remain Phase 08-owned.
-**Plan:** [Phase 04 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-04-one-snapshot-phase-planning.md) and [master plan](../plans/260912-0051-hook-materialization-scope-distribution/plan.md)
-
-- Resolved one aggregate schema-2 `VerifiedCurrentBuild` and digest once, then passed the immutable snapshot to ordered shared and harness planning. Shared controller materialization remains fixed beneath `<home>/.evcrate/bin`; HOME uses strict target mappings/order, with only valid Gemini `.gemini` → Antigravity `.gemini/config` nesting; project roots/documents remain neutral and contained.
+- Resolved one aggregate schema-2 `VerifiedCurrentBuild` and digest once, then passed the immutable snapshot to ordered shared and harness planning. Shared controller materialization remains fixed beneath `<home>/.evcrate/bin`; HOME uses strict target mappings/order, with only valid Gemini `.gemini` → Antigravity `.gemini/config` nesting; project roots/documents remain neutral and contained. [Phase 04 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-04-one-snapshot-phase-planning.md).
 - Preserved selected-target ownership and stale cleanup bounds, shared JSON merges and user-owned bytes, hashes, modes, CAS snapshots, immutable defensive operation bytes, transformed/merged file-size bounds, and duplicate planned-destination rejection. Full overlap/path preflight runs before destination reads.
-- Advisor correction state completed after user-approved bounded corrections. Final blocking code review verdict: approve with no findings.
-- **Direct repository evidence:** `npm run build` passed; `node --test tests/distribution/publication-plan.test.mjs tests/distribution/publication-parity.test.mjs` passed 8/8; `npm run test:publication` passed 57/57; `npm run test:adapters` passed 24/24; `npm run distribute:check` returned `status: "ok"`.
-- The tester subagent could not execute because its external Cloud Code Assist backend returned HTTP 429; the direct commands above are the evidence. These deterministic repository checks do not qualify live vendors/operators or authorize HOME publication.
-- Handoff: Phase 05 generic transaction engine; Phase 06 schema-2 state/recovery/partial orchestration; Phase 07 focused contract/runtime proof.
+- Direct repository evidence: `npm run build` passed; `publication-plan.test.mjs` and `publication-parity.test.mjs` (8/8); `npm run test:publication` (57/57); `npm run test:adapters` (24/24); `npm run distribute:check` ok.
+
 ### 2026-09-12 — feat(distribution): neutral seven-target runtime closures and structured HOME rules (Phase 03)
 
-**Status:** Phase 03 DONE (2026-09-12; 100%).  
-**Plan:** [Phase 03 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-03-neutral-seven-target-runtime-closures.md)
-
-- Completed installation-relative neutral runtime closures for all seven targets, structured HOME transforms, workspace `cwd`/environment separation, and fail-closed child validation.
-- Evidence: `npm run build`, adapters 24/24, source-derived publication 54/54, integration 14/14, and the source-derived full suite passed. Checked-in generated outputs remained Phase 08-owned.
-
+- Completed installation-relative neutral runtime closures for all seven targets, structured HOME transforms, workspace `cwd`/environment separation, and fail-closed child validation. [Phase 03 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-03-neutral-seven-target-runtime-closures.md).
+- Evidence: `npm run build`, adapters 24/24, source-derived publication 54/54, integration 14/14, and source-derived full suite passed. Checked-in generated outputs remained Phase 08-owned.
 
 ### 2026-09-12 — feat(distribution): context and manifest project bindings (Phase 02)
 
-**Status:** Phase 02 DONE (2026-09-12; 100%). Live operator documentation (`docs/system-architecture.md`) remains unchanged until final proof in Phase 09 per design contracts and acceptance matrix A47/A50.  
-**Plan:** [Phase 02 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-02-context-and-manifest-project-bindings.md)  
-**Evidence:** [Advisor review](../plans/reports/advisor-260912-1035-phase02-context-and-manifest-project-bindings.md) and [context tests](../tests/context/invocation-context.test.mjs)
-
-- Normalized project destinations: Added immutable `ProjectDirectoryDescriptor` and `ProjectDocumentDescriptor` unions to `SelectedTargetContext` and `InvocationContext` (`src/manifests/types.ts`, `src/context/invocation-context.ts`), derived strictly from manifest `outputRoots` and `projectDocs` in declaration order without filesystem ancestor traversal.
+- Normalized project destinations: Added immutable `ProjectDirectoryDescriptor` and `ProjectDocumentDescriptor` unions to `SelectedTargetContext` and `InvocationContext`, derived strictly from manifest `outputRoots` and `projectDocs` in declaration order without filesystem ancestor traversal. [Phase 02 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-02-context-and-manifest-project-bindings.md).
 - Retained file/directory distinction: Root documents (Codex `AGENTS.md`, Gemini `GEMINI.md`) are explicitly represented as document descriptors, never traversed as directory bindings.
-- Intra- and cross-target overlap validation: Added strict overlap rejection via `pathOverlaps` and `assertNoDescriptorOverlap` (`src/manifests/manifest.ts`, `src/manifests/registry.ts`, `src/context/invocation-context.ts`) that rejects equal, nested (ancestor/descendant), duplicate document, and root/document collisions before any destination inventory reads.
-- Canonical project root and owner-controlled identity: Implemented `canonicalProjectRoot` in `src/scopes/identity.ts` enforcing real directory existence, non-symlink ancestry, owner control (`process.getuid()` or root), and native `realpath` canonicalization. Computed lowercase 64-hex SHA-256 `projectIdentity` over the validated canonical absolute path.
-- Non-publication safety: Added `resolvePublicationProjectContext` for publication-boundary mutation checks while preserving lexical project root resolution and independent `projectId` for general `resolveInvocationContext` commands.
-- Projection neutrality: Maintained exact byte-for-byte shape compatibility for `ProjectionBuildContext` in `src/adapters/types.ts`; adapters receive no scope or transaction context.
-- Verification: 174/174 tests passing across primitives, CLI, adapters, publication, and protocol test suites (`npm run test:primitives`, `npm run test:cli`); `npm run distribute:check` status ok with zero drift.
+- Intra- and cross-target overlap validation: Added strict overlap rejection via `pathOverlaps` and `assertNoDescriptorOverlap` that rejects equal, nested, duplicate document, and root/document collisions before destination inventory reads.
+- Canonical project root and owner-controlled identity: Implemented `canonicalProjectRoot` in `src/scopes/identity.ts` enforcing real directory existence, non-symlink ancestry, owner control, and native `realpath` canonicalization. Computed lowercase 64-hex SHA-256 `projectIdentity` over canonical path.
+- Non-publication safety: Added `resolvePublicationProjectContext` for publication-boundary mutation checks while preserving lexical project root resolution.
+- Verification: 174/174 tests passing across primitives, CLI, adapters, publication, and protocol test suites; `npm run distribute:check` status ok with zero drift.
+
 ### 2026-09-12 — feat(distribution): freeze scope publication protocol (Phase 01)
 
-**Status:** Phase 01 DONE (2026-09-12; 100%).  
-**Plan:** [Phase 01 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-01-cli-and-protocol-contract.md)
-
-- Froze scalar `--scope home|project` parsing/defaults, exact publication/recovery wire shapes, ordered shared/harness phase correlation, partial results, and exit category 5.
+- Froze scalar `--scope home|project` parsing/defaults, exact publication/recovery wire shapes, ordered shared/harness phase correlation, partial results, and exit category 5. [Phase 01 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-01-cli-and-protocol-contract.md).
 - Evidence: protocol 21/21, CLI 42/42, integration 14/14, publication 53/53, and `npm run build` passed.
-
-
 ### 2026-09-11 — fix(advisor): resolve V2 evidence.files schema ambiguity and improve input diagnostics
 
 - Resolved `PROTOCOL_INVALID` failure on caller-provided string `evidence.files` by differentiating client request validation from downstream adapter protocol errors.

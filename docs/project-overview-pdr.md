@@ -40,7 +40,7 @@ counsel bounded and fail-closed.
 - Two-phase project publication transactions with project-only rollback, non-compensation
   of shared commit, and schema-2 scope-isolated recovery.
 - One shared advisor controller published to `$HOME/.evcrate/bin`.
-- Explicit checkpoint counsel through a final `--advice` token.
+- Deterministic advice activation via `evcrate-advice-mode`, explicit checkpoint counsel through a final `--advice` token, and structured caller handoffs.
 - Documentation/target command naming as `/cmd-*`, OMP `__` flattening, and
   Copilot `evcrate-cmd-*` projection.
 
@@ -241,17 +241,18 @@ roots before destination reads. A simulated interruption recovers the complete
 prior managed set; unrelated policy, HOME roots, and unmanaged project files remain
 untouched. Current package scripts invoke the TypeScript path; no root `distribute.py`
 command is treated as canonical.
-### FR-11: Supervision semantics
+### FR-11: Deterministic advice activation and supervision semantics
 
-**Requirement:** A standalone final `--advice` token is explicit checkpoint counsel
-for bootstrap, code, cook, and fix workflows. `@advisor` remains ordinary task text.
-Only an outer <code>ADVICE_READY</code> envelope completes the checkpoint.
+**Requirement:** Deterministic advice activation is governed by the packaged CommonJS `evcrate-advice-mode` Node helper (`$HOME/.evcrate/bin/evcrate-advice-mode`) invoked before any state initialization or full mentoring load. A standalone final `--advice` token enables explicit mode (`EXPLICIT_FINAL_FLAG`). Structured pre-run (`INHERITED_PRE_RUN`) and same-run (`INHERITED_SAME_RUN`) caller handoffs preserve known plan/phase selections without synthetic flags or eager run creation. Neutral historical inspection is governed independently by `plan-progress.md` using `state get` only. `@advisor` remains ordinary task text. Only an outer <code>ADVICE_READY</code> envelope completes an authorized checkpoint.
 
-**Acceptance:** The token is case-sensitive, standalone, whitespace-delimited, final
-(trailing whitespace allowed), and duplicate tokens reject. Quoted, embedded,
-suffixed, differently cased, and non-final forms remain ordinary text. Handoffs
-preserve exactly one final token in explicit mode or no token in default mode.
-
+**Acceptance:**
+- **Invocation & limits:** Maintained callers invoke the helper with supported Node (`>=22.19.0`), absolute HOME path, zero positional options, and canonical project cwd. Strict bounded JSON stdin (`protocol: "evcrate-advice-mode"`, version 1, max 64 KiB), raw arguments (max 32 KiB), terminal output (max 256 KiB), and 2-second deadlines.
+- **Token parsing:** The token is case-sensitive, standalone, whitespace-delimited, and strictly final (trailing whitespace allowed). Duplicate tokens reject with `ADVICE_MODE_DUPLICATE_FLAG`. Quoted, embedded, suffixed, differently cased, and non-final forms remain ordinary work text.
+- **Modes:** Resolves mode `off`, `explicit`, or `inherited`. Helper in off mode performs zero get (L=0). Cooperating callers load full `advisor-mentoring.md` conditionally only upon resolved `explicit` or `inherited` mode. Off mode preserves ordinary debugging, review corrections, validation, approvals, and command-scoped Git policy without advice lifecycle calls; neutral historical progress inspection can perform identified `state get` without activating advice.
+- **Structured handoffs:** Routers (`/cmd-cook`, `/cmd-fix`) use `kind: "pre-run"` with `run: null` to preserve known plan/phase/target context without synthetic flags or eager router state init. Continuation delegates use `kind: "same-run"` forwarding verified `task_run_id`, `project_id`, `phase_id`, and exact revisions (`task_revision`, `scope_revision`, `evidence_revision`) validated by lazy get against durable state; completed or abandoned runs fail closed with `ADVICE_RUN_COMPLETED`.
+- **Fail-closed:** Missing/unreadable helper, unsupported Node, nonzero exit, malformed output, context mismatch, or stale revisions halt routing immediately with a sanitized four-key diagnostic (`{ code, category, action, message }`). No fallback parser, automatic installation, retry loop, or heuristic mode inference.
+- **Neutral progress & immutability:** Historical progress inspection uses `state get` only; permits existing lock acquisition/release and provably dead lock reaping; zero lifecycle writes/state mutation. Historical success requires matching project identity, repo-relative plan/phase paths, controller phase, and snapshot digest; completed scope is a verified no-op.
+- **Boundaries:** Caller JSON provides cooperative consistency without authenticated user intent or session-token provenance guarantees. Linux x64 bounded native qualification observed on OMP 18.6.1 across six scenario classes (`s01`, `s02`, `s03`, `s05`, `s07`, `s11`) capped at Step 0; prerequisite admission gates (`s10` diagnostic uncaptured, `s12` timed out) remain explicit native limits; incomplete A02/A22 historical artifact evidence, A12 retained-record reconciliation without compiler loops, and unexercised A13/A16 native branches. Other vendor model loops remain unqualified; native Windows and macOS are excluded by user direction; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim.
 ### FR-12: Documented command names
 
 **Requirement:** Documentation and target-facing examples use `/cmd-*` for every

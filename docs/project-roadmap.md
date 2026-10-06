@@ -1,11 +1,12 @@
 # Project Roadmap
 
-**Status:** Current roadmap for package `2.6.0`; Hook Materialization Scope
+**Status:** Current roadmap for package `2.9.0`; Hook Materialization Scope
 Distribution is complete through Phase 09, and Windows release qualification is
 complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Phase 08
 (commit `cbd298a4`, receipt `phase-08-completion-receipt.md`). Phase 09 documentation,
 controlled rollout, and lifecycle governance is completed (report `phase-09-rollout-and-lifecycle-report.md`).
-**Updated:** 2026-10-05
+**Updated:** 2026-10-06
+**Deterministic durable-advice activation:** 100% (4/4 phases complete; Phase 01–03 ordinary approved; Phase 04 DONE 2026-10-06; Cycle 2 review approved 9.8/10; user approved 2026-10-06T14:13:41+07:00). Bounded Linux qualification and documentation complete; Windows/macOS excluded; 604 pass, 24 Windows skips, 0 fail (628 unique tests); post-correction 309 unique / 285 pass / 24 skip / 0 fail; 46-file controller closure; explicit native qualification limits preserved. Scoped parent commit pending; no push or live publication.
 **Advisor Node-only launch and cross-platform runtime:** 5/8 phases durably complete (62.5%). Phase 06 candidate regeneration and Linux requalification is complete: replacement candidate `evcrate-candidate-1791140555626` (7,410 files, archive SHA-256 `6a720dfb136fb80ccd624cdca63dbce3ca18ba08fe75a2ef322c90f3d7a5b3a9`, manifest SHA-256 `365f145bb0deefe9eabad83ac6c9f9e598e7bb80f275c435e54a17321ee7c86a`). Stale `.omp` output hash in `.evcrate/build-manifest-omp.json` repaired; `node-launch.test.cjs` verified 9/9 passing directly within extracted candidate root; Cycle 2 native Windows runner fixes incorporated in `tests/advisor-controller/native-windows-qualification.cjs`; Linux qualification gates passed (753/753 passed, 25 win32 skips; health & launch 17/17 passed; release:check, distribute:check, and >30s smoke passed); code review approved 9.8/10. Ready for native Windows qualification re-execution (Phase 07). Phase 08 remains pending. See the [plan](../plans/261003-1527-advisor-node-only-launch/plan.md) and [requalification review](../plans/reports/code-review-261005-0231-phase-06-qualification-regeneration.md).
 
 **Filesystem-policy cutover progress:** 100% (2/2 phases complete; Phase 01 DONE 2026-09-27; Phase 02 DONE 2026-09-27; review approved 9.6/10; user approved). Cutover plan complete; broader operator release deployment matrix remains release-gated.
@@ -43,7 +44,7 @@ output and is not the phase evidence authority.
 
 The current source establishes a TypeScript control plane, eight persisted target IDs
 with seven shared-registry adapters plus a separately routed VS Code Local adapter,
-schema-2 target/build manifests, the current 36-file advisor controller closure,
+schema-2 target/build manifests, the current verified 46-file advisor controller closure,
 advisor v2 contracts with explicit policy migration, canonical generated mentor
 instructions, unified structured advice parsing, V2 envelope correspondence
 validation, compatibility direct checkpoint counsel, bounded primary retry with
@@ -64,6 +65,7 @@ policy; they are not hand edited.
 | Phase 9 packed consumer/adapter work | Historical evidence recorded | The changelog records packed-consumer and diagnostic adapter contracts; it does not claim live Agent Store/DamHopper release or target cutover. |
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
+| Deterministic durable-advice activation — Phases 01–04 | DONE (2026-10-06; Cycle 2 review approved 9.8/10; user approved 2026-10-06T14:13:41+07:00; 4/4 phases complete, 100%) | [Plan](../plans/261004-2012-deterministic-advice-activation/plan.md), [Phase 04](../plans/261004-2012-deterministic-advice-activation/phase-04-behavioral-qualification-and-docs.md), [Parent acceptance](../plans/261004-2012-deterministic-advice-activation/reports/phase-04-parent-acceptance.md), [Cycle 2 review](../plans/261004-2012-deterministic-advice-activation/reports/phase-04-review-cycle-2.md), and [Corrections validation](../plans/261004-2012-deterministic-advice-activation/reports/phase-04-review-corrections-validation.md); bounded Linux qualification completed (604 pass, 24 Windows-only skips, 0 fail across 628 unique tests; post-correction 309 unique / 285 pass / 24 skip / 0 fail; 2 throwaway smokes; 17 host probes pass; 144 registry resources, 9 manifests across 8 targets; 46-file controller closure). Preserves explicit qualification limits (Windows/macOS excluded; s10 uncaptured diagnostic / s12 15s timeout unqualified; non-OMP vendor sessions and model loops unrun). Local finalization complete; commit pending, no push or live publication. |
 | VS Code Local Native qualification — Phase 08 | DONE (2026-10-04; review approved 9.4/10; user approved; commit `cbd298a4`) | The eighth persisted target is `vscode`; the [index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md) reconciles 50 capability rows and 12 contexts (six contexts marked `QUALIFIED`, five `NOT EXERCISED`, one `UNSUPPORTED`). Gates: 8/8 Phase 08 tests, 737/737 full npm tests. Durable completion sealed in task run `980efda4-94ae-4a51-aac9-51bb62d1fe62`. |
 | VS Code Local documentation & rollout — Phase 09 | DONE (2026-10-04; review approved; report `phase-09-rollout-and-lifecycle-report.md`) | [Phase 09 Spec](../plans/261002-2213-vscode-local-native-support/phase-09-documentation-and-rollout.md) and [Rollout Report](../plans/261002-2213-vscode-local-native-support/reports/phase-09-rollout-and-lifecycle-report.md); delivers support matrix (12 contexts), quickstart, coexistence with Copilot CLI, bounded recovery runbook, and lifecycle stop triggers for undated Local retirement. |
 | Documentation centralization | Current gate | Advisor distribution and supervision content is centralized into the six core docs; standalone advisor docs are removed. |
