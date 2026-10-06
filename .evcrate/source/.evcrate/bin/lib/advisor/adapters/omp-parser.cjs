@@ -23,10 +23,10 @@ const EVENT_KEYS = Object.freeze({
 });
 const USER_MESSAGE_KEYS = Object.freeze(['role', 'content', 'attribution', 'timestamp']);
 const ASSISTANT_MESSAGE_KEYS = Object.freeze(['role', 'content', 'api', 'provider', 'model', 'responseModel',
-  'responseId', 'usage', 'stopReason', 'rawStopReason', 'timestamp', 'duration', 'ttft', 'completedAt', 'credentialId']);
+  'responseId', 'serviceTier', 'usage', 'stopReason', 'rawStopReason', 'timestamp', 'duration', 'ttft', 'completedAt', 'credentialId']);
 const TEXT_CONTENT_KEYS = Object.freeze(['type', 'text', 'textSignature']);
 const THINKING_CONTENT_KEYS = Object.freeze(['type', 'thinking', 'thinkingSignature', 'redacted']);
-const USAGE_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'totalTokens', 'cost']);
+const USAGE_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'premiumRequests', 'totalTokens', 'cost']);
 const COST_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'total']);
 function exactKeys(value, allowed, required = allowed) {
   if (!isPlainObject(value)) fail('PROTOCOL_INVALID');
@@ -55,7 +55,7 @@ function contentPart(part) {
 }
 function usageShape(value) {
   exactKeys(value, USAGE_KEYS, ['input', 'output', 'cacheRead', 'cacheWrite', 'totalTokens', 'cost']);
-  for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'totalTokens']) {
+  for (const key of ['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'premiumRequests', 'totalTokens']) {
     if (value[key] !== undefined) finite(value[key]);
   }
   exactKeys(value.cost, COST_KEYS);
@@ -88,6 +88,7 @@ function messageShape(message, route) {
   if (message.responseModel !== undefined
     && (typeof message.responseModel !== 'string' || message.responseModel !== message.model)) fail('MODEL_UNSUPPORTED');
   if (message.responseId !== undefined && typeof message.responseId !== 'string') fail('PROTOCOL_INVALID');
+  if (message.serviceTier !== undefined && (typeof message.serviceTier !== 'string' || !message.serviceTier)) fail('PROTOCOL_INVALID');
   if (message.rawStopReason !== undefined && typeof message.rawStopReason !== 'string') fail('PROTOCOL_INVALID');
   for (const key of ['duration', 'ttft', 'completedAt']) {
     if (message[key] !== undefined) finite(message[key]);
@@ -136,9 +137,9 @@ function updateShape(event) {
   if (update.type.endsWith('_end') && typeof update.content !== 'string') fail('PROTOCOL_INVALID');
 }
 function parseJsonl(text, route, expectedCwd) {
-  if (typeof text !== 'string' || !text || Buffer.byteLength(text, 'utf8') > 256 * 1024) fail('OUTPUT_LIMIT');
+  if (typeof text !== 'string' || !text || Buffer.byteLength(text, 'utf8') > 1024 * 1024) fail('OUTPUT_LIMIT');
   const lines = text.split(/\r?\n/u); if (lines.at(-1) === '') lines.pop();
-  if (!lines.length || lines.length > 2048 || lines.some((line) => !line)) fail('PROTOCOL_INVALID');
+  if (!lines.length || lines.length > 8192 || lines.some((line) => !line)) fail('PROTOCOL_INVALID');
   let phase = 0; let open; let answer; let finalAssistant; const messages = [];
   for (const line of lines) {
     let event; try { event = parseJsonDocument(line); } catch { fail('PROTOCOL_INVALID'); }
