@@ -105,7 +105,7 @@ export function stageAdvisorController(
     const dst = join(stageBin, entry);
     mkdirSync(dirname(dst), { recursive: true });
     copyFileSync(src, dst);
-    if (entry === 'evcrate-advisor' && process.platform !== 'win32') {
+    if ((entry === 'evcrate-advisor' || entry === 'evcrate-advice-mode') && process.platform !== 'win32') {
       try {
         chmodSync(dst, (lstatSync(dst).mode & 0o777) | 0o111);
       } catch (error) {

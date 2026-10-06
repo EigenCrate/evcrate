@@ -29,31 +29,16 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
-and does not duplicate route or adapter selection.
+When advice mode is active (`explicit` or `inherited`), named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence and does not duplicate route or adapter selection. In `off` mode, named checkpoints and mentoring lifecycle are never invoked.
 
 ## Advice Mode
 
-A final standalone `--advice` activates explicit review mentoring in `/code`.
-Before scouting, read `.codex/workflows/advisor-mentoring.md` (specifically
-`## Argument mode` and `## Caller lifecycle binding`) and derive `WORK_ARGUMENTS`
-plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the task input and
-apply the shared default stuck-escalation contract.
-
-If an active advisor run context is already present from an earlier named
-checkpoint (such as a direction, decision, or stuck checkpoint in this session),
-retain its identity and context: `task_run_id`, active phase, project root,
-current state revision, prior consultation, counsel, disposition, and outcome.
-Pass that same active run context forward to `/code`. Never initialize a new
-UUID or create redundant consultations. If no prior advice checkpoint exists,
-`/cook:auto:fast` remains stateless: never initialize state at command start
-just to track scout or fast preflight.
-
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.codex/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
-For every fallback handoff, pass `WORK_ARGUMENTS`, preserve any active run
-context, append exactly one trailing `--advice` in explicit mode, and otherwise
-pass no `--advice` token.
+Before discovery or routing, resolve the HOME helper per `.codex/workflows/advice-activation.md` if present; otherwise read `~/.codex/workflows/advice-activation.md` (the published install) with original `{{args}}`, canonical `context.command: "cook/auto/fast"`, the current root and any direct caller handoff.
+Preserve known direct-caller selections; use `work_target: "cook/auto/fast"` only when no caller target exists, and null plan/phase fields only when unknown.
+Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
+Apply neutral `.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.codex/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+This command is a stateless router; `/code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
 ---
 
 ## Role Responsibilities
@@ -74,7 +59,7 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 ## Workflow
 
 - **Scout**: Use `scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
-- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cook` with `WORK_ARGUMENTS`, preserving any active run context and the same explicit advice mode.
-- **Plan**: Use the matching `cmd_*` skill to run `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
-- **Implementation**: Use the matching `cmd_*` skill to run `/code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates. In explicit advice mode append exactly one trailing `--advice`; otherwise append none. Pass any active run context forward. `/code` is the sole durable-state owner and enforces the full lifecycle per `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.codex/workflows/advisor-mentoring.md`. Root `/cook:auto:fast` is a delegate router and delegates ownership to `/code`; do not duplicate publication or durable controller operations. Preserved historical snapshot protection applies across runs even when `--advice` is omitted; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal. Do not mutate captured plan, report, or doc files after `/code` seals the run, and do not duplicate substantive finalization. For advice-controlled plans or preserved snapshots, point startup and final output to `<plan-dir>/progress.md` (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker); old sealed `plan.md` remains untouched. Normal default plans with no history do not require, read, or output nonexistent progress links. Parent plan-owning completion (`/code`) writes mandatory outside-snapshot immutable phase completion receipts and updates live `progress.md` per `Plan progress and phase reconciliation` in `.codex/workflows/advisor-mentoring.md`.
-- **Fallback handoff**: If `/code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cook` or `/fix:hard` using `WORK_ARGUMENTS`, preserving any active run context; append exactly one trailing `--advice` in explicit mode and otherwise pass no `--advice` token. Preserve scoped approval and commit behavior (no actual commit now).
+- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/cook` with `WORK_ARGUMENTS` and structured caller context per `.codex/workflows/advice-activation.md` (no synthetic flag).
+- **Plan**: Use the matching `cmd_*` skill to run `/plan:fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` per `.codex/workflows/plan-progress.md` before capture; old sealed plans remain untouched.
+- **Implementation**: Use the matching `cmd_*` skill to run `/code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates without appending a synthetic `--advice` flag. Pass structured pre-run or same-run context per `.codex/workflows/advice-activation.md` when advice mode is active (`explicit` or `inherited`); pass no activation handoff when `off`. `/code` is the sole durable-state owner and enforces the full lifecycle per `## Caller lifecycle binding` in `.codex/workflows/advisor-mentoring.md` and neutral reconciliation per `.codex/workflows/plan-progress.md`. Root `/cook:auto:fast` is a delegate router and delegates ownership to `/code`; do not duplicate publication or durable controller operations. Preserved historical snapshot protection applies across runs even in `off` mode; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
+- **Fallback handoff**: If `/code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/cook` or `/fix:hard` using `WORK_ARGUMENTS` and structured caller context per `.codex/workflows/advice-activation.md` (no synthetic flag). Preserve scoped approval and commit behavior (no actual commit now).

@@ -66,12 +66,11 @@ plans/
 - List each phase with status/progress
 - Link to detailed phase files
 - Key dependencies
-- **Plan progress & reconciliation**: For advice-controlled plans (explicit `--advice`, applicable active advice run, or named checkpoint) and plans with preserved historical snapshots, follow [Plan progress and phase reconciliation](./advisor-mentoring.md#plan-progress-and-phase-reconciliation):
-  - Sealed `plan.md`, phase files, and historical baseline paths remain strictly immutable even if subsequent commands omit `--advice`. Never edit sealed `plan.md` in place.
-  - Live overview is maintained in `<plan-dir>/progress.md` (derived, uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker).
-  - New plans link `progress.md` before capture; for already sealed plans, startup and final output identify the overview without editing `plan.md`.
-  - Parent plan-owning completion publishes mandatory outside-snapshot immutable phase completion receipts and updates `progress.md` upon completion per [Plan progress and phase reconciliation](./advisor-mentoring.md#plan-progress-and-phase-reconciliation). Do not execute Git commands or captured-file/selected-index mutations after seal; only bounded administrative receipt and progress publication outside baseline is permitted.
-  - Normal plans without advice involvement keep normal `plan.md` status updates and do not require nonexistent progress links; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted.
+- **Plan progress & reconciliation**: Follow neutral [Plan progress and phase reconciliation](./plan-progress.md) in every mode, without loading full mentoring from documentation navigation.
+  - Sealed plan/phase/evidence/index identities remain protected independently of activation. Historical records never activate advice.
+  - Parent alone publishes immutable completion receipts outside capture and updates uncaptured `<plan-dir>/progress.md`; if a destination is already captured, stop publication rather than altering the manifest.
+  - Ordinary unprotected plans retain normal `plan.md` tracking after required approval/validation; protected off-mode phases use expressly non-durable default receipts. Never invent progress links or durable completion.
+  - Under resolved explicit/inherited mode, substantive docs/roadmap/status and selected index transitions settle under the registered parent action before final outcome/seal. No captured mutations or Git transitions after seal.
 ##### Phase Files (phase-XX-name.md)
 Fully respect the `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) file.
 Each phase file should contain:

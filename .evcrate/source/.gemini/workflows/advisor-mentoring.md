@@ -5,42 +5,22 @@
 
 # Advisor Mentoring Contract
 
-Use this contract whenever an implementation workflow executes under advice mode
-or reaches a named checkpoint. It defines raw argument parsing, bounded evidence,
-mandatory task-state lifecycle, canonical controller invocation, and the owner
-disposition gate.
+Load this contract only after `advice-activation.md` returns `MODE_READY` with
+resolved `ADVICE_MODE` equal to `explicit` or `inherited`. It defines bounded
+evidence, mandatory task-state lifecycle, canonical controller invocation and
+the owner disposition gate. Off-mode callers never load it.
 
-## Argument mode
+## Activation prerequisite
 
-1. Inspect raw command arguments before interpreting plan, phase, task, or
-   positional input.
-2. A standalone token is exactly `--advice` delimited by whitespace. Count all
-   standalone tokens first. Two or more tokens are a deterministic input error;
-   stop normal work.
-3. With exactly one token, explicit advice mode is active only when the token is
-   final after trailing whitespace. A non-final token is ordinary input.
-4. In explicit mode remove only the final token, its separator, and trailing
-   whitespace. Preserve every other byte as `WORK_ARGUMENTS`.
-5. With no active mode, `WORK_ARGUMENTS` is the complete raw input unchanged.
-   `--advice` alone produces empty work input and follows normal empty-input
-   handling.
-6. The raw wrapper is local parsing only. Downstream prompts receive
-   `WORK_ARGUMENTS`; never forward the wrapper itself.
+Consume the helper's exact `WORK_ARGUMENTS`, context and run binding. Do not
+parse arguments again or infer mode from history, a checkpoint name or blockers.
+Historical selection/protection and publication live in neutral
+[Plan progress and phase reconciliation](./plan-progress.md); that contract
+does not activate this lifecycle. Invalid continuation stops, never off/fresh.
 
-```text
-RAW = the unmodified argument string
-TOKENS = standalone `--advice` matches with whitespace boundaries
-if count(TOKENS) > 1: reject and stop
-if count(TOKENS) == 1 and the match is final after trailing-whitespace removal:
-    WORK_ARGUMENTS = RAW prefix before the match, with only its separator removed
-    ADVICE_MODE = explicit
-else:
-    WORK_ARGUMENTS = RAW
-    ADVICE_MODE = default
-```
-
-Do not normalize, re-tokenize, trim internal whitespace, or rewrite any other
-prefix or suffix bytes. The exact final `@advisor` token is ordinary work input.
+Named checkpoints below are authorized locations within an already activated
+lifecycle, not activation sources. Ordinary off-mode risk approvals and
+debugger/user escalation remain independent of this contract.
 
 ## Named checkpoints
 
@@ -145,121 +125,19 @@ For each operation use `spawn(process.execPath, [controller, ...args], { shell: 
 ### 5. Explicit caller state and counsel agent boundaries
 
 1. **Tool-less counsel agent**: The advisor agent (`advisor.md`) is strictly tool-less (`tools: none`). It cannot bootstrap task state, execute controller CLI commands, or recurse into another advisor. Never instruct the counsel agent to invoke itself or the controller.
-2. **Explicit requests require caller state management**: Both explicit `--advice` command invocations and named checkpoints require active task state. The caller workflow owns the state lifecycle and must execute the state machine (`init` -> `checkpoint` -> controller -> `state get` -> `disposition` -> `outcome` -> `complete`).
+2. **Resolved activation requires caller state management**: Explicit/inherited workflows own the state lifecycle (`init` -> `checkpoint` -> controller -> `state get` -> `disposition` -> `outcome` -> `complete`). A named checkpoint cannot activate that lifecycle; pre-run inheritance does not initialize state merely to route.
 3. **Interactive human decision**: State transition `state human-decision` requires authentic interactive console challenge via `/dev/tty` (POSIX) or verified `CONIN$` / `CONOUT$` (Windows). Conversational approval text in chat cannot satisfy or bypass a `needs_human` durable state gate; headless or detached environments fail closed to `needs_human`.
 4. **Terminal results and error handling**: Only an `ADVICE_READY` envelope completes the advice gate (exit code 0). Any `FAILED` envelope, nonzero exit code, process crash, timeout, or malformed JSON leaves the advice gate incomplete. Dependent mutations must never proceed without valid counsel.
 
 ## Caller lifecycle binding
 
-This is the single caller-side lifecycle for explicit advice mode and named
-checkpoints. The controller remains authoritative for freshness, authorized
-scope, revisions, correction accounting, and human gates; callers must not
-weaken or bypass those checks.
+This is the single caller-side lifecycle for resolved explicit/inherited mode.
+The controller remains authoritative for freshness, authorized scope, revisions,
+correction accounting and human gates; callers must not weaken or bypass them.
 
-### Plan progress and phase reconciliation
-
-Apply this section before selecting a phase, dispatching phase writers, or
-continuing a dependency batch, including when the current command omits
-`--advice`. It separates completion authority from its administrative display.
-
-**Mode and authority**
-
-- An ordinary plan with no advice-controlled evidence keeps normal `plan.md`
-  status updates after the command's required approval and validation. Do not
-  initialize controller state or require receipts merely for ordinary tracking.
-- Explicit advice mode, an applicable active advice run, or a named checkpoint
-  activates the advice lifecycle for that run. Preserve its identity, revisions,
-  counsel, disposition, outcome and gates even if a later caller omits the flag.
-- A completed historical advice run does not require a fresh advice run for a
-  new default-mode phase. It does protect its captured plan/status/evidence from
-  administrative overwrites. Absence of `--advice` never unseals those artifacts.
-- For an advice-controlled plan, `<plan-dir>/progress.md` is the current overview;
-  `plan.md` retains scope, dependencies and historical snapshot wording. The
-  overview is derived, never completion authority or implementation permission.
-  Distinguish current status, captured status, completion basis/scope, evidence
-  links, next phase and unresolved prerequisites. Never label authoring proof as
-  live qualification, or ordinary default completion as durable advice completion.
-
-**Reconcile before selection**
-
-1. Read the selected plan, phase contracts, existing run handoff/finalization
-   records and phase receipts. Discover runs from those records and supplied
-   caller context, not from plan-table status, a bare phase label or newest UUID.
-   Missing `progress.md` does not mean no advice history. An unreadable source is
-   an error, not evidence that no history exists.
-2. Preserve an applicable active run/action before considering new work. Its
-   stale, pending, correction and human gates remain binding; no replacement
-   UUID, implicit refresh, duplicate action or fresh consultation to evade them.
-3. For claimed advice completion, use the host-aware read-only `state get` for
-   the identified run and reconcile its completion evidence with the receipt.
-   Match project identity/root, repository-relative plan and phase paths,
-   controller phase ID, run, revisions, approved scope and snapshot digest.
-   The controller has no separate plan-ID field: establish the plan association
-   from captured task/evidence paths and the receipt, never phase-ID equality alone.
-   Successful completion requires a matching `complete` operation in the durable
-   ledger and the accepted, resolved outcome it sealed. `gate_status: completed`
-   alone is insufficient: operator abandonment also sets that flag.
-4. Missing receipt plus sufficient matching durable evidence permits receipt
-   reconstruction. A receipt or overview alone cannot resolve contradictory or
-   unavailable controller evidence: show last-recorded completion separately
-   from current verification, stop dependent execution and identify the missing
-   evidence. Do not downgrade a recorded success into work to rerun. Missing
-   plan/run association or conflicting scope likewise blocks automatic selection.
-5. Select only incomplete scope whose dependencies are established, then check
-   execution prerequisites and existing approval gates. An explicitly requested
-   already-completed phase is a no-op for that scope, not implicit reauthorization.
-   Apply the same rule to every parallel batch and automatic next-phase loop.
-   Publish the selected phase, basis, overview path and outstanding prerequisites.
-
-**Receipt and overview publication**
-
-- The parent is the single publisher. Before first capture of a new plan, add
-  navigation from `plan.md` to `progress.md` and record the plan/phase association
-  in the task/evidence and run handoff. For an already sealed plan, do not add a
-  link in place; startup and final output identify the overview and stale table.
-- Keep the live overview and planned completion-receipt destination outside
-  `task.authorized_paths`, `baseline_paths`, checkpoint evidence/artifacts and
-  selected Git transitions. They are bounded administrative outputs, not
-  substantive phase finalization. Cite immutable receipts in later reviews,
-  never the live overview. Never remove a path from an existing captured
-  manifest to make it mutable. If an intended destination is already captured,
-  stop that publication and report the conflict; preserve the snapshot.
-- After successful `state complete`, save an immutable phase completion receipt
-  under `<plan-dir>/reports/`, identifying project/plan, phase, approved scope,
-  run, completion operation/revision, evidence revision, matching accepted
-  disposition/resolved outcome and approved baseline digest, with links to
-  retained reviewed evidence and validation. Preserve the actual completion
-  response or an exact reference to its durable record; never invent IDs or
-  imply that the digest itself preserves the original file bytes.
-  Reuse an existing receipt only when its full completion identity matches.
-  The first receipt may use `<phase-id>-completion-receipt.md`; additional
-  authorized scopes/runs use `<phase-id>-<task-run-id>-completion-receipt.md`,
-  or `<phase-id>-default-<scope-revision-label>-completion-receipt.md` for a
-  default completion without a controller run. Keep prior receipts immutable;
-  a different valid scope is not a collision to overwrite. Discover and link
-  all applicable receipts when reconciling phase coverage. A contradictory
-  receipt for the same identity blocks publication. Non-plan tasks may still
-  use an optional administrative receipt.
-- Then update `progress.md` from reconciled evidence. This is the only mutable
-  post-completion status surface; never copy DONE into sealed files, stage their
-  index, broaden scope, relax prerequisites or claim later edits were reviewed.
-  One parent serializes publication across parallel results. Re-read before
-  replacing the overview; preserve unresolved/conflicting evidence rather than
-  allowing a later-finishing writer to overwrite another phase's result.
-- A new default-mode phase in an advice-controlled plan needs no controller
-  lifecycle unless a named checkpoint activates one. After its normal gates,
-  save an uncaptured immutable phase receipt explicitly marked
-  `default approval/validation; not durable advice completion`, linking actual
-  approval/validation and scope evidence, and update the overview. Do not invent
-  controller IDs or overwrite prior receipts. Substantive outputs remain subject
-  to their normal authorization; administrative publication grants none.
-- If completion succeeds but receipt/overview publication fails, report
-  `phase complete; progress publication failed` with the known run and revision.
-  On the next invocation, reconcile first and repair only administrative outputs
-  from sufficient evidence. Never rerun implementation, reopen completion or
-  initialize a run to repair the display. A publication error is not a failed
-  implementation outcome. These permissions never bypass another active run's
-  capture/writer barrier or authorize Git staging/commit after sealing.
+Apply neutral [Plan progress and phase reconciliation](./plan-progress.md)
+before selection and every dependency batch/automatic iteration, and for
+parent-owned immutable receipt/uncaptured overview publication after completion.
 
 
 ### Fresh first review (no active run)
@@ -286,14 +164,13 @@ continuing a dependency batch, including when the current command omits
 
 ### Active run and handoffs
 
-If `state get` shows an active direction, decision, or stuck run, continue that
-run: retain its `task_run_id`, phase and project root, current task/evidence
-revisions, prior consultation/counsel, disposition, outcome, and correction
-accounting. Handoffs preserve explicit advice mode and this context without
-repeating consultations; ordinary stateless routers stay stateless until a
-named checkpoint requires state. `get` reads state; it does not refresh a stale
-baseline. Never initialize a replacement UUID to bypass stale evidence, scope,
-or counters.
+Continue only the same-run binding validated by `advice-activation.md`, never a
+run discovered by historical get. Retain `task_run_id`, project root, phase,
+task/scope/evidence revisions, prior consultation/counsel, disposition, outcome
+and correction accounting. Forward that direct context without duplicate
+actions or consultations. Pre-run routers stay stateless; the implementation
+owner initializes only at its authorized barrier. Get does not refresh stale
+evidence; no replacement UUID bypasses scope, revisions, counters or gates.
 
 One parent owns all durable state operations and integrates child results.
 Before authorized bounded writes, require `accept` with a registered correction

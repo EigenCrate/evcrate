@@ -121,7 +121,7 @@ export function rewriteCommandGuidance(text: string, known: ReadonlySet<string>)
 
 export function addWorkflowFallback(text: string): string {
   let result = text;
-  for (const name of ['advisor-mentoring.md', 'advisory-interview.md']) {
+  for (const name of ['advice-activation.md', 'plan-progress.md', 'advisor-mentoring.md', 'advisory-interview.md']) {
     const local = `.codex/workflows/${name}`; const home = `~/.codex/workflows/${name}`;
     const marker = `\`${local}\``; if (!result.includes(`${marker} if present`)) result = result.replace(marker, `${marker} if present; otherwise read \`${home}\` (the published install)`);
   }

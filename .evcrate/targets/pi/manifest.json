@@ -23,6 +23,7 @@
     "files/agent/extensions/evcrate/index.js",
     "files/agent/extensions/evcrate/model-roles.js",
     "files/agent/extensions/evcrate/operation-policy.js",
+    "files/agent/extensions/evcrate/package.json",
     "files/agent/extensions/evcrate/paths.js"
   ],
   "overlay_root": ".evcrate/targets/pi/files",

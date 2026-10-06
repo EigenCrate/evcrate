@@ -83,15 +83,17 @@ function commandInstruction(root, reference) {
     .replace(/\.md$/, "")
     .split(sep)
     .join(":");
-  return `Invoke \`evcrate_command\` with \`{"name":"${name}","args":""}\`.`;
+  return `Invoke \`evcrate_command\` with name \`${name}\`, the intended command text unchanged in \`args\` (empty only when there is none), and the current direct \`handoff\` object when one exists.`;
 }
 
 export function resolveEvcrateMarkers(text, agentRoot = getAgentRoot()) {
   const root = getEvcrateRoot(agentRoot);
-  return text.replace(/{{evcrate:([^}\r\n]+)}}/g, (marker, rawReference) => {
+  return text.replace(/{{evcrate:([^}\r\n]+)}}/g, (_marker, rawReference) => {
     const reference = rawReference.trim();
     const command = commandInstruction(root, reference);
     if (command) return command;
-    return resolveContainedExistingPath(root, reference) || marker;
+    const resolved = resolveContainedExistingPath(root, reference);
+    if (!resolved) throw new Error(`Required EVCrate resource is unavailable: ${reference}`);
+    return resolved;
   });
 }

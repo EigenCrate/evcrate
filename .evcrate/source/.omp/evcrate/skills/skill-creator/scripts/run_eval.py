@@ -42,7 +42,7 @@ def run_single_query(
 ) -> bool:
     """Run a single query and return whether the skill was triggered.
 
-    Creates a command file in .omp/commands/ so it appears in Claude's
+    Creates a command file in .omp/evcrate/commands/ so it appears in Claude's
     available_skills list, then runs `claude -p` with the raw query.
     Uses --include-partial-messages to detect triggering early from
     stream events (content_block_start) rather than waiting for the

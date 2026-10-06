@@ -12,29 +12,17 @@ Use the orchestration protocol, development rules, and relevant skills to fix:
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); this command supplies bounded evidence
-and does not duplicate route or adapter selection.
+`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) only under explicit or inherited advice mode.
+This command supplies bounded evidence and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
-A final standalone `--advice` activates explicit review mentoring in `/cmd-code`.
-Before analysis, read `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and derive
-`WORK_ARGUMENTS` plus explicit/default advice mode from the raw arguments. Use
-`WORK_ARGUMENTS` as the issue input and apply the shared default stuck-escalation
-contract throughout discovery and planning.
-
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); default branches apply ONLY when no advice lifecycle is active. The argument routing token (`--advice`) passed to sub-commands or handoffs remains explicit-only (forwarded only when explicit `--advice` was provided).
-
-`/cmd-fix-hard` is a delegate router: it coordinates analysis, research, and planning, and delegates canonical
-implementation, review, and durable task-state lifecycle ownership to `/cmd-code`
-under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
-separate task run, invoke a duplicate review checkpoint, double advice
-checkpoint/init, or duplicate publication of progress receipts before or alongside `/cmd-code`.
-Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
-When the caller provides an active advice run context (`task_run_id`, active
-phase, project root, state revision, prior counsel/disposition/outcome),
-`/cmd-fix-hard` preserves that active caller context across the handoff to `/cmd-code`.
-Never initialize a new UUID or drop the active run state.
+Before discovery or routing, resolve the HOME helper per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/hard"`, the current root and any direct caller handoff.
+Preserve known direct-caller selections; use `work_target: "fix/hard"` only when no caller target exists, and null plan/phase fields only when unknown.
+Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
+Apply neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+8. `/cmd-fix-hard` is a delegate router: it coordinates analysis, research, and planning, and delegates canonical implementation, review, and durable task-state lifecycle ownership to `/cmd-code`. It must not initialize a separate task run, invoke a duplicate review checkpoint, double advice initialization, or duplicate publication of progress receipts before or alongside `/cmd-code`. Child agents report terminal artifacts and actual changed paths within parent-authorized paths; they receive strict ownership, writable path, protected path, and delta destination constraints, and never operate controller state or stage behind the parent.
 ## Workflow:
 
 If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.
@@ -55,16 +43,16 @@ Analyze the skills catalog and activate other skills that are needed for the tas
 1. Use `debugger` subagent to find the root cause of the issues and report back to main agent.
 2. Use `researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
 3. Use `planner` subagent to create an implementation plan based on the reports, then report back to main agent.
-4. Then use `/cmd-code <plan-path>` SlashCommand to implement the plan step by step.
-   This fallback handoff uses `WORK_ARGUMENTS`; append exactly one trailing
-   `--advice` in explicit mode and otherwise pass no `--advice` token. Forward
-   any active caller context (`task_run_id`, phase, state revision, prior
-   counsel/disposition/outcome) so `/cmd-code` continues as the single durable-state
-   owner without doubling advice initialization or consultations.
+4. Then use `/cmd-code <plan-path>` SlashCommand to implement the plan step by step:
+   - In `off` mode, invoke `/cmd-code <plan-path>` with no advice handoff and no appended token.
+   - In `explicit` or `inherited` mode, pass structured direct-caller handoff context to `/cmd-code`:
+     * Pre-run handoff: use the activation contract's exact `{ kind, context, run }` object with selected child `command: "code"`, current project root and plan target, genuinely known selections, and `run: null`.
+     * Same-run handoff: if invoked with an active advice run context (`task_run_id`, project_id, revisions, prior counsel/disposition/outcome), forward that exact matching binding and context so `/cmd-code` continues as the single durable-state owner without doubling advice initialization or consultations.
+     * NEVER append a synthetic `--advice` token.
 5. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps. For advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md` (uncaptured, outside baseline; never captured or cited as evidence/authorized substantive paths; if already captured, cannot overwrite progress, surface blocker); old sealed `plan.md` remains untouched. Normal default plans with no history do not require, read, or output nonexistent progress links.
-  * Durable completion, mandatory outside-snapshot immutable receipts, and live `progress.md` updates are owned by `/cmd-code` (which executes index transitions, matching validation, truthful outcome, and `state complete` under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md`) if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install); do not mutate captured baseline state, stage/commit captured paths, or fabricate completion after `/cmd-code` seals the run. Delegate routers do not duplicate publication or durable operations.
-  * Any post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits. Only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
+  * `/cmd-code` owns durable lifecycle/finalization under `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) only when mode is explicit/inherited, and parent-only receipt/progress publication under neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) in all applicable modes. Do not mutate captured paths/index identities or fabricate completion after `/cmd-code` seals a run; this router duplicates neither publication nor durable operations.
+  * Any post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits. Only bounded administrative receipt and progress publication outside baseline is permitted per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install).
   - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **REMEMBER**:

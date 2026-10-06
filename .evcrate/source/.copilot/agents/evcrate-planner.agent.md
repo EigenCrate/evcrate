@@ -106,7 +106,7 @@ created: {YYYY-MM-DD}
 For a new advice-controlled plan, link `<plan-dir>/progress.md` as the current
 overview before the first capture; explain that captured statuses are historical.
 Follow `Plan progress and phase reconciliation` in
-`.copilot/evcrate/workflows/advisor-mentoring.md`. Never rewrite a previously sealed plan
+`.copilot/evcrate/workflows/plan-progress.md`. Never rewrite a previously sealed plan
 to add navigation or update status. The parent owns receipts, reconciliation
 and progress publication; a planner does not initialize controller runs.
 Ordinary plans retain normal frontmatter/status updates without controller state.

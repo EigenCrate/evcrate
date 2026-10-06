@@ -7,36 +7,16 @@ Think harder to plan & start working on these tasks follow the Orchestration Pro
 
 ## Canonical checkpoint routing
 
-Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`{{evcrate:workflows/advisor-mentoring.md}}`; this command supplies bounded evidence
-and does not duplicate route or adapter selection.
+When advice mode is active (`explicit` or `inherited`), named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in `{{evcrate:workflows/advisor-mentoring.md}}`; this command supplies bounded evidence and does not duplicate route or adapter selection. In `off` mode, named checkpoints and mentoring lifecycle are never invoked.
 
 ## Advice Mode
 
-A final standalone `--advice` activates explicit review mentoring in `/code`.
-Before discovery or planning, read `{{evcrate:workflows/advisor-mentoring.md}}`
-(specifically `## Argument mode` and `## Caller lifecycle binding`) and derive
-`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
-tasks input.
-
-If an active advisor run context is already present from an earlier named
-checkpoint (such as a direction, decision, or stuck checkpoint in this session),
-retain its identity and context: `task_run_id`, active phase, project root,
-current state revision, prior consultation, counsel, disposition, and outcome.
-Pass that same active run context forward to {{evcrate:commands/code}}. Never initialize a new
-UUID or create redundant consultations. If no prior advice checkpoint exists,
-`/cook` remains stateless: never initialize state at command start just to track
-discovery, preflight, or planning.
-
-If explicit mode is active, append exactly one trailing `--advice` to the
-eventual `/code` handoff; otherwise append none. Apply the shared default
-stuck-escalation contract during `/cook` discovery and planning. If a stuck
-checkpoint is reached during planning, follow `## Caller lifecycle binding`
-for active run disposition and outcome before proceeding.
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `{{evcrate:workflows/advisor-mentoring.md}}`); default branches apply ONLY when no advice lifecycle is active.
-Every fallback handoff to another implementation command uses `WORK_ARGUMENTS`,
-preserves any active run context, appends exactly one trailing `--advice` when
-explicit mode is active, and otherwise passes no `--advice` token.
+Before discovery or routing, resolve the HOME helper per `{{evcrate:workflows/advice-activation.md}}` with original `$ARGUMENTS`, canonical `context.command: "cook"`, the current root and any direct caller handoff.
+Preserve known direct-caller selections; use `work_target: "cook"` only when no caller target exists, and null plan/phase fields only when unknown.
+Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
+Apply neutral `{{evcrate:workflows/plan-progress.md}}` in every mode. Only resolved `explicit` or `inherited` loads `{{evcrate:workflows/advisor-mentoring.md}}` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+This command is a stateless router; {{evcrate:commands/code}} owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
 ---
 
 ## Role Responsibilities
@@ -73,7 +53,7 @@ explicit mode is active, and otherwise passes no `--advice` token.
 - Do not edit code directly from `/cook`. Use `/code <plan-path>` after the plan is ready.
 - Root `/cook` delegates ownership to `/code`; do not mutate captured plan,
   report, doc files, or Git index state after {{evcrate:commands/code}} seals the run, and do not
-  duplicate substantive finalization. In explicit advice mode, phase-owned
+  duplicate substantive finalization. When advice mode is active, phase-owned
   configuration, onboarding, and selected Git decisions belong to `/code`'s
   pre-outcome finalization and must be passed to `/code` before delegation/sealing.
 **Subagent synchronization:** Treat every planner, researcher, scout, tester, debugger, reviewer, project-manager, or docs-manager delegation as a blocking call. Wait for the terminal result, verify the requested report/artifact, and do not hand off, continue, or finalize from partial output. For parallel work, wait for every requested agent and require one result per agent.
@@ -122,7 +102,7 @@ Do not hand off to `/code` until the preflight contract and plan are clear.
 
 * Use `planner` subagent to analyze the preflight contract, research reports, and scout reports to create an implementation plan using the progressive disclosure structure:
   - Create a directory using naming pattern from `## Naming` section.
-  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
+  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` per `{{evcrate:workflows/plan-progress.md}}` before capture; old sealed plans remain untouched.
   - For each phase, add `phase-XX-phase-name.md` files containing sections (Context links, Overview with date/priority/statuses, Key Insights, Requirements, Architecture, Related code files, Implementation Steps, Todo list, Success Criteria, Risk Assessment, Security Considerations, Next steps).
   - Include the preflight contract and side-effect review checklist in the plan.
 ### 6. Side-Effect Review Checklist
@@ -139,18 +119,15 @@ Before handoff, verify the plan accounts for:
 
 ### 7. Implementation Handoff
 
-* Use {{evcrate:commands/code}} <plan-path> Slash Command to implement the plan step by step. In
-  explicit advice mode invoke {{evcrate:commands/code}} <plan-path> --advice; never pass the token
-  into scout, research, preflight, or plan content.
-* Pass the plan path, any active run context (`task_run_id`, state revision,
-  prior counsel/disposition/outcome), and any unresolved questions to `/code`.
-* In explicit advice mode, phase-owned configuration, onboarding, and selected Git
-  decisions/execution belong to the implementation owner's pre-outcome finalization.
-  Clarify any onboarding setup or commit preferences with the user and pass such
-  decisions to `/code` before delegation/sealing.
-* In explicit advice mode, `/code` also owns required user approval/rejection and
-  any accepted fix cycles before its final outcome and completion. Pass this
-  requirement in the handoff; never return a sealed run to a corrective caller.
+* Use {{evcrate:commands/code}} <plan-path> Slash Command to implement the plan step by step without appending a synthetic `--advice` flag.
+* Pass direct structured downstream context per `{{evcrate:workflows/advice-activation.md}}`:
+  - When `ADVICE_MODE` is `off`: pass no activation handoff.
+  - When `ADVICE_MODE` is `explicit` or `inherited`:
+    - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path: null, phase_id: null }`, `run: null`). No UUID allocation or state init merely to hand off.
+    - If entering with an existing active run: pass same-run handoff (`kind: "same-run"`, exact context and validated `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }`), forwarding existing counsel and registered action context.
+* Never append a synthetic `--advice` flag to stand in for inheritance. Pass the plan path, any active run context, and any unresolved questions to {{evcrate:commands/code}}.
+* In active advice mode, phase-owned configuration, onboarding, and selected Git decisions/execution belong to the implementation owner's pre-outcome finalization. Clarify any onboarding setup or commit preferences with the user and pass such decisions to `/code` before delegation/sealing.
+* In active advice mode, {{evcrate:commands/code}} also owns required user approval/rejection and any accepted fix cycles before its final outcome and completion. Pass this requirement in the handoff; never return a sealed run to a corrective caller.
 * If the plan includes frontend work, ensure the `/code` handoff calls `ui-ux-designer` and follows `./docs/design-guidelines.md`.
 * If the plan needs visual assets, include `ai-multimodal` and `media-processing` requirements in the plan.
 
@@ -171,14 +148,14 @@ Before handoff, verify the plan accounts for:
 
 Substantive plan progress, documentation, and roadmap updates belong to phase
 execution and are owned and finalized inside `/code` before sealing durable
-completion under `## Caller lifecycle binding` and `Plan progress and phase reconciliation` in `{{evcrate:workflows/advisor-mentoring.md}}`.
+completion under `## Caller lifecycle binding` in `{{evcrate:workflows/advisor-mentoring.md}}` and neutral reconciliation in `{{evcrate:workflows/plan-progress.md}}`.
 
 * Root `/cook` is a delegate router: it delegates this ownership to `/code` and
   must not duplicate publication or durable controller operations. Do not mutate
   captured plan, report, or doc files after {{evcrate:commands/code}} seals its run, nor duplicate
   substantive finalization.
-* Preserved historical snapshot protection applies across runs even when `--advice`
-  is omitted; prior sealed paths remain immutable, while current-run registered
+* Preserved historical snapshot protection applies across runs even in `off`
+  mode; prior sealed paths remain immutable, while current-run registered
   pre-seal writes within parent-authorized paths remain permitted. Never direct edits
   to sealed plans or metadata/roadmap after seal.
 * For advice-controlled plans or plans with preserved historical snapshots,
@@ -187,23 +164,23 @@ completion under `## Caller lifecycle binding` and `Plan progress and phase reco
   already captured, cannot overwrite progress, surface blocker). Old sealed
   `plan.md` remains untouched; startup and final output identify the overview
   instead of relying on stale `plan.md` display.
-* Under advice lifecycle, all phase-owned configuration, onboarding updates, and
+* Under active advice mode, all phase-owned configuration, onboarding updates, and
   selected Git transitions belong to `/code`'s pre-outcome finalization before
   `state complete` seals the run. Root {{evcrate:commands/cook}} delegates sealing to {{evcrate:commands/code}} and
   performs no captured mutations or Git commands after seal.
 * Do not mark durable phase DONE prematurely or mutate captured evidence after
   complete. Do NOT prescribe copying DONE into captured files after sealing.
 * Parent plan-owning completion (`/code`) writes mandatory outside-snapshot
-  immutable phase completion receipts and live `progress.md` per `Plan progress and phase reconciliation` in `{{evcrate:workflows/advisor-mentoring.md}}`; root `/cook`
+  immutable phase completion receipts and live `progress.md` per `{{evcrate:workflows/plan-progress.md}}`; root `/cook`
   does not duplicate publication.
 * In default mode, if the user rejects the changes, ask for the issues and route
   back to `/code` with the plan and unresolved questions for a bounded fix cycle.
-* Under advice lifecycle, rejection and fixes are handled inside `/code` before
+* Under active advice mode, rejection and fixes are handled inside `/code` before
   sealing. After its completion receipt, root output is read-only; do not route
   a completed run back into checkpoint, disposition, correction, or outcome work.
 ### 10. Onboarding
 
-* Under advice lifecycle: phase-owned configuration and onboarding setup belong
+* Under active advice mode: phase-owned configuration and onboarding setup belong
   to the implementation owner's pre-outcome finalization and were passed to
   {{evcrate:commands/code}} before sealing. After {{evcrate:commands/code}} seals the run, provide readonly guidance
   only; perform no mutations to captured workspace paths or configuration files.
@@ -222,11 +199,11 @@ completion under `## Caller lifecycle binding` and `Plan progress and phase reco
   or plans with preserved historical snapshots, point startup and final output to
   `<plan-dir>/progress.md`. Normal default plans with no history do not require,
   read, or output nonexistent progress links.
-* Under advice lifecycle: selected Git decisions and execution belong to the
+* Under active advice mode: selected Git decisions and execution belong to the
   implementation owner's pre-outcome finalization before sealing. After `/code`
   seals the run, do not execute git commit or push commands or captured-file/selected-index
   mutations; emit readonly guidance or an uncaptured administrative receipt strictly
-  outside the captured baseline snapshot only per `Plan progress and phase reconciliation` in `{{evcrate:workflows/advisor-mentoring.md}}`.
+  outside the captured baseline snapshot only per `{{evcrate:workflows/plan-progress.md}}`.
 * In default mode: preserve existing default-mode postimplementation behavior:
   * Ask the user if they want to commit and push to git repository, if yes, use
     `git-manager` subagent to commit and push to git repository.

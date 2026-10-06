@@ -4,8 +4,8 @@
       "classification": "memory-file",
       "kind": "memory-file",
       "source": "CLAUDE.md",
-      "status": "migrated-wrapper",
-      "target": "GEMINI.md -> @./CLAUDE.md"
+      "status": "migrated",
+      "target": "GEMINI.md"
     },
     {
       "classification": "command-prose",

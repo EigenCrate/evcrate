@@ -88,7 +88,7 @@ Execute bash scripts with full shell capabilities.
 ```json
 {
   "type": "command",
-  "command": "jq -r '.tool_parameters.command' | tee -a .omp/commands.log"
+  "command": "jq -r '.tool_parameters.command' | tee -a .omp/evcrate/commands.log"
 }
 ```
 
@@ -228,7 +228,7 @@ Track bash commands for compliance.
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_parameters | \"\\(.command) - \\(.description)\"' >> .omp/commands.log"
+            "command": "jq -r '.tool_parameters | \"\\(.command) - \\(.description)\"' >> .omp/evcrate/commands.log"
           }
         ]
       }

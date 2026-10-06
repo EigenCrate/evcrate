@@ -3,58 +3,36 @@ description: "Analyze and fix issues [INTELLIGENT ROUTING]"
 argument-hint: "[issues] [--advice]"
 ---
 **Analyze the issue, select the narrowest fix workflow, and execute it in this session:**
-<issues>$ARGUMENTS</issues>
+<raw-issues>$ARGUMENTS</raw-issues>
 
 ## Advice Mode
 
-Parse the raw arguments for one exact, case-sensitive, whitespace-delimited
-`--advice` token. It is explicit only when it is the final token after trailing
-whitespace; reject duplicates and leave quoted, embedded, suffixed, non-final,
-or differently cased text unchanged. Strip the final token into
-`WORK_ARGUMENTS` before routing. Preserve explicit mode by appending exactly one
-trailing `--advice` to the delegated command.
-
-When the caller has an active advice run context (`task_run_id`, active phase,
-project root, state revision, prior counsel/disposition/outcome), preserve that
-active caller context across delegation. Never initialize a new UUID to bypass
-stale evidence or counters. The root router is stateless and must not initialize
-state runs, record duplicate consultations, or perform advisor calls itself; all
-durable operations and checkpoint invocations belong to the delegated command.
-
-If the selected specialist does not declare `--advice`, route to `/fix:hard`
-with the same `WORK_ARGUMENTS` and active caller context so the requested advice
-gate is not silently dropped. Otherwise pass no mode token.
-Read `{{evcrate:workflows/advisor-mentoring.md}}` before routing. Checkpoint and state
-requests use its authoritative host-aware invocation contract (POSIX direct path or
-Windows PowerShell / Node argv-array).
-
+Before discovery or routing, resolve the HOME helper per `{{evcrate:workflows/advice-activation.md}}` with original `$ARGUMENTS`, canonical `context.command: "fix"`, the current root and any direct caller handoff.
+Preserve known direct-caller selections; use `work_target: "fix"` only when no caller target exists, and null plan/phase fields only when unknown.
+Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
+Apply neutral `{{evcrate:workflows/plan-progress.md}}` in every mode. Only resolved `explicit` or `inherited` loads `{{evcrate:workflows/advisor-mentoring.md}}` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and only identified historical get, never hard lifecycle or inference.
+Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+8. The root router is stateless and must not initialize state runs, record duplicate consultations, perform advisor calls, or publish receipts itself; all durable operations and checkpoint invocations belong to the delegated command.
 ## Execution Contract
 
-After selecting a route, execute the selected command immediately; do not print
-a route for the user to run manually.
+After selecting a route, execute the selected command immediately; do not print a route for the user to run manually.
 
-1. Build one enhanced description from `WORK_ARGUMENTS` and preserve it exactly
-   as the delegated command's input. Preserve active caller context (`task_run_id`,
-   phase, state revision, prior counsel/disposition/outcome) and append trailing
-   `--advice` only when explicit mode is active.
-2. When the host exposes `SlashCommand`, execute the selected route with that
-   mechanism in the same session. For example, `/fix:hard` is defined by
-   `.pi/agent/evcrate/commands/fix/hard.md`.
-3. If this command environment cannot recursively invoke a file-based slash
-   command, read the selected command definition and perform that workflow
-   directly in the current session. Never emit a bare specialist-command
-   handoff, ask the user to rerun it, or stop after route selection.
-4. Wait for the delegated workflow to reach its terminal result before reporting
-   the route. The router is stateless and must not duplicate advisor calls,
-   initialize state runs, or summarize a partial delegation.
-
+1. Build one enhanced description from `WORK_ARGUMENTS` and preserve it exactly as the delegated command's input.
+2. In `off` mode, delegate to the specialist with no advice handoff and no appended token.
+3. In `explicit` or `inherited` mode, pass structured direct-caller handoff context to the delegated specialist:
+   - If entering without an active run: pass pre-run handoff (`kind: "pre-run"`, exact selected child `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: null`). Preserve known direct-caller or router-selected plan/phase values; use null only when genuinely unknown, per the shared activation contract.
+   - If entering with an active run: pass same-run handoff (`kind: "same-run"`, `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }}`). Forward prior counsel, disposition, and registered action in direct caller context.
+   - NEVER append a synthetic `--advice` token.
+4. All specialists support the shared activation contract. Route directly to the designated specialist by issue type. Use the existing `/fix:hard` route only if a custom execution environment cannot carry the structured handoff contract, not because a command hint lacks a flag.
+5. When the host exposes `SlashCommand`, execute the selected route with that mechanism in the same session.
+6. If this command environment cannot recursively invoke a file-based slash command, read the selected command definition and perform that workflow directly in the current session. Never emit a bare specialist-command handoff, ask the user to rerun it, or stop after route selection.
+7. Child writers receive strict ownership, writable path, protected path, and delta destination constraints; they never operate controller state or stage behind the parent.
+8. Wait for the delegated workflow to reach its terminal result before reporting the route. The router is stateless and must not duplicate advisor calls, initialize state runs, or summarize a partial delegation.
 
 ## Decision Tree
 
 **1. Check for existing plan:**
-- If a markdown plan exists, select `/code <path-to-plan>`, append one trailing
-  `--advice` only when explicit mode is active, and preserve any active caller
-  context. Execute it under the contract above.
+- If a markdown plan exists, select {{evcrate:commands/code}} <path-to-plan>. Forward structured pre-run or same-run context when in `explicit` or `inherited` mode; never append synthetic `--advice`. Execute it under the contract above.
 
 **2. Route by issue type:**
 
@@ -82,17 +60,7 @@ a route for the user to run manually.
 **H) Simple/Quick Fixes** (default: small bug, single file, straightforward)
 → `/fix:fast <detailed-description>`
 
-When explicit advice mode is active, apply the Advice Mode routing rule above:
-specialists that declare `--advice` (`/fix:test`, `/fix:logs`, `/fix:parallel`,
-`/fix:hard`) receive trailing `--advice` directly, while specialists without
-advice support (`/fix:types`, `/fix:ui`, `/fix:ci`, `/fix:fast`) route to
-`/fix:hard <detailed-description>` with trailing `--advice` and active caller
-context. When explicit advice mode is default (no `--advice`), route directly
-to the designated specialist without an `--advice` token. Execute the selected
-command under the contract above. Never report an advisor result before the
-delegated command returns a terminal `ADVICE_READY` result from the central
-controller according to the host-aware invocation contract in
-`{{evcrate:workflows/advisor-mentoring.md}}`.
+All specialists support the shared activation contract. Route directly to the designated specialist by issue type. In `off` mode, route directly without handoff. In `explicit` or `inherited` mode, supply the structured pre-run or same-run context without synthetic flags. Use the existing {{evcrate:commands/fix:hard}} route only if a custom execution environment cannot carry the structured handoff contract, not because a command hint lacks a flag. Execute the selected command under the contract above.
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail
 - If unclear, ask user for clarification before routing

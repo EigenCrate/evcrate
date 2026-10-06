@@ -194,13 +194,13 @@
   name: /cmd-fix__ci
   path: cmd-fix__ci.md
   description: Analyze Github Actions logs and fix issues
-  argument_hint: '[github-actions-url]'
+  argument_hint: '[github-actions-url] [--advice]'
   category: fix
 - source: fix/fast.md
   name: /cmd-fix__fast
   path: cmd-fix__fast.md
   description: Analyze and fix small issues [FAST]
-  argument_hint: '[issues]'
+  argument_hint: '[issues] [--advice]'
   category: fix
 - source: fix/hard.md
   name: /cmd-fix__hard
@@ -230,13 +230,13 @@
   name: /cmd-fix__types
   path: cmd-fix__types.md
   description: Fix type errors
-  argument_hint: ''
+  argument_hint: '[options] [--advice]'
   category: fix
 - source: fix/ui.md
   name: /cmd-fix__ui
   path: cmd-fix__ui.md
   description: Analyze and fix UI issues
-  argument_hint: '[issue]'
+  argument_hint: '[issue] [--advice]'
   category: fix
 - source: git/cm.md
   name: /cmd-git__cm

@@ -22,6 +22,22 @@ const SLASH_PHRASE = /\bslash\s*[- ]?commands?\b/iu;
 const USE = /\buse\b/iu;
 const NON_DIRECTIVE = /\b(?:command\s*[- ]?path|discover(?:y|ing)?|available|examples?)\b/iu;
 const FENCE = /^\s*(?:`{3,}|~{3,})/u;
+const GENERIC_WORKFLOW_LOOKUP =
+  /Resolve required workflow resources from `(?:\.\/)?\.claude\/workflows\/<name>` when present; otherwise use the published `~\/\.claude\/workflows\/<name>`\./gu;
+
+function translateGenericWorkflowLookup(value: string): string {
+  return value.replace(
+    GENERIC_WORKFLOW_LOOKUP,
+    'Resolve required workflow resources from `{{evcrate:workflows}}/<name>` in the active Pi installation.',
+  );
+}
+
+function translateResourcePatterns(value: string): string {
+  return value.replace(
+    /(?<![~A-Za-z0-9_./-])(?:\.\/)?\.claude\/(workflows|scripts|hooks)\/\*/gu,
+    (_match, kind: string) => `{{evcrate:${kind}}}/*`,
+  );
+}
 
 function knownCommandNames(commands: readonly string[]): ReadonlySet<string> {
   return new Set(commands.map((command) => command.replaceAll('/', ':').toLowerCase()));
@@ -57,7 +73,9 @@ function translateNestedCommands(value: string, commands: readonly string[]): st
 
 export function translatePrompt(value: string, commands: readonly string[] = []): string {
   const urls: string[] = [];
-  let translated = normalizeLf(value).replace(URL, (match) => { const token = `__PI_URL_${urls.length}__`; urls.push(match); return token; });
+  let translated = translateResourcePatterns(
+    translateGenericWorkflowLookup(normalizeLf(value)),
+  ).replace(URL, (match) => { const token = `__PI_URL_${urls.length}__`; urls.push(match); return token; });
   for (const [pattern, replacement] of PATH_TRANSLATIONS) translated = translated.replace(pattern, replacement);
   for (const prefix of ['$HOME', '${HOME}', '~']) for (const separator of ['/', '\\']) {
     for (const suffix of ['scripts', 'hooks', 'workflows', 'output-styles', '.env', '.mcp.json']) {

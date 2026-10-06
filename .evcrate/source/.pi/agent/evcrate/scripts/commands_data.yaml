@@ -194,13 +194,13 @@
   name: '/evcrate:fix:ci'
   path: fix/ci.md
   description: Analyze Github Actions logs and fix issues
-  argument_hint: '[github-actions-url]'
+  argument_hint: '[github-actions-url] [--advice]'
   category: fix
 - source: fix/fast.md
   name: '/evcrate:fix:fast'
   path: fix/fast.md
   description: Analyze and fix small issues [FAST]
-  argument_hint: '[issues]'
+  argument_hint: '[issues] [--advice]'
   category: fix
 - source: fix/hard.md
   name: '/evcrate:fix:hard'
@@ -230,13 +230,13 @@
   name: '/evcrate:fix:types'
   path: fix/types.md
   description: Fix type errors
-  argument_hint: ''
+  argument_hint: '[options] [--advice]'
   category: fix
 - source: fix/ui.md
   name: '/evcrate:fix:ui'
   path: fix/ui.md
   description: Analyze and fix UI issues
-  argument_hint: '[issue]'
+  argument_hint: '[issue] [--advice]'
   category: fix
 - source: git/cm.md
   name: '/evcrate:git:cm'

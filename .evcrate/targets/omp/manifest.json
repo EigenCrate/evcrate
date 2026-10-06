@@ -3,6 +3,7 @@
   "name": "omp",
   "adapter": "dist/adapters/omp/index.js",
   "adapter_sources": [
+    "dist/adapters/omp/activation.js",
     "dist/adapters/omp/agents.js",
     "dist/adapters/omp/commands.js",
     "dist/adapters/omp/frontmatter.js",

@@ -10,6 +10,7 @@ import {
   MAX_COMMAND_OUTPUT_LINES,
   parseCommandFile,
 } from "./command-files.js";
+import { prependCommandContext } from "./child-context.js";
 import { getAgentRoot, getEvcrateRoot, resolveEvcrateMarkers } from "./paths.js";
 
 function boundedCollector() {
@@ -126,6 +127,7 @@ export function readManagedCommand(command) {
 }
 
 export async function expandManagedCommand(command, args, context, options = {}) {
+  if (typeof args !== "string") throw new Error("EVCrate commands require raw string arguments");
   const parsed = options.parsed || readManagedCommand(command);
   const agentRoot = options.agentRoot || getAgentRoot();
   const execute = options.execute || ((shell) => executeBoundedShell(shell, {
@@ -133,11 +135,14 @@ export async function expandManagedCommand(command, args, context, options = {})
     env: typeof options.sessionEnv === "function" ? options.sessionEnv() : undefined,
     signal: context.signal,
   }));
-  const body = await expandCommandBody(parsed.body, args, {
+  const expandedBody = await expandCommandBody(parsed.body, args, {
     cwd: context.cwd,
     execute,
     resolveMarkers: (text) => resolveEvcrateMarkers(text, agentRoot),
   });
+  const body = options.invocation
+    ? prependCommandContext(expandedBody, options.invocation)
+    : expandedBody;
   return { ...parsed, body };
 }
 
@@ -158,7 +163,15 @@ export function registerManagedCommands(pi, options = {}) {
           const token = policy?.begin({ allowedTools: currentDefinition.allowedTools });
           try {
             const current = await expandManagedCommand(command, args, context, {
-              ...options, pi, agentRoot,
+              ...options,
+              pi,
+              agentRoot,
+              invocation: {
+                source: "native-user",
+                command: command.canonicalName,
+                rawArguments: args,
+                handoff: null,
+              },
             });
             pi.sendUserMessage(current.body);
           } catch (error) {

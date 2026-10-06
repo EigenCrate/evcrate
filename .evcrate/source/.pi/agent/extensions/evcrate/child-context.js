@@ -34,6 +34,31 @@ export function appendChildContext(task, additionalContext, roots) {
   return [task, additionalContext, ...formatRuntimeRoots(roots)].filter(Boolean).join("\n\n");
 }
 
+function commandTransportError(message) {
+  throw new Error(`EVCrate command context invalid: ${message}`);
+}
+
+/** Carry cooperative caller data in the model-visible command result; it is not provenance. */
+export function createCommandContext({ source, command, rawArguments, handoff = null }) {
+  if (source !== "native-user" && source !== "model-tool") commandTransportError("unsupported source");
+  if (typeof command !== "string" || !command) commandTransportError("canonical command is required");
+  if (typeof rawArguments !== "string") commandTransportError("raw arguments must be a string");
+  if (handoff !== null && (!isObject(handoff))) commandTransportError("handoff must be an object or null");
+  return Object.freeze({
+    protocol: "evcrate-pi-command-context",
+    version: 1,
+    source,
+    command,
+    raw_arguments: rawArguments,
+    handoff,
+  });
+}
+
+export function prependCommandContext(body, invocation) {
+  if (typeof body !== "string") commandTransportError("expanded body must be a string");
+  return `${JSON.stringify({ evcrate_command_context: createCommandContext(invocation) })}\n\n${body}`;
+}
+
 /** Compatibility export backed by the shared, bounded canonical hook adapter. */
 export function createChildStartRunner(options = {}) {
   return createAdapterChildStartRunner(options);

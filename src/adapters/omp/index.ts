@@ -31,7 +31,7 @@ function build(context: ProjectionBuildContext): void {
     scriptDirectory: '.omp/evcrate/scripts',
     commands: {
       format: 'markdown',
-      root: '../../commands',
+      root: '../commands',
       authorityPath: '../command-name-map.json',
       mapRecord(cmd) {
         const item = Object.values(map).find((c) => c.source === cmd.source);

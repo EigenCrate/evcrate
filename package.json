@@ -59,7 +59,7 @@
     "release:candidate": "node scripts/release/run-release-candidate.cjs",
     "release:prepare": "node scripts/prepare-release-assets.cjs",
     "release:verify-assets": "node scripts/release/asset-verification.cjs",
-    "test:release": "node --test tests/distribution/private-release-artifacts.test.mjs tests/distribution/release-orchestration.test.mjs",
+    "test:release": "node --test tests/distribution/private-release-artifacts.test.mjs tests/distribution/advice-helper-launchability.test.mjs tests/distribution/release-orchestration.test.mjs",
     "test:installer:linux": "node --test tests/installers/*.test.mjs",
     "test:installer:windows": "node tests/installers/windows-release-qualification.mjs",
     "test:distribution:rollout": "node --test tests/distribution/private-unpack-rollout.test.mjs"

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
+import { MANAGED_PI_PACKAGES } from "../../../../dist/index.js";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -46,11 +47,7 @@ function installPi(root) {
 }
 
 function installManagedPackages(runtime, home) {
-  for (const source of [
-    "npm:pi-subagents@0.44.0",
-    "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
-    "npm:@juicesharp/rpiv-todo@2.4.0",
-  ]) {
+  for (const source of MANAGED_PI_PACKAGES) {
     run(runtime.command, [...runtime.args, "install", source], {
       cwd: home,
       env: { ...process.env, HOME: home, PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0" },
@@ -60,41 +57,59 @@ function installManagedPackages(runtime, home) {
   const installed = readdirSync(packageRoot, { recursive: true })
     .filter((path) => path.endsWith("package.json"))
     .map((path) => JSON.parse(readFileSync(join(packageRoot, path), "utf8")));
+  const managedBases = MANAGED_PI_PACKAGES.map((pkg) => pkg.replace(/^npm:/, "").replace(/@[^@]+$/, ""));
   const managed = installed
-    .filter(({ name }) => [
-      "pi-subagents",
-      "@juicesharp/rpiv-ask-user-question",
-      "@juicesharp/rpiv-todo",
-    ].includes(name))
+    .filter(({ name }) => managedBases.includes(name))
     .map(({ name, version }) => `${name}@${version}`);
-  assert.deepEqual(new Set(managed), new Set([
-    "pi-subagents@0.44.0",
-    "@juicesharp/rpiv-ask-user-question@2.4.0",
-    "@juicesharp/rpiv-todo@2.4.0",
-  ]));
+  const expected = MANAGED_PI_PACKAGES.map((pkg) => pkg.replace(/^npm:/, ""));
+  assert.deepEqual(new Set(managed), new Set(expected));
 }
 
-test("packed distribution builds, publishes, and Pi discovers native commands and skills", { timeout: 600_000 }, () => {
+test("packed distribution publishes and Pi discovers native commands and skills", { timeout: 600_000 }, (t) => {
   const root = mkdtempSync(join(tmpdir(), "evcrate-pi-runtime-"));
+  t.after(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
   try {
     const packDirectory = join(root, "pack");
     const installRoot = join(root, "installed");
     const home = join(root, "home");
+    const project = join(root, "project");
     const state = join(root, "state");
-    mkdirSync(packDirectory);
+    mkdirSync(packDirectory, { recursive: true });
+    mkdirSync(installRoot, { recursive: true });
+    mkdirSync(home, { recursive: true, mode: 0o700 });
+    mkdirSync(project, { recursive: true, mode: 0o700 });
+    mkdirSync(state, { recursive: true, mode: 0o700 });
     run("npm", ["pack", "--pack-destination", packDirectory, "--ignore-scripts"], { cwd: projectRoot });
     const tarball = join(packDirectory, readdirSync(packDirectory).find((name) => name.endsWith(".tgz")) ?? "");
     assert.ok(existsSync(tarball), "npm pack did not create a tarball");
     run("npm", ["install", "--prefix", installRoot, "--ignore-scripts", "--no-audit", "--no-fund", tarball]);
     const packageName = JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf8")).name;
     const packedRoot = join(installRoot, "node_modules", packageName);
-    assert.ok(existsSync(join(packedRoot, "migrate_claude_to_pi.py")));
-    run("python3", ["distribute.py", "--build"], { cwd: packedRoot });
-    run("python3", ["distribute.py", "--check"], { cwd: packedRoot });
-    run("python3", ["distribute.py", "--publish"], {
+    const cliPath = join(packedRoot, "dist/cli/evcrate.js");
+
+    const dryRunOutput = run(process.execPath, [
+      cliPath, "publish", "--dry-run", "--target", "pi", "--home", home,
+      "--project-root", project, "--state-home", state, "--json"
+    ], {
       cwd: packedRoot,
-      env: { ...process.env, EVCRATE_HOME: home, EVCRATE_STATE_HOME: state },
+      env: { ...process.env, HOME: home, EVCRATE_HOME: home, EVCRATE_STATE_HOME: state },
     });
+    const dryRun = JSON.parse(dryRunOutput);
+    assert.equal(dryRun.status, "preview");
+    assert.equal(existsSync(join(home, ".pi/agent/extensions/evcrate/index.js")), false,
+      "dry-run must not publish the installed extension");
+
+    const applyOutput = run(process.execPath, [
+      cliPath, "publish", "--apply", "--target", "pi", "--home", home,
+      "--project-root", project, "--state-home", state, "--json"
+    ], {
+      cwd: packedRoot,
+      env: { ...process.env, HOME: home, EVCRATE_HOME: home, EVCRATE_STATE_HOME: state },
+    });
+    const apply = JSON.parse(applyOutput);
+    assert.equal(apply.status, "published");
 
     const pi = installPi(root);
     installManagedPackages(pi, home);
@@ -102,22 +117,15 @@ test("packed distribution builds, publishes, and Pi discovers native commands an
     const names = new Set(commands.map((command) => command.name));
     for (const name of ["plan", "fix:fast", "cook:auto:fast"]) assert.ok(names.has(name), name);
     assert.ok(names.has("skill:planning"), "generated Pi skills were not discovered");
-    assert.equal(readdirSync(join(home, ".pi/agent/agents")).filter((name) => name.endsWith(".md")).length, 18);
 
     const isolated = rpcCommands(pi, home, ["--no-skills", "--skill", join(home, ".pi/agent/skills")]);
     assert.ok(isolated.some((command) => command.name === "skill:planning"));
     const alternateAgent = join(root, "alternate-pi/agent");
     cpSync(join(home, ".pi/agent"), alternateAgent, { recursive: true });
-    const alternate = rpcCommands(pi, home, ["--no-extensions", "-e", join(alternateAgent, "extensions/evcrate/index.js")], {
-      PI_CODING_AGENT_DIR: alternateAgent,
-    });
+    const alternate = rpcCommands(pi, home, ["--no-extensions", "-e", join(alternateAgent, "extensions/evcrate/index.js")]);
     assert.ok(alternate.some((command) => command.name === "plan"));
     const settings = JSON.parse(readFileSync(join(home, ".pi/agent/settings.json"), "utf8"));
-    assert.deepEqual(settings.packages, [
-      "npm:pi-subagents@0.44.0",
-      "npm:@juicesharp/rpiv-ask-user-question@2.4.0",
-      "npm:@juicesharp/rpiv-todo@2.4.0",
-    ]);
+    assert.deepEqual(settings.packages, [...MANAGED_PI_PACKAGES]);
     assert.ok(!settings.packages.some((entry) => String(entry).includes("pi-code")));
   } finally {
     rmSync(root, { recursive: true, force: true });

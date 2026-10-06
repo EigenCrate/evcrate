@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 def _load_omp_command_map(commands_dir):
     import json, re
-    map_path = commands_dir.parent / "evcrate" / "command-name-map.json"
+    map_path = commands_dir.parent / "command-name-map.json"
     try:
         payload = json.loads(map_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValueError) as error:
@@ -26,7 +26,7 @@ def _load_omp_command_map(commands_dir):
 
 """
     EVCrate Help Command - All-in-one guide with dynamic command discovery.
-Scans .omp/commands/ directory to build catalog at runtime.
+Scans .omp/evcrate/commands/ directory to build catalog at runtime.
 
 Usage:
     python ev-help.py                    # Overview with quick start
@@ -449,7 +449,8 @@ def discover_commands(commands_dir: Path, prefix: str, command_map: dict | None 
             if record is None: raise RuntimeError(f"OMP command map has no record for {rel_path.as_posix()}")
             mapped_targets.add(rel_path.as_posix())
             cmd_name = record["targetName"]
-            category = parts[0] if len(parts) > 1 else "core"
+            src_parts = record["sourceName"].split(":")
+            category = src_parts[0] if len(src_parts) > 1 else "core"
         else:
             cmd_name = command_file.stem if len(parts) == 1 else ':'.join([*parts[:-1], command_file.stem])
             category = "core" if len(parts) == 1 else parts[0]
@@ -1088,9 +1089,9 @@ def show_coding_level_guide() -> None:
 def main():
     script_path = Path(__file__).resolve()
     source_kind, source_dir = resolve_command_source(script_path)
-    command_map = _load_omp_command_map(source_dir) if source_dir.name == "commands" and source_dir.parent.name == ".omp" else None
+    command_map = _load_omp_command_map(source_dir) if source_dir.name == "commands" and source_dir.parent.name == "evcrate" else None
     if not source_dir.is_dir():
-        print("Error: no .omp/commands or generated command skills directory found.")
+        print("Error: no .omp/evcrate/commands or generated command skills directory found.")
         sys.exit(1)
 
     if source_kind == "skills":

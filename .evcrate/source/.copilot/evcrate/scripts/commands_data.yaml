@@ -194,13 +194,13 @@
   name: /evcrate-cmd-fix-ci
   path: evcrate-cmd-fix-ci/SKILL.md
   description: Analyze Github Actions logs and fix issues
-  argument_hint: '[github-actions-url]'
+  argument_hint: '[github-actions-url] [--advice]'
   category: fix
 - source: fix/fast.md
   name: /evcrate-cmd-fix-fast
   path: evcrate-cmd-fix-fast/SKILL.md
   description: Analyze and fix small issues [FAST]
-  argument_hint: '[issues]'
+  argument_hint: '[issues] [--advice]'
   category: fix
 - source: fix/hard.md
   name: /evcrate-cmd-fix-hard
@@ -230,13 +230,13 @@
   name: /evcrate-cmd-fix-types
   path: evcrate-cmd-fix-types/SKILL.md
   description: Fix type errors
-  argument_hint: ''
+  argument_hint: '[options] [--advice]'
   category: fix
 - source: fix/ui.md
   name: /evcrate-cmd-fix-ui
   path: evcrate-cmd-fix-ui/SKILL.md
   description: Analyze and fix UI issues
-  argument_hint: '[issue]'
+  argument_hint: '[issue] [--advice]'
   category: fix
 - source: git/cm.md
   name: /evcrate-cmd-git-cm

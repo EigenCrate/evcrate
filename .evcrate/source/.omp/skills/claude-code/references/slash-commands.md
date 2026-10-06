@@ -8,7 +8,7 @@ Slash commands are user-defined operations that:
 - Start with `/` (e.g., `/cmd-cook`, `/cmd-test`)
 - Expand to full prompts when executed
 - Accept arguments
-- Located in `.omp/commands/`
+- Located in `.omp/evcrate/commands/`
 - Can be project-specific or global
 
 ## Development Commands
@@ -410,13 +410,13 @@ Create new agent skill.
 
 ### Command File Structure
 ```
-.omp/commands/
+.omp/evcrate/commands/
 └── my-command.md
 ```
 
 ### Example Command File
 ```markdown
-# File: .omp/commands/my-command.md
+# File: .omp/evcrate/commands/my-command.md
 
 Create comprehensive test suite for {{feature}}.
 
