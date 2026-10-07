@@ -154,6 +154,12 @@ test('metadata: mapAgentTools maps canonical tools and restricts delegation when
   assert.equal(resGit.canDelegate, false);
 });
 
+test('metadata: mapAgentTools maps TodoWrite to manage_todo_list', () => {
+  const res = mapAgentTools('Read, TodoWrite');
+  assert.deepEqual([...res.mapped].sort(), ['manage_todo_list', 'read_file']);
+  assert.deepEqual(res.dropped, []);
+});
+
 test('metadata: mapAgentTools allows delegation only when Task is present', () => {
   const resTask = mapAgentTools(['Read', 'Task']);
   assert.deepEqual([...resTask.mapped].sort(), ['read_file', 'runSubagent'].sort());
@@ -161,16 +167,16 @@ test('metadata: mapAgentTools allows delegation only when Task is present', () =
 });
 
 test('metadata: mapAgentTools records dropped tools faithfully', () => {
-  const res = mapAgentTools('Read, Grep, WebFetch, TodoWrite, UnknownCustom');
+  const res = mapAgentTools('Read, Grep, WebFetch, NotebookEdit, UnknownCustom');
   assert.deepEqual([...res.mapped].sort(), ['grep_search', 'read_file'].sort());
   assert.deepEqual(
     [...res.dropped].sort(),
-    ['TodoWrite', 'UnknownCustom', 'WebFetch'].sort()
+    ['NotebookEdit', 'UnknownCustom', 'WebFetch'].sort()
   );
   assert.equal(res.canDelegate, false);
 });
 
-test('metadata: VSCODE_LOCAL_TOOL_MAP defines all 12 canonical tool mappings', () => {
+test('metadata: VSCODE_LOCAL_TOOL_MAP defines all 13 canonical tool mappings', () => {
   assert.equal(VSCODE_LOCAL_TOOL_MAP.read, 'read_file');
   assert.equal(VSCODE_LOCAL_TOOL_MAP.edit, 'edit_file');
   assert.equal(VSCODE_LOCAL_TOOL_MAP.write, 'edit_file');
@@ -183,4 +189,5 @@ test('metadata: VSCODE_LOCAL_TOOL_MAP defines all 12 canonical tool mappings', (
   assert.equal(VSCODE_LOCAL_TOOL_MAP.glob, 'file_search');
   assert.equal(VSCODE_LOCAL_TOOL_MAP.ls, 'file_search');
   assert.equal(VSCODE_LOCAL_TOOL_MAP.task, 'runSubagent');
+  assert.equal(VSCODE_LOCAL_TOOL_MAP.todowrite, 'manage_todo_list');
 });

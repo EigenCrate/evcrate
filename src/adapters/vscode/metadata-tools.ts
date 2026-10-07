@@ -10,7 +10,8 @@ export const VSCODE_LOCAL_TOOL_MAP: Readonly<Record<string, string>> = Object.fr
   grep: 'grep_search',
   glob: 'file_search',
   ls: 'file_search',
-  task: 'runSubagent'
+  task: 'runSubagent',
+  todowrite: 'manage_todo_list'
 });
 
 export interface ToolMappingResult {

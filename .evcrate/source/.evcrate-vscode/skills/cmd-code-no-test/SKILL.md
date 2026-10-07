@@ -56,7 +56,7 @@ Task(subagent_type="[type]", prompt="[task description]", description="[brief]")
 
 ## Workflow Sequence
 
-**Rules:** Follow steps 1-6 in order. Each step requires output marker starting with "✓ Step N:". Mark each complete in TodoWrite before proceeding. Do not skip steps.
+**Rules:** Follow steps 1-6 in order. Each step requires output marker starting with "✓ Step N:". Mark each complete in manage_todo_list before proceeding. Do not skip steps.
 
 ---
 
@@ -64,19 +64,19 @@ Task(subagent_type="[type]", prompt="[task description]", description="[brief]")
 
 Read plan file completely. Map dependencies between tasks. List ambiguities or blockers. Identify required skills/tools and activate from catalog. Parse phase file and extract actionable tasks.
 
-**TodoWrite Initialization & Task Extraction:**
-- Initialize TodoWrite with `Step 0: [Plan Name] - [Phase Name]` and all command steps (Step 1 through Step 6)
+**manage_todo_list Initialization & Task Extraction:**
+- Initialize manage_todo_list with `Step 0: [Plan Name] - [Phase Name]` and all command steps (Step 1 through Step 6)
 - Read phase file (e.g., phase-01-preparation.md)
 - Look for tasks/steps/phases/sections/numbered/bulleted lists
-- MUST convert to TodoWrite tasks:
+- MUST convert to manage_todo_list tasks:
   - Phase Implementation tasks → Step 2.X (Step 2.1, Step 2.2, etc.)
   - Phase Code Review tasks → Step 3.X (Step 3.1, Step 3.2, etc.)
 - Ensure each task has UNIQUE name (increment X for each task)
-- Add tasks to TodoWrite after their corresponding command step
+- Add tasks to manage_todo_list after their corresponding command step
 
 **Output:** `✓ Step 1: Found [N] tasks across [M] phases - Ambiguities: [list or "none"]`
 
-Mark Step 1 complete in TodoWrite, mark Step 2 in_progress.
+Mark Step 1 complete in manage_todo_list, mark Step 2 in_progress.
 
 ---
 
@@ -86,7 +86,7 @@ Implement selected plan phase step-by-step following extracted tasks (Step 2.1, 
 
 **Output:** `✓ Step 2: Implemented [N] files - [X/Y] tasks complete, compilation passed`
 
-Mark Step 2 complete in TodoWrite, mark Step 3 in_progress.
+Mark Step 2 complete in manage_todo_list, mark Step 3 in_progress.
 
 ---
 
@@ -159,7 +159,7 @@ active context rather than internally starting another review/advisor cycle.
 
 **Validation:** Step 3 INCOMPLETE until user explicitly approves.
 
-Mark Step 3 complete in TodoWrite, mark Step 4 in_progress.
+Mark Step 3 complete in manage_todo_list, mark Step 4 in_progress.
 
 ---
 
@@ -209,7 +209,7 @@ Mark Step 3 complete in TodoWrite, mark Step 4 in_progress.
   - On protected historical advice plans: phase completion is explicitly non-durable; never modify captured `plan.md`, status, roadmap, or prior sealed paths. Parent records uncaptured default completion receipt (with approval/validation evidence) and updates `<plan-dir>/progress.md` per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install). Output identifies `<plan-dir>/progress.md`.
 
 **Validation:** Steps 1 and 2 must complete successfully on the default/registered-action path, with fresh compile/typecheck validation passed; Step 3 (auto-commit) runs only if conditions met. The explicit genuine no-change path skips all three, validates the unchanged snapshot, and records only its null-ID/empty-path outcome. When advice mode is active, `state complete` must succeed before phase completion.
-Mark Step 4 complete in TodoWrite.
+Mark Step 4 complete in manage_todo_list.
 
 **Phase workflow finished. Ready for next plan phase.**
 
@@ -228,7 +228,7 @@ Mark Step 4 complete in TodoWrite.
 
 **If any "✓ Step N:" output missing, that step is INCOMPLETE.**
 
-**TodoWrite tracking required:** Initialize at Step 0, mark each step complete before next.
+**manage_todo_list tracking required:** Initialize at Step 0, mark each step complete before next.
 
 **Mandatory subagent calls:**
 - Step 3: `code-reviewer`
