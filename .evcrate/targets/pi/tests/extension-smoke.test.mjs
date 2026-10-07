@@ -89,9 +89,9 @@ function fixture() {
   const root = join(agentRoot, "evcrate");
   mkdirSync(join(root, "commands"), { recursive: true });
   mkdirSync(join(root, "workflows"), { recursive: true });
-  writeFileSync(join(root, "commands", "limited.md"), "---\nallowed-tools: Read, AskUserQuestion, evcrate_command\n---\nlimited");
-  writeFileSync(join(root, "commands", "child.md"), "child");
-  writeFileSync(join(root, "commands", "fail.md"), "---\nallowed-tools: Read\n---\n!`true`");
+  writeFileSync(join(root, "commands", "evc-cmd-limited.md"), "---\nallowed-tools: Read, AskUserQuestion, evcrate_command\n---\nlimited");
+  writeFileSync(join(root, "commands", "evc-cmd-child.md"), "child");
+  writeFileSync(join(root, "commands", "evc-cmd-fail.md"), "---\nallowed-tools: Read\n---\n!`true`");
   writeFileSync(join(root, "workflows", "flow.md"), "flow");
   const extensionDir = join(agentRoot, "extensions", "evcrate");
   cpSync(overlayExtensionDir, extensionDir, { recursive: true });
@@ -113,16 +113,16 @@ test("extension registers policy before tools, preserves markers, and restores r
     assert.deepEqual([...pi.tools.keys()].sort(), ["evcrate_command", "evcrate_subagent"]);
     await pi.emit("session_start");
     const original = pi.getActiveTools();
-    await assert.rejects(pi.commands.get("fail").handler("", { cwd: join(agentRoot, "missing") }));
+    await assert.rejects(pi.commands.get("evc-cmd-fail").handler("", { cwd: join(agentRoot, "missing") }));
     assert.deepEqual(pi.getActiveTools().sort(), original.sort());
-    await pi.commands.get("limited").handler("", { cwd: agentRoot });
+    await pi.commands.get("evc-cmd-limited").handler("", { cwd: agentRoot });
     assert.deepEqual(pi.getActiveTools().sort(), ["ask_user_question", "evcrate_command", "read"]);
     assert.equal((await pi.emit("tool_call", { toolName: "write", toolCallId: "write-1" }))[0]?.block, true);
     pi.setActiveTools(["write"]);
     assert.equal((await pi.emit("tool_call", { toolName: "write", toolCallId: "write-2" }))[0]?.block, true);
     await pi.emit("agent_settled");
     assert.deepEqual(pi.getActiveTools().sort(), original.sort());
-    await pi.commands.get("limited").handler("", { cwd: agentRoot });
+    await pi.commands.get("evc-cmd-limited").handler("", { cwd: agentRoot });
     await pi.emit("session_shutdown", { reason: "reload" });
     assert.deepEqual(pi.getActiveTools().sort(), original.sort());
 
@@ -141,10 +141,10 @@ test("extension registers policy before tools, preserves markers, and restores r
     assert.equal((await pi.emit("tool_call", { toolName: "read", toolCallId: "read" }, siblingContext))[0]?.block, true);
 
     const resolvedMarkers = resolveEvcrateMarkers(
-      "before {{evcrate:commands/child}} after {{evcrate:workflows/flow.md}}",
+      "before {{evcrate:commands/evc-cmd-child}} after {{evcrate:workflows/flow.md}}",
       agentRoot,
     );
-    assert.match(resolvedMarkers, /name `child`/);
+    assert.match(resolvedMarkers, /name `evc-cmd-child`/);
     assert.ok(resolvedMarkers.endsWith(join(root, "workflows", "flow.md")));
   } finally {
     if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
@@ -194,7 +194,7 @@ test("extension normalizes an EVCrate resource root before skill discovery", asy
   const oldRoot = process.env.PI_CODING_AGENT_DIR;
   try {
     mkdirSync(join(resourceRoot, "commands"), { recursive: true });
-    writeFileSync(join(resourceRoot, "commands", "child.md"), "child");
+    writeFileSync(join(resourceRoot, "commands", "evc-cmd-child.md"), "child");
     cpSync(overlayExtensionDir, extensionDir, { recursive: true });
     symlinkSync(join(projectRoot, "node_modules"), join(agentRoot, "node_modules"), "dir");
     const { default: runInstalledExtension } = await import(pathToFileURL(join(extensionDir, "index.js")).href);
@@ -206,7 +206,7 @@ test("extension normalizes an EVCrate resource root before skill discovery", asy
     assert.equal(result.resourceRoot, resourceRoot);
     assert.equal(process.env.PI_CODING_AGENT_DIR, agentRoot);
     await pi.emit("session_start");
-    assert.ok(pi.commands.has("child"));
+    assert.ok(pi.commands.has("evc-cmd-child"));
   } finally {
     if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
     else process.env.PI_CODING_AGENT_DIR = oldRoot;
@@ -260,7 +260,7 @@ test("isolated published Pi entrypoint preserves resolver and hook adapter behav
       assert.equal(result.agentRoot, publishedAgentRoot);
       assert.equal(result.resourceRoot, join(publishedAgentRoot, "evcrate"));
       await pi.emit("session_start");
-      assert.ok(pi.commands.has("plan"));
+      assert.ok(pi.commands.has("evc-cmd-plan"));
     } finally {
       if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
       else process.env.PI_CODING_AGENT_DIR = oldRoot;
@@ -313,7 +313,7 @@ test("Pi 0.84.1 loads a TypeBox extension from its bundled dependency", { timeou
     const alternateExtensionDir = join(alternateAgentRoot, "extensions", "evcrate");
     cpSync(overlayExtensionDir, alternateExtensionDir, { recursive: true });
     mkdirSync(join(alternateAgentRoot, "evcrate", "commands"), { recursive: true });
-    writeFileSync(join(alternateAgentRoot, "evcrate", "commands", "smoke.md"), "smoke");
+    writeFileSync(join(alternateAgentRoot, "evcrate", "commands", "evc-cmd-smoke.md"), "smoke");
     execFileSync(join(piRoot, "node_modules/.bin/pi"), [
       "--no-session", "--no-context-files", "--no-tools", "--no-extensions",
       "-e", join(alternateAgentRoot, "extensions/evcrate/index.js"), "--help",

@@ -23,13 +23,13 @@ async function fixture(t) {
   const project = join(root, 'project 日本');
   const config = join(project, '.omp');
   const resources = join(config, 'evcrate');
-  const commandDir = join(config, 'commands/cmd-code');
+  const commandDir = join(config, 'commands/evc-cmd-code');
   for (const path of [join(home, '.evcrate'), join(resources, 'commands'), join(resources, 'workflows'), commandDir]) {
     mkdirSync(path, { recursive: true });
   }
   cpSync(controllerRoot, join(home, '.evcrate/bin'), { recursive: true });
   writeFileSync(join(resources, 'omp-command-runtime.ts'), OMP_COMMAND_RUNTIME);
-  writeFileSync(join(resources, 'commands/cmd-code.md'), '---\ndescription: Native test\n---\n<work>$ARGUMENTS</work>');
+  writeFileSync(join(resources, 'commands/evc-cmd-code.md'), '---\ndescription: Native test\n---\n<work>$ARGUMENTS</work>');
   for (const name of ['advice-activation', 'plan-progress']) {
     writeFileSync(join(resources, `workflows/${name}.md`), `# ${name}\n`);
   }
@@ -40,8 +40,8 @@ async function fixture(t) {
     else process.env.HOME = priorHome;
   });
   const { createCommand } = await import(pathToFileURL(join(resources, 'omp-command-runtime.ts')).href);
-  const command = createCommand({ name: 'cmd-code', canonicalName: 'code', description: 'Native test',
-    activation: true, template: 'cmd-code.md' }, pathToFileURL(join(commandDir, 'index.ts')).href);
+  const command = createCommand({ name: 'evc-cmd-code', canonicalName: 'code', description: 'Native test',
+    activation: true, template: 'evc-cmd-code.md' }, pathToFileURL(join(commandDir, 'index.ts')).href);
   const notices = [];
   const ctx = { cwd: project, ui: { notify(message, level) { notices.push({ message, level }); } } };
   return { home, project, resources, command, ctx, notices, helper: join(home, '.evcrate/bin/evcrate-advice-mode') };
@@ -202,7 +202,7 @@ async function generatedCommandFixture(t) {
     join(home, '.evcrate'),
     join(resources, 'commands'),
     join(resources, 'workflows'),
-    join(config, 'commands/cmd-code')
+    join(config, 'commands/evc-cmd-code')
   ]) {
     mkdirSync(path, { recursive: true });
   }
@@ -210,7 +210,7 @@ async function generatedCommandFixture(t) {
   writeFileSync(join(resources, 'omp-command-runtime.ts'), OMP_COMMAND_RUNTIME);
 
   const actualOmpEvcrate = fileURLToPath(new URL('../../.evcrate/source/.omp/evcrate/', import.meta.url));
-  for (const name of ['cmd-code.md']) {
+  for (const name of ['evc-cmd-code.md']) {
     cpSync(join(actualOmpEvcrate, 'commands', name), join(resources, 'commands', name));
   }
   for (const name of ['advice-activation.md', 'plan-progress.md']) {
@@ -228,9 +228,9 @@ async function generatedCommandFixture(t) {
   const { createCommand } = await import(runtimeUrl);
 
   const codeCmd = createCommand({
-    name: 'cmd-code', canonicalName: 'code', description: 'Start coding & testing an existing plan',
-    activation: true, template: 'cmd-code.md'
-  }, pathToFileURL(join(config, 'commands/cmd-code/index.ts')).href);
+    name: 'evc-cmd-code', canonicalName: 'code', description: 'Start coding & testing an existing plan',
+    activation: true, template: 'evc-cmd-code.md'
+  }, pathToFileURL(join(config, 'commands/evc-cmd-code/index.ts')).href);
 
   const notices = [];
   const ctx = { cwd: project, ui: { notify(message, level) { notices.push({ message, level }); } } };
@@ -290,7 +290,7 @@ test('headless admission failures write one diagnostic to stderr and admit nothi
   const f = await fixture(t);
   const script = [
     "const { createCommand } = await import(process.env.EVC_RUNTIME);",
-    "const command = createCommand({ name: 'cmd-code', canonicalName: 'code', description: 'Native test', activation: true, template: 'cmd-code.md' }, process.env.EVC_MODULE);",
+    "const command = createCommand({ name: 'evc-cmd-code', canonicalName: 'code', description: 'Native test', activation: true, template: 'evc-cmd-code.md' }, process.env.EVC_MODULE);",
     "const body = await command.execute([], { cwd: process.env.EVC_CWD, hasUI: false }, 'private work text');",
     "process.stdout.write(JSON.stringify({ admitted: body !== undefined }));"
   ].join('\n');
@@ -298,7 +298,7 @@ test('headless admission failures write one diagnostic to stderr and admit nothi
     encoding: 'utf8',
     env: { HOME: f.home, PATH: path, EVC_CWD: f.project,
       EVC_RUNTIME: pathToFileURL(join(f.resources, 'omp-command-runtime.ts')).href,
-      EVC_MODULE: pathToFileURL(join(f.project, '.omp/commands/cmd-code/index.ts')).href }
+      EVC_MODULE: pathToFileURL(join(f.project, '.omp/commands/evc-cmd-code/index.ts')).href }
   });
   const assertOneDiagnostic = (result, expected) => {
     assert.equal(result.status, 0);
@@ -367,7 +367,7 @@ test('generated entrypoints call the helper exactly for the helper command list 
   const { commands } = JSON.parse(readFileSync(join(ompRoot, 'evcrate/command-name-map.json'), 'utf8'));
   const activated = [];
   for (const record of commands) {
-    const canonical = record.source.slice(0, -'.md'.length);
+    const canonical = record.sourceName;
     const { default: create } = await import(pathToFileURL(join(ompRoot, 'commands', record.targetName, 'index.ts')).href);
     capture.reset();
     const body = await create().execute([], f.ctx, 'ordinary task text');

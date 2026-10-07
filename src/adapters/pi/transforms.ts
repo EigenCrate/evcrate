@@ -14,9 +14,9 @@ const LOCAL_PATHS: readonly [string, string][] = [
   ['.claude/output-styles', '.pi/agent/evcrate/output-styles'], ['.claude/.evcrate.json', '.pi/.evcrate.json'],
   ['.claude/.mcp.json', '.pi/.mcp.json'], ['.claude/.env', '.pi/.env'],
 ];
-const COMMAND_NAME = '[a-z0-9][a-z0-9:_-]*';
+const COMMAND_NAME = 'evc-cmd-[a-z0-9]+(?:-[a-z0-9]+)*';
 const QUOTED_COMMAND = new RegExp(`\`/(?<name>${COMMAND_NAME})(?<args>[^\`\\n]*)\``, 'giu');
-const BARE_COMMAND = new RegExp(`(?<![\\w/:<])/(?<name>${COMMAND_NAME})(?![a-z0-9:_-]|\\*)`, 'giu');
+const BARE_COMMAND = new RegExp(`(?<![\\w/:<])/(?<name>${COMMAND_NAME})(?![a-z0-9_-]|\\*)`, 'giu');
 const DIRECTIVE = /\b(?:trigger|invoke|execute|run|dispatch|call)\b/iu;
 const SLASH_PHRASE = /\bslash\s*[- ]?commands?\b/iu;
 const USE = /\buse\b/iu;
@@ -39,10 +39,6 @@ function translateResourcePatterns(value: string): string {
   );
 }
 
-function knownCommandNames(commands: readonly string[]): ReadonlySet<string> {
-  return new Set(commands.map((command) => command.replaceAll('/', ':').toLowerCase()));
-}
-
 function translateDirectiveLine(line: string, commands: ReadonlySet<string>): string {
   if (commands.size === 0 || NON_DIRECTIVE.test(line) || (!DIRECTIVE.test(line) && !(USE.test(line) && SLASH_PHRASE.test(line)))) return line;
   const markdownReference = (value: string, position: number): boolean => {
@@ -62,7 +58,7 @@ function translateDirectiveLine(line: string, commands: ReadonlySet<string>): st
 }
 
 function translateNestedCommands(value: string, commands: readonly string[]): string {
-  const known = knownCommandNames(commands);
+  const known: ReadonlySet<string> = new Set(commands.map((command) => command.toLowerCase()));
   let fenced = false;
   return value.split('\n').map((line, index, lines) => {
     const suffix = index + 1 < lines.length ? '\n' : '';

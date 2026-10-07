@@ -127,9 +127,9 @@ for (const scopes of [['home'], ['project'], ['home', 'project']]) {
       }
 
       // Rejection: invalid handoff rejects at consumer boundary
-      await assert.rejects(() => dispatchManagedCommand({ name: 'code:auto', args: work, handoff: 'invalid' },
+      await assert.rejects(() => dispatchManagedCommand({ name: 'evc-cmd-code-x-auto', args: work, handoff: 'invalid' },
         { cwd: f.project }, options));
-      await assert.rejects(() => dispatchManagedCommand({ name: 'code:auto', args: work, handoff: [1, 2] },
+      await assert.rejects(() => dispatchManagedCommand({ name: 'evc-cmd-code-x-auto', args: work, handoff: [1, 2] },
         { cwd: f.project }, options));
     }
 

@@ -1,4 +1,5 @@
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
+import { assertAgentName } from '../resource-naming.js';
 import { graphFile, writeProjectionFile } from '../projection-utils.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { serializeFrontmatter, splitFrontmatter } from './frontmatter.js';
@@ -30,12 +31,12 @@ export function convertAgents(context: ProjectionBuildContext, commands: readonl
   const roles: Record<string, Record<string, string>> = {}; const audit: Record<string, Record<string, string[]>> = {}; const seen = new Set<string>();
   for (const path of paths) {
     const parsed = splitFrontmatter(new TextDecoder('utf-8', { fatal: true }).decode(graphFile(context, path).bytes));
-    const name = parsed.fields.name ?? ''; if (!name || seen.has(name)) throw new ControlPlaneError('VALIDATION_INVALID'); seen.add(name);
+    const name = parsed.fields.name ?? ''; assertAgentName(name, path.slice('agents/'.length, -'.md'.length)); if (seen.has(name)) throw new ControlPlaneError('VALIDATION_INVALID'); seen.add(name);
     const model = (parsed.fields.model ?? '').toLowerCase() || 'standard'; const role = MODEL_ROLES[model] ?? (model === 'standard' ? model : undefined);
     if (!role) throw new ControlPlaneError('VALIDATION_INVALID');
     const tools = convertTools(parsed.fields.tools ?? '');
     let description = neutralize(translatePrompt(parsed.fields.description ?? '', commands)); let body = neutralize(translatePrompt(parsed.body, commands));
-    if (name === 'advisor') {
+    if (name === 'evc-advisor') {
       description = 'Use this high-tier mentor for fresh named checkpoints; Pi rejects interview relay.';
       if (!body.includes('## Required checkpoint method') || !body.includes('## Checkpoint terminal report')) throw new ControlPlaneError('VALIDATION_INVALID');
     }

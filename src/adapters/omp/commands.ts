@@ -4,12 +4,12 @@ import { copy, filesUnder, relativeTo, writeJson, writeText } from './resources.
 import { serializeFrontmatter, splitFrontmatter } from './frontmatter.js';
 import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 import { restoreIndexedTokens } from '../uri-restoration.js';
+import { commandNameFromSourcePath } from '../resource-naming.js';
 import { COMMAND_NAMES } from '../../manifests/controller.js';
 import { OMP_COMMAND_RUNTIME } from './activation.js';
 export interface CommandRecord { readonly source: string; readonly sourceName: string; readonly target: string; readonly targetName: string; }
 export type CommandMap = Readonly<Record<string, CommandRecord>>;
 const URI = /(?<![A-Za-z0-9_./:])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/giu;
-const NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
 const SKILL_MARKERS = ['activate the skills', 'activate needed skills', 'activate only needed skills', 'activate from catalog', 'skills catalog', 'list of skills', 'skill tool'];
 const NO_SKILLS = '**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP\'s normal skill discovery.';
 const ADVICE_HEADING = '## Advice Mode';
@@ -42,37 +42,16 @@ function restoreUris(value: string, values: readonly string[]): string {
 }
 export function buildCommandMap(context: ProjectionBuildContext): CommandMap {
   const records: Record<string, CommandRecord> = {};
-  const used = new Set<string>();
   const allEntries = filesUnder(context, 'commands').filter((entry) => entry.path !== 'commands');
   if (allEntries.some((entry) => !entry.path.endsWith('.md'))) throw new ControlPlaneError('VALIDATION_INVALID');
   const entries = allEntries.filter((entry) => entry.path.endsWith('.md')).sort((a, b) => a.path.localeCompare(b.path));
   if (!entries.length) throw new ControlPlaneError('VALIDATION_INVALID');
+  // Flat source stem is the native command name; the semantic id (`code/auto`) keys the advisor allowlist.
   for (const entry of entries) {
-    const source = relativeTo(entry.path, 'commands');
-    const parts = source.slice(0, -3).split('/');
-    const sourceName = parts.join(':');
-    const targetName = `cmd-${parts.join('__')}`;
-    if (!NAME.test(targetName) || used.has(targetName.toLowerCase())) throw new ControlPlaneError('VALIDATION_INVALID');
-    used.add(targetName.toLowerCase());
-    records[sourceName.toLowerCase()] = { source, sourceName, target: `${targetName}.md`, targetName };
+    const { name, semanticId } = commandNameFromSourcePath(entry.path);
+    records[semanticId] = { source: relativeTo(entry.path, 'commands'), sourceName: semanticId, target: `${name}.md`, targetName: name };
   }
   return Object.freeze(Object.fromEntries(Object.entries(records).sort(([a], [b]) => a.localeCompare(b))));
-}
-export function renderCommandReferences(value: string, map: CommandMap): string {
-  const protectedValue = protectUris(value);
-  let rendered = protectedValue.rendered;
-  const items = Object.values(map).sort((a, b) => b.source.length - a.source.length);
-  for (const item of items) {
-    for (const [prefix, replacement] of [['${HOME}/', '${HOME}/.omp/agent/'], ['$HOME/', '$HOME/.omp/agent/'], ['~/', '~/.omp/agent/'], ['./', './.omp/'], ['', '.omp/']] as const) {
-      rendered = rendered.replaceAll(`${prefix}.claude/commands/${item.source}`, `${replacement}evcrate/commands/${item.target}`);
-    }
-  }
-  for (const item of items) {
-    const escapedSourceName = item.sourceName.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-    const pattern = new RegExp(`(?<![A-Za-z0-9_/:])/(?:evcrate:)?${escapedSourceName}(?![A-Za-z0-9_-])`, 'giu');
-    rendered = rendered.replace(pattern, `/${item.targetName}`);
-  }
-  return restoreUris(rendered, protectedValue.values);
 }
 function harnessPaths(value: string): string {
   const protectedValue = protectUris(value);
@@ -103,8 +82,8 @@ function workflowFallback(value: string): string {
     return `\`${path}\` if present; otherwise read \`~/.omp/agent/evcrate/workflows/${name}\``;
   });
 }
-export function translatePrompt(value: string, map: CommandMap): string {
-  let rendered = harnessPaths(renderCommandReferences(value, map));
+export function translatePrompt(value: string): string {
+  let rendered = harnessPaths(value);
   rendered = workflowFallback(rendered);
   rendered = addRuntimeGuidance(rendered);
   return rendered.replaceAll('Skill tool', 'OMP command mechanism').replaceAll('Task tool', 'task tool').replaceAll('AskUserQuestion', 'ask the user').replaceAll('SlashCommand', 'OMP command').replaceAll('TodoWrite', 'todo');
@@ -114,37 +93,35 @@ export function convertCommands(context: ProjectionBuildContext, map: CommandMap
   if (allEntries.some((item) => !item.path.endsWith('.md'))) throw new ControlPlaneError('VALIDATION_INVALID');
   writeText(context, 'evcrate/omp-command-runtime.ts', OMP_COMMAND_RUNTIME);
   for (const entry of allEntries.filter((item) => item.path.endsWith('.md'))) {
-    const relSource = relativeTo(entry.path, 'commands');
-    const canonicalName = relSource.slice(0, -3);
-    const record = map[canonicalName.split('/').join(':').toLowerCase()];
+    const { semanticId } = commandNameFromSourcePath(entry.path);
+    const record = map[semanticId];
     if (!record) throw new ControlPlaneError('VALIDATION_INVALID');
     const source = new TextDecoder().decode(entry.bytes);
     const parsed = source.startsWith('---\n') ? splitFrontmatter(source) : { fields: {}, body: source };
     const fields: Record<string, string> = { ...parsed.fields };
-    if (fields.name) fields.name = renderCommandReferences(fields.name, map);
-    const activation = COMMAND_NAMES.includes(canonicalName);
+    const activation = COMMAND_NAMES.includes(semanticId);
     if (!activation && parsed.body.includes(ADVICE_HEADING)) throw new ControlPlaneError('VALIDATION_INVALID');
     let body = parsed.body;
-    if (activation) body = renderNativeAdviceMode(body, canonicalName);
-    if (entry.path === 'commands/advise.md') {
+    if (activation) body = renderNativeAdviceMode(body, semanticId);
+    if (semanticId === 'advise') {
       fields.description = 'Interview-first technical advice; advisor relay is unsupported by OMP.';
       fields['argument-hint'] = '[prompt-or-url]';
       body = renderInlineAdviseCommand(parsed.body, 'omp', 'native user-input flow');
     }
-    const translatedBody = translatePrompt(body, map);
+    const translatedBody = translatePrompt(body);
     const generatedMarkdown = Object.keys(fields).length ? serializeFrontmatter(fields, translatedBody) : translatedBody.replace(/^\s+/u, '');
     writeText(context, `evcrate/commands/${record.target}`, generatedMarkdown);
     const description = fields.description ?? '';
-    const nativeModule = `import { createCommand } from '../../evcrate/omp-command-runtime.ts';\n\nexport default () => createCommand({\n  name: ${JSON.stringify(record.targetName)},\n  canonicalName: ${JSON.stringify(canonicalName)},\n  description: ${JSON.stringify(description)},\n  activation: ${activation},\n  template: ${JSON.stringify(record.target)}\n}, import.meta.url);\n`;
+    const nativeModule = `import { createCommand } from '../../evcrate/omp-command-runtime.ts';\n\nexport default () => createCommand({\n  name: ${JSON.stringify(record.targetName)},\n  canonicalName: ${JSON.stringify(semanticId)},\n  description: ${JSON.stringify(description)},\n  activation: ${activation},\n  template: ${JSON.stringify(record.target)}\n}, import.meta.url);\n`;
     writeText(context, `commands/${record.targetName}/index.ts`, nativeModule);
   }
   writeJson(context, 'evcrate/command-name-map.json', { schema: 'evcrate-omp-command-map-v1', commands: Object.values(map) });
 }
-export function convertWorkflows(context: ProjectionBuildContext, map: CommandMap): string[] {
+export function convertWorkflows(context: ProjectionBuildContext): string[] {
   const copied: string[] = [];
   for (const entry of filesUnder(context, 'workflows').filter((item) => item.path.endsWith('.md'))) {
     const rel = relativeTo(entry.path, 'workflows');
-    let value = translatePrompt(new TextDecoder().decode(entry.bytes), map);
+    let value = translatePrompt(new TextDecoder().decode(entry.bytes));
     if (rel === 'advisory-interview.md') value = renderAdvisoryInterviewWorkflow(value, 'omp');
     else if (rel === 'advisor-mentoring.md') value = renderMentoringWorkflow(value, 'omp');
     copy(context, entry.path, `evcrate/workflows/${rel}`, () => value);

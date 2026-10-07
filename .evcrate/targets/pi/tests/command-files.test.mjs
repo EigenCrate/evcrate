@@ -88,11 +88,17 @@ test("discovers only contained regular markdown files", () => {
   const outside = fixture();
   try {
     mkdirSync(join(root, "nested"));
-    writeFileSync(join(root, "nested", "run.md"), "run");
+    writeFileSync(join(root, "nested", "evc-cmd-nested.md"), "ignored: nested directory");
+    writeFileSync(join(root, "evc-cmd-plan-x-hard.md"), "plan");
+    writeFileSync(join(root, "plain.md"), "ignored: not a command name");
+    writeFileSync(join(root, "evc-cmd-bad-x-x-name.md"), "ignored: reserved x token");
     writeFileSync(join(root, "skip.txt"), "skip");
     writeFileSync(join(outside, "escape.md"), "escape");
-    symlinkSync(join(outside, "escape.md"), join(root, "escape.md"));
-    assert.deepEqual(discoverCommandFiles(root).map((item) => item.name), ["nested:run"]);
+    symlinkSync(join(outside, "escape.md"), join(root, "evc-cmd-escape.md"));
+    assert.deepEqual(
+      discoverCommandFiles(root).map(({ name, canonicalName }) => ({ name, canonicalName })),
+      [{ name: "evc-cmd-plan-x-hard", canonicalName: "plan/hard" }],
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(outside, { recursive: true, force: true });
@@ -126,20 +132,20 @@ test("resolves contained markers and rejects missing, traversal, and escaping-sy
   const outside = fixture();
   try {
     mkdirSync(join(agent, "evcrate", "scripts"), { recursive: true });
-    mkdirSync(join(agent, "evcrate", "commands", "content"), { recursive: true });
+    mkdirSync(join(agent, "evcrate", "commands"), { recursive: true });
     mkdirSync(join(agent, "evcrate", "workflows"), { recursive: true });
     writeFileSync(join(agent, "evcrate", "scripts", "ok.cjs"), "ok");
-    writeFileSync(join(agent, "evcrate", "commands", "content", "good.md"), "good");
-    writeFileSync(join(agent, "evcrate", "commands", "plan:two.md"), "literal");
+    writeFileSync(join(agent, "evcrate", "commands", "evc-cmd-content-x-good.md"), "good");
+    writeFileSync(join(agent, "evcrate", "commands", "evc-cmd-plan-x-two.md"), "literal");
     writeFileSync(join(outside, "bad.cjs"), "bad");
     symlinkSync(join(outside, "bad.cjs"), join(agent, "evcrate", "scripts", "bad.cjs"));
     const text = resolveEvcrateMarkers(
-      "{{evcrate:scripts/ok.cjs}} {{evcrate:commands/content:good}} {{evcrate:commands/plan:two}} {{evcrate:workflows}}",
+      "{{evcrate:scripts/ok.cjs}} {{evcrate:commands/evc-cmd-content-x-good}} {{evcrate:commands/evc-cmd-plan-x-two.md}} {{evcrate:workflows}}",
       agent,
     );
     assert.match(text, new RegExp(join(agent, "evcrate", "scripts", "ok\\.cjs")));
-    assert.match(text, /name `content:good`/);
-    assert.match(text, /name `plan:two`/);
+    assert.match(text, /name `evc-cmd-content-x-good`/);
+    assert.match(text, /name `evc-cmd-plan-x-two`/);
     assert.match(text, new RegExp(join(agent, "evcrate", "workflows")));
     for (const marker of [
       "{{evcrate:../bad.cjs}}",

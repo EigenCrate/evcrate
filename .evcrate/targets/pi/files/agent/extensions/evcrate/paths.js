@@ -71,18 +71,10 @@ function commandInstruction(root, reference) {
   const commandsRoot = resolve(root, "commands");
   const commandReference = reference.slice("commands/".length);
   if (!commandReference) return undefined;
-  const literalReference = commandReference.endsWith(".md")
-    ? commandReference
-    : `${commandReference}.md`;
-  const nestedReference = `${commandReference.replace(/\.md$/, "").split(":").join(sep)}.md`;
-  const resolved = [literalReference, nestedReference]
-    .map((candidate) => resolveContainedExistingPath(commandsRoot, candidate))
-    .find(Boolean);
+  const resolved = resolveContainedExistingPath(commandsRoot, `${commandReference.replace(/\.md$/, "")}.md`);
   if (!resolved) return undefined;
-  const name = relative(commandsRoot, resolved)
-    .replace(/\.md$/, "")
-    .split(sep)
-    .join(":");
+  const name = relative(commandsRoot, resolved).replace(/\.md$/, "");
+  if (name.includes(sep)) return undefined;
   return `Invoke \`evcrate_command\` with name \`${name}\`, the intended command text unchanged in \`args\` (empty only when there is none), and the current direct \`handoff\` object when one exists.`;
 }
 

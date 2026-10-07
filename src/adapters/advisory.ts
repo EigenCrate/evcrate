@@ -42,7 +42,7 @@ export function renderInlineAdviseCommand(canonical: string, target: string, que
   return `${frontmatter}<!-- generated target: ${target} -->
 ${capabilityBlock}
 
-Use this command for candid technical or architectural advice. \`/advise\` is
+Use this command for candid technical or architectural advice. \`/evc-cmd-advise\` is
 separate from \`--advice\` checkpoint mentorship: it first converges on the
 problem, then provides advice.
 
@@ -52,7 +52,7 @@ Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
 Reject two or more tokens. One token requests relay only when it is final after
 trailing whitespace; quoted, embedded, suffixed, non-final, and differently
 cased text remains ordinary input. If a final token requests relay, return
-\`${error}\` and say: \`Run /advise <prompt> without --agent for inline
+\`${error}\` and say: \`Run /evc-cmd-advise <prompt> without --agent for inline
 advice.\` Do not invoke an advisor, create relay state, or silently continue in
 inline mode.
 

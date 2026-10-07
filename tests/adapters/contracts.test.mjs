@@ -126,7 +126,7 @@ test('projection registry is complete and qualification order is fixed', () => {
 });
 test('brainstormer model projects through each target contract', () => {
   const claude = materialize('claude').stage.path;
-  assert.match(readFileSync(join(claude, '.claude/agents/brainstormer.md'), 'utf8'), /^model: opus$/mu);
+  assert.match(readFileSync(join(claude, '.claude/agents/evc-brainstormer.md'), 'utf8'), /^model: opus$/mu);
 
   const gemini = materialize('gemini').stage.path;
   assert.match(readFileSync(join(gemini, '.gemini/agents/brainstormer.md'), 'utf8'), /^model: pro$/mu);
@@ -137,11 +137,11 @@ test('brainstormer model projects through each target contract', () => {
   assert.match(codexAgent, /^model_reasoning_effort = "high"$/mu);
 
   const omp = materialize('omp').stage.path;
-  assert.match(readFileSync(join(omp, '.omp/agents/brainstormer.md'), 'utf8'), /^model: "@slow"$/mu);
+  assert.match(readFileSync(join(omp, '.omp/agents/evc-brainstormer.md'), 'utf8'), /^model: "@slow"$/mu);
 
   const pi = materialize('pi').stage.path;
   const piRoles = JSON.parse(readFileSync(join(pi, '.pi/agent/evcrate/model-roles.json'), 'utf8'));
-  assert.deepEqual(piRoles.agents.brainstormer, { role: 'strong', source: 'canonical-agent-frontmatter' });
+  assert.deepEqual(piRoles.agents['evc-brainstormer'], { role: 'strong', source: 'canonical-agent-frontmatter' });
 
   const copilot = materialize('copilot').stage.path;
   const copilotAudit = JSON.parse(readFileSync(join(copilot, '.copilot/evcrate/agent-tool-audit.json'), 'utf8'));
@@ -210,7 +210,7 @@ test('target-specific managed settings and command maps stay independent', () =>
   const commandMap = JSON.parse(readFileSync(join(omp, '.omp/evcrate/command-name-map.json'), 'utf8'));
   assert.equal(commandMap.schema, 'evcrate-omp-command-map-v1');
   assert.ok(commandMap.commands.length > 0);
-  assert.ok(commandMap.commands.every(({ target }) => /^cmd-[A-Za-z0-9_-]+\.md$/u.test(target)));
+  assert.ok(commandMap.commands.every(({ source, sourceName, target, targetName }) => source === target && target === `${targetName}.md` && /^evc-cmd-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/u.test(target) && !sourceName.includes(':')));
   const copilot = materialize('copilot').stage.path;
   const managed = JSON.parse(readFileSync(join(copilot, '.copilot/evcrate/managed-settings.json'), 'utf8'));
   assert.deepEqual(Object.keys(managed).sort(), ['effortLevel', 'includeCoAuthoredBy', 'statusLine']);
@@ -285,7 +285,7 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   assert.equal(modified.adapter.validate(modified.context).diagnostics.some(({ code }) => code === 'hash-mismatch'), true);
 
   const wrongMode = freshProjection('omp');
-  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/cmd-advise.md');
+  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/evc-cmd-advise.md');
   const initialMode = lstatSync(modePath).mode & 0o777;
   chmodSync(modePath, initialMode ^ 0o100);
   assert.equal(wrongMode.adapter.validate(wrongMode.context).valid, true);
@@ -301,7 +301,7 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   const symlink = freshProjection('pi');
   const outside = temporaryDirectory();
   const outsidePath = join(outside, 'payload');
-  const symlinkPath = join(symlink.stage.path, '.pi/agent/evcrate/commands/advise.md');
+  const symlinkPath = join(symlink.stage.path, '.pi/agent/evcrate/commands/evc-cmd-advise.md');
   writeFileSync(outsidePath, 'outside');
   rmSync(symlinkPath);
   symlinkSync(outsidePath, symlinkPath);
@@ -493,7 +493,7 @@ test('projected scanners fail closed on missing target, duplicate map, and unsaf
   const initialCmdData = readFileSync(cmdDataFile, 'utf8');
 
   // Missing allowlisted command file
-  const targetCmd = join(stage.path, '.omp/evcrate/commands/cmd-advise.md');
+  const targetCmd = join(stage.path, '.omp/evcrate/commands/evc-cmd-advise.md');
   const backupCmd = readFileSync(targetCmd, 'utf8');
   rmSync(targetCmd);
   const missingRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });

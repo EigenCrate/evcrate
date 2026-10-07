@@ -115,7 +115,7 @@ test("packed distribution publishes and Pi discovers native commands and skills"
     installManagedPackages(pi, home);
     const commands = rpcCommands(pi, home);
     const names = new Set(commands.map((command) => command.name));
-    for (const name of ["plan", "fix:fast", "cook:auto:fast"]) assert.ok(names.has(name), name);
+    for (const name of ["evc-cmd-plan", "evc-cmd-fix-x-fast", "evc-cmd-cook-x-auto-x-fast"]) assert.ok(names.has(name), name);
     assert.ok(names.has("skill:planning"), "generated Pi skills were not discovered");
 
     const isolated = rpcCommands(pi, home, ["--no-skills", "--skill", join(home, ".pi/agent/skills")]);
@@ -123,7 +123,7 @@ test("packed distribution publishes and Pi discovers native commands and skills"
     const alternateAgent = join(root, "alternate-pi/agent");
     cpSync(join(home, ".pi/agent"), alternateAgent, { recursive: true });
     const alternate = rpcCommands(pi, home, ["--no-extensions", "-e", join(alternateAgent, "extensions/evcrate/index.js")]);
-    assert.ok(alternate.some((command) => command.name === "plan"));
+    assert.ok(alternate.some((command) => command.name === "evc-cmd-plan"));
     const settings = JSON.parse(readFileSync(join(home, ".pi/agent/settings.json"), "utf8"));
     assert.deepEqual(settings.packages, [...MANAGED_PI_PACKAGES]);
     assert.ok(!settings.packages.some((entry) => String(entry).includes("pi-code")));
