@@ -87,6 +87,9 @@ test('tool-inputs: normalizes search, subagent, and unrelated tools', () => {
   // Unrelated tool
   const unrel = normalizeLocalTool('ask_user', { question: 'Are you sure?' });
   assert.equal(unrel.kind, 'unrelated');
+
+  // VS Code's todo tool must stay allowed once TodoWrite maps to it
+  assert.equal(normalizeLocalTool('manage_todo_list', { todoList: [] }).kind, 'unrelated');
 });
 
 test('tool-inputs: enforces operand count and size limits', () => {
