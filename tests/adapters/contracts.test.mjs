@@ -285,7 +285,7 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   assert.equal(modified.adapter.validate(modified.context).diagnostics.some(({ code }) => code === 'hash-mismatch'), true);
 
   const wrongMode = freshProjection('omp');
-  const modePath = join(wrongMode.stage.path, '.omp/commands/cmd-advise.md');
+  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/cmd-advise.md');
   const initialMode = lstatSync(modePath).mode & 0o777;
   chmodSync(modePath, initialMode ^ 0o100);
   assert.equal(wrongMode.adapter.validate(wrongMode.context).valid, true);
@@ -493,7 +493,7 @@ test('projected scanners fail closed on missing target, duplicate map, and unsaf
   const initialCmdData = readFileSync(cmdDataFile, 'utf8');
 
   // Missing allowlisted command file
-  const targetCmd = join(stage.path, '.omp/commands/cmd-advise.md');
+  const targetCmd = join(stage.path, '.omp/evcrate/commands/cmd-advise.md');
   const backupCmd = readFileSync(targetCmd, 'utf8');
   rmSync(targetCmd);
   const missingRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });

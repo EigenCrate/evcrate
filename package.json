@@ -22,6 +22,7 @@
     "prebuild:clean": "npm run prebuild",
     "build:clean": "node scripts/build-typescript.mjs -p tsconfig.json --clean",
     "generate:advisor-runtime": "node scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json",
+    "typecheck:omp-runtime": "node scripts/build-typescript.mjs -p tsconfig.omp-runtime.json",
     "build:all": "npm run build",
     "test:advisor-metrics": "node --test tests/advisor-metrics/*.test.mjs",
     "test:advisor-parity": "node --test tests/protocol/advisor-contract-parity.test.mjs",
@@ -59,7 +60,7 @@
     "release:candidate": "node scripts/release/run-release-candidate.cjs",
     "release:prepare": "node scripts/prepare-release-assets.cjs",
     "release:verify-assets": "node scripts/release/asset-verification.cjs",
-    "test:release": "node --test tests/distribution/private-release-artifacts.test.mjs tests/distribution/release-orchestration.test.mjs",
+    "test:release": "node --test tests/distribution/private-release-artifacts.test.mjs tests/distribution/advice-helper-launchability.test.mjs tests/distribution/release-orchestration.test.mjs",
     "test:installer:linux": "node --test tests/installers/*.test.mjs",
     "test:installer:windows": "node tests/installers/windows-release-qualification.mjs",
     "test:distribution:rollout": "node --test tests/distribution/private-unpack-rollout.test.mjs"

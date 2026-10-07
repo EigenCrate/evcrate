@@ -62,7 +62,8 @@ function closure(root: string): void {
       continue;
     }
 
-    if (entry !== 'evcrate-advisor' && !entry.endsWith('.cjs') && !entry.endsWith('.js')) {
+    if (entry !== 'evcrate-advisor' && entry !== 'evcrate-advice-mode'
+      && !entry.endsWith('.cjs') && !entry.endsWith('.js')) {
       fail();
     }
 
@@ -111,7 +112,9 @@ export function validateAdvisorControllerSource(root: string): void {
   validateRoot(root);
   for (const entry of ADVISOR_CONTROLLER_FILES) assertRegularFile(join(root, entry));
   closure(root);
-  if (readFileSync(join(root, 'evcrate-advisor'), 'utf8').split('\n')[0] !== '#!/usr/bin/env node') fail();
+  for (const entrypoint of ['evcrate-advisor', 'evcrate-advice-mode']) {
+    if (readFileSync(join(root, entrypoint), 'utf8').split('\n')[0] !== '#!/usr/bin/env node') fail();
+  }
 }
 export function controllerHashes(root: string): Record<string, string> {
   validateAdvisorControllerSource(root);

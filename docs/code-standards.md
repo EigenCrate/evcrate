@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standards for the EVCrate core package; former plugin-specific guidance below is historical.
-**Updated:** 2026-10-04
+**Updated:** 2026-10-06
 **Applies to:** TypeScript control plane, core advisor controller, canonical harness resources, generated projections, and publication tooling.
 **Windows release boundary:** Qualification covers only standalone installer lifecycle and clean-install `version --json`.
 Native Windows advisor Phases 01–04 are complete: Phase 03 observed OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not establish broad Windows runtime parity or authorize production release.
@@ -39,6 +39,9 @@ The following patterns are strictly prohibited across the codebase:
 - **No hand edits to generated files**: Never edit generated target projections, build manifests, registries, or runtime brief artifacts directly. Modify canonical sources and regenerate through established scripts.
 - **No cross-scope recovery search**: Recovery must never cross the requested scope boundary. HOME recovery never mutates project files; project recovery never searches or mutates HOME state.
 - **No direct POSIX controller execution fallback**: The approved Phase 01 target contract requires every maintained advisor caller to launch supported Node (`>=22.19.0`) with the absolute HOME-owned controller script as `argv[0]`, exact UTF-8 JSON on stdin, and canonical project cwd (`packageRoot` for health diagnostics). Direct POSIX execution, shebang retry, `.cmd` shim, or shell fallback after Node launch failure is banned. Baseline direct-exec sites remain for Phase 02 migration; their presence is not completed compliance.
+- **No full mentoring load or controller consultation in off mode**: Callers must resolve activation mode via `evcrate-advice-mode` before loading `advisor-mentoring.md`. Off mode strictly forbids reading mentoring instructions through navigation, loops, or fallback prompts, and never invokes `evcrate-advisor` (no get, no locks).
+- **No synthetic flag appending or handoff replay**: Routers and delegators must use structured direct handoffs (`kind: "pre-run"` or `"same-run"`) built for the exact current call only. User-entered commands always use `handoff: null`; appending fake or synthetic `--advice` flags or replaying prior handoffs is banned.
+- **No historical state mutation or off-mode state get during progress inspection**: Progress reconciliation via `plan-progress.md` in `off` mode never invokes `evcrate-advisor` (dependency basis is immutable in-repo receipts + sealed-path metadata, reported `receipt-attested; controller not consulted`; identified unreceipted runs pause same/overlapping scope only). Only `explicit` and `inherited` modes use identified `state get`, and progress inspection never invokes `init`, checkpoint reservations, claims, consultation, disposition, outcome, or completion.
 ## Repository structure and ownership
 
 ```text
@@ -278,20 +281,43 @@ unmanaged destinations return <code>CAS_CONFLICT</code> without adopting or dele
 ## Advisor controller standards
 
 The controller is authored only at `.evcrate/source/.evcrate/bin/` and published
-once to `$HOME/.evcrate/bin/`. Its exact 44-file generated closure includes the
-prior 36 shared/Windows entries plus eight Darwin-specific assets. The controller
-reads user-owned `$HOME/.evcrate/advisor-routing.json`; policy is never published.
+once to `$HOME/.evcrate/bin/`. Its exact 46-file generated closure includes the
+36 shared/Windows entries, eight Darwin-specific assets, plus two deterministic
+advice activation assets (`evcrate-advice-mode` and `lib/advisor/activation.cjs`).
+The controller reads user-owned `$HOME/.evcrate/advisor-routing.json`; policy is never published.
 
 ### Explicit Node caller launch invariant
 
-All maintained advisor-controller callers must use explicit Node invocation:
-- Executable is supported Node (`>=22.19.0`), using `process.execPath` when running under Node, or configured/available `node` in shell/harness callers.
-- First argument is the absolute HOME-owned controller script (`<home>/.evcrate/bin/evcrate-advisor`).
+All maintained advisor callers must use explicit Node invocation:
+- Executable is supported Node (`>=22.19.0`), using `process.execPath` when running under Node, or configured/available `node` on `PATH` in shell/harness callers.
+- Script path is the absolute HOME-owned asset (`<home>/.evcrate/bin/evcrate-advisor` or `<home>/.evcrate/bin/evcrate-advice-mode`). The helper asset is packaged in the closure, not exposed as an npm CLI binary on PATH.
 - Standard input carries exact UTF-8 request JSON, terminated by EOF.
-- Working directory is canonical project cwd (or `packageRoot` for health diagnostics).
+- Working directory is canonical project cwd (`packageRoot` for health diagnostics).
 - No direct POSIX execution fallback, shebang retry, `.cmd` shim, or shell fallback after launch failure.
-- Shebang, npm `bin` mapping, and execute-bit requirements remain packaging metadata only; they do not authorize direct execution.
+- Shebang (`#!/usr/bin/env node`), npm `bin` mappings for CLI tools (`evcrate`, `evcrate-advisor`), and execute bits remain packaging metadata verified by closure checks; they do not authorize direct execution.
 
+### Deterministic activation helper wire contract and error convention
+
+The packaged CommonJS helper `evcrate-advice-mode` provides deterministic advice activation:
+- **Bounded wire schema, realpath & selection paths:** Protocol `evcrate-advice-mode` v1 (stdin ≤ 64 KiB, decoded raw arguments ≤ 32 KiB, terminal output ≤ 256 KiB, 2-second input/output deadlines). CLI compares `fs.realpathSync(project_root)` to `fs.realpathSync(process.cwd())`; a symlinked logical root is accepted, while a different or unresolvable root rejects with `ADVICE_CONTEXT_MISMATCH`; original context is echoed on success. Selection paths (`plan_path`, `phase_path`) are validated by metadata and relative-POSIX safety only: reject leading `/`, `\`, `:`, controls, empty/`.`/`..` components, trailing `.` or space, characters `<` `>` `"` `|` `?` `*`, and case-insensitive device stems CON, PRN, AUX, NUL, CLOCK$, COM0–COM9, LPT0–LPT9, COM¹ COM² COM³, LPT¹ LPT² LPT³, CONIN$, CONOUT$, with or without any extension as well as device stems with optional spaces before an extension (conservative admission policy, no Windows qualification claim; names with internal spaces or merely resembling stems stay accepted); 1 KiB bound; no sensitive-name filter — artifact readers keep their own fences.
+- **Supported command helper admission:** Supported OMP command entrypoints execute the HOME helper before model prompt admission; activation membership derives from the helper's exported frozen `COMMAND_NAMES` array (single authority). Other hosts follow their projected receiving contract. Plain tasks and unsupported commands must not invent a helper command identity.
+- **Sole parser authority, quote spans & byte preservation:** `lib/advisor/activation.cjs` is the single parser authority (`COMMAND_NAMES`, `parseAdviceArguments`, `parseActivationRequest`, `evaluateActivation`). Never reimplement flag scanning in harness wrappers or command prompts. Arguments are parsed with strict quote-span and boundary rules:
+  - Single (`'...'`) and double (`"..."`) quotes define non-evaluating spans where flags are ignored.
+  - A quote opens a span only at an unescaped token boundary (start of input or after unescaped whitespace); mid-token quotes (`don't`, `café's`, `日本's`, `5" bezel`) are ordinary text (no word-character apostrophe heuristic). In boundary-less constructs such as `key="x --advice y" --advice` or `("use --advice here") --advice`, the inner flag is not inside a quote span, producing two eligible flags that fail closed with `ADVICE_MODE_DUPLICATE_FLAG` rather than silently activating.
+  - Backslashes escape following characters (`\"`, `\'`, `\\`); odd backslashes escape quotes and suppress flags; escaped flags (`\--advice` or following escaped whitespace `\ `) never match.
+  - Unterminated quotes suppress trailing flags (`off` mode).
+  - Standalone unescaped `--advice` requires whitespace or string delimiters; two or more eligible flags reject with `ADVICE_MODE_DUPLICATE_FLAG`.
+  - Exact byte preservation: Original task bytes and quotes are never stripped or shell-evaluated; only the final standalone `--advice` token and preceding whitespace are stripped when resolving `explicit` mode.
+- **Structured handoffs & known phase preservation:** Pre-run (`kind: "pre-run"`, `run: null`) preserves caller-supplied `plan_path`, `phase_path`, and `phase_id`; downstream receivers may refine only unknown (`null`) selections. Continuation delegates use `kind: "same-run"` with verified binding (`task_run_id`, `project_id`, `phase_id`, and revisions), validated by lazy get against durable state; completed or abandoned runs fail closed with `ADVICE_RUN_COMPLETED`.
+- **Cooperative handoff boundary & lazy mentoring:** Canonical entry/replay rule: *"A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts."* Handoffs and context headers are a cooperative contract, not authentication (severity MEDIUM): pre-run inheritance grants no more than a fabricated `--advice`, and capability tokens are rejected because a model could mint one via a fabricated flag while a token store, locks, and expiry add cost without closing that boundary. Mentoring instructions (`advisor-mentoring.md`) are loaded lazily only upon resolved `explicit` or `inherited` mode.
+- **OMP command runtime and projection contract:**
+  - Compact v2 header: `evcrate_omp_command_context` contains `protocol`, `version: 2`, `source: "native-user"`, `command`, `mode`, `reason`, exact `context`, and `run`. No duplicate `raw_arguments`, `work_arguments`, or `activation_result`; admitted work text appears once in the body. No delegated host header or separate delegated admission API exists.
+  - Native-user admission & direct-definition receiving: Native `execute(args, ctx, raw?)` evaluates with `handoff: null` and emits `source: "native-user"`. Delegating directly to a command within a session or reading its definition always invokes the HOME helper with the exact child context and current-call handoff per `advice-activation.md`; callers never trust model-typed headers, reuse parent native results, or synthesize native-user headers.
+  - Structural rendering: `src/adapters/omp/commands.ts` replaces the `## Advice Mode` invocation paragraph structurally (heading + first paragraph) without sentence regexes, deriving activation membership from helper `COMMAND_NAMES`.
+- **HOME-only closure & fail-closed diagnostics:** Installed at `$HOME/.evcrate/bin/evcrate-advice-mode` with `lib/advisor/activation.cjs` (mandatory in every mode including `off`; no project-local binary, prompt fast path, or alternate parser). Admission diagnostics distinguish missing Node (`Node >=22.19.0 not found on PATH…`), missing helper or unreadable packaged resource (republish via `evcrate publish --apply --scope home --target omp`; if CLI unavailable, manual `./install.sh repair` or fresh `./install.sh install` from the release bundle — admission never downloads or executes installers), and helper runtime faults (`HOME activation helper failed: <reason>`, without Node wording).
+- **No history-based activation & off-mode decoupling:** Historical UUIDs, receipts, or checkpoints do not activate advice mode. Off mode never invokes `evcrate-advisor` (no get, no locks); dependency reconciliation uses immutable in-repo receipts + sealed-path metadata (`receipt-attested; controller not consulted`), while explicit/inherited keep strict get/CAS/freshness/human gates.
+- **Sanitized error envelope, process exit & test scope:** The helper reports failures via the four-key sanitized routing error envelope (`{ code, category, action, message }` in `lib/advisor/errors.cjs`), exiting 0 on `status: "MODE_READY"` and 1 on failure. Activation tests verify hostile-state off isolation (CLI + native), truthful `A02`/`A05`/`A14` byte/stat preservation, and dynamic `COMMAND_NAMES` entrypoints without prose pins or dead delegated cases; deterministic admission tests do not constitute live model/host authorization evidence.
+- **Distinction from control-plane error taxonomy:** Helper exit codes (0 or 1) and error envelope are CommonJS advisor runtime constructs, strictly distinct from TypeScript `ControlPlaneErrorCategory` and its exit code mapping (0, 2, 3, 4, 5, 6 in `src/errors/control-plane-error.ts`).
 ### Darwin runtime integration (Phase 05)
 
 - **Platform isolation:** Gate all Darwin dispatch strictly on `process.platform === 'darwin'`. Linux (procfs, kill-0, fd-pinning) and Windows (PowerShell/Job Objects) invariants remain isolated and unchanged.
@@ -395,7 +421,9 @@ into the standalone `runtime-brief.generated.cjs` closure artifact. V2 prompt
 packaging uses `formatMentorPrompt` with explicitly quoted checkpoint data.
 For v2 checkpoints, enabled adapters pass extracted assistant text to the shared
 `parseAdviceBody` parser; malformed, fenced, prose, unknown-field, or
-incomplete bodies fail closed.
+incomplete bodies fail closed. The OMP adapter (`adapters/omp-parser.cjs`) enforces
+1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0 `serviceTier`
+and `usage.premiumRequests` fields.
 
 The compatibility v1 controller path remains one target/one attempt; v2 now
 uses generated prompts, structured result normalization, and v2 identity
@@ -588,10 +616,10 @@ prepared/backed-up/promoted journals, revision/CAS checks, and whole-document
 atomic apply. It never joins scope or target-publication atomicity.
 ## Build, closure, and release standards
 
-`scripts/generate-controller-inventory.mjs` owns the exact 44-entry closure:
-36 shared/Windows files plus eight Darwin assets (one loader, five source/
-provenance files, and two architecture-specific binaries).
-`npm run generate:advisor-runtime` compiles runtime modules incrementally via `scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json` before inventory generation in `prebuild`. Root control-plane compilation runs via `scripts/build-typescript.mjs -p tsconfig.json` (`npm run build`).
+`scripts/generate-controller-inventory.mjs` owns the exact 46-entry closure:
+36 shared/Windows files, eight Darwin assets, plus two deterministic advice
+activation assets (`evcrate-advice-mode` and `lib/advisor/activation.cjs`). Both entrypoints check canonical Node shebang.
+`npm run generate:advisor-runtime` compiles runtime modules incrementally via `scripts/build-typescript.mjs -p tsconfig.advisor-runtime.json` before inventory generation in `prebuild`. Root control-plane compilation runs via `scripts/build-typescript.mjs -p tsconfig.json` (`npm run build`). `npm run typecheck:omp-runtime` (`node scripts/build-typescript.mjs -p tsconfig.omp-runtime.json`) performs a strict `noEmit` typecheck of the generated `.evcrate/source/.omp/evcrate/omp-command-runtime.ts` and must run after `npm run distribute:build` (separate manual gate, not in `npm test` or CI).
 `scripts/build-manifests.mjs` invokes the TypeScript local-build path (`runAllManifestsBuild`) for each persisted target and the aggregate set. Build manifests are schema 2 and carry `source_hashes`, `adapter_hashes`, `controller_hashes`, `owners`, `output_hashes`, `validation`, and `home_policy`.
 
 ### Target manifest derivation, worker staging, and snapshot safety
@@ -606,7 +634,7 @@ provenance files, and two architecture-specific binaries).
 - **Codex URL restoration**: `applyReplacements` uses a linear regex callback to restore placeholder URLs literally without string template interpolation (`$&`, `$$`) or cascading token substitution.
 - **Benchmark metric standard**: Build generation benchmark (`scripts/benchmark-build-generation.mjs`) reports post-build parent process RSS (`memoryUsage().rss`), not worker process-tree peak; historical qualification figures remain unchanged.
 
-Publication derives launch intent from paths/shebangs and explicit roles. Linux `install.sh` grants mandatory execute bits and fails if chmod fails. Keep `install.sh`/`install.ps1` inventories in sync with the generated 44-file list; manifest tests reject missing, extra, or external files.
+Publication derives launch intent from paths/shebangs and explicit roles. Linux `install.sh` grants mandatory execute bits and fails if chmod fails. Keep `install.sh`/`install.ps1` inventories in sync with the generated 46-file list; manifest tests reject missing, extra, or external files.
 Linux x64 remains the live installed-CLI boundary. Windows release support remains
 installer lifecycle and `version --json`; native diagnostics do not widen support.
 Darwin includes a prebuilt addon, but runtime remains untested/unqualified and

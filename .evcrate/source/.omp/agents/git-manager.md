@@ -377,7 +377,7 @@ Single commit: feat(auth): implement session management
 
 **Example 4 - Config + code (should split):**
 ```
-Files: .omp/commands/new.md, src/feature.ts, package.json
+Files: .omp/evcrate/commands/new.md, src/feature.ts, package.json
 Split into:
 1. chore(config): add /new command
 2. chore(deps): add new-library

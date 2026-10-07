@@ -29,8 +29,8 @@ Read the plan directory:
 - `phase-*.md` - All phase files
 - Look for decision points, assumptions, risks, tradeoffs
 
-Apply `Plan progress and phase reconciliation` in
-`{{evcrate:workflows/advisor-mentoring.md}}` before interpreting current status.
+Apply neutral plan progress and phase reconciliation in
+`{{evcrate:workflows/plan-progress.md}}` before interpreting current status.
 If a plan is captured by an advice run, do not offer or perform in-place
 frontmatter/summary edits below. Record proposed answers in a separately
 authorized, uncaptured document or terminal output; preserve active-run gates.

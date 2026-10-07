@@ -48,18 +48,27 @@ export function splitArguments(input) {
 }
 
 export function substituteArguments(body, rawArgs) {
-  const args = splitArguments(rawArgs);
-  const all = rawArgs.trim();
-  return body
-    .replace(/\$\{ARGUMENTS:-([^}]*)\}/g, (_match, fallback) => all || fallback)
-    .replace(/\$\{(\d+):-([^}]*)\}/g, (_match, index, fallback) => args[Number(index) - 1] ?? fallback)
-    .replace(/\$ARGUMENTS\b/g, all)
-    .replace(/\$@/g, all)
-    .replace(/\$(\d+)/g, (_match, index) => args[Number(index) - 1] ?? "");
+  if (typeof rawArgs !== "string") throw new Error("EVCrate commands require raw string arguments");
+  let args;
+  const getArgs = () => {
+    if (!args) args = splitArguments(rawArgs);
+    return args;
+  };
+  const placeholder = /\$\{ARGUMENTS:-([^}]*)\}|\$\{(\d+):-([^}]*)\}|\$ARGUMENTS\b|\$@|\$(\d+)/g;
+  return body.replace(placeholder, (match, argumentFallback, positionalIndex, positionalFallback, simpleIndex) => {
+    if (match.startsWith("${ARGUMENTS:-")) return rawArgs || argumentFallback;
+    const index = positionalIndex ?? simpleIndex;
+    if (index !== undefined) return getArgs()[Number(index) - 1] ?? (positionalFallback ?? "");
+    return rawArgs;
+  });
 }
 
 export function commandNameFor(relativePath) {
   return relativePath.slice(0, -extname(relativePath).length).split(sep).join(":");
+}
+
+export function canonicalCommandNameFor(relativePath) {
+  return relativePath.slice(0, -extname(relativePath).length).split(sep).join("/");
 }
 
 export function discoverCommandFiles(root) {
@@ -71,8 +80,13 @@ export function discoverCommandFiles(root) {
       const candidate = `${directory}${sep}${entry.name}`;
       if (entry.isDirectory()) walk(candidate);
       else if (entry.isFile() && extname(entry.name) === ".md") {
-        const filePath = resolveContainedExistingPath(root, relative(root, candidate));
-        if (filePath) commands.push({ name: commandNameFor(relative(root, candidate)), filePath });
+        const relativePath = relative(root, candidate);
+        const filePath = resolveContainedExistingPath(root, relativePath);
+        if (filePath) commands.push({
+          name: commandNameFor(relativePath),
+          canonicalName: canonicalCommandNameFor(relativePath),
+          filePath,
+        });
       }
     }
   };
@@ -133,7 +147,7 @@ export async function expandCommandBody(body, rawArgs, { cwd, execute, resolveMa
   let result = "";
   let cursor = 0;
   for (const event of events) {
-    result += marked.slice(cursor, event.index);
+    result += substituteArguments(marked.slice(cursor, event.index), rawArgs);
     if (event.type === "command") {
       const run = await execute(event[1]);
       const output = run.code === 0 ? run.stdout : `(command failed: ${event[1]})\n${run.stderr || run.stdout}`;
@@ -147,5 +161,5 @@ export async function expandCommandBody(body, rawArgs, { cwd, execute, resolveMa
     }
     cursor = event.index + event[0].length;
   }
-  return substituteArguments(result + marked.slice(cursor), rawArgs);
+  return result + substituteArguments(marked.slice(cursor), rawArgs);
 }

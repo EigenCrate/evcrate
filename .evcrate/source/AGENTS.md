@@ -15,6 +15,8 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Documentation management: `./.codex/workflows/documentation-management.md`
 - And other workflows: `./.codex/workflows/*`
 
+Resolve required workflow resources from `./.codex/workflows/<name>` when present; otherwise use the published `~/.codex/workflows/<name>`. This shared lookup includes `advice-activation.md` and `plan-progress.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read full `advisor-mentoring.md` only after resolved explicit/inherited activation.
+
 ## Subagent Completion Contract
 
 Delegation is synchronous unless a workflow explicitly says otherwise. After spawning or calling a subagent, remain in the parent turn and wait for its terminal response before continuing. Do not start dependent work, edit shared files, mark a step complete, or give a final answer while the subagent is still running.

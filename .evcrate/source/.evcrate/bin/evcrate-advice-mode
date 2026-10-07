@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const cancellation = new AbortController();
+const onSignal = () => cancellation.abort();
+process.on('SIGINT', onSignal);
+process.on('SIGTERM', onSignal);
+process.on('message', (message) => {
+  if (message === 'SIGINT' || message === 'SIGTERM') onSignal();
+});
+process.on('disconnect', onSignal);
+
+const {
+  MAX_INPUT_BYTES, MAX_OUTPUT_BYTES, parseActivationRequest, evaluateActivation
+} = require('./lib/advisor/activation.cjs');
+const { createRoutingError, serializeRoutingError } = require('./lib/advisor/errors.cjs');
+
+function readStdin(signal) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let settled = false;
+    let timer;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      process.stdin.removeListener('data', onData);
+      process.stdin.removeListener('end', onEnd);
+      process.stdin.removeListener('error', onError);
+      signal.removeEventListener('abort', onAbort);
+      if (error) {
+        process.stdin.pause();
+        process.stdin.destroy();
+        reject(error);
+      } else resolve(Buffer.concat(chunks, size));
+    };
+    const onData = (chunk) => {
+      size += chunk.length;
+      if (size > MAX_INPUT_BYTES) return finish(createRoutingError('ADVICE_MODE_OVERSIZED'));
+      chunks.push(chunk);
+    };
+    const onEnd = () => finish();
+    const onError = () => finish(createRoutingError('ADVICE_MODE_INVALID'));
+    const onAbort = () => finish(createRoutingError('CANCELLED'));
+    process.stdin.on('data', onData);
+    process.stdin.on('end', onEnd);
+    process.stdin.on('error', onError);
+    signal.addEventListener('abort', onAbort, { once: true });
+    timer = setTimeout(() => finish(createRoutingError('TIMEOUT')), 2_000);
+    if (signal.aborted) onAbort();
+    else process.stdin.resume();
+  });
+}
+
+function failure(error) {
+  let diagnostic = serializeRoutingError(error);
+  // Missing continuation state must never suggest replacing the bound run.
+  if (diagnostic.code === 'STATE_NOT_FOUND') {
+    diagnostic = { ...diagnostic, action: 'Restore the required existing run with its owner before continuation.' };
+  } else if (diagnostic.code === 'TIMEOUT') {
+    diagnostic = { ...diagnostic, action: 'Send the complete bounded request and close stdin within 2 seconds.' };
+  }
+  return {
+    protocol: 'evcrate-advice-mode', version: 1, status: 'FAILED',
+    mode: null, reason: null, work_arguments: null, context: null, run: null,
+    error: diagnostic
+  };
+}
+
+async function main() {
+  let result;
+  try {
+    if (process.argv.length !== 2) throw createRoutingError('ADVICE_MODE_INVALID');
+    const request = parseActivationRequest(await readStdin(cancellation.signal));
+    if (cancellation.signal.aborted) throw createRoutingError('CANCELLED');
+    // Never let caller context silently redirect retrieval to another project.
+    // Compare physical identities so a logical symlink root for this cwd matches;
+    // an unresolvable or different root is a mismatch, never a fallback.
+    let sameRoot = false;
+    try {
+      sameRoot = fs.realpathSync(path.resolve(request.context.project_root)) === fs.realpathSync(process.cwd());
+    } catch { /* unresolvable root stays a mismatch */ }
+    if (!sameRoot) throw createRoutingError('ADVICE_CONTEXT_MISMATCH');
+    let state = null;
+    if (request.handoff?.kind === 'same-run') {
+      // Lazy get-only import: ordinary and pre-run modes never load the dispatcher.
+      const { executeStateRequest } = require('./lib/advisor/task-state.cjs');
+      const response = executeStateRequest({
+        protocol: 'evcrate-advisor-state', version: 1, operation: 'get',
+        task_run_id: request.handoff.run.task_run_id,
+        operation_id: null, expected_revision: null, payload: {}
+      }, { cwd: process.cwd(), environment: process.env, signal: cancellation.signal });
+      state = response.state;
+    }
+    if (cancellation.signal.aborted) throw createRoutingError('CANCELLED');
+    result = evaluateActivation(request, state);
+  } catch (error) {
+    result = failure(error);
+  }
+  let output;
+  try {
+    output = JSON.stringify(result) + '\n';
+    if (Buffer.byteLength(output) > MAX_OUTPUT_BYTES) {
+      result = failure(createRoutingError('ADVICE_MODE_OVERSIZED'));
+      output = JSON.stringify(result) + '\n';
+    }
+  } catch {
+    result = failure(createRoutingError('PROCESS_FAILED'));
+    output = JSON.stringify(result) + '\n';
+  }
+  // Flush normal output completely; a stalled consumer must not strand the CLI.
+  // Never append a second envelope after a partially written terminal result.
+  const exitCode = result.status === 'MODE_READY' ? 0 : 1;
+  const stopOutput = () => {
+    process.stdout.destroy();
+    process.exit(1);
+  };
+  const outputTimer = setTimeout(stopOutput, 2_000);
+  cancellation.signal.addEventListener('abort', stopOutput, { once: true });
+  process.stdout.on('error', stopOutput);
+  process.stdout.write(output, (error) => {
+    if (error) return stopOutput();
+    clearTimeout(outputTimer);
+    process.exit(exitCode);
+  });
+}
+
+void main();

@@ -40,7 +40,8 @@ function collectPackInventory(projectRoot) {
     const data = Buffer.from(fs.readFileSync(fullPath));
     const isExecutable = (stat.mode & 0o111) !== 0 ||
       file.path === 'dist/cli/evcrate.js' ||
-      file.path === '.evcrate/source/.evcrate/bin/evcrate-advisor';
+      file.path === '.evcrate/source/.evcrate/bin/evcrate-advisor' ||
+      file.path === '.evcrate/source/.evcrate/bin/evcrate-advice-mode';
     const normMode = isExecutable ? 0o755 : 0o644;
     const sha256 = crypto.createHash('sha256').update(data).digest('hex');
 

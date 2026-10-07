@@ -17,8 +17,8 @@ const ASSISTANT = {
 };
 const ASSISTANT_START = { ...ASSISTANT, content: [], stopReason: 'pending' };
 
-function stream({ eventExtra, cwd = CWD, messageExtra, tool = false, willRetry } = {}) {
-  const assistantEnd = messageExtra ? { ...ASSISTANT, ...messageExtra } : ASSISTANT;
+function stream({ eventExtra, cwd = CWD, messageExtra, assistant = ASSISTANT, deltas = [], tool = false, willRetry } = {}) {
+  const assistantEnd = messageExtra ? { ...assistant, ...messageExtra } : assistant;
   const events = [
     { type: 'session', version: 3, id: 'session-id', timestamp: '2026-08-29T00:00:00.000Z', cwd },
     { type: 'agent_start', ...(eventExtra || {}) }, { type: 'turn_start' },
@@ -26,6 +26,7 @@ function stream({ eventExtra, cwd = CWD, messageExtra, tool = false, willRetry }
     { type: 'message_start', message: ASSISTANT_START },
     { type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 0 } },
     { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'Use the smallest safe change.' } },
+    ...deltas.map((delta) => ({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta } })),
     { type: 'message_update', assistantMessageEvent: { type: 'text_end', contentIndex: 0, content: 'Use the smallest safe change.' } },
     { type: 'message_end', message: assistantEnd },
     { type: 'turn_end', message: assistantEnd, toolResults: tool ? [{ toolCallId: 'x' }] : [] },
@@ -49,6 +50,60 @@ test('OMP parser rejects unexpected fields and route mismatches', () => {
 test('OMP parser rejects tool results and retries', () => {
   assert.throws(() => parse(stream({ tool: true })), { code: 'READ_ONLY_UNSUPPORTED' });
   assert.throws(() => parse(stream({ willRetry: true })), { code: 'PROTOCOL_INVALID' });
+});
+
+// Key/structure shapes recorded from real omp output; all text is synthetic.
+const CODEX_18_7_0 = {
+  role: 'assistant', content: ASSISTANT.content, api: 'openai-codex-responses', provider: 'openai-codex', model: 'gpt-5.6-sol',
+  usage: { ...USAGE, reasoningTokens: 0, premiumRequests: 0 }, stopReason: 'stop', timestamp: 2, credentialId: 'credential-id',
+  responseId: 'response-id', serviceTier: 'default', duration: 1, ttft: 1, completedAt: 3,
+};
+function without(object, ...keys) { return Object.fromEntries(Object.entries(object).filter(([key]) => !keys.includes(key))); }
+const CODEX_18_6_3 = {
+  ...without(CODEX_18_7_0, 'serviceTier'), usage: without(CODEX_18_7_0.usage, 'premiumRequests'),
+};
+const ANTIGRAVITY_BACKUP = {
+  ...without(CODEX_18_6_3, 'responseId'), usage: without(CODEX_18_6_3.usage, 'reasoningTokens'),
+};
+
+test('OMP parser accepts recorded omp v18.7.0, v18.6.3 and antigravity message shapes', () => {
+  assert.deepEqual(Object.keys(CODEX_18_7_0).sort(), ['api', 'completedAt', 'content', 'credentialId', 'duration', 'model', 'provider',
+    'responseId', 'role', 'serviceTier', 'stopReason', 'timestamp', 'ttft', 'usage']);
+  assert.deepEqual(Object.keys(CODEX_18_7_0.usage).sort(), ['cacheRead', 'cacheWrite', 'cost', 'input', 'output', 'premiumRequests',
+    'reasoningTokens', 'totalTokens']);
+  for (const assistant of [CODEX_18_7_0, CODEX_18_6_3, ANTIGRAVITY_BACKUP]) {
+    // stream() reuses the same assistant in message_end, turn_end and agent_end.messages[1].
+    assert.deepEqual(parse(stream({ assistant })), { recommendation: 'Use the smallest safe change.' });
+  }
+  assert.equal('serviceTier' in CODEX_18_6_3 || 'premiumRequests' in CODEX_18_6_3.usage, false);
+  assert.equal('responseId' in ANTIGRAVITY_BACKUP || 'serviceTier' in ANTIGRAVITY_BACKUP, false);
+  assert.equal('reasoningTokens' in ANTIGRAVITY_BACKUP.usage || 'premiumRequests' in ANTIGRAVITY_BACKUP.usage, false);
+});
+
+test('OMP parser validates serviceTier and premiumRequests', () => {
+  for (const serviceTier of ['', 1, null, {}]) {
+    assert.throws(() => parse(stream({ assistant: CODEX_18_7_0, messageExtra: { serviceTier } })), { code: 'PROTOCOL_INVALID' });
+  }
+  for (const premiumRequests of [-1, Number.NaN, '0', null]) {
+    const usage = { ...CODEX_18_7_0.usage, premiumRequests };
+    assert.throws(() => parse(stream({ assistant: CODEX_18_7_0, messageExtra: { usage } })), { code: 'PROTOCOL_INVALID' });
+  }
+  assert.throws(() => parse(stream({ assistant: CODEX_18_7_0, messageExtra: { foo: 'bar' } })), { code: 'PROTOCOL_INVALID' });
+  const usage = { ...CODEX_18_7_0.usage, foo: 0 };
+  assert.throws(() => parse(stream({ assistant: CODEX_18_7_0, messageExtra: { usage } })), { code: 'PROTOCOL_INVALID' });
+});
+
+test('OMP parser enforces the 1 MiB byte and 8192 line limits', () => {
+  const MAX_BYTES = 1024 * 1024;
+  const base = Buffer.byteLength(stream({ deltas: [''] }), 'utf8');
+  const atLimit = stream({ deltas: ['x'.repeat(MAX_BYTES - base)] });
+  assert.equal(Buffer.byteLength(atLimit, 'utf8'), MAX_BYTES);
+  assert.deepEqual(parse(atLimit), { recommendation: 'Use the smallest safe change.' });
+  assert.throws(() => parse(stream({ deltas: ['x'.repeat(MAX_BYTES - base + 1)] })), { code: 'OUTPUT_LIMIT' });
+
+  const baseLines = stream().split('\n').length;
+  assert.deepEqual(parse(stream({ deltas: Array(8192 - baseLines).fill('') })), { recommendation: 'Use the smallest safe change.' });
+  assert.throws(() => parse(stream({ deltas: Array(8193 - baseLines).fill('') })), { code: 'PROTOCOL_INVALID' });
 });
 
 test('OMP parser rejects undocumented advisor_yielded event', () => {

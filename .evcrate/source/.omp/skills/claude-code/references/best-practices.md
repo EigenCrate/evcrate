@@ -53,7 +53,7 @@ Copy `.omp/.env.example` to `.omp/.env` and fill in:
 
 **What to commit:**
 - `.omp/settings.json`
-- `.omp/commands/`
+- `.omp/evcrate/commands/`
 - `.omp/skills/`
 - `.omp/evcrate/hooks.json`
 - `.omp/mcp.json` (without secrets)
@@ -243,7 +243,7 @@ claude analytics cost --group-by project
 Create consistent slash commands:
 
 ```markdown
-# .omp/commands/cmd-test.md
+# .omp/evcrate/commands/cmd-test.md
 Run test suite with coverage report.
 
 Options:

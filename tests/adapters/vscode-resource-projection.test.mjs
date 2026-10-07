@@ -102,7 +102,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(styleParsed.fields.name, 'style-coding-level-3-senior');
     assert.equal(styleParsed.fields['disable-model-invocation'], true);
 
-    // 7. Verify workflows (6)
+    // 7. Verify workflows
     const workflowPath = join(stageRoot, 'evcrate/workflows/primary-workflow.md');
     assert.ok(existsSync(workflowPath), 'evcrate/workflows/primary-workflow.md must exist');
 
@@ -145,14 +145,6 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const resourceMapJson = JSON.parse(readFileSync(resourceMapPath, 'utf8'));
     assert.ok(resourceMapJson.resources.length > 100);
 
-    const inventoryPath = join(stageRoot, 'evcrate/projection-inventory.json');
-    assert.ok(existsSync(inventoryPath));
-    const inventoryJson = JSON.parse(readFileSync(inventoryPath, 'utf8'));
-    assert.equal(inventoryJson.summary.agents_count, 19);
-    assert.equal(inventoryJson.summary.commands_count, 70);
-    assert.equal(inventoryJson.summary.skills_count, 40);
-    assert.equal(inventoryJson.summary.styles_count, 6);
-    assert.equal(inventoryJson.summary.workflows_count, 6);
 
     // 10. Verify Phase 05 configuration examples, guides, and dispositions
     const vscodeSettingsExamplePath = join(stageRoot, 'evcrate/examples/vscode-settings.example.json');

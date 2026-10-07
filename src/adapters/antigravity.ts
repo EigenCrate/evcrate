@@ -81,7 +81,7 @@ function description(content: string): string {
   return 'Migrated command from .claude';
 }
 function workflowFallback(text: string): string {
-  for (const name of ['advisor-mentoring.md', 'advisory-interview.md']) {
+  for (const name of ['advice-activation.md', 'plan-progress.md', 'advisor-mentoring.md', 'advisory-interview.md']) {
     text = text.replaceAll(`\`.antigravity/workflows/${name}\``, `\`.antigravity/workflows/${name}\` if present; otherwise read \`~/.gemini/config/workflows/${name}\` (the published install)`);
   }
   return text;

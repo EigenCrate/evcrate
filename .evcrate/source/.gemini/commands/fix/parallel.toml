@@ -4,26 +4,26 @@ prompt = """**Ultrathink parallel** raw input: <raw-issues>{{args}}</raw-issues>
 ## Canonical checkpoint routing
 
 Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.gemini/workflows/advisor-mentoring.md`; this command supplies bounded evidence
-and does not duplicate route or adapter selection.
+`.gemini/workflows/advisor-mentoring.md` only under explicit or inherited advice mode.
+This command supplies bounded evidence and does not duplicate route or adapter selection.
 
 ## Advice Mode
 
-A final standalone `--advice` activates explicit review mentoring.
-Before analysis, read `.gemini/workflows/advisor-mentoring.md` and derive
-`WORK_ARGUMENTS` plus explicit/default advice mode. Use `WORK_ARGUMENTS` as the
-issues input and apply the shared default stuck-escalation contract.
-**Effective advice lifecycle**: The advice lifecycle is active if explicit `--advice` was provided, OR an applicable active advisor run context is present, OR a named checkpoint is invoked. When active, all operational branches follow the advice lifecycle (durable task-state machine, registered work, review gate, phase reconciliation per `## Caller lifecycle binding` in `.gemini/workflows/advisor-mentoring.md`); default branches apply ONLY when no advice lifecycle is active.
-In explicit advice mode (or when an active advice run or named checkpoint
-activates the advice lifecycle), this command directly coordinates parallel
-fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
-`Plan progress and phase reconciliation` in `.gemini/workflows/advisor-mentoring.md`.
+Before discovery or routing, resolve the HOME helper per `.gemini/workflows/advice-activation.md` with original `{{args}}`, canonical `context.command: \"fix/parallel\"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: \"fix/parallel\"` only when no such target exists, and null plan/phase fields only when unknown.
+Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
+
+Apply neutral `.gemini/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.gemini/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
+Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+
+Under `explicit` or `inherited` advice mode, this command directly coordinates parallel fixes and binds its durable lifecycle to `.gemini/workflows/advisor-mentoring.md` and `.gemini/workflows/plan-progress.md`:
 1. **Single durable-state owner**: The parent agent owns all state controller
    operations (`init`, `checkpoint`, `disposition`, `outcome`, `complete`).
    Parallel child agents (`fullstack-developer`, `debugger`, `tester`,
    `code-reviewer`, `project-manager`, `docs-manager`) report terminal
-   artifacts and actual changed paths; they never operate controller state or
-   stage files behind the parent.
+   artifacts and actual changed paths within parent-authorized paths; they
+   receive strict ownership, writable path, protected path, and delta destination constraints,
+   and never operate controller state or stage files behind the parent.
 2. **Active run retention & pre-mutation disposition**: If invoked with an active advice run (`task_run_id`,
    phase, state revision, prior counsel/disposition/outcome), retain that run
    identity across parallel fix and review cycles without initializing a new UUID
@@ -52,14 +52,15 @@ fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
 
 ## Workflow
 
-### 0. Active-Run Branch & Writer Pre-flight (Explicit Advice Mode)
-- In explicit advice mode with an active run (`task_run_id`, active phase, state revision, prior counsel/action/disposition):
+### 0. Active-Run Branch & Writer Pre-flight
+- Under `off` advice mode, apply neutral progress/protection from immutable in-repo receipts and sealed-path metadata only; never call `evcrate-advisor`, initialize state, adopt a discovered run as continuation, or register actions.
+- Under `explicit` or `inherited` advice mode with an active run (`task_run_id`, active phase, state revision, prior counsel/action/disposition):
   - Inspect active counsel and action via `state get`.
   - **Resume existing action**: If an action is already registered (`action_id`, `episode_id`), resume that action without duplicating it; complete its authorized bounded parallel work, run its declared validation (`tester`), and record a truthful matching `state outcome` (with `actual_changed_paths`) before reserving the next checkpoint.
   - **Accepted action registration**: If counsel requires disposition and changes are accepted, record `state disposition` with `action: \"accept\"`, causal rationale, and canonical `correction: { action_id, episode_id, validation_command }` (note: canonical state disposition payload contains only `consultation_id`, `evidence_revision`, `action`, `rationale`, and `correction`; intended paths belong in checkpoint `proposal.intended_changed_paths` and write authority is bounded by `task.authorized_paths`, not direct disposition fields) BEFORE any writer touches files (such as parallel plan generation or worker code modifications). Then complete authorized work, run declared validation (`tester`), and record a truthful matching `state outcome` before reserving the next checkpoint.
   - **Disputed counsel without active action**: If counsel is disputed (`reject-with-evidence`, `need-evidence`, or `reconcile`), record `state disposition` with that action, causal rationale, and `correction: null`. Do NOT perform corrective writes and do NOT force an invented action or outcome prerequisite. Collect read-only evidence or an explicit resolution while keeping captured baseline paths unchanged, then obtain fresh same-run counsel via checkpoint reservation and controller inference BEFORE any corrective mutation or resolved correction outcome.
   - **Terminal inference failure or no active work**: Do not force an invented action or outcome; keep baseline unchanged and resolve the advice gate before mutation.
-- If fresh first review (no active run yet): preserve stateless router behavior; do NOT initialize state at command start just to track discovery, planning, or initial parallel execution.
+- If fresh first review under `explicit` or `inherited` mode (no active run yet): do NOT initialize state at command start just to track discovery, planning, or initial parallel execution.
 
 ### 1. Issue Analysis
 - Use `debugger` subagent to analyze root causes
@@ -68,9 +69,9 @@ fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
 - Identify dependencies between issues
 
 ### 2. Parallel Fix Planning
-- In explicit advice mode with an active run, ensure plan generation and file ownership boundaries align with an accepted registered correction action within authorized scope (or resumed active action) before mutating plan files. Mutating plan files under disputed or unregistered counsel is forbidden.
-- Trigger `/plan:parallel <detailed-fix-instructions>` for parallel-executable fix plan
-- For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched
+- In `explicit` or `inherited` advice mode with an active run, ensure plan generation and file ownership boundaries align with an accepted registered correction action within authorized scope (or resumed active action) before mutating plan files. Mutating plan files under disputed or unregistered counsel is forbidden.
+- Trigger `/plan:parallel <detailed-fix-instructions>` for parallel-executable fix plan. In `explicit` or `inherited` mode, pass structured pre-run or same-run context without appending synthetic `--advice`.
+- Reconcile plans and phase status via `.gemini/workflows/plan-progress.md` before planning and before each parallel batch. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
 - Wait for plan with dependency graph, execution strategy, file ownership matrix
 - Group independent fixes for parallel execution
 - Sequential fixes for dependent issues
@@ -94,8 +95,8 @@ fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
 
 ### 5. Code Review
 - Use `code-reviewer` for all changes
-- In explicit advice mode, enter the canonical checkpoint dispatcher at
-  `review:fix-parallel` under `## Caller lifecycle binding`:
+- **Under `off` advice mode**: Wait for reviewer report, verify fixes, revalidate with `tester`, and ask user for approval. On a second consecutive matching terminal blocker without progress, escalate through ordinary debugger/user handling before another attempt; do not invoke a checkpoint.
+- **Under `explicit` or `inherited` advice mode**, enter the canonical checkpoint dispatcher at `review:fix-parallel` under `.gemini/workflows/advisor-mentoring.md`:
   - **Fresh first review (no active run yet)**: Settle all parallel fix
     implementations, test validation, reviewer report, and selected evidence
     artifacts. Enforce a writer barrier (no intervening file edits or Git index
@@ -123,25 +124,27 @@ fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
     requires interactive terminal authorization; conversational approval cannot
     forge completion.
 - Verify fixes don't introduce regressions
-- If critical findings are accepted in explicit advice mode, record
+- If critical findings are accepted in `explicit` or `inherited` advice mode, record
   `state disposition` with `accept` and a registered bounded correction action
   before writes; apply fixes, run its actual declared validation, record the
   matching truthful `state outcome`, then repeat review in the same run within
   the review cap.
-- If guidance is disputed in explicit advice mode, record
+- If guidance is disputed in `explicit` or `inherited` advice mode, record
   `reject-with-evidence`, `need-evidence`, or `reconcile`; collect read-only
   evidence or an explicit resolution, then obtain fresh same-run counsel before
   mutating corrections or a resolved correction outcome. Follow the canonical
   disposition lifecycle and review cap; do not imply immediate resolution.
-- In default mode, if critical issues remain or review is rejected, apply bounded
-  fixes, revalidate with `tester`, and repeat review without controller operations.
+- In `off` mode, if critical issues remain or review is rejected, apply bounded fixes, revalidate with `tester`, and repeat review without controller operations.
 ### 6. Project Management & Docs
+- In `explicit` or `inherited` mode, register the bounded finalization action and declared validation before any Step 6 substantive writes or selected index transitions, or resume the existing registered action. In `off` mode, keep ordinary approval/validation and neutral protection without durable lifecycle.
 - If approved: use `project-manager` + `docs-manager` in parallel
 - Child agents (`project-manager`, `docs-manager`) are advisory children reporting terminal artifacts and actual changed paths within parent-supplied authorized paths; they never operate controller state or stage behind the parent. Prior sealed paths remain immutable, while current-run registered pre-seal writes within authorized paths remain permitted.
 - Update plan files, docs, roadmap for authorized scope
 - All substantive documentation, plan status, and report writes are substantive
   finalization mutations and must settle BEFORE final outcome and completion
 ### 7. Final Report and Completion
+- In `off` mode, skip the registered-action/no-change/durable-completion branches below and retain ordinary approved/validated completion plus neutral administrative reporting.
+- Those durable branches apply only in `explicit` or `inherited` mode under `## Caller lifecycle binding`.
 - **Distinguish no-change closure from registered bounded finalization**:
   - **No-change outcome**: Requires 0 actual changed paths (`actual_changed_paths: []`),
     passed declared validation, `accept` disposition, and no `must_fix` or
@@ -162,15 +165,9 @@ fixes and binds its durable lifecycle to `## Caller lifecycle binding` and
   outside the captured baseline snapshot and updates the derived live overview `<plan-dir>/progress.md`
   (uncaptured, outside baseline; never captured or cited as evidence/authorized
   substantive paths; if already captured, cannot overwrite progress, surface blocker)
-  per shared receipt rules in `Plan progress and phase reconciliation` in `.gemini/workflows/advisor-mentoring.md`.
+  per shared receipt rules in `.gemini/workflows/plan-progress.md`.
   Preserved historical snapshot protection applies across runs even without `--advice`; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
 - **Sealed baseline**: Do NOT stage, commit, or mutate captured baseline files
-  or their Git index state after `state complete` seals the run; only bounded administrative receipt and progress publication outside baseline is permitted per `Plan progress and phase reconciliation` in `.gemini/workflows/advisor-mentoring.md`.
-- **Administrative reporting**: Report summary of all fixes from parallel phases
-  and verification status per issue. For advice-controlled plans or preserved snapshots,
-  point output to `<plan-dir>/progress.md`; old sealed `plan.md` remains untouched.
-  Normal default plans with no advice history do not require, read, or output
-  nonexistent progress links. Any optional post-completion administrative receipt
-  must be strictly OUTSIDE the captured baseline snapshot, identify the approved
-  snapshot, and cannot claim unreviewed edits.
+  or their Git index state after `state complete` seals the run; only bounded administrative receipt and progress publication outside baseline is permitted per `.gemini/workflows/plan-progress.md`.
+- **Administrative reporting**: Report summary of all fixes from parallel phases and verification status per issue. In `off` mode, if executing in an advice-controlled plan with prior historical advice phases, save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `.gemini/workflows/plan-progress.md`. For advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md`; old sealed `plan.md` remains untouched. Normal default plans with no advice history do not require, read, or output nonexistent progress links. Any optional post-completion administrative receipt must be strictly OUTSIDE the captured baseline snapshot, identify the approved snapshot, and cannot claim unreviewed edits.
 **Example:** Fix 1 (auth) + Fix 2 (payments) + Fix 3 (UI) → Launch 3 fullstack-developer agents → Wait → Fix 4 (integration) sequential"""

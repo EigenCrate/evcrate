@@ -13,7 +13,7 @@ Anthropic's agentic coding tool combining autonomous planning, execution, and va
 
 **Agent Skills**: Modular capabilities with SKILL.md + bundled resources (scripts, references, assets) loaded progressively
 
-**Slash Commands**: User-defined operations in `.omp/commands/` expanding to prompts
+**Slash Commands**: User-defined operations in `.omp/evcrate/commands/` expanding to prompts
 
 **Hooks**: Event-driven shell commands (SessionStart, PreToolUse, PostToolUse, Stop, SubagentStop)
 

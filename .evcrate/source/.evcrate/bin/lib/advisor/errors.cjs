@@ -1,6 +1,41 @@
 'use strict';
 
 const CATALOG = Object.freeze({
+  ADVICE_MODE_INVALID: {
+    category: 'request',
+    action: 'Provide one valid advice-mode request with the original raw arguments.',
+    message: 'Advice activation input is invalid'
+  },
+  ADVICE_MODE_OVERSIZED: {
+    category: 'request',
+    action: 'Keep advice-mode input and output within their declared byte limits.',
+    message: 'Advice activation exceeds its byte limit'
+  },
+  ADVICE_MODE_DUPLICATE_FLAG: {
+    category: 'request',
+    action: 'Supply at most one standalone --advice token.',
+    message: 'Advice activation contains duplicate flags'
+  },
+  ADVICE_HANDOFF_INVALID: {
+    category: 'request',
+    action: 'Provide the complete direct-caller handoff without inventing a run binding.',
+    message: 'Advice caller handoff is invalid'
+  },
+  ADVICE_CONTEXT_MISMATCH: {
+    category: 'request',
+    action: 'Use the agreed project, command, and selected work context.',
+    message: 'Advice caller context does not match'
+  },
+  ADVICE_HANDOFF_STALE: {
+    category: 'state',
+    action: 'Resolve continuation with the owner of the existing run.',
+    message: 'Advice caller handoff revisions are stale'
+  },
+  ADVICE_RUN_COMPLETED: {
+    category: 'state',
+    action: 'Reconcile completed scope separately; do not resume this run.',
+    message: 'Advice run is already completed or abandoned'
+  },
   REQUEST_INVALID: {
     category: 'request',
     action: 'Provide a valid advisor checkpoint request. In V2, evidence.files requires objects with { path, excerpt, digest } and intended_changed_paths are strings.',

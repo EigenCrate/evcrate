@@ -24,6 +24,8 @@ export const ADVISOR_CONTROLLER_TEXT_DATA_FILES = Object.freeze([
 
 export const ADVISOR_CONTROLLER_FILES = Object.freeze([
   'evcrate-advisor',
+  'evcrate-advice-mode',
+  'lib/advisor/activation.cjs',
   'lib/advisor/adapter-contract.cjs',
   'lib/advisor/adapter-registry.cjs',
   'lib/advisor/adapters/claude.cjs',

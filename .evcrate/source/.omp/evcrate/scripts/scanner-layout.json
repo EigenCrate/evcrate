@@ -3,7 +3,7 @@
   "target": "omp",
   "commands": {
     "format": "markdown",
-    "root": "../../commands",
+    "root": "../commands",
     "output": "commands_data.yaml",
     "authority": "../command-name-map.json"
   },

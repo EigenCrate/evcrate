@@ -10,7 +10,7 @@ Description: Analyze and fix UI issues
 
 ---
 description: "Analyze and fix UI issues"
-argument-hint: "[issue]"
+argument-hint: "[issue] [--advice]"
 ---
 ## Required Skills (Priority Order)
 1. **`ui-ux-pro-max`** - Design intelligence database (ALWAYS ACTIVATE FIRST)
@@ -18,8 +18,22 @@ argument-hint: "[issue]"
 3. **`frontend-design`** - Implementation patterns
 
 Use `ui-ux-designer` subagent to read and analyze `./docs/design-guidelines.md` then fix the following issues:
-<issue>$ARGUMENTS</issue>
+<raw-issue>$ARGUMENTS</raw-issue>
 
+## Canonical checkpoint routing
+
+Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
+`.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) only under explicit or inherited advice mode.
+This command supplies bounded evidence and does not duplicate route or adapter selection.
+
+## Advice Mode
+
+Before discovery or routing, resolve the HOME helper per `.antigravity/workflows/advice-activation.md` if present; otherwise read `~/.gemini/config/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/ui"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
+Preserve known selections from the exact-call router; use `work_target: "fix/ui"` only when no such target exists, and null plan/phase fields only when unknown.
+Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
+
+Apply neutral `.antigravity/workflows/plan-progress.md` if present; otherwise read `~/.gemini/config/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
+Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
 ## Workflow
 **FIRST**: Run `ui-ux-pro-max` searches to understand context and common issues:
 ```bash
@@ -36,20 +50,28 @@ If the user provides a screenshots or videos, use `ai-multimodal` skill to descr
   - If the issues are not addressed, repeat the process until all issues are addressed.
 3. Use `chrome-devtools` skill to analyze the implemented fix and make sure it matches the design guideline.
 4. Use `tester` agent to test the fix and compile the code to make sure it works, then report back to main agent.
-  - If there are issues or failed tests, ask main agent to fix all of them and repeat the process until all tests pass.
+  - If there are issues or failed tests, ask main agent to fix all of them and repeat the process until all tests pass. In `off` mode, a second consecutive matching terminal blocker escalates through ordinary debugger/user handling before another attempt.
 5. Project Management & Documentation:
-  **If user approves the changes:** Use `project-manager` and `docs-manager` subagents in parallel to update the project progress and documentation:
-    * Use `project-manager` subagent to update the project progress and task status in the given plan file.
-    * Use `docs-manager` subagent to update the docs in `./docs` directory if needed.
-    * Use `project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
-    * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
-  **If user rejects the changes:** Ask user to explain the issues and ask main agent to fix all of them and repeat the process.
+  - **Under `off` advice mode**:
+    * **If user approves the changes:** Use `project-manager` and `docs-manager` subagents in parallel to update the project progress and documentation:
+      - Use `project-manager` subagent to update the project progress and task status in the given plan file.
+      - Use `docs-manager` subagent to update the docs in `./docs` directory if needed. If executing in an advice-controlled plan with prior historical advice phases, save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `.antigravity/workflows/plan-progress.md` if present; otherwise read `~/.gemini/config/workflows/plan-progress.md` (the published install); prior sealed paths remain immutable.
+      - Use `project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
+      - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
+    * **If user rejects the changes:** Ask user to explain the issues and ask main agent to fix all of them and repeat the process.
+  - **Under `explicit` or `inherited` advice mode**:
+    * Delegate to `code-reviewer` and wait for its terminal report. Enforce a writer barrier before checkpoint reservation.
+    * Enter the canonical checkpoint dispatcher at `review:fix-ui` under `.antigravity/workflows/advisor-mentoring.md` if present; otherwise read `~/.gemini/config/workflows/advisor-mentoring.md` (the published install).
+    * Parent is sole durable-state owner (`init`, `checkpoint`, `disposition`, `outcome`, `complete`). Child agents (`ui-ux-designer`, `tester`, `code-reviewer`, `project-manager`, `docs-manager`) report terminal artifacts and actual changed paths within parent-authorized paths; they receive strict ownership, writable path, protected path, and delta destination constraints, and never operate controller state or stage files behind the parent.
+    * Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.
+    * For accepted corrections, record `state disposition` with `action: "accept"` and registered action before writes, implement fix, validate, and record truthful `outcome`. For disputed counsel, record supported disposition without action, collect evidence, obtain fresh same-run counsel.
+    * Settle all authorized substantive documentation and finalization writes under the registered parent action before the final truthful outcome; do not complete here. Step 6 is the sole durable completion exit.
 6. Final Report:
   * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
-  * Ask the user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository.
+  * In `off` mode, ask user if they want to commit and push to git repository, if yes, use `git-manager` subagent to commit and push to git repository (no controller state operations). For advice-controlled plans with prior historical advice phases, point output to `<plan-dir>/progress.md`.
+  * In `explicit` or `inherited` mode, record the matching final truthful outcome after all substantive writes/selected Git transitions settle, then complete ONCE via `state complete`. After success, publish the immutable outside-baseline receipt and derived `progress.md` per neutral `.antigravity/workflows/plan-progress.md` if present; otherwise read `~/.gemini/config/workflows/plan-progress.md` (the published install). Freeze captured baseline/index identities; output points to `<plan-dir>/progress.md`.
   * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   * **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
-
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skill to verify they meet requirements.

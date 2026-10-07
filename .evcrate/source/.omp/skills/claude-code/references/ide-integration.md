@@ -82,7 +82,7 @@ Use Claude Code with Visual Studio Code and JetBrains IDEs.
 ```json
 {
   "skills": [".omp/skills/project-skill"],
-  "commands": [".omp/commands"],
+  "commands": [".omp/evcrate/commands"],
   "mcpServers": ".omp/mcp.json",
   "outputStyle": "technical-writer"
 }

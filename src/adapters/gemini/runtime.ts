@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import type { ProjectionBuildContext } from '../types.js';
 import { parseJsonDocument } from '../../protocol/json.js';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
-import { graphFile, sourceSibling, writeProjectionFile, ensureProjectionDirectory, textBytes, isProductionControllerArtifact } from '../projection-utils.js';
+import { graphFile, siblingText, sourceSibling, writeProjectionFile, ensureProjectionDirectory, textBytes, isProductionControllerArtifact } from '../projection-utils.js';
 import { applyTargetReplacements, TOOL_MAPPING } from './replacements.js';
 const EVENTS: Record<string, string> = { SessionStart: 'SessionStart', UserPromptSubmit: 'BeforeAgent', PreToolUse: 'BeforeTool', SessionEnd: 'SessionEnd' };
 const DROPPED: Record<string, string> = { SubagentStart: 'No Gemini CLI hook directly targets subagent startup; behavior is intentionally dropped.', PreCompact: 'No clean Gemini CLI equivalent for Claude PreCompact; behavior is intentionally dropped.' };
@@ -131,8 +131,9 @@ export function projectSettings(context: ProjectionBuildContext): void {
 }
 
 export function projectDocumentsAndMatrix(context: ProjectionBuildContext): void {
-  if (context.manifest.projectDocs.includes('GEMINI.md') && sourceExists(context, 'CLAUDE.md')) writeProjectionFile(context, 'GEMINI.md', textBytes('# Gemini Project Context\n\nThe authoritative project memory file for this migrated workspace remains `CLAUDE.md`.\nGemini should load native context first and then import the source memory document below.\n\n@./CLAUDE.md\n\n'));
-  const behaviors: Record<string, unknown>[] = [{ kind: 'memory-file', source: 'CLAUDE.md', classification: 'memory-file', status: sourceExists(context, 'CLAUDE.md') ? 'migrated-wrapper' : 'not-present', target: sourceExists(context, 'CLAUDE.md') ? 'GEMINI.md -> @./CLAUDE.md' : null }];
+  const hasDocument = context.manifest.projectDocs.includes('GEMINI.md') && sourceExists(context, 'CLAUDE.md');
+  if (hasDocument) writeProjectionFile(context, 'GEMINI.md', textBytes(applyTargetReplacements(siblingText(context, 'CLAUDE.md')).replace(/^# CLAUDE\.md/mu, '# GEMINI.md')));
+  const behaviors: Record<string, unknown>[] = [{ kind: 'memory-file', source: 'CLAUDE.md', classification: 'memory-file', status: hasDocument ? 'migrated' : 'not-present', target: hasDocument ? 'GEMINI.md' : null }];
   const commands = context.resources.files.filter((file) => file.path.startsWith('commands/') && file.path.endsWith('.md'));
   for (const file of commands) behaviors.push({ kind: 'command-prose', source: file.path.slice('commands/'.length), classification: 'command-prose', status: 'migrated', target: file.path.slice('commands/'.length, -3) + '.toml' });
   const skipSkills = new Set(['claude-code', 'skill-creator', 'template-skill']);
