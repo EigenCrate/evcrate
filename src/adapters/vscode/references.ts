@@ -210,5 +210,7 @@ export function transformVscodePrompt(
   result = replaceWorkflowReferences(result);
   result = replaceInstructionReferences(result);
   result = replaceHarnessPaths(result);
+  // Claude-native TodoWrite has no VS Code tool of that name; the model-facing tool is manage_todo_list.
+  result = result.replace(/\bTodoWrite\b/gu, 'manage_todo_list');
   return result;
 }

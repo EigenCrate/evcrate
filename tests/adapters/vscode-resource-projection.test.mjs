@@ -71,6 +71,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     );
     assert.deepEqual(gitParsed.fields.agents, []);
 
+    // TodoWrite is rewritten in tools and prose to VS Code's manage_todo_list
+    const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'com.github.copilot/agents/project-manager.agent.md'), 'utf8'));
+    assert.ok(pmParsed.fields.tools.includes('manage_todo_list'));
+    const cmdCodeContent = readFileSync(join(stageRoot, 'skills/cmd-code/SKILL.md'), 'utf8');
+    assert.ok(cmdCodeContent.includes('manage_todo_list'));
+    assert.ok(!cmdCodeContent.includes('TodoWrite'));
+
     // Code-reviewer: tools mapped, model: opus
     const reviewerPath = join(stageRoot, 'com.github.copilot/agents/code-reviewer.agent.md');
     assert.ok(existsSync(reviewerPath), 'code-reviewer.agent.md must exist');

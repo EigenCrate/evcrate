@@ -107,7 +107,7 @@ export function translatePrompt(value: string, map: CommandMap): string {
   let rendered = harnessPaths(renderCommandReferences(value, map));
   rendered = workflowFallback(rendered);
   rendered = addRuntimeGuidance(rendered);
-  return rendered.replaceAll('Skill tool', 'OMP command mechanism').replaceAll('Task tool', 'task tool').replaceAll('AskUserQuestion', 'ask the user').replaceAll('SlashCommand', 'OMP command');
+  return rendered.replaceAll('Skill tool', 'OMP command mechanism').replaceAll('Task tool', 'task tool').replaceAll('AskUserQuestion', 'ask the user').replaceAll('SlashCommand', 'OMP command').replaceAll('TodoWrite', 'todo');
 }
 export function convertCommands(context: ProjectionBuildContext, map: CommandMap): void {
   const allEntries = filesUnder(context, 'commands').filter((item) => item.path !== 'commands');

@@ -81,6 +81,7 @@ const UNRELATED_TOOL_NAMES: Record<string, true> = {
   askuserquestion: true,
   question: true,
   todo: true,
+  manage_todo_list: true,
   todowrite: true,
   view_image: true,
   read_resource: true,

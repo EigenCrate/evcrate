@@ -5,6 +5,7 @@ user-invocable: true
 tools:
   - file_search
   - grep_search
+  - manage_todo_list
   - read_file
   - run_in_terminal
 agents: []
