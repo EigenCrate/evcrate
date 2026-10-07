@@ -1,3 +1,15 @@
+## [2.10.0](https://github.com/EigenCrate/evcrate/compare/v2.9.1...v2.10.0) (2026-10-07)
+
+
+### 🚀 Features
+
+* **advisor:** implement deterministic advice activation helper and workflow cutover ([#19](https://github.com/EigenCrate/evcrate/issues/19)) ([deb9344](https://github.com/EigenCrate/evcrate/commit/deb9344b6d1a5f156bc51bff454d9673913ae561))
+
+
+### 🐞 Bug Fixes
+
+* **ci:** eliminate dynamic require and harden rollout test ([17bb297](https://github.com/EigenCrate/evcrate/commit/17bb297a12aa70c7636c079c51d22e3d6fba0053))
+
 ## [2.9.1](https://github.com/EigenCrate/evcrate/compare/v2.9.0...v2.9.1) (2026-10-05)
 
 
