@@ -1,7 +1,7 @@
 # Advisory Interview Contract
 
-This is the single semantics source for `/advise`. It is separate from
-`advisor-mentoring.md`: `--advice` is checkpoint counsel, while `/advise` is an
+This is the single semantics source for `/evc-cmd-advise`. It is separate from
+`advisor-mentoring.md`: `--advice` is checkpoint counsel, while `/evc-cmd-advise` is an
 interview that must first converge on the user's problem.
 
 ## Capability

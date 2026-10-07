@@ -123,13 +123,13 @@ describe('subagent-init.cjs', () => {
 
     it('includes agent type and ID in output', async () => {
       const result = await runHook({
-        agent_type: 'code-reviewer',
+        agent_type: 'evc-code-reviewer',
         agent_id: 'abc-123',
         cwd: process.cwd()
       });
 
       const context = result.output?.hookSpecificOutput?.additionalContext || '';
-      assert.ok(context.includes('code-reviewer'), 'Should include agent type');
+      assert.ok(context.includes('evc-code-reviewer'), 'Should include agent type');
       assert.ok(context.includes('abc-123'), 'Should include agent ID');
     });
 
@@ -236,7 +236,7 @@ describe('subagent-init.cjs', () => {
       const isWorktree = fs.existsSync(gitPath) && fs.statSync(gitPath).isFile();
 
       const result = await runHook({
-        agent_type: 'fullstack-developer',
+        agent_type: 'evc-fullstack-developer',
         agent_id: 'submodule-test',
         cwd: gitRoot
       });
@@ -356,7 +356,7 @@ describe('subagent-init.cjs', () => {
 
     it('includes required sections in output', async () => {
       const result = await runHook({
-        agent_type: 'planner',
+        agent_type: 'evc-planner',
         agent_id: 'section-test',
         cwd: process.cwd()
       });
@@ -452,7 +452,7 @@ describe('subagent-init.cjs', () => {
 
         // Subagent running in inner repo should get inner repo's git root
         const result = await runHook({
-          agent_type: 'fullstack-developer',
+          agent_type: 'evc-fullstack-developer',
           agent_id: 'nested-test',
           cwd: innerDir
         }, { cwd: innerDir });

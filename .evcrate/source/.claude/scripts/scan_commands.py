@@ -100,9 +100,35 @@ def parse_command_skill_metadata(content: str, rel_path: str) -> Dict[str, Any]:
     return {"description": desc, "argument_hint": hint, "name": name.strip() if name else None, "raw": data}
 
 
+COMMAND_PREFIX = "evc-cmd-"
+SEGMENT_SEPARATOR = "-x-"
+_KEBAB_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def command_segments_from_stem(stem: str) -> List[str]:
+    """Split a flat command stem (`evc-cmd-a-x-b`) into semantic segments (['a', 'b'])."""
+    if "/" in stem or "\\" in stem:
+        raise ScanError(f"Command source must be a flat file, got nested path: {stem!r}")
+    if not _KEBAB_NAME.fullmatch(stem) or not stem.startswith(COMMAND_PREFIX):
+        raise ScanError(f"Command name must be kebab-case with '{COMMAND_PREFIX}' prefix: {stem!r}")
+    segments = stem[len(COMMAND_PREFIX):].split(SEGMENT_SEPARATOR)
+    for segment in segments:
+        if not segment or "x" in segment.split("-"):
+            raise ScanError(f"Invalid command segment {segment!r} in {stem!r}")
+    return segments
+
+
+def command_semantic_name(source: str) -> str:
+    """Semantic colon form (`a:b`) of a flat command source path or stem (optional `.md`)."""
+    stem = source[:-3] if source.endswith(".md") else source
+    return ":".join(command_segments_from_stem(stem))
+
+
 def default_command_name_and_category(rel_path: Path) -> Tuple[str, str]:
-    parts = list(rel_path.parts[:-1]) + [rel_path.stem]
-    return "/evcrate:" + ":".join(parts), parts[0] if len(parts) > 1 else "core"
+    if len(rel_path.parts) != 1:
+        raise ScanError(f"Command source must be a flat file, got nested path: {rel_path.as_posix()}")
+    segments = command_segments_from_stem(rel_path.stem)
+    return "/" + rel_path.stem, segments[0] if len(segments) > 1 else "core"
 
 
 def scan_commands(base_path: Optional[Path] = None, layout: Optional[CommandLayout] = None) -> List[Dict]:
@@ -150,7 +176,8 @@ def scan_commands(base_path: Optional[Path] = None, layout: Optional[CommandLayo
             category = src_parts[0] if len(src_parts) > 1 else "core"
             source = rec.get("source", posix_rel)
         elif layout.format == "command-skill" and meta.get("name"):
-            cmd_name, category = "/" + meta["name"], "core"
+            segments = command_segments_from_stem(meta["name"])
+            cmd_name, category = "/" + meta["name"], segments[0] if len(segments) > 1 else "core"
         else:
             cmd_name, category = default_command_name_and_category(rel)
 
@@ -227,10 +254,15 @@ def resolve_command_layout(script_dir: Path) -> CommandLayout:
         for item in auth_data:
             if isinstance(item, dict) and "source" in item:
                 src = item["source"]
-                managed.add(src)
+                if not isinstance(src, str) or not src.endswith(".md"):
+                    raise ScanError(f"Authority YAML source must be a flat .md file name: {src!r}")
+                sname = command_semantic_name(src)
                 name = item.get("name", "")
-                tname = name[1:] if name.startswith("/") else name
-                sname = src[:-3].replace("/", ":") if src.endswith(".md") else src
+                tname = name[1:] if isinstance(name, str) and name.startswith("/") else name
+                if not isinstance(tname, str):
+                    raise ScanError(f"Authority YAML name must be a string for {src}")
+                command_segments_from_stem(tname)
+                managed.add(src)
                 name_map[src] = {"source": src, "targetName": tname, "sourceName": sname}
                 source_map[src] = src
         return CommandLayout(root=root, format=fmt, output_path=output_path, managed_entries=managed, name_map=name_map, source_map=source_map)
@@ -251,9 +283,9 @@ def resolve_command_layout(script_dir: Path) -> CommandLayout:
             if not isinstance(item, dict):
                 raise ScanError(f"Invalid command record in {auth_file}")
             src, target, tname = item.get("source"), item.get("target"), item.get("targetName")
-            sname = item.get("sourceName", src[:-3].replace("/", ":") if src and src.endswith(".md") else src)
             if not src or not target or not tname:
                 raise ScanError(f"Incomplete command record in {auth_file}")
+            sname = item.get("sourceName") or command_semantic_name(src)
             rel_target = target
             if rel_target.startswith("skills/") and root.name == "skills":
                 rel_target = rel_target[len("skills/"):]
@@ -270,8 +302,8 @@ def resolve_command_layout(script_dir: Path) -> CommandLayout:
             if rel_target in managed:
                 raise ScanError(f"Duplicate command in {auth_file}: {rel_target}")
             managed.add(rel_target)
-            sname = cmd[:-3].replace("/", ":") if cmd.endswith(".md") else cmd.replace("/", ":")
-            name_map[rel_target] = {"source": rel_target, "targetName": "evcrate:" + sname, "sourceName": sname}
+            sname = command_semantic_name(rel_target)
+            name_map[rel_target] = {"source": rel_target, "targetName": rel_target[:-3], "sourceName": sname}
             source_map[rel_target] = rel_target
     elif "behaviors" in auth_data and isinstance(auth_data["behaviors"], list):
         for b in auth_data["behaviors"]:
@@ -288,17 +320,8 @@ def resolve_command_layout(script_dir: Path) -> CommandLayout:
                     raise ScanError(f"Duplicate command target in {auth_file}: {rel_target}")
                 managed.add(rel_target)
                 src_stem = src[:-3] if src.endswith(".md") else src
-                sname = src_stem.replace("/", ":")
-                if b.get("target_name"):
-                    tname = b["target_name"]
-                elif fmt == "toml":
-                    tname = "evcrate:" + sname
-                elif data.get("target") == "codex":
-                    tname = "cmd-" + src_stem.replace("/", "-")
-                elif data.get("target") == "antigravity":
-                    tname = "cmd_" + src_stem.replace("/", "_")
-                else:
-                    tname = "evcrate:" + sname
+                sname = command_semantic_name(src_stem)
+                tname = b.get("target_name") or src_stem
                 name_map[rel_target] = {"source": src, "targetName": tname, "sourceName": sname}
                 source_map[rel_target] = src
     else:

@@ -6,7 +6,7 @@ Scans .claude/commands/ directory to build catalog at runtime.
 Usage:
     python ev-help.py                    # Overview with quick start
     python ev-help.py fix                # Category guide with workflow
-    python ev-help.py plan:fast          # Command details
+    python ev-help.py plan:fast          # Command details (also /evc-cmd-plan-x-fast)
     python ev-help.py debug login error  # Task recommendations
     python ev-help.py auth               # Search (unknown word)
 """
@@ -72,7 +72,6 @@ TASK_MAPPINGS = {
     "coding-level": ["coding", "level", "eli5", "junior", "senior", "lead", "god", "beginner", "expert", "teach", "learn", "explain"],
     # New categories
     "worktree": ["worktree", "parallel", "isolate", "isolation", "concurrent", "multiple branches"],
-    "preview": ["preview", "view", "render", "markdown", "reader", "novel"],
     "journal": ["journal", "diary", "log", "entry", "reflect", "failure", "lesson"],
     "brainstorm": ["brainstorm", "idea", "ideate", "creative", "explore ideas", "think through"],
     "watzup": ["watzup", "status", "summary", "wrap up", "what's up", "recent", "changes"],
@@ -83,102 +82,102 @@ CATEGORY_GUIDES = {
     "fix": {
         "title": "Fixing Issues",
         "workflow": [
-            ("Start", "`/fix` \"describe your issue\""),
-            ("If stuck", "`/debug` \"more details\""),
-            ("Verify", "`/test`"),
+            ("Start", "`/evc-cmd-fix` \"describe your issue\""),
+            ("If stuck", "`/evc-cmd-debug` \"more details\""),
+            ("Verify", "`/evc-cmd-test`"),
         ],
         "tip": "Include error messages for better results",
     },
     "plan": {
         "title": "Planning",
         "workflow": [
-            ("Quick plan", "`/plan:fast` \"your task\""),
-            ("Deep research", "`/plan:hard` \"complex task\""),
-            ("Validate", "`/plan:validate` (interview to confirm decisions)"),
-            ("Execute plan", "`/code` (runs the plan)"),
+            ("Quick plan", "`/evc-cmd-plan-x-fast` \"your task\""),
+            ("Deep research", "`/evc-cmd-plan-x-hard` \"complex task\""),
+            ("Validate", "`/evc-cmd-plan-x-validate` (interview to confirm decisions)"),
+            ("Execute plan", "`/evc-cmd-code` (runs the plan)"),
         ],
-        "tip": "Use /plan:validate to confirm assumptions before coding",
+        "tip": "Use /evc-cmd-plan-x-validate to confirm assumptions before coding",
     },
     "cook": {
         "title": "Implementation",
         "workflow": [
-            ("Quick impl", "`/cook` \"your feature\""),
-            ("Auto mode", "`/cook:auto` \"trust me bro\""),
-            ("Test", "`/test`"),
+            ("Quick impl", "`/evc-cmd-cook` \"your feature\""),
+            ("Auto mode", "`/evc-cmd-cook-x-auto` \"trust me bro\""),
+            ("Test", "`/evc-cmd-test`"),
         ],
-        "tip": "Cook is standalone - it plans internally. Use /plan → /code for explicit planning",
+        "tip": "Cook is standalone - it plans internally. Use /evc-cmd-plan → /evc-cmd-code for explicit planning",
     },
     "bootstrap": {
         "title": "Project Setup",
         "workflow": [
-            ("Quick start", "`/bootstrap:auto:fast` \"requirements\""),
-            ("Full setup", "`/bootstrap` \"detailed requirements\""),
+            ("Quick start", "`/evc-cmd-bootstrap-x-auto-x-fast` \"requirements\""),
+            ("Full setup", "`/evc-cmd-bootstrap` \"detailed requirements\""),
         ],
         "tip": "Include tech stack preferences in description",
     },
     "test": {
         "title": "Testing",
         "workflow": [
-            ("Run tests", "`/test`"),
-            ("Fix failures", "`/fix:test`"),
+            ("Run tests", "`/evc-cmd-test`"),
+            ("Fix failures", "`/evc-cmd-fix-x-test`"),
         ],
         "tip": "Run tests frequently during development",
     },
     "docs": {
         "title": "Documentation",
         "workflow": [
-            ("Initialize", "`/docs:init`"),
-            ("Update", "`/docs:update`"),
+            ("Initialize", "`/evc-cmd-docs-x-init`"),
+            ("Update", "`/evc-cmd-docs-x-update`"),
         ],
         "tip": "Keep docs close to code for accuracy",
     },
     "git": {
         "title": "Git Workflow",
         "workflow": [
-            ("Commit", "`/git:cm`"),
-            ("Push", "`/git:cp`"),
-            ("PR", "`/git:pr`"),
+            ("Commit", "`/evc-cmd-git-x-cm`"),
+            ("Push", "`/evc-cmd-git-x-cp`"),
+            ("PR", "`/evc-cmd-git-x-pr`"),
         ],
         "tip": "Commit often with clear messages",
     },
     "design": {
         "title": "Design",
         "workflow": [
-            ("Quick design", "`/design:fast` \"description\""),
-            ("From screenshot", "`/design:screenshot` <path>"),
-            ("3D design", "`/design:3d` \"description\""),
+            ("Quick design", "`/evc-cmd-design-x-fast` \"description\""),
+            ("From screenshot", "`/evc-cmd-design-x-screenshot` <path>"),
+            ("3D design", "`/evc-cmd-design-x-3d` \"description\""),
         ],
         "tip": "Reference existing designs for consistency",
     },
     "review": {
         "title": "Code Review",
         "workflow": [
-            ("Full review", "`/review:codebase`"),
+            ("Full review", "`/evc-cmd-review-x-codebase`"),
         ],
         "tip": "Review before merging to main",
     },
     "content": {
         "title": "Content Creation",
         "workflow": [
-            ("Quick copy", "`/content:fast` \"requirements\""),
-            ("Quality copy", "`/content:good` \"requirements\""),
-            ("Optimize", "`/content:cro`"),
+            ("Quick copy", "`/evc-cmd-content-x-fast` \"requirements\""),
+            ("Quality copy", "`/evc-cmd-content-x-good` \"requirements\""),
+            ("Optimize", "`/evc-cmd-content-x-cro`"),
         ],
         "tip": "Know your audience before writing",
     },
     "skill": {
         "title": "Skill Management",
         "workflow": [
-            ("Create", "`/skill:create`"),
-            ("Optimize", "`/skill:optimize`"),
+            ("Create", "`/evc-cmd-skill-x-create`"),
+            ("Optimize", "`/evc-cmd-skill-x-optimize`"),
         ],
         "tip": "Skills extend agent capabilities",
     },
     "scout": {
         "title": "Codebase Exploration",
         "workflow": [
-            ("Find files", "`/scout` \"what to find\""),
-            ("External tools", "`/scout:ext` \"query\""),
+            ("Find files", "`/evc-cmd-scout` \"what to find\""),
+            ("External tools", "`/evc-cmd-scout-x-ext` \"query\""),
         ],
         "tip": "Be specific about what you're looking for",
     },
@@ -208,18 +207,18 @@ CATEGORY_GUIDES = {
     "worktree": {
         "title": "Git Worktrees (Parallel Development)",
         "workflow": [
-            ("Create worktree", "`/worktree` \"feature description\""),
+            ("Create worktree", "`/evc-cmd-worktree` \"feature description\""),
             ("Work in isolation", "cd to worktree, implement, test"),
-            ("Review & merge", "`/git:pr` from worktree → merge → cleanup"),
-            ("List worktrees", "`/worktree list`"),
-            ("Remove worktree", "`/worktree remove <name>`"),
+            ("Review & merge", "`/evc-cmd-git-x-pr` from worktree → merge → cleanup"),
+            ("List worktrees", "`/evc-cmd-worktree list`"),
+            ("Remove worktree", "`/evc-cmd-worktree remove <name>`"),
         ],
         "tip": "Use worktrees for parallel features without stashing. Each worktree = isolated branch + clean working directory",
     },
     "journal": {
         "title": "Technical Journaling",
         "workflow": [
-            ("Write entry", "`/journal`"),
+            ("Write entry", "`/evc-cmd-journal`"),
             ("Document failures", "Capture what went wrong with emotional honesty"),
             ("Lessons learned", "Turn setbacks into future guidance"),
         ],
@@ -228,7 +227,7 @@ CATEGORY_GUIDES = {
     "brainstorm": {
         "title": "Brainstorming & Ideation",
         "workflow": [
-            ("Quick brainstorm", "`/brainstorm \"your question\"`"),
+            ("Quick brainstorm", "`/evc-cmd-brainstorm \"your question\"`"),
             ("Explore approaches", "Get 2-3 viable solutions with trade-offs"),
             ("Challenge assumptions", "Receive brutally honest feedback"),
         ],
@@ -237,7 +236,7 @@ CATEGORY_GUIDES = {
     "watzup": {
         "title": "Session Review & Wrap-up",
         "workflow": [
-            ("Review changes", "`/watzup`"),
+            ("Review changes", "`/evc-cmd-watzup`"),
             ("Get summary", "See what was done, what files changed"),
             ("Next steps", "Receive suggestions for what to do next"),
         ],
@@ -246,10 +245,38 @@ CATEGORY_GUIDES = {
 }
 
 
-def detect_prefix(commands_dir: Path) -> str:
-    """Detect if commands use /evcrate: prefix based on directory structure."""
-    evcrate_commands_dir = commands_dir / "evcrate"
-    return "evcrate:" if evcrate_commands_dir.exists() and evcrate_commands_dir.is_dir() else ""
+COMMAND_PREFIX = "evc-cmd-"
+SEGMENT_SEPARATOR = "-x-"
+_KEBAB_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def command_segments(stem: str) -> list:
+    """Segments of a flat command stem (`evc-cmd-a-x-b` -> ['a', 'b']); [] when the stem is not a command."""
+    if not _KEBAB_NAME.fullmatch(stem) or not stem.startswith(COMMAND_PREFIX):
+        return []
+    segments = stem[len(COMMAND_PREFIX):].split(SEGMENT_SEPARATOR)
+    if any(not seg or "x" in seg.split("-") for seg in segments):
+        return []
+    return segments
+
+
+def command_key(text: str) -> tuple:
+    """Segments for user input: `plan:hard`, `/plan:hard` or `/evc-cmd-plan-x-hard`."""
+    text = text.strip().lower().lstrip("/")
+    if text.startswith(COMMAND_PREFIX):
+        return tuple(command_segments(text))
+    return tuple(part for part in re.split(r"[:/]+", text) if part)
+
+
+def build_command(stem: str, description: str) -> dict:
+    """Catalog record for a flat command stem; category = first segment, else core."""
+    segments = command_segments(stem)
+    return {
+        "name": f"/{stem}",
+        "id": ":".join(segments),
+        "description": description,
+        "category": segments[0] if len(segments) > 1 else "core",
+    }
 
 
 def parse_frontmatter(file_path: Path) -> dict:
@@ -304,49 +331,27 @@ def parse_command_metadata(file_path: Path) -> dict:
 COMMAND_PATH_RE = re.compile(r"(?im)^\s*Command Path:\s*(/\S+)")
 
 
-def _normalize_command_path(command_path: str) -> str:
-    """Use the canonical colon form for commands stored as skill paths."""
-    command_path = command_path.strip()
-    if not command_path.startswith("/"):
-        return ""
-    command_name = command_path[1:]
-    if command_name.startswith("evcrate:"):
-        return command_path
-    return "/" + command_name.replace("/", ":")
-
-
-def _skill_category(command_name: str) -> str:
-    """Match command-file categories, including root evcrate-prefixed commands."""
-    name = command_name.removeprefix("/")
-    if name.startswith("evcrate:") or ":" not in name:
-        return "core"
-    return name.split(":", 1)[0]
-
-
 def discover_skill_commands(skills_dir: Path) -> dict:
-    """Discover migrated cmd_* skills through their embedded Command Path."""
+    """Discover generated evc-cmd-* skills through their embedded Command Path."""
     commands = {}
     categories = {}
     if not skills_dir.is_dir():
         return {"commands": commands, "categories": categories}
 
-    for skill_file in sorted(skills_dir.glob("cmd_*/SKILL.md")):
+    for skill_file in sorted(skills_dir.glob("evc-cmd-*/SKILL.md")):
         metadata = parse_command_metadata(skill_file)
         description = metadata.get("description", "")
         match = COMMAND_PATH_RE.search(skill_file.read_text(encoding="utf-8"))
         if not description or not match:
             continue
 
-        command_name = _normalize_command_path(match.group(1))
-        if not command_name:
+        stem = match.group(1)[1:]
+        if not command_segments(stem):
             continue
-        category = _skill_category(command_name)
         clean_desc = re.sub(r"^[^\w\s]+\s*", "", description).strip()
-        commands.setdefault(category, []).append({
-            "name": command_name,
-            "description": clean_desc,
-            "category": category,
-        })
+        command = build_command(stem, clean_desc)
+        category = command["category"]
+        commands.setdefault(category, []).append(command)
         categories.setdefault(category, category.title())
 
     for category in commands:
@@ -375,7 +380,7 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
     if direct_commands.is_dir():
         return "commands", direct_commands
 
-    # Antigravity removes commands while retaining generated cmd_* skills.
+    # Antigravity removes commands while retaining generated evc-cmd-* skills.
     direct_skills = target_root / "skills"
     if target_root.name == "antigravity" and direct_skills.is_dir():
         return "skills", direct_skills
@@ -401,34 +406,20 @@ def resolve_command_source(script_path: Path) -> tuple[str, Path]:
     return "", target_root / "commands"
 
 
-def discover_commands(commands_dir: Path, prefix: str) -> dict:
-    """Scan command files and build the command catalog."""
+def discover_commands(commands_dir: Path) -> dict:
+    """Scan flat command files (evc-cmd-*.md / .toml) and build the command catalog."""
     commands = {}
     categories = {}
 
     if not commands_dir.exists():
         return {"commands": commands, "categories": categories}
 
-    command_files = sorted(
-        [*commands_dir.rglob("*.md"), *commands_dir.rglob("*.toml")]
-    )
+    command_files = sorted([*commands_dir.glob("*.md"), *commands_dir.glob("*.toml")])
     for command_file in command_files:
-        # Skip non-command files
-        rel_path = command_file.relative_to(commands_dir)
-        parts = rel_path.parts
+        # Skip files that are not evc-cmd-* commands
+        if not command_segments(command_file.stem):
+            continue
 
-        # Get command name from path
-        # e.g., fix/fast.md -> fix:fast, plan.md -> plan
-        if len(parts) == 1:
-            # Root command: plan.md or plan.toml -> plan
-            cmd_name = command_file.stem
-            category = "core"
-        else:
-            # Nested command: fix/fast.md -> fix:fast
-            category = parts[0]
-            cmd_name = ':'.join([*parts[:-1], command_file.stem])
-
-        # Parse frontmatter
         fm = parse_command_metadata(command_file)
         description = fm.get('description', '')
 
@@ -439,22 +430,10 @@ def discover_commands(commands_dir: Path, prefix: str) -> dict:
         # Clean description (remove emoji indicators)
         clean_desc = re.sub(r'^[^\w\s]+\s*', '', description).strip()
 
-        # Format command name with prefix
-        formatted_name = f"/{prefix}{cmd_name}" if prefix else f"/{cmd_name}"
-
-        # Add to commands
-        if category not in commands:
-            commands[category] = []
-
-        commands[category].append({
-            "name": formatted_name,
-            "description": clean_desc,
-            "category": category,
-        })
-
-        # Track categories
-        if category not in categories:
-            categories[category] = category.title()
+        command = build_command(command_file.stem, clean_desc)
+        category = command["category"]
+        commands.setdefault(category, []).append(command)
+        categories.setdefault(category, category.title())
 
     # Sort commands within each category
     for cat in commands:
@@ -471,10 +450,14 @@ def detect_intent(input_str: str, categories: list) -> str:
     input_lower = input_str.lower()
     words = input_str.split()
 
+    # A lone flat command name (/evc-cmd-plan-x-hard) is a command lookup; with free text it is a task description
+    if len(words) == 1 and input_lower.lstrip("/").startswith(COMMAND_PREFIX):
+        return "command"
+
     # Multiple words = likely task description (even if first word is a category)
     # e.g., "test my login" should be task, not category "test"
     if len(words) >= 2:
-        # Exception: if it looks like a command (has colon), treat as command
+        # Exception: colon form (e.g. "plan:hard") is a command lookup
         if ':' in input_str:
             return "command"
         return "task"
@@ -494,29 +477,29 @@ def detect_intent(input_str: str, categories: list) -> str:
     return "search"
 
 
-def show_overview(data: dict, prefix: str) -> None:
+def show_overview(data: dict) -> None:
     """Display overview with quick start guide."""
     emit_output_type("category-guide")
 
     commands = data["commands"]
     categories = data["categories"]
     total = sum(len(cmds) for cmds in commands.values())
-    help_cmd = f"/{prefix}evcrate-help" if prefix else "/evcrate-help"
+    help_cmd = "/evc-cmd-help"
 
     print("# EVCrate Commands")
     print()
     print(f"{total} commands across {len(categories)} categories.")
     print()
     print("**Quick Start:**")
-    print(f"- `/{prefix}cook` - Implement features (standalone)")
-    print(f"- `/{prefix}plan` + `/{prefix}code` - Plan then execute")
-    print(f"- `/{prefix}fix` - Fix bugs intelligently")
-    print(f"- `/{prefix}test` - Run and analyze tests")
+    print("- `/evc-cmd-cook` - Implement features (standalone)")
+    print("- `/evc-cmd-plan` + `/evc-cmd-code` - Plan then execute")
+    print("- `/evc-cmd-fix` - Fix bugs intelligently")
+    print("- `/evc-cmd-test` - Run and analyze tests")
     print()
     print("**Common Workflows:**")
-    print(f"- New feature: `/{prefix}plan` → `/{prefix}code` → `/{prefix}test` → `/{prefix}git:pr`")
-    print(f"- Bug fix: `/{prefix}debug` → `/{prefix}fix` → `/{prefix}test` → `/{prefix}git:cm`")
-    print(f"- Review: `/{prefix}scout` → `/{prefix}review` → `/{prefix}watzup`")
+    print("- New feature: `/evc-cmd-plan` → `/evc-cmd-code` → `/evc-cmd-test` → `/evc-cmd-git-x-pr`")
+    print("- Bug fix: `/evc-cmd-debug` → `/evc-cmd-fix` → `/evc-cmd-test` → `/evc-cmd-git-x-cm`")
+    print("- Review: `/evc-cmd-scout` → `/evc-cmd-review-x-codebase` → `/evc-cmd-watzup`")
     print()
     print("**Categories:**")
     for cat_key in sorted(categories.keys()):
@@ -525,17 +508,16 @@ def show_overview(data: dict, prefix: str) -> None:
     print()
     print("**Usage:**")
     print(f"- `{help_cmd} <category>` - Category guide with workflow")
-    print(f"- `{help_cmd} <command>` - Command details")
+    print(f"- `{help_cmd} <command>` - Command details (e.g. `plan:hard` or `/evc-cmd-plan-x-hard`)")
     print(f"- `{help_cmd} <task description>` - Recommendations")
     print()
     print("**Tips:**")
-    print(f"- Unclear about approach? → `/{prefix}brainstorm` first")
-    print(f"- Agent generated report? → `/{prefix}preview` to view")
+    print("- Unclear about approach? → `/evc-cmd-brainstorm` first")
     print("- Add `ultrathink` for deep analysis (more tokens)")
-    print("- `:parallel` variants (e.g., `/code:parallel`) = faster but more tokens, check quota")
+    print("- `-x-parallel` variants (e.g., `/evc-cmd-code-x-parallel`) = faster but more tokens, check quota")
 
 
-def show_category_guide(data: dict, category: str, prefix: str) -> None:
+def show_category_guide(data: dict, category: str) -> None:
     """Display category guide with workflow and tips."""
     emit_output_type("category-guide")
 
@@ -588,21 +570,17 @@ def show_category_guide(data: dict, category: str, prefix: str) -> None:
         print(f"*Tip: {guide['tip']}*")
 
 
-def show_command(data: dict, command: str, prefix: str) -> None:
+def show_command(data: dict, command: str) -> None:
     """Display command details."""
     emit_output_type("command-details")
 
     commands = data["commands"]
-
-    # Normalize search term
-    search = command.lower().replace("/evcrate:", "").replace("/", "").replace(":", "")
+    search = command_key(command)
 
     found = None
     for cmds in commands.values():
         for cmd in cmds:
-            # Normalize command name for comparison
-            name = cmd["name"].lower().replace("/evcrate:", "").replace("/", "").replace(":", "")
-            if name == search:
+            if tuple(cmd["id"].split(":")) == search:
                 found = cmd
                 break
         if found:
@@ -611,7 +589,7 @@ def show_command(data: dict, command: str, prefix: str) -> None:
     if not found:
         print(f"Command '{command}' not found.")
         print()
-        do_search(data, command.replace(":", " "), prefix)
+        do_search(data, command.replace(":", " "))
         return
 
     print(f"# `{found['name']}`")
@@ -641,12 +619,12 @@ def advisory_target(script_path: Path) -> str:
     return "cla" + "ude"
 
 
-def show_advisory_guide(prefix: str, target: str) -> None:
+def show_advisory_guide(target: str) -> None:
     """Explain checkpoint, inline, and target-accurate relay capabilities."""
     relay_target = "cla" + "ude"
     supports_relay = target == relay_target
     emit_output_type("command-details")
-    command = f"/{prefix}advise" if prefix else "/advise"
+    command = "/evc-cmd-advise"
     print(f"# `{command}`")
     print()
     if supports_relay:
@@ -679,17 +657,20 @@ def show_advisory_guide(prefix: str, target: str) -> None:
     print("`--advice` is a separate one-shot checkpoint counsel mode for implementation commands. `@advisor` is ordinary input and never activates supervision.")
 
 
-def do_search(data: dict, term: str, prefix: str) -> None:
+def do_search(data: dict, term: str) -> None:
     """Search commands by keyword."""
     emit_output_type("search-results")
 
     commands = data["commands"]
     term_lower = term.lower()
+    term_id = " ".join(command_key(term))
     matches = []
 
     for cmds in commands.values():
         for cmd in cmds:
-            if term_lower in cmd["name"].lower() or term_lower in cmd["description"].lower():
+            id_text = cmd["id"].replace(":", " ")
+            if (term_lower in cmd["name"].lower() or term_lower in cmd["description"].lower()
+                    or (term_id and term_id in id_text)):
                 matches.append(cmd)
 
     if not matches:
@@ -705,7 +686,7 @@ def do_search(data: dict, term: str, prefix: str) -> None:
         print(f"- `{cmd['name']}` - {cmd['description']}")
 
 
-def recommend_task(data: dict, task: str, prefix: str) -> None:
+def recommend_task(data: dict, task: str) -> None:
     """Recommend commands for a task description."""
     emit_output_type("task-recommendations")
 
@@ -873,7 +854,7 @@ def show_config_guide() -> None:
     print("**Plan Validation:**")
     print("- `mode: \"prompt\"` - Ask user after plan creation (default)")
     print("- `mode: \"auto\"` - Always run validation interview")
-    print("- `mode: \"off\"` - Skip; user runs `/plan:validate` manually")
+    print("- `mode: \"off\"` - Skip; user runs `/evc-cmd-plan-x-validate` manually")
     print()
     print("Validation interviews the user with critical questions to confirm")
     print("assumptions, risks, and architectural decisions before implementation.")
@@ -887,7 +868,7 @@ def show_config_guide() -> None:
     print("- `4` = Tech Lead - executive summary, risk matrix, business impact")
     print("- `5` = God Mode - code first, minimal prose, no hand-holding")
     print()
-    print("Guidelines auto-inject on session start. Commands like `/brainstorm` respect them.")
+    print("Guidelines auto-inject on session start. Commands like `/evc-cmd-brainstorm` respect them.")
     print()
     print("---")
     print()
@@ -994,7 +975,7 @@ def show_coding_level_guide() -> None:
     print()
     print("1. SessionStart hook reads `codingLevel` from `.evcrate.json`")
     print("2. If 0-5, injects guidelines from `.claude/output-styles/coding-level-*.md`")
-    print("3. Commands like `/brainstorm` follow the injected guidelines")
+    print("3. Commands like `/evc-cmd-brainstorm` follow the injected guidelines")
     print()
     print("**Token Efficiency:**")
     print("- `-1` (default): Zero injection, zero overhead")
@@ -1067,11 +1048,9 @@ def main():
         sys.exit(1)
 
     if source_kind == "skills":
-        prefix = ""
         data = discover_skill_commands(source_dir)
     else:
-        prefix = detect_prefix(source_dir)
-        data = discover_commands(source_dir, prefix)
+        data = discover_commands(source_dir)
 
     if not data["commands"]:
         print(f"No commands found in {source_dir}.")
@@ -1092,23 +1071,23 @@ def main():
         return
 
     # Advisory surfaces need capability and migration guidance beyond metadata.
-    if input_str.lower() in ["advise", "/advise", "advice", "/advice"]:
-        show_advisory_guide(prefix, advisory_target(script_path))
+    if input_str.lower().lstrip("/") in ["advise", "advice", "evc-cmd-advise"]:
+        show_advisory_guide(advisory_target(script_path))
         return
 
     # Detect intent and route
     intent = detect_intent(input_str, list(data["categories"].keys()))
 
     if intent == "overview":
-        show_overview(data, prefix)
+        show_overview(data)
     elif intent == "category":
-        show_category_guide(data, input_str, prefix)
+        show_category_guide(data, input_str)
     elif intent == "command":
-        show_command(data, input_str, prefix)
+        show_command(data, input_str)
     elif intent == "task":
-        recommend_task(data, input_str, prefix)
+        recommend_task(data, input_str)
     else:
-        do_search(data, input_str, prefix)
+        do_search(data, input_str)
 
 
 if __name__ == "__main__":
