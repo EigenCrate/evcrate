@@ -1,11 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { builtinModules } from 'node:module';
+import { builtinModules, createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const OUTPUT = join(ROOT, 'src', 'manifests', 'controller-inventory.generated.ts');
+const require = createRequire(import.meta.url);
+const { COMMAND_NAMES } = require(join(ROOT, '.evcrate', 'source', '.evcrate', 'bin', 'lib', 'advisor', 'activation.cjs'));
 
 export const ADVISOR_CONTROLLER_BINARY_FILES = Object.freeze([
   'lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node',
@@ -98,6 +100,7 @@ function main() {
   const entries = JSON.stringify(ADVISOR_CONTROLLER_FILES, null, 2);
   const binaryEntries = JSON.stringify(ADVISOR_CONTROLLER_BINARY_FILES, null, 2);
   const textEntries = JSON.stringify(ADVISOR_CONTROLLER_TEXT_DATA_FILES, null, 2);
+  const commandNames = JSON.stringify(COMMAND_NAMES, null, 2);
   const builtins = JSON.stringify(
     [...new Set(builtinModules.map((m) => m.startsWith('node:') ? m.slice(5) : m))].sort(),
     null,
@@ -108,6 +111,7 @@ export const ADVISOR_CONTROLLER_FILES = Object.freeze(${entries} as const);
 export const ADVISOR_CONTROLLER_BINARY_FILES = Object.freeze(${binaryEntries} as const);
 export const ADVISOR_CONTROLLER_TEXT_DATA_FILES = Object.freeze(${textEntries} as const);
 export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze(${builtins} as const);
+export const ADVISOR_COMMAND_NAMES = Object.freeze(${commandNames} as const);
 `;
   writeFileSync(OUTPUT, content, 'utf8');
   updateInstallSh();

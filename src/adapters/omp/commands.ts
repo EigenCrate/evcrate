@@ -1,10 +1,10 @@
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionBuildContext } from '../types.js';
-import { join } from 'node:path';
 import { copy, filesUnder, relativeTo, writeJson, writeText } from './resources.js';
 import { serializeFrontmatter, splitFrontmatter } from './frontmatter.js';
 import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 import { restoreIndexedTokens } from '../uri-restoration.js';
+import { COMMAND_NAMES } from '../../manifests/controller.js';
 import { OMP_COMMAND_RUNTIME } from './activation.js';
 export interface CommandRecord { readonly source: string; readonly sourceName: string; readonly target: string; readonly targetName: string; }
 export type CommandMap = Readonly<Record<string, CommandRecord>>;
@@ -13,9 +13,6 @@ const NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
 const SKILL_MARKERS = ['activate the skills', 'activate needed skills', 'activate only needed skills', 'activate from catalog', 'skills catalog', 'list of skills', 'skill tool'];
 const NO_SKILLS = '**OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP\'s normal skill discovery.';
 const ADVICE_HEADING = '## Advice Mode';
-// Single activation authority: the HOME helper's frozen command list, resolved relative to the package (dist/adapters/omp -> package root).
-// Emitted module format is CommonJS (package has no "type": "module"), so the plain CJS require applies.
-const { COMMAND_NAMES } = require(join(__dirname, '..', '..', '..', '.evcrate', 'source', '.evcrate', 'bin', 'lib', 'advisor', 'activation.cjs')) as { readonly COMMAND_NAMES: readonly string[] };
 function nativeAdviceInvocation(canonicalName: string): string {
   return `Native command execution validates and resolves advice activation prior to prompt admission, prepending the compact \`evcrate_omp_command_context\` header (version 2, source "native-user").
 For a valid version-2 header from this command's admission, consume its validated \`ADVICE_MODE = evcrate_omp_command_context.mode\`, exact \`context\`, and \`run\`; \`WORK_ARGUMENTS\` is the work input already admitted once in this command body. Do not re-invoke the HOME helper. A header for another command is parent context, never this command's result.

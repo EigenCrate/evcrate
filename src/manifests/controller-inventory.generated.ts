@@ -134,3 +134,26 @@ export const ADVISOR_CONTROLLER_NODE_BUILTINS = Object.freeze([
   "worker_threads",
   "zlib"
 ] as const);
+export const ADVISOR_COMMAND_NAMES = Object.freeze([
+  "code",
+  "code/auto",
+  "code/no-test",
+  "code/parallel",
+  "cook",
+  "cook/auto",
+  "cook/auto/fast",
+  "cook/auto/parallel",
+  "bootstrap",
+  "bootstrap/auto",
+  "bootstrap/auto/fast",
+  "bootstrap/auto/parallel",
+  "fix",
+  "fix/ci",
+  "fix/fast",
+  "fix/hard",
+  "fix/logs",
+  "fix/parallel",
+  "fix/test",
+  "fix/types",
+  "fix/ui"
+] as const);
