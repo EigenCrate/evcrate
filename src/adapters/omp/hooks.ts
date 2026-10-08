@@ -42,6 +42,11 @@ function scriptTransform(value: string, relative: string, map: CommandMap): stri
     const shebang = rendered.match(/^#![^\n]*\n/u)?.[0] ?? '';
     rendered = shebang + MAP_LOADER + '\n' + rendered.slice(shebang.length);
   }
+  if (relative === 'worktree.cjs') {
+    rendered = rendered
+      .replaceAll('claude', 'omp')
+      .replaceAll('AskUserQuestion', 'ask the user');
+  }
   return rendered;
 }
 export function convertHooksAndScripts(context: ProjectionBuildContext, map: CommandMap): { hooks: string[]; scripts: string[]; modules: string[] } {

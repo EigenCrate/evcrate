@@ -601,6 +601,12 @@ and qualification-to-spawn executable identity checks. At most one model process
 is active; cancellation, non-retryable failure, or unconfirmed cleanup prevents
 later launches.
 
+OMP version/help probes have a 5-second per-command limit. Usage readiness and
+model-catalog discovery may perform network I/O and have 20-second limits; each
+is capped by the remaining shared 30-second preflight deadline. Usage also
+passes `--no-extensions`, excluding ambient extension authority. Model lookup
+still validates the exact selector and effort; timeout never attests readiness.
+
 The runner uses `shell: false`, fixed allowlisted argv/environment, stdin-only
 prompt delivery, fatal UTF-8 decoding, bounded streams/results, and one
 monotonic deadline. POSIX detached process groups receive TERM, then KILL if
