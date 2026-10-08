@@ -145,33 +145,31 @@ test('brainstormer model projects through each target contract', () => {
 
   const copilot = materialize('copilot').stage.path;
   const copilotAudit = JSON.parse(readFileSync(join(copilot, '.copilot/evcrate/agent-tool-audit.json'), 'utf8'));
-  assert.deepEqual(copilotAudit.agents.brainstormer.model, {
+  assert.deepEqual(copilotAudit.agents['evc-brainstormer'].model, {
     source: 'opus',
     target: null,
     reason: 'Copilot inherits the active model',
   });
-  assert.equal(copilotAudit.agents.brainstormer.droppedFields.includes('model'), true);
-  assert.doesNotMatch(readFileSync(join(copilot, '.copilot/agents/evcrate-brainstormer.agent.md'), 'utf8'), /^model\s*:/mu);
+  assert.equal(copilotAudit.agents['evc-brainstormer'].droppedFields.includes('model'), true);
+  assert.doesNotMatch(readFileSync(join(copilot, '.copilot/agents/evc-brainstormer.agent.md'), 'utf8'), /^model\s*:/mu);
 
   const antigravity = materialize('antigravity').stage.path;
   assert.throws(() => lstatSync(join(antigravity, '.antigravity/agents/brainstormer.md')), { code: 'ENOENT' });
 });
 
 test('Copilot relative skill handoffs resolve across package and reference nesting', () => {
-  const skills = { review: 'evcrate-review' };
+  const skills = { review: 'evc-review' };
   const root = temporaryDirectory();
   for (const [document, link] of [
     ['fix/SKILL.md', '../review/SKILL.md'],
     ['fix/references/procedure.md', '../../review/SKILL.md'],
   ]) {
-    const rendered = replaceKnownNames(`[Review](${link}#decision)`, {}, skills);
+    const rendered = replaceKnownNames(`[Review](${link}#decision)`, skills);
     const destination = rendered.match(/\]\(([^#)]+)#decision\)/u)?.[1];
-    assert.equal(resolve(dirname(join(root, document)), destination), join(root, 'evcrate-review/SKILL.md'));
+    assert.equal(resolve(dirname(join(root, document)), destination), join(root, 'evc-review/SKILL.md'));
   }
   const unrelated = '[Remote](https://example.test/review/SKILL.md) [Local](references/review/SKILL.md)';
-  assert.equal(replaceKnownNames(unrelated, {}, skills), unrelated);
-  const agentOnly = '[Agent](../review/SKILL.md)';
-  assert.equal(replaceKnownNames(agentOnly, skills, {}), agentOnly);
+  assert.equal(replaceKnownNames(unrelated, skills), unrelated);
 });
 
 

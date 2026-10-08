@@ -1,8 +1,9 @@
 import type { ProjectionBuildContext } from '../types.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
-import { copyFile, copyText, filesUnder, fieldString, parseFrontmatter, sourcePath, targetName, invalid, writeJson, decode } from './common.js';
+import { copyFile, copyText, filesUnder, fieldString, parseFrontmatter, sourcePath, invalid, writeJson, decode } from './common.js';
 import { yamlValue } from './prompts.js';
 import type { SimpleMap } from './prompts.js';
+import { assertUniqueNames, copilotSkillName } from '../resource-naming.js';
 
 function serializeNativeSkill(fields: Record<string, string>, name: string, description: string, body: string): string {
   const output: Record<string, unknown> = { name, description };
@@ -40,7 +41,6 @@ export function discoverSkills(context: ProjectionBuildContext): SkillDiscovery 
   const names: Record<string, string> = {};
   const native: NativeSkill[] = [];
   const archived: string[] = [];
-  const used = new Set<string>();
   for (const [packageName, list] of [...packageFiles(context)].sort(([a], [b]) => a.localeCompare(b))) {
     const direct = list.filter((file) => skillMarker(file, packageName, false));
     if (direct.length > 1) invalid();
@@ -57,13 +57,12 @@ export function discoverSkills(context: ProjectionBuildContext): SkillDiscovery 
       }
     }
     for (const candidate of candidates) {
-      const target = `evcrate-${targetName(candidate.skillName)}`;
-      if (target.length > 64 || used.has(target.toLowerCase())) invalid();
-      used.add(target.toLowerCase());
+      const target = copilotSkillName(candidate.skillName);
       names[candidate.skillName.toLowerCase()] = target;
       native.push({ packageName: candidate.packageName, marker: candidate.marker.path, targetName: target, source: candidate.packageName });
     }
   }
+  assertUniqueNames(native.map((item) => item.targetName));
   for (const file of filesUnder(context, 'skills')) {
     const relative = sourcePath('skills', file);
     if (relative.split('/').length === 1 && !archived.includes(relative)) archived.push(relative);

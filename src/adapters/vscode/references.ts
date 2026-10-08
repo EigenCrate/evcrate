@@ -54,30 +54,6 @@ export function replaceCommandPaths(
   return restoreSegments(rendered, guarded.protectedEntries);
 }
 
-export function renderCommandReferences(
-  value: string,
-  commandMap: Record<string, VscodeCommandMapEntry>
-): string {
-  const base = replaceCommandPaths(value, commandMap);
-  const guarded = protectSegments(base);
-  let rendered = guarded.text;
-
-  const entries = Object.values(commandMap).sort((a, b) => b.sourceName.length - a.sourceName.length);
-
-  for (const item of entries) {
-    const forms = [item.sourceName, item.sourceName.replaceAll('/', ':'), item.sourceName.replaceAll(':', '/')];
-    for (const form of forms) {
-      const pattern = new RegExp(
-        `(?<![A-Za-z0-9_/:])/(?:evcrate:)?${escapeRegex(form)}(?![A-Za-z0-9_-])`,
-        'giu'
-      );
-      rendered = rendered.replace(pattern, `/${item.localName}`);
-    }
-  }
-
-  return restoreSegments(rendered, guarded.protectedEntries);
-}
-
 export function replaceSkillReferences(
   value: string,
   skills: readonly VscodeSkillMapEntry[]
@@ -205,7 +181,7 @@ export function transformVscodePrompt(
   commandMap: Record<string, VscodeCommandMapEntry>,
   skills: readonly VscodeSkillMapEntry[]
 ): string {
-  let result = renderCommandReferences(value, commandMap);
+  let result = replaceCommandPaths(value, commandMap);
   result = replaceSkillReferences(result, skills);
   result = replaceWorkflowReferences(result);
   result = replaceInstructionReferences(result);

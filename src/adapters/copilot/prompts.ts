@@ -31,27 +31,12 @@ export function replaceCommandPaths(value: string, commandMap: NameMap): string 
   return restore(rendered, guarded.protected);
 }
 
-export function renderCommandReferences(value: string, commandMap: NameMap): string {
-  const base = replaceCommandPaths(value, commandMap);
-  const guarded = protect(base);
-  let rendered = guarded.text;
-  for (const item of Object.values(commandMap).sort((a, b) => b.sourceName.length - a.sourceName.length)) {
-    for (const form of [item.sourceName, item.sourceName.replaceAll(':', '/')]) {
-      const pattern = new RegExp(`(?<![A-Za-z0-9_/:])/(?:evcrate:)?${escapeRegex(form)}(?![A-Za-z0-9_-])`, 'giu');
-      rendered = rendered.replace(pattern, `/${item.targetName}`);
-    }
-  }
-  return restore(rendered, guarded.protected);
-}
-
-export function replaceKnownNames(value: string, agents: SimpleMap, skills: SimpleMap): string {
+export function replaceKnownNames(value: string, skills: SimpleMap): string {
   const guarded = protect(value);
   let rendered = guarded.text;
-  for (const [source, target] of Object.entries({ ...agents, ...skills }).sort((a, b) => b[0].length - a[0].length)) {
+  for (const [source, target] of Object.entries(skills).sort((a, b) => b[0].length - a[0].length)) {
     const escaped = escapeRegex(source);
     rendered = rendered.replace(new RegExp(String.raw`(?<![A-Za-z0-9_-])\x60${escaped}\x60`, 'giu'), `\`${target}\``);
-    rendered = rendered.replace(new RegExp(String.raw`(?<![A-Za-z0-9_-])${escaped}(?=\s+agent\b)`, 'giu'), target);
-    rendered = rendered.replace(new RegExp(String.raw`(subagent_type\s*=\s*["'])${escaped}(["'])`, 'giu'), `$1${target}$2`);
     rendered = rendered.replace(new RegExp(String.raw`(skills?/)${escaped}(?=[/\s\x60)]|$)`, 'giu'), `$1${target}`);
   }
   for (const [source, target] of Object.entries(skills)) {
@@ -60,10 +45,10 @@ export function replaceKnownNames(value: string, agents: SimpleMap, skills: Simp
   return restore(rendered, guarded.protected);
 }
 
-export function translatePrompt(value: string, commandMap: NameMap, agents: SimpleMap = {}, skills: SimpleMap = {}): string {
-  let rendered = renderCommandReferences(value, commandMap);
+export function translatePrompt(value: string, commandMap: NameMap, skills: SimpleMap = {}): string {
+  let rendered = replaceCommandPaths(value, commandMap);
   rendered = renderHarness(rendered);
-  rendered = replaceKnownNames(rendered, agents, skills);
+  rendered = replaceKnownNames(rendered, skills);
   const guarded = protect(rendered);
   rendered = guarded.text;
   for (const [pattern, replacement] of [

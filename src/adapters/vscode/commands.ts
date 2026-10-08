@@ -35,7 +35,7 @@ export function convertVscodeCommands(
       'disable-model-invocation': true
     };
     let body = parsed.body;
-    if (stem === 'advise') {
+    if (entry.sourceSemanticId === 'advise') {
       outFrontmatter.description = 'Interview-first technical advice; advisor relay is unsupported by VS Code Local.';
       outFrontmatter['argument-hint'] = '[prompt-or-url]';
       body = renderVscodeInlineAdviseCommand(parsed.body, 'vscode/askQuestions');

@@ -102,12 +102,6 @@ export function sourcePath(prefix: string, file: ResourceGraphFile): string {
   return file.path.slice(prefix.replace(/\/$/u, '').length + 1);
 }
 
-export function targetName(value: string): string {
-  const result = value.replace(/(?:__|[_\s]+)/gu, '-').replace(/[^A-Za-z0-9-]+/gu, '-').replace(/-+/gu, '-').replace(/^-|-$/gu, '').toLowerCase();
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(result)) return invalid();
-  return result;
-}
-
 export function parseJson(context: ProjectionBuildContext, path: string): Record<string, unknown> {
   const file = optionalGraphFile(context, path);
   if (!file) return invalid();

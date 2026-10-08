@@ -3,21 +3,26 @@ import { filesUnder, fieldString, parseFrontmatter, sourcePath, invalid, writeJs
 import { commandBody, firstProseLine, serializeSkill } from './prompts.js';
 import { advisoryCommand, advisoryWorkflow, mentoringWorkflow } from './text.js';
 import type { NameMap } from './prompts.js';
+import { assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
 
 export interface CommandEntry { source: string; sourceName: string; target: string; targetName: string; description?: string; descriptionSource?: string; argumentHint?: string }
 
 export function buildCommandMap(context: ProjectionBuildContext): NameMap {
   const result: Record<string, CommandEntry> = {};
-  const used = new Map<string, string>();
+  const names: string[] = [];
   for (const file of filesUnder(context, 'commands')) {
     const relative = sourcePath('commands', file);
-    if (!relative.endsWith('.md')) invalid();
-    const parts = relative.slice(0, -3).split('/');
-    const targetName = `evcrate-cmd-${parts.map((part) => part.replace(/(?:__|[_\s]+)/gu, '-').replace(/[^A-Za-z0-9-]+/gu, '-').replace(/-+/gu, '-').replace(/^-|-$/gu, '').toLowerCase()).filter(Boolean).join('-')}`;
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(targetName) || targetName.length > 64 || used.has(targetName.toLowerCase())) invalid();
-    used.set(targetName.toLowerCase(), relative);
-    result[`${parts.join(':')}`.toLowerCase()] = { source: relative, sourceName: parts.join(':'), target: `skills/${targetName}/SKILL.md`, targetName };
+    const command = commandNameFromSourcePath(`commands/${relative}`);
+    if (result[command.semanticId] !== undefined) invalid();
+    names.push(command.name);
+    result[command.semanticId] = {
+      source: relative,
+      sourceName: command.semanticId,
+      target: `skills/${command.name}/SKILL.md`,
+      targetName: command.name
+    };
   }
+  assertUniqueNames(names);
   return Object.fromEntries(Object.entries(result).sort(([a], [b]) => a.localeCompare(b)));
 }
 
@@ -42,7 +47,7 @@ export function convertCommands(context: ProjectionBuildContext, map: NameMap, t
     if (!description) { description = firstProseLine(parsed.body); kind = 'first-prose-line'; }
     if (!description || description.length > 1024) invalid();
     let body = parsed.body;
-    if (relative === 'advise.md') { body = advisoryCommand(body); description = 'Interview-first technical advice; advisor relay is unsupported by Copilot CLI.'; }
+    if (entry.sourceName === 'advise') { body = advisoryCommand(body); description = 'Interview-first technical advice; advisor relay is unsupported by Copilot CLI.'; }
     body = transform(body);
     description = transform(description).trim();
     if (!description || description.length > 1024) invalid();

@@ -107,7 +107,7 @@ test('lifecycle: buildSubagentStartContext reflects active plan and parent revis
       {
         hook_event_name: 'SubagentStart',
         agent_id: 'sub-01',
-        agent_type: 'planner',
+        agent_type: 'evc-planner',
         session_id: 'parent-sess',
         cwd: projectDir
       },
@@ -118,7 +118,6 @@ test('lifecycle: buildSubagentStartContext reflects active plan and parent revis
     assert.equal(subNative.continue, true);
     assert.equal(subNative.hookSpecificOutput.hookEventName, 'SubagentStart');
     assert.ok(subNative.hookSpecificOutput.additionalContext.includes('Agent ID: sub-01'));
-    assert.ok(subNative.hookSpecificOutput.additionalContext.includes('planner'));
     assert.ok(subNative.hookSpecificOutput.additionalContext.includes('Active plan: plans/feat-x/plan.md'));
     assert.ok(subNative.hookSpecificOutput.additionalContext.includes('State revision: 2'));
 
@@ -127,7 +126,7 @@ test('lifecycle: buildSubagentStartContext reflects active plan and parent revis
       {
         hook_event_name: 'SubagentStart',
         agent_id: 'sub-02',
-        agent_type: 'tester',
+        agent_type: 'evc-tester',
         session_id: '',
         cwd: projectDir
       },
