@@ -539,6 +539,132 @@ test('discovers remote-only base branch and creates worktree in single-branch cl
   }
 });
 
+test('rejects missing option values and flags passed as option values without creating worktree', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-args-'));
+  try {
+    const repo = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repo);
+    execSync('git init -b main', { cwd: repo, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: repo, stdio: 'pipe' });
+    fs.writeFileSync(path.join(repo, 'file.txt'), 'init');
+    execSync('git add . && git commit -m "init"', { cwd: repo, stdio: 'pipe' });
+
+    // 1. --plan followed by --dry-run
+    const resPlanDry = run('create missing-val-plan --plan --dry-run --json', { cwd: repo });
+    assert(!resPlanDry.success, 'Should fail when --plan is followed by another flag');
+    assert(resPlanDry.exitCode === 1, 'Exit code should be 1');
+    const jsonPlan = assertJSON(resPlanDry.output);
+    assert(jsonPlan.error.code === 'MISSING_OPTION_VALUE', 'Should return MISSING_OPTION_VALUE');
+    // Ensure no branch or worktree was created
+    const branchCheck = execSync('git branch --list "feat/missing-val-plan"', { cwd: repo, encoding: 'utf-8' }).trim();
+    assert(!branchCheck, 'Branch should NOT be created when option value is missing');
+    const wtCheck = execSync('git worktree list', { cwd: repo, encoding: 'utf-8' });
+    assert(!wtCheck.includes('missing-val-plan'), 'Worktree should NOT be created');
+
+    // 2. --base followed by --dry-run
+    const resBaseDry = run('create missing-val-base --base --dry-run --json', { cwd: repo });
+    assert(!resBaseDry.success, 'Should fail when --base is followed by another flag');
+    const jsonBase = assertJSON(resBaseDry.output);
+    assert(jsonBase.error.code === 'MISSING_OPTION_VALUE', 'Should return MISSING_OPTION_VALUE for --base');
+
+    // 3. --prefix followed by --dry-run
+    const resPrefixDry = run('create missing-val-prefix --prefix --dry-run --json', { cwd: repo });
+    assert(!resPrefixDry.success, 'Should fail when --prefix is followed by another flag');
+    const jsonPrefix = assertJSON(resPrefixDry.output);
+    assert(jsonPrefix.error.code === 'MISSING_OPTION_VALUE', 'Should return MISSING_OPTION_VALUE for --prefix');
+
+    // 4. --env followed by --dry-run
+    const resEnvDry = run('create missing-val-env --env --dry-run --json', { cwd: repo });
+    assert(!resEnvDry.success, 'Should fail when --env is followed by another flag');
+    const jsonEnv = assertJSON(resEnvDry.output);
+    assert(jsonEnv.error.code === 'MISSING_OPTION_VALUE', 'Should return MISSING_OPTION_VALUE for --env');
+
+    // 5. Lone trailing --plan
+    const resTrailing = run('create missing-val-trail --plan --json', { cwd: repo });
+    assert(!resTrailing.success, 'Should fail when --plan is lone trailing flag');
+    const jsonTrailing = assertJSON(resTrailing.output);
+    assert(jsonTrailing.error.code === 'MISSING_OPTION_VALUE', 'Should return MISSING_OPTION_VALUE');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('bounds remote discovery with timeout and handles offline remotes gracefully', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-offline-'));
+  try {
+    const repo = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repo);
+    execSync('git init -b main', { cwd: repo, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: repo, stdio: 'pipe' });
+    fs.writeFileSync(path.join(repo, 'file.txt'), 'init');
+    execSync('git add . && git commit -m "init"', { cwd: repo, stdio: 'pipe' });
+
+    // Set an unreachable/offline origin URL (non-routable TEST-NET IP)
+    execSync('git remote add origin http://192.0.2.1:1/offline.git', { cwd: repo, stdio: 'pipe' });
+
+    // 1. Dry run on new feature branch should complete fast without stalling on remote
+    const startMs = Date.now();
+    const dryRes = run('create offline-feat --dry-run --json', { cwd: repo });
+    const elapsedMs = Date.now() - startMs;
+    assert(dryRes.success, `Dry run should succeed offline: ${dryRes.stderr}`);
+    const dryJson = assertJSON(dryRes.output);
+    assert(dryJson.wouldCreate.branch === 'feat/offline-feat', 'Should create branch name');
+    assert(elapsedMs < 3000, `Dry run should not stall on remote (took ${elapsedMs}ms)`);
+
+    // 2. Querying a nonexistent base branch with offline origin should fail with BASE_BRANCH_NOT_FOUND in bounded time
+    const infoStartMs = Date.now();
+    const infoRes = run('info --base non-existent-remote-branch --json', { cwd: repo });
+    const infoElapsedMs = Date.now() - infoStartMs;
+    assert(!infoRes.success, 'Offline nonexistent base should fail');
+    const infoJson = assertJSON(infoRes.output);
+    assert(infoJson.error.code === 'BASE_BRANCH_NOT_FOUND', 'Should return BASE_BRANCH_NOT_FOUND');
+    assert(infoElapsedMs < 8000, `Remote discovery should time out within bound (took ${infoElapsedMs}ms)`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('copies directory and file symlinks during actual worktree creation', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-realsym-'));
+  try {
+    const repo = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repo);
+    execSync('git init -b main', { cwd: repo, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: repo, stdio: 'pipe' });
+    fs.writeFileSync(path.join(repo, 'file.txt'), 'init');
+    execSync('git add . && git commit -m "init"', { cwd: repo, stdio: 'pipe' });
+
+    // Create a plan directory containing real sub-dir, directory symlink, and file symlink
+    const planDir = path.join(repo, 'plans', 'symlink-test-plan');
+    const subReal = path.join(planDir, 'sub-real');
+    fs.mkdirSync(subReal, { recursive: true });
+    fs.writeFileSync(path.join(subReal, 'nested.txt'), 'nested file content');
+
+    // Directory symlink and file symlink
+    try {
+      fs.symlinkSync(subReal, path.join(planDir, 'sub-dir-link'), 'dir');
+      fs.symlinkSync(path.join(subReal, 'nested.txt'), path.join(planDir, 'file-link.txt'), 'file');
+    } catch {
+      // Symlinks may not be permitted in some restricted environments
+    }
+
+    // Run real worktree creation
+    const res = run('create real-sym-feat --plan plans/symlink-test-plan --json', { cwd: repo });
+    assert(res.success, `Worktree creation with plan symlinks should succeed: ${res.stderr}`);
+    const json = assertJSON(res.output);
+    assert(json.success, 'Result should indicate success');
+    const wtPath = json.worktreePath;
+    assert(fs.existsSync(wtPath), 'Worktree directory should exist');
+
+    const copiedPlan = path.join(wtPath, 'plans', 'symlink-test-plan');
+    assert(fs.existsSync(copiedPlan), 'Copied plan directory should exist');
+    assert(fs.existsSync(path.join(copiedPlan, 'sub-real', 'nested.txt')), 'Nested file should be copied');
+    assert(fs.existsSync(path.join(copiedPlan, 'sub-dir-link')), 'Directory symlink (or fallback copy) should exist');
+    assert(fs.existsSync(path.join(copiedPlan, 'sub-dir-link', 'nested.txt')), 'Directory symlink content should exist');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
 // ============================================
 // SUMMARY
 // ============================================

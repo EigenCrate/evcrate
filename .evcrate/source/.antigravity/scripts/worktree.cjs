@@ -34,46 +34,45 @@ if (nodeVersion < MIN_NODE_VERSION) {
 
 // Parse arguments
 const args = process.argv.slice(2);
-const jsonOutput = args.includes('--json');
 const jsonIndex = args.indexOf('--json');
+const jsonOutput = jsonIndex > -1;
 if (jsonIndex > -1) args.splice(jsonIndex, 1);
 
-const prefixIndex = args.indexOf('--prefix');
-let branchPrefix = 'feat';
-if (prefixIndex > -1) {
-  branchPrefix = args[prefixIndex + 1] || 'feat';
-  args.splice(prefixIndex, 2);
-}
-const baseIndex = args.indexOf('--base');
-let explicitBaseBranch = null;
-if (baseIndex > -1) {
-  explicitBaseBranch = args[baseIndex + 1] || null;
-  args.splice(baseIndex, 2);
-}
-
-const planIndex = args.indexOf('--plan');
-let explicitPlanPath = null;
-if (planIndex > -1) {
-  explicitPlanPath = args[planIndex + 1] || null;
-  args.splice(planIndex, 2);
+function getOptionValue(flag) {
+  const index = args.indexOf(flag);
+  if (index === -1) return null;
+  const val = args[index + 1];
+  if (!val || val.startsWith('--')) {
+    outputError('MISSING_OPTION_VALUE', `Missing required value for ${flag} option`, {
+      suggestion: `Specify a value after ${flag}, e.g. ${flag} <value>`
+    });
+  }
+  args.splice(index, 2);
+  return val;
 }
 
-const noPlanIndex = args.indexOf('--no-plan');
-const noPlan = noPlanIndex > -1;
-if (noPlanIndex > -1) args.splice(noPlanIndex, 1);
-
-
-const envIndex = args.indexOf('--env');
-let envFilesToCopy = [];
-if (envIndex > -1) {
-  envFilesToCopy = (args[envIndex + 1] || '').split(',').filter(Boolean);
-  args.splice(envIndex, 2);
+function hasFlag(flag) {
+  const index = args.indexOf(flag);
+  if (index > -1) {
+    args.splice(index, 1);
+    return true;
+  }
+  return false;
 }
 
-const dryRunIndex = args.indexOf('--dry-run');
-const dryRun = dryRunIndex > -1;
-if (dryRunIndex > -1) args.splice(dryRunIndex, 1);
+const explicitPrefix = getOptionValue('--prefix');
+let branchPrefix = explicitPrefix || 'feat';
 
+const explicitBaseBranch = getOptionValue('--base');
+
+const explicitPlanPath = getOptionValue('--plan');
+
+const noPlan = hasFlag('--no-plan');
+
+const envOption = getOptionValue('--env');
+let envFilesToCopy = envOption ? envOption.split(',').filter(Boolean) : [];
+
+const dryRun = hasFlag('--dry-run');
 const command = args[0];
 // For create: args[1] is project (or feature for standalone), args[2] is feature
 // For remove: args[1] is worktree name or path
@@ -155,14 +154,16 @@ function git(args, options = {}) {
     const result = spawnSync('git', argv, {
       encoding: 'utf-8',
       stdio: options.silent ? 'pipe' : ['pipe', 'pipe', 'pipe'],
-      cwd: options.cwd || process.cwd()
+      cwd: options.cwd || process.cwd(),
+      timeout: options.timeout || undefined
     });
     if (result.error) {
       return {
         success: false,
         error: result.error.message,
-        stderr: '',
-        code: 1
+        stderr: result.error.code === 'ETIMEDOUT' ? 'Command timed out' : '',
+        code: 1,
+        timedOut: result.error.code === 'ETIMEDOUT'
       };
     }
     return {
@@ -272,14 +273,36 @@ function copyRecursive(src, dest, visited = new Set()) {
     const target = fs.readlinkSync(src);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     try {
-      fs.symlinkSync(target, dest);
-    } catch {
       const stat = fs.statSync(src);
-      if (!stat.isDirectory()) {
-        fs.copyFileSync(src, dest);
+      fs.symlinkSync(target, dest, stat.isDirectory() ? 'dir' : 'file');
+      return;
+    } catch (symlinkErr) {
+      // Safe tested fallback if symlink creation fails (e.g. Windows non-admin permissions or cross-fs)
+      try {
+        const stat = fs.statSync(src);
+        if (stat.isDirectory()) {
+          if (visited.has(realSrc)) {
+            return; // prevent cyclic recursion
+          }
+          visited.add(realSrc);
+          fs.mkdirSync(dest, { recursive: true });
+          for (const child of fs.readdirSync(src)) {
+            const childSrc = path.join(src, child);
+            const childDest = path.join(dest, child);
+            const childReal = getCanonicalPath(childSrc);
+            if (childReal === realDest || childReal.startsWith(realDest + path.sep)) {
+              continue;
+            }
+            copyRecursive(childSrc, childDest, visited);
+          }
+        } else {
+          fs.copyFileSync(src, dest);
+        }
+        return;
+      } catch (fallbackErr) {
+        throw new Error(`Failed to copy symlink "${src}" to "${dest}": ${symlinkErr.message} (fallback: ${fallbackErr.message})`);
       }
     }
-    return;
   }
 
   if (lstat.isDirectory()) {
@@ -373,20 +396,27 @@ function isBranchCheckedOut(branchName, cwd) {
 }
 
 // Check if branch exists (local branch, local tracking ref, or remote origin ref)
-function branchExists(branchName, cwd) {
+function branchExists(branchName, cwd, options = {}) {
   if (!isValidBranchName(branchName, cwd)) return false;
   const local = git(['show-ref', '--verify', '--quiet', `refs/heads/${branchName}`], { silent: true, cwd });
   if (local.success) return 'local';
   const remote = git(['show-ref', '--verify', '--quiet', `refs/remotes/origin/${branchName}`], { silent: true, cwd });
   if (remote.success) return 'remote';
-  const hasOrigin = git(['remote', 'get-url', 'origin'], { silent: true, cwd }).success;
-  if (hasOrigin) {
-    const lsRemote = git(['ls-remote', '--heads', 'origin', branchName], { silent: true, cwd });
-    if (lsRemote.success && lsRemote.output) {
-      const lines = lsRemote.output.split('\n').filter(Boolean);
-      const matchRef = `refs/heads/${branchName}`;
-      if (lines.some(line => line.endsWith(`\t${matchRef}`) || line.endsWith(` ${matchRef}`))) {
-        return 'remote';
+  const checkRemote = options.checkRemote !== false;
+  if (checkRemote) {
+    const hasOrigin = git(['remote', 'get-url', 'origin'], { silent: true, cwd, timeout: 2000 }).success;
+    if (hasOrigin) {
+      const timeout = typeof options.timeout === 'number' ? options.timeout : 3000;
+      const lsRemote = git(['ls-remote', '--heads', 'origin', branchName], { silent: true, cwd, timeout });
+      if (lsRemote.success && lsRemote.output) {
+        const lines = lsRemote.output.split('\n').filter(Boolean);
+        const matchRef = `refs/heads/${branchName}`;
+        if (lines.some(line => {
+          const parts = line.split(/\s+/);
+          return parts[1] === matchRef;
+        })) {
+          return 'remote';
+        }
       }
     }
   }
@@ -611,7 +641,7 @@ function cmdCreate() {
   }
 
   // Check if branch exists
-  const branchStatus = branchExists(branchName, workDir);
+  const branchStatus = branchExists(branchName, workDir, { checkRemote: false });
 
   // Determine starting revision for planning (read-only, no network mutations)
   let startPoint = baseBranch;
