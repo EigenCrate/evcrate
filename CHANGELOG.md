@@ -1,3 +1,10 @@
+## [2.10.2](https://github.com/EigenCrate/evcrate/compare/v2.10.1...v2.10.2) (2026-10-08)
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** allow bounded OMP network probes and exclude ambient extensions ([#21](https://github.com/EigenCrate/evcrate/issues/21)) ([48aa653](https://github.com/EigenCrate/evcrate/commit/48aa653d86ffdaf54a97a64fadeadad6a5bcc138))
+
 ## [2.10.1](https://github.com/EigenCrate/evcrate/compare/v2.10.0...v2.10.1) (2026-10-07)
 
 
