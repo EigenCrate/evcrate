@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ADVISOR_COMMAND_NAMES } from '../../dist/manifests/controller.js';
 import {
   assertAgentName,
   assertUniqueNames,
@@ -166,4 +171,51 @@ test('64-char limit is inclusive for every generated name kind', () => {
     assert.equal(build(maxBody).length, 64);
     assert.throws(() => build(maxBody + 1), validationInvalid);
   }
+});
+
+test('advisor activation guard: allowlist ids resolve to command files and cover all advisor-capable commands', () => {
+  const commandsDirectory = fileURLToPath(new URL('../../.evcrate/source/.claude/commands', import.meta.url));
+  const allCommandFiles = readdirSync(commandsDirectory).filter((file) => file.endsWith('.md'));
+
+  assert.equal(ADVISOR_COMMAND_NAMES.length, 21);
+
+  // 1. Every allowlist id resolves to exactly one commands/evc-cmd-*.md via formatCommandName(id.split('/'))
+  const expectedCommandFiles = new Set();
+  for (const id of ADVISOR_COMMAND_NAMES) {
+    const formatted = formatCommandName(id.split('/'));
+    const fileName = `${formatted}.md`;
+    assert.ok(
+      allCommandFiles.includes(fileName),
+      `Allowlist id ${id} must resolve to existing ${fileName}`
+    );
+    expectedCommandFiles.add(fileName);
+  }
+  assert.equal(expectedCommandFiles.size, ADVISOR_COMMAND_NAMES.length);
+
+  // 2. Every advisor-capable command file (has advice-activation block) is in allowlist
+  const advisorCapableFiles = [];
+  for (const file of allCommandFiles) {
+    const content = readFileSync(join(commandsDirectory, file), 'utf8');
+    if (content.includes('advice-activation.md') || content.includes('## Advice Mode')) {
+      advisorCapableFiles.push(file);
+      const stem = file.slice(0, -3);
+      const parsed = parseCommandName(stem);
+      assert.ok(
+        ADVISOR_COMMAND_NAMES.includes(parsed.semanticId),
+        `Advisor-capable command ${file} (${parsed.semanticId}) must be in ADVISOR_COMMAND_NAMES`
+      );
+    }
+  }
+
+  // 3. Exactly 21 advisor-capable commands matching the allowlist
+  assert.equal(advisorCapableFiles.length, 21);
+  assert.deepEqual(
+    advisorCapableFiles.sort(),
+    [...expectedCommandFiles].sort()
+  );
+
+  // 4. Parity with activation.cjs COMMAND_NAMES
+  const require = createRequire(import.meta.url);
+  const { COMMAND_NAMES } = require('../../.evcrate/source/.evcrate/bin/lib/advisor/activation.cjs');
+  assert.deepEqual([...ADVISOR_COMMAND_NAMES], [...COMMAND_NAMES]);
 });
