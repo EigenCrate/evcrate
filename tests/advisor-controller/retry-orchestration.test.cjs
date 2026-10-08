@@ -210,7 +210,8 @@ const OMP_USAGE_HELP_OUTPUT = [
   'Usage: omp usage [ACTION] [FLAGS]',
   '  -j, --json',
   '  -r, --redact',
-  '  -p, --provider=<value>'
+  '  -p, --provider=<value>',
+  '  --no-extensions'
 ].join('\n') + '\n';
 
 const OMP_MODELS_HELP_OUTPUT = 'Usage: omp models [ACTION] [PATTERN] find --json --no-extensions\n';

@@ -42,7 +42,8 @@ function help() {
   ].join('\n');
 }
 function usageHelp() {
-  return ['Usage: omp usage [ACTION] [FLAGS]', '  -j, --json', '  -r, --redact', '  -p, --provider=<value>'].join('\n');
+  return ['Usage: omp usage [ACTION] [FLAGS]', '  -j, --json', '  -r, --redact', '  -p, --provider=<value>',
+    '  --no-extensions'].join('\n');
 }
 function modelsHelp() { return 'Usage: omp models [ACTION] [PATTERN] find --json --no-extensions'; }
 function usageStatus() {

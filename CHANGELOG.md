@@ -70,6 +70,7 @@
 * **build:** inventory the full imported emit closure, preserve ownership receipts across clean builds, share ordinary prebuild prerequisites, refuse unsafe ancestor traversal, retain receipts on cleanup failure, honor CLI output overrides, and leave emitting-build ownership unchanged for `--noEmit`.
 * **distribution:** include consumed .gitignore bytes in snapshot freshness identity, reject unsafe path entries before ignore filtering, exclude heavy artifact directories during snapshot traversal, validate compiled runtime revisions across serial and parallel worker execution, and execute freshness verification under promotion lock before journal recording.
 * **manifests:** regenerate target and aggregate identities from reproducible tracked inputs, without an accidental empty Codex patch directory.
+* **advisor:** allow bounded OMP usage and model discovery beyond five seconds while preserving the shared preflight deadline and excluding ambient extensions from usage readiness.
 
 
 ### Documentation

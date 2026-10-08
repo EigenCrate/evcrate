@@ -155,7 +155,7 @@ function probeContext({
         calls.push(invocation.argv);
         const key = invocation.argv.join(' ');
         if (key === '--version') return { stdout: versionStdout, stderr: '' };
-        if (key === 'usage --help') return { stdout: 'Options:\n  --json\n  --redact\n  --provider', stderr: '' };
+        if (key === 'usage --help') return { stdout: 'Options:\n  --json\n  --redact\n  --provider\n  --no-extensions', stderr: '' };
         if (invocation.argv[0] === 'usage') return { stdout: usageStdout, stderr: '' };
         if (key === '--help') return { stdout: 'Options:\n  -p\n  --mode json\n  --model\n  --thinking\n  --no-session\n  --no-tools\n  --no-lsp\n  --no-pty\n  --no-extensions\n  --no-skills\n  --no-rules', stderr: '' };
         if (key === 'models --help') return { stdout: 'find', stderr: '' };
@@ -171,6 +171,59 @@ test('OMP probeAuth validates usable auth readiness', async () => {
   const { context } = probeContext();
   await OMP.probeVersion(context);
   assert.deepEqual(await OMP.probeAuth(context), { authenticated: true });
+});
+
+test('OMP network probes finish beyond five seconds but remain bounded by the shared deadline', { timeout: 45000 }, async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const RUNNER = require(path.resolve(__dirname, '../../.evcrate/source/.evcrate/bin/lib/advisor/runner.cjs'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-omp-network-probe-'));
+  const { context } = probeContext();
+  const fixtureRunner = context.runner;
+  const execution = RUNNER.createRunner();
+  const outcomes = [];
+  const scriptPath = path.join(cwd, 'probe-response.cjs');
+  const deadline = Date.now() + 30000;
+  context.cwd = cwd;
+  context.workspaceRoot = cwd;
+  context.createInvocation = (invocation) => ({ ...invocation });
+  context.runner = RUNNER.createProbeRunner({
+    deadline,
+    now: Date.now,
+    runner: {
+      async run(invocation) {
+        const response = await fixtureRunner.run(invocation);
+        const networked = (invocation.argv[0] === 'usage' && !invocation.argv.includes('--help'))
+          || (invocation.argv[0] === 'models' && invocation.argv[1] === 'find');
+        // Real child-process latency exercises timeout/cleanup, not just the
+        // adapter's limit values. CLI responses stand in for the external OMP.
+        fs.writeFileSync(scriptPath,
+          `setTimeout(() => process.stdout.write(${JSON.stringify(response.stdout)}), ${networked ? 6000 : 0});\n`);
+        const result = await execution.run(RUNNER.createInvocation({
+          ...invocation,
+          executable: process.execPath,
+          argv: [scriptPath],
+        }), { environment: {} });
+        outcomes.push(result);
+        return result;
+      },
+    },
+  });
+  try {
+    await OMP.probeVersion(context);
+    assert.deepEqual(await OMP.probeAuth(context), { authenticated: true });
+    assert.equal((await OMP.probeCapabilities(context)).model, TARGET.model);
+
+    context.runner = RUNNER.createProbeRunner({
+      runner: context.runner,
+      deadline: Date.now() + 250,
+      now: Date.now,
+    });
+    await assert.rejects(() => OMP.probeAuth(context), (error) => OMP.classifyFailure(error) === 'TIMEOUT');
+    assert.equal(outcomes.find((result) => result.error?.code === 'TIMEOUT').cleanupOutcome, 'confirmed');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
 });
 
 test('OMP probeAuth rejects when limits are exhausted, capacity is zero, or readiness is unproven (R2)', async () => {
