@@ -1,3 +1,10 @@
+## [2.10.1](https://github.com/EigenCrate/evcrate/compare/v2.10.0...v2.10.1) (2026-10-07)
+
+
+### 🐞 Bug Fixes
+
+* **vscode:** map TodoWrite to manage_todo_list ([#20](https://github.com/EigenCrate/evcrate/issues/20)) ([b1e1b31](https://github.com/EigenCrate/evcrate/commit/b1e1b31e268b650f5b5f2a237e1c0afb2b2b40b4))
+
 ## [2.10.0](https://github.com/EigenCrate/evcrate/compare/v2.9.1...v2.10.0) (2026-10-07)
 
 
