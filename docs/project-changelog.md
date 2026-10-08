@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-07
+**Updated:** 2026-10-08
 **Status:** Core package `evcrate` 2.9.0; PR #19 advice activation review repairs & prompt economy complete (2/2 phases DONE 2026-10-06; review approved 9.2/10; warning fixed; user approved); Deterministic Advice Activation Phases 01–04 ordinary user-approved completed 2026-10-06T14:13:41+07:00 / 9.8 review (no durable completion, provider release, or commit claim); Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64; native Windows Advisor evidence remains bounded to installer and diagnostics.
+
+### 2026-10-08 — fix(advisor): accept omp requestControls and usage.cttl in assistant stream
+
+- OMP advisor parser (`adapters/omp-parser.cjs`) accepts optional assistant `requestControls` (plain JSON object bounded to 4096 serialized bytes, depth 6, 256 nodes) and optional `usage.cttl` (plain object of at most 16 finite non-negative numbers) emitted by omp 18.8.x for the Anthropic provider; previously every `anthropic/claude-opus-5-5` backup consultation failed `PROTOCOL_INVALID`. Both fields stay optional, all other exact-key checks are unchanged, and message_end/turn_end/agent_end equivalence is unaffected. Regression tests added to `tests/advisor-controller/omp-adapter.test.cjs`.
 
 ### 2026-10-07 — fix(advisor): PR #19 advice activation hardening
 

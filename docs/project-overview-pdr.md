@@ -213,7 +213,9 @@ version/auth/capability probes. Runner calls use `shell:false`, allowlisted
 environment, bounded streams, stdin-only prompts, detached POSIX process groups,
 deadlines, cancellation, and descendant reaping. The OMP adapter (`omp-parser.cjs`)
 enforces 1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0
-`serviceTier` and `usage.premiumRequests` fields.
+`serviceTier` and `usage.premiumRequests` fields plus omp 18.8.x Anthropic-provider
+`requestControls` (bounded plain JSON object) and `usage.cttl` (plain object of
+non-negative numbers) fields; all other unknown keys still fail closed.
 This remains live vendor/runtime qualification and is repeated after vendor CLI
 upgrades on Linux only. The separate Windows qualification covers standalone
 installer lifecycle and `version --json` under FR-17. Native Windows Phase 03
