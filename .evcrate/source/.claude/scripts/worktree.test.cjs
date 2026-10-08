@@ -7,6 +7,7 @@
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const SCRIPT_PATH = path.join(__dirname, 'worktree.cjs');
 const REPO_ROOT = execSync('git rev-parse --show-toplevel', { cwd: __dirname, encoding: 'utf-8' }).trim();
@@ -353,6 +354,189 @@ test('create dry-run detects --no-plan flag', () => {
   assert(result.success, `Should succeed: ${result.stderr}`);
   const json = assertJSON(result.output);
   assert(json.wouldCreate.planToCopy === undefined, 'Should not plan to copy when --no-plan is passed');
+});
+
+// ============================================
+console.log('\n🛡️ Security & Regression Tests (Isolated Repositories)');
+
+test('rejects shell command injection in --base without executing payload', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-sec-'));
+  const marker = path.join(tmpDir, 'injection_marker.txt');
+  try {
+    const repo = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repo);
+    execSync('git init -b main', { cwd: repo, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: repo, stdio: 'pipe' });
+    fs.writeFileSync(path.join(repo, 'file.txt'), 'init');
+    execSync('git add . && git commit -m "init"', { cwd: repo, stdio: 'pipe' });
+
+    const result = run(`info --base "main; echo pwned > \\"${marker}\\"" --json`, { cwd: repo });
+    assert(!result.success, 'Command with injected metacharacters should fail');
+    assert(!fs.existsSync(marker), 'Injected shell command must NOT execute');
+    const json = assertJSON(result.output);
+    assert(json.error.code === 'BASE_BRANCH_NOT_FOUND', 'Should return BASE_BRANCH_NOT_FOUND error code');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('rejects malformed branch names in --base', () => {
+  const malformedNames = [
+    'main@{1}',
+    'main..dev',
+    '-invalid-dash-start',
+    'main~1',
+    'main^',
+    'main:sub'
+  ];
+  for (const name of malformedNames) {
+    const result = run(`info --base "${name}" --json`);
+    assert(!result.success, `Should reject malformed branch: ${name}`);
+    const json = assertJSON(result.output);
+    assert(json.error.code === 'BASE_BRANCH_NOT_FOUND', `Expected BASE_BRANCH_NOT_FOUND for ${name}`);
+  }
+});
+
+test('rejects plan directory overlap and prevents recursive copying', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-overlap-'));
+  try {
+    const repo = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repo);
+    execSync('git init -b main', { cwd: repo, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: repo, stdio: 'pipe' });
+    fs.writeFileSync(path.join(repo, 'file.txt'), 'init');
+    execSync('git add . && git commit -m "init"', { cwd: repo, stdio: 'pipe' });
+
+    // Explicit plan pointing to parent directory containing the worktree destination
+    const result = run('create overlap-feat --plan ../ --json', { cwd: repo });
+    assert(!result.success, 'Should fail when plan overlaps with destination');
+    const json = assertJSON(result.output);
+    assert(json.error.code === 'PLAN_PATH_OVERLAP', 'Should fail with PLAN_PATH_OVERLAP');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('handles plan directory with symlinks without cyclic recursion', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-symlink-'));
+  try {
+    const repo = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repo);
+    execSync('git init -b main', { cwd: repo, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: repo, stdio: 'pipe' });
+    fs.writeFileSync(path.join(repo, 'file.txt'), 'init');
+    execSync('git add . && git commit -m "init"', { cwd: repo, stdio: 'pipe' });
+
+    const plansDir = path.join(repo, 'plans', 'cycle-plan');
+    fs.mkdirSync(plansDir, { recursive: true });
+    fs.writeFileSync(path.join(plansDir, 'plan.md'), '# Plan');
+    // Create a circular directory symlink inside the plan directory
+    try {
+      fs.symlinkSync(plansDir, path.join(plansDir, 'self-link'));
+    } catch {
+      // Symlinks may require special privileges on some platforms
+    }
+
+    const result = run('create symlink-feat --plan plans/cycle-plan --dry-run --json', { cwd: repo });
+    assert(result.success, `Dry run with plan symlinks should succeed: ${result.stderr}`);
+    const json = assertJSON(result.output);
+    assert(json.wouldCreate.planToCopy !== undefined, 'Plan should be planned for copying');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('dry-run does not perform network fetch or update remote refs', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-dryrun-'));
+  try {
+    const upstream = path.join(tmpDir, 'upstream');
+    fs.mkdirSync(upstream);
+    execSync('git init -b main', { cwd: upstream, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: upstream, stdio: 'pipe' });
+    fs.writeFileSync(path.join(upstream, 'file.txt'), 'v1');
+    execSync('git add . && git commit -m "v1"', { cwd: upstream, stdio: 'pipe' });
+
+    const bare = path.join(tmpDir, 'bare.git');
+    execSync(`git clone --bare "${upstream}" "${bare}"`, { stdio: 'pipe' });
+
+    const clone = path.join(tmpDir, 'clone');
+    execSync(`git clone "${bare}" "${clone}"`, { stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: clone, stdio: 'pipe' });
+
+    // Upstream receives a new commit
+    fs.writeFileSync(path.join(upstream, 'file.txt'), 'v2');
+    execSync(`git commit -am "v2" && git push "${bare}" main:main`, { cwd: upstream, stdio: 'pipe' });
+
+    const originMainBefore = execSync('git rev-parse refs/remotes/origin/main', { cwd: clone, encoding: 'utf-8' }).trim();
+    const fetchHeadFile = path.join(clone, '.git', 'FETCH_HEAD');
+    const fetchHeadMtimeBefore = fs.existsSync(fetchHeadFile) ? fs.statSync(fetchHeadFile).mtimeMs : 0;
+
+    const result = run('create dry-check --base main --dry-run --json', { cwd: clone });
+    assert(result.success, `Dry-run should succeed: ${result.stderr}`);
+
+    const originMainAfter = execSync('git rev-parse refs/remotes/origin/main', { cwd: clone, encoding: 'utf-8' }).trim();
+    const fetchHeadMtimeAfter = fs.existsSync(fetchHeadFile) ? fs.statSync(fetchHeadFile).mtimeMs : 0;
+
+    assert(originMainBefore === originMainAfter, 'Remote tracking ref should NOT be updated by dry-run');
+    assert(fetchHeadMtimeBefore === fetchHeadMtimeAfter, 'FETCH_HEAD should NOT be touched by dry-run');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('discovers remote-only base branch and creates worktree in single-branch clone', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-test-remote-'));
+  try {
+    const upstream = path.join(tmpDir, 'upstream');
+    fs.mkdirSync(upstream);
+    execSync('git init -b main', { cwd: upstream, stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: upstream, stdio: 'pipe' });
+    fs.writeFileSync(path.join(upstream, 'file.txt'), 'main');
+    execSync('git add . && git commit -m "main commit"', { cwd: upstream, stdio: 'pipe' });
+
+    const bare = path.join(tmpDir, 'bare.git');
+    execSync(`git clone --bare "${upstream}" "${bare}"`, { stdio: 'pipe' });
+
+    // Push a new remote branch to bare
+    execSync(`git branch feature-remote && git push "${bare}" feature-remote:feature-remote`, { cwd: upstream, stdio: 'pipe' });
+
+    // Clone only single branch (main)
+    const clone = path.join(tmpDir, 'clone');
+    execSync(`git clone --single-branch -b main "${bare}" "${clone}"`, { stdio: 'pipe' });
+    execSync('git config user.name "Tester" && git config user.email "test@example.com"', { cwd: clone, stdio: 'pipe' });
+
+    // Verify remote tracking ref for feature-remote does NOT exist locally yet
+    let trackingExists = false;
+    try {
+      execSync('git show-ref --verify --quiet refs/remotes/origin/feature-remote', { cwd: clone });
+      trackingExists = true;
+    } catch {
+      trackingExists = false;
+    }
+    assert(!trackingExists, 'Single branch clone should not have cached remote branch ref yet');
+
+    // 1. Info discovers remote-only base branch
+    const infoRes = run('info --base feature-remote --json', { cwd: clone });
+    assert(infoRes.success, `Info with remote-only base should succeed: ${infoRes.stderr}`);
+    const infoJson = assertJSON(infoRes.output);
+    assert(infoJson.baseBranch === 'feature-remote', 'Info should report remote-only base branch');
+
+    // 2. Dry-run discovers remote-only base branch without error
+    const dryRes = run('create feat-from-remote --base feature-remote --dry-run --json', { cwd: clone });
+    assert(dryRes.success, `Dry-run with remote-only base should succeed: ${dryRes.stderr}`);
+    const dryJson = assertJSON(dryRes.output);
+    assert(dryJson.wouldCreate.baseBranch === 'feature-remote', 'Dry-run baseBranch should be feature-remote');
+    assert(dryJson.wouldCreate.startPoint === 'refs/remotes/origin/feature-remote', 'startPoint should point to remote ref');
+
+    // 3. Real creation creates worktree from remote-only branch
+    const createRes = run('create feat-from-remote --base feature-remote --json', { cwd: clone });
+    assert(createRes.success, `Creation from remote-only base should succeed: ${createRes.stderr}`);
+    const createJson = assertJSON(createRes.output);
+    assert(createJson.success, 'Worktree should be created successfully');
+    assert(fs.existsSync(createJson.worktreePath), 'Created worktree directory should exist');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 // ============================================

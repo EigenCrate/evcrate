@@ -20,7 +20,7 @@
  *   --dry-run          Show what would be done without executing
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -148,28 +148,42 @@ function outputError(code, message, details = {}) {
   process.exit(1);
 }
 
-// Git command wrapper with error handling
-function git(command, options = {}) {
+// Git command wrapper with argument array safety (never invokes a shell)
+function git(args, options = {}) {
+  const argv = Array.isArray(args) ? args : args.split(/\s+/).filter(Boolean);
   try {
-    const result = execSync(`git ${command}`, {
+    const result = spawnSync('git', argv, {
       encoding: 'utf-8',
       stdio: options.silent ? 'pipe' : ['pipe', 'pipe', 'pipe'],
       cwd: options.cwd || process.cwd()
     });
-    return { success: true, output: result.trim() };
+    if (result.error) {
+      return {
+        success: false,
+        error: result.error.message,
+        stderr: '',
+        code: 1
+      };
+    }
+    return {
+      success: result.status === 0,
+      output: (result.stdout || '').trim(),
+      stderr: (result.stderr || '').trim(),
+      code: result.status
+    };
   } catch (error) {
     return {
       success: false,
       error: error.message,
       stderr: error.stderr?.toString().trim() || '',
-      code: error.status
+      code: error.status || 1
     };
   }
 }
 
 // Check if in git repo
 function checkGitRepo() {
-  const result = git('rev-parse --show-toplevel', { silent: true });
+  const result = git(['rev-parse', '--show-toplevel'], { silent: true });
   if (!result.success) {
     outputError('NOT_GIT_REPO', 'Not in a git repository', {
       suggestion: 'Run this command from within a git repository'
@@ -180,7 +194,7 @@ function checkGitRepo() {
 
 // Check git version supports worktree
 function checkGitVersion() {
-  const result = git('worktree list', { silent: true });
+  const result = git(['worktree', 'list'], { silent: true });
   if (!result.success && result.stderr.includes('not a git command')) {
     outputError('GIT_VERSION_ERROR', 'Git version too old (worktree requires git 2.5+)', {
       suggestion: 'Upgrade git to version 2.5 or newer'
@@ -188,35 +202,101 @@ function checkGitVersion() {
   }
 }
 
+// Check if branch name adheres to Git's ref-format rules
+function isValidBranchName(branchName, cwd) {
+  if (!branchName || typeof branchName !== 'string' || branchName.startsWith('-')) {
+    return false;
+  }
+  const result = git(['check-ref-format', '--branch', branchName], { silent: true, cwd });
+  return result.success;
+}
+
 // Detect base branch
 function detectBaseBranch(cwd) {
   // Check upstream origin/HEAD if configured (e.g. refs/remotes/origin/HEAD -> origin/main)
-  const headRef = git('symbolic-ref refs/remotes/origin/HEAD', { silent: true, cwd });
+  const headRef = git(['symbolic-ref', 'refs/remotes/origin/HEAD'], { silent: true, cwd });
   if (headRef.success && headRef.output) {
     const defaultBranch = headRef.output.replace(/^refs\/remotes\/origin\//, '').trim();
-    if (defaultBranch) {
-      const local = git(`show-ref --verify --quiet refs/heads/${defaultBranch}`, { silent: true, cwd });
-      const remote = git(`show-ref --verify --quiet refs/remotes/origin/${defaultBranch}`, { silent: true, cwd });
+    if (defaultBranch && isValidBranchName(defaultBranch, cwd)) {
+      const local = git(['show-ref', '--verify', '--quiet', `refs/heads/${defaultBranch}`], { silent: true, cwd });
+      const remote = git(['show-ref', '--verify', '--quiet', `refs/remotes/origin/${defaultBranch}`], { silent: true, cwd });
       if (local.success || remote.success) return defaultBranch;
     }
   }
 
   const branches = ['dev', 'develop', 'main', 'master'];
   for (const branch of branches) {
-    const local = git(`show-ref --verify --quiet refs/heads/${branch}`, { silent: true, cwd });
+    const local = git(['show-ref', '--verify', '--quiet', `refs/heads/${branch}`], { silent: true, cwd });
     if (local.success) return branch;
-    const remote = git(`show-ref --verify --quiet refs/remotes/origin/${branch}`, { silent: true, cwd });
+    const remote = git(['show-ref', '--verify', '--quiet', `refs/remotes/origin/${branch}`], { silent: true, cwd });
     if (remote.success) return branch;
   }
   return 'main'; // fallback
 }
 
-function copyRecursive(src, dest) {
-  const stats = fs.statSync(src);
-  if (stats.isDirectory()) {
+// Resolve canonical path safely even if leaf does not exist yet
+function getCanonicalPath(targetPath) {
+  try {
+    return fs.realpathSync(targetPath);
+  } catch {
+    const resolved = path.resolve(targetPath);
+    const parent = path.dirname(resolved);
+    try {
+      const realParent = fs.realpathSync(parent);
+      return path.join(realParent, path.basename(resolved));
+    } catch {
+      return resolved;
+    }
+  }
+}
+
+// Check if two paths overlap (identical, or one contains the other)
+function pathsOverlap(src, dest) {
+  const realSrc = path.resolve(getCanonicalPath(src));
+  const realDest = path.resolve(getCanonicalPath(dest));
+  if (realSrc === realDest) return true;
+  if (realDest.startsWith(realSrc + path.sep)) return true;
+  if (realSrc.startsWith(realDest + path.sep)) return true;
+  return false;
+}
+
+function copyRecursive(src, dest, visited = new Set()) {
+  const realSrc = getCanonicalPath(src);
+  const realDest = getCanonicalPath(dest);
+  if (pathsOverlap(realSrc, realDest)) {
+    throw new Error(`Source and destination paths overlap: "${src}" and "${dest}"`);
+  }
+
+  const lstat = fs.lstatSync(src);
+  if (lstat.isSymbolicLink()) {
+    const target = fs.readlinkSync(src);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    try {
+      fs.symlinkSync(target, dest);
+    } catch {
+      const stat = fs.statSync(src);
+      if (!stat.isDirectory()) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+    return;
+  }
+
+  if (lstat.isDirectory()) {
+    if (visited.has(realSrc)) {
+      return; // prevent symlink/directory cycle
+    }
+    visited.add(realSrc);
+
     fs.mkdirSync(dest, { recursive: true });
     for (const child of fs.readdirSync(src)) {
-      copyRecursive(path.join(src, child), path.join(dest, child));
+      const childSrc = path.join(src, child);
+      const childDest = path.join(dest, child);
+      const childReal = getCanonicalPath(childSrc);
+      if (childReal === realDest || childReal.startsWith(realDest + path.sep)) {
+        continue;
+      }
+      copyRecursive(childSrc, childDest, visited);
     }
   } else {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -226,14 +306,14 @@ function copyRecursive(src, dest) {
 
 // Check for uncommitted changes
 function checkDirtyState() {
-  const diff = git('diff --quiet', { silent: true });
-  const diffCached = git('diff --cached --quiet', { silent: true });
+  const diff = git(['diff', '--quiet'], { silent: true });
+  const diffCached = git(['diff', '--cached', '--quiet'], { silent: true });
   return !diff.success || !diffCached.success;
 }
 
 // Get dirty state details
 function getDirtyStateDetails() {
-  const status = git('status --porcelain', { silent: true });
+  const status = git(['status', '--porcelain'], { silent: true });
   if (!status.success) return null;
   const lines = status.output.split('\n').filter(Boolean);
   const modified = lines.filter(l => l.startsWith(' M') || l.startsWith('M ')).length;
@@ -287,17 +367,29 @@ function findMatchingProjects(projects, query) {
 
 // Check if branch is already checked out
 function isBranchCheckedOut(branchName, cwd) {
-  const result = git('worktree list --porcelain', { silent: true, cwd });
+  const result = git(['worktree', 'list', '--porcelain'], { silent: true, cwd });
   if (!result.success) return false;
   return result.output.includes(`branch refs/heads/${branchName}`);
 }
 
-// Check if branch exists
+// Check if branch exists (local branch, local tracking ref, or remote origin ref)
 function branchExists(branchName, cwd) {
-  const local = git(`show-ref --verify --quiet refs/heads/${branchName}`, { silent: true, cwd });
+  if (!isValidBranchName(branchName, cwd)) return false;
+  const local = git(['show-ref', '--verify', '--quiet', `refs/heads/${branchName}`], { silent: true, cwd });
   if (local.success) return 'local';
-  const remote = git(`show-ref --verify --quiet refs/remotes/origin/${branchName}`, { silent: true, cwd });
+  const remote = git(['show-ref', '--verify', '--quiet', `refs/remotes/origin/${branchName}`], { silent: true, cwd });
   if (remote.success) return 'remote';
+  const hasOrigin = git(['remote', 'get-url', 'origin'], { silent: true, cwd }).success;
+  if (hasOrigin) {
+    const lsRemote = git(['ls-remote', '--heads', 'origin', branchName], { silent: true, cwd });
+    if (lsRemote.success && lsRemote.output) {
+      const lines = lsRemote.output.split('\n').filter(Boolean);
+      const matchRef = `refs/heads/${branchName}`;
+      if (lines.some(line => line.endsWith(`\t${matchRef}`) || line.endsWith(` ${matchRef}`))) {
+        return 'remote';
+      }
+    }
+  }
   return false;
 }
 
@@ -320,6 +412,11 @@ function cmdInfo() {
   const projects = parseGitModules(gitRoot);
   const isMonorepo = projects.length > 0;
   if (explicitBaseBranch) {
+    if (!isValidBranchName(explicitBaseBranch, gitRoot)) {
+      outputError('BASE_BRANCH_NOT_FOUND', `Base branch "${explicitBaseBranch}" does not exist`, {
+        suggestion: 'Verify branch exists locally or on remote origin'
+      });
+    }
     const exists = branchExists(explicitBaseBranch, gitRoot);
     if (!exists) {
       outputError('BASE_BRANCH_NOT_FOUND', `Base branch "${explicitBaseBranch}" does not exist`, {
@@ -361,7 +458,7 @@ function cmdInfo() {
 
 function cmdList() {
   checkGitRepo();
-  const result = git('worktree list', { silent: true });
+  const result = git(['worktree', 'list'], { silent: true });
   if (!result.success) {
     outputError('WORKTREE_LIST_ERROR', 'Failed to list worktrees', {
       suggestion: 'Ensure you are in a git repository'
@@ -463,10 +560,20 @@ function cmdCreate() {
     warnings.push(`Feature name sanitized: "${feature}" → "${sanitizedFeature}"`);
   }
 
+  // Validate prefix
+  if (!isValidBranchName(branchPrefix, workDir)) {
+    branchPrefix = 'feat';
+  }
+
   // Create branch name
   const branchName = `${branchPrefix}/${sanitizedFeature}`;
   // Resolve base branch
   if (explicitBaseBranch) {
+    if (!isValidBranchName(explicitBaseBranch, workDir)) {
+      outputError('BASE_BRANCH_NOT_FOUND', `Base branch "${explicitBaseBranch}" does not exist`, {
+        suggestion: 'Verify branch exists locally or on remote origin'
+      });
+    }
     const exists = branchExists(explicitBaseBranch, workDir);
     if (!exists) {
       outputError('BASE_BRANCH_NOT_FOUND', `Base branch "${explicitBaseBranch}" does not exist`, {
@@ -506,36 +613,23 @@ function cmdCreate() {
   // Check if branch exists
   const branchStatus = branchExists(branchName, workDir);
 
-  // Check remote origin availability and fetch base branch
-  const hasOrigin = git('remote get-url origin', { silent: true, cwd: workDir }).success;
-  let remoteBaseAvailable = false;
-  if (hasOrigin) {
-    const fetchBase = git(`fetch origin ${baseBranch}`, { silent: true, cwd: workDir });
-    if (fetchBase.success) {
-      remoteBaseAvailable = true;
-    } else if (!branchExists(baseBranch, workDir)) {
-      outputError('FETCH_FAILED', `Failed to fetch base branch "${baseBranch}" from remote`, {
-        suggestion: 'Check network connection or specify existing local branch with --base'
-      });
-    } else {
-      warnings.push(`Could not fetch "${baseBranch}" from origin; creating worktree from local commits.`);
-    }
-  }
-
-  // Determine starting revision
+  // Determine starting revision for planning (read-only, no network mutations)
   let startPoint = baseBranch;
   const localRef = `refs/heads/${baseBranch}`;
   const remoteRef = `refs/remotes/origin/${baseBranch}`;
-  const hasLocal = git(`show-ref --verify --quiet ${localRef}`, { silent: true, cwd: workDir }).success;
-  const hasRemote = remoteBaseAvailable && git(`show-ref --verify --quiet ${remoteRef}`, { silent: true, cwd: workDir }).success;
+  const hasLocal = git(['show-ref', '--verify', '--quiet', localRef], { silent: true, cwd: workDir }).success;
+  const hasRemote = git(['show-ref', '--verify', '--quiet', remoteRef], { silent: true, cwd: workDir }).success;
+  const baseStatus = branchExists(baseBranch, workDir);
 
   if (hasRemote && !hasLocal) {
     startPoint = remoteRef;
+  } else if (!hasLocal && baseStatus === 'remote') {
+    startPoint = remoteRef;
   } else if (hasRemote && hasLocal) {
-    const localHash = git(`rev-parse ${localRef}`, { silent: true, cwd: workDir }).output.trim();
-    const remoteHash = git(`rev-parse ${remoteRef}`, { silent: true, cwd: workDir }).output.trim();
+    const localHash = git(['rev-parse', localRef], { silent: true, cwd: workDir }).output.trim();
+    const remoteHash = git(['rev-parse', remoteRef], { silent: true, cwd: workDir }).output.trim();
     if (localHash !== remoteHash) {
-      const isAncestor = git(`merge-base --is-ancestor ${localRef} ${remoteRef}`, { silent: true, cwd: workDir }).success;
+      const isAncestor = git(['merge-base', '--is-ancestor', localRef, remoteRef], { silent: true, cwd: workDir }).success;
       if (isAncestor) {
         startPoint = remoteRef;
       } else {
@@ -595,6 +689,22 @@ function cmdCreate() {
     }
   }
 
+  // Validate plan path overlap before dry-run
+  if (detectedPlan) {
+    const relPlan = path.relative(sourceDir, detectedPlan);
+    const destPlan = path.join(worktreePath, relPlan.startsWith('..') ? path.join('plans', path.basename(detectedPlan)) : relPlan);
+    if (pathsOverlap(detectedPlan, destPlan) || pathsOverlap(detectedPlan, worktreePath)) {
+      if (explicitPlanPath) {
+        outputError('PLAN_PATH_OVERLAP', `Plan source path "${detectedPlan}" overlaps with worktree destination`, {
+          suggestion: 'Specify a plan directory that does not contain or reside inside the worktree destination'
+        });
+      } else {
+        warnings.push(`Plan path "${detectedPlan}" overlaps with worktree destination; skipping plan copy.`);
+        detectedPlan = null;
+      }
+    }
+  }
+
   // Dry-run mode: show what would be done
   if (dryRun) {
     output({
@@ -625,9 +735,34 @@ function cmdCreate() {
     });
   }
 
+  // Fetch remote base branch if origin is available (performed only during actual creation)
+  const hasOrigin = git(['remote', 'get-url', 'origin'], { silent: true, cwd: workDir }).success;
+  if (hasOrigin) {
+    const fetchBase = git(['fetch', 'origin', `+refs/heads/${baseBranch}:refs/remotes/origin/${baseBranch}`], { silent: true, cwd: workDir });
+    if (fetchBase.success) {
+      const hasRemoteNow = git(['show-ref', '--verify', '--quiet', remoteRef], { silent: true, cwd: workDir }).success;
+      if (hasRemoteNow && !hasLocal) {
+        startPoint = remoteRef;
+      } else if (hasRemoteNow && hasLocal) {
+        const localHash = git(['rev-parse', localRef], { silent: true, cwd: workDir }).output.trim();
+        const remoteHash = git(['rev-parse', remoteRef], { silent: true, cwd: workDir }).output.trim();
+        if (localHash !== remoteHash) {
+          const isAncestor = git(['merge-base', '--is-ancestor', localRef, remoteRef], { silent: true, cwd: workDir }).success;
+          startPoint = isAncestor ? remoteRef : localRef;
+        }
+      }
+    } else if (!hasLocal && !hasRemote) {
+      outputError('FETCH_FAILED', `Failed to fetch base branch "${baseBranch}" from remote`, {
+        suggestion: 'Check network connection or specify existing local branch with --base'
+      });
+    } else {
+      warnings.push(`Could not fetch "${baseBranch}" from origin; creating worktree from local commits.`);
+    }
+  }
+
   // Fetch remote branch if needed
   if (branchStatus === 'remote') {
-    const fetchResult = git(`fetch origin ${branchName}`, { silent: true, cwd: workDir });
+    const fetchResult = git(['fetch', 'origin', `+refs/heads/${branchName}:refs/remotes/origin/${branchName}`], { silent: true, cwd: workDir });
     if (!fetchResult.success) {
       outputError('FETCH_FAILED', `Failed to fetch branch from remote: ${branchName}`, {
         suggestion: 'Check network connection and remote repository access'
@@ -638,10 +773,14 @@ function cmdCreate() {
   // Create worktree
   let createResult;
   if (branchStatus) {
-    createResult = git(`worktree add "${worktreePath}" ${branchName}`, { cwd: workDir });
+    createResult = git(['worktree', 'add', worktreePath, branchName], { cwd: workDir });
   } else {
-    const trackFlag = startPoint.startsWith('refs/remotes/') ? '--no-track ' : '';
-    createResult = git(`worktree add -b ${branchName} ${trackFlag}"${worktreePath}" ${startPoint}`, { cwd: workDir });
+    const addArgs = ['worktree', 'add', '-b', branchName];
+    if (startPoint.startsWith('refs/remotes/')) {
+      addArgs.push('--no-track');
+    }
+    addArgs.push(worktreePath, startPoint);
+    createResult = git(addArgs, { cwd: workDir });
   }
 
   if (!createResult.success) {
@@ -709,7 +848,7 @@ function cmdRemove() {
   checkGitVersion();
 
   // Get list of worktrees
-  const result = git('worktree list --porcelain', { silent: true });
+  const result = git(['worktree', 'list', '--porcelain'], { silent: true });
   if (!result.success) {
     outputError('WORKTREE_LIST_ERROR', 'Failed to list worktrees');
   }
@@ -792,7 +931,7 @@ function cmdRemove() {
   }
 
   // Remove worktree
-  const removeResult = git(`worktree remove "${worktreePath}" --force`, { silent: true });
+  const removeResult = git(['worktree', 'remove', worktreePath, '--force'], { silent: true });
   if (!removeResult.success) {
     outputError('WORKTREE_REMOVE_FAILED', `Failed to remove worktree: ${worktreePath}`, {
       suggestion: removeResult.stderr || 'Check if the worktree has uncommitted changes',
@@ -803,12 +942,12 @@ function cmdRemove() {
   // Delete branch if it exists
   let branchDeleted = false;
   if (branchName) {
-    const deleteResult = git(`branch -d "${branchName}"`, { silent: true });
+    const deleteResult = git(['branch', '-d', branchName], { silent: true });
     if (deleteResult.success) {
       branchDeleted = true;
     } else {
       // Try force delete if normal delete fails
-      const forceDeleteResult = git(`branch -D "${branchName}"`, { silent: true });
+      const forceDeleteResult = git(['branch', '-D', branchName], { silent: true });
       branchDeleted = forceDeleteResult.success;
     }
   }
