@@ -7,6 +7,7 @@ import { contextBridge, hooksJson, permissionHook, pretoolBridge, runMcpPackage,
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { projectCatalogDataAndLayout } from '../catalog-data.js';
 import { renderMentoringWorkflow } from '../advisory.js';
+import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
 
 const SKILLS_TO_SKIP = new Set(['claude-code', 'skill-creator']);
 const OMITTED_PARTS = new Set(['__tests__', 'tests', 'fixtures', 'helpers']);
@@ -23,6 +24,16 @@ function filesUnder(context: ProjectionBuildContext, prefix: string): readonly R
   return context.resources.files.filter((file) => file.path.startsWith(`${prefix}/`)).sort((a, b) => a.path.localeCompare(b.path));
 }
 function writeText(context: ProjectionBuildContext, path: string, value: string, executable = false): void { writeProjectionFile(context, path, textBytes(value), executable); }
+function assertResourceNames(context: ProjectionBuildContext): void {
+  const names = filesUnder(context, 'commands')
+    .filter((file) => file.path.endsWith('.md'))
+    .map((file) => commandNameFromSourcePath(file.path).name);
+  for (const file of filesUnder(context, 'agents')) {
+    const stem = file.path.slice('agents/'.length, -3);
+    if (file.path.endsWith('.md') && !stem.includes('/')) names.push(assertAgentName(stem, stem));
+  }
+  assertUniqueNames(names);
+}
 function knownCommands(context: ProjectionBuildContext): Set<string> {
   const known = new Set<string>();
   for (const file of filesUnder(context, 'commands')) if (file.path.endsWith('.md')) {
@@ -80,12 +91,11 @@ function copySkills(context: ProjectionBuildContext): void {
 }
 function renderAgent(context: ProjectionBuildContext, file: ResourceGraphFile, known: ReadonlySet<string>): string {
   const parsed = parseFrontmatter(new TextDecoder().decode(file.bytes)); const stem = file.path.slice('agents/'.length, -3);
-  let name = applyReplacements(typeof parsed.metadata.name === 'string' ? parsed.metadata.name : stem);
+  const name = assertAgentName(applyReplacements(typeof parsed.metadata.name === 'string' ? parsed.metadata.name : stem), stem);
   let description = rewriteCommandGuidance(applyReplacements(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : `Specialized Codex subagent for ${name}.`), known);
-  if (stem === 'advisor') description = 'Use this high-tier mentor for fresh named checkpoints; Codex rejects interview relay.';
+  if (stem === 'evc-advisor') description = 'Use this high-tier mentor for fresh named checkpoints; Codex rejects interview relay.';
   let body = addWorkflowFallback(rewriteCommandGuidance(applyReplacements(parsed.body), known));
-  if (stem === 'scout-external') body = body.replace(/<!-- EXTERNAL_SCOUT_STRATEGY_START -->[\s\S]*?<!-- EXTERNAL_SCOUT_STRATEGY_END -->/u, '<!-- EXTERNAL_SCOUT_STRATEGY_START -->\n## External command strategy\n\nFor each focused directory search, use the same read-only primary command. Prompts must request concise paths and supporting evidence, and must not ask for modifications or credentials.\n\n```bash\nagy -p "[prompt]" --model gemini-3.7-flash-high\n```\n\nRun focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command.\n<!-- EXTERNAL_SCOUT_STRATEGY_END -->');
-  if (stem === 'advisor') body = `${body}`;
+  if (stem === 'evc-scout-external') body = body.replace(/<!-- EXTERNAL_SCOUT_STRATEGY_START -->[\s\S]*?<!-- EXTERNAL_SCOUT_STRATEGY_END -->/u, '<!-- EXTERNAL_SCOUT_STRATEGY_START -->\n## External command strategy\n\nFor each focused directory search, use the same read-only primary command. Prompts must request concise paths and supporting evidence, and must not ask for modifications or credentials.\n\n```bash\nagy -p "[prompt]" --model gemini-3.7-flash-high\n```\n\nRun focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command.\n<!-- EXTERNAL_SCOUT_STRATEGY_END -->');
   body = `${body.trim()}\n\n${SUBAGENT_WAIT_CONTRACT}`;
   const lines = [tomlValue('name', name), tomlValue('description', description), tomlValue('developer_instructions', body)];
   const model = typeof parsed.metadata.model === 'string' ? MODEL_MAP[parsed.metadata.model.toLowerCase()] : undefined;
@@ -183,8 +193,8 @@ function behaviorMatrix(context: ProjectionBuildContext): void {
   const entries: Record<string, unknown>[] = [{ kind: 'memory-file', source: 'CLAUDE.md', classification: 'memory-file', status: hasProjectDoc ? 'materialized-copy' : 'not-present', target: hasProjectDoc ? 'AGENTS.md' : null }];
   for (const file of filesUnder(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
-    const relative = file.path.slice('commands/'.length, -3);
-    entries.push({ kind: 'command-prose', source: relative + '.md', classification: 'command-prose', status: 'migrated', target: '.agents/skills/cmd_' + relative.replaceAll('/', '_') + '/SKILL.md' });
+    const command = commandNameFromSourcePath(file.path);
+    entries.push({ kind: 'command-prose', source: `${command.name}.md`, classification: 'command-prose', status: 'migrated', target: `.agents/skills/${command.name}/SKILL.md`, target_name: command.name });
   }
   for (const file of filesUnder(context, 'skills')) {
     if (!file.path.endsWith('/SKILL.md')) continue;
@@ -227,25 +237,22 @@ function sourceSiblingExists(context: ProjectionBuildContext, name: string): boo
 function commands(context: ProjectionBuildContext): void {
   const known = knownCommands(context);
   for (const file of filesUnder(context, 'commands')) if (file.path.endsWith('.md')) {
-    const relative = file.path.slice('commands/'.length, -3);
+    const command = commandNameFromSourcePath(file.path);
     const parsed = parseFrontmatter(new TextDecoder().decode(file.bytes));
-    const commandName = typeof parsed.metadata.name === 'string' && parsed.metadata.name.startsWith('/') ? parsed.metadata.name : '/' + relative;
-    const commandPath = canonicalCommandPath(commandName);
-    let body = relative === 'advise' ? renderInlineAdvise(parsed.body) : transformResourceText(parsed.body, known).trim();
-    let description = normalizeDescription(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : undefined, body, 'Run the /' + relative + ' command workflow.');
-    if (relative === 'advise') description = 'Interview-first technical advice with native inline questioning and explicit relay rejection.';
-    if (relative === 'coding-level') {
+    const commandPath = `$${command.name}`;
+    let body = command.semanticId === 'advise' ? renderInlineAdvise(parsed.body) : transformResourceText(parsed.body, known).trim();
+    let description = normalizeDescription(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : undefined, body, `Run the $${command.name} command workflow.`);
+    if (command.semanticId === 'advise') description = 'Interview-first technical advice with native inline questioning and explicit relay rejection.';
+    if (command.semanticId === 'coding-level') {
       const marker = '1. Set ' + String.fromCharCode(96) + 'codingLevel' + String.fromCharCode(96) + ' in .codex/.evcrate.json';
       body = body.replace(marker, marker + '.\n   This file is materialized from the canonical EVCrate source; update that source before regenerating to persist changes');
     }
-    const skill = 'cmd_' + relative.replaceAll('/', '_');
-    const skillName = 'cmd-' + relative.replaceAll('/', '-');
     const tick = String.fromCharCode(96);
-    const note = 'Codex note: when this recipe says to run another ' + tick + '/...' + tick + ' command, invoke the matching ' + tick + 'cmd_*' + tick + ' skill for that path.';
-    const advice = 'For high-impact architecture, security, debugging, or review decisions, consider explicit ' + tick + '$advisor-strategy' + tick + ' use for current-session guidance; this pointer does not activate it.';
-    const text = [markdownFrontmatter({ name: skillName, description }), '# ' + skill, 'Command Path: ' + commandPath, 'Description: ' + description, note, advice, SUBAGENT_WAIT_CONTRACT + body].join('\n\n') + '\n';
-    writeText(context, '.agents/skills/' + skill + '/SKILL.md', text);
-}
+    const note = `Codex note: when this recipe says to run another ${tick}$evc-cmd-…${tick} command, invoke the matching ${tick}evc-cmd-*${tick} skill for that path.`;
+    const advice = `For high-impact architecture, security, debugging, or review decisions, consider explicit ${tick}$advisor-strategy${tick} use for current-session guidance; this pointer does not activate it.`;
+    const text = [markdownFrontmatter({ name: command.name, description }), '# ' + command.name, 'Command Path: ' + commandPath, 'Description: ' + description, note, advice, SUBAGENT_WAIT_CONTRACT + body].join('\n\n') + '\n';
+    writeText(context, `.agents/skills/${command.name}/SKILL.md`, text);
+  }
 }
 
 function prepareRoots(context: ProjectionBuildContext): void {
@@ -268,6 +275,7 @@ export const codexAdapter: ProjectionAdapter = Object.freeze({
   } as const,
   build(context: ProjectionBuildContext): void {
     assertManifest(context);
+    assertResourceNames(context);
     prepareRoots(context);
     projectDocument(context);
     copyConfigInputs(context); copyWorkflows(context); copyAgents(context); copySkills(context); copyScripts(context); copyHooks(context); commands(context); globalGuidance(context); generatedHooks(context); config(context); behaviorMatrix(context);
@@ -279,12 +287,10 @@ export const codexAdapter: ProjectionAdapter = Object.freeze({
         root: '../../.agents/skills',
         authorityPath: '../migration-behavior-matrix.json',
         mapRecord(cmd) {
-          const relative = cmd.source.slice(0, -3);
-          const skillDir = 'cmd_' + relative.replaceAll('/', '_');
-          const skillName = 'cmd-' + relative.replaceAll('/', '-');
+          const command = commandNameFromSourcePath(`commands/${cmd.source}`);
           return {
-            name: '/' + skillName,
-            path: `${skillDir}/SKILL.md`
+            name: '/' + command.name,
+            path: `${command.name}/SKILL.md`
           };
         }
       },

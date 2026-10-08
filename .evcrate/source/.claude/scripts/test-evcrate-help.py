@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Test suite for ev-help.py with scanner independence regressions."""
 
+import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-
 GREEN = "\033[92m"
 RED = "\033[91m"
 RESET = "\033[0m"
@@ -82,6 +82,32 @@ def test_flat_discovery_ignores_legacy_layout():
     print(f"{GREEN}✓ PASS flat discovery ignores nested/prefixed legacy files{RESET}")
     return True
 
+def test_codex_skill_discovery_accepts_dollar_command_path():
+    """Codex command skills retain a dollar invocation sigil."""
+    with tempfile.TemporaryDirectory() as td:
+        codex = Path(td) / ".codex"
+        (codex / "scripts").mkdir(parents=True)
+        shutil.copy(SCRIPT_PATH, codex / "scripts" / "ev-help.py")
+        skill = Path(td) / ".agents" / "skills" / "evc-cmd-plan-x-fast" / "SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text(
+            '---\nname: "evc-cmd-plan-x-fast"\ndescription: "Fast plan"\n---\n'
+            '# evc-cmd-plan-x-fast\n\nCommand Path: $evc-cmd-plan-x-fast\n',
+            encoding="utf-8",
+        )
+        clean_env = os.environ.copy()
+        for name in ("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR"):
+            clean_env.pop(name, None)
+        out = subprocess.run(
+            [sys.executable, str(codex / "scripts" / "ev-help.py"), "plan"],
+            capture_output=True, text=True, cwd=td, env=clean_env,
+        ).stdout
+        if "`/evc-cmd-plan-x-fast` - Fast plan" not in out:
+            print(f"{RED}✗ FAIL Codex dollar command-path discovery\n{out}{RESET}")
+            return False
+    print(f"{GREEN}✓ PASS Codex dollar command-path discovery{RESET}")
+    return True
+
 
 def test_case(name, args, expected, unexpected=None):
     """Run a test case and check for expected and unexpected patterns."""
@@ -108,7 +134,7 @@ def test_case(name, args, expected, unexpected=None):
 
 def main():
     print("=" * 60 + "\nev-help.py Test Suite\n" + "=" * 60)
-    tests = [test_independence(), test_no_legacy_names(), test_flat_discovery_ignores_legacy_layout()]
+    tests = [test_independence(), test_no_legacy_names(), test_flat_discovery_ignores_legacy_layout(), test_codex_skill_discovery_accepts_dollar_command_path()]
 
     print("\n--- Category Guides ---")
     tests.append(test_case("worktree category", ["worktree"], ["Git Worktrees", "Parallel Development", "/evc-cmd-worktree", "isolated branch"]))

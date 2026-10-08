@@ -3,6 +3,7 @@ import type { ResourceGraphFile } from '../resource-graph.js';
 
 const URL_REFERENCE = /https?:\/\/[^\s<>()]+/giu;
 const COMMAND_TOKEN = /\/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*/gu;
+const COMMAND_REFERENCE = /(?<![A-Za-z0-9_.-])\/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*/gu;
 const REPLACEMENTS: readonly [RegExp, string][] = [
   [/\.claude\/skills/giu, '.agents/skills'],
   [/\.claude/giu, '.codex'],
@@ -103,20 +104,9 @@ export function canonicalizeCommands(text: string, known: ReadonlySet<string>): 
   return text.replace(COMMAND_TOKEN, (token) => { const canonical = canonicalCommandPath(token); return known.has(canonical) ? canonical : token; });
 }
 export function rewriteCommandGuidance(text: string, known: ReadonlySet<string>): string {
-  let result = canonicalizeCommands(text, known);
-  const substitutions: readonly [RegExp, string][] = [
-    [/^(\s*(?:[-*]|\d+\.)\s*)Trigger slash command (`\/[^`]+`)(.*)$/gimu, '$1Use the matching `cmd_*` skill to run $2$3'],
-    [/^(\s*(?:[-*]|\d+\.)\s*)Trigger (`\/[^`]+`)(.*)$/gimu, '$1Use the matching `cmd_*` skill to run $2$3'],
-    [/(^|:\s*)Trigger slash command (`\/[^`]+`)(.*)$/gimu, '$1Use the matching `cmd_*` skill to run $2$3'],
-    [/(^|:\s*)Trigger (`\/[^`]+`)(.*)$/gimu, '$1Use the matching `cmd_*` skill to run $2$3'],
-    [/^(\s*(?:[-*]|\d+\.)\s*)Execute Codex slash command:\s*(.*)$/gimu, '$1Use the matching `cmd_*` skill to run $2'],
-    [/(^|:\s*)Execute (`\/[^`]+`)(?: Codex slash command)?/gimu, '$1use the matching `cmd_*` skill to run $2'],
-    [/(?<!\w)trigger (`\/[^`]+`) slash command\b/gimu, 'use the matching `cmd_*` skill to run $1'],
-    [/Use (`\/[^`]+`) Codex slash command to/gimu, 'Use the matching `cmd_*` skill to run $1 to'],
-    [/Use (`\/[^`]+`) Slash Command to/gimu, 'Use the matching `cmd_*` skill to run $1 to'],
-    [/(→\s*)(`\/[^`]+`)/gu, '$1Use the matching `cmd_*` skill to run $2'],
-  ];
-  for (const [pattern, replacement] of substitutions) result = result.replace(pattern, replacement); return result;
+  return canonicalizeCommands(text, known).replace(COMMAND_REFERENCE, (token) => {
+    return token.startsWith('/evc-cmd-') && known.has(token) ? `$${token.slice(1)}` : token;
+  });
 }
 
 export function addWorkflowFallback(text: string): string {
@@ -170,7 +160,7 @@ export function renderInlineAdvise(body: string): string {
   return `<!-- generated target: codex -->
 ${capability.slice(start, end)}
 
-Use this command for candid technical or architectural advice. \`/advise\` is
+Use this command for candid technical or architectural advice. \`$evc-cmd-advise\` is
 separate from \`--advice\` checkpoint mentorship: it first converges on the
 problem, then provides advice.
 
@@ -180,7 +170,7 @@ Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
 Reject two or more tokens. One token requests relay only when it is final after
 trailing whitespace; remove only that token, its separator, and trailing whitespace
 from the prompt. If a final token requests relay, return \`${relay}\` and say:
-\`Run /advise <prompt> without --agent for inline advice.\` Do not invoke an advisor,
+\`Run $evc-cmd-advise <prompt> without --agent for inline advice.\` Do not invoke an advisor,
 create relay state, or silently continue in inline mode.
 
 ## Inline interview
@@ -211,6 +201,6 @@ export function renderAdvisoryInterview(body: string): string {
   projected = projected.replaceAll('`--agent` | Claude relay, empty prompt | empty; normal empty-input handling', '`--agent` | `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` | no inline interview');
   const relay = projected.indexOf('## Relay turn envelope');
   if (relay < 0) throw new Error('Canonical advisory interview workflow is missing relay contract');
-  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX\` before advisor delegation, state creation, or inline-interview work. Users can run \`/advise <prompt>\` for inline advice.\n`;
+  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX\` before advisor delegation, state creation, or inline-interview work. Users can run \`$evc-cmd-advise <prompt>\` for inline advice.\n`;
 }
 export function isBinary(file: ResourceGraphFile): boolean { return file.bytes.slice(0, 1024).includes(0) || /\.(?:coverage|dll|dylib|exe|gif|gz|jpeg|jpg|pdf|png|pyc|pyo|so|tar|zip)$/iu.test(file.path); }

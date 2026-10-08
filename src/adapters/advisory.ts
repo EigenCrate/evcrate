@@ -94,7 +94,7 @@ export function renderAdvisoryInterviewWorkflow(text: string, target: string): s
   );
   const relay = projected.indexOf('## Relay turn envelope');
   if (relay < 0) invalid();
-  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`${error}\` before advisor delegation, state creation, or inline-interview work. Users can run \`/advise <prompt>\` for inline advice.\n`;
+  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`${error}\` before advisor delegation, state creation, or inline-interview work. Users can run \`/evc-cmd-advise <prompt>\` for inline advice.\n`;
 }
 
 export const MENTORING_START = '<!-- EVCRATE_MENTORING_CAPABILITIES_START -->';

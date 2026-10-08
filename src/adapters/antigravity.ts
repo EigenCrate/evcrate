@@ -14,6 +14,8 @@ import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js
 import { renderMentoringWorkflow } from './advisory.js';
 import type { ResourceGraphFile } from './resource-graph.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from './types.js';
+import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from './resource-naming.js';
+import { parseMarkdownFrontmatter } from './gemini/frontmatter.js';
 
 const PRETOOL_MATCHER = 'run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file';
 const FILTERED_PARTS: Record<string, true> = Object.freeze({
@@ -34,6 +36,16 @@ function record(value: unknown): Record<string, JsonValue> {
 }
 function sourceFiles(context: ProjectionBuildContext, prefix: string): readonly ResourceGraphFile[] {
   return context.resources.files.filter((file) => file.path === prefix || file.path.startsWith(`${prefix}/`));
+}
+function assertResourceNames(context: ProjectionBuildContext): void {
+  const names = sourceFiles(context, 'commands')
+    .filter((file) => file.path.endsWith('.md'))
+    .map((file) => commandNameFromSourcePath(file.path).name);
+  for (const file of sourceFiles(context, 'agents')) {
+    const stem = file.path.slice('agents/'.length, -3);
+    if (file.path.endsWith('.md') && !stem.includes('/')) names.push(assertAgentName(stem, stem));
+  }
+  assertUniqueNames(names);
 }
 function productionPath(path: string): boolean {
   const parts = path.split('/');
@@ -64,14 +76,6 @@ function decode(bytes: Uint8Array): string {
 }
 function parseText(bytes: Uint8Array): unknown {
   try { return parseJsonDocument(bytes); } catch { return invalid(); }
-}
-function commandPath(content: string, fallback: string): string {
-  for (const line of content.split('\n')) {
-    const match = /^name\s*:\s*(.*)$/iu.exec(line.trim());
-    const value = match?.[1]?.trim().replace(/^['"]+|['"]+$/gu, '');
-    if (value?.startsWith('/')) return value;
-  }
-  return `/${fallback}`;
 }
 function description(content: string): string {
   for (const line of content.split('\n')) {
@@ -114,7 +118,7 @@ function inlineAdviseCommand(canonical: string): string {
   return `<!-- generated target: antigravity -->
 ${capabilities}
 
-Use this command for candid technical or architectural advice. \`/advise\` is
+Use this command for candid technical or architectural advice. \`/evc-cmd-advise\` is
 separate from \`--advice\` checkpoint mentorship: it first converges on the
 problem, then provides advice.
 
@@ -124,7 +128,7 @@ Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
 Reject two or more tokens. One token requests relay only when it is final after
 trailing whitespace; quoted, embedded, suffixed, non-final, and differently
 cased text remains ordinary input. If a final token requests relay, return
-\`ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY\` and say: \`Run /advise <prompt> without --agent for inline
+\`ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY\` and say: \`Run /evc-cmd-advise <prompt> without --agent for inline
 advice.\` Do not invoke an advisor, create relay
 state, or silently continue in inline mode.
 
@@ -161,11 +165,16 @@ function advisoryWorkflow(text: string): string {
   );
   const relay = projected.indexOf('## Relay turn envelope');
   if (relay < 0) return invalid();
-  return workflowFallback(projected.slice(0, relay) + '## Unsupported relay\n\nA final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` before advisor delegation, state creation, or inline-interview work. Users can run `/advise <prompt>` for inline advice.\n');
+  return workflowFallback(projected.slice(0, relay) + '## Unsupported relay\n\nA final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` before advisor delegation, state creation, or inline-interview work. Users can run `/evc-cmd-advise <prompt>` for inline advice.\n');
 }
 function projectAdvisor(content: string): string {
   const match = /^(---\n[\s\S]*?\n---\n)([\s\S]*)$/u.exec(content);
   if (!match) return invalid();
+  const { data } = parseMarkdownFrontmatter(content);
+  if (Object.hasOwn(data, 'name')) {
+    if (typeof data.name !== 'string') return invalid();
+    assertAgentName(data.name, 'evc-advisor');
+  }
   const frontmatter = match[1]
     .replace(/^model:\s*opus$/mu, 'model: pro')
     .replace(/^description:.*$/mu, 'description: Use this high-tier mentor for fresh named checkpoints; Antigravity uses the central controller.');
@@ -427,11 +436,12 @@ function assertManifest(context: ProjectionBuildContext): void {
 }
 function build(context: ProjectionBuildContext): void {
   assertManifest(context);
+  assertResourceNames(context);
   ensureProjectionDirectory(context, '.antigravity');
   for (const file of context.resources.files) if (shouldCopy(file.path)) writeProjectionFile(context, `.antigravity/${file.path}`, file.bytes, file.executable ?? false);
   extractHooks(context);
-  const advisor = context.resources.files.find((file) => file.path === 'agents/advisor.md');
-  if (advisor) writeProjectionFile(context, '.antigravity/agents/advisor.md', textBytes(projectAdvisor(decode(advisor.bytes))));
+  const advisor = context.resources.files.find((file) => file.path === 'agents/evc-advisor.md');
+  if (advisor) writeProjectionFile(context, '.antigravity/agents/evc-advisor.md', textBytes(projectAdvisor(decode(advisor.bytes))));
   const workflow = context.resources.files.find((file) => file.path === 'workflows/advisory-interview.md');
   if (workflow) {
     const content = decode(workflow.bytes);
@@ -444,17 +454,17 @@ function build(context: ProjectionBuildContext): void {
   }
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
-    const suffix = file.path.slice('commands/'.length, -3);
+    const identity = commandNameFromSourcePath(file.path);
     const content = decode(file.bytes);
-    const name = `cmd_${suffix.replaceAll('/', '_')}`;
-    const command = commandPath(content, suffix);
+    const name = identity.name;
+    const command = `/${name}`;
     let body = content.replaceAll('python .claude/scripts/ev-help.py', 'python .antigravity/scripts/ev-help.py')
       .replaceAll('.claude/workflows/', '.antigravity/workflows/');
     body = workflowFallback(body);
-    const commandDescription = suffix === 'advise'
+    const commandDescription = identity.semanticId === 'advise'
       ? 'Interview-first technical advice with native inline questioning and explicit relay rejection'
       : description(body);
-    if (suffix === 'advise') body = inlineAdviseCommand(body);
+    if (identity.semanticId === 'advise') body = inlineAdviseCommand(body);
     const text = `---
 name: ${name}
 description: ${escapeYamlString(commandDescription)}
@@ -473,9 +483,8 @@ ${body}`;
   const behaviors: Record<string, unknown>[] = [];
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
-    const suffix = file.path.slice('commands/'.length, -3);
-    const name = `cmd_${suffix.replaceAll('/', '_')}`;
-    behaviors.push({ kind: 'command-prose', source: `${suffix}.md`, classification: 'command-prose', status: 'migrated', target: `${name}/SKILL.md`, target_name: name });
+    const identity = commandNameFromSourcePath(file.path);
+    behaviors.push({ kind: 'command-prose', source: `${identity.name}.md`, classification: 'command-prose', status: 'migrated', target: `${identity.name}/SKILL.md`, target_name: identity.name });
   }
   for (const file of sourceFiles(context, 'skills')) {
     if (!file.path.endsWith('/SKILL.md') || file.path.includes('template-skill')) continue;
@@ -491,11 +500,10 @@ ${body}`;
       root: '../skills',
       authorityPath: '../migration-behavior-matrix.json',
       mapRecord(cmd) {
-        const suffix = cmd.source.slice(0, -3);
-        const name = `cmd_${suffix.replaceAll('/', '_')}`;
+        const command = commandNameFromSourcePath(`commands/${cmd.source}`);
         return {
-          name: '/' + name,
-          path: `${name}/SKILL.md`
+          name: '/' + command.name,
+          path: `${command.name}/SKILL.md`
         };
       }
     },

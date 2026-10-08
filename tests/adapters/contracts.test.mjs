@@ -129,10 +129,10 @@ test('brainstormer model projects through each target contract', () => {
   assert.match(readFileSync(join(claude, '.claude/agents/evc-brainstormer.md'), 'utf8'), /^model: opus$/mu);
 
   const gemini = materialize('gemini').stage.path;
-  assert.match(readFileSync(join(gemini, '.gemini/agents/brainstormer.md'), 'utf8'), /^model: pro$/mu);
+  assert.match(readFileSync(join(gemini, '.gemini/agents/evc-brainstormer.md'), 'utf8'), /^model: pro$/mu);
 
   const codex = materialize('codex').stage.path;
-  const codexAgent = readFileSync(join(codex, '.codex/agents/brainstormer.toml'), 'utf8');
+  const codexAgent = readFileSync(join(codex, '.codex/agents/evc-brainstormer.toml'), 'utf8');
   assert.match(codexAgent, /^model = "gpt-5\.6-sol"$/mu);
   assert.match(codexAgent, /^model_reasoning_effort = "high"$/mu);
 
@@ -218,6 +218,98 @@ test('target-specific managed settings and command maps stay independent', () =>
   assert.equal(managed.effortLevel, 'high');
 });
 
+test('Codex, Gemini, and Antigravity project flat evc command and agent identities', () => {
+  const commandName = 'evc-cmd-code-x-auto';
+  const codex = materialize('codex').stage.path;
+  const codexSkill = readFileSync(join(codex, `.agents/skills/${commandName}/SKILL.md`), 'utf8');
+  assert.match(codexSkill, new RegExp(`^name: "${commandName}"$`, 'mu'));
+  assert.match(codexSkill, new RegExp(`^Command Path: \\$${commandName}$`, 'mu'));
+  assert.match(codexSkill, /\$evc-cmd-/u);
+  assert.doesNotMatch(codexSkill, /cmd_\*/u);
+  const codexAdvise = readFileSync(join(codex, '.agents/skills/evc-cmd-advise/SKILL.md'), 'utf8');
+  assert.match(codexAdvise, /\$evc-cmd-advise/u);
+  assert.doesNotMatch(codexAdvise, /\/advise\b/u);
+
+
+  const gemini = materialize('gemini').stage.path;
+  assert.equal(existsSync(join(gemini, `.gemini/commands/${commandName}.toml`)), true);
+  const geminiSkill = readFileSync(join(gemini, `.gemini/skills/${commandName}/SKILL.md`), 'utf8');
+  assert.match(geminiSkill, new RegExp(`^name: ${commandName}$`, 'mu'));
+  assert.match(geminiSkill, new RegExp(`^Command Path: /${commandName}$`, 'mu'));
+  assert.equal(existsSync(join(gemini, '.gemini/agents/evc-advisor.md')), true);
+  assert.equal(existsSync(join(gemini, '.gemini/agents/advisor.md')), false);
+  const geminiWorkflow = readFileSync(join(gemini, '.gemini/workflows/advisory-interview.md'), 'utf8');
+  assert.match(geminiWorkflow, /\/evc-cmd-advise/u);
+  assert.doesNotMatch(geminiWorkflow, /\/advise\b/u);
+
+  const antigravity = materialize('antigravity').stage.path;
+  const antigravitySkill = readFileSync(join(antigravity, `.antigravity/skills/${commandName}/SKILL.md`), 'utf8');
+  assert.match(antigravitySkill, new RegExp(`^name: ${commandName}$`, 'mu'));
+  assert.match(antigravitySkill, new RegExp(`^Command Path: /${commandName}$`, 'mu'));
+  assert.equal(existsSync(join(antigravity, '.antigravity/agents/evc-advisor.md')), true);
+  assert.equal(existsSync(join(antigravity, '.antigravity/agents/advisor.md')), false);
+  const antigravityAdvise = readFileSync(join(antigravity, '.antigravity/skills/evc-cmd-advise/SKILL.md'), 'utf8');
+  assert.match(antigravityAdvise, /\/evc-cmd-advise/u);
+  assert.doesNotMatch(antigravityAdvise, /\/advise\b/u);
+  const commandNames = readdirSync(join(canonicalRoot, 'commands'))
+    .filter((name) => name.endsWith('.md'))
+    .map((name) => name.slice(0, -3));
+  for (const [skillRoot, quoted] of ([
+    [join(codex, '.agents/skills'), true],
+    [join(gemini, '.gemini/skills'), false],
+    [join(antigravity, '.antigravity/skills'), false],
+  ])) {
+    for (const name of commandNames) {
+      const projected = readFileSync(join(skillRoot, name, 'SKILL.md'), 'utf8');
+      assert.match(projected, new RegExp(`^name: ${quoted ? '"' : ''}${name}${quoted ? '"' : ''}$`, 'mu'));
+    }
+  }
+
+  const codexScout = readFileSync(join(codex, '.codex/agents/evc-scout-external.toml'), 'utf8');
+  assert.match(codexScout, /agy -p \\"\[prompt\]\\" --model gemini-3\.7-flash-high/u);
+});
+
+test('Antigravity command path derives only from the source filename', () => {
+  const sourceContainer = temporaryDirectory();
+  const sourceRoot = join(sourceContainer, '.claude');
+  cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
+  const commandPath = join(sourceRoot, 'commands/evc-cmd-code-x-auto.md');
+  writeFileSync(commandPath, readFileSync(commandPath, 'utf8').replace('---\n', '---\nname: /wrong-command\n'));
+  const stage = createStagedRoot(repository, '.phase4-antigravity-command-path-');
+  stages.push(stage);
+  const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
+  getProjectionAdapter('antigravity').build(context);
+  const projected = readFileSync(join(stage.path, '.antigravity/skills/evc-cmd-code-x-auto/SKILL.md'), 'utf8');
+  assert.match(projected, /^Command Path: \/evc-cmd-code-x-auto$/mu);
+});
+
+test('Antigravity rejects conflicting advisor names before emission and preserves absent names', () => {
+  for (const name of ['evc-advisor', 'evc-other', 'advisor', '', null]) {
+    const sourceContainer = temporaryDirectory();
+    const sourceRoot = join(sourceContainer, '.claude');
+    cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
+    const advisorPath = join(sourceRoot, 'agents/evc-advisor.md');
+    const content = readFileSync(advisorPath, 'utf8').replace(
+      /^name: evc-advisor\n/mu, name === null ? '' : `name: ${name}\n`,
+    );
+    writeFileSync(advisorPath, content);
+    const stage = createStagedRoot(repository, '.phase4-antigravity-advisor-name-');
+    stages.push(stage);
+    const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
+    const projectedPath = join(stage.path, '.antigravity/agents/evc-advisor.md');
+    const build = () => getProjectionAdapter('antigravity').build(context);
+    if (name === 'evc-advisor' || name === null) {
+      build();
+      const projected = readFileSync(projectedPath, 'utf8');
+      if (name === null) assert.doesNotMatch(projected, /^name:/mu);
+      else assert.match(projected, /^name: evc-advisor$/mu);
+    } else {
+      assert.throws(build, code('VALIDATION_INVALID'), `advisor name ${JSON.stringify(name)}`);
+      assert.equal(existsSync(projectedPath), false, 'conflicting advisor must not be emitted');
+    }
+  }
+});
+
 test('Gemini rejects declared malformed or non-object settings', () => {
   for (const document of ['{', '[]', 'null', '"scalar"']) {
     const sourceContainer = temporaryDirectory();
@@ -270,7 +362,7 @@ test('projection writes reject traversal and preserve graph bytes', () => {
 
 test('validators reject missing, extra, modified, symlink, and special outputs while accepting mode changes', () => {
   const missing = freshProjection('gemini');
-  rmSync(join(missing.stage.path, '.gemini/agents/advisor.md'));
+  rmSync(join(missing.stage.path, '.gemini/agents/evc-advisor.md'));
   assert.equal(missing.adapter.validate(missing.context).diagnostics.some(({ code }) => code === 'missing'), true);
 
   const extra = freshProjection('codex');

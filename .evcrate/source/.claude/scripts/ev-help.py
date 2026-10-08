@@ -328,7 +328,7 @@ def parse_command_metadata(file_path: Path) -> dict:
     return parse_frontmatter(file_path)
 
 
-COMMAND_PATH_RE = re.compile(r"(?im)^\s*Command Path:\s*(/\S+)")
+COMMAND_PATH_RE = re.compile(r"(?im)^\s*Command Path:\s*([/$]\S+)")
 
 
 def discover_skill_commands(skills_dir: Path) -> dict:

@@ -8,6 +8,7 @@ import {
 import { applyTargetReplacements, renderExternalScoutStrategy, TOOL_MAPPING, VALID_GEMINI_TOOLS } from './replacements.js';
 import { parseMarkdownFrontmatter, writeMarkdownFrontmatter, writeToml, type Frontmatter, type FrontmatterValue } from './frontmatter.js';
 import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
+import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
 
 const SKIP_SKILLS = new Set(['claude-code', 'skill-creator']);
 const EVENTS: Record<string, string> = { SessionStart: 'SessionStart', UserPromptSubmit: 'BeforeAgent', PreToolUse: 'BeforeTool', SessionEnd: 'SessionEnd' };
@@ -46,18 +47,18 @@ function nestedValue(value: FrontmatterValue): FrontmatterValue {
 
 export function projectAgents(context: ProjectionBuildContext): void {
   ensureProjectionDirectory(context, '.gemini/agents');
-  for (const file of filesUnder(context, 'agents')) {
-    if (file.path.includes('/') && file.path.slice('agents/'.length).includes('/')) continue;
+  const agents = filesUnder(context, 'agents').filter((file) => file.path.endsWith('.md') && !file.path.slice('agents/'.length).includes('/'));
+  assertUniqueNames(agents.map((file) => assertAgentName(basename(file.path, '.md'), basename(file.path, '.md'))));
+  for (const file of agents) {
     const name = basename(file.path);
-    if (!name.endsWith('.md')) continue;
+    const agentName = assertAgentName(name.slice(0, -3), name.slice(0, -3));
     const parsed = parseMarkdownFrontmatter(new TextDecoder('utf-8', { fatal: true }).decode(file.bytes));
-    const frontmatter: Frontmatter = { ...parsed.data };
+    const frontmatter: Frontmatter = { ...parsed.data, name: agentName };
     let body = applyTargetReplacements(parsed.body);
-    if (name === 'scout-external.md') body = renderExternalScoutStrategy(body);
-    if (name === 'advisor.md') {
+    if (name === 'evc-scout-external.md') body = renderExternalScoutStrategy(body);
+    if (name === 'evc-advisor.md') {
       if (!body.includes('## Required checkpoint method') || !body.includes('## Checkpoint terminal report')) throw new Error('Canonical advisor is missing its checkpoint contract');
     }
-    if (frontmatter.name === undefined) frontmatter.name = name.slice(0, -3);
     if (frontmatter.description === undefined) {
       const match = /^description:\s*(.*)$/imu.exec(body);
       frontmatter.description = match ? match[1].trim() : `Subagent ${String(frontmatter.name)}`;
@@ -71,27 +72,26 @@ export function projectAgents(context: ProjectionBuildContext): void {
     }
     for (const key of ['Examples', 'Context', 'user', 'assistant']) delete frontmatter[key];
     for (const [key, value] of Object.entries(frontmatter)) frontmatter[key] = nestedValue(value);
-    if (name === 'advisor.md') frontmatter.description = 'Use this high-tier mentor for fresh named checkpoints; Gemini rejects interview relay.';
+    if (name === 'evc-advisor.md') frontmatter.description = 'Use this high-tier mentor for fresh named checkpoints; Gemini rejects interview relay.';
     writeProjectionFile(context, `.gemini/agents/${name}`, textBytes(writeMarkdownFrontmatter(frontmatter, body)), file.executable ?? false);
   }
 }
 
 export function projectCommands(context: ProjectionBuildContext): void {
   ensureProjectionDirectory(context, '.gemini/commands'); ensureProjectionDirectory(context, '.gemini/skills');
-  for (const file of filesUnder(context, 'commands')) {
-    if (!file.path.endsWith('.md')) continue;
-    const relative = file.path.slice('commands/'.length);
-    const commandPath = relative.slice(0, -3);
+  const files = filesUnder(context, 'commands').filter((file) => file.path.endsWith('.md'));
+  assertUniqueNames(files.map((file) => commandNameFromSourcePath(file.path).name));
+  for (const file of files) {
+    const command = commandNameFromSourcePath(file.path);
     const parsed = parseMarkdownFrontmatter(new TextDecoder('utf-8', { fatal: true }).decode(file.bytes));
     let body = parsed.body;
     let description = applyTargetReplacements(String(parsed.data.description ?? ''));
-    if (basename(relative) === 'advise.md') {
+    if (command.semanticId === 'advise') {
       body = renderInlineAdviseCommand(body, 'gemini', 'ask_user'); description = 'Interview-first technical advice with native inline questioning and explicit relay rejection.';
     } else body = applyTargetReplacements(body);
-    writeProjectionFile(context, `.gemini/commands/${relative.slice(0, -3)}.toml`, textBytes(writeToml({ description, prompt: body.trim() })), file.executable ?? false);
-    const skillName = `cmd_${commandPath.replaceAll('/', '_')}`;
-    const skillBody = `---\nname: ${skillName}\ndescription: ${description}\n---\n# ${skillName}\n\nCommand Path: /${commandPath}\n\nDescription: ${description}\n\n${body.trim()}\n`;
-    writeProjectionFile(context, `.gemini/skills/${skillName}/SKILL.md`, textBytes(skillBody), false);
+    writeProjectionFile(context, `.gemini/commands/${command.name}.toml`, textBytes(writeToml({ description, prompt: body.trim() })), file.executable ?? false);
+    const skillBody = `---\nname: ${command.name}\ndescription: ${description}\n---\n# ${command.name}\n\nCommand Path: /${command.name}\n\nDescription: ${description}\n\n${body.trim()}\n`;
+    writeProjectionFile(context, `.gemini/skills/${command.name}/SKILL.md`, textBytes(skillBody), false);
   }
 }
 

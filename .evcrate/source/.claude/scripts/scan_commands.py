@@ -172,7 +172,7 @@ def scan_commands(base_path: Optional[Path] = None, layout: Optional[CommandLayo
             if not rec:
                 raise ScanError(f"Command map missing entry for: {posix_rel}")
             cmd_name = "/" + rec["targetName"]
-            src_parts = rec.get("sourceName", "").split(":")
+            src_parts = re.split(r"[:/]", rec.get("sourceName", ""))
             category = src_parts[0] if len(src_parts) > 1 else "core"
             source = rec.get("source", posix_rel)
         elif layout.format == "command-skill" and meta.get("name"):

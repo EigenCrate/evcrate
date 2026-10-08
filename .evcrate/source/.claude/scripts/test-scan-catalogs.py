@@ -193,6 +193,7 @@ def test_authority_layouts_derive_flat_names():
             {"source": "evc-cmd-plan-x-hard.md", "target": "evc-cmd-plan-x-hard.md", "targetName": "evc-cmd-plan-x-hard"},
         ]})
         assert lay.name_map["evc-cmd-plan-x-hard.md"]["sourceName"] == "plan:hard"
+        lay.name_map["evc-cmd-plan-x-hard.md"]["sourceName"] = "plan/hard"
         res = scan_commands(layout=lay)
         assert [(c["name"], c["category"]) for c in res] == [("/evc-cmd-plan-x-hard", "plan")], res
 

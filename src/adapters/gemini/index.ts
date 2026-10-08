@@ -4,6 +4,7 @@ import { ensureProjectionDirectory, validateProjection } from '../projection-uti
 import { projectAgents, projectCommands, projectSkills, projectWorkflows } from './resources.js';
 import { projectConfig, projectDocumentsAndMatrix, projectHooks, projectScripts, projectSettings } from './runtime.js';
 import { projectCatalogDataAndLayout } from '../catalog-data.js';
+import { commandNameFromSourcePath } from '../resource-naming.js';
 
 function invalidManifest(): never {
   throw new ControlPlaneError('VALIDATION_INVALID');
@@ -36,10 +37,10 @@ function build(context: ProjectionBuildContext): void {
       root: '../commands',
       authorityPath: '../migration-behavior-matrix.json',
       mapRecord(cmd) {
-        const rel = cmd.source.slice(0, -3);
+        const command = commandNameFromSourcePath(`commands/${cmd.source}`);
         return {
-          name: cmd.name,
-          path: `${rel}.toml`
+          name: '/' + command.name,
+          path: `${command.name}.toml`
         };
       }
     },
