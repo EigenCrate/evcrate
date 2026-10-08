@@ -11,9 +11,12 @@
  *   list                        List existing worktrees
  *
  * Options:
+ *   --base <branch>    Base branch to branch off from (e.g. main, develop)
  *   --prefix <type>    Branch prefix (feat|fix|refactor|docs|test|chore|perf)
- *   --json             Output in JSON format for LLM consumption
  *   --env <files>      Comma-separated list of .env files to copy
+ *   --plan <path>      Plan directory or file to copy (auto-detected if omitted)
+ *   --no-plan          Disable automatic plan directory copying
+ *   --json             Output in JSON format for LLM consumption
  *   --dry-run          Show what would be done without executing
  */
 
@@ -41,6 +44,24 @@ if (prefixIndex > -1) {
   branchPrefix = args[prefixIndex + 1] || 'feat';
   args.splice(prefixIndex, 2);
 }
+const baseIndex = args.indexOf('--base');
+let explicitBaseBranch = null;
+if (baseIndex > -1) {
+  explicitBaseBranch = args[baseIndex + 1] || null;
+  args.splice(baseIndex, 2);
+}
+
+const planIndex = args.indexOf('--plan');
+let explicitPlanPath = null;
+if (planIndex > -1) {
+  explicitPlanPath = args[planIndex + 1] || null;
+  args.splice(planIndex, 2);
+}
+
+const noPlanIndex = args.indexOf('--no-plan');
+const noPlan = noPlanIndex > -1;
+if (noPlanIndex > -1) args.splice(noPlanIndex, 1);
+
 
 const envIndex = args.indexOf('--env');
 let envFilesToCopy = [];
@@ -78,6 +99,10 @@ function output(data) {
       if (data.envFilesCopied && data.envFilesCopied.length > 0) {
         console.log(`\n📄 Environment files copied:`);
         data.envFilesCopied.forEach(f => console.log(`   ✓ ${f}`));
+      }
+      if (data.planCopied) {
+        console.log(`\n📋 Plan directory copied:`);
+        console.log(`   ✓ ${data.planCopied}`);
       }
       if (data.warnings && data.warnings.length > 0) {
         console.log(`\n⚠️  Warnings:`);
@@ -165,6 +190,17 @@ function checkGitVersion() {
 
 // Detect base branch
 function detectBaseBranch(cwd) {
+  // Check upstream origin/HEAD if configured (e.g. refs/remotes/origin/HEAD -> origin/main)
+  const headRef = git('symbolic-ref refs/remotes/origin/HEAD', { silent: true, cwd });
+  if (headRef.success && headRef.output) {
+    const defaultBranch = headRef.output.replace(/^refs\/remotes\/origin\//, '').trim();
+    if (defaultBranch) {
+      const local = git(`show-ref --verify --quiet refs/heads/${defaultBranch}`, { silent: true, cwd });
+      const remote = git(`show-ref --verify --quiet refs/remotes/origin/${defaultBranch}`, { silent: true, cwd });
+      if (local.success || remote.success) return defaultBranch;
+    }
+  }
+
   const branches = ['dev', 'develop', 'main', 'master'];
   for (const branch of branches) {
     const local = git(`show-ref --verify --quiet refs/heads/${branch}`, { silent: true, cwd });
@@ -173,6 +209,19 @@ function detectBaseBranch(cwd) {
     if (remote.success) return branch;
   }
   return 'main'; // fallback
+}
+
+function copyRecursive(src, dest) {
+  const stats = fs.statSync(src);
+  if (stats.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true });
+    for (const child of fs.readdirSync(src)) {
+      copyRecursive(path.join(src, child), path.join(dest, child));
+    }
+  } else {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
 }
 
 // Check for uncommitted changes
@@ -270,7 +319,15 @@ function cmdInfo() {
 
   const projects = parseGitModules(gitRoot);
   const isMonorepo = projects.length > 0;
-  const baseBranch = detectBaseBranch(gitRoot);
+  if (explicitBaseBranch) {
+    const exists = branchExists(explicitBaseBranch, gitRoot);
+    if (!exists) {
+      outputError('BASE_BRANCH_NOT_FOUND', `Base branch "${explicitBaseBranch}" does not exist`, {
+        suggestion: 'Verify branch exists locally or on remote origin'
+      });
+    }
+  }
+  const baseBranch = explicitBaseBranch || detectBaseBranch(gitRoot);
   const dirtyState = checkDirtyState();
   const dirtyDetails = dirtyState ? getDirtyStateDetails() : null;
   const envFiles = findEnvFiles(gitRoot);
@@ -408,9 +465,16 @@ function cmdCreate() {
 
   // Create branch name
   const branchName = `${branchPrefix}/${sanitizedFeature}`;
-
-  // Detect base branch
-  const baseBranch = detectBaseBranch(workDir);
+  // Resolve base branch
+  if (explicitBaseBranch) {
+    const exists = branchExists(explicitBaseBranch, workDir);
+    if (!exists) {
+      outputError('BASE_BRANCH_NOT_FOUND', `Base branch "${explicitBaseBranch}" does not exist`, {
+        suggestion: 'Verify branch exists locally or on remote origin'
+      });
+    }
+  }
+  const baseBranch = explicitBaseBranch || detectBaseBranch(workDir);
 
   // Check if branch already checked out
   if (isBranchCheckedOut(branchName, workDir)) {
@@ -442,6 +506,95 @@ function cmdCreate() {
   // Check if branch exists
   const branchStatus = branchExists(branchName, workDir);
 
+  // Check remote origin availability and fetch base branch
+  const hasOrigin = git('remote get-url origin', { silent: true, cwd: workDir }).success;
+  let remoteBaseAvailable = false;
+  if (hasOrigin) {
+    const fetchBase = git(`fetch origin ${baseBranch}`, { silent: true, cwd: workDir });
+    if (fetchBase.success) {
+      remoteBaseAvailable = true;
+    } else if (!branchExists(baseBranch, workDir)) {
+      outputError('FETCH_FAILED', `Failed to fetch base branch "${baseBranch}" from remote`, {
+        suggestion: 'Check network connection or specify existing local branch with --base'
+      });
+    } else {
+      warnings.push(`Could not fetch "${baseBranch}" from origin; creating worktree from local commits.`);
+    }
+  }
+
+  // Determine starting revision
+  let startPoint = baseBranch;
+  const localRef = `refs/heads/${baseBranch}`;
+  const remoteRef = `refs/remotes/origin/${baseBranch}`;
+  const hasLocal = git(`show-ref --verify --quiet ${localRef}`, { silent: true, cwd: workDir }).success;
+  const hasRemote = remoteBaseAvailable && git(`show-ref --verify --quiet ${remoteRef}`, { silent: true, cwd: workDir }).success;
+
+  if (hasRemote && !hasLocal) {
+    startPoint = remoteRef;
+  } else if (hasRemote && hasLocal) {
+    const localHash = git(`rev-parse ${localRef}`, { silent: true, cwd: workDir }).output.trim();
+    const remoteHash = git(`rev-parse ${remoteRef}`, { silent: true, cwd: workDir }).output.trim();
+    if (localHash !== remoteHash) {
+      const isAncestor = git(`merge-base --is-ancestor ${localRef} ${remoteRef}`, { silent: true, cwd: workDir }).success;
+      if (isAncestor) {
+        startPoint = remoteRef;
+      } else {
+        startPoint = localRef;
+      }
+    }
+  }
+
+  // Find plan directory to copy if not disabled
+  const sourceDir = isMonorepo ? workDir : gitRoot;
+  let detectedPlan = null;
+  if (!noPlan) {
+    if (explicitPlanPath) {
+      const candidates = [
+        path.isAbsolute(explicitPlanPath) ? explicitPlanPath : path.join(sourceDir, explicitPlanPath),
+        path.join(sourceDir, 'plans', explicitPlanPath)
+      ];
+      for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+          detectedPlan = candidate;
+          break;
+        }
+      }
+      if (!detectedPlan) {
+        warnings.push(`Explicit plan path not found: ${explicitPlanPath}`);
+      }
+    } else if (process.env.EVCRATE_ACTIVE_PLAN) {
+      const activePlan = process.env.EVCRATE_ACTIVE_PLAN;
+      const candidates = [
+        path.isAbsolute(activePlan) ? activePlan : path.join(sourceDir, activePlan),
+        path.join(sourceDir, 'plans', path.basename(activePlan))
+      ];
+      for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+          detectedPlan = candidate;
+          break;
+        }
+      }
+    } else {
+      const plansDir = path.join(sourceDir, 'plans');
+      if (fs.existsSync(plansDir)) {
+        try {
+          const entries = fs.readdirSync(plansDir, { withFileTypes: true });
+          const matches = entries.filter(e => e.isDirectory() && (
+            e.name === sanitizedFeature ||
+            e.name.endsWith(`-${sanitizedFeature}`) ||
+            e.name.includes(sanitizedFeature)
+          ));
+          if (matches.length > 0) {
+            matches.sort((a, b) => b.name.localeCompare(a.name));
+            detectedPlan = path.join(plansDir, matches[0].name);
+          }
+        } catch {
+          // Ignore read errors
+        }
+      }
+    }
+  }
+
   // Dry-run mode: show what would be done
   if (dryRun) {
     output({
@@ -452,9 +605,11 @@ function cmdCreate() {
         worktreePath,
         branch: branchName,
         baseBranch,
+        startPoint,
         branchExists: !!branchStatus,
         project: isMonorepo ? projectName : null,
-        envFilesToCopy: envFilesToCopy.length > 0 ? envFilesToCopy : undefined
+        envFilesToCopy: envFilesToCopy.length > 0 ? envFilesToCopy : undefined,
+        planToCopy: detectedPlan || undefined
       },
       warnings: warnings.length > 0 ? warnings : undefined
     });
@@ -485,7 +640,8 @@ function cmdCreate() {
   if (branchStatus) {
     createResult = git(`worktree add "${worktreePath}" ${branchName}`, { cwd: workDir });
   } else {
-    createResult = git(`worktree add -b ${branchName} "${worktreePath}" ${baseBranch}`, { cwd: workDir });
+    const trackFlag = startPoint.startsWith('refs/remotes/') ? '--no-track ' : '';
+    createResult = git(`worktree add -b ${branchName} ${trackFlag}"${worktreePath}" ${startPoint}`, { cwd: workDir });
   }
 
   if (!createResult.success) {
@@ -498,7 +654,6 @@ function cmdCreate() {
   // Copy env files if specified
   const envFilesCopied = [];
   if (envFilesToCopy.length > 0) {
-    const sourceDir = isMonorepo ? workDir : gitRoot;
     envFilesToCopy.forEach(envFile => {
       const sourcePath = path.join(sourceDir, envFile);
       const destPath = path.join(worktreePath, envFile);
@@ -515,6 +670,21 @@ function cmdCreate() {
     });
   }
 
+  // Copy detected plan if available
+  let planCopied = null;
+  if (detectedPlan) {
+    try {
+      const relPlan = path.relative(sourceDir, detectedPlan);
+      const destPlan = path.join(worktreePath, relPlan.startsWith('..') ? path.join('plans', path.basename(detectedPlan)) : relPlan);
+      if (!fs.existsSync(destPlan)) {
+        copyRecursive(detectedPlan, destPlan);
+        planCopied = path.relative(worktreePath, destPlan) || destPlan;
+      }
+    } catch (err) {
+      warnings.push(`Failed to copy plan from ${detectedPlan}: ${err.message}`);
+    }
+  }
+
   output({
     success: true,
     message: 'Worktree created successfully!',
@@ -523,6 +693,7 @@ function cmdCreate() {
     baseBranch,
     project: isMonorepo ? projectName : null,
     envFilesCopied,
+    planCopied,
     warnings: warnings.length > 0 ? warnings : undefined
   });
 }
@@ -558,15 +729,34 @@ function cmdRemove() {
 
   // Find matching worktree
   const searchTerm = arg1.toLowerCase();
-  const matches = worktrees.filter(w => {
-    const name = path.basename(w.path).toLowerCase();
-    const fullPath = w.path.toLowerCase();
-    return name.includes(searchTerm) || fullPath.includes(searchTerm) ||
-           (w.branch && w.branch.toLowerCase().includes(searchTerm));
-  });
+  const resolvedArg = path.resolve(arg1).toLowerCase();
 
   // Exclude main worktree (bare .git or the primary checkout)
-  const removableMatches = matches.filter(w => !w.path.includes('.git/'));
+  const isMainWorktree = (w) => w.path.includes('.git/') || path.resolve(w.path) === path.resolve(gitRoot);
+
+  // Check exact path match first
+  const exactPathMatches = worktrees.filter(w => !isMainWorktree(w) && (
+    w.path.toLowerCase() === searchTerm ||
+    path.resolve(w.path).toLowerCase() === resolvedArg
+  ));
+
+  // Check exact name match
+  const exactNameMatches = worktrees.filter(w => !isMainWorktree(w) && path.basename(w.path).toLowerCase() === searchTerm);
+
+  let removableMatches;
+  if (exactPathMatches.length === 1) {
+    removableMatches = exactPathMatches;
+  } else if (exactNameMatches.length === 1) {
+    removableMatches = exactNameMatches;
+  } else {
+    const matches = worktrees.filter(w => {
+      const name = path.basename(w.path).toLowerCase();
+      const fullPath = w.path.toLowerCase();
+      return name.includes(searchTerm) || fullPath.includes(searchTerm) ||
+             (w.branch && w.branch.toLowerCase().includes(searchTerm));
+    });
+    removableMatches = matches.filter(w => !isMainWorktree(w));
+  }
 
   if (removableMatches.length === 0) {
     outputError('WORKTREE_NOT_FOUND', `No worktree matching "${arg1}" found`, {

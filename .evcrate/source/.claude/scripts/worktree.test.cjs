@@ -9,8 +9,10 @@ const path = require('path');
 const fs = require('fs');
 
 const SCRIPT_PATH = path.join(__dirname, 'worktree.cjs');
-const STANDALONE_DIR = path.dirname(path.dirname(__dirname)); // worktree dir
-const MONOREPO_DIR = `/home/${USER}/evcrate`;
+const REPO_ROOT = execSync('git rev-parse --show-toplevel', { cwd: __dirname, encoding: 'utf-8' }).trim();
+const STANDALONE_DIR = REPO_ROOT;
+const user = process.env.USER || process.env.USERNAME || 'unknown';
+const MONOREPO_DIR = `/home/${user}/evcrate`;
 
 let passed = 0;
 let failed = 0;
@@ -249,12 +251,10 @@ test('remove dry-run does not remove worktree', () => {
   // First get a worktree name from list
   const listResult = run('list --json');
   const listJson = assertJSON(listResult.output);
-  const removable = listJson.worktrees.find(w => !w.path.includes('.git/'));
-
+  const removable = listJson.worktrees.find(w => !w.path.includes('.git/') && path.resolve(w.path) !== path.resolve(REPO_ROOT));
   if (removable) {
-    const name = path.basename(removable.path);
-    const result = run(`remove "${name}" --dry-run --json`);
-    assert(result.success, 'Dry-run should succeed');
+    const result = run(`remove "${removable.path}" --dry-run --json`);
+    assert(result.success, `Dry-run should succeed: ${result.stderr || result.output}`);
     const json = assertJSON(result.output);
     assert(json.dryRun === true, 'Should have dryRun: true');
     assert(json.wouldRemove, 'Should have wouldRemove object');
@@ -314,6 +314,45 @@ test('non-git directory returns error', () => {
   assert(!result.success, 'Should fail in non-git dir');
   const json = assertJSON(result.output);
   assert(json.error.code === 'NOT_GIT_REPO', 'Should have NOT_GIT_REPO error');
+});
+
+// ============================================
+console.log('\n🌿 Base Branch & Plan Tests');
+
+test('info with valid --base reports requested base branch', () => {
+  const result = run('info --base main --json');
+  assert(result.success, `Should succeed: ${result.stderr}`);
+  const json = assertJSON(result.output);
+  assert(json.baseBranch === 'main', `Expected main, got ${json.baseBranch}`);
+});
+
+test('info with invalid --base returns BASE_BRANCH_NOT_FOUND', () => {
+  const result = run('info --base nonexistent-branch-xyz --json');
+  assert(!result.success, 'Should fail for nonexistent base');
+  const json = assertJSON(result.output);
+  assert(json.error.code === 'BASE_BRANCH_NOT_FOUND', 'Should return BASE_BRANCH_NOT_FOUND');
+});
+
+test('create dry-run respects --base flag', () => {
+  const result = run('create test-feature --base main --dry-run --json');
+  assert(result.success, `Should succeed: ${result.stderr}`);
+  const json = assertJSON(result.output);
+  assert(json.wouldCreate.baseBranch === 'main', `Expected main base branch, got ${json.wouldCreate.baseBranch}`);
+  assert(json.wouldCreate.branch === 'feat/test-feature', 'Branch should be feat/test-feature');
+});
+
+test('create dry-run with invalid --base returns error', () => {
+  const result = run('create test-feature --base nonexistent-branch-xyz --dry-run --json');
+  assert(!result.success, 'Should fail for nonexistent base');
+  const json = assertJSON(result.output);
+  assert(json.error.code === 'BASE_BRANCH_NOT_FOUND', 'Should return BASE_BRANCH_NOT_FOUND');
+});
+
+test('create dry-run detects --no-plan flag', () => {
+  const result = run('create test-feature --no-plan --dry-run --json');
+  assert(result.success, `Should succeed: ${result.stderr}`);
+  const json = assertJSON(result.output);
+  assert(json.wouldCreate.planToCopy === undefined, 'Should not plan to copy when --no-plan is passed');
 });
 
 // ============================================
