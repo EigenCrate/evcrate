@@ -560,7 +560,7 @@ once, probes each selected adapter before its launch, creates one empty isolated
 
 For v2, the controller computes the checkpoint digest; `formatMentorPrompt` combines the canonical mentor brief with explicitly quoted checkpoint data.
 Its tool-less instructions require outcome follow-through, evidence/assumption separation, relevant boundary/error/interleaving analysis, plausible-cause discrimination with expected observations, adversarial review, and caller-owned verification.
-The same `context.prompt` reaches Claude, Codex, OMP (`omp-parser`), and Pi without adapter-specific mentor text; each extracts raw assistant text for shared seven-field `parseAdviceBody` validation before `normalizeResult` creates `evcrate-advisor-result` v2. The OMP adapter parser (`adapters/omp-parser.cjs`) enforces 1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0 `serviceTier` and `usage.premiumRequests` fields.
+The same `context.prompt` reaches Claude, Codex, OMP (`omp-parser`), and Pi without adapter-specific mentor text; each extracts raw assistant text for shared seven-field `parseAdviceBody` validation before `normalizeResult` creates `evcrate-advisor-result` v2. The OMP adapter parser (`adapters/omp-parser.cjs`) enforces 1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0 `serviceTier` and `usage.premiumRequests` fields plus omp 18.8.x Anthropic-provider `requestControls` (bounded plain JSON object, 4096 serialized bytes) and `usage.cttl` (plain object of finite non-negative numbers); all other unknown keys still fail closed.
 
 `parseAdviceBody` accepts exactly one JSON object with seven fields:
 `recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,

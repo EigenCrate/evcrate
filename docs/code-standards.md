@@ -423,7 +423,10 @@ For v2 checkpoints, enabled adapters pass extracted assistant text to the shared
 `parseAdviceBody` parser; malformed, fenced, prose, unknown-field, or
 incomplete bodies fail closed. The OMP adapter (`adapters/omp-parser.cjs`) enforces
 1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0 `serviceTier`
-and `usage.premiumRequests` fields.
+and `usage.premiumRequests` fields, plus omp 18.8.x Anthropic-provider fields: assistant
+`requestControls` (plain JSON object, at most 4096 serialized bytes, depth 6, 256 nodes) and
+`usage.cttl` (plain object of at most 16 finite non-negative numbers). Both are optional and never
+read; every other unknown key still fails closed with `PROTOCOL_INVALID`.
 
 The compatibility v1 controller path remains one target/one attempt; v2 now
 uses generated prompts, structured result normalization, and v2 identity
