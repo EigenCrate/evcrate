@@ -23,10 +23,11 @@ const EVENT_KEYS = Object.freeze({
 });
 const USER_MESSAGE_KEYS = Object.freeze(['role', 'content', 'attribution', 'timestamp']);
 const ASSISTANT_MESSAGE_KEYS = Object.freeze(['role', 'content', 'api', 'provider', 'model', 'responseModel',
-  'responseId', 'serviceTier', 'usage', 'stopReason', 'rawStopReason', 'timestamp', 'duration', 'ttft', 'completedAt', 'credentialId']);
+  'responseId', 'serviceTier', 'usage', 'stopReason', 'rawStopReason', 'timestamp', 'duration', 'ttft', 'completedAt', 'credentialId',
+  'requestControls']);
 const TEXT_CONTENT_KEYS = Object.freeze(['type', 'text', 'textSignature']);
 const THINKING_CONTENT_KEYS = Object.freeze(['type', 'thinking', 'thinkingSignature', 'redacted']);
-const USAGE_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'premiumRequests', 'totalTokens', 'cost']);
+const USAGE_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'reasoning', 'reasoningTokens', 'premiumRequests', 'totalTokens', 'cost', 'cttl']);
 const COST_KEYS = Object.freeze(['input', 'output', 'cacheRead', 'cacheWrite', 'total']);
 function exactKeys(value, allowed, required = allowed) {
   if (!isPlainObject(value)) fail('PROTOCOL_INVALID');
@@ -35,6 +36,33 @@ function exactKeys(value, allowed, required = allowed) {
 }
 function finite(value) { if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) fail('PROTOCOL_INVALID'); }
 function timestamp(value) { if (!Number.isSafeInteger(value) || value < 0) fail('PROTOCOL_INVALID'); }
+// Anthropic-provider omp builds (18.8.x) attach `requestControls` (opaque request metadata) to assistant messages.
+// Its shape is not part of the advice contract, so it is validated loosely: a plain JSON object bounded in depth,
+// node count, and serialized size. Nothing in it is read or trusted.
+const REQUEST_CONTROLS_MAX_BYTES = 4096;
+const REQUEST_CONTROLS_MAX_DEPTH = 6;
+const REQUEST_CONTROLS_MAX_NODES = 256;
+const CTTL_MAX_KEYS = 16;
+function jsonNode(value, depth, budget) {
+  if (depth > REQUEST_CONTROLS_MAX_DEPTH || ++budget.nodes > REQUEST_CONTROLS_MAX_NODES) fail('PROTOCOL_INVALID');
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+  if (typeof value === 'number') { if (!Number.isFinite(value)) fail('PROTOCOL_INVALID'); return; }
+  if (Array.isArray(value)) { for (const item of value) jsonNode(item, depth + 1, budget); return; }
+  if (!isPlainObject(value)) fail('PROTOCOL_INVALID');
+  for (const item of Object.values(value)) jsonNode(item, depth + 1, budget);
+}
+function requestControls(value) {
+  if (!isPlainObject(value)) fail('PROTOCOL_INVALID');
+  jsonNode(value, 0, { nodes: 0 });
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > REQUEST_CONTROLS_MAX_BYTES) fail('PROTOCOL_INVALID');
+}
+// `usage.cttl` (Anthropic cache-TTL token breakdown, e.g. `{ ephemeral1h: 9740 }`): plain object of non-negative numbers.
+function cacheTtlUsage(value) {
+  if (!isPlainObject(value)) fail('PROTOCOL_INVALID');
+  const keys = Object.keys(value);
+  if (keys.length > CTTL_MAX_KEYS) fail('PROTOCOL_INVALID');
+  for (const key of keys) finite(value[key]);
+}
 function contentPart(part) {
   if (!isPlainObject(part) || typeof part.type !== 'string') fail('PROTOCOL_INVALID');
   if (part.type === 'text') {
@@ -60,6 +88,7 @@ function usageShape(value) {
   }
   exactKeys(value.cost, COST_KEYS);
   for (const key of COST_KEYS) finite(value.cost[key]);
+  if (value.cttl !== undefined) cacheTtlUsage(value.cttl);
 }
 function messageShape(message, route) {
   if (!isPlainObject(message) || typeof message.role !== 'string') fail('PROTOCOL_INVALID');
@@ -93,6 +122,7 @@ function messageShape(message, route) {
   for (const key of ['duration', 'ttft', 'completedAt']) {
     if (message[key] !== undefined) finite(message[key]);
   }
+  if (message.requestControls !== undefined) requestControls(message.requestControls);
   usageShape(message.usage);
   timestamp(message.timestamp);
   return message;

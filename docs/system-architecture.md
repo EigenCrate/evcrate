@@ -610,7 +610,7 @@ once, probes each selected adapter before its launch, creates one empty isolated
 
 For v2, the controller computes the checkpoint digest; `formatMentorPrompt` combines the canonical mentor brief with explicitly quoted checkpoint data.
 Its tool-less instructions require outcome follow-through, evidence/assumption separation, relevant boundary/error/interleaving analysis, plausible-cause discrimination with expected observations, adversarial review, and caller-owned verification.
-The same `context.prompt` reaches Claude, Codex, OMP (`omp-parser`), and Pi without adapter-specific mentor text; each extracts raw assistant text for shared seven-field `parseAdviceBody` validation before `normalizeResult` creates `evcrate-advisor-result` v2. The OMP adapter parser (`adapters/omp-parser.cjs`) enforces 1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0 `serviceTier` and `usage.premiumRequests` fields.
+The same `context.prompt` reaches Claude, Codex, OMP (`omp-parser`), and Pi without adapter-specific mentor text; each extracts raw assistant text for shared seven-field `parseAdviceBody` validation before `normalizeResult` creates `evcrate-advisor-result` v2. The OMP adapter parser (`adapters/omp-parser.cjs`) enforces 1 MiB and 8192-line JSONL stream caps and accepts optional omp 18.7.0 `serviceTier` and `usage.premiumRequests` fields plus omp 18.8.x Anthropic-provider `requestControls` (bounded plain JSON object, 4096 serialized bytes) and `usage.cttl` (plain object of finite non-negative numbers); all other unknown keys still fail closed.
 
 `parseAdviceBody` accepts exactly one JSON object with seven fields:
 `recommendation`, `rationale`, `must_fix`, `cautions`, `assumptions`,
@@ -650,6 +650,12 @@ For v2, every primary retry and the one-shot backup repeats adapter qualificatio
 and qualification-to-spawn executable identity checks. At most one model process
 is active; cancellation, non-retryable failure, or unconfirmed cleanup prevents
 later launches.
+
+OMP version/help probes have a 5-second per-command limit. Usage readiness and
+model-catalog discovery may perform network I/O and have 20-second limits; each
+is capped by the remaining shared 30-second preflight deadline. Usage also
+passes `--no-extensions`, excluding ambient extension authority. Model lookup
+still validates the exact selector and effort; timeout never attests readiness.
 
 The runner uses `shell: false`, fixed allowlisted argv/environment, stdin-only
 prompt delivery, fatal UTF-8 decoding, bounded streams/results, and one

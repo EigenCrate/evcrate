@@ -1,6 +1,6 @@
 {
   "name": "evcrate",
-  "version": "2.10.0",
+  "version": "2.10.3",
   "private": true,
   "description": "Shared coding-agent resources for Claude Code, Codex, Antigravity, Pi, OMP, GitHub Copilot CLI, and VS Code Local.",
   "main": "dist/index.js",

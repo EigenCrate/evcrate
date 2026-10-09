@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-10-09
-**Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–09 complete, Phase 10 in progress, Phase 11 pending); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 10.
+**Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
 
 ### 2026-10-09 — feat(distribution)!: docs, changelog, prerelease and stable promotion pipeline (Phase 10)
 
@@ -11,6 +11,10 @@
 - Release candidate mirror seeding: updated `scripts/release/run-release-candidate.cjs` (`createLocalReleaseMirror`) to seed bare candidate mirror with triggering branch at `sourceCommit`, seed verified configured `main` (and `next`) refs from repository history, and seed all local tags.
 - Stable candidate approval evidence validation: updated `scripts/release/publish-release.cjs` (`verifyStableApprovalEvidence`) to enforce branch topology guards (rejecting prereleases on `main` and stable releases on `next`) and require valid maintainer approval evidence binding candidate commit, version, tag, run ID, and file digests before publishing stable releases.
 - Normative documentation reconciliation: updated `README.md`, `docs/code-standards.md`, `docs/system-architecture.md`, `docs/project-overview-pdr.md` (FR-12), `docs/codebase-summary.md`, `docs/project-roadmap.md`, `docs/pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, `-x-` nesting reversibility, single `AGENTS.md` authority (`.evcrate/source/.claude/AGENTS.md`), pre-upgrade customization backup warnings, and local-asset installer installation procedures.
+
+### 2026-10-08 — fix(advisor): accept omp requestControls and usage.cttl in assistant stream
+
+- OMP advisor parser (`adapters/omp-parser.cjs`) accepts optional assistant `requestControls` (plain JSON object bounded to 4096 serialized bytes, depth 6, 256 nodes) and optional `usage.cttl` (plain object of at most 16 finite non-negative numbers) emitted by omp 18.8.x for the Anthropic provider; previously every `anthropic/claude-opus-5-5` backup consultation failed `PROTOCOL_INVALID`. Both fields stay optional, all other exact-key checks are unchanged, and message_end/turn_end/agent_end equivalence is unaffected. Regression tests added to `tests/advisor-controller/omp-adapter.test.cjs`.
 ### 2026-10-07 — fix(advisor): PR #19 advice activation hardening
 
 - Phases 01–05 hardening & caveats: quote-span/boundary parsing to unescaped token delimiters; 1 KiB relative-POSIX selection paths; root realpath cwd verification (`ADVICE_CONTEXT_MISMATCH` fail closed); off mode decoupled from controller (receipt-attested, never calls `evcrate-advisor`); native-user admission (`handoff: null`, `source: "native-user"`); dead `executeDelegated`/`source: "delegated"` removed; delegated/direct-definition receiving evaluates HOME helper with caller handoff (model headers untrusted); prompt blocks rendered structurally via exported `COMMAND_NAMES`; fail-closed diagnostics; live matrix 8/8 PASS (M3 approval gate NOT QUALIFIED, M2b non-adversarial); manual `typecheck:omp-runtime` gate (not in npm test/CI); OMP blank-line paragraph boundary deferred.

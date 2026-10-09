@@ -1,6 +1,6 @@
 ---
 description: "Create isolated git worktree for parallel development"
-argument-hint: "[feature-description] OR [project] [feature] (monorepo)"
+argument-hint: "[feature-description] OR [project] [feature] (monorepo) [--base <branch>] [--plan <path>]"
 ---
 Create an isolated git worktree for parallel feature development.
 
@@ -74,11 +74,13 @@ node .claude/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>
 ```
 
 **Options:**
+- `--base` - Base branch to branch off from (e.g. main, develop)
 - `--prefix` - Branch type: feat|fix|refactor|docs|test|chore|perf
 - `--env` - Comma-separated .env files to copy
+- `--plan` - Plan directory or file to copy (auto-detected if omitted)
+- `--no-plan` - Disable automatic plan directory copying
 - `--json` - Output JSON for parsing
 - `--dry-run` - Preview without executing
-
 ## Commands
 
 | Command | Usage | Description |

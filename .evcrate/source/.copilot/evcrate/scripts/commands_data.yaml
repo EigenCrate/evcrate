@@ -416,5 +416,5 @@
   name: /evc-cmd-worktree
   path: evc-cmd-worktree/SKILL.md
   description: Create isolated git worktree for parallel development
-  argument_hint: '[feature-description] OR [project] [feature] (monorepo)'
+  argument_hint: '[feature-description] OR [project] [feature] (monorepo) [--base <branch>] [--plan <path>]'
   category: core

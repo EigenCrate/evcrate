@@ -11,6 +11,9 @@ const MODEL_PATTERN = /^([^/\s]+)\/([^/\s]+)$/u;
 const THINKING = new Set(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 const PROBE_LIMITS = Object.freeze({ ...DEFAULT_LIMITS, maxPromptBytes: 1,
   maxStdoutBytes: 5 * 1024 * 1024, maxResultBytes: 5 * 1024 * 1024, timeoutMs: 5_000 });
+// Usage and catalog discovery can perform network I/O; the runner still caps
+// each invocation at the controller's remaining aggregate preflight deadline.
+const NETWORK_PROBE_LIMITS = Object.freeze({ ...PROBE_LIMITS, timeoutMs: 20_000 });
 const GENERATION_LIMITS = Object.freeze({ ...DEFAULT_LIMITS,
   maxStdoutBytes: 5 * 1024 * 1024, maxResultBytes: 5 * 1024 * 1024, maxLines: 8192 });
 const STATES = new WeakMap();
@@ -99,7 +102,8 @@ async function probeAuth(context) {
   let status;
   try {
     status = parseJsonDocument(
-      (await command(context, ['usage', '--json', '--redact', '--provider', route.provider])).stdout.trim(),
+      (await command(context, ['usage', '--json', '--redact', '--provider', route.provider, '--no-extensions'],
+        NETWORK_PROBE_LIMITS)).stdout.trim(),
       'AUTH_UNAVAILABLE', 'AUTH_UNAVAILABLE'
     );
     usageStatus(status, route);
@@ -149,11 +153,12 @@ async function probeCapabilities(context) {
   requiredOption(help, '--thinking', 'EFFORT_UNSUPPORTED');
   for (const marker of CONTROL_ARGV) requiredOption(help, marker, marker === '--no-tools' ? 'READ_ONLY_UNSUPPORTED' : 'SESSION_UNSUPPORTED');
   const usageHelp = (await command(context, ['usage', '--help'])).stdout;
-  for (const marker of ['--json', '--redact', '--provider']) requiredOption(usageHelp, marker, 'AUTH_UNAVAILABLE');
+  for (const marker of ['--json', '--redact', '--provider', '--no-extensions']) requiredOption(usageHelp, marker, 'AUTH_UNAVAILABLE');
   const modelsHelp = (await command(context, ['models', '--help'])).stdout;
   required(modelsHelp, 'find', 'MODEL_UNSUPPORTED');
   const catalog = parseJsonDocument(
-    (await command(context, ['models', 'find', route.model, '--json', '--no-extensions'])).stdout.trim(),
+    (await command(context, ['models', 'find', route.model, '--json', '--no-extensions'],
+      NETWORK_PROBE_LIMITS)).stdout.trim(),
     'OUTPUT_UNSUPPORTED', 'OUTPUT_UNSUPPORTED'
   );
   catalogEntry(catalog, route);

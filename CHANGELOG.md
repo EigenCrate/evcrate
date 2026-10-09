@@ -1,3 +1,24 @@
+## [2.10.3](https://github.com/EigenCrate/evcrate/compare/v2.10.2...v2.10.3) (2026-10-08)
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** accept omp requestControls and usage.cttl in assistant stream ([#22](https://github.com/EigenCrate/evcrate/issues/22)) ([bb056f9](https://github.com/EigenCrate/evcrate/commit/bb056f901e26fb91d84501a8bf801b989e17ff06))
+
+## [2.10.2](https://github.com/EigenCrate/evcrate/compare/v2.10.1...v2.10.2) (2026-10-08)
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** allow bounded OMP network probes and exclude ambient extensions ([#21](https://github.com/EigenCrate/evcrate/issues/21)) ([48aa653](https://github.com/EigenCrate/evcrate/commit/48aa653d86ffdaf54a97a64fadeadad6a5bcc138))
+
+## [2.10.1](https://github.com/EigenCrate/evcrate/compare/v2.10.0...v2.10.1) (2026-10-07)
+
+
+### 🐞 Bug Fixes
+
+* **vscode:** map TodoWrite to manage_todo_list ([#20](https://github.com/EigenCrate/evcrate/issues/20)) ([b1e1b31](https://github.com/EigenCrate/evcrate/commit/b1e1b31e268b650f5b5f2a237e1c0afb2b2b40b4))
+
 ## [2.10.0](https://github.com/EigenCrate/evcrate/compare/v2.9.1...v2.10.0) (2026-10-07)
 
 
@@ -75,6 +96,7 @@
 * **recovery:** retain validated predecessor publication markers/journals and their raw transaction identities; rebase only published Codex skill leaves, preserving recorded historical residual ownership without re-enabling retired targets.
 * **pi:** resolve command, workflow and main/child instruction references from the active installed resource root instead of the caller's working directory.
 * **antigravity:** bound canonical context-hook execution to 25 seconds and refuse timed-out hooks before context injection.
+* **advisor:** allow bounded OMP usage and model discovery beyond five seconds while preserving the shared preflight deadline and excluding ambient extensions from usage readiness.
 
 
 ### Documentation

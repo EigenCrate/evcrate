@@ -23,7 +23,7 @@ function stream({ eventExtra, cwd = CWD, messageExtra, assistant = ASSISTANT, de
     { type: 'session', version: 3, id: 'session-id', timestamp: '2026-08-29T00:00:00.000Z', cwd },
     { type: 'agent_start', ...(eventExtra || {}) }, { type: 'turn_start' },
     { type: 'message_start', message: USER }, { type: 'message_end', message: USER },
-    { type: 'message_start', message: ASSISTANT_START },
+    { type: 'message_start', message: { ...assistant, content: [], stopReason: 'pending' } },
     { type: 'message_update', assistantMessageEvent: { type: 'text_start', contentIndex: 0 } },
     { type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'Use the smallest safe change.' } },
     ...deltas.map((delta) => ({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta } })),
@@ -93,6 +93,87 @@ test('OMP parser validates serviceTier and premiumRequests', () => {
   assert.throws(() => parse(stream({ assistant: CODEX_18_7_0, messageExtra: { usage } })), { code: 'PROTOCOL_INVALID' });
 });
 
+// Shape recorded from omp 18.8.4 with provider anthropic (anthropic/claude-opus-5-5); all text and ids are synthetic.
+const ANTHROPIC_TARGET = { model: 'anthropic/claude-opus-5-5', effort: 'high' };
+const ADVICE_BODY = {
+  recommendation: 'Proceed with the smallest safe change.', rationale: 'The intended paths are inside the authorized paths.',
+  must_fix: ['Add the missing disposition.'], cautions: ['Keep the move mechanical.'], assumptions: ['Checkpoint data is accurate.'],
+  success_checks: ['Run the focused tests.'], unresolved_questions: [],
+};
+const ANTHROPIC_18_8_4 = {
+  role: 'assistant', api: 'anthropic-messages', provider: 'anthropic', model: 'claude-opus-5-5',
+  content: [{ type: 'thinking', thinking: 'Synthetic reasoning.', thinkingSignature: '' }, { type: 'text', text: JSON.stringify(ADVICE_BODY) }],
+  usage: { input: 4, output: 8, cacheRead: 0, cacheWrite: 9740, totalTokens: 9752,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }, cttl: { ephemeral1h: 9740 } },
+  stopReason: 'stop', timestamp: 2,
+  requestControls: { messageIndex: 1, tools: { declared: [], deferred: [], active: [] }, effort: { topLevel: 'high', tail: 'high' } },
+  responseId: 'response-id', credentialId: 24, duration: 1, ttft: 1, completedAt: 3,
+};
+function parseAnthropic(messageExtra, assistant = ANTHROPIC_18_8_4, checkpoint) {
+  return OMP.parseResult({ target: ANTHROPIC_TARGET, cwd: CWD, checkpoint, execution: { stdout: stream({ assistant, messageExtra }) } });
+}
+
+test('OMP parser accepts anthropic requestControls and usage.cttl across message_start, message_end, turn_end and agent_end', () => {
+  assert.deepEqual(Object.keys(ANTHROPIC_18_8_4).sort(), ['api', 'completedAt', 'content', 'credentialId', 'duration', 'model', 'provider',
+    'requestControls', 'responseId', 'role', 'stopReason', 'timestamp', 'ttft', 'usage']);
+  assert.deepEqual(Object.keys(ANTHROPIC_18_8_4.usage).sort(), ['cacheRead', 'cacheWrite', 'cost', 'cttl', 'input', 'output', 'totalTokens']);
+  // stream() embeds the same assistant (including both new fields) in message_start (content-less), message_end, turn_end and agent_end.
+  const stdout = stream({ assistant: ANTHROPIC_18_8_4 });
+  const events = stdout.split('\n').map((line) => JSON.parse(line));
+  const copies = [events.find((e) => e.type === 'message_start' && e.message.role === 'assistant').message,
+    events.find((e) => e.type === 'message_end' && e.message.role === 'assistant').message,
+    events.find((e) => e.type === 'turn_end').message, events.find((e) => e.type === 'agent_end').messages[1]];
+  for (const copy of copies) assert.deepEqual([copy.requestControls, copy.usage.cttl], [ANTHROPIC_18_8_4.requestControls, { ephemeral1h: 9740 }]);
+  assert.deepEqual(parseAnthropic(), { recommendation: JSON.stringify(ADVICE_BODY) });
+  assert.deepEqual(parseAnthropic(undefined, ANTHROPIC_18_8_4, { version: 2 }), ADVICE_BODY);
+});
+
+test('OMP parser keeps requestControls and usage.cttl optional', () => {
+  const noControls = without(ANTHROPIC_18_8_4, 'requestControls');
+  const noCttl = { ...ANTHROPIC_18_8_4, usage: without(ANTHROPIC_18_8_4.usage, 'cttl') };
+  const bare = { ...noControls, usage: noCttl.usage };
+  for (const assistant of [noControls, noCttl, bare]) {
+    assert.deepEqual(parseAnthropic(undefined, assistant, { version: 2 }), ADVICE_BODY);
+  }
+  // Existing providers are unaffected: the fields are accepted but never required.
+  assert.deepEqual(parse(stream({ assistant: CODEX_18_7_0 })), { recommendation: 'Use the smallest safe change.' });
+});
+
+test('OMP parser rejects malformed requestControls', () => {
+  const nested = (depth) => Array.from({ length: depth }).reduce((inner) => ({ inner }), {});
+  const malformed = [
+    null, true, 1, 'effort=high', [], [{ messageIndex: 1 }],
+    { blob: 'x'.repeat(4096) }, // over the 4096-byte serialized bound
+    nested(8), // over the depth bound
+    { items: Array.from({ length: 300 }, (_, index) => index) }, // over the node bound
+  ];
+  for (const requestControls of malformed) {
+    assert.throws(() => parseAnthropic({ requestControls }), { code: 'PROTOCOL_INVALID' });
+  }
+  assert.deepEqual(parseAnthropic({ requestControls: nested(5) }, ANTHROPIC_18_8_4, { version: 2 }), ADVICE_BODY);
+  assert.deepEqual(parseAnthropic({ requestControls: {} }, ANTHROPIC_18_8_4, { version: 2 }), ADVICE_BODY);
+});
+
+test('OMP parser rejects malformed usage.cttl', () => {
+  const malformed = [null, 5, 'ephemeral1h', [], [1], { ephemeral1h: '9740' }, { ephemeral1h: null }, { ephemeral1h: -1 },
+    { ephemeral1h: true }, { ephemeral1h: { tokens: 1 } }, { ephemeral1h: 1, ephemeral5m: 'x' },
+    Object.fromEntries(Array.from({ length: 17 }, (_, index) => [`bucket${index}`, 1]))];
+  for (const cttl of malformed) {
+    const usage = { ...ANTHROPIC_18_8_4.usage, cttl };
+    assert.throws(() => parseAnthropic({ usage }), { code: 'PROTOCOL_INVALID' });
+  }
+  const usage = { ...ANTHROPIC_18_8_4.usage, cttl: { ephemeral1h: 9740, ephemeral5m: 0 } };
+  assert.deepEqual(parseAnthropic({ usage }, ANTHROPIC_18_8_4, { version: 2 }), ADVICE_BODY);
+});
+
+test('OMP parser still rejects unknown keys alongside requestControls and usage.cttl', () => {
+  assert.throws(() => parseAnthropic({ unexpected: true }), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parseAnthropic({ requestControl: {} }), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parseAnthropic({ usage: { ...ANTHROPIC_18_8_4.usage, ctt: {} } }), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parseAnthropic({ usage: { ...ANTHROPIC_18_8_4.usage, foo: 0 } }), { code: 'PROTOCOL_INVALID' });
+  assert.throws(() => parseAnthropic({ provider: 'openai-codex' }), { code: 'MODEL_UNSUPPORTED' });
+});
+
 test('OMP parser enforces the 1 MiB byte and 8192 line limits', () => {
   const MAX_BYTES = 1024 * 1024;
   const base = Buffer.byteLength(stream({ deltas: [''] }), 'utf8');
@@ -155,7 +236,7 @@ function probeContext({
         calls.push(invocation.argv);
         const key = invocation.argv.join(' ');
         if (key === '--version') return { stdout: versionStdout, stderr: '' };
-        if (key === 'usage --help') return { stdout: 'Options:\n  --json\n  --redact\n  --provider', stderr: '' };
+        if (key === 'usage --help') return { stdout: 'Options:\n  --json\n  --redact\n  --provider\n  --no-extensions', stderr: '' };
         if (invocation.argv[0] === 'usage') return { stdout: usageStdout, stderr: '' };
         if (key === '--help') return { stdout: 'Options:\n  -p\n  --mode json\n  --model\n  --thinking\n  --no-session\n  --no-tools\n  --no-lsp\n  --no-pty\n  --no-extensions\n  --no-skills\n  --no-rules', stderr: '' };
         if (key === 'models --help') return { stdout: 'find', stderr: '' };
@@ -171,6 +252,59 @@ test('OMP probeAuth validates usable auth readiness', async () => {
   const { context } = probeContext();
   await OMP.probeVersion(context);
   assert.deepEqual(await OMP.probeAuth(context), { authenticated: true });
+});
+
+test('OMP network probes finish beyond five seconds but remain bounded by the shared deadline', { timeout: 45000 }, async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const RUNNER = require(path.resolve(__dirname, '../../.evcrate/source/.evcrate/bin/lib/advisor/runner.cjs'));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-omp-network-probe-'));
+  const { context } = probeContext();
+  const fixtureRunner = context.runner;
+  const execution = RUNNER.createRunner();
+  const outcomes = [];
+  const scriptPath = path.join(cwd, 'probe-response.cjs');
+  const deadline = Date.now() + 30000;
+  context.cwd = cwd;
+  context.workspaceRoot = cwd;
+  context.createInvocation = (invocation) => ({ ...invocation });
+  context.runner = RUNNER.createProbeRunner({
+    deadline,
+    now: Date.now,
+    runner: {
+      async run(invocation) {
+        const response = await fixtureRunner.run(invocation);
+        const networked = (invocation.argv[0] === 'usage' && !invocation.argv.includes('--help'))
+          || (invocation.argv[0] === 'models' && invocation.argv[1] === 'find');
+        // Real child-process latency exercises timeout/cleanup, not just the
+        // adapter's limit values. CLI responses stand in for the external OMP.
+        fs.writeFileSync(scriptPath,
+          `setTimeout(() => process.stdout.write(${JSON.stringify(response.stdout)}), ${networked ? 6000 : 0});\n`);
+        const result = await execution.run(RUNNER.createInvocation({
+          ...invocation,
+          executable: process.execPath,
+          argv: [scriptPath],
+        }), { environment: {} });
+        outcomes.push(result);
+        return result;
+      },
+    },
+  });
+  try {
+    await OMP.probeVersion(context);
+    assert.deepEqual(await OMP.probeAuth(context), { authenticated: true });
+    assert.equal((await OMP.probeCapabilities(context)).model, TARGET.model);
+
+    context.runner = RUNNER.createProbeRunner({
+      runner: context.runner,
+      deadline: Date.now() + 250,
+      now: Date.now,
+    });
+    await assert.rejects(() => OMP.probeAuth(context), (error) => OMP.classifyFailure(error) === 'TIMEOUT');
+    assert.equal(outcomes.find((result) => result.error?.code === 'TIMEOUT').cleanupOutcome, 'confirmed');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
 });
 
 test('OMP probeAuth rejects when limits are exhausted, capacity is zero, or readiness is unproven (R2)', async () => {
