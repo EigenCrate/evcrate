@@ -21,16 +21,68 @@ export function detectLegacyInstallation(targetDir) {
   const targetClaudeDir = path.join(normalizedTarget, '.claude');
   const detectedPaths = [];
 
+  let claudeStat;
+  try {
+    claudeStat = fs.lstatSync(targetClaudeDir);
+  } catch (err) {
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
+      return {
+        detected: false,
+        targetDir: normalizedTarget,
+        targetClaudeDir,
+        paths: []
+      };
+    }
+    throw err;
+  }
+
+  if (claudeStat.isSymbolicLink()) {
+    try {
+      const real = fs.statSync(targetClaudeDir);
+      if (!real.isDirectory()) {
+        return {
+          detected: false,
+          targetDir: normalizedTarget,
+          targetClaudeDir,
+          paths: []
+        };
+      }
+    } catch (err) {
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
+        return {
+          detected: false,
+          targetDir: normalizedTarget,
+          targetClaudeDir,
+          paths: []
+        };
+      }
+      throw err;
+    }
+  } else if (!claudeStat.isDirectory()) {
+    return {
+      detected: false,
+      targetDir: normalizedTarget,
+      targetClaudeDir,
+      paths: []
+    };
+  }
+
   for (const rel of LEGACY_CLAUDE_CANDIDATES) {
     const full = path.join(targetClaudeDir, rel);
-    const stat = fs.lstatSync(full, { throwIfNoEntry: false });
-    if (stat) {
+    try {
+      fs.lstatSync(full);
       detectedPaths.push(path.join('.claude', rel));
+    } catch (err) {
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
+        continue;
+      }
+      throw err;
     }
   }
 
   return {
     detected: detectedPaths.length > 0,
+    targetDir: normalizedTarget,
     targetClaudeDir,
     paths: detectedPaths
   };

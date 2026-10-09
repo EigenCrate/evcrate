@@ -38,11 +38,14 @@ Historical receipt association: Phases 02–04 attest sealed old resource author
 - [x] Feature branch created; pre-existing changes preserved.
 - [x] Rescan and official CLI research; sealed-path reconciliation; user selected `.agents`.
 - [x] Common payload, CLI and Node.js/TypeScript procedures implemented.
-- [x] Tests, actual smoke and independent review: [validation](reports/validation.md); 24/24 package tests, seven syntax checks, installer/pack smoke and seven constructed prompt cases. Review 9/10, zero critical/high.
+- [x] Tests, actual smoke and independent review: [validation](reports/validation.md); 35/35 package tests passed across 7 suites, 10 syntax checks, installer/pack smoke, cross-directory target resolution, and seven constructed prompt cases. Review 9.8/10, zero critical/high.
 - [x] User review approval: selected **Approve local delivery** with documented limits.
-- [x] Documentation/evidence finalized; user selected **Create scoped commit**, no push. Commit execution is the parent’s final Git action; no commit identity invented in this document.
-- [x] Complete removal of legacy `.claude/`: deleted `ext/snyk-expert/.claude/` (9 files), updated package `README.md`, `docs/usage.md`, and `docs/snyk-expert-cli.md` to keep only `.agents`.
-
+- [x] Documentation/evidence finalized; user selected **Create scoped commit**, no push.
+- [x] Addressed PR #23 review findings:
+  - P1: Replaced raw `rm -rf` recommendation with target-qualified absolute path reporting and safe manual backup/inspection instructions.
+  - P2: Hardened `detectLegacyInstallation` against `ENOTDIR` crashes when `.claude` or ancestors are regular files, dangling symlinks, or non-directories.
+  - P2: Updated validation evidence with fresh verification (35 tests, 10 syntax checks, cross-directory smoke).
+  - P3: Superseding amendment documenting authorized complete removal of `ext/snyk-expert/.claude/` (9 files) to retain exclusively `.agents/`.
 Approved final scope: common `.agents` payload, existing package installer/metadata/tests, new packaged usage and root common-bundle docs, this new ordinary plan and evidence. Plans are normally ignored; user explicitly authorized current plan/evidence in the scoped commit, so stage only this plan directory with `git add -f`. Existing staged input was empty before selection. User `.gitignore`, unrelated extensions, historical sources/plans and captured root docs excluded.
 
 Default approval/validation only; not durable advice completion. Native slash dispatch unavailable; scoped commit contract read and applied inline, never blanket `git add .`. Temporary smoke artifacts removed. Live qualification prerequisites remain excluded, not silently passed.

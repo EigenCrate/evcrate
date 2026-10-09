@@ -57,16 +57,13 @@ describe('Snyk Expert Installer - Unit & Planner', () => {
       );
     });
   });
-
   describe('getSourceInventory', () => {
-
     test('throws if source bundle .agents directory is missing', () => {
       const emptyDir = path.join(tmpDir, 'empty');
       fs.mkdirSync(emptyDir);
       assert.throws(() => getSourceInventory(emptyDir));
     });
   });
-
   describe('planInstallation', () => {
     test('plans a fresh target without collisions or replacements', () => {
       const plan = planInstallation({
@@ -167,6 +164,35 @@ describe('Snyk Expert Installer - Unit & Planner', () => {
       const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
       assert.equal(plan.legacyInstallation.detected, true);
       assert.ok(plan.legacyInstallation.paths.includes('.claude/agents/snyk-expert.md'));
+    });
+
+    test('reports false when .claude is a regular file instead of a directory', () => {
+      fs.writeFileSync(path.join(tmpDir, '.claude'), 'not a directory');
+      const res = detectLegacyInstallation(tmpDir);
+      assert.equal(res.detected, false);
+      assert.deepEqual(res.paths, []);
+
+      // Verify planInstallation does not throw ENOTDIR
+      const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+      assert.equal(plan.isBlocked, false);
+      assert.equal(plan.legacyInstallation.detected, false);
+    });
+
+    test('reports false when .claude is a dangling symlink', () => {
+      fs.symlinkSync(path.join(tmpDir, 'nonexistent-target'), path.join(tmpDir, '.claude'));
+      const res = detectLegacyInstallation(tmpDir);
+      assert.equal(res.detected, false);
+      assert.deepEqual(res.paths, []);
+    });
+
+    test('reports false when .claude has a non-directory ancestor component', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      fs.mkdirSync(claudeDir, { recursive: true });
+      fs.writeFileSync(path.join(claudeDir, 'skills'), 'file not dir');
+
+      const res = detectLegacyInstallation(tmpDir);
+      assert.equal(res.detected, false);
+      assert.deepEqual(res.paths, []);
     });
   });
 });

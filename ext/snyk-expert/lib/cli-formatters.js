@@ -64,13 +64,18 @@ export function printInstallationSuccess(targetDir, result, plan) {
 
 export function printLegacyMigrationWarning(legacyInstallation) {
   if (!legacyInstallation || !legacyInstallation.detected) return;
-  console.log(`\n⚠️  Legacy .claude/ installation detected:`);
+  const targetLabel = legacyInstallation.targetDir || 'target project';
+  console.log(`\n⚠️  Legacy .claude/ installation detected in ${targetLabel}:`);
   for (const p of legacyInstallation.paths) {
-    console.log(`  - ${p}`);
+    const qualifiedPath = legacyInstallation.targetDir
+      ? path.join(legacyInstallation.targetDir, p)
+      : p;
+    console.log(`  - ${qualifiedPath}`);
   }
   console.log(`Notice: The installer installs new common resources into .agents/.`);
-  console.log(`To prevent host discovery ambiguity or running outdated instructions,`);
-  console.log(`safely archive or remove legacy .claude/ snyk-expert files manually:`);
-  console.log(`  rm -rf ${legacyInstallation.paths.join(' ')}`);
+  console.log(`To prevent host discovery ambiguity or running outdated instructions:`);
+  console.log(`1. Inspect and back up any customized instructions or files in the legacy directory.`);
+  console.log(`2. In the target project (${targetLabel}), manually archive or remove`);
+  console.log(`   only the legacy snyk-expert files listed above after verification.`);
   console.log(`Existing files are preserved and never deleted automatically.`);
 }
