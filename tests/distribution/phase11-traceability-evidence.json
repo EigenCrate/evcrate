@@ -1,5 +1,6 @@
 {
   "schema": "evcrate-phase11-qualification-traceability/v1",
+  "qualification_status": "CANDIDATE_STAGED_LOCAL_QUALIFIED_PENDING_WINDOWS_CI",
   "candidate": {
     "version": "3.0.0-rc.1",
     "tag": "v3.0.0-rc.1",
@@ -76,43 +77,43 @@
   "eight_target_matrix": [
     {
       "target": "claude",
-      "mode": "native-pass",
-      "probe": "claude --version (2.1.292), inspect .claude/commands/ and .claude/rules/AGENTS.md",
+      "mode": "file-level-pass (native picker unproven)",
+      "probe": "claude --version (2.1.292), structural verification of .claude/commands/ and .claude/rules/AGENTS.md",
       "expected": "Picker lists evc-cmd-help & evc-cmd-plan-x-fast; evc-planner discovered; rules in .claude/rules/AGENTS.md only",
-      "observed": "70 evc-cmd-* commands and 18 evc-* agents verified; unconditional rules in HOME and Project; zero direct .claude/AGENTS.md duplicates, zero CLAUDE.md files",
-      "limitations": "Native picker interactive session requires interactive TTY; command/agent registry and unconditional rules validated."
+      "observed": "70 evc-cmd-* commands and 18 evc-* agents structurally verified; unconditional rules in HOME and Project; zero direct .claude/AGENTS.md duplicates, zero CLAUDE.md files; native picker interactive session requires interactive TTY",
+      "limitations": "Interactive TTY picker behavior and subagent spawning unproven without interactive session; file-level layout and rules verified."
     },
     {
       "target": "omp",
-      "mode": "native-pass",
-      "probe": "omp --version (18.8.7), inspect .omp/agent/evcrate/commands/ & AGENTS.md",
+      "mode": "file-level-pass (live model unproven)",
+      "probe": "omp --version (18.8.7), structural verification of .omp/agent/evcrate/commands/ & AGENTS.md",
       "expected": "evc-cmd-code-x-auto listed; advice admission preserved; OMP_PRE_MODULE non-displaying bridge; ~/.omp/agent/evcrate/AGENTS.md",
-      "observed": "evc-cmd-code-x-auto present; evc-planner skill installed; transformed AGENTS.md delivered in both scopes; OMP_PRE_MODULE context bridge verified",
-      "limitations": "Live prompt dispatch requires active API keys; command inventory, advice activation bridge, and AGENTS guidance validated."
+      "observed": "evc-cmd-code-x-auto present; evc-planner skill installed; transformed AGENTS.md delivered in both scopes; OMP_PRE_MODULE context bridge verified; live model invocation unexercised",
+      "limitations": "Live prompt dispatch requires active provider credentials; command inventory, advice activation bridge, and AGENTS guidance verified."
     },
     {
       "target": "pi",
-      "mode": "native-pass",
-      "probe": "pi --version (0.85.1), inspect .pi/agent/evcrate/commands/ & AGENTS.md",
+      "mode": "file-level-pass (live session unproven)",
+      "probe": "pi --version (0.85.1), structural verification of .pi/agent/evcrate/commands/ & AGENTS.md",
       "expected": "Slash registration & evcrate_command agree; semantic ID code/auto; evc-planner tool delegation; extension hook context",
-      "observed": "evc-cmd-code-x-auto present; evc-planner agent registered; child-context loader and transformed AGENTS.md delivered in both scopes",
-      "limitations": "Native slash tool execution requires interactive model session; extension registration and child context loader validated."
+      "observed": "evc-cmd-code-x-auto present; evc-planner agent registered; child-context loader and transformed AGENTS.md delivered in both scopes; live slash tool unexercised",
+      "limitations": "Native slash tool execution requires interactive model session; extension registration and child context loader verified."
     },
     {
       "target": "codex",
-      "mode": "native-pass",
-      "probe": "codex --version (0.160.0), inspect .agents/skills/ & project root AGENTS.md",
+      "mode": "file-level-pass (live execution unproven)",
+      "probe": "codex --version (0.160.0), structural verification of .agents/skills/ & project root AGENTS.md",
       "expected": "$evc-cmd-plan discoverable; skill dir == frontmatter; project root AGENTS.md authority; ~/.codex/AGENTS.md in HOME",
-      "observed": "evc-cmd-plan skill verified; project root AGENTS.md exclusively owned by Codex; ~/.codex/AGENTS.md in HOME; zero duplicate content",
-      "limitations": "Non-interactive execution verified; skill directory == frontmatter name verified."
+      "observed": "evc-cmd-plan skill verified; project root AGENTS.md exclusively owned by Codex; ~/.codex/AGENTS.md in HOME; zero duplicate content; live exec unexercised",
+      "limitations": "Non-interactive execution unexercised without API key; skill directory == frontmatter name and project root AGENTS.md verified."
     },
     {
       "target": "gemini",
-      "mode": "native-pass",
-      "probe": "gemini --version (0.47.0), inspect ~/.gemini/config/AGENTS.md & project rules",
+      "mode": "file-level-pass (live prompt unproven)",
+      "probe": "gemini --version (0.47.0), structural verification of ~/.gemini/config/AGENTS.md & project rules",
       "expected": "Command skills discoverable; ~/.gemini/config/AGENTS.md and shared antigravity rules consumed; zero CLAUDE references",
-      "observed": "TOML command skills verified; ~/.gemini/config/AGENTS.md delivered in HOME; project .antigravity integration verified",
-      "limitations": "Gemini loads instructions via ~/.gemini/config/AGENTS.md and shared antigravity project rules."
+      "observed": "TOML command skills verified; ~/.gemini/config/AGENTS.md delivered in HOME; project .antigravity integration verified; headless prompt unexercised",
+      "limitations": "Gemini loads instructions via ~/.gemini/config/AGENTS.md and shared antigravity project rules; live query unexercised."
     },
     {
       "target": "antigravity",
@@ -124,18 +125,18 @@
     },
     {
       "target": "copilot",
-      "mode": "native-pass",
-      "probe": "copilot --version (1.0.83), inspect .copilot/skills/ & copilot-instructions.md",
+      "mode": "file-level-pass (live chat unproven)",
+      "probe": "copilot --version (1.0.83), structural verification of .copilot/skills/ & copilot-instructions.md",
       "expected": "evc-cmd-plan command; evc-planner agent; evc-planning skill; evc-style-* manual styles; copilot-instructions.md",
-      "observed": "evc-cmd-plan, evc-planner, evc-planning, and evc-style-* verified; HOME and Project copilot-instructions.md verified",
-      "limitations": "Verified skills inventory, manual style wrappers, and copilot-instructions.md in HOME and project."
+      "observed": "evc-cmd-plan, evc-planner, evc-planning, and evc-style-* verified; HOME and Project copilot-instructions.md verified; live chat unexercised",
+      "limitations": "Verified skills inventory, manual style wrappers, and copilot-instructions.md in HOME and project; interactive session unexercised."
     },
     {
       "target": "vscode",
-      "mode": "native-pass",
-      "probe": "code --version (1.140.0), inspect .evcrate-vscode/skills/ & bootstrap.instructions.md",
+      "mode": "file-level-pass (editor runtime unproven)",
+      "probe": "code --version (1.140.0), structural verification of .evcrate-vscode/skills/ & bootstrap.instructions.md",
       "expected": "evcrate-local plugin; unqualified evc-cmd-plan-x-cro; evc-planner; bootstrap.instructions.md in managed store",
-      "observed": "Unqualified evc-cmd-plan-x-cro and evc-planner verified; plugin identity evcrate-local preserved; bootstrap.instructions.md verified",
+      "observed": "Unqualified evc-cmd-plan-x-cro and evc-planner verified; plugin identity evcrate-local preserved; bootstrap.instructions.md verified; editor UI unexercised",
       "limitations": "Editor plugin registered via explicit setting; verified bootstrap.instructions.md, unqualified evc-cmd-plan-x-cro, and isolated plugin store."
     }
   ],
@@ -156,7 +157,7 @@
       "passed": 1002,
       "skipped": 25,
       "failed": 0,
-      "skipped_accounting": "All 25 skipped tests are platform-conditioned for Windows-native environments (process.platform === 'win32'). They cover Windows job objects, supervisor console observation via CONIN$, and Windows drive path resolution. None apply to Linux execution and none leave any acceptance criteria unverified. All 25 execute natively in CI on windows-2025 runners."
+      "skipped_accounting": "All 25 skipped tests are platform-conditioned for Windows-native environments (process.platform === 'win32'). They cover Windows job objects (6 in supervision-console.test.cjs, 4 in verification-regressions.test.cjs), supervisor console observation via CONIN$ (3 in supervision-console.test.cjs, 2 in verification-lifecycle.test.cjs), Windows drive path resolution (1 in windows-paths.test.mjs), Windows-only CAS/environment handling (6 in verification-lifecycle.test.cjs), and symlink exclusions (3 across suites). On Linux, these are skipped by design; in CI, all 25 execute natively on windows-2025 runners. Acceptance for Windows execution is pending CI runner execution."
     }
   },
   "windows_qualification_boundaries": {
@@ -169,11 +170,12 @@
     "native_execution_matrix_ci": {
       "runner": "windows-2025",
       "workflow": ".github/workflows/release.yml",
+      "status": "PENDING_CI_RUNNER_EXECUTION",
       "rows": [
-        "PowerShell 5.1 (powershell.exe) x Node 22.19.0",
-        "PowerShell 5.1 (powershell.exe) x Node 24.21.0",
-        "PowerShell Core (pwsh.exe) x Node 22.19.0",
-        "PowerShell Core (pwsh.exe) x Node 24.21.0"
+        { "powershell": "powershell.exe", "node": "22.19.0", "status": "pending_ci" },
+        { "powershell": "powershell.exe", "node": "24.21.0", "status": "pending_ci" },
+        { "powershell": "pwsh.exe", "node": "22.19.0", "status": "pending_ci" },
+        { "powershell": "pwsh.exe", "node": "24.21.0", "status": "pending_ci" }
       ]
     }
   },

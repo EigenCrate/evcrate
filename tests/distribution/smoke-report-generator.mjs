@@ -84,7 +84,7 @@ export function generateSmokeResultsMarkdown(results) {
   return `# Cross-Harness Smoke Verification & Promotion Qualification Report
 
 **Execution Timestamp:** ${meta.timestamp}  
-**Qualification Status:** **QUALIFIED FOR PROMOTION**  
+**Qualification Status:** **RELEASE CANDIDATE STAGED & QUALIFIED LOCALLY (LINUX) — PENDING WINDOWS-2025 CI EXECUTION & MAINTAINER APPROVAL FOR STABLE PROMOTION**  
 **Promotion Channel:** \`next\` (prerelease \`rc\`) → \`main\` (stable promotion)
 
 ---
@@ -188,6 +188,6 @@ The Windows release qualification boundary consists of two distinct, complementa
 3. **Zero Owned CLAUDE.md Files:** Repository-wide audit proves 0 repository-owned \`CLAUDE.md\` files and 0 active read reminders.
 4. **Prior Receipts Protected:** Prior sealed phase completion receipts (Phases 01–10, 12) remain unchanged and protected.
 5. **Prerelease Distribution:** Candidate release staged and qualified on \`next\` channel as \`3.0.0-rc.1\`.
-6. **Promotion Recommendation:** **ACCEPT RELEASE CANDIDATE 3.0.0-rc.1 AND AUTHORIZE PROMOTION**.
+6. **Promotion Recommendation:** **ACCEPT RELEASE CANDIDATE 3.0.0-rc.1 FOR PRERELEASE DISTRIBUTION ON NEXT; PENDING WINDOWS-2025 CI EXECUTION & MAINTAINER APPROVAL FOR STABLE PROMOTION TO MAIN**.
 `;
 }
