@@ -22,9 +22,9 @@ import {
 const packageRoot = process.cwd();
 const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
 
-test('all seven persisted targets have completed cutover gate receipts', () => {
+test('all persisted targets have completed cutover gate receipts', () => {
   const receipts = getAllTargetGateReceipts();
-  assert.equal(receipts.length, 8);
+  assert.equal(receipts.length, PERSISTED_TARGETS.length);
 
   for (const target of PERSISTED_TARGETS) {
     const receipt = getTargetGateReceipt(target);
@@ -76,7 +76,7 @@ test('local distribution build executes and generates verified build manifest', 
   const buildResult = await runLocalBuild(packageRoot, PERSISTED_TARGETS);
   assert.ok(buildResult.manifestPath);
   assert.ok(buildResult.manifest);
-  assert.equal(buildResult.selectedManifests.length, 8);
+  assert.equal(buildResult.selectedManifests.length, PERSISTED_TARGETS.length);
 
   const ompBuild = await runLocalBuild(packageRoot, ['omp']);
   assert.ok(ompBuild.manifestPath);

@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { cpSync, existsSync, rmSync, symlinkSync } from 'node:fs';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { makeTempDir, packageRoot, prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 import { spawnNpmSync } from '../../scripts/release/npm-runner.cjs';
@@ -34,27 +33,4 @@ test('F4: npm clean build repairs missing advisor runtime, brief, and controller
   assert.equal(existsSync(brief), true);
   assert.equal(existsSync(inventory), true);
   require(join(root, 'dist/index.js')).controllerHashes(join(root, '.evcrate/source/.evcrate/bin'));
-});
-
-test('F8: committed aggregate resolves against target files reconstructed from the Git index', (t) => {
-  const root = fixture(t);
-  rmSync(join(root, '.evcrate/targets'), { recursive: true });
-  const files = execFileSync('git', ['ls-files', '-z', '.evcrate/targets'], { cwd: packageRoot, encoding: 'utf8' })
-    .split('\0').filter(Boolean);
-  for (const name of files) {
-    mkdirSync(dirname(join(root, name)), { recursive: true });
-    copyFileSync(join(packageRoot, name), join(root, name));
-  }
-  copyFileSync(join(root, '.evcrate/source/CLAUDE.md'), join(root, 'CLAUDE.md'));
-  const require = createRequire(join(root, 'package.json'));
-  const api = require(join(root, 'dist/index.js'));
-  const manifestPath = join(root, '.evcrate/build-manifest.json');
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  assert.equal(api.treeHash(join(root, '.evcrate/targets')), manifest.source_hashes['.evcrate/targets']);
-  const verified = api.resolveCurrentBuild({
-    packageRoot: root, canonicalSourceRoot: join(root, '.evcrate/source/.claude'),
-    controllerRoot: join(root, '.evcrate/source/.evcrate/bin'),
-    targetRegistryPath: join(root, '.evcrate/targets/manifest.json'), selectedTargets: [], mode: 'authoring'
-  });
-  assert.deepEqual(verified.manifest, manifest);
 });

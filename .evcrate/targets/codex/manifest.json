@@ -3,16 +3,23 @@
   "name": "codex",
   "adapter": "dist/adapters/codex/index.js",
   "adapter_sources": [
+    "dist/adapters/advisory.js",
+    "dist/adapters/catalog-data.js",
+    "dist/adapters/catalog-types.js",
     "dist/adapters/codex/hooks.js",
     "dist/adapters/codex/transforms.js",
+    "dist/adapters/projection-utils.js",
+    "dist/adapters/resource-graph.js",
+    "dist/adapters/resource-naming.js",
+    "dist/adapters/types.js",
     "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".codex",
-  "additional_roots": [".agents"],
+  "additional_roots": [".agents/skills"],
   "project_docs": ["AGENTS.md"],
   "patches": [],
   "home_policy": {
-    "bindings": {".codex": ".codex", ".agents": ".agents"},
+    "bindings": {".codex": ".codex", ".agents/skills": ".agents/skills"},
     "preserve_paths": {".codex": [".evcrate.json"]},
     "promotion_order": 20,
     "publication_rules": ["codex-home-path-rewrite"]

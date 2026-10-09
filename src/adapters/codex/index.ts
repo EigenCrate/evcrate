@@ -1,6 +1,5 @@
-import { lstatSync } from 'node:fs';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
-import { ensureProjectionDirectory, siblingText, sourceSibling, validateProjection, writeProjectionFile, textBytes, isProductionControllerArtifact } from '../projection-utils.js';
+import { ensureProjectionDirectory, graphText, validateProjection, writeProjectionFile, textBytes, isProductionControllerArtifact } from '../projection-utils.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 import { applyReplacements, addWorkflowFallback, canonicalCommandPath, isBinary, markdownFrontmatter, MODEL_MAP, normalizeDescription, parseFrontmatter, renderAdvisoryInterview, renderHarnessScriptReferences, renderInlineAdvise, rewriteCommandGuidance, SUBAGENT_WAIT_CONTRACT, tomlValue, transformResourceText } from './transforms.js';
 import { contextBridge, hooksJson, permissionHook, pretoolBridge, runMcpPackage, runNodeHook } from './hooks.js';
@@ -120,17 +119,10 @@ function copyWorkflows(context: ProjectionBuildContext): void {
   }
 }
 function projectDocument(context: ProjectionBuildContext): void {
-  if (!context.manifest.projectDocs.includes('AGENTS.md')) return;
-  const candidate = sourceSibling(context, 'CLAUDE.md');
-  try {
-    const stat = lstatSync(candidate);
-    if (stat.isSymbolicLink() || !stat.isFile()) throw new ControlPlaneError('PATH_UNSAFE');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
-    if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError('VALIDATION_INVALID');
-  }
-  writeText(context, 'AGENTS.md', applyReplacements(siblingText(context, 'CLAUDE.md')));
+  const document = graphText(context, 'AGENTS.md');
+  if (!document.trim()) fail();
+  if (context.manifest.projectDocs.includes('AGENTS.md')) writeText(context, 'AGENTS.md', applyReplacements(document));
+  writeText(context, '.codex/AGENTS.md', applyReplacements(document, '~/.codex/AGENTS.md').replace(/^# ~\/\.codex\/AGENTS\.md(?=\r?$)/mu, '# AGENTS.md'));
 }
 function copyConfigInputs(context: ProjectionBuildContext): void {
   for (const name of ['.evcrate.json', '.evcrateignore']) { const file = source(context, name); if (file) writeProjectionFile(context, `.codex/${name}`, file.bytes, file.executable ?? false); }
@@ -163,8 +155,6 @@ sandbox_mode = "workspace-write"
 personality = "pragmatic"
 tool_output_token_limit = 8192
 
-project_doc_fallback_filenames = ["CLAUDE.md", "GEMINI.md"]
-
 [agents]
 # Keep fan-out bounded; prompt contracts require terminal results before continuation.
 enabled = true
@@ -189,8 +179,11 @@ function parseSettings(context: ProjectionBuildContext): Record<string, unknown>
 }
 function behaviorMatrix(context: ProjectionBuildContext): void {
   const settings = parseSettings(context);
-  const hasProjectDoc = sourceSiblingExists(context, 'CLAUDE.md');
-  const entries: Record<string, unknown>[] = [{ kind: 'memory-file', source: 'CLAUDE.md', classification: 'memory-file', status: hasProjectDoc ? 'materialized-copy' : 'not-present', target: hasProjectDoc ? 'AGENTS.md' : null }];
+  const hasProjectDoc = context.manifest.projectDocs.includes('AGENTS.md');
+  const entries: Record<string, unknown>[] = [
+    { kind: 'memory-file', source: 'AGENTS.md', classification: 'memory-file', status: hasProjectDoc ? 'materialized-copy' : 'not-present', target: hasProjectDoc ? 'AGENTS.md' : null },
+    { kind: 'memory-file', source: 'AGENTS.md', classification: 'memory-file', status: 'materialized-copy', target: '.codex/AGENTS.md' },
+  ];
   for (const file of filesUnder(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
     const command = commandNameFromSourcePath(file.path);
@@ -211,7 +204,7 @@ function behaviorMatrix(context: ProjectionBuildContext): void {
     const mapped = COMMAND_EVENT_NAMES.has(eventName); const entry: Record<string, unknown> = { kind: 'hook-driven', source_event: eventName, source_matcher: (group as Record<string, unknown>).matcher ?? '*', source_command: (hook as Record<string, unknown>).command ?? '' };
     if (mapped) Object.assign(entry, { classification: 'hook-driven', status: 'migrated', target_event: eventName, ...(eventName === 'PreToolUse' ? { target_followups: ['PermissionRequest'] } : {}) }); else Object.assign(entry, { classification: 'unsupported', status: 'dropped', reason: UNSUPPORTED_EVENTS[eventName] ?? 'No Codex hook mapping was defined for this Claude event.' }); entries.push(entry);
   }
-  const payload = { target: 'codex', project_doc_fallback_filenames: ['CLAUDE.md', 'GEMINI.md'], unsupported_events: UNSUPPORTED_EVENTS, behaviors: entries };
+  const payload = { target: 'codex', unsupported_events: UNSUPPORTED_EVENTS, behaviors: entries };
   writeText(context, '.codex/migration-behavior-matrix.json', JSON.stringify(sortJson(payload), null, 2) + '\n');
 }
 function sortJson(value: unknown): unknown {
@@ -222,17 +215,6 @@ function sortJson(value: unknown): unknown {
     return output;
   }
   return value;
-}
-function sourceSiblingExists(context: ProjectionBuildContext, name: string): boolean {
-  try {
-    const stat = lstatSync(sourceSibling(context, name));
-    if (stat.isSymbolicLink() || !stat.isFile()) throw new ControlPlaneError('PATH_UNSAFE');
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
-    if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError('VALIDATION_INVALID');
-  }
 }
 function commands(context: ProjectionBuildContext): void {
   const known = knownCommands(context);
@@ -261,7 +243,7 @@ function prepareRoots(context: ProjectionBuildContext): void {
 
 function assertManifest(context: ProjectionBuildContext): void {
   if (context.manifest.id !== 'codex' || context.manifest.outputRoots.length !== 2
-    || context.manifest.outputRoots[0] !== '.codex' || context.manifest.outputRoots[1] !== '.agents'
+    || context.manifest.outputRoots[0] !== '.codex' || context.manifest.outputRoots[1] !== '.agents/skills'
     || context.manifest.sharedJson !== null) fail();
 }
 export const codexAdapter: ProjectionAdapter = Object.freeze({

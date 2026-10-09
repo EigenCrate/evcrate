@@ -1,7 +1,7 @@
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
 import { validateProjection } from '../projection-utils.js';
-import { copy, filesUnder, json, prepareOutput, productionFiles, writeJson } from './resources.js';
+import { copy, filesUnder, json, prepareOutput, productionFiles, text, writeJson, writeText } from './resources.js';
 import { buildCommandMap, convertCommands, convertWorkflows, translatePrompt } from './commands.js';
 import { convertAgents } from './agents.js';
 import { convertSkills } from './skills.js';
@@ -26,6 +26,7 @@ function build(context: ProjectionBuildContext): void {
   const skills = convertSkills(context);
   const workflows = convertWorkflows(context);
   const staticResources = convertHooksAndScripts(context);
+  writeText(context, 'evcrate/AGENTS.md', translatePrompt(text(context, 'AGENTS.md')));
   projectCatalogDataAndLayout(context, {
     target: 'omp',
     scriptDirectory: '.omp/evcrate/scripts',

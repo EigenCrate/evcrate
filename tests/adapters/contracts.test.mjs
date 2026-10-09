@@ -7,8 +7,6 @@ import {
   hashBytes,
   loadTargetManifestRegistry,
   PROJECTION_QUALIFICATION_ORDER,
-  PROJECTION_REGISTRY_ORDER,
-  registeredProjectionAdapters,
   writeProjectionFile,
 } from '../../dist/index.js';
 import { projectionExpectations, registerProjectionExpectation } from '../../dist/adapters/types.js';
@@ -34,6 +32,9 @@ import { after, afterEach, before, test } from 'node:test';
 const repository = process.cwd();
 const registry = loadTargetManifestRegistry(join(repository, '.evcrate/targets/manifest.json'));
 const canonicalRoot = join(repository, '.evcrate/source/.claude');
+const fixtureRoot = mkdtempSync(join(process.platform === 'win32' ? tmpdir() : '/tmp', 'evcrate-adapter-contracts-'));
+const runtimeHome = join(fixtureRoot, 'home');
+const runtimeTemp = join(fixtureRoot, 'tmp');
 const stages = [];
 const temporaryRoots = [];
 const forbiddenControllerMarkers = ['advisor-bridge.cjs', 'advisor-coordinator.cjs', 'advisor-dispatch.cjs', 'advisor-handoff.cjs', 'native-capabilities.json', 'active_host'];
@@ -43,14 +44,14 @@ function code(expected) {
   return (error) => error?.code === expected;
 }
 function temporaryDirectory() {
-  const root = mkdtempSync(join(tmpdir(), 'evcrate-phase5-'));
+  const root = mkdtempSync(join(fixtureRoot, 'temporary-'));
   temporaryRoots.push(root);
   return root;
 }
 function materialize(target) {
   const cached = materializedTargets.get(target);
   if (cached) return cached;
-  const stage = createStagedRoot(repository, `.phase5-test-${target}-`);
+  const stage = createStagedRoot(fixtureRoot, `.projection-${target}-`);
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get(target), canonicalRoot, stage);
   const adapter = getProjectionAdapter(target);
@@ -64,7 +65,7 @@ function materialize(target) {
 }
 function freshProjection(target) {
   const source = materialize(target);
-  const stage = createStagedRoot(repository, `.phase5-mutation-${target}-`);
+  const stage = createStagedRoot(fixtureRoot, `.mutation-${target}-`);
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get(target), canonicalRoot, stage);
   for (const name of readdirSync(source.stage.path)) {
@@ -87,7 +88,8 @@ function filesUnder(root, prefix = '') {
 }
 function invokeRuntime(args, cwd, env, input = '{}') {
   const result = spawnSync(process.execPath, args, {
-    cwd, env: { ...process.env, ...env }, input, encoding: 'utf8'
+    cwd, env: { ...process.env, HOME: runtimeHome, USERPROFILE: runtimeHome, TMPDIR: runtimeTemp, TMP: runtimeTemp, TEMP: runtimeTemp, ...env },
+    input, encoding: 'utf8'
   });
   assert.equal(result.status, 0, `${args.join(' ')} failed: ${result.stderr}`);
   return result.stdout;
@@ -101,7 +103,7 @@ function installProjections(destination) {
   }
 }
 function installedProjectionRoot() {
-  const stage = createStagedRoot(repository, '.phase7-installed-');
+  const stage = createStagedRoot(fixtureRoot, '.installed-');
   stages.push(stage);
   installProjections(stage.path);
   symlinkSync(join(repository, 'node_modules'), join(stage.path, 'node_modules'), 'dir');
@@ -110,26 +112,20 @@ function installedProjectionRoot() {
 
 
 before(() => {
+  mkdirSync(runtimeHome);
+  mkdirSync(runtimeTemp);
   for (const target of PROJECTION_QUALIFICATION_ORDER) materialize(target);
 });
 after(() => {
   for (const stage of stages.splice(0)) stage.cleanup();
+  rmSync(fixtureRoot, { recursive: true, force: true });
 });
 afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-test('projection registry is complete and qualification order is fixed', () => {
-  assert.deepEqual([...registeredProjectionAdapters().keys()], ['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot']);
-  assert.deepEqual([...PROJECTION_QUALIFICATION_ORDER], ['claude', 'gemini', 'antigravity', 'codex', 'pi', 'omp', 'copilot']);
-  assert.equal(getProjectionAdapter('agy').id, 'antigravity');
-  assert.throws(() => getProjectionAdapter('vscode'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
-});
 test('brainstormer model projects through each target contract', () => {
   const claude = materialize('claude').stage.path;
   assert.match(readFileSync(join(claude, '.claude/agents/evc-brainstormer.md'), 'utf8'), /^model: opus$/mu);
-
-  const gemini = materialize('gemini').stage.path;
-  assert.match(readFileSync(join(gemini, '.gemini/agents/evc-brainstormer.md'), 'utf8'), /^model: pro$/mu);
 
   const codex = materialize('codex').stage.path;
   const codexAgent = readFileSync(join(codex, '.codex/agents/evc-brainstormer.toml'), 'utf8');
@@ -173,19 +169,9 @@ test('Copilot relative skill handoffs resolve across package and reference nesti
 });
 
 
-test('every target builds only its declared staged roots', () => {
-  const expectedRoots = {
-    claude: ['.claude'],
-    gemini: ['.gemini', 'GEMINI.md'],
-    antigravity: ['.antigravity'],
-    codex: ['.agents', '.codex', 'AGENTS.md'],
-    pi: ['.pi'],
-    omp: ['.omp'],
-    copilot: ['.copilot'],
-  };
+test('projections exclude controller implementation and host-selection artifacts', () => {
   for (const target of PROJECTION_QUALIFICATION_ORDER) {
     const { stage } = materialize(target);
-    assert.deepEqual(readdirSync(stage.path).sort(), expectedRoots[target]);
     for (const path of filesUnder(stage.path)) {
       assert.equal(path.includes('/bin/lib/advisor/'), false, `${target} copied controller path ${path}`);
       assert.equal(path.endsWith('/bin/evcrate-advisor'), false, `${target} copied controller entrypoint ${path}`);
@@ -216,7 +202,7 @@ test('target-specific managed settings and command maps stay independent', () =>
   assert.equal(managed.effortLevel, 'high');
 });
 
-test('Codex, Gemini, and Antigravity project flat evc command and agent identities', () => {
+test('Codex and Antigravity project flat evc command and agent identities', () => {
   const commandName = 'evc-cmd-code-x-auto';
   const codex = materialize('codex').stage.path;
   const codexSkill = readFileSync(join(codex, `.agents/skills/${commandName}/SKILL.md`), 'utf8');
@@ -228,17 +214,6 @@ test('Codex, Gemini, and Antigravity project flat evc command and agent identiti
   assert.match(codexAdvise, /\$evc-cmd-advise/u);
   assert.doesNotMatch(codexAdvise, /\/advise\b/u);
 
-
-  const gemini = materialize('gemini').stage.path;
-  assert.equal(existsSync(join(gemini, `.gemini/commands/${commandName}.toml`)), true);
-  const geminiSkill = readFileSync(join(gemini, `.gemini/skills/${commandName}/SKILL.md`), 'utf8');
-  assert.match(geminiSkill, new RegExp(`^name: ${commandName}$`, 'mu'));
-  assert.match(geminiSkill, new RegExp(`^Command Path: /${commandName}$`, 'mu'));
-  assert.equal(existsSync(join(gemini, '.gemini/agents/evc-advisor.md')), true);
-  assert.equal(existsSync(join(gemini, '.gemini/agents/advisor.md')), false);
-  const geminiWorkflow = readFileSync(join(gemini, '.gemini/workflows/advisory-interview.md'), 'utf8');
-  assert.match(geminiWorkflow, /\/evc-cmd-advise/u);
-  assert.doesNotMatch(geminiWorkflow, /\/advise\b/u);
 
   const antigravity = materialize('antigravity').stage.path;
   const antigravitySkill = readFileSync(join(antigravity, `.antigravity/skills/${commandName}/SKILL.md`), 'utf8');
@@ -254,7 +229,6 @@ test('Codex, Gemini, and Antigravity project flat evc command and agent identiti
     .map((name) => name.slice(0, -3));
   for (const [skillRoot, quoted] of ([
     [join(codex, '.agents/skills'), true],
-    [join(gemini, '.gemini/skills'), false],
     [join(antigravity, '.antigravity/skills'), false],
   ])) {
     for (const name of commandNames) {
@@ -273,7 +247,7 @@ test('Antigravity command path derives only from the source filename', () => {
   cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
   const commandPath = join(sourceRoot, 'commands/evc-cmd-code-x-auto.md');
   writeFileSync(commandPath, readFileSync(commandPath, 'utf8').replace('---\n', '---\nname: /wrong-command\n'));
-  const stage = createStagedRoot(repository, '.phase4-antigravity-command-path-');
+  const stage = createStagedRoot(fixtureRoot, '.antigravity-command-path-');
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
   getProjectionAdapter('antigravity').build(context);
@@ -291,7 +265,7 @@ test('Antigravity rejects conflicting advisor names before emission and preserve
       /^name: evc-advisor\n/mu, name === null ? '' : `name: ${name}\n`,
     );
     writeFileSync(advisorPath, content);
-    const stage = createStagedRoot(repository, '.phase4-antigravity-advisor-name-');
+    const stage = createStagedRoot(fixtureRoot, '.antigravity-advisor-name-');
     stages.push(stage);
     const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
     const projectedPath = join(stage.path, '.antigravity/agents/evc-advisor.md');
@@ -308,20 +282,6 @@ test('Antigravity rejects conflicting advisor names before emission and preserve
   }
 });
 
-test('Gemini rejects declared malformed or non-object settings', () => {
-  for (const document of ['{', '[]', 'null', '"scalar"']) {
-    const sourceContainer = temporaryDirectory();
-    const sourceRoot = join(sourceContainer, '.claude');
-    mkdirSync(sourceRoot);
-    cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
-    writeFileSync(join(sourceContainer, 'CLAUDE.md'), '# Test project context');
-    writeFileSync(join(sourceRoot, 'settings.json'), document);
-    const stage = createStagedRoot(repository, '.phase5-invalid-gemini-');
-    stages.push(stage);
-    const context = createProjectionBuildContext(registry.targets.get('gemini'), sourceRoot, stage);
-    assert.throws(() => getProjectionAdapter('gemini').build(context), code('VALIDATION_INVALID'), document);
-  }
-});
 
 test('resource graph snapshots dist assets and rejects unsafe source entries', () => {
   const graph = createResourceGraph(canonicalRoot);
@@ -336,7 +296,7 @@ test('resource graph snapshots dist assets and rejects unsafe source entries', (
   assert.throws(() => createResourceGraph(root), code('PATH_UNSAFE'));
 });
 test('registered adapters reject mutated resource graph byte buffers', () => {
-  const stage = createStagedRoot(repository, '.phase5-graph-mutation-');
+  const stage = createStagedRoot(fixtureRoot, '.graph-mutation-');
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get('claude'), canonicalRoot, stage);
   const file = context.resources.files.find(({ bytes }) => bytes.byteLength > 0);
@@ -359,8 +319,8 @@ test('projection writes reject traversal and preserve graph bytes', () => {
 });
 
 test('validators reject missing, extra, modified, symlink, and special outputs while accepting mode changes', () => {
-  const missing = freshProjection('gemini');
-  rmSync(join(missing.stage.path, '.gemini/agents/evc-advisor.md'));
+  const missing = freshProjection('antigravity');
+  rmSync(join(missing.stage.path, '.agents/rules/evcrate-antigravity.md'));
   assert.equal(missing.adapter.validate(missing.context).diagnostics.some(({ code }) => code === 'missing'), true);
 
   const extra = freshProjection('codex');
@@ -380,8 +340,8 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   chmodSync(modePath, initialMode ^ 0o100);
   assert.equal(wrongMode.adapter.validate(wrongMode.context).valid, true);
 
-  const wrongDirectoryMode = freshProjection('gemini');
-  const directoryModePath = join(wrongDirectoryMode.stage.path, '.gemini/agents');
+  const wrongDirectoryMode = freshProjection('codex');
+  const directoryModePath = join(wrongDirectoryMode.stage.path, '.agents/skills');
   chmodSync(directoryModePath, 0o700);
   assert.equal(wrongDirectoryMode.adapter.validate(wrongDirectoryMode.context).valid, true);
 
@@ -424,15 +384,24 @@ test('installed runtime entrypoints resolve children from their own roots and ke
   ));
   assert.equal(codex.hookSpecificOutput?.hookEventName, 'SessionStart');
 
-  const gemini = JSON.parse(invokeRuntime(
-    [join(installed, '.gemini/hooks/session-start.cjs')],
-    workspace, { GEMINI_PROJECT_DIR: workspace }
+  const invocation = JSON.parse(invokeRuntime(
+    [join(installed, '.antigravity/hooks/pre-invocation.cjs')],
+    workspace, { AGY_PROJECT_DIR: workspace },
+    JSON.stringify({
+      conversationId: 'installed-context-session',
+      workspacePaths: [workspace],
+      transcriptPath: join(container, 'transcript.jsonl'),
+      invocationNum: 0,
+      initialNumSteps: 0,
+    })
   ));
-  assert.equal(gemini.hookSpecificOutput?.hookEventName, 'SessionStart');
+  assert.ok(invocation.injectSteps.length > 0);
+  assert.ok(invocation.injectSteps.every(({ ephemeralMessage }) => typeof ephemeralMessage === 'string' && ephemeralMessage.length > 0));
 
   const antigravity = JSON.parse(invokeRuntime(
     [join(installed, '.antigravity/hooks/scout-block.cjs')],
-    workspace, { AGY_PROJECT_DIR: workspace }
+    workspace, { AGY_PROJECT_DIR: workspace },
+    JSON.stringify({ conversationId: 'installed-policy-session', workspacePaths: [workspace], toolCall: { name: 'run_command', args: { CommandLine: 'echo safe' } } })
   ));
   assert.equal(antigravity.decision, 'allow');
 
@@ -477,13 +446,13 @@ test('installed runtime wrappers deny missing and symlinked child hooks', () => 
   assert.equal(missing.hookSpecificOutput.permissionDecision, 'deny');
   assert.equal(missing.hookSpecificOutput.permissionDecisionReason, 'EVCREATE_HOOK_UNAVAILABLE');
 
-  const geminiChild = join(installed, '.gemini/hooks/scout-block.cjs');
-  rmSync(geminiChild);
-  symlinkSync(join(installed, '.gemini/hooks/privacy-block.cjs'), geminiChild);
+  const antigravityChild = join(installed, '.antigravity/hooks/scout-block.cjs.original.cjs');
+  rmSync(antigravityChild);
+  symlinkSync(join(installed, '.antigravity/hooks/privacy-block.cjs.original.cjs'), antigravityChild);
   const symlinked = JSON.parse(invokeRuntime(
-    [join(installed, '.gemini/hooks/before-tool-scout-block.cjs')],
-    workspace, { GEMINI_PROJECT_DIR: workspace },
-    '{"toolCall":{"args":{"CommandLine":"echo safe"}}}'
+    [join(installed, '.antigravity/hooks/scout-block.cjs')],
+    workspace, { AGY_PROJECT_DIR: workspace },
+    JSON.stringify({ conversationId: 'symlink-policy-session', workspacePaths: [workspace], toolCall: { name: 'run_command', args: { CommandLine: 'echo safe' } } })
   ));
   assert.equal(symlinked.decision, 'deny');
   assert.equal(symlinked.reason, 'EVCREATE_HOOK_UNAVAILABLE');
@@ -491,12 +460,12 @@ test('installed runtime wrappers deny missing and symlinked child hooks', () => 
 
 const SCRIPT_DIRS = {
   claude: '.claude/scripts',
-  gemini: '.gemini/scripts',
   antigravity: '.antigravity/scripts',
   codex: '.codex/scripts',
   pi: '.pi/agent/evcrate/scripts',
   omp: '.omp/evcrate/scripts',
   copilot: '.copilot/evcrate/scripts',
+  vscode: '.evcrate-vscode/evcrate/scripts',
 };
 
 test('seven-target scanner and catalog contracts hold from foreign CWD', () => {

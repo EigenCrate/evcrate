@@ -10,10 +10,9 @@ import {
   containedPath, normalizeRelativePath
 } from '../filesystem/paths.js';
 import { parseJsonDocument, isPlainObject } from '../protocol/json.js';
-import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
 import {
-  MAX_PUBLICATION_STATE_BYTES, MAX_PUBLICATION_CHANGES, PUBLICATION_BINDING_ORDER,
-  PUBLICATION_LOCAL_ROOTS, PUBLICATION_TARGET_BINDINGS, PUBLICATION_PROJECT_TARGET_BINDINGS
+  MAX_PUBLICATION_STATE_BYTES, MAX_PUBLICATION_CHANGES, PUBLICATION_LOCAL_ROOTS,
+  publicationStateTargets, publicationStateLayout, publicationStateOwnership, publicationFlatOwnership
 } from '../protocol/publication-payloads.js';
 
 export const MAX_PUBLICATION_FILE_BYTES = COMPLETE_TREE_HASH_LIMITS.maxFileBytes;
@@ -215,34 +214,6 @@ function markerManaged(value: unknown): void {
     if (new Set(normalized).size !== normalized.length) fail();
   }
 }
-function markerProjectManaged(value: unknown): void {
-  if (!isPlainObject(value)) fail();
-  const known = new Set<string>(Object.values(PUBLICATION_PROJECT_TARGET_BINDINGS).flat());
-  for (const [binding, paths] of Object.entries(value)) {
-    if (!known.has(binding) || !Array.isArray(paths)) fail();
-    const normalized = paths.map(markerRelative);
-    if (new Set(normalized).size !== normalized.length) fail();
-  }
-}
-function markerOwnershipV2(
-  value: unknown, scope: 'home' | 'project', phase: 'shared' | 'harness',
-  allowedTargets: ReadonlySet<string>
-): void {
-  if (!isPlainObject(value)) fail();
-  for (const [target, bindings] of Object.entries(value)) {
-    if (target === 'advisor-controller' || !isPlainObject(bindings)) fail();
-    const expected = scope === 'home'
-      ? PUBLICATION_TARGET_BINDINGS[target as keyof typeof PUBLICATION_TARGET_BINDINGS]
-      : PUBLICATION_PROJECT_TARGET_BINDINGS[target as keyof typeof PUBLICATION_PROJECT_TARGET_BINDINGS];
-    if (!expected || phase !== 'harness'
-      || !allowedTargets.has(target)) fail();
-    for (const [binding, paths] of Object.entries(bindings)) {
-      if (!expected.includes(binding as never) || !Array.isArray(paths)) fail();
-      const normalized = paths.map(markerRelative);
-      if (new Set(normalized).size !== normalized.length) fail();
-    }
-  }
-}
 const V2_RECORD_KEYS = [
   'phase', 'scope', 'status', 'release_id', 'selected_targets', 'binding_order',
   'managed_paths', 'previous_managed_paths', 'build_manifest_path', 'build_manifest_digest',
@@ -259,26 +230,16 @@ export function validatePublicationStateRecord(
     || !['promoting', 'complete', 'recovered'].includes(String(value.status))) fail();
   const release = markerRelease(value.release_id);
   if (value.transaction_dir !== `release-${release}`) fail();
-  const selected = markerTargets(value.selected_targets, phase === 'shared');
-  if (phase === 'shared' && selected.length !== 0) fail();
-  if (phase === 'harness' && scope === 'home' && selected.length === 0) fail();
-  const expectedBindings = phase === 'shared'
-    ? ['.evcrate/bin']
-    : scope === 'home'
-      ? PUBLICATION_BINDING_ORDER.filter((binding) => binding !== '.evcrate/bin'
-        && selected.some((target) => PUBLICATION_TARGET_BINDINGS[target].includes(binding as never)))
-      : selected.flatMap((target) => PUBLICATION_PROJECT_TARGET_BINDINGS[target]);
-  if (!Array.isArray(value.binding_order)
-    || value.binding_order.length !== expectedBindings.length
-    || value.binding_order.some((binding, index) => binding !== expectedBindings[index])) fail();
-  const previousOwnership = value.previous_managed_paths;
-  if (!isPlainObject(previousOwnership)) fail();
-  const allowedTargets = new Set<string>(selected);
-  for (const target of Object.keys(previousOwnership)) allowedTargets.add(target);
-  markerOwnershipV2(previousOwnership, scope, phase, allowedTargets);
-  markerOwnershipV2(value.managed_paths, scope, phase, allowedTargets);
-  if (phase === 'shared'
-    && (!isPlainObject(value.managed_paths) || Object.keys(value.managed_paths).length !== 0)) fail();
+  try {
+    const selected = publicationStateTargets(value.selected_targets, phase === 'shared');
+    if (phase === 'shared' && selected.length !== 0) fail();
+    const layout = publicationStateLayout(value.binding_order, selected, scope, phase === 'shared');
+    const ownership = publicationStateOwnership(
+      value.managed_paths, value.previous_managed_paths, selected, scope, layout.generation
+    );
+    if (phase === 'shared'
+      && (Object.keys(ownership.managed).length !== 0 || Object.keys(ownership.previous).length !== 0)) fail();
+  } catch { fail(); }
   if (!/^\.evcrate\/build-manifest(?:-[a-z]+)?\.json$/u.test(markerRelative(value.build_manifest_path))
     || typeof value.build_manifest_digest !== 'string'
     || !/^[a-f0-9]{64}$/u.test(value.build_manifest_digest)) fail();
@@ -330,21 +291,6 @@ export function publicationMarkerRecord(
   const value = records[phase];
   return value === null || value === undefined ? null : isPlainObject(value) ? value : fail();
 }
-function markerTargets(value: unknown, allowEmpty = false): readonly PersistedTarget[] {
-  if (!Array.isArray(value) || (!allowEmpty && !value.length)) fail();
-  const result = value.map((entry) => normalizeTarget(entry));
-  if (new Set(result).size !== result.length) fail();
-  return Object.freeze(result);
-}
-function markerBindings(targets: readonly PersistedTarget[]): readonly string[] {
-  const names = new Set<string>(['.evcrate/bin']);
-  for (const target of targets) {
-    const bindings = PUBLICATION_TARGET_BINDINGS[target];
-    if (!bindings) fail();
-    bindings.forEach((binding) => names.add(binding));
-  }
-  return Object.freeze(PUBLICATION_BINDING_ORDER.filter((binding) => names.has(binding)));
-}
 function validateTargetMarker(marker: Record<string, unknown>): void {
   const keys = ['schema_version', 'status', 'transaction_type', 'release_id', 'selected_targets', 'binding_order',
     'managed_paths', 'previous_managed_paths', 'build_manifest_path', 'build_manifest_digest', 'transaction_dir', 'retained_release_id'];
@@ -352,12 +298,12 @@ function validateTargetMarker(marker: Record<string, unknown>): void {
     || !['promoting', 'complete', 'recovered'].includes(String(marker.status))) fail();
   const release = markerRelease(marker.release_id);
   if (marker.transaction_dir !== `release-${release}`) fail();
-  const targets = markerTargets(marker.selected_targets, true);
-  const bindings = marker.binding_order;
-  if (!Array.isArray(bindings) || bindings.length !== markerBindings(targets).length
-    || bindings.some((value, index) => markerRelative(value) !== markerBindings(targets)[index])) fail();
-  markerManaged(marker.managed_paths);
-  markerManaged(marker.previous_managed_paths);
+  try {
+    const selected = publicationStateTargets(marker.selected_targets, true);
+    const layout = publicationStateLayout(marker.binding_order, selected, 'home', true);
+    publicationFlatOwnership(marker.managed_paths, selected, 'home', layout.generation);
+    publicationFlatOwnership(marker.previous_managed_paths, selected, 'home', layout.generation);
+  } catch { fail(); }
   if (!/^\.evcrate\/build-manifest(?:-[a-z]+)?\.json$/u.test(markerRelative(marker.build_manifest_path))) fail();
   if (typeof marker.build_manifest_digest !== 'string' || !/^[a-f0-9]{64}$/u.test(marker.build_manifest_digest)) fail();
   if (marker.retained_release_id !== null) markerRelease(marker.retained_release_id);
@@ -371,12 +317,12 @@ function validateProjectMarker(marker: Record<string, unknown>): void {
     || marker.scope !== 'project' || !['promoting', 'complete', 'recovered'].includes(String(marker.status))) fail();
   const release = markerRelease(marker.release_id);
   if (marker.transaction_dir !== `release-${release}`) fail();
-  const targets = markerTargets(marker.selected_targets);
-  const expected = targets.flatMap((target) => PUBLICATION_PROJECT_TARGET_BINDINGS[target]);
-  if (!Array.isArray(marker.binding_order) || marker.binding_order.length !== expected.length
-    || marker.binding_order.some((value, index) => markerRelative(value) !== expected[index])) fail();
-  markerProjectManaged(marker.managed_paths);
-  markerProjectManaged(marker.previous_managed_paths);
+  try {
+    const selected = publicationStateTargets(marker.selected_targets);
+    const layout = publicationStateLayout(marker.binding_order, selected, 'project');
+    publicationFlatOwnership(marker.managed_paths, selected, 'project', layout.generation);
+    publicationFlatOwnership(marker.previous_managed_paths, selected, 'project', layout.generation);
+  } catch { fail(); }
   if (typeof marker.destination_root !== 'string' || resolve(marker.destination_root) !== marker.destination_root
     || typeof marker.durable_state_root !== 'string' || resolve(marker.durable_state_root) !== marker.durable_state_root
     || typeof marker.workspace_root !== 'string' || resolve(marker.workspace_root) !== marker.workspace_root

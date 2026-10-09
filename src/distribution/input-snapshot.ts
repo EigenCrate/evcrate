@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { createStagedRoot, type StagedRoot } from '../filesystem/atomic.js';
@@ -17,7 +17,7 @@ export interface InputSnapshotHashes {
   readonly canonicalClaudeHash: string;
   readonly canonicalInputHash: string;
   readonly compiledRuntimeHash: string;
-  readonly claudeMdHash: string;
+  readonly agentsMdHash: string;
   readonly targetsRegistryHash?: string | undefined;
   readonly controllerHashes: Readonly<Record<string, string>>;
 }
@@ -42,7 +42,7 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
 
   // 1. Capture live hashes before copy
   const canonicalClaudeHash = treeHash(canonicalHarnessRoot);
-  const claudeMdHash = hashFile(join(sourceRoot, 'CLAUDE.md'));
+  const agentsMdHash = hashFile(join(canonicalHarnessRoot, 'AGENTS.md'));
   const targetsRegistryHash = existsSync(targetsRegistryPath) ? treeHash(targetsRegistryPath) : undefined;
   const cHashes = controllerHashes(controllerBinSource);
 
@@ -50,7 +50,7 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
     canonicalClaudeHash,
     canonicalInputHash: canonicalIdentity,
     compiledRuntimeHash: runtimeHash,
-    claudeMdHash,
+    agentsMdHash,
     targetsRegistryHash,
     controllerHashes: cHashes
   };
@@ -65,7 +65,6 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
     const snapRuntime = join(snapshotStage.path, 'dist');
 
     copyCanonicalInputs(canonicalHarnessRoot, snapClaude);
-    copyFileSync(join(sourceRoot, 'CLAUDE.md'), join(snapSource, 'CLAUDE.md'));
     if (existsSync(targetsRegistryPath)) {
       copyStagedTree(targetsRegistryPath, snapTargets);
     }
@@ -82,8 +81,8 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
     if (compiledRuntimeHash(snapRuntime) !== runtimeHash) {
       throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot compiled runtime hash mismatch');
     }
-    if (hashFile(join(snapSource, 'CLAUDE.md')) !== claudeMdHash) {
-      throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot CLAUDE.md hash mismatch');
+    if (hashFile(join(snapClaude, 'AGENTS.md')) !== agentsMdHash) {
+      throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot AGENTS.md hash mismatch');
     }
     if (targetsRegistryHash !== undefined && treeHash(snapTargets) !== targetsRegistryHash) {
       throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot targets registry hash mismatch');
@@ -103,7 +102,7 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
       sourceRoot: snapSource,
       canonicalHarnessRoot: snapClaude,
       canonicalClaudeHash,
-      claudeMdHash,
+      agentsMdHash,
       registryPath: snapRegistryPath,
       registry,
       controllerBinSource: snapBin,
@@ -134,9 +133,9 @@ export function assertLiveInputsUnchanged(packageRoot: string, expected: InputSn
     throw new ControlPlaneError('PUBLICATION_FAILED', 'Compiled runtime modified during build');
   }
 
-  const currentClaudeMdHash = hashFile(join(sourceRoot, 'CLAUDE.md'));
-  if (currentClaudeMdHash !== expected.claudeMdHash) {
-    throw new ControlPlaneError('PUBLICATION_FAILED', 'Source CLAUDE.md modified during build');
+  const currentAgentsMdHash = hashFile(join(canonicalHarnessRoot, 'AGENTS.md'));
+  if (currentAgentsMdHash !== expected.agentsMdHash) {
+    throw new ControlPlaneError('PUBLICATION_FAILED', 'Source AGENTS.md modified during build');
   }
 
   const targetsRegistryPath = join(packageRoot, '.evcrate', 'targets');

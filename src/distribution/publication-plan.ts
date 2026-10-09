@@ -11,6 +11,7 @@ import { PERSISTED_TARGETS, type PersistedTarget } from '../protocol/validation.
 import {
   MAX_PUBLICATION_BINDINGS, MAX_PUBLICATION_CHANGES, PUBLICATION_BINDING_ORDER,
   PUBLICATION_TARGET_BINDINGS, PUBLICATION_TARGET_LOCAL_ROOTS,
+  publicationStateTargets, publicationStateLayout, publicationFlatOwnership,
   type PublicationChange, type PublicationPhase, type PublicationScope, type PublicationTarget
 } from '../protocol/publication-payloads.js';
 import { normalizeRelativePath, pathOverlaps } from '../filesystem/paths.js';
@@ -22,7 +23,7 @@ import {
 import { assertPublicationRules, mapPublicationPath, publishFile } from './publication-rules.js';
 import {
   MAX_PUBLICATION_FILE_BYTES, listPublicationFiles, publicationNode, safePublicationChild,
-  validatePublicationAncestors, readOptionalPublicationMarker, controllerTreeHash,
+  validatePublicationAncestors, readOptionalPublicationMarker, publicationMarkerRecord, controllerTreeHash,
   type PublicationNode, type PublicationNodeSnapshot
 } from './publication-inventory.js';
 import { planSharedJson, type SharedJsonPlan } from './shared-json.js';
@@ -186,12 +187,16 @@ function normalizeOwnership(value: PriorManagedOwnership | undefined): PriorMana
 }
 
 function priorPaths(
-  ownership: PriorManagedOwnership, descriptor: BindingDescriptor
+  ownership: PriorManagedOwnership, descriptor: BindingDescriptor, includePredecessor = true
 ): Set<string> {
   const target = ownership[descriptor.target];
-  if (!target) return new Set();
-  const values = target[descriptor.binding] ?? target[descriptor.localRoot] ?? [];
-  return new Set(values);
+  const paths = new Set(target?.[descriptor.binding] ?? target?.[descriptor.localRoot] ?? []);
+  if (includePredecessor && descriptor.target === 'codex' && descriptor.binding === '.agents/skills') {
+    for (const path of target?.['.agents'] ?? []) {
+      if (path.startsWith('skills/')) paths.add(path.slice('skills/'.length));
+    }
+  }
+  return paths;
 }
 
 function ownershipWithBinding(
@@ -206,6 +211,17 @@ function ownershipWithBinding(
   }
   result[descriptor.target] ??= {};
   result[descriptor.target][descriptor.binding] = Object.freeze([...paths]);
+  if (descriptor.target === 'codex' && descriptor.binding === '.agents/skills') {
+    const legacy = result.codex['.agents'];
+    if (legacy !== undefined) {
+      // Rebase only leaves actually published; historical leftovers remain
+      // recorded, but never become authority to write the shared parent.
+      const published = new Set(paths.map((path) => `skills/${path}`));
+      const residual = legacy.filter((path) => !published.has(path));
+      if (residual.length) result.codex['.agents'] = Object.freeze(residual);
+      else delete result.codex['.agents'];
+    }
+  }
   for (const [target, bindings] of Object.entries(result)) {
     result[target] = Object.freeze(bindings);
   }
@@ -233,6 +249,18 @@ function markerPaths(marker: Record<string, unknown> | null, key: string): Set<s
 function legacyOwnership(
   marker: Record<string, unknown> | null, manifests: readonly TargetManifest[]
 ): PriorManagedOwnership {
+  if (marker?.schema_version === 2) {
+    const record = publicationMarkerRecord(marker, 'harness');
+    if (record === null) return Object.freeze({});
+    if (record.status !== 'complete' && record.status !== 'recovered') fail();
+    return normalizeOwnership(record.managed_paths as PriorManagedOwnership);
+  }
+  if (marker?.transaction_type === 'target-publication') {
+    if (marker.status !== 'complete' && marker.status !== 'recovered') fail();
+    const selected = publicationStateTargets(marker.selected_targets, true);
+    const layout = publicationStateLayout(marker.binding_order, selected, 'home', true);
+    return publicationFlatOwnership(marker.managed_paths, selected, 'home', layout.generation);
+  }
   const managed = marker?.managed_paths;
   if (managed === undefined) return Object.freeze({});
   if (!isPlainObject(managed)) fail();
@@ -439,7 +467,8 @@ function directoryBinding(
       prior, manifest.homePolicy.rejectUnmanagedCollisions, preserve, isExecutable
     ));
   }
-  for (const stale of [...prior].sort()) {
+  // Predecessor-only leaves are retained for Phase08, not implicitly pruned by rebasing.
+  for (const stale of [...priorPaths(ownership, descriptor, false)].sort()) {
     if (seen.has(stale) || managed.includes(stale) || (sharedDestination !== null && stale === sharedDestination)) continue;
     const destination = safePublicationChild(descriptor.destinationRoot, stale);
     const current = existing(destination);
@@ -555,12 +584,9 @@ function assertAggregateBuild(context: InvocationContext, build: VerifiedCurrent
   const expectedManifestPath = buildManifestPath(context.packageRoot, []);
   if (resolve(build.manifestPath) !== resolve(expectedManifestPath)
     || build.manifest.schema_version !== 2
-    || (Object.keys(build.manifest.home_policy).length !== PERSISTED_TARGETS.length + 1
-      && Object.keys(build.manifest.home_policy).length !== 8)
+    || Object.keys(build.manifest.home_policy).length !== PERSISTED_TARGETS.length + 1
     || !Object.hasOwn(build.manifest.home_policy, 'advisor-controller')
-    || (Object.keys(build.manifest.home_policy).length === PERSISTED_TARGETS.length + 1
-      ? PERSISTED_TARGETS.some((target) => !Object.hasOwn(build.manifest.home_policy, target))
-      : ['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot'].some((target) => !Object.hasOwn(build.manifest.home_policy, target)))) {
+    || PERSISTED_TARGETS.some((target) => !Object.hasOwn(build.manifest.home_policy, target))) {
     fail('PROTOCOL_INVALID');
   }
 }
@@ -709,17 +735,6 @@ function destinationPath(descriptor: BindingDescriptor): string {
     : descriptor.destinationRoot;
 }
 
-function allowedHomeOverlap(left: BindingDescriptor, right: BindingDescriptor): boolean {
-  const parent = left.binding === '.gemini' && right.binding === '.gemini/config'
-    ? left : right.binding === '.gemini' && left.binding === '.gemini/config' ? right : null;
-  const child = parent === left ? right : parent === right ? left : null;
-  return parent !== null && child !== null
-    && parent.phase === 'harness' && parent.scope === 'home'
-    && child.phase === 'harness' && child.scope === 'home'
-    && parent.target === 'gemini' && parent.localRoot === '.gemini'
-    && child.target === 'antigravity' && child.localRoot === '.antigravity'
-    && parent.order < child.order;
-}
 
 function assertDescriptorShape(descriptor: BindingDescriptor): void {
   if (descriptor.kind === 'controller') {
@@ -768,7 +783,7 @@ function preflightDescriptors(descriptors: readonly BindingDescriptor[]): void {
     for (let j = i + 1; j < destinations.length; j += 1) {
       const left = destinations[i];
       const right = destinations[j];
-      if (pathOverlaps(left.path, right.path) && !allowedHomeOverlap(left.descriptor, right.descriptor)) {
+      if (pathOverlaps(left.path, right.path)) {
         fail('PROTOCOL_INVALID');
       }
     }

@@ -1,8 +1,8 @@
 # EVCrate
 
-EVCrate 2.6.0 is a private Node/TypeScript package that authors one canonical
-agent-harness source tree and builds verified projections for eight targets:
-`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `omp`, `pi`, and `vscode`.
+EVCrate 2.10.0 is a private Node/TypeScript package that authors one canonical
+agent-harness source tree and builds verified projections for seven targets:
+`antigravity`, `claude`, `codex`, `copilot`, `omp`, `pi`, and `vscode`.
 It publishes managed output with ownership, hashing, locking, and recovery rules,
 and ships one shared checkpoint advisor controller. The former DamHopper plugin
 runtime/package and paired host integration were retired 2026-10-02; current
@@ -171,6 +171,12 @@ The CLI positional forms are plural: `evcrate resources list`,
 `--target` filters harness projections only; the shared controller is always
 published under `<home>/.evcrate/bin` and never under a project root.
 
+Current targets: `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, `vscode`.
+Standalone Gemini is retired; Antigravity still uses its vendor HOME
+`~/.gemini/config`. Canonical instructions are authored only in
+`.evcrate/source/.claude/AGENTS.md`; generated delivery formats and native
+loader prerequisites are in the [instruction matrix](docs/system-architecture.md#instruction-authority-and-native-delivery).
+
 HOME publication is one atomic transaction. Project publication commits the
 shared HOME controller first, then the project harness under the project lock.
 If the harness fails, only project work is rolled back; shared HOME work is not
@@ -191,10 +197,11 @@ interrupted harness transaction. They are not interchangeable.
 ## Development and modification workflow
 
 1. Edit canonical sources:
+   - Instructions: `.evcrate/source/.claude/AGENTS.md`
    - Commands: `.evcrate/source/.claude/commands/`
    - Skills: `.evcrate/source/.claude/skills/`
    - Controller: `.evcrate/source/.evcrate/bin/`
-2. Regenerate and verify all eight target trees:
+2. Regenerate and verify all seven target trees:
    ```bash
    npm run distribute:build
    npm run distribute:check
@@ -236,14 +243,14 @@ Configure the required user-owned policy at
 ```
 
 Use distinct routes. Enabled backends are `claude`, `codex`, `pi`, and `omp`;
-`antigravity` is unavailable, and Gemini/Copilot are not controller backends.
+`antigravity` is unavailable, standalone Gemini is retired, and Copilot is not a controller backend.
 For existing policy, use `evcrate advisor settings get`, prepare a v2 request,
 then `preview` and `apply`; migration never rewrites HOME automatically.
 
 A final standalone `--advice` token activates formal
 `evcrate-advisor-checkpoint/v2` mentoring for bootstrap, code, cook, and fix
 reviews (up to three correction cycles). `@advisor` remains ordinary task text.
-The documentation-facing `/cmd-advise` workflow is a separate interview path.
+The documentation-facing `/evc-cmd-advise` workflow is a separate interview path.
 Direct controller invocation requires Node with valid absolute HOME and exact JSON
 on stdin: `node "$HOME/.evcrate/bin/evcrate-advisor" state <operation>` (or empty
 subcommand for checkpoint inference); see [canonical workflow](./.evcrate/source/.claude/workflows/advisor-mentoring.md)
@@ -251,20 +258,20 @@ for authoritative host-aware lifecycle syntax.
 
 ## Documented command names
 
-Documentation and target-facing examples use `/cmd-*` slash names:
+Documentation and target-facing examples use `/evc-cmd-*` slash names:
 
 ```text
-/cmd-plan "design the change"
-/cmd-cook "implement the approved plan"
-/cmd-code plans/example.md --advice
-/cmd-fix__hard "apply a scoped fix"
+/evc-cmd-plan "design the change"
+/evc-cmd-cook "implement the approved plan"
+/evc-cmd-code plans/example.md --advice
+/evc-cmd-fix-x-hard "apply a scoped fix"
 ```
 
-OMP nested names use `__`; Copilot projects them as `/evcrate-cmd-fix-hard`.
-`evcrate/command-name-map.json` is authoritative for target translations.
-This is a documentation convention; scanner/parser prefix enforcement remains a
-follow-up and does not rename canonical source files or invent aliases.
-
+All seven active targets project unified `evc-cmd-*` command names and `evc-*`
+agent names (with `-x-` segment separation for nested commands). Copilot projects
+user-invocable skills as `evc-cmd-*` with raw `$ARGUMENTS`. Governed by
+`src/adapters/resource-naming.ts` and enforced by
+`.evcrate/source/.claude/scripts/scan_commands.py`.
 ## VS Code Local native support
 
 EVCrate provides native support for VS Code Local as an isolated Agent Plugins 1.0 bundle (`evcrate-local`), distinct from the GitHub Copilot CLI target (`copilot`).

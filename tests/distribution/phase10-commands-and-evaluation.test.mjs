@@ -16,8 +16,8 @@ import { setupTestEnvironment, defaultPolicyV2 } from './phase10-test-helpers.mj
 
 const packageRoot = new URL('../..', import.meta.url).pathname.replace(/\/$/u, '');
 
-test('SCENARIO 3.1: Honest 7-target capability declarations and projection markers', () => {
-  const expectedTargets = ['claude', 'codex', 'omp', 'antigravity', 'gemini', 'copilot', 'pi'];
+test('SCENARIO 3.1: Honest current-target capability declarations and projection markers', () => {
+  const expectedTargets = ['claude', 'codex', 'omp', 'antigravity', 'copilot', 'pi'];
   assert.deepEqual(Object.keys(TARGET_MENTORING_CAPABILITIES).sort(), [...expectedTargets].sort());
 
   for (const target of expectedTargets) {

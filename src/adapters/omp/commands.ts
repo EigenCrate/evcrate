@@ -57,12 +57,15 @@ function harnessPaths(value: string): string {
   const protectedValue = protectUris(value);
   let rendered = protectedValue.rendered;
   for (const prefix of ['~', '$HOME', '${HOME}']) {
+    rendered = rendered.replaceAll(`${prefix}/.claude/rules/AGENTS.md`, `${prefix}/.omp/agent/evcrate/AGENTS.md`);
     for (const suffix of ['workflows', 'scripts', 'hooks', 'skills', 'output-styles', 'commands']) {
       const target = suffix === 'skills' ? '.omp/agent/skills' : `.omp/agent/evcrate/${suffix}`;
       rendered = rendered.replaceAll(`${prefix}/.claude/${suffix}`, `${prefix}/${target}`);
     }
     rendered = rendered.replaceAll(`${prefix}/.claude`, `${prefix}/.omp/agent`);
   }
+  rendered = rendered.replaceAll('./.claude/rules/AGENTS.md', './.omp/evcrate/AGENTS.md');
+  rendered = rendered.replaceAll('.claude/rules/AGENTS.md', '.omp/evcrate/AGENTS.md');
   for (const suffix of ['workflows', 'scripts', 'hooks', 'skills', 'output-styles', 'commands']) {
     const target = suffix === 'skills' ? '.omp/skills' : `.omp/evcrate/${suffix}`;
     rendered = rendered.replaceAll(`.claude/${suffix}`, target);

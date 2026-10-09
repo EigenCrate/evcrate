@@ -65,11 +65,16 @@
 
 ### Bug Fixes
 
-* **adapters:** restore linear regex callback literal URL replacement for Codex transforms and register extracted URI restoration helper in all seven translated target hash closures.
+* **adapters:** restore linear regex callback literal URL replacement for Codex transforms and register the extracted URI restoration helper in declared adapter hash closures.
 * **benchmarks:** label build generation memory metric accurately as post-build parent process RSS.
 * **build:** inventory the full imported emit closure, preserve ownership receipts across clean builds, share ordinary prebuild prerequisites, refuse unsafe ancestor traversal, retain receipts on cleanup failure, honor CLI output overrides, and leave emitting-build ownership unchanged for `--noEmit`.
 * **distribution:** include consumed .gitignore bytes in snapshot freshness identity, reject unsafe path entries before ignore filtering, exclude heavy artifact directories during snapshot traversal, validate compiled runtime revisions across serial and parallel worker execution, and execute freshness verification under promotion lock before journal recording.
 * **manifests:** regenerate target and aggregate identities from reproducible tracked inputs, without an accidental empty Codex patch directory.
+* **instructions:** relocate canonical authority to `.evcrate/source/.claude/AGENTS.md`; deliver Claude native rules, target-specific HOME/project instructions, and once-per-context OMP/Pi bridges with unsafe-payload admission guards.
+* **publication:** separate local Claude projection from its authoring tree; own only Codex `.agents/skills`, Antigravity native hook/rule leaves, and Copilot `.github/copilot-instructions.md`, preserving unrelated parent contents.
+* **recovery:** retain validated predecessor publication markers/journals and their raw transaction identities; rebase only published Codex skill leaves, preserving recorded historical residual ownership without re-enabling retired targets.
+* **pi:** resolve command, workflow and main/child instruction references from the active installed resource root instead of the caller's working directory.
+* **antigravity:** bound canonical context-hook execution to 25 seconds and refuse timed-out hooks before context injection.
 
 
 ### Documentation
@@ -80,7 +85,8 @@
 ### ♻️ Chores & Refactoring
 
 * **advisor:** retire Dam-Hopper plugin runtime, worker, and distribution artifacts in favor of native Dam-Hopper in-process Advisor integration; preserve standalone viewer components and core CLI controller.
-
+* **targets:** retire standalone Gemini projection and selectors; retain validated historical registry migration and Antigravity's `~/.gemini/config` HOME resources.
+* **naming:** unify command and agent resource naming across all seven active targets under canonical `evc-cmd-*` (with `-x-` segment separation) and `evc-*` identities, governed by `src/adapters/resource-naming.ts` and enforced by canonical command scanning.
 ## [2.6.0](https://github.com/EigenCrate/evcrate/compare/v2.5.0...v2.6.0) (2026-10-01)
 
 

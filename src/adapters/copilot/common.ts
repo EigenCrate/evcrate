@@ -1,6 +1,6 @@
 import { canonicalBytes } from '../../protocol/canonical-json.js';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
-import { copyGraphFile, graphFile, siblingBytes, writeProjectionFile, textBytes } from '../projection-utils.js';
+import { copyGraphFile, graphFile, writeProjectionFile, textBytes } from '../projection-utils.js';
 import type { ProjectionBuildContext } from '../types.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 
@@ -19,10 +19,6 @@ export function filesUnder(context: ProjectionBuildContext, prefix: string): Res
 
 export function optionalGraphFile(context: ProjectionBuildContext, path: string): ResourceGraphFile | undefined {
   return context.resources.files.find((file) => file.path === path);
-}
-
-export function readSibling(context: ProjectionBuildContext, path: string): Uint8Array {
-  return siblingBytes(context, path);
 }
 
 export function decode(bytes: Uint8Array): string {

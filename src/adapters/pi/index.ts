@@ -6,7 +6,7 @@ import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { validateProjection, writeProjectionFile } from '../projection-utils.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
 import { convertAgents } from './agents.js';
-import { copyCommandsAndWorkflows, copyHooksAndScripts, copySkills, inventory, writeJson } from './resources.js';
+import { copyAgentsDocument, copyCommandsAndWorkflows, copyHooksAndScripts, copySkills, inventory, writeJson } from './resources.js';
 import { projectCatalogDataAndLayout } from '../catalog-data.js';
 
 const MANAGED_PACKAGES = Object.freeze([
@@ -56,6 +56,7 @@ function build(context: ProjectionBuildContext): void {
   copyNormalized(context, '.evcrateignore', '.pi/.evcrateignore');
   copyOwnedOverlay(context);
   const resources = inventory(context);
+  copyAgentsDocument(context, resources);
   copyCommandsAndWorkflows(context, resources);
   copySkills(context);
   copyHooksAndScripts(context);

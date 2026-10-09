@@ -63,7 +63,7 @@ See the [code standards](../docs/code-standards.md#normative-command-naming).
 
 Read both skill entrypoints and every bundled reference in the consuming context; resolve relative links from the installed package, not the target cwd. The parent retains human approval ownership. Drift invalidates prior approval; missing graph, affected-consumer runtime or comparable rescan evidence prevents a `fixed` claim.
 
-Local generation covers all eight targets (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`). Copilot names are `evcrate-snyk-expert`, `evcrate-snyk-fix` and `evcrate-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
+Local generation covers all seven targets (`claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`). Copilot names are `evcrate-snyk-expert`, `evcrate-snyk-fix` and `evcrate-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
 
 ---
 
@@ -661,4 +661,4 @@ Or manually create a skill:
 
 For more information, see:
 - [Project Documentation](../docs/)
-- [CLAUDE.md](../.evcrate/source/CLAUDE.md)
+- [Canonical AGENTS.md](../.evcrate/source/.claude/AGENTS.md)

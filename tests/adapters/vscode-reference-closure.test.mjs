@@ -165,8 +165,8 @@ test('references: replaceWorkflowReferences rewrites workflow paths with publish
   assert.equal(replaceWorkflowReferences(replaceWorkflowReferences(projectedLocal)), replaceWorkflowReferences(projectedLocal));
 });
 
-test('references: replaceInstructionReferences rewrites CLAUDE.md to bootstrap rule', () => {
-  const input = 'Read .evcrate/source/CLAUDE.md or ~/.evcrate/source/CLAUDE.md for rules';
+test('references: instruction references resolve to the installed bootstrap rule', () => {
+  const input = 'Read .claude/rules/AGENTS.md or ~/.claude/rules/AGENTS.md for rules';
   const output = replaceInstructionReferences(input);
   assert.equal(
     output,

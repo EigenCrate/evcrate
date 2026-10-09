@@ -1,19 +1,12 @@
 import { restoreIndexedTokens } from '../uri-restoration.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 
-const URL_REFERENCE = /https?:\/\/[^\s<>()]+/giu;
+const URL_REFERENCE = /https?:\/\/[^\s<>()]+|(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/giu;
 const COMMAND_TOKEN = /\/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*/gu;
 const COMMAND_REFERENCE = /(?<![A-Za-z0-9_.-])\/[A-Za-z0-9_-]+(?:[:/][A-Za-z0-9_-]+)*/gu;
 const REPLACEMENTS: readonly [RegExp, string][] = [
   [/\.claude\/skills/giu, '.agents/skills'],
   [/\.claude/giu, '.codex'],
-  [/\bCLAUDE\.md\b/giu, 'AGENTS.md'],
-  [/\bClaude Code\b/giu, 'Codex CLI'],
-  [/\bclaude-code\b/giu, 'codex-cli'],
-  [/\bClaude\b/gu, 'Codex'],
-  [/\bclaude\b/gu, 'codex'],
-  [/\bAnthropic\b/giu, 'OpenAI'],
-  [/\banthropic\b/giu, 'openai'],
   [/\bCLAUDE_PROJECT_DIR\b/giu, 'CODEX_PROJECT_DIR'],
   [/\bCLAUDE_COMMAND\b/giu, 'CODEX_COMMAND'],
   [/\bANTHROPIC_API_KEY\b/giu, 'OPENAI_API_KEY'],
@@ -92,10 +85,22 @@ export function normalizeDescription(raw: string | string[] | undefined, body: s
   value = value.replace(/\s+/gu, ' ').trim(); return value.length > 1024 ? `${value.slice(0, 1021).trimEnd()}...` : value;
 }
 
-export function applyReplacements(value: string): string {
+function instructionReferences(value: string, instructionPath: string): string {
+  return value.replace(
+    /(?<![A-Za-z0-9_./~$\\{}-])(?:(~|\$HOME|\$\{HOME\})\/)?(?:\.\/)?(?:(?:\.evcrate\/source\/)?\.claude\/(?:rules\/)?)?AGENTS\.md(?![A-Za-z0-9_-]|\.[A-Za-z0-9_.-])/gu,
+    (_match, home: string | undefined) => home ? `${home}/.codex/AGENTS.md` : instructionPath,
+  );
+}
+
+export function applyReplacements(value: string, instructionPath = 'AGENTS.md'): string {
   const urls: string[] = []; let result = value.replace(URL_REFERENCE, (url) => { urls.push(url); return `__EVCRATE_GLOBAL_URL_${urls.length - 1}__`; });
+  result = instructionReferences(result, instructionPath);
   for (const [pattern, replacement] of REPLACEMENTS) result = result.replace(pattern, replacement);
   result = result.replace(/\.Codex/gu, '.codex');
+  if (instructionPath === 'AGENTS.md') result = result.replace(/^.*(?:\bread\b|\bfollow\b).*$/gimu, (line) => {
+    if (/\buntrusted\b|\bdo not follow\b/iu.test(line) || line.includes('~/.codex/AGENTS.md')) return line;
+    return line.replace(/`AGENTS\.md`/gu, '`AGENTS.md` if present; otherwise read `~/.codex/AGENTS.md` (the published install; respect native overrides and custom CODEX_HOME)');
+  });
   return result.replace(/__EVCRATE_GLOBAL_URL_(\d+)__/gu, (_, index: string) => urls[Number(index)] ?? '');
 }
 
@@ -120,6 +125,7 @@ export function addWorkflowFallback(text: string): string {
 
 export function renderHarnessScriptReferences(text: string): string {
   const urls: string[] = []; let result = text.replace(URL_REFERENCE, (url) => { urls.push(url); return `__EVCRATE_HARNESS_URL_${urls.length - 1}__`; });
+  result = instructionReferences(result, 'AGENTS.md');
   const suffixes = ['output-styles', 'workflows', 'scripts', 'hooks', 'skills', '.evcrate.json', '.mcp.json', '.env'];
   for (const prefix of ['~', '$HOME', '${HOME}']) for (const suffix of suffixes) {
     const target = suffix === 'skills' ? '.agents/skills' : `.codex/${suffix}`;

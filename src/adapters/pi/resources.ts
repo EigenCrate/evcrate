@@ -47,6 +47,11 @@ export function inventory(context: ProjectionBuildContext): ResourceInventory {
   });
 }
 
+export function copyAgentsDocument(context: ProjectionBuildContext, resources: ResourceInventory): void {
+  const source = text(context, 'AGENTS.md');
+  writeProjectionFile(context, '.pi/agent/evcrate/AGENTS.md', new TextEncoder().encode(translatePrompt(normalizeLf(source), resources.commands)));
+}
+
 
 
 export function copyCommandsAndWorkflows(context: ProjectionBuildContext, resources: ResourceInventory): void {

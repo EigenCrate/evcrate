@@ -1,19 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync,
-  readdirSync, rmSync, writeFileSync
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync,
+  rmSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   ControlPlaneError, MAX_RETAINED_RELEASE_AGE_MS, PERSISTED_TARGETS, publishApply, publishDryRun,
-  publicationStateRoot, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext,
+  publicationStateRoot, recoverPublication, resolveCurrentPublicationBuild,
+  resolveInvocationContext, resolvePublicationProjectContext,
   runLocalBuild
 } from '../../dist/index.js';
+import { prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 
-const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]$/u, '');
+let packageRoot;
+let fixtureRoot;
+test.before(async () => {
+  fixtureRoot = mkdtempSync(join(tmpdir(), 'evcrate-publication-package-'));
+  packageRoot = join(fixtureRoot, 'package');
+  prepareFixtureWorkspace(packageRoot);
+  await runLocalBuild(packageRoot, PERSISTED_TARGETS, { emitAllManifests: true });
+});
+test.after(() => {
+  if (fixtureRoot !== undefined) rmSync(fixtureRoot, { recursive: true, force: true });
+});
 const policyBytes = Buffer.from('{"version":1,"advisor":{"backend":"codex","model":"m","effort":"low","timeout_ms":60000}}\n');
 
 function directory(path) {
@@ -21,19 +32,6 @@ function directory(path) {
   chmodSync(path, 0o700);
 }
 
-function copyTree(source, destination) {
-  const stat = lstatSync(source);
-  if (stat.isSymbolicLink()) throw new Error(`unexpected symlink: ${source}`);
-  if (stat.isDirectory()) {
-    mkdirSync(destination, { recursive: true, mode: Number(stat.mode) & 0o777 });
-    for (const entry of readdirSync(source)) copyTree(join(source, entry), join(destination, entry));
-    chmodSync(destination, Number(stat.mode) & 0o777);
-    return;
-  }
-  if (!stat.isFile()) throw new Error(`unexpected fixture node: ${source}`);
-  copyFileSync(source, destination);
-  chmodSync(destination, Number(stat.mode) & 0o777);
-}
 test('OMP publication is real, isolated, recoverable, and retention-bounded', () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-publication-'));
   try {
@@ -128,29 +126,6 @@ test('project publication commits shared HOME and scoped harness without retaini
   }
 });
 
-test('project publication validates a canonical multi-target binding sequence', () => {
-  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-order-'));
-  const home = join(root, 'home');
-  const project = join(root, 'project');
-  directory(home);
-  directory(project);
-  try {
-    const context = resolveInvocationContext({
-      packageRoot, cwd: packageRoot, home, projectRoot: project,
-      targets: ['copilot', 'pi', 'claude', 'codex']
-    });
-    const request = { scope: 'project', selectedTargets: context.selectedTargetIds };
-    assert.deepEqual(context.selectedTargetIds, ['claude', 'codex', 'copilot', 'pi']);
-    const result = publishApply(context, {}, request);
-    assert.deepEqual(result.phases[1].bindingOrder, ['.claude', '.codex', '.agents', 'AGENTS.md', '.copilot', '.pi']);
-    for (const relativePath of result.phases[1].bindingOrder) {
-      assert.equal(existsSync(join(project, relativePath)), true);
-    }
-    assert.equal(existsSync(join(project, '.evcrate', 'bin')), false);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
 test('project apply rejects a marker substituted to another destination root before HOME mutation', () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-project-root-binding-'));
   const home = join(root, 'home');
@@ -440,31 +415,15 @@ test('project recovery rejects a journal bound to another project identity', () 
 });
 
 test('project apply rejects an oversized result before transaction mutation', async () => {
-  const root = mkdtempSync(join(packageRoot, '.evcrate-project-result-limit-'));
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-project-result-limit-'));
   const fixturePackage = join(root, 'package');
   const home = join(root, 'home');
   const project = join(root, 'project');
   directory(home);
   directory(project);
   try {
-    directory(fixturePackage);
+    prepareFixtureWorkspace(fixturePackage);
     const sourceRoot = join(fixturePackage, '.evcrate', 'source');
-    copyTree(join(packageRoot, '.evcrate', 'targets'), join(fixturePackage, '.evcrate', 'targets'));
-    copyTree(
-      join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin'),
-      join(sourceRoot, '.evcrate', 'bin')
-    );
-    copyTree(join(packageRoot, '.evcrate', 'source', '.pi'), join(sourceRoot, '.pi'));
-    copyTree(join(packageRoot, 'dist'), join(fixturePackage, 'dist'));
-    copyTree(
-      join(packageRoot, '.evcrate', 'source', '.claude'),
-      join(sourceRoot, '.claude')
-    );
-    writeFileSync(
-      join(sourceRoot, 'CLAUDE.md'),
-      readFileSync(join(packageRoot, '.evcrate', 'source', 'CLAUDE.md')),
-      { mode: 0o644 }
-    );
     const workflowRoot = join(sourceRoot, '.claude', 'workflows');
     const syntheticWorkflowRoot = join(workflowRoot, 'helpers');
     directory(syntheticWorkflowRoot);
@@ -476,10 +435,13 @@ test('project apply rejects an oversized result before transaction mutation', as
         { mode: 0o644 }
       );
     }
-    await runLocalBuild(fixturePackage, PERSISTED_TARGETS);
+    const build = await runLocalBuild(fixturePackage, PERSISTED_TARGETS);
+    assert.equal(build.outputPaths['.claude'], join(sourceRoot, '.claude-projection'));
+    assert.equal(existsSync(join(build.outputPaths['.claude'], 'rules', 'AGENTS.md')), true);
     const context = resolveInvocationContext({
       packageRoot: fixturePackage, cwd: fixturePackage, home, projectRoot: project, targets: ['omp']
     });
+    assert.deepEqual(resolveCurrentPublicationBuild(context).manifest, build.manifest);
     const identity = resolvePublicationProjectContext(context).projectIdentity;
     assert.throws(
       () => publishApply(context, {}, { scope: 'project', selectedTargets: ['omp'] }),

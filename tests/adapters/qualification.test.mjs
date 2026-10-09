@@ -46,8 +46,8 @@ test('qualification rejects stale, duplicate, mixed, and failed evidence', () =>
   const record = qualifyProjectionAdapter(input('claude'));
   assert.throws(() => createQualifiedRecordMap([record, record]), code('VALIDATION_INVALID'));
   const map = createQualifiedRecordMap([record]);
-  assert.equal(selectProjectionEngine(['gemini'], map), 'python-compatibility');
-  assert.throws(() => selectProjectionEngine(['claude', 'gemini'], map), code('CAS_CONFLICT'));
+  assert.equal(selectProjectionEngine(['codex'], map), 'python-compatibility');
+  assert.throws(() => selectProjectionEngine(['claude', 'codex'], map), code('CAS_CONFLICT'));
   assert.throws(() => qualifyProjectionAdapter({
     ...input('claude'),
     validation: { target: 'claude', valid: false, diagnostics: [] },
@@ -68,6 +68,6 @@ test('qualification validates canonical target identity and evidence shape', () 
   }), code('VALIDATION_INVALID'));
   assert.throws(() => qualifyProjectionAdapter({
     ...input('claude'),
-    validation: { target: 'gemini', valid: true, diagnostics: [] },
+    validation: { target: 'codex', valid: true, diagnostics: [] },
   }), code('VALIDATION_INVALID'));
 });

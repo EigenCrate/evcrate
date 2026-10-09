@@ -13,7 +13,7 @@ and [code standards](./code-standards.md).
 ## Product intent
 
 EVCrate gives maintainers one source of truth for Claude-oriented harness resources
-while supporting Claude, Codex, Gemini, Antigravity, Pi, OMP, and Copilot projections.
+while supporting Claude, Codex, Antigravity, Pi, OMP, Copilot, and VS Code Local projections.
 It must make generated output reproducible, publication recoverable, and checkpoint
 counsel bounded and fail-closed.
 
@@ -33,7 +33,7 @@ counsel bounded and fail-closed.
 
 - Strict bounded JSON/protocol contracts and sanitized errors.
 - Schema-2 target manifests/build manifests and schema-1 resource registry.
-- Eight fixed projection adapters (`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`) with no discovery or fallback adapter.
+- Seven fixed projection adapters (`claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`) with no discovery or fallback adapter; standalone Gemini retired.
 - CAS-aware import, scope, advisor-settings, build, publication, and recovery flows.
 - Scope-aware publication (`--scope home|project`) with unconditional shared controller
   publication to `<home>/.evcrate/bin` and independent project harness materialization.
@@ -41,8 +41,7 @@ counsel bounded and fail-closed.
   of shared commit, and schema-2 scope-isolated recovery.
 - One shared advisor controller published to `$HOME/.evcrate/bin`.
 - Deterministic advice activation via `evcrate-advice-mode`, explicit checkpoint counsel through a final `--advice` token, and structured caller handoffs.
-- Documentation/target command naming as `/cmd-*`, OMP `__` flattening, and
-  Copilot `evcrate-cmd-*` projection.
+- Unified command and agent naming as `/evc-cmd-*` (with `-x-` segment separation) and `/evc-*` across all seven targets.
 
 ### Out of scope for this baseline
 
@@ -74,9 +73,11 @@ out of scope.
 `.evcrate/source/.evcrate/bin/`. Target manifests and overlays select generated
 outputs.
 
-**Acceptance:** A build reads the canonical roots, registers all eight fixed target
-adapters, rejects missing/duplicate/unsupported target adapters, and emits validated
-projections. A generated output is never treated as an authoring source.
+**Acceptance:** A build reads canonical `.claude/AGENTS.md` through the resource
+graph, registers every current fixed adapter, rejects missing/duplicate/unsupported
+targets, and emits validated projections without overwriting the authoring tree.
+Native delivery must match actual HOME/project loaders; unavailable native surfaces
+remain explicitly unqualified. Generated output is never an authoring source.
 
 ### FR-2: Deterministic target authorization
 
@@ -251,7 +252,7 @@ command is treated as canonical.
 - **Invocation & limits:** Maintained callers invoke the helper with supported Node (`>=22.19.0`), absolute HOME path, zero positional options, and canonical project cwd. Strict bounded JSON stdin (`protocol: "evcrate-advice-mode"`, version 1, max 64 KiB), raw arguments (max 32 KiB), terminal output (max 256 KiB), and 2-second deadlines. CLI compares `fs.realpathSync(project_root)` to `fs.realpathSync(process.cwd())`; a symlinked logical root is accepted, while an unresolvable or different root fails with `ADVICE_CONTEXT_MISMATCH`; original context is echoed on success. Selection paths (`plan_path`, `phase_path`) are validated by metadata and relative-POSIX safety only: reject leading `/`, `\`, `:`, controls, empty/`.`/`..` components, trailing `.` or space, characters `<` `>` `"` `|` `?` `*`, and case-insensitive device stems CON, PRN, AUX, NUL, CLOCK$, COM0–COM9, LPT0–LPT9, COM¹ COM² COM³, LPT¹ LPT² LPT³, CONIN$, CONOUT$, with or without any extension as well as device stems with optional spaces before an extension (conservative admission policy, no Windows qualification claim; names with internal spaces or merely resembling stems stay accepted); 1 KiB bound; no sensitive-name filter.
 - **Token parsing, quote spans & byte preservation:** The helper parses arguments with strict quote spans and whitespace boundaries. Single (`'...'`) and double (`"..."`) quotes define non-evaluating spans where flags are ignored. A quote opens a span only at an unescaped token boundary (start of input or after unescaped whitespace); mid-token quotes (`don't`, `café's`, `日本's`, `5" bezel`) are ordinary text (no word-character apostrophe heuristic). In boundary-less constructs such as `key="x --advice y" --advice` or `("use --advice here") --advice`, the inner flag is not inside a quote span, producing two eligible flags that fail closed with `ADVICE_MODE_DUPLICATE_FLAG` rather than silently activating. A backslash (`\`) escapes following characters (`\"`, `\'`, `\\`); odd backslashes escape quotes (preventing span boundary transitions) and escaped flags (`\--advice` or following escaped whitespace `\ `) never match. Unterminated quotes suppress trailing flags (`off` mode). Standalone unescaped `--advice` requires whitespace or string delimiters; two or more eligible flags reject with `ADVICE_MODE_DUPLICATE_FLAG`. Original task bytes and quotes are never stripped or shell-evaluated; only the final standalone `--advice` token and preceding whitespace are stripped when resolving `explicit` mode.
 - **Modes & lazy mentoring:** Resolves mode `off`, `explicit`, or `inherited`. Helper in off mode performs zero get (L=0). Cooperating callers load full `advisor-mentoring.md` conditionally only upon resolved `explicit` or `inherited` mode. Off mode preserves ordinary debugging, review corrections, validation, approvals, and command-scoped Git policy without advice lifecycle calls; neutral historical progress inspection can perform identified `state get` without activating advice.
-- **Structured handoffs & known phase preservation:** Routers (`/cmd-cook`, `/cmd-fix`) use `kind: "pre-run"` with `run: null` to preserve known plan/phase/target context (`plan_path`, `phase_path`, `phase_id`) without synthetic flags or eager router state init; downstream receivers may refine only unknown (`null`) plan/phase selections. Continuation delegates use `kind: "same-run"` forwarding verified `task_run_id`, `project_id`, `phase_id`, and exact revisions (`task_revision`, `scope_revision`, `evidence_revision`) validated by lazy get against durable state; completed or abandoned runs fail closed with `ADVICE_RUN_COMPLETED`.
+- **Structured handoffs & known phase preservation:** Routers (`/evc-cmd-cook`, `/evc-cmd-fix`) use `kind: "pre-run"` with `run: null` to preserve known plan/phase/target context (`plan_path`, `phase_path`, `phase_id`) without synthetic flags or eager router state init; downstream receivers may refine only unknown (`null`) plan/phase selections. Continuation delegates use `kind: "same-run"` forwarding verified `task_run_id`, `project_id`, `phase_id`, and exact revisions (`task_revision`, `scope_revision`, `evidence_revision`) validated by lazy get against durable state; completed or abandoned runs fail closed with `ADVICE_RUN_COMPLETED`.
 - **Host admission & OMP compact v2 envelope:** Supported command helper admission executes the HOME helper before model prompt admission. Injected `evcrate_omp_command_context` (version 2) carries `protocol`, `version: 2`, `source: "native-user"`, `command`, `mode`, `reason`, exact `context`, and `run`, with no duplicate `raw_arguments`, `work_arguments`, or `activation_result`. Admitted work text appears exactly once in the command prompt body. Native `execute(args, ctx, raw?)` validates native-user admission (`handoff: null`, `source: "native-user"`); no separate delegated admission API or delegated host header exists.
 - **Direct definition receiving contract:** Delegating directly to a command within a session or reading its definition always evaluates the HOME helper with the exact child context and current-call handoff per `advice-activation.md`; model-authored headers are never trusted, and callers never reuse parent native activation results or synthesize native-user headers.
 - **Fail-closed:** Missing/unreadable helper, unsupported Node, nonzero exit, malformed output, context mismatch, or stale revisions halt routing immediately with a sanitized four-key diagnostic (`{ code, category, action, message }`). No fallback parser, automatic installation, retry loop, or heuristic mode inference.
@@ -259,16 +260,15 @@ command is treated as canonical.
 - **Boundaries & qualification:** Caller JSON and handoffs provide cooperative consistency without authenticated user intent or session-token provenance guarantees; mentoring instructions are loaded lazily. Linux x64 bounded native qualification observed on OMP 18.6.1 across six scenario classes (`s01`, `s02`, `s03`, `s05`, `s07`, `s11`) capped at Step 0; prerequisite admission gates (`s10` diagnostic uncaptured, `s12` timed out) remain explicit native limits; incomplete A02/A22 historical artifact evidence, A12 retained-record reconciliation without compiler loops, and unexercised A13/A16 native branches. Other vendor model loops remain unqualified; native Windows and macOS are excluded by user direction; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim.
 ### FR-12: Documented command names
 
-**Requirement:** Documentation and target-facing examples use `/cmd-*` for every
-slash command/resource name, including `.claude` references. OMP nested names use
-`__`; Copilot names remain `/evcrate-cmd-*`.
+**Requirement:** Documentation and target-facing examples use unified `/evc-cmd-*`
+for every slash command/resource name and `/evc-*` for agents. Nested commands use
+the reserved `-x-` path separator; Copilot projects user-invocable skills as
+`evc-cmd-*` with raw `$ARGUMENTS`.
 
-**Acceptance:** Core docs contain no bare documented workflow invocation. Each
-OMP or Copilot translation points to `evcrate/command-name-map.json`. The docs
-explicitly state that current canonical scanning/parser enforcement is a
-follow-up and that this requirement does not rename source files or alter
-command implementation.
-
+**Acceptance:** Core docs use flat `/evc-cmd-*` commands. All seven active targets
+emit unified `evc-*` names with zero compatibility aliases. The single naming
+authority is `src/adapters/resource-naming.ts`, enforced canonically by
+`.evcrate/source/.claude/scripts/scan_commands.py`.
 ### FR-13: Sanitized audit history and outcome review
 
 **Requirement:** Store a bounded, versioned execution record and linked outcome
@@ -575,7 +575,7 @@ are not the current Native Advisor contract.
 
 ## Observable release gates
 
-**Current status:** EVCrate package `2.6.0` maintains the core CLI, Advisor
+**Current status:** EVCrate package `2.10.0` maintains the core CLI, Advisor
 controller, producer history, and seven-asset release workflow. The DamHopper
 plugin runtime/package/worker and paired host integration were retired on
 2026-10-02. E00–E05 and Workspace Advisor Phase 00–09 qualification records are

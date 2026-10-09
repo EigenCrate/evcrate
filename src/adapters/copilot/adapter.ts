@@ -15,7 +15,9 @@ import { assertUniqueNames } from '../resource-naming.js';
 function assertManifest(context: ProjectionBuildContext): void {
   const shared = context.manifest.sharedJson;
   if (context.manifest.id !== 'copilot' || context.manifest.outputRoots.length !== 1
-    || context.manifest.outputRoots[0] !== '.copilot' || shared === null
+    || context.manifest.outputRoots[0] !== '.copilot'
+    || context.manifest.projectDocs.length !== 1
+    || context.manifest.projectDocs[0] !== '.github/copilot-instructions.md' || shared === null
     || shared.schema !== 'managed-json-v1' || shared.destination !== 'settings.json'
     || shared.fragment !== 'evcrate/managed-settings.json'
     || shared.managedKeys.length !== 3

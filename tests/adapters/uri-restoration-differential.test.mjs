@@ -174,9 +174,8 @@ test('applyReplacements (Codex): preserves base callback edge behavior on author
 });
 
 test('applyReplacements (Codex): preserves protected URLs while performing non-URL canonical replacements', () => {
-  const input = 'Migrate CLAUDE.md to AGENTS.md; see https://example.org/.claude/reference?q=$$test for claude details.';
-  // Surrounding CLAUDE.md -> AGENTS.md, claude -> codex; URL https://example.org/.claude/reference?q=$$test preserved verbatim
-  const expected = 'Migrate AGENTS.md to AGENTS.md; see https://example.org/.claude/reference?q=$$test for codex details.';
+  const input = 'Read .claude/rules/AGENTS.md; see https://example.org/.claude/rules/AGENTS.md?q=$$test and ssh://host/.claude/rules/AGENTS.md.';
+  const expected = 'Read AGENTS.md; see https://example.org/.claude/rules/AGENTS.md?q=$$test and ssh://host/.claude/rules/AGENTS.md.';
   assert.equal(applyReplacements(input), expected);
 });
 

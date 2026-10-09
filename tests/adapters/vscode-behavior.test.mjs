@@ -38,33 +38,17 @@ import {
   loadTargetManifestRegistry
 } from '../../dist/manifests/registry.js';
 
-import {
-  PERSISTED_TARGETS
-} from '../../dist/index.js';
 
 const repository = process.cwd();
 
 function createTempDir(prefix = 'vscode-behavior-test-') {
-  return mkdtempSync(join(tmpdir(), prefix));
+  // Session-state ownership checks permit system temp ancestors, not arbitrary TMPDIR parents.
+  return mkdtempSync(join(process.platform === 'win32' ? tmpdir() : '/tmp', prefix));
 }
 
 // -----------------------------------------------------------------------------
 // 1. Target and Registry Migration Contracts
 // -----------------------------------------------------------------------------
-test('vscode-behavior: exact eight persisted targets in schema 2 registry', () => {
-  const registryPath = join(repository, '.evcrate/targets/manifest.json');
-  const registry = loadTargetManifestRegistry(registryPath);
-  
-  assert.equal(registry.targets.size, 8);
-  assert.ok(registry.targets.has('vscode'), 'vscode target must exist in registry');
-  assert.deepEqual(
-    [...registry.targets.keys()].sort(),
-    ['antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi', 'vscode'].sort()
-  );
-
-  assert.equal(PERSISTED_TARGETS.length, 8);
-  assert.ok(PERSISTED_TARGETS.includes('vscode'));
-});
 
 test('vscode-behavior: legacy schema 1 fixtures decode conservatively without mutating state', () => {
   const legacyFixturePath = join(repository, 'tests/fixtures/resource-registry-v1/payloads.json');

@@ -26,7 +26,6 @@ export function assertPublicationRules(manifest: TargetManifest): void {
     'omp-agent-prefix': 'omp',
     'codex-home-path-rewrite': 'codex',
     'claude-home-path-rewrite': 'claude',
-    'gemini-home-path-rewrite': 'gemini',
     'antigravity-home-path-rewrite': 'antigravity',
     'copilot-home-path-rewrite': 'copilot',
     'claude-skill-root-exclusion': 'claude'
@@ -89,12 +88,36 @@ function rewriteClaudeSettings(content: Uint8Array, destinationRoot: string): Ui
   return rewriteHookDocument(content, (command) => rewriteProjectPath(command, 'CLAUDE_PROJECT_DIR', '.claude', destinationRoot), true);
 }
 
-function rewriteGeminiSettings(content: Uint8Array, destinationRoot: string): Uint8Array {
-  return rewriteHookDocument(content, (command) => rewriteProjectPath(command, 'GEMINI_PROJECT_DIR', '.gemini', destinationRoot));
-}
-
 function rewriteAntigravityHooks(content: Uint8Array, destinationRoot: string): Uint8Array {
-  return rewriteHookDocument(content, (command) => rewriteProjectPath(command, 'AGY_PROJECT_DIR', '.antigravity', destinationRoot));
+  const parsed = parseJsonDocument(content);
+  if (!isPlainObject(parsed)) fail();
+  const rewrite = (command: string): string => {
+    const match = /^node (\.antigravity\/hooks\/[A-Za-z0-9._-]+)$/u.exec(command);
+    if (!match) fail();
+    return `node ${shellQuote(join(destinationRoot, match[1].slice('.antigravity/'.length)))}`;
+  };
+  const events: Readonly<Record<string, true>> = {
+    PreToolUse: true, PostToolUse: true, PreInvocation: true, PostInvocation: true, Stop: true
+  };
+  for (const definition of Object.values(parsed)) {
+    if (!isPlainObject(definition)) fail();
+    for (const [event, handlers] of Object.entries(definition)) {
+      if (event === 'enabled') {
+        if (typeof handlers !== 'boolean') fail();
+        continue;
+      }
+      if (!Object.hasOwn(events, event) || !Array.isArray(handlers)) fail();
+      if (event === 'PreToolUse' || event === 'PostToolUse') {
+        rewriteCommands(handlers, rewrite);
+      } else {
+        for (const handler of handlers) {
+          if (!isPlainObject(handler) || typeof handler.command !== 'string') fail();
+          handler.command = rewrite(handler.command);
+        }
+      }
+    }
+  }
+  return new TextEncoder().encode(JSON.stringify(parsed, null, 2));
 }
 
 function countOccurrences(value: string, needle: string): number {
@@ -173,8 +196,6 @@ export function publishFile(
     } else if (hasRule(manifest, 'codex-home-path-rewrite')) {
       if (relativePath === 'hooks.json') publishedContent = codexHooks(content, destinationRoot);
       if (relativePath === 'config.toml') publishedContent = codexConfig(content, destinationRoot);
-    } else if (hasRule(manifest, 'gemini-home-path-rewrite') && relativePath === 'settings.json') {
-      publishedContent = rewriteGeminiSettings(content, destinationRoot);
     } else if (hasRule(manifest, 'antigravity-home-path-rewrite') && relativePath === 'hooks.json') {
       publishedContent = rewriteAntigravityHooks(content, destinationRoot);
     } else if (hasRule(manifest, 'copilot-home-path-rewrite')) {

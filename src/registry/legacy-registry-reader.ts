@@ -1,7 +1,7 @@
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { assertExactKeys } from '../protocol/validation.js';
+import { assertExactKeys, boundedText } from '../protocol/validation.js';
 import { isPlainObject } from '../protocol/json.js';
-import { validateResourceRecord } from '../protocol/resource-payload-validation.js';
+import { validateCompatibilityStatus, validateResourceRecord } from '../protocol/resource-payload-validation.js';
 import { MAX_RESOURCE_RECORDS } from './schema.js';
 import type { RegistryDocument, ResourceRecord, RegistryCompatibilityEntry } from './types.js';
 
@@ -23,6 +23,25 @@ function compareCodePoints(left: string, right: string): number {
   return a.length - b.length;
 }
 
+/** Validate and remove a retired input-only compatibility entry. */
+export function removeRetiredGeminiCompatibility(value: unknown): Record<string, unknown> {
+  if (!isPlainObject(value)) throw new ControlPlaneError('PROTOCOL_INVALID');
+  const { gemini: retired, ...retained } = value;
+  if (!isPlainObject(retired)
+    || !Object.hasOwn(retired, 'status')
+    || Object.keys(retired).some((key) => key !== 'status' && key !== 'reason')) {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+  try {
+    const status = validateCompatibilityStatus(retired.status);
+    if (retired.reason !== undefined) boundedText(retired.reason, 256, 'compatibility reason');
+    if (status === 'unsupported' && retired.reason === undefined) throw new ControlPlaneError('PROTOCOL_INVALID');
+  } catch {
+    throw new ControlPlaneError('PROTOCOL_INVALID');
+  }
+  return retained;
+}
+
 export function normalizeLegacyRecord(value: unknown): ResourceRecord {
   if (!isPlainObject(value)) throw new ControlPlaneError('PROTOCOL_INVALID');
   const raw = value as Record<string, unknown>;
@@ -40,9 +59,10 @@ export function normalizeLegacyRecord(value: unknown): ResourceRecord {
     throw new ControlPlaneError('PROTOCOL_INVALID');
   }
 
-  // Create temporary record with vscode filled in so validateResourceRecord passes 8-target validation
+  // Retain legacy source recognition without persisting the retired Gemini target.
+  const retainedCompatibility = removeRetiredGeminiCompatibility(raw.compatibility);
   const augmentedCompat: Record<string, unknown> = {
-    ...(raw.compatibility as Record<string, unknown>),
+    ...retainedCompatibility,
     vscode: DEFAULT_VSCODE_COMPATIBILITY
   };
 

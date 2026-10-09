@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { createProjectionBuildContext, createStagedRoot, loadTargetManifestRegistry } from "../../../../dist/index.js";
+import { piAdapter } from "../../../../dist/adapters/pi/index.js";
+import { translatePrompt } from "../../../../dist/adapters/pi/transforms.js";
 
 import {
   discoverCommandFiles,
@@ -157,6 +163,131 @@ test("resolves contained markers and rejects missing, traversal, and escaping-sy
   } finally {
     rmSync(agent, { recursive: true, force: true });
     rmSync(outside, { recursive: true, force: true });
+  }
+});
+
+test("canonical Pi command and main/child instructions read the installed HOME projection from a foreign cwd", (t) => {
+  const root = fixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const stage = createStagedRoot(root);
+  t.after(() => stage.cleanup());
+  const registry = loadTargetManifestRegistry(join(repository, ".evcrate/targets/manifest.json"));
+  const context = createProjectionBuildContext(registry.targets.get("pi"), join(repository, ".evcrate/source/.claude"), stage);
+  piAdapter.build(context);
+  const validation = piAdapter.validate(context);
+  assert.equal(validation.valid, true, JSON.stringify(validation.diagnostics));
+  const home = join(root, "home");
+  cpSync(join(stage.path, ".pi"), join(home, ".pi"), { recursive: true });
+  const foreignCwd = join(root, "foreign-project");
+  const references = [
+    "AGENTS.md",
+    "workflows/advisor-mentoring.md",
+    "workflows/advice-activation.md",
+    "workflows/plan-progress.md",
+    "workflows/development-rules.md",
+  ];
+  for (const prefix of [".pi/agent/evcrate", ".claude"]) {
+    for (const reference of references) {
+      const wrong = join(foreignCwd, prefix, reference);
+      mkdirSync(dirname(wrong), { recursive: true });
+      writeFileSync(wrong, "WRONG_FOREIGN_PAYLOAD");
+    }
+  }
+  const extension = join(home, ".pi/agent/extensions/evcrate");
+  const moduleUrl = (name) => JSON.stringify(pathToFileURL(join(extension, name)).href);
+  const script = `
+    import assert from "node:assert/strict";
+    import { readFileSync, rmSync, writeFileSync } from "node:fs";
+    import { basename, join } from "node:path";
+    const { getInstalledAgentRoot } = await import(${moduleUrl("paths.js")});
+    const { findManagedCommand, expandManagedCommand } = await import(${moduleUrl("commands.js")});
+    const { registerHooks } = await import(${moduleUrl("hooks.js")});
+    const { runChildStart } = await import(${moduleUrl("child-context.js")});
+    const agentRoot = getInstalledAgentRoot(${moduleUrl("paths.js")});
+    const resourceRoot = join(agentRoot, "evcrate");
+    function readReference(body, reference) {
+      const paths = [...body.matchAll(/\x60([^\x60\\n]+)\x60/g)]
+        .map((match) => match[1]).filter((path) => basename(path) === basename(reference));
+      assert.ok(paths.length > 0, "Missing resource reference: " + reference);
+      for (const path of paths) {
+        assert.equal(path, join(resourceRoot, reference));
+        const contents = readFileSync(path, "utf8");
+        assert.equal(contents, readFileSync(join(resourceRoot, reference), "utf8"));
+        assert.notEqual(contents, "WRONG_FOREIGN_PAYLOAD");
+        assert.ok(contents.trim());
+      }
+    }
+    const command = findManagedCommand("evc-cmd-code", agentRoot);
+    assert.ok(command);
+    const rawArgs = "plans/selected.md {{evcrate:workflows/user-literal.md}}";
+    const expanded = await expandManagedCommand(command, rawArgs, { cwd: process.cwd() }, { agentRoot });
+    assert.ok(expanded.body.includes(rawArgs));
+    for (const reference of ${JSON.stringify(references.slice(0, 4))}) readReference(expanded.body, reference);
+    const handlers = new Map();
+    const adapter = registerHooks({ on(name, handler) { handlers.set(name, handler); } }, {
+      agentRoot, resourceRoot, hookMap: { schema: "evcrate-pi-hook-map-v1", events: {} },
+    });
+    const runtimeContext = { cwd: process.cwd(), sessionId: "installed-resource-consumer" };
+    await handlers.get("session_start")({}, runtimeContext);
+    const startup = await handlers.get("before_agent_start")({}, runtimeContext);
+    for (const reference of ["AGENTS.md", "workflows/development-rules.md"]) {
+      readReference(startup.message.content, reference);
+    }
+    assert.equal(startup.message.details.evcrateStartup, true);
+    assert.equal(await handlers.get("before_agent_start")({}, runtimeContext), undefined);
+    const startChild = () => runChildStart({
+      runner: adapter.childStartRunner,
+      canonicalEvent: { request: { cwd: process.cwd(), agent: "evc-tester", nodeId: "child" } },
+      task: "Read required installed instructions",
+      runtimeRoots: { resourceRoot },
+    });
+    const child = await startChild();
+    for (const reference of ["AGENTS.md", "workflows/development-rules.md"]) {
+      readReference(child.task, reference);
+    }
+    assert.ok(child.task.includes(child.additionalContext));
+    assert.equal(startup.message.content, child.additionalContext);
+    const required = join(resourceRoot, "workflows/development-rules.md");
+    const saved = readFileSync(required);
+    rmSync(required);
+    await assert.rejects(handlers.get("session_compact")({}, runtimeContext));
+    assert.deepEqual(await handlers.get("input")({}, runtimeContext), { action: "handled" });
+    await assert.rejects(startChild(), /resource is unavailable/);
+    writeFileSync(required, saved);
+    assert.equal(await handlers.get("input")({}, runtimeContext), undefined);
+    readReference((await handlers.get("before_agent_start")({}, runtimeContext)).message.content, "AGENTS.md");
+  `;
+  execFileSync(process.execPath, ["--input-type=module", "-e", script], {
+    cwd: foreignCwd,
+    env: { ...process.env, HOME: home, PI_CODING_AGENT_DIR: join(foreignCwd, ".pi/agent") },
+    stdio: "pipe",
+  });
+});
+
+test("Pi prompt resource markers bind project and HOME references while preserving URI literals and semantic identities", () => {
+  const agent = fixture();
+  try {
+    for (const reference of ["AGENTS.md", "workflows/required.md", "scripts/required.cjs", "hooks/required.cjs"]) {
+      const target = join(agent, "evcrate", reference);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, reference);
+      const canonical = reference === "AGENTS.md" ? "rules/AGENTS.md" : reference;
+      for (const prefix of ["", "./", "~/", "$HOME/", "\${HOME}/"]) {
+        const resolved = resolveEvcrateMarkers(translatePrompt(prefix + ".claude/" + canonical), agent);
+        assert.equal(resolved, target);
+        assert.equal(readFileSync(resolved, "utf8"), reference);
+      }
+    }
+    for (const literal of [
+      "https://example.test/.claude/workflows/required.md",
+      "file:///other/.claude/rules/AGENTS.md",
+      "ssh://host/.claude/scripts/required.cjs",
+      "AGENTS.override.md",
+      "Claude Code CLI by Anthropic uses claude-sonnet; target: claude",
+    ]) assert.equal(resolveEvcrateMarkers(translatePrompt(literal), agent), literal);
+  } finally {
+    rmSync(agent, { recursive: true, force: true });
   }
 });
 

@@ -19,6 +19,11 @@ The Python script only understands English keywords. If `$ARGUMENTS` is in anoth
 python .claude/scripts/ev-help.py "$ARGUMENTS"
 ```
 
+Resolve the script path against the selected project or HOME installation before
+running it from another working directory. Its adjacent `scanner-layout.json`
+selects that installation's command catalog and target identity; another
+co-installed harness or the caller's working directory is never a fallback.
+
 ## Output Type Detection
 
 The script outputs a type marker on the first line: `@EVCRATE_OUTPUT_TYPE:<type>`
@@ -113,15 +118,14 @@ Never replace or summarize the script output. Always show it fully, then enhance
 
 ## Supported Harness Targets
 
-EVCrate projects canonical resources into eight target harness formats:
+EVCrate projects canonical resources into seven target harness formats:
 1. `claude` (Anthropic Claude Code CLI)
 2. `codex` (OpenAI Codex CLI with companion `.agents` root)
-3. `gemini` (Google Gemini CLI)
-4. `antigravity` (Antigravity harness)
-5. `pi` (Pi coding agent)
-6. `omp` (OpenCode/OMP)
-7. `copilot` (GitHub Copilot CLI)
-8. `vscode` (VS Code Local Agent Plugins 1.0 bundle at `.evcrate-vscode/`)
+3. `antigravity` (Antigravity harness)
+4. `pi` (Pi coding agent)
+5. `omp` (OpenCode/OMP)
+6. `copilot` (GitHub Copilot CLI)
+7. `vscode` (VS Code Local Agent Plugins 1.0 bundle at `.evcrate-vscode/`)
 
 ### VS Code Local Support Boundaries
 
@@ -130,3 +134,4 @@ EVCrate projects canonical resources into eight target harness formats:
 - **Command Syntax**: Projects slash commands as manual skills named like every other target (e.g., `/evc-cmd-plan`), forwarding arguments directly.
 - **Activation**: User-controlled via VS Code's `chat.pluginLocations` setting; publication never touches editor configuration.
 - **Scope Recovery**: `evcrate recover --scope project|home` restores managed files without touching editor settings or user workspaces.
+- **Qualification**: Local bundle/helper execution does not establish native VS Code GUI qualification.

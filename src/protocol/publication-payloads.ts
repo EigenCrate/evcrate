@@ -1,7 +1,7 @@
-import type { JsonValue } from './json.js';
+import { isPlainObject, type JsonValue } from './json.js';
 import {
   assertExactKeys, assertSafeBoundedJson, boundedText, normalizeTarget,
-  validateOpaque, type PersistedTarget
+  validateOpaque, PERSISTED_TARGETS, type PersistedTarget
 } from './validation.js';
 import { normalizeRelativePath } from '../filesystem/paths.js';
 import {
@@ -22,11 +22,10 @@ export type PublicationChangeAction = typeof PUBLICATION_CHANGE_ACTIONS[number];
 export type PublicationTarget = PersistedTarget | 'advisor-controller';
 
 export const PUBLICATION_BINDING_ORDER = Object.freeze([
-  '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+  '.evcrate/bin', '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
 ] as const);
 export const PUBLICATION_TARGET_BINDINGS = Object.freeze({
-  gemini: Object.freeze(['.gemini']),
-  codex: Object.freeze(['.agents', '.codex']),
+  codex: Object.freeze(['.agents/skills', '.codex']),
   pi: Object.freeze(['.pi']),
   antigravity: Object.freeze(['.gemini/config']),
   omp: Object.freeze(['.omp']),
@@ -36,22 +35,20 @@ export const PUBLICATION_TARGET_BINDINGS = Object.freeze({
 });
 export const PUBLICATION_PROJECT_TARGET_BINDINGS = Object.freeze({
   claude: Object.freeze(['.claude']),
-  codex: Object.freeze(['.codex', '.agents', 'AGENTS.md']),
-  gemini: Object.freeze(['.gemini', 'GEMINI.md']),
-  antigravity: Object.freeze(['.antigravity']),
+  codex: Object.freeze(['.codex', '.agents/skills', 'AGENTS.md']),
+  antigravity: Object.freeze(['.antigravity', '.agents/hooks.json', '.agents/rules/evcrate-antigravity.md']),
   pi: Object.freeze(['.pi']),
   omp: Object.freeze(['.omp']),
-  copilot: Object.freeze(['.copilot']),
+  copilot: Object.freeze(['.copilot', '.github/copilot-instructions.md']),
   vscode: Object.freeze(['.evcrate-vscode'])
 });
 export const PUBLICATION_LOCAL_ROOTS = Object.freeze([
-  '.evcrate/bin', '.gemini', '.agents', '.codex', '.antigravity', '.pi', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+  '.evcrate/bin', '.agents/skills', '.codex', '.antigravity', '.pi', '.omp', '.claude', '.copilot', '.evcrate-vscode'
 ] as const);
 export const MAX_PUBLICATION_RESULT_BYTES = 2 * 1024 * 1024;
 export const MAX_PUBLICATION_STATE_BYTES = 16 * 1024 * 1024;
 export const PUBLICATION_TARGET_LOCAL_ROOTS = Object.freeze({
-  gemini: Object.freeze(['.gemini']),
-  codex: Object.freeze(['.codex', '.agents']),
+  codex: Object.freeze(['.codex', '.agents/skills']),
   pi: Object.freeze(['.pi']),
   antigravity: Object.freeze(['.antigravity']),
   omp: Object.freeze(['.omp']),
@@ -62,6 +59,151 @@ export const PUBLICATION_TARGET_LOCAL_ROOTS = Object.freeze({
 export const MAX_PUBLICATION_CHANGES = 10_000;
 export const MAX_PUBLICATION_BINDINGS = 16;
 export const MAX_PUBLICATION_RELEASE_ID_BYTES = 256;
+
+// Input-only layouts recorded by 768fbb5e before the seven-target cutover.
+// Never use these tables to select a build or grant new publication bindings.
+export type PublicationStateTarget = PersistedTarget | 'gemini';
+export type PublicationStateGeneration = 'current' | 'predecessor';
+export type PublicationStateOwnership = Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>;
+const PREDECESSOR_HOME_BINDINGS = Object.freeze({
+  gemini: Object.freeze(['.gemini']), codex: Object.freeze(['.agents', '.codex']), pi: Object.freeze(['.pi']),
+  antigravity: Object.freeze(['.gemini/config']), omp: Object.freeze(['.omp']), claude: Object.freeze(['.claude']),
+  copilot: Object.freeze(['.copilot']), vscode: Object.freeze(['.evcrate-vscode'])
+});
+const PREDECESSOR_PROJECT_BINDINGS = Object.freeze({
+  claude: Object.freeze(['.claude']), codex: Object.freeze(['.codex', '.agents', 'AGENTS.md']),
+  gemini: Object.freeze(['.gemini', 'GEMINI.md']), antigravity: Object.freeze(['.antigravity']),
+  pi: Object.freeze(['.pi']), omp: Object.freeze(['.omp']),
+  copilot: Object.freeze(['.copilot']), vscode: Object.freeze(['.evcrate-vscode'])
+});
+const PREDECESSOR_BINDING_ORDER = [
+  '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config',
+  '.omp', '.claude', '.copilot', '.evcrate-vscode'
+] as const;
+const NO_STATE_BINDINGS: readonly string[] = Object.freeze([]);
+
+export function publicationStateTarget(value: unknown): PublicationStateTarget {
+  if (value === 'gemini') return value;
+  if (typeof value !== 'string' || !PERSISTED_TARGETS.includes(value as PersistedTarget)) invalidResourcePayload();
+  return value as PersistedTarget;
+}
+export function publicationStateTargets(value: unknown, allowEmpty = false): readonly PublicationStateTarget[] {
+  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)
+    || value.length > PERSISTED_TARGETS.length + 1) invalidResourcePayload();
+  const result = value.map(publicationStateTarget);
+  if (new Set(result).size !== result.length) invalidResourcePayload();
+  return Object.freeze(result);
+}
+export function publicationStateBindings(
+  target: PublicationStateTarget, scope: PublicationScope, generation: PublicationStateGeneration
+): readonly string[] {
+  if (generation === 'predecessor') {
+    return scope === 'home' ? PREDECESSOR_HOME_BINDINGS[target] : PREDECESSOR_PROJECT_BINDINGS[target];
+  }
+  if (target === 'gemini') return NO_STATE_BINDINGS;
+  return scope === 'home' ? PUBLICATION_TARGET_BINDINGS[target] : PUBLICATION_PROJECT_TARGET_BINDINGS[target];
+}
+export function publicationStateLayout(
+  value: unknown, selected: readonly PublicationStateTarget[], scope: PublicationScope, shared = false
+): { readonly generation: PublicationStateGeneration; readonly bindingOrder: readonly string[] } {
+  if (!Array.isArray(value) || value.length > MAX_PUBLICATION_BINDINGS) invalidResourcePayload();
+  const bindings = value.map(normalizeRelativePath);
+  for (const generation of ['current', 'predecessor'] as const) {
+    if (generation === 'current' && selected.includes('gemini')) continue;
+    const wanted = selected.flatMap((target) => publicationStateBindings(target, scope, generation));
+    if (shared) wanted.unshift('.evcrate/bin');
+    if (new Set(wanted).size !== wanted.length) invalidResourcePayload();
+    const expected = scope === 'home'
+      ? (generation === 'current' ? PUBLICATION_BINDING_ORDER : PREDECESSOR_BINDING_ORDER)
+        .filter((binding) => wanted.includes(binding))
+      : wanted;
+    if (bindings.length === expected.length && bindings.every((binding, index) => binding === expected[index])) {
+      return Object.freeze({ generation, bindingOrder: Object.freeze(bindings) });
+    }
+  }
+  invalidResourcePayload();
+}
+export function publicationStateLocalRoot(binding: string, scope: PublicationScope): string {
+  return scope === 'home' && binding === '.gemini/config' ? '.antigravity' : binding;
+}
+export function publicationStateDestination(binding: string, path: string, scope: PublicationScope): string {
+  const document = scope === 'project' && [
+    'AGENTS.md', 'GEMINI.md', '.agents/hooks.json', '.agents/rules/evcrate-antigravity.md',
+    '.github/copilot-instructions.md'
+  ].includes(binding);
+  if (document && path !== binding) invalidResourcePayload();
+  return document ? binding : `${binding}/${path}`;
+}
+function stateOwnership(
+  value: unknown, scope: PublicationScope, generation: PublicationStateGeneration
+): PublicationStateOwnership {
+  if (!isPlainObject(value)) invalidResourcePayload();
+  const result: Record<string, Record<string, readonly string[]>> = {};
+  const destinations = new Set<string>();
+  for (const [rawTarget, rawBindings] of Object.entries(value)) {
+    const target = publicationStateTarget(rawTarget);
+    if (!isPlainObject(rawBindings)) invalidResourcePayload();
+    const allowed = publicationStateBindings(target, scope, generation);
+    const inherited = generation === 'current'
+      ? publicationStateBindings(target, scope, 'predecessor') : NO_STATE_BINDINGS;
+    const bindings: Record<string, readonly string[]> = {};
+    for (const [binding, rawPaths] of Object.entries(rawBindings)) {
+      if ((!allowed.includes(binding) && !inherited.includes(binding)) || !Array.isArray(rawPaths)) invalidResourcePayload();
+      const paths = rawPaths.map((rawPath) => {
+        const path = normalizeRelativePath(rawPath);
+        const destination = publicationStateDestination(binding, path, scope);
+        if (destinations.has(destination)) invalidResourcePayload();
+        destinations.add(destination);
+        return path;
+      });
+      bindings[binding] = Object.freeze(paths);
+    }
+    result[target] = Object.freeze(bindings);
+  }
+  return Object.freeze(result);
+}
+export function publicationStateOwnership(
+  value: unknown, previousValue: unknown, selected: readonly PublicationStateTarget[],
+  scope: PublicationScope, generation: PublicationStateGeneration
+): { readonly managed: PublicationStateOwnership; readonly previous: PublicationStateOwnership } {
+  const previous = stateOwnership(previousValue, scope, generation);
+  const managed = stateOwnership(value, scope, generation);
+  for (const [targetName, bindings] of Object.entries(managed)) {
+    const target = publicationStateTarget(targetName);
+    const active = selected.includes(target)
+      ? publicationStateBindings(target, scope, generation) : NO_STATE_BINDINGS;
+    for (const [binding, paths] of Object.entries(bindings)) {
+      if (active.includes(binding)) continue;
+      const inherited = previous[target]?.[binding];
+      if (inherited === undefined || paths.some((path) => !inherited.includes(path))) invalidResourcePayload();
+    }
+    if (!selected.includes(target) && previous[target] === undefined) invalidResourcePayload();
+  }
+  return Object.freeze({ managed, previous });
+}
+export function publicationFlatOwnership(
+  value: unknown, selected: readonly PublicationStateTarget[],
+  scope: PublicationScope, generation: PublicationStateGeneration
+): PublicationStateOwnership {
+  if (!isPlainObject(value)) invalidResourcePayload();
+  const result: Record<string, Record<string, readonly string[]>> = {};
+  for (const [root, paths] of Object.entries(value)) {
+    if (!Array.isArray(paths)) invalidResourcePayload();
+    if (scope === 'home' && root === '.evcrate/bin') {
+      if (paths.length !== 0) invalidResourcePayload();
+      continue;
+    }
+    const owners = selected.flatMap((target) =>
+      publicationStateBindings(target, scope, generation)
+        .filter((binding) => publicationStateLocalRoot(binding, scope) === root)
+        .map((binding) => ({ target, binding })));
+    if (owners.length !== 1) invalidResourcePayload();
+    const { target, binding } = owners[0];
+    result[target] ??= {};
+    result[target][binding] = paths;
+  }
+  return stateOwnership(result, scope, generation);
+}
 
 export interface PublishRequestPayload {
   readonly scope: PublicationScope;
@@ -112,7 +254,7 @@ export interface RecoveryPhaseRecord {
   readonly scope: PublicationScope;
   readonly releaseId: string;
   readonly action: 'rolled-back' | 'finalized';
-  readonly selectedTargets: readonly PersistedTarget[];
+  readonly selectedTargets: readonly PublicationStateTarget[];
   readonly bindingOrder: readonly string[];
 }
 export interface RecoverResultPayload {
@@ -127,7 +269,7 @@ const PROJECT_IDENTITY = /^[a-f0-9]{64}$/u;
 const PHASE_KEYS = ['phase', 'scope', 'selectedTargets', 'bindingOrder', 'changes'] as const;
 function relativeMetadataPath(value: unknown): string {
   const path = normalizeRelativePath(boundedText(value, 4096, 'metadata path'));
-  if (path.split('/').some((segment) => FORBIDDEN_METADATA_SEGMENTS.has(segment)
+  if (path !== '.github/copilot-instructions.md' && path.split('/').some((segment) => FORBIDDEN_METADATA_SEGMENTS.has(segment)
     || segment === '.env' || (segment.startsWith('.env.') && segment !== '.env.example'))) invalidResourcePayload();
   return path;
 }
@@ -305,8 +447,10 @@ function validateRecoveryPhase(
   assertExactKeys(raw, ['phase', 'scope', 'releaseId', 'action', 'selectedTargets', 'bindingOrder']);
   if (raw.phase !== phase || raw.scope !== (phase === 'shared' ? 'home' : scope)) invalidResourcePayload();
   if (phase === 'shared' && (!Array.isArray(raw.selectedTargets) || raw.selectedTargets.length !== 0)) invalidResourcePayload();
-  const selectedTargets = targetList(raw.selectedTargets, phase === 'shared');
-  const bindingOrderValue = bindingOrder(raw.bindingOrder, phase, scope, selectedTargets);
+  const selectedTargets = publicationStateTargets(raw.selectedTargets, phase === 'shared');
+  const bindingOrderValue = publicationStateLayout(
+    raw.bindingOrder, selectedTargets, scope, phase === 'shared'
+  ).bindingOrder;
   if (raw.action !== 'rolled-back' && raw.action !== 'finalized') invalidResourcePayload();
   return Object.freeze({
     phase, scope: phase === 'shared' ? 'home' : scope,

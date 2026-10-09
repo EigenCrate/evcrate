@@ -77,8 +77,8 @@ export function createConsumerWorkspace() {
   writeFileSync(join(binDir, 'evcrate-advisor'), advisorScript, { mode: 0o755 });
   chmodSync(join(binDir, 'evcrate-advisor'), 0o755);
 
-  writeFileSync(join(fixture.root, '.evcrate', 'source', 'CLAUDE.md'), '# Claude guidance\n', { mode: 0o644 });
-  chmodSync(join(fixture.root, '.evcrate', 'source', 'CLAUDE.md'), 0o644);
+  writeFileSync(join(fixture.root, '.evcrate', 'source', '.claude', 'AGENTS.md'), '# Agent guidance\n', { mode: 0o644 });
+  chmodSync(join(fixture.root, '.evcrate', 'source', '.claude', 'AGENTS.md'), 0o644);
 
   const incomingRoot = join(consumerRoot, 'incoming');
   mkdirSync(incomingRoot, { recursive: true, mode: 0o755 });

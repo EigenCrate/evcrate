@@ -3,6 +3,9 @@
   "name": "omp",
   "adapter": "dist/adapters/omp/index.js",
   "adapter_sources": [
+    "dist/adapters/advisory.js",
+    "dist/adapters/catalog-data.js",
+    "dist/adapters/catalog-types.js",
     "dist/adapters/omp/activation.js",
     "dist/adapters/omp/agents.js",
     "dist/adapters/omp/commands.js",
@@ -11,6 +14,10 @@
     "dist/adapters/omp/resources.js",
     "dist/adapters/omp/skills.js",
     "dist/adapters/omp/templates.js",
+    "dist/adapters/projection-utils.js",
+    "dist/adapters/resource-graph.js",
+    "dist/adapters/resource-naming.js",
+    "dist/adapters/types.js",
     "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".omp",

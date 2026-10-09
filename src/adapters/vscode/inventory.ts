@@ -75,11 +75,11 @@ export function buildVscodeInventory(
 
   const sourcePrefix = '.evcrate/source/.claude/';
 
-  // 1. Sibling Instruction
+  // 1. Canonical graph instruction
   const instructionTarget = 'com.github.copilot/rules/bootstrap.instructions.md';
-  add('.evcrate/source/CLAUDE.md', [instructionTarget], 'native');
+  add(`${sourcePrefix}AGENTS.md`, [instructionTarget], 'native');
   resourceMap.push(Object.freeze({
-    source: '.evcrate/source/CLAUDE.md',
+    source: 'AGENTS.md',
     sourceSemanticId: 'bootstrap-instructions',
     target: instructionTarget,
     localName: 'bootstrap.instructions.md',

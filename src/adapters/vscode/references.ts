@@ -131,22 +131,10 @@ export function replaceWorkflowReferences(value: string): string {
 
 export function replaceInstructionReferences(value: string): string {
   const guarded = protectSegments(value);
-  let rendered = guarded.text;
-
-  const prefixes = [
-    ['${HOME}/.evcrate/source/', '${HOME}/.evcrate-vscode/'],
-    ['$HOME/.evcrate/source/', '$HOME/.evcrate-vscode/'],
-    ['~/.evcrate/source/', '~/.evcrate-vscode/'],
-    ['./.evcrate/source/', './.evcrate-vscode/'],
-    ['.evcrate/source/', '.evcrate-vscode/']
-  ] as const;
-
-  for (const [prefix, replacement] of prefixes) {
-    rendered = rendered.replaceAll(
-      `${prefix}CLAUDE.md`,
-      `${replacement}com.github.copilot/rules/bootstrap.instructions.md`
-    );
-  }
+  const rendered = guarded.text.replace(
+    /(?<![A-Za-z0-9_./~$\\{}-])(?:(~|\$HOME|\$\{HOME\})\/)?(?:\.\/)?(?:(?:\.evcrate\/source\/)?\.claude\/(?:rules\/)?)?AGENTS\.md(?![A-Za-z0-9_-]|\.[A-Za-z0-9_.-])/gu,
+    (_match, home: string | undefined) => `${home ? `${home}/` : ''}.evcrate-vscode/com.github.copilot/rules/bootstrap.instructions.md`,
+  );
 
   return restoreSegments(rendered, guarded.protectedEntries);
 }

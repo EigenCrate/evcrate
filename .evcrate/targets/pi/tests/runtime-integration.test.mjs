@@ -3,7 +3,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { MANAGED_PI_PACKAGES } from "../../../../dist/index.js";
+import { MANAGED_PI_PACKAGES, runAllManifestsBuild } from "../../../../dist/index.js";
+import { prepareFixtureWorkspace } from "../../../../tests/distribution/parity-verification-helpers.mjs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -65,7 +66,7 @@ function installManagedPackages(runtime, home) {
   assert.deepEqual(new Set(managed), new Set(expected));
 }
 
-test("packed distribution publishes and Pi discovers native commands and skills", { timeout: 600_000 }, (t) => {
+test("packed distribution publishes and Pi discovers native commands and skills", { timeout: 600_000 }, async (t) => {
   const root = mkdtempSync(join(tmpdir(), "evcrate-pi-runtime-"));
   t.after(() => {
     rmSync(root, { recursive: true, force: true });
@@ -81,7 +82,13 @@ test("packed distribution publishes and Pi discovers native commands and skills"
     mkdirSync(home, { recursive: true, mode: 0o700 });
     mkdirSync(project, { recursive: true, mode: 0o700 });
     mkdirSync(state, { recursive: true, mode: 0o700 });
-    run("npm", ["pack", "--pack-destination", packDirectory, "--ignore-scripts"], { cwd: projectRoot });
+    const fixturePackage = join(root, "package");
+    prepareFixtureWorkspace(fixturePackage);
+    for (const name of ["README.md", "CHANGELOG.md"]) {
+      cpSync(join(projectRoot, name), join(fixturePackage, name));
+    }
+    await runAllManifestsBuild(fixturePackage, { jobs: 2 });
+    run("npm", ["pack", "--pack-destination", packDirectory, "--ignore-scripts"], { cwd: fixturePackage });
     const tarball = join(packDirectory, readdirSync(packDirectory).find((name) => name.endsWith(".tgz")) ?? "");
     assert.ok(existsSync(tarball), "npm pack did not create a tarball");
     run("npm", ["install", "--prefix", installRoot, "--ignore-scripts", "--no-audit", "--no-fund", tarball]);

@@ -5,7 +5,7 @@ import { canonicalJsonBytes, readBoundedFile } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors } from '../filesystem/paths.js';
 import { PERSISTED_TARGETS } from '../protocol/validation.js';
 import { validateResourceRecord } from '../protocol/resource-payload-validation.js';
-import { readLegacyRegistryDocument } from './legacy-registry-reader.js';
+import { readLegacyRegistryDocument, removeRetiredGeminiCompatibility } from './legacy-registry-reader.js';
 import type { RegistryDocument, ResourceRecord } from './types.js';
 
 export const RESOURCE_REGISTRY_SCHEMA_VERSION = 2;
@@ -22,7 +22,18 @@ function sortedStrings(values: readonly string[]): boolean {
 }
 function normalizeRecord(value: unknown): ResourceRecord {
   try {
-    const record = validateResourceRecord(value);
+    let input = value;
+    // Older schema-2 documents contain the retired target alongside every
+    // current target. Recognize only that complete shape; never persist it.
+    if (isPlainObject(value) && isPlainObject(value.compatibility)
+      && Object.hasOwn(value.compatibility, 'gemini')) {
+      if (Object.keys(value.compatibility).length !== PERSISTED_TARGETS.length + 1
+        || PERSISTED_TARGETS.some((target) => !Object.hasOwn(value.compatibility as object, target))) {
+        throw new ControlPlaneError('PROTOCOL_INVALID');
+      }
+      input = { ...value, compatibility: removeRetiredGeminiCompatibility(value.compatibility) };
+    }
+    const record = validateResourceRecord(input);
     if (!sortedStrings(record.capabilities)) throw new ControlPlaneError('PROTOCOL_INVALID');
     if (Object.keys(record.compatibility).length !== PERSISTED_TARGETS.length
       || PERSISTED_TARGETS.some((target) => !Object.hasOwn(record.compatibility, target))) {

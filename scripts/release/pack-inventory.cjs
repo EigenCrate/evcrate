@@ -12,7 +12,6 @@ const EXPECTED_TARGETS = Object.freeze([
   'claude',
   'codex',
   'copilot',
-  'gemini',
   'omp',
   'pi',
   'vscode'
@@ -65,6 +64,7 @@ function collectBuildManifestDigests(projectRoot) {
 
   const manifestLib = require(path.join(projectRoot, 'dist', 'distribution', 'manifest.js'));
   const { readBuildManifest, verifyBuild } = manifestLib;
+  const { localProjectionPath } = require(path.join(projectRoot, 'dist', 'distribution', 'output-paths.js'));
 
   const expectedFiles = [
     'build-manifest.json',
@@ -89,7 +89,7 @@ function collectBuildManifestDigests(projectRoot) {
 
     const outputRoots = {};
     for (const key of Object.keys(manifest.output_hashes)) {
-      outputRoots[key] = path.join(sourceRoot, key);
+      outputRoots[key] = localProjectionPath(sourceRoot, key, true);
     }
 
     verifyBuild({ manifestPath, outputRoots, controllerRoot });

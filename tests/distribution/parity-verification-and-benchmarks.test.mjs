@@ -31,19 +31,19 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
 
         // 1. Run serial build (jobs=1)
         const serialResult = await runAllManifestsBuild(fixtureSerial, { jobs: 1 });
-        assert.equal(serialResult.allManifestPaths.length, 9);
-        assert.equal(serialResult.targetBuilds.size, 8);
+        assert.equal(serialResult.allManifestPaths.length, PERSISTED_TARGETS.length + 1);
+        assert.equal(serialResult.targetBuilds.size, PERSISTED_TARGETS.length);
 
         // 2. Run parallel builds (jobs=2, jobs=4)
         const parallel2Result = await runAllManifestsBuild(fixtureParallel2, { jobs: 2 });
-        assert.equal(parallel2Result.allManifestPaths.length, 9);
-        assert.equal(parallel2Result.targetBuilds.size, 8);
+        assert.equal(parallel2Result.allManifestPaths.length, PERSISTED_TARGETS.length + 1);
+        assert.equal(parallel2Result.targetBuilds.size, PERSISTED_TARGETS.length);
 
         const parallel4Result = await runAllManifestsBuild(fixtureParallel4, { jobs: 4 });
-        assert.equal(parallel4Result.allManifestPaths.length, 9);
-        assert.equal(parallel4Result.targetBuilds.size, 8);
+        assert.equal(parallel4Result.allManifestPaths.length, PERSISTED_TARGETS.length + 1);
+        assert.equal(parallel4Result.targetBuilds.size, PERSISTED_TARGETS.length);
 
-        // 3. Verify all 9 manifests are 100% byte-for-byte identical across j1, j2, j4
+        // 3. Verify aggregate and every target manifest are byte-for-byte identical across j1, j2, j4
         const manifestNames = [
           'build-manifest.json',
           ...PERSISTED_TARGETS.map((t) => `build-manifest-${t}.json`)
@@ -60,15 +60,14 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
 
         // 4. Verify every projected output file across all targets is byte-for-byte identical
         const targetOutputRoots = [
-          join('.evcrate', 'source', '.claude'),
+          join('.evcrate', 'source', '.claude-projection'),
           join('.evcrate', 'source', '.evcrate-vscode'),
           join('.evcrate', 'source', '.copilot'),
-          join('.evcrate', 'source', '.gemini'),
           join('.evcrate', 'source', '.antigravity'),
           join('.evcrate', 'source', '.codex'),
           join('.evcrate', 'source', '.pi'),
           join('.evcrate', 'source', '.omp'),
-          join('.evcrate', 'source', '.agents')
+          join('.evcrate', 'source', '.agents', 'skills')
         ];
 
         let totalFilesCompared = 0;
@@ -77,7 +76,7 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
           const p2Root = join(fixtureParallel2, outputRoot);
           const p4Root = join(fixtureParallel4, outputRoot);
 
-          if (!existsSync(serialRoot)) continue;
+          assert.ok(existsSync(serialRoot), `Missing projected output: ${outputRoot}`);
 
           const serialFiles = collectRelativeFiles(serialRoot);
           const p2Files = collectRelativeFiles(p2Root);
@@ -99,16 +98,18 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
 
         assert.ok(totalFilesCompared > 100, `Expected over 100 projected files compared, got ${totalFilesCompared}`);
 
-        // 5. Verify project docs parity (AGENTS.md, GEMINI.md)
-        for (const doc of ['AGENTS.md', 'GEMINI.md']) {
+        // 5. Verify native project documents parity, including exact nested documents
+        for (const doc of [
+          'AGENTS.md', '.github/copilot-instructions.md',
+          '.agents/hooks.json', '.agents/rules/evcrate-antigravity.md'
+        ]) {
           const sDoc = join(fixtureSerial, '.evcrate', 'source', doc);
           const p2Doc = join(fixtureParallel2, '.evcrate', 'source', doc);
           const p4Doc = join(fixtureParallel4, '.evcrate', 'source', doc);
 
-          if (existsSync(sDoc)) {
-            assert.deepEqual(readFileSync(sDoc), readFileSync(p2Doc));
-            assert.deepEqual(readFileSync(sDoc), readFileSync(p4Doc));
-          }
+          assert.ok(existsSync(sDoc), `Missing native project document: ${doc}`);
+          assert.deepEqual(readFileSync(sDoc), readFileSync(p2Doc));
+          assert.deepEqual(readFileSync(sDoc), readFileSync(p4Doc));
         }
       } finally {
         rmSync(fixtureSerial, { recursive: true, force: true });
@@ -119,10 +120,10 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
   });
 
   describe('Gate 2: Manifest Semantic Verification & Target Subsets', () => {
-    it('all nine manifests pass schema-2 validation and contain expected target policies', () => {
+    it('aggregate and every target manifest pass schema-2 validation and contain expected target policies', () => {
       const registryPath = join(packageRoot, '.evcrate', 'targets', 'manifest.json');
       const registry = loadTargetManifestRegistry(registryPath);
-      assert.equal(registry.targets.size, 8);
+      assert.equal(registry.targets.size, PERSISTED_TARGETS.length);
 
       const aggregateManifestPath = join(packageRoot, '.evcrate', 'build-manifest.json');
       const aggregateManifest = readBuildManifest(aggregateManifestPath);

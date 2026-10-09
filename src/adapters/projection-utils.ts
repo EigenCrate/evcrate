@@ -1,7 +1,6 @@
 import { lstatSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
-import { parseJsonDocument } from '../protocol/json.js';
 import { normalizeTarget } from '../protocol/validation.js';
 import { assertNoSymlinkAncestors, containedPath, normalizeRelativePath } from '../filesystem/paths.js';
 import { hashBytes, readBoundedFile } from '../filesystem/hashing.js';
@@ -43,34 +42,12 @@ export function graphText(context: ProjectionBuildContext, path: string): string
   }
 }
 
-export function sourceSibling(context: ProjectionBuildContext, path: string): string {
-  const name = normalized(path);
-  return containedPath(dirname(context.canonicalRoot), name, true);
-}
-
-export function siblingBytes(context: ProjectionBuildContext, path: string, maxBytes = 16 * 1024 * 1024): Uint8Array {
-  try { return readBoundedFile(sourceSibling(context, path), maxBytes); }
-  catch (error) {
-    if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError('VALIDATION_INVALID');
-  }
-}
-
-export function siblingText(context: ProjectionBuildContext, path: string): string {
-  try { return new TextDecoder('utf-8', { fatal: true }).decode(siblingBytes(context, path)); }
-  catch (error) {
-    if (error instanceof ControlPlaneError) throw error;
-    throw new ControlPlaneError('VALIDATION_INVALID');
-  }
-}
-
-export function siblingJson(context: ProjectionBuildContext, path: string): unknown {
-  return parseJsonDocument(siblingBytes(context, path));
-}
-
 export function ensureProjectionDirectory(context: ProjectionBuildContext, path: string): string {
   const name = normalized(path);
-  const destination = context.stagePath(name);
+  // Nested output/document parents are directories, not writable output roots.
+  const ownedParent = context.manifest.outputRoots.some((output) => output.startsWith(`${name}/`))
+    || context.manifest.projectDocs.some((output) => output.startsWith(`${name}/`));
+  const destination = ownedParent ? containedPath(context.stage.path, name) : context.stagePath(name);
   assertNoSymlinkAncestors(destination);
   try { mkdirSync(destination, { recursive: true }); }
   catch { unsafe(); }

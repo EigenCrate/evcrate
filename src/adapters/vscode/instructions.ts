@@ -1,6 +1,7 @@
 import type { ProjectionBuildContext } from '../types.js';
-import { writeProjectionFile, textBytes } from '../projection-utils.js';
-import { readSiblingString, outputPath } from './common.js';
+import { graphText, writeProjectionFile, textBytes } from '../projection-utils.js';
+import { outputPath } from './common.js';
+import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { serializeFrontmatter } from './metadata.js';
 import { transformVscodePrompt } from './references.js';
 import type { VscodeCommandMapEntry, VscodeSkillMapEntry } from './names.js';
@@ -10,9 +11,9 @@ export function generateVscodeInstructions(
   commandMap: Record<string, VscodeCommandMapEntry>,
   skills: readonly VscodeSkillMapEntry[]
 ): void {
-  const source = readSiblingString(context, 'CLAUDE.md');
-  const transformed = transformVscodePrompt(source, commandMap, skills);
-  const updatedHeader = transformed.replace(/^#\s+CLAUDE\.md/u, '# bootstrap.instructions.md');
+  const source = graphText(context, 'AGENTS.md');
+  if (!source.trim()) throw new ControlPlaneError('VALIDATION_INVALID');
+  const updatedHeader = transformVscodePrompt(source.replace(/^# AGENTS\.md(?=\r?$)/mu, '# bootstrap.instructions.md'), commandMap, skills);
 
   const frontmatter: Record<string, unknown> = {
     applyTo: '**',

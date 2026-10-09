@@ -54,34 +54,3 @@ export function parseMarkdownFrontmatter(content: string): { readonly data: Fron
   }
   return { data, body: content.slice(match[0].length).replace(/^\s+/u, '') };
 }
-
-function yamlScalar(value: FrontmatterValue): string {
-  if (value === null) return 'null';
-  if (typeof value === 'string') {
-    if (/^[A-Za-z0-9_./-]+$/u.test(value)) return value;
-    return JSON.stringify(value);
-  }
-  return String(value);
-}
-
-export function writeMarkdownFrontmatter(data: Frontmatter, body: string): string {
-  const lines = ['---'];
-  for (const [key, value] of Object.entries(data)) {
-    if (Array.isArray(value)) {
-      lines.push(`${key}:`);
-      for (const item of value) lines.push(`- ${yamlScalar(item)}`);
-    } else lines.push(`${key}: ${yamlScalar(value)}`);
-  }
-  lines.push('---');
-  return `${lines.join('\n')}\n${body}`;
-}
-
-export function writeToml(data: Record<string, string>): string {
-  return Object.entries(data).map(([key, value]) => {
-    if (value.includes('\n')) {
-      const escaped = value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
-      return `${key} = """${escaped}"""`;
-    }
-    return `${key} = ${JSON.stringify(value)}`;
-  }).join('\n') + '\n';
-}

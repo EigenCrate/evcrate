@@ -111,7 +111,6 @@ export const TARGET_MENTORING_CAPABILITIES: Readonly<Record<string, TargetMentor
   codex: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   omp: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   antigravity: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
-  gemini: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   copilot: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   pi: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
 });

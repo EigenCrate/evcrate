@@ -15,7 +15,7 @@ import sys
 import re
 import io
 import ast
-import os
+import json
 from pathlib import Path
 
 try:
@@ -332,7 +332,7 @@ COMMAND_PATH_RE = re.compile(r"(?im)^\s*Command Path:\s*([/$]\S+)")
 
 
 def discover_skill_commands(skills_dir: Path) -> dict:
-    """Discover generated evc-cmd-* skills through their embedded Command Path."""
+    """Discover generated command skills by native name or embedded Command Path."""
     commands = {}
     categories = {}
     if not skills_dir.is_dir():
@@ -342,10 +342,12 @@ def discover_skill_commands(skills_dir: Path) -> dict:
         metadata = parse_command_metadata(skill_file)
         description = metadata.get("description", "")
         match = COMMAND_PATH_RE.search(skill_file.read_text(encoding="utf-8"))
-        if not description or not match:
+        if not description:
             continue
 
-        stem = match.group(1)[1:]
+        stem = metadata.get("name", "").strip("\"'")
+        if not command_segments(stem) and match:
+            stem = match.group(1)[1:]
         if not command_segments(stem):
             continue
         clean_desc = re.sub(r"^[^\w\s]+\s*", "", description).strip()
@@ -359,51 +361,36 @@ def discover_skill_commands(skills_dir: Path) -> dict:
     return {"commands": commands, "categories": categories}
 
 
-def _candidate_roots(*roots: Path) -> list[Path]:
-    """Return unique roots plus their parents for project-local execution."""
-    candidates = []
-    for root in roots:
-        try:
-            current = root.expanduser().resolve()
-        except OSError:
-            continue
-        for candidate in (current, *current.parents):
-            if candidate not in candidates:
-                candidates.append(candidate)
-    return candidates
+def installed_layout(script_path: Path) -> dict:
+    """Read installed host authority, never the caller's working directory."""
+    layout_path = script_path.parent / "scanner-layout.json"
+    if not layout_path.is_file():
+        return {}
+    layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    if not isinstance(layout, dict) or layout.get("schema") != "evcrate-scanner-layout-v1":
+        raise ValueError(f"Invalid scanner layout: {layout_path}")
+    return layout
 
 
 def resolve_command_source(script_path: Path) -> tuple[str, Path]:
-    """Find canonical commands or a generated target's command skills."""
+    """Use the installed layout; standalone copies only inspect adjacent resources."""
+    layout = installed_layout(script_path)
+    if layout:
+        commands = layout.get("commands")
+        if (not isinstance(commands, dict) or not isinstance(commands.get("root"), str)
+                or commands.get("format") not in {"markdown", "toml", "command-skill"}):
+            raise ValueError("Invalid commands block in installed scanner layout")
+        kind = "skills" if commands["format"] == "command-skill" else "commands"
+        return kind, (script_path.parent / commands["root"]).resolve()
+
     target_root = script_path.parent.parent
     direct_commands = target_root / "commands"
     if direct_commands.is_dir():
         return "commands", direct_commands
-
-    # Antigravity removes commands while retaining generated evc-cmd-* skills.
-    direct_skills = target_root / "skills"
-    if target_root.name == "antigravity" and direct_skills.is_dir():
-        return "skills", direct_skills
-
-    project_roots = [
-        Path(value)
-        for name in ("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")
-        if (value := os.environ.get(name))
-    ]
-    project_roots.extend((target_root.parent, Path.cwd()))
-    for project_root in _candidate_roots(*project_roots):
-        commands_dir = project_root / ".claude" / "commands"
-        if commands_dir.is_dir():
-            return "commands", commands_dir
-
-    # Codex publishes generated command skills as a sibling .agents tree.
-    codex_skills = target_root.parent / ".agents" / "skills"
-    if target_root.name == ".codex" and codex_skills.is_dir():
-        return "skills", codex_skills
-
-    if direct_skills.is_dir():
-        return "skills", direct_skills
-    return "", target_root / "commands"
+    # Standalone Codex copies retain their sibling command-skill layout.
+    if target_root.name == ".codex":
+        return "skills", target_root.parent / ".agents" / "skills"
+    return "skills", target_root / "skills"
 
 
 def discover_commands(commands_dir: Path) -> dict:
@@ -611,17 +598,16 @@ def show_command(data: dict, command: str) -> None:
 
 
 def advisory_target(script_path: Path) -> str:
-    """Infer the generated host from the portable help script location."""
-
-    for parent in (script_path.parent, *script_path.parents):
-        if parent.name in {".antigravity", ".codex", ".gemini", ".pi"}:
-            return parent.name.removeprefix(".")
-    return "cla" + "ude"
+    """Use the installed target ID, including nonstandard HOME resource roots."""
+    target = installed_layout(script_path).get("target")
+    if target not in {"claude", "codex", "antigravity", "pi", "omp", "copilot", "vscode"}:
+        raise ValueError("Missing or unsupported target in installed scanner layout")
+    return target
 
 
 def show_advisory_guide(target: str) -> None:
     """Explain checkpoint, inline, and target-accurate relay capabilities."""
-    relay_target = "cla" + "ude"
+    relay_target = "claude"
     supports_relay = target == relay_target
     emit_output_type("command-details")
     command = "/evc-cmd-advise"
@@ -643,7 +629,7 @@ def show_advisory_guide(target: str) -> None:
     print("**Interview contract:** one question per turn, explicit reframe confirmation, eight discovery-question cap, two reframe cycles, and a linked sanitized report.")
     print()
     if supports_relay:
-        unsupported_targets = ("codex", "pi", "gemini", "antigravity")
+        unsupported_targets = ("codex", "antigravity", "pi", "omp", "copilot", "vscode")
         projected_names = ", ".join(name.title() for name in unsupported_targets)
         print(f"**Relay capability:** `--agent` is supported only by {relay_target.title()} relay v1. {projected_names} must reject it explicitly; they must not silently run inline or create relay state.")
     else:
@@ -1042,9 +1028,13 @@ def show_coding_level_guide() -> None:
 
 def main():
     script_path = Path(__file__).resolve()
-    source_kind, source_dir = resolve_command_source(script_path)
+    try:
+        source_kind, source_dir = resolve_command_source(script_path)
+    except (OSError, ValueError) as error:
+        print(f"Error: {error}")
+        sys.exit(1)
     if not source_dir.is_dir():
-        print("Error: no .claude/commands or generated command skills directory found.")
+        print(f"Error: installed command directory not found: {source_dir}")
         sys.exit(1)
 
     if source_kind == "skills":
@@ -1072,7 +1062,12 @@ def main():
 
     # Advisory surfaces need capability and migration guidance beyond metadata.
     if input_str.lower().lstrip("/") in ["advise", "advice", "evc-cmd-advise"]:
-        show_advisory_guide(advisory_target(script_path))
+        try:
+            target = advisory_target(script_path)
+        except (OSError, ValueError) as error:
+            print(f"Error: {error}")
+            sys.exit(1)
+        show_advisory_guide(target)
         return
 
     # Detect intent and route

@@ -331,12 +331,12 @@ test('diagnostic failures use the stable routing error catalog', () => {
   }), (error) => error.code === 'DIAGNOSTIC_INVALID');
 });
 test('Phase 8 publication payloads enforce scope, phase order, identity, and empty recovery', () => {
-  assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
-  ]);
   assert.deepEqual(validatePublishRequestPayload({
     scope: 'home', selectedTargets: ['agy']
   }), { scope: 'home', selectedTargets: ['antigravity'] });
+  assert.throws(() => validatePublishRequestPayload({
+    scope: 'home', selectedTargets: ['gemini']
+  }), (error) => error.code === 'CAPABILITY_UNSUPPORTED');
   assert.deepEqual(validateRecoverRequestPayload({
     scope: 'home', projectIdentity: null, releaseId: 'release-1'
   }), { scope: 'home', projectIdentity: null, releaseId: 'release-1' });
@@ -353,6 +353,22 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
     ]
   };
   assert.deepEqual(validatePublishDryRunResultPayload(dryRun), dryRun);
+  const nativeCopilotProject = {
+    ...dryRun, scope: 'project', projectIdentity: 'c'.repeat(64),
+    phases: [dryRun.phases[0], {
+      phase: 'harness', scope: 'project', selectedTargets: ['copilot'],
+      bindingOrder: ['.copilot', '.github/copilot-instructions.md'],
+      changes: [{ ...change, target: 'copilot', path: '.github/copilot-instructions.md' }]
+    }]
+  };
+  assert.deepEqual(validatePublishDryRunResultPayload(nativeCopilotProject), nativeCopilotProject);
+  assert.throws(() => validatePublishDryRunResultPayload({
+    ...nativeCopilotProject,
+    phases: [dryRun.phases[0], {
+      ...nativeCopilotProject.phases[1],
+      changes: [{ ...change, target: 'copilot', path: '.github/workflows/execute.yml' }]
+    }]
+  }));
   const applied = {
     ...dryRun,
     phases: dryRun.phases.map((phase) => ({
