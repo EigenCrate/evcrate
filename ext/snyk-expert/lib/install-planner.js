@@ -3,6 +3,38 @@ import path from 'node:path';
 import { getSourceInventory } from './inventory.js';
 import { isSymlinkOrContainsSymlink } from './target-resolver.js';
 
+
+/**
+ * Candidate relative paths for legacy .claude installations of snyk-expert.
+ */
+export const LEGACY_CLAUDE_CANDIDATES = [
+  'agents/snyk-expert.md',
+  'skills/snyk-fix',
+  'skills/dependency-upgrade-review'
+];
+
+/**
+ * Detect pre-existing legacy snyk-expert assets under target's .claude/ directory.
+ */
+export function detectLegacyInstallation(targetDir) {
+  const normalizedTarget = path.resolve(targetDir);
+  const targetClaudeDir = path.join(normalizedTarget, '.claude');
+  const detectedPaths = [];
+
+  for (const rel of LEGACY_CLAUDE_CANDIDATES) {
+    const full = path.join(targetClaudeDir, rel);
+    const stat = fs.lstatSync(full, { throwIfNoEntry: false });
+    if (stat) {
+      detectedPaths.push(path.join('.claude', rel));
+    }
+  }
+
+  return {
+    detected: detectedPaths.length > 0,
+    targetClaudeDir,
+    paths: detectedPaths
+  };
+}
 /**
  * Build a deterministic installation plan.
  */
@@ -14,6 +46,7 @@ export function planInstallation({
   const assets = inventory || getSourceInventory(sourceDir);
   const normalizedTarget = path.resolve(targetDir);
   const targetAgentsDir = path.join(normalizedTarget, '.agents');
+  const legacyInstallation = detectLegacyInstallation(normalizedTarget);
 
   const actions = [];
   const additions = [];
@@ -106,6 +139,7 @@ export function planInstallation({
     replacements,
     unchanged,
     blockers,
+    legacyInstallation,
     hasCollisions: replacements.length > 0,
     isBlocked: blockers.length > 0
   };

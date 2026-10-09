@@ -41,6 +41,7 @@ Historical receipt association: Phases 02–04 attest sealed old resource author
 - [x] Tests, actual smoke and independent review: [validation](reports/validation.md); 24/24 package tests, seven syntax checks, installer/pack smoke and seven constructed prompt cases. Review 9/10, zero critical/high.
 - [x] User review approval: selected **Approve local delivery** with documented limits.
 - [x] Documentation/evidence finalized; user selected **Create scoped commit**, no push. Commit execution is the parent’s final Git action; no commit identity invented in this document.
+- [x] Complete removal of legacy `.claude/`: deleted `ext/snyk-expert/.claude/` (9 files), updated package `README.md`, `docs/usage.md`, and `docs/snyk-expert-cli.md` to keep only `.agents`.
 
 Approved final scope: common `.agents` payload, existing package installer/metadata/tests, new packaged usage and root common-bundle docs, this new ordinary plan and evidence. Plans are normally ignored; user explicitly authorized current plan/evidence in the scoped commit, so stage only this plan directory with `git add -f`. Existing staged input was empty before selection. User `.gitignore`, unrelated extensions, historical sources/plans and captured root docs excluded.
 

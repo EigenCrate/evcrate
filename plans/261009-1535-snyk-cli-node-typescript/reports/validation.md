@@ -7,7 +7,7 @@
 - Exact SHA-256 comparison: thirteen captured protected files unchanged (eight old runtime resources, old README, root architecture/changelog/roadmap and user's `.gitignore`). Identities retained in [protected-baseline.json](../protected-baseline.json).
 - Actual installer CLI: dry-run wrote nothing; fresh install produced common `.agents`; repeat skipped identical resources; changed nested CLI-reference collision refused with exit 1 and preserved user bytes; noninteractive `--force` without confirmation refused with exit 1; explicit `--force --yes` restored bundle bytes.
 - Actual `npm pack --json --pack-destination <temporary>` and `tar` extraction: 21 packed files, eleven common runtime assets, no `.claude` runtime payload. Extracted artifact installer ran successfully; all runtime bytes matched source and 28 installed local reference links resolved.
-- npm auto-includes the sealed historical README; current packed guide is `docs/usage.md`. No public publication performed.
+- The package contains exclusively `.agents/`; `ext/snyk-expert/.claude/` was completely removed, and `README.md` was rewritten to document the `.agents/` bundle and skills.
 
 Full actual CLI argv/cwd/exits/stdout/stderr retained in [installer-smoke.json](../installer-smoke.json). Initial smoke script incorrectly assumed array-shaped npm JSON; it stopped after successful packaging. Read actual object-by-package-name output and resumed extraction/install only; earlier successful operations were not rerun.
 
@@ -20,6 +20,7 @@ Final `npm test` after review cleanup: 24/24 passed. Actual post-review fresh in
 Independent [behavior smoke](behavior-smoke.md): seven stateless model-completion scenarios passed, zero defects reported, eleven copied resource hashes unchanged. Cases cover setup without report/target, exit-1 findings with `ok:false`, missing workspace coverage, clean Code JSON omission, missing pnpm lockfile, read-only/gated ESM/types changes, and missing Code upload authority with inert report injection. Selected context files, not full runtime/reference loading, were supplied directly; no tools were granted. This is constructed prompt behavior, not native permissions or real scans.
 
 User selected **Approve local delivery** and **Create scoped commit**, excluding unrelated user changes and historical snapshots; no push authorized. Default approval/validation only, not durable advice completion.
+- Post-commit update: removed legacy `.claude/` directory (9 files), updated package `README.md`, `bin/install.js`, `docs/usage.md`, and `docs/snyk-expert-cli.md` to keep only `.agents/`.
 
 ## Limits
 

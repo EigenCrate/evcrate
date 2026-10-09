@@ -13,7 +13,7 @@ node ext/snyk-expert/bin/install.js --target /path/to/project
 
 
 Installation requires trusted exclusive ownership of the destination tree. Symlink/collision checks are preflight checks, not an adversarial race-proof sandbox; another writer changing paths after planning can invalidate them. Keep concurrent writers out of the installation boundary. No concurrency-safety qualification is claimed.
-These are usage templates, not a claim of npm publication. Local checkout execution works without registry publication. Installer destinations are always project-local `.agents`, never a target-specific folder. Defaulting to HOME is refused; `--target` is the project root, not the `.agents` folder. Identical resources are skipped; differing files require `--force` and interactive confirmation or `--force --yes`. `--yes` alone is rejected. Dry-run writes nothing. Unrelated files and existing `.claude` resources are untouched; symlink escapes and leaf symlinks are blocked. Each file is staged/verified/renamed; a multi-file install is not a transactional rollback guarantee.
+These are usage templates, not a claim of npm publication. Local checkout execution works without registry publication. Installer destinations are always project-local `.agents`, never a target-specific folder. Defaulting to HOME is refused; `--target` is the project root, not the `.agents` folder. Identical resources are skipped; differing files require `--force` and interactive confirmation or `--force --yes`. `--yes` alone is rejected. Dry-run writes nothing. Unrelated files are untouched; legacy `.claude` installations trigger migration warnings without automatic deletion; symlink escapes and leaf symlinks are blocked. Each file is staged/verified/renamed; a multi-file install is not a transactional rollback guarantee.
 
 ## Resources and host loading
 
@@ -35,7 +35,7 @@ These are usage templates, not a claim of npm publication. Local checkout execut
 
 A host supporting `.agents/skills` can discover skills according to its own contract. `.agents/agents/snyk-expert.md` is portable specialist instruction text, not universal native subagent registration. If discovery or registration is unavailable, explicitly read the specialist and selected entrypoint plus all required references in the executing context. Configure host integration separately; no target-specific adapter or permissions are installed. A parent-read body is not proof of child reference consumption.
 
-The historical `.claude` and README in this authoring checkout are sealed snapshots, not current installer payload or usage instructions. They remain unchanged for historical integrity and are excluded as runtime resources. npm may automatically include the historical README; this packaged guide is the current contract.
+The package bundle contains exclusively `.agents/` resources; legacy `.claude/` resources have been removed from the package. This packaged guide and the package README document the current contract.
 
 ## Workflow from CLI, not only HTML
 

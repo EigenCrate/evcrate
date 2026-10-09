@@ -9,9 +9,10 @@ export {
 } from './inventory.js';
 
 export {
-  planInstallation
+  planInstallation,
+  detectLegacyInstallation,
+  LEGACY_CLAUDE_CANDIDATES
 } from './install-planner.js';
-
 export {
   executeInstallation
 } from './install-executor.js';

@@ -10,6 +10,7 @@ import {
   getSourceInventory,
   planInstallation,
   executeInstallation,
+  detectLegacyInstallation,
   ASSET_INVENTORY
 } from '../lib/install.js';
 
@@ -131,6 +132,41 @@ describe('Snyk Expert Installer - Unit & Planner', () => {
       } finally {
         fs.rmSync(outsideDir, { recursive: true, force: true });
       }
+    });
+  });
+
+  describe('detectLegacyInstallation', () => {
+    test('reports false when .claude directory does not exist', () => {
+      const res = detectLegacyInstallation(tmpDir);
+      assert.equal(res.detected, false);
+      assert.deepEqual(res.paths, []);
+    });
+
+    test('reports false when .claude contains only unrelated files', () => {
+      const unrelated = path.join(tmpDir, '.claude', 'custom-tool.md');
+      fs.mkdirSync(path.dirname(unrelated), { recursive: true });
+      fs.writeFileSync(unrelated, '# Unrelated');
+
+      const res = detectLegacyInstallation(tmpDir);
+      assert.equal(res.detected, false);
+      assert.deepEqual(res.paths, []);
+    });
+
+    test('detects legacy snyk-expert files under .claude', () => {
+      const legacyAgent = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
+      const legacySkill = path.join(tmpDir, '.claude', 'skills', 'snyk-fix');
+      fs.mkdirSync(path.dirname(legacyAgent), { recursive: true });
+      fs.mkdirSync(legacySkill, { recursive: true });
+      fs.writeFileSync(legacyAgent, 'LEGACY AGENT');
+
+      const res = detectLegacyInstallation(tmpDir);
+      assert.equal(res.detected, true);
+      assert.ok(res.paths.includes('.claude/agents/snyk-expert.md'));
+      assert.ok(res.paths.includes('.claude/skills/snyk-fix'));
+
+      const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+      assert.equal(plan.legacyInstallation.detected, true);
+      assert.ok(plan.legacyInstallation.paths.includes('.claude/agents/snyk-expert.md'));
     });
   });
 });
