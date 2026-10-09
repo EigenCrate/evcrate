@@ -20,3 +20,4 @@ export * from './input-snapshot.js';
 export * from './worker-pool.js';
 export * from './target-worker.js';
 export * from './worker-stage-verification.js';
+export * from './legacy-leftovers.js';

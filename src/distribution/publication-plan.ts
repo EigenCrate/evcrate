@@ -29,6 +29,7 @@ import {
 import { planSharedJson, type SharedJsonPlan } from './shared-json.js';
 import { validateAdvisorControllerProjection } from '../manifests/controller.js';
 import { resolvePublicationProjectContext } from '../context/invocation-context.js';
+import { isMigratedDestination } from './legacy-leftovers.js';
 
 export interface PlannedPublicationOperation {
   readonly target: PublicationTarget;
@@ -461,10 +462,12 @@ function directoryBinding(
         .some((value) => mapPublicationPath(manifest, value) === published.relativePath);
     if (!preserve) managed.push(published.relativePath);
     const isExecutable = deriveLaunchIntent(published.relativePath, published.content, file.relativePath);
+    const rejectCollision = manifest.homePolicy.rejectUnmanagedCollisions
+      || isMigratedDestination(descriptor.target, descriptor.binding, published.relativePath);
     operations.push(actionForFile(
       descriptor.target, descriptor.binding, descriptor.localRoot, published.relativePath,
       safePublicationChild(descriptor.destinationRoot, published.relativePath), published.content,
-      prior, manifest.homePolicy.rejectUnmanagedCollisions, preserve, isExecutable
+      prior, rejectCollision, preserve, isExecutable
     ));
   }
   // Predecessor-only leaves are retained for Phase08, not implicitly pruned by rebasing.
@@ -500,9 +503,11 @@ function documentBinding(
   const destination = safePublicationChild(descriptor.destinationRoot, relativePath);
   const prior = priorPaths(ownership, descriptor);
   const isExecutable = deriveLaunchIntent(relativePath, content);
+  const rejectCollision = manifest.homePolicy.rejectUnmanagedCollisions
+    || isMigratedDestination(descriptor.target, descriptor.binding, relativePath);
   const operation = actionForFile(
     descriptor.target, descriptor.binding, descriptor.localRoot, relativePath, destination,
-    content, prior, manifest.homePolicy.rejectUnmanagedCollisions, false, isExecutable
+    content, prior, rejectCollision, false, isExecutable
   );
   const operations: PlannedPublicationOperation[] = [operation];
   const managed = [relativePath];
@@ -591,6 +596,103 @@ function assertAggregateBuild(context: InvocationContext, build: VerifiedCurrent
   }
 }
 
+function reconcileRemovedBindings(
+  context: InvocationContext,
+  phase: PublicationPhase,
+  scope: PublicationScope,
+  destinationRoot: string,
+  descriptors: readonly BindingDescriptor[],
+  prior: PriorManagedOwnership,
+  currentManagedOwnership: PriorManagedOwnership,
+  existingDestinations: ReadonlySet<string>
+): {
+  readonly bindings: readonly PublicationBindingPlan[];
+  readonly managedOwnership: PriorManagedOwnership;
+} {
+  if (phase === 'shared' || scope !== 'project') {
+    return { bindings: Object.freeze([]), managedOwnership: currentManagedOwnership };
+  }
+
+  const removedBindings: PublicationBindingPlan[] = [];
+  const mutableOwnership: MutableOwnership = {};
+  for (const [t, bMap] of Object.entries(currentManagedOwnership)) {
+    mutableOwnership[t] = { ...bMap };
+  }
+
+  const targetsToInspect = [...context.selectedTargetIds];
+  if (targetsToInspect.includes('antigravity') && prior.gemini) {
+    targetsToInspect.push('gemini' as never);
+  }
+
+  for (const target of targetsToInspect) {
+    const priorTargetBindings = prior[target];
+    if (!priorTargetBindings) continue;
+    for (const [priorBinding, paths] of Object.entries(priorTargetBindings)) {
+      const hasDescriptor = descriptors.some(
+        (d) => d.target === target && (d.binding === priorBinding || d.localRoot === priorBinding)
+      );
+      if (hasDescriptor) continue;
+
+      // Preserve inherited predecessor residuals for Codex
+      if (target === 'codex' && priorBinding === '.agents') continue;
+
+      const operations: PlannedPublicationOperation[] = [];
+      for (const stalePath of paths) {
+        const destPath = priorBinding === stalePath || stalePath.startsWith(`${priorBinding}/`)
+          ? safePublicationChild(destinationRoot, stalePath)
+          : safePublicationChild(safePublicationChild(destinationRoot, priorBinding), stalePath);
+        if (existingDestinations.has(destPath)) continue;
+        const current = existing(destPath);
+        if (!current.hash && !current.directory) continue;
+
+        operations.push(plannedOperation({
+          target: target as PublicationTarget,
+          binding: priorBinding,
+          localRoot: priorBinding,
+          relativePath: stalePath,
+          destination: destPath,
+          action: current.directory ? 'conflict' : 'delete',
+          beforeHash: current.hash,
+          beforeSnapshot: current.snapshot,
+          intendedHash: null
+        }, null));
+      }
+
+      if (mutableOwnership[target]) {
+        delete mutableOwnership[target][priorBinding];
+        if (Object.keys(mutableOwnership[target]).length === 0) {
+          delete mutableOwnership[target];
+        }
+      }
+
+      if (operations.length > 0) {
+        removedBindings.push(Object.freeze({
+          target: target as PublicationTarget,
+          localRoot: priorBinding,
+          binding: priorBinding,
+          sourceRoot: '',
+          destinationRoot,
+          order: 1000,
+          controller: false,
+          kind: 'document',
+          managedPaths: Object.freeze([]),
+          operations: Object.freeze(operations)
+        }));
+      }
+    }
+  }
+
+  const frozenOwnership: MutableOwnership = {};
+  for (const [t, bMap] of Object.entries(mutableOwnership)) {
+    frozenOwnership[t] = Object.freeze(bMap);
+  }
+
+  return {
+    bindings: Object.freeze(removedBindings),
+    managedOwnership: Object.freeze(frozenOwnership)
+  };
+}
+
 function phasePlan(
   context: InvocationContext, build: VerifiedCurrentBuild, phase: PublicationPhase,
   scope: PublicationScope, projectIdentity: string | null,
@@ -601,14 +703,26 @@ function phasePlan(
   let managedOwnership = prior;
   const bindings: PublicationBindingPlan[] = [];
   let changeCount = 0;
+  const plannedDestinations = new Set<string>();
   for (const descriptor of descriptors) {
     const binding = planBinding(context, descriptor, prior, materialization);
     bindings.push(binding);
     changeCount += binding.operations.length;
     if (changeCount > MAX_PUBLICATION_CHANGES) fail();
+    for (const op of binding.operations) {
+      plannedDestinations.add(op.destination);
+    }
     managedOwnership = ownershipWithBinding(managedOwnership, descriptor, binding.managedPaths);
   }
+  const removed = reconcileRemovedBindings(
+    context, phase, scope, destinationRoot, descriptors, prior, managedOwnership, plannedDestinations
+  );
+  bindings.push(...removed.bindings);
+  managedOwnership = removed.managedOwnership;
+  changeCount += removed.bindings.reduce((acc, b) => acc + b.operations.length, 0);
+  if (changeCount > MAX_PUBLICATION_CHANGES) fail();
   const frozenBindings = Object.freeze(bindings);
+
   assertUniqueOperationDestinations(frozenBindings);
   const changes = Object.freeze(frozenBindings.flatMap((binding) =>
     binding.operations.map((operation) => changeFor(binding, operation))

@@ -30,6 +30,7 @@ import {
   createPublicationPlan, createPublicationPlanSet, type PlannedPublicationOperation,
   type PriorManagedOwnership, type PublicationPhasePlan, type PublicationPlan, type PublicationPlanSet
 } from './publication-plan.js';
+import { detectLegacyLeftovers } from './legacy-leftovers.js';
 
 export const PUBLICATION_STATE_DIRECTORY = '.evcrate/publication';
 export const MAX_RETAINED_RELEASE_BYTES = 512 * 1024 * 1024;
@@ -461,13 +462,29 @@ function applyPhase(
   });
 }
 function applyPayload(
-  plan: PublicationPlan, releaseId: string, retainedReleaseId: string | null
+  plan: PublicationPlan, releaseId: string, retainedReleaseId: string | null,
+  options?: {
+    readonly destinationRoot?: string;
+    readonly previousMarker?: Record<string, unknown> | null;
+  }
 ): PublishApplyResultPayload {
+  const previousOwnership = options?.previousMarker !== undefined
+    ? homePriorOwnership(options.previousMarker) : Object.freeze({});
+  const legacyLeftovers = options?.destinationRoot !== undefined
+    ? detectLegacyLeftovers({
+        scope: 'home',
+        selectedTargets: plan.selectedTargets,
+        destinationRoot: options.destinationRoot,
+        currentOwnership: plan.managedOwnership,
+        previousOwnership
+      })
+    : Object.freeze([]);
   return Object.freeze({
     scope: 'home', projectIdentity: null,
     buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
     phases: [applyPhase(plan, 'shared', releaseId, retainedReleaseId),
-      applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const
+      applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const,
+    legacyLeftovers
   });
 }
 function recoveryPayload(result: PublicationRecoveryOutcome, request: RecoverRequestPayload): RecoverResultPayload {
@@ -795,8 +812,20 @@ function projectDryRunPayload(
 function projectApplyPayload(
   shared: PublicationPhasePlan, harness: PublicationPhasePlan,
   sharedResult: { readonly releaseId: string; readonly retainedReleaseId: string | null },
-  harnessResult: { readonly releaseId: string; readonly retainedReleaseId: string | null }
+  harnessResult: { readonly releaseId: string; readonly retainedReleaseId: string | null },
+  previousMarker: Record<string, unknown> | null = null,
+  scanLeftovers = true
 ): PublishApplyResultPayload {
+  const previousOwnership = projectPriorOwnership(previousMarker);
+  const legacyLeftovers = scanLeftovers
+    ? detectLegacyLeftovers({
+        scope: 'project',
+        selectedTargets: harness.selectedTargets,
+        destinationRoot: harness.destinationRoot,
+        currentOwnership: harness.managedOwnership,
+        previousOwnership
+      })
+    : Object.freeze([]);
   return Object.freeze({
     scope: 'project', projectIdentity: harness.projectIdentity,
     buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
@@ -805,7 +834,8 @@ function projectApplyPayload(
         releaseId: sharedResult.releaseId, retainedReleaseId: sharedResult.retainedReleaseId }),
       Object.freeze({ ...scopedDryRunPhase(harness), status: 'committed' as const,
         releaseId: harnessResult.releaseId, retainedReleaseId: null })
-    ] as const
+    ] as const,
+    legacyLeftovers
   });
 }
 function projectPartialPayload(
@@ -960,7 +990,7 @@ export function publishApply(
             preflightTransaction(projectDescriptor, plans.harness);
             assertProjectApplyResultBudget(lockedPlans.shared, plans.harness);
             const harnessResult = applyTransaction(plans.harness, projectDescriptor, projectMarker, options);
-            return projectApplyPayload(lockedPlans.shared, plans.harness, sharedResult, harnessResult);
+            return projectApplyPayload(lockedPlans.shared, plans.harness, sharedResult, harnessResult, projectMarker);
           } catch (error) {
             let code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' =
               error instanceof ControlPlaneError && error.code === 'ROLLBACK_FAILED'
@@ -1007,7 +1037,7 @@ export function publishApply(
     );
     preflightTransaction(descriptor, plan);
     const result = applyTransaction(plan, descriptor, previousMarker, options);
-    return applyPayload(plan, releaseId, result.retainedReleaseId);
+    return applyPayload(plan, releaseId, result.retainedReleaseId, { destinationRoot: context.homeRoot, previousMarker });
   });
 }
 export function recoverPublication(

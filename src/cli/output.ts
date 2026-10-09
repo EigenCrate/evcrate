@@ -35,6 +35,17 @@ export function createCliErrorResult(
   });
 }
 
+function formatLegacyLeftoversWarning(leftovers: unknown): string {
+  if (!Array.isArray(leftovers) || leftovers.length === 0) return '';
+  const lines = [
+    '',
+    'Warning: Preserved untracked legacy artifacts detected:',
+    ...leftovers.map((l: Record<string, unknown>) => `  - [${String(l.target)}] ${String(l.path)} (${String(l.kind)})`),
+    'Manual review recommended: these unmanaged files were preserved and not deleted. Review and back up any customizations before manual removal.'
+  ];
+  return lines.join('\n');
+}
+
 function statusText(result: Record<string, unknown>, debug = false): string {
   if (result.status === 'QUALIFIED') {
     const target = result.target as Record<string, unknown> | null;
@@ -58,7 +69,11 @@ function statusText(result: Record<string, unknown>, debug = false): string {
   if (result.status === 'APPLIED') return 'advisor settings applied';
   if (result.status === 'CONFLICT') return 'advisor settings conflict';
   if (result.status === 'RECOVERED' || result.status === 'recovered') return 'recovered';
-  if (result.status === 'published' || result.status === 'activated') return 'published';
+  if (result.status === 'published' || result.status === 'activated') {
+    const payload = result.payload as Record<string, unknown> | undefined;
+    const warning = formatLegacyLeftoversWarning(payload?.legacyLeftovers);
+    return `published${warning}`;
+  }
   if (result.status === 'ok') {
     const payload = result.payload as Record<string, unknown> | undefined;
     return payload?.version ? `evcrate ${String(payload.version)}` : 'ok';

@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-09 (Phase 07 projection, catalog, registry, and manifest regeneration; Phase 12 instruction cutover).
+**Maintained:** 2026-10-09 (Phase 07 projection/catalog regeneration; Phase 08 publication prune and upgrade path; Phase 12 instruction cutover).
 **Source:** Current repository declarations and implementation modules. Historical candidate qualification evidence remains dated separately.
 **Updated:** 2026-10-09
 **Package:** Private npm package `evcrate` 2.10.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The controller closure also packages the HOME helper asset `evcrate-advice-mode` (`.evcrate/source/.evcrate/bin/evcrate-advice-mode`), invoked explicitly with supported Node (not an npm CLI binary). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
@@ -33,17 +33,17 @@ The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `cop
 
 | Area | Responsibility | Representative files |
 |---|---|---|
-| `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts`, `advisor-settings.ts`, `index.ts` |
+| `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts` (Phase 08 `legacyLeftovers` payload and validation), `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Target manifest loading, build metadata, controller closure | `manifest.ts`, `registry.ts`, `controller.ts` (validates 46-file closure and Node shebangs on both `evcrate-advisor` and `evcrate-advice-mode`) |
 | `src/adapters/` | Seven target projection adapters; canonical graph `AGENTS.md`, native instruction formats, OMP admission/context guards, Pi main/child extension, current Antigravity hooks/rules, Copilot `.github` project instructions, VS Code Local plugin; shared URI restoration and Markdown frontmatter | `registry.ts`, `qualification.ts`, `markdown-frontmatter.ts`, `vscode/`, `codex/`, `omp/`, `pi/`, `copilot/`, `antigravity.ts` |
-| `src/distribution/` | Local build/check, single-projection manifest reuse, bounded worker pool (`worker-pool.ts`), input snapshot isolation (`input-snapshot.ts`, `input-snapshot-tree.ts`), publication planning, staging, atomic promotion, and recovery | `local-build.ts`, `local-build-staging.ts`, `manifest-view-derivation.ts`, `local-staging-fs.ts`, `worker-pool.ts`, `input-snapshot.ts`, `publication-plan.ts`, `publication.ts` |
+| `src/distribution/` | Local build/check, single-projection manifest reuse, bounded worker pool (`worker-pool.ts`), input snapshot isolation (`input-snapshot.ts`, `input-snapshot-tree.ts`), publication planning, staging, atomic promotion, and recovery | `local-build.ts`, `local-build-staging.ts`, `manifest-view-derivation.ts`, `local-staging-fs.ts`, `worker-pool.ts`, `input-snapshot.ts`, `publication-plan.ts` (Phase 08 removed bindings reconciliation), `publication.ts`, `legacy-leftovers.ts` (Phase 08 unmanaged leftover scanning and migrated collision checks) |
 | `src/filesystem/` | Host/portable paths, hashing, atomic writes, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/registry/` | Canonical resource scan, schema, validation, and queries | `scanner.ts`, `schema.ts`, `store.ts` |
 | `src/imports/` | Bounded explicit-source preview/apply and materialization | `source.ts`, `preview.ts`, `apply.ts`, `handler.ts` |
 | `src/scopes/` | Global/project assignments, revisions, and CAS | `identity.ts`, `state.ts`, `mutations.ts`, `changes.ts` |
 | `src/advisor-settings/` | User-policy snapshots, journaled transactions, and recovery | `policy-files.ts`, `coordinator.ts`, `transactions.ts`, `recovery.ts` |
-| `src/cli/`, `src/errors/` | One-shot dispatch, output, stable errors, and exit mapping | `arguments.ts`, `dispatch.ts`, `main.ts`, `control-plane-error.ts` |
+| `src/cli/`, `src/errors/` | One-shot dispatch, output, stable errors, and exit mapping | `arguments.ts`, `dispatch.ts`, `main.ts`, `output.ts` (Phase 08 legacy leftovers TTY warning), `control-plane-error.ts` |
 
 The CLI resolves context, validates one invocation, dispatches one operation, writes one validated result, and exits. It exposes version/health, resource and import operations, scopes/changes, advisor settings, and distribution build/check/publish/recover operations. There is no canonical root `distribute.py` runtime.
 
@@ -683,6 +683,15 @@ Phase 07 regenerated all seven active target projections, catalogs, registry, an
 - **Canonical hash binding:** Manifest entries `source_hashes['AGENTS.md']` and `agentsMdHash` strictly bind canonical `.claude/AGENTS.md` (`358d2375560909b18b4ef3b20f701dfe0aa116d97cf314766ab1a7d277ac3001`), never generated root AGENTS.
 - **Unified naming invariants:** 70/70 commands follow `evc-cmd-*` (with `-x-` nesting segments and length <= 64), 18/18 agents follow `evc-*`, Copilot skills use `evc-` prefixes (`evc-<skill>`), and semantic advisor IDs (21 allowlisted IDs, e.g. `code/auto`) remain stable invariants.
 - **Verification:** `npm run distribute:check` passed with `status: "ok"` in 14.71s across all 7 targets. Targeted test suites passed at 338+ tests (adapters 228/228, manifests 16/16, primitives 38/38, protocol 53/53, vscode-hooks 20/20, package-smoke 3/3). Code review approved at 9.7/10.
+
+### Phase 08 publication prune, collision refusal, and legacy leftover reporting
+
+Phase 08 establishes the hard cutover publication upgrade path, collision protections, and legacy residual management:
+- **Universal unmanaged collision refusal:** `isMigratedDestination` enforces collision refusal across all active targets for unified command destinations (`evc-cmd-*`), agent destinations (`evc-*`), Copilot/VS Code unified extensions, and canonical instruction documents (`AGENTS.md`, `.github/copilot-instructions.md`, `.agents/rules/evcrate-antigravity.md`, `.agents/hooks.json`). Unmanaged files at migrated destinations yield `conflict` actions, failing closed atomically (`PUBLICATION_FAILED`) with zero user data loss.
+- **Project-scope obsolete binding reconciliation:** `reconcileRemovedBindings` scans prior release markers in project scope. Obsolete managed bindings (e.g., project-level `.claude/CLAUDE.md` and retired Gemini bindings) are planned with `action: 'delete'` and safely purged during harness application. Inherited Codex `.agents` residuals are explicitly preserved.
+- **Untracked legacy leftover reporting:** `detectLegacyLeftovers` performs a bounded, read-only inspection of known resource locations across selected targets, subtracting current and prior recorded ownership. Untracked legacy files are preserved byte-identically and reported across five kinds (`command`, `agent`, `skill`, `style`, `instruction`).
+- **Dual-interface reporting:** Machine payloads carry `legacyLeftovers: readonly LegacyLeftoverRecord[]` sorted deterministically in `PublishApplyResultPayload`; human TTY output displays `published` followed by concise warnings with manual review recommendations.
+- **Upgrade guidance:** Full operational procedures, ownership policies, and pre-upgrade backup requirements are documented in [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md).
 ## Documentation navigation
 
 - [System architecture](./system-architecture.md) — central contracts.
@@ -694,3 +703,4 @@ Phase 07 regenerated all seven active target projections, catalogs, registry, an
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
 - [Historical Advisor integration records](./all-project-advisor-history.md), [Workspace host contract](./workspace-advisor-host-contract.md), and [Workspace Advisor PDR](./workspace-advisor-pdr.md) — former plugin-era contracts and evidence.
 - Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md) — operational upgrade, backup, and collision safety guidance.

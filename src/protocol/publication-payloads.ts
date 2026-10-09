@@ -242,12 +242,24 @@ export interface PublishDryRunResultPayload {
   readonly buildManifestDigest: string;
   readonly phases: readonly [DryRunPhaseRecord, DryRunPhaseRecord];
 }
+export const LEGACY_LEFTOVER_KINDS = Object.freeze([
+  'command', 'agent', 'skill', 'style', 'instruction'
+] as const);
+export type LegacyLeftoverKind = typeof LEGACY_LEFTOVER_KINDS[number];
+
+export interface LegacyLeftoverRecord {
+  readonly target: PublicationStateTarget;
+  readonly path: string;
+  readonly kind: LegacyLeftoverKind;
+}
+
 export interface PublishApplyResultPayload {
   readonly scope: PublicationScope;
   readonly projectIdentity: string | null;
   readonly buildManifestPath: string;
   readonly buildManifestDigest: string;
   readonly phases: readonly [ApplyPhaseRecord, ApplyPhaseRecord];
+  readonly legacyLeftovers?: readonly LegacyLeftoverRecord[];
 }
 export interface RecoveryPhaseRecord {
   readonly phase: PublicationPhase;
@@ -398,18 +410,65 @@ function phasePair(
   }
   return Object.freeze([applyShared, applyHarness]) as readonly [ApplyPhaseRecord, ApplyPhaseRecord];
 }
+function validateLegacyLeftovers(
+  value: unknown, selectedTargets?: readonly PublicationStateTarget[]
+): readonly LegacyLeftoverRecord[] {
+  if (value === undefined) return Object.freeze([]);
+  if (!Array.isArray(value) || value.length > MAX_PUBLICATION_CHANGES) invalidResourcePayload();
+  const seen = new Set<string>();
+  const result: LegacyLeftoverRecord[] = [];
+  let previousSortKey = '';
+  for (const entry of value) {
+    const raw = asPayloadObject(entry);
+    assertExactKeys(raw, ['target', 'path', 'kind']);
+    const leftoverTarget = publicationStateTarget(raw.target);
+    if (selectedTargets && !selectedTargets.includes(leftoverTarget)) invalidResourcePayload();
+    const path = normalizeRelativePath(boundedText(raw.path, 4096, 'leftover path'));
+    if (typeof raw.kind !== 'string' || !LEGACY_LEFTOVER_KINDS.includes(raw.kind as LegacyLeftoverKind)) {
+      invalidResourcePayload();
+    }
+    const kind = raw.kind as LegacyLeftoverKind;
+    const key = `${leftoverTarget}:${path}`;
+    if (seen.has(key)) invalidResourcePayload();
+    seen.add(key);
+    const sortKey = `${leftoverTarget}\0${path}\0${kind}`;
+    if (sortKey < previousSortKey) invalidResourcePayload();
+    previousSortKey = sortKey;
+    result.push(Object.freeze({ target: leftoverTarget, path, kind }));
+  }
+  return Object.freeze(result);
+}
+
 function publishEnvelope(value: unknown, kind: 'dry-run' | 'apply', allowPartial = false): {
   scope: PublicationScope; projectIdentity: string | null; buildManifestPath: string;
   buildManifestDigest: string; phases: readonly [DryRunPhaseRecord, DryRunPhaseRecord] | readonly [ApplyPhaseRecord, ApplyPhaseRecord];
+  legacyLeftovers?: readonly LegacyLeftoverRecord[];
 } {
   const raw = asPayloadObject(value);
-  assertExactKeys(raw, ['scope', 'projectIdentity', 'buildManifestPath', 'buildManifestDigest', 'phases']);
   const scope = validatePublicationScope(raw.scope);
+  const phases = phasePair(raw.phases, scope, kind, allowPartial);
+  if (kind === 'apply') {
+    if (raw.legacyLeftovers !== undefined) {
+      assertExactKeys(raw, ['scope', 'projectIdentity', 'buildManifestPath', 'buildManifestDigest', 'phases', 'legacyLeftovers']);
+    } else {
+      assertExactKeys(raw, ['scope', 'projectIdentity', 'buildManifestPath', 'buildManifestDigest', 'phases']);
+    }
+    const selectedTargets = phases[1].selectedTargets;
+    const legacyLeftovers = validateLegacyLeftovers(raw.legacyLeftovers, selectedTargets);
+    return {
+      scope, projectIdentity: projectIdentity(scope, raw.projectIdentity),
+      buildManifestDigest: validateHash(raw.buildManifestDigest),
+      buildManifestPath: relativeMetadataPath(raw.buildManifestPath),
+      phases,
+      ...(raw.legacyLeftovers !== undefined ? { legacyLeftovers } : {})
+    };
+  }
+  assertExactKeys(raw, ['scope', 'projectIdentity', 'buildManifestPath', 'buildManifestDigest', 'phases']);
   return {
     scope, projectIdentity: projectIdentity(scope, raw.projectIdentity),
     buildManifestDigest: validateHash(raw.buildManifestDigest),
     buildManifestPath: relativeMetadataPath(raw.buildManifestPath),
-    phases: phasePair(raw.phases, scope, kind, allowPartial)
+    phases
   };
 }
 export function validatePublishRequestPayload(value: unknown): PublishRequestPayload {
