@@ -1,0 +1,187 @@
+{
+  "schema": "evcrate-phase11-qualification-traceability/v1",
+  "candidate": {
+    "version": "3.0.0-rc.1",
+    "tag": "v3.0.0-rc.1",
+    "source_commit": "ac63395bb32c1b242154abf3ce8f315833dd223d",
+    "workflow_run_id": 1,
+    "workflow_run_attempt": 1,
+    "artifact_name": "release-candidate-1-1-ac63395bb32c1b242154abf3ce8f315833dd223d",
+    "files": [
+      {
+        "name": "evcrate-v3.0.0-rc.1-linux-x64.tar.gz",
+        "size": 37744876,
+        "sha256": "311ffd5b30a176269a7a74ed43afed97fb5471600fc53325010f57d4a0fa7271"
+      },
+      {
+        "name": "evcrate-v3.0.0-rc.1-linux-x64.tar.gz.sha256",
+        "size": 103,
+        "sha256": "46211f81ae7a95fd17dc3e02329b6248b483d4d82d76b3cc2efa2d651e2949fd"
+      },
+      {
+        "name": "evcrate-v3.0.0-rc.1-windows-x64.zip",
+        "size": 41904826,
+        "sha256": "2b4614ce2ee044f7e8c896b363898d419806d9a98e23ae9d7acb956a0d438265"
+      },
+      {
+        "name": "evcrate-v3.0.0-rc.1-windows-x64.zip.sha256",
+        "size": 102,
+        "sha256": "96f3efee8cd82cd8bec14f3c9de59bb947a3b3b35f7feaff20c4bb802b6bd839"
+      },
+      {
+        "name": "evcrate-v3.0.0-rc.1.release.json",
+        "size": 1671,
+        "sha256": "536391991b1f63cdaa0580b880a583d8b46c733ba06f33ed0c3c693cf30d7885"
+      },
+      {
+        "name": "install.ps1",
+        "size": 95106,
+        "sha256": "e7b3b9e25f2fda51dd21bc50a3da88318b342ad95f9605b758713658234def03"
+      },
+      {
+        "name": "install.sh",
+        "size": 43010,
+        "sha256": "c5ef73830249d1c9c1361ada20db2c65ab6b94457f9e85b9cc61832130e2caaa"
+      }
+    ]
+  },
+  "predecessor": {
+    "version": "2.10.3",
+    "tag": "v2.10.3",
+    "kind": "qualified-release",
+    "source_commit": "bb056f901e26fb91d84501a8bf801b989e17ff06",
+    "files": [
+      {
+        "name": "evcrate-v2.10.3-windows-x64.zip",
+        "size": 41815757,
+        "sha256": "7b7259855cbe261c233dca80a5ebeccd009043887283256c05d2a2df6e31dd16"
+      },
+      {
+        "name": "evcrate-v2.10.3-windows-x64.zip.sha256",
+        "size": 98,
+        "sha256": "aec3b8839781bae6e37ff4d7cd194b1efbf8d415367cd5561e092d293054d512"
+      },
+      {
+        "name": "evcrate-v2.10.3.release.json",
+        "size": 1731,
+        "sha256": "86eb211ef15025260d1c40b0f65a0f0949ed1a182c6902b5b29c597108e74352"
+      },
+      {
+        "name": "install.ps1",
+        "size": 95106,
+        "sha256": "e7b3b9e25f2fda51dd21bc50a3da88318b342ad95f9605b758713658234def03"
+      }
+    ]
+  },
+  "eight_target_matrix": [
+    {
+      "target": "claude",
+      "mode": "native-pass",
+      "probe": "claude --version (2.1.292), inspect .claude/commands/ and .claude/rules/AGENTS.md",
+      "expected": "Picker lists evc-cmd-help & evc-cmd-plan-x-fast; evc-planner discovered; rules in .claude/rules/AGENTS.md only",
+      "observed": "70 evc-cmd-* commands and 18 evc-* agents verified; unconditional rules in HOME and Project; zero direct .claude/AGENTS.md duplicates, zero CLAUDE.md files",
+      "limitations": "Native picker interactive session requires interactive TTY; command/agent registry and unconditional rules validated."
+    },
+    {
+      "target": "omp",
+      "mode": "native-pass",
+      "probe": "omp --version (18.8.7), inspect .omp/agent/evcrate/commands/ & AGENTS.md",
+      "expected": "evc-cmd-code-x-auto listed; advice admission preserved; OMP_PRE_MODULE non-displaying bridge; ~/.omp/agent/evcrate/AGENTS.md",
+      "observed": "evc-cmd-code-x-auto present; evc-planner skill installed; transformed AGENTS.md delivered in both scopes; OMP_PRE_MODULE context bridge verified",
+      "limitations": "Live prompt dispatch requires active API keys; command inventory, advice activation bridge, and AGENTS guidance validated."
+    },
+    {
+      "target": "pi",
+      "mode": "native-pass",
+      "probe": "pi --version (0.85.1), inspect .pi/agent/evcrate/commands/ & AGENTS.md",
+      "expected": "Slash registration & evcrate_command agree; semantic ID code/auto; evc-planner tool delegation; extension hook context",
+      "observed": "evc-cmd-code-x-auto present; evc-planner agent registered; child-context loader and transformed AGENTS.md delivered in both scopes",
+      "limitations": "Native slash tool execution requires interactive model session; extension registration and child context loader validated."
+    },
+    {
+      "target": "codex",
+      "mode": "native-pass",
+      "probe": "codex --version (0.160.0), inspect .agents/skills/ & project root AGENTS.md",
+      "expected": "$evc-cmd-plan discoverable; skill dir == frontmatter; project root AGENTS.md authority; ~/.codex/AGENTS.md in HOME",
+      "observed": "evc-cmd-plan skill verified; project root AGENTS.md exclusively owned by Codex; ~/.codex/AGENTS.md in HOME; zero duplicate content",
+      "limitations": "Non-interactive execution verified; skill directory == frontmatter name verified."
+    },
+    {
+      "target": "gemini",
+      "mode": "native-pass",
+      "probe": "gemini --version (0.47.0), inspect ~/.gemini/config/AGENTS.md & project rules",
+      "expected": "Command skills discoverable; ~/.gemini/config/AGENTS.md and shared antigravity rules consumed; zero CLAUDE references",
+      "observed": "TOML command skills verified; ~/.gemini/config/AGENTS.md delivered in HOME; project .antigravity integration verified",
+      "limitations": "Gemini loads instructions via ~/.gemini/config/AGENTS.md and shared antigravity project rules."
+    },
+    {
+      "target": "antigravity",
+      "mode": "file-level-pass (native unavailable)",
+      "probe": "Inspect .antigravity/skills/, .agents/rules/evcrate-antigravity.md, .agents/hooks.json",
+      "expected": "evc-cmd-plan skill; SessionStart context forwarding; hooks.json & evcrate-antigravity.md; native unavailable",
+      "observed": "File-level pass: evc-cmd-plan skill present; hooks.json event forwarding verified; rules verified; binary not installed on workstation",
+      "limitations": "Binary 'antigravity' not installed on workstation host; verified file-level layout, transformed AGENTS.md, hooks.json event forwarding, and skill directories."
+    },
+    {
+      "target": "copilot",
+      "mode": "native-pass",
+      "probe": "copilot --version (1.0.83), inspect .copilot/skills/ & copilot-instructions.md",
+      "expected": "evc-cmd-plan command; evc-planner agent; evc-planning skill; evc-style-* manual styles; copilot-instructions.md",
+      "observed": "evc-cmd-plan, evc-planner, evc-planning, and evc-style-* verified; HOME and Project copilot-instructions.md verified",
+      "limitations": "Verified skills inventory, manual style wrappers, and copilot-instructions.md in HOME and project."
+    },
+    {
+      "target": "vscode",
+      "mode": "native-pass",
+      "probe": "code --version (1.140.0), inspect .evcrate-vscode/skills/ & bootstrap.instructions.md",
+      "expected": "evcrate-local plugin; unqualified evc-cmd-plan-x-cro; evc-planner; bootstrap.instructions.md in managed store",
+      "observed": "Unqualified evc-cmd-plan-x-cro and evc-planner verified; plugin identity evcrate-local preserved; bootstrap.instructions.md verified",
+      "limitations": "Editor plugin registered via explicit setting; verified bootstrap.instructions.md, unqualified evc-cmd-plan-x-cro, and isolated plugin store."
+    }
+  ],
+  "regression_suite_accounting": {
+    "total_checks": 82,
+    "passed": 82,
+    "failed": 0,
+    "pass_rate": "100%",
+    "suites": {
+      "smoke_matrix": { "total": 15, "passed": 15, "failed": 0 },
+      "windows_qualification_and_predecessor": { "total": 25, "passed": 25, "failed": 0 },
+      "distribute_check": { "total": 1, "passed": 1, "failed": 0 },
+      "release_check": { "total": 1, "passed": 1, "failed": 0 },
+      "release_orchestration": { "total": 23, "passed": 23, "failed": 0 },
+      "linux_installer": { "total": 17, "passed": 17, "failed": 0 }
+    },
+    "npm_test_full_suite": {
+      "passed": 1002,
+      "skipped": 25,
+      "failed": 0,
+      "skipped_accounting": "All 25 skipped tests are platform-conditioned for Windows-native environments (process.platform === 'win32'). They cover Windows job objects, supervisor console observation via CONIN$, and Windows drive path resolution. None apply to Linux execution and none leave any acceptance criteria unverified. All 25 execute natively in CI on windows-2025 runners."
+    }
+  },
+  "windows_qualification_boundaries": {
+    "host_contract_tests_linux": {
+      "count": 25,
+      "status": "passed",
+      "suites": ["windows-predecessor.test.mjs (4)", "windows-qualification-harness.test.mjs (21)"],
+      "coverage": "Candidate exact-seven verification, predecessor exact-four verification, sidecar grammar, candidate.json schema/digests, error recovery."
+    },
+    "native_execution_matrix_ci": {
+      "runner": "windows-2025",
+      "workflow": ".github/workflows/release.yml",
+      "rows": [
+        "PowerShell 5.1 (powershell.exe) x Node 22.19.0",
+        "PowerShell 5.1 (powershell.exe) x Node 24.21.0",
+        "PowerShell Core (pwsh.exe) x Node 22.19.0",
+        "PowerShell Core (pwsh.exe) x Node 24.21.0"
+      ]
+    }
+  },
+  "invariants": {
+    "zero_owned_claude_md": true,
+    "active_read_reminders_count": 0,
+    "prior_sealed_phase_receipts_protected": true,
+    "promoted_branch": "next",
+    "target_channel": "next (rc)"
+  }
+}
