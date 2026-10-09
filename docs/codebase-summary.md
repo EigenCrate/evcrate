@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-09 (Phase 07 projection/catalog regeneration; Phase 08 publication prune and upgrade path; Phase 12 instruction cutover).
+**Maintained:** 2026-10-09 (Phase 08 publication prune and upgrade path hard cutover complete; universal collision refusal active).
 **Source:** Current repository declarations and implementation modules. Historical candidate qualification evidence remains dated separately.
 **Updated:** 2026-10-09
 **Package:** Private npm package `evcrate` 2.10.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The controller closure also packages the HOME helper asset `evcrate-advice-mode` (`.evcrate/source/.evcrate/bin/evcrate-advice-mode`), invoked explicitly with supported Node (not an npm CLI binary). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
