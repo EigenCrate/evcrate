@@ -152,7 +152,7 @@
       "release_orchestration": { "total": 23, "passed": 23, "failed": 0 },
       "linux_installer": { "total": 17, "passed": 17, "failed": 0 }
     },
-    "npm_test_full_suite": {
+    "regression_suite_npm_test": {
       "passed": 1002,
       "skipped": 25,
       "failed": 0,
