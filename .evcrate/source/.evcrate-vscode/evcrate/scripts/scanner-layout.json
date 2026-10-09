@@ -5,11 +5,11 @@
     "format": "command-skill",
     "root": "../../skills",
     "output": "commands_data.yaml",
-    "authority": "../command-name-map.json"
+    "authority": "../scanner-command-map.json"
   },
   "skills": {
     "root": "../../skills",
     "output": "skills_data.yaml",
-    "authority": "../skill-map.json"
+    "authority": "skills_data.yaml"
   }
 }

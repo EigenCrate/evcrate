@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { extname, relative, sep } from "node:path";
+import { extname } from "node:path";
 
 import { resolveContainedExistingPath } from "./paths.js";
 
@@ -63,34 +63,42 @@ export function substituteArguments(body, rawArgs) {
   });
 }
 
+const COMMAND_PREFIX = "evc-cmd-";
+const SEGMENT_SEPARATOR = "-x-";
+const MAX_NAME_LENGTH = 64;
+const KEBAB_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Advisor semantic id (`evc-cmd-code-x-auto` -> `code/auto`), or undefined when `name` is not a valid
+ * flat command name. Twin of `parseCommandName` in src/adapters/resource-naming.ts (the installed
+ * runtime cannot import src/); tests/adapters/pi-command-name-parity.test.mjs keeps them identical.
+ */
+export function semanticIdFor(name) {
+  if (typeof name !== "string" || name.length > MAX_NAME_LENGTH || !KEBAB_NAME.test(name) || !name.startsWith(COMMAND_PREFIX)) return undefined;
+  const segments = name.slice(COMMAND_PREFIX.length).split(SEGMENT_SEPARATOR);
+  return segments.every((segment) => KEBAB_NAME.test(segment) && !segment.split("-").includes("x")) ? segments.join("/") : undefined;
+}
+
+/** Flat command name = file stem. */
 export function commandNameFor(relativePath) {
-  return relativePath.slice(0, -extname(relativePath).length).split(sep).join(":");
+  return relativePath.slice(0, -extname(relativePath).length);
 }
 
 export function canonicalCommandNameFor(relativePath) {
-  return relativePath.slice(0, -extname(relativePath).length).split(sep).join("/");
+  return semanticIdFor(commandNameFor(relativePath));
 }
 
+/** Command files are flat `evc-cmd-*.md`; nested directories and non-command stems are ignored. */
 export function discoverCommandFiles(root) {
   const commands = [];
-  const walk = (directory) => {
-    let entries;
-    try { entries = readdirSync(directory, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      const candidate = `${directory}${sep}${entry.name}`;
-      if (entry.isDirectory()) walk(candidate);
-      else if (entry.isFile() && extname(entry.name) === ".md") {
-        const relativePath = relative(root, candidate);
-        const filePath = resolveContainedExistingPath(root, relativePath);
-        if (filePath) commands.push({
-          name: commandNameFor(relativePath),
-          canonicalName: canonicalCommandNameFor(relativePath),
-          filePath,
-        });
-      }
-    }
-  };
-  walk(root);
+  let entries;
+  try { entries = readdirSync(root, { withFileTypes: true }); } catch { return commands; }
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!entry.isFile() || extname(entry.name) !== ".md") continue;
+    const canonicalName = canonicalCommandNameFor(entry.name);
+    const filePath = canonicalName && resolveContainedExistingPath(root, entry.name);
+    if (filePath) commands.push({ name: commandNameFor(entry.name), canonicalName, filePath });
+  }
   return commands;
 }
 

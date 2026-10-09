@@ -81,7 +81,7 @@ def categorize_skill(name: str, description: str, content: str) -> str:
         return "infrastructure"
     if any(x in lower for x in ["database", "mongodb", "postgresql", "sql"]):
         return "database"
-    if any(x in lower for x in ["mcp", "skill-creator", "copilot-cli", "repomix", "docs-seeker"]):
+    if any(x in lower for x in ["mcp", "skill-creator", "claude-code", "repomix", "docs-seeker"]):
         return "dev-tools"
     if any(x in lower for x in ["media", "chrome-devtools", "document-skills"]):
         return "multimedia"

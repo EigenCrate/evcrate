@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate updated command and skill catalogs.
 
-Outputs YAML to stdout by default for easy consumption by Copilot.
+Outputs YAML to stdout by default for easy consumption by Claude.
 Use --output to write to a specific file instead.
 """
 
@@ -13,6 +13,7 @@ import sys
 import tempfile
 from typing import Any, Dict, List, Optional, Set, Tuple
 import yaml
+from scan_commands import ScanError, command_segments_from_stem
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -84,6 +85,10 @@ def validate_command_records(records: Any) -> List[Dict[str, str]]:
             raise CatalogError(f"{pfx} unsafe or non-normalized relative path: {src!r} or {path!r}")
         if not name.startswith("/"):
             raise CatalogError(f"{pfx} command name must start with '/': {name!r}")
+        try:
+            command_segments_from_stem(name[1:])
+        except ScanError as e:
+            raise CatalogError(f"{pfx} {e}") from e
         if cat not in VALID_CMD_CATS:
             raise CatalogError(f"{pfx} invalid category: '{cat}'")
         if src in seen_src or name in seen_name or path in seen_path:

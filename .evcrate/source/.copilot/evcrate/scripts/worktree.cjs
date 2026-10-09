@@ -69,7 +69,7 @@ function output(data) {
       if (data.worktreePath) {
         console.log(`\n📋 Next Steps:`);
         console.log(`   1. cd ${data.worktreePath}`);
-        console.log(`   2. copilot`);
+        console.log(`   2. claude`);
         console.log(`   3. Start working on your feature`);
         console.log(`\n🧹 Cleanup when done:`);
         console.log(`   git worktree remove ${data.worktreePath}`);
@@ -435,7 +435,7 @@ function cmdCreate() {
   // Check if worktree already exists
   if (fs.existsSync(worktreePath)) {
     outputError('WORKTREE_EXISTS', `Worktree already exists: ${worktreePath}`, {
-      suggestion: `To use: cd ${worktreePath} && copilot\nTo remove: git worktree remove ${worktreePath}`
+      suggestion: `To use: cd ${worktreePath} && claude\nTo remove: git worktree remove ${worktreePath}`
     });
   }
 

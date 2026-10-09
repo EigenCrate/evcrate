@@ -127,7 +127,7 @@ def find_api_key():
 
             # Show hierarchy
             print_info("\nTo see where the key was found, run:")
-            print_info("python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose")
+            print_info("python {{evcrate:scripts/resolve_env.py}} GEMINI_API_KEY --skill ai-multimodal --verbose")
 
             return api_key
         else:
@@ -249,8 +249,8 @@ def provide_setup_instructions():
     print(f"   $ python {Path(__file__)}")
 
     print("\n4. Debug if needed:")
-    print(f"   $ python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
-    print(f"   $ python ~/.pi/agent/evcrate/scripts/resolve_env.py GEMINI_API_KEY --skill ai-multimodal --verbose")
+    print(f"   $ python {{evcrate:scripts/resolve_env.py}} --show-hierarchy --skill ai-multimodal")
+    print(f"   $ python {{evcrate:scripts/resolve_env.py}} GEMINI_API_KEY --skill ai-multimodal --verbose")
 
 
 def main():

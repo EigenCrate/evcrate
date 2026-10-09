@@ -1,5 +1,5 @@
 import hookAdapter from "./hook-adapter.cjs";
-
+import { readInstalledAgentsDocument } from "./paths.js";
 const { createHookAdapter } = hookAdapter;
 
 function sessionId(context) {
@@ -18,6 +18,16 @@ function notify(context, message) {
 /** Register the sole Pi lifecycle/tool owner for generated canonical hook entries. */
 export function registerHooks(pi, options = {}) {
   const adapter = options.adapter ?? createHookAdapter(options);
+  let startupContext;
+  let startupDelivered = false;
+  const rebuildStartupContext = async (event, context) => {
+    startupContext = undefined;
+    startupDelivered = false;
+    const payload = readInstalledAgentsDocument(adapter.agentRoot);
+    const output = await run("SessionStart", { reason: event?.reason }, context);
+    startupContext = [payload, output.additionalContext].filter(Boolean).join("\n\n");
+    startupDelivered = false;
+  };
   const run = (eventName, event, context) => adapter.run(eventName, {
     ...event,
     sessionId: sessionId(context),
@@ -28,14 +38,22 @@ export function registerHooks(pi, options = {}) {
   });
 
   pi.on("session_start", async (event, context) => {
-    const output = await run("SessionStart", { reason: event?.reason }, context);
-    if (output.additionalContext) {
-      pi.sendMessage({
-        customType: "evcrate-hook-context",
-        content: output.additionalContext,
-        display: false,
-      }, { deliverAs: "nextTurn" });
+    await rebuildStartupContext(event, context);
+  });
+
+  // Hosts report lifecycle exceptions but continue. Consume rejected input
+  // explicitly so a missing required payload cannot reach the provider.
+  pi.on("input", async (_event, context) => {
+    if (startupContext !== undefined) return undefined;
+    try {
+      await rebuildStartupContext({ reason: "startup" }, context);
+    } catch {
+      const message = "Required EVCrate AGENTS payload is unsafe or unavailable";
+      console.error(message);
+      notify(context, message);
+      return { action: "handled" };
     }
+    return undefined;
   });
 
   pi.on("session_before_compact", async (event, context) => {
@@ -43,20 +61,54 @@ export function registerHooks(pi, options = {}) {
   });
 
   pi.on("session_compact", async (event, context) => {
+    startupContext = undefined;
+    startupDelivered = false;
     await run("PostCompact", { reason: event?.reason }, context);
-    await run("SessionStart", { reason: "compact" }, context);
+    await rebuildStartupContext({ reason: "compact" }, context);
   });
 
   pi.on("before_agent_start", async (_event, context) => {
+    if (startupContext === undefined) await rebuildStartupContext({ reason: "startup" }, context);
     const output = await run("UserPromptSubmit", {}, context);
-    if (!output.additionalContext) return undefined;
+    const parts = [];
+    const includesStartup = !startupDelivered;
+    if (!startupDelivered) {
+      parts.push(startupContext);
+      startupDelivered = true;
+    }
+    if (output.additionalContext) parts.push(output.additionalContext);
+    if (!parts.length) return undefined;
     return {
       message: {
         customType: "evcrate-hook-context",
-        content: output.additionalContext,
+        content: parts.join("\n\n"),
         display: false,
+        details: includesStartup ? { evcrateStartup: true, reminder: output.additionalContext ?? "" } : undefined,
       },
     };
+  });
+
+  // Compaction can retain an older startup message. Supersede only its startup
+  // content in the outgoing context, preserving reminders and session history.
+  pi.on("context", (event) => {
+    const isStartup = (message) => message.role === "custom"
+      && message.customType === "evcrate-hook-context"
+      && message.details?.evcrateStartup === true;
+    const latest = event.messages.findLastIndex(isStartup);
+    if (latest < 0 || event.messages.findIndex(isStartup) === latest) return undefined;
+    const messages = [];
+    for (let index = 0; index < event.messages.length; index += 1) {
+      const message = event.messages[index];
+      if (index < latest && isStartup(message)) {
+        const reminder = message.details.reminder;
+        if (typeof reminder === "string" && reminder) {
+          messages.push({ ...message, content: reminder, details: undefined });
+        }
+      } else {
+        messages.push(message);
+      }
+    }
+    return { messages };
   });
 
   pi.on("tool_call", async (event, context) => {

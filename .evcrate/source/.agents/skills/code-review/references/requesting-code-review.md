@@ -1,11 +1,11 @@
 ---
 name: requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements - dispatches code-reviewer subagent to review implementation against plan or requirements before proceeding
+description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements - dispatches evc-code-reviewer subagent to review implementation against plan or requirements before proceeding
 ---
 
 # Requesting Code Review
 
-Dispatch code-reviewer subagent to catch issues before they cascade.
+Dispatch evc-code-reviewer subagent to catch issues before they cascade.
 
 **Core principle:** Review early, review often.
 
@@ -29,9 +29,9 @@ BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-**2. Dispatch code-reviewer subagent:**
+**2. Dispatch evc-code-reviewer subagent:**
 
-Use subagent workflow with `code-reviewer` type, fill template at `code-reviewer.md`
+Use subagent workflow with `evc-code-reviewer` type, fill template at `code-reviewer.md`
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
@@ -56,7 +56,7 @@ You: Let me request code review before proceeding.
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch code-reviewer subagent]
+[Dispatch evc-code-reviewer subagent]
   WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
   PLAN_OR_REQUIREMENTS: Task 2 from docs/plans/deployment-plan.md
   BASE_SHA: a7981ec

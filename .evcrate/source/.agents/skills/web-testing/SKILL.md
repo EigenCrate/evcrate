@@ -1,6 +1,6 @@
 ---
 name: "web-testing"
-description: "Web testing release-gate workflow for browser-facing changes. Use this skill whenever the user works on frontend UI, browser flows, Playwright, Vitest, k6, axe/WCAG, Lighthouse/Core Web Vitals, visual regression, flaky tests, hard waits, CI browser tests, or asks if a web change is ready to release. It guides Codex to prove behavior in a real browser with evidence instead of relying only on diffs, unit tests, or confident summaries."
+description: "Web testing release-gate workflow for browser-facing changes. Use this skill whenever the user works on frontend UI, browser flows, Playwright, Vitest, k6, axe/WCAG, Lighthouse/Core Web Vitals, visual regression, flaky tests, hard waits, CI browser tests, or asks if a web change is ready to release. It guides Claude to prove behavior in a real browser with evidence instead of relying only on diffs, unit tests, or confident summaries."
 compatibility: "JavaScript and TypeScript web projects using Playwright, Vitest, k6, axe-core, Lighthouse/Lighthouse CI, visual regression tooling, or equivalent project-native test tools."
 ---
 

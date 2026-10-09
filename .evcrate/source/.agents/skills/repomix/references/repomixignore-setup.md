@@ -64,5 +64,5 @@ secrets/
 
 After setup, confirm `.codex/` is excluded:
 ```bash
-repomix --verbose 2>&1 | grep -i "codex\|skipping"
+repomix --verbose 2>&1 | grep -i "claude\|skipping"
 ```

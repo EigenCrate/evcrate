@@ -91,7 +91,7 @@ echo "Search for latest Next.js 15 features and summarize the top 3" | gemini -y
 
 **Multi-Tool Orchestration**:
 ```bash
-echo "Search for Codex AI documentation, take a screenshot of the homepage, and save both to memory" | gemini -y -m gemini-2.5-flash
+echo "Search for Claude AI documentation, take a screenshot of the homepage, and save both to memory" | gemini -y -m gemini-2.5-flash
 ```
 
 **Browser Automation**:

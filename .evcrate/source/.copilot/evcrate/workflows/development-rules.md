@@ -10,12 +10,12 @@
   - Use composition over inheritance for complex widgets
   - Extract utility functions into separate modules
   - Create dedicated service classes for business logic
-- When looking for docs, activate `evcrate-docs-seeker` skill (`context7` reference) for exploring latest docs.
+- When looking for docs, activate `evc-docs-seeker` skill (`context7` reference) for exploring latest docs.
 - Use `gh` bash command to interact with Github features if needed
 - Use `psql` bash command to query Postgres database for debugging if needed
-- Use `evcrate-ai-multimodal` skill for describing details of images, videos, documents, etc. if needed
-- Use `evcrate-ai-multimodal` skill and `imagemagick` skill for generating and editing images, videos, documents, etc. if needed
-- Use `evcrate-sequential-thinking` and `evcrate-debugging` skills for sequential thinking, analyzing code, debugging, etc. if needed
+- Use `evc-ai-multimodal` skill for describing details of images, videos, documents, etc. if needed
+- Use `evc-ai-multimodal` skill and `imagemagick` skill for generating and editing images, videos, documents, etc. if needed
+- Use `evc-sequential-thinking` and `evc-debugging` skills for sequential thinking, analyzing code, debugging, etc. if needed
 - **[IMPORTANT]** Follow the codebase structure and code standards in `./docs` during implementation.
 - **[IMPORTANT]** Do not just simulate the implementation or mocking them, always implement the real code.
 
@@ -25,7 +25,7 @@
 - Prioritize functionality and readability over strict style enforcement and code formatting
 - Use reasonable code quality standards that enhance developer productivity
 - Use try catch error handling & cover security standards
-- Use `evcrate-code-reviewer` agent to review code after every implementation
+- Use `evc-code-reviewer` agent to review code after every implementation
 - Implementation commands first resolve the helper result through [Advice activation](./advice-activation.md); use exact `WORK_ARGUMENTS` and `ADVICE_MODE`, never duplicated parsing, history-based activation or synthetic flag inheritance.
 - Off mode keeps normal validation/review/approval and ordinary debugger/user escalation on a second matching terminal blocker; it never loads full mentoring, invokes `evcrate-advisor` (no get, no locks) or hard lifecycle/inference. Risky actions remain approval-gated.
 - Only resolved explicit/inherited mode loads [Caller lifecycle binding](./advisor-mentoring.md#caller-lifecycle-binding): parent-owned state, writer barriers, same-run CAS/gates, registered bounded work and matching truthful validation outcomes, substantive finalization before seal. Review caps/chat approval do not bypass durable human gates.

@@ -1,0 +1,345 @@
+#!/usr/bin/env node
+
+/**
+ * Test script for scout-block.cjs hook
+ * Tests various tool inputs to verify blocking logic
+ *
+ * Updated to use Node.js dispatcher directly (not bash wrapper)
+ */
+
+const { spawn } = require('child_process');
+const path = require('path');
+const scriptPath = path.join(__dirname, '..', 'scout-block.cjs');
+
+const testCases = [
+  // Directory access - should be BLOCKED
+  {
+    name: 'Bash: ls node_modules',
+    input: { tool_name: 'Bash', tool_input: { command: 'ls node_modules' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: cd build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd build' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: cat dist/bundle.js',
+    input: { tool_name: 'Bash', tool_input: { command: 'cat dist/bundle.js' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Grep with node_modules path',
+    input: { tool_name: 'Grep', tool_input: { pattern: 'test', path: 'node_modules' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Glob with node_modules pattern',
+    input: { tool_name: 'Glob', tool_input: { pattern: '**/node_modules/**' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Read with node_modules file_path',
+    input: { tool_name: 'Read', tool_input: { file_path: 'node_modules/package.json' } },
+    expected: 'BLOCKED'
+  },
+
+  // Subfolder blocking (THE BUG FIX)
+  {
+    name: '[BUG FIX] Bash: ls packages/web/node_modules',
+    input: { tool_name: 'Bash', tool_input: { command: 'ls packages/web/node_modules' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: '[BUG FIX] Read: subfolder node_modules',
+    input: { tool_name: 'Read', tool_input: { file_path: 'apps/api/node_modules/pkg/index.js' } },
+    expected: 'BLOCKED'
+  },
+
+  // Build commands - should be ALLOWED
+  {
+    name: 'Bash: npm build',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: pnpm build',
+    input: { tool_name: 'Bash', tool_input: { command: 'pnpm build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: yarn build',
+    input: { tool_name: 'Bash', tool_input: { command: 'yarn build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: pnpm --filter web run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'pnpm --filter web run build 2>&1 | tail -100' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: npm install',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm install' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: npx tsc',
+    input: { tool_name: 'Bash', tool_input: { command: 'npx tsc' } },
+    expected: 'ALLOWED'
+  },
+
+  // Chained and compound build commands (NEW)
+  {
+    name: 'Bash: cd packages/foo && npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/foo && npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: cd packages/foo && pnpm build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/foo && pnpm build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: cd packages/foo; npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd packages/foo; npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: NODE_ENV=production npm run build',
+    input: { tool_name: 'Bash', tool_input: { command: 'NODE_ENV=production npm run build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: npm run build && npm test',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && npm test' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: cd node_modules && npm run build (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'cd node_modules && npm run build' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: npm run build && ls dist (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && ls dist' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: npm run build && cat build/app.js (adversarial chain blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'npm run build && cat build/app.js' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: echo ok; grep token dist/bundle.js (adversarial chain blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'echo ok; grep token dist/bundle.js' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: ls build/ (directory exploration blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'ls build/' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: tree target (directory exploration blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'tree target' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: 'Bash: CI=true pnpm build',
+    input: { tool_name: 'Bash', tool_input: { command: 'CI=true pnpm build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: python -m build',
+    input: { tool_name: 'Bash', tool_input: { command: 'python -m build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: python3 -m build',
+    input: { tool_name: 'Bash', tool_input: { command: 'python3 -m build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: python setup.py build',
+    input: { tool_name: 'Bash', tool_input: { command: 'python setup.py build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: node build.js',
+    input: { tool_name: 'Bash', tool_input: { command: 'node build.js' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: node scripts/build.js',
+    input: { tool_name: 'Bash', tool_input: { command: 'node scripts/build.js' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: deno task build',
+    input: { tool_name: 'Bash', tool_input: { command: 'deno task build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: zig build',
+    input: { tool_name: 'Bash', tool_input: { command: 'zig build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: dotnet build',
+    input: { tool_name: 'Bash', tool_input: { command: 'dotnet build' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Bash: swift build',
+    input: { tool_name: 'Bash', tool_input: { command: 'swift build' } },
+    expected: 'ALLOWED'
+  },
+
+  // Safe operations - should be ALLOWED
+  {
+    name: 'Grep with safe path',
+    input: { tool_name: 'Grep', tool_input: { pattern: 'test', path: 'src' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Read with safe file_path',
+    input: { tool_name: 'Read', tool_input: { file_path: 'src/index.js' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: 'Glob with scoped pattern',
+    input: { tool_name: 'Glob', tool_input: { pattern: 'src/**/*.ts' } },
+    expected: 'ALLOWED'
+  },
+  // Broad pattern detection (NEW)
+  {
+    name: '[NEW] Glob with broad pattern (should block)',
+    input: { tool_name: 'Glob', tool_input: { pattern: '**/*.ts' } },
+    expected: 'BLOCKED'
+  },
+
+  // Venv executable paths - should be ALLOWED (Issue #265)
+  // .venv (with dot)
+  {
+    name: '[#265] Bash: Unix .venv python executable',
+    input: { tool_name: 'Bash', tool_input: { command: '~/.claude/skills/.venv/bin/python3 script.py' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: '[#265] Bash: Windows .venv python executable',
+    input: { tool_name: 'Bash', tool_input: { command: '.venv/Scripts/python.exe script.py' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: '[#265] Bash: project .venv pip',
+    input: { tool_name: 'Bash', tool_input: { command: './project/.venv/bin/pip install requests' } },
+    expected: 'ALLOWED'
+  },
+  // venv (without dot)
+  {
+    name: '[#265] Bash: Unix venv python executable',
+    input: { tool_name: 'Bash', tool_input: { command: 'venv/bin/python3 script.py' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: '[#265] Bash: Windows venv python executable',
+    input: { tool_name: 'Bash', tool_input: { command: 'venv/Scripts/python.exe script.py' } },
+    expected: 'ALLOWED'
+  },
+  {
+    name: '[#265] Bash: project venv pip',
+    input: { tool_name: 'Bash', tool_input: { command: './myproject/venv/bin/pip install flask' } },
+    expected: 'ALLOWED'
+  },
+
+  // Venv exploration - should be BLOCKED
+  {
+    name: '[#265] Bash: cat .venv lib (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'cat .venv/lib/python3.11/site.py' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: '[#265] Bash: ls .venv (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'ls -la .venv/' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: '[#265] Read: .venv file (blocked)',
+    input: { tool_name: 'Read', tool_input: { file_path: '.venv/pyvenv.cfg' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: '[#265] Bash: cat venv lib (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'cat venv/lib/python3.11/site.py' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: '[#265] Bash: ls venv (blocked)',
+    input: { tool_name: 'Bash', tool_input: { command: 'ls -la venv/' } },
+    expected: 'BLOCKED'
+  },
+  {
+    name: '[#265] Read: venv file (blocked)',
+    input: { tool_name: 'Read', tool_input: { file_path: 'venv/pyvenv.cfg' } },
+    expected: 'BLOCKED'
+  }
+];
+
+async function runHook(input) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [scriptPath], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    let stderr = '';
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('error', error => resolve({ status: null, stderr: error.message }));
+    child.on('close', status => resolve({ status, stderr }));
+    child.stdin.end(JSON.stringify(input));
+  });
+}
+
+(async function main() {
+console.log('Testing scout-block.cjs hook...\n');
+
+// Test Node.js dispatcher directly
+let passed = 0;
+let failed = 0;
+
+for (const test of testCases) {
+  const result = await runHook(test.input);
+  if (result.status === 0) {
+    const actual = 'ALLOWED';
+    const success = actual === test.expected;
+
+    if (success) {
+      console.log(`\x1b[32m✓\x1b[0m ${test.name}: ${actual}`);
+      passed++;
+    } else {
+      console.log(`\x1b[31m✗\x1b[0m ${test.name}: expected ${test.expected}, got ${actual}`);
+      failed++;
+    }
+  } else {
+    const actual = result.status === 2 ? 'BLOCKED' : 'ERROR';
+    const success = actual === test.expected;
+
+    if (success) {
+      console.log(`\x1b[32m✓\x1b[0m ${test.name}: ${actual}`);
+      passed++;
+    } else {
+      console.log(`\x1b[31m✗\x1b[0m ${test.name}: expected ${test.expected}, got ${actual}`);
+      if (result.stderr) {
+        console.log(`  Error: ${result.stderr.trim().split('\n')[0]}`);
+      }
+      failed++;
+    }
+  }
+}
+
+console.log(`\nResults: ${passed} passed, ${failed} failed`);
+process.exit(failed > 0 ? 1 : 0);
+})();

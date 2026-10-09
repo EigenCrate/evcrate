@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Custom GitHub Copilot CLI statusline for Node.js
+ * Custom Claude Code statusline for Node.js
  * Cross-platform support: Windows, macOS, Linux
  * Theme: detailed | Features: directory, git, model, usage, session, tokens
  * No external dependencies - uses only Node.js built-in modules
@@ -144,7 +144,7 @@ async function main() {
         }
         currentDir = expandHome(currentDir);
 
-        const modelName = data.model?.display_name || data.model?.displayName || data.model?.name || 'Copilot';
+        const modelName = data.model?.display_name || 'Claude';
         const modelVersion = (data.model?.version || data.model?.versionName) && (data.model.version || data.model.versionName) !== 'null' ? (data.model.version || data.model.versionName) : '';
 
         // Git branch detection
@@ -163,7 +163,7 @@ async function main() {
             }
         }
 
-        // Native GitHub Copilot CLI data integration
+        // Native Claude Code data integration
         let sessionText = '';
         let costUSD = '';
         let linesAdded = 0;
@@ -172,12 +172,12 @@ async function main() {
         let contextText = '';
         const billingMode = env.CLAUDE_BILLING_MODE || 'api';
 
-        // Extract native cost data from GitHub Copilot CLI
+        // Extract native cost data from Claude Code
         costUSD = data.cost?.total_cost_usd || data.cost?.totalCostUsd || '';
         linesAdded = data.cost?.total_lines_added || data.cost?.totalLinesAdded || 0;
         linesRemoved = data.cost?.total_lines_removed || data.cost?.totalLinesRemoved || 0;
 
-        // Extract context window usage (GitHub Copilot CLI v2.0.65+)
+        // Extract context window usage (Claude Code v2.0.65+)
         // Uses 3-layer self-healing detection from context-tracker module:
         // - Layer 1: Session ID change detection
         // - Layer 2: Token drop detection (50% threshold)
@@ -230,7 +230,7 @@ async function main() {
                     }
 
                     if (firstApiCall) {
-                        // Calculate 5-hour billing block (GitHub windows)
+                        // Calculate 5-hour billing block (Anthropic windows)
                         const now = new Date();
                         const currentUtcHour = now.getUTCHours();
                         const blockStart = Math.floor(currentUtcHour / 5) * 5;
@@ -299,7 +299,7 @@ async function main() {
             output += `  📝 +${linesAdded} -${linesRemoved}`;
         }
 
-        // Context window usage (GitHub Copilot CLI v2.0.65+)
+        // Context window usage (Claude Code v2.0.65+)
         if (contextText) {
             output += `  ${contextText}`;
         }

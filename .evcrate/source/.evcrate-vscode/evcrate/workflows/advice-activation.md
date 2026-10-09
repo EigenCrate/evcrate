@@ -80,7 +80,7 @@ Entry and replay rule: A user-entered command always uses `handoff: null`. A han
 
 Threat model: this is a cooperative contract, not authentication or authorization. Prompt-only hosts cannot prove who built a handoff, and no deterministic rejection of a fabricated pre-run handoff is claimed. A fabricated pre-run inheritance grants nothing beyond a fabricated `--advice` flag; same-run handoffs still require matching controller state, CAS/freshness and human gates. A capability token was rejected: the same model could mint one through a fabricated flag, and a token store, locks and expiry add cost without closing that boundary.
 
-Pre-run example: caller selected `/cmd-code` and a plan but has no run. The receiving helper request supplies the original child input, this exact child context, and this handoff:
+Pre-run example: caller selected `/evc-cmd-code` and a plan but has no run. The receiving helper request supplies the original child input, this exact child context, and this handoff:
 
 ```json
 {"kind":"pre-run","context":{"project_root":"/tmp/project","command":"code","work_target":"plans/example/plan.md","plan_path":"plans/example/plan.md","phase_path":null,"phase_id":null},"run":null}

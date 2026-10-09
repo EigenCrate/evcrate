@@ -1,0 +1,19 @@
+---
+name: evc-cmd-watzup
+description: Review recent changes and wrap up the work
+---
+# evc-cmd-watzup
+
+Command Path: /evc-cmd-watzup
+
+Description: Review recent changes and wrap up the work
+
+---
+description: "Review recent changes and wrap up the work"
+argument-hint: ""
+---
+Review my current branch and the most recent commits. 
+Provide a detailed summary of all changes, including what was modified, added, or removed. 
+Analyze the overall impact and quality of the changes.
+
+**IMPORTANT**: **Do not** start implementing.

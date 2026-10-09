@@ -4,40 +4,40 @@
 
 **Plan first approach:**
 ```bash
-/cmd-plan implement payment integration with Stripe
+/plan implement payment integration with Stripe
 # Review plan, then proceed with implementation
-/cmd-cook implement payment integration with Stripe
+/cook implement payment integration with Stripe
 ```
 
 **Direct implementation:**
 ```bash
-/cmd-cook implement user authentication with JWT
-/cmd-cook__auto add dark mode toggle to settings
+/cook implement user authentication with JWT
+/cook:auto add dark mode toggle to settings
 ```
 
 ## Bug Fixing
 
 **Quick fixes:**
 ```bash
-/cmd-fix__fast login button not working
-/cmd-fix__types  # Fix TypeScript errors
+/fix:fast login button not working
+/fix:types  # Fix TypeScript errors
 ```
 
 **Complex debugging:**
 ```bash
-/cmd-debug API returns 500 errors intermittently
-/cmd-fix__hard authentication flow breaks after password reset
+/debug API returns 500 errors intermittently
+/fix:hard authentication flow breaks after password reset
 ```
 
 **Test-driven fixes:**
 ```bash
-/cmd-fix__test user service tests failing
-/cmd-test  # Run full test suite
+/fix:test user service tests failing
+/test  # Run full test suite
 ```
 
 **CI/CD failures:**
 ```bash
-/cmd-fix__ci https://github.com/org/repo/actions/runs/12345
+/fix:ci https://github.com/org/repo/actions/runs/12345
 ```
 
 ## Code Review & Testing
@@ -48,62 +48,62 @@ claude "review my latest commit"
 claude "analyze the changes in PR #42"
 
 # Run tests
-/cmd-test
-/cmd-fix__test payment tests failing
+/test
+/fix:test payment tests failing
 ```
 
 ## Documentation Management
 
 ```bash
-/cmd-docs__init                    # Create initial docs structure
-/cmd-docs__update                  # Update all docs based on codebase
-/cmd-docs__summarize auth security # Focused documentation update
+/docs:init                    # Create initial docs structure
+/docs:update                  # Update all docs based on codebase
+/docs:summarize auth security # Focused documentation update
 ```
 
 ## Git Operations
 
 ```bash
-/cmd-git__cm                        # Stage and commit
-/cmd-git__cp                        # Stage, commit, and push
-/cmd-git__pr feature-branch main    # Create pull request from feature-branch to main
+/git:cm                        # Stage and commit
+/git:cp                        # Stage, commit, and push
+/git:pr feature-branch main    # Create pull request from feature-branch to main
 ```
 
 ## Design & Content
 
 **UI/UX design:**
 ```bash
-/cmd-design__fast create landing page for SaaS product
-/cmd-design__good build immersive dashboard with data viz
-/cmd-design__screenshot analyze this design and suggest improvements
+/design:fast create landing page for SaaS product
+/design:good build immersive dashboard with data viz
+/design:screenshot analyze this design and suggest improvements
 ```
 
 **Content creation:**
 ```bash
-/cmd-content__good write product description for new feature
-/cmd-content__fast create blog post about our API
-/cmd-content__cro optimize landing page copy for conversions
+/content:good write product description for new feature
+/content:fast create blog post about our API
+/content:cro optimize landing page copy for conversions
 ```
 
 ## Project Initialization
 
 ```bash
-/cmd-bootstrap__auto create Next.js app with auth and database
-/cmd-bootstrap__auto__fast quick React app with TypeScript
+/bootstrap:auto create Next.js app with auth and database
+/bootstrap:auto:fast quick React app with TypeScript
 ```
 
 ## Advanced Workflows
 
 **Codebase analysis:**
 ```bash
-/cmd-review__codebase analyze authentication implementation
-/cmd-scout__ext find all payment-related files
+/review:codebase analyze authentication implementation
+/scout:ext find all payment-related files
 ```
 
 **Strategic planning:**
 ```bash
-/cmd-plan__hard implement real-time collaboration features
-/cmd-plan__two compare serverless vs traditional backend approaches
-/cmd-brainstorm improve onboarding UX
+/plan:hard implement real-time collaboration features
+/plan:two compare serverless vs traditional backend approaches
+/brainstorm improve onboarding UX
 ```
 
 **Payment integrations:**
@@ -114,6 +114,6 @@ claude "analyze the changes in PR #42"
 
 **Skill management:**
 ```bash
-/cmd-skill__create payment-processing  # Create new skill
-/cmd-skill__optimize frontend-dev      # Improve existing skill
+/skill:create payment-processing  # Create new skill
+/skill:optimize frontend-dev      # Improve existing skill
 ```

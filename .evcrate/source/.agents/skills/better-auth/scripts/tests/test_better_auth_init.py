@@ -98,7 +98,7 @@ KEY4=value=with=equals
         # Create .env files
         claude_env = mock_project_root / ".codex" / ".env"
         claude_env.parent.mkdir(parents=True, exist_ok=True)
-        claude_env.write_text("BASE_VAR=base\nOVERRIDE=codex")
+        claude_env.write_text("BASE_VAR=base\nOVERRIDE=claude")
 
         skills_env = mock_project_root / ".codex" / "skills" / ".env"
         skills_env.parent.mkdir(parents=True, exist_ok=True)

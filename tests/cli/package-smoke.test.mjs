@@ -12,7 +12,7 @@ const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'
 
 function npmJson(args, cwd) {
   const result = spawnSync('npm', [...args, '--json', '--ignore-scripts'], {
-    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000, shell: true
+    cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000, maxBuffer: 50 * 1024 * 1024, shell: true
   });
   assert.equal(result.status, 0, result.stderr);
   const jsonIndex = result.stdout.search(/[[{]/);
@@ -29,12 +29,12 @@ function installPackage(tarball, root) {
   const result = spawnSync('npm', [
     'install', '--prefix', root, '--no-audit', '--no-fund', '--ignore-scripts', tarball
   ], {
-    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000, shell: true
+    cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300_000, maxBuffer: 50 * 1024 * 1024, shell: true
   });
   assert.equal(result.status, 0, result.stderr);
 }
 
-test('package metadata includes the CLI, declarations, and required runtime assets', () => {
+test('package metadata includes the CLI, declarations, and required runtime assets', { timeout: 300_000 }, () => {
   const output = npmJson(['pack', '--dry-run'], packageRoot);
   const files = output[0].files.map(({ path }) => path);
   for (const expected of [
@@ -57,7 +57,7 @@ test('importing the sealed package entrypoint has no process or output side effe
   assert.equal(result.stderr, '');
 });
 
-test('installed tarball runs version and resolves distinct target contexts', () => {
+test('installed tarball runs version and resolves distinct target contexts', { timeout: 300_000 }, () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-package-smoke-'));
   const installRoot = join(root, 'install');
   const home = join(root, 'home');

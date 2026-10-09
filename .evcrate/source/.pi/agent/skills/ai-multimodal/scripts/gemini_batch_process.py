@@ -74,7 +74,7 @@ IMAGEN_MODELS = {
 def find_api_key() -> Optional[str]:
     """Find Gemini API key using centralized resolver or fallback.
 
-    Uses ~/.pi/agent/evcrate/scripts/resolve_env.py for consistent resolution across all skills.
+    Uses {{evcrate:scripts/resolve_env.py}} for consistent resolution across all skills.
     Falls back to local resolution if centralized resolver not available.
 
     Priority order (highest to lowest):
@@ -735,7 +735,7 @@ def batch_process(
         print("Error: GEMINI_API_KEY not found")
         print("\nSetup options:")
         print("1. Run setup checker: python scripts/check_setup.py")
-        print("2. Show hierarchy: python ~/.pi/agent/evcrate/scripts/resolve_env.py --show-hierarchy --skill ai-multimodal")
+        print("2. Show hierarchy: python {{evcrate:scripts/resolve_env.py}} --show-hierarchy --skill ai-multimodal")
         print("3. Quick setup: export GEMINI_API_KEY='your-key'")
         print("4. Create .env: cd ~/.pi/agent/skills/ai-multimodal && cp .env.example .env")
         print("\nFor key rotation, add multiple keys:")

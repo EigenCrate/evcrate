@@ -99,7 +99,7 @@ Modern approach to customize Tailwind using CSS:
 ```html
 <h1 class="font-display">Display heading</h1>
 <p class="font-sans">Body text</p>
-<code class="font-mono">Code block</cmd-code>
+<code class="font-mono">Code block</code>
 ```
 
 ### Custom Font Sizes

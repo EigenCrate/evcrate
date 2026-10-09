@@ -48,7 +48,7 @@
    Clone + Repomix
    ↓ No repo
 4. Research agents
-   Deploy multiple Researcher agents
+   Deploy multiple evc-researcher agents
 ```
 
 ## Timeout Handling

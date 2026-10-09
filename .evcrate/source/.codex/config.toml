@@ -9,8 +9,6 @@ sandbox_mode = "workspace-write"
 personality = "pragmatic"
 tool_output_token_limit = 8192
 
-project_doc_fallback_filenames = ["CLAUDE.md", "GEMINI.md"]
-
 [agents]
 # Keep fan-out bounded; prompt contracts require terminal results before continuation.
 enabled = true

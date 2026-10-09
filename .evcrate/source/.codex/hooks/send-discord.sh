@@ -39,7 +39,7 @@ discord_message="$message"
 payload=$(cat <<EOF
 {
 "embeds": [{
-    "title": "🤖 Codex CLI Session Complete",
+    "title": "🤖 Claude Code Session Complete",
     "description": "$discord_message",
     "color": 5763719,
     "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",

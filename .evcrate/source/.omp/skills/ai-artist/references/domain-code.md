@@ -38,7 +38,7 @@ Show before/after.
 ## Debugging
 ```
 <error>[Error message/behavior]</error>
-<code>[Relevant code]</cmd-code>
+<code>[Relevant code]</code>
 <context>[When it occurs]</context>
 
 Analyze:

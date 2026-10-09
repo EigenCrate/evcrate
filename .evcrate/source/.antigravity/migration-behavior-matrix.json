@@ -2,564 +2,630 @@
   "target": "antigravity",
   "behaviors": [
     {
+      "kind": "hook",
+      "source": "SessionStart",
+      "classification": "lifecycle-hook",
+      "status": "adapted",
+      "target": "PreInvocation",
+      "reason": "First invocation only (invocationNum=0); resume, clear and compact have no native lifecycle signal."
+    },
+    {
+      "kind": "hook",
+      "source": "SubagentStart",
+      "classification": "lifecycle-hook",
+      "status": "unsupported",
+      "reason": "No equivalent native lifecycle event; not registered."
+    },
+    {
+      "kind": "hook",
+      "source": "UserPromptSubmit",
+      "classification": "lifecycle-hook",
+      "status": "adapted",
+      "target": "PreInvocation",
+      "reason": "Reminder per model invocation; native payload does not identify user-prompt submissions."
+    },
+    {
+      "kind": "hook",
+      "source": "PreToolUse",
+      "classification": "lifecycle-hook",
+      "status": "adapted",
+      "target": "PreToolUse"
+    },
+    {
+      "kind": "hook",
+      "source": "PreToolUse",
+      "classification": "lifecycle-hook",
+      "status": "adapted",
+      "target": "PreToolUse"
+    },
+    {
+      "kind": "hook",
+      "source": "PostToolUse",
+      "classification": "lifecycle-hook",
+      "status": "unsupported",
+      "reason": "Native PostToolUse has no additionalContext output; canonical modularization context is not registered."
+    },
+    {
+      "kind": "hook",
+      "source": "PreCompact",
+      "classification": "lifecycle-hook",
+      "status": "unsupported",
+      "reason": "No equivalent native lifecycle event; not registered."
+    },
+    {
+      "kind": "hook",
+      "source": "SessionEnd",
+      "classification": "lifecycle-hook",
+      "status": "unsupported",
+      "reason": "No equivalent native lifecycle event; not registered."
+    },
+    {
+      "kind": "project-doc",
+      "source": "AGENTS.md",
+      "classification": "instruction-context",
+      "status": "migrated",
+      "target": ".agents/rules/evcrate-antigravity.md",
+      "reason": "Native always_on include; HOME standalone AGENTS.md. PreInvocation verifies, never reinjects instructions."
+    },
+    {
       "kind": "command-prose",
-      "source": "advise.md",
+      "source": "evc-cmd-advise.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_advise/SKILL.md",
-      "target_name": "cmd_advise"
+      "target": "evc-cmd-advise/SKILL.md",
+      "target_name": "evc-cmd-advise"
     },
     {
       "kind": "command-prose",
-      "source": "ask.md",
+      "source": "evc-cmd-ask.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_ask/SKILL.md",
-      "target_name": "cmd_ask"
+      "target": "evc-cmd-ask/SKILL.md",
+      "target_name": "evc-cmd-ask"
     },
     {
       "kind": "command-prose",
-      "source": "bootstrap.md",
+      "source": "evc-cmd-bootstrap-x-auto-x-fast.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_bootstrap/SKILL.md",
-      "target_name": "cmd_bootstrap"
+      "target": "evc-cmd-bootstrap-x-auto-x-fast/SKILL.md",
+      "target_name": "evc-cmd-bootstrap-x-auto-x-fast"
     },
     {
       "kind": "command-prose",
-      "source": "bootstrap/auto.md",
+      "source": "evc-cmd-bootstrap-x-auto-x-parallel.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_bootstrap_auto/SKILL.md",
-      "target_name": "cmd_bootstrap_auto"
+      "target": "evc-cmd-bootstrap-x-auto-x-parallel/SKILL.md",
+      "target_name": "evc-cmd-bootstrap-x-auto-x-parallel"
     },
     {
       "kind": "command-prose",
-      "source": "bootstrap/auto/fast.md",
+      "source": "evc-cmd-bootstrap-x-auto.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_bootstrap_auto_fast/SKILL.md",
-      "target_name": "cmd_bootstrap_auto_fast"
+      "target": "evc-cmd-bootstrap-x-auto/SKILL.md",
+      "target_name": "evc-cmd-bootstrap-x-auto"
     },
     {
       "kind": "command-prose",
-      "source": "bootstrap/auto/parallel.md",
+      "source": "evc-cmd-bootstrap.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_bootstrap_auto_parallel/SKILL.md",
-      "target_name": "cmd_bootstrap_auto_parallel"
+      "target": "evc-cmd-bootstrap/SKILL.md",
+      "target_name": "evc-cmd-bootstrap"
     },
     {
       "kind": "command-prose",
-      "source": "brainstorm.md",
+      "source": "evc-cmd-brainstorm.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_brainstorm/SKILL.md",
-      "target_name": "cmd_brainstorm"
+      "target": "evc-cmd-brainstorm/SKILL.md",
+      "target_name": "evc-cmd-brainstorm"
     },
     {
       "kind": "command-prose",
-      "source": "code.md",
+      "source": "evc-cmd-code-x-auto.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_code/SKILL.md",
-      "target_name": "cmd_code"
+      "target": "evc-cmd-code-x-auto/SKILL.md",
+      "target_name": "evc-cmd-code-x-auto"
     },
     {
       "kind": "command-prose",
-      "source": "code/auto.md",
+      "source": "evc-cmd-code-x-no-test.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_code_auto/SKILL.md",
-      "target_name": "cmd_code_auto"
+      "target": "evc-cmd-code-x-no-test/SKILL.md",
+      "target_name": "evc-cmd-code-x-no-test"
     },
     {
       "kind": "command-prose",
-      "source": "code/no-test.md",
+      "source": "evc-cmd-code-x-parallel.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_code_no-test/SKILL.md",
-      "target_name": "cmd_code_no-test"
+      "target": "evc-cmd-code-x-parallel/SKILL.md",
+      "target_name": "evc-cmd-code-x-parallel"
     },
     {
       "kind": "command-prose",
-      "source": "code/parallel.md",
+      "source": "evc-cmd-code.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_code_parallel/SKILL.md",
-      "target_name": "cmd_code_parallel"
+      "target": "evc-cmd-code/SKILL.md",
+      "target_name": "evc-cmd-code"
     },
     {
       "kind": "command-prose",
-      "source": "coding-level.md",
+      "source": "evc-cmd-coding-level.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_coding-level/SKILL.md",
-      "target_name": "cmd_coding-level"
+      "target": "evc-cmd-coding-level/SKILL.md",
+      "target_name": "evc-cmd-coding-level"
     },
     {
       "kind": "command-prose",
-      "source": "content/cro.md",
+      "source": "evc-cmd-content-x-cro.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_content_cro/SKILL.md",
-      "target_name": "cmd_content_cro"
+      "target": "evc-cmd-content-x-cro/SKILL.md",
+      "target_name": "evc-cmd-content-x-cro"
     },
     {
       "kind": "command-prose",
-      "source": "content/enhance.md",
+      "source": "evc-cmd-content-x-enhance.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_content_enhance/SKILL.md",
-      "target_name": "cmd_content_enhance"
+      "target": "evc-cmd-content-x-enhance/SKILL.md",
+      "target_name": "evc-cmd-content-x-enhance"
     },
     {
       "kind": "command-prose",
-      "source": "content/fast.md",
+      "source": "evc-cmd-content-x-fast.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_content_fast/SKILL.md",
-      "target_name": "cmd_content_fast"
+      "target": "evc-cmd-content-x-fast/SKILL.md",
+      "target_name": "evc-cmd-content-x-fast"
     },
     {
       "kind": "command-prose",
-      "source": "content/good.md",
+      "source": "evc-cmd-content-x-good.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_content_good/SKILL.md",
-      "target_name": "cmd_content_good"
+      "target": "evc-cmd-content-x-good/SKILL.md",
+      "target_name": "evc-cmd-content-x-good"
     },
     {
       "kind": "command-prose",
-      "source": "cook.md",
+      "source": "evc-cmd-cook-x-auto-x-fast.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_cook/SKILL.md",
-      "target_name": "cmd_cook"
+      "target": "evc-cmd-cook-x-auto-x-fast/SKILL.md",
+      "target_name": "evc-cmd-cook-x-auto-x-fast"
     },
     {
       "kind": "command-prose",
-      "source": "cook/auto.md",
+      "source": "evc-cmd-cook-x-auto-x-parallel.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_cook_auto/SKILL.md",
-      "target_name": "cmd_cook_auto"
+      "target": "evc-cmd-cook-x-auto-x-parallel/SKILL.md",
+      "target_name": "evc-cmd-cook-x-auto-x-parallel"
     },
     {
       "kind": "command-prose",
-      "source": "cook/auto/fast.md",
+      "source": "evc-cmd-cook-x-auto.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_cook_auto_fast/SKILL.md",
-      "target_name": "cmd_cook_auto_fast"
+      "target": "evc-cmd-cook-x-auto/SKILL.md",
+      "target_name": "evc-cmd-cook-x-auto"
     },
     {
       "kind": "command-prose",
-      "source": "cook/auto/parallel.md",
+      "source": "evc-cmd-cook.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_cook_auto_parallel/SKILL.md",
-      "target_name": "cmd_cook_auto_parallel"
+      "target": "evc-cmd-cook/SKILL.md",
+      "target_name": "evc-cmd-cook"
     },
     {
       "kind": "command-prose",
-      "source": "debug.md",
+      "source": "evc-cmd-debug.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_debug/SKILL.md",
-      "target_name": "cmd_debug"
+      "target": "evc-cmd-debug/SKILL.md",
+      "target_name": "evc-cmd-debug"
     },
     {
       "kind": "command-prose",
-      "source": "design/3d.md",
+      "source": "evc-cmd-design-x-3d.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_design_3d/SKILL.md",
-      "target_name": "cmd_design_3d"
+      "target": "evc-cmd-design-x-3d/SKILL.md",
+      "target_name": "evc-cmd-design-x-3d"
     },
     {
       "kind": "command-prose",
-      "source": "design/describe.md",
+      "source": "evc-cmd-design-x-describe.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_design_describe/SKILL.md",
-      "target_name": "cmd_design_describe"
+      "target": "evc-cmd-design-x-describe/SKILL.md",
+      "target_name": "evc-cmd-design-x-describe"
     },
     {
       "kind": "command-prose",
-      "source": "design/fast.md",
+      "source": "evc-cmd-design-x-fast.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_design_fast/SKILL.md",
-      "target_name": "cmd_design_fast"
+      "target": "evc-cmd-design-x-fast/SKILL.md",
+      "target_name": "evc-cmd-design-x-fast"
     },
     {
       "kind": "command-prose",
-      "source": "design/good.md",
+      "source": "evc-cmd-design-x-good.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_design_good/SKILL.md",
-      "target_name": "cmd_design_good"
+      "target": "evc-cmd-design-x-good/SKILL.md",
+      "target_name": "evc-cmd-design-x-good"
     },
     {
       "kind": "command-prose",
-      "source": "design/screenshot.md",
+      "source": "evc-cmd-design-x-screenshot.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_design_screenshot/SKILL.md",
-      "target_name": "cmd_design_screenshot"
+      "target": "evc-cmd-design-x-screenshot/SKILL.md",
+      "target_name": "evc-cmd-design-x-screenshot"
     },
     {
       "kind": "command-prose",
-      "source": "design/video.md",
+      "source": "evc-cmd-design-x-video.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_design_video/SKILL.md",
-      "target_name": "cmd_design_video"
+      "target": "evc-cmd-design-x-video/SKILL.md",
+      "target_name": "evc-cmd-design-x-video"
     },
     {
       "kind": "command-prose",
-      "source": "docs/init.md",
+      "source": "evc-cmd-docs-x-init.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_docs_init/SKILL.md",
-      "target_name": "cmd_docs_init"
+      "target": "evc-cmd-docs-x-init/SKILL.md",
+      "target_name": "evc-cmd-docs-x-init"
     },
     {
       "kind": "command-prose",
-      "source": "docs/summarize.md",
+      "source": "evc-cmd-docs-x-summarize.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_docs_summarize/SKILL.md",
-      "target_name": "cmd_docs_summarize"
+      "target": "evc-cmd-docs-x-summarize/SKILL.md",
+      "target_name": "evc-cmd-docs-x-summarize"
     },
     {
       "kind": "command-prose",
-      "source": "docs/update.md",
+      "source": "evc-cmd-docs-x-update.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_docs_update/SKILL.md",
-      "target_name": "cmd_docs_update"
+      "target": "evc-cmd-docs-x-update/SKILL.md",
+      "target_name": "evc-cmd-docs-x-update"
     },
     {
       "kind": "command-prose",
-      "source": "evcrate-help.md",
+      "source": "evc-cmd-fix-x-ci.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_evcrate-help/SKILL.md",
-      "target_name": "cmd_evcrate-help"
+      "target": "evc-cmd-fix-x-ci/SKILL.md",
+      "target_name": "evc-cmd-fix-x-ci"
     },
     {
       "kind": "command-prose",
-      "source": "fix.md",
+      "source": "evc-cmd-fix-x-fast.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix/SKILL.md",
-      "target_name": "cmd_fix"
+      "target": "evc-cmd-fix-x-fast/SKILL.md",
+      "target_name": "evc-cmd-fix-x-fast"
     },
     {
       "kind": "command-prose",
-      "source": "fix/ci.md",
+      "source": "evc-cmd-fix-x-hard.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_ci/SKILL.md",
-      "target_name": "cmd_fix_ci"
+      "target": "evc-cmd-fix-x-hard/SKILL.md",
+      "target_name": "evc-cmd-fix-x-hard"
     },
     {
       "kind": "command-prose",
-      "source": "fix/fast.md",
+      "source": "evc-cmd-fix-x-logs.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_fast/SKILL.md",
-      "target_name": "cmd_fix_fast"
+      "target": "evc-cmd-fix-x-logs/SKILL.md",
+      "target_name": "evc-cmd-fix-x-logs"
     },
     {
       "kind": "command-prose",
-      "source": "fix/hard.md",
+      "source": "evc-cmd-fix-x-parallel.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_hard/SKILL.md",
-      "target_name": "cmd_fix_hard"
+      "target": "evc-cmd-fix-x-parallel/SKILL.md",
+      "target_name": "evc-cmd-fix-x-parallel"
     },
     {
       "kind": "command-prose",
-      "source": "fix/logs.md",
+      "source": "evc-cmd-fix-x-test.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_logs/SKILL.md",
-      "target_name": "cmd_fix_logs"
+      "target": "evc-cmd-fix-x-test/SKILL.md",
+      "target_name": "evc-cmd-fix-x-test"
     },
     {
       "kind": "command-prose",
-      "source": "fix/parallel.md",
+      "source": "evc-cmd-fix-x-types.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_parallel/SKILL.md",
-      "target_name": "cmd_fix_parallel"
+      "target": "evc-cmd-fix-x-types/SKILL.md",
+      "target_name": "evc-cmd-fix-x-types"
     },
     {
       "kind": "command-prose",
-      "source": "fix/test.md",
+      "source": "evc-cmd-fix-x-ui.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_test/SKILL.md",
-      "target_name": "cmd_fix_test"
+      "target": "evc-cmd-fix-x-ui/SKILL.md",
+      "target_name": "evc-cmd-fix-x-ui"
     },
     {
       "kind": "command-prose",
-      "source": "fix/types.md",
+      "source": "evc-cmd-fix.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_types/SKILL.md",
-      "target_name": "cmd_fix_types"
+      "target": "evc-cmd-fix/SKILL.md",
+      "target_name": "evc-cmd-fix"
     },
     {
       "kind": "command-prose",
-      "source": "fix/ui.md",
+      "source": "evc-cmd-git-x-cm.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_fix_ui/SKILL.md",
-      "target_name": "cmd_fix_ui"
+      "target": "evc-cmd-git-x-cm/SKILL.md",
+      "target_name": "evc-cmd-git-x-cm"
     },
     {
       "kind": "command-prose",
-      "source": "git/cm.md",
+      "source": "evc-cmd-git-x-cp.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_git_cm/SKILL.md",
-      "target_name": "cmd_git_cm"
+      "target": "evc-cmd-git-x-cp/SKILL.md",
+      "target_name": "evc-cmd-git-x-cp"
     },
     {
       "kind": "command-prose",
-      "source": "git/cp.md",
+      "source": "evc-cmd-git-x-merge.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_git_cp/SKILL.md",
-      "target_name": "cmd_git_cp"
+      "target": "evc-cmd-git-x-merge/SKILL.md",
+      "target_name": "evc-cmd-git-x-merge"
     },
     {
       "kind": "command-prose",
-      "source": "git/merge.md",
+      "source": "evc-cmd-git-x-pr.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_git_merge/SKILL.md",
-      "target_name": "cmd_git_merge"
+      "target": "evc-cmd-git-x-pr/SKILL.md",
+      "target_name": "evc-cmd-git-x-pr"
     },
     {
       "kind": "command-prose",
-      "source": "git/pr.md",
+      "source": "evc-cmd-help.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_git_pr/SKILL.md",
-      "target_name": "cmd_git_pr"
+      "target": "evc-cmd-help/SKILL.md",
+      "target_name": "evc-cmd-help"
     },
     {
       "kind": "command-prose",
-      "source": "journal.md",
+      "source": "evc-cmd-journal.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_journal/SKILL.md",
-      "target_name": "cmd_journal"
+      "target": "evc-cmd-journal/SKILL.md",
+      "target_name": "evc-cmd-journal"
     },
     {
       "kind": "command-prose",
-      "source": "plan.md",
+      "source": "evc-cmd-plan-x-archive.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan/SKILL.md",
-      "target_name": "cmd_plan"
+      "target": "evc-cmd-plan-x-archive/SKILL.md",
+      "target_name": "evc-cmd-plan-x-archive"
     },
     {
       "kind": "command-prose",
-      "source": "plan/archive.md",
+      "source": "evc-cmd-plan-x-ci.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_archive/SKILL.md",
-      "target_name": "cmd_plan_archive"
+      "target": "evc-cmd-plan-x-ci/SKILL.md",
+      "target_name": "evc-cmd-plan-x-ci"
     },
     {
       "kind": "command-prose",
-      "source": "plan/ci.md",
+      "source": "evc-cmd-plan-x-cro.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_ci/SKILL.md",
-      "target_name": "cmd_plan_ci"
+      "target": "evc-cmd-plan-x-cro/SKILL.md",
+      "target_name": "evc-cmd-plan-x-cro"
     },
     {
       "kind": "command-prose",
-      "source": "plan/cro.md",
+      "source": "evc-cmd-plan-x-fast.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_cro/SKILL.md",
-      "target_name": "cmd_plan_cro"
+      "target": "evc-cmd-plan-x-fast/SKILL.md",
+      "target_name": "evc-cmd-plan-x-fast"
     },
     {
       "kind": "command-prose",
-      "source": "plan/fast.md",
+      "source": "evc-cmd-plan-x-hard.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_fast/SKILL.md",
-      "target_name": "cmd_plan_fast"
+      "target": "evc-cmd-plan-x-hard/SKILL.md",
+      "target_name": "evc-cmd-plan-x-hard"
     },
     {
       "kind": "command-prose",
-      "source": "plan/hard.md",
+      "source": "evc-cmd-plan-x-parallel.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_hard/SKILL.md",
-      "target_name": "cmd_plan_hard"
+      "target": "evc-cmd-plan-x-parallel/SKILL.md",
+      "target_name": "evc-cmd-plan-x-parallel"
     },
     {
       "kind": "command-prose",
-      "source": "plan/parallel.md",
+      "source": "evc-cmd-plan-x-two.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_parallel/SKILL.md",
-      "target_name": "cmd_plan_parallel"
+      "target": "evc-cmd-plan-x-two/SKILL.md",
+      "target_name": "evc-cmd-plan-x-two"
     },
     {
       "kind": "command-prose",
-      "source": "plan/two.md",
+      "source": "evc-cmd-plan-x-validate.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_two/SKILL.md",
-      "target_name": "cmd_plan_two"
+      "target": "evc-cmd-plan-x-validate/SKILL.md",
+      "target_name": "evc-cmd-plan-x-validate"
     },
     {
       "kind": "command-prose",
-      "source": "plan/validate.md",
+      "source": "evc-cmd-plan.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_plan_validate/SKILL.md",
-      "target_name": "cmd_plan_validate"
+      "target": "evc-cmd-plan/SKILL.md",
+      "target_name": "evc-cmd-plan"
     },
     {
       "kind": "command-prose",
-      "source": "review/codebase.md",
+      "source": "evc-cmd-review-x-codebase-x-parallel.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_review_codebase/SKILL.md",
-      "target_name": "cmd_review_codebase"
+      "target": "evc-cmd-review-x-codebase-x-parallel/SKILL.md",
+      "target_name": "evc-cmd-review-x-codebase-x-parallel"
     },
     {
       "kind": "command-prose",
-      "source": "review/codebase/parallel.md",
+      "source": "evc-cmd-review-x-codebase.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_review_codebase_parallel/SKILL.md",
-      "target_name": "cmd_review_codebase_parallel"
+      "target": "evc-cmd-review-x-codebase/SKILL.md",
+      "target_name": "evc-cmd-review-x-codebase"
     },
     {
       "kind": "command-prose",
-      "source": "scout.md",
+      "source": "evc-cmd-scout-x-ext.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_scout/SKILL.md",
-      "target_name": "cmd_scout"
+      "target": "evc-cmd-scout-x-ext/SKILL.md",
+      "target_name": "evc-cmd-scout-x-ext"
     },
     {
       "kind": "command-prose",
-      "source": "scout/ext.md",
+      "source": "evc-cmd-scout.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_scout_ext/SKILL.md",
-      "target_name": "cmd_scout_ext"
+      "target": "evc-cmd-scout/SKILL.md",
+      "target_name": "evc-cmd-scout"
     },
     {
       "kind": "command-prose",
-      "source": "skill/add.md",
+      "source": "evc-cmd-skill-x-add.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_skill_add/SKILL.md",
-      "target_name": "cmd_skill_add"
+      "target": "evc-cmd-skill-x-add/SKILL.md",
+      "target_name": "evc-cmd-skill-x-add"
     },
     {
       "kind": "command-prose",
-      "source": "skill/create.md",
+      "source": "evc-cmd-skill-x-create.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_skill_create/SKILL.md",
-      "target_name": "cmd_skill_create"
+      "target": "evc-cmd-skill-x-create/SKILL.md",
+      "target_name": "evc-cmd-skill-x-create"
     },
     {
       "kind": "command-prose",
-      "source": "skill/fix-logs.md",
+      "source": "evc-cmd-skill-x-fix-logs.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_skill_fix-logs/SKILL.md",
-      "target_name": "cmd_skill_fix-logs"
+      "target": "evc-cmd-skill-x-fix-logs/SKILL.md",
+      "target_name": "evc-cmd-skill-x-fix-logs"
     },
     {
       "kind": "command-prose",
-      "source": "skill/optimize.md",
+      "source": "evc-cmd-skill-x-optimize-x-auto.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_skill_optimize/SKILL.md",
-      "target_name": "cmd_skill_optimize"
+      "target": "evc-cmd-skill-x-optimize-x-auto/SKILL.md",
+      "target_name": "evc-cmd-skill-x-optimize-x-auto"
     },
     {
       "kind": "command-prose",
-      "source": "skill/optimize/auto.md",
+      "source": "evc-cmd-skill-x-optimize.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_skill_optimize_auto/SKILL.md",
-      "target_name": "cmd_skill_optimize_auto"
+      "target": "evc-cmd-skill-x-optimize/SKILL.md",
+      "target_name": "evc-cmd-skill-x-optimize"
     },
     {
       "kind": "command-prose",
-      "source": "skill/plan.md",
+      "source": "evc-cmd-skill-x-plan.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_skill_plan/SKILL.md",
-      "target_name": "cmd_skill_plan"
+      "target": "evc-cmd-skill-x-plan/SKILL.md",
+      "target_name": "evc-cmd-skill-x-plan"
     },
     {
       "kind": "command-prose",
-      "source": "take.md",
+      "source": "evc-cmd-take.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_take/SKILL.md",
-      "target_name": "cmd_take"
+      "target": "evc-cmd-take/SKILL.md",
+      "target_name": "evc-cmd-take"
     },
     {
       "kind": "command-prose",
-      "source": "test.md",
+      "source": "evc-cmd-test-x-ui.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_test/SKILL.md",
-      "target_name": "cmd_test"
+      "target": "evc-cmd-test-x-ui/SKILL.md",
+      "target_name": "evc-cmd-test-x-ui"
     },
     {
       "kind": "command-prose",
-      "source": "test/ui.md",
+      "source": "evc-cmd-test.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_test_ui/SKILL.md",
-      "target_name": "cmd_test_ui"
+      "target": "evc-cmd-test/SKILL.md",
+      "target_name": "evc-cmd-test"
     },
     {
       "kind": "command-prose",
-      "source": "use-mcp.md",
+      "source": "evc-cmd-use-mcp.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_use-mcp/SKILL.md",
-      "target_name": "cmd_use-mcp"
+      "target": "evc-cmd-use-mcp/SKILL.md",
+      "target_name": "evc-cmd-use-mcp"
     },
     {
       "kind": "command-prose",
-      "source": "watzup.md",
+      "source": "evc-cmd-watzup.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_watzup/SKILL.md",
-      "target_name": "cmd_watzup"
+      "target": "evc-cmd-watzup/SKILL.md",
+      "target_name": "evc-cmd-watzup"
     },
     {
       "kind": "command-prose",
-      "source": "worktree.md",
+      "source": "evc-cmd-worktree.md",
       "classification": "command-prose",
       "status": "migrated",
-      "target": "cmd_worktree/SKILL.md",
-      "target_name": "cmd_worktree"
+      "target": "evc-cmd-worktree/SKILL.md",
+      "target_name": "evc-cmd-worktree"
     },
     {
       "kind": "skill-package",

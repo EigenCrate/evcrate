@@ -246,7 +246,7 @@ async function main() {
 
   const { tool_input: toolInput, tool_name: toolName } = hookData;
 
-  // For Bash commands, only warn but don't block - let Codex CLI's permission system handle it
+  // For Bash commands, only warn but don't block - let Claude Code's permission system handle it
   // This allows the "Yes → bash cat" flow after request_user_input approval
   const isBashTool = toolName === 'Bash' || toolName === 'run_shell_command' || toolName === 'run_command';
 
