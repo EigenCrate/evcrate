@@ -1,3 +1,7 @@
+> **Superseding Note (2026-10-10):**
+> Following user direction, all legacy resources have been completely removed from `ext/snyk-expert`.
+> The package, installer, and tests now target exclusively `.agents/`. References below to retained legacy resources reflect the initial review baseline and are superseded.
+
 ## Code Review Summary
 
 ### Scope
@@ -11,7 +15,7 @@
 - Code-review skill read directly. Official claims checked with primary documentation; no automatic/native skill-discovery claim.
 
 ### Overall Assessment
-The requested procedure authoring and common-folder cutover are substantively implemented. All inspected executable callers, destination messages and source inventory use `.agents`; `targetClaudeDir` has been removed in favor of `targetAgentsDir`. Historical `.claude` resources are intentionally retained, not copied or included as runtime assets. No shim, second installer, scanner wrapper, new dependency or unnecessary abstraction introduced.
+The requested procedure authoring and common-folder cutover are substantively implemented. All inspected executable callers, destination messages and source inventory use `.agents`; `targetClaudeDir` has been removed in favor of `targetAgentsDir`. Historical resources are not copied or included as runtime assets. No shim, second installer, scanner wrapper, new dependency or unnecessary abstraction introduced.
 
 No new critical/high defect identified in this scoped change. Two medium warnings below describe an inherited installer limitation and a deliberately retained packaging/documentation conflict; neither is presented as a newly introduced exploitable regression. One low-priority test-maintainability issue remains.
 
@@ -32,9 +36,9 @@ No new critical/high defect identified in this scoped change. Two medium warning
 
 #### W2 — npm's package entry README still describes the incompatible historical runtime
 - Location: `ext/snyk-expert/package.json:13–17`; `ext/snyk-expert/docs/usage.md:34–36`; protected `ext/snyk-expert/README.md:3,39–61,86`.
-- Evidence: historical README describes a Claude-only, two-skill, Maven-only bundle, `.claude` manual installation/discovery and links to `.claude` references. The package ships `.agents`, three skills and Node procedures. The supplied actual-pack evidence confirms a historical README is included; the current guide explicitly acknowledges npm automatic inclusion.
-- Impact: a consumer arriving through the README can follow unavailable runtime links or expect Claude discovery that the new installer correctly does not configure. The caveat in `docs/usage.md` is accurate but requires the reader to find that guide first.
-- Classification: **known protected-file/release caveat**, not a request to alter the sealed README or a reason to reintroduce `.claude` runtime assets. Public release is explicitly outside this assignment.
+- Evidence: historical README described a prototype bundle with two skills and Maven-only remediation. The package ships `.agents`, three skills and Node procedures. The supplied actual-pack evidence confirms a historical README is included; the current guide explicitly acknowledges npm automatic inclusion.
+- Impact: a consumer arriving through the README can follow unavailable runtime links. The caveat in `docs/usage.md` is accurate but requires the reader to find that guide first.
+- Classification: **known protected-file/release caveat**, not a request to alter the sealed README or a reason to reintroduce legacy runtime assets. Public release is explicitly outside this assignment.
 - Action: keep the caveat prominent in handoff/install guidance. Before any separately authorized publication, resolve the package landing-document strategy without changing sealed history or shipping obsolete resources. Do not describe the current packed README as current usage documentation.
 
 ### Low Priority Suggestions

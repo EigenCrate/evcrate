@@ -13,8 +13,7 @@ import {
   printHelp,
   printVersion,
   printDryRun,
-  printInstallationSuccess,
-  printLegacyMigrationWarning
+  printInstallationSuccess
 } from '../lib/cli-formatters.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -84,7 +83,6 @@ async function main() {
 
   if (values['dry-run']) {
     printDryRun(plan);
-    printLegacyMigrationWarning(plan.legacyInstallation);
     process.exit(0);
   }
 
@@ -125,7 +123,6 @@ async function main() {
   try {
     const result = executeInstallation(plan, { dryRun: false, force: values.force, yes: authorizedYes });
     printInstallationSuccess(targetDir, result, plan);
-    printLegacyMigrationWarning(plan.legacyInstallation);
     console.log(`Usage guide: ${path.join(PACKAGE_ROOT, 'docs', 'usage.md')}`);
   } catch (err) {
     console.error(`\nInstallation failed: ${err.message}`);

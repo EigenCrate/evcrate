@@ -3,90 +3,6 @@ import path from 'node:path';
 import { getSourceInventory } from './inventory.js';
 import { isSymlinkOrContainsSymlink } from './target-resolver.js';
 
-
-/**
- * Candidate relative paths for legacy .claude installations of snyk-expert.
- */
-export const LEGACY_CLAUDE_CANDIDATES = [
-  'agents/snyk-expert.md',
-  'skills/snyk-fix',
-  'skills/dependency-upgrade-review'
-];
-
-/**
- * Detect pre-existing legacy snyk-expert assets under target's .claude/ directory.
- */
-export function detectLegacyInstallation(targetDir) {
-  const normalizedTarget = path.resolve(targetDir);
-  const targetClaudeDir = path.join(normalizedTarget, '.claude');
-  const detectedPaths = [];
-
-  let claudeStat;
-  try {
-    claudeStat = fs.lstatSync(targetClaudeDir);
-  } catch (err) {
-    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
-      return {
-        detected: false,
-        targetDir: normalizedTarget,
-        targetClaudeDir,
-        paths: []
-      };
-    }
-    throw err;
-  }
-
-  if (claudeStat.isSymbolicLink()) {
-    try {
-      const real = fs.statSync(targetClaudeDir);
-      if (!real.isDirectory()) {
-        return {
-          detected: false,
-          targetDir: normalizedTarget,
-          targetClaudeDir,
-          paths: []
-        };
-      }
-    } catch (err) {
-      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
-        return {
-          detected: false,
-          targetDir: normalizedTarget,
-          targetClaudeDir,
-          paths: []
-        };
-      }
-      throw err;
-    }
-  } else if (!claudeStat.isDirectory()) {
-    return {
-      detected: false,
-      targetDir: normalizedTarget,
-      targetClaudeDir,
-      paths: []
-    };
-  }
-
-  for (const rel of LEGACY_CLAUDE_CANDIDATES) {
-    const full = path.join(targetClaudeDir, rel);
-    try {
-      fs.lstatSync(full);
-      detectedPaths.push(path.join('.claude', rel));
-    } catch (err) {
-      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') {
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  return {
-    detected: detectedPaths.length > 0,
-    targetDir: normalizedTarget,
-    targetClaudeDir,
-    paths: detectedPaths
-  };
-}
 /**
  * Build a deterministic installation plan.
  */
@@ -98,7 +14,6 @@ export function planInstallation({
   const assets = inventory || getSourceInventory(sourceDir);
   const normalizedTarget = path.resolve(targetDir);
   const targetAgentsDir = path.join(normalizedTarget, '.agents');
-  const legacyInstallation = detectLegacyInstallation(normalizedTarget);
 
   const actions = [];
   const additions = [];
@@ -191,7 +106,6 @@ export function planInstallation({
     replacements,
     unchanged,
     blockers,
-    legacyInstallation,
     hasCollisions: replacements.length > 0,
     isBlocked: blockers.length > 0
   };

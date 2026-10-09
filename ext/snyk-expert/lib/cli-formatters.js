@@ -61,21 +61,3 @@ export function printInstallationSuccess(targetDir, result, plan) {
   console.log(`3. Use snyk-cli for authorized setup/login/scan; snyk-fix for dependency remediation.`);
   console.log(`   Installation does not configure native host discovery or authenticate Snyk.`);
 }
-
-export function printLegacyMigrationWarning(legacyInstallation) {
-  if (!legacyInstallation || !legacyInstallation.detected) return;
-  const targetLabel = legacyInstallation.targetDir || 'target project';
-  console.log(`\n⚠️  Legacy .claude/ installation detected in ${targetLabel}:`);
-  for (const p of legacyInstallation.paths) {
-    const qualifiedPath = legacyInstallation.targetDir
-      ? path.join(legacyInstallation.targetDir, p)
-      : p;
-    console.log(`  - ${qualifiedPath}`);
-  }
-  console.log(`Notice: The installer installs new common resources into .agents/.`);
-  console.log(`To prevent host discovery ambiguity or running outdated instructions:`);
-  console.log(`1. Inspect and back up any customized instructions or files in the legacy directory.`);
-  console.log(`2. In the target project (${targetLabel}), manually archive or remove`);
-  console.log(`   only the legacy snyk-expert files listed above after verification.`);
-  console.log(`Existing files are preserved and never deleted automatically.`);
-}

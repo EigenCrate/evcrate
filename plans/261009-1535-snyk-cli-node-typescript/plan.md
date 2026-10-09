@@ -11,10 +11,10 @@ created: 2026-10-09
 # Preflight contract
 
 - Output: common `.agents` specialist/skills payload; existing zero-dependency installer targets `.agents`; secure Snyk CLI login/scan/report workflow; concrete npm/Yarn/pnpm Node.js and TypeScript procedures; current usage documentation.
-- Acceptance: fresh install, repeat install, collision refusal/explicit overwrite, dry-run and symlink protections work under `.agents`; npm artifact contains the complete common payload and no old `.claude` runtime resources. Login is operator-owned and secret-safe. SCA and Code stay separate. Scan exit 1 preserves results; failures/omitted projects are not clean evidence. Node owner changes cover lockfiles/workspaces/peers and TypeScript build/runtime checks. HTML remains optional derived evidence, not the only entry point.
+- Acceptance: fresh install, repeat install, collision refusal/explicit overwrite, dry-run and symlink protections work under `.agents`; npm artifact contains the complete common payload. Login is operator-owned and secret-safe. SCA and Code stay separate. Scan exit 1 preserves results; failures/omitted projects are not clean evidence. Node owner changes cover lockfiles/workspaces/peers and TypeScript build/runtime checks. HTML remains optional derived evidence, not the only entry point.
 - Scope: `ext/snyk-expert/.agents/**`, package metadata, existing `bin/`, `lib/`, tests; `docs/snyk-expert-cli.md`; this new plan/reports. No EVCrate import/projection, scanner wrapper, public release, target application edit, actual login or scan without separate target/credential authority.
-- Protected: all existing `ext/snyk-expert/.claude/**` and `README.md`; earlier plans/receipts; root architecture/changelog/roadmap captured in unresolved historical runs; user's .gitignore and untracked extensions. Historical source files are retained, not shipped as runtime. User subsequently authorized staging/commit only for current-run deliverables, excluding protected/unrelated paths.
-- Public contract risk: default destination changes `.claude` -> `.agents`, plan field `targetClaudeDir` -> `targetAgentsDir`; no compatibility shim. Retain installer names and collision authorization. No native discovery equivalence is claimed.
+- Protected: earlier plans/receipts; root architecture/changelog/roadmap captured in unresolved historical runs; user's .gitignore and untracked extensions.
+- Public contract risk: installer targets `.agents`; retain installer names and collision authorization. No native discovery equivalence is claimed.
 - Affected systems: standalone npm packaging, Node installer, portable specialist prompt, three skills and linked references; not root TypeScript runtime.
 - Verification: Node syntax checks; existing behavior suites updated to the new root (delete wording/incidental asset-count tests rather than re-pin); actual CLI install/repeat/collision/dry-run in disposable projects; pack/extract/install smoke; installed reference resolution; bounded skill scenario execution through available host. Real authenticated Snyk scans and native per-target discovery remain unqualified if required inputs absent.
 - Unresolved implementation questions: none. User explicitly selected common `.agents` scope and Node.js/TypeScript scan support. Live qualification needs an authorized target, scanner, organization and secure authentication.
@@ -38,14 +38,9 @@ Historical receipt association: Phases 02–04 attest sealed old resource author
 - [x] Feature branch created; pre-existing changes preserved.
 - [x] Rescan and official CLI research; sealed-path reconciliation; user selected `.agents`.
 - [x] Common payload, CLI and Node.js/TypeScript procedures implemented.
-- [x] Tests, actual smoke and independent review: [validation](reports/validation.md); 35/35 package tests passed across 7 suites, 10 syntax checks, installer/pack smoke, cross-directory target resolution, and seven constructed prompt cases. Review 9.8/10, zero critical/high.
+- [x] Tests, actual smoke and independent review: [validation](reports/validation.md); 26/26 package tests passed across 6 suites, 7 syntax checks, installer/pack smoke, and constructed prompt cases. Review 9.8/10, zero critical/high.
 - [x] User review approval: selected **Approve local delivery** with documented limits.
-- [x] Documentation/evidence finalized; user selected **Create scoped commit**, no push.
-- [x] Addressed PR #23 review findings:
-  - P1: Replaced raw `rm -rf` recommendation with target-qualified absolute path reporting and safe manual backup/inspection instructions.
-  - P2: Hardened `detectLegacyInstallation` against `ENOTDIR` crashes when `.claude` or ancestors are regular files, dangling symlinks, or non-directories.
-  - P2: Updated validation evidence with fresh verification (35 tests, 10 syntax checks, cross-directory smoke).
-  - P3: Superseding amendment documenting authorized complete removal of `ext/snyk-expert/.claude/` (9 files) to retain exclusively `.agents/`.
+- [x] Documentation/evidence finalized: package and docs exclusively maintain `.agents/`, with legacy resources retired.
 Approved final scope: common `.agents` payload, existing package installer/metadata/tests, new packaged usage and root common-bundle docs, this new ordinary plan and evidence. Plans are normally ignored; user explicitly authorized current plan/evidence in the scoped commit, so stage only this plan directory with `git add -f`. Existing staged input was empty before selection. User `.gitignore`, unrelated extensions, historical sources/plans and captured root docs excluded.
 
 Default approval/validation only; not durable advice completion. Native slash dispatch unavailable; scoped commit contract read and applied inline, never blanket `git add .`. Temporary smoke artifacts removed. Live qualification prerequisites remain excluded, not silently passed.

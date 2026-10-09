@@ -31,11 +31,10 @@ node ext/snyk-expert/bin/install.js --target /path/to/project
 
 ### CLI Installer Safety Guarantees
 
-- **Project-Local Only**: Installs strictly into the project's `.agents/` directory. Refuses to default to `$HOME` (`~/.agents/` or `~/.claude/`) to prevent polluting global configurations.
+- **Project-Local Only**: Installs strictly into the project's `.agents/` directory. Refuses to default to user `$HOME` to prevent polluting global configurations.
 - **Collision Detection & Protection**: Existing files that differ trigger collision warnings and fail closed. Overwrite requires explicit `--force` plus interactive confirmation (or non-interactive `--force --yes`). `--yes` alone without `--force` is rejected.
 - **Atomic Staging & Integrity**: Files are staged to temporary files in destination directories and atomically moved (`renameSync`) with complete byte-level integrity verification.
 - **Preserves Pre-existing Files**: Pre-existing unrelated files and directories in the target are preserved untouched.
-- **Legacy Migration Warnings**: Automatically detects existing legacy `.claude/` snyk-expert files in target projects and outputs safe manual migration commands (`rm -rf ...`) without deleting files automatically.
 - **Symlink Defense**: Rejects destination paths or components containing symlinks that escape the target project root.
 
 ## Bundle Structure

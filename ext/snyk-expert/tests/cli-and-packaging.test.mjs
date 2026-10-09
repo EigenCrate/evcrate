@@ -43,43 +43,11 @@ describe('Snyk Expert Installer - CLI & Packaging', () => {
 
   test('full CLI install creates the common resource tree', () => {
     execFileSync('node', [CLI_PATH, '--target', tmpDir]);
-    assert.ok(!fs.existsSync(path.join(tmpDir, '.claude')));
     for (const rel of ASSET_INVENTORY) {
       assert.ok(fs.existsSync(path.join(tmpDir, '.agents', rel)));
     }
   });
 
-  test('CLI emits legacy migration warning when .claude installation is detected', () => {
-    const legacyAgent = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
-    fs.mkdirSync(path.dirname(legacyAgent), { recursive: true });
-    fs.writeFileSync(legacyAgent, 'LEGACY AGENT');
-
-    const out = execFileSync('node', [CLI_PATH, '--target', tmpDir], { encoding: 'utf8' });
-    assert.ok(out.includes('Legacy .claude/ installation detected'));
-    assert.ok(out.includes(path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md')));
-    assert.ok(!out.includes('rm -rf'));
-    assert.equal(fs.readFileSync(legacyAgent, 'utf8'), 'LEGACY AGENT');
-    assert.ok(fs.existsSync(path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md')));
-  });
-
-  test('CLI install succeeds without error when .claude is a regular file', () => {
-    fs.writeFileSync(path.join(tmpDir, '.claude'), 'regular file');
-    const out = execFileSync('node', [CLI_PATH, '--target', tmpDir], { encoding: 'utf8' });
-    assert.ok(out.includes('Installation complete!'));
-    assert.ok(!out.includes('Legacy .claude/ installation detected'));
-    assert.ok(fs.existsSync(path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md')));
-  });
-  test('CLI dry-run emits legacy migration warning when .claude installation is detected', () => {
-    const legacyAgent = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
-    fs.mkdirSync(path.dirname(legacyAgent), { recursive: true });
-    fs.writeFileSync(legacyAgent, 'LEGACY AGENT');
-
-    const out = execFileSync('node', [CLI_PATH, '--target', tmpDir, '--dry-run'], { encoding: 'utf8' });
-    assert.ok(out.includes('Legacy .claude/ installation detected'));
-    assert.ok(out.includes('.claude/agents/snyk-expert.md'));
-    assert.equal(fs.readFileSync(legacyAgent, 'utf8'), 'LEGACY AGENT');
-    assert.deepEqual(fs.readdirSync(tmpDir), ['.claude']);
-  });
 
   test('CLI rejects --yes without --force', () => {
     assert.throws(
@@ -133,7 +101,6 @@ describe('Snyk Expert Installer - CLI & Packaging', () => {
     }
     assert.ok(packedPaths.includes('bin/install.js'));
     assert.ok(packedPaths.includes('docs/usage.md'));
-    assert.ok(!packedPaths.some(p => p.startsWith('.claude/')));
     assert.ok(!packedPaths.some(p => p.startsWith('tests/')));
   });
 });

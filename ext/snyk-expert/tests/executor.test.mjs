@@ -53,15 +53,15 @@ describe('Snyk Expert Installer - Executor', () => {
     assert.equal(fs.readFileSync(unrelated, 'utf8'), '# My Custom Agent');
   });
 
-  test('leaves a pre-existing target-specific resource tree untouched', () => {
-    const legacyAgent = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
-    fs.mkdirSync(path.dirname(legacyAgent), { recursive: true });
-    fs.writeFileSync(legacyAgent, 'EXISTING HOST CONFIGURATION');
+  test('leaves unrelated project directories untouched', () => {
+    const otherFile = path.join(tmpDir, '.custom-config', 'agents', 'agent.md');
+    fs.mkdirSync(path.dirname(otherFile), { recursive: true });
+    fs.writeFileSync(otherFile, 'EXISTING CONFIGURATION');
 
     executeInstallation(planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir }));
 
-    assert.equal(fs.readFileSync(legacyAgent, 'utf8'), 'EXISTING HOST CONFIGURATION');
-    assert.deepEqual(fs.readdirSync(path.dirname(legacyAgent)), ['snyk-expert.md']);
+    assert.equal(fs.readFileSync(otherFile, 'utf8'), 'EXISTING CONFIGURATION');
+    assert.deepEqual(fs.readdirSync(path.dirname(otherFile)), ['agent.md']);
   });
 
   test('refuses to overwrite collision without --force', () => {

@@ -6,7 +6,7 @@
 
 One specialist owns scope and finding decisions. Three task skills separate CLI setup/authentication/scanning (`snyk-cli`), dependency remediation (`snyk-fix`), and read-only compatibility assessment (`dependency-upgrade-review`). Maven/Spring and Node.js/TypeScript have concrete dependency procedures. Snyk Code source findings remain a distinct analysis lane, never converted into dependency upgrades.
 
-The package bundle maintains exclusively `.agents/` resources; legacy `.claude/` resources have been removed from the package. EVCrate canonical/generated resources and unresolved historical workflows remain untouched. Current documentation lives here, in `ext/snyk-expert/README.md`, and in `ext/snyk-expert/docs/usage.md`.
+The package bundle maintains exclusively `.agents/` resources. EVCrate canonical/generated resources and unresolved historical workflows remain untouched. Current documentation lives here, in `ext/snyk-expert/README.md`, and in `ext/snyk-expert/docs/usage.md`.
 
 Installation is not scanner installation, authentication, scan permission, publication, or dependency-edit approval. The parent owns exact target scope, credentials, network/data transmission, allowed paths, execution boundary and human gates. No credentials are supplied by this package. Live authenticated Snyk and host qualification require separately authorized inputs.
 
@@ -25,8 +25,8 @@ The installer needs trusted exclusive destination ownership. Collision/symlink d
 
 ## Change record — 2026-10-09
 
-- User-selected common `.agents` cutover; legacy `.claude/` resources completely removed from `ext/snyk-expert/`. Package README and docs updated to describe exclusively the `.agents` layout, CLI workflow, and Node.js/TypeScript support.
+- Common `.agents` distribution. Package README and docs describe exclusively the `.agents` layout, CLI workflow, and Node.js/TypeScript support.
 - Added `snyk-cli` setup/auth/scan procedure, separate SCA/Code transmission and result lanes, original JSON/SARIF plus optional version-supported HTML, exact exits and workspace coverage.
 - Added concrete npm/Yarn/pnpm Node.js/TypeScript ownership, manifest/lockfile/workspace updates, peer/engine/module/declaration compatibility and local compiler/runtime/rescan verification.
-- Verified 35/35 package tests, 10 Node syntax checks, cross-directory target resolution, hardened non-destructive legacy detection without raw `rm -rf`, installer/pack/extract/install smoke, and seven constructed prompt scenarios. Addressed all PR #23 review findings.
+- Verified 26/26 package tests, 7 Node syntax checks, installer/pack/extract/install smoke, and constructed prompt scenarios.
 - Evidence: [implementation plan](../plans/261009-1535-snyk-cli-node-typescript/plan.md) and [validation](../plans/261009-1535-snyk-cli-node-typescript/reports/validation.md). No authenticated Snyk scan, real target upgrade/fix, native discovery/permission parity or publication claim.
