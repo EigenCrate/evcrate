@@ -258,17 +258,24 @@ command is treated as canonical.
 - **Fail-closed:** Missing/unreadable helper, unsupported Node, nonzero exit, malformed output, context mismatch, or stale revisions halt routing immediately with a sanitized four-key diagnostic (`{ code, category, action, message }`). No fallback parser, automatic installation, retry loop, or heuristic mode inference.
 - **Neutral progress & immutability:** Historical progress inspection uses `state get` only; permits existing lock acquisition/release and provably dead lock reaping; zero lifecycle writes/state mutation. Historical success requires matching project identity, repo-relative plan/phase paths, controller phase, and snapshot digest; completed scope is a verified no-op.
 - **Boundaries & qualification:** Caller JSON and handoffs provide cooperative consistency without authenticated user intent or session-token provenance guarantees; mentoring instructions are loaded lazily. Linux x64 bounded native qualification observed on OMP 18.6.1 across six scenario classes (`s01`, `s02`, `s03`, `s05`, `s07`, `s11`) capped at Step 0; prerequisite admission gates (`s10` diagnostic uncaptured, `s12` timed out) remain explicit native limits; incomplete A02/A22 historical artifact evidence, A12 retained-record reconciliation without compiler loops, and unexercised A13/A16 native branches. Other vendor model loops remain unqualified; native Windows and macOS are excluded by user direction; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim.
-### FR-12: Documented command names
+### FR-12: Unified command/agent naming, canonical AGENTS.md, and release promotion
 
-**Requirement:** Documentation and target-facing examples use unified `/evc-cmd-*`
-for every slash command/resource name and `/evc-*` for agents. Nested commands use
-the reserved `-x-` path separator; Copilot projects user-invocable skills as
-`evc-cmd-*` with raw `$ARGUMENTS`.
+**Requirement:** Documentation, maintained source, and target-facing projections use unified
+`/evc-cmd-*` for every slash command/resource name, `/evc-*` for custom agents, and `evc-<skill>` /
+`evc-style-<style>` for Copilot skills and styles. Nested commands use the reserved `-x-` path
+separator, reversibly mapping to internal semantic identifiers. All names conform to spec64
+(`^[a-z0-9]+(-[a-z0-9]+)*$`, <= 64 chars, no `_`, `:`, `--`). Advisor semantic IDs (e.g. `code/auto`)
+remain stable invariants. Instructions author solely in `.evcrate/source/.claude/AGENTS.md`. Upgrades
+enforce ownership-based pruning with pre-upgrade customization backup warnings, unmanaged collision refusal,
+and untracked leftover reporting. Releases validate through prerelease channel `next` (`3.0.0-rc.N`)
+before candidate-bound stable promotion on `main` (`3.0.0`).
 
-**Acceptance:** Core docs use flat `/evc-cmd-*` commands. All seven active targets
-emit unified `evc-*` names with zero compatibility aliases. The single naming
-authority is `src/adapters/resource-naming.ts`, enforced canonically by
-`.evcrate/source/.claude/scripts/scan_commands.py`.
+**Acceptance:** Core docs and all seven active target projections emit unified `evc-*` names with zero
+compatibility aliases. Single naming authority is `src/adapters/resource-naming.ts`, enforced by
+`.evcrate/source/.claude/scripts/scan_commands.py`. Claude publishes native unconditional
+`.claude/rules/AGENTS.md` (no duplicate direct AGENTS or CLAUDE shim). Pre-upgrade backups are required;
+recorded ownership controls pruning. Prerelease builds on `next` publish via verified mirror topology;
+stable publication on `main` strictly requires verified candidate-bound maintainer approval evidence (enforced via GitHub `production` environment review gate in CI and programmatic approval evidence in scripted publication).
 ### FR-13: Sanitized audit history and outcome review
 
 **Requirement:** Store a bounded, versioned execution record and linked outcome

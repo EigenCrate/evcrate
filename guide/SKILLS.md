@@ -41,29 +41,27 @@ ls .evcrate/source/.claude/skills/
 Skills work seamlessly with slash commands:
 
 ```bash
-/cmd-plan "implement authentication with Better Auth"
-/cmd-cook "create Docker containers for the app"
-/cmd-design__good "create a landing page with shadcn/ui"
+/evc-cmd-plan "implement authentication with Better Auth"
+/evc-cmd-cook "create Docker containers for the app"
+/evc-cmd-design-x-good "create a landing page with shadcn/ui"
 ```
 
-Project documentation uses the `/cmd-*` naming convention for slash command/resource
-examples, including `.claude` references. OMP nested names use `__`; Copilot uses
-`/evcrate-cmd-*`; VS Code Local maps slash commands as manual skills with mapped names
-(such as `/cmd-plan`, or `/evcrate-local:cmd-plan` when qualified), forwarding arguments directly. Current scanner/parser
-prefix enforcement remains a follow-up; this convention does not rename source commands.
-See the [code standards](../docs/code-standards.md#normative-command-naming).
-
+Project documentation and all active target projections use the unified `/evc-cmd-*` naming convention
+for slash commands (with `-x-` nesting separators for subcommands, e.g. `/evc-cmd-design-x-good`).
+Agents project as `evc-*`. Copilot projects ordinary skills as `evc-<skill>` and styles as `evc-style-<style>`.
+VS Code Local maps commands as manual skills (`/evc-cmd-*`). See the
+[code standards](../docs/code-standards.md#enforceable-architectural-bans).
 ---
 
 ## Dependency Review and Snyk Remediation
 
 - [`dependency-upgrade-review`](../.evcrate/source/.claude/skills/dependency-upgrade-review/SKILL.md): reusable read-only assessment of an exact proposed dependency upgrade. Ordinary upgrades require no Snyk report. Returns `eligible`, `needs-approval` or `blocked`; never chooses releases, mutates a target or grants approval.
 - [`snyk-fix`](../.evcrate/source/.claude/skills/snyk-fix/SKILL.md): finding/path preservation, dependency-owner mapping and scoped remediation. The concrete execution procedure is Maven/Spring only. Analysis is read-only; major, breaking or uncertain changes require an exact main-session human decision against the current complete baseline.
-- [`snyk-expert`](../.evcrate/source/.claude/agents/snyk-expert.md): specialist orchestration using both skills. The parent supplies the canonical absolute installed resource root separately from the authorized target root, effective execution/isolation permissions and single-writer ownership.
+- [`snyk-expert`](../ext/snyk-expert/.claude/agents/snyk-expert.md): specialist orchestration using both skills. The parent supplies the canonical absolute installed resource root separately from the authorized target root, effective execution/isolation permissions and single-writer ownership.
 
 Read both skill entrypoints and every bundled reference in the consuming context; resolve relative links from the installed package, not the target cwd. The parent retains human approval ownership. Drift invalidates prior approval; missing graph, affected-consumer runtime or comparable rescan evidence prevents a `fixed` claim.
 
-Local generation covers all seven targets (`claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`). Copilot names are `evcrate-snyk-expert`, `evcrate-snyk-fix` and `evcrate-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
+Local generation covers all seven targets (`claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`). Copilot names are `evc-snyk-expert`, `evc-snyk-fix` and `evc-dependency-upgrade-review`; sibling links follow those names. Antigravity projects the skills, not this specialist agent. Agent preload/permission metadata and tool mappings differ across targets; generated resources are not proof of native discovery, enforcement or live remediation. See the [local porting qualification](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md) for observed versions, evidence and limits. Publication remains a separate operator action.
 
 ---
 

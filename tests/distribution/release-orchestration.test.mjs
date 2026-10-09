@@ -885,3 +885,297 @@ test('releaseContract.isValidReleaseCommitOrSource enforces strict release commi
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('Phase 10: release.yml enforces dual-branch triggers (main, next) and protected publish environment', () => {
+  const workflowPath = path.join(projectRoot, '.github', 'workflows', 'release.yml');
+  const content = fs.readFileSync(workflowPath, 'utf8');
+
+  // Push triggers must include both main and next
+  assert.match(content, /on:\s*\n\s*push:\s*\n\s*branches:\s*\n\s*-\s*main\s*\n\s*-\s*next/u);
+
+  // Publish job must declare environment with production for main and prerelease otherwise
+  assert.match(content, /environment:\s*\n\s*name:\s*\$\{\{\s*github\.ref_name\s*==\s*'main'\s*&&\s*'production'\s*\|\|\s*'prerelease'\s*\}\}/u);
+});
+
+test('Phase 10: createLocalReleaseMirror seeds main and next refs and fails closed if main is missing', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-mirror-test-dual-'));
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+
+  try {
+    // 1. Dual branch seeding when triggering from next
+    const mirror = runReleaseCandidate.createLocalReleaseMirror({
+      cwd: projectRoot,
+      tempDir: tmpDir,
+      branch: 'next',
+      sourceCommit: head,
+      configuredBranches: ['main', { name: 'next', channel: 'next', prerelease: 'rc' }]
+    });
+
+    assert.ok(fs.existsSync(mirror.mirrorPath));
+    const mirrorNext = execFileSync('git', ['rev-parse', 'refs/heads/next'], {
+      cwd: mirror.mirrorPath,
+      encoding: 'utf8'
+    }).trim().toLowerCase();
+    assert.equal(mirrorNext, head);
+
+    const mirrorMain = execFileSync('git', ['rev-parse', 'refs/heads/main'], {
+      cwd: mirror.mirrorPath,
+      encoding: 'utf8'
+    }).trim().toLowerCase();
+    assert.ok(/^[0-9a-f]{40}$/.test(mirrorMain));
+
+    const symbolicHead = execFileSync('git', ['--git-dir', mirror.mirrorPath, 'symbolic-ref', 'HEAD'], {
+      encoding: 'utf8'
+    }).trim();
+    assert.equal(symbolicHead, 'refs/heads/next');
+    mirror.cleanup();
+
+    // 2. Fail closed when main is missing in repository
+    const emptyRepoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-empty-repo-'));
+    try {
+      execFileSync('git', ['-c', 'init.defaultBranch=feature', 'init', emptyRepoDir]);
+      execFileSync('git', ['-C', emptyRepoDir, 'config', 'user.name', 'Tester']);
+      execFileSync('git', ['-C', emptyRepoDir, 'config', 'user.email', 'tester@example.com']);
+      fs.writeFileSync(path.join(emptyRepoDir, 'dummy.txt'), 'hello');
+      execFileSync('git', ['-C', emptyRepoDir, 'add', '.']);
+      execFileSync('git', ['-C', emptyRepoDir, 'commit', '-m', 'chore: dummy']);
+      const dummyHead = execFileSync('git', ['-C', emptyRepoDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
+
+      assert.throws(
+        () => runReleaseCandidate.createLocalReleaseMirror({
+          cwd: emptyRepoDir,
+          tempDir: tmpDir,
+          branch: 'feature',
+          sourceCommit: dummyHead,
+          configuredBranches: ['main', 'feature']
+        }),
+        /createLocalReleaseMirror requires verified "main" ref in repository to seed canonical release topology/
+      );
+    } finally {
+      fs.rmSync(emptyRepoDir, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 10: publish-release enforces stable approval evidence and branch topology guards', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pub-approval-test-'));
+  const version = '3.0.0';
+  const commit = '7'.repeat(40);
+  const receiptPath = path.join(tmpDir, 'candidate.json');
+  const distReleaseDir = path.join(tmpDir, 'dist-release');
+  const assetsDir = path.join(tmpDir, 'assets');
+
+  try {
+    const verifiedSummary = createExactSevenAssets(assetsDir, version, commit);
+    const candidateReceipt = {
+      schema: 'evcrate-release-candidate/v1',
+      version,
+      tag: `v${version}`,
+      source_commit: commit,
+      workflow_run_id: 101,
+      workflow_run_attempt: 1,
+      files: verifiedSummary.files
+    };
+    fs.writeFileSync(receiptPath, JSON.stringify(candidateReceipt));
+
+    // 1. Missing approval when required
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        requireStableApproval: true,
+        semanticReleaseFn: async () => ({ nextRelease: { version, gitTag: `v${version}`, gitHead: commit } }),
+        config: { branches: ['main'], plugins: [] }
+      }),
+      /Stable release publication requires verified maintainer approval evidence file binding candidate identity/
+    );
+
+    // 2. Valid approval passes
+    const approvalPath = path.join(tmpDir, 'stable-approval.json');
+    const validApproval = {
+      status: 'approved',
+      version,
+      tag: `v${version}`,
+      source_commit: commit,
+      workflow_run_id: 101,
+      approved_by: 'lead-maintainer',
+      approved_at: '2026-10-09T18:00:00Z',
+      digests: {
+        'install.sh': verifiedSummary.files.find((f) => f.name === 'install.sh').sha256
+      }
+    };
+    fs.writeFileSync(approvalPath, JSON.stringify(validApproval));
+
+    const result = await publishRelease.runPublishRelease({
+      receiptPath,
+      distReleaseDir,
+      runnerTemp: tmpDir,
+      env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+      approvalPath,
+      requireStableApproval: true,
+      branch: 'main',
+      semanticReleaseFn: async () => ({ nextRelease: { version, gitTag: `v${version}`, gitHead: commit } }),
+      config: { branches: ['main'], plugins: [] }
+    });
+    assert.equal(result.success, true);
+    assert.equal(result.approval.approved_by, 'lead-maintainer');
+
+    // 3. Mismatched commit in approval rejects
+    const badCommitApproval = { ...validApproval, source_commit: '8'.repeat(40) };
+    fs.writeFileSync(approvalPath, JSON.stringify(badCommitApproval));
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        approvalPath,
+        requireStableApproval: true,
+        semanticReleaseFn: async () => ({ nextRelease: { version, gitTag: `v${version}`, gitHead: commit } }),
+        config: { branches: ['main'], plugins: [] }
+      }),
+      /Approval evidence source_commit.*does not match receipt source_commit/
+    );
+
+    // 4. Mismatched status in approval rejects
+    const rejectedApproval = { ...validApproval, status: 'rejected' };
+    fs.writeFileSync(approvalPath, JSON.stringify(rejectedApproval));
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        approvalPath,
+        semanticReleaseFn: async () => ({ nextRelease: { version, gitTag: `v${version}`, gitHead: commit } }),
+        config: { branches: ['main'], plugins: [] }
+      }),
+      /Approval evidence status must be "approved"/
+    );
+
+    // 5. Topology guard: prerelease on main rejects
+    fs.writeFileSync(approvalPath, JSON.stringify(validApproval));
+    const rcAssetsDir = path.join(tmpDir, 'rc-assets');
+    const rcSummary = createExactSevenAssets(rcAssetsDir, '3.0.0-rc.1', commit);
+    const rcCandidateReceipt = { ...candidateReceipt, version: '3.0.0-rc.1', tag: 'v3.0.0-rc.1', files: rcSummary.files };
+    fs.writeFileSync(receiptPath, JSON.stringify(rcCandidateReceipt));
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        assetsDir: rcAssetsDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        branch: 'main',
+        semanticReleaseFn: async () => ({ nextRelease: { version: '3.0.0-rc.1', gitTag: 'v3.0.0-rc.1', gitHead: commit } }),
+        config: { branches: ['main', { name: 'next', channel: 'next', prerelease: 'rc' }], plugins: [] }
+      }),
+      /Topology violation: cannot publish prerelease version "3.0.0-rc.1" on stable branch "main"/
+    );
+
+    // 6. Topology guard: stable on next rejects
+    fs.writeFileSync(receiptPath, JSON.stringify(candidateReceipt));
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        branch: 'next',
+        semanticReleaseFn: async () => ({ nextRelease: { version: '3.0.0', gitTag: 'v3.0.0', gitHead: commit } }),
+        config: { branches: ['main', { name: 'next', channel: 'next', prerelease: 'rc' }], plugins: [] }
+      }),
+      /Topology violation: cannot publish stable version "3.0.0" on prerelease branch "next"/
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 10: real semantic-release dry-run predicts 3.0.0-rc.1 on next and 3.0.0 on merged main', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-sr-dryrun-'));
+  const srModule = require('semantic-release');
+  const semanticRelease = typeof srModule === 'function' ? srModule : srModule.default;
+  const { pathToFileURL } = require('node:url');
+
+  try {
+    const repoDir = path.join(tmpDir, 'repo');
+    fs.mkdirSync(repoDir);
+    execFileSync('git', ['init', repoDir]);
+    execFileSync('git', ['-C', repoDir, 'config', 'user.name', 'Tester']);
+    execFileSync('git', ['-C', repoDir, 'config', 'user.email', 'tester@example.com']);
+    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'main']);
+
+    // Seed v2.9.1 baseline commit and tag
+    fs.writeFileSync(path.join(repoDir, 'package.json'), JSON.stringify({ name: 'test-pkg', version: '2.9.1' }, null, 2));
+    execFileSync('git', ['-C', repoDir, 'add', '.']);
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'chore: release 2.9.1']);
+    execFileSync('git', ['-C', repoDir, 'tag', 'v2.9.1']);
+
+    // Create next branch with breaking change commit
+    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'next']);
+    fs.writeFileSync(path.join(repoDir, 'feature.txt'), 'unified naming');
+    execFileSync('git', ['-C', repoDir, 'add', '.']);
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'feat(naming)!: unified command and agent naming across all harnesses\n\nBREAKING CHANGE: all command and agent identities unified']);
+
+    const bareRemote = path.join(tmpDir, 'remote.git');
+    execFileSync('git', ['init', '--bare', bareRemote]);
+    const remoteUrl = pathToFileURL(bareRemote).href;
+    execFileSync('git', ['-C', repoDir, 'push', remoteUrl, 'main:refs/heads/main', 'next:refs/heads/next', '--tags']);
+
+    const branchesConfig = [
+      'main',
+      { name: 'next', channel: 'next', prerelease: 'rc' }
+    ];
+
+    // 1. Dry run on next branch: must predict 3.0.0-rc.1
+    const nextResult = await semanticRelease({
+      branches: branchesConfig,
+      repositoryUrl: remoteUrl,
+      dryRun: true,
+      ci: false,
+      plugins: [
+        '@semantic-release/commit-analyzer'
+      ]
+    }, {
+      cwd: repoDir,
+      env: { ...process.env, CI: 'false' },
+      stdout: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } }),
+      stderr: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } })
+    });
+
+    assert.ok(nextResult, 'semantic-release must calculate a release on next');
+    assert.equal(nextResult.nextRelease.version, '3.0.0-rc.1');
+    assert.equal(nextResult.nextRelease.channel, 'next');
+
+    // 2. Merge next into main: dry run on main must predict 3.0.0
+    execFileSync('git', ['-C', repoDir, 'checkout', 'main']);
+    execFileSync('git', ['-C', repoDir, 'merge', '--no-ff', '-m', 'merge next into main', 'next']);
+    execFileSync('git', ['-C', repoDir, 'push', remoteUrl, 'main:refs/heads/main']);
+
+    const mainResult = await semanticRelease({
+      branches: branchesConfig,
+      repositoryUrl: remoteUrl,
+      dryRun: true,
+      ci: false,
+      plugins: [
+        '@semantic-release/commit-analyzer'
+      ]
+    }, {
+      cwd: repoDir,
+      env: { ...process.env, CI: 'false' },
+      stdout: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } }),
+      stderr: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } })
+    });
+
+    assert.ok(mainResult, 'semantic-release must calculate a release on main');
+    assert.equal(mainResult.nextRelease.version, '3.0.0');
+    assert.equal(mainResult.nextRelease.channel, null);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

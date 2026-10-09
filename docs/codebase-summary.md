@@ -586,7 +586,7 @@ vendor authentication, or universal host enforcement. All seven targets remain
 Deterministic advice activation is governed by the neutral [advice-activation.md](../.evcrate/source/.claude/workflows/advice-activation.md) contract; neutral historical progress inspection is governed by [plan-progress.md](../.evcrate/source/.claude/workflows/plan-progress.md). A final standalone `--advice` enables explicit checkpoint mentoring. Quoted spans (`"..."`, `'...'`), word apostrophes (`don't`), and escaped characters (`\`) suppress flag eligibility while preserving non-flag bytes; duplicate standalone flags reject fail-closed. Explicit-parent inheritance is supported; independent invocations without flag remain off. Handoffs preserve mode and active run identity; default mode carries no advice token.
 OMP targets enforce native-user admission (`handoff: null`, `source: "native-user"`), while delegated calls within a session or direct command definition readers always evaluate the HOME helper with the exact current-call handoff per `advice-activation.md`; model-authored headers are never trusted. Prompt context uses compact version 2 envelopes (`evcrate_omp_command_context` with mode, reason, context, run, source) to expand task text exactly once without payload triplication.
 Current verification proves deterministic activation through helper probes and programmatic smoke (84 admissions, 6 routed delegations) across isolated fixtures; live model loops and 8-host qualification are not invoked.
-The main-session `/cmd-advise` interview remains separate from checkpoint routing.
+The main-session `/evc-cmd-advise` interview remains separate from checkpoint routing.
 For explicit or inherited advice runs only, see the [caller lifecycle binding](../.evcrate/source/.claude/workflows/advisor-mentoring.md#caller-lifecycle-binding).
 
 - **Fresh review:** The parent settles implementation, actual declared validation, reviewer output, selected documentation/artifacts, and relevant writers behind a writer barrier, then initializes once immediately before the first checkpoint.
@@ -700,7 +700,14 @@ Phase 09 establishes cross-cutting test suites, golden contract regressions, and
 - **Installed advice activation cutover:** Updated `tests/integration/advice-activation-installed.test.mjs` to invoke canonical `evc-cmd-*` and `evc-cmd-*-x-*` command names while preserving underlying 21-ID semantic advisor contracts and fail-closed security invariants.
 - **tmpfs concurrency protection (`--test-concurrency=1`):** Configured serial test execution in `package.json` for heavy workspace fixture suites (`test:publication`, `test:build-generation`, and `test:integration`), preventing out-of-memory and inode exhaustion on tmpfs mounts while maintaining full isolation.
 - **Buffer overrun protection (`maxBuffer`):** Updated `scripts/release/npm-runner.cjs` with a 64MB default `maxBuffer` in `execNpmSync` and `spawnNpmSync`, preventing `ENOBUFS` truncation during large `npm pack --dry-run --json` invocations.
-- **Verification:** 10/10 Phase 09 regressions passed (11.28s), full suite green (1001/1001 passed, 0 failures), `npm run distribute:check` ok (14.30s), `npm run release:check` ok. Code review approved at 9.0/10.
+
+### Phase 10 documentation, changelog, and release promotion pipeline
+
+Phase 10 cuts over maintained documentation, migration guidance, and the dual-branch prerelease/stable release pipeline:
+- **Prerelease and promotion release pipeline:** `.releaserc.json` configured with canonical branches `["main", {"name": "next", "channel": "next", "prerelease": "rc"}]`. Workflow `.github/workflows/release.yml` triggers pushes on both `main` and `next`, establishing a protected `production` environment review gate for stable publishes.
+- **Candidate mirror seeding & topology guards:** `scripts/release/run-release-candidate.cjs` seeds bare candidate mirrors with triggering branch at `sourceCommit`, seeds verified configured `main` (and `next`) refs from repository history, and pushes all local tags.
+- **Stable candidate approval evidence validation:** `scripts/release/publish-release.cjs` implements branch topology guards (preventing prerelease publishes on `main` and stable publishes on `next`) and `verifyStableApprovalEvidence` requiring valid maintainer approval binding candidate commit, version, tag, run ID, and file digests before publishing stable releases.
+- **Normative documentation reconciliation:** Reconciled `README.md`, `code-standards.md`, `system-architecture.md`, `project-overview-pdr.md` (FR-12), `project-roadmap.md`, `pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, single `AGENTS.md` authority, pre-upgrade customization backup warnings, and exact local-asset installer installation procedures.
 ## Documentation navigation
 
 - [System architecture](./system-architecture.md) — central contracts.

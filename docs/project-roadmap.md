@@ -1,11 +1,9 @@
 # Project Roadmap
 
-**Status:** Current roadmap for package `2.9.0`; Hook Materialization Scope
-Distribution is complete through Phase 09, and Windows release qualification is
-complete through Phase 10 (10/10 phases, 100%; completed 2026-09-15). Phase 08
-(commit `cbd298a4`, receipt `phase-08-completion-receipt.md`). Phase 09 documentation,
-controlled rollout, and lifecycle governance is completed (report `phase-09-rollout-and-lifecycle-report.md`).
-**Updated:** 2026-10-06
+**Status:** Unified evc-* naming and AGENTS.md instructions across all harnesses milestone:
+Phases 01–10 complete (Phase 01–09 approved and durably sealed; Phase 10 documentation, changelog, and release pipeline cutover in progress; Phase 11 cross-harness smoke verification next).
+Package line targeting 3.0.0-rc.1 (channel: `next`) and stable 3.0.0 (branch: `main`).
+**Updated:** 2026-10-09
 **Deterministic durable-advice activation:** 100% (4/4 phases complete; Phase 01–03 ordinary approved; Phase 04 DONE 2026-10-06; Cycle 2 review approved 9.8/10; user approved 2026-10-06T14:13:41+07:00). Bounded Linux qualification and documentation complete; Windows/macOS excluded; 604 pass, 24 Windows skips, 0 fail (628 unique tests); post-correction 309 unique / 285 pass / 24 skip / 0 fail; 46-file controller closure; explicit native qualification limits preserved. Scoped parent commit pending; no push or live publication.
 **Deterministic advice review repairs & prompt economy:** 100% (2/2 phases complete; Phase 01–02 DONE 2026-10-06; review approved 9.2/10; warning fixed; user approved). Quoted flag parsing repaired, OMP delegated receiving path implemented (`executeDelegated`), prompt task duplication eliminated via compact v2 header (11,200B input delta yields 11,200B output delta, 1:1 scaling), 9 manifests across 8 targets regenerated; programmatic smoke passed (84 admissions, 6 routed delegations); no live inference or 8-host qualification invoked; no commit/push claims.
 **Advisor Node-only launch and cross-platform runtime:** 5/8 phases durably complete (62.5%). Phase 06 candidate regeneration and Linux requalification is complete: replacement candidate `evcrate-candidate-1791140555626` (7,410 files, archive SHA-256 `6a720dfb136fb80ccd624cdca63dbce3ca18ba08fe75a2ef322c90f3d7a5b3a9`, manifest SHA-256 `365f145bb0deefe9eabad83ac6c9f9e598e7bb80f275c435e54a17321ee7c86a`). Stale `.omp` output hash in `.evcrate/build-manifest-omp.json` repaired; `node-launch.test.cjs` verified 9/9 passing directly within extracted candidate root; Cycle 2 native Windows runner fixes incorporated in `tests/advisor-controller/native-windows-qualification.cjs`; Linux qualification gates passed (753/753 passed, 25 win32 skips; health & launch 17/17 passed; release:check, distribute:check, and >30s smoke passed); code review approved 9.8/10. Ready for native Windows qualification re-execution (Phase 07). Phase 08 remains pending. See the [plan](../plans/261003-1527-advisor-node-only-launch/plan.md) and [requalification review](../plans/reports/code-review-261005-0231-phase-06-qualification-regeneration.md).
@@ -218,22 +216,16 @@ Native Windows advisor support is COMPLETE (4/4 phases, 100%; Phase 04 DONE 2026
    review Pi settings/runtime separately; leave Antigravity unavailable until its
    capability contract is proven.
 
-## Documentation and command-prefix follow-up
+## Unified naming, AGENTS.md authority, and release promotion milestone
 
-Documentation now uses a literal `cmd` prefix for every documented slash
-command/resource name, including `.claude` references. OMP nested names use `__`
-(for example `/cmd-fix__hard`), and Copilot names use `/evcrate-cmd-fix-hard`.
-
-The current `.claude/scripts/scan_commands.py` still derives names from relative
-paths, while the TypeScript CLI parser accepts bare operational actions. Prefix
-validation is therefore a known implementation follow-up, not a completed source
-change. Do not rename source command files or claim parser enforcement from this
-roadmap item.
-
+The unified naming and instruction authority refactoring is implemented across all seven targets:
+- **Universal command & agent naming:** All 70 commands follow `/evc-cmd-*` (nested with reserved separator `-x-`, length <= 64), 18 custom agents follow `evc-*`, and Copilot skills/styles follow `evc-<skill>` and `evc-style-<style>`. Enforced by `src/adapters/resource-naming.ts` and `.evcrate/source/.claude/scripts/scan_commands.py`.
+- **Single instruction authority:** Authored strictly in `.evcrate/source/.claude/AGENTS.md`; root Codex `AGENTS.md` is generated. All targets consume canonical instructions without aliases or CLAUDE shims.
+- **Publication upgrade & leftover reporting:** Ownership markers control pruning; untracked legacy leftovers are reported across 5 canonical kinds; unmanaged collisions refuse publication (`PUBLICATION_FAILED`).
+- **Release pipeline:** `.releaserc.json` and `.github/workflows/release.yml` support dual-branch promotion (`next` prerelease candidate -> `main` stable release) with candidate mirror seeding and maintainer approval evidence validation.
 ## Open gaps and decisions
 
-- **Command enforcement:** Decide whether and where to enforce the documentation
-  convention in future scanner/parser changes without breaking generated target maps.
+- **Command enforcement:** Unified `evc-cmd-*` naming and `-x-` nesting are canonically enforced by `src/adapters/resource-naming.ts` and `.evcrate/source/.claude/scripts/scan_commands.py`; target projections and manifests are verified.
 - **Advisor qualification:** Repeat real installed-CLI qualification after every
   vendor CLI upgrade; keep `antigravity` unavailable until equivalent evidence exists.
 - **Former plugin cutover (historical):** The E05 source cutover and retirement were completed 2026-10-02. Old G4/owner-runner/separate-LAN evidence is not a current EVCrate release gate, and historical paired tests do not qualify native DamHopper integration.
@@ -257,11 +249,11 @@ roadmap item.
   totals into new documentation.
 
 ## Related documents
-
 - [System architecture](./system-architecture.md)
 - [Project overview and PDR](./project-overview-pdr.md)
 - [Code standards](./code-standards.md)
 - [Codebase summary](./codebase-summary.md)
 - [Project changelog](./project-changelog.md)
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md)
 - [Pi-native migration](./pi-native-migration.md)
 - [Historical Advisor integration](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02) — former plugin UI and bridge evidence.

@@ -149,14 +149,48 @@ function createCandidatePluginSpecs(canonicalPlugins, options = {}) {
 }
 
 /**
+ * Resolves a Git branch ref in repository to a lowercase 40-hex commit SHA.
+ * Checks local branch, remote tracking branch (origin), or direct ref.
+ *
+ * @param {string} cwd Git working tree directory
+ * @param {string} branchName Branch name to resolve
+ * @returns {string|null} Resolved 40-hex SHA or null
+ */
+function resolveRepositoryRef(cwd, branchName) {
+  if (!branchName || typeof branchName !== 'string') return null;
+  const candidates = [
+    `refs/heads/${branchName}`,
+    `refs/remotes/origin/${branchName}`,
+    branchName
+  ];
+  for (const candidate of candidates) {
+    try {
+      const sha = execFileSync('git', ['rev-parse', '--verify', candidate], {
+        cwd,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'ignore']
+      }).trim().toLowerCase();
+      if (/^[0-9a-f]{40}$/.test(sha)) {
+        return sha;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+  return null;
+}
+
+/**
  * Creates a unique bare Git repository under runnerTemp, seeds triggering branch ref at sourceCommit,
- * and seeds all local tags. Returns mirror path, file:// URL, and cleanup callback.
+ * seeds verified configured branch refs (main required), and seeds all local tags.
+ * Returns mirror path, file:// URL, and cleanup callback.
  *
  * @param {object} options
  * @param {string} [options.cwd] Git working tree directory
  * @param {string} [options.tempDir] Base directory for temporary bare repo
  * @param {string} options.branch Triggering branch name
  * @param {string} options.sourceCommit Exact lowercase 40-hex commit SHA
+ * @param {Array|string} [options.configuredBranches] Canonical configured release branches
  * @returns {{ mirrorPath: string, mirrorUrl: string, cleanup: () => void }}
  */
 function createLocalReleaseMirror(options = {}) {
@@ -172,6 +206,20 @@ function createLocalReleaseMirror(options = {}) {
   }
   if (!branch || !/^[a-zA-Z0-9/_.-]+$/.test(branch)) {
     throw new Error(`createLocalReleaseMirror requires valid branch name: ${JSON.stringify(branch)}`);
+  }
+
+  const configuredBranches = options.configuredBranches || ['main', 'next'];
+  const configuredList = Array.isArray(configuredBranches) ? configuredBranches : [configuredBranches];
+  const configuredBranchNames = [];
+  for (const item of configuredList) {
+    if (typeof item === 'string' && item.trim()) {
+      configuredBranchNames.push(item.trim());
+    } else if (item && typeof item === 'object' && typeof item.name === 'string' && item.name.trim()) {
+      configuredBranchNames.push(item.name.trim());
+    }
+  }
+  if (!configuredBranchNames.includes('main')) {
+    configuredBranchNames.unshift('main');
   }
 
   const mirrorParent = fs.mkdtempSync(path.join(tempDir, 'evcrate-release-mirror-'));
@@ -192,6 +240,28 @@ function createLocalReleaseMirror(options = {}) {
     execFileSync('git', ['--git-dir', mirrorPath, 'symbolic-ref', 'HEAD', `refs/heads/${branch}`], {
       stdio: 'pipe'
     });
+
+    // Seed configured branches from verified repository refs
+    for (const targetBranch of configuredBranchNames) {
+      if (targetBranch === branch) {
+        continue; // Already seeded at sourceCommit
+      }
+      const resolvedSha = resolveRepositoryRef(cwd, targetBranch);
+      if (targetBranch === 'main') {
+        if (!resolvedSha) {
+          throw new Error(`createLocalReleaseMirror requires verified "main" ref in repository to seed canonical release topology`);
+        }
+        execFileSync('git', ['push', mirrorUrl, `${resolvedSha}:refs/heads/main`], {
+          cwd,
+          stdio: 'pipe'
+        });
+      } else if (resolvedSha) {
+        execFileSync('git', ['push', mirrorUrl, `${resolvedSha}:refs/heads/${targetBranch}`], {
+          cwd,
+          stdio: 'pipe'
+        });
+      }
+    }
 
     // Push all local tags
     try {
@@ -594,7 +664,8 @@ async function runCandidateRelease(options = {}) {
     cwd,
     tempDir: runnerTemp,
     branch,
-    sourceCommit
+    sourceCommit,
+    configuredBranches: canonicalConfig.branches
   });
 
   try {
@@ -872,6 +943,7 @@ if (require.main === module) {
 module.exports = {
   readCanonicalReleaseConfig,
   createCandidatePluginSpecs,
+  resolveRepositoryRef,
   createLocalReleaseMirror,
   runCandidateRelease,
   stageCandidateArtifact,

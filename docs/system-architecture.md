@@ -714,7 +714,7 @@ Deterministic advice activation is governed by the packaged Node helper `evcrate
 - **Modes & lazy mentoring:**
   - `off` (`NO_FINAL_FLAG`): Helper performs zero state init, zero get (`L=0`), and never loads mentoring. Off mode never invokes `evcrate-advisor` (no get, no locks); dependency reconciliation uses immutable in-repo receipts and sealed-path metadata, reported `receipt-attested; controller not consulted`; an identified unreceipted run pauses same/overlapping scope only.
   - `explicit` (`EXPLICIT_FINAL_FLAG`): Mentoring loads lazily only after helper confirms explicit mode; fresh init at existing lifecycle barrier.
-  - `inherited`: Structured caller handoff without synthetic flags or eager run creation. Reasons: `INHERITED_PRE_RUN` (routers `/cmd-cook`, `/cmd-fix` forward context with `run: null`, preserving known `plan_path`, `phase_path`, and `phase_id`; downstream receivers may refine only unknown `null` selections) or `INHERITED_SAME_RUN` (forwards verified binding; lazy get validates project/phase/revisions; completed/abandoned runs fail closed with `ADVICE_RUN_COMPLETED`).
+  - `inherited`: Structured caller handoff without synthetic flags or eager run creation. Reasons: `INHERITED_PRE_RUN` (routers `/evc-cmd-cook`, `/evc-cmd-fix` forward context with `run: null`, preserving known `plan_path`, `phase_path`, and `phase_id`; downstream receivers may refine only unknown `null` selections) or `INHERITED_SAME_RUN` (forwards verified binding; lazy get validates project/phase/revisions; completed/abandoned runs fail closed with `ADVICE_RUN_COMPLETED`).
 - **Fail-closed:** Missing/unreadable helper, unsupported Node, nonzero exit, malformed output, context mismatch, or stale revisions halt routing immediately with a sanitized four-key diagnostic (`{ code, category, action, message }`). Diagnostics distinguish missing Node (`Node >=22.19.0 not found on PATH…`), missing helper or unreadable packaged resource (republish via `evcrate publish --apply --scope home --target omp`; if CLI unavailable, manual `./install.sh repair` or fresh `./install.sh install` from release bundle; admission never downloads or executes installers), and helper faults (`HOME activation helper failed: <reason>`, without Node wording). No alternate parser, automatic install, retry loop, or heuristic mode inference.
 - **Cooperative boundary & handoffs:** Canonical entry/replay rule: *"A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts."* Handoffs and context headers are a cooperative contract, not authentication (severity MEDIUM); pre-run inheritance grants no more than a fabricated `--advice`; capability tokens were rejected because a model could mint one via a fabricated flag while a token store, locks, and expiry add cost without closing that boundary. Native user invocations have `handoff: null` and initial null plan/phase selections. Mentoring instructions are loaded lazily. No V1/direct API or CAS schema changes.
 - **Multi-target packaging and transports:**
@@ -736,11 +736,12 @@ and agents as `agents/evc-<agent>.md`, governed by `src/adapters/resource-naming
 enforced by `.evcrate/source/.claude/scripts/scan_commands.py`:
 
 - Slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, `/evc-cmd-advise`).
-- Nested commands use the reserved `-x-` path separator (e.g., `/evc-cmd-fix-x-hard`, `/evc-cmd-review-x-codebase`).
-- Agents use `/evc-*` (e.g., `evc-advisor`, `evc-code-reviewer`, `evc-planner`). Copilot styles use `evc-style-*`.
-- Semantic command identities (`code/auto`) remain the stable join for advisor activation.
-- All seven active target adapters emit flat `evc-*` names for commands and agents. Shell commands (`npm`, `node`, `python3`, `cp`, `export`) are executable shell syntax, not slash resource names.
-
+- Nested commands use reserved `-x-` path separator (e.g., `/evc-cmd-fix-x-hard`), reversible to semantic IDs (`fix/hard`).
+- Agents use `evc-*` (e.g., `evc-advisor`, `evc-planner`). Copilot skills use `evc-<skill>` and styles use `evc-style-<style>`.
+- Specification: charset `^[a-z0-9]+(-[a-z0-9]+)*$`, length <= 64, no `_`, `:`, `--`. Advisor semantic IDs (`code/auto`) remain unchanged invariants.
+- Canonical instructions are authored solely in `.evcrate/source/.claude/AGENTS.md`; root Codex `AGENTS.md` is generated.
+- Pre-upgrade ownership: stale recorded-owned files are pruned; untracked legacy leftovers are reported; unmanaged collisions refuse publication.
+- Release topology: prerelease channel `next` (`3.0.0-rc.N`); stable promotion on `main` (`3.0.0`) requires candidate-bound maintainer approval (enforced via GitHub `production` environment review gate in CI and programmatic approval evidence in scripted workflows).
 ## 7. Verification and support boundary
 
 Automated contracts cover strict policy/checkpoint parsing, fixed argv, sanitized environment, isolated cwd, output lifecycle, timeout/cancellation, descendant cleanup, workspace removal, envelope immutability, stale-hash blocking, atomic recovery, and selected-target publication. These contracts do not authenticate a vendor CLI.

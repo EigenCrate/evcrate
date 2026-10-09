@@ -42,6 +42,9 @@ The following patterns are strictly prohibited across the codebase:
 - **No full mentoring load or controller consultation in off mode**: Callers must resolve activation mode via `evcrate-advice-mode` before loading `advisor-mentoring.md`. Off mode strictly forbids reading mentoring instructions through navigation, loops, or fallback prompts, and never invokes `evcrate-advisor` (no get, no locks).
 - **No synthetic flag appending or handoff replay**: Routers and delegators must use structured direct handoffs (`kind: "pre-run"` or `"same-run"`) built for the exact current call only. User-entered commands always use `handoff: null`; appending fake or synthetic `--advice` flags or replaying prior handoffs is banned.
 - **No historical state mutation or off-mode state get during progress inspection**: Progress reconciliation via `plan-progress.md` in `off` mode never invokes `evcrate-advisor` (dependency basis is immutable in-repo receipts + sealed-path metadata, reported `receipt-attested; controller not consulted`; identified unreceipted runs pause same/overlapping scope only). Only `explicit` and `inherited` modes use identified `state get`, and progress inspection never invokes `init`, checkpoint reservations, claims, consultation, disposition, outcome, or completion.
+- **No legacy command or agent naming in maintained sources**: All commands strictly project `evc-cmd-*` (nested with `-x-`, length <= 64), custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy shapes (`cmd_`, colons, underscores).
+- **Single AGENTS.md authoring authority**: Canonical instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never author in root `AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
+- **Branch topology and release qualification**: Canonical release branches are `main` (stable) and `next` (prerelease `rc`). Release candidates must never publish on `main`; stable releases in CI enforce review gates via the protected `production` environment rule, while offline and scripted publisher invocations require verified maintainer approval evidence (`EVCRATE_REQUIRE_STABLE_APPROVAL=true`) binding exact candidate identity before publication.
 ## Repository structure and ownership
 
 ```text
@@ -757,5 +760,6 @@ before reporting success.
 
 - [System architecture](./system-architecture.md), [Project overview and PDR](./project-overview-pdr.md), [Codebase summary](./codebase-summary.md).
 - [Project roadmap](./project-roadmap.md), [Project changelog](./project-changelog.md), [Project changelog archive](./project-changelog-archive.md).
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md).
 - [Pi-native migration](./pi-native-migration.md).
 - [Historical Advisor integration](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02); [Workspace Advisor host contract](./workspace-advisor-host-contract.md).

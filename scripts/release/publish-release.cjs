@@ -62,6 +62,18 @@ function parsePublisherOptions(argv = process.argv, env = process.env) {
       options.expectedRunAttempt = Number(args[++i]);
     } else if (arg.startsWith('--run-attempt=')) {
       options.expectedRunAttempt = Number(arg.slice('--run-attempt='.length));
+    } else if (arg === '--approval' || arg === '--approval-evidence') {
+      options.approvalPath = args[++i];
+    } else if (arg.startsWith('--approval=')) {
+      options.approvalPath = arg.slice('--approval='.length);
+    } else if (arg.startsWith('--approval-evidence=')) {
+      options.approvalPath = arg.slice('--approval-evidence='.length);
+    } else if (arg === '--require-approval') {
+      options.requireStableApproval = true;
+    } else if (arg === '--branch') {
+      options.branch = args[++i];
+    } else if (arg.startsWith('--branch=')) {
+      options.branch = arg.slice('--branch='.length);
     } else if (arg === '-h' || arg === '--help') {
       options.help = true;
     }
@@ -86,6 +98,16 @@ function parsePublisherOptions(argv = process.argv, env = process.env) {
   if (options.expectedRunAttempt === undefined && (env.EVCRATE_EXPECTED_RUN_ATTEMPT || env.GITHUB_RUN_ATTEMPT)) {
     const rawAttempt = env.EVCRATE_EXPECTED_RUN_ATTEMPT || env.GITHUB_RUN_ATTEMPT;
     options.expectedRunAttempt = Number(rawAttempt);
+  }
+  if (!options.approvalPath && (env.EVCRATE_STABLE_APPROVAL_PATH || env.EVCRATE_APPROVAL_PATH)) {
+    options.approvalPath = env.EVCRATE_STABLE_APPROVAL_PATH || env.EVCRATE_APPROVAL_PATH;
+  }
+  if (options.requireStableApproval === undefined && (env.EVCRATE_REQUIRE_STABLE_APPROVAL || env.EVCRATE_REQUIRE_APPROVAL)) {
+    const rawVal = env.EVCRATE_REQUIRE_STABLE_APPROVAL || env.EVCRATE_REQUIRE_APPROVAL;
+    options.requireStableApproval = rawVal === 'true' || rawVal === '1';
+  }
+  if (!options.branch && (env.EVCRATE_BRANCH || env.BRANCH_NAME || env.GITHUB_REF_NAME)) {
+    options.branch = env.EVCRATE_BRANCH || env.BRANCH_NAME || env.GITHUB_REF_NAME;
   }
 
   options.expectedHashes = {};
@@ -119,6 +141,105 @@ function assertSafeDirectoryWithin(targetPath, allowedParents) {
     throw new Error(`Target path "${resolved}" is not safely contained within allowed roots: ${allowedParents.join(', ')}`);
   }
   return resolved;
+}
+
+/**
+ * Verifies whether a version string is a prerelease version.
+ * @param {string} version Semantic version string
+ * @returns {boolean} True if prerelease
+ */
+function isPrereleaseVersion(version) {
+  if (typeof version !== 'string') return false;
+  return version.includes('-');
+}
+
+/**
+ * Strictly verifies maintainer approval evidence for stable release publication.
+ * Validates file existence, non-symlink, schema, exact version, tag, source commit,
+ * status ('approved'), optional run ID and file digests.
+ *
+ * @param {string} approvalPath Path to approval evidence JSON file
+ * @param {object} receipt Verified candidate receipt record
+ * @param {object} [options] Optional verification parameters
+ * @returns {object} Parsed and verified approval evidence record
+ */
+function verifyStableApprovalEvidence(approvalPath, receipt, options = {}) {
+  if (!approvalPath || typeof approvalPath !== 'string' || !approvalPath.trim()) {
+    throw new Error('Stable release publication requires verified maintainer approval evidence file binding candidate identity');
+  }
+
+  const resolvedPath = path.resolve(approvalPath);
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`Approval evidence file not found at "${resolvedPath}"`);
+  }
+  const stat = fs.lstatSync(resolvedPath);
+  if (stat.isSymbolicLink()) {
+    throw new Error(`Approval evidence file cannot be a symbolic link: "${resolvedPath}"`);
+  }
+  if (!stat.isFile()) {
+    throw new Error(`Approval evidence path is not a regular file: "${resolvedPath}"`);
+  }
+
+  let raw;
+  try {
+    raw = fs.readFileSync(resolvedPath, 'utf8');
+  } catch (err) {
+    throw new Error(`Failed to read approval evidence file at "${resolvedPath}": ${err.message}`);
+  }
+
+  let approval;
+  try {
+    approval = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`Failed to parse approval evidence JSON at "${resolvedPath}": ${err.message}`);
+  }
+
+  if (!approval || typeof approval !== 'object' || Array.isArray(approval)) {
+    throw new Error('Approval evidence must be a non-null object');
+  }
+
+  if (approval.status !== 'approved') {
+    throw new Error(`Approval evidence status must be "approved", got: ${JSON.stringify(approval.status)}`);
+  }
+
+  if (!approval.version || approval.version !== receipt.version) {
+    throw new Error(`Approval evidence version "${approval.version}" does not match receipt version "${receipt.version}"`);
+  }
+
+  if (!approval.tag || approval.tag !== receipt.tag) {
+    throw new Error(`Approval evidence tag "${approval.tag}" does not match receipt tag "${receipt.tag}"`);
+  }
+
+  const expectedCommit = receipt.source_commit.toLowerCase();
+  if (!approval.source_commit || approval.source_commit.toLowerCase() !== expectedCommit) {
+    throw new Error(`Approval evidence source_commit "${approval.source_commit}" does not match receipt source_commit "${expectedCommit}"`);
+  }
+
+  if (!approval.approved_by || typeof approval.approved_by !== 'string' || !approval.approved_by.trim()) {
+    throw new Error('Approval evidence missing valid approved_by field');
+  }
+
+  if (!approval.approved_at || typeof approval.approved_at !== 'string' || !approval.approved_at.trim()) {
+    throw new Error('Approval evidence missing valid approved_at timestamp');
+  }
+
+  if (approval.workflow_run_id !== undefined && approval.workflow_run_id !== receipt.workflow_run_id) {
+    throw new Error(`Approval evidence workflow_run_id "${approval.workflow_run_id}" does not match receipt workflow_run_id "${receipt.workflow_run_id}"`);
+  }
+
+  if (approval.digests && typeof approval.digests === 'object') {
+    const receiptFiles = {};
+    for (const f of receipt.files) {
+      receiptFiles[f.name] = f.sha256;
+    }
+    for (const [name, expectedSha] of Object.entries(approval.digests)) {
+      if (receiptFiles[name] && receiptFiles[name] !== expectedSha.toLowerCase()) {
+        throw new Error(`Approval evidence digest mismatch for "${name}": expected "${receiptFiles[name]}", approval has "${expectedSha}"`);
+      }
+    }
+  }
+
+  return approval;
 }
 
 /**
@@ -324,13 +445,30 @@ async function runPublishRelease(options = {}) {
     ...options,
     assetsDir
   });
+  // 1b. Verify stable candidate approval evidence if supplied or required
+  let approvalRecord = null;
+  const isPrerelease = isPrereleaseVersion(receipt.version);
+  if (options.approvalPath || options.requireStableApproval) {
+    approvalRecord = verifyStableApprovalEvidence(options.approvalPath, receipt, options);
+  }
+
+  // 1c. Verify branch topology guards against canonical release configuration
+  const canonicalConfig = options.config || readCanonicalReleaseConfig({ projectRoot: cwd });
+  const branch = options.branch || env.BRANCH_NAME || env.GITHUB_REF_NAME;
+  if (branch) {
+    const trimmedBranch = String(branch).trim();
+    if (trimmedBranch === 'main' && isPrerelease) {
+      throw new Error(`Topology violation: cannot publish prerelease version "${receipt.version}" on stable branch "main"`);
+    }
+    if (trimmedBranch === 'next' && !isPrerelease) {
+      throw new Error(`Topology violation: cannot publish stable version "${receipt.version}" on prerelease branch "next"`);
+    }
+  }
 
   // 2. Prepare publish workspace (copy assets only to dist/release, verify again)
   preparePublishWorkspace(assetsDir, distReleaseDir, receipt, { cwd, runnerTemp: options.runnerTemp });
 
-  // 3. Load canonical release configuration
-  const canonicalConfig = options.config || readCanonicalReleaseConfig({ projectRoot: cwd });
-
+  // 3. Canonical release configuration is already loaded
   // Ensure asset mode is strictly verify in semantic-release environment
   const publishEnv = {
     ...env,
@@ -373,7 +511,8 @@ async function runPublishRelease(options = {}) {
   return {
     success: true,
     publishedRelease: nextRelease,
-    receipt
+    receipt,
+    approval: approvalRecord
   };
 }
 
@@ -412,7 +551,9 @@ if (require.main === module) {
 
 module.exports = {
   parsePublisherOptions,
+  isPrereleaseVersion,
   verifyCandidateReceipt,
+  verifyStableApprovalEvidence,
   preparePublishWorkspace,
   runPublishRelease,
   main
