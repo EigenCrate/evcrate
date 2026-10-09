@@ -14,7 +14,7 @@ Read both bundled references in this execution context before assessing:
 - [Compatibility evidence](references/compatibility-evidence.md)
 - [Assessment output](references/review-output.md)
 
-Resolve links relative to this installed skill directory, not the target cwd or an authoring checkout. Native preload of this body does not prove references were read. If preload is unavailable, explicitly read this entrypoint and both references; record fallback loading, not native-preload proof. No other skill or repository-local guide is required.
+Resolve links relative to this installed skill directory, not target cwd or an authoring checkout. Explicitly read both references even if a host loads the skill body; record actual loading and fallback rather than assuming common-folder discovery. No other skill or repository-local guide is required.
 
 ## Inputs and boundaries
 
@@ -42,4 +42,4 @@ Evaluate each proposal independently; preserve all applicable blockers and appro
 
 When blockers coexist with a major/breaking/uncertain proposal, use `blocked` and retain the human gate for after prerequisites are restored. Never let a blocked proposal prevent independent proposals from being assessed.
 
-`eligible` is an assessment, not a write or fix. The mutation caller must separately enforce operation, supported procedure, allowed paths, current baseline, single writer, effective permissions, and execution authorization. The Snyk consumer currently supports Maven/Spring remediation only; neutral review of another ecosystem does not invent its missing remediation procedure. Major/breaking/uncertain assessment stays `needs-approval` even after a human decision; the caller validates that exact decision against the current baseline before any gated edit.
+`eligible` is an assessment, not a write or fix. The mutation caller separately enforces operation, supported procedure, allowed paths, current baseline, writer, permissions and execution authorization. The Snyk consumer has Maven/Spring and Node.js/TypeScript npm/Yarn/pnpm procedures; other ecosystems need a concrete authorized procedure. Major/breaking/uncertain assessments stay `needs-approval` even after a human decision; the caller validates exact approval against the current baseline before gated edits.

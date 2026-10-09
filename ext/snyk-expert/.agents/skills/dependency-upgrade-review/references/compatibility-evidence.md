@@ -48,9 +48,31 @@ Consume authorized file/graph/usage reads and supplied command evidence. Record 
 | Toolchain/platform | Language/runtime level, framework/Cloud/platform support, OS/architecture requirements, build/test plugins and artifact variants. |
 | Serialization/state | Persisted/wire format, schema/default changes and migration/rollback compatibility. |
 | Security/crypto/logging | Used providers, signing/verification/certificate/TLS paths, logging initialization and actual logging behavior; select checks from observed usage, not generic claims. |
-| Coupled families | Documented coordinated versions/classifiers and support constraints; for Maven/Spring, check applicable core/classic or provider/PKIX relationships and framework-managed versions. Do not assume every target uses them. |
+| Coupled families | Documented coordinated versions/classifiers and support constraints; for Maven/Spring, check applicable core/classic or provider/PKIX relationships and framework-managed versions; for Node/TypeScript, check monorepo workspace alignment, framework ecosystems (e.g. Next.js, Vite, ESLint), and companion `@types/*` packages. Do not assume every target uses them. |
 
 Unknown usage or unsupported/unreviewed combinations cannot yield `eligible`. Record exact impacted files/fields/consumers and potential wider consequences even when the proposal changes only one property. Never infer resolved versions from an edited BOM string.
+
+### Node.js and TypeScript compatibility dimensions
+
+When evaluating Node.js and TypeScript dependency changes, review these concrete read-only dimensions across package manifests, lockfiles, and compiler configurations:
+
+1. **Node engine and runtime bounds**:
+   - Check candidate package `engines.node` and package manager fields against target constraints (`package.json`, `.nvmrc`, `.node-version`).
+   - Identify dropped Node LTS support (e.g. dropping Node 18 or 20) or increased minimum runtime versions that would fail on target deployment environments.
+2. **Module formats and exports map**:
+   - **ESM vs CommonJS transitions**: inspect package type, extensions, exports, target Node version and top-level await. Modern Node supports `require()` for some synchronous ESM; assess actual deployed consumer behavior rather than assume universal compatibility or failure.
+   - **Subpath exports**: verify whether target code imports subpaths (e.g. `package/sub/path`). If the candidate defines a restrictive `"exports"` map omitting internal subpaths, consumers will fail at runtime with `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+   - **Conditional export keys**: verify candidate supports target conditions (`import`, `require`, `types`, `node`, `default`). Check dual-package hazard risks where stateful singletons are loaded twice under mixed CJS/ESM graphs.
+3. **TypeScript compiler and `@types` alignment**:
+   - **Compiler version**: verify candidate declarations work with target's local TypeScript version (`typescript` in `devDependencies`). Note changes requiring newer syntax or compiler features (e.g. `satisfies`, `const` type parameters, decorators).
+   - **Companion `@types/*` synchronization**: determine whether candidate ships bundled declarations (`"types"`/`"typings"` in `package.json` or within `"exports"`) or requires external `@types/<pkg>`. Upgrading a package that bundled types may require removing stale `@types/<pkg>` to prevent duplicate identifier conflicts (`TS2300`); upgrading an unbundled package requires checking matching `@types/<pkg>` availability and version alignment.
+   - **Type-level breaking changes**: check exported interface/type modifications, generics constraints, stricter null checks, or `tsconfig.json` `moduleResolution` incompatibilities (`NodeNext`, `Bundler`, `Node10`).
+4. **Peer dependency constraints**:
+   - Inspect candidate and downstream `peerDependencies` and `peerDependenciesMeta` (optionality flags).
+   - Reconcile peer ranges and deployed package-manager/version/configuration behavior; incompatibility requires an exact coordinated proposal and risk assessment, never `--force`/`--legacy-peer-deps` to conceal it.
+5. **Native addons and ABI compatibility**:
+   - Inspect packages with native C/C++ or Rust bindings (`node-gyp`, `@napi-rs/*`, prebuilds).
+   - Verify Node-API (N-API) version compatibility against target Node.js runtime, as well as OS (`linux`, `darwin`, `win32`), libc (`glibc` vs `musl`), and CPU architecture (`x64`, `arm64`). Incompatible native bindings cause build failures or runtime dynamic link errors (`ERR_DLOPEN_FAILED`).
 
 ## Owner release versus coordinated override
 
@@ -63,8 +85,19 @@ Compare evidence-backed alternatives without selecting a new version:
 
 An inaccessible internal owner fix is a blocker, not permission to bypass it with an unsupported child pin. A major owner release still requires approval even if it removes more vulnerable children. Do not propose suppression, exclusion, dependency removal, Boot-major migration or other scope-changing workarounds as automatic alternatives. Return a distinct exact reviewed proposal and human gate if separately requested and supported.
 
+For Node.js and TypeScript targets, compare direct manifest upgrades (`dependencies`/`devDependencies` in root or workspace manifests) against selective override mechanisms:
+- npm: `"overrides"` in root `package.json` (npm 8+)
+- Yarn: `"resolutions"` in root `package.json` (Yarn Classic/Modern)
+- pnpm: version-supported root configuration; current pnpm uses `pnpm-workspace.yaml` ([settings](https://pnpm.io/settings/dependency-resolution#overrides)); older versions may support root `package.json` `pnpm.overrides`. Bind observed precedence and catalogs.
+Selective overrides affect every matched consumer, not necessarily every dependency. Preserve exact selectors and review their full workspace/peer reach; never widen them silently.
+
 ## Required verification handoff
 
 List planned checks and their owners: effective/resolved graph per affected module/profile; repository build/tests; concrete affected API/config/integration/runtime behavior; and rollback compatibility. For a Snyk request, preserve the caller's baseline/post same-scope rescan requirement and source-path coverage. For an ordinary upgrade, scanner/finding fields may be not applicable with request evidence.
 
 No command is executed by this skill. The caller must supply exact cwd/argv, flags/profiles, expected observations, output location, trusted execution and network/registry authorization before running any check. Builds/resolution/scanners can execute project code; read permission is not execution permission. A planned command, green build or approved proposal does not establish compatibility at runtime or a fixed vulnerability.
+
+For Node.js and TypeScript targets:
+- **Local installed typecheck compiler**: Planned typecheck must run the project's locally installed compiler via declared script (e.g. `npm run typecheck`, `pnpm run typecheck`) or explicit local node path (e.g. `./node_modules/.bin/tsc --noEmit` or `node ./node_modules/typescript/bin/tsc --noEmit`). **Never** allow `npx` or ad-hoc runners to silently download or execute remote packages.
+- **Manager graph verification**: Plan exact manager/version/workspace graph commands and retain every covered path/peer variant. Supported existing duplicate versions can be legitimate; do not dedupe or assert uniqueness as an incidental safety criterion.
+- **Concrete runtime probes**: Beyond build/test execution, probe actual affected modules: verify import/require resolution, entrypoint export loading, and native addon initialization under the target Node runtime.

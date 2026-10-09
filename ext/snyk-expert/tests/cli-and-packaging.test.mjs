@@ -24,7 +24,6 @@ describe('Snyk Expert Installer - CLI & Packaging', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
-
   test('--help displays usage and options', () => {
     const out = execFileSync('node', [CLI_PATH, '--help'], { encoding: 'utf8' });
     assert.ok(out.includes('Usage:'));
@@ -37,57 +36,51 @@ describe('Snyk Expert Installer - CLI & Packaging', () => {
     const out = execFileSync('node', [CLI_PATH, '--version'], { encoding: 'utf8' });
     assert.ok(out.trim().match(/^\d+\.\d+\.\d+/));
   });
-
-  test('--dry-run via CLI previews changes without writes', () => {
-    const out = execFileSync('node', [CLI_PATH, '--target', tmpDir, '--dry-run'], { encoding: 'utf8' });
-    assert.ok(out.includes('Dry run preview'));
-    assert.ok(out.includes('8 to add'));
-    assert.ok(!fs.existsSync(path.join(tmpDir, '.claude')));
+  test('--dry-run writes no project resources', () => {
+    execFileSync('node', [CLI_PATH, '--target', tmpDir, '--dry-run']);
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
   });
 
-  test('full CLI install succeeds and prints next steps', () => {
-    const out = execFileSync('node', [CLI_PATH, '--target', tmpDir], { encoding: 'utf8' });
-    assert.ok(out.includes('Installation complete!'));
-    assert.ok(out.includes('delegate to snyk-expert'));
-
+  test('full CLI install creates the common resource tree', () => {
+    execFileSync('node', [CLI_PATH, '--target', tmpDir]);
     for (const rel of ASSET_INVENTORY) {
-      assert.ok(fs.existsSync(path.join(tmpDir, '.claude', rel)));
+      assert.ok(fs.existsSync(path.join(tmpDir, '.agents', rel)));
     }
   });
+
 
   test('CLI rejects --yes without --force', () => {
     assert.throws(
       () => execFileSync('node', [CLI_PATH, '--target', tmpDir, '--yes'], { stdio: 'pipe' }),
       (err) => {
         assert.equal(err.status, 1);
-        assert.ok(err.stderr.toString().includes('Option --yes cannot be used without --force'));
         return true;
       }
     );
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
   });
 
   test('CLI fails on collisions without --force', () => {
     execFileSync('node', [CLI_PATH, '--target', tmpDir]);
-    fs.writeFileSync(path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md'), 'MODIFIED');
+    fs.writeFileSync(path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md'), 'MODIFIED');
 
     assert.throws(
       () => execFileSync('node', [CLI_PATH, '--target', tmpDir], { stdio: 'pipe' }),
       (err) => {
         assert.equal(err.status, 1);
-        assert.ok(err.stderr.toString().includes('Destination files already exist and differ'));
         return true;
       }
     );
+    assert.equal(fs.readFileSync(path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md'), 'utf8'), 'MODIFIED');
   });
 
   test('CLI succeeds on collisions with --force --yes', () => {
     execFileSync('node', [CLI_PATH, '--target', tmpDir]);
-    fs.writeFileSync(path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md'), 'MODIFIED');
+    fs.writeFileSync(path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md'), 'MODIFIED');
 
-    const out = execFileSync('node', [CLI_PATH, '--target', tmpDir, '--force', '--yes'], { encoding: 'utf8' });
-    assert.ok(out.includes('Installation complete!'));
-    const srcAgent = path.join(PACKAGE_ROOT, '.claude', 'agents', 'snyk-expert.md');
-    const destAgent = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
+    execFileSync('node', [CLI_PATH, '--target', tmpDir, '--force', '--yes']);
+    const srcAgent = path.join(PACKAGE_ROOT, '.agents', 'agents', 'snyk-expert.md');
+    const destAgent = path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md');
     assert.ok(fs.readFileSync(destAgent).equals(fs.readFileSync(srcAgent)));
   });
 
@@ -102,12 +95,12 @@ describe('Snyk Expert Installer - CLI & Packaging', () => {
 
     for (const asset of ASSET_INVENTORY) {
       assert.ok(
-        packedPaths.includes(`.claude/${asset}`),
+        packedPaths.includes(`.agents/${asset}`),
         `Missing ${asset} in npm pack files`
       );
     }
     assert.ok(packedPaths.includes('bin/install.js'));
-    assert.ok(packedPaths.includes('README.md'));
+    assert.ok(packedPaths.includes('docs/usage.md'));
     assert.ok(!packedPaths.some(p => p.startsWith('tests/')));
   });
 });

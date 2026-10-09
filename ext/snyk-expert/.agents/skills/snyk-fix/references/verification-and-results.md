@@ -17,11 +17,11 @@ Executed commands require explicit parent authorization, host permissions, trust
 ### Verification execution rules
 
 - **Baseline before edits:** Retain current effective/resolved graph, relevant consumer observations and matching-scope baseline scan. Record missing evidence before any change; do not destroy the baseline then infer presence from an old report.
-- **Resolved graph:** Use the bound [Maven procedure](maven-spring-remediation.md) per affected module/profile. Inspect effective POM/import/pin evidence and verbose resolved winners, retaining full module output; a tree alone does not identify every management source.
+- **Resolved graph:** Use the bound [Maven](maven-spring-remediation.md) or [Node.js/TypeScript](node-typescript-remediation.md) procedure per affected module/profile/workspace. Retain effective owner fields and resolved winners; Node evidence includes manifest section, shared lockfile, peer/optional/platform variants and workspace consumers. A tree alone does not prove controlling fields.
 - **Target build and tests:** Run exact target-approved verification and inspect executed/skipped tests. Green builds alone do not establish remediation.
 - **Concrete runtime behavior:** Probes must exercise affected consumers (logging formats/levels, crypto ciphers/providers, serialization paths), not merely process startup or absence of fatal exceptions.
 - **Snyk scanner invocation:**
-  - Use the bound Maven-reference argv template with actual authorized scope/options, distinct private baseline/post output paths and captured Maven arguments. Templates are planned, never executed facts.
+  - Use the applicable ecosystem procedure and [CLI workflow](../../snyk-cli/references/cli-workflow.md) with actual authorized scope/options and distinct private baseline/post outputs. Maven arguments and Node workspace/lockfile/dev scope are captured, never guessed. Templates are planned, not executed facts.
   - For Maven aggregate projects: use `--maven-aggregate-project` instead of `--all-projects`; never combine both.
   - Option restrictions: `--show-vulnerable-paths=all` is unsupported with `--json-file-output`. A JSON artifact alone does not guarantee unpruned path coverage.
   - Exit codes: `0` = scan complete, no vulnerabilities found; `1` = scan complete, vulnerabilities found; `2` = execution failure / scan error; `3` = unsupported project / no supported target found.
@@ -103,4 +103,4 @@ When validation fails, an unapproved side effect occurs, or the caller halts exe
 - **Strict prohibitions:** NEVER execute `git reset --hard`, `git checkout -- .`, `git clean`, or any blanket workspace revert. Pre-existing staged, unstaged, and untracked user modifications, as well as concurrent modifications, must be preserved.
 - **Blocked rollback:** If worktree drift is detected or rollback cannot proceed safely, halt immediately. Document the exact partial state, modified paths, and remaining hashes for manual recovery.
 - **Boundaries:** No deployment, production monitoring, `.snyk` suppression file generation, external report upload, Git commit, or Git push is implied or authorized.
-- **Live qualification:** No tests, artifacts, or live claims are qualified during skill authoring; qualification is deferred to Phase 05.
+- **Live qualification:** Authoring checks do not qualify real target remediation, native host loading or authenticated scanner behavior; require observed authorized runs.

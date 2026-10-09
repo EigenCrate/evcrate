@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "syntaxFiles": 1,
+  "protectedFiles": 13,
+  "currentGuide": "Current usage guide: /home/loidinh/WS/evcrate/ext/snyk-expert/docs/usage.md (bundled README is historical).",
+  "event": {
+    "label": "post-review fresh install",
+    "executable": "/home/loidinh/.nvm/versions/node/v24.16.0/bin/node",
+    "args": [
+      "/home/loidinh/WS/evcrate/ext/snyk-expert/bin/install.js",
+      "--target",
+      "/tmp/snyk-common-smoke-4l6Ano/review-final"
+    ],
+    "cwd": "/home/loidinh/WS/evcrate",
+    "exit": 0,
+    "stdout": "Target project: /tmp/snyk-common-smoke-4l6Ano/review-final\n\nInstalled assets:\n  + .agents/agents/snyk-expert.md\n  + .agents/skills/dependency-upgrade-review/SKILL.md\n  + .agents/skills/dependency-upgrade-review/references/compatibility-evidence.md\n  + .agents/skills/dependency-upgrade-review/references/review-output.md\n  + .agents/skills/snyk-fix/SKILL.md\n  + .agents/skills/snyk-fix/references/finding-and-owner-contract.md\n  + .agents/skills/snyk-fix/references/maven-spring-remediation.md\n  + .agents/skills/snyk-fix/references/verification-and-results.md\n  + .agents/skills/snyk-fix/references/node-typescript-remediation.md\n  + .agents/skills/snyk-cli/SKILL.md\n  + .agents/skills/snyk-cli/references/cli-workflow.md\n\nInstallation complete! Installed into /tmp/snyk-common-smoke-4l6Ano/review-final/.agents\n\nNext steps:\n1. In your host, explicitly read .agents/agents/snyk-expert.md and its linked skills.\n2. If the host supports agent registration, delegate to snyk-expert with an explicit target and authority.\n3. Use snyk-cli for authorized setup/login/scan; snyk-fix for dependency remediation.\n   Installation does not configure native host discovery or authenticate Snyk.\nCurrent usage guide: /home/loidinh/WS/evcrate/ext/snyk-expert/docs/usage.md (bundled README is historical).\n",
+    "stderr": ""
+  }
+}

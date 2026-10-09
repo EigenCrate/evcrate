@@ -6,7 +6,7 @@ export function printHelp() {
 Usage: npx @evcrate/snyk-expert [options]
        snyk-expert-install [options]
 
-Install Snyk specialist agent and skills into a project's .claude/ directory.
+Install portable Snyk specialist instructions and skills into a project's .agents/ directory.
 
 Options:
   -t, --target <path>   Project directory to install into (defaults to current working directory)
@@ -30,13 +30,13 @@ export function printVersion(packageRoot) {
 export function printDryRun(plan) {
   console.log(`\nDry run preview for ${plan.targetDir}:`);
   for (const a of plan.additions) {
-    console.log(`  + .claude/${a.relPath} (new)`);
+    console.log(`  + .agents/${a.relPath} (new)`);
   }
   for (const r of plan.replacements) {
-    console.log(`  ! .claude/${r.relPath} (collision: differs)`);
+    console.log(`  ! .agents/${r.relPath} (collision: differs)`);
   }
   for (const u of plan.unchanged) {
-    console.log(`  = .claude/${u.relPath} (identical, will skip)`);
+    console.log(`  = .agents/${u.relPath} (identical, will skip)`);
   }
   console.log(`\nSummary: ${plan.additions.length} to add, ${plan.replacements.length} to replace, ${plan.unchanged.length} unchanged.`);
 }
@@ -45,19 +45,19 @@ export function printInstallationSuccess(targetDir, result, plan) {
   console.log(`\nInstalled assets:`);
   for (const c of result.committed) {
     const isReplacement = plan.replacements.some(r => r.relPath === c);
-    console.log(`  ${isReplacement ? '!' : '+'} .claude/${c}`);
+    console.log(`  ${isReplacement ? '!' : '+'} .agents/${c}`);
   }
   if (result.unchanged.length > 0) {
     console.log(`\nPreserved identical assets:`);
     for (const u of result.unchanged) {
-      console.log(`  = .claude/${u}`);
+      console.log(`  = .agents/${u}`);
     }
   }
 
-  console.log(`\n✨ Installation complete! Installed into ${path.join(targetDir, '.claude')}`);
+  console.log(`\nInstallation complete! Installed into ${path.join(targetDir, '.agents')}`);
   console.log(`\nNext steps:`);
-  console.log(`1. Start a fresh Claude Code session in your project:`);
-  console.log(`   cd ${targetDir} && claude`);
-  console.log(`2. Delegate to the agent:`);
-  console.log(`   "delegate to snyk-expert"`);
+  console.log(`1. In your host, explicitly read .agents/agents/snyk-expert.md and its linked skills.`);
+  console.log(`2. If the host supports agent registration, delegate to snyk-expert with an explicit target and authority.`);
+  console.log(`3. Use snyk-cli for authorized setup/login/scan; snyk-fix for dependency remediation.`);
+  console.log(`   Installation does not configure native host discovery or authenticate Snyk.`);
 }

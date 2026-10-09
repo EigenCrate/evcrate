@@ -1,6 +1,6 @@
 # Maven and Spring remediation procedure
 
-Executable-after-binding procedure for tracing controlling owners, evaluating dependencies, applying coherent owner changes, and verifying resolution in Maven and Spring projects (Phase 03, steps 5–11).
+Executable-after-binding procedure for tracing controlling owners, evaluating dependencies, applying coherent owner changes, and verifying resolution in Maven and Spring projects.
 
 ## 1. Prerequisites and trust boundaries
 
@@ -49,8 +49,8 @@ Capture the verbose tree's full bounded stdout separately for each command. With
 
 ## 5. Coupled families and source assertion integrity
 
-- **Source assertions**: Five Bouncy Castle and one Logback findings are unverified source assertions from initial advice, not verified ground truth. Verify actual occurrences, IDs, and paths from supplied scan artifacts.
-- **No version preselection**: Do not preselect candidate versions (such as Bouncy Castle `1.85` or Logback `1.5.36`). Query authorized registries at runtime to verify release availability.
+- **Source assertions**: Findings, IDs, versions and paths remain assertions until verified against supplied artifacts and the authorized baseline scan. No earlier advice/count supplies missing records.
+- **No version preselection**: Establish exact candidate releases from official evidence and authorized registries at execution time.
 - **Logback coupling**: Trace Boot logging ownership separately from Cloud/internal crypto ownership. Inspect `logback-core`/`logback-classic`, property/direct versions and documented coordinated support; align the complete supported set where required, not a lone vulnerable child.
 - **Bouncy Castle coupling**: Inspect every used provider/PKIX/util artifact and JDK/FIPS variant. Verify upstream-documented family/version support and artifact availability; do not mix artifact lines or assume every family uses identical version conventions.
 - **Framework boundaries**: Do NOT force a Spring Boot major upgrade (e.g., Boot 2.x to 3.x / Jakarta / Java 17) or unsupported Spring Cloud release train realignment to eliminate minor dependency findings.
@@ -109,7 +109,7 @@ Run baseline and post-remediation scans with identical scope:
 | Missing authority/procedure/artifact/access | Stop that action; `blocked` before required execution, `partial` after started work | Restore exact missing prerequisite; independent fully supported subsets keep their separate gates |
 | Analyze operation | Zero target writes; `analyzed` only if analysis complete, otherwise blocked/partial per verification rules | Return evidence and exact gaps; no target-writing command |
 | Relevant baseline drift | Void old assessment/approval; status follows actual work and prerequisites | Reassess current intent/state; obtain new exact decision only for gated work |
-| Pin defeats owner proposal | No fix claim or automatic pin removal | Trace effective owner, review exact supported correction through Phase02 |
+| Pin defeats owner proposal | No fix claim or automatic pin removal | Trace effective owner and review the exact supported correction through dependency-upgrade-review |
 | Incompatible/unknown coupling | Defer exact proposal; preserve blocker and human-gate reasons | Establish supported artifacts/impact and exact decision where gated |
 | Exact gated proposal lacks approval | No gated write; `needs-approval` only before required execution, otherwise `partial` with next approval action | Main collects exact current-baseline human decision |
 | Graph/build/test/runtime/scan failure | Stop dependent sets; `partial`, findings remaining/unverified as evidenced | Diagnose, preserve outputs and new risks; rollback only safely authorized owned hunks |

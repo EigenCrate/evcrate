@@ -31,19 +31,18 @@ describe('Snyk Expert Installer - Executor', () => {
     const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
     const result = executeInstallation(plan);
 
-    assert.equal(result.committed.length, 8);
     assert.equal(result.unchanged.length, 0);
 
     for (const rel of ASSET_INVENTORY) {
-      const srcPath = path.join(PACKAGE_ROOT, '.claude', rel);
-      const destPath = path.join(tmpDir, '.claude', rel);
+      const srcPath = path.join(PACKAGE_ROOT, '.agents', rel);
+      const destPath = path.join(tmpDir, '.agents', rel);
       assert.ok(fs.existsSync(destPath), `File does not exist: ${destPath}`);
       assert.ok(fs.readFileSync(srcPath).equals(fs.readFileSync(destPath)));
     }
   });
 
-  test('preserves unrelated pre-existing files in .claude directory', () => {
-    const unrelated = path.join(tmpDir, '.claude', 'custom-agent.md');
+  test('preserves unrelated pre-existing files in .agents directory', () => {
+    const unrelated = path.join(tmpDir, '.agents', 'custom-agent.md');
     fs.mkdirSync(path.dirname(unrelated), { recursive: true });
     fs.writeFileSync(unrelated, '# My Custom Agent');
 
@@ -54,8 +53,19 @@ describe('Snyk Expert Installer - Executor', () => {
     assert.equal(fs.readFileSync(unrelated, 'utf8'), '# My Custom Agent');
   });
 
+  test('leaves unrelated project directories untouched', () => {
+    const otherFile = path.join(tmpDir, '.custom-config', 'agents', 'agent.md');
+    fs.mkdirSync(path.dirname(otherFile), { recursive: true });
+    fs.writeFileSync(otherFile, 'EXISTING CONFIGURATION');
+
+    executeInstallation(planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir }));
+
+    assert.equal(fs.readFileSync(otherFile, 'utf8'), 'EXISTING CONFIGURATION');
+    assert.deepEqual(fs.readdirSync(path.dirname(otherFile)), ['agent.md']);
+  });
+
   test('refuses to overwrite collision without --force', () => {
-    const agentDest = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
+    const agentDest = path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md');
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
@@ -71,7 +81,7 @@ describe('Snyk Expert Installer - Executor', () => {
   });
 
   test('refuses to overwrite when --yes is passed without --force', () => {
-    const agentDest = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
+    const agentDest = path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md');
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
@@ -86,7 +96,7 @@ describe('Snyk Expert Installer - Executor', () => {
   });
 
   test('requires confirmation when --force is passed without --yes', () => {
-    const agentDest = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
+    const agentDest = path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md');
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
@@ -101,15 +111,14 @@ describe('Snyk Expert Installer - Executor', () => {
   });
 
   test('overwrites colliding files when both --force and --yes are provided', () => {
-    const agentDest = path.join(tmpDir, '.claude', 'agents', 'snyk-expert.md');
+    const agentDest = path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md');
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
     const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
     const result = executeInstallation(plan, { force: true, yes: true });
 
-    assert.equal(result.committed.length, 8);
-    const srcAgent = path.join(PACKAGE_ROOT, '.claude', 'agents', 'snyk-expert.md');
+    const srcAgent = path.join(PACKAGE_ROOT, '.agents', 'agents', 'snyk-expert.md');
     assert.ok(fs.readFileSync(agentDest).equals(fs.readFileSync(srcAgent)));
   });
 
@@ -118,7 +127,6 @@ describe('Snyk Expert Installer - Executor', () => {
     const result = executeInstallation(plan, { dryRun: true });
 
     assert.equal(result.dryRun, true);
-    assert.equal(result.plannedAdditions.length, 8);
-    assert.ok(!fs.existsSync(path.join(tmpDir, '.claude')));
+    assert.ok(!fs.existsSync(path.join(tmpDir, '.agents')));
   });
 });

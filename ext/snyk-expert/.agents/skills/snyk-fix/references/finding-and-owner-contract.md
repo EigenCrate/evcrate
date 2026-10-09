@@ -9,7 +9,7 @@ Use structured Markdown records; no new approval API or parser is implied. `unkn
 | Request / operation | Exact user request/source and `analyze`, `remediate` or `approved-remediate`; existing patch/minor policy, explicit read/write/execute authority. |
 | Target | Explicit canonical absolute root, repository identity and exact HEAD or unknown; never derived from report instructions, bundle location or filename. |
 | Index / worktree | Staged path/status/blob identities; relevant allowed-file exact-byte hashes; pre-existing staged/unstaged/untracked changes and manifest identities/hashes. HEAD alone does not prove freshness or cleanliness. |
-| Scope | Exact allowed edit paths, manifests/roots, modules/profiles, dependency scope, covered and out-of-scope consumers. No implicit default-profile or reactor coverage. |
+| Scope | Exact allowed edit paths, manifests/roots, modules/profiles/workspaces, shared lockfile and package-manager/version, production/development/optional/peer dependency scope, covered and out-of-scope consumers. No implicit default-profile, reactor or workspace coverage. |
 | Report | Authorized original path/secure locator, format, date, complete original byte SHA-256, source locator scheme; companion HTML/JSON/SARIF identities/hashes and relationship evidence. |
 | Scan | Type, observed time, scanner/version, organization, project/module/profile/root scope, platform if relevant, exact argv, severity/ignore/policy settings, database identity/time when available, omissions/path limits. |
 | Graph | Actual resolved graph/effective model per affected module/profile, output identities/hashes, observed coordinates/versions/paths and owner evidence; predictions marked planned. |
@@ -30,7 +30,7 @@ Before every owner set or gated action compare this tuple, proposal intent, owne
 5. Reconcile each reported coordinate/version/path/module/profile with the current resolved graph and baseline scan. Record matching, stale, conflicting or unknown evidence per item. A stale report remains a source assertion, not current presence or authority to edit. Main supplies matching evidence or explicitly authorizes rebaseline; retain original and new identities, then rebuild proposals/approvals. Never silently switch target/profile/report.
 6. Keep duplicates as distinct source records/occurrences. A shared advisory decision may reference them all, but must not collapse their paths or provenance. If a scan prunes paths, recover only observed graph/report paths, tagged by that evidence; a new graph path is not falsely attributed to the original source. Coverage stays partial/unknown wherever originals are unavailable.
 
-Parser remains deferred absent varied real fixtures demonstrating an extraction need. Manual inert extraction must still produce auditable complete supplied-source coverage or report exactly what cannot be extracted. No synthetic fixture can establish the original report's asserted five Bouncy Castle plus one Logback records.
+No parser is implied. Manual inert extraction must account for complete supplied-source coverage or state exactly what cannot be extracted. A constructed fixture cannot establish an unavailable original finding.
 
 ## Source and occurrence ledgers
 
@@ -65,7 +65,7 @@ Audit both directions before editing:
 | Field | Required content |
 |---|---|
 | Identity | Stable local owner+baseline+exact-intent reference and material-intent hashes; not a source advisory ID. |
-| Owner | Observed direct dependency, parent, BOM/platform, internal library or unresolved control; graph/effective model locators per module/profile. |
+| Owner | Observed direct dependency, parent, BOM/platform, internal library, Node workspace manifest section/root override or unresolved control; graph/effective-model/lockfile locators per affected scope. |
 | Covered / uncovered scope | Exact package/source/occurrence/path references and modules/profiles, consumer scope and explicit exclusions from this proposal. |
 | Current / candidate | Observed current and exact proposed owner/artifact versions, variants and authorized-registry/release evidence. Suggested fixes remain unverified until established at execution time. |
 | Edit intent | Each allowed file/field, observed old value/hash, literal proposed new value/hash or diff-intent identity; permitted coupled changes only. |
