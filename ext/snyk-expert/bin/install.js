@@ -76,7 +76,7 @@ async function main() {
   if (plan.isBlocked) {
     console.error(`\nInstallation blocked by destination conflicts:`);
     for (const b of plan.blockers) {
-      console.error(`  ✖ .claude/${b.relPath}: ${b.reason}`);
+      console.error(`  ✖ .agents/${b.relPath}: ${b.reason}`);
     }
     process.exit(1);
   }
@@ -91,7 +91,7 @@ async function main() {
   if (plan.hasCollisions) {
     console.log(`\nExisting files differ from bundle:`);
     for (const r of plan.replacements) {
-      console.log(`  ! .claude/${r.relPath}`);
+      console.log(`  ! .agents/${r.relPath}`);
     }
 
     if (!values.force) {
@@ -123,6 +123,7 @@ async function main() {
   try {
     const result = executeInstallation(plan, { dryRun: false, force: values.force, yes: authorizedYes });
     printInstallationSuccess(targetDir, result, plan);
+    console.log(`Current usage guide: ${path.join(PACKAGE_ROOT, 'docs', 'usage.md')} (bundled README is historical).`);
   } catch (err) {
     console.error(`\nInstallation failed: ${err.message}`);
     process.exit(1);

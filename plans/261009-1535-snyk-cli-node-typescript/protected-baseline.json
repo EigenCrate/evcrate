@@ -1,0 +1,15 @@
+{
+  "ext/snyk-expert/.claude/agents/snyk-expert.md": "7b746a193b9848be73d438fbd129a8f78adeddf7e4f17004190f4a29f7759c67",
+  "ext/snyk-expert/.claude/skills/dependency-upgrade-review/SKILL.md": "485d6cbbf8617ffc90b94bf17d771be8cceb8762772f19712a687a514dd8bc13",
+  "ext/snyk-expert/.claude/skills/dependency-upgrade-review/references/compatibility-evidence.md": "36175892fffc1f64580edbc6831e82de1ab480245ceec026398fd72f2f1bbbb6",
+  "ext/snyk-expert/.claude/skills/dependency-upgrade-review/references/review-output.md": "50b148b5b4a64a354f66025d5848472610882086ecb409934a534c30c082a3bc",
+  "ext/snyk-expert/.claude/skills/snyk-fix/SKILL.md": "92b1b500628da4ffac965277278d19dcdef8260ff5a01881120fac28ea486aae",
+  "ext/snyk-expert/.claude/skills/snyk-fix/references/finding-and-owner-contract.md": "dfcb6d0b5596162105b7aeab4f3aa609e12fe0d087d07abcb820330a3f641ad7",
+  "ext/snyk-expert/.claude/skills/snyk-fix/references/maven-spring-remediation.md": "99199f546ead40a11325d31ea5f2441aa22e43464080773c432b2470c40dc9dc",
+  "ext/snyk-expert/.claude/skills/snyk-fix/references/verification-and-results.md": "bcbbedb00d2a8d9f87349108a34eb1a2f0cb66dc741b6ec5cf7bbde474e062d3",
+  "ext/snyk-expert/README.md": "cebb8d8f5f7279cfdd46070b8c6bcf15ae4c58a7da4f9e6be7a5e7375dbd3edf",
+  "docs/system-architecture.md": "a7c5202303eb2f6e835480dc8819bd8e212cd1243e4e20a7f7351ea53cd8d667",
+  "docs/project-changelog.md": "1c9d02b856d3b14093c6d94cef01f5249e90fb7b8af5acbb8b75cbca7da32ada",
+  "docs/project-roadmap.md": "132474b4b78c33056d1acbb2d29196bc1852a70395b02b322907dbdbb966eb5d",
+  ".gitignore": "caf5f50a12f01a6d22e3c4e0f3bf0cb4080095be6aef464b72eaeed026e4a2cc"
+}
