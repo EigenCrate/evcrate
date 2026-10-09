@@ -1,3 +1,10 @@
+## [2.10.3](https://github.com/EigenCrate/evcrate/compare/v2.10.2...v2.10.3) (2026-10-08)
+
+
+### 🐞 Bug Fixes
+
+* **advisor:** accept omp requestControls and usage.cttl in assistant stream ([#22](https://github.com/EigenCrate/evcrate/issues/22)) ([bb056f9](https://github.com/EigenCrate/evcrate/commit/bb056f901e26fb91d84501a8bf801b989e17ff06))
+
 ## [2.10.2](https://github.com/EigenCrate/evcrate/compare/v2.10.1...v2.10.2) (2026-10-08)
 
 
