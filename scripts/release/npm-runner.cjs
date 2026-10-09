@@ -35,7 +35,8 @@ function resolveNpmInvocation() {
  */
 function execNpmSync(args, options = {}) {
   const { command, prefixArgs } = resolveNpmInvocation();
-  return execFileSync(command, [...prefixArgs, ...args], options);
+  const maxBuffer = options.maxBuffer !== undefined ? options.maxBuffer : 64 * 1024 * 1024;
+  return execFileSync(command, [...prefixArgs, ...args], { ...options, maxBuffer });
 }
 
 /**
@@ -47,7 +48,8 @@ function execNpmSync(args, options = {}) {
  */
 function spawnNpmSync(args, options = {}) {
   const { command, prefixArgs } = resolveNpmInvocation();
-  return spawnSync(command, [...prefixArgs, ...args], options);
+  const maxBuffer = options.maxBuffer !== undefined ? options.maxBuffer : 64 * 1024 * 1024;
+  return spawnSync(command, [...prefixArgs, ...args], { ...options, maxBuffer });
 }
 
 module.exports = {
