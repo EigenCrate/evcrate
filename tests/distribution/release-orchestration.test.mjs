@@ -671,6 +671,16 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
     } finally {
       fs.writeFileSync(winZipPath, originalBytes);
     }
+    const approvalPath = path.join(tmpDir, 'approval.json');
+    fs.writeFileSync(approvalPath, JSON.stringify({
+      status: 'approved',
+      version,
+      tag: `v${version}`,
+      source_commit: commit,
+      workflow_run_id: 77,
+      approved_by: 'lead-maintainer',
+      approved_at: '2026-10-09T12:00:00Z'
+    }));
 
     // 5. Successful publish run with mock semanticRelease
     let modeSeenInPublish = null;
@@ -693,6 +703,8 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
       distReleaseDir,
       runnerTemp: tmpDir,
       env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+      approvalPath,
+      branch: 'main',
       semanticReleaseFn: mockPublishSemanticRelease,
       config: { branches: ['main'], plugins: [] }
     });
@@ -708,6 +720,8 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
         distReleaseDir,
         runnerTemp: tmpDir,
         env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        approvalPath,
+        branch: 'main',
         semanticReleaseFn: async () => false,
         config: { branches: ['main'], plugins: [] }
       }),
@@ -721,6 +735,8 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
         distReleaseDir,
         runnerTemp: tmpDir,
         env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        approvalPath,
+        branch: 'main',
         semanticReleaseFn: async () => ({
           nextRelease: {
             version,
@@ -994,6 +1010,19 @@ test('Phase 10: publish-release enforces stable approval evidence and branch top
       /Stable release publication requires verified maintainer approval evidence file binding candidate identity/
     );
 
+    // 1b. Stable publication unconditionally requires approval even if requireStableApproval is not explicitly passed
+    await assert.rejects(
+      () => publishRelease.runPublishRelease({
+        receiptPath,
+        distReleaseDir,
+        runnerTemp: tmpDir,
+        env: { EVCRATE_RELEASE_ASSET_MODE: 'verify' },
+        branch: 'main',
+        semanticReleaseFn: async () => ({ nextRelease: { version, gitTag: `v${version}`, gitHead: commit } }),
+        config: { branches: ['main'], plugins: [] }
+      }),
+      /Stable release publication requires verified maintainer approval evidence file binding candidate identity/
+    );
     // 2. Valid approval passes
     const approvalPath = path.join(tmpDir, 'stable-approval.json');
     const validApproval = {

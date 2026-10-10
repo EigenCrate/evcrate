@@ -445,14 +445,8 @@ async function runPublishRelease(options = {}) {
     ...options,
     assetsDir
   });
-  // 1b. Verify stable candidate approval evidence if supplied or required
-  let approvalRecord = null;
+  // 1b. Verify branch topology guards against canonical release configuration
   const isPrerelease = isPrereleaseVersion(receipt.version);
-  if (options.approvalPath || options.requireStableApproval) {
-    approvalRecord = verifyStableApprovalEvidence(options.approvalPath, receipt, options);
-  }
-
-  // 1c. Verify branch topology guards against canonical release configuration
   const canonicalConfig = options.config || readCanonicalReleaseConfig({ projectRoot: cwd });
   const branch = options.branch || env.BRANCH_NAME || env.GITHUB_REF_NAME;
   if (branch) {
@@ -465,6 +459,11 @@ async function runPublishRelease(options = {}) {
     }
   }
 
+  // 1c. Verify stable candidate approval evidence unconditionally for stable releases
+  let approvalRecord = null;
+  if (!isPrerelease || options.approvalPath || options.requireStableApproval) {
+    approvalRecord = verifyStableApprovalEvidence(options.approvalPath, receipt, options);
+  }
   // 2. Prepare publish workspace (copy assets only to dist/release, verify again)
   preparePublishWorkspace(assetsDir, distReleaseDir, receipt, { cwd, runnerTemp: options.runnerTemp });
 
@@ -532,6 +531,7 @@ Options:
   --source-commit <commit>  Expected 40-hex commit SHA
   --run-id <id>             Expected workflow run ID
   --run-attempt <attempt>   Expected workflow run attempt
+  --approval <path>         Path to maintainer approval evidence JSON (mandatory for stable releases)
   -h, --help                Show this help message
 `);
     return 0;

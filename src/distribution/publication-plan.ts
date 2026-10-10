@@ -609,7 +609,7 @@ function reconcileRemovedBindings(
   readonly bindings: readonly PublicationBindingPlan[];
   readonly managedOwnership: PriorManagedOwnership;
 } {
-  if (phase === 'shared' || scope !== 'project') {
+  if (phase === 'shared') {
     return { bindings: Object.freeze([]), managedOwnership: currentManagedOwnership };
   }
 
@@ -724,9 +724,12 @@ function phasePlan(
   const frozenBindings = Object.freeze(bindings);
 
   assertUniqueOperationDestinations(frozenBindings);
-  const changes = Object.freeze(frozenBindings.flatMap((binding) =>
-    binding.operations.map((operation) => changeFor(binding, operation))
-  ));
+  const activeBindingOrder = Object.freeze(descriptors.map(({ binding }) => binding));
+  const activeBindingSet = new Set(activeBindingOrder);
+  const changes = Object.freeze(frozenBindings
+    .filter((binding) => activeBindingSet.has(binding.binding) && context.selectedTargetIds.includes(binding.target as PersistedTarget))
+    .flatMap((binding) => binding.operations.map((operation) => changeFor(binding, operation)))
+  );
   if (changes.length > MAX_PUBLICATION_CHANGES) fail();
   return Object.freeze({
     phase, scope,
@@ -735,8 +738,10 @@ function phasePlan(
     buildManifestPath: buildManifestRelativePath(context, build),
     buildManifestDigest: build.manifestDigest,
     selectedTargets: Object.freeze(phase === 'shared' ? [] : [...context.selectedTargetIds]),
-    bindingOrder: Object.freeze(frozenBindings.map(({ binding }) => binding)),
-    bindings: frozenBindings, changes, managedOwnership
+    bindingOrder: activeBindingOrder,
+    bindings: frozenBindings,
+    changes,
+    managedOwnership: Object.freeze(managedOwnership)
   });
 }
 
@@ -988,7 +993,8 @@ function composeLegacyPlan(
   return Object.freeze({
     build, buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
     selectedTargets: Object.freeze([...context.selectedTargetIds]),
-    bindingOrder: Object.freeze(bindings.map(({ binding }) => binding)), bindings, changes,
+    bindingOrder: Object.freeze([...shared.bindingOrder, ...harness.bindingOrder]),
+    bindings, changes,
     managedOwnership: harness.managedOwnership
   });
 }

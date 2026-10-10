@@ -62,7 +62,7 @@ export interface TransactionDescriptor {
   readonly operations: readonly PlannedPublicationOperation[];
 }
 type EnginePlan = Pick<PublicationPlan, 'bindings' | 'selectedTargets' | 'buildManifestPath' | 'buildManifestDigest'>
-  & { readonly managedOwnership?: PriorManagedOwnership };
+  & { readonly bindingOrder?: readonly string[]; readonly managedOwnership?: PriorManagedOwnership };
 function createTransactionDescriptor(
   plan: EnginePlan, logicalPhase: 'shared' | 'harness', scope: PublicationScope, releaseId: string,
   destinationRoot: string, durableStateRoot: string, projectIdentity: string | null
@@ -70,7 +70,7 @@ function createTransactionDescriptor(
   const transactionWorkspaceRoot = scope === 'project'
     ? join(resolve(destinationRoot), `.evcrate-publish-${releaseId}`)
     : join(resolve(durableStateRoot), `release-${releaseId}`);
-  const bindings = Object.freeze(plan.bindings.map(({ binding }) => binding));
+  const bindings = Object.freeze(plan.bindingOrder ?? plan.bindings.map(({ binding }) => binding));
   const operations = Object.freeze(plan.bindings.flatMap(({ operations }) => operations));
 
   return Object.freeze({
@@ -435,9 +435,8 @@ function phaseChanges(plan: PublicationPlan, phase: 'shared' | 'harness') {
     phase === 'shared' ? target === 'advisor-controller' : target !== 'advisor-controller'));
 }
 function phaseBindings(plan: PublicationPlan, phase: 'shared' | 'harness'): readonly string[] {
-  return Object.freeze(plan.bindings
-    .filter(({ controller }) => phase === 'shared' ? controller : !controller)
-    .map(({ binding }) => binding));
+  if (phase === 'shared') return Object.freeze(['.evcrate/bin']);
+  return Object.freeze(plan.bindingOrder.filter((binding) => binding !== '.evcrate/bin'));
 }
 function dryRunPhase(plan: PublicationPlan, phase: 'shared' | 'harness'): DryRunPhaseRecord {
   return Object.freeze({
@@ -862,7 +861,7 @@ function composeHomePublicationPlan(planSet: PublicationPlanSet): PublicationPla
     buildManifestPath: planSet.buildManifestPath,
     buildManifestDigest: planSet.buildManifestDigest,
     selectedTargets: Object.freeze([...planSet.harness.selectedTargets]),
-    bindingOrder: Object.freeze(bindings.map(({ binding }) => binding)),
+    bindingOrder: Object.freeze([...planSet.shared.bindingOrder, ...planSet.harness.bindingOrder]),
     bindings, changes, managedOwnership: planSet.harness.managedOwnership
   });
 }

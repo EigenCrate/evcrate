@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
 import { prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 import { renderResult } from '../../dist/cli/output.js';
 import { validatePublishApplyResultPayload } from '../../dist/protocol/publication-payloads.js';
-
+import { readOptionalPublicationMarker, validatePublicationStateRecord } from '../../dist/distribution/publication-inventory.js';
 let packageRoot;
 let fixtureRoot;
 
@@ -470,6 +470,152 @@ test('Phase 08: Pinned stable (v2.10.2) to candidate upgrade smoke scenario acro
     assert.equal(existsSync(projectOwnedCook), false, 'Project owned obsolete file must be deleted');
     assert.equal(existsSync(projectUntrackedScout), true, 'Project untracked file must be preserved');
     assert.ok(projectResult.legacyLeftovers?.some((l) => l.target === 'claude' && l.path === 'commands/scout.md'));
+  } finally {
+    env.cleanup();
+  }
+});
+
+test('Phase 08 / PR #24: Predecessor Gemini cleanup in project scope preserves layout validity and allows re-publication', () => {
+  const env = createIsolatedEnv();
+  try {
+    const home = join(env.tmp, 'user-home');
+    const project = join(env.tmp, 'user-project');
+    directory(home);
+    directory(project);
+
+    const projectContext = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['antigravity']
+    });
+    const projectIdentity = resolvePublicationProjectContext(projectContext).projectIdentity;
+    const projectState = join(projectContext.stateRoot, 'project-publication', projectIdentity);
+    directory(projectState);
+
+    // Predecessor marker with antigravity and gemini ownership
+    const predecessorMarker = recordedMarker(
+      project, projectState, 'project',
+      ['antigravity', 'gemini'],
+      ['.antigravity', '.gemini', 'GEMINI.md'],
+      {
+        antigravity: { '.antigravity': ['AGENTS.md'] },
+        gemini: {
+          '.gemini': ['commands/worktree.toml'],
+          'GEMINI.md': ['GEMINI.md']
+        }
+      },
+      projectIdentity
+    );
+    writeFileSync(join(projectState, 'release-marker.json'), JSON.stringify(predecessorMarker));
+
+    // Staging: owned files (one locally modified), untracked file, and existing antigravity AGENTS.md
+    const ownedGeminiCmd = userFile(project, '.gemini/commands/worktree.toml', '# User Modified Owned Gemini Cmd\n');
+    const ownedGeminiMd = userFile(project, 'GEMINI.md', '# User Modified Owned GEMINI.md\n');
+    const untrackedVendor = userFile(project, '.gemini/vendor-user.txt', 'Untracked vendor content\n');
+
+    // 1. First invocation: publish antigravity
+    const firstResult = publishApply(projectContext, {}, { scope: 'project', selectedTargets: ['antigravity'] });
+    assert.equal(firstResult.scope, 'project');
+
+    // Verify owned Gemini files were pruned despite local edits
+    assert.equal(existsSync(ownedGeminiCmd), false, 'Owned Gemini command must be pruned');
+    assert.equal(existsSync(ownedGeminiMd), false, 'Owned GEMINI.md must be pruned');
+
+    // Verify untracked user file is strictly preserved
+    assert.equal(existsSync(untrackedVendor), true, 'Untracked vendor file must be preserved');
+    assert.equal(readFileSync(untrackedVendor, 'utf8'), 'Untracked vendor content\n');
+
+    // Verify active binding order in payload does not include .gemini or GEMINI.md
+    const harnessPhase = firstResult.phases[1];
+    assert.deepEqual([...harnessPhase.selectedTargets], ['antigravity']);
+    assert.equal(harnessPhase.bindingOrder.includes('.gemini'), false, 'bindingOrder must not include .gemini');
+    assert.equal(harnessPhase.bindingOrder.includes('GEMINI.md'), false, 'bindingOrder must not include GEMINI.md');
+
+    // Verify changes do not include retired target gemini
+    assert.equal(harnessPhase.changes.some((c) => c.target === 'gemini'), false, 'changes must not contain gemini');
+
+    // Verify written marker is valid
+    const markerAfterFirst = readOptionalPublicationMarker(join(projectState, 'release-marker.json'));
+    assert.ok(markerAfterFirst !== null, 'Marker must exist after publication');
+    validatePublicationStateRecord(markerAfterFirst.records.harness, 'harness', 'project');
+
+    // Verify managed_paths in marker no longer has gemini
+    assert.equal(Object.hasOwn(markerAfterFirst.records.harness.managed_paths, 'gemini'), false, 'Marker must not manage gemini');
+
+    // 2. Second invocation: must cleanly succeed, reread marker, and maintain stability
+    const secondResult = publishApply(projectContext, {}, { scope: 'project', selectedTargets: ['antigravity'] });
+    assert.equal(secondResult.scope, 'project');
+    const markerAfterSecond = readOptionalPublicationMarker(join(projectState, 'release-marker.json'));
+    validatePublicationStateRecord(markerAfterSecond.records.harness, 'harness', 'project');
+  } finally {
+    env.cleanup();
+  }
+});
+
+test('Phase 08 / PR #24: Predecessor Gemini cleanup in HOME scope prunes owned files and reports untracked leftovers', () => {
+  const env = createIsolatedEnv();
+  try {
+    const home = join(env.tmp, 'user-home');
+    const project = join(env.tmp, 'user-project');
+    directory(home);
+    directory(project);
+
+    const context = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['antigravity']
+    });
+    const homeState = publicationStateRoot(home);
+    directory(homeState);
+
+    // Predecessor marker with antigravity and gemini ownership
+    const predecessorMarker = recordedMarker(
+      home, homeState, 'home',
+      ['antigravity', 'gemini'],
+      ['.gemini', '.gemini/config'],
+      {
+        antigravity: { '.gemini/config': ['AGENTS.md'] },
+        gemini: {
+          '.gemini': ['skills/cmd_worktree/SKILL.md']
+        }
+      }
+    );
+    writeFileSync(join(homeState, 'release-marker.json'), JSON.stringify(predecessorMarker));
+
+    // Staging: owned file, untracked command leftover, and untracked user file
+    const ownedGeminiSkill = userFile(home, '.gemini/skills/cmd_worktree/SKILL.md', '# Owned Worktree Skill\n');
+    const untrackedCmdSkill = userFile(home, '.gemini/skills/cmd_advise/SKILL.md', '# Untracked Advise Skill\n');
+    const untrackedVendor = userFile(home, '.gemini/vendor-user.txt', 'Untracked vendor content\n');
+
+    // 1. First invocation: publish antigravity in HOME scope
+    const firstResult = publishApply(context, {}, { scope: 'home', selectedTargets: ['antigravity'] });
+    assert.equal(firstResult.scope, 'home');
+
+    // Verify owned Gemini skill is deleted
+    assert.equal(existsSync(ownedGeminiSkill), false, 'Owned Gemini skill must be pruned');
+
+    // Verify untracked files are preserved
+    assert.equal(existsSync(untrackedCmdSkill), true, 'Untracked command skill must be preserved');
+    assert.equal(existsSync(untrackedVendor), true, 'Untracked vendor file must be preserved');
+
+    // Verify untracked legacy command is reported in legacyLeftovers
+    assert.ok(Array.isArray(firstResult.legacyLeftovers));
+    assert.ok(
+      firstResult.legacyLeftovers.some((l) => l.target === 'antigravity' && l.path === 'skills/cmd_advise/SKILL.md'),
+      'Must report untracked skills/cmd_advise/SKILL.md in legacyLeftovers'
+    );
+    assert.equal(
+      firstResult.legacyLeftovers.some((l) => l.path.includes('vendor-user.txt')),
+      false,
+      'Must not report unrelated vendor file in legacyLeftovers'
+    );
+
+    // Verify written marker is valid
+    const markerAfterFirst = readOptionalPublicationMarker(join(homeState, 'release-marker.json'));
+    assert.ok(markerAfterFirst !== null, 'Marker must exist after publication');
+    validatePublicationStateRecord(markerAfterFirst.records.harness, 'harness', 'home');
+
+    // 2. Second invocation: must cleanly succeed, reread marker, and maintain stability
+    const secondResult = publishApply(context, {}, { scope: 'home', selectedTargets: ['antigravity'] });
+    assert.equal(secondResult.scope, 'home');
+    const markerAfterSecond = readOptionalPublicationMarker(join(homeState, 'release-marker.json'));
+    validatePublicationStateRecord(markerAfterSecond.records.harness, 'harness', 'home');
   } finally {
     env.cleanup();
   }

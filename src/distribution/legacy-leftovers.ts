@@ -410,6 +410,34 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
       }
     }
 
+    // Also check Antigravity predecessor root: .gemini in HOME scope
+    if (target === 'antigravity' && options.scope === 'home') {
+      const geminiRoot = join(options.destinationRoot, '.gemini');
+      if (existsSync(geminiRoot)) {
+        for (const item of candidateItems) {
+          const fullPath = join(geminiRoot, item.relativePath);
+          if (!existsSync(fullPath)) continue;
+          try {
+            const stat = lstatSync(fullPath);
+            if (stat.isDirectory()) continue;
+          } catch {
+            continue;
+          }
+          const targetRelPath = normalizeRelativePath(item.relativePath);
+          const dedupeKey = `antigravity:${targetRelPath}`;
+          if (seen.has(dedupeKey)) continue;
+          if (isPathRecorded(options.currentOwnership, 'antigravity', targetRelPath)) continue;
+          if (isPathRecorded(options.previousOwnership, 'antigravity', targetRelPath)) continue;
+          if (isPathRecorded(options.previousOwnership, 'gemini', targetRelPath)) continue;
+          seen.add(dedupeKey);
+          leftovers.push(Object.freeze({
+            target: 'antigravity',
+            path: targetRelPath,
+            kind: item.kind
+          }));
+        }
+      }
+    }
     // In project scope: check root-level legacy docs (CLAUDE.md, GEMINI.md)
     if (options.scope === 'project') {
       if (target === 'claude') {
@@ -439,7 +467,8 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
           const dedupeKey = `${target}:GEMINI.md`;
           if (!seen.has(dedupeKey)
             && !isPathRecorded(options.currentOwnership, target, 'GEMINI.md')
-            && !isPathRecorded(options.previousOwnership, target, 'GEMINI.md')) {
+            && !isPathRecorded(options.previousOwnership, target, 'GEMINI.md')
+            && !isPathRecorded(options.previousOwnership, 'gemini', 'GEMINI.md')) {
             try {
               if (!lstatSync(projectGemini).isDirectory()) {
                 seen.add(dedupeKey);
