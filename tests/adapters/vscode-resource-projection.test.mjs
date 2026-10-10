@@ -69,13 +69,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(gitParsed.fields.model, 'haiku');
     assert.deepEqual(
       [...(gitParsed.fields.tools || [])].sort(),
-      ['file_search', 'grep_search', 'read_file', 'run_in_terminal'].sort()
+      ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
     );
     assert.deepEqual(gitParsed.fields.agents, []);
 
-    // TodoWrite is rewritten in tools and prose to VS Code's manage_todo_list
+    // TodoWrite is mapped to frontmatter 'todo' while prose remains manage_todo_list
     const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-project-manager.agent.md'), 'utf8'));
-    assert.ok(pmParsed.fields.tools.includes('manage_todo_list'));
+    assert.ok(pmParsed.fields.tools.includes('todo'));
     const cmdCodeContent = readFileSync(join(stageRoot, 'skills/evc-cmd-code/SKILL.md'), 'utf8');
     assert.ok(cmdCodeContent.includes('manage_todo_list'));
     assert.ok(!cmdCodeContent.includes('TodoWrite'));

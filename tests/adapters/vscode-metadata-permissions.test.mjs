@@ -148,27 +148,27 @@ test('metadata: mapAgentTools maps canonical tools and restricts delegation when
   assert.equal(resGit.isExplicitNone, false);
   assert.deepEqual(
     [...resGit.mapped].sort(),
-    ['file_search', 'grep_search', 'read_file', 'run_in_terminal'].sort()
+    ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
   );
   assert.deepEqual(resGit.dropped, []);
   assert.equal(resGit.canDelegate, false);
 });
 
-test('metadata: mapAgentTools maps TodoWrite to manage_todo_list', () => {
+test('metadata: mapAgentTools maps TodoWrite to todo', () => {
   const res = mapAgentTools('Read, TodoWrite');
-  assert.deepEqual([...res.mapped].sort(), ['manage_todo_list', 'read_file']);
+  assert.deepEqual([...res.mapped].sort(), ['read/readFile', 'todo'].sort());
   assert.deepEqual(res.dropped, []);
 });
 
 test('metadata: mapAgentTools allows delegation only when Task is present', () => {
   const resTask = mapAgentTools(['Read', 'Task']);
-  assert.deepEqual([...resTask.mapped].sort(), ['read_file', 'runSubagent'].sort());
+  assert.deepEqual([...resTask.mapped].sort(), ['agent/runSubagent', 'read/readFile'].sort());
   assert.equal(resTask.canDelegate, true);
 });
 
 test('metadata: mapAgentTools records dropped tools faithfully', () => {
   const res = mapAgentTools('Read, Grep, WebFetch, NotebookEdit, UnknownCustom');
-  assert.deepEqual([...res.mapped].sort(), ['grep_search', 'read_file'].sort());
+  assert.deepEqual([...res.mapped].sort(), ['read/readFile', 'search/textSearch'].sort());
   assert.deepEqual(
     [...res.dropped].sort(),
     ['NotebookEdit', 'UnknownCustom', 'WebFetch'].sort()
@@ -177,17 +177,17 @@ test('metadata: mapAgentTools records dropped tools faithfully', () => {
 });
 
 test('metadata: VSCODE_LOCAL_TOOL_MAP defines all 13 canonical tool mappings', () => {
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.read, 'read_file');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.edit, 'edit_file');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.write, 'edit_file');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.multiedit, 'edit_file');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.bash, 'run_in_terminal');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.bashoutput, 'run_in_terminal');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.killbash, 'run_in_terminal');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.killshell, 'run_in_terminal');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.grep, 'grep_search');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.glob, 'file_search');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.ls, 'file_search');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.task, 'runSubagent');
-  assert.equal(VSCODE_LOCAL_TOOL_MAP.todowrite, 'manage_todo_list');
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.read, ['read/readFile']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.edit, ['editFiles']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.write, ['createFile', 'editFiles']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.multiedit, ['multiReplaceString']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.bash, ['runInTerminal']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.bashoutput, ['getTerminalOutput']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.killbash, ['killTerminal']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.killshell, ['killTerminal']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.grep, ['search/textSearch']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.glob, ['search/fileSearch']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.ls, ['search/listDirectory']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.task, ['agent/runSubagent']);
+  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.todowrite, ['todo']);
 });

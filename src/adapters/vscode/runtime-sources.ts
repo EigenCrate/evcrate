@@ -333,7 +333,9 @@ const READ_TOOL_NAMES = {
   read_file: true,
   view: true,
   readfile: true,
-  read: true
+  read: true,
+  'read/readfile': true,
+  copilot_readfile: true
 };
 
 const EDIT_TOOL_NAMES = {
@@ -342,8 +344,17 @@ const EDIT_TOOL_NAMES = {
   editfiles: true,
   str_replace_editor: true,
   apply_patch: true,
+  applypatch: true,
   write: true,
-  create: true
+  create: true,
+  createfile: true,
+  copilot_createfile: true,
+  replacestring: true,
+  copilot_replacestring: true,
+  insertedit: true,
+  copilot_insertedit: true,
+  multireplacestring: true,
+  copilot_multireplacestring: true
 };
 
 const TERMINAL_TOOL_NAMES = {
@@ -358,13 +369,22 @@ const TERMINAL_TOOL_NAMES = {
 const GREP_TOOL_NAMES = {
   grep_search: true,
   grep: true,
-  rg: true
+  rg: true,
+  textsearch: true,
+  'search/textsearch': true,
+  copilot_findtextinfiles: true
 };
 
 const GLOB_TOOL_NAMES = {
   file_search: true,
   glob: true,
-  find: true
+  find: true,
+  filesearch: true,
+  'search/filesearch': true,
+  copilot_findfiles: true,
+  listdirectory: true,
+  'search/listdirectory': true,
+  copilot_listdirectory: true
 };
 
 const SUBAGENT_TOOL_NAMES = {
@@ -382,8 +402,11 @@ const UNRELATED_TOOL_NAMES = {
   manage_todo_list: true,
   todowrite: true,
   view_image: true,
+  copilot_viewimage: true,
   read_resource: true,
-  list_resources: true
+  list_resources: true,
+  getterminaloutput: true,
+  killterminal: true
 };
 
 const CANONICAL_BLOCKED_DIR_NAMES = {
@@ -486,7 +509,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 1. Read operations
   if (READ_TOOL_NAMES[lowerName]) {
-    const rawPath = toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
+    const rawPath = toolInput.filePath || toolInput.FilePath || toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
     if (typeof rawPath !== 'string' || !rawPath.trim()) {
       return {
         kind: 'unqualified',
@@ -512,15 +535,29 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   // 2. Edit operations
   if (EDIT_TOOL_NAMES[lowerName]) {
     const collectedPaths = [];
-    const directPath = toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
+    const directPath = toolInput.filePath || toolInput.FilePath || toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
     if (typeof directPath === 'string' && directPath.trim()) {
       collectedPaths.push(directPath);
     }
 
     if (Array.isArray(toolInput.files)) {
       for (const item of toolInput.files) {
-        if (item && typeof item === 'object' && typeof item.path === 'string' && item.path.trim()) {
-          collectedPaths.push(item.path);
+        if (item && typeof item === 'object') {
+          const itemPath = item.filePath || item.FilePath || item.path || item.file_path || item.target_file || item.TargetFile;
+          if (typeof itemPath === 'string' && itemPath.trim()) {
+            collectedPaths.push(itemPath);
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(toolInput.replacements)) {
+      for (const item of toolInput.replacements) {
+        if (item && typeof item === 'object') {
+          const itemPath = item.filePath || item.FilePath || item.path || item.file_path || item.target_file || item.TargetFile;
+          if (typeof itemPath === 'string' && itemPath.trim()) {
+            collectedPaths.push(itemPath);
+          }
         }
       }
     }
@@ -616,7 +653,8 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 5. File search operations
   if (GLOB_TOOL_NAMES[lowerName]) {
-    const pattern = toolInput.pattern || toolInput.query;
+    const isListDir = lowerName.includes('listdirectory');
+    const pattern = toolInput.pattern || toolInput.query || (isListDir ? '*' : undefined);
     if (typeof pattern !== 'string' || !pattern.trim()) {
       return {
         kind: 'unqualified',
@@ -625,7 +663,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
         originalInput: toolInput
       };
     }
-    const folderOperand = toolInput.folder || toolInput.path || toolInput.DirectoryPath;
+    const folderOperand = toolInput.folder || toolInput.path || toolInput.filePath || toolInput.FilePath || toolInput.dirPath || toolInput.DirPath || toolInput.DirectoryPath;
     const operandsToValidate = typeof folderOperand === 'string' && folderOperand.trim() ? [folderOperand] : [];
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
