@@ -1,3 +1,10 @@
+## [2.11.0](https://github.com/EigenCrate/evcrate/compare/v2.10.3...v2.11.0) (2026-10-10)
+
+
+### 🚀 Features
+
+* **snyk-expert:** add common .agents CLI and Node.js/TypeScript workflows ([#23](https://github.com/EigenCrate/evcrate/issues/23)) ([b8e5603](https://github.com/EigenCrate/evcrate/commit/b8e56037aa7deb51cdb7f70c196eaafc6c9e729a))
+
 ## [2.10.3](https://github.com/EigenCrate/evcrate/compare/v2.10.2...v2.10.3) (2026-10-08)
 
 
