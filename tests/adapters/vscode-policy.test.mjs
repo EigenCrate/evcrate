@@ -304,3 +304,45 @@ test('policy: unqualified tool fails closed with deny', () => {
   assert.equal(pol.decision, 'deny');
   assert.ok(pol.reason.includes('PreToolUse security policy denied unqualified tool'));
 });
+
+test('policy: paired regressions for native host tool permissions and policy gates', () => {
+  // 1. Native readFile with filePath variants
+  const readPermitted = evaluateLocalPolicies(normalizeLocalTool('readFile', { filePath: 'src/utils/math.ts' }));
+  assert.equal(readPermitted.decision, 'none');
+
+  const readScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('readFile', { filePath: 'node_modules/lodash/index.js' }));
+  assert.equal(readScoutBlocked.decision, 'deny');
+  assert.ok(readScoutBlocked.reason.includes('Scout policy blocked'));
+
+  const readPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('read/readFile', { FilePath: '.env.local' }));
+  assert.equal(readPrivacyAsk.decision, 'ask');
+  assert.ok(readPrivacyAsk.reason.includes('privacy-sensitive'));
+
+  // 2. Native createFile and replaceString with filePath
+  const createPermitted = evaluateLocalPolicies(normalizeLocalTool('createFile', { filePath: 'src/components/card.tsx' }));
+  assert.equal(createPermitted.decision, 'none');
+
+  const createScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('createFile', { filePath: '.git/hooks/pre-commit' }));
+  assert.equal(createScoutBlocked.decision, 'deny');
+
+  const replacePrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('replaceString', { filePath: 'config/master.key' }));
+  assert.equal(replacePrivacyAsk.decision, 'ask');
+
+  // 3. Native multiReplaceString multi-operand denial
+  const multiAllPermitted = evaluateLocalPolicies(normalizeLocalTool('multiReplaceString', {
+    replacements: [{ filePath: 'src/a.ts' }, { filePath: 'src/b.ts' }]
+  }));
+  assert.equal(multiAllPermitted.decision, 'none');
+
+  const multiOneBlocked = evaluateLocalPolicies(normalizeLocalTool('multiReplaceString', {
+    replacements: [{ filePath: 'src/a.ts' }, { filePath: 'vendor/cache/pkg.json' }]
+  }));
+  assert.equal(multiOneBlocked.decision, 'deny');
+
+  // 4. Native listDirectory with path
+  const listPermitted = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'src/services' }));
+  assert.equal(listPermitted.decision, 'none');
+
+  const listScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'node_modules' }));
+  assert.equal(listScoutBlocked.decision, 'deny');
+});

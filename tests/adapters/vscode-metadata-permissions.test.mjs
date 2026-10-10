@@ -1,14 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   parseFrontmatter,
   serializeFrontmatter,
   mapAgentTools,
   parseYamlScalar,
-  formatYamlScalar,
-  VSCODE_LOCAL_TOOL_MAP
+  formatYamlScalar
 } from '../../dist/adapters/vscode/metadata.js';
 import { ControlPlaneError } from '../../dist/errors/control-plane-error.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const toolReferencesFixture = JSON.parse(
+  readFileSync(join(__dirname, '../fixtures/vscode-local/tool-references.json'), 'utf8')
+);
 
 test('metadata: parseYamlScalar parses typed scalars correctly', () => {
   assert.equal(parseYamlScalar('true'), true);
@@ -176,18 +184,85 @@ test('metadata: mapAgentTools records dropped tools faithfully', () => {
   assert.equal(res.canDelegate, false);
 });
 
-test('metadata: VSCODE_LOCAL_TOOL_MAP defines all 13 canonical tool mappings', () => {
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.read, ['read/readFile']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.edit, ['editFiles']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.write, ['createFile', 'editFiles']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.multiedit, ['multiReplaceString']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.bash, ['runInTerminal']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.bashoutput, ['getTerminalOutput']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.killbash, ['killTerminal']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.killshell, ['killTerminal']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.grep, ['search/textSearch']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.glob, ['search/fileSearch']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.ls, ['search/listDirectory']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.task, ['agent/runSubagent']);
-  assert.deepEqual(VSCODE_LOCAL_TOOL_MAP.todowrite, ['todo']);
+test('metadata: capability contract cases match independently recorded host references', () => {
+  const { capabilities } = toolReferencesFixture;
+  assert.ok(capabilities, 'tool-references fixture must declare capabilities');
+
+  for (const [key, cap] of Object.entries(capabilities)) {
+    const res = mapAgentTools(cap.canonical_intent);
+    const expectedReferences = cap.host_references || [cap.host_reference];
+
+    assert.deepEqual(
+      [...res.mapped].sort(),
+      [...expectedReferences].sort(),
+      `Capability "${key}" (${cap.canonical_intent}) must map to expected host references`
+    );
+    assert.deepEqual(
+      res.dropped,
+      [],
+      `Canonical capability "${key}" must not be dropped`
+    );
+
+    if (cap.grants_delegation) {
+      assert.equal(
+        res.canDelegate,
+        true,
+        `Capability "${key}" must grant delegation eligibility`
+      );
+    } else {
+      assert.equal(
+        res.canDelegate,
+        false,
+        `Capability "${key}" must NOT grant delegation eligibility`
+      );
+    }
+  }
+});
+
+test('metadata: security boundary - unsupported-only explicit tools remain empty without fallback to inheritance', () => {
+  const resString = mapAgentTools('WebFetch, WebSearch, UnknownCustom');
+  assert.equal(resString.hasExplicitTools, true);
+  assert.equal(resString.isExplicitNone, false);
+  assert.deepEqual(resString.mapped, []);
+  assert.deepEqual(
+    [...resString.dropped].sort(),
+    ['UnknownCustom', 'WebFetch', 'WebSearch'].sort()
+  );
+  assert.equal(resString.canDelegate, false);
+
+  const resArray = mapAgentTools(['WebFetch', 'UnknownTool']);
+  assert.equal(resArray.hasExplicitTools, true);
+  assert.equal(resArray.isExplicitNone, false);
+  assert.deepEqual(resArray.mapped, []);
+  assert.deepEqual(
+    [...resArray.dropped].sort(),
+    ['UnknownTool', 'WebFetch'].sort()
+  );
+  assert.equal(resArray.canDelegate, false);
+});
+
+test('metadata: security boundary - deduplication does not duplicate or expand capabilities', () => {
+  const resDup = mapAgentTools(['Read', 'read', 'READ', 'Read']);
+  assert.deepEqual([...resDup.mapped], ['read/readFile']);
+  assert.deepEqual(resDup.dropped, []);
+  assert.equal(resDup.canDelegate, false);
+
+  const resTaskDup = mapAgentTools('Task, task, TASK, Read, read');
+  assert.deepEqual([...resTaskDup.mapped].sort(), ['agent/runSubagent', 'read/readFile'].sort());
+  assert.deepEqual(resTaskDup.dropped, []);
+  assert.equal(resTaskDup.canDelegate, true);
+});
+
+test('metadata: security boundary - comma-list and array inputs produce identical capability contracts', () => {
+  const resArray = mapAgentTools(['Glob', 'Grep', 'Read', 'Task']);
+  const resCommaSpaced = mapAgentTools('Glob, Grep, Read, Task');
+  const resCommaTight = mapAgentTools('Glob,Grep,Read,Task');
+
+  const expectedMapped = ['agent/runSubagent', 'read/readFile', 'search/fileSearch', 'search/textSearch'].sort();
+  assert.deepEqual([...resArray.mapped].sort(), expectedMapped);
+  assert.deepEqual([...resCommaSpaced.mapped].sort(), expectedMapped);
+  assert.deepEqual([...resCommaTight.mapped].sort(), expectedMapped);
+  assert.equal(resArray.canDelegate, true);
+  assert.equal(resCommaSpaced.canDelegate, true);
+  assert.equal(resCommaTight.canDelegate, true);
 });

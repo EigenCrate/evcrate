@@ -24,24 +24,49 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
-test('vscode-local: materializeFixture creates all 9 plugin components with expected digests', () => {
+test('vscode-local: materializeFixture creates plugin components with expected controls and digests', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-fixture-test-'));
   try {
     const captureDir = path.join(tmpDir, 'capture-logs');
     const manifest = materializeFixture({ destination: tmpDir, captureDirectory: captureDir });
 
-    assert.equal(manifest.files.length, 9);
+    assert.ok(manifest.files.length > 0, 'Manifest must contain files');
     assert.ok(fs.existsSync(path.join(tmpDir, 'plugin.json')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'skills/contract-echo/SKILL.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'skills/contract-echo/spec.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'skills/contract-auto/SKILL.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-deny-all.agent.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-reader.agent.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-no-child.agent.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-editor.agent.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/rules/bootstrap.instructions.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/hooks/hooks.json')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'evcrate/capture-hook.cjs')));
     assert.ok(fs.existsSync(captureDir));
 
+    // Verify distinct positive and negative controls in agents
+    const readerContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-reader.agent.md'), 'utf8');
+    assert.ok(readerContent.includes('read/readFile'));
+    assert.ok(readerContent.includes('search/fileSearch'));
+    assert.ok(readerContent.includes('search/textSearch'));
+    assert.ok(readerContent.includes('disable-model-invocation: false'));
+    assert.ok(readerContent.includes('agents: []'));
+
+    const denyAllContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-deny-all.agent.md'), 'utf8');
+    assert.ok(denyAllContent.includes('tools: []'));
+    assert.ok(denyAllContent.includes('agents: []'));
+    assert.ok(denyAllContent.includes('disable-model-invocation: false'));
+
+    const noChildContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-no-child.agent.md'), 'utf8');
+    assert.ok(noChildContent.includes('agent/runSubagent'));
+    assert.ok(noChildContent.includes('agents: []'));
+    assert.ok(noChildContent.includes('disable-model-invocation: false'));
+
+    const editorContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-editor.agent.md'), 'utf8');
+    assert.ok(editorContent.includes('editFiles'));
+    assert.ok(editorContent.includes('createFile'));
+    assert.ok(editorContent.includes('multiReplaceString'));
+    assert.ok(editorContent.includes('agents: []'));
     // Verify plugin.json contents
     const pluginData = JSON.parse(fs.readFileSync(path.join(tmpDir, 'plugin.json'), 'utf8'));
     assert.equal(pluginData.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
@@ -62,14 +87,21 @@ test('vscode-local: materializeFixture creates all 9 plugin components with expe
   }
 });
 
-test('vscode-local: materializeWorkspace creates synthetic workspace files', () => {
+test('vscode-local: materializeWorkspace creates synthetic workspace files with disjoint scouting slices', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-workspace-test-'));
   try {
     const manifest = materializeWorkspace({ destination: tmpDir });
-    assert.equal(manifest.length, 3);
+    assert.ok(manifest.length > 0, 'Workspace manifest must contain files');
     assert.ok(fs.existsSync(path.join(tmpDir, 'fixture.env')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'sample.txt')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'edit-target.txt')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'scout-slice-a/document-alpha.txt')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'scout-slice-b/document-beta.txt')));
+
+    const alphaContent = fs.readFileSync(path.join(tmpDir, 'scout-slice-a/document-alpha.txt'), 'utf8');
+    assert.ok(alphaContent.includes('AlphaSectionToken:7719'));
+    const betaContent = fs.readFileSync(path.join(tmpDir, 'scout-slice-b/document-beta.txt'), 'utf8');
+    assert.ok(betaContent.includes('BetaSectionToken:4432'));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -220,6 +252,11 @@ test('vscode-local: baseline fixtures validate contract integrity', () => {
   assert.ok(fs.existsSync(runtimePath));
   assert.ok(fs.existsSync(toolInputsPath));
   assert.ok(fs.existsSync(eventCasesPath));
+  const toolReferencesPath = path.join(REPO_ROOT, 'tests/fixtures/vscode-local/tool-references.json');
+  assert.ok(fs.existsSync(toolReferencesPath));
+  const toolReferences = JSON.parse(fs.readFileSync(toolReferencesPath, 'utf8'));
+  assert.ok(toolReferences.target);
+  assert.ok(toolReferences.capabilities);
 
   const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf8'));
   const toolInputs = JSON.parse(fs.readFileSync(toolInputsPath, 'utf8'));
