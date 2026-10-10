@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { executeInstallation, planInstallation, resolveInstallTarget } from '../lib/install.js';
+import { executeInstallation, isSupportedNodeVersion, MIN_NODE_VERSION, planInstallation, resolveInstallTarget } from '../lib/install.js';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(packageRoot, 'bin', 'install.js');
@@ -232,5 +232,109 @@ describe('SonarQube common skill installer', () => {
     assert.throws(() => executeInstallation(plan), /Destination changed after planning/);
     assert.deepEqual(fs.readdirSync(skillRoot(project)), ['SKILL.md']);
     assert.equal(fs.readFileSync(path.join(skillRoot(project), 'SKILL.md'), 'utf8'), 'new user evidence');
+  });
+
+  test('enforces Node.js >=18.11.0 compatibility in metadata and runtime validator', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
+    assert.equal(pkg.engines.node, '>=18.11.0');
+    assert.equal(MIN_NODE_VERSION, '18.11.0');
+    assert.equal(isSupportedNodeVersion('18.0.0'), false);
+    assert.equal(isSupportedNodeVersion('18.10.0'), false);
+    assert.equal(isSupportedNodeVersion('18.10.9'), false);
+    assert.equal(isSupportedNodeVersion('18.11.0'), true);
+    assert.equal(isSupportedNodeVersion('18.11.0-alpha.1'), true);
+    assert.equal(isSupportedNodeVersion('18.10.0-rc.1'), false);
+    assert.equal(isSupportedNodeVersion('v18.11.0'), true);
+    assert.equal(isSupportedNodeVersion('v18.10.0'), false);
+    assert.equal(isSupportedNodeVersion('18.12.0'), true);
+    assert.equal(isSupportedNodeVersion('20.0.0'), true);
+    assert.equal(isSupportedNodeVersion('22.19.0'), true);
+    assert.equal(isSupportedNodeVersion(), true);
+  });
+
+  test('exits with status 1 and leaves files untouched when interactive replacement is rejected', () => {
+    const project = path.join(tempRoot, 'project');
+    executeInstallation(planFor(project));
+    const target = path.join(skillRoot(project), 'SKILL.md');
+    fs.writeFileSync(target, 'original user edit');
+    const result = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--force'], {
+      cwd: tempRoot,
+      input: 'n\n',
+      env: { ...process.env, FORCE_TTY: '1' },
+      encoding: 'utf8'
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /Installation cancelled\./);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'original user edit');
+  });
+
+  test('confirms interactive replacement when user confirms with yes', () => {
+    const project = path.join(tempRoot, 'project');
+    executeInstallation(planFor(project));
+    const target = path.join(skillRoot(project), 'SKILL.md');
+    fs.writeFileSync(target, 'original user edit');
+    const result = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--force'], {
+      cwd: tempRoot,
+      input: 'yes\n',
+      env: { ...process.env, FORCE_TTY: '1' },
+      encoding: 'utf8'
+    });
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Installed 1 file\(s\)/);
+    assert.ok(fs.readFileSync(target).equals(fs.readFileSync(path.join(packageRoot, 'SKILL.md'))));
+  });
+
+  test('exclusive installation locking prevents concurrent installer execution', () => {
+    const project = path.join(tempRoot, 'project');
+    const plan = planFor(project);
+    const lockFile = path.join(skillRoot(project), '.install.lock');
+    fs.mkdirSync(path.dirname(lockFile), { recursive: true });
+    fs.writeFileSync(lockFile, 'lock held by another process');
+    assert.throws(() => executeInstallation(plan), /Installation locked by another process/);
+    assert.ok(fs.existsSync(lockFile));
+    fs.unlinkSync(lockFile);
+  });
+
+  test('prevents overwriting a destination created concurrently immediately before publication', () => {
+    const project = path.join(tempRoot, 'project');
+    const plan = planFor(project);
+    assert.throws(() => executeInstallation(plan, {
+      _beforePublish: (action) => {
+        if (action.relativePath.endsWith('SKILL.md')) {
+          fs.writeFileSync(action.destinationPath, 'competing concurrent write');
+        }
+      }
+    }), /Destination changed during installation.*already exists/);
+    assert.equal(fs.readFileSync(path.join(skillRoot(project), 'SKILL.md'), 'utf8'), 'competing concurrent write');
+  });
+
+  test('rolls back to previous usable installation if a fault occurs during replacement', () => {
+    const project = path.join(tempRoot, 'project');
+    executeInstallation(planFor(project));
+    const modifiedSkill = path.join(skillRoot(project), 'SKILL.md');
+    const modifiedConverter = path.join(skillRoot(project), 'scripts', 'convert-sonar-report.mjs');
+    fs.writeFileSync(modifiedSkill, 'modified skill by user');
+    fs.writeFileSync(modifiedConverter, 'modified converter by user');
+
+    const replacePlan = planFor(project);
+    assert.equal(replacePlan.replacements.length, 2);
+
+    assert.throws(() => executeInstallation(replacePlan, {
+      force: true,
+      yes: true,
+      _beforePublish: (action, index) => {
+        if (index === 1) {
+          throw new Error('Simulated I/O failure during commit');
+        }
+      }
+    }), /Simulated I\/O failure during commit/);
+
+    assert.equal(fs.readFileSync(modifiedSkill, 'utf8'), 'modified skill by user');
+    assert.equal(fs.readFileSync(modifiedConverter, 'utf8'), 'modified converter by user');
+    assert.ok(!fs.existsSync(path.join(skillRoot(project), '.install.lock')));
+    const allFiles = fs.readdirSync(skillRoot(project), { recursive: true });
+    for (const f of allFiles) {
+      assert.ok(!f.includes('.tmp-'));
+    }
   });
 });

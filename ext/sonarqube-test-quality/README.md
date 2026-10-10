@@ -4,7 +4,7 @@ Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline repor
 
 ## Runtime Requirements
 
-- **Node.js 18 or newer (required)**: Runs the portable installer (`bin/install.js`) and the standalone offline report converter (`scripts/convert-sonar-report.mjs`). Both are dependency-free, pure ESM scripts requiring no external npm packages or network access.
+- **Node.js 18.11.0 or newer (required)**: Runs the portable installer (`bin/install.js`) and the standalone offline report converter (`scripts/convert-sonar-report.mjs`). Both are dependency-free, pure ESM scripts requiring no external npm packages or network access.
 - **PowerShell / `pwsh` (optional)**: Only needed if running legacy PowerShell helper scripts (`scripts/fetch-sonar-issues.ps1` and `scripts/calculate-jacoco-coverage.ps1`). Core triage, Sonar CLI execution, report conversion, and isolated worktree remediation do not require PowerShell.
 
 ## Install
@@ -22,7 +22,9 @@ The installer requires an explicit target project root via `--directory` and ins
 ### Installer Safety
 
 - `--dry-run` previews file changes without modifying disk state.
-- Changed destination files fail closed; replacement requires both `--force` and `--yes`.
+- Changed destination files fail closed; replacement requires both `--force` and `--yes` (or interactive confirmation with `--force`).
+- Exclusive installation locking prevents concurrent installer conflicts.
+- Transactional staging and automatic rollback ensure failed installations never leave a partially modified skill.
 - Unrelated files are preserved; no harness configurations or settings are modified.
 
 Run focused installer tests with `npm test` from this package directory.

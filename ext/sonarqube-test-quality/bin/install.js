@@ -5,7 +5,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import readline from 'node:readline/promises';
-import { executeInstallation, planInstallation } from '../lib/install.js';
+import { executeInstallation, isSupportedNodeVersion, MIN_NODE_VERSION, planInstallation } from '../lib/install.js';
+
+if (!isSupportedNodeVersion()) {
+  console.error(`Error: Node.js >=${MIN_NODE_VERSION} is required (current: ${process.version}).`);
+  process.exit(1);
+}
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -73,7 +78,8 @@ async function main() {
   }
 
   let confirmed = values.yes;
-  if (plan.replacements.length && values.force && !confirmed && process.stdin.isTTY) {
+  const isInteractive = Boolean(process.stdin.isTTY || process.env.FORCE_TTY === '1');
+  if (plan.replacements.length && values.force && !confirmed && isInteractive) {
     const prompt = readline.createInterface({ input: process.stdin, output: process.stdout });
     try {
       const answer = await prompt.question(`Replace ${plan.replacements.length} changed file(s)? [y/N]: `);
@@ -81,7 +87,11 @@ async function main() {
     } finally {
       prompt.close();
     }
-    if (!confirmed) return console.log('Installation cancelled.');
+    if (!confirmed) {
+      console.log('Installation cancelled.');
+      process.exitCode = 1;
+      return;
+    }
   }
 
   const result = executeInstallation(plan, { force: values.force, yes: confirmed });
