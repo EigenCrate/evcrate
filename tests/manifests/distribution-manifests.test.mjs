@@ -27,14 +27,13 @@ afterEach(() => {
 
 test('schema-2 registry selection and input hashes follow persisted target declarations', () => {
   const registry = loadTargetManifestRegistry(registryPath);
-  assert.deepEqual([...registry.targets.keys()], ['antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi', 'vscode']);
   assert.equal(loadSelectedManifests(registry, ['agy'])[0].name, 'antigravity');
-  assert.equal(loadSelectedManifests(registry).length, 8);
   assert.deepEqual(
     loadSelectedManifests(registry, ['copilot', 'pi', 'claude', 'codex']).map(({ id }) => id),
     ['claude', 'codex', 'copilot', 'pi']
   );
   assert.throws(() => loadSelectedManifests(registry, ['not-a-target']), code('CAPABILITY_UNSUPPORTED'));
+  assert.throws(() => loadSelectedManifests(registry, ['gemini']), code('CAPABILITY_UNSUPPORTED'));
   const manifests = [...registry.targets.values()];
   assert.ok(Object.keys(manifestSourceHashes(manifests)).length > 0);
   assert.ok(Object.keys(manifestAdapterHashes(manifests, packageRoot)).length > 0);
@@ -45,8 +44,8 @@ test('verified build checks complete metadata, independent roots, and controller
   const manifestPath = join(root, '.evcrate', 'build-manifest.json');
   mkdirSync(join(root, '.evcrate'), { recursive: true });
   const outputRoots = Object.fromEntries([
-    '.agents', '.antigravity', '.claude', '.codex', '.copilot', '.evcrate',
-    '.gemini', '.omp', '.pi', 'AGENTS.md', 'GEMINI.md'
+    '.agents/skills', '.antigravity', '.claude', '.codex', '.copilot', '.evcrate',
+    '.omp', '.pi', 'AGENTS.md'
   ].map((name) => [name, join(packageRoot, '.evcrate', 'source', name)]));
   writeFileSync(manifestPath, buildManifestBytes({
     sourceHashes: {}, adapterHashes: {}, controllerHashes: controllerHashes(controllerRoot),

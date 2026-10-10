@@ -3,6 +3,7 @@ import type { ProjectionBuildContext } from '../types.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 import { filesUnder, sourcePath, decodeUtf8 } from './common.js';
 import { parseFrontmatter } from './metadata.js';
+import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
 
 export interface VscodeCommandMapEntry {
   readonly source: string;
@@ -73,43 +74,29 @@ const KEBAB_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 export function discoverVscodeCommands(context: ProjectionBuildContext): Record<string, VscodeCommandMapEntry> {
   const result: Record<string, VscodeCommandMapEntry> = {};
-  const commandFiles = filesUnder(context, 'commands')
-    .filter((file) => file.path.endsWith('.md'))
-    .sort((a, b) => a.path.localeCompare(b.path));
-
-  for (const file of commandFiles) {
+  const names: string[] = [];
+  for (const file of filesUnder(context, 'commands').filter((file) => file.path.endsWith('.md')).sort((a, b) => a.path.localeCompare(b.path))) {
     const rel = sourcePath('commands', file);
-    const stem = rel.slice(0, -3); // remove .md
-    const sourceSemanticId = stem.replaceAll('/', ':');
-    const flattened = stem.replaceAll('/', '-');
-    const localName = `cmd-${flattened}`;
-
-    if (!KEBAB_PATTERN.test(localName) || localName.length > 64) {
-      throw new ControlPlaneError('VALIDATION_INVALID');
-    }
-
+    const command = commandNameFromSourcePath(`commands/${rel}`);
+    if (result[command.name] !== undefined) throw new ControlPlaneError('VALIDATION_INVALID');
     const parsed = parseFrontmatter(decodeUtf8(file.bytes));
-    const description = typeof parsed.fields.description === 'string'
-      ? parsed.fields.description.trim()
-      : '';
-    const argumentHint = typeof parsed.fields['argument-hint'] === 'string'
-      ? parsed.fields['argument-hint'].trim()
-      : undefined;
-
-    result[stem] = Object.freeze({
+    const description = typeof parsed.fields.description === 'string' ? parsed.fields.description.trim() : '';
+    const argumentHint = typeof parsed.fields['argument-hint'] === 'string' ? parsed.fields['argument-hint'].trim() : undefined;
+    names.push(command.name);
+    result[command.name] = Object.freeze({
       source: rel,
-      sourceSemanticId,
-      sourceName: stem,
-      target: `skills/${localName}/SKILL.md`,
-      localName,
-      targetName: localName,
-      nativeInvocationName: `/${localName}`,
+      sourceSemanticId: command.semanticId,
+      sourceName: command.semanticId,
+      target: `skills/${command.name}/SKILL.md`,
+      localName: command.name,
+      targetName: command.name,
+      nativeInvocationName: `/${command.name}`,
       description,
       argumentHint,
       disposition: 'approximated'
     });
   }
-
+  assertUniqueNames(names);
   return Object.freeze(result);
 }
 
@@ -223,11 +210,9 @@ export function discoverVscodeAgents(context: ProjectionBuildContext): Record<st
 
   for (const file of files) {
     const rel = sourcePath('agents', file);
-    const name = rel.slice(0, -3);
-    if (!KEBAB_PATTERN.test(name) || name.length > 64) {
-      throw new ControlPlaneError('VALIDATION_INVALID');
-    }
-
+    const parsed = parseFrontmatter(decodeUtf8(file.bytes));
+    const name = assertAgentName(typeof parsed.fields.name === 'string' ? parsed.fields.name.trim() : '', rel.slice(0, -3));
+    if (result[name] !== undefined) throw new ControlPlaneError('VALIDATION_INVALID');
     result[name] = Object.freeze({
       source: rel,
       sourceSemanticId: name,
@@ -237,7 +222,7 @@ export function discoverVscodeAgents(context: ProjectionBuildContext): Record<st
       disposition: 'native'
     });
   }
-
+  assertUniqueNames(Object.keys(result));
   return Object.freeze(result);
 }
 
@@ -311,36 +296,12 @@ export function discoverAllVscodeNames(context: ProjectionBuildContext): VscodeD
   const workflows = discoverVscodeWorkflows(context);
 
   // Validate no collisions in the skills/ directory namespace
-  const skillDirs = new Set<string>();
-  const allSkillDirs: string[] = [];
-
-  for (const skill of skillDiscovery.skills) {
-    const lower = skill.localName.toLowerCase();
-    if (skillDirs.has(lower)) {
-      throw new ControlPlaneError('VALIDATION_INVALID');
-    }
-    skillDirs.add(lower);
-    allSkillDirs.push(skill.localName);
-  }
-
-  for (const cmd of Object.values(commands)) {
-    const lower = cmd.localName.toLowerCase();
-    if (skillDirs.has(lower)) {
-      throw new ControlPlaneError('VALIDATION_INVALID');
-    }
-    skillDirs.add(lower);
-    allSkillDirs.push(cmd.localName);
-  }
-
-  for (const style of Object.values(styles)) {
-    const lower = style.localName.toLowerCase();
-    if (skillDirs.has(lower)) {
-      throw new ControlPlaneError('VALIDATION_INVALID');
-    }
-    skillDirs.add(lower);
-    allSkillDirs.push(style.localName);
-  }
-
+  const allSkillDirs = [
+    ...skillDiscovery.skills.map((skill) => skill.localName),
+    ...Object.values(commands).map((command) => command.localName),
+    ...Object.values(styles).map((style) => style.localName)
+  ];
+  assertUniqueNames(allSkillDirs);
   allSkillDirs.sort();
 
   return Object.freeze({

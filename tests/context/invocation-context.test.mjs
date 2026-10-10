@@ -65,6 +65,7 @@ test('rejects unknown targets, traversal, and symlinked context roots', () => {
   mkdirSync(actual); symlinkSync(actual, link, 'dir');
   assert.throws(() => resolveInvocationContext({ packageRoot, cwd: packageRoot, home: link }), (error) => error.code === 'PATH_UNSAFE');
   assert.throws(() => resolveInvocationContext({ packageRoot, cwd: packageRoot, targets: ['unknown'] }), (error) => error.code === 'CAPABILITY_UNSUPPORTED');
+  assert.throws(() => resolveInvocationContext({ packageRoot, cwd: packageRoot, targets: ['gemini'] }), (error) => error.code === 'CAPABILITY_UNSUPPORTED');
   const registryPath = join(root, 'manifest.json');
   writeFileSync(registryPath, JSON.stringify({ schema_version: 2, targets: { omp: '../escape/manifest.json' } }));
   assert.throws(() => loadTargetRegistry(registryPath), (error) => error.code === 'PROTOCOL_INVALID');
@@ -77,7 +78,7 @@ test('exposes immutable manifest-derived project directory and document descript
   mkdirSync(home); mkdirSync(project);
   const context = resolveInvocationContext({
     packageRoot, cwd: packageRoot, home, projectRoot: project,
-    targets: ['codex', 'gemini']
+    targets: ['codex', 'antigravity']
   });
 
   // Check Codex descriptors
@@ -93,9 +94,9 @@ test('exposes immutable manifest-derived project directory and document descript
 
   assert.equal(codex.projectDirectoryDescriptors[1].kind, 'directory');
   assert.equal(codex.projectDirectoryDescriptors[1].targetId, 'codex');
-  assert.equal(codex.projectDirectoryDescriptors[1].relativeDestination, '.agents');
+  assert.equal(codex.projectDirectoryDescriptors[1].relativeDestination, '.agents/skills');
   assert.equal(codex.projectDirectoryDescriptors[1].declarationIndex, 1);
-  assert.equal(codex.projectDirectoryDescriptors[1].localSource, join(packageRoot, '.evcrate/source/.agents'));
+  assert.equal(codex.projectDirectoryDescriptors[1].localSource, join(packageRoot, '.evcrate/source/.agents/skills'));
 
   assert.equal(codex.projectDocumentDescriptors.length, 1);
   assert.equal(codex.projectDocumentDescriptors[0].kind, 'document');
@@ -105,26 +106,28 @@ test('exposes immutable manifest-derived project directory and document descript
   assert.equal(codex.projectDocumentDescriptors[0].localSource, join(packageRoot, '.evcrate/source/AGENTS.md'));
 
   assert.equal(codex.projectDescriptors.length, 3);
-  assert.deepEqual(codex.projectDescriptors.map((d) => d.relativeDestination), ['.codex', '.agents', 'AGENTS.md']);
+  assert.deepEqual(codex.projectDescriptors.map((d) => d.relativeDestination), ['.codex', '.agents/skills', 'AGENTS.md']);
   assert.deepEqual(codex.projectDirectoryBindings, codex.projectDirectoryDescriptors);
   assert.deepEqual(codex.projectDocumentBindings, codex.projectDocumentDescriptors);
   assert.ok(Object.isFrozen(codex.projectDirectoryDescriptors));
   assert.ok(Object.isFrozen(codex.projectDocumentDescriptors));
   assert.ok(Object.isFrozen(codex.projectDescriptors));
 
-  // Check Gemini descriptors
-  const gemini = context.selectedTargets.find(({ id }) => id === 'gemini');
-  assert.ok(gemini);
-  assert.equal(gemini.projectDirectoryDescriptors.length, 1);
-  assert.equal(gemini.projectDirectoryDescriptors[0].relativeDestination, '.gemini');
-  assert.equal(gemini.projectDocumentDescriptors.length, 1);
-  assert.equal(gemini.projectDocumentDescriptors[0].relativeDestination, 'GEMINI.md');
-  assert.equal(gemini.projectDocumentDescriptors[0].kind, 'document');
+  // Native Antigravity documents coexist with Codex-owned skills.
+  const antigravity = context.selectedTargets.find(({ id }) => id === 'antigravity');
+  assert.ok(antigravity);
+  assert.equal(antigravity.projectDirectoryDescriptors.length, 1);
+  assert.equal(antigravity.projectDirectoryDescriptors[0].relativeDestination, '.antigravity');
+  assert.deepEqual(antigravity.projectDocumentDescriptors.map((descriptor) => descriptor.relativeDestination), [
+    '.agents/hooks.json', '.agents/rules/evcrate-antigravity.md'
+  ]);
+  assert.ok(antigravity.projectDocumentDescriptors.every((descriptor) => descriptor.kind === 'document'));
+  assert.equal(antigravity.homeBindings[0].homeRoot, join(home, '.gemini/config'));
 
   // Check InvocationContext top-level aggregate descriptors
   assert.equal(context.projectDirectoryDescriptors.length, 3);
-  assert.equal(context.projectDocumentDescriptors.length, 2);
-  assert.equal(context.projectDescriptors.length, 5);
+  assert.equal(context.projectDocumentDescriptors.length, 3);
+  assert.equal(context.projectDescriptors.length, 6);
   assert.ok(Object.isFrozen(context.projectDirectoryDescriptors));
   assert.ok(Object.isFrozen(context.projectDocumentDescriptors));
   assert.ok(Object.isFrozen(context.projectDescriptors));
@@ -170,7 +173,7 @@ test('rejects intra-manifest and cross-target directory overlap, document collis
 
   // Cross-target root/doc collision (target A outputRoot matches target B projectDoc)
   const targetC = {
-    id: 'gemini', name: 'gemini', manifestPath: 'm3', adapter: null, adapterSources: [],
+    id: 'copilot', name: 'copilot', manifestPath: 'm3', adapter: null, adapterSources: [],
     outputRoots: ['SHARED_DOC.md'], ownedPaths: [], patches: [], projectDocs: [],
     homePolicy: { bindings: { 'SHARED_DOC.md': 'SHARED_DOC.md' }, preservePaths: {}, promotionOrder: 30, rejectUnmanagedCollisions: false, publicationRules: [] },
     sourceRoot: root, overlayRoot: null, sharedJson: null
@@ -186,14 +189,14 @@ test('rejects intra-manifest and cross-target directory overlap, document collis
 
 test('assertNoDescriptorOverlap rejects duplicate document destination and overlapping directory destination', () => {
   const doc1 = { kind: 'document', targetId: 'codex', localSource: '/src/1', generatedSource: '/src/1', relativeDestination: 'DOC.md', declarationIndex: 0 };
-  const doc2 = { kind: 'document', targetId: 'gemini', localSource: '/src/2', generatedSource: '/src/2', relativeDestination: 'DOC.md', declarationIndex: 0 };
+  const doc2 = { kind: 'document', targetId: 'copilot', localSource: '/src/2', generatedSource: '/src/2', relativeDestination: 'DOC.md', declarationIndex: 0 };
   assert.throws(() => assertNoDescriptorOverlap([doc1, doc2]), (error) => error.code === 'PROTOCOL_INVALID');
 
   const dir1 = { kind: 'directory', targetId: 'claude', localSource: '/src/d1', generatedSource: '/src/d1', relativeDestination: 'root', declarationIndex: 0 };
   const dir2 = { kind: 'directory', targetId: 'omp', localSource: '/src/d2', generatedSource: '/src/d2', relativeDestination: 'root/child', declarationIndex: 0 };
   assert.throws(() => assertNoDescriptorOverlap([dir1, dir2]), (error) => error.code === 'PROTOCOL_INVALID');
 
-  const doc3 = { kind: 'document', targetId: 'gemini', localSource: '/src/3', generatedSource: '/src/3', relativeDestination: 'root/child.md', declarationIndex: 0 };
+  const doc3 = { kind: 'document', targetId: 'copilot', localSource: '/src/3', generatedSource: '/src/3', relativeDestination: 'root/child.md', declarationIndex: 0 };
   assert.throws(() => assertNoDescriptorOverlap([dir1, doc3]), (error) => error.code === 'PROTOCOL_INVALID');
 });
 

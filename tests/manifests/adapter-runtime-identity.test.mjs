@@ -1,108 +1,127 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendFileSync, cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
+  appendFileSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import {
+  buildManifestBytes,
+  controllerHashes,
   loadTargetManifestRegistry,
   loadSelectedManifests,
-  manifestAdapterHashes
+  manifestAdapterHashes,
+  verifyBuild
 } from '../../dist/index.js';
 
 const packageRoot = process.cwd();
+const controllerRoot = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
+const sharedHelper = 'dist/adapters/advisory.js';
+const vscodeHelper = 'dist/adapters/vscode/configuration-validation.js';
 
-const TRANSLATED_TARGETS = [
-  'antigravity',
-  'codex',
-  'copilot',
-  'gemini',
-  'omp',
-  'pi',
-  'vscode'
-];
+function code(errorCode) {
+  return (error) => error?.code === errorCode;
+}
 
-
-test('adapter-runtime-identity: helper-only change invalidates adapter identity across all 7 affected targets in disposable copied runtime', (t) => {
+function copiedTranslatedRuntime(t) {
   const tempDir = mkdtempSync(join(tmpdir(), 'evcrate-adapter-identity-'));
   t.after(() => rmSync(tempDir, { recursive: true, force: true }));
-
-  // Set up disposable isolated runtime directory
-  // Copy target definitions
   cpSync(join(packageRoot, '.evcrate', 'targets'), join(tempDir, '.evcrate', 'targets'), { recursive: true });
-  cpSync(join(packageRoot, '.evcrate', 'source', '.claude'), join(tempDir, '.evcrate', 'source', '.claude'), { recursive: true });
+  for (const resource of ['agents', 'commands', 'hooks', 'skills', 'workflows']) {
+    mkdirSync(join(tempDir, '.evcrate', 'source', '.claude', resource), { recursive: true });
+  }
 
-  const tempRegistryPath = join(tempDir, '.evcrate', 'targets', 'manifest.json');
-  const tempRegistry = loadTargetManifestRegistry(tempRegistryPath);
-  const tempManifests = loadSelectedManifests(tempRegistry, TRANSLATED_TARGETS);
-
-  // Copy declared adapter files into disposable runtime
-  for (const manifest of tempManifests) {
+  const registry = loadTargetManifestRegistry(join(tempDir, '.evcrate', 'targets', 'manifest.json'));
+  const manifests = loadSelectedManifests(registry).filter((manifest) => manifest.adapter !== null);
+  for (const manifest of manifests) {
     for (const sourcePath of [manifest.adapter, ...manifest.adapterSources]) {
-      if (sourcePath) {
-        const srcFull = join(packageRoot, sourcePath);
-        const destFull = join(tempDir, sourcePath);
-        mkdirSync(join(destFull, '..'), { recursive: true });
-        cpSync(srcFull, destFull);
-      }
+      if (sourcePath === null) continue;
+      const destination = join(tempDir, sourcePath);
+      mkdirSync(dirname(destination), { recursive: true });
+      cpSync(join(packageRoot, sourcePath), destination);
     }
   }
+  return { tempDir, manifests };
+}
 
-  // Pre-condition: manifestAdapterHashes contains dist/adapters/uri-restoration.js
-  const beforeHashes = manifestAdapterHashes(tempManifests, tempDir);
-  assert.ok(
-    'dist/adapters/uri-restoration.js' in beforeHashes,
-    'Aggregate adapter hashes must contain dist/adapters/uri-restoration.js'
-  );
+function recordedBuild(tempDir, adapterHashes) {
+  const manifestPath = join(tempDir, '.evcrate', 'build-manifest.json');
+  writeFileSync(manifestPath, buildManifestBytes({
+    sourceHashes: {},
+    adapterHashes,
+    controllerHashes: controllerHashes(controllerRoot),
+    owners: {},
+    outputRoots: {},
+    validation: { complete: true },
+    homePolicy: {}
+  }));
+  return manifestPath;
+}
 
-  // Verify each target individually includes dist/adapters/uri-restoration.js in its hash closure
-  const perTargetBefore = new Map();
-  for (const manifest of tempManifests) {
-    const targetHashes = manifestAdapterHashes([manifest], tempDir);
-    assert.ok(
-      'dist/adapters/uri-restoration.js' in targetHashes,
-      `Target ${manifest.name} individual adapter hashes must contain dist/adapters/uri-restoration.js`
-    );
-    perTargetBefore.set(manifest.name, targetHashes);
-  }
+function verifyRecordedBuild(manifestPath, adapterHashes) {
+  return verifyBuild({
+    manifestPath,
+    outputRoots: {},
+    controllerRoot,
+    sourceHashes: {},
+    adapterHashes
+  });
+}
 
-  // Mutate ONLY the extracted helper file in the disposable copied runtime
-  appendFileSync(join(tempDir, 'dist', 'adapters', 'uri-restoration.js'), '\n// helper-only identity mutation\n');
+test('a shared adapter helper change invalidates every translated adapter and rejects the recorded build', (t) => {
+  const { tempDir, manifests } = copiedTranslatedRuntime(t);
+  const beforeByTarget = new Map(manifests.map((manifest) => [
+    manifest.name,
+    manifestAdapterHashes([manifest], tempDir)
+  ]));
+  const before = manifestAdapterHashes(manifests, tempDir);
+  const manifestPath = recordedBuild(tempDir, before);
+  assert.doesNotThrow(() => verifyRecordedBuild(manifestPath, before));
 
-  // Recompute aggregate adapter hashes
-  const afterHashes = manifestAdapterHashes(tempManifests, tempDir);
+  appendFileSync(join(tempDir, sharedHelper), '\n// shared helper identity mutation\n');
+  const after = manifestAdapterHashes(manifests, tempDir);
 
-  // Helper hash must differ
-  assert.notEqual(
-    afterHashes['dist/adapters/uri-restoration.js'],
-    beforeHashes['dist/adapters/uri-restoration.js'],
-    'Helper hash must change after helper-only modification'
-  );
-  assert.notDeepEqual(afterHashes, beforeHashes, 'Aggregate adapter hashes must change after helper-only modification');
-
-  // Verify that EVERY individual translated target adapter identity is invalidated
-  for (const manifest of tempManifests) {
-    const targetBefore = perTargetBefore.get(manifest.name);
-    const targetAfter = manifestAdapterHashes([manifest], tempDir);
+  for (const manifest of manifests) {
     assert.notDeepEqual(
-      targetAfter,
-      targetBefore,
-      `Target ${manifest.name} adapter identity must be invalidated by helper-only change`
-    );
-    assert.notEqual(
-      targetAfter['dist/adapters/uri-restoration.js'],
-      targetBefore['dist/adapters/uri-restoration.js'],
-      `Target ${manifest.name} helper hash must reflect helper-only change`
+      manifestAdapterHashes([manifest], tempDir),
+      beforeByTarget.get(manifest.name),
+      `${manifest.name} must reject an identity recorded before its shared helper changed`
     );
   }
+  assert.throws(
+    () => verifyRecordedBuild(manifestPath, after),
+    code('PUBLICATION_FAILED')
+  );
+});
 
-  // Verify no unintended hash changed (all other keys must remain identical)
-  for (const [key, value] of Object.entries(beforeHashes)) {
-    if (key !== 'dist/adapters/uri-restoration.js') {
-      assert.equal(
-        afterHashes[key],
-        value,
-        `Unmodified adapter file ${key} hash must remain unchanged`
-      );
+test('a VS Code helper change invalidates only its adapter and rejects the recorded build', (t) => {
+  const { tempDir, manifests } = copiedTranslatedRuntime(t);
+  const beforeByTarget = new Map(manifests.map((manifest) => [
+    manifest.name,
+    manifestAdapterHashes([manifest], tempDir)
+  ]));
+  const before = manifestAdapterHashes(manifests, tempDir);
+  const manifestPath = recordedBuild(tempDir, before);
+  assert.doesNotThrow(() => verifyRecordedBuild(manifestPath, before));
+
+  appendFileSync(join(tempDir, vscodeHelper), '\n// target helper identity mutation\n');
+  const after = manifestAdapterHashes(manifests, tempDir);
+
+  for (const manifest of manifests) {
+    const current = manifestAdapterHashes([manifest], tempDir);
+    if (manifest.name === 'vscode') {
+      assert.notDeepEqual(current, beforeByTarget.get(manifest.name));
+    } else {
+      assert.deepEqual(current, beforeByTarget.get(manifest.name));
     }
   }
+  assert.throws(
+    () => verifyRecordedBuild(manifestPath, after),
+    code('PUBLICATION_FAILED')
+  );
 });

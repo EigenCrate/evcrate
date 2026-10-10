@@ -25,7 +25,7 @@
 - Prioritize functionality and readability over strict style enforcement and code formatting
 - Use reasonable code quality standards that enhance developer productivity
 - Use try catch error handling & cover security standards
-- Use `code-reviewer` agent to review code after every implementation
+- Use `evc-code-reviewer` agent to review code after every implementation
 - Implementation commands first resolve the helper result through [Advice activation](./advice-activation.md); use exact `WORK_ARGUMENTS` and `ADVICE_MODE`, never duplicated parsing, history-based activation or synthetic flag inheritance.
 - Off mode keeps normal validation/review/approval and ordinary debugger/user escalation on a second matching terminal blocker; it never loads full mentoring, invokes `evcrate-advisor` (no get, no locks) or hard lifecycle/inference. Risky actions remain approval-gated.
 - Only resolved explicit/inherited mode loads [Caller lifecycle binding](./advisor-mentoring.md#caller-lifecycle-binding): parent-owned state, writer barriers, same-run CAS/gates, registered bounded work and matching truthful validation outcomes, substantive finalization before seal. Review caps/chat approval do not bypass durable human gates.

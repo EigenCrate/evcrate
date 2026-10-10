@@ -42,13 +42,28 @@ The following patterns are strictly prohibited across the codebase:
 - **No full mentoring load or controller consultation in off mode**: Callers must resolve activation mode via `evcrate-advice-mode` before loading `advisor-mentoring.md`. Off mode strictly forbids reading mentoring instructions through navigation, loops, or fallback prompts, and never invokes `evcrate-advisor` (no get, no locks).
 - **No synthetic flag appending or handoff replay**: Routers and delegators must use structured direct handoffs (`kind: "pre-run"` or `"same-run"`) built for the exact current call only. User-entered commands always use `handoff: null`; appending fake or synthetic `--advice` flags or replaying prior handoffs is banned.
 - **No historical state mutation or off-mode state get during progress inspection**: Progress reconciliation via `plan-progress.md` in `off` mode never invokes `evcrate-advisor` (dependency basis is immutable in-repo receipts + sealed-path metadata, reported `receipt-attested; controller not consulted`; identified unreceipted runs pause same/overlapping scope only). Only `explicit` and `inherited` modes use identified `state get`, and progress inspection never invokes `init`, checkpoint reservations, claims, consultation, disposition, outcome, or completion.
+- **No legacy command or agent naming in maintained sources**: All commands strictly project `evc-cmd-*` (nested with `-x-`, length <= 64), custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy shapes (`cmd_`, colons, underscores).
+- **Single AGENTS.md authoring authority**: Canonical instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never author in root `AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
+- **Branch topology and release qualification**: Canonical release branches are `main` (stable) and `next` (prerelease `rc`). Stable publication always requires live, candidate-bound GitHub authorization; caller-authored approval files and environment flags cannot grant authorization.
+
+### Stable-release authorization
+
+- Configure `production` before stable publication: required human User reviewers with repository maintain/admin roles, prevent self-review, disable administrator bypass, and allow only the selected `main` branch (no tag policies or wildcards).
+- The publisher checks the live environment and branch-policy APIs, then verifies the candidate's canonical repository, source commit, release workflow path, run ID, and attempt against GitHub.
+- The workflow run's production review history must contain an approved review by a configured maintainer/admin distinct from both the actor and triggering actor. Record the actual reviewer and source API, not the initiating actor or a fabricated review timestamp.
+- Stable publication requires `GITHUB_TOKEN` or `GH_TOKEN` with access to run/review history, environment protections, branch policies, and collaborator permissions. API errors or unsupported protection shapes fail closed.
+- Review history cannot bind approvals to rerun attempts; stable reruns require a new workflow run. Offline stable publication is not supported. Prerelease publication does not require production approval.
+- `--approval`, `--approval-evidence`, `--require-approval`, and local approval-path/requirement environment variables are removed. Candidate receipt and asset-hash verification remain mandatory.
+- Live setup verified 2026-10-10: `production` reviewers `loidinhm31` and `quochuy-vo`, self-review prevented, admin bypass disabled, selected deployment branch `main`. The publisher rechecks these protections rather than trusting this documentation.
+- API contracts: [environment protections](https://docs.github.com/en/rest/deployments/environments) and [workflow review history](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run).
+
 ## Repository structure and ownership
 
 ```text
 .
 ├── .evcrate/source/.claude/       canonical harness resources
 ├── .evcrate/source/.evcrate/bin/  shared advisor-controller source
-├── .evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/
+├── .evcrate/source/{.claude-projection,.agents/skills,.codex,.antigravity,.pi,.omp,.copilot}/
 │                                  generated target projections
 ├── .evcrate/targets/              schema-2 target manifests and overlays
 ├── .evcrate/registry.json         schema-1 canonical resource registry
@@ -66,10 +81,10 @@ The following patterns are strictly prohibited across the codebase:
 scoped repository inventory. Do not describe them as alternate engines. The current
 package path is TypeScript; source retains compatibility-engine types for transition
 and validation boundaries, but no root `distribute.py` command is canonical.
-The eight generated target trees are listed above (`.agents`, `.codex`, `.gemini`,
-`.antigravity`, `.pi`, `.omp`, `.copilot`, and `.evcrate-vscode`); the persisted adapter IDs remain
-`claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Do not count
-the `.agents` Codex companion root as an additional adapter.
+Persisted adapter IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`,
+and `vscode`. Standalone Gemini is retired. Codex owns only `.agents/skills`;
+Antigravity owns exact hook/rule leaves within that shared parent. Claude local
+output `.claude-projection` never replaces canonical `.claude/AGENTS.md`.
 
 ### Scout-block ignore policy
 
@@ -88,10 +103,9 @@ negation behavior. Do not add `!dist`/`!build` command workarounds, infer file
 types from the working tree, or hand-edit generated projections.
 
 The canonical Claude resources are the only authored hook source. Regenerate the
-eight target trees (`.agents`, `.codex`, `.gemini`, `.antigravity`, `.pi`, `.omp`,
-`.copilot`, and `.evcrate-vscode`) and require `npm run distribute:check` before publication.
-`.agents` is Codex's companion output root, not a separate adapter; `vscode` is the
-eighth persisted adapter.
+current target projections and require `npm run distribute:check` before publication.
+Include VS Code Local and native nested instruction/hook/rule leaves. Companion
+directories are ownership boundaries, never additional adapter IDs.
 Projected and published OMP runtime behavior must retain the same allow/block
 boundary.
 
@@ -178,30 +192,22 @@ stderr, credentials, and stack traces do not cross the public boundary.
 - Exported functions have explicit return types and exhaustive result branches.
 - Comments explain security rationale or non-obvious invariants, not syntax.
 
-## Normative command naming
+## Normative command and resource naming
 
-All documentation and target-facing examples use a literal `cmd` prefix for every
-slash command/resource name, including names referring to `.claude` resources.
-This rule applies to prose, tables, examples, and generated documentation:
+All documentation and target-facing examples use unified `evc-cmd-*` naming for
+slash commands and `evc-*` naming for agents. The single authority is
+`src/adapters/resource-naming.ts`, enforced canonically by
+`.evcrate/source/.claude/scripts/scan_commands.py`:
 
-- Root forms are `/cmd-plan`, `/cmd-code`, `/cmd-cook`, `/cmd-fix`, and `/cmd-advise`.
-- OMP nested resource names replace path separators with `__`, for example
-  `/cmd-fix__hard` and `/cmd-review__codebase`.
-- Copilot projects a nested resource as `/evcrate-cmd-fix-hard`; its raw arguments
-  remain `$ARGUMENTS`.
-- A source path such as `.claude/commands/fix/hard.md` is a file reference, not a
-  slash invocation, and does not change source naming.
-- Shell executable syntax (`npm`, `node`, `python3`, `cp`, `export`) is not a slash
-  resource name and remains syntactically executable.
-
-This is a documentation/target convention for the migration. The canonical
-`.claude/scripts/scan_commands.py` scanner currently derives names from relative
-paths, and `src/cli/arguments.ts` accepts bare operational action names. Neither
-currently enforces a `cmd` prefix. That enforcement is a follow-up; do not claim
-this documentation change renamed source commands or completed parser migration.
-The OMP and Copilot `evcrate/command-name-map.json` files are authoritative for
-their projections. Do not invent aliases.
-
+- Canonical command source files are flat files under `.evcrate/source/.claude/commands/evc-cmd-*.md`.
+- Root forms are `/evc-cmd-plan`, `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, and `/evc-cmd-advise`.
+- Nested resources use the reserved segment separator `-x-`, for example
+  `/evc-cmd-fix-x-hard` and `/evc-cmd-review-x-codebase`. No segment may contain an isolated `x` token.
+- Agents use `/evc-*` (e.g., `evc-advisor`, `evc-code-reviewer`, `evc-planner`).
+- Copilot projects user-invocable skills as `evc-cmd-*` (with raw `$ARGUMENTS`) and styles as `evc-style-*`.
+- Semantic identities (e.g. `code/auto`) join segments with `/` and remain the stable key for advisor activation allowlists.
+- All seven active target projection adapters emit flat `evc-*` names without compatibility aliases.
+- Shell executable syntax (`npm`, `node`, `python3`, `cp`, `export`) is executable shell syntax, not slash resource names.
 ## Protocol and JSON standards
 
 Use repository parsers rather than permissive ad-hoc parsing at a control-plane
@@ -243,12 +249,16 @@ operation-specific exit codes at individual call sites.
 ### Target manifests
 
 The schema-2 target registry persists exactly `antigravity`, `claude`, `codex`,
-`copilot`, `gemini`, `omp`, `pi`, and `vscode`. `agy` is input-only normalization for
+`copilot`, `omp`, `pi`, and `vscode`. `agy` is input-only normalization for
 `antigravity`. Manifests declare exactly the resource roots `skill`, `agent`,
 `workflow`, `command`, and `hook`, plus target output/home policy. Normalize paths;
 reject traversal, backslashes, duplicate lists, symlinked ancestors, equal/nested
 output roots, unsafe adapter/helper files, and obsolete per-harness controller
 fields.
+Nested project documents are closed exact declarations: Copilot
+`.github/copilot-instructions.md`; Antigravity `.agents/hooks.json` and
+`.agents/rules/evcrate-antigravity.md`. Do not authorize either parent as a
+replaceable root; preserve user sibling contents and reject unmanaged leaf collisions.
 
 Patch authorization is explicit: a source must be a regular file under the manifest
 patch subtree; destination must be normalized, unique, and inside a declared output
@@ -257,9 +267,10 @@ valid JSON.
 
 ### Resource registry and imports
 
-Keep `.evcrate/registry.json` (schema 1) distinct from target/build manifests
-(schema 2). Schema 1 performs exact-seven read-only normalization for legacy clients,
-while schema 2 targets and build manifests manage all eight persisted targets.
+Keep resource registries distinct from schema-2 target/build manifests. Validate
+historical schema-1 and complete old eight-target schema-2 resource documents
+before read-only normalization; remove retired Gemini and add VS Code only for
+schema 1. Current writes persist seven targets with original-byte CAS.
 Registry records use stable `kind:canonical-relative-path` IDs, canonical source paths,
 file-versus-tree domain-separated content hashes, provenance, compatibility entries,
 capabilities, bounded optional metadata, and positive revisions. IDs and records sort
@@ -633,7 +644,7 @@ activation assets (`evcrate-advice-mode` and `lib/advisor/activation.cjs`). Both
 - **Physical safety and pre-filter rejection**: `visitSnapshotInputs` verifies `assertNoSymlinkAncestors` and `assertRealDirectory`. Unsafe entries (symlinks, non-regular files/directories) throw `PATH_UNSAFE` immediately before any ignore filter is evaluated. Traversal filters (`isIgnoredArtifact`) bypass heavy excluded directories (`node_modules/`, `__pycache__/`) without reading or recursing into descendant paths.
 - **Compiled runtime revision binding**: `compiledRuntimeHash` hashes all `.js` outputs in `dist`. The parent compares disk runtime against in-memory `loadedRuntimeHash`; any divergence throws `PUBLICATION_FAILED` across both serial (jobs 1) and worker (jobs 2) execution. Workers execute the snapshot runtime (`sharedInputs.runtimeRoot/distribution/target-worker.js`).
 - **Promotion freshness under lock before journal**: In `promoteUnlocked`, `options.hooks?.beforeTransaction?.()` executes input freshness checks (`assertLiveInputsUnchanged`) while holding the promotion lock, strictly BEFORE writing the journal or claiming destination outputs. Source drift fails safely before journal recording, avoiding spurious `ROLLBACK_FAILED`.
-- **Adapter hash closures**: All 7 translated targets (`antigravity`, `codex`, `copilot`, `gemini`, `omp`, `pi`, `vscode`) declare `dist/adapters/uri-restoration.js` in `adapter_sources`, ensuring changes to URI restoration invalidate target manifest digests.
+- **Adapter hash closures**: All six translated targets (`antigravity`, `codex`, `copilot`, `omp`, `pi`, `vscode`) declare `dist/adapters/uri-restoration.js` in `adapter_sources`; Antigravity also binds the shared Markdown frontmatter parser.
 - **Codex URL restoration**: `applyReplacements` uses a linear regex callback to restore placeholder URLs literally without string template interpolation (`$&`, `$$`) or cascading token substitution.
 - **Benchmark metric standard**: Build generation benchmark (`scripts/benchmark-build-generation.mjs`) reports post-build parent process RSS (`memoryUsage().rss`), not worker process-tree peak; historical qualification figures remain unchanged.
 
@@ -764,5 +775,6 @@ before reporting success.
 
 - [System architecture](./system-architecture.md), [Project overview and PDR](./project-overview-pdr.md), [Codebase summary](./codebase-summary.md).
 - [Project roadmap](./project-roadmap.md), [Project changelog](./project-changelog.md), [Project changelog archive](./project-changelog-archive.md).
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md).
 - [Pi-native migration](./pi-native-migration.md).
 - [Historical Advisor integration](./system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02); [Workspace Advisor host contract](./workspace-advisor-host-contract.md).

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - next
   workflow_dispatch:
 
 concurrency:
@@ -224,6 +225,8 @@ jobs:
     if: needs.release-candidate.outputs.has_release == 'true' && needs.release-candidate.outputs.artifact_id != ''
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'prerelease' }}
     permissions:
       contents: write
       issues: write
@@ -321,5 +324,6 @@ jobs:
           CANDIDATE_DIR="release-candidate"
           if [ ! -f "$CANDIDATE_DIR/candidate.json" ] && [ -f "$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json" ]; then
             export EVCRATE_RELEASE_CANDIDATE_RECEIPT="$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json"
+            CANDIDATE_DIR="$CANDIDATE_DIR/$ARTIFACT_NAME"
           fi
           npm run semantic-release

@@ -2,12 +2,11 @@ import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { filesUnder, writeJson, writeText } from './resources.js';
 import { splitFrontmatter } from './frontmatter.js';
-import type { CommandMap } from './commands.js';
-import { renderCommandReferences, translatePrompt } from './commands.js';
+import { translatePrompt } from './commands.js';
+import { assertAgentName } from '../resource-naming.js';
 
 const MODEL_MAP: Record<string, string> = { opus: '@slow', sonnet: '@default', haiku: '@smol' };
 const TOOL_MAP: Record<string, string> = { read: 'read', glob: 'glob', grep: 'grep', bash: 'bash', edit: 'edit', multiedit: 'edit', write: 'write', ls: 'glob', notebookedit: 'edit', webfetch: 'read', websearch: 'web_search', todowrite: 'todo' };
-const NAME = /^[a-z0-9][a-z0-9_-]*$/u;
 function invalid(): never { throw new ControlPlaneError('VALIDATION_INVALID'); }
 function tools(value: string): string[] {
   const raw = value.trim().replace(/^\[/u, '').replace(/\]$/u, '');
@@ -23,7 +22,7 @@ function serialize(fields: Readonly<Record<string, string | string[]>>, body: st
   lines.push('---', '', body.replace(/\r\n?/gu, '\n').replace(/\n+$/u, ''), '');
   return lines.join('\n');
 }
-export function convertAgents(context: ProjectionBuildContext, map: CommandMap, thinkingLevel: string | null): Record<string, unknown> {
+export function convertAgents(context: ProjectionBuildContext, thinkingLevel: string | null): Record<string, unknown> {
   const entries = filesUnder(context, 'agents').filter((entry) => entry.path.split('/').length === 2 && entry.path.endsWith('.md'));
   const seen = new Set<string>();
   const audit: Record<string, unknown> = {};
@@ -31,7 +30,8 @@ export function convertAgents(context: ProjectionBuildContext, map: CommandMap, 
     const parsed = splitFrontmatter(new TextDecoder().decode(entry.bytes));
     const name = (parsed.fields.name ?? '').trim();
     const description = (parsed.fields.description ?? '').trim();
-    if (!NAME.test(name) || !description || seen.has(name)) invalid();
+    assertAgentName(name, entry.path.slice('agents/'.length, -'.md'.length));
+    if (!description || seen.has(name)) invalid();
     seen.add(name);
     const rawModel = (parsed.fields.model ?? '').trim().toLowerCase();
     if (rawModel && rawModel !== 'inherit' && MODEL_MAP[rawModel] === undefined) invalid();
@@ -41,12 +41,12 @@ export function convertAgents(context: ProjectionBuildContext, map: CommandMap, 
       const target = TOOL_MAP[source.toLowerCase()];
       if (!target) dropped.push(source); else if (!mapped.includes(target)) mapped.push(target);
     }
-    if (name === 'advisor' && (!parsed.body.includes('## Required checkpoint method') || !parsed.body.includes('## Checkpoint terminal report'))) invalid();
-    const fields: Record<string, string | string[]> = { name, description: renderCommandReferences(description, map) };
+    if (name === 'evc-advisor' && (!parsed.body.includes('## Required checkpoint method') || !parsed.body.includes('## Checkpoint terminal report'))) invalid();
+    const fields: Record<string, string | string[]> = { name, description };
     if (mapped.length) fields.tools = mapped;
     if (rawModel && rawModel !== 'inherit') fields.model = MODEL_MAP[rawModel];
     if (thinkingLevel) fields['thinking-level'] = thinkingLevel;
-    writeText(context, `agents/${entry.path.split('/').pop()}`, serialize(fields, translatePrompt(parsed.body, map)));
+    writeText(context, `agents/${entry.path.split('/').pop()}`, serialize(fields, translatePrompt(parsed.body)));
     audit[name] = { source: entry.path.split('/').pop(), model: { source: rawModel || null, target: rawModel && rawModel !== 'inherit' ? MODEL_MAP[rawModel] : null }, tools: { mapped, dropped: dropped.sort() }, thinkingLevel };
   }
   writeJson(context, 'evcrate/agent-tool-audit.json', { schema: 'evcrate-omp-agent-tool-audit-v1', agents: audit });

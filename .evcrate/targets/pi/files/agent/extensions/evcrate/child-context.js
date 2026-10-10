@@ -1,4 +1,6 @@
 import hookAdapter from "./hook-adapter.cjs";
+import { dirname } from "node:path";
+import { resolveEvcrateMarkers } from "./paths.js";
 
 const { createChildStartRunner: createAdapterChildStartRunner } = hookAdapter;
 
@@ -67,6 +69,10 @@ export function createChildStartRunner(options = {}) {
 /** Reusable seam: structured delegation owns child-start invocation timing. */
 export async function runChildStart({ runner, canonicalEvent, task, runtimeRoots }) {
   const output = runner ? await runner(canonicalEvent) : undefined;
-  const additionalContext = parseAdditionalContext(output);
+  let additionalContext = parseAdditionalContext(output);
+  if (additionalContext?.includes("{{evcrate:")) {
+    if (!runtimeRoots?.resourceRoot) throw new Error("Installed EVCrate resource root is required for child context");
+    additionalContext = resolveEvcrateMarkers(additionalContext, dirname(runtimeRoots.resourceRoot));
+  }
   return { task: appendChildContext(task, additionalContext, runtimeRoots), additionalContext };
 }

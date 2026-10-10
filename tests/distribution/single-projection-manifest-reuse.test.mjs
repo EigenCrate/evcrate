@@ -77,7 +77,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
       assert.equal(parsedSingle.source_hashes['.evcrate/targets'], undefined, 'Single target manifest must NOT contain .evcrate/targets');
       assert.ok(parsedSingle.source_hashes['omp/manifest.json']);
       assert.ok(parsedSingle.source_hashes['.claude']);
-      assert.ok(parsedSingle.source_hashes['CLAUDE.md']);
+      assert.equal(parsedSingle.source_hashes['AGENTS.md'], shared.agentsMdHash);
       assert.ok(parsedSingle.home_policy.omp);
       assert.equal(parsedSingle.home_policy.claude, undefined);
 
@@ -102,7 +102,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
       assert.ok(allView.manifestPath.endsWith('build-manifest.json'));
       const parsedAll = JSON.parse(new TextDecoder().decode(allView.manifestData));
       assert.ok(parsedAll.source_hashes['.evcrate/targets'], 'All-targets manifest MUST contain .evcrate/targets');
-      assert.equal(Object.keys(parsedAll.home_policy).length, 9, 'All targets policy must have controller + 8 targets');
+      assert.equal(Object.keys(parsedAll.home_policy).length, PERSISTED_TARGETS.length + 1, 'All targets policy must include controller and every target');
     });
   });
 
@@ -117,19 +117,19 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
         cpSync(join(packageRoot, item), join(fixtureB, item), { recursive: true });
       }
 
-      // Legacy approach in fixtureA: 8 individual builds + 1 aggregate build (16 projections)
+      // Legacy approach: individual target builds plus aggregate build
       for (const target of PERSISTED_TARGETS) {
         await runLocalBuild(fixtureA, [target]);
       }
       await runLocalBuild(fixtureA, PERSISTED_TARGETS);
 
-      // New single-pass approach in fixtureB: 8 projections, 9 manifests promoted in 1 transaction
+      // Single-pass approach: each target projected once, all manifest views promoted together
       const result = await runAllManifestsBuild(fixtureB);
-      assert.equal(result.allManifestPaths.length, 9);
-      assert.equal(result.targetBuilds.size, 8);
+      assert.equal(result.allManifestPaths.length, PERSISTED_TARGETS.length + 1);
+      assert.equal(result.targetBuilds.size, PERSISTED_TARGETS.length);
       assert.ok(result.aggregateBuild);
 
-      // Verify all 9 manifests match 100% byte-for-byte
+      // Verify aggregate and every target manifest match byte-for-byte
       const manifestFiles = [
         'build-manifest.json',
         ...PERSISTED_TARGETS.map((t) => `build-manifest-${t}.json`)
@@ -175,9 +175,9 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
 
       const build = await runLocalBuild(fixture, PERSISTED_TARGETS, { emitAllManifests: true });
       assert.ok(build.manifest);
-      assert.equal(build.selectedManifests.length, 8);
+      assert.equal(build.selectedManifests.length, PERSISTED_TARGETS.length);
 
-      // Check that all 9 manifest files exist in destination
+      // Check aggregate and every target manifest exist in destination
       assert.ok(existsSync(join(fixture, '.evcrate', 'build-manifest.json')));
       for (const target of PERSISTED_TARGETS) {
         assert.ok(existsSync(join(fixture, '.evcrate', `build-manifest-${target}.json`)));

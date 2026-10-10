@@ -5,6 +5,7 @@ import { parseJsonDocument } from '../../protocol/json.js';
 import { copyGraphTree, graphFile, isProductionControllerArtifact, writeProjectionFile } from '../projection-utils.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { normalizeLf, validateSkillFrontmatter } from './frontmatter.js';
+import { parseCommandName } from '../resource-naming.js';
 import { renderHarnessScriptReferences, translatePiSkill, translatePrompt } from './transforms.js';
 import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
 
@@ -39,11 +40,16 @@ export function inventory(context: ProjectionBuildContext): ResourceInventory {
     if (basename(path) === 'SKILL.md') skills.add(relativeName(path, 'skills').slice(0, -8));
   }
   return Object.freeze({
-    commands: Object.freeze(markdown('commands')), workflows: Object.freeze(markdown('workflows')),
+    commands: Object.freeze(markdown('commands').map((name) => parseCommandName(name).name)), workflows: Object.freeze(markdown('workflows')),
     agents: Object.freeze(markdown('agents')), skills: Object.freeze([...skills].sort()),
     scripts: Object.freeze(canonicalFiles(context, 'scripts').map((path) => relativeName(path, 'scripts')).filter((path) => !isController(path) && !path.includes('advise-state')).sort()),
     hooks: Object.freeze(canonicalFiles(context, 'hooks').map((path) => relativeName(path, 'hooks')).filter((path) => !path.split('/').some((part) => SKIP_PARTS.has(part))).sort())
   });
+}
+
+export function copyAgentsDocument(context: ProjectionBuildContext, resources: ResourceInventory): void {
+  const source = text(context, 'AGENTS.md');
+  writeProjectionFile(context, '.pi/agent/evcrate/AGENTS.md', new TextEncoder().encode(translatePrompt(normalizeLf(source), resources.commands)));
 }
 
 
@@ -55,7 +61,7 @@ export function copyCommandsAndWorkflows(context: ProjectionBuildContext, resour
     const destination = `.pi/agent/evcrate/${prefix}/${relativeName(path, prefix)}`;
     const sourceText = normalizeLf(text(context, path));
     let value = translatePrompt(sourceText, resources.commands);
-    if (path === 'commands/advise.md') value = renderInlineAdviseCommand(sourceText, 'pi', 'ask_user_question');
+    if (path === 'commands/evc-cmd-advise.md') value = renderInlineAdviseCommand(sourceText, 'pi', 'ask_user_question');
     if (path === 'workflows/advisory-interview.md') value = renderAdvisoryInterviewWorkflow(sourceText, 'pi');
     if (path === 'workflows/advisor-mentoring.md') value = translatePrompt(renderMentoringWorkflow(sourceText, 'pi'), resources.commands);
     writeProjectionFile(context, destination, new TextEncoder().encode(value));

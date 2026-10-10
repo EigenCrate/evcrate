@@ -1,6 +1,7 @@
 import type { ProjectionBuildContext } from '../types.js';
 import { outputPath, writeJson, copyFile } from './common.js';
 import { writeProjectionFile, textBytes } from '../projection-utils.js';
+import { replaceHarnessPaths } from './references.js';
 import {
   LOCAL_HOOK_PROTOCOL_SOURCE,
   LOCAL_TOOL_INPUTS_SOURCE,
@@ -58,6 +59,19 @@ export function convertVscodeHooks(context: ProjectionBuildContext): VscodeHookA
     writeProjectionFile(context, outputPath(f.rel), textBytes(f.source), f.exec);
   }
 
+  // Portable help and catalog tools used by the projected procedures.
+  const portableScripts = ['ev-help.py', 'scan_commands.py', 'scan_skills.py', 'generate_catalogs.py', 'win_compat.py'];
+  for (const script of portableScripts) {
+    copyFile(context, `scripts/${script}`, `evcrate/scripts/${script}`, replaceHarnessPaths);
+  }
+  copyFile(context, 'scripts/requirements.txt', 'evcrate/scripts/requirements.txt');
+  const scripts = [
+    ...runtimeFiles.map((f) => f.rel),
+    ...portableScripts.map((script) => `evcrate/scripts/${script}`),
+    'evcrate/scripts/requirements.txt',
+    ...['scanner-layout.json', 'commands_data.yaml', 'skills_data.yaml'].map((file) => `evcrate/scripts/${file}`)
+  ];
+
   // 3. Copy .evcrateignore to root and evcrate/
   copyFile(context, '.evcrateignore', '.evcrateignore');
   copyFile(context, '.evcrateignore', 'evcrate/.evcrateignore');
@@ -83,13 +97,13 @@ export function convertVscodeHooks(context: ProjectionBuildContext): VscodeHookA
     schema: 'evcrate-vscode-hook-inventory-v1',
     plugin_id: 'evcrate-local',
     registered_events: [...VSCODE_LOCAL_HOOK_EVENTS],
-    runtime_scripts: runtimeFiles.map((f) => f.rel),
+    runtime_scripts: scripts,
     unsupported_capabilities: unsupported
   });
 
   return {
     hooks: ['com.github.copilot/hooks/hooks.json'],
-    scripts: runtimeFiles.map((f) => f.rel),
+    scripts,
     events: [...VSCODE_LOCAL_HOOK_EVENTS],
     unsupportedCapabilities: unsupported
   };

@@ -13,7 +13,7 @@ export function planInstallation({
 }) {
   const assets = inventory || getSourceInventory(sourceDir);
   const normalizedTarget = path.resolve(targetDir);
-  const targetClaudeDir = path.join(normalizedTarget, '.claude');
+  const targetAgentsDir = path.join(normalizedTarget, '.agents');
 
   const actions = [];
   const additions = [];
@@ -22,7 +22,7 @@ export function planInstallation({
   const blockers = [];
 
   for (const asset of assets) {
-    const destPath = path.join(targetClaudeDir, asset.relPath);
+    const destPath = path.join(targetAgentsDir, asset.relPath);
 
     // Symlink escape validation
     if (isSymlinkOrContainsSymlink(destPath, normalizedTarget)) {
@@ -100,7 +100,7 @@ export function planInstallation({
 
   return {
     targetDir: normalizedTarget,
-    targetClaudeDir,
+    targetAgentsDir,
     actions,
     additions,
     replacements,

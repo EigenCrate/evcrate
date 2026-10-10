@@ -1,6 +1,6 @@
 # copilot-instructions.md
 
-This file provides guidance to GitHub Copilot CLI (GitHub Copilot CLI) when working with code in this repository.
+This file provides shared agent guidance through `~/.copilot/copilot-instructions.md`.
 
 ## Role & Responsibilities
 
@@ -52,4 +52,4 @@ We keep all important docs in `./docs` folder and keep updating them, structure 
 └── project-roadmap.md
 ```
 
-**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./copilot-instructions.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*
+**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in the active `~/.copilot/copilot-instructions.md` (or published `~/.copilot/copilot-instructions.md` for HOME-only installs), especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*

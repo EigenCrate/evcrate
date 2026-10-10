@@ -27,7 +27,7 @@ The YAML frontmatter has 2 required properties:
     - Restricted to lowercase Unicode alphanumeric + hyphen
     - Must match the name of the directory containing the SKILL.md
 - `description` 
-    - Description of what the skill does and when Copilot should use it
+    - Description of what the skill does and when Claude should use it
 
 There are 3 optional properties:
 
@@ -36,7 +36,7 @@ There are 3 optional properties:
     - We recommend keeping it short (either the name of a license or the name of a bundled license file)
 - `allowed-tools` 
     - A list of tools that are pre-approved to run
-    - Currently only supported in GitHub Copilot CLI
+    - Currently only supported in Claude Code
 - `metadata`
     - A map from string keys to string values
     - Clients can use this to store additional properties not defined by the Agent Skills Spec
@@ -48,7 +48,7 @@ The Markdown body has no restrictions on it.
 
 # Additional Information
 
-For a minimal example, see the `evcrate-template-skill` example.
+For a minimal example, see the `evc-template-skill` example.
 
 # Version History
 

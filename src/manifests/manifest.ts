@@ -135,9 +135,14 @@ export function loadTargetManifest(path: string, expectedId?: PersistedTarget): 
     return Object.freeze({ source, destination, keys: Object.freeze(keys) });
   });
   const docs = pathList(data.project_docs ?? []);
-  if (docs.some((doc) => doc.includes('/'))) invalid();
+  const nestedDocuments: Readonly<Record<string, readonly string[]>> = {
+    copilot: ['.github/copilot-instructions.md'],
+    antigravity: ['.agents/hooks.json', '.agents/rules/evcrate-antigravity.md']
+  };
+  if (docs.some((doc) => doc.includes('/') && !nestedDocuments[id]?.includes(doc))) invalid();
   for (const doc of docs) {
     if (outputRoots.some((root) => pathOverlaps(root, doc))) invalid();
+    if (docs.some((other) => other !== doc && pathOverlaps(other, doc))) invalid();
   }
   const overlayRoot = data.overlay_root === undefined || data.overlay_root === null
     ? null : containedPath(repository, normalizeRelativePath(data.overlay_root));

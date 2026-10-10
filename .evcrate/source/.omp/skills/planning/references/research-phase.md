@@ -4,9 +4,9 @@
 
 ## Core Activities
 
-### Parallel Researcher Agents
-- Spawn multiple `researcher` agents in parallel to investigate different approaches
-- Wait for all researcher agents to report back before proceeding
+### Parallel evc-researcher Agents
+- Spawn multiple `evc-researcher` agents in parallel to investigate different approaches
+- Wait for all evc-researcher agents to report back before proceeding
 - Each researcher investigates a specific aspect or approach
 
 ### Sequential Thinking
@@ -36,9 +36,9 @@ repomix --remote https://github.com/mrgoonie/human-mcp
 ```
 
 ### Debugger Delegation
-- Delegate to `debugger` agent for root cause analysis
+- Delegate to `evc-debugger` agent for root cause analysis
 - Use when investigating complex issues or bugs
-- Debugger agent specializes in diagnostic tasks
+- evc-debugger agent specializes in diagnostic tasks
 
 ## Best Practices
 

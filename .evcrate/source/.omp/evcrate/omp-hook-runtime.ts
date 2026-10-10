@@ -1,14 +1,38 @@
+import { constants, fstatSync, lstatSync, openSync, readSync, closeSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { lstatSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const SOURCE_HOOK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "hooks");
+const RESOURCE_ROOT = path.resolve(SOURCE_HOOK_ROOT, "..");
+const MAX_AGENTS_BYTES = 256 * 1024;
 function hasSymlinkedAncestor(candidate: string): boolean {
   let current = path.resolve(candidate);
   while (true) {
     try { if (lstatSync(current).isSymbolicLink()) return true; } catch { return true; }
     const parent = path.dirname(current); if (parent === current) return false; current = parent;
   }
+}
+export function requiredAgentsContext(): string {
+  const candidate = path.resolve(RESOURCE_ROOT, "AGENTS.md");
+  if (path.dirname(candidate) !== RESOURCE_ROOT || hasSymlinkedAncestor(candidate)) throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  let initial; let descriptor: number;
+  try {
+    initial = lstatSync(candidate);
+    if (!initial.isFile() || initial.isSymbolicLink() || initial.size <= 0 || initial.size > MAX_AGENTS_BYTES) throw new Error("invalid payload");
+    descriptor = openSync(candidate, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch { throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable"); }
+  try {
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size !== initial.size || opened.dev !== initial.dev || opened.ino !== initial.ino) throw new Error("payload changed");
+    const bytes = Buffer.alloc(opened.size);
+    for (let offset = 0; offset < bytes.length;) { const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset); if (!count) throw new Error("payload truncated"); offset += count; }
+    const final = lstatSync(candidate);
+    if (!final.isFile() || final.isSymbolicLink() || final.size !== initial.size || final.dev !== initial.dev || final.ino !== initial.ino) throw new Error("payload changed");
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    if (!text || text.includes("\0")) throw new Error("payload is empty or invalid");
+    return text;
+  } catch { throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable"); }
+  finally { closeSync(descriptor); }
 }
 function canonicalHookPath(relative: string): string {
   const candidate = path.resolve(SOURCE_HOOK_ROOT, relative);

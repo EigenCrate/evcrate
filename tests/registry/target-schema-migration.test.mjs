@@ -33,20 +33,16 @@ import {
   createQualifiedRecordMap
 } from '../../dist/adapters/qualification.js';
 
-test('schema-migration: PERSISTED_TARGETS contains exactly 8 targets in fixed order', () => {
-  assert.equal(PERSISTED_TARGETS.length, 8);
-  assert.deepEqual(
-    [...PERSISTED_TARGETS],
-    ['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot', 'vscode']
-  );
+test('schema-migration: accepts current names and rejects retired or unknown targets', () => {
   assert.equal(normalizeTarget('vscode'), 'vscode');
   assert.equal(normalizeTarget('agy'), 'antigravity');
   assert.throws(() => normalizeTarget('unknown-target'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
   assert.throws(() => normalizeTarget('local'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
   assert.throws(() => normalizeTarget('vscode-local'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
+  assert.throws(() => normalizeTarget('gemini'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
 });
 
-test('schema-migration: legacy schema 1 records normalize with needsAdapter for vscode', () => {
+test('schema-migration: legacy schema 1 records drop Gemini and add needsAdapter for vscode', () => {
   const legacyRecord = {
     id: 'skill:skills/sample',
     kind: 'skill',
@@ -68,13 +64,46 @@ test('schema-migration: legacy schema 1 records normalize with needsAdapter for 
 
   const normalized = normalizeLegacyRecord(legacyRecord);
   assert.equal(normalized.id, legacyRecord.id);
-  assert.equal(Object.keys(normalized.compatibility).length, 8);
+  assert.equal(Object.keys(normalized.compatibility).length, 7);
+  assert.equal(Object.hasOwn(normalized.compatibility, 'gemini'), false);
   assert.equal(normalized.compatibility.vscode.status, 'needsAdapter');
   assert.equal(normalized.compatibility.vscode.reason, 'Local projection requires qualification');
 
   for (const target of LEGACY_SCHEMA_1_TARGETS) {
+    if (target === 'gemini') continue;
     assert.deepEqual(normalized.compatibility[target], legacyRecord.compatibility[target]);
   }
+  assert.deepEqual(Object.keys(normalized.compatibility), [...PERSISTED_TARGETS]);
+  for (const retiredEntry of [null, {}, { status: 'unknown' }, { status: 'unsupported' }, { status: 'native', extra: true }, { status: 'native', reason: 5 }]) {
+    assert.throws(
+      () => normalizeLegacyRecord({ ...legacyRecord, compatibility: { ...legacyRecord.compatibility, gemini: retiredEntry } }),
+      (err) => err?.code === 'PROTOCOL_INVALID'
+    );
+  }
+});
+
+test('schema-migration: complete historical schema 2 retires Gemini without changing other capabilities', () => {
+  const compatibility = Object.fromEntries(PERSISTED_TARGETS.map((target) => [target, { status: 'native' }]));
+  compatibility.vscode = { status: 'unsupported', reason: 'Fixture limitation' };
+  const record = {
+    id: 'skill:skills/sample', kind: 'skill', source_path: 'skills/sample',
+    content_hash: 'a'.repeat(64), origin: 'user', capabilities: [], revision: 1,
+    compatibility: { ...compatibility, gemini: { status: 'native' } },
+  };
+  const historical = { schema_version: 2, revision: 4, resources: [record] };
+  const result = validateRegistryDocument(historical);
+  assert.deepEqual(result.resources[0].compatibility, compatibility);
+  assert.equal(historical.resources[0].compatibility.gemini.status, 'native');
+  assert.equal(Object.hasOwn(JSON.parse(Buffer.from(registryDocumentBytes(result)).toString()).resources[0].compatibility, 'gemini'), false);
+  for (const retired of [null, {}, { status: 'unknown' }, { status: 'unsupported' }, { status: 'native', extra: true }]) {
+    assert.throws(() => validateRegistryDocument({
+      ...historical, resources: [{ ...record, compatibility: { ...compatibility, gemini: retired } }],
+    }), (error) => error?.code === 'PROTOCOL_INVALID');
+  }
+  const { vscode, ...partial } = record.compatibility;
+  assert.throws(() => validateRegistryDocument({
+    ...historical, resources: [{ ...record, compatibility: partial }],
+  }), (error) => error?.code === 'PROTOCOL_INVALID');
 });
 
 test('schema-migration: schema 1 document containing vscode is rejected', () => {
@@ -147,6 +176,7 @@ test('schema-migration: schema 1 document reads without disk writes and normaliz
     assert.equal(parsed.revision, 3);
     assert.equal(parsed.resources.length, 1);
     assert.equal(parsed.resources[0].compatibility.vscode.status, 'needsAdapter');
+    assert.equal(Object.hasOwn(parsed.resources[0].compatibility, 'gemini'), false);
 
     // Confirm file bytes on disk are completely untouched (read performs no mutation)
     const currentBytes = fs.readFileSync(regFile);
@@ -156,7 +186,7 @@ test('schema-migration: schema 1 document reads without disk writes and normaliz
   }
 });
 
-test('schema-migration: mutation upsert writes schema 2 document with all 8 targets', () => {
+test('schema-migration: mutation upsert writes schema 2 document with all 7 current targets', () => {
   const baseDoc = {
     schema_version: 1,
     revision: 1,
@@ -195,7 +225,6 @@ test('schema-migration: mutation upsert writes schema 2 document with all 8 targ
     compatibility: {
       claude: { status: 'native' },
       codex: { status: 'native' },
-      gemini: { status: 'native' },
       antigravity: { status: 'native' },
       pi: { status: 'native' },
       omp: { status: 'native' },
@@ -215,13 +244,18 @@ test('schema-migration: mutation upsert writes schema 2 document with all 8 targ
   const bytes = registryDocumentBytes(updated);
   const reRead = JSON.parse(Buffer.from(bytes).toString('utf8'));
   assert.equal(reRead.schema_version, 2);
+  for (const record of reRead.resources) {
+    assert.deepEqual(Object.keys(record.compatibility).sort(), [...PERSISTED_TARGETS].sort());
+    assert.equal(Object.hasOwn(record.compatibility, 'gemini'), false);
+  }
 });
 
-test('schema-migration: target manifest registry loads 8 targets including vscode', () => {
+test('schema-migration: target manifest registry loads 7 targets including vscode', () => {
   const registryPath = path.resolve('.evcrate/targets/manifest.json');
   const targetRegistry = loadTargetManifestRegistry(registryPath);
 
-  assert.equal(targetRegistry.targets.size, 8);
+  assert.equal(targetRegistry.targets.size, 7);
+  assert.equal(targetRegistry.targets.has('gemini'), false);
   assert.ok(targetRegistry.targets.has('vscode'));
 
   const vscodeManifest = targetRegistry.targets.get('vscode');

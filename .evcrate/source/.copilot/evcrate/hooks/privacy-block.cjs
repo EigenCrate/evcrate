@@ -210,7 +210,7 @@ function formatBlockMessage(filePath) {
 ${JSON.stringify(promptData, null, 2)}
 \x1b[90m@@PRIVACY_PROMPT_END@@\x1b[0m
 
-  \x1b[34mCopilot:\x1b[0m Use user-input tool with the JSON above, then:
+  \x1b[34mClaude:\x1b[0m Use user-input tool with the JSON above, then:
   \x1b[32mIf "Yes":\x1b[0m Use bash to read: cat "${filePath}"
   \x1b[31mIf "No":\x1b[0m  Continue without this file.
 `;
@@ -246,7 +246,7 @@ async function main() {
 
   const { tool_input: toolInput, tool_name: toolName } = hookData;
 
-  // For Bash commands, only warn but don't block - let GitHub Copilot CLI's permission system handle it
+  // For Bash commands, only warn but don't block - let Claude Code's permission system handle it
   // This allows the "Yes → bash cat" flow after user input approval
   const isBashTool = toolName === 'Bash' || toolName === 'run_shell_command' || toolName === 'run_command';
 

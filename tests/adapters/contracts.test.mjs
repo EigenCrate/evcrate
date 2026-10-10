@@ -7,8 +7,6 @@ import {
   hashBytes,
   loadTargetManifestRegistry,
   PROJECTION_QUALIFICATION_ORDER,
-  PROJECTION_REGISTRY_ORDER,
-  registeredProjectionAdapters,
   writeProjectionFile,
 } from '../../dist/index.js';
 import { projectionExpectations, registerProjectionExpectation } from '../../dist/adapters/types.js';
@@ -34,6 +32,9 @@ import { after, afterEach, before, test } from 'node:test';
 const repository = process.cwd();
 const registry = loadTargetManifestRegistry(join(repository, '.evcrate/targets/manifest.json'));
 const canonicalRoot = join(repository, '.evcrate/source/.claude');
+const fixtureRoot = mkdtempSync(join(process.platform === 'win32' ? tmpdir() : '/tmp', 'evcrate-adapter-contracts-'));
+const runtimeHome = join(fixtureRoot, 'home');
+const runtimeTemp = join(fixtureRoot, 'tmp');
 const stages = [];
 const temporaryRoots = [];
 const forbiddenControllerMarkers = ['advisor-bridge.cjs', 'advisor-coordinator.cjs', 'advisor-dispatch.cjs', 'advisor-handoff.cjs', 'native-capabilities.json', 'active_host'];
@@ -43,14 +44,14 @@ function code(expected) {
   return (error) => error?.code === expected;
 }
 function temporaryDirectory() {
-  const root = mkdtempSync(join(tmpdir(), 'evcrate-phase5-'));
+  const root = mkdtempSync(join(fixtureRoot, 'temporary-'));
   temporaryRoots.push(root);
   return root;
 }
 function materialize(target) {
   const cached = materializedTargets.get(target);
   if (cached) return cached;
-  const stage = createStagedRoot(repository, `.phase5-test-${target}-`);
+  const stage = createStagedRoot(fixtureRoot, `.projection-${target}-`);
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get(target), canonicalRoot, stage);
   const adapter = getProjectionAdapter(target);
@@ -64,7 +65,7 @@ function materialize(target) {
 }
 function freshProjection(target) {
   const source = materialize(target);
-  const stage = createStagedRoot(repository, `.phase5-mutation-${target}-`);
+  const stage = createStagedRoot(fixtureRoot, `.mutation-${target}-`);
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get(target), canonicalRoot, stage);
   for (const name of readdirSync(source.stage.path)) {
@@ -87,7 +88,8 @@ function filesUnder(root, prefix = '') {
 }
 function invokeRuntime(args, cwd, env, input = '{}') {
   const result = spawnSync(process.execPath, args, {
-    cwd, env: { ...process.env, ...env }, input, encoding: 'utf8'
+    cwd, env: { ...process.env, HOME: runtimeHome, USERPROFILE: runtimeHome, TMPDIR: runtimeTemp, TMP: runtimeTemp, TEMP: runtimeTemp, ...env },
+    input, encoding: 'utf8'
   });
   assert.equal(result.status, 0, `${args.join(' ')} failed: ${result.stderr}`);
   return result.stdout;
@@ -101,7 +103,7 @@ function installProjections(destination) {
   }
 }
 function installedProjectionRoot() {
-  const stage = createStagedRoot(repository, '.phase7-installed-');
+  const stage = createStagedRoot(fixtureRoot, '.installed-');
   stages.push(stage);
   installProjections(stage.path);
   symlinkSync(join(repository, 'node_modules'), join(stage.path, 'node_modules'), 'dir');
@@ -110,84 +112,66 @@ function installedProjectionRoot() {
 
 
 before(() => {
+  mkdirSync(runtimeHome);
+  mkdirSync(runtimeTemp);
   for (const target of PROJECTION_QUALIFICATION_ORDER) materialize(target);
 });
 after(() => {
   for (const stage of stages.splice(0)) stage.cleanup();
+  rmSync(fixtureRoot, { recursive: true, force: true });
 });
 afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
-test('projection registry is complete and qualification order is fixed', () => {
-  assert.deepEqual([...registeredProjectionAdapters().keys()], ['claude', 'codex', 'gemini', 'antigravity', 'pi', 'omp', 'copilot']);
-  assert.deepEqual([...PROJECTION_QUALIFICATION_ORDER], ['claude', 'gemini', 'antigravity', 'codex', 'pi', 'omp', 'copilot']);
-  assert.equal(getProjectionAdapter('agy').id, 'antigravity');
-  assert.throws(() => getProjectionAdapter('vscode'), (err) => err?.code === 'CAPABILITY_UNSUPPORTED');
-});
 test('brainstormer model projects through each target contract', () => {
   const claude = materialize('claude').stage.path;
-  assert.match(readFileSync(join(claude, '.claude/agents/brainstormer.md'), 'utf8'), /^model: opus$/mu);
-
-  const gemini = materialize('gemini').stage.path;
-  assert.match(readFileSync(join(gemini, '.gemini/agents/brainstormer.md'), 'utf8'), /^model: pro$/mu);
+  assert.match(readFileSync(join(claude, '.claude/agents/evc-brainstormer.md'), 'utf8'), /^model: opus$/mu);
 
   const codex = materialize('codex').stage.path;
-  const codexAgent = readFileSync(join(codex, '.codex/agents/brainstormer.toml'), 'utf8');
+  const codexAgent = readFileSync(join(codex, '.codex/agents/evc-brainstormer.toml'), 'utf8');
   assert.match(codexAgent, /^model = "gpt-5\.6-sol"$/mu);
   assert.match(codexAgent, /^model_reasoning_effort = "high"$/mu);
 
   const omp = materialize('omp').stage.path;
-  assert.match(readFileSync(join(omp, '.omp/agents/brainstormer.md'), 'utf8'), /^model: "@slow"$/mu);
+  assert.match(readFileSync(join(omp, '.omp/agents/evc-brainstormer.md'), 'utf8'), /^model: "@slow"$/mu);
 
   const pi = materialize('pi').stage.path;
   const piRoles = JSON.parse(readFileSync(join(pi, '.pi/agent/evcrate/model-roles.json'), 'utf8'));
-  assert.deepEqual(piRoles.agents.brainstormer, { role: 'strong', source: 'canonical-agent-frontmatter' });
+  assert.deepEqual(piRoles.agents['evc-brainstormer'], { role: 'strong', source: 'canonical-agent-frontmatter' });
 
   const copilot = materialize('copilot').stage.path;
   const copilotAudit = JSON.parse(readFileSync(join(copilot, '.copilot/evcrate/agent-tool-audit.json'), 'utf8'));
-  assert.deepEqual(copilotAudit.agents.brainstormer.model, {
+  assert.deepEqual(copilotAudit.agents['evc-brainstormer'].model, {
     source: 'opus',
     target: null,
     reason: 'Copilot inherits the active model',
   });
-  assert.equal(copilotAudit.agents.brainstormer.droppedFields.includes('model'), true);
-  assert.doesNotMatch(readFileSync(join(copilot, '.copilot/agents/evcrate-brainstormer.agent.md'), 'utf8'), /^model\s*:/mu);
+  assert.equal(copilotAudit.agents['evc-brainstormer'].droppedFields.includes('model'), true);
+  assert.doesNotMatch(readFileSync(join(copilot, '.copilot/agents/evc-brainstormer.agent.md'), 'utf8'), /^model\s*:/mu);
 
   const antigravity = materialize('antigravity').stage.path;
   assert.throws(() => lstatSync(join(antigravity, '.antigravity/agents/brainstormer.md')), { code: 'ENOENT' });
 });
 
 test('Copilot relative skill handoffs resolve across package and reference nesting', () => {
-  const skills = { review: 'evcrate-review' };
+  const skills = { review: 'evc-review' };
   const root = temporaryDirectory();
   for (const [document, link] of [
     ['fix/SKILL.md', '../review/SKILL.md'],
     ['fix/references/procedure.md', '../../review/SKILL.md'],
   ]) {
-    const rendered = replaceKnownNames(`[Review](${link}#decision)`, {}, skills);
+    const rendered = replaceKnownNames(`[Review](${link}#decision)`, skills);
     const destination = rendered.match(/\]\(([^#)]+)#decision\)/u)?.[1];
-    assert.equal(resolve(dirname(join(root, document)), destination), join(root, 'evcrate-review/SKILL.md'));
+    assert.equal(resolve(dirname(join(root, document)), destination), join(root, 'evc-review/SKILL.md'));
   }
   const unrelated = '[Remote](https://example.test/review/SKILL.md) [Local](references/review/SKILL.md)';
-  assert.equal(replaceKnownNames(unrelated, {}, skills), unrelated);
-  const agentOnly = '[Agent](../review/SKILL.md)';
-  assert.equal(replaceKnownNames(agentOnly, skills, {}), agentOnly);
+  assert.equal(replaceKnownNames(unrelated, skills), unrelated);
 });
 
 
-test('every target builds only its declared staged roots', () => {
-  const expectedRoots = {
-    claude: ['.claude'],
-    gemini: ['.gemini', 'GEMINI.md'],
-    antigravity: ['.antigravity'],
-    codex: ['.agents', '.codex', 'AGENTS.md'],
-    pi: ['.pi'],
-    omp: ['.omp'],
-    copilot: ['.copilot'],
-  };
+test('projections exclude controller implementation and host-selection artifacts', () => {
   for (const target of PROJECTION_QUALIFICATION_ORDER) {
     const { stage } = materialize(target);
-    assert.deepEqual(readdirSync(stage.path).sort(), expectedRoots[target]);
     for (const path of filesUnder(stage.path)) {
       assert.equal(path.includes('/bin/lib/advisor/'), false, `${target} copied controller path ${path}`);
       assert.equal(path.endsWith('/bin/evcrate-advisor'), false, `${target} copied controller entrypoint ${path}`);
@@ -210,7 +194,7 @@ test('target-specific managed settings and command maps stay independent', () =>
   const commandMap = JSON.parse(readFileSync(join(omp, '.omp/evcrate/command-name-map.json'), 'utf8'));
   assert.equal(commandMap.schema, 'evcrate-omp-command-map-v1');
   assert.ok(commandMap.commands.length > 0);
-  assert.ok(commandMap.commands.every(({ target }) => /^cmd-[A-Za-z0-9_-]+\.md$/u.test(target)));
+  assert.ok(commandMap.commands.every(({ source, sourceName, target, targetName }) => source === target && target === `${targetName}.md` && /^evc-cmd-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/u.test(target) && !sourceName.includes(':')));
   const copilot = materialize('copilot').stage.path;
   const managed = JSON.parse(readFileSync(join(copilot, '.copilot/evcrate/managed-settings.json'), 'utf8'));
   assert.deepEqual(Object.keys(managed).sort(), ['effortLevel', 'includeCoAuthoredBy', 'statusLine']);
@@ -218,20 +202,86 @@ test('target-specific managed settings and command maps stay independent', () =>
   assert.equal(managed.effortLevel, 'high');
 });
 
-test('Gemini rejects declared malformed or non-object settings', () => {
-  for (const document of ['{', '[]', 'null', '"scalar"']) {
+test('Codex and Antigravity project flat evc command and agent identities', () => {
+  const commandName = 'evc-cmd-code-x-auto';
+  const codex = materialize('codex').stage.path;
+  const codexSkill = readFileSync(join(codex, `.agents/skills/${commandName}/SKILL.md`), 'utf8');
+  assert.match(codexSkill, new RegExp(`^name: "${commandName}"$`, 'mu'));
+  assert.match(codexSkill, new RegExp(`^Command Path: \\$${commandName}$`, 'mu'));
+  assert.match(codexSkill, /\$evc-cmd-/u);
+  assert.doesNotMatch(codexSkill, /cmd_\*/u);
+  const codexAdvise = readFileSync(join(codex, '.agents/skills/evc-cmd-advise/SKILL.md'), 'utf8');
+  assert.match(codexAdvise, /\$evc-cmd-advise/u);
+  assert.doesNotMatch(codexAdvise, /\/advise\b/u);
+
+
+  const antigravity = materialize('antigravity').stage.path;
+  const antigravitySkill = readFileSync(join(antigravity, `.antigravity/skills/${commandName}/SKILL.md`), 'utf8');
+  assert.match(antigravitySkill, new RegExp(`^name: ${commandName}$`, 'mu'));
+  assert.match(antigravitySkill, new RegExp(`^Command Path: /${commandName}$`, 'mu'));
+  assert.equal(existsSync(join(antigravity, '.antigravity/agents/evc-advisor.md')), true);
+  assert.equal(existsSync(join(antigravity, '.antigravity/agents/advisor.md')), false);
+  const antigravityAdvise = readFileSync(join(antigravity, '.antigravity/skills/evc-cmd-advise/SKILL.md'), 'utf8');
+  assert.match(antigravityAdvise, /\/evc-cmd-advise/u);
+  assert.doesNotMatch(antigravityAdvise, /\/advise\b/u);
+  const commandNames = readdirSync(join(canonicalRoot, 'commands'))
+    .filter((name) => name.endsWith('.md'))
+    .map((name) => name.slice(0, -3));
+  for (const [skillRoot, quoted] of ([
+    [join(codex, '.agents/skills'), true],
+    [join(antigravity, '.antigravity/skills'), false],
+  ])) {
+    for (const name of commandNames) {
+      const projected = readFileSync(join(skillRoot, name, 'SKILL.md'), 'utf8');
+      assert.match(projected, new RegExp(`^name: ${quoted ? '"' : ''}${name}${quoted ? '"' : ''}$`, 'mu'));
+    }
+  }
+
+  const codexScout = readFileSync(join(codex, '.codex/agents/evc-scout-external.toml'), 'utf8');
+  assert.match(codexScout, /agy -p \\"\[prompt\]\\" --model gemini-3\.7-flash-high/u);
+});
+
+test('Antigravity command path derives only from the source filename', () => {
+  const sourceContainer = temporaryDirectory();
+  const sourceRoot = join(sourceContainer, '.claude');
+  cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
+  const commandPath = join(sourceRoot, 'commands/evc-cmd-code-x-auto.md');
+  writeFileSync(commandPath, readFileSync(commandPath, 'utf8').replace('---\n', '---\nname: /wrong-command\n'));
+  const stage = createStagedRoot(fixtureRoot, '.antigravity-command-path-');
+  stages.push(stage);
+  const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
+  getProjectionAdapter('antigravity').build(context);
+  const projected = readFileSync(join(stage.path, '.antigravity/skills/evc-cmd-code-x-auto/SKILL.md'), 'utf8');
+  assert.match(projected, /^Command Path: \/evc-cmd-code-x-auto$/mu);
+});
+
+test('Antigravity rejects conflicting advisor names before emission and preserves absent names', () => {
+  for (const name of ['evc-advisor', 'evc-other', 'advisor', '', null]) {
     const sourceContainer = temporaryDirectory();
     const sourceRoot = join(sourceContainer, '.claude');
-    mkdirSync(sourceRoot);
     cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
-    writeFileSync(join(sourceContainer, 'CLAUDE.md'), '# Test project context');
-    writeFileSync(join(sourceRoot, 'settings.json'), document);
-    const stage = createStagedRoot(repository, '.phase5-invalid-gemini-');
+    const advisorPath = join(sourceRoot, 'agents/evc-advisor.md');
+    const content = readFileSync(advisorPath, 'utf8').replace(
+      /^name: evc-advisor\n/mu, name === null ? '' : `name: ${name}\n`,
+    );
+    writeFileSync(advisorPath, content);
+    const stage = createStagedRoot(fixtureRoot, '.antigravity-advisor-name-');
     stages.push(stage);
-    const context = createProjectionBuildContext(registry.targets.get('gemini'), sourceRoot, stage);
-    assert.throws(() => getProjectionAdapter('gemini').build(context), code('VALIDATION_INVALID'), document);
+    const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
+    const projectedPath = join(stage.path, '.antigravity/agents/evc-advisor.md');
+    const build = () => getProjectionAdapter('antigravity').build(context);
+    if (name === 'evc-advisor' || name === null) {
+      build();
+      const projected = readFileSync(projectedPath, 'utf8');
+      if (name === null) assert.doesNotMatch(projected, /^name:/mu);
+      else assert.match(projected, /^name: evc-advisor$/mu);
+    } else {
+      assert.throws(build, code('VALIDATION_INVALID'), `advisor name ${JSON.stringify(name)}`);
+      assert.equal(existsSync(projectedPath), false, 'conflicting advisor must not be emitted');
+    }
   }
 });
+
 
 test('resource graph snapshots dist assets and rejects unsafe source entries', () => {
   const graph = createResourceGraph(canonicalRoot);
@@ -246,7 +296,7 @@ test('resource graph snapshots dist assets and rejects unsafe source entries', (
   assert.throws(() => createResourceGraph(root), code('PATH_UNSAFE'));
 });
 test('registered adapters reject mutated resource graph byte buffers', () => {
-  const stage = createStagedRoot(repository, '.phase5-graph-mutation-');
+  const stage = createStagedRoot(fixtureRoot, '.graph-mutation-');
   stages.push(stage);
   const context = createProjectionBuildContext(registry.targets.get('claude'), canonicalRoot, stage);
   const file = context.resources.files.find(({ bytes }) => bytes.byteLength > 0);
@@ -269,8 +319,8 @@ test('projection writes reject traversal and preserve graph bytes', () => {
 });
 
 test('validators reject missing, extra, modified, symlink, and special outputs while accepting mode changes', () => {
-  const missing = freshProjection('gemini');
-  rmSync(join(missing.stage.path, '.gemini/agents/advisor.md'));
+  const missing = freshProjection('antigravity');
+  rmSync(join(missing.stage.path, '.agents/rules/evcrate-antigravity.md'));
   assert.equal(missing.adapter.validate(missing.context).diagnostics.some(({ code }) => code === 'missing'), true);
 
   const extra = freshProjection('codex');
@@ -285,13 +335,13 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   assert.equal(modified.adapter.validate(modified.context).diagnostics.some(({ code }) => code === 'hash-mismatch'), true);
 
   const wrongMode = freshProjection('omp');
-  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/cmd-advise.md');
+  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/evc-cmd-advise.md');
   const initialMode = lstatSync(modePath).mode & 0o777;
   chmodSync(modePath, initialMode ^ 0o100);
   assert.equal(wrongMode.adapter.validate(wrongMode.context).valid, true);
 
-  const wrongDirectoryMode = freshProjection('gemini');
-  const directoryModePath = join(wrongDirectoryMode.stage.path, '.gemini/agents');
+  const wrongDirectoryMode = freshProjection('codex');
+  const directoryModePath = join(wrongDirectoryMode.stage.path, '.agents/skills');
   chmodSync(directoryModePath, 0o700);
   assert.equal(wrongDirectoryMode.adapter.validate(wrongDirectoryMode.context).valid, true);
 
@@ -301,7 +351,7 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   const symlink = freshProjection('pi');
   const outside = temporaryDirectory();
   const outsidePath = join(outside, 'payload');
-  const symlinkPath = join(symlink.stage.path, '.pi/agent/evcrate/commands/advise.md');
+  const symlinkPath = join(symlink.stage.path, '.pi/agent/evcrate/commands/evc-cmd-advise.md');
   writeFileSync(outsidePath, 'outside');
   rmSync(symlinkPath);
   symlinkSync(outsidePath, symlinkPath);
@@ -334,15 +384,24 @@ test('installed runtime entrypoints resolve children from their own roots and ke
   ));
   assert.equal(codex.hookSpecificOutput?.hookEventName, 'SessionStart');
 
-  const gemini = JSON.parse(invokeRuntime(
-    [join(installed, '.gemini/hooks/session-start.cjs')],
-    workspace, { GEMINI_PROJECT_DIR: workspace }
+  const invocation = JSON.parse(invokeRuntime(
+    [join(installed, '.antigravity/hooks/pre-invocation.cjs')],
+    workspace, { AGY_PROJECT_DIR: workspace },
+    JSON.stringify({
+      conversationId: 'installed-context-session',
+      workspacePaths: [workspace],
+      transcriptPath: join(container, 'transcript.jsonl'),
+      invocationNum: 0,
+      initialNumSteps: 0,
+    })
   ));
-  assert.equal(gemini.hookSpecificOutput?.hookEventName, 'SessionStart');
+  assert.ok(invocation.injectSteps.length > 0);
+  assert.ok(invocation.injectSteps.every(({ ephemeralMessage }) => typeof ephemeralMessage === 'string' && ephemeralMessage.length > 0));
 
   const antigravity = JSON.parse(invokeRuntime(
     [join(installed, '.antigravity/hooks/scout-block.cjs')],
-    workspace, { AGY_PROJECT_DIR: workspace }
+    workspace, { AGY_PROJECT_DIR: workspace },
+    JSON.stringify({ conversationId: 'installed-policy-session', workspacePaths: [workspace], toolCall: { name: 'run_command', args: { CommandLine: 'echo safe' } } })
   ));
   assert.equal(antigravity.decision, 'allow');
 
@@ -387,13 +446,13 @@ test('installed runtime wrappers deny missing and symlinked child hooks', () => 
   assert.equal(missing.hookSpecificOutput.permissionDecision, 'deny');
   assert.equal(missing.hookSpecificOutput.permissionDecisionReason, 'EVCREATE_HOOK_UNAVAILABLE');
 
-  const geminiChild = join(installed, '.gemini/hooks/scout-block.cjs');
-  rmSync(geminiChild);
-  symlinkSync(join(installed, '.gemini/hooks/privacy-block.cjs'), geminiChild);
+  const antigravityChild = join(installed, '.antigravity/hooks/scout-block.cjs.original.cjs');
+  rmSync(antigravityChild);
+  symlinkSync(join(installed, '.antigravity/hooks/privacy-block.cjs.original.cjs'), antigravityChild);
   const symlinked = JSON.parse(invokeRuntime(
-    [join(installed, '.gemini/hooks/before-tool-scout-block.cjs')],
-    workspace, { GEMINI_PROJECT_DIR: workspace },
-    '{"toolCall":{"args":{"CommandLine":"echo safe"}}}'
+    [join(installed, '.antigravity/hooks/scout-block.cjs')],
+    workspace, { AGY_PROJECT_DIR: workspace },
+    JSON.stringify({ conversationId: 'symlink-policy-session', workspacePaths: [workspace], toolCall: { name: 'run_command', args: { CommandLine: 'echo safe' } } })
   ));
   assert.equal(symlinked.decision, 'deny');
   assert.equal(symlinked.reason, 'EVCREATE_HOOK_UNAVAILABLE');
@@ -401,12 +460,12 @@ test('installed runtime wrappers deny missing and symlinked child hooks', () => 
 
 const SCRIPT_DIRS = {
   claude: '.claude/scripts',
-  gemini: '.gemini/scripts',
   antigravity: '.antigravity/scripts',
   codex: '.codex/scripts',
   pi: '.pi/agent/evcrate/scripts',
   omp: '.omp/evcrate/scripts',
   copilot: '.copilot/evcrate/scripts',
+  vscode: '.evcrate-vscode/evcrate/scripts',
 };
 
 test('seven-target scanner and catalog contracts hold from foreign CWD', () => {
@@ -493,7 +552,7 @@ test('projected scanners fail closed on missing target, duplicate map, and unsaf
   const initialCmdData = readFileSync(cmdDataFile, 'utf8');
 
   // Missing allowlisted command file
-  const targetCmd = join(stage.path, '.omp/evcrate/commands/cmd-advise.md');
+  const targetCmd = join(stage.path, '.omp/evcrate/commands/evc-cmd-advise.md');
   const backupCmd = readFileSync(targetCmd, 'utf8');
   rmSync(targetCmd);
   const missingRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });

@@ -1,0 +1,74 @@
+---
+name: "evc-cmd-coding-level"
+description: "Set your coding experience level for tailored explanations and output format."
+---
+
+# evc-cmd-coding-level
+
+Command Path: $evc-cmd-coding-level
+
+Description: Set your coding experience level for tailored explanations and output format.
+
+Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
+
+For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
+
+## Subagent Completion Contract
+
+Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
+
+- Parallel prompt format: **spawn N agents; wait for all N to finish; collect one terminal result from each; then summarize**.
+- Wait protocol: use the native agent wait/poll operation for the same agent set. **"No agents completed yet" is a non-terminal poll result; wait again.** Do not treat this as a timeout, sleep instead of polling, restart, interrupt, or advance the workflow.
+- A polling interval or retry count is not a delegation deadline. Do not invent a wall-clock limit. Continue polling until a terminal result, explicit user stop, or an actual parent-runtime termination.
+- Treat an interrupted, timed-out, missing, or partial result as a failed gate. Do not continue from partial output or silently restart it.
+- Sequential prompt format: **run one agent; wait for its terminal response before continuing**.
+- Every delegated prompt must define scope, file ownership, expected report, and validation signal.
+- A spawn acknowledgement or file change does not mean completion; completion requires the terminal response and requested validation.
+Set your coding experience level for tailored explanations and output format.
+
+## Usage
+
+`$evc-cmd-coding-level [0-5]`
+
+## Levels
+
+| Level | Name | Description |
+|-------|------|-------------|
+| 0 | ELI5 | Zero coding experience - analogies, no jargon, step-by-step |
+| 1 | Junior | 0-2 years - concepts explained, WHY not just HOW |
+| 2 | Mid-Level | 3-5 years - design patterns, system thinking |
+| 3 | Senior | 5-8 years - trade-offs, business context, architecture |
+| 4 | Tech Lead | 8-10 years - risk assessment, business impact, strategy |
+| 5 | God Mode | Expert - default behavior, maximum efficiency (default) |
+
+## How It Works
+
+1. Set `codingLevel` in `.codex/.evcrate.json`
+2. Guidelines are **automatically injected** on every session start
+3. No manual activation needed - it just works!
+
+## Example
+
+Set level 1 in `.codex/.evcrate.json`:
+```json
+{
+  "codingLevel": 1,
+  ...
+}
+```
+
+Next session, Claude will automatically:
+- Explain concepts and techniques clearly
+- Always explain WHY, not just HOW
+- Point out common mistakes
+- Add "Key Takeaways" after implementations
+
+## Optional: Manual Output Styles
+
+For finer control, you can also use `/output-style` with these styles:
+- `coding-level-0-eli5`
+- `coding-level-1-junior`
+- `coding-level-2-mid`
+- `coding-level-3-senior`
+- `coding-level-4-lead`
+- `coding-level-5-god`

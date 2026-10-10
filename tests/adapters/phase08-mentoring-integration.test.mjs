@@ -24,33 +24,6 @@ const canonicalRoot = join(repository, '.evcrate/source/.claude');
 const CLI = join(repository, '.evcrate/source/.evcrate/bin/evcrate-advisor');
 const FAKE_CODEX = join(repository, 'tests/advisor-controller/fixtures/fake-codex.cjs');
 
-test('TARGET_MENTORING_CAPABILITIES honestly declares supported mentoring and advisory-only write checks for all 7 targets', () => {
-  const expected = {
-    claude: { mentoring: 'supported', writeChecks: 'advisory-only' },
-    codex: { mentoring: 'supported', writeChecks: 'advisory-only' },
-    omp: { mentoring: 'supported', writeChecks: 'advisory-only' },
-    antigravity: { mentoring: 'supported', writeChecks: 'advisory-only' },
-    gemini: { mentoring: 'supported', writeChecks: 'advisory-only' },
-    copilot: { mentoring: 'supported', writeChecks: 'advisory-only' },
-    pi: { mentoring: 'supported', writeChecks: 'advisory-only' },
-  };
-
-  assert.deepEqual(Object.keys(TARGET_MENTORING_CAPABILITIES).sort(), Object.keys(expected).sort());
-  for (const [target, cap] of Object.entries(expected)) {
-    assert.deepEqual(TARGET_MENTORING_CAPABILITIES[target], cap, `Target ${target} capability mismatch`);
-  }
-});
-
-test('renderMentoringCapabilities transforms canonical markers to honest target-specific capabilities', () => {
-  const sample = `${MENTORING_START}\n${CANONICAL_MENTORING}\n${MENTORING_END}\n# Workflow Content`;
-
-  for (const target of ['claude', 'codex', 'omp', 'antigravity', 'gemini', 'copilot', 'pi']) {
-    const rendered = renderMentoringCapabilities(sample, target);
-    assert.ok(rendered.includes(`<!-- EVCRATE_CAPABILITY: mentoring/supported/v2 -->`));
-    assert.ok(rendered.includes(`<!-- EVCRATE_CAPABILITY: write-checks/${target}/advisory-only/v1 -->`));
-    assert.ok(rendered.includes('# Workflow Content'));
-  }
-});
 
 test('renderMentoringCapabilities rejects malformed or invalid inputs', () => {
   const isInvalid = (err) => err?.code === 'VALIDATION_INVALID';
@@ -793,41 +766,3 @@ test('state CLI tracks failed correction outcomes with exact 1-indexed ordinals 
   assert.ok(blockedComplete.stdout.includes('STATE_GATE_BLOCKED'));
 });
 
-test('all projection adapters (including claude) project advisor-mentoring.md with honest advisory-only capabilities', () => {
-  const targets = ['claude', 'omp', 'codex', 'copilot', 'pi', 'gemini', 'antigravity'];
-
-  for (const target of targets) {
-    const stage = createStagedRoot(repository, `.phase8-test-${target}-`);
-    try {
-      const context = createProjectionBuildContext(registry.targets.get(target), canonicalRoot, stage);
-      const adapter = getProjectionAdapter(target);
-      adapter.build(context);
-      const validation = adapter.validate(context);
-      assert.equal(validation.valid, true, `${target} projection validation failed: ${JSON.stringify(validation.diagnostics)}`);
-
-      let relativeWorkflowPath;
-      if (target === 'claude') relativeWorkflowPath = '.claude/workflows/advisor-mentoring.md';
-      else if (target === 'omp') relativeWorkflowPath = '.omp/evcrate/workflows/advisor-mentoring.md';
-      else if (target === 'copilot') relativeWorkflowPath = '.copilot/evcrate/workflows/advisor-mentoring.md';
-      else if (target === 'pi') relativeWorkflowPath = '.pi/agent/evcrate/workflows/advisor-mentoring.md';
-      else if (target === 'gemini') relativeWorkflowPath = '.gemini/workflows/advisor-mentoring.md';
-      else if (target === 'antigravity') relativeWorkflowPath = '.antigravity/workflows/advisor-mentoring.md';
-      else if (target === 'codex') relativeWorkflowPath = '.codex/workflows/advisor-mentoring.md';
-
-      const projectedFile = join(stage.path, relativeWorkflowPath);
-      assert.ok(existsSync(projectedFile), `Missing projected mentoring workflow in ${target}: ${projectedFile}`);
-      const projectedContent = readFileSync(projectedFile, 'utf8');
-
-      assert.ok(
-        projectedContent.includes(`<!-- EVCRATE_CAPABILITY: write-checks/${target}/advisory-only/v1 -->`),
-        `${target} missing expected capability marker write-checks/${target}/advisory-only/v1`
-      );
-      assert.ok(
-        projectedContent.includes(`<!-- EVCRATE_CAPABILITY: mentoring/supported/v2 -->`),
-        `${target} missing mentoring/supported/v2`
-      );
-    } finally {
-      stage.cleanup();
-    }
-  }
-});

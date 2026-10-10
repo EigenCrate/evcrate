@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Codex CLI (codex.ai/code) when working with code in this repository.
+This file provides shared agent guidance through `AGENTS.md`.
 
 ## Role & Responsibilities
 
@@ -52,4 +52,4 @@ We keep all important docs in `./docs` folder and keep updating them, structure 
 └── project-roadmap.md
 ```
 
-**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./AGENTS.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*
+**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in the active `AGENTS.md` (or published `~/.codex/AGENTS.md` for HOME-only installs), especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*

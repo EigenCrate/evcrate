@@ -14,7 +14,7 @@
 - **Weekly Reviews**: Update progress percentages and milestone statuses
 
 ### Documentation Triggers
-The `project-manager` agent MUST update these documents (for unsealed, authorized deliverables) when:
+The `evc-project-manager` agent MUST update these documents (for unsealed, authorized deliverables) when:
 - A development phase status changes (e.g., from "In Progress" to "Complete")
 - Major features are implemented or released
 - Significant bugs are resolved or security patches applied

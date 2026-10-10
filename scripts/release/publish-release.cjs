@@ -8,6 +8,7 @@ const os = require('node:os');
 const assetVerification = require('./asset-verification.cjs');
 const releaseContract = require('./release-contract.cjs');
 const { readCanonicalReleaseConfig } = require('./run-release-candidate.cjs');
+const { verifyGitHubStableApproval } = require('./github-approval.cjs');
 
 /**
  * Parses and validates environment and CLI arguments for publisher execution.
@@ -62,8 +63,14 @@ function parsePublisherOptions(argv = process.argv, env = process.env) {
       options.expectedRunAttempt = Number(args[++i]);
     } else if (arg.startsWith('--run-attempt=')) {
       options.expectedRunAttempt = Number(arg.slice('--run-attempt='.length));
+    } else if (arg === '--branch') {
+      options.branch = args[++i];
+    } else if (arg.startsWith('--branch=')) {
+      options.branch = arg.slice('--branch='.length);
     } else if (arg === '-h' || arg === '--help') {
       options.help = true;
+    } else {
+      throw new Error(`Unknown publisher option: ${arg}`);
     }
   }
 
@@ -86,6 +93,9 @@ function parsePublisherOptions(argv = process.argv, env = process.env) {
   if (options.expectedRunAttempt === undefined && (env.EVCRATE_EXPECTED_RUN_ATTEMPT || env.GITHUB_RUN_ATTEMPT)) {
     const rawAttempt = env.EVCRATE_EXPECTED_RUN_ATTEMPT || env.GITHUB_RUN_ATTEMPT;
     options.expectedRunAttempt = Number(rawAttempt);
+  }
+  if (!options.branch && (env.EVCRATE_BRANCH || env.BRANCH_NAME || env.GITHUB_REF_NAME)) {
+    options.branch = env.EVCRATE_BRANCH || env.BRANCH_NAME || env.GITHUB_REF_NAME;
   }
 
   options.expectedHashes = {};
@@ -120,6 +130,17 @@ function assertSafeDirectoryWithin(targetPath, allowedParents) {
   }
   return resolved;
 }
+
+/**
+ * Verifies whether a version string is a prerelease version.
+ * @param {string} version Semantic version string
+ * @returns {boolean} True if prerelease
+ */
+function isPrereleaseVersion(version) {
+  if (typeof version !== 'string') return false;
+  return version.includes('-');
+}
+
 
 /**
  * Verifies candidate.json receipt and validates staged assets in assetsDir against receipt records.
@@ -324,13 +345,29 @@ async function runPublishRelease(options = {}) {
     ...options,
     assetsDir
   });
+  // 1b. Verify branch topology guards against canonical release configuration
+  const isPrerelease = isPrereleaseVersion(receipt.version);
+  const canonicalConfig = options.config || readCanonicalReleaseConfig({ projectRoot: cwd });
+  const branch = options.branch || env.BRANCH_NAME || env.GITHUB_REF_NAME;
+  if (branch) {
+    const trimmedBranch = String(branch).trim();
+    if (trimmedBranch === 'main' && isPrerelease) {
+      throw new Error(`Topology violation: cannot publish prerelease version "${receipt.version}" on stable branch "main"`);
+    }
+    if (trimmedBranch === 'next' && !isPrerelease) {
+      throw new Error(`Topology violation: cannot publish stable version "${receipt.version}" on prerelease branch "next"`);
+    }
+  }
 
+  // Stable publication always requires an independent, candidate-bound live GitHub review.
+  let approvalRecord = null;
+  if (!isPrerelease) {
+    approvalRecord = await verifyGitHubStableApproval(receipt, { env, fetchFn: options.fetchFn });
+  }
   // 2. Prepare publish workspace (copy assets only to dist/release, verify again)
   preparePublishWorkspace(assetsDir, distReleaseDir, receipt, { cwd, runnerTemp: options.runnerTemp });
 
-  // 3. Load canonical release configuration
-  const canonicalConfig = options.config || readCanonicalReleaseConfig({ projectRoot: cwd });
-
+  // 3. Canonical release configuration is already loaded
   // Ensure asset mode is strictly verify in semantic-release environment
   const publishEnv = {
     ...env,
@@ -373,7 +410,8 @@ async function runPublishRelease(options = {}) {
   return {
     success: true,
     publishedRelease: nextRelease,
-    receipt
+    receipt,
+    approval: approvalRecord
   };
 }
 
@@ -393,6 +431,7 @@ Options:
   --source-commit <commit>  Expected 40-hex commit SHA
   --run-id <id>             Expected workflow run ID
   --run-attempt <attempt>   Expected workflow run attempt
+  --branch <branch>        Release branch (stable approval is verified live with GitHub)
   -h, --help                Show this help message
 `);
     return 0;
@@ -412,7 +451,9 @@ if (require.main === module) {
 
 module.exports = {
   parsePublisherOptions,
+  isPrereleaseVersion,
   verifyCandidateReceipt,
+  verifyGitHubStableApproval,
   preparePublishWorkspace,
   runPublishRelease,
   main

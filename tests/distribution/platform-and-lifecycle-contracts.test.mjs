@@ -13,8 +13,6 @@ import { dirname, join } from 'node:path';
 
 import {
   assertLegacyRootClean,
-  assertLiveInputsUnchanged,
-  prepareInputSnapshot,
   runAllManifestsBuild,
   runLocalBuild
 } from '../../dist/index.js';
@@ -65,26 +63,38 @@ describe('Phase 05: Platform & Lifecycle Contracts', () => {
       }
     });
 
-    it('assertLiveInputsUnchanged rejects promotion if canonical source files are modified during staging', async () => {
-      const fixture = makeTempDir('evcrate-live-change-');
-      try {
-        prepareFixtureWorkspace(fixture);
-
-        const { snapshotStage, snapshotHashes } = prepareInputSnapshot(fixture);
+    for (const jobs of [1, 2]) {
+      it(`rejects canonical AGENTS drift before journal or promotion with jobs=${jobs}`, async () => {
+        const fixture = makeTempDir('evcrate-live-change-');
         try {
-          writeFileSync(join(fixture, '.evcrate', 'source', 'CLAUDE.md'), 'mutated live content during staging\n');
+          prepareFixtureWorkspace(fixture);
+          const source = join(fixture, '.evcrate', 'source');
+          const canonical = join(source, '.claude', 'AGENTS.md');
+          const manifest = join(fixture, '.evcrate', 'build-manifest.json');
+          const priorManifest = readFileSync(manifest);
+          const priorCodex = readFileSync(join(source, 'AGENTS.md'));
+          const claudeRule = join(source, '.claude-projection', 'rules', 'AGENTS.md');
+          const priorClaude = existsSync(claudeRule) ? readFileSync(claudeRule) : null;
 
-          assert.throws(
-            () => assertLiveInputsUnchanged(fixture, snapshotHashes),
-            (err) => err?.code === 'PUBLICATION_FAILED'
-          );
+          // Snapshot capture is synchronous; promotion resumes after the awaited staging result.
+          const pending = runLocalBuild(fixture, ['claude', 'codex'], { jobs });
+          writeFileSync(canonical, '# AGENTS.md\nConcurrent authored instructions\n');
+          await assert.rejects(pending, { code: 'PUBLICATION_FAILED' });
+
+          assert.equal(readFileSync(canonical, 'utf8'), '# AGENTS.md\nConcurrent authored instructions\n');
+          assert.deepEqual(readFileSync(manifest), priorManifest);
+          assert.deepEqual(readFileSync(join(source, 'AGENTS.md')), priorCodex);
+          if (priorClaude === null) assert.equal(existsSync(claudeRule), false);
+          else assert.deepEqual(readFileSync(claudeRule), priorClaude);
+          assert.equal(existsSync(join(fixture, '.evcrate', '.evcrate-promotion-journal.json')), false);
+          assert.deepEqual(readdirSync(fixture).filter((name) =>
+            name.startsWith('.evcrate-build-') || name.startsWith('.evcrate-snapshot-') || name.startsWith('.evcrate-target-')
+          ), []);
         } finally {
-          snapshotStage.cleanup();
+          rmSync(fixture, { recursive: true, force: true });
         }
-      } finally {
-        rmSync(fixture, { recursive: true, force: true });
-      }
-    });
+      });
+    }
 
     it('staging failure leaves prior workspace completely unmodified (transaction rollback)', async () => {
       const fixture = makeTempDir('evcrate-rollback-');

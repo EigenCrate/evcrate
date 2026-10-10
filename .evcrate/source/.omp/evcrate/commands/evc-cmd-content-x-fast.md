@@ -1,0 +1,13 @@
+---
+argument-hint: "[user-request]"
+description: "Write creative & smart copy [FAST]"
+---
+
+Write creative & smart copy for this user request:
+<user_request>$ARGUMENTS</user_request>
+
+## Workflow
+
+- If the user provides screenshots, use `ai-multimodal` skill to analyze and describe the context.
+- If the user provides videos, use `ai-multimodal` (`video-analysis`) skill to analyze video content.
+- Use `evc-copywriter` agent to write the copy, then report back to main agent.

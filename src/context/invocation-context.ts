@@ -2,6 +2,7 @@ import { existsSync, lstatSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { pathOverlaps } from '../filesystem/paths.js';
+import { localProjectionPath } from '../distribution/output-paths.js';
 import { validateProjectId } from '../protocol/validation.js';
 import {
   HomePathOptions, resolveHomeRoot, resolveProjectRoot, resolveSafePath, resolveStateRoot
@@ -102,15 +103,15 @@ export function assertNoDescriptorOverlap(
 }
 
 function targetContext(manifest: TargetManifestContext, sourceParent: string, homeRoot: string): SelectedTargetContext {
-  const generatedRoots = manifest.outputRoots.map((root) => resolveSafePath(join(sourceParent, root)));
+  const generatedRoots = manifest.outputRoots.map((root) => localProjectionPath(sourceParent, root));
   const homeBindings = manifest.homeBindings.map((binding) => ({
-    localRoot: resolveSafePath(join(sourceParent, binding.localRoot)),
+    localRoot: localProjectionPath(sourceParent, binding.localRoot),
     homeRoot: resolveSafePath(join(homeRoot, binding.homeRoot)),
     promotionOrder: binding.promotionOrder
   }));
   const projectDirectoryDescriptors: readonly ProjectDirectoryDescriptor[] = Object.freeze(
     manifest.outputRoots.map((root, index) => {
-      const source = resolveSafePath(join(sourceParent, root));
+      const source = localProjectionPath(sourceParent, root);
       return Object.freeze({
         kind: 'directory' as const,
         targetId: manifest.id,
@@ -123,7 +124,9 @@ function targetContext(manifest: TargetManifestContext, sourceParent: string, ho
   );
   const projectDocumentDescriptors: readonly ProjectDocumentDescriptor[] = Object.freeze(
     manifest.projectDocs.map((doc, index) => {
-      const source = resolveSafePath(join(sourceParent, doc));
+      // Validated manifests authorize exact nested native leaves, not metadata
+      // directory roots. Containment preserves that ownership boundary.
+      const source = localProjectionPath(sourceParent, doc);
       return Object.freeze({
         kind: 'document' as const,
         targetId: manifest.id,

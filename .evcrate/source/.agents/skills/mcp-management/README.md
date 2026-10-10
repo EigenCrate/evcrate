@@ -4,7 +4,7 @@ Intelligent management and execution of Model Context Protocol (MCP) servers.
 
 ## Overview
 
-This skill enables Codex to discover, analyze, and execute MCP server capabilities without polluting the main context window. Perfect for context-efficient MCP integration using subagent-based architecture.
+This skill enables Claude to discover, analyze, and execute MCP server capabilities without polluting the main context window. Perfect for context-efficient MCP integration using subagent-based architecture.
 
 ## Features
 
@@ -12,7 +12,7 @@ This skill enables Codex to discover, analyze, and execute MCP server capabiliti
 - **Intelligent Tool Discovery**: Analyze which tools are relevant for specific tasks
 - **Progressive Disclosure**: Load only necessary tool definitions
 - **Execution Engine**: Call MCP tools with proper parameter handling
-- **Context Efficiency**: Delegate MCP operations to `mcp-manager` subagent
+- **Context Efficiency**: Delegate MCP operations to `evc-mcp-manager` subagent
 
 ## Quick Start
 
@@ -73,11 +73,11 @@ npx ts-node scripts/cli.ts call-tool memory add '{"key":"name","value":"Alice"}'
 
 ### Pattern 4: Use with Subagent
 
-In main Codex conversation:
+In main Claude conversation:
 
 ```
 User: "I need to search the web and save results"
-Main Agent: [Spawns mcp-manager subagent]
+Main Agent: [Spawns evc-mcp-manager subagent]
 mcp-manager: Discovers brave-search + memory tools, reports back
 Main Agent: Uses recommended tools for implementation
 ```
@@ -85,9 +85,9 @@ Main Agent: Uses recommended tools for implementation
 ## Architecture
 
 ```
-Main Agent (Codex)
+Main Agent (Claude)
     ↓ (delegates MCP tasks)
-mcp-manager Subagent
+evc-mcp-manager Subagent
     ↓ (uses skill)
 mcp-management Skill
     ↓ (connects via)
@@ -176,9 +176,9 @@ Install with `npx`:
 - `@modelcontextprotocol/server-puppeteer` - Browser automation
 - `@modelcontextprotocol/server-fetch` - HTTP requests
 
-## Integration with mcp-manager Agent
+## Integration with evc-mcp-manager Agent
 
-The `mcp-manager` agent (`.codex/agents/mcp-manager.md`) uses this skill to:
+The `evc-mcp-manager` agent (`.codex/agents/evc-mcp-manager.md`) uses this skill to:
 
 1. **Discover**: Connect to MCP servers, list capabilities
 2. **Analyze**: Filter relevant tools for tasks

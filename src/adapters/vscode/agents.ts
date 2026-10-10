@@ -55,7 +55,7 @@ export function convertVscodeAgents(
 
     const body = transformVscodePrompt(parsed.body, commandMap, skills);
 
-    if (sourceName === 'advisor') {
+    if (sourceName === 'evc-advisor') {
       if (!body.includes('## Required checkpoint method') || !body.includes('## Checkpoint terminal report')) {
         throw new ControlPlaneError('VALIDATION_INVALID');
       }

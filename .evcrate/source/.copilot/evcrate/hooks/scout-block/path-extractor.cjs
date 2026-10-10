@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * path-extractor.cjs - Extract paths from GitHub Copilot CLI tool inputs
+ * path-extractor.cjs - Extract paths from Claude Code tool inputs
  *
  * Extracts file_path, path, pattern params and parses Bash commands
  * to find all path-like arguments.
@@ -34,7 +34,7 @@ function extractFromToolInput(toolInput, toolName) {
     }
   }
 
-  // Extract from Bash command if present (Copilot uses 'command', agy uses 'CommandLine')
+  // Extract from Bash command if present (Claude uses 'command', agy uses 'CommandLine')
   const cmd = toolInput.command || toolInput.CommandLine;
   if (cmd && typeof cmd === 'string') {
     const cmdPaths = extractFromCommand(cmd);

@@ -1,9 +1,11 @@
-import { realpathSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import { fileURLToPath } from "node:url";
 /** Accept the exact resource-root value sometimes passed by child launchers. */
+export const MAX_AGENTS_BYTES = 256 * 1024;
+
 export function normalizeAgentRoot(value) {
   const configured = resolve(value);
   const parent = dirname(configured);
@@ -66,23 +68,59 @@ export function getEvcrateRoot(agentRoot = getAgentRoot()) {
   return resolve(normalizeAgentRoot(agentRoot), "evcrate");
 }
 
+export function readInstalledAgentsDocument(agentRoot = getAgentRoot()) {
+  const root = getEvcrateRoot(agentRoot);
+  const candidate = resolve(root, "AGENTS.md");
+  if (!isContained(root, candidate)) throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  for (let current = root;; current = dirname(current)) {
+    let stat;
+    try {
+      stat = lstatSync(current);
+    } catch {
+      throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+    }
+    if (stat.isSymbolicLink()) throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+    if (dirname(current) === current) break;
+  }
+  let initial;
+  let descriptor;
+  try {
+    initial = lstatSync(candidate);
+    if (!initial.isFile() || initial.isSymbolicLink() || initial.size <= 0 || initial.size > MAX_AGENTS_BYTES) throw new Error("invalid payload");
+    descriptor = openSync(candidate, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch {
+    throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  }
+  try {
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.dev !== initial.dev || opened.ino !== initial.ino || opened.size !== initial.size) throw new Error("payload changed");
+    const bytes = Buffer.alloc(opened.size);
+    for (let offset = 0; offset < bytes.length;) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (!count) throw new Error("payload truncated");
+      offset += count;
+    }
+    const final = lstatSync(candidate);
+    if (!final.isFile() || final.isSymbolicLink() || final.dev !== initial.dev || final.ino !== initial.ino || final.size !== initial.size) throw new Error("payload changed");
+    const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    if (!content || content.includes("\0")) throw new Error("invalid payload");
+    return resolveEvcrateMarkers(content, agentRoot);
+  } catch {
+    throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 function commandInstruction(root, reference) {
   if (!reference.startsWith("commands/")) return undefined;
   const commandsRoot = resolve(root, "commands");
   const commandReference = reference.slice("commands/".length);
   if (!commandReference) return undefined;
-  const literalReference = commandReference.endsWith(".md")
-    ? commandReference
-    : `${commandReference}.md`;
-  const nestedReference = `${commandReference.replace(/\.md$/, "").split(":").join(sep)}.md`;
-  const resolved = [literalReference, nestedReference]
-    .map((candidate) => resolveContainedExistingPath(commandsRoot, candidate))
-    .find(Boolean);
+  const resolved = resolveContainedExistingPath(commandsRoot, `${commandReference.replace(/\.md$/, "")}.md`);
   if (!resolved) return undefined;
-  const name = relative(commandsRoot, resolved)
-    .replace(/\.md$/, "")
-    .split(sep)
-    .join(":");
+  const name = relative(commandsRoot, resolved).replace(/\.md$/, "");
+  if (name.includes(sep)) return undefined;
   return `Invoke \`evcrate_command\` with name \`${name}\`, the intended command text unchanged in \`args\` (empty only when there is none), and the current direct \`handoff\` object when one exists.`;
 }
 

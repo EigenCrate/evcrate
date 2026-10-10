@@ -29,14 +29,14 @@ function parseCommandContext(body) {
 test("dispatches an exact discovered command with canonical model context", async () => {
   const { agentRoot, commands } = fixture();
   try {
-    writeFileSync(join(commands, "plan.md"), "---\ndescription: Plan\n---\nplan $1");
+    writeFileSync(join(commands, "evc-cmd-plan.md"), "---\ndescription: Plan\n---\nplan $1");
     const raw = '"safe task"';
-    const result = await dispatchManagedCommand({ name: "plan", args: raw }, context(agentRoot), {
+    const result = await dispatchManagedCommand({ name: "evc-cmd-plan", args: raw }, context(agentRoot), {
       agentRoot,
       execute: async () => ({ code: 0, stdout: "", stderr: "" }),
     });
     const expanded = parseCommandContext(result.body);
-    assert.equal(result.command, "plan");
+    assert.equal(result.command, "evc-cmd-plan");
     assert.equal(result.canonicalCommand, "plan");
     assert.equal(expanded.body, "plan safe task");
     assert.deepEqual(expanded.context, {
@@ -68,8 +68,7 @@ test("registered model tool carries exact raw work and direct handoff through re
   const handlers = new Map();
   const tools = new Map();
   try {
-    mkdirSync(join(commands, "code"), { recursive: true });
-    writeFileSync(join(commands, "code", "auto.md"), "$ARGUMENTS");
+    writeFileSync(join(commands, "evc-cmd-code-x-auto.md"), "$ARGUMENTS");
     const pi = {
       on(name, handler) { handlers.set(name, handler); },
       registerTool(tool) { tools.set(tool.name, tool); },
@@ -91,7 +90,7 @@ test("registered model tool carries exact raw work and direct handoff through re
     };
     const result = await tools.get("evcrate_command").execute(
       "call-1",
-      { name: "code:auto", args: raw, handoff },
+      { name: "evc-cmd-code-x-auto", args: raw, handoff },
       undefined,
       undefined,
       context(agentRoot),
@@ -102,7 +101,7 @@ test("registered model tool carries exact raw work and direct handoff through re
     assert.equal(expanded.context.raw_arguments, raw);
     assert.deepEqual(expanded.context.handoff, handoff);
     assert.deepEqual(result.details, {
-      command: "code:auto", canonicalCommand: "code/auto", source: "model-tool", handoff,
+      command: "evc-cmd-code-x-auto", canonicalCommand: "code/auto", source: "model-tool", handoff,
     });
     handlers.get("agent_start")?.();
     const sameRun = {
@@ -114,7 +113,7 @@ test("registered model tool carries exact raw work and direct handoff through re
       },
     };
     const continued = await tools.get("evcrate_command").execute(
-      "call-2", { name: "code:auto", args: "continue", handoff: sameRun },
+      "call-2", { name: "evc-cmd-code-x-auto", args: "continue", handoff: sameRun },
       undefined, undefined, context(agentRoot),
     );
     assert.deepEqual(parseCommandContext(continued.content[0].text).context.handoff, sameRun);
@@ -129,7 +128,7 @@ test("native command handler labels its transport and cannot claim model handoff
   const registered = new Map();
   const messages = [];
   try {
-    writeFileSync(join(commands, "code.md"), "$ARGUMENTS");
+    writeFileSync(join(commands, "evc-cmd-code.md"), "$ARGUMENTS");
     const pi = {
       on(name, handler) { handlers.set(name, handler); },
       registerCommand(name, definition) { registered.set(name, definition); },
@@ -138,7 +137,7 @@ test("native command handler labels its transport and cannot claim model handoff
     registerManagedCommands(pi, { agentRoot });
     handlers.get("session_start")?.();
     const raw = "\tuser \"quote 'unmatched-single \\trailing \r\n雪 ";
-    await registered.get("code").handler(raw, context(agentRoot));
+    await registered.get("evc-cmd-code").handler(raw, context(agentRoot));
     const expanded = parseCommandContext(messages[0]);
     assert.equal(expanded.body, raw);
     assert.equal(expanded.context.source, "native-user");
@@ -153,34 +152,34 @@ test("native command handler labels its transport and cannot claim model handoff
 test("rejects unknown, disabled, repeated, and over-depth model dispatches", async () => {
   const { agentRoot, commands } = fixture();
   try {
-    writeFileSync(join(commands, "open.md"), "open");
-    writeFileSync(join(commands, "private.md"), "---\ndisable-model-invocation: true\n---\nprivate");
+    writeFileSync(join(commands, "evc-cmd-open.md"), "open");
+    writeFileSync(join(commands, "evc-cmd-private.md"), "---\ndisable-model-invocation: true\n---\nprivate");
     const options = { agentRoot, execute: async () => ({ code: 0, stdout: "", stderr: "" }) };
-    await assert.rejects(dispatchManagedCommand({ name: "missing" }, context(agentRoot), options), /Unknown/);
-    await assert.rejects(dispatchManagedCommand({ name: "private" }, context(agentRoot), options), /disables model invocation/);
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-missing" }, context(agentRoot), options), /Unknown/);
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-private" }, context(agentRoot), options), /disables model invocation/);
     await assert.rejects(dispatchManagedCommand(
-      { name: "open", args: ["normalized"] }, context(agentRoot), options,
+      { name: "evc-cmd-open", args: ["normalized"] }, context(agentRoot), options,
     ), /raw string args/);
     await assert.rejects(dispatchManagedCommand(
-      { name: "open", handoff: "discovered-json" }, context(agentRoot), options,
+      { name: "evc-cmd-open", handoff: "discovered-json" }, context(agentRoot), options,
     ), /handoff must be an object or null/);
     await assert.rejects(dispatchManagedCommand(
-      { name: "open", handoff: ["invalid", "array"] }, context(agentRoot), options,
+      { name: "evc-cmd-open", handoff: ["invalid", "array"] }, context(agentRoot), options,
     ), /handoff must be an object or null/);
     await assert.rejects(dispatchManagedCommand(
-      { name: "open", handoff: true }, context(agentRoot), options,
+      { name: "evc-cmd-open", handoff: true }, context(agentRoot), options,
     ), /handoff must be an object or null/);
     const state = createCommandDispatchState();
-    await dispatchManagedCommand({ name: "open" }, context(agentRoot), { ...options, state });
-    await assert.rejects(dispatchManagedCommand({ name: "open" }, context(agentRoot), { ...options, state }), /cycle/);
+    await dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state });
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state }), /cycle/);
 
     const depthState = createCommandDispatchState();
-    await dispatchManagedCommand({ name: "open" }, context(agentRoot), { ...options, state: depthState, maxDepth: 1 });
-    await assert.rejects(dispatchManagedCommand({ name: "other" }, context(agentRoot), { ...options, state: depthState, maxDepth: 1 }), /nesting depth/);
+    await dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state: depthState, maxDepth: 1 });
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-other" }, context(agentRoot), { ...options, state: depthState, maxDepth: 1 }), /nesting depth/);
 
     const countState = createCommandDispatchState();
-    await dispatchManagedCommand({ name: "open" }, context(agentRoot), { ...options, state: countState, maxDepth: 10, maxInvocations: 1 });
-    await assert.rejects(dispatchManagedCommand({ name: "open" }, context(agentRoot), { ...options, state: countState, maxDepth: 10, maxInvocations: 1 }), /invocation limit/);
+    await dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state: countState, maxDepth: 10, maxInvocations: 1 });
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state: countState, maxDepth: 10, maxInvocations: 1 }), /invocation limit/);
   } finally {
     rmSync(agentRoot, { recursive: true, force: true });
   }
@@ -189,14 +188,27 @@ test("rejects unknown, disabled, repeated, and over-depth model dispatches", asy
 test("releases a failed dispatch from cycle state", async () => {
   const { agentRoot, commands } = fixture();
   try {
-    writeFileSync(join(commands, "retry.md"), "retry");
+    writeFileSync(join(commands, "evc-cmd-retry.md"), "retry");
     const state = createCommandDispatchState();
     const options = {
       agentRoot,
       state,
       expand: async () => { throw new Error("expansion failed"); },
     };
-    await assert.rejects(dispatchManagedCommand({ name: "retry" }, context(agentRoot), options), /expansion failed/);
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-retry" }, context(agentRoot), options), /expansion failed/);
+    assert.equal(state.count, 0);
+    assert.equal(state.names.size, 0);
+  } finally {
+    rmSync(agentRoot, { recursive: true, force: true });
+  }
+});
+
+test("fails closed when a resolved command carries no canonical identity", async () => {
+  const { agentRoot } = fixture();
+  try {
+    const state = createCommandDispatchState();
+    const options = { agentRoot, state, find: () => ({ name: "evc-cmd-open", filePath: "unused" }), read: () => ({ body: "open" }) };
+    await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), options), /no canonical identity/);
     assert.equal(state.count, 0);
     assert.equal(state.names.size, 0);
   } finally {

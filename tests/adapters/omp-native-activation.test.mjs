@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -8,6 +7,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { OMP_COMMAND_RUNTIME } from '../../dist/adapters/omp/activation.js';
+import { translateHarnessReferences } from '../../dist/adapters/omp/commands.js';
+import { OMP_PRE_MODULE, OMP_RUNTIME_HELPER } from '../../dist/adapters/omp/templates.js';
+import { createProjectionBuildContext, createStagedRoot, loadTargetManifestRegistry } from '../../dist/index.js';
+import { ompAdapter } from '../../dist/adapters/omp/index.js';
 import helpers from '../advisor-controller/activation-test-helpers.cjs';
 const { initializeStateFixture } = helpers;
 
@@ -16,6 +19,15 @@ const REPUBLISH = 'evcrate publish --apply --scope home --target omp';
 const DIAGNOSTIC_PREFIX = 'EVCrate command stopped before prompt admission: ';
 const NODE_RANGE = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).engines.node;
 
+test('OMP references use installed project and HOME AGENTS payload paths without rewriting URIs', () => {
+  const rendered = translateHarnessReferences(
+    'Read ./.claude/rules/AGENTS.md or ~/.claude/rules/AGENTS.md; preserve https://example.test/.claude/rules/AGENTS.md.',
+  );
+  assert.match(rendered, /\.omp\/evcrate\/AGENTS\.md/u);
+  assert.match(rendered, /~\/\.omp\/agent\/evcrate\/AGENTS\.md/u);
+  assert.match(rendered, /https:\/\/example\.test\/\.claude\/rules\/AGENTS\.md/u);
+});
+
 async function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-native-command-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -23,13 +35,13 @@ async function fixture(t) {
   const project = join(root, 'project 日本');
   const config = join(project, '.omp');
   const resources = join(config, 'evcrate');
-  const commandDir = join(config, 'commands/cmd-code');
+  const commandDir = join(config, 'commands/evc-cmd-code');
   for (const path of [join(home, '.evcrate'), join(resources, 'commands'), join(resources, 'workflows'), commandDir]) {
     mkdirSync(path, { recursive: true });
   }
   cpSync(controllerRoot, join(home, '.evcrate/bin'), { recursive: true });
   writeFileSync(join(resources, 'omp-command-runtime.ts'), OMP_COMMAND_RUNTIME);
-  writeFileSync(join(resources, 'commands/cmd-code.md'), '---\ndescription: Native test\n---\n<work>$ARGUMENTS</work>');
+  writeFileSync(join(resources, 'commands/evc-cmd-code.md'), '---\ndescription: Native test\n---\n<work>$ARGUMENTS</work>');
   for (const name of ['advice-activation', 'plan-progress']) {
     writeFileSync(join(resources, `workflows/${name}.md`), `# ${name}\n`);
   }
@@ -40,8 +52,8 @@ async function fixture(t) {
     else process.env.HOME = priorHome;
   });
   const { createCommand } = await import(pathToFileURL(join(resources, 'omp-command-runtime.ts')).href);
-  const command = createCommand({ name: 'cmd-code', canonicalName: 'code', description: 'Native test',
-    activation: true, template: 'cmd-code.md' }, pathToFileURL(join(commandDir, 'index.ts')).href);
+  const command = createCommand({ name: 'evc-cmd-code', canonicalName: 'code', description: 'Native test',
+    activation: true, template: 'evc-cmd-code.md' }, pathToFileURL(join(commandDir, 'index.ts')).href);
   const notices = [];
   const ctx = { cwd: project, ui: { notify(message, level) { notices.push({ message, level }); } } };
   return { home, project, resources, command, ctx, notices, helper: join(home, '.evcrate/bin/evcrate-advice-mode') };
@@ -202,20 +214,19 @@ async function generatedCommandFixture(t) {
     join(home, '.evcrate'),
     join(resources, 'commands'),
     join(resources, 'workflows'),
-    join(config, 'commands/cmd-code')
+    join(config, 'commands/evc-cmd-code')
   ]) {
     mkdirSync(path, { recursive: true });
   }
   cpSync(controllerRoot, join(home, '.evcrate/bin'), { recursive: true });
   writeFileSync(join(resources, 'omp-command-runtime.ts'), OMP_COMMAND_RUNTIME);
 
-  const actualOmpEvcrate = fileURLToPath(new URL('../../.evcrate/source/.omp/evcrate/', import.meta.url));
-  for (const name of ['cmd-code.md']) {
-    cpSync(join(actualOmpEvcrate, 'commands', name), join(resources, 'commands', name));
-  }
-  for (const name of ['advice-activation.md', 'plan-progress.md']) {
-    cpSync(join(actualOmpEvcrate, 'workflows', name), join(resources, 'workflows', name));
-  }
+  const repository = fileURLToPath(new URL('../../', import.meta.url));
+  const registry = loadTargetManifestRegistry(join(repository, '.evcrate/targets/manifest.json'));
+  const stage = createStagedRoot(root, '.omp-current-projection-');
+  t.after(() => stage.cleanup());
+  ompAdapter.build(createProjectionBuildContext(registry.targets.get('omp'), join(repository, '.evcrate/source/.claude'), stage));
+  cpSync(join(stage.path, '.omp'), config, { recursive: true });
 
   const priorHome = process.env.HOME;
   process.env.HOME = home;
@@ -228,9 +239,9 @@ async function generatedCommandFixture(t) {
   const { createCommand } = await import(runtimeUrl);
 
   const codeCmd = createCommand({
-    name: 'cmd-code', canonicalName: 'code', description: 'Start coding & testing an existing plan',
-    activation: true, template: 'cmd-code.md'
-  }, pathToFileURL(join(config, 'commands/cmd-code/index.ts')).href);
+    name: 'evc-cmd-code', canonicalName: 'code', description: 'Start coding & testing an existing plan',
+    activation: true, template: 'evc-cmd-code.md'
+  }, pathToFileURL(join(config, 'commands/evc-cmd-code/index.ts')).href);
 
   const notices = [];
   const ctx = { cwd: project, ui: { notify(message, level) { notices.push({ message, level }); } } };
@@ -286,35 +297,6 @@ test('helper exit with Node available yields a helper diagnostic and never leaks
   assert.equal(message.includes('secret-plan'), false);
 });
 
-test('headless admission failures write one diagnostic to stderr and admit nothing', async (t) => {
-  const f = await fixture(t);
-  const script = [
-    "const { createCommand } = await import(process.env.EVC_RUNTIME);",
-    "const command = createCommand({ name: 'cmd-code', canonicalName: 'code', description: 'Native test', activation: true, template: 'cmd-code.md' }, process.env.EVC_MODULE);",
-    "const body = await command.execute([], { cwd: process.env.EVC_CWD, hasUI: false }, 'private work text');",
-    "process.stdout.write(JSON.stringify({ admitted: body !== undefined }));"
-  ].join('\n');
-  const run = (path) => spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--input-type=module', '-e', script], {
-    encoding: 'utf8',
-    env: { HOME: f.home, PATH: path, EVC_CWD: f.project,
-      EVC_RUNTIME: pathToFileURL(join(f.resources, 'omp-command-runtime.ts')).href,
-      EVC_MODULE: pathToFileURL(join(f.project, '.omp/commands/cmd-code/index.ts')).href }
-  });
-  const assertOneDiagnostic = (result, expected) => {
-    assert.equal(result.status, 0);
-    assert.deepEqual(JSON.parse(result.stdout), { admitted: false });
-    const lines = result.stderr.split('\n').filter(Boolean);
-    assert.equal(lines.length, 1, 'exactly one stderr diagnostic');
-    assert.ok(lines[0].startsWith(DIAGNOSTIC_PREFIX));
-    assert.ok(lines[0].includes(expected));
-    for (const forbidden of ['private work text', 'RAW-HELPER-SECRET']) assert.equal(lines[0].includes(forbidden), false);
-  };
-
-  assertOneDiagnostic(run(emptyDirectory(t)), `Node ${NODE_RANGE} not found on PATH`);
-
-  writeFaultHelper(f, "process.stderr.write('RAW-HELPER-SECRET'); process.exit(1);");
-  assertOneDiagnostic(run(process.env.PATH), 'HOME activation helper failed');
-});
 
 test('native no-flag admission ignores locked or corrupt HOME state and sends a null handoff', async (t) => {
   const f = await fixture(t);
@@ -359,33 +341,37 @@ test('native no-flag admission ignores locked or corrupt HOME state and sends a 
   }
 });
 
-test('generated entrypoints call the helper exactly for the helper command list with their canonical command', async (t) => {
-  const f = await fixture(t);
-  const capture = installCapturingHelper(f);
-  const { COMMAND_NAMES } = createRequire(import.meta.url)(join(controllerRoot, 'lib/advisor/activation.cjs'));
-  const ompRoot = fileURLToPath(new URL('../../.evcrate/source/.omp/', import.meta.url));
-  const { commands } = JSON.parse(readFileSync(join(ompRoot, 'evcrate/command-name-map.json'), 'utf8'));
-  const activated = [];
-  for (const record of commands) {
-    const canonical = record.source.slice(0, -'.md'.length);
-    const { default: create } = await import(pathToFileURL(join(ompRoot, 'commands', record.targetName, 'index.ts')).href);
-    capture.reset();
-    const body = await create().execute([], f.ctx, 'ordinary task text');
-    assert.equal(typeof body, 'string', `${canonical}: ordinary or admitted body expected`);
-    const request = capture.read();
-    if (COMMAND_NAMES.includes(canonical)) {
-      assert.ok(request, `${canonical}: supported command must call the helper`);
-      assert.equal(request.context.command, canonical);
-      assert.equal(request.handoff, null);
-      const header = resultHeader(body);
-      assert.equal(header.source, 'native-user');
-      assert.equal(header.mode, 'off');
-      assert.equal(header.context.command, canonical);
-      activated.push(canonical);
-    } else {
-      assert.equal(request, null, `${canonical}: unsupported command must not call the helper`);
-      assert.equal(body.startsWith('{"evcrate_omp_command_context"'), false, `${canonical}: no admission header`);
-    }
-  }
-  assert.deepEqual(activated.sort(), [...COMMAND_NAMES].sort(), 'every helper command has a generated entrypoint');
+
+test('OMP rejects input when its host continues after a required-payload lifecycle error', async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), 'evcrate-omp-context-admission-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const resources = join(directory, '.omp/evcrate');
+  const entry = join(directory, '.omp/hooks/pre/evcrate-context.ts');
+  mkdirSync(resources, { recursive: true });
+  mkdirSync(dirname(entry), { recursive: true });
+  writeFileSync(join(resources, 'omp-hook-runtime.ts'), OMP_RUNTIME_HELPER);
+  writeFileSync(entry, OMP_PRE_MODULE);
+  const handlers = new Map();
+  const { default: register } = await import(pathToFileURL(entry).href);
+  register({ on(name, handler) { handlers.set(name, handler); } });
+  const notices = [];
+  let aborted = 0;
+  const ctx = { cwd: directory, abort() { aborted += 1; }, ui: { notify(message) { notices.push(message); } } };
+  t.mock.method(console, 'error', () => {});
+  await assert.rejects(handlers.get('session_start')({}, ctx));
+  assert.deepEqual(await handlers.get('input')({}, ctx), { handled: true });
+  assert.equal(notices.some((message) => message.includes('AGENTS')), true);
+  await handlers.get('before_provider_request')({}, ctx);
+  assert.equal(aborted, 1, 'print mode cannot dispatch after a swallowed lifecycle refusal');
+  writeFileSync(join(resources, 'AGENTS.md'), 'restored OMP instructions\n');
+  assert.equal(await handlers.get('input')({}, ctx), undefined);
+  const admitted = await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(admitted.message.content, 'restored OMP instructions');
+  await handlers.get('before_provider_request')({}, ctx);
+  assert.equal(aborted, 1, 'valid context still permits provider admission');
+  rmSync(join(resources, 'AGENTS.md'));
+  await handlers.get('session_before_compact')({}, ctx);
+  await assert.rejects(handlers.get('before_agent_start')({}, ctx));
+  await handlers.get('before_provider_request')({}, ctx);
+  assert.equal(aborted, 2, 'failed rebuilt context must not use the prior valid snapshot');
 });

@@ -49,13 +49,11 @@ Windows runtime equivalence.
 
 ## Runtime model
 
-The adapter copies command/workflow files recursively below the Pi EVCrate resource
-root. The runtime helper derives its internal command name from the relative path
-using colon separators (for example, the path `commands/fix/fast.md` has internal
-name `fix:fast`). This is a Pi implementation detail; the repository documentation
-convention still uses `/cmd-*` names. OMP's `__` filename flattening is not copied
-into Pi output. Prefix enforcement across the canonical scanner and target runtimes
-is a known follow-up; this documentation change does not rename source commands.
+Under the unified naming contract, the Pi target projects flat `/evc-cmd-*` command names
+with reserved `-x-` nesting tokens (e.g. `commands/evc-cmd-fix-x-fast.md`), matching all
+other active harnesses. The Pi extension resolves child commands and workflows directly
+from its installed resource root. Internal semantic command identifiers (e.g. `fix/fast`, `code/auto`)
+remain the stable keys for advisor activation.
 
 - `evcrate_command` performs bounded nested command expansion; static workflows
   remain Markdown documents.

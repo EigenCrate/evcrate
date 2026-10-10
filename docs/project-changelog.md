@@ -2,13 +2,26 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-08
-**Status:** Core package `evcrate` 2.9.0; PR #19 advice activation review repairs & prompt economy complete (2/2 phases DONE 2026-10-06; review approved 9.2/10; warning fixed; user approved); Deterministic Advice Activation Phases 01–04 ordinary user-approved completed 2026-10-06T14:13:41+07:00 / 9.8 review (no durable completion, provider release, or commit claim); Hook Materialization Scope Distribution through Phase 09; Windows release qualification through Phase 10; filesystem-policy cutover 2/2; readiness repairs 4/4; VS Code Local Native qualification durably verified for `vscode` on Linux x64; native Windows Advisor evidence remains bounded to installer and diagnostics.
+**Updated:** 2026-10-10
+**Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+
+### 2026-10-10 — fix(distribution): recover retired cleanup and authenticate stable approval
+
+- Retired Gemini cleanup carries an explicit schema-3 journal discriminator, validated against exact predecessor ownership and delete-only historical paths without adding retired targets to active publication metadata.
+- HOME/project fault injection restores locally edited owned files; persisted-journal recovery handles child-process termination. Forged cleanup, unsafe paths, invalid progress, and symlink cases are rejected.
+- Stable publication replaces self-generated approval JSON with live GitHub run/environment/review-history and reviewer-permission verification. Removed local approval-file options; unsupported protections, self-review, absent approval and stable reruns fail closed.
+- Configured live `production` required reviewers (`loidinhm31`, `quochuy-vo`), prevented self-review, disabled admin bypass, and restricted deployment to `main`. The publisher verifies the live policy on every stable invocation.
+
+### 2026-10-09 — feat(distribution)!: docs, changelog, prerelease and stable promotion pipeline (Phase 10)
+
+- Dual-branch release pipeline: updated `.releaserc.json` with prerelease branch `next` (`channel: "next"`, `prerelease: "rc"`) and stable branch `main`. Workflow `.github/workflows/release.yml` triggers pushes on both `main` and `next`, establishing a protected `production` environment review gate for stable publication.
+- Release candidate mirror seeding: updated `scripts/release/run-release-candidate.cjs` (`createLocalReleaseMirror`) to seed bare candidate mirror with triggering branch at `sourceCommit`, seed verified configured `main` (and `next`) refs from repository history, and seed all local tags.
+- Stable candidate approval evidence validation: updated `scripts/release/publish-release.cjs` (`verifyStableApprovalEvidence`) to enforce branch topology guards (rejecting prereleases on `main` and stable releases on `next`) and require valid maintainer approval evidence binding candidate commit, version, tag, run ID, and file digests before publishing stable releases.
+- Normative documentation reconciliation: updated `README.md`, `docs/code-standards.md`, `docs/system-architecture.md`, `docs/project-overview-pdr.md` (FR-12), `docs/codebase-summary.md`, `docs/project-roadmap.md`, `docs/pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, `-x-` nesting reversibility, single `AGENTS.md` authority (`.evcrate/source/.claude/AGENTS.md`), pre-upgrade customization backup warnings, and local-asset installer installation procedures.
 
 ### 2026-10-08 — fix(advisor): accept omp requestControls and usage.cttl in assistant stream
 
 - OMP advisor parser (`adapters/omp-parser.cjs`) accepts optional assistant `requestControls` (plain JSON object bounded to 4096 serialized bytes, depth 6, 256 nodes) and optional `usage.cttl` (plain object of at most 16 finite non-negative numbers) emitted by omp 18.8.x for the Anthropic provider; previously every `anthropic/claude-opus-5-5` backup consultation failed `PROTOCOL_INVALID`. Both fields stay optional, all other exact-key checks are unchanged, and message_end/turn_end/agent_end equivalence is unaffected. Regression tests added to `tests/advisor-controller/omp-adapter.test.cjs`.
-
 ### 2026-10-07 — fix(advisor): PR #19 advice activation hardening
 
 - Phases 01–05 hardening & caveats: quote-span/boundary parsing to unescaped token delimiters; 1 KiB relative-POSIX selection paths; root realpath cwd verification (`ADVICE_CONTEXT_MISMATCH` fail closed); off mode decoupled from controller (receipt-attested, never calls `evcrate-advisor`); native-user admission (`handoff: null`, `source: "native-user"`); dead `executeDelegated`/`source: "delegated"` removed; delegated/direct-definition receiving evaluates HOME helper with caller handoff (model headers untrusted); prompt blocks rendered structurally via exported `COMMAND_NAMES`; fail-closed diagnostics; live matrix 8/8 PASS (M3 approval gate NOT QUALIFIED, M2b non-adversarial); manual `typecheck:omp-runtime` gate (not in npm test/CI); OMP blank-line paragraph boundary deferred.
@@ -752,59 +765,10 @@ and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-determini
 - Modularized installed assertions into `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC).
 - All release gates passed sequentially: `npm run distribute:build`, `generate:registry`, `generate:manifests`, `distribute:check`, `test:release` (10/10), `test:installer:linux` (15/15), `test:validation-rollout` (6/6), `test:distribution:rollout` (5/5), and full test suite (512/512). Review PASS.
 
-### 2026-09-13 — feat(distribution): focused contract and runtime proof for scope distribution (Phase 07)
+### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 
-- Focused gates passed: build; protocol 21/21; CLI/context 47/47; primitives 31/31; adapters 26/26; publication 77/77; integration 14/14; cutover 7/7; and direct `distribute:check` returned `status: "ok"`. [Phase 07 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-07-focused-contract-and-runtime-proof.md).
-- Tester passed five targeted checks; terminal code review approved with no findings; advisor reconciliation approved finalization.
-- Canonical regeneration ran through `distribute:build`, `generate:registry`, and `generate:manifests` to restore controller-manifest hash integrity.
-
-### 2026-09-13 — feat(distribution): schema-2 state migration and scope-isolated recovery (Phase 06)
-
-- Schema 2 separates shared controller state from HOME harness state. Valid schema-1 in-progress state is recovered first under the HOME lock; valid terminal state migrates atomically, while ambiguous ownership remains untouched and fails closed. [Phase 06 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-06-state-migration-recovery-and-partial-orchestration.md).
-- Recovery is scope-isolated: HOME recovery reads only HOME state; project recovery validates canonical project identity and reads only its identity-keyed project state. Project publication commits shared HOME first, then applies harness independently; harness failure rolls back only project work and returns a top-level `partial` (exit category 5).
-- Blocking review corrections covered schema-2 binding/phase validation, project-root binding before HOME mutation, locked replanning after HOME recovery, durable ownership-pinned legacy cleanup retry, and same-volume preflight.
-- Direct local evidence: `npm run build` passed; `publication-recovery.test.mjs` (19/19); `publication-apply.test.mjs` (12/12); `publication-plan.test.mjs` (6/6); `cli/publication.test.mjs` (6/6). External provider 429 blocked tester agent.
-
-### 2026-09-13 — feat(distribution): generic transaction engine and locking (Phase 05)
-
-- Generic immutable transaction descriptor/engine covering HOME and project publication with preflight-before-mutation, HOME-then-project locking, durable journal-before-workspace ordering, workspace identity/containment and same-volume checks, fsync/marker ordering, bounded HOME retention with project no-retention cleanup, and distinct recovery/error outcomes. [Phase 05 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-05-generic-transaction-engine.md).
-- Existing schema-1 HOME recovery compatibility preserved.
-- Direct evidence: `npm run build` passed; `npm run test:publication` passed 66/66; `npm run test:integration` passed 14/14; focused recovery and oversized-result regressions passed.
-
-### 2026-09-12 — feat(distribution): one-snapshot shared and harness phase planning (Phase 04)
-
-- Resolved one aggregate schema-2 `VerifiedCurrentBuild` and digest once, then passed the immutable snapshot to ordered shared and harness planning. Shared controller materialization remains fixed beneath `<home>/.evcrate/bin`; HOME uses strict target mappings/order, with only valid Gemini `.gemini` → Antigravity `.gemini/config` nesting; project roots/documents remain neutral and contained. [Phase 04 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-04-one-snapshot-phase-planning.md).
-- Preserved selected-target ownership and stale cleanup bounds, shared JSON merges and user-owned bytes, hashes, modes, CAS snapshots, immutable defensive operation bytes, transformed/merged file-size bounds, and duplicate planned-destination rejection. Full overlap/path preflight runs before destination reads.
-- Direct repository evidence: `npm run build` passed; `publication-plan.test.mjs` and `publication-parity.test.mjs` (8/8); `npm run test:publication` (57/57); `npm run test:adapters` (24/24); `npm run distribute:check` ok.
-
-### 2026-09-12 — feat(distribution): neutral seven-target runtime closures and structured HOME rules (Phase 03)
-
-- Completed installation-relative neutral runtime closures for all seven targets, structured HOME transforms, workspace `cwd`/environment separation, and fail-closed child validation. [Phase 03 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-03-neutral-seven-target-runtime-closures.md).
-- Evidence: `npm run build`, adapters 24/24, source-derived publication 54/54, integration 14/14, and source-derived full suite passed. Checked-in generated outputs remained Phase 08-owned.
-
-### 2026-09-12 — feat(distribution): context and manifest project bindings (Phase 02)
-
-- Normalized project destinations: Added immutable `ProjectDirectoryDescriptor` and `ProjectDocumentDescriptor` unions to `SelectedTargetContext` and `InvocationContext`, derived strictly from manifest `outputRoots` and `projectDocs` in declaration order without filesystem ancestor traversal. [Phase 02 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-02-context-and-manifest-project-bindings.md).
-- Retained file/directory distinction: Root documents (Codex `AGENTS.md`, Gemini `GEMINI.md`) are explicitly represented as document descriptors, never traversed as directory bindings.
-- Intra- and cross-target overlap validation: Added strict overlap rejection via `pathOverlaps` and `assertNoDescriptorOverlap` that rejects equal, nested, duplicate document, and root/document collisions before destination inventory reads.
-- Canonical project root and owner-controlled identity: Implemented `canonicalProjectRoot` in `src/scopes/identity.ts` enforcing real directory existence, non-symlink ancestry, owner control, and native `realpath` canonicalization. Computed lowercase 64-hex SHA-256 `projectIdentity` over canonical path.
-- Non-publication safety: Added `resolvePublicationProjectContext` for publication-boundary mutation checks while preserving lexical project root resolution.
-- Verification: 174/174 tests passing across primitives, CLI, adapters, publication, and protocol test suites; `npm run distribute:check` status ok with zero drift.
-
-### 2026-09-12 — feat(distribution): freeze scope publication protocol (Phase 01)
-
-- Froze scalar `--scope home|project` parsing/defaults, exact publication/recovery wire shapes, ordered shared/harness phase correlation, partial results, and exit category 5. [Phase 01 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-01-cli-and-protocol-contract.md).
-- Evidence: protocol 21/21, CLI 42/42, integration 14/14, publication 53/53, and `npm run build` passed.
-### 2026-09-11 — fix(advisor): resolve V2 evidence.files schema ambiguity and improve input diagnostics
-
-- Resolved `PROTOCOL_INVALID` failure on caller-provided string `evidence.files` by differentiating client request validation from downstream adapter protocol errors.
-- Parameterized `validateCheckpointV2(value, code = 'PROTOCOL_INVALID')`; request boundaries in `state-contract.cjs` and `task-state.cjs` pass `REQUEST_INVALID`.
-- Updated `REQUEST_INVALID` in `errors.cjs` to provide version-neutral, actionable instructions indicating that V2 `evidence.files` requires `{ path, excerpt, digest }` objects and `intended_changed_paths` are strings. Preserved exact four-key error envelope.
-- Populated empty `evidence.files` examples in canonical `advisor-mentoring.md` and `brief-contract.md` with schema-valid `{ path, excerpt, digest }` fixtures while maintaining exactly 10 extractable JSON blocks.
-- Clarified agent instructions across all seven target projections (`advisor.md`, `SKILL.md`).
-- Validated zero projection drift across all seven harnesses via `distribute:check` and 100% test pass rate across 230 tests (`test:advisor-controller` 207/207, `test:adapters` 23/23).
-- Independent code review (9.5/10 Approved) and mentor review (`review:hard-fix` with GPT-5.6 Sol high effort: Approved).
-
+- Scope distribution baseline: scalar `--scope home|project`, normalized project descriptors and identity hashing, runtime closures, single-snapshot planning, generic transaction engine, schema-2 state migration/recovery, and contract proofs across all targets.
+- Retained evidence: `npm run build`, `npm run test:publication`, `npm run test:integration`, and all target manifests green. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
 Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md).

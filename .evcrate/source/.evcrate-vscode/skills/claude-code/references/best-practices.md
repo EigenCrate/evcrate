@@ -243,7 +243,7 @@ claude analytics cost --group-by project
 Create consistent slash commands:
 
 ```markdown
-# .evcrate-vscode/skills/cmd-test/SKILL.md
+# .evcrate-vscode/commands/test.md
 Run test suite with coverage report.
 
 Options:
@@ -252,9 +252,9 @@ Options:
 
 **Usage:**
 ```bash
-/cmd-test
-/cmd-test unit
-/cmd-test integration
+/test
+/test unit
+/test integration
 ```
 
 ### Share Skills
@@ -392,38 +392,38 @@ claude analytics cost --project my-project
 
 ```bash
 # 1. Plan feature
-claude /cmd-plan "implement user authentication"
+claude /plan "implement user authentication"
 
 # 2. Create checkpoint
 claude checkpoint create "before auth implementation"
 
 # 3. Implement
-claude /cmd-cook "implement user authentication"
+claude /cook "implement user authentication"
 
 # 4. Test
-claude /cmd-test
+claude /test
 
 # 5. Review
 claude "review authentication implementation"
 
 # 6. Commit
-claude /cmd-git-cm
+claude /git:cm
 ```
 
 ### Bug Fixing
 
 ```bash
 # 1. Debug
-claude /cmd-debug "login button not working"
+claude /debug "login button not working"
 
 # 2. Fix
-claude /cmd-fix-fast "fix login button issue"
+claude /fix:fast "fix login button issue"
 
 # 3. Test
-claude /cmd-test
+claude /test
 
 # 4. Commit
-claude /cmd-git-cm
+claude /git:cm
 ```
 
 ### Code Review

@@ -13,7 +13,7 @@ import { createResourceRequest, createResourceRecoveryResult, createResourceResu
 import { PROTOCOL_VERSION } from '../protocol/validation.js';
 import {
   PUBLICATION_BINDING_ORDER, validatePublishApplyResultPayload, validatePublishDryRunResultPayload,
-  validateRecoverResultPayload
+  validateRecoverResultPayload, publicationStateLayout
 } from '../protocol/publication-payloads.js';
 import type {
   ApplyPhaseRecord, DryRunPhaseRecord, PublicationRequestPayload, PublicationScope, PublishRequestPayload,
@@ -318,12 +318,12 @@ function assertRecoveryCorrelation(
       assertExactValues(phase.bindingOrder, ['.evcrate/bin']);
       continue;
     }
-    if (phase.selectedTargets.some((target) => !context.selectedTargetIds.includes(target))) {
+    const layout = publicationStateLayout(phase.bindingOrder, phase.selectedTargets, request.scope);
+    if (phase.selectedTargets.some((target) => target === 'gemini'
+      ? layout.generation !== 'predecessor'
+      : !context.selectedTargetIds.includes(target))) {
       throw new ControlPlaneError('PROTOCOL_INVALID');
     }
-    assertExactValues(
-      phase.bindingOrder, publicationHarnessBindingOrder(context, phase.selectedTargets, request.scope)
-    );
   }
 }
 async function publicationResult(

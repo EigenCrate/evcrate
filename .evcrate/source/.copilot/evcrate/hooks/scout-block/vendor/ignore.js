@@ -3,7 +3,7 @@
  * https://github.com/kaelzhang/node-ignore
  * MIT License - Copyright (c) 2013 Kael Zhang
  *
- * Vendored to avoid npm dependency for GitHub Copilot CLI hooks.
+ * Vendored to avoid npm dependency for Claude Code hooks.
  * Original source: https://unpkg.com/ignore@5.3.0/index.js
  */
 

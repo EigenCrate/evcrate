@@ -50,9 +50,14 @@ function verifyMaterializedRuntimes(homeDir, workspaceDir, sandboxEnv) {
   if (claude.includes('EVCREATE_HOOK_UNAVAILABLE')) throw new Error('Claude could not resolve installed child hooks');
   const codex = JSON.parse(invokeRuntime([path.join(homeDir, '.codex', 'hooks', 'session-start.cjs')], workspaceDir, runtimeEnv({ CODEX_PROJECT_DIR: workspaceDir }), 'Codex'));
   if (codex.hookSpecificOutput?.hookEventName !== 'SessionStart') throw new Error('Codex runtime lost workspace hook semantics');
-  const gemini = JSON.parse(invokeRuntime([path.join(homeDir, '.gemini', 'hooks', 'session-start.cjs')], workspaceDir, runtimeEnv({ GEMINI_PROJECT_DIR: workspaceDir }), 'Gemini'));
-  if (gemini.hookSpecificOutput?.hookEventName !== 'SessionStart') throw new Error('Gemini runtime lost workspace hook semantics');
-  const antigravity = JSON.parse(invokeRuntime([path.join(homeDir, '.gemini', 'config', 'hooks', 'scout-block.cjs')], workspaceDir, runtimeEnv({ AGY_PROJECT_DIR: workspaceDir }), 'Antigravity'));
+  const antigravity = JSON.parse(invokeRuntime(
+    [path.join(homeDir, '.gemini', 'config', 'hooks', 'scout-block.cjs')],
+    workspaceDir, runtimeEnv({ AGY_PROJECT_DIR: workspaceDir }), 'Antigravity',
+    JSON.stringify({
+      toolCall: { name: 'run_command', args: { CommandLine: 'pwd' } },
+      workspacePaths: [workspaceDir], conversationId: 'installed-lifecycle', invocationNum: 1
+    })
+  ));
   if (antigravity.decision !== 'allow') throw new Error('Antigravity runtime did not execute installed hook');
   const ompProgram = [`import { runCanonicalHook } from ${JSON.stringify(`file://${path.join(homeDir, '.omp', 'agent', 'evcrate', 'omp-hook-runtime.ts')}`)};`, `const result = await runCanonicalHook('session-init.cjs', {}, { cwd: ${JSON.stringify(workspaceDir)} });`, 'process.exitCode = result.code;'].join('\n');
   invokeRuntime(['--experimental-strip-types', '--input-type=module', '--eval', ompProgram], workspaceDir, runtimeEnv({}), 'OMP');
@@ -131,7 +136,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
   runLauncher(launcherPath, ['publish', '--apply', '--scope', 'home', '--json'], defaultOpts, 'HOME publish apply');
   assertPackageHash(snapshotDir, packageHashBefore, 'HOME publish');
 
-  const expectedTargets = ['.claude', '.copilot', '.omp', '.pi', '.gemini', '.codex', '.agents', '.evcrate-vscode'];
+  const expectedTargets = ['.claude', '.copilot', '.omp', '.pi', '.codex', '.agents/skills', '.evcrate-vscode'];
   for (const target of expectedTargets) {
     if (!fs.existsSync(path.join(homeDir, target))) throw new Error(`Missing expected HOME target projection: ${target}`);
   }
@@ -165,7 +170,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
       }
     })}`);
   }
-  const expectedProjectPaths = ['.claude', '.codex', '.agents', 'AGENTS.md', '.pi', '.copilot', '.evcrate-vscode'];
+  const expectedProjectPaths = ['.claude', '.codex', '.agents/skills', 'AGENTS.md', '.pi', '.copilot', '.github/copilot-instructions.md', '.evcrate-vscode'];
   for (const target of expectedProjectPaths) {
     if (!fs.existsSync(path.join(projectDir, target))) throw new Error(`Missing expected project publication path: ${target}`);
   }
