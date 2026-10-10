@@ -277,7 +277,7 @@ compatibility aliases. Single naming authority is `src/adapters/resource-naming.
 `.evcrate/source/.claude/scripts/scan_commands.py`. Claude publishes native unconditional
 `.claude/rules/AGENTS.md` (no duplicate direct AGENTS or CLAUDE shim). Pre-upgrade backups are required;
 recorded ownership controls pruning. Prerelease builds on `next` publish via verified mirror topology;
-stable publication on `main` strictly requires verified candidate-bound maintainer approval evidence (enforced via GitHub `production` environment review gate in CI and programmatic approval evidence in scripted publication).
+stable publication on `main` strictly requires live GitHub verification of production protections and an independent configured maintainer/admin's environment review bound to the candidate repository, release workflow, source commit, run ID and first attempt. Caller-authored approval files and offline authorization are rejected; stable reruns require a new workflow run.
 ### FR-13: Sanitized audit history and outcome review
 
 **Requirement:** Store a bounded, versioned execution record and linked outcome

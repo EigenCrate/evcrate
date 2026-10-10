@@ -2,8 +2,15 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-09
+**Updated:** 2026-10-10
 **Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+
+### 2026-10-10 — fix(distribution): recover retired cleanup and authenticate stable approval
+
+- Retired Gemini cleanup carries an explicit schema-3 journal discriminator, validated against exact predecessor ownership and delete-only historical paths without adding retired targets to active publication metadata.
+- HOME/project fault injection restores locally edited owned files; persisted-journal recovery handles child-process termination. Forged cleanup, unsafe paths, invalid progress, and symlink cases are rejected.
+- Stable publication replaces self-generated approval JSON with live GitHub run/environment/review-history and reviewer-permission verification. Removed local approval-file options; unsupported protections, self-review, absent approval and stable reruns fail closed.
+- Configured live `production` required reviewers (`loidinhm31`, `quochuy-vo`), prevented self-review, disabled admin bypass, and restricted deployment to `main`. The publisher verifies the live policy on every stable invocation.
 
 ### 2026-10-09 — feat(distribution)!: docs, changelog, prerelease and stable promotion pipeline (Phase 10)
 

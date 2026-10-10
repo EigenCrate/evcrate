@@ -183,6 +183,7 @@ function journalFor(
     const before = operation.beforeSnapshot;
     return {
       target: operation.target, binding: operation.binding, local_root: operation.localRoot,
+      ...(operation.cleanup === undefined ? {} : { cleanup: operation.cleanup }),
       relative_path: operation.relativePath,
       kind: operation.target === 'advisor-controller' ? 'directory' : 'file',
       action: operation.action, destination: operation.target === 'advisor-controller'

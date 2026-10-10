@@ -21,10 +21,12 @@ import {
   type PublicationNodeSnapshot
 } from './publication-inventory.js';
 import { writeReleaseMarker, RELEASE_MARKER_NAME } from '../filesystem/locking.js';
+import { retiredBindingCleanupDestination } from './publication-cleanup.js';
 
 export const PUBLICATION_JOURNAL_NAME = 'publication-journal.json';
 export interface PublicationJournalOperation {
   readonly target: PublicationStateTarget | 'advisor-controller'; readonly binding: string; readonly localRoot: string;
+  readonly cleanup?: 'retired-binding';
   readonly relativePath: string; readonly kind: 'file' | 'directory';
   readonly action: PublicationChangeAction; readonly destination: string; readonly backup: string | null;
   readonly before: PublicationNodeSnapshot; readonly intendedHash: string | null;
@@ -331,7 +333,7 @@ function readJournal(path: string): PublicationJournal {
       if (!isPlainObject(value)) fail();
       const baseKeys = ['target', 'binding', 'local_root', 'relative_path', 'kind', 'action', 'destination',
         'backup', 'before', 'intendedHash', 'intended', 'promoted'];
-      const allowedOpKeys = allowMode ? [...baseKeys, 'mode'] : baseKeys;
+      const allowedOpKeys = allowMode ? [...baseKeys, 'mode'] : [...baseKeys, 'cleanup'];
       if (Object.keys(value).length > allowedOpKeys.length
         || Object.keys(value).some((key) => !allowedOpKeys.includes(key))
         || baseKeys.some((k) => !Object.hasOwn(value, k))
@@ -339,16 +341,25 @@ function readJournal(path: string): PublicationJournal {
       if (Object.hasOwn(value, 'mode')) {
         safeInteger(value.mode, 0o7777);
       }
+      // Only schema 3 can carry cleanup intent. Ordinary and historical
+      // operations still require an active target/binding below.
+      const cleanup = Object.hasOwn(value, 'cleanup');
+      if (cleanup && value.cleanup !== 'retired-binding') fail();
       const target = value.target === 'advisor-controller' ? value.target : publicationStateTarget(value.target);
-      if (target !== 'advisor-controller' && !selectedTargets.includes(target)) fail();
+      if (!cleanup && target !== 'advisor-controller' && !selectedTargets.includes(target)) fail();
       const binding = relativePath(value.binding);
       const localRoot = relativePath(value.local_root);
       const relativePathValue = relativePath(value.relative_path);
-      if (!bindingOrder.includes(binding) || !targetForBinding(target, binding, scope, layout.generation)) fail();
+      if (!cleanup
+        && (!bindingOrder.includes(binding) || !targetForBinding(target, binding, scope, layout.generation))) fail();
       if (value.kind !== 'file' && value.kind !== 'directory' || typeof value.destination !== 'string') fail();
       const destination = relativePath(value.destination);
-      const expectedDestination = target === 'advisor-controller' ? binding
-        : publicationStateDestination(binding, relativePathValue, scope);
+      const expectedDestination = cleanup
+        ? retiredBindingCleanupDestination(
+          target, binding, relativePathValue, scope, selectedTargets, previousManagedPaths
+        )
+        : target === 'advisor-controller' ? binding
+          : publicationStateDestination(binding, relativePathValue, scope);
       if (destination !== expectedDestination) fail('PATH_UNSAFE');
       if (destinations.has(destination)) fail();
       destinations.add(destination);
@@ -364,6 +375,9 @@ function readJournal(path: string): PublicationJournal {
       if (needsBackup !== (backup !== null) || (backup !== null && backup !== `backups/${index}`)) fail();
       if (before.present && before.kind !== value.kind) fail();
       const intendedHash = hash(value.intendedHash);
+      if (cleanup && (layout.generation !== 'current' || bindingOrder.includes(binding)
+        || action !== 'delete' || !before.present || before.kind !== 'file'
+        || intendedHash !== null || localRoot !== binding)) fail();
       if (['create', 'update', 'merge-create', 'merge-update'].includes(action) && intendedHash === null) fail();
       if (action === 'delete' && intendedHash !== null) fail();
       if ((action === 'noop' || action === 'preserve')
@@ -379,6 +393,7 @@ function readJournal(path: string): PublicationJournal {
       if (mutation(action) && !value.promoted && intended !== null) fail();
       return Object.freeze({
         target, binding, localRoot, relativePath: relativePathValue, kind: value.kind,
+        ...(cleanup ? { cleanup: 'retired-binding' as const } : {}),
         action, destination, backup, before, intendedHash, intended, promoted: value.promoted
       });
     });

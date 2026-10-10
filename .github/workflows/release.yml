@@ -304,42 +304,6 @@ jobs:
             --expected-hash "install.ps1=${INSTALL_PS1_SHA}"
 
 
-      - name: Generate maintainer approval evidence for stable release
-        if: github.ref_name == 'main'
-        env:
-          ARTIFACT_NAME: ${{ needs.release-candidate.outputs.artifact_name }}
-          ACTOR: ${{ github.triggering_actor || github.actor }}
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
-        run: |
-          set -euo pipefail
-          CANDIDATE_DIR="release-candidate"
-          if [ ! -f "$CANDIDATE_DIR/candidate.json" ] && [ -f "$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json" ]; then
-            CANDIDATE_DIR="$CANDIDATE_DIR/$ARTIFACT_NAME"
-          fi
-          node -e '
-            const fs = require("node:fs");
-            const path = require("node:path");
-            const candidateDir = process.argv[1];
-            const receipt = JSON.parse(fs.readFileSync(path.join(candidateDir, "candidate.json"), "utf8"));
-            const digests = {};
-            for (const f of receipt.files) {
-              digests[f.name] = f.sha256;
-            }
-            const evidence = {
-              status: "approved",
-              version: receipt.version,
-              tag: receipt.tag,
-              source_commit: receipt.source_commit,
-              workflow_run_id: Number(process.env.WORKFLOW_RUN_ID),
-              approved_by: process.env.ACTOR,
-              approved_at: new Date().toISOString(),
-              digests
-            };
-            const outPath = path.join(candidateDir, "approval-evidence.json");
-            fs.writeFileSync(outPath, JSON.stringify(evidence, null, 2));
-            console.log("Generated stable approval evidence at " + outPath);
-          ' "$CANDIDATE_DIR"
-
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -361,8 +325,5 @@ jobs:
           if [ ! -f "$CANDIDATE_DIR/candidate.json" ] && [ -f "$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json" ]; then
             export EVCRATE_RELEASE_CANDIDATE_RECEIPT="$CANDIDATE_DIR/$ARTIFACT_NAME/candidate.json"
             CANDIDATE_DIR="$CANDIDATE_DIR/$ARTIFACT_NAME"
-          fi
-          if [ "${GITHUB_REF_NAME:-}" = "main" ]; then
-            export EVCRATE_STABLE_APPROVAL_PATH="$CANDIDATE_DIR/approval-evidence.json"
           fi
           npm run semantic-release

@@ -32,12 +32,13 @@ During publication planning across all active targets (`claude`, `codex`, `antig
 
 ---
 
-## 3. Project-Scope Obsolete Binding Reconciliation
+## 3. HOME and Project Retired Binding Reconciliation
 
-When upgrading a project scope that was previously published by older evcrate versions:
-- **Prior Binding Sweep**: `reconcileRemovedBindings` inspects prior target bindings in `release-marker.json`. Any prior binding that no longer exists in current descriptors (such as legacy `.claude/CLAUDE.md` or obsolete `.gemini` documents) is planned with `action: 'delete'`.
-- **Safe Predecessor Retention**: Codex inherited predecessor residuals under `.agents` are safely preserved and not swept.
-- **Atomic Application**: Obsolete files are removed during the harness phase transaction and purged from the new release marker's `managed_paths`.
+When upgrading an older publication and selecting Antigravity:
+- **Owned Predecessor Sweep**: `reconcileRetiredBindings` plans deletion only for exact recorded Gemini predecessor files: `.gemini` leaves in HOME/project scopes and owned `GEMINI.md` in project scope. Existing active-binding pruning handles obsolete owned leaves such as `.claude/CLAUDE.md`.
+- **Safe Predecessor Retention**: Untracked files and inherited Codex `.agents` residuals are preserved; there is no generic sweep of arbitrary old bindings.
+- **Recoverable Application**: Retired deletions carry `cleanup: "retired-binding"` in schema-3 journals, authorized against exact predecessor ownership without adding Gemini to active targets or binding order. Snapshot, backup, workspace, progress and path checks remain strict; operation faults and process interruptions can restore owned files.
+- **Scope Boundary**: HOME rollback includes its controller transaction. Project harness rollback does not undo the separately committed shared HOME phase.
 
 ---
 

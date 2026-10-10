@@ -1,17 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { buildTestReleaseSet } from '../installers/fixtures/private-release-fixture.mjs';
 import { createIsolatedEnv } from '../installers/fixtures/test-env.mjs';
 import {
   existsSync, mkdirSync, mkdtempSync, readFileSync,
-  rmSync, writeFileSync
+  rmSync, symlinkSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
   PERSISTED_TARGETS, createPublicationPlanSet, publishApply,
-  publicationStateRoot, resolveInvocationContext, resolvePublicationProjectContext, runLocalBuild
+  publicationStateRoot, resolveInvocationContext, resolvePublicationProjectContext, runLocalBuild,
+  canonicalJsonBytes, hashBytes, readPublicationJournal, recoverPublicationUnlocked
 } from '../../dist/index.js';
 import { resolve } from 'node:path';
 import { prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
@@ -65,6 +66,190 @@ function recordedMarker(destination, state, scope, selected, bindings, ownership
       harness
     } : { harness }
   };
+}
+
+function retiredCleanupFixture(scope) {
+  const root = mkdtempSync(join(tmpdir(), `evcrate-retired-rollback-${scope}-`));
+  const home = join(root, 'home');
+  const project = join(root, 'project');
+  directory(home);
+  directory(project);
+  const context = resolveInvocationContext({
+    packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['antigravity']
+  });
+  const destination = scope === 'home' ? home : project;
+  const identity = scope === 'home' ? null : resolvePublicationProjectContext(context).projectIdentity;
+  const state = scope === 'home' ? publicationStateRoot(home)
+    : join(context.stateRoot, 'project-publication', identity);
+  directory(state);
+  const activeBinding = scope === 'home' ? '.gemini/config' : '.antigravity';
+  const ownership = {
+    antigravity: { [activeBinding]: ['AGENTS.md'] },
+    gemini: { '.gemini': ['commands/worktree.toml'],
+      ...(scope === 'project' ? { 'GEMINI.md': ['GEMINI.md'] } : {}) }
+  };
+  const marker = recordedMarker(
+    destination, state, scope, ['antigravity', 'gemini'],
+    scope === 'home' ? ['.gemini', activeBinding] : [activeBinding, '.gemini', 'GEMINI.md'],
+    ownership, identity
+  );
+  writeFileSync(join(state, 'release-marker.json'), JSON.stringify(marker));
+  const owned = [
+    ['.gemini/commands/worktree.toml', '# Locally edited owned Gemini command\n'],
+    ...(scope === 'project' ? [['GEMINI.md', '# Locally edited owned Gemini document\n']] : [])
+  ].map(([path, content]) => [userFile(destination, path, content), content]);
+  const active = userFile(destination, `${activeBinding}/AGENTS.md`, '# Previous active instructions\n');
+  const untracked = userFile(destination, '.gemini/vendor-user.txt', 'Untracked vendor content\n');
+  const plan = createPublicationPlanSet(context, { scope, priorManagedOwnership: ownership });
+  assert.deepEqual(plan.harness.selectedTargets, ['antigravity']);
+  assert.equal(plan.harness.bindingOrder.includes('.gemini'), false);
+  assert.equal(plan.harness.bindingOrder.includes('GEMINI.md'), false);
+  assert.equal(plan.harness.changes.some(({ target }) => target === 'gemini'), false);
+  const created = plan.harness.bindings.flatMap(({ operations }) =>
+    operations.filter(({ beforeSnapshot }) => !beforeSnapshot.present).map(({ destination }) => destination));
+  return { root, scope, home, project, context, destination, identity, state, owned, active, untracked, created, ownership };
+}
+
+function assertRetiredCleanupRestored(value) {
+  for (const [path, content] of value.owned) assert.equal(readFileSync(path, 'utf8'), content);
+  assert.equal(readFileSync(value.active, 'utf8'), '# Previous active instructions\n');
+  assert.equal(readFileSync(value.untracked, 'utf8'), 'Untracked vendor content\n');
+  for (const path of value.created) assert.equal(existsSync(path), false, `rollback must remove ${path}`);
+  assert.equal(existsSync(join(value.home, '.evcrate/bin')), value.scope === 'project',
+    'HOME rollback includes the controller; project rollback preserves the separately committed shared phase');
+  assert.equal(existsSync(join(value.state, 'publication-journal.json')), false);
+  const record = readOptionalPublicationMarker(join(value.state, 'release-marker.json')).records.harness;
+  assert.equal(record.status, 'recovered');
+  assert.deepEqual(record.managed_paths, value.ownership);
+  assert.deepEqual(record.selected_targets, ['antigravity']);
+  assert.equal(record.binding_order.includes('.gemini'), false);
+  assert.equal(record.binding_order.includes('GEMINI.md'), false);
+}
+
+for (const scope of ['home', 'project']) {
+  test(`retired Gemini ${scope} cleanup rolls back edited owned files after an operation failure`, () => {
+    const value = retiredCleanupFixture(scope);
+    try {
+      let deleted = 0;
+      assert.throws(() => publishApply(value.context, {
+        hooks: {
+          afterOperation(operation) {
+            if (operation.target !== 'gemini') return;
+            assert.equal(operation.action, 'delete');
+            assert.equal(existsSync(operation.destination), false);
+            if (++deleted === value.owned.length) throw new Error('injected after retired cleanup');
+          }
+        }
+      }, { scope, selectedTargets: ['antigravity'] }), (error) => error?.code === 'PUBLICATION_FAILED');
+      assert.equal(deleted, value.owned.length, 'fault must happen after all retired deletions');
+      assertRetiredCleanupRestored(value);
+    } finally {
+      rmSync(value.root, { recursive: true, force: true });
+    }
+  });
+
+  test(`retired Gemini ${scope} persisted cleanup rejects forgery and recovers a crashed publisher`, () => {
+    const value = retiredCleanupFixture(scope);
+    try {
+      const child = spawnSync(process.execPath, ['--input-type=module', '--eval', `
+        import { publishApply, resolveInvocationContext } from ${JSON.stringify(new URL('../../dist/index.js', import.meta.url).href)};
+        const input = JSON.parse(process.argv[1]);
+        const context = resolveInvocationContext(input.context);
+        let deleted = 0;
+        publishApply(context, { hooks: { afterOperation(operation) {
+          if (operation.target === 'gemini' && ++deleted === input.count) process.exit(86);
+        } } }, { scope: input.scope, selectedTargets: ['antigravity'] });
+        process.exit(87);
+      `, JSON.stringify({
+        context: { packageRoot, cwd: packageRoot, home: value.home, projectRoot: value.project, targets: ['antigravity'] },
+        scope, count: value.owned.length
+      })], { encoding: 'utf8', timeout: 120_000 });
+      assert.equal(child.status, 86, child.stderr || child.error?.message);
+      for (const [path] of value.owned) assert.equal(existsSync(path), false);
+      assert.equal(readFileSync(value.untracked, 'utf8'), 'Untracked vendor content\n');
+      const journalPath = join(value.state, 'publication-journal.json');
+      const original = readFileSync(journalPath);
+      const journal = JSON.parse(original);
+      const cleanupIndex = journal.operations.findIndex(({ cleanup }) => cleanup === 'retired-binding');
+      assert.notEqual(cleanupIndex, -1);
+      const decoded = readPublicationJournal(value.state);
+      assert.equal(decoded.operations[cleanupIndex].promoted, true, 'recovery must consume durable progress');
+      assert.deepEqual(decoded.selected_targets, ['antigravity']);
+      assert.equal(decoded.binding_order.includes('.gemini'), false);
+      assert.equal(decoded.binding_order.includes('GEMINI.md'), false);
+
+      const mutations = [
+        ['unowned leaf', (raw, op) => {
+          op.relative_path = 'vendor-user.txt';
+          op.destination = '.gemini/vendor-user.txt';
+        }],
+        ['missing predecessor ownership', (raw) => {
+          delete raw.previous_managed_paths.gemini;
+          delete raw.records.harness.previous_managed_paths.gemini;
+        }],
+        ['record ownership mismatch', (raw) => { delete raw.records.harness.previous_managed_paths.gemini; }],
+        ['create', (raw, op) => { op.action = 'create'; op.intendedHash = 'a'.repeat(64); }],
+        ['update', (raw, op) => { op.action = 'update'; op.intendedHash = 'a'.repeat(64); }],
+        ['wrong destination', (raw, op) => { op.destination = '.gemini/vendor-user.txt'; }],
+        ['traversal', (raw, op) => { op.destination = '../outside'; }],
+        ['wrong local root', (raw, op) => { op.local_root = '.antigravity'; }],
+        ['unapproved binding', (raw, op) => { op.binding = '.gemini/config'; }],
+        ['active target cleanup disguise', (raw, op) => { op.target = 'antigravity'; }],
+        ['ordinary operation disguise', (raw, op) => { delete op.cleanup; }],
+        ['unknown cleanup kind', (raw, op) => { op.cleanup = 'anything'; }],
+        ['missing regular file', (raw, op) => { op.before = { present: false }; op.backup = null; }],
+        ['directory', (raw, op) => { op.kind = 'directory'; op.before.kind = 'directory'; }],
+        ['non-null intended hash', (raw, op) => { op.intendedHash = 'a'.repeat(64); }],
+        ['wrong backup', (raw, op) => { op.backup = 'backups/999999'; }],
+        ['duplicate destination', (raw, op) => { raw.operations.push({ ...op, backup: `backups/${raw.operations.length}` }); }],
+        ['wrong workspace identity', (raw) => { raw.workspace_inode += 1; }],
+        ['legacy schema cleanup', (raw) => { raw.schema_version = 2; }]
+      ];
+      if (scope === 'home') mutations.push(['project-only binding', (raw, op) => {
+        op.binding = 'GEMINI.md'; op.local_root = 'GEMINI.md';
+        op.relative_path = 'GEMINI.md'; op.destination = 'GEMINI.md';
+      }]);
+      for (const [name, mutate] of mutations) {
+        const malformed = structuredClone(journal);
+        mutate(malformed, malformed.operations[cleanupIndex]);
+        malformed.operation_count = malformed.operations.length;
+        malformed.operations_digest = hashBytes(canonicalJsonBytes(malformed.operations));
+        writeFileSync(journalPath, canonicalJsonBytes(malformed));
+        assert.throws(() => recoverPublicationUnlocked(value.state, value.destination, null, value.identity),
+          undefined, name);
+        for (const [path] of value.owned) assert.equal(existsSync(path), false, name);
+        assert.equal(readFileSync(value.untracked, 'utf8'), 'Untracked vendor content\n', name);
+      }
+      writeFileSync(journalPath, original);
+      const progressPath = join(journal.workspace_root, 'progress', `${cleanupIndex}.json`);
+      const progress = readFileSync(progressPath);
+      writeFileSync(progressPath, canonicalJsonBytes({
+        index: cleanupIndex, promoted: true, intended: journal.operations[cleanupIndex].before
+      }));
+      assert.throws(() => recoverPublicationUnlocked(value.state, value.destination, null, value.identity));
+      writeFileSync(progressPath, progress);
+      const recovered = recoverPublicationUnlocked(value.state, value.destination, null, value.identity);
+      assert.equal(recovered.action, 'rolled-back');
+      assertRetiredCleanupRestored(value);
+      assert.equal(existsSync(journal.workspace_root), false);
+    } finally {
+      rmSync(value.root, { recursive: true, force: true });
+    }
+  });
+
+  test(`retired Gemini ${scope} cleanup refuses a symlink instead of deleting its referent`, { skip: process.platform === 'win32' }, () => {
+    const value = retiredCleanupFixture(scope);
+    try {
+      const [ownedPath] = value.owned[0];
+      rmSync(ownedPath);
+      symlinkSync(value.untracked, ownedPath);
+      assert.throws(() => publishApply(value.context, {}, { scope, selectedTargets: ['antigravity'] }));
+      assert.equal(readFileSync(value.untracked, 'utf8'), 'Untracked vendor content\n');
+      assert.equal(existsSync(join(value.state, 'publication-journal.json')), false);
+    } finally {
+      rmSync(value.root, { recursive: true, force: true });
+    }
+  });
 }
 
 test('Phase 08: Universal collision refusal protects unmanaged files at migrated destinations', () => {
