@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Centralized environment variable resolver for Codex CLI skills.
+Centralized environment variable resolver for Claude Code skills.
 
-Resolves environment variables following the Codex CLI hierarchy:
+Resolves environment variables following the Claude Code hierarchy:
 1. process.env                    - Runtime environment (HIGHEST)
 2. .agents/skills/<skill>/.env    - Project skill-specific
 3. .agents/skills/.env            - Project shared
@@ -145,7 +145,7 @@ def resolve_env(
     verbose: bool = False
 ) -> Optional[str]:
     """
-    Resolve environment variable following Codex CLI hierarchy.
+    Resolve environment variable following Claude Code hierarchy.
 
     Args:
         var_name: Name of the environment variable to resolve
@@ -256,7 +256,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Resolve environment variables following Codex CLI hierarchy',
+        description='Resolve environment variables following Claude Code hierarchy',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -25,7 +25,7 @@ function manifest(name, publicationRules = []) {
 
 test('publication rules are closed, explicit, and preserve the frozen order', () => {
   assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-    '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+    '.evcrate/bin', '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
   ]);
   assert.equal(mapPublicationPath(manifest('omp', ['omp-agent-prefix']), 'agents/a.md'), 'agent/agents/a.md');
   assert.equal(mapPublicationPath(manifest('claude', ['claude-skill-root-exclusion']), 'skills/README.md'), null);
@@ -136,11 +136,12 @@ test('publication plan set shares one aggregate build across fixed shared and sc
     assert.deepEqual(homePlan.shared.bindingOrder, ['.evcrate/bin']);
     assert.deepEqual(homePlan.shared.selectedTargets, []);
     assert.deepEqual(homePlan.harness.bindingOrder, [
-      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+      '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
     assert.deepEqual(projectPlan.harness.bindingOrder, [
-      '.antigravity', '.claude', '.codex', '.agents', 'AGENTS.md',
-      '.copilot', '.gemini', 'GEMINI.md', '.omp', '.pi', '.evcrate-vscode'
+      '.antigravity', '.agents/hooks.json', '.agents/rules/evcrate-antigravity.md',
+      '.claude', '.codex', '.agents/skills', 'AGENTS.md',
+      '.copilot', '.github/copilot-instructions.md', '.omp', '.pi', '.evcrate-vscode'
     ]);
     assert.equal(projectPlan.shared.destinationRoot, fixture.home);
     assert.equal(projectPlan.shared.bindings[0].destinationRoot, join(fixture.home, '.evcrate', 'bin'));
@@ -192,23 +193,27 @@ test('publication plan set shares one aggregate build across fixed shared and sc
     assert.ok(projectPiSettings?.content);
     assert.equal(JSON.parse(text(homePiSettings.content)).theme, 'dark');
     assert.equal(JSON.parse(text(projectPiSettings.content)).theme, 'light');
-    const geminiDoc = projectPlan.harness.bindings.find(({ binding }) => binding === 'GEMINI.md');
-    assert.ok(geminiDoc);
-    assert.equal(geminiDoc.kind, 'document');
-    const geminiOperation = geminiDoc.operations.find(({ relativePath }) => relativePath === 'GEMINI.md');
-    assert.ok(geminiOperation?.content);
-    assert.deepEqual(
-      [...geminiOperation.content],
-      [...readFileSync(projectPlan.build.outputPaths['GEMINI.md'])]
-    );
+    for (const document of [
+      '.agents/hooks.json', '.agents/rules/evcrate-antigravity.md', '.github/copilot-instructions.md'
+    ]) {
+      const binding = projectPlan.harness.bindings.find(({ binding }) => binding === document);
+      assert.ok(binding, document);
+      assert.equal(binding.kind, 'document');
+      const operation = binding.operations.find(({ relativePath }) => relativePath === document);
+      assert.ok(operation?.content, document);
+      assert.deepEqual(
+        [...operation.content],
+        [...readFileSync(projectPlan.build.outputPaths[document])]
+      );
+    }
 
     const reversedBuild = {
       ...build,
       selectedManifests: build.selectedManifests.map((manifest) => {
-        if (manifest.name === 'gemini') {
+        if (manifest.name === 'codex') {
           return {
             ...manifest,
-            homePolicy: { ...manifest.homePolicy, promotionOrder: 31 }
+            homePolicy: { ...manifest.homePolicy, promotionOrder: 61 }
           };
         }
         if (manifest.name === 'antigravity') {
@@ -242,7 +247,7 @@ test('project overlap preflight runs before destination inventory reads', async 
   try {
     const build = resolveCurrentPublicationBuild(fixture.context);
     const selectedTargets = fixture.context.selectedTargets.map((target) => {
-      if (target.id !== 'gemini') return target;
+      if (target.id !== 'antigravity') return target;
       const descriptor = target.projectDirectoryDescriptors[0];
       return {
         ...target,

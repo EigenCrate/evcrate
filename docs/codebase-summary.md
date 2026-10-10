@@ -1,11 +1,11 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-05 (PR #17 remediation).
-**Source:** Current repository declarations and implementation modules; [Linux remediation verification](../plans/reports/implementation-261005-1303-pr17-verification.md). Historical candidate qualification evidence remains dated separately.
-**Updated:** 2026-10-06
-**Package:** Private npm package `evcrate` 2.9.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The controller closure also packages the HOME helper asset `evcrate-advice-mode` (`.evcrate/source/.evcrate/bin/evcrate-advice-mode`), invoked explicitly with supported Node (not an npm CLI binary). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
+**Maintained:** 2026-10-09 (Phase 09 tests and golden fixtures verified; tmpfs concurrency protection and buffer overrun fixes active).
+**Source:** Current repository declarations and implementation modules. Historical candidate qualification evidence remains dated separately.
+**Updated:** 2026-10-09
+**Package:** Private npm package `evcrate` 2.10.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The controller closure also packages the HOME helper asset `evcrate-advice-mode` (`.evcrate/source/.evcrate/bin/evcrate-advice-mode`), invoked explicitly with supported Node (not an npm CLI binary). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phase 07 exercised one native Windows x64 row (111 passed; formal qualification invalidated by stale `.omp` manifest under Rule 94). Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`, 7,410 files, archive SHA-256 `6a720dfb...`, manifest SHA-256 `365f145b...`) with repaired `.omp` output hash, 9/9 extracted root launch test pass, Cycle 2 native Windows runner fixes, clean Linux qualification (753/753 passed, 25 win32 skips), and code review score 9.8/10; ready for Phase 07 requalification. Broader Windows support remains limited to installer lifecycle and `version --json`.
-**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phases 01–05 complete 2026-10-05. Deterministic advice activation Phases 01–03 are ordinary user-approved complete with no durable parent run or receipt (CommonJS activation helper, 30 canonical workflows/commands, and 8-target projection cutover); Phase 04 behavioral qualification and docs integration complete for exercised fixture gates with bounded observed native qualification on Linux x64 (OMP six scenario classes capped at Step 0; prerequisite gate and workflow limits retained; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim). Deterministic advice review repairs & prompt economy (PR #19) Phases 01–02 complete (DONE 2026-10-06; review approved 9.2/10, misleading test-title warning fixed, user approved; parser quote/apostrophe/escape handling repaired, OMP delegated receiving path `executeDelegated` added, later removed in PR #19 hardening, cook known-phase handoffs preserved, primary-workflow admission scoped, compact v2 header prompt economy with task expanded once, 9 manifests / 8 targets regenerated; programmatic smoke verified 84 admissions and 6 routed delegations; live model loops and 8-host qualification excluded; no commit/push claims).
+**Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phases 01–05 complete 2026-10-05. Deterministic advice activation Phases 01–03 are ordinary user-approved complete with no durable parent run or receipt (CommonJS activation helper, 30 canonical workflows/commands, and 8-target projection cutover); Phase 04 behavioral qualification and docs integration complete for exercised fixture gates with bounded observed native qualification on Linux x64 (OMP six scenario classes capped at Step 0; prerequisite gate and workflow limits retained; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim). Deterministic advice review repairs & prompt economy (PR #19) Phases 01–02 complete (DONE 2026-10-06; review approved 9.2/10, misleading test-title warning fixed, user approved; parser quote/apostrophe/escape handling repaired, OMP delegated receiving path `executeDelegated` added, later removed in PR #19 hardening, cook known-phase handoffs preserved, primary-workflow admission scoped, compact v2 header prompt economy with task expanded once, 9 manifests / 8 targets regenerated; programmatic smoke verified 84 admissions and 6 routed delegations; live model loops and 8-host qualification excluded; no commit/push claims). Unified naming migration: Phases 01–06, Phase 12, Phase 07 (projections/manifests), Phase 08 (publication prune/upgrade), and Phase 09 (tests & golden fixtures; review 9.0/10) are complete. Pending phases: 10 (docs/changelog cutover), 11 (native packaging & multi-harness qualification).
 **Controller closure:** Exactly 46 files (36 prior shared/Windows entries, eight Darwin assets, plus two deterministic advice activation assets: `evcrate-advice-mode` and `lib/advisor/activation.cjs`); earlier 29-, 33-, 36-, and 44-file inventories are dated counts.
 **Former Workspace Advisor integration:** The 2026-09-30 Phase 09 paired qualification is historical plugin-era evidence, not qualification of the current native DamHopper integration. The plugin runtime and paired host integration were retired 2026-10-02.
 
@@ -15,35 +15,35 @@ EVCrate builds and publishes validated projections of one canonical agent-harnes
 
 | Path | Role | Editing rule |
 |---|---|---|
-| `.evcrate/source/.claude/` | Canonical harness resources | Author here; includes 30 canonical paths (22 commands, 6 workflows including neutral `advice-activation.md` and `plan-progress.md`, 2 agents). Do not hand-edit generated target copies. |
+| `.evcrate/source/.claude/` | Canonical harness resources | Author here; includes 70 canonical commands (`evc-cmd-*`), 18 canonical agents (`evc-*`), 6 workflows (including neutral `advice-activation.md` and `plan-progress.md`), and skills. Do not hand-edit generated target copies. |
 | `.evcrate/source/.evcrate/bin/` | Shared advisor controller source, helper, Darwin native sources and prebuilt assets | Maintain the 46-file generated closure (`evcrate-advisor`, `evcrate-advice-mode`, `lib/advisor/activation.cjs`, Darwin assets). The Darwin integration is present but actual macOS runtime remains untested/unqualified. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlays | Change target policy or declared overlays, then rebuild. |
-| `.evcrate/source/{.agents,.codex,.gemini,.antigravity,.pi,.omp,.copilot}/` | Generated target projections | Regenerate; never treat as authoring roots. |
+| `.evcrate/source/{.claude-projection,.agents/skills,.codex,.antigravity,.pi,.omp,.copilot}/` and declared native project documents | Generated target projections | Regenerate; never treat as authoring roots. |
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
-| `.evcrate/registry.json` | Schema-1 canonical resource records | Regenerate from the canonical scan; distinct from target/build manifests. |
+| `.evcrate/registry.json` | Schema-2 canonical resource records | Regenerate from canonical scan (144 resources across commands, agents, workflows, and skills); distinct from target/build manifests. |
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `scripts/` | Generation, package, release, benchmark (`benchmark-build-generation.mjs`), and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
 | `viewer/src/` | Shared Advisor UI source retained after plugin retirement | Maintain only against current consumers; the former `plugin/` backend/package was removed. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
 
-The persisted target IDs are `claude`, `codex`, `gemini`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. `.agents` is a Codex companion output root, not an additional target. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
+The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Standalone Gemini is retired, not Antigravity's vendor HOME directory. Codex owns `.agents/skills`; Antigravity owns exact `.agents` hook/rule leaves. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
 
 ## TypeScript module map
 
 | Area | Responsibility | Representative files |
 |---|---|---|
-| `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts`, `advisor-settings.ts`, `index.ts` |
+| `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts` (Phase 08 `legacyLeftovers` payload and validation), `advisor-settings.ts`, `index.ts` |
 | `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
 | `src/manifests/` | Target manifest loading, build metadata, controller closure | `manifest.ts`, `registry.ts`, `controller.ts` (validates 46-file closure and Node shebangs on both `evcrate-advisor` and `evcrate-advice-mode`) |
-| `src/adapters/` | Eight target projection adapters (seven shared-registry adapters plus VS Code Local native adapter in `vscode/`; OMP native custom-command gate, native-user admission (`handoff: null`), and compact v2 context headers in `omp/activation.ts` and `omp/commands.ts`; Pi extension ESM boundary and TypeBox bindings in `pi/`; Copilot conditional activation reads in `copilot/prompts.ts`; Gemini standalone transformed files in `gemini/runtime.ts`; all 7 translated adapters hash `dist/adapters/uri-restoration.js`; Codex linear regex callback URL restoration) | `registry.ts`, `qualification.ts`, `vscode/` (`adapter.ts`, `hook-protocol.ts`, `policy.ts`, `session-context.ts`, `advisory-caller.ts`), `codex/` (`transforms.ts`) |
-| `src/distribution/` | Local build/check, single-projection manifest reuse, bounded worker pool (`worker-pool.ts`), input snapshot isolation (`input-snapshot.ts`, `input-snapshot-tree.ts`), publication planning, staging, atomic promotion, and recovery | `local-build.ts`, `local-build-staging.ts`, `manifest-view-derivation.ts`, `local-staging-fs.ts`, `worker-pool.ts`, `input-snapshot.ts`, `publication-plan.ts`, `publication.ts` |
+| `src/adapters/` | Seven target projection adapters; canonical graph `AGENTS.md`, native instruction formats, OMP admission/context guards, Pi main/child extension, current Antigravity hooks/rules, Copilot `.github` project instructions, VS Code Local plugin; shared URI restoration and Markdown frontmatter | `registry.ts`, `qualification.ts`, `markdown-frontmatter.ts`, `vscode/`, `codex/`, `omp/`, `pi/`, `copilot/`, `antigravity.ts` |
+| `src/distribution/` | Local build/check, single-projection manifest reuse, bounded worker pool (`worker-pool.ts`), input snapshot isolation (`input-snapshot.ts`, `input-snapshot-tree.ts`), publication planning, staging, atomic promotion, and recovery | `local-build.ts`, `local-build-staging.ts`, `manifest-view-derivation.ts`, `local-staging-fs.ts`, `worker-pool.ts`, `input-snapshot.ts`, `publication-plan.ts` (Phase 08 removed bindings reconciliation), `publication.ts`, `legacy-leftovers.ts` (Phase 08 unmanaged leftover scanning and migrated collision checks) |
 | `src/filesystem/` | Host/portable paths, hashing, atomic writes, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` |
 | `src/registry/` | Canonical resource scan, schema, validation, and queries | `scanner.ts`, `schema.ts`, `store.ts` |
 | `src/imports/` | Bounded explicit-source preview/apply and materialization | `source.ts`, `preview.ts`, `apply.ts`, `handler.ts` |
 | `src/scopes/` | Global/project assignments, revisions, and CAS | `identity.ts`, `state.ts`, `mutations.ts`, `changes.ts` |
 | `src/advisor-settings/` | User-policy snapshots, journaled transactions, and recovery | `policy-files.ts`, `coordinator.ts`, `transactions.ts`, `recovery.ts` |
-| `src/cli/`, `src/errors/` | One-shot dispatch, output, stable errors, and exit mapping | `arguments.ts`, `dispatch.ts`, `main.ts`, `control-plane-error.ts` |
+| `src/cli/`, `src/errors/` | One-shot dispatch, output, stable errors, and exit mapping | `arguments.ts`, `dispatch.ts`, `main.ts`, `output.ts` (Phase 08 legacy leftovers TTY warning), `control-plane-error.ts` |
 
 The CLI resolves context, validates one invocation, dispatches one operation, writes one validated result, and exits. It exposes version/health, resource and import operations, scopes/changes, advisor settings, and distribution build/check/publish/recover operations. There is no canonical root `distribute.py` runtime.
 
@@ -75,7 +75,7 @@ For full repository manifest generation, `scripts/build-manifests.mjs` executes 
 - **Physical boundary validation**: `visitSnapshotInputs` verifies `assertNoSymlinkAncestors` and `assertRealDirectory`. Unsafe entries (symlinks, special files) throw `PATH_UNSAFE` immediately before any filter is evaluated. Traversal filters (`isIgnoredArtifact`) bypass heavy excluded directories (`node_modules/`, `__pycache__/`) without reading or recursing into descendant paths.
 - **Compiled runtime revision binding**: `compiledRuntimeHash` hashes all `.js` outputs in `dist`. The parent compares disk runtime against in-memory `loadedRuntimeHash`; any divergence throws `PUBLICATION_FAILED` across both serial (jobs 1) and worker (jobs 2) execution. Workers execute the snapshot runtime (`sharedInputs.runtimeRoot/distribution/target-worker.js`).
 - **Promotion freshness under lock before journal**: In `promoteUnlocked`, `options.hooks?.beforeTransaction?.()` executes input freshness checks (`assertLiveInputsUnchanged`) while holding the promotion lock, strictly BEFORE writing the journal or claiming destination outputs. Source drift fails safely before journal recording, avoiding spurious `ROLLBACK_FAILED`.
-- **In-memory metadata derivation**: `deriveManifestView` constructs 8 single-target manifests (`build-manifest-<target>.json`) and 1 aggregate manifest (`build-manifest.json`) without duplicate projection runs or disk re-reads. All 7 translated targets declare `dist/adapters/uri-restoration.js` in `adapter_sources`. All 9 manifests and staged outputs are committed in a single atomic promotion transaction (`promoteTransaction`), maintaining 100% byte-for-byte parity.
+- **In-memory metadata derivation**: `deriveManifestView` constructs seven single-target manifests (`build-manifest-<target>.json`) and one aggregate manifest (`build-manifest.json`) without duplicate projection runs or disk re-reads. All six translated targets declare their transitive adapter helper closure, including `dist/adapters/uri-restoration.js`, in `adapter_sources`. All eight manifests and staged outputs are committed in a single atomic promotion transaction (`promoteTransaction`).
 - **Benchmark metric**: `scripts/benchmark-build-generation.mjs` measures post-build parent process RSS (`memoryUsage().rss`), not worker process-tree peak.
 
 Publication consumes a verified build and publishes the shared advisor controller under HOME plus target harness files in HOME or project scope. Recovery is scope-isolated.
@@ -141,10 +141,10 @@ Key architectural and safety invariants:
 
 ## VS Code Local target, qualification, and Phase 09 rollout
 
-Schema-2 persists eight target IDs, including `vscode`; its target manifest writes
+Schema-2 persists seven target IDs, including `vscode`; its target manifest writes
 to `.evcrate-vscode`. `src/adapters/vscode/` contains native conversion and runtime
 modules. `local-build-staging.ts` selects `vscodeAdapter` for this target; the other
-seven adapters use the shared registry. The npm allowlist includes the generated
+six adapters use the shared registry. The npm allowlist includes the generated
 `.evcrate/source/.evcrate-vscode/**` bundle, but core release assets remain exactly
 seven. Activation stays user-controlled through manual `chat.pluginLocations`
 registration.
@@ -586,7 +586,7 @@ vendor authentication, or universal host enforcement. All seven targets remain
 Deterministic advice activation is governed by the neutral [advice-activation.md](../.evcrate/source/.claude/workflows/advice-activation.md) contract; neutral historical progress inspection is governed by [plan-progress.md](../.evcrate/source/.claude/workflows/plan-progress.md). A final standalone `--advice` enables explicit checkpoint mentoring. Quoted spans (`"..."`, `'...'`), word apostrophes (`don't`), and escaped characters (`\`) suppress flag eligibility while preserving non-flag bytes; duplicate standalone flags reject fail-closed. Explicit-parent inheritance is supported; independent invocations without flag remain off. Handoffs preserve mode and active run identity; default mode carries no advice token.
 OMP targets enforce native-user admission (`handoff: null`, `source: "native-user"`), while delegated calls within a session or direct command definition readers always evaluate the HOME helper with the exact current-call handoff per `advice-activation.md`; model-authored headers are never trusted. Prompt context uses compact version 2 envelopes (`evcrate_omp_command_context` with mode, reason, context, run, source) to expand task text exactly once without payload triplication.
 Current verification proves deterministic activation through helper probes and programmatic smoke (84 admissions, 6 routed delegations) across isolated fixtures; live model loops and 8-host qualification are not invoked.
-The main-session `/cmd-advise` interview remains separate from checkpoint routing.
+The main-session `/evc-cmd-advise` interview remains separate from checkpoint routing.
 For explicit or inherited advice runs only, see the [caller lifecycle binding](../.evcrate/source/.claude/workflows/advisor-mentoring.md#caller-lifecycle-binding).
 
 - **Fresh review:** The parent settles implementation, actual declared validation, reviewer output, selected documentation/artifacts, and relevant writers behind a writer barrier, then initializes once immediately before the first checkpoint.
@@ -627,12 +627,12 @@ Phase 09 reconciles and finalizes operator documentation against that proof:
      publication, and the controller is never materialized under a project root.
    - **Seven target projections**:
      - Claude: `<home>/.claude` (HOME) / `<project>/.claude` (Project).
-     - Codex: `<home>/.agents` then `<home>/.codex` without root doc (HOME) / `<project>/.codex`, `<project>/.agents`, then `<project>/AGENTS.md` (Project).
-     - Gemini: `<home>/.gemini` without root doc (HOME) / `<project>/.gemini` then `<project>/GEMINI.md` (Project).
-     - Antigravity: mapped to `<home>/.gemini/config` via structured rule (HOME) / `<project>/.antigravity` (Project).
+     - Codex: `<home>/.agents/skills` and `<home>/.codex/AGENTS.md` (HOME) / `<project>/.codex`, `<project>/.agents/skills`, and root `AGENTS.md` (Project).
+     - Antigravity: `<home>/.gemini/config` (HOME) / `<project>/.antigravity`, `.agents/hooks.json`, and `.agents/rules/evcrate-antigravity.md` (Project).
      - Pi: `<home>/.pi` (HOME) / `<project>/.pi` (Project).
      - OMP: `<home>/.omp` with declared path mapping (HOME) / `<project>/.omp` (Project).
-     - Copilot: `<home>/.copilot` (HOME) / `<project>/.copilot` (Project).
+     - Copilot: `<home>/.copilot/copilot-instructions.md` (HOME) / `<project>/.copilot` and exact `.github/copilot-instructions.md` (Project).
+     - VS Code Local: `<home>/.evcrate-vscode` (HOME) / `<project>/.evcrate-vscode` (Project).
 
 2. **Preflight and two-phase transaction semantics**:
    - Preflight validates real owner-controlled directories, non-symlink ancestry, canonical project
@@ -662,19 +662,52 @@ Phase 09 reconciles and finalizes operator documentation against that proof:
      `test:validation-rollout` (6/6), `test:distribution:rollout` (5/5), and full test suite (512/512).
 ## Projection map
 
-- Claude is canonical; Codex, Gemini, Antigravity, Pi, OMP, and Copilot are
-  fixed TypeScript projections with target-specific transforms and validation.
-- OMP emits `evcrate/command-name-map.json` and flattens nested commands with `__`.
-- Copilot emits `evcrate-cmd-*` skills with raw `$ARGUMENTS`; it is not an advisor
-  backend. Pi keeps its runtime/extension and settings-merge boundary.
+- `.evcrate/source/.claude/AGENTS.md` is canonical; all current adapters consume
+  its resource-graph entry. Local Claude projection uses `.claude-projection`
+  without replacing authoring resources. See the [native delivery matrix and
+  loader prerequisites](./system-architecture.md#instruction-authority-and-native-delivery).
+- All seven active targets project unified `evc-cmd-*` command names and `evc-*` agent names.
+- Copilot emits `evc-cmd-*` skills with raw `$ARGUMENTS`; it is not an advisor backend.
+- Pi resolves command, workflow, and main/child instruction references from its active installed resource root.
 
-### Command naming note
+### Command and resource naming convention
 
-Core docs use `/cmd-*`; OMP nested names use `__`, and Copilot uses
-`/evcrate-cmd-*`. The canonical scanner/parser do not yet enforce this convention;
-it is a documented follow-up, not a source rename. Shell commands remain executable
-syntax, not slash resource names.
+Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<segment>)*.md`) with `-x-` segment separation, and agents use `evc-*`. Governed by `src/adapters/resource-naming.ts` and enforced by `.evcrate/source/.claude/scripts/scan_commands.py`, all seven active targets project flat `evc-*` identities. Semantic command identities (`code/auto`) remain the stable keys for advisor activation. Shell commands remain executable syntax, not slash resource names.
 
+### Phase 07 unified projection and catalog regeneration
+
+Phase 07 regenerated all seven active target projections, catalogs, registry, and build manifests following the unified naming migration and Phase 12 instruction cutover:
+- **Seven active targets regenerated:** `.claude-projection`, `.codex`, `.antigravity`, `.pi`, `.omp`, `.copilot`, `.evcrate-vscode`, root `AGENTS.md` (projected from canonical `.claude/AGENTS.md`), and `.agents/skills` (Codex projection).
+- **Manifest and registry synchronization:** `.evcrate/registry.json` updated to schema v2 with 144 canonical resources. Regenerated aggregate `.evcrate/build-manifest.json` and all seven target build manifests (`build-manifest-claude.json`, `build-manifest-codex.json`, `build-manifest-antigravity.json`, `build-manifest-pi.json`, `build-manifest-omp.json`, `build-manifest-copilot.json`, `build-manifest-vscode.json`).
+- **Retired artifact purge:** Standalone Gemini target artifacts completely purged (`.evcrate/build-manifest-gemini.json`, `.evcrate/source/.gemini/` containing 751 files, `.evcrate/source/GEMINI.md`, and target manifest entry) along with legacy `.evcrate/source/CLAUDE.md`, eliminating dangling read reminders.
+- **Canonical hash binding:** Manifest entries `source_hashes['AGENTS.md']` and `agentsMdHash` strictly bind canonical `.claude/AGENTS.md` (`358d2375560909b18b4ef3b20f701dfe0aa116d97cf314766ab1a7d277ac3001`), never generated root AGENTS.
+- **Unified naming invariants:** 70/70 commands follow `evc-cmd-*` (with `-x-` nesting segments and length <= 64), 18/18 agents follow `evc-*`, Copilot skills use `evc-` prefixes (`evc-<skill>`), and semantic advisor IDs (21 allowlisted IDs, e.g. `code/auto`) remain stable invariants.
+- **Verification:** `npm run distribute:check` passed with `status: "ok"` in 14.71s across all 7 targets. Targeted test suites passed at 338+ tests (adapters 228/228, manifests 16/16, primitives 38/38, protocol 53/53, vscode-hooks 20/20, package-smoke 3/3). Code review approved at 9.7/10.
+
+### Phase 08 publication prune, collision refusal, and legacy leftover reporting
+
+Phase 08 establishes the hard cutover publication upgrade path, collision protections, and legacy residual management:
+- **Universal unmanaged collision refusal:** `isMigratedDestination` enforces collision refusal across all active targets for unified command destinations (`evc-cmd-*`), agent destinations (`evc-*`), Copilot/VS Code unified extensions, and canonical instruction documents (`AGENTS.md`, `.github/copilot-instructions.md`, `.agents/rules/evcrate-antigravity.md`, `.agents/hooks.json`). Unmanaged files at migrated destinations yield `conflict` actions, failing closed atomically (`PUBLICATION_FAILED`) with zero user data loss.
+- **HOME/project retired binding reconciliation:** `reconcileRetiredBindings` removes exact predecessor-owned Gemini files when Antigravity is selected, without adding retired bindings to active metadata. Schema-3 journals explicitly distinguish this delete-only cleanup and validate its ownership during rollback/recovery. Existing active-binding pruning still removes obsolete owned leaves; inherited Codex `.agents` residuals remain preserved.
+- **Untracked legacy leftover reporting:** `detectLegacyLeftovers` performs a bounded, read-only inspection of known resource locations across selected targets, subtracting current and prior recorded ownership. Untracked legacy files are preserved byte-identically and reported across five kinds (`command`, `agent`, `skill`, `style`, `instruction`).
+- **Dual-interface reporting:** Machine payloads carry `legacyLeftovers: readonly LegacyLeftoverRecord[]` sorted deterministically in both `PublishApplyResultPayload` and `PublishDryRunResultPayload`; human TTY output displays `published` (or `preview` on dry-run) followed by concise warnings with manual review recommendations.
+- **Upgrade guidance:** Full operational procedures, ownership policies, and pre-upgrade backup requirements are documented in [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md).
+
+### Phase 09 tests, golden fixture regressions, and concurrency protection
+
+Phase 09 establishes cross-cutting test suites, golden contract regressions, and test infrastructure stability:
+- **Phase 09 regression suite (`tests/distribution/phase09-golden-and-contract-regressions.test.mjs`):** Exercises 10 focused contracts covering unified naming invariants, `-x-` nesting reversibility, Copilot skill/style prefixing, command name mapping purity (no foreign `evcrate-local:` prefixes), Phase 12 snapshot drift safety across both serial and parallel worker modes, Claude rules delivery invariants, target AGENTS output verification, and schema-2 target manifest registrations.
+- **Installed advice activation cutover:** Updated `tests/integration/advice-activation-installed.test.mjs` to invoke canonical `evc-cmd-*` and `evc-cmd-*-x-*` command names while preserving underlying 21-ID semantic advisor contracts and fail-closed security invariants.
+- **tmpfs concurrency protection (`--test-concurrency=1`):** Configured serial test execution in `package.json` for heavy workspace fixture suites (`test:publication`, `test:build-generation`, and `test:integration`), preventing out-of-memory and inode exhaustion on tmpfs mounts while maintaining full isolation.
+- **Buffer overrun protection (`maxBuffer`):** Updated `scripts/release/npm-runner.cjs` with a 64MB default `maxBuffer` in `execNpmSync` and `spawnNpmSync`, preventing `ENOBUFS` truncation during large `npm pack --dry-run --json` invocations.
+
+### Phase 10 documentation, changelog, and release promotion pipeline
+
+Phase 10 cuts over maintained documentation, migration guidance, and the dual-branch prerelease/stable release pipeline:
+- **Prerelease and promotion release pipeline:** `.releaserc.json` configured with canonical branches `["main", {"name": "next", "channel": "next", "prerelease": "rc"}]`. Workflow `.github/workflows/release.yml` triggers pushes on both branches; stable publication verifies the actual GitHub `production` required-reviewer protections rather than treating an environment declaration as a review gate.
+- **Candidate mirror seeding & topology guards:** `scripts/release/run-release-candidate.cjs` seeds bare candidate mirrors with triggering branch at `sourceCommit`, seeds verified configured `main` (and `next`) refs from repository history, and pushes all local tags.
+- **Stable candidate authorization:** `scripts/release/github-approval.cjs` verifies the live canonical GitHub run, protected production environment, main-only branch policy, independent review history and actual reviewer maintain/admin permission. `publish-release.cjs` requires this authorization before stable publication, independently of receipt/assets and branch topology checks. Removed approval-file authorization; stable reruns fail closed because review history lacks attempt provenance.
+- **Normative documentation reconciliation:** Reconciled `README.md`, `code-standards.md`, `system-architecture.md`, `project-overview-pdr.md` (FR-12), `project-roadmap.md`, `pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, single `AGENTS.md` authority, pre-upgrade customization backup warnings, and exact local-asset installer installation procedures.
 ## Documentation navigation
 
 - [System architecture](./system-architecture.md) — central contracts.
@@ -686,3 +719,4 @@ syntax, not slash resource names.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
 - [Historical Advisor integration records](./all-project-advisor-history.md), [Workspace host contract](./workspace-advisor-host-contract.md), and [Workspace Advisor PDR](./workspace-advisor-pdr.md) — former plugin-era contracts and evidence.
 - Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md) — operational upgrade, backup, and collision safety guidance.

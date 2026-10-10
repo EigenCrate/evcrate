@@ -1,6 +1,6 @@
-# Codex CLI Scripts
+# Claude Code Scripts
 
-Centralized utility scripts for Codex CLI skills.
+Centralized utility scripts for Claude Code skills.
 
 ## Installation
 
@@ -12,7 +12,7 @@ pip install -r requirements.txt
 
 ## resolve_env.py
 
-Centralized environment variable resolver that follows Codex CLI's hierarchy.
+Centralized environment variable resolver that follows Claude Code's hierarchy.
 
 ### Priority Order (Highest to Lowest)
 
@@ -160,13 +160,22 @@ A suite of strict, fail-closed utilities for scanning commands and skills, valid
 #### `commands_data.yaml`
 List of command records. Every record contains exactly these keys (strict; no `power_level` or extras):
 ```yaml
-- source: string        # Path relative to canonical commands root (e.g., core/advise.md)
-  name: string          # Target-native command name (e.g., /evcrate:advise or /evcrate-cmd-advise)
+- source: string        # Flat file name in the canonical commands root (e.g., evc-cmd-plan-x-hard.md)
+  name: string          # Invocation name == file stem (e.g., /evc-cmd-plan-x-hard)
   path: string          # Path relative to target commands root
   description: string   # Non-empty description
   argument_hint: string # Argument hint string (empty string if none)
   category: string      # One of: core, bootstrap, code, content, cook, design, docs, fix, git, integrate, plan, review, scout, skill, test
 ```
+
+Command naming (flat, no subdirectories; mirrors `src/adapters/resource-naming.ts`):
+
+- Name is `evc-cmd-<segment>(-x-<segment>)*`; `-x-` is the reserved path separator, so no segment may contain an `x` token.
+- Semantic id is the segments joined with `:` for category/search (`evc-cmd-plan-x-hard` → `plan:hard`).
+- Category is the first segment when there is more than one segment, else `core` (`evc-cmd-help`, `evc-cmd-plan` → `core`).
+- Scanners reject nested paths and stems without the `evc-cmd-` prefix with `ScanError`; there are no legacy aliases or fallbacks.
+- Explicit `target_name` / `targetName` values in authority maps win; otherwise the target name is the flat stem.
+- `ev-help.py` accepts the colon forms `plan:hard` / `/plan:hard` and the flat name `/evc-cmd-plan-x-hard` as command lookups (space-separated words remain a task description), and only prints `/evc-cmd-*` names.
 
 #### `skills_data.yaml`
 List of skill records. Every record contains exactly these keys (strict):
@@ -184,19 +193,19 @@ List of skill records. Every record contains exactly these keys (strict):
 
 | Target | Script Root | Command Format | Authority / Mapping |
 |---|---|---|---|
-| Codex | `.evcrate/source/.codex/scripts` | Markdown | `commands_data.yaml` |
+| Claude | `.evcrate/source/.codex/scripts` | Markdown | `commands_data.yaml` |
 | Gemini | `.evcrate/source/.gemini/scripts` | TOML | `gemini-command-map.json` |
 | Pi | `.evcrate/source/.pi/agent/evcrate/scripts` | archived Markdown | `commands_data.yaml` |
-| OMP | `.evcrate/source/.omp/evcrate/scripts` | flattened mapped Markdown | `command-name-map.json` |
+| OMP | `.evcrate/source/.omp/evcrate/scripts` | Markdown | `command-name-map.json` |
 | Codex | `.evcrate/source/.codex/scripts` | command-skill | `commands_data.yaml` |
 | Antigravity | `.evcrate/source/.antigravity/scripts` | command-skill | `commands_data.yaml` |
-| Copilot | `.evcrate/source/.copilot/evcrate/scripts` | prefixed command-skill | `copilot-command-map.json` |
+| Copilot | `.evcrate/source/.copilot/evcrate/scripts` | command-skill | `copilot-command-map.json` |
 
 ### Invocations
 
 #### 1. Scanner Invocations (from any working directory)
 ```bash
-# Canonical Codex
+# Canonical Claude
 python3 .evcrate/source/.codex/scripts/scan_commands.py
 python3 .evcrate/source/.codex/scripts/scan_skills.py
 

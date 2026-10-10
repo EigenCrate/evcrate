@@ -166,7 +166,6 @@ function runFreeze(rootDir, outputDir, options = {}) {
       'claude',
       'codex',
       'copilot',
-      'gemini',
       'omp',
       'pi',
       'vscode'

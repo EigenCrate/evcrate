@@ -86,6 +86,6 @@ Health: 1.2K stars, active
 ## Alternative
 
 If no GitHub repo exists:
-→ Deploy multiple Researcher agents
+→ Deploy multiple evc-researcher agents
 → Gather: Official site, blog posts, tutorials, Stack Overflow
 → Note: Quality varies, cross-reference sources

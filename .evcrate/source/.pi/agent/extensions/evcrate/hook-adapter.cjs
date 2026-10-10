@@ -2,14 +2,16 @@
 
 /** Bounded adapter between Pi events and generated canonical EVCrate hooks. */
 const { spawn } = require("node:child_process");
-const { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } = require("node:fs");
-const { basename, dirname, isAbsolute, join, relative, resolve } = require("node:path");
+const { closeSync, constants, existsSync, fstatSync, lstatSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync, writeFileSync } = require("node:fs");
+const { basename, dirname, isAbsolute, join, relative, resolve, sep } = require("node:path");
 const { homedir, tmpdir } = require("node:os");
 
 const HOOK_TIMEOUT_MS = 30_000;
 const MAX_HOOK_OUTPUT_BYTES = 64 * 1024;
 const MAX_ENV_FILE_BYTES = 16 * 1024;
 const SAFETY_FILENAMES = new Set(["scout-block.cjs", "privacy-block.cjs"]);
+const MAX_AGENTS_BYTES = 256 * 1024;
+
 
 function normalizeAgentRoot(value) {
   const configured = resolve(value);
@@ -188,6 +190,47 @@ function readMap(resourceRoot) {
     return { events: {}, valid: false, error: `Generated hook map is unavailable: ${error.message}` };
   }
 }
+function readRequiredAgentsDocument(resourceRoot) {
+  const root = resolve(resourceRoot);
+  const candidate = resolve(root, "AGENTS.md");
+  const relation = relative(root, candidate);
+  if (!relation || relation === ".." || relation.startsWith(`..${sep}`) || isAbsolute(relation)) throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  for (let current = root;; current = dirname(current)) {
+    let stat;
+    try {
+      stat = lstatSync(current);
+    } catch {
+      throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+    }
+    if (stat.isSymbolicLink()) throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+    if (dirname(current) === current) break;
+  }
+  let initial;
+  let descriptor;
+  try {
+    initial = lstatSync(candidate);
+    if (!initial.isFile() || initial.isSymbolicLink() || initial.size <= 0 || initial.size > MAX_AGENTS_BYTES) throw new Error("invalid payload");
+    descriptor = openSync(candidate, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.dev !== initial.dev || opened.ino !== initial.ino || opened.size !== initial.size) throw new Error("payload changed");
+    const bytes = Buffer.alloc(opened.size);
+    for (let offset = 0; offset < bytes.length;) {
+      const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+      if (!count) throw new Error("payload truncated");
+      offset += count;
+    }
+    const final = lstatSync(candidate);
+    if (!final.isFile() || final.isSymbolicLink() || final.dev !== initial.dev || final.ino !== initial.ino || final.size !== initial.size) throw new Error("payload changed");
+    const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    if (!content || content.includes("\0")) throw new Error("invalid payload");
+    return content;
+  } catch {
+    throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
 
 function createHookAdapter(options = {}) {
   const agentRoot = resolveAgentRoot(options);
@@ -284,10 +327,12 @@ function createHookAdapter(options = {}) {
     run,
     childStartRunner: async (canonicalEvent) => {
       const request = canonicalEvent?.request ?? {};
+      const agents = readRequiredAgentsDocument(resourceRoot);
       const output = await run("SubagentStart", {
         agent: request.agent, agentId: request.nodeId, sessionId: canonicalEvent?.sessionId,
       }, { cwd: request.cwd, signal: canonicalEvent?.signal, sessionId: canonicalEvent?.sessionId });
-      return output.additionalContext ? { hookSpecificOutput: { additionalContext: output.additionalContext } } : undefined;
+      const contexts = [agents, output.additionalContext].filter(Boolean).join("\n\n");
+      return { hookSpecificOutput: { additionalContext: contexts } };
     },
   };
 }

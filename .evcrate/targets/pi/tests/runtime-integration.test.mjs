@@ -3,7 +3,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { MANAGED_PI_PACKAGES } from "../../../../dist/index.js";
+import { MANAGED_PI_PACKAGES, runAllManifestsBuild } from "../../../../dist/index.js";
+import { prepareFixtureWorkspace } from "../../../../tests/distribution/parity-verification-helpers.mjs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -65,7 +66,7 @@ function installManagedPackages(runtime, home) {
   assert.deepEqual(new Set(managed), new Set(expected));
 }
 
-test("packed distribution publishes and Pi discovers native commands and skills", { timeout: 600_000 }, (t) => {
+test("packed distribution publishes and Pi discovers native commands and skills", { timeout: 600_000 }, async (t) => {
   const root = mkdtempSync(join(tmpdir(), "evcrate-pi-runtime-"));
   t.after(() => {
     rmSync(root, { recursive: true, force: true });
@@ -81,7 +82,13 @@ test("packed distribution publishes and Pi discovers native commands and skills"
     mkdirSync(home, { recursive: true, mode: 0o700 });
     mkdirSync(project, { recursive: true, mode: 0o700 });
     mkdirSync(state, { recursive: true, mode: 0o700 });
-    run("npm", ["pack", "--pack-destination", packDirectory, "--ignore-scripts"], { cwd: projectRoot });
+    const fixturePackage = join(root, "package");
+    prepareFixtureWorkspace(fixturePackage);
+    for (const name of ["README.md", "CHANGELOG.md"]) {
+      cpSync(join(projectRoot, name), join(fixturePackage, name));
+    }
+    await runAllManifestsBuild(fixturePackage, { jobs: 2 });
+    run("npm", ["pack", "--pack-destination", packDirectory, "--ignore-scripts"], { cwd: fixturePackage });
     const tarball = join(packDirectory, readdirSync(packDirectory).find((name) => name.endsWith(".tgz")) ?? "");
     assert.ok(existsSync(tarball), "npm pack did not create a tarball");
     run("npm", ["install", "--prefix", installRoot, "--ignore-scripts", "--no-audit", "--no-fund", tarball]);
@@ -115,7 +122,7 @@ test("packed distribution publishes and Pi discovers native commands and skills"
     installManagedPackages(pi, home);
     const commands = rpcCommands(pi, home);
     const names = new Set(commands.map((command) => command.name));
-    for (const name of ["plan", "fix:fast", "cook:auto:fast"]) assert.ok(names.has(name), name);
+    for (const name of ["evc-cmd-plan", "evc-cmd-fix-x-fast", "evc-cmd-cook-x-auto-x-fast"]) assert.ok(names.has(name), name);
     assert.ok(names.has("skill:planning"), "generated Pi skills were not discovered");
 
     const isolated = rpcCommands(pi, home, ["--no-skills", "--skill", join(home, ".pi/agent/skills")]);
@@ -123,7 +130,7 @@ test("packed distribution publishes and Pi discovers native commands and skills"
     const alternateAgent = join(root, "alternate-pi/agent");
     cpSync(join(home, ".pi/agent"), alternateAgent, { recursive: true });
     const alternate = rpcCommands(pi, home, ["--no-extensions", "-e", join(alternateAgent, "extensions/evcrate/index.js")]);
-    assert.ok(alternate.some((command) => command.name === "plan"));
+    assert.ok(alternate.some((command) => command.name === "evc-cmd-plan"));
     const settings = JSON.parse(readFileSync(join(home, ".pi/agent/settings.json"), "utf8"));
     assert.deepEqual(settings.packages, [...MANAGED_PI_PACKAGES]);
     assert.ok(!settings.packages.some((entry) => String(entry).includes("pi-code")));

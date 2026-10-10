@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]+$/u, '');
 const validatorScript = join(repoRoot, '.evcrate/source/.claude/scripts/validate-docs.cjs');
-const docsManagerInstruction = join(repoRoot, '.evcrate/source/.claude/agents/docs-manager.md');
+const docsManagerInstruction = join(repoRoot, '.evcrate/source/.claude/agents/evc-docs-manager.md');
 
 function runValidator(cwd, args = ['docs', '--src', 'src']) {
   return spawnSync(process.execPath, [validatorScript, ...args], {

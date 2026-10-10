@@ -115,12 +115,12 @@ KEY4=value=with=equals
 
     def test_prompt_direct_db_sqlite(self, auth_init):
         """Test prompting for SQLite database."""
-        with patch("builtins.input", side_effect=["3", "./cmd-test.db"]):
+        with patch("builtins.input", side_effect=["3", "./test.db"]):
             config = auth_init._prompt_direct_db()
 
         assert config["type"] == "sqlite"
         assert "better-sqlite3" in config["import"]
-        assert "./cmd-test.db" in config["config"]
+        assert "./test.db" in config["config"]
 
     def test_prompt_direct_db_postgresql(self, auth_init):
         """Test prompting for PostgreSQL database."""

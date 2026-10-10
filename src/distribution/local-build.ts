@@ -1,5 +1,5 @@
-import { existsSync, lstatSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, lstatSync, mkdirSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { createStagedRoot } from '../filesystem/atomic.js';
 import { withPublishLock } from '../filesystem/locking.js';
@@ -8,6 +8,8 @@ import { readBuildManifest } from './manifest.js';
 import type { VerifiedCurrentBuild } from './build-resolution.js';
 import { assembleLocalStage, assertLiveInputsUnchanged } from './local-build-staging.js';
 import { promoteTransaction, type PromotionPair } from './promotion.js';
+import { localProjectionPath } from './output-paths.js';
+import { assertNoSymlinkAncestors, assertRealDirectory } from '../filesystem/paths.js';
 import { publishApply, recoverPublication, type PublicationOptions } from './publication.js';
 import { PERSISTED_TARGETS, type PersistedTarget } from '../protocol/validation.js';
 import type {
@@ -15,6 +17,18 @@ import type {
 } from '../protocol/publication-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 export { assertLegacyRootClean } from './local-build-staging.js';
+
+function prepareLocalPromotionParents(pairs: readonly PromotionPair[]): void {
+  // A leaf-owned native document must not promote its entire user-owned parent.
+  // Validate every parent before creating the missing directory containers.
+  for (const pair of pairs) assertNoSymlinkAncestors(dirname(pair.destination));
+  for (const pair of pairs) {
+    const parent = dirname(pair.destination);
+    mkdirSync(parent, { recursive: true });
+    assertNoSymlinkAncestors(parent);
+    assertRealDirectory(parent);
+  }
+}
 
 function isSamePathTree(staged: string, local: string): boolean {
   if (!existsSync(staged) || !existsSync(local)) return !existsSync(staged) && !existsSync(local);
@@ -73,6 +87,8 @@ export async function runLocalBuild(
         }
       : undefined;
 
+    if (result.snapshotHashes) assertLiveInputsUnchanged(packageRoot, result.snapshotHashes);
+    prepareLocalPromotionParents(pairs);
     promoteTransaction(pairs, {
       stageRoot: stage,
       lockRoot: join(packageRoot, '.evcrate-publish-state'),
@@ -120,6 +136,8 @@ export async function runAllManifestsBuild(
         }
       : undefined;
 
+    if (result.snapshotHashes) assertLiveInputsUnchanged(packageRoot, result.snapshotHashes);
+    prepareLocalPromotionParents(pairs);
     promoteTransaction(pairs, {
       stageRoot: stage,
       lockRoot: join(packageRoot, '.evcrate-publish-state'),
@@ -144,10 +162,10 @@ export async function runAllManifestsBuild(
         '.evcrate': join(packageRoot, '.evcrate', 'source', '.evcrate')
       };
       for (const root of manifestDef.outputRoots) {
-        targetOutputs[root] = join(packageRoot, '.evcrate', 'source', root);
+        targetOutputs[root] = localProjectionPath(join(packageRoot, '.evcrate', 'source'), root);
       }
       for (const doc of manifestDef.projectDocs) {
-        targetOutputs[doc] = join(packageRoot, '.evcrate', 'source', doc);
+        targetOutputs[doc] = localProjectionPath(join(packageRoot, '.evcrate', 'source'), doc);
       }
       targetBuilds.set(entry.target, Object.freeze({
         manifestPath: entry.manifestPath,

@@ -10,6 +10,7 @@ import {
 } from '../manifests/registry.js';
 import type { BuildManifest, TargetManifest } from '../manifests/types.js';
 import { readBuildManifestSnapshot, verifyBuild } from './manifest.js';
+import { localProjectionPath } from './output-paths.js';
 
 export interface CurrentBuildOptions {
   readonly packageRoot: string;
@@ -65,10 +66,9 @@ function currentSourceHashes(
   allTargets: boolean
 ): Record<string, string> {
   const sourceRoot = options.canonicalSourceRoot;
-  const parent = dirname(sourceRoot);
   const values: Record<string, string> = {
     '.claude': treeHash(sourceRoot),
-    'CLAUDE.md': hashFile(join(parent, 'CLAUDE.md')),
+    'AGENTS.md': hashFile(join(sourceRoot, 'AGENTS.md')),
     ...manifestSourceHashes(manifests)
   };
   if (allTargets) values['.evcrate/targets'] = treeHash(join(options.packageRoot, '.evcrate', 'targets'));
@@ -87,16 +87,16 @@ function expectedOutputPaths(
   }
   const result: Record<string, string> = {};
   for (const name of names) {
-    const full = containedPath(parent, name, false);
+    const full = localProjectionPath(parent, name);
     if (existsSync(full)) {
-      result[name] = containedPath(parent, name, true);
+      result[name] = localProjectionPath(parent, name, true);
     }
   }
   return result;
 }
 function hasAuthoringSources(options: CurrentBuildOptions, manifests: readonly TargetManifest[]): boolean {
-  const claudeDoc = join(options.packageRoot, 'CLAUDE.md');
-  if (!existsSync(claudeDoc)) return false;
+  const agentsDoc = join(options.canonicalSourceRoot, 'AGENTS.md');
+  if (!existsSync(agentsDoc)) return false;
   for (const manifest of manifests) {
     for (const path of [manifest.adapter, ...manifest.adapterSources].filter((value): value is string => value !== null)) {
       try {

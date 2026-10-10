@@ -9,7 +9,7 @@ export interface SharedBuildInputs {
   readonly sourceRoot: string;
   readonly canonicalHarnessRoot: string;
   readonly canonicalClaudeHash: string;
-  readonly claudeMdHash: string;
+  readonly agentsMdHash: string;
   readonly registryPath: string;
   readonly registry: TargetManifestRegistry;
   readonly controllerBinSource: string;
@@ -76,7 +76,7 @@ export function deriveManifestView(
 
   const sourceHashes: Record<string, string> = {
     '.claude': shared.canonicalClaudeHash,
-    'CLAUDE.md': shared.claudeMdHash
+    'AGENTS.md': shared.agentsMdHash
   };
   for (const fact of targetFactsList) {
     Object.assign(sourceHashes, fact.sourceHashes);

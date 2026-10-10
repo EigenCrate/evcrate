@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { restoreIndexedTokens } from '../../dist/adapters/projection-utils.js';
-import { applyReplacements } from '../../dist/adapters/codex/transforms.js';
+import { applyReplacements, rewriteCommandGuidance } from '../../dist/adapters/codex/transforms.js';
 
 function legacyRestoreTuples(text, saved) {
   let result = text;
@@ -174,10 +174,18 @@ test('applyReplacements (Codex): preserves base callback edge behavior on author
 });
 
 test('applyReplacements (Codex): preserves protected URLs while performing non-URL canonical replacements', () => {
-  const input = 'Migrate CLAUDE.md to AGENTS.md; see https://example.org/.claude/reference?q=$$test for claude details.';
-  // Surrounding CLAUDE.md -> AGENTS.md, claude -> codex; URL https://example.org/.claude/reference?q=$$test preserved verbatim
-  const expected = 'Migrate AGENTS.md to AGENTS.md; see https://example.org/.claude/reference?q=$$test for codex details.';
+  const input = 'Read .claude/rules/AGENTS.md; see https://example.org/.claude/rules/AGENTS.md?q=$$test and ssh://host/.claude/rules/AGENTS.md.';
+  const expected = 'Read AGENTS.md; see https://example.org/.claude/rules/AGENTS.md?q=$$test and ssh://host/.claude/rules/AGENTS.md.';
   assert.equal(applyReplacements(input), expected);
+});
+
+test('rewriteCommandGuidance (Codex): rewrites only standalone evc command references', () => {
+  const known = new Set(['/evc-cmd-plan-x-hard']);
+  const input = 'Run /evc-cmd-plan-x-hard; read commands/evc-cmd-plan-x-hard.md; see https://example.test/evc-cmd-plan-x-hard.';
+  assert.equal(
+    rewriteCommandGuidance(input, known),
+    'Run $evc-cmd-plan-x-hard; read commands/evc-cmd-plan-x-hard.md; see https://example.test/evc-cmd-plan-x-hard.',
+  );
 });
 
 test('differential: sequential helper vs literal Codex applyReplacements semantics', () => {

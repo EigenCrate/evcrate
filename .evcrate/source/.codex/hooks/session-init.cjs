@@ -431,7 +431,7 @@ async function main() {
         writeEnv(envFile, 'EVCRATE_RESPONSE_LANGUAGE', config.locale.responseLanguage);
       }
 
-      // Plan validation config (for /plan:validate, /plan:hard, /plan:parallel)
+      // Plan validation config (for /evc-cmd-plan-x-validate, /evc-cmd-plan-x-hard, /evc-cmd-plan-x-parallel)
       const validation = config.plan?.validation || {};
       writeEnv(envFile, 'EVCRATE_VALIDATION_MODE', validation.mode || 'prompt');
       writeEnv(envFile, 'EVCRATE_VALIDATION_MIN_QUESTIONS', validation.minQuestions || 3);
@@ -449,13 +449,13 @@ async function main() {
     // Warn user if running from subdirectory (CWD != git root)
     if (staticEnv.gitRoot && staticEnv.gitRoot !== process.cwd()) {
       console.log(`⚠️ Running from subdirectory. Plans/docs created at git root: ${staticEnv.gitRoot}`);
-      console.log(`   To avoid this, run Codex from: cd ${staticEnv.gitRoot}`);
+      console.log(`   To avoid this, run Claude from: cd ${staticEnv.gitRoot}`);
     }
 
     // MITIGATION: Issue #277 - Auto-compact can bypass request_user_input approval gates
     // When context is compacted mid-workflow, the summarization may lose "pending approval" state.
-    // This warning reminds Codex to verify if user approval was pending before proceeding.
-    // Upstream bug: Codex CLI CLI should preserve pending interactive state during compaction.
+    // This warning reminds Claude to verify if user approval was pending before proceeding.
+    // Upstream bug: Claude Code CLI should preserve pending interactive state during compaction.
     if (source === 'compact') {
       console.log(`\n⚠️ CONTEXT COMPACTED - APPROVAL STATE CHECK:`);
       console.log(`If you were waiting for user approval via request_user_input (e.g., Step 4 review gate),`);

@@ -96,7 +96,7 @@ for (const scopes of [['home'], ['project'], ['home', 'project']]) {
       // Consumer selection: command discovery and expansion selects neutral workflows from extension root
       const { expandManagedCommand, findManagedCommand } = await import(pathToFileURL(
         join(agentRoot, 'extensions/evcrate/commands.js')).href);
-      const command = findManagedCommand('code', agentRoot);
+      const command = findManagedCommand('evc-cmd-code', agentRoot);
       assert.ok(command, 'published code command must be discoverable');
 
       const expanded = await expandManagedCommand(command, work, { cwd: f.project }, {
@@ -115,7 +115,7 @@ for (const scopes of [['home'], ['project'], ['home', 'project']]) {
 
       for (const handoff of [null, { kind: 'pre-run', context, run: null }]) {
         const raw = `${work}\t--advice`;
-        const dispatched = await dispatchManagedCommand({ name: 'code:auto', args: raw, handoff },
+        const dispatched = await dispatchManagedCommand({ name: 'evc-cmd-code-x-auto', args: raw, handoff },
           { cwd: f.project }, options);
         const header = JSON.parse(dispatched.body.split('\n')[0]);
         assert.deepEqual(header, { evcrate_command_context: {
@@ -127,9 +127,9 @@ for (const scopes of [['home'], ['project'], ['home', 'project']]) {
       }
 
       // Rejection: invalid handoff rejects at consumer boundary
-      await assert.rejects(() => dispatchManagedCommand({ name: 'code:auto', args: work, handoff: 'invalid' },
+      await assert.rejects(() => dispatchManagedCommand({ name: 'evc-cmd-code-x-auto', args: work, handoff: 'invalid' },
         { cwd: f.project }, options));
-      await assert.rejects(() => dispatchManagedCommand({ name: 'code:auto', args: work, handoff: [1, 2] },
+      await assert.rejects(() => dispatchManagedCommand({ name: 'evc-cmd-code-x-auto', args: work, handoff: [1, 2] },
         { cwd: f.project }, options));
     }
 
@@ -150,8 +150,8 @@ test('installed Pi consumer isolates copies and rejects missing neutral resource
   const { expandManagedCommand: expandProject, findManagedCommand: findProject } = await import(pathToFileURL(
     join(projectAgent, 'extensions/evcrate/commands.js')).href);
 
-  const homeCmd = findHome('code', homeAgent);
-  const projectCmd = findProject('code', projectAgent);
+  const homeCmd = findHome('evc-cmd-code', homeAgent);
+  const projectCmd = findProject('evc-cmd-code', projectAgent);
   assert.ok(homeCmd && projectCmd);
 
   const homeExpand = () => expandHome(homeCmd, work, { cwd: f.project }, {

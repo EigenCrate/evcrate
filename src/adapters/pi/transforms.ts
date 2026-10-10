@@ -1,11 +1,11 @@
 import { restoreIndexedTokens } from '../uri-restoration.js';
 import { normalizeLf } from './frontmatter.js';
 
-const URL = /https?:\/\/[^\s<>"']+/giu;
+const URL = /(?<![A-Za-z0-9_./])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/giu;
 const PATH_TRANSLATIONS: readonly [RegExp, string][] = [
-  [/(?<![~A-Za-z0-9_./-])(?:\.\/)?\.claude\/workflows\/([^\s)`\]"']+)/gu, '{{evcrate:workflows/$1}}'],
-  [/(?<![~A-Za-z0-9_./-])(?:\.\/)?\.claude\/scripts\/([^\s)`\]"']+)/gu, '{{evcrate:scripts/$1}}'],
-  [/(?<![~A-Za-z0-9_./-])(?:\.\/)?\.claude\/hooks\/([^\s)`\]"']+)/gu, '{{evcrate:hooks/$1}}'],
+  [/(?<![~A-Za-z0-9_./\\-])(?:(?:~|\$HOME|\$\{HOME\})\/|\.\/)?\.claude\/workflows\/([^\s)`\]"'<>]+)/gu, '{{evcrate:workflows/$1}}'],
+  [/(?<![~A-Za-z0-9_./\\-])(?:(?:~|\$HOME|\$\{HOME\})\/|\.\/)?\.claude\/scripts\/([^\s)`\]"'<>]+)/gu, '{{evcrate:scripts/$1}}'],
+  [/(?<![~A-Za-z0-9_./\\-])(?:(?:~|\$HOME|\$\{HOME\})\/|\.\/)?\.claude\/hooks\/([^\s)`\]"'<>]+)/gu, '{{evcrate:hooks/$1}}'],
 ];
 const LOCAL_PATHS: readonly [string, string][] = [
   ['.claude/commands', '.pi/agent/evcrate/commands'], ['.claude/agents', '.pi/agent/agents'],
@@ -14,9 +14,9 @@ const LOCAL_PATHS: readonly [string, string][] = [
   ['.claude/output-styles', '.pi/agent/evcrate/output-styles'], ['.claude/.evcrate.json', '.pi/.evcrate.json'],
   ['.claude/.mcp.json', '.pi/.mcp.json'], ['.claude/.env', '.pi/.env'],
 ];
-const COMMAND_NAME = '[a-z0-9][a-z0-9:_-]*';
+const COMMAND_NAME = 'evc-cmd-[a-z0-9]+(?:-[a-z0-9]+)*';
 const QUOTED_COMMAND = new RegExp(`\`/(?<name>${COMMAND_NAME})(?<args>[^\`\\n]*)\``, 'giu');
-const BARE_COMMAND = new RegExp(`(?<![\\w/:<])/(?<name>${COMMAND_NAME})(?![a-z0-9:_-]|\\*)`, 'giu');
+const BARE_COMMAND = new RegExp(`(?<![\\w/:<])/(?<name>${COMMAND_NAME})(?![a-z0-9_-]|\\*)`, 'giu');
 const DIRECTIVE = /\b(?:trigger|invoke|execute|run|dispatch|call)\b/iu;
 const SLASH_PHRASE = /\bslash\s*[- ]?commands?\b/iu;
 const USE = /\buse\b/iu;
@@ -31,16 +31,25 @@ function translateGenericWorkflowLookup(value: string): string {
     'Resolve required workflow resources from `{{evcrate:workflows}}/<name>` in the active Pi installation.',
   );
 }
+function translateAgentsReferences(value: string, installedMarkers = false): string {
+  if (installedMarkers) value = value.replace(
+    /(?<![~A-Za-z0-9_./\\-])(?:(?:~|\$HOME|\$\{HOME\})\/|\.\/)?\.claude\/rules\/AGENTS\.md(?![A-Za-z0-9_./-])/gu,
+    '{{evcrate:AGENTS.md}}',
+  );
+  let translated = value;
+  for (const prefix of ['~', '$HOME', '${HOME}']) {
+    translated = translated.replaceAll(`${prefix}/.claude/rules/AGENTS.md`, `${prefix}/.pi/agent/evcrate/AGENTS.md`);
+  }
+  translated = translated.replaceAll('./.claude/rules/AGENTS.md', './.pi/agent/evcrate/AGENTS.md');
+  return translated.replaceAll('.claude/rules/AGENTS.md', '.pi/agent/evcrate/AGENTS.md');
+}
+
 
 function translateResourcePatterns(value: string): string {
   return value.replace(
-    /(?<![~A-Za-z0-9_./-])(?:\.\/)?\.claude\/(workflows|scripts|hooks)\/\*/gu,
+    /(?<![~A-Za-z0-9_./\\-])(?:(?:~|\$HOME|\$\{HOME\})\/|\.\/)?\.claude\/(workflows|scripts|hooks)\/\*/gu,
     (_match, kind: string) => `{{evcrate:${kind}}}/*`,
   );
-}
-
-function knownCommandNames(commands: readonly string[]): ReadonlySet<string> {
-  return new Set(commands.map((command) => command.replaceAll('/', ':').toLowerCase()));
 }
 
 function translateDirectiveLine(line: string, commands: ReadonlySet<string>): string {
@@ -62,7 +71,7 @@ function translateDirectiveLine(line: string, commands: ReadonlySet<string>): st
 }
 
 function translateNestedCommands(value: string, commands: readonly string[]): string {
-  const known = knownCommandNames(commands);
+  const known: ReadonlySet<string> = new Set(commands.map((command) => command.toLowerCase()));
   let fenced = false;
   return value.split('\n').map((line, index, lines) => {
     const suffix = index + 1 < lines.length ? '\n' : '';
@@ -73,23 +82,14 @@ function translateNestedCommands(value: string, commands: readonly string[]): st
 
 export function translatePrompt(value: string, commands: readonly string[] = []): string {
   const urls: string[] = [];
-  let translated = translateResourcePatterns(
-    translateGenericWorkflowLookup(normalizeLf(value)),
-  ).replace(URL, (match) => { const token = `__PI_URL_${urls.length}__`; urls.push(match); return token; });
+  let translated = normalizeLf(value).replace(URL, (match) => { const token = `__PI_URL_${urls.length}__`; urls.push(match); return token; });
+  translated = translateAgentsReferences(translateResourcePatterns(translateGenericWorkflowLookup(translated)), true);
   for (const [pattern, replacement] of PATH_TRANSLATIONS) translated = translated.replace(pattern, replacement);
-  for (const prefix of ['$HOME', '${HOME}', '~']) for (const separator of ['/', '\\']) {
-    for (const suffix of ['scripts', 'hooks', 'workflows', 'output-styles', '.env', '.mcp.json']) {
-      const target = ['.env', '.mcp.json'].includes(suffix) ? `.pi/${suffix}` : `.pi/agent/evcrate/${suffix}`;
-      translated = translated.replace(`${prefix}${separator}.claude${separator}${suffix}`, `${prefix}${separator}${target.replaceAll('/', separator)}`);
-    }
-  }
   const component = /(?<base>home|Path\.home\(\)|os\.homedir\(\))\s*\/\s*(?<quote>['"])\.claude\k<quote>\s*\/\s*\k<quote>(?<suffix>skills|scripts|hooks|workflows|output-styles|\.env|\.evcrate\.json|\.mcp\.json)\k<quote>/gu;
   translated = translated.replace(component, (all, base: string, quote: string, suffix: string) => {
     const parts = suffix === 'skills' ? ['.pi', 'agent', 'skills'] : ['scripts', 'hooks', 'workflows', 'output-styles'].includes(suffix) ? ['.pi', 'agent', 'evcrate', suffix] : ['.pi', suffix];
     return base + parts.map((part) => ` / ${quote}${part}${quote}`).join('');
   });
-  for (const prefix of ['$HOME', '${HOME}', '~']) translated = translated.replaceAll(`${prefix}/.claude/skills`, `${prefix}/.pi/agent/skills`);
-  translated = translated.replaceAll('.claude/skills', '.pi/agent/skills').replaceAll('.claude/.evcrate.json', '.pi/.evcrate.json').replaceAll('.claude/.mcp.json', '.pi/.mcp.json').replaceAll('.claude/.env', '.pi/.env');
   for (const [source, replacement] of LOCAL_PATHS) translated = translated.replaceAll(source, replacement).replaceAll(source.replaceAll('/', '\\'), replacement.replaceAll('/', '\\'));
   translated = translated.replace(/(?<![A-Za-z0-9_])\.claude(?=(?:[/\\'"`)\}]|\s|$))/gu, '.pi');
   translated = translateNestedCommands(translated, commands);
@@ -115,6 +115,7 @@ export function renderHarnessScriptReferences(value: string): string {
   let rendered = normalizeLf(value).replace(uri, (match) => {
     const token = `__EVCRATE_HARNESS_URL_${urls.length}__`; urls.push(match); return token;
   });
+  rendered = translateAgentsReferences(rendered);
   const suffixes = ['output-styles', 'workflows', 'scripts', 'hooks', 'skills', '.evcrate.json', '.mcp.json', '.env'];
   const targetPath = (scope: 'global' | 'local', suffix: string): string => {
     if (suffix === 'skills') return '.pi/agent/skills';

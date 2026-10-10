@@ -13,6 +13,9 @@ import {
   resolveBuildJobs,
   prepareInputSnapshot,
   assertLiveInputsUnchanged,
+  hashFile,
+  treeHash,
+  resolveCurrentBuild,
   runAllManifestsBuild,
   runLocalBuild,
   TargetWorkerPool
@@ -99,21 +102,32 @@ describe('Phase 03: Bounded Worker Staging', () => {
   });
 
   describe('Input snapshot lifecycle and freshness verification', () => {
-    it('prepareInputSnapshot produces verified snapshot and hashes', () => {
-      const { shared, snapshotStage, snapshotHashes } = prepareInputSnapshot(packageRoot);
+    it('snapshots canonical AGENTS independently of generated root instructions', () => {
+      const fixture = makeTempDir('evcrate-fixture-snapshot-');
       try {
-        assert.ok(snapshotStage.path);
-        assert.ok(snapshotHashes.canonicalClaudeHash);
-        assert.ok(snapshotHashes.claudeMdHash);
-        assert.ok(snapshotHashes.controllerHashes);
-        assert.equal(typeof snapshotHashes.controllerHashes, 'object');
+        for (const item of ['.evcrate', 'dist', 'package.json']) {
+          cpSync(join(packageRoot, item), join(fixture, item), { recursive: true });
+        }
+        const source = join(fixture, '.evcrate', 'source');
+        const canonical = join(source, '.claude', 'AGENTS.md');
+        const generated = join(source, 'AGENTS.md');
+        writeFileSync(generated, '# Generated Codex output, not authoring input\n');
+        const { shared, snapshotStage, snapshotHashes } = prepareInputSnapshot(fixture);
+        try {
+          assert.equal(snapshotHashes.agentsMdHash, hashFile(canonical));
+          assert.equal(shared.agentsMdHash, hashFile(canonical));
+          assert.deepEqual(readFileSync(join(shared.canonicalHarnessRoot, 'AGENTS.md')), readFileSync(canonical));
+          assert.equal(existsSync(join(shared.sourceRoot, 'AGENTS.md')), false);
 
-        // assertLiveInputsUnchanged passes when live files are untouched
-        assert.doesNotThrow(() => {
-          assertLiveInputsUnchanged(packageRoot, snapshotHashes);
-        });
+          writeFileSync(generated, '# Changed generated output\n');
+          assert.doesNotThrow(() => assertLiveInputsUnchanged(fixture, snapshotHashes));
+          rmSync(generated);
+          assert.doesNotThrow(() => assertLiveInputsUnchanged(fixture, snapshotHashes));
+        } finally {
+          snapshotStage.cleanup();
+        }
       } finally {
-        snapshotStage.cleanup();
+        rmSync(fixture, { recursive: true, force: true });
       }
     });
 
@@ -126,8 +140,8 @@ describe('Phase 03: Bounded Worker Staging', () => {
 
         const { snapshotStage, snapshotHashes } = prepareInputSnapshot(fixture);
         try {
-          // Mutate live CLAUDE.md
-          writeFileSync(join(fixture, '.evcrate', 'source', 'CLAUDE.md'), 'mutated content\n');
+          // Mutate the canonical graph input, not the generated Codex root document.
+          writeFileSync(join(fixture, '.evcrate', 'source', '.claude', 'AGENTS.md'), 'mutated content\n');
 
           assert.throws(
             () => assertLiveInputsUnchanged(fixture, snapshotHashes),
@@ -140,6 +154,49 @@ describe('Phase 03: Bounded Worker Staging', () => {
         rmSync(fixture, { recursive: true, force: true });
       }
     });
+
+    for (const jobs of [1, 2]) {
+      it(`rebuilds twice without promoting over canonical AGENTS with jobs=${jobs}`, async () => {
+        const fixture = makeTempDir('evcrate-authority-rebuild-');
+        try {
+          for (const item of ['.evcrate', 'dist', 'package.json']) {
+            cpSync(join(packageRoot, item), join(fixture, item), { recursive: true });
+          }
+          const source = join(fixture, '.evcrate', 'source');
+          const canonicalRoot = join(source, '.claude');
+          const canonical = join(canonicalRoot, 'AGENTS.md');
+          const original = readFileSync(canonical);
+          const canonicalHash = treeHash(canonicalRoot);
+          const first = await runLocalBuild(fixture, ['claude', 'codex'], { jobs });
+          const generatedCodex = readFileSync(join(source, 'AGENTS.md'));
+          assert.equal(first.manifest.source_hashes['AGENTS.md'], hashFile(canonical));
+          assert.equal(first.outputPaths['.claude'], join(source, '.claude-projection'));
+          assert.deepEqual(readFileSync(join(first.outputPaths['.claude'], 'rules', 'AGENTS.md')), original);
+          assert.equal(existsSync(join(first.outputPaths['.claude'], 'AGENTS.md')), false);
+          assert.equal(treeHash(canonicalRoot), canonicalHash);
+
+          // A generated file changed after capture is output to replace, not source drift.
+          const pending = runLocalBuild(fixture, ['claude', 'codex'], { jobs });
+          writeFileSync(join(source, 'AGENTS.md'), '# Untrusted generated output mutation\n');
+          const second = await pending;
+          assert.equal(second.manifestDigest, first.manifestDigest);
+          assert.deepEqual(readFileSync(canonical), original);
+          assert.equal(treeHash(canonicalRoot), canonicalHash);
+          assert.deepEqual(readFileSync(join(source, 'AGENTS.md')), generatedCodex);
+          const options = {
+            packageRoot: fixture, canonicalSourceRoot: canonicalRoot,
+            controllerRoot: join(source, '.evcrate', 'bin'),
+            targetRegistryPath: join(fixture, '.evcrate', 'targets', 'manifest.json'),
+            selectedTargets: ['claude', 'codex']
+          };
+          assert.equal(resolveCurrentBuild(options).manifestDigest, second.manifestDigest);
+          writeFileSync(canonical, '# AGENTS.md\nNew authoring input\n');
+          assert.throws(() => resolveCurrentBuild(options), { code: 'PUBLICATION_FAILED' });
+        } finally {
+          rmSync(fixture, { recursive: true, force: true });
+        }
+      });
+    }
   });
 
   describe('Parity and concurrency execution', () => {
@@ -155,15 +212,15 @@ describe('Phase 03: Bounded Worker Staging', () => {
 
         // 1. Run serial build (jobs=1)
         const serialResult = await runAllManifestsBuild(fixtureSerial, { jobs: 1 });
-        assert.equal(serialResult.allManifestPaths.length, 9);
-        assert.equal(serialResult.targetBuilds.size, 8);
+        assert.equal(serialResult.allManifestPaths.length, PERSISTED_TARGETS.length + 1);
+        assert.equal(serialResult.targetBuilds.size, PERSISTED_TARGETS.length);
 
         // 2. Run parallel build (jobs=2)
         const parallelResult = await runAllManifestsBuild(fixtureParallel, { jobs: 2 });
-        assert.equal(parallelResult.allManifestPaths.length, 9);
-        assert.equal(parallelResult.targetBuilds.size, 8);
+        assert.equal(parallelResult.allManifestPaths.length, PERSISTED_TARGETS.length + 1);
+        assert.equal(parallelResult.targetBuilds.size, PERSISTED_TARGETS.length);
 
-        // 3. Verify all 9 manifests are 100% byte-for-byte identical
+        // 3. Verify aggregate and every target manifest are byte-for-byte identical
         const manifestNames = [
           'build-manifest.json',
           ...PERSISTED_TARGETS.map((t) => `build-manifest-${t}.json`)
@@ -321,7 +378,7 @@ describe('Phase 03: Bounded Worker Staging', () => {
         );
 
         await assert.rejects(
-          async () => runLocalBuild(fixture, ['omp', 'codex', 'claude', 'gemini'], {
+          async () => runLocalBuild(fixture, ['omp', 'codex', 'claude', 'antigravity'], {
             jobs: 2,
             workerScriptPath: trackingWorkerScript
           })

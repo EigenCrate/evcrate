@@ -1,7 +1,7 @@
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
 import { validateProjection } from '../projection-utils.js';
-import { copy, filesUnder, json, prepareOutput, productionFiles, writeJson } from './resources.js';
+import { copy, filesUnder, json, prepareOutput, productionFiles, text, writeJson, writeText } from './resources.js';
 import { buildCommandMap, convertCommands, convertWorkflows, translatePrompt } from './commands.js';
 import { convertAgents } from './agents.js';
 import { convertSkills } from './skills.js';
@@ -22,10 +22,11 @@ function build(context: ProjectionBuildContext): void {
   prepareOutput(context);
   const map = buildCommandMap(context);
   convertCommands(context, map);
-  const agents = convertAgents(context, map, typeof effort === 'string' ? effort : null);
-  const skills = convertSkills(context, map);
-  const workflows = convertWorkflows(context, map);
-  const staticResources = convertHooksAndScripts(context, map);
+  const agents = convertAgents(context, typeof effort === 'string' ? effort : null);
+  const skills = convertSkills(context);
+  const workflows = convertWorkflows(context);
+  const staticResources = convertHooksAndScripts(context);
+  writeText(context, 'evcrate/AGENTS.md', translatePrompt(text(context, 'AGENTS.md')));
   projectCatalogDataAndLayout(context, {
     target: 'omp',
     scriptDirectory: '.omp/evcrate/scripts',
@@ -36,7 +37,7 @@ function build(context: ProjectionBuildContext): void {
       mapRecord(cmd) {
         const item = Object.values(map).find((c) => c.source === cmd.source);
         if (!item) throw new ControlPlaneError('VALIDATION_INVALID');
-        const srcParts = item.sourceName.split(':');
+        const srcParts = item.sourceName.split('/');
         const category = srcParts.length > 1 ? srcParts[0] : 'core';
         return {
           name: '/' + item.targetName,
@@ -64,7 +65,7 @@ function build(context: ProjectionBuildContext): void {
   for (const entry of productionFiles(context, 'output-styles')) {
     const rel = entry.path.slice('output-styles/'.length);
     if (!rel) continue;
-    copy(context, entry.path, `evcrate/output-styles/${rel}`, (value) => translatePrompt(value, map));
+    copy(context, entry.path, `evcrate/output-styles/${rel}`, translatePrompt);
     outputStyles.push(rel);
   }
   writeJson(context, 'evcrate/inventory.json', {

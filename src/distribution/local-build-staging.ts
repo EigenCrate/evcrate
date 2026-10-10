@@ -17,6 +17,7 @@ import {
   type TargetBuildFacts
 } from './manifest-view-derivation.js';
 import { collectBaselineOwners, copyStagedTree } from './local-staging-fs.js';
+import { localProjectionPath } from './output-paths.js';
 
 export {
   buildTargetPolicies,
@@ -85,7 +86,7 @@ export function prepareSharedBuildInputs(packageRoot: string): SharedBuildInputs
     sourceRoot,
     canonicalHarnessRoot,
     canonicalClaudeHash: treeHash(canonicalHarnessRoot),
-    claudeMdHash: hashFile(join(sourceRoot, 'CLAUDE.md')),
+    agentsMdHash: hashFile(join(canonicalHarnessRoot, 'AGENTS.md')),
     registryPath,
     registry,
     controllerBinSource,
@@ -144,7 +145,7 @@ export function buildAndStageTarget(
 
   for (const root of manifest.outputRoots) {
     const staged = join(stagePath, root);
-    const local = join(shared.sourceRoot, root);
+    const local = localProjectionPath(shared.sourceRoot, root);
     stagedOutputRoots[root] = staged;
     stagedOutputs.set(root, staged);
     localOutputs.set(root, local);
@@ -152,7 +153,7 @@ export function buildAndStageTarget(
   }
   for (const doc of manifest.projectDocs) {
     const staged = join(stagePath, doc);
-    const local = join(shared.sourceRoot, doc);
+    const local = localProjectionPath(shared.sourceRoot, doc);
     stagedOutputRoots[doc] = staged;
     stagedOutputs.set(doc, staged);
     localOutputs.set(doc, local);
@@ -212,7 +213,7 @@ export async function assembleLocalStage(
     const localOutputs = new Map<string, string>([['.evcrate', join(liveSourceRoot, '.evcrate')]]);
     for (const fact of targetFacts) {
       for (const [key, val] of fact.stagedOutputs) stagedOutputs.set(key, val);
-      for (const [key] of fact.localOutputs) localOutputs.set(key, join(liveSourceRoot, key));
+      for (const [key] of fact.localOutputs) localOutputs.set(key, localProjectionPath(liveSourceRoot, key));
     }
 
     if (options.emitAllManifests) {
@@ -220,13 +221,13 @@ export async function assembleLocalStage(
         throw new ControlPlaneError('PROTOCOL_INVALID');
       }
 
-      // Derive all 9 manifest views in memory BEFORE writing manifest files into stagePath/.evcrate
+      // Derive target and aggregate views before writing manifests into the stage.
       const singleViews = targetFacts.map((fact) =>
         deriveManifestView([fact], shared, stagePath, controllerMetadata, fact.manifest.id)
       );
       const aggregateView = deriveManifestView(targetFacts, shared, stagePath, controllerMetadata);
 
-      // Now write all 9 manifest files atomically into stagePath
+      // Write every derived manifest atomically into the stage.
       for (const singleView of singleViews) {
         mkdirSync(dirname(singleView.stagedManifestPath), { recursive: true });
         writeAtomicFile(singleView.stagedManifestPath, singleView.manifestData);

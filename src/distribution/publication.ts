@@ -14,8 +14,8 @@ import {
   readOptionalPublicationMarker, publicationMarkerRecord, type PublicationNodeSnapshot
 } from './publication-inventory.js';
 import {
-  MAX_PUBLICATION_CHANGES, MAX_PUBLICATION_RESULT_BYTES, MAX_PUBLICATION_STATE_BYTES, PUBLICATION_PROJECT_TARGET_BINDINGS,
-  validatePublishApplyResultPayload,
+  MAX_PUBLICATION_CHANGES, MAX_PUBLICATION_RESULT_BYTES, MAX_PUBLICATION_STATE_BYTES,
+  validatePublishApplyResultPayload, publicationStateTargets, publicationStateLayout, publicationFlatOwnership,
   type ApplyPhaseRecord, type DryRunPhaseRecord, type PublishApplyResultPayload,
   type PublishDryRunResultPayload, type PublicationScope, type PublishRequestPayload,
   type RecoverRequestPayload, type RecoverResultPayload, type RecoveryPhaseRecord
@@ -30,6 +30,7 @@ import {
   createPublicationPlan, createPublicationPlanSet, type PlannedPublicationOperation,
   type PriorManagedOwnership, type PublicationPhasePlan, type PublicationPlan, type PublicationPlanSet
 } from './publication-plan.js';
+import { detectLegacyLeftovers } from './legacy-leftovers.js';
 
 export const PUBLICATION_STATE_DIRECTORY = '.evcrate/publication';
 export const MAX_RETAINED_RELEASE_BYTES = 512 * 1024 * 1024;
@@ -61,7 +62,7 @@ export interface TransactionDescriptor {
   readonly operations: readonly PlannedPublicationOperation[];
 }
 type EnginePlan = Pick<PublicationPlan, 'bindings' | 'selectedTargets' | 'buildManifestPath' | 'buildManifestDigest'>
-  & { readonly managedOwnership?: PriorManagedOwnership };
+  & { readonly bindingOrder?: readonly string[]; readonly managedOwnership?: PriorManagedOwnership };
 function createTransactionDescriptor(
   plan: EnginePlan, logicalPhase: 'shared' | 'harness', scope: PublicationScope, releaseId: string,
   destinationRoot: string, durableStateRoot: string, projectIdentity: string | null
@@ -69,7 +70,7 @@ function createTransactionDescriptor(
   const transactionWorkspaceRoot = scope === 'project'
     ? join(resolve(destinationRoot), `.evcrate-publish-${releaseId}`)
     : join(resolve(durableStateRoot), `release-${releaseId}`);
-  const bindings = Object.freeze(plan.bindings.map(({ binding }) => binding));
+  const bindings = Object.freeze(plan.bindingOrder ?? plan.bindings.map(({ binding }) => binding));
   const operations = Object.freeze(plan.bindings.flatMap(({ operations }) => operations));
 
   return Object.freeze({
@@ -182,6 +183,7 @@ function journalFor(
     const before = operation.beforeSnapshot;
     return {
       target: operation.target, binding: operation.binding, local_root: operation.localRoot,
+      ...(operation.cleanup === undefined ? {} : { cleanup: operation.cleanup }),
       relative_path: operation.relativePath,
       kind: operation.target === 'advisor-controller' ? 'directory' : 'file',
       action: operation.action, destination: operation.target === 'advisor-controller'
@@ -354,50 +356,21 @@ function markerManagedOwnership(
   return Object.freeze({});
 }
 function homePriorOwnership(marker: Record<string, unknown> | null): PriorManagedOwnership {
-  return marker?.schema_version === 2
-    ? markerManagedOwnership(marker, 'harness') : Object.freeze({});
+  if (marker?.schema_version === 2) return markerManagedOwnership(marker, 'harness');
+  if (marker?.transaction_type === 'target-publication') {
+    if (marker.status !== 'complete' && marker.status !== 'recovered') fail('RECOVERY_FAILED');
+    const selected = publicationStateTargets(marker.selected_targets, true);
+    const layout = publicationStateLayout(marker.binding_order, selected, 'home', true);
+    return publicationFlatOwnership(marker.managed_paths, selected, 'home', layout.generation);
+  }
+  return Object.freeze({});
 }
 function projectPriorOwnership(marker: Record<string, unknown> | null): PriorManagedOwnership {
-  const value = markerManagedOwnership(marker, 'harness');
-  if (marker?.schema_version === 2) return value;
-  const legacy = marker?.managed_paths;
-  if (legacy === undefined) return Object.freeze({});
-  if (!isPlainObject(legacy)) fail('RECOVERY_FAILED');
-  const entries = Object.entries(legacy);
-  if (entries.length === 0) return Object.freeze({});
-  const nested = entries.every(([, candidate]) => isPlainObject(candidate));
-  const flat = entries.every(([, candidate]) => Array.isArray(candidate));
-  if (nested === flat) fail('RECOVERY_FAILED');
-  const result: Record<string, Record<string, readonly string[]>> = {};
-  const assign = (target: string, binding: string, rawPaths: unknown): void => {
-    const bindings = PUBLICATION_PROJECT_TARGET_BINDINGS[
-      target as keyof typeof PUBLICATION_PROJECT_TARGET_BINDINGS
-    ];
-    if (!bindings || !bindings.includes(binding as never) || !Array.isArray(rawPaths)) {
-      fail('RECOVERY_FAILED');
-    }
-    const paths = rawPaths.map((path) =>
-      typeof path === 'string' ? path : fail('RECOVERY_FAILED')
-    );
-    result[target] ??= {};
-    if (result[target][binding] !== undefined) fail('RECOVERY_FAILED');
-    result[target][binding] = Object.freeze(paths);
-  };
-  if (nested) {
-    for (const [target, bindings] of entries) {
-      if (!isPlainObject(bindings)) fail('RECOVERY_FAILED');
-      for (const [binding, paths] of Object.entries(bindings)) assign(target, binding, paths);
-    }
-  } else {
-    for (const [binding, paths] of entries) {
-      const owners = Object.entries(PUBLICATION_PROJECT_TARGET_BINDINGS)
-        .filter(([, bindings]) => bindings.includes(binding as never));
-      if (owners.length !== 1) fail('RECOVERY_FAILED');
-      assign(owners[0][0], binding, paths);
-    }
-  }
-  for (const [target, bindings] of Object.entries(result)) result[target] = Object.freeze(bindings);
-  return Object.freeze(result);
+  if (marker?.schema_version === 2) return markerManagedOwnership(marker, 'harness');
+  if (marker === null || marker.managed_paths === undefined) return Object.freeze({});
+  const selected = publicationStateTargets(marker.selected_targets);
+  const layout = publicationStateLayout(marker.binding_order, selected, 'project');
+  return publicationFlatOwnership(marker.managed_paths, selected, 'project', layout.generation);
 }
 function retainedMarkerId(marker: Record<string, unknown> | null): string | null {
   const record = marker?.schema_version === 2
@@ -469,9 +442,8 @@ function phaseChanges(plan: PublicationPlan, phase: 'shared' | 'harness') {
     phase === 'shared' ? target === 'advisor-controller' : target !== 'advisor-controller'));
 }
 function phaseBindings(plan: PublicationPlan, phase: 'shared' | 'harness'): readonly string[] {
-  return Object.freeze(plan.bindings
-    .filter(({ controller }) => phase === 'shared' ? controller : !controller)
-    .map(({ binding }) => binding));
+  if (phase === 'shared') return Object.freeze(['.evcrate/bin']);
+  return Object.freeze(plan.bindingOrder.filter((binding) => binding !== '.evcrate/bin'));
 }
 function dryRunPhase(plan: PublicationPlan, phase: 'shared' | 'harness'): DryRunPhaseRecord {
   return Object.freeze({
@@ -481,11 +453,29 @@ function dryRunPhase(plan: PublicationPlan, phase: 'shared' | 'harness'): DryRun
     changes: phaseChanges(plan, phase)
   });
 }
-function dryRunPayload(plan: PublicationPlan): PublishDryRunResultPayload {
+function dryRunPayload(
+  plan: PublicationPlan,
+  options?: {
+    readonly destinationRoot?: string;
+    readonly previousMarker?: Record<string, unknown> | null;
+  }
+): PublishDryRunResultPayload {
+  const previousOwnership = options?.previousMarker !== undefined
+    ? homePriorOwnership(options.previousMarker) : Object.freeze({});
+  const legacyLeftovers = options?.destinationRoot !== undefined
+    ? detectLegacyLeftovers({
+        scope: 'home',
+        selectedTargets: plan.selectedTargets,
+        destinationRoot: options.destinationRoot,
+        currentOwnership: plan.managedOwnership,
+        previousOwnership
+      })
+    : Object.freeze([]);
   return Object.freeze({
     scope: 'home', projectIdentity: null,
     buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-    phases: [dryRunPhase(plan, 'shared'), dryRunPhase(plan, 'harness')] as const
+    phases: [dryRunPhase(plan, 'shared'), dryRunPhase(plan, 'harness')] as const,
+    legacyLeftovers
   });
 }
 function applyPhase(
@@ -496,13 +486,29 @@ function applyPhase(
   });
 }
 function applyPayload(
-  plan: PublicationPlan, releaseId: string, retainedReleaseId: string | null
+  plan: PublicationPlan, releaseId: string, retainedReleaseId: string | null,
+  options?: {
+    readonly destinationRoot?: string;
+    readonly previousMarker?: Record<string, unknown> | null;
+  }
 ): PublishApplyResultPayload {
+  const previousOwnership = options?.previousMarker !== undefined
+    ? homePriorOwnership(options.previousMarker) : Object.freeze({});
+  const legacyLeftovers = options?.destinationRoot !== undefined
+    ? detectLegacyLeftovers({
+        scope: 'home',
+        selectedTargets: plan.selectedTargets,
+        destinationRoot: options.destinationRoot,
+        currentOwnership: plan.managedOwnership,
+        previousOwnership
+      })
+    : Object.freeze([]);
   return Object.freeze({
     scope: 'home', projectIdentity: null,
     buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
     phases: [applyPhase(plan, 'shared', releaseId, retainedReleaseId),
-      applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const
+      applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const,
+    legacyLeftovers
   });
 }
 function recoveryPayload(result: PublicationRecoveryOutcome, request: RecoverRequestPayload): RecoverResultPayload {
@@ -819,19 +825,41 @@ function assertProjectMarkerBinding(
 }
 
 function projectDryRunPayload(
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan
+  shared: PublicationPhasePlan, harness: PublicationPhasePlan,
+  previousMarker: Record<string, unknown> | null = null
 ): PublishDryRunResultPayload {
+  const previousOwnership = projectPriorOwnership(previousMarker);
+  const legacyLeftovers = detectLegacyLeftovers({
+    scope: 'project',
+    selectedTargets: harness.selectedTargets,
+    destinationRoot: harness.destinationRoot,
+    currentOwnership: harness.managedOwnership,
+    previousOwnership
+  });
   return Object.freeze({
     scope: 'project', projectIdentity: harness.projectIdentity,
     buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
-    phases: [scopedDryRunPhase(shared), scopedDryRunPhase(harness)] as const
+    phases: [scopedDryRunPhase(shared), scopedDryRunPhase(harness)] as const,
+    legacyLeftovers
   });
 }
 function projectApplyPayload(
   shared: PublicationPhasePlan, harness: PublicationPhasePlan,
   sharedResult: { readonly releaseId: string; readonly retainedReleaseId: string | null },
-  harnessResult: { readonly releaseId: string; readonly retainedReleaseId: string | null }
+  harnessResult: { readonly releaseId: string; readonly retainedReleaseId: string | null },
+  previousMarker: Record<string, unknown> | null = null,
+  scanLeftovers = true
 ): PublishApplyResultPayload {
+  const previousOwnership = projectPriorOwnership(previousMarker);
+  const legacyLeftovers = scanLeftovers
+    ? detectLegacyLeftovers({
+        scope: 'project',
+        selectedTargets: harness.selectedTargets,
+        destinationRoot: harness.destinationRoot,
+        currentOwnership: harness.managedOwnership,
+        previousOwnership
+      })
+    : Object.freeze([]);
   return Object.freeze({
     scope: 'project', projectIdentity: harness.projectIdentity,
     buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
@@ -840,7 +868,8 @@ function projectApplyPayload(
         releaseId: sharedResult.releaseId, retainedReleaseId: sharedResult.retainedReleaseId }),
       Object.freeze({ ...scopedDryRunPhase(harness), status: 'committed' as const,
         releaseId: harnessResult.releaseId, retainedReleaseId: null })
-    ] as const
+    ] as const,
+    legacyLeftovers
   });
 }
 function projectPartialPayload(
@@ -867,7 +896,7 @@ function composeHomePublicationPlan(planSet: PublicationPlanSet): PublicationPla
     buildManifestPath: planSet.buildManifestPath,
     buildManifestDigest: planSet.buildManifestDigest,
     selectedTargets: Object.freeze([...planSet.harness.selectedTargets]),
-    bindingOrder: Object.freeze(bindings.map(({ binding }) => binding)),
+    bindingOrder: Object.freeze([...planSet.shared.bindingOrder, ...planSet.harness.bindingOrder]),
     bindings, changes, managedOwnership: planSet.harness.managedOwnership
   });
 }
@@ -901,7 +930,7 @@ export function publishDryRun(
     const plans = createPublicationPlanSet(context, {
       scope: 'project', priorManagedOwnership: projectPriorOwnership(projectMarker)
     });
-    return projectDryRunPayload(plans.shared, plans.harness);
+    return projectDryRunPayload(plans.shared, plans.harness, projectMarker);
   }
   const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
   if (readPublicationJournal(stateRoot)) fail('RECOVERY_FAILED');
@@ -919,7 +948,7 @@ export function publishDryRun(
     fail('RECOVERY_FAILED');
   }
   const plan = homePublicationPlan(context, stateRoot, marker);
-  return dryRunPayload(plan);
+  return dryRunPayload(plan, { destinationRoot: context.homeRoot, previousMarker: marker });
 }
 export function publishApply(
   context: InvocationContext, options: PublicationOptions = {},
@@ -995,7 +1024,7 @@ export function publishApply(
             preflightTransaction(projectDescriptor, plans.harness);
             assertProjectApplyResultBudget(lockedPlans.shared, plans.harness);
             const harnessResult = applyTransaction(plans.harness, projectDescriptor, projectMarker, options);
-            return projectApplyPayload(lockedPlans.shared, plans.harness, sharedResult, harnessResult);
+            return projectApplyPayload(lockedPlans.shared, plans.harness, sharedResult, harnessResult, projectMarker);
           } catch (error) {
             let code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' =
               error instanceof ControlPlaneError && error.code === 'ROLLBACK_FAILED'
@@ -1042,7 +1071,7 @@ export function publishApply(
     );
     preflightTransaction(descriptor, plan);
     const result = applyTransaction(plan, descriptor, previousMarker, options);
-    return applyPayload(plan, releaseId, result.retainedReleaseId);
+    return applyPayload(plan, releaseId, result.retainedReleaseId, { destinationRoot: context.homeRoot, previousMarker });
   });
 }
 export function recoverPublication(

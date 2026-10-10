@@ -1,6 +1,6 @@
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { canonicalBytes } from '../../protocol/canonical-json.js';
-import { writeProjectionFile, copyGraphFile, siblingBytes, siblingText, graphFile, textBytes } from '../projection-utils.js';
+import { writeProjectionFile, copyGraphFile, graphFile, textBytes } from '../projection-utils.js';
 import type { ProjectionBuildContext } from '../types.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 
@@ -26,14 +26,6 @@ export function filesUnder(context: ProjectionBuildContext, prefix: string): Res
 
 export function sourcePath(prefix: string, file: ResourceGraphFile): string {
   return file.path.slice(prefix.replace(/\/$/u, '').length + 1);
-}
-
-export function readSibling(context: ProjectionBuildContext, path: string): Uint8Array {
-  return siblingBytes(context, path);
-}
-
-export function readSiblingString(context: ProjectionBuildContext, path: string): string {
-  return siblingText(context, path);
 }
 
 export function decodeUtf8(bytes: Uint8Array): string {

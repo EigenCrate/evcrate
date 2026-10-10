@@ -1,6 +1,11 @@
 {
   "branches": [
-    "main"
+    "main",
+    {
+      "name": "next",
+      "channel": "next",
+      "prerelease": "rc"
+    }
   ],
   "plugins": [
     [
@@ -123,14 +128,6 @@
           {
             "path": "dist/release/install.ps1",
             "label": "Windows Installer Entrypoint (install.ps1)"
-          },
-          {
-            "path": "dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz",
-            "label": "Advisor Plugin Archive"
-          },
-          {
-            "path": "dist/advisor-plugin/evcrate-advisor-plugin-v*.tar.gz.sha256",
-            "label": "Advisor Plugin SHA-256 Sidecar"
           }
         ]
       }

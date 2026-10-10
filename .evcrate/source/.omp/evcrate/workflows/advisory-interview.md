@@ -1,7 +1,7 @@
 # Advisory Interview Contract
 
-This is the single semantics source for `/cmd-advise`. It is separate from
-`advisor-mentoring.md`: `--advice` is checkpoint counsel, while `/cmd-advise` is an
+This is the single semantics source for `/evc-cmd-advise`. It is separate from
+`advisor-mentoring.md`: `--advice` is checkpoint counsel, while `/evc-cmd-advise` is an
 interview that must first converge on the user's problem.
 
 ## Capability
@@ -85,4 +85,4 @@ reimplement those rules.
 
 ## Unsupported relay
 
-A final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` before advisor delegation, state creation, or inline-interview work. Users can run `/advise <prompt>` for inline advice.
+A final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_OMP` before advisor delegation, state creation, or inline-interview work. Users can run `/evc-cmd-advise <prompt>` for inline advice.

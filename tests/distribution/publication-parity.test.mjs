@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  PUBLICATION_BINDING_ORDER, PERSISTED_TARGETS, resolveCurrentPublicationBuild,
+  PUBLICATION_BINDING_ORDER, PERSISTED_TARGETS, hashFile, resolveCurrentPublicationBuild,
   resolveInvocationContext, runLocalBuild, verifyBuild
 } from '../../dist/index.js';
 
@@ -45,14 +45,16 @@ test('all-target schema-2 build resolves with explicit publication policy parity
   try {
     const { build } = fixture;
     assert.deepEqual(build.selectedManifests.map(({ name }) => name), [
-      'antigravity', 'claude', 'codex', 'copilot', 'gemini', 'omp', 'pi', 'vscode'
+      'antigravity', 'claude', 'codex', 'copilot', 'omp', 'pi', 'vscode'
     ]);
     assert.equal(build.manifest.validation.complete, true);
+    assert.equal(build.manifest.source_hashes['AGENTS.md'],
+      hashFile(join(fixture.context.packageRoot, '.evcrate', 'source', '.claude', 'AGENTS.md')));
     assert.deepEqual(build.manifest.home_policy.omp.publication_rules, ['omp-agent-prefix']);
     assert.deepEqual(build.manifest.home_policy.codex.publication_rules, ['codex-home-path-rewrite']);
     assert.deepEqual(build.manifest.home_policy.claude.publication_rules, ['claude-home-path-rewrite', 'claude-skill-root-exclusion']);
     assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-      '.evcrate/bin', '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+      '.evcrate/bin', '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
@@ -63,7 +65,7 @@ test('build verification rejects a stale source hash before publication planning
   const fixture = await sourceDerivedBuild(['claude']);
   try {
     const { context, build } = fixture;
-    const stale = { ...build.manifest.source_hashes, 'CLAUDE.md': '0'.repeat(64) };
+    const stale = { ...build.manifest.source_hashes, 'AGENTS.md': '0'.repeat(64) };
     assert.throws(() => verifyBuild({
       manifestPath: build.manifestPath,
       manifest: build.manifest,

@@ -3,16 +3,25 @@
   "name": "antigravity",
   "adapter": "dist/adapters/antigravity.js",
   "adapter_sources": [
+    "dist/adapters/advisory.js",
+    "dist/adapters/catalog-data.js",
+    "dist/adapters/catalog-types.js",
+    "dist/adapters/markdown-frontmatter.js",
+    "dist/adapters/projection-utils.js",
+    "dist/adapters/resource-graph.js",
+    "dist/adapters/resource-naming.js",
+    "dist/adapters/types.js",
     "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".antigravity",
   "additional_roots": [],
-  "project_docs": [],
+  "project_docs": [".agents/hooks.json", ".agents/rules/evcrate-antigravity.md"],
   "overlay_root": ".evcrate/targets/antigravity/files",
   "patches": [],
   "home_policy": {
     "bindings": {".antigravity": ".gemini/config"},
     "preserve_paths": {},
+    "reject_unmanaged_collisions": true,
     "promotion_order": 30,
     "publication_rules": ["antigravity-home-path-rewrite"]
   }

@@ -75,11 +75,11 @@ export function buildVscodeInventory(
 
   const sourcePrefix = '.evcrate/source/.claude/';
 
-  // 1. Sibling Instruction
+  // 1. Canonical graph instruction
   const instructionTarget = 'com.github.copilot/rules/bootstrap.instructions.md';
-  add('.evcrate/source/CLAUDE.md', [instructionTarget], 'native');
+  add(`${sourcePrefix}AGENTS.md`, [instructionTarget], 'native');
   resourceMap.push(Object.freeze({
-    source: '.evcrate/source/CLAUDE.md',
+    source: 'AGENTS.md',
     sourceSemanticId: 'bootstrap-instructions',
     target: instructionTarget,
     localName: 'bootstrap.instructions.md',
@@ -322,17 +322,16 @@ export function buildVscodeInventory(
     }));
   }
 
-  // 4. Archived support packages (4)
+  // 4. Archived support directories; loose root files remain in the resource inventory.
+  let archivedDirectoryCount = 0;
   for (const arch of skillsResult.archived) {
+    const archFiles = allSkillFiles.filter((f) => sourcePath('skills', f).startsWith(`${arch}/`));
+    if (!archFiles.length) continue;
     const destDir = `evcrate/skills/${arch}`;
     if (seenDestDirs.has(destDir)) {
       throw new ControlPlaneError('VALIDATION_INVALID');
     }
     seenDestDirs.add(destDir);
-    const archFiles = allSkillFiles.filter((f) => {
-      const rel = sourcePath('skills', f);
-      return rel === arch || rel.startsWith(`${arch}/`);
-    });
     directoryEntries.push(Object.freeze({
       destinationDirectory: destDir,
       sourceDirectory: `skills/${arch}`,
@@ -341,14 +340,15 @@ export function buildVscodeInventory(
       disposition: 'managed-static',
       fileCount: archFiles.length
     }));
+    archivedDirectoryCount += 1;
   }
 
   // Write directory-manifest.json
   writeJson(context, 'evcrate/directory-manifest.json', {
     schema: 'evcrate-vscode-directory-manifest-v1',
     plugin_id: 'evcrate-local',
-    total_skill_directories: 116,
-    total_archived_directories: skillsResult.archived.length,
+    total_skill_directories: directoryEntries.length,
+    total_archived_directories: archivedDirectoryCount,
     directories: directoryEntries.sort((a, b) => a.destinationDirectory.localeCompare(b.destinationDirectory))
   });
 
@@ -373,8 +373,8 @@ export function buildVscodeInventory(
       skills_count: skillsResult.skills.length,
       styles_count: Object.keys(styles).length,
       workflows_count: Object.keys(workflows).length,
-      skill_directories_count: 116,
-      archived_directories_count: skillsResult.archived.length,
+      skill_directories_count: directoryEntries.length,
+      archived_directories_count: archivedDirectoryCount,
       hooks_count: hookAudit ? hookAudit.events.length : 8
     }
   };

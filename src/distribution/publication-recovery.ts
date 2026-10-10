@@ -2,11 +2,12 @@ import { lstatSync, mkdirSync, readdirSync, renameSync, unlinkSync } from 'node:
 import { dirname, join, resolve } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
-import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
 import {
   MAX_PUBLICATION_CHANGES, MAX_PUBLICATION_STATE_BYTES, PUBLICATION_BINDING_ORDER, PUBLICATION_CHANGE_ACTIONS,
-  PUBLICATION_LOCAL_ROOTS, PUBLICATION_PROJECT_TARGET_BINDINGS, PUBLICATION_TARGET_BINDINGS, PUBLICATION_TARGET_LOCAL_ROOTS,
-  type PublicationChangeAction, type PublicationTarget, type PublicationScope
+  publicationStateTarget, publicationStateTargets, publicationStateLayout, publicationStateBindings,
+  publicationStateLocalRoot, publicationStateDestination, publicationStateOwnership, publicationFlatOwnership,
+  type PublicationStateTarget, type PublicationStateGeneration,
+  type PublicationChangeAction, type PublicationScope
 } from '../protocol/publication-payloads.js';
 import {
   assertNoSymlinkAncestors, assertRealDirectory, assertRegularFile,
@@ -20,10 +21,12 @@ import {
   type PublicationNodeSnapshot
 } from './publication-inventory.js';
 import { writeReleaseMarker, RELEASE_MARKER_NAME } from '../filesystem/locking.js';
+import { retiredBindingCleanupDestination } from './publication-cleanup.js';
 
 export const PUBLICATION_JOURNAL_NAME = 'publication-journal.json';
 export interface PublicationJournalOperation {
-  readonly target: PublicationTarget; readonly binding: string; readonly localRoot: string;
+  readonly target: PublicationStateTarget | 'advisor-controller'; readonly binding: string; readonly localRoot: string;
+  readonly cleanup?: 'retired-binding';
   readonly relativePath: string; readonly kind: 'file' | 'directory';
   readonly action: PublicationChangeAction; readonly destination: string; readonly backup: string | null;
   readonly before: PublicationNodeSnapshot; readonly intendedHash: string | null;
@@ -34,7 +37,7 @@ export interface PublicationStateRecord {
   readonly scope: PublicationScope;
   readonly status: 'promoting' | 'complete' | 'recovered';
   readonly release_id: string;
-  readonly selected_targets: readonly PersistedTarget[];
+  readonly selected_targets: readonly PublicationStateTarget[];
   readonly binding_order: readonly string[];
   readonly managed_paths: Record<string, unknown>;
   readonly previous_managed_paths: Record<string, unknown>;
@@ -52,7 +55,7 @@ export interface PublicationStateRecord {
 export interface PublicationJournal {
   readonly schema_version: 1 | 2 | 3; readonly transaction_type: 'target-publication';
   readonly status: 'staged' | 'promoting' | 'committed'; readonly release_id: string; readonly home_root: string;
-  readonly transaction_dir: string; readonly selected_targets: readonly PersistedTarget[]; readonly binding_order: readonly string[];
+  readonly transaction_dir: string; readonly selected_targets: readonly PublicationStateTarget[]; readonly binding_order: readonly string[];
   readonly previous_managed_paths: Record<string, unknown>; readonly managed_paths: Record<string, unknown>;
   readonly build_manifest_path: string; readonly build_manifest_digest: string;
   readonly retained_release_id: string | null; readonly retain_transaction: boolean;
@@ -70,7 +73,7 @@ export interface PublicationJournal {
 }
 export interface PublicationRecoveryOutcome {
   readonly action: 'none' | 'rolled-back' | 'finalized'; readonly releaseId: string | null;
-  readonly selectedTargets: readonly PersistedTarget[]; readonly bindingOrder: readonly string[];
+  readonly selectedTargets: readonly PublicationStateTarget[]; readonly bindingOrder: readonly string[];
 }
 function fail(code: 'RECOVERY_FAILED' | 'PATH_UNSAFE' = 'RECOVERY_FAILED'): never { throw new ControlPlaneError(code); }
 function hash(value: unknown): string | null {
@@ -104,72 +107,14 @@ function safeInteger(value: unknown, maximum: number): number {
 function nullableSafeInteger(value: unknown, maximum: number): number | null {
   return value === undefined || value === null ? null : safeInteger(value, maximum);
 }
-function targets(value: unknown, allowEmpty = false): readonly PersistedTarget[] {
-  if (!Array.isArray(value) || (!allowEmpty && !value.length)) fail();
-  try {
-    const result = value.map((entry) => normalizeTarget(entry));
-    if (new Set(result).size !== result.length) fail();
-    return Object.freeze(result);
-  } catch { fail(); }
-}
-function expectedBindings(selectedTargets: readonly PersistedTarget[], scope: PublicationScope): readonly string[] {
-  const names = new Set<string>(scope === 'home' ? ['.evcrate/bin'] : []);
-  for (const target of selectedTargets) {
-    const bindings = scope === 'home'
-      ? PUBLICATION_TARGET_BINDINGS[target] : PUBLICATION_PROJECT_TARGET_BINDINGS[target];
-    if (!bindings) fail();
-    for (const binding of bindings) {
-      if (names.has(binding)) fail();
-      names.add(binding);
-    }
-  }
-  if (scope === 'project') {
-    return Object.freeze(selectedTargets.flatMap((target) => PUBLICATION_PROJECT_TARGET_BINDINGS[target]));
-  }
-  return Object.freeze(PUBLICATION_BINDING_ORDER.filter((binding) => names.has(binding)));
+function targets(value: unknown, allowEmpty = false): readonly PublicationStateTarget[] {
+  try { return publicationStateTargets(value, allowEmpty); } catch { fail(); }
 }
 function order(
-  value: unknown, selectedTargets: readonly PersistedTarget[], scope: PublicationScope = 'home'
+  value: unknown, selectedTargets: readonly PublicationStateTarget[], scope: PublicationScope = 'home'
 ): readonly string[] {
-  if (!Array.isArray(value) || value.length > PUBLICATION_BINDING_ORDER.length + 16) fail();
-  const result = value.map(relativePath);
-  const expected = expectedBindings(selectedTargets, scope);
-  if (result.length !== expected.length || result.some((binding, index) => binding !== expected[index])) fail();
-  return Object.freeze(result);
-}
-function managed(
-  value: unknown, scope: PublicationScope = 'home', nested = false
-): Record<string, unknown> {
-  if (!isPlainObject(value)) fail();
-  const result: Record<string, unknown> = {};
-  if (nested) {
-    const targetBindings = scope === 'home'
-      ? PUBLICATION_TARGET_BINDINGS : PUBLICATION_PROJECT_TARGET_BINDINGS;
-    for (const [target, rawBindings] of Object.entries(value)) {
-      const expected = targetBindings[target as keyof typeof targetBindings];
-      if (!expected || !isPlainObject(rawBindings)) fail();
-      const bindings: Record<string, readonly string[]> = {};
-      for (const [binding, rawValues] of Object.entries(rawBindings)) {
-        if (!expected.includes(binding as never) || !Array.isArray(rawValues)) fail();
-        const values = rawValues.map(relativePath);
-        if (new Set(values).size !== values.length) fail();
-        bindings[binding] = Object.freeze(values);
-      }
-      result[target] = Object.freeze(bindings);
-    }
-    return Object.freeze(result);
-  }
-  const known = new Set<string>(
-    scope === 'home' ? PUBLICATION_LOCAL_ROOTS : Object.values(PUBLICATION_PROJECT_TARGET_BINDINGS).flat()
-  );
-  for (const [rawKey, rawValues] of Object.entries(value)) {
-    const key = relativePath(rawKey);
-    if (!known.has(key) || !Array.isArray(rawValues)) fail();
-    const values = rawValues.map(relativePath);
-    if (new Set(values).size !== values.length) fail();
-    result[key] = Object.freeze(values);
-  }
-  return Object.freeze(result);
+  try { return publicationStateLayout(value, selectedTargets, scope, scope === 'home').bindingOrder; }
+  catch { fail(); }
 }
 function node(value: unknown, allowMode = false): PublicationNodeSnapshot {
   if (!isPlainObject(value)) fail();
@@ -236,13 +181,13 @@ function journalRecords(
 function sameStringArray(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
-function sameTargetArray(left: readonly PersistedTarget[], right: readonly PersistedTarget[]): boolean {
+function sameTargetArray(left: readonly PublicationStateTarget[], right: readonly PublicationStateTarget[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 function assertSchema2JournalPhase(
   scope: PublicationScope, logicalPhase: unknown,
   records: Readonly<Record<string, PublicationStateRecord | null>>,
-  selectedTargets: readonly PersistedTarget[], bindingOrder: readonly string[],
+  selectedTargets: readonly PublicationStateTarget[], bindingOrder: readonly string[],
   operations: readonly PublicationJournalOperation[]
 ): void {
   const harness = records.harness;
@@ -266,17 +211,13 @@ function assertSchema2JournalPhase(
     || !operations.some((operation) => operation.target === 'advisor-controller')
     || !operations.some((operation) => operation.target !== 'advisor-controller')) fail('PATH_UNSAFE');
 }
-function targetForBinding(target: PublicationTarget, binding: string, scope: PublicationScope): boolean {
-  if (target === 'advisor-controller') return scope === 'home' && binding === '.evcrate/bin';
-  const bindings = scope === 'home'
-    ? PUBLICATION_TARGET_BINDINGS[target] : PUBLICATION_PROJECT_TARGET_BINDINGS[target];
-  return bindings !== undefined && bindings.includes(binding as never);
-}
-function targetForLocalRoot(target: PublicationTarget, localRoot: string, scope: PublicationScope): boolean {
-  if (target === 'advisor-controller') return scope === 'home' && localRoot === '.evcrate/bin';
-  const roots = scope === 'project'
-    ? PUBLICATION_PROJECT_TARGET_BINDINGS[target] : PUBLICATION_TARGET_LOCAL_ROOTS[target];
-  return roots !== undefined && roots.includes(localRoot as never);
+function targetForBinding(
+  target: PublicationStateTarget | 'advisor-controller', binding: string,
+  scope: PublicationScope, generation: PublicationStateGeneration
+): boolean {
+  return target === 'advisor-controller'
+    ? scope === 'home' && binding === '.evcrate/bin'
+    : publicationStateBindings(target, scope, generation).includes(binding);
 }
 function stringArray(value: unknown, maximum: number, absolute: boolean, minimum = 0): readonly string[] {
   if (!Array.isArray(value) || value.length < minimum || value.length > maximum) fail('PATH_UNSAFE');
@@ -337,9 +278,23 @@ function readJournal(path: string): PublicationJournal {
       fail('PATH_UNSAFE');
     }
     const selectedTargets = targets(parsed.selected_targets, scope === 'home');
-    const bindingOrder = order(parsed.binding_order, selectedTargets, scope);
-    const previousManagedPaths = managed(parsed.previous_managed_paths, scope, isV2OrV3);
-    const managedPaths = managed(parsed.managed_paths, scope, isV2OrV3);
+    const layout = publicationStateLayout(parsed.binding_order, selectedTargets, scope, scope === 'home');
+    const bindingOrder = layout.bindingOrder;
+    let previousManagedPaths: Record<string, unknown>;
+    let managedPaths: Record<string, unknown>;
+    if (isV2OrV3) {
+      const ownership = publicationStateOwnership(
+        parsed.managed_paths, parsed.previous_managed_paths, selectedTargets, scope, layout.generation
+      );
+      previousManagedPaths = ownership.previous;
+      managedPaths = ownership.managed;
+    } else {
+      publicationFlatOwnership(parsed.previous_managed_paths, selectedTargets, scope, layout.generation);
+      publicationFlatOwnership(parsed.managed_paths, selectedTargets, scope, layout.generation);
+      if (!isPlainObject(parsed.previous_managed_paths) || !isPlainObject(parsed.managed_paths)) fail();
+      previousManagedPaths = parsed.previous_managed_paths;
+      managedPaths = parsed.managed_paths;
+    }
     const manifestPath = relativePath(parsed.build_manifest_path);
     const manifestDigest = hash(parsed.build_manifest_digest);
     const operationCount = safeInteger(parsed.operation_count, MAX_PUBLICATION_CHANGES);
@@ -378,7 +333,7 @@ function readJournal(path: string): PublicationJournal {
       if (!isPlainObject(value)) fail();
       const baseKeys = ['target', 'binding', 'local_root', 'relative_path', 'kind', 'action', 'destination',
         'backup', 'before', 'intendedHash', 'intended', 'promoted'];
-      const allowedOpKeys = allowMode ? [...baseKeys, 'mode'] : baseKeys;
+      const allowedOpKeys = allowMode ? [...baseKeys, 'mode'] : [...baseKeys, 'cleanup'];
       if (Object.keys(value).length > allowedOpKeys.length
         || Object.keys(value).some((key) => !allowedOpKeys.includes(key))
         || baseKeys.some((k) => !Object.hasOwn(value, k))
@@ -386,15 +341,25 @@ function readJournal(path: string): PublicationJournal {
       if (Object.hasOwn(value, 'mode')) {
         safeInteger(value.mode, 0o7777);
       }
-      const target = value.target === 'advisor-controller' ? value.target : normalizeTarget(value.target);
-      if (target !== 'advisor-controller' && !selectedTargets.includes(target)) fail();
+      // Only schema 3 can carry cleanup intent. Ordinary and historical
+      // operations still require an active target/binding below.
+      const cleanup = Object.hasOwn(value, 'cleanup');
+      if (cleanup && value.cleanup !== 'retired-binding') fail();
+      const target = value.target === 'advisor-controller' ? value.target : publicationStateTarget(value.target);
+      if (!cleanup && target !== 'advisor-controller' && !selectedTargets.includes(target)) fail();
       const binding = relativePath(value.binding);
       const localRoot = relativePath(value.local_root);
       const relativePathValue = relativePath(value.relative_path);
-      if (!bindingOrder.includes(binding) || !targetForBinding(target, binding, scope)) fail();
+      if (!cleanup
+        && (!bindingOrder.includes(binding) || !targetForBinding(target, binding, scope, layout.generation))) fail();
       if (value.kind !== 'file' && value.kind !== 'directory' || typeof value.destination !== 'string') fail();
       const destination = relativePath(value.destination);
-      const expectedDestination = target === 'advisor-controller' ? binding : `${binding}/${relativePathValue}`;
+      const expectedDestination = cleanup
+        ? retiredBindingCleanupDestination(
+          target, binding, relativePathValue, scope, selectedTargets, previousManagedPaths
+        )
+        : target === 'advisor-controller' ? binding
+          : publicationStateDestination(binding, relativePathValue, scope);
       if (destination !== expectedDestination) fail('PATH_UNSAFE');
       if (destinations.has(destination)) fail();
       destinations.add(destination);
@@ -403,13 +368,16 @@ function readJournal(path: string): PublicationJournal {
       if (target === 'advisor-controller'
         ? binding !== '.evcrate/bin' || localRoot !== '.evcrate/bin'
           || relativePathValue !== '.evcrate/bin' || value.kind !== 'directory'
-        : value.kind !== 'file' || !targetForLocalRoot(target, localRoot, scope)) fail();
+        : value.kind !== 'file' || localRoot !== publicationStateLocalRoot(binding, scope)) fail();
       const backup = value.backup === null ? null : relativePath(value.backup);
       const before = node(value.before, allowMode);
       const needsBackup = mutation(action) && before.present;
       if (needsBackup !== (backup !== null) || (backup !== null && backup !== `backups/${index}`)) fail();
       if (before.present && before.kind !== value.kind) fail();
       const intendedHash = hash(value.intendedHash);
+      if (cleanup && (layout.generation !== 'current' || bindingOrder.includes(binding)
+        || action !== 'delete' || !before.present || before.kind !== 'file'
+        || intendedHash !== null || localRoot !== binding)) fail();
       if (['create', 'update', 'merge-create', 'merge-update'].includes(action) && intendedHash === null) fail();
       if (action === 'delete' && intendedHash !== null) fail();
       if ((action === 'noop' || action === 'preserve')
@@ -425,6 +393,7 @@ function readJournal(path: string): PublicationJournal {
       if (mutation(action) && !value.promoted && intended !== null) fail();
       return Object.freeze({
         target, binding, localRoot, relativePath: relativePathValue, kind: value.kind,
+        ...(cleanup ? { cleanup: 'retired-binding' as const } : {}),
         action, destination, backup, before, intendedHash, intended, promoted: value.promoted
       });
     });
@@ -433,6 +402,16 @@ function readJournal(path: string): PublicationJournal {
         scope, logicalPhase, records as Readonly<Record<string, PublicationStateRecord | null>>,
         selectedTargets, bindingOrder, parsedOperations
       );
+      for (const record of Object.values(records ?? {})) {
+        if (record === null) continue;
+        if (record.destination_root !== destinationRoot || record.durable_state_root !== durableStateRoot
+          || record.workspace_root !== workspaceRoot || record.workspace_name !== workspaceName
+          || record.project_identity !== projectIdentity || record.retention !== retention
+          || record.build_manifest_path !== manifestPath || record.transaction_dir !== transaction) fail('PATH_UNSAFE');
+        if (record.phase === 'harness'
+          && (hashBytes(canonicalJsonBytes(record.managed_paths)) !== hashBytes(canonicalJsonBytes(managedPaths))
+            || hashBytes(canonicalJsonBytes(record.previous_managed_paths)) !== hashBytes(canonicalJsonBytes(previousManagedPaths)))) fail();
+      }
     }
     if (parsed.status === 'committed' && parsedOperations.some((operation) => mutation(operation.action) && !operation.promoted)) fail();
     return Object.freeze({ schema_version: schemaVersion as 1 | 2 | 3, transaction_type: 'target-publication', status: parsed.status,
@@ -505,9 +484,10 @@ function readProgress(journal: PublicationJournal): PublicationJournal {
     }
     operations[index] = Object.freeze({ ...operation, promoted: true, intended });
   }
+  // The digest identifies the recorded wire operations, not decoded camel-case
+  // objects or later progress overlays. Keep that identity for recovery/CAS.
   const updated = Object.freeze({
-    ...journal, operations: Object.freeze(operations),
-    operations_digest: hashBytes(canonicalJsonBytes(operations))
+    ...journal, operations: Object.freeze(operations)
   });
   if (updated.status === 'committed'
     && updated.operations.some((operation) => mutation(operation.action) && !operation.promoted)) {
@@ -578,34 +558,12 @@ export function readPublicationJournal(stateRoot: string): PublicationJournal | 
   return readProgress(readJournal(path));
 }
 function legacyOwnershipRecord(
-  marker: Record<string, unknown>, key: 'managed_paths' | 'previous_managed_paths'
+  marker: Record<string, unknown>, key: 'managed_paths' | 'previous_managed_paths',
+  scope: PublicationScope = 'home'
 ): Record<string, unknown> {
-  const selected = marker.selected_targets;
-  const values = marker[key];
-  if (!Array.isArray(selected) || !isPlainObject(values)) fail();
-  const result: Record<string, Record<string, readonly string[]>> = {};
-  for (const [localRoot, rawPaths] of Object.entries(values)) {
-    if (localRoot === '.evcrate/bin') {
-      if (!Array.isArray(rawPaths) || rawPaths.length !== 0) fail();
-      continue;
-    }
-    if (!Array.isArray(rawPaths)) fail();
-    const matches = selected
-      .map((target) => normalizeTarget(target))
-      .filter((target) => PUBLICATION_TARGET_LOCAL_ROOTS[target]?.includes(localRoot as never));
-    if (matches.length !== 1) fail();
-    const target = matches[0];
-    const localRoots = PUBLICATION_TARGET_LOCAL_ROOTS[target];
-    const bindings = PUBLICATION_TARGET_BINDINGS[target];
-    if (!localRoots || !bindings) fail();
-    const index = localRoots.indexOf(localRoot as never);
-    if (index < 0 || index >= bindings.length) fail();
-    const normalized = rawPaths.map(relativePath);
-    if (new Set(normalized).size !== normalized.length) fail();
-    result[target] ??= {};
-    result[target][bindings[index]] = Object.freeze(normalized);
-  }
-  return Object.freeze(result);
+  const selected = targets(marker.selected_targets, scope === 'home');
+  const layout = publicationStateLayout(marker.binding_order, selected, scope, scope === 'home');
+  return publicationFlatOwnership(marker[key], selected, scope, layout.generation);
 }
 function migratedStateRecord(
   marker: Record<string, unknown>, stateRoot: string, homeRoot: string,
@@ -616,7 +574,7 @@ function migratedStateRecord(
   const selected = phase === 'shared' ? [] : targets(marker.selected_targets, true);
   const bindingOrder = phase === 'shared'
     ? ['.evcrate/bin']
-    : expectedBindings(selected, 'home').filter((binding) => binding !== '.evcrate/bin');
+    : order(marker.binding_order, selected, 'home').filter((binding) => binding !== '.evcrate/bin');
   const retained = marker.retained_release_id === null ? null : releaseId(marker.retained_release_id);
   const digest = hash(marker.build_manifest_digest);
   if (digest === null) fail();
@@ -976,27 +934,6 @@ export function recoverAndMigrateHomeStateUnlocked(
   }
   return result;
 }
-function legacyProjectOwnership(
-  marker: Record<string, unknown>
-): Record<string, unknown> {
-  const selected = targets(marker.selected_targets);
-  const values = marker.managed_paths;
-  if (!isPlainObject(values)) fail();
-  const result: Record<string, Record<string, readonly string[]>> = {};
-  for (const [binding, rawPaths] of Object.entries(values)) {
-    if (!Array.isArray(rawPaths)) fail();
-    const owners = selected.filter((target) =>
-      PUBLICATION_PROJECT_TARGET_BINDINGS[target]?.includes(binding as never));
-    if (owners.length !== 1) fail();
-    const target = owners[0];
-    result[target] ??= {};
-    if (result[target][binding] !== undefined) fail();
-    const paths = rawPaths.map(relativePath);
-    if (new Set(paths).size !== paths.length) fail();
-    result[target][binding] = Object.freeze(paths);
-  }
-  return Object.freeze(result);
-}
 function migrateLegacyProjectMarker(
   stateRoot: string, projectRoot: string, identity: string, marker: Record<string, unknown>
 ): void {
@@ -1019,10 +956,8 @@ function migrateLegacyProjectMarker(
     phase: 'harness', scope: 'project', status: marker.status, release_id: release,
     selected_targets: selectedTargets,
     binding_order: order(marker.binding_order, selectedTargets, 'project'),
-    managed_paths: legacyProjectOwnership(marker),
-    previous_managed_paths: legacyProjectOwnership({
-      ...marker, managed_paths: marker.previous_managed_paths
-    }),
+    managed_paths: legacyOwnershipRecord(marker, 'managed_paths', 'project'),
+    previous_managed_paths: legacyOwnershipRecord(marker, 'previous_managed_paths', 'project'),
     build_manifest_path: relativePath(marker.build_manifest_path),
     build_manifest_digest: digest, transaction_dir: `release-${release}`,
     retained_release_id: null, destination_root: resolve(projectRoot),
@@ -1193,6 +1128,10 @@ function assertMarkerMatches(
         || markerRecord.release_id !== journalRecord.release_id
         || markerRecord.transaction_dir !== journalRecord.transaction_dir
         || markerRecord.build_manifest_digest !== journalRecord.build_manifest_digest) fail();
+      for (const key of ['selected_targets', 'binding_order', 'managed_paths', 'previous_managed_paths',
+        'destination_root', 'durable_state_root', 'workspace_root', 'workspace_name', 'project_identity'] as const) {
+        if (hashBytes(canonicalJsonBytes(markerRecord[key])) !== hashBytes(canonicalJsonBytes(journalRecord[key]))) fail();
+      }
       const allowedStatuses = journal.status === 'staged'
         ? ['promoting'] : ['promoting', 'complete'];
       if (!allowedStatuses.includes(String(markerRecord.status))) fail();

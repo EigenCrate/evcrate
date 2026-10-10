@@ -9,7 +9,6 @@
     "claude": {"status": "native"},
     "codex": {"status": "needsAdapter"},
     "copilot": {"status": "needsAdapter"},
-    "gemini": {"status": "needsAdapter"},
     "omp": {"status": "needsAdapter"},
     "pi": {"status": "needsAdapter"},
     "vscode": {"status": "needsAdapter"}

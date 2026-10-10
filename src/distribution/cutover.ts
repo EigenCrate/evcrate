@@ -27,15 +27,6 @@ const DEFAULT_CUTOVER_RECEIPTS: Readonly<Record<PersistedTarget, TargetGateRecei
     cutoverTimestamp: '2026-09-02T00:00:00.000Z',
     notes: 'Claude canonical target parity verified in Phase 5 and Phase 8; cutover complete.'
   }),
-  gemini: Object.freeze({
-    target: 'gemini',
-    authoritativeEngine: 'typescript',
-    parityVerified: true,
-    closureVerified: true,
-    schemaVersion: 2,
-    cutoverTimestamp: '2026-09-02T00:00:00.000Z',
-    notes: 'Gemini target adapter and project docs parity verified in Phase 5; cutover complete.'
-  }),
   antigravity: Object.freeze({
     target: 'antigravity',
     authoritativeEngine: 'typescript',

@@ -43,4 +43,4 @@ No hardcoded releases, guessed original six records, unsupported ecosystem comma
 
 Use `blocked` when a prerequisite prevents required execution from starting; `partial` once required work/checks started but failed, deferred or incomplete; `needs-approval` for an exact ready human gate before execution; `analyzed` for complete read-only analysis; `completed` only for all required authorized actions/checks with newly introduced risk resolved or explicitly accepted. Overall status never replaces per-finding evidence. `fixed` requires baseline presence plus graph, affected runtime and comparable post-scan evidence for every claimed path/module/profile. Unavailable or incomparable evidence stays `unverified`, not fixed.
 
-These documents define a procedure, not deployed Codex loading/permission or live remediation proof. Record actual qualification limits; do not claim operational support from authoring checks.
+These documents define a procedure, not deployed Claude loading/permission or live remediation proof. Record actual qualification limits; do not claim operational support from authoring checks.

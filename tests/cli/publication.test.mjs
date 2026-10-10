@@ -3,11 +3,25 @@ import assert from 'node:assert/strict';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { ControlPlaneError, createPublicationPlan, main, recoverPublication, resolveInvocationContext, resolvePublicationProjectContext } from '../../dist/index.js';
+import {
+  ControlPlaneError, createPublicationPlan, main, recoverPublication, resolveInvocationContext,
+  resolvePublicationProjectContext, runAllManifestsBuild
+} from '../../dist/index.js';
 import { PublicationPartialError } from '../../dist/distribution/publication.js';
 
-const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/\\]$/u, '');
+import { prepareFixtureWorkspace } from '../distribution/parity-verification-helpers.mjs';
+
+let packageRoot;
+let fixtureRoot;
+test.before(async () => {
+  fixtureRoot = mkdtempSync(join(tmpdir(), 'evcrate-cli-publication-package-'));
+  packageRoot = join(fixtureRoot, 'package');
+  prepareFixtureWorkspace(packageRoot);
+  await runAllManifestsBuild(packageRoot, { jobs: 2 });
+});
+test.after(() => {
+  if (fixtureRoot !== undefined) rmSync(fixtureRoot, { recursive: true, force: true });
+});
 const bindingOrder = ['.omp'];
 const dryRun = Object.freeze({
   scope: 'home', projectIdentity: null,
@@ -153,7 +167,7 @@ test('typed publication rejects handler output with mismatched binding order', a
         buildManifestPath: '.evcrate/build-manifest.json', buildManifestDigest: 'a'.repeat(64),
         phases: [
           { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
-          { phase: 'harness', scope: 'home', selectedTargets: ['codex'], bindingOrder: ['.agents', '.codex'], changes: [] }
+          { phase: 'harness', scope: 'home', selectedTargets: ['codex'], bindingOrder: ['.agents/skills', '.codex'], changes: [] }
         ]
       }),
       publishApply: () => applied,

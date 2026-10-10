@@ -23,7 +23,6 @@ const CANONICAL_TARGET_IDS = Object.freeze([
   'claude',
   'codex',
   'copilot',
-  'gemini',
   'omp',
   'pi',
   'vscode'

@@ -37,7 +37,6 @@
           "compatibility": {
             "claude": { "status": "native" },
             "codex": { "status": "native" },
-            "gemini": { "status": "native" },
             "antigravity": { "status": "native" },
             "pi": { "status": "native" },
             "omp": { "status": "native" },

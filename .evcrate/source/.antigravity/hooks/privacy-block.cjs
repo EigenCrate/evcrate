@@ -57,15 +57,19 @@ try {
     ];
     projectRoot = workspaceCandidates.find(isWorkspaceDirectory) || process.cwd();
   }
-  if (data && !data.tool_input && data.toolCall && data.toolCall.args) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)
+      || !data.toolCall || typeof data.toolCall.name !== 'string'
+      || !data.toolCall.args || typeof data.toolCall.args !== 'object' || Array.isArray(data.toolCall.args)) {
+    throw new Error('Invalid native tool call');
+  }
+  {
     const args = data.toolCall.args;
-    let toolName = "unknown";
-    if (args.CommandLine) toolName = "run_command";
-    else if (args.TargetFile) toolName = "replace_file_content";
-    else if (args.Query) toolName = "grep_search";
-    else if (args.DirectoryPath) toolName = "list_dir";
-    else if (args.AbsolutePath) toolName = "view_file";
-
+    const toolNames = {
+      run_command: 'Bash', grep_search: 'Grep', find_by_name: 'Glob', list_dir: 'Glob',
+      view_file: 'Read', replace_file_content: 'Edit', multi_replace_file_content: 'Edit', write_to_file: 'Write',
+    };
+    const toolName = toolNames[data.toolCall.name];
+    if (!toolName) throw new Error('Unsupported native tool call');
     const mapKeys = (obj) => {
       if (typeof obj === "string") {
         const normalized = obj.replace(/\\/g, '/');
@@ -79,11 +83,10 @@ try {
         const newObj = {};
         for (const key of Object.keys(obj)) {
           let mappedKey = key;
-          if (key === 'AbsolutePath') mappedKey = 'path';
-          else if (key === 'TargetFile') mappedKey = 'path';
-          else if (key === 'SearchPath') mappedKey = 'path';
-          else if (key === 'DirectoryPath') mappedKey = 'path';
+          if (key === 'AbsolutePath' || key === 'TargetFile') mappedKey = 'file_path';
+          else if (key === 'SearchPath' || key === 'SearchDirectory' || key === 'DirectoryPath') mappedKey = 'path';
           else if (key === 'CommandLine') mappedKey = 'command';
+          else if (key === 'Pattern') mappedKey = 'pattern';
           newObj[mappedKey] = mapKeys(obj[key]);
         }
         return newObj;
@@ -92,11 +95,18 @@ try {
     };
 
     claudePayload = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      session_id: data.conversationId,
+      transcript_path: data.transcriptPath,
+      cwd: projectRoot,
       tool_name: toolName,
       tool_input: mapKeys(args)
     });
   }
-} catch(e) {}
+} catch {
+  process.stdout.write(JSON.stringify({ decision: 'deny', reason: 'EVCREATE_INVALID_TOOL_CALL' }) + '\n');
+  process.exit(0);
+}
 if (!isUsableHook(sourceHook)) {
   process.stdout.write(JSON.stringify({
     decision: "deny",

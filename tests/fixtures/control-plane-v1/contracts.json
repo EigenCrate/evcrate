@@ -79,9 +79,6 @@
             "codex": {
               "status": "native"
             },
-            "gemini": {
-              "status": "native"
-            },
             "antigravity": {
               "status": "native"
             },
@@ -125,9 +122,6 @@
               "status": "native"
             },
             "codex": {
-              "status": "native"
-            },
-            "gemini": {
               "status": "native"
             },
             "antigravity": {

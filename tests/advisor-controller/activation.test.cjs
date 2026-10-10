@@ -2,6 +2,8 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   ACTIVATION_MODULE,
@@ -16,6 +18,7 @@ const {
 } = require('./activation-test-helpers.cjs');
 
 const {
+  COMMAND_NAMES,
   parseAdviceArguments,
   parseActivationRequest,
   evaluateActivation
@@ -802,4 +805,60 @@ test('object input rejects hidden fields and getters without invoking them', () 
   const symbol = createRequest();
   symbol[Symbol('extra')] = true;
   assertThrowsCode(() => parseActivationRequest(symbol), 'ADVICE_MODE_INVALID');
+});
+
+test('advisor activation guard: COMMAND_NAMES allowlist resolves to command files and covers all advisor-capable commands', () => {
+  assert.equal(COMMAND_NAMES.length, 21);
+  assert.equal(Object.isFrozen(COMMAND_NAMES), true);
+
+  const commandsDir = path.resolve(__dirname, '../../.evcrate/source/.claude/commands');
+  const allCommandFiles = fs.readdirSync(commandsDir).filter((file) => file.endsWith('.md'));
+  // COMMAND_PREFIX and SEGMENT_SEPARATOR are intentionally inlined to preserve CJS runtime isolation without dynamic import() of ESM resource-naming.js.
+  const COMMAND_PREFIX = 'evc-cmd-';
+  const SEGMENT_SEPARATOR = '-x-';
+
+  // Format command name from segments (equivalent to formatCommandName)
+  function formatName(segments) {
+    return `${COMMAND_PREFIX}${segments.join(SEGMENT_SEPARATOR)}`;
+  }
+
+  // 1. Every allowlist id resolves to exactly one commands/evc-cmd-*.md
+  const expectedCommandFiles = new Set();
+  for (const id of COMMAND_NAMES) {
+    const segments = id.split('/');
+    const formatted = formatName(segments);
+    const fileName = `${formatted}.md`;
+    assert.ok(allCommandFiles.includes(fileName), `Allowlist id ${id} must resolve to existing ${fileName}`);
+    expectedCommandFiles.add(fileName);
+  }
+  assert.equal(expectedCommandFiles.size, COMMAND_NAMES.length);
+
+  // 2. Every advisor-capable command file (has advice-activation block) is in allowlist
+  const advisorCapableFiles = [];
+  for (const file of allCommandFiles) {
+    const content = fs.readFileSync(path.join(commandsDir, file), 'utf8');
+    if (content.includes('advice-activation.md') || content.includes('## Advice Mode')) {
+      advisorCapableFiles.push(file);
+      const stem = file.slice(0, -3);
+      assert.ok(stem.startsWith(COMMAND_PREFIX), `${file} must start with ${COMMAND_PREFIX}`);
+      const semanticId = stem.slice(COMMAND_PREFIX.length).split(SEGMENT_SEPARATOR).join('/');
+      assert.ok(
+        COMMAND_NAMES.includes(semanticId),
+        `Advisor-capable command ${file} (${semanticId}) must be in COMMAND_NAMES allowlist`
+      );
+    }
+  }
+
+  // 3. Exact 21 commands set equality
+  assert.equal(advisorCapableFiles.length, 21);
+  assert.deepEqual(
+    advisorCapableFiles.sort(),
+    [...expectedCommandFiles].sort()
+  );
+
+  // 4. Parity with controller-inventory source definition
+  const inventorySource = fs.readFileSync(path.resolve(__dirname, '../../src/manifests/controller-inventory.generated.ts'), 'utf8');
+  for (const name of COMMAND_NAMES) {
+    assert.ok(inventorySource.includes(`"${name}"`), `controller-inventory must include ${name}`);
+  }
 });

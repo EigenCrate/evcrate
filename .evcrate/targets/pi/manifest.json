@@ -3,10 +3,17 @@
   "name": "pi",
   "adapter": "dist/adapters/pi/index.js",
   "adapter_sources": [
+    "dist/adapters/advisory.js",
+    "dist/adapters/catalog-data.js",
+    "dist/adapters/catalog-types.js",
     "dist/adapters/pi/agents.js",
     "dist/adapters/pi/frontmatter.js",
     "dist/adapters/pi/resources.js",
     "dist/adapters/pi/transforms.js",
+    "dist/adapters/projection-utils.js",
+    "dist/adapters/resource-graph.js",
+    "dist/adapters/resource-naming.js",
+    "dist/adapters/types.js",
     "dist/adapters/uri-restoration.js"
   ],
   "output_root": ".pi",

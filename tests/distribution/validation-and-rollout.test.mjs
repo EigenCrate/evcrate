@@ -124,7 +124,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     // Verify promotion order: shared controller, then HOME harness bindings
     assert.deepEqual([...dryRunResult.payload.phases[0].bindingOrder], ['.evcrate/bin']);
     assert.deepEqual([...dryRunResult.payload.phases[1].bindingOrder], [
-      '.gemini', '.agents', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+      '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
 
     // Ensure home directory remains empty after dry-run
@@ -155,9 +155,9 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.ok(existsSync(join(home, '.copilot')), 'copilot home exists');
     assert.ok(existsSync(join(home, '.omp')), 'omp home exists');
     assert.ok(existsSync(join(home, '.pi')), 'pi home exists');
-    assert.ok(existsSync(join(home, '.gemini')), 'gemini home exists');
+    assert.ok(existsSync(join(home, '.gemini', 'config')), 'Antigravity vendor config exists');
     assert.ok(existsSync(join(home, '.codex')), 'codex home exists');
-    assert.ok(existsSync(join(home, '.agents')), 'agents home exists');
+    assert.ok(existsSync(join(home, '.agents', 'skills')), 'Codex skills home exists');
     assert.ok(existsSync(join(home, '.evcrate-vscode')), 'vscode home exists');
 
     // Verify advisor controller is executable
@@ -178,6 +178,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.equal(projectResult.payload.phases[1].scope, 'project');
     assert.ok(existsSync(join(project, '.claude')));
     assert.ok(existsSync(join(project, '.copilot')));
+    assert.ok(existsSync(join(project, '.github', 'copilot-instructions.md')));
     assert.equal(existsSync(join(project, '.evcrate', 'bin')), false);
     assert.equal(treeHash(installedPackageDir), packageHashBefore);
 
@@ -235,7 +236,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
 
 test('all target manifests and cutover receipts validate schema 2 with TypeScript authority', () => {
   const receipts = getAllTargetGateReceipts();
-  assert.equal(receipts.length, 8);
+  assert.equal(receipts.length, PERSISTED_TARGETS.length);
   for (const receipt of receipts) {
     assert.ok(PERSISTED_TARGETS.includes(receipt.target));
     assert.equal(receipt.authoritativeEngine, 'typescript');

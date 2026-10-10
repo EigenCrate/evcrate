@@ -28,7 +28,8 @@ export async function dispatchManagedCommand({ name, args = "", handoff = null }
   state.count += 1;
   state.names.add(name);
   try {
-    const canonicalCommand = command.canonicalName ?? name.replaceAll(":", "/");
+    const canonicalCommand = command.canonicalName;
+    if (!canonicalCommand) throw new Error(`EVCrate command has no canonical identity: ${name}`);
     const expanded = await (options.expand || expandManagedCommand)(command, args, context, {
       ...options,
       agentRoot,

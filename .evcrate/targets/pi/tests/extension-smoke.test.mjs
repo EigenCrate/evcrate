@@ -11,12 +11,15 @@ import {
   getAgentRoot,
   getInstalledAgentRoot,
   resolveEvcrateMarkers,
+  readInstalledAgentsDocument,
 } from "../files/agent/extensions/evcrate/paths.js";
 import {
   publishApply,
   publishDryRun,
   resolveInvocationContext,
+  runAllManifestsBuild,
 } from "../../../../dist/index.js";
+import { prepareFixtureWorkspace } from "../../../../tests/distribution/parity-verification-helpers.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const overlayExtensionDir = fileURLToPath(new URL("../files/agent/extensions/evcrate", import.meta.url));
@@ -89,10 +92,11 @@ function fixture() {
   const root = join(agentRoot, "evcrate");
   mkdirSync(join(root, "commands"), { recursive: true });
   mkdirSync(join(root, "workflows"), { recursive: true });
-  writeFileSync(join(root, "commands", "limited.md"), "---\nallowed-tools: Read, AskUserQuestion, evcrate_command\n---\nlimited");
-  writeFileSync(join(root, "commands", "child.md"), "child");
-  writeFileSync(join(root, "commands", "fail.md"), "---\nallowed-tools: Read\n---\n!`true`");
+  writeFileSync(join(root, "commands", "evc-cmd-limited.md"), "---\nallowed-tools: Read, AskUserQuestion, evcrate_command\n---\nlimited");
+  writeFileSync(join(root, "commands", "evc-cmd-child.md"), "child");
+  writeFileSync(join(root, "commands", "evc-cmd-fail.md"), "---\nallowed-tools: Read\n---\n!`true`");
   writeFileSync(join(root, "workflows", "flow.md"), "flow");
+  writeFileSync(join(root, "AGENTS.md"), "# Installed Pi instructions\n");
   const extensionDir = join(agentRoot, "extensions", "evcrate");
   cpSync(overlayExtensionDir, extensionDir, { recursive: true });
   symlinkSync(join(projectRoot, "node_modules"), join(agentRoot, "node_modules"), "dir");
@@ -113,16 +117,16 @@ test("extension registers policy before tools, preserves markers, and restores r
     assert.deepEqual([...pi.tools.keys()].sort(), ["evcrate_command", "evcrate_subagent"]);
     await pi.emit("session_start");
     const original = pi.getActiveTools();
-    await assert.rejects(pi.commands.get("fail").handler("", { cwd: join(agentRoot, "missing") }));
+    await assert.rejects(pi.commands.get("evc-cmd-fail").handler("", { cwd: join(agentRoot, "missing") }));
     assert.deepEqual(pi.getActiveTools().sort(), original.sort());
-    await pi.commands.get("limited").handler("", { cwd: agentRoot });
+    await pi.commands.get("evc-cmd-limited").handler("", { cwd: agentRoot });
     assert.deepEqual(pi.getActiveTools().sort(), ["ask_user_question", "evcrate_command", "read"]);
     assert.equal((await pi.emit("tool_call", { toolName: "write", toolCallId: "write-1" }))[0]?.block, true);
     pi.setActiveTools(["write"]);
     assert.equal((await pi.emit("tool_call", { toolName: "write", toolCallId: "write-2" }))[0]?.block, true);
     await pi.emit("agent_settled");
     assert.deepEqual(pi.getActiveTools().sort(), original.sort());
-    await pi.commands.get("limited").handler("", { cwd: agentRoot });
+    await pi.commands.get("evc-cmd-limited").handler("", { cwd: agentRoot });
     await pi.emit("session_shutdown", { reason: "reload" });
     assert.deepEqual(pi.getActiveTools().sort(), original.sort());
 
@@ -141,10 +145,10 @@ test("extension registers policy before tools, preserves markers, and restores r
     assert.equal((await pi.emit("tool_call", { toolName: "read", toolCallId: "read" }, siblingContext))[0]?.block, true);
 
     const resolvedMarkers = resolveEvcrateMarkers(
-      "before {{evcrate:commands/child}} after {{evcrate:workflows/flow.md}}",
+      "before {{evcrate:commands/evc-cmd-child}} after {{evcrate:workflows/flow.md}}",
       agentRoot,
     );
-    assert.match(resolvedMarkers, /name `child`/);
+    assert.match(resolvedMarkers, /name `evc-cmd-child`/);
     assert.ok(resolvedMarkers.endsWith(join(root, "workflows", "flow.md")));
   } finally {
     if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
@@ -194,7 +198,8 @@ test("extension normalizes an EVCrate resource root before skill discovery", asy
   const oldRoot = process.env.PI_CODING_AGENT_DIR;
   try {
     mkdirSync(join(resourceRoot, "commands"), { recursive: true });
-    writeFileSync(join(resourceRoot, "commands", "child.md"), "child");
+    writeFileSync(join(resourceRoot, "commands", "evc-cmd-child.md"), "child");
+    writeFileSync(join(resourceRoot, "AGENTS.md"), "# Installed Pi instructions\n");
     cpSync(overlayExtensionDir, extensionDir, { recursive: true });
     symlinkSync(join(projectRoot, "node_modules"), join(agentRoot, "node_modules"), "dir");
     const { default: runInstalledExtension } = await import(pathToFileURL(join(extensionDir, "index.js")).href);
@@ -206,11 +211,40 @@ test("extension normalizes an EVCrate resource root before skill discovery", asy
     assert.equal(result.resourceRoot, resourceRoot);
     assert.equal(process.env.PI_CODING_AGENT_DIR, agentRoot);
     await pi.emit("session_start");
-    assert.ok(pi.commands.has("child"));
+    assert.ok(pi.commands.has("evc-cmd-child"));
   } finally {
     if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
     else process.env.PI_CODING_AGENT_DIR = oldRoot;
     rmSync(container, { recursive: true, force: true });
+  }
+});
+
+test("installed AGENTS payload is rooted at the extension installation and fails closed", () => {
+  const root = mkdtempSync(join(tmpdir(), "evcrate-agents-payload-"));
+  const agentRoot = join(root, "agent");
+  const resourceRoot = join(agentRoot, "evcrate");
+  try {
+    mkdirSync(resourceRoot, { recursive: true });
+    const payload = join(resourceRoot, "AGENTS.md");
+    writeFileSync(payload, "# Installed instructions\n");
+    assert.equal(readInstalledAgentsDocument(agentRoot), "# Installed instructions");
+    const foreignCwd = join(root, "foreign-cwd");
+    mkdirSync(foreignCwd);
+    execFileSync(process.execPath, ["--input-type=module", "-e", [
+      `const { readInstalledAgentsDocument } = await import(${JSON.stringify(pathToFileURL(overlayPathsPath).href)});`,
+      `if (readInstalledAgentsDocument(${JSON.stringify(agentRoot)}) !== "# Installed instructions") process.exit(1);`,
+    ].join("\n")], { cwd: foreignCwd, stdio: "pipe" });
+    rmSync(payload);
+    assert.throws(() => readInstalledAgentsDocument(agentRoot), /Required EVCrate AGENTS payload/);
+    writeFileSync(payload, Buffer.from([0xff]));
+    assert.throws(() => readInstalledAgentsDocument(agentRoot), /Required EVCrate AGENTS payload/);
+    writeFileSync(payload, "x".repeat(256 * 1024 + 1));
+    assert.throws(() => readInstalledAgentsDocument(agentRoot), /Required EVCrate AGENTS payload/);
+    rmSync(payload);
+    symlinkSync(join(root, "foreign-agents.md"), payload);
+    assert.throws(() => readInstalledAgentsDocument(agentRoot), /Required EVCrate AGENTS payload/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
 
@@ -221,8 +255,11 @@ test("isolated published Pi entrypoint preserves resolver and hook adapter behav
   mkdirSync(home, { recursive: true });
   mkdirSync(state, { recursive: true });
   try {
+    const fixturePackage = join(root, "package");
+    prepareFixtureWorkspace(fixturePackage);
+    await runAllManifestsBuild(fixturePackage, { jobs: 2 });
     const context = resolveInvocationContext({
-      packageRoot: projectRoot,
+      packageRoot: fixturePackage,
       cwd: root,
       projectRoot: root,
       home,
@@ -260,7 +297,7 @@ test("isolated published Pi entrypoint preserves resolver and hook adapter behav
       assert.equal(result.agentRoot, publishedAgentRoot);
       assert.equal(result.resourceRoot, join(publishedAgentRoot, "evcrate"));
       await pi.emit("session_start");
-      assert.ok(pi.commands.has("plan"));
+      assert.ok(pi.commands.has("evc-cmd-plan"));
     } finally {
       if (oldRoot === undefined) delete process.env.PI_CODING_AGENT_DIR;
       else process.env.PI_CODING_AGENT_DIR = oldRoot;
@@ -313,7 +350,7 @@ test("Pi 0.84.1 loads a TypeBox extension from its bundled dependency", { timeou
     const alternateExtensionDir = join(alternateAgentRoot, "extensions", "evcrate");
     cpSync(overlayExtensionDir, alternateExtensionDir, { recursive: true });
     mkdirSync(join(alternateAgentRoot, "evcrate", "commands"), { recursive: true });
-    writeFileSync(join(alternateAgentRoot, "evcrate", "commands", "smoke.md"), "smoke");
+    writeFileSync(join(alternateAgentRoot, "evcrate", "commands", "evc-cmd-smoke.md"), "smoke");
     execFileSync(join(piRoot, "node_modules/.bin/pi"), [
       "--no-session", "--no-context-files", "--no-tools", "--no-extensions",
       "-e", join(alternateAgentRoot, "extensions/evcrate/index.js"), "--help",
@@ -340,6 +377,7 @@ test("child-start runner derives allowlisted generated scripts without subscribi
       schema: "evcrate-pi-hook-map-v1",
       events: { SubagentStart: [{ matcher: "*", scripts: ["child.cjs", "../escape.cjs"] }] },
     }));
+    writeFileSync(join(root, "AGENTS.md"), "# Child instructions\n");
     writeFileSync(join(root, "hooks", "child.cjs"), "if(process.env.PI_CODING_AGENT_DIR&&process.env.EVCRATE_RESOURCE_ROOT)console.log(JSON.stringify({hookSpecificOutput:{additionalContext:'hook context'}}))");
     const runner = createChildStartRunner({ agentRoot, resourceRoot: root });
     const result = await runChildStart({
@@ -348,8 +386,15 @@ test("child-start runner derives allowlisted generated scripts without subscribi
       task: "review",
       runtimeRoots: { resourceRoot: root },
     });
-    assert.equal(result.additionalContext, "hook context");
-    assert.match(result.task, /^review\n\nhook context\n\nActive resource root:/);
+    assert.equal(result.additionalContext, "# Child instructions\n\nhook context");
+    assert.match(result.task, /^review\n\n# Child instructions\n\nhook context\n\nActive resource root:/);
+    writeFileSync(join(root, "AGENTS.md"), Buffer.from([0xff]));
+    await assert.rejects(runChildStart({
+      runner,
+      canonicalEvent: { request: { agent: "tester", nodeId: "node-2", cwd: agentRoot } },
+      task: "review",
+      runtimeRoots: { resourceRoot: root },
+    }), /Required EVCrate AGENTS payload/);
   } finally {
     rmSync(agentRoot, { recursive: true, force: true });
   }

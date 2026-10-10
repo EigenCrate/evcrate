@@ -42,7 +42,7 @@ export function renderInlineAdviseCommand(canonical: string, target: string, que
   return `${frontmatter}<!-- generated target: ${target} -->
 ${capabilityBlock}
 
-Use this command for candid technical or architectural advice. \`/advise\` is
+Use this command for candid technical or architectural advice. \`/evc-cmd-advise\` is
 separate from \`--advice\` checkpoint mentorship: it first converges on the
 problem, then provides advice.
 
@@ -52,7 +52,7 @@ Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
 Reject two or more tokens. One token requests relay only when it is final after
 trailing whitespace; quoted, embedded, suffixed, non-final, and differently
 cased text remains ordinary input. If a final token requests relay, return
-\`${error}\` and say: \`Run /advise <prompt> without --agent for inline
+\`${error}\` and say: \`Run /evc-cmd-advise <prompt> without --agent for inline
 advice.\` Do not invoke an advisor, create relay state, or silently continue in
 inline mode.
 
@@ -94,7 +94,7 @@ export function renderAdvisoryInterviewWorkflow(text: string, target: string): s
   );
   const relay = projected.indexOf('## Relay turn envelope');
   if (relay < 0) invalid();
-  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`${error}\` before advisor delegation, state creation, or inline-interview work. Users can run \`/advise <prompt>\` for inline advice.\n`;
+  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`${error}\` before advisor delegation, state creation, or inline-interview work. Users can run \`/evc-cmd-advise <prompt>\` for inline advice.\n`;
 }
 
 export const MENTORING_START = '<!-- EVCRATE_MENTORING_CAPABILITIES_START -->';
@@ -111,7 +111,6 @@ export const TARGET_MENTORING_CAPABILITIES: Readonly<Record<string, TargetMentor
   codex: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   omp: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   antigravity: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
-  gemini: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   copilot: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
   pi: Object.freeze({ mentoring: 'supported', writeChecks: 'advisory-only' }),
 });

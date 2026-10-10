@@ -5,7 +5,7 @@ description: Always-on bootstrap instruction rule for EVCrate VS Code Local
 
 # bootstrap.instructions.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides shared agent guidance through `.evcrate-vscode/com.github.copilot/rules/bootstrap.instructions.md`.
 
 ## Role & Responsibilities
 
@@ -57,4 +57,4 @@ We keep all important docs in `./docs` folder and keep updating them, structure 
 └── project-roadmap.md
 ```
 
-**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in project `./CLAUDE.md`, especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*
+**IMPORTANT:** *MUST READ* and *MUST COMPLY* all *INSTRUCTIONS* in the active `.evcrate-vscode/com.github.copilot/rules/bootstrap.instructions.md` (or published `~/.evcrate-vscode/com.github.copilot/rules/bootstrap.instructions.md` for HOME-only installs), especially *WORKFLOWS* section is *CRITICALLY IMPORTANT*, this rule is *MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!*

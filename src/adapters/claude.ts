@@ -46,12 +46,18 @@ function createRoot(context: ProjectionBuildContext, root: string): void {
 }
 
 function expectedFiles(context: ProjectionBuildContext, root: string): ReadonlyMap<string, ResourceGraphFile> {
-  return new Map(context.resources.files.map((file) => [`${root}/${file.path}`, file]));
+  const files = new Map<string, ResourceGraphFile>();
+  for (const file of context.resources.files) {
+    const path = `${root}/${file.path === 'AGENTS.md' ? 'rules/AGENTS.md' : file.path}`;
+    if (files.has(path)) return invalidManifest();
+    files.set(path, file);
+  }
+  return files;
 }
 function expectedDirectories(context: ProjectionBuildContext, root: string): ReadonlySet<string> {
   const directories = new Set<string>([root]);
   for (const file of context.resources.files) {
-    const segments = file.path.split('/');
+    const segments = (file.path === 'AGENTS.md' ? 'rules/AGENTS.md' : file.path).split('/');
     for (let index = 1; index < segments.length; index += 1) {
       directories.add(`${root}/${segments.slice(0, index).join('/')}`);
     }
@@ -177,8 +183,8 @@ function buildClaude(context: ProjectionBuildContext): void {
   assertStagedRoot(context.stage);
   const root = claudeRoot(context);
   createRoot(context, root);
-  for (const file of context.resources.files) {
-    writeProjectionFile(context, `${root}/${file.path}`, file.bytes, file.executable ?? false);
+  for (const [path, file] of expectedFiles(context, root)) {
+    writeProjectionFile(context, path, file.bytes, file.executable ?? false);
   }
 }
 

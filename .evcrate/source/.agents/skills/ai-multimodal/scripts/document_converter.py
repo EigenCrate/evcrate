@@ -44,7 +44,7 @@ def find_api_key() -> Optional[str]:
     1. process.env (runtime environment variables)
     2. .agents/skills/ai-multimodal/.env (skill-specific config)
     3. .agents/skills/.env (shared skills config)
-    4. .codex/.env (Codex global config)
+    4. .codex/.env (Claude global config)
     """
     # Priority 1: Already in process.env (highest)
     api_key = os.getenv('GEMINI_API_KEY')
@@ -75,7 +75,7 @@ def find_api_key() -> Optional[str]:
             if api_key:
                 return api_key
 
-        # Priority 4: Codex global .env
+        # Priority 4: Claude global .env
         env_file = harness_dir / '.env'
         if env_file.exists():
             load_dotenv(env_file)

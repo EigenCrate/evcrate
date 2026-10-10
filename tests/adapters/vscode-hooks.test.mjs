@@ -172,7 +172,7 @@ test('vscode-hooks: convertVscodeHooks emits hooks.json, runtime closure scripts
     const audit = convertVscodeHooks(context);
 
     assert.equal(audit.events.length, 8);
-    assert.equal(audit.scripts.length, 9);
+    assert.equal(audit.scripts.length, 18);
 
     const stageRoot = context.stagePath('.evcrate-vscode');
 

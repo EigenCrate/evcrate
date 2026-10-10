@@ -80,9 +80,9 @@ test('tool-inputs: normalizes search, subagent, and unrelated tools', () => {
   assert.deepEqual(glob.operands, ['tests']);
 
   // Subagent
-  const sub = normalizeLocalTool('runSubagent', { agentName: 'planner', prompt: 'plan something' });
+  const sub = normalizeLocalTool('runSubagent', { agentName: 'evc-planner', prompt: 'plan something' });
   assert.equal(sub.kind, 'subagent');
-  assert.deepEqual(sub.operands, ['planner']);
+  assert.deepEqual(sub.operands, ['evc-planner']);
 
   // Unrelated tool
   const unrel = normalizeLocalTool('ask_user', { question: 'Are you sure?' });

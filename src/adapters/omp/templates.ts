@@ -1,14 +1,38 @@
-export const OMP_RUNTIME_HELPER = String.raw`import { spawn } from "node:child_process";
-import { lstatSync } from "node:fs";
+export const OMP_RUNTIME_HELPER = String.raw`import { constants, fstatSync, lstatSync, openSync, readSync, closeSync } from "node:fs";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const SOURCE_HOOK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "hooks");
+const RESOURCE_ROOT = path.resolve(SOURCE_HOOK_ROOT, "..");
+const MAX_AGENTS_BYTES = 256 * 1024;
 function hasSymlinkedAncestor(candidate: string): boolean {
   let current = path.resolve(candidate);
   while (true) {
     try { if (lstatSync(current).isSymbolicLink()) return true; } catch { return true; }
     const parent = path.dirname(current); if (parent === current) return false; current = parent;
   }
+}
+export function requiredAgentsContext(): string {
+  const candidate = path.resolve(RESOURCE_ROOT, "AGENTS.md");
+  if (path.dirname(candidate) !== RESOURCE_ROOT || hasSymlinkedAncestor(candidate)) throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable");
+  let initial; let descriptor: number;
+  try {
+    initial = lstatSync(candidate);
+    if (!initial.isFile() || initial.isSymbolicLink() || initial.size <= 0 || initial.size > MAX_AGENTS_BYTES) throw new Error("invalid payload");
+    descriptor = openSync(candidate, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  } catch { throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable"); }
+  try {
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || opened.size !== initial.size || opened.dev !== initial.dev || opened.ino !== initial.ino) throw new Error("payload changed");
+    const bytes = Buffer.alloc(opened.size);
+    for (let offset = 0; offset < bytes.length;) { const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset); if (!count) throw new Error("payload truncated"); offset += count; }
+    const final = lstatSync(candidate);
+    if (!final.isFile() || final.isSymbolicLink() || final.size !== initial.size || final.dev !== initial.dev || final.ino !== initial.ino) throw new Error("payload changed");
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    if (!text || text.includes("\0")) throw new Error("payload is empty or invalid");
+    return text;
+  } catch { throw new Error("Required EVCrate AGENTS payload is unsafe or unavailable"); }
+  finally { closeSync(descriptor); }
 }
 function canonicalHookPath(relative: string): string {
   const candidate = path.resolve(SOURCE_HOOK_ROOT, relative);
@@ -39,19 +63,47 @@ export function additionalContext(output: string): string | undefined { for (con
 export function outputText(result: CanonicalHookResult): string { return result.stdout + "\n" + result.stderr; }
 `;
 
-export const OMP_PRE_MODULE = String.raw`import { canonicalToolPayload, runCanonicalHook, sessionFile, sessionId } from "../../evcrate/omp-hook-runtime.ts";
+export const OMP_PRE_MODULE = String.raw`import { requiredAgentsContext, runCanonicalHook, sessionFile, sessionId } from "../../evcrate/omp-hook-runtime.ts";
 export default function (pi: any) {
-  let startupContext = ""; let startupDelivered = false;
-  pi.on("session_start", async (_event: any, ctx: any) => { const result = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx); startupContext = result.stdout.trim(); });
+  let startupContext: string | undefined; let startupDelivered = false;
+  // Print mode bypasses input and the host swallows lifecycle exceptions.
+  // Abort the active operation before transport when no context was admitted.
+  pi.on("before_provider_request", (_event: unknown, ctx: { abort: () => void; ui?: { notify?: (message: string, kind: string) => void } }) => {
+    if (startupContext !== undefined) return;
+    ctx.abort();
+    const message = "Required EVCrate AGENTS payload is unsafe or unavailable";
+    console.error(message); ctx.ui?.notify?.(message, "error");
+  });
+  async function rebuildStartupContext(ctx: any): Promise<void> {
+    startupContext = undefined; startupDelivered = false;
+    const agents = requiredAgentsContext();
+    const startup = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx);
+    startupContext = [agents, startup.stdout.trim()].filter(Boolean).join("\n\n");
+    startupDelivered = false;
+  }
+  pi.on("session_start", async (_event: any, ctx: any) => { await rebuildStartupContext(ctx); });
+  // Interactive/RPC input can refuse before entering the provider operation.
+  pi.on("input", async (_event: unknown, ctx: { ui?: { notify?: (message: string, kind: string) => void } }) => {
+    if (startupContext !== undefined) return;
+    try { await rebuildStartupContext(ctx); }
+    catch {
+      const message = "Required EVCrate AGENTS payload is unsafe or unavailable";
+      console.error(message); ctx?.ui?.notify?.(message, "error");
+      return { handled: true };
+    }
+  });
   pi.on("before_agent_start", async (event: any, ctx: any) => {
+    if (startupContext === undefined) await rebuildStartupContext(ctx);
     const parts: string[] = [];
-    if (!startupContext) { const startup = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx); startupContext = startup.stdout.trim(); }
-    if (!startupDelivered && startupContext) { parts.push(startupContext); startupDelivered = true; }
+    if (!startupDelivered) { parts.push(startupContext); startupDelivered = true; }
     const reminder = await runCanonicalHook("dev-rules-reminder.cjs", { prompt: event?.prompt ?? "", transcript_path: sessionFile(ctx) }, ctx);
     if (reminder.stdout.trim()) parts.push(reminder.stdout.trim()); if (!parts.length) return;
     return { message: { customType: "evcrate-context", content: parts.join("\n\n"), display: false } };
   });
-  pi.on("session_before_compact", async (_event: any, ctx: any) => { await runCanonicalHook("write-compact-marker.cjs", { source: "compact", session_id: sessionId(ctx), trigger: "omp", context_window: {} }, ctx); });
+  pi.on("session_before_compact", async (_event: any, ctx: any) => {
+    startupContext = undefined; startupDelivered = false;
+    await runCanonicalHook("write-compact-marker.cjs", { source: "compact", session_id: sessionId(ctx), trigger: "omp", context_window: {} }, ctx);
+  });
 }
 `;
 export const OMP_POLICY_MODULE = String.raw`import { canonicalToolPayload, outputText, runCanonicalHook } from "../../evcrate/omp-hook-runtime.ts";

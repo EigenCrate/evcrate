@@ -6,7 +6,7 @@ import { normalizeProjectionCompatibility, type ProjectionAdapter, type Projecti
 /** Schema order is owned by protocol/manifest validation and is not qualification order. */
 export const PROJECTION_REGISTRY_ORDER = PERSISTED_TARGETS;
 export const PROJECTION_QUALIFICATION_ORDER = Object.freeze([
-  'claude', 'gemini', 'antigravity', 'codex', 'pi', 'omp', 'copilot'
+  'claude', 'antigravity', 'codex', 'pi', 'omp', 'copilot'
 ] as const satisfies readonly PersistedTarget[]);
 
 const adapters = new Map<PersistedTarget, ProjectionAdapter>();

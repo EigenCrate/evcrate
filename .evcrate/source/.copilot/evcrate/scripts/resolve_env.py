@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Centralized environment variable resolver for GitHub Copilot CLI skills.
+Centralized environment variable resolver for Claude Code skills.
 
-Resolves environment variables following the GitHub Copilot CLI hierarchy:
+Resolves environment variables following the Claude Code hierarchy:
 1. process.env                    - Runtime environment (HIGHEST)
 2. .copilot/skills/<skill>/.env    - Project skill-specific
 3. .copilot/skills/.env            - Project shared
@@ -145,7 +145,7 @@ def resolve_env(
     verbose: bool = False
 ) -> Optional[str]:
     """
-    Resolve environment variable following GitHub Copilot CLI hierarchy.
+    Resolve environment variable following Claude Code hierarchy.
 
     Args:
         var_name: Name of the environment variable to resolve
@@ -256,7 +256,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Resolve environment variables following GitHub Copilot CLI hierarchy',
+        description='Resolve environment variables following Claude Code hierarchy',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

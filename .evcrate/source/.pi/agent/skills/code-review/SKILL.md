@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Use when receiving code review feedback (especially if unclear or technically questionable), when completing tasks or major features requiring review before proceeding, or before making any completion/success claims. Covers three practices - receiving feedback with technical rigor over performative agreement, requesting reviews via code-reviewer subagent, and verification gates requiring evidence before any status claims. Essential for subagent-driven development, pull requests, and preventing false completion claims.
+description: Use when receiving code review feedback (especially if unclear or technically questionable), when completing tasks or major features requiring review before proceeding, or before making any completion/success claims. Covers three practices - receiving feedback with technical rigor over performative agreement, requesting reviews via evc-code-reviewer subagent, and verification gates requiring evidence before any status claims. Essential for subagent-driven development, pull requests, and preventing false completion claims.
 ---
 
 # Code Review
@@ -12,7 +12,7 @@ Guide proper code review practices emphasizing technical rigor, evidence-based c
 Code review requires three distinct practices:
 
 1. **Receiving feedback** - Technical evaluation over performative agreement
-2. **Requesting reviews** - Systematic review via code-reviewer subagent
+2. **Requesting reviews** - Systematic review via evc-code-reviewer subagent
 3. **Verification gates** - Evidence before any completion claims
 
 Each practice has specific triggers and protocols detailed in reference files.
@@ -67,8 +67,8 @@ SITUATION?
 │  └─ From external reviewer? → Verify technically before implementing
 │
 ├─ Completed work
-│  ├─ Major feature/task? → Request code-reviewer subagent review
-│  └─ Before merge? → Request code-reviewer subagent review
+│  ├─ Major feature/task? → Request evc-code-reviewer subagent review
+│  └─ Before merge? → Request evc-code-reviewer subagent review
 │
 └─ About to claim status
    ├─ Have fresh verification? → State claim WITH evidence
@@ -102,7 +102,7 @@ READ → UNDERSTAND → VERIFY → EVALUATE → RESPOND → IMPLEMENT
 
 ### Process
 1. Get git SHAs: `BASE_SHA=$(git rev-parse HEAD~1)` and `HEAD_SHA=$(git rev-parse HEAD)`
-2. Dispatch code-reviewer subagent via evcrate_subagent tool with: WHAT_WAS_IMPLEMENTED, PLAN_OR_REQUIREMENTS, BASE_SHA, HEAD_SHA, DESCRIPTION
+2. Dispatch evc-code-reviewer subagent via evcrate_subagent tool with: WHAT_WAS_IMPLEMENTED, PLAN_OR_REQUIREMENTS, BASE_SHA, HEAD_SHA, DESCRIPTION
 3. Act on feedback: Fix Critical immediately, Important before proceeding, note Minor for later
 
 **Full protocol:** `references/requesting-code-review.md`
@@ -137,7 +137,7 @@ Using "should"/"probably"/"seems to", expressing satisfaction before verificatio
 ## Bottom Line
 
 1. Technical rigor over social performance - No performative agreement
-2. Systematic review processes - Use code-reviewer subagent
+2. Systematic review processes - Use evc-code-reviewer subagent
 3. Evidence before claims - Verification gates always
 
 Verify. Question. Then implement. Evidence. Then claim.

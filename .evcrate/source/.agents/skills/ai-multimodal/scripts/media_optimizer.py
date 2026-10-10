@@ -32,7 +32,7 @@ def load_env_files():
     1. process.env (runtime environment variables)
     2. .agents/skills/ai-multimodal/.env (skill-specific config)
     3. .agents/skills/.env (shared skills config)
-    4. .codex/.env (Codex global config)
+    4. .codex/.env (Claude global config)
     """
     if not load_dotenv:
         return
@@ -53,7 +53,7 @@ def load_env_files():
     if env_file.exists():
         load_dotenv(env_file)
 
-    # Priority 4: Codex global .env
+    # Priority 4: Claude global .env
     env_file = harness_dir / '.env'
     if env_file.exists():
         load_dotenv(env_file)

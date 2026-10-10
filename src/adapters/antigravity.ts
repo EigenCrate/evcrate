@@ -5,17 +5,19 @@ import { parseJsonDocument, type JsonValue } from '../protocol/json.js';
 import { readBoundedFile } from '../filesystem/hashing.js';
 import {
   ensureProjectionDirectory,
+  graphText,
   textBytes,
   writeProjectionFile,
-  validateProjection,
-  restoreIndexedTokens
+  validateProjection
 } from './projection-utils.js';
 import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js';
 import { renderMentoringWorkflow } from './advisory.js';
 import type { ResourceGraphFile } from './resource-graph.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from './types.js';
+import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from './resource-naming.js';
+import { parseMarkdownFrontmatter } from './markdown-frontmatter.js';
 
-const PRETOOL_MATCHER = 'run_command|grep_search|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file';
+const PRETOOL_MATCHER = 'run_command|grep_search|find_by_name|list_dir|view_file|replace_file_content|multi_replace_file_content|write_to_file';
 const FILTERED_PARTS: Record<string, true> = Object.freeze({
   __tests__: true,
   tests: true,
@@ -24,6 +26,7 @@ const FILTERED_PARTS: Record<string, true> = Object.freeze({
 });
 const RESOURCE_SUFFIXES = ['output-styles', 'workflows', 'scripts', 'hooks', 'skills', '.evcrate.json', '.mcp.json', '.env'];
 const HOOK_FILES = ['scout-block.cjs', 'privacy-block.cjs', 'pretool-scout-block.cjs', 'pretool-privacy-block.cjs'];
+const CONTEXT_HOOKS = ['session-init.cjs', 'dev-rules-reminder.cjs'];
 const URI = /(?<![A-Za-z0-9./])(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/giu;
 
 function invalid(): never { throw new ControlPlaneError('VALIDATION_INVALID'); }
@@ -35,6 +38,16 @@ function record(value: unknown): Record<string, JsonValue> {
 function sourceFiles(context: ProjectionBuildContext, prefix: string): readonly ResourceGraphFile[] {
   return context.resources.files.filter((file) => file.path === prefix || file.path.startsWith(`${prefix}/`));
 }
+function assertResourceNames(context: ProjectionBuildContext): void {
+  const names = sourceFiles(context, 'commands')
+    .filter((file) => file.path.endsWith('.md'))
+    .map((file) => commandNameFromSourcePath(file.path).name);
+  for (const file of sourceFiles(context, 'agents')) {
+    const stem = file.path.slice('agents/'.length, -3);
+    if (file.path.endsWith('.md') && !stem.includes('/')) names.push(assertAgentName(stem, stem));
+  }
+  assertUniqueNames(names);
+}
 function productionPath(path: string): boolean {
   const parts = path.split('/');
   const name = parts.at(-1) ?? '';
@@ -42,6 +55,7 @@ function productionPath(path: string): boolean {
     || /(?:\.test\.(?:cjs|js|mjs|py)|\.spec\.(?:cjs|js))$/u.test(name);
 }
 function shouldCopy(path: string): boolean {
+  if (path === 'AGENTS.md') return false;
   if (path === 'settings.json' || path === 'settings.local.json' || path === '.mcp.json.example') return false;
   if (path === 'scripts/commands_data.yaml' || path === 'scripts/skills_data.yaml') return false;
   if (/^(?:agents|commands)(?:\/|$)/u.test(path)) return false;
@@ -64,14 +78,6 @@ function decode(bytes: Uint8Array): string {
 }
 function parseText(bytes: Uint8Array): unknown {
   try { return parseJsonDocument(bytes); } catch { return invalid(); }
-}
-function commandPath(content: string, fallback: string): string {
-  for (const line of content.split('\n')) {
-    const match = /^name\s*:\s*(.*)$/iu.exec(line.trim());
-    const value = match?.[1]?.trim().replace(/^['"]+|['"]+$/gu, '');
-    if (value?.startsWith('/')) return value;
-  }
-  return `/${fallback}`;
 }
 function description(content: string): string {
   for (const line of content.split('\n')) {
@@ -114,7 +120,7 @@ function inlineAdviseCommand(canonical: string): string {
   return `<!-- generated target: antigravity -->
 ${capabilities}
 
-Use this command for candid technical or architectural advice. \`/advise\` is
+Use this command for candid technical or architectural advice. \`/evc-cmd-advise\` is
 separate from \`--advice\` checkpoint mentorship: it first converges on the
 problem, then provides advice.
 
@@ -124,7 +130,7 @@ Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
 Reject two or more tokens. One token requests relay only when it is final after
 trailing whitespace; quoted, embedded, suffixed, non-final, and differently
 cased text remains ordinary input. If a final token requests relay, return
-\`ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY\` and say: \`Run /advise <prompt> without --agent for inline
+\`ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY\` and say: \`Run /evc-cmd-advise <prompt> without --agent for inline
 advice.\` Do not invoke an advisor, create relay
 state, or silently continue in inline mode.
 
@@ -161,11 +167,16 @@ function advisoryWorkflow(text: string): string {
   );
   const relay = projected.indexOf('## Relay turn envelope');
   if (relay < 0) return invalid();
-  return workflowFallback(projected.slice(0, relay) + '## Unsupported relay\n\nA final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` before advisor delegation, state creation, or inline-interview work. Users can run `/advise <prompt>` for inline advice.\n');
+  return workflowFallback(projected.slice(0, relay) + '## Unsupported relay\n\nA final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` before advisor delegation, state creation, or inline-interview work. Users can run `/evc-cmd-advise <prompt>` for inline advice.\n');
 }
 function projectAdvisor(content: string): string {
   const match = /^(---\n[\s\S]*?\n---\n)([\s\S]*)$/u.exec(content);
   if (!match) return invalid();
+  const { data } = parseMarkdownFrontmatter(content);
+  if (Object.hasOwn(data, 'name')) {
+    if (typeof data.name !== 'string') return invalid();
+    assertAgentName(data.name, 'evc-advisor');
+  }
   const frontmatter = match[1]
     .replace(/^model:\s*opus$/mu, 'model: pro')
     .replace(/^description:.*$/mu, 'description: Use this high-tier mentor for fresh named checkpoints; Antigravity uses the central controller.');
@@ -182,6 +193,12 @@ function renderHarness(text: string): string {
     protectedUrls.push(url);
     return token;
   });
+  rendered = rendered.replaceAll('.claude/rules/AGENTS.md', '.claude/AGENTS.md');
+  for (const prefix of ['~', '$HOME', '${HOME}']) {
+    rendered = rendered.replaceAll(`${prefix}/.claude/AGENTS.md`, `${prefix}/.gemini/config/AGENTS.md`);
+  }
+  rendered = rendered.replaceAll('.claude/AGENTS.md', '.antigravity/AGENTS.md')
+    .replace(/(?<![A-Za-z0-9_./-])AGENTS\.md\b/gu, '.antigravity/AGENTS.md');
   const suffixes = [...RESOURCE_SUFFIXES].sort((a, b) => b.length - a.length);
   for (const prefix of ['~', '$HOME', '${HOME}']) {
     for (const suffix of suffixes) {
@@ -204,7 +221,11 @@ function renderHarness(text: string): string {
     return `${base} / ${quote}${renderResourcePath(global ? 'global' : 'local', suffix).split('/').join(`${quote} / ${quote}`)}${quote}`;
   });
   rendered = rendered.replace(/(?<![A-Za-z0-9_])\.claude(?=(?:[/\\'"`()\]\}]|\s|$))/gu, '.antigravity');
-  return restoreIndexedTokens(rendered, '__EVCRATE_HARNESS_URL_', protectedUrls);
+  rendered = rendered.replace(
+    /`(?:\.\/)?\.antigravity\/AGENTS\.md`(?! if present; otherwise read)/gu,
+    '`.antigravity/AGENTS.md` if present; otherwise read `~/.gemini/config/AGENTS.md` (the published install)'
+  );
+  return rendered.replace(/__EVCRATE_HARNESS_URL_(\d+)__/gu, (token, index: string) => protectedUrls[Number(index)] ?? token);
 }
 function wrapper(hookFile: string): string {
   return String.raw`#!/usr/bin/env node
@@ -266,15 +287,19 @@ try {
     ];
     projectRoot = workspaceCandidates.find(isWorkspaceDirectory) || process.cwd();
   }
-  if (data && !data.tool_input && data.toolCall && data.toolCall.args) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)
+      || !data.toolCall || typeof data.toolCall.name !== 'string'
+      || !data.toolCall.args || typeof data.toolCall.args !== 'object' || Array.isArray(data.toolCall.args)) {
+    throw new Error('Invalid native tool call');
+  }
+  {
     const args = data.toolCall.args;
-    let toolName = "unknown";
-    if (args.CommandLine) toolName = "run_command";
-    else if (args.TargetFile) toolName = "replace_file_content";
-    else if (args.Query) toolName = "grep_search";
-    else if (args.DirectoryPath) toolName = "list_dir";
-    else if (args.AbsolutePath) toolName = "view_file";
-
+    const toolNames = {
+      run_command: 'Bash', grep_search: 'Grep', find_by_name: 'Glob', list_dir: 'Glob',
+      view_file: 'Read', replace_file_content: 'Edit', multi_replace_file_content: 'Edit', write_to_file: 'Write',
+    };
+    const toolName = toolNames[data.toolCall.name];
+    if (!toolName) throw new Error('Unsupported native tool call');
     const mapKeys = (obj) => {
       if (typeof obj === "string") {
         const normalized = obj.replace(/\\/g, '/');
@@ -288,11 +313,10 @@ try {
         const newObj = {};
         for (const key of Object.keys(obj)) {
           let mappedKey = key;
-          if (key === 'AbsolutePath') mappedKey = 'path';
-          else if (key === 'TargetFile') mappedKey = 'path';
-          else if (key === 'SearchPath') mappedKey = 'path';
-          else if (key === 'DirectoryPath') mappedKey = 'path';
+          if (key === 'AbsolutePath' || key === 'TargetFile') mappedKey = 'file_path';
+          else if (key === 'SearchPath' || key === 'SearchDirectory' || key === 'DirectoryPath') mappedKey = 'path';
           else if (key === 'CommandLine') mappedKey = 'command';
+          else if (key === 'Pattern') mappedKey = 'pattern';
           newObj[mappedKey] = mapKeys(obj[key]);
         }
         return newObj;
@@ -301,11 +325,18 @@ try {
     };
 
     claudePayload = JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      session_id: data.conversationId,
+      transcript_path: data.transcriptPath,
+      cwd: projectRoot,
       tool_name: toolName,
       tool_input: mapKeys(args)
     });
   }
-} catch(e) {}
+} catch {
+  process.stdout.write(JSON.stringify({ decision: 'deny', reason: 'EVCREATE_INVALID_TOOL_CALL' }) + '\n');
+  process.exit(0);
+}
 if (!isUsableHook(sourceHook)) {
   process.stdout.write(JSON.stringify({
     decision: "deny",
@@ -341,51 +372,194 @@ if (result.status === 0 && !result.error) {
 }
 `;
 }
-function neutralHookCommand(command: string): string {
-  const prefixes: readonly [string, string][] = [
-    ['"$CLAUDE_PROJECT_DIR"/.claude/hooks', '"$AGY_PROJECT_DIR"/.antigravity/hooks'],
-    ["'$CLAUDE_PROJECT_DIR'/.claude/hooks", "'$AGY_PROJECT_DIR'/.antigravity/hooks"],
-    ['$CLAUDE_PROJECT_DIR/.claude/hooks', '$AGY_PROJECT_DIR/.antigravity/hooks'],
-    ['${CLAUDE_PROJECT_DIR}/.claude/hooks', '${AGY_PROJECT_DIR}/.antigravity/hooks']
-  ];
-  return prefixes.reduce((value, [source, target]) => value.replaceAll(source, target), command);
-}
-function extractHooks(context: ProjectionBuildContext): void {
-  const settings = context.resources.files.find((file) => file.path === 'settings.json');
-  if (!settings) return;
-  const data = record(parseText(settings.bytes));
-  let hooks: Record<string, JsonValue> = {};
-  if ('hooks' in data) {
-    if (data.hooks === null || typeof data.hooks !== 'object' || Array.isArray(data.hooks)) invalid();
-    hooks = data.hooks as Record<string, JsonValue>;
+function contextWrapper(): string {
+  return String.raw`#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const maxBytes = 256 * 1024;
+const contextHookTimeoutMs = 25_000;
+const decoder = new TextDecoder('utf-8', { fatal: true });
+const fail = (reason) => {
+  process.stderr.write('EVCREATE_CONTEXT_REJECTED: ' + reason + '\n');
+  process.exit(2);
+};
+const assertSafePath = (candidate) => {
+  let current = path.resolve(candidate);
+  while (true) {
+    const stat = fs.lstatSync(current);
+    if (stat.isSymbolicLink()) throw new Error('Unsafe installed context path');
+    const parent = path.dirname(current);
+    if (parent === current) return;
+    current = parent;
   }
-  for (const groups of Object.values(hooks)) {
+};
+const readBounded = (fd) => {
+  const bytes = Buffer.alloc(maxBytes + 1);
+  let size = 0;
+  while (size < bytes.length) {
+    const count = fs.readSync(fd, bytes, size, bytes.length - size, null);
+    if (count === 0) break;
+    size += count;
+  }
+  if (size > maxBytes) throw new Error('Context exceeds byte limit');
+  return decoder.decode(bytes.subarray(0, size));
+};
+const installedInstructions = () => {
+  const filename = path.join(__dirname, '..', 'AGENTS.md');
+  assertSafePath(filename);
+  const stat = fs.lstatSync(filename);
+  if (!stat.isFile() || stat.size === 0 || stat.size > maxBytes) throw new Error('Invalid installed instructions');
+  const fd = fs.openSync(filename, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+  try {
+    const opened = fs.fstatSync(fd);
+    if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino) throw new Error('Installed instructions changed');
+    const text = readBounded(fd);
+    assertSafePath(filename);
+    if (!text.trim() || text.includes('\0')) throw new Error('Empty or invalid installed instructions');
+    return text;
+  } finally {
+    fs.closeSync(fd);
+  }
+};
+const isDirectory = (candidate) => {
+  if (typeof candidate !== 'string' || !path.isAbsolute(candidate)) return false;
+  try {
+    const stat = fs.lstatSync(candidate);
+    return stat.isDirectory() && !stat.isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
+const canonicalContext = (hookFile, event, payload, projectRoot) => {
+  const sourceHook = path.join(__dirname, hookFile + '.original.cjs');
+  assertSafePath(sourceHook);
+  if (!fs.lstatSync(sourceHook).isFile()) throw new Error('Context hook unavailable');
+  const result = spawnSync(process.execPath, [sourceHook], {
+    cwd: projectRoot,
+    input: JSON.stringify({ ...payload, hook_event_name: event }),
+    maxBuffer: maxBytes,
+    timeout: contextHookTimeoutMs,
+    // A synchronous deadline cannot escalate after SIGTERM; SIGKILL guarantees completion.
+    killSignal: 'SIGKILL',
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: projectRoot,
+      GEMINI_PROJECT_DIR: projectRoot,
+      AGY_PROJECT_DIR: projectRoot,
+      EVCRATE_SESSION_ID: payload.session_id,
+    },
+  });
+  if (result.error || result.status !== 0) throw new Error('Context hook failed');
+  const stderr = decoder.decode(result.stderr || Buffer.alloc(0)).trim();
+  // Canonical hooks report caught failures on stderr even when they exit zero.
+  if (stderr) throw new Error('Context hook reported an error: ' + stderr.slice(0, 2048));
+  const stdout = decoder.decode(result.stdout || Buffer.alloc(0)).trim();
+  let context = stdout;
+  // Canonical hooks emit text today; accept only their additionalContext envelope if structured.
+  if (/^[{\[]/u.test(stdout)) {
+    const output = JSON.parse(stdout);
+    const specific = output && output.hookSpecificOutput;
+    if (!output || typeof output !== 'object' || Array.isArray(output)
+        || (output.decision !== undefined && output.decision !== 'allow')
+        || (output.continue !== undefined && output.continue !== true)
+        || !specific || typeof specific !== 'object' || Array.isArray(specific)
+        || specific.hookEventName !== event || typeof specific.additionalContext !== 'string') {
+      throw new Error('Invalid context hook output');
+    }
+    context = specific.additionalContext;
+  }
+  if (context.includes('\0')) throw new Error('Invalid context hook text');
+  return context;
+};
+try {
+  // Node resolves symlinked entrypoints before setting __dirname; inspect the invoked path too.
+  assertSafePath(process.argv[1]);
+  const data = JSON.parse(readBounded(0));
+  if (!data || typeof data !== 'object' || Array.isArray(data)
+      || !Number.isSafeInteger(data.invocationNum) || data.invocationNum < 0
+      || typeof data.conversationId !== 'string' || !data.conversationId
+      || !Array.isArray(data.workspacePaths)) {
+    throw new Error('Invalid native invocation');
+  }
+  // Native rules own instruction injection. This gate verifies this installation only.
+  installedInstructions();
+  const projectRoot = data.workspacePaths.find(isDirectory);
+  if (!projectRoot) throw new Error('Context workspace unavailable');
+  const payload = {
+    cwd: projectRoot,
+    session_id: data.conversationId,
+    transcript_path: data.transcriptPath,
+  };
+  const contexts = [];
+  // Official invocationNum is zero-indexed. No native field proves resume/clear/compact.
+  if (data.invocationNum === 0) {
+    contexts.push(canonicalContext('session-init.cjs', 'SessionStart', { ...payload, source: 'startup' }, projectRoot));
+  }
+  contexts.push(canonicalContext('dev-rules-reminder.cjs', 'UserPromptSubmit', payload, projectRoot));
+  if (contexts.reduce((size, text) => size + Buffer.byteLength(text, 'utf8'), 0) > maxBytes) {
+    throw new Error('Combined context exceeds byte limit');
+  }
+  process.stdout.write(JSON.stringify({
+    injectSteps: contexts.filter(Boolean).map((ephemeralMessage) => ({ ephemeralMessage })),
+  }) + '\n');
+} catch (error) {
+  fail(error instanceof Error ? error.message : 'Context unavailable');
+}
+`;
+}
+function extractHooks(context: ProjectionBuildContext): Record<string, unknown>[] {
+  const settings = context.resources.files.find((file) => file.path === 'settings.json');
+  const data: Record<string, JsonValue> = settings ? record(parseText(settings.bytes)) : {};
+  const hooks = data.hooks === undefined ? {} : record(data.hooks);
+  const behaviors: Record<string, unknown>[] = [];
+  const policies: JsonValue[] = [];
+  for (const [event, groups] of Object.entries(hooks)) {
     if (!Array.isArray(groups)) invalid();
     for (const group of groups) {
-      if (group === null || typeof group !== 'object' || Array.isArray(group)) invalid();
-      const entries = (group as Record<string, JsonValue>).hooks;
-      if (entries === undefined) continue;
+      const entries = record(group).hooks;
       if (!Array.isArray(entries)) invalid();
       for (const hook of entries) {
-        if (hook === null || typeof hook !== 'object' || Array.isArray(hook)) invalid();
-        const object = hook as Record<string, JsonValue>;
-        if (object.command !== undefined && typeof object.command !== 'string') invalid();
-        if (typeof object.command === 'string') object.command = neutralHookCommand(object.command);
+        const handler = record(hook);
+        if (typeof handler.command !== 'string') invalid();
+        const policy = event === 'PreToolUse' && HOOK_FILES.some((file) => handler.command === `node "$CLAUDE_PROJECT_DIR"/.claude/hooks/${file}`);
+        const session = event === 'SessionStart' && handler.command === 'node "$CLAUDE_PROJECT_DIR"/.claude/hooks/session-init.cjs';
+        const reminder = event === 'UserPromptSubmit' && handler.command === 'node "$CLAUDE_PROJECT_DIR"/.claude/hooks/dev-rules-reminder.cjs';
+        if (policy) {
+          policies.push({ type: 'command', command: handler.command.replace('node "$CLAUDE_PROJECT_DIR"/.claude/', 'node .antigravity/'), ...(handler.timeout === undefined ? {} : { timeout: handler.timeout }) });
+        }
+        behaviors.push({
+          kind: 'hook', source: event, classification: 'lifecycle-hook',
+          status: policy || session || reminder ? 'adapted' : 'unsupported',
+          ...(policy ? { target: 'PreToolUse' }
+            : session ? { target: 'PreInvocation', reason: 'First invocation only (invocationNum=0); resume, clear and compact have no native lifecycle signal.' }
+            : reminder ? { target: 'PreInvocation', reason: 'Reminder per model invocation; native payload does not identify user-prompt submissions.' }
+            : { reason: event === 'PostToolUse'
+              ? 'Native PostToolUse has no additionalContext output; canonical modularization context is not registered.'
+              : 'No equivalent native lifecycle event; not registered.' }),
+        });
       }
     }
   }
-  if ('PreToolUse' in hooks) {
-    const pretool = hooks.PreToolUse;
-    if (!Array.isArray(pretool)) invalid();
-    for (const group of pretool) {
-      if (group === null || typeof group !== 'object' || Array.isArray(group)) invalid();
-      if ('matcher' in group) (group as Record<string, JsonValue>).matcher = PRETOOL_MATCHER;
-    }
-  }
-  writeProjectionFile(context, '.antigravity/hooks.json', textBytes(pythonJson({ hooks })));
+  const nativeHooks = {
+    'evcrate-context': { PreInvocation: [{ type: 'command', command: 'node .antigravity/hooks/pre-invocation.cjs' }] },
+    ...(policies.length ? { 'evcrate-policy': { PreToolUse: [{ matcher: PRETOOL_MATCHER, hooks: policies }] } } : {}),
+  };
+  const bytes = textBytes(pythonJson(nativeHooks));
+  writeProjectionFile(context, '.antigravity/hooks.json', bytes);
+  writeProjectionFile(context, '.agents/hooks.json', bytes);
+  writeProjectionFile(context, '.agents/rules/evcrate-antigravity.md', textBytes([
+    '---',
+    'trigger: always_on',
+    'description: "EVCrate instructions from this Antigravity installation"',
+    '---',
+    '@[EVCrate instructions](../../.antigravity/AGENTS.md)',
+    '',
+  ].join('\n')));
+  return behaviors;
 }
 function wrapHooks(context: ProjectionBuildContext): void {
-  for (const hookFile of HOOK_FILES) {
+  for (const hookFile of [...HOOK_FILES, ...CONTEXT_HOOKS]) {
     const path = `.antigravity/hooks/${hookFile}`;
     let stat;
     try {
@@ -397,8 +571,9 @@ function wrapHooks(context: ProjectionBuildContext): void {
     }
     const source = readBoundedFile(context.stagePath(path), 16 * 1024 * 1024);
     writeProjectionFile(context, `${path}.original.cjs`, source);
-    writeProjectionFile(context, path, textBytes(wrapper(hookFile)), true);
+    if (!CONTEXT_HOOKS.includes(hookFile)) writeProjectionFile(context, path, textBytes(wrapper(hookFile)), true);
   }
+  writeProjectionFile(context, '.antigravity/hooks/pre-invocation.cjs', textBytes(contextWrapper()), true);
 }
 function rewriteAll(context: ProjectionBuildContext): void {
   const root = context.stagePath('.antigravity');
@@ -427,11 +602,13 @@ function assertManifest(context: ProjectionBuildContext): void {
 }
 function build(context: ProjectionBuildContext): void {
   assertManifest(context);
+  assertResourceNames(context);
   ensureProjectionDirectory(context, '.antigravity');
+  writeProjectionFile(context, '.antigravity/AGENTS.md', textBytes(graphText(context, 'AGENTS.md')));
   for (const file of context.resources.files) if (shouldCopy(file.path)) writeProjectionFile(context, `.antigravity/${file.path}`, file.bytes, file.executable ?? false);
-  extractHooks(context);
-  const advisor = context.resources.files.find((file) => file.path === 'agents/advisor.md');
-  if (advisor) writeProjectionFile(context, '.antigravity/agents/advisor.md', textBytes(projectAdvisor(decode(advisor.bytes))));
+  const hookBehaviors = extractHooks(context);
+  const advisor = context.resources.files.find((file) => file.path === 'agents/evc-advisor.md');
+  if (advisor) writeProjectionFile(context, '.antigravity/agents/evc-advisor.md', textBytes(projectAdvisor(decode(advisor.bytes))));
   const workflow = context.resources.files.find((file) => file.path === 'workflows/advisory-interview.md');
   if (workflow) {
     const content = decode(workflow.bytes);
@@ -444,17 +621,17 @@ function build(context: ProjectionBuildContext): void {
   }
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
-    const suffix = file.path.slice('commands/'.length, -3);
+    const identity = commandNameFromSourcePath(file.path);
     const content = decode(file.bytes);
-    const name = `cmd_${suffix.replaceAll('/', '_')}`;
-    const command = commandPath(content, suffix);
+    const name = identity.name;
+    const command = `/${name}`;
     let body = content.replaceAll('python .claude/scripts/ev-help.py', 'python .antigravity/scripts/ev-help.py')
       .replaceAll('.claude/workflows/', '.antigravity/workflows/');
     body = workflowFallback(body);
-    const commandDescription = suffix === 'advise'
+    const commandDescription = identity.semanticId === 'advise'
       ? 'Interview-first technical advice with native inline questioning and explicit relay rejection'
       : description(body);
-    if (suffix === 'advise') body = inlineAdviseCommand(body);
+    if (identity.semanticId === 'advise') body = inlineAdviseCommand(body);
     const text = `---
 name: ${name}
 description: ${escapeYamlString(commandDescription)}
@@ -468,14 +645,14 @@ Description: ${commandDescription}
 ${body}`;
     writeProjectionFile(context, `.antigravity/skills/${name}/SKILL.md`, textBytes(text));
   }
-  wrapHooks(context);
   rewriteAll(context);
-  const behaviors: Record<string, unknown>[] = [];
+  wrapHooks(context);
+  const behaviors: Record<string, unknown>[] = [...hookBehaviors];
+  behaviors.push({ kind: 'project-doc', source: 'AGENTS.md', classification: 'instruction-context', status: 'migrated', target: '.agents/rules/evcrate-antigravity.md', reason: 'Native always_on include; HOME standalone AGENTS.md. PreInvocation verifies, never reinjects instructions.' });
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
-    const suffix = file.path.slice('commands/'.length, -3);
-    const name = `cmd_${suffix.replaceAll('/', '_')}`;
-    behaviors.push({ kind: 'command-prose', source: `${suffix}.md`, classification: 'command-prose', status: 'migrated', target: `${name}/SKILL.md`, target_name: name });
+    const identity = commandNameFromSourcePath(file.path);
+    behaviors.push({ kind: 'command-prose', source: `${identity.name}.md`, classification: 'command-prose', status: 'migrated', target: `${identity.name}/SKILL.md`, target_name: identity.name });
   }
   for (const file of sourceFiles(context, 'skills')) {
     if (!file.path.endsWith('/SKILL.md') || file.path.includes('template-skill')) continue;
@@ -491,11 +668,10 @@ ${body}`;
       root: '../skills',
       authorityPath: '../migration-behavior-matrix.json',
       mapRecord(cmd) {
-        const suffix = cmd.source.slice(0, -3);
-        const name = `cmd_${suffix.replaceAll('/', '_')}`;
+        const command = commandNameFromSourcePath(`commands/${cmd.source}`);
         return {
-          name: '/' + name,
-          path: `${name}/SKILL.md`
+          name: '/' + command.name,
+          path: `${command.name}/SKILL.md`
         };
       }
     },
