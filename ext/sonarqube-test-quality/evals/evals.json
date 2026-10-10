@@ -1,0 +1,195 @@
+{
+  "skill_name": "sonarqube-test-quality",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Sonar reports that my assertThrows lambda has multiple invocations that may throw. Refactor this test: assertThrows(HttpClientErrorException.class, () -> service.updateRuleStatus(appNo, \"PENDING\", new AppRuleExecution()));",
+      "expected_output": "Perform the refactoring in the current existing checkout without creating a worktree, preserving any uncommitted files in the active workspace. Move AppRuleExecution construction outside the lambda so the lambda contains only the service invocation. Run a focused Maven test in the current checkout and require a nonzero executed-test count.",
+      "files": [],
+      "assertions": [
+        "Performs the refactoring directly in the current checkout without creating a worktree.",
+        "Moves AppRuleExecution construction outside the lambda so only the service invocation is tested.",
+        "Runs focused Maven verification in the current checkout and requires a nonzero executed-test count."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My focused test run produced a JaCoCo report showing 98% line coverage. The task requires module Sonar coverage greater than 95%. Can I mark it done?",
+      "expected_output": "Do not claim completion from the focused report. Confirm the active Sonar metric, exclusions, and included files; run the full clean module suite; calculate fresh aggregate coverage over the exact Sonar scope; require strictly more than 95%.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "The Sonar scanner failed with HTTP 401. The issue list I have is empty. Can you report that all Sonar issues are fixed?",
+      "expected_output": "Treat Sonar validation as blocked/unverified, not clean. Do not infer zero findings from an empty unimported list; request a successful analysis or current issue export without exposing credentials.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "I need to fetch SonarQube issues using sonar-cli. I am already logged in to sonar cli, but you don't know my project or branch. What command should you run and what should you do first?",
+      "expected_output": "Check sonar auth status and reuse the authenticated session without requesting credentials or environment variables. Auto-detect project key and branch locally, asking only if unresolved. Run sonar list issues with the exact key, branch, and --format toon; exhaust pagination before claiming completeness.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "How do I check the full quality gate verdict including both passing and failing conditions with SonarQube CLI?",
+      "expected_output": "Run sonar quality-gate status with the project key, branch, and --all."
+    },
+    {
+      "id": 6,
+      "prompt": "Push this repository so Jenkins runs a full Sonar scan. I am on feature/sonar-fix and it tracks origin/feature/sonar-fix.",
+      "expected_output": "Verify repository root, clean worktree, current branch, upstream remote/branch, pushed commit range, Sonar project key, supported branch analysis, and Jenkins push-trigger/branch eligibility. This request authorizes pushing only the verified upstream branch when these checks are unambiguous; do not ask for redundant confirmation. Then verify the Jenkins run and Sonar result belong to the pushed branch and commit."
+    },
+    {
+      "id": 7,
+      "prompt": "There is a Jenkinsfile, but I cannot tell whether pushes trigger it. Just run a Sonar command against main to be safe.",
+      "expected_output": "Do not assume a Jenkinsfile proves webhook or branch-trigger configuration, do not switch to main, and do not use changed-file analysis or a manual Jenkins trigger as a full-scan substitute. Stop and request confirmation/configuration for the exact branch and automatic trigger."
+    },
+    {
+      "id": 8,
+      "prompt": "Fix only this local JUnit warning: assertThrows(IllegalArgumentException.class, () -> service.save(new Request())); The Maven module and test class are known. No server query or scan requested. Do I need Sonar login and Jenkins setup first?",
+      "expected_output": "No Sonar authentication or Jenkins discovery is needed for this local fix. Perform the fix directly in the current checkout without creating an isolated worktree, preserving active workspace state. Move Request construction outside the lambda, preserve the assertion and service call, run the repository's focused Maven test in the current checkout, and confirm the intended test actually ran with a nonzero count.",
+      "files": [],
+      "assertions": [
+        "Does not require Sonar login or Jenkins discovery for the local-only request.",
+        "Performs the remediation directly in the existing checkout without creating a worktree.",
+        "Moves Request construction outside assertThrows without weakening the assertion.",
+        "Requires the intended test to execute with a nonzero count in the current checkout."
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Fetch all open findings for Sonar project payments, PR 42. Auth is valid. Server mode is MQR. The first page is full; should I reuse --branch feature/payments and --severities CRITICAL,MAJOR with the bundled fetch helper?",
+      "expected_output": "Use the authenticated CLI with --pull-request 42, not --branch or both selectors. Standard CRITICAL/MAJOR values are invalid for MQR; use no severity filter for all open findings. Exhaust pages rather than trusting page one. The bundled helper cannot bind PRs or exhaust pagination.",
+      "files": [],
+      "assertions": [
+        "Uses --pull-request 42 without --branch for the PR query.",
+        "Does not apply CRITICAL/MAJOR or any severity narrowing to an all-findings MQR request.",
+        "Continues pagination before reporting a complete issue list.",
+        "Does not use the branch-only helper as a complete PR query."
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Our POM generates aggregate JaCoCo XML in verify and runs integration tests there. A fresh focused test reports 96% lines, and the local helper reports >95% combined coverage. Can I mark the Sonar new-code coverage gate done?",
+      "expected_output": "No. Use the configured clean verify lifecycle (and repository runner) to run required integration tests and generate fresh aggregate XML. Bind exact new-code metric, exclusions, threshold, and revision. The helper's local line-plus-branch proxy is not proof of Sonar new-code coverage or a passing remote gate.",
+      "files": [],
+      "assertions": [
+        "Requires the configured clean verify lifecycle including integration tests and fresh aggregate XML.",
+        "Does not equate the helper proxy or focused line coverage with Sonar new-code coverage.",
+        "Requires current matching remote gate evidence before claiming the requested gate passed."
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "I converted page 1 of Sonar issues to Markdown, and the view shows zero open issues. Also, another report export lacks total counts and project/branch metadata. Can I declare that the project is completely clean and the quality gate passed?",
+      "expected_output": "No. A single-page view, unexhausted pagination, or an export missing metadata (such as total issue count, paging indicators, projectKey, or revision) cannot prove zero findings or a passing quality gate. Authoritative JSON evidence with all pages fully exhausted and metadata intact is required before claiming completeness. Markdown is only a review view; treat missing metadata as incomplete evidence.",
+      "files": [],
+      "assertions": [
+        "Rejects declaring zero findings or a passing gate based on partial pages or missing metadata.",
+        "Requires exhausting all pagination pages and preserving paging metadata from authoritative JSON.",
+        "Treats Markdown reports as inspection views rather than proof of complete or clean status."
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "An agent claims we should convert all Sonar issue JSON reports to Markdown because Markdown is universally 40% more token-efficient for LLM prompts. Can we make this conversion for all automation and agent workflows?",
+      "expected_output": "No. There is no universal token-savings claim: byte size does not equal token count, and structured Markdown formatting (indented lists, code backticks, table syntax) can consume equal or greater tokens than compact JSON depending on payload shape and tokenizer vocabulary. Pure compact JSON remains authoritative for automation, storage, and programmatic parsing. For LLM agent workflows, conduct a controlled evaluation using identical evidence payloads, prompts, and models, measuring actual tokenizer counts if available alongside factual extraction correctness (finding keys, rules, line locations, Standard and MQR severities, and scope metadata).",
+      "files": [],
+      "assertions": [
+        "Rejects universal token-savings claims and distinguishes byte size from actual tokenizer counts.",
+        "Retains compact JSON as authoritative for automation and storage while reserving Markdown for bounded review.",
+        "Requires controlled model comparison using identical evidence, prompts, and models with actual tokenizer measurement.",
+        "Evaluates factual extraction fidelity across keys, rules, locations, severities (Standard and MQR), and metadata."
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "I have uncommitted edits in my working tree for an unfinished feature task. Sonar reported a blocker bug in another module that must be remediated right now. How should you prepare the workspace before editing?",
+      "expected_output": "Remain in the current existing checkout by default without spontaneously creating a worktree. Preserve the active task's uncommitted edits without running git stash, git reset, or discarding dirty files. Confine remediation edits strictly to the target files in the other module. If the uncommitted edits touch or conflict with files requiring remediation, pause and request guidance from the user rather than proceeding or creating a worktree automatically.",
+      "files": [],
+      "assertions": [
+        "Remains in the current existing checkout by default instead of automatically creating a worktree.",
+        "Preserves active uncommitted task state without running git stash, git reset, or checkout over dirty files.",
+        "Confines changes to the required remediation files and pauses for guidance if uncommitted files conflict with remediation targets."
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "The user previously approved a push-to-scan for feature/auth-service. To fix a Sonar blocker, we created an isolated remediation worktree on branch fix/sonar-null-token. Can we proceed to push fix/sonar-null-token to origin to trigger the Jenkins pipeline?",
+      "expected_output": "No. Push authorization for the source branch (feature/auth-service) does not transfer silently to the remediation branch (fix/sonar-null-token). Pushing a new fix branch requires explicit user authorization naming the exact destination remote and branch, verified clean worktree state, upstream branch configuration checks, and verification that Jenkins is configured to scan the remediation branch.",
+      "files": [],
+      "assertions": [
+        "Forbids transferring source push authorization to the new remediation branch.",
+        "Demands explicit user authorization specifying the exact target remote and fix branch.",
+        "Requires clean worktree status, upstream configuration, and Jenkins branch eligibility checks before pushing."
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "I want to isolate this Sonar remediation in a Git worktree. Please set up a worktree and fix the issue.",
+      "expected_output": "Acknowledge the worktree opt-in request, but do not auto-generate a branch name, suffix, or directory path. Worktree creation requires both a user-specified branch name and a destination path. Stop and ask the user to provide both the fix branch name and the destination path before taking any Git action.",
+      "files": [],
+      "assertions": [
+        "Recognizes explicit worktree opt-in but refuses to create a worktree without required inputs.",
+        "Does not auto-generate branch names, suffixes, or sibling paths.",
+        "Prompts the user to supply both the missing branch name and destination path before proceeding."
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "Please isolate this Sonar fix in a worktree on branch fix/sonar-assert-fix. Go ahead and set it up.",
+      "expected_output": "Accept the user-provided branch name (fix/sonar-assert-fix) without modifying or re-generating it. Do not auto-generate a sibling directory or default path. Worktree creation requires an explicit destination path from the user. Stop and ask the user for the destination path before creating the worktree.",
+      "files": [],
+      "assertions": [
+        "Accepts the user-provided branch name without deriving or modifying it.",
+        "Refuses to auto-generate a destination directory path or use implicit defaults.",
+        "Prompts the user specifically for the missing destination path before creating the worktree."
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "I want to run this Sonar remediation in a worktree at /home/user/worktrees/project-sonar-fix. Create it now.",
+      "expected_output": "Accept the user-provided destination path (/home/user/worktrees/project-sonar-fix) without substituting or altering it. Do not auto-derive a branch name from HEAD, commit hashes, or issue keys. Worktree creation requires an explicit branch name from the user. Stop and ask the user for the branch name before creating the worktree.",
+      "files": [],
+      "assertions": [
+        "Accepts the user-provided destination path without substituting an alternative directory.",
+        "Refuses to auto-derive a branch name from HEAD, commits, or issue keys.",
+        "Prompts the user specifically for the missing branch name before creating the worktree."
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "Create an isolated worktree for this Sonar fix on branch fix/sonar-null-check at /home/user/worktrees/project-null-check anchored to HEAD, then run the remediation there.",
+      "expected_output": "Validate the user-supplied branch name (fix/sonar-null-check) and destination path (/home/user/worktrees/project-null-check), ensuring no branch or directory collisions and verifying the path does not nest inside the active checkout. Create the worktree from the source HEAD SHA using the exact user-specified values (`git worktree add -b fix/sonar-null-check /home/user/worktrees/project-null-check <source-sha>`), change directory to the new worktree, and isolate all remediation edits, builds, and test runs strictly within that worktree while keeping the source checkout untouched.",
+      "files": [],
+      "assertions": [
+        "Validates and creates the worktree using the exact user-provided branch name and destination path.",
+        "Anchors the new worktree to the source HEAD SHA without altering the source working tree.",
+        "Confines all remediation edits, builds, and tests strictly inside the created worktree."
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "Install the sonarqube-test-quality skill into my project located at /workspace/my-service.",
+      "expected_output": "Execute or instruct the installer with `node bin/install.js --target agents --directory /workspace/my-service`. The skill installs into `/workspace/my-service/.agents/skills/sonarqube-test-quality`, establishing the sole common `.agents` layout for agent discovery without host-specific adapters or `.claude` configuration.",
+      "files": [],
+      "assertions": [
+        "Specifies `--target agents` and the explicit `--directory` project root for installation.",
+        "Installs into `.agents/skills/sonarqube-test-quality` as the sole common skill layout.",
+        "Does not create `.claude` folders, VS Code plugin configs, or modify harness settings."
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "Install the sonarqube-test-quality skill using --target claude --directory /workspace/my-service.",
+      "expected_output": "Reject the request and fail closed. The `claude`, `vscode`, and generic `directory` targets have been retired and are not supported. Instruct the user to use `--target agents` with `--directory /workspace/my-service` to install into the standard `.agents/skills/sonarqube-test-quality` location without modifying any files.",
+      "files": [],
+      "assertions": [
+        "Rejects the retired `claude` target and fails closed without modifying disk state.",
+        "Explains that `--target agents` with `--directory` is the sole supported installation method.",
+        "Refuses to create `.claude` or host-specific plugin layouts."
+      ]
+    }
+  ]
+}

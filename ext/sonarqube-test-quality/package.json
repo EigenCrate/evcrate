@@ -1,0 +1,30 @@
+{
+  "name": "@evcrate/sonarqube-test-quality",
+  "version": "1.0.0",
+  "description": "Portable SonarQube test-quality skill with common agents installer",
+  "type": "module",
+  "bin": {
+    "sonarqube-test-quality-install": "./bin/install.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "SKILL.md",
+    "references",
+    "scripts",
+    "evals",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "sonarqube",
+    "agent-skill",
+    "testing",
+    "jacoco"
+  ]
+}
