@@ -163,6 +163,55 @@ You are an edit-capable test agent for VS Code Local contract qualification.
 You have explicit edit tool access (editFiles, createFile, multiReplaceString) to disposable files. You must not run terminal commands or delegate.
 `;
 
+export const FIXTURE_COORDINATOR_AGENT = `---
+name: contract-coordinator
+description: "Local qualification coordinator agent with subagent delegation capability and permitted child"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - agent/runSubagent
+agents:
+  - contract-reader
+  - evc-scout
+---
+
+You are a coordinator test agent for VS Code Local contract qualification.
+You have the subagent runner tool declared (agent/runSubagent) and an allowlist permitting contract-reader and evc-scout.
+You can delegate tasks to permitted subagents.
+`;
+
+export const FIXTURE_TERMINAL_AGENT = `---
+name: contract-terminal
+description: "Local qualification agent with terminal execution capability family"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - runInTerminal
+  - getTerminalOutput
+  - killTerminal
+agents: []
+---
+
+You are a terminal test agent for VS Code Local contract qualification.
+You have terminal capability family tool access (runInTerminal, getTerminalOutput, killTerminal).
+You must not edit files or delegate.
+`;
+
+export const FIXTURE_TODO_AGENT = `---
+name: contract-todo
+description: "Local qualification agent with todo list tool access"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - todo
+agents: []
+---
+
+You are a todo test agent for VS Code Local contract qualification.
+You have todo tool access (todo).
+You must not edit files, run terminal commands, or delegate.
+`;
+
 export const FIXTURE_SKILL_ECHO = `---
 name: contract-echo
 description: "Manual slash-invoked echo skill for argument testing"
@@ -389,6 +438,9 @@ export function materializeFixture({ destination, captureDirectory }) {
     { rel: 'com.github.copilot/agents/contract-reader.agent.md', content: FIXTURE_READER_AGENT, mode: 0o644 },
     { rel: 'com.github.copilot/agents/contract-no-child.agent.md', content: FIXTURE_NO_CHILD_AGENT, mode: 0o644 },
     { rel: 'com.github.copilot/agents/contract-editor.agent.md', content: FIXTURE_EDITOR_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-coordinator.agent.md', content: FIXTURE_COORDINATOR_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-terminal.agent.md', content: FIXTURE_TERMINAL_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-todo.agent.md', content: FIXTURE_TODO_AGENT, mode: 0o644 },
     { rel: 'com.github.copilot/rules/bootstrap.instructions.md', content: FIXTURE_BOOTSTRAP_INSTRUCTIONS, mode: 0o644 },
     { rel: 'com.github.copilot/hooks/hooks.json', content: JSON.stringify(FIXTURE_HOOKS_JSON, null, 2) + '\n', mode: 0o644 },
     { rel: 'evcrate/capture-hook.cjs', content: FIXTURE_CAPTURE_HOOK_CJS, mode: 0o755 }

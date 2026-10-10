@@ -39,6 +39,9 @@ test('vscode-local: materializeFixture creates plugin components with expected c
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-reader.agent.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-no-child.agent.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-editor.agent.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-coordinator.agent.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-terminal.agent.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/agents/contract-todo.agent.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/rules/bootstrap.instructions.md')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'com.github.copilot/hooks/hooks.json')));
     assert.ok(fs.existsSync(path.join(tmpDir, 'evcrate/capture-hook.cjs')));
@@ -67,6 +70,20 @@ test('vscode-local: materializeFixture creates plugin components with expected c
     assert.ok(editorContent.includes('createFile'));
     assert.ok(editorContent.includes('multiReplaceString'));
     assert.ok(editorContent.includes('agents: []'));
+
+    const coordinatorContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-coordinator.agent.md'), 'utf8');
+    assert.ok(coordinatorContent.includes('agent/runSubagent'));
+    assert.ok(coordinatorContent.includes('contract-reader'));
+
+    const terminalContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-terminal.agent.md'), 'utf8');
+    assert.ok(terminalContent.includes('runInTerminal'));
+    assert.ok(terminalContent.includes('getTerminalOutput'));
+    assert.ok(terminalContent.includes('killTerminal'));
+    assert.ok(terminalContent.includes('agents: []'));
+
+    const todoContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-todo.agent.md'), 'utf8');
+    assert.ok(todoContent.includes('todo'));
+    assert.ok(todoContent.includes('agents: []'));
     // Verify plugin.json contents
     const pluginData = JSON.parse(fs.readFileSync(path.join(tmpDir, 'plugin.json'), 'utf8'));
     assert.equal(pluginData.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
