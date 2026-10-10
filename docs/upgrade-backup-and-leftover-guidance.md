@@ -59,7 +59,7 @@ The reported records classify leftovers into five canonical kinds:
 ### Machine and Human Interfaces
 
 #### Machine JSON Interface (`--json`)
-The `PublishApplyResultPayload` includes an optional `legacyLeftovers` array sorted deterministically by `target`, `path`, and `kind`:
+Both `PublishApplyResultPayload` and `PublishDryRunResultPayload` include an optional `legacyLeftovers` array sorted deterministically by `target`, `path`, and `kind`:
 ```json
 {
   "status": "published",
@@ -86,7 +86,7 @@ The `PublishApplyResultPayload` includes an optional `legacyLeftovers` array sor
 ```
 
 #### Human TTY Output
-Standard TTY output prints the `published` status followed by human-readable warnings:
+Standard TTY output prints the `published` (or `preview` on dry-run) status followed by human-readable warnings:
 ```text
 published
 Warning: Preserved untracked legacy artifacts detected:

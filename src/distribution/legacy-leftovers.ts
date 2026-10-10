@@ -297,10 +297,29 @@ function resolveTargetRootOnDisk(target: PublicationStateTarget, destinationRoot
   }
 }
 
-function isPathRecorded(ownership: PriorManagedOwnership | undefined, target: string, path: string): boolean {
+const TARGET_ROOT_BINDINGS: Readonly<Record<PublicationStateTarget, readonly string[]>> = Object.freeze({
+  claude: Object.freeze(['.claude']),
+  codex: Object.freeze(['.codex']),
+  antigravity: Object.freeze(['.gemini/config', '.antigravity']),
+  copilot: Object.freeze(['.copilot']),
+  omp: Object.freeze(['.omp']),
+  pi: Object.freeze(['.pi']),
+  vscode: Object.freeze(['.evcrate-vscode']),
+  gemini: Object.freeze(['.gemini'])
+});
+
+function isPathRecorded(
+  ownership: PriorManagedOwnership | undefined,
+  target: string,
+  path: string,
+  bindings?: readonly string[]
+): boolean {
   if (!ownership) return false;
   const targetBindings = ownership[target];
   if (!targetBindings) return false;
+  if (bindings !== undefined) {
+    return bindings.some((binding) => targetBindings[binding]?.includes(path) === true);
+  }
   for (const paths of Object.values(targetBindings)) {
     if (paths.includes(path)) return true;
   }
@@ -352,6 +371,9 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
 
   for (const target of options.selectedTargets) {
     const targetRoot = resolveTargetRootOnDisk(target, options.destinationRoot, options.scope);
+    const rootBindings = target === 'antigravity' && options.scope === 'project'
+      ? ['.antigravity']
+      : TARGET_ROOT_BINDINGS[target];
     const candidateItems = legacyItemsForTarget(target, options.scope);
 
     // Check target-relative items inside the target root directory
@@ -373,8 +395,8 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
         if (seen.has(dedupeKey)) continue;
 
         // Check if recorded as managed in current or previous ownership
-        if (isPathRecorded(options.currentOwnership, target, targetRelPath)) continue;
-        if (isPathRecorded(options.previousOwnership, target, targetRelPath)) continue;
+        if (isPathRecorded(options.currentOwnership, target, targetRelPath, rootBindings)) continue;
+        if (isPathRecorded(options.previousOwnership, target, targetRelPath, rootBindings)) continue;
 
         seen.add(dedupeKey);
         leftovers.push(Object.freeze({
@@ -396,8 +418,9 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
             const relPath = normalizeRelativePath(`cmd_${underscored}/SKILL.md`);
             const dedupeKey = `codex:${relPath}`;
             if (!seen.has(dedupeKey)
-              && !isPathRecorded(options.currentOwnership, 'codex', relPath)
-              && !isPathRecorded(options.previousOwnership, 'codex', relPath)) {
+              && !isPathRecorded(options.currentOwnership, 'codex', relPath, ['.agents/skills'])
+              && !isPathRecorded(options.previousOwnership, 'codex', relPath, ['.agents/skills'])
+              && !isPathRecorded(options.previousOwnership, 'codex', `skills/${relPath}`, ['.agents'])) {
               seen.add(dedupeKey);
               leftovers.push(Object.freeze({
                 target: 'codex',
@@ -410,8 +433,8 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
       }
     }
 
-    // Also check Antigravity predecessor root: .gemini in HOME scope
-    if (target === 'antigravity' && options.scope === 'home') {
+    // Also check Antigravity predecessor root: .gemini in both HOME and project scopes
+    if (target === 'antigravity') {
       const geminiRoot = join(options.destinationRoot, '.gemini');
       if (existsSync(geminiRoot)) {
         for (const item of candidateItems) {
@@ -426,9 +449,9 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
           const targetRelPath = normalizeRelativePath(item.relativePath);
           const dedupeKey = `antigravity:${targetRelPath}`;
           if (seen.has(dedupeKey)) continue;
-          if (isPathRecorded(options.currentOwnership, 'antigravity', targetRelPath)) continue;
-          if (isPathRecorded(options.previousOwnership, 'antigravity', targetRelPath)) continue;
-          if (isPathRecorded(options.previousOwnership, 'gemini', targetRelPath)) continue;
+          if (isPathRecorded(options.currentOwnership, 'antigravity', targetRelPath, ['.gemini'])) continue;
+          if (isPathRecorded(options.previousOwnership, 'antigravity', targetRelPath, ['.gemini'])) continue;
+          if (isPathRecorded(options.previousOwnership, 'gemini', targetRelPath, ['.gemini'])) continue;
           seen.add(dedupeKey);
           leftovers.push(Object.freeze({
             target: 'antigravity',
@@ -445,8 +468,8 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
         if (existsSync(projectClaude)) {
           const dedupeKey = 'claude:CLAUDE.md';
           if (!seen.has(dedupeKey)
-            && !isPathRecorded(options.currentOwnership, 'claude', 'CLAUDE.md')
-            && !isPathRecorded(options.previousOwnership, 'claude', 'CLAUDE.md')) {
+            && !isPathRecorded(options.currentOwnership, 'claude', 'CLAUDE.md', ['CLAUDE.md'])
+            && !isPathRecorded(options.previousOwnership, 'claude', 'CLAUDE.md', ['CLAUDE.md'])) {
             try {
               if (!lstatSync(projectClaude).isDirectory()) {
                 seen.add(dedupeKey);
@@ -466,9 +489,9 @@ export function detectLegacyLeftovers(options: LegacyLeftoverScanOptions): reado
         if (existsSync(projectGemini)) {
           const dedupeKey = `${target}:GEMINI.md`;
           if (!seen.has(dedupeKey)
-            && !isPathRecorded(options.currentOwnership, target, 'GEMINI.md')
-            && !isPathRecorded(options.previousOwnership, target, 'GEMINI.md')
-            && !isPathRecorded(options.previousOwnership, 'gemini', 'GEMINI.md')) {
+            && !isPathRecorded(options.currentOwnership, target, 'GEMINI.md', ['GEMINI.md'])
+            && !isPathRecorded(options.previousOwnership, target, 'GEMINI.md', ['GEMINI.md'])
+            && !isPathRecorded(options.previousOwnership, 'gemini', 'GEMINI.md', ['GEMINI.md'])) {
             try {
               if (!lstatSync(projectGemini).isDirectory()) {
                 seen.add(dedupeKey);

@@ -356,8 +356,14 @@ function markerManagedOwnership(
   return Object.freeze({});
 }
 function homePriorOwnership(marker: Record<string, unknown> | null): PriorManagedOwnership {
-  return marker?.schema_version === 2
-    ? markerManagedOwnership(marker, 'harness') : Object.freeze({});
+  if (marker?.schema_version === 2) return markerManagedOwnership(marker, 'harness');
+  if (marker?.transaction_type === 'target-publication') {
+    if (marker.status !== 'complete' && marker.status !== 'recovered') fail('RECOVERY_FAILED');
+    const selected = publicationStateTargets(marker.selected_targets, true);
+    const layout = publicationStateLayout(marker.binding_order, selected, 'home', true);
+    return publicationFlatOwnership(marker.managed_paths, selected, 'home', layout.generation);
+  }
+  return Object.freeze({});
 }
 function projectPriorOwnership(marker: Record<string, unknown> | null): PriorManagedOwnership {
   if (marker?.schema_version === 2) return markerManagedOwnership(marker, 'harness');
@@ -447,11 +453,29 @@ function dryRunPhase(plan: PublicationPlan, phase: 'shared' | 'harness'): DryRun
     changes: phaseChanges(plan, phase)
   });
 }
-function dryRunPayload(plan: PublicationPlan): PublishDryRunResultPayload {
+function dryRunPayload(
+  plan: PublicationPlan,
+  options?: {
+    readonly destinationRoot?: string;
+    readonly previousMarker?: Record<string, unknown> | null;
+  }
+): PublishDryRunResultPayload {
+  const previousOwnership = options?.previousMarker !== undefined
+    ? homePriorOwnership(options.previousMarker) : Object.freeze({});
+  const legacyLeftovers = options?.destinationRoot !== undefined
+    ? detectLegacyLeftovers({
+        scope: 'home',
+        selectedTargets: plan.selectedTargets,
+        destinationRoot: options.destinationRoot,
+        currentOwnership: plan.managedOwnership,
+        previousOwnership
+      })
+    : Object.freeze([]);
   return Object.freeze({
     scope: 'home', projectIdentity: null,
     buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-    phases: [dryRunPhase(plan, 'shared'), dryRunPhase(plan, 'harness')] as const
+    phases: [dryRunPhase(plan, 'shared'), dryRunPhase(plan, 'harness')] as const,
+    legacyLeftovers
   });
 }
 function applyPhase(
@@ -801,12 +825,22 @@ function assertProjectMarkerBinding(
 }
 
 function projectDryRunPayload(
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan
+  shared: PublicationPhasePlan, harness: PublicationPhasePlan,
+  previousMarker: Record<string, unknown> | null = null
 ): PublishDryRunResultPayload {
+  const previousOwnership = projectPriorOwnership(previousMarker);
+  const legacyLeftovers = detectLegacyLeftovers({
+    scope: 'project',
+    selectedTargets: harness.selectedTargets,
+    destinationRoot: harness.destinationRoot,
+    currentOwnership: harness.managedOwnership,
+    previousOwnership
+  });
   return Object.freeze({
     scope: 'project', projectIdentity: harness.projectIdentity,
     buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
-    phases: [scopedDryRunPhase(shared), scopedDryRunPhase(harness)] as const
+    phases: [scopedDryRunPhase(shared), scopedDryRunPhase(harness)] as const,
+    legacyLeftovers
   });
 }
 function projectApplyPayload(
@@ -896,7 +930,7 @@ export function publishDryRun(
     const plans = createPublicationPlanSet(context, {
       scope: 'project', priorManagedOwnership: projectPriorOwnership(projectMarker)
     });
-    return projectDryRunPayload(plans.shared, plans.harness);
+    return projectDryRunPayload(plans.shared, plans.harness, projectMarker);
   }
   const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
   if (readPublicationJournal(stateRoot)) fail('RECOVERY_FAILED');
@@ -914,7 +948,7 @@ export function publishDryRun(
     fail('RECOVERY_FAILED');
   }
   const plan = homePublicationPlan(context, stateRoot, marker);
-  return dryRunPayload(plan);
+  return dryRunPayload(plan, { destinationRoot: context.homeRoot, previousMarker: marker });
 }
 export function publishApply(
   context: InvocationContext, options: PublicationOptions = {},

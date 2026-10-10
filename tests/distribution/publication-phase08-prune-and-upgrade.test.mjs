@@ -10,14 +10,16 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
-  PERSISTED_TARGETS, createPublicationPlanSet, publishApply,
+  PERSISTED_TARGETS, createPublicationPlanSet, publishApply, publishDryRun,
   publicationStateRoot, resolveInvocationContext, resolvePublicationProjectContext, runLocalBuild,
   canonicalJsonBytes, hashBytes, readPublicationJournal, recoverPublicationUnlocked
 } from '../../dist/index.js';
 import { resolve } from 'node:path';
 import { prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 import { renderResult } from '../../dist/cli/output.js';
-import { validatePublishApplyResultPayload } from '../../dist/protocol/publication-payloads.js';
+import {
+  validatePublishApplyResultPayload, validatePublishDryRunResultPayload
+} from '../../dist/protocol/publication-payloads.js';
 import { readOptionalPublicationMarker, validatePublicationStateRecord } from '../../dist/distribution/publication-inventory.js';
 let packageRoot;
 let fixtureRoot;
@@ -412,9 +414,27 @@ test('Phase 08: Untracked legacy files are preserved and reported in legacyLefto
     // Also create an unrelated user file that should NOT be reported
     const unrelatedFile = userFile(home, '.claude/commands/my-custom-script.md', '# Custom\n');
 
+    // Dry-run must report legacyLeftovers without modifying disk state
+    const dryRunResult = publishDryRun(context, { scope: 'home', selectedTargets: ['claude'] });
+    assert.equal(existsSync(join(home, '.claude/commands/evc-cmd-code.md')), false, 'Dry-run must not write new commands');
+    assert.ok(Array.isArray(dryRunResult.legacyLeftovers), 'Dry-run result must contain legacyLeftovers array');
+    assert.deepEqual(
+      dryRunResult.legacyLeftovers.map((l) => l.path),
+      ['agents/planner.md', 'commands/code.md'],
+      'Dry-run must report exact untracked legacy leftovers'
+    );
+    const dryRunTty = renderResult({
+      protocol: 'evcrate-resource-control',
+      protocolVersion: 1,
+      requestId: 'test-dry-req',
+      operation: 'publish.dry-run',
+      status: 'preview',
+      payload: dryRunResult
+    }, { isTTY: true });
+    assert.match(dryRunTty, /^preview\nWarning: Preserved untracked legacy artifacts detected:/);
+
     // Publish without prior ownership (fresh install / untracked predecessor)
     const result = publishApply(context, {}, { scope: 'home', selectedTargets: ['claude'] });
-
     // Files must be preserved
     assert.equal(existsSync(untrackedCmd), true, 'Untracked legacy command must be preserved');
     assert.equal(readFileSync(untrackedCmd, 'utf8'), '# Untracked legacy code\n');
@@ -469,7 +489,7 @@ test('Phase 08: Untracked legacy files are preserved and reported in legacyLefto
   }
 });
 
-test('Phase 08: validatePublishApplyResultPayload enforces strict leftover validation and absent-field compatibility', () => {
+test('Phase 08: validatePublishApplyResultPayload and validatePublishDryRunResultPayload enforce strict leftover validation and absent-field compatibility', () => {
   const validBase = {
     scope: 'home',
     projectIdentity: null,
@@ -480,54 +500,69 @@ test('Phase 08: validatePublishApplyResultPayload enforces strict leftover valid
       { phase: 'harness', scope: 'home', status: 'committed', releaseId: 'rel-1', retainedReleaseId: null, selectedTargets: ['omp'], bindingOrder: ['.omp'], changes: [] }
     ]
   };
-
-  // 1. Absent legacyLeftovers is valid and accepted (backward compatibility)
-  const withoutLeftovers = validatePublishApplyResultPayload(validBase);
-  assert.equal(withoutLeftovers.scope, 'home');
-
-  // 2. Valid legacyLeftovers is preserved
-  const withValid = {
-    ...validBase,
-    legacyLeftovers: [
-      { target: 'omp', path: 'commands/cmd-code.md', kind: 'command' }
+  const validDryRunBase = {
+    scope: 'home',
+    projectIdentity: null,
+    buildManifestPath: '.evcrate/build-manifest-omp.json',
+    buildManifestDigest: 'a'.repeat(64),
+    phases: [
+      { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
+      { phase: 'harness', scope: 'home', selectedTargets: ['omp'], bindingOrder: ['.omp'], changes: [] }
     ]
   };
-  const validatedWith = validatePublishApplyResultPayload(withValid);
-  assert.deepEqual(validatedWith.legacyLeftovers, withValid.legacyLeftovers);
 
-  // 3. Unselected target in legacyLeftovers throws VALIDATION_INVALID
-  assert.throws(
-    () => validatePublishApplyResultPayload({
-      ...validBase,
-      legacyLeftovers: [{ target: 'claude', path: 'commands/code.md', kind: 'command' }]
-    }),
-    (err) => err?.code === 'VALIDATION_INVALID'
-  );
+  for (const [validate, base] of [
+    [validatePublishApplyResultPayload, validBase],
+    [validatePublishDryRunResultPayload, validDryRunBase]
+  ]) {
+    // 1. Absent legacyLeftovers is valid and accepted (backward compatibility)
+    const withoutLeftovers = validate(base);
+    assert.equal(withoutLeftovers.scope, 'home');
 
-  // 4. Invalid kind throws VALIDATION_INVALID
-  assert.throws(
-    () => validatePublishApplyResultPayload({
-      ...validBase,
-      legacyLeftovers: [{ target: 'omp', path: 'commands/cmd-code.md', kind: 'invalid-kind' }]
-    }),
-    (err) => err?.code === 'VALIDATION_INVALID'
-  );
-
-  // 5. Unsorted entries throw VALIDATION_INVALID
-  assert.throws(
-    () => validatePublishApplyResultPayload({
-      ...validBase,
-      phases: [
-        validBase.phases[0],
-        { ...validBase.phases[1], selectedTargets: ['claude', 'omp'] }
-      ],
+    // 2. Valid legacyLeftovers is preserved
+    const withValid = {
+      ...base,
       legacyLeftovers: [
-        { target: 'omp', path: 'commands/cmd-code.md', kind: 'command' },
-        { target: 'claude', path: 'commands/code.md', kind: 'command' }
+        { target: 'omp', path: 'commands/cmd-code.md', kind: 'command' }
       ]
-    }),
-    (err) => err?.code === 'VALIDATION_INVALID'
-  );
+    };
+    const validatedWith = validate(withValid);
+    assert.deepEqual(validatedWith.legacyLeftovers, withValid.legacyLeftovers);
+
+    // 3. Unselected target in legacyLeftovers throws VALIDATION_INVALID
+    assert.throws(
+      () => validate({
+        ...base,
+        legacyLeftovers: [{ target: 'claude', path: 'commands/code.md', kind: 'command' }]
+      }),
+      (err) => err?.code === 'VALIDATION_INVALID'
+    );
+
+    // 4. Invalid kind throws VALIDATION_INVALID
+    assert.throws(
+      () => validate({
+        ...base,
+        legacyLeftovers: [{ target: 'omp', path: 'commands/cmd-code.md', kind: 'invalid-kind' }]
+      }),
+      (err) => err?.code === 'VALIDATION_INVALID'
+    );
+
+    // 5. Unsorted entries throw VALIDATION_INVALID
+    assert.throws(
+      () => validate({
+        ...base,
+        phases: [
+          base.phases[0],
+          { ...base.phases[1], selectedTargets: ['claude', 'omp'] }
+        ],
+        legacyLeftovers: [
+          { target: 'omp', path: 'commands/cmd-code.md', kind: 'command' },
+          { target: 'claude', path: 'commands/code.md', kind: 'command' }
+        ]
+      }),
+      (err) => err?.code === 'VALIDATION_INVALID'
+    );
+  }
 });
 test('Phase 08: Pinned stable (v2.10.2) to candidate upgrade smoke scenario across scopes', () => {
   const env = createIsolatedEnv();
@@ -691,10 +726,19 @@ test('Phase 08 / PR #24: Predecessor Gemini cleanup in project scope preserves l
     );
     writeFileSync(join(projectState, 'release-marker.json'), JSON.stringify(predecessorMarker));
 
-    // Staging: owned files (one locally modified), untracked file, and existing antigravity AGENTS.md
+    // Staging: owned files (one locally modified), untracked command skill, untracked vendor file
     const ownedGeminiCmd = userFile(project, '.gemini/commands/worktree.toml', '# User Modified Owned Gemini Cmd\n');
     const ownedGeminiMd = userFile(project, 'GEMINI.md', '# User Modified Owned GEMINI.md\n');
+    const untrackedCmdSkill = userFile(project, '.gemini/skills/cmd_advise/SKILL.md', '# Untracked Project Advise Skill\n');
     const untrackedVendor = userFile(project, '.gemini/vendor-user.txt', 'Untracked vendor content\n');
+
+    // 0. Dry-run before apply: reports untracked .gemini leftover while excluding recorded-owned files and leaving disk untouched
+    const dryRunResult = publishDryRun(projectContext, { scope: 'project', selectedTargets: ['antigravity'] });
+    assert.equal(existsSync(ownedGeminiCmd), true, 'Dry-run must not delete owned Gemini command');
+    assert.equal(existsSync(ownedGeminiMd), true, 'Dry-run must not delete owned GEMINI.md');
+    assert.deepEqual(dryRunResult.legacyLeftovers, [
+      { target: 'antigravity', path: 'skills/cmd_advise/SKILL.md', kind: 'command' }
+    ]);
 
     // 1. First invocation: publish antigravity
     const firstResult = publishApply(projectContext, {}, { scope: 'project', selectedTargets: ['antigravity'] });
@@ -704,11 +748,13 @@ test('Phase 08 / PR #24: Predecessor Gemini cleanup in project scope preserves l
     assert.equal(existsSync(ownedGeminiCmd), false, 'Owned Gemini command must be pruned');
     assert.equal(existsSync(ownedGeminiMd), false, 'Owned GEMINI.md must be pruned');
 
-    // Verify untracked user file is strictly preserved
+    // Verify untracked files are strictly preserved and untracked legacy skill is reported in legacyLeftovers
+    assert.equal(existsSync(untrackedCmdSkill), true, 'Untracked command skill must be preserved');
     assert.equal(existsSync(untrackedVendor), true, 'Untracked vendor file must be preserved');
     assert.equal(readFileSync(untrackedVendor, 'utf8'), 'Untracked vendor content\n');
-
-    // Verify active binding order in payload does not include .gemini or GEMINI.md
+    assert.deepEqual(firstResult.legacyLeftovers, [
+      { target: 'antigravity', path: 'skills/cmd_advise/SKILL.md', kind: 'command' }
+    ]);
     const harnessPhase = firstResult.phases[1];
     assert.deepEqual([...harnessPhase.selectedTargets], ['antigravity']);
     assert.equal(harnessPhase.bindingOrder.includes('.gemini'), false, 'bindingOrder must not include .gemini');

@@ -112,9 +112,13 @@ async function verifyGitHubStableApproval(receipt, { env = process.env, fetchFn 
     throw new Error('GitHub production environment requires User reviewers and prevent_self_review=true');
   }
   const branches = await get('/environments/production/deployment-branch-policies?per_page=100');
+  const branchPolicy = Array.isArray(branches.branch_policies) ? branches.branch_policies[0] : null;
   if (branches.total_count !== 1 || !Array.isArray(branches.branch_policies) ||
-      branches.branch_policies.length !== 1 || branches.branch_policies[0]?.name !== 'main' ||
-      branches.branch_policies[0]?.type !== 'branch') {
+      branches.branch_policies.length !== 1 || !Number.isSafeInteger(branchPolicy?.id) ||
+      branchPolicy.id <= 0 || branchPolicy.name !== 'main' ||
+      (branchPolicy.node_id !== undefined &&
+        (typeof branchPolicy.node_id !== 'string' || branchPolicy.node_id.length === 0)) ||
+      (branchPolicy.type !== undefined && branchPolicy.type !== 'branch')) {
     throw new Error('GitHub production environment must allow only the main branch');
   }
 

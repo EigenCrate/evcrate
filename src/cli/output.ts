@@ -74,6 +74,11 @@ function statusText(result: Record<string, unknown>, debug = false): string {
     const warning = formatLegacyLeftoversWarning(payload?.legacyLeftovers);
     return `published${warning}`;
   }
+  if (result.status === 'preview') {
+    const payload = result.payload as Record<string, unknown> | undefined;
+    const warning = formatLegacyLeftoversWarning(payload?.legacyLeftovers);
+    return `preview${warning}`;
+  }
   if (result.status === 'ok') {
     const payload = result.payload as Record<string, unknown> | undefined;
     return payload?.version ? `evcrate ${String(payload.version)}` : 'ok';

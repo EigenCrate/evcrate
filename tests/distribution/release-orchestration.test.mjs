@@ -93,7 +93,8 @@ function githubApprovalFixture(receipt) {
       ]
     },
     '/environments/production/deployment-branch-policies?per_page=100': {
-      total_count: 1, branch_policies: [{ id: 62566638, name: 'main', type: 'branch' }]
+      total_count: 1,
+      branch_policies: [{ id: 62566638, node_id: 'MDE2OkdhdGViBrb2xpY3k2MjU2NjYzOA==', name: 'main' }]
     },
     [`${runPath}/approvals`]: [{ user: reviewer, state: 'approved', environments: [environment], comment: 'Candidate reviewed' }],
     '/collaborators/release-maintainer/permission': {
@@ -1045,8 +1046,10 @@ test('stable publication requires a candidate-bound independent GitHub review be
     ['unsupported protection', (r) => { r[environmentPath].protection_rules.push({ type: 'custom' }); }, /unsupported protection/],
     ['unrestricted branches', (r) => { r[environmentPath].deployment_branch_policy = null; }, /restrict selected branches/],
     ['wildcard branch', (r) => { r[branchPath].branch_policies[0].name = '*'; }, /only the main branch/],
+    ['missing branch policy id', (r) => { delete r[branchPath].branch_policies[0].id; }, /only the main branch/],
+    ['invalid branch policy node_id', (r) => { r[branchPath].branch_policies[0].node_id = ''; }, /only the main branch/],
     ['main tag instead of branch', (r) => { r[branchPath].branch_policies[0].type = 'tag'; }, /only the main branch/],
-    ['additional branch', (r) => { r[branchPath].total_count = 2; r[branchPath].branch_policies.push({ name: 'next', type: 'branch' }); }, /only the main branch/],
+    ['additional branch', (r) => { r[branchPath].total_count = 2; r[branchPath].branch_policies.push({ id: 62566639, name: 'next' }); }, /only the main branch/],
     ['wrong run', (r, p) => { r[p].id += 1; }, /does not match candidate/],
     ['wrong commit', (r, p) => { r[p].head_sha = '8'.repeat(40); }, /does not match candidate/],
     ['wrong attempt', (r, p) => { r[p].run_attempt = 2; }, /does not match candidate/],
@@ -1139,8 +1142,9 @@ test('stable publication requires a candidate-bound independent GitHub review be
     assert.deepEqual(result.receipt, candidateReceipt);
   });
 
-  await t.test('admin reviewer and GH_TOKEN are supported', async () => {
+  await t.test('admin reviewer, explicit branch type, and GH_TOKEN are supported', async () => {
     const github = githubApprovalFixture(candidateReceipt);
+    github.responses[branchPath].branch_policies[0].type = 'branch';
     github.responses[permissionPath].role_name = 'admin';
     github.responses[permissionPath].permission = 'admin';
     const result = await publishRelease.runPublishRelease({ ...options, env: { GH_TOKEN: 'test-token' }, fetchFn: github.fetchFn });

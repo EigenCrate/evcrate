@@ -353,6 +353,11 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
     ]
   };
   assert.deepEqual(validatePublishDryRunResultPayload(dryRun), dryRun);
+  const dryRunWithLeftovers = {
+    ...dryRun,
+    legacyLeftovers: [{ target: 'omp', path: 'commands/cmd-code.md', kind: 'command' }]
+  };
+  assert.deepEqual(validatePublishDryRunResultPayload(dryRunWithLeftovers), dryRunWithLeftovers);
   const nativeCopilotProject = {
     ...dryRun, scope: 'project', projectIdentity: 'c'.repeat(64),
     phases: [dryRun.phases[0], {
