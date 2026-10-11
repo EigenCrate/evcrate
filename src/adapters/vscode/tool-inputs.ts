@@ -353,19 +353,6 @@ export function normalizeLocalTool(
 
   // 2. Edit operations
   if (EDIT_TOOL_NAMES[lowerName]) {
-    if (NOTEBOOK_EDIT_TOOL_NAMES[lowerName]) {
-      const editType = toolInput.editType;
-      if (editType !== undefined && (typeof editType !== 'string' || !VALID_NOTEBOOK_EDIT_TYPES[editType])) {
-        return {
-          kind: 'unqualified',
-          toolName,
-          reason: 'Notebook edit tool requires editType to be "insert", "edit", or "delete"',
-          originalInput: toolInput
-        };
-      }
-    }
-
-    const collectedPaths: string[] = [];
     const directPath =
       toolInput.filePath ??
       toolInput.FilePath ??
@@ -373,6 +360,48 @@ export function normalizeLocalTool(
       toolInput.file_path ??
       toolInput.target_file ??
       toolInput.TargetFile;
+    if (NOTEBOOK_EDIT_TOOL_NAMES[lowerName]) {
+      if (typeof directPath !== 'string' || !directPath.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires a non-empty filePath string',
+          originalInput: toolInput
+        };
+      }
+      const editType = toolInput.editType;
+      if (typeof editType !== 'string' || !VALID_NOTEBOOK_EDIT_TYPES[editType]) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires editType to be "insert", "edit", or "delete"',
+          originalInput: toolInput
+        };
+      }
+      const cellId = toolInput.cellId;
+      if (typeof cellId !== 'string' || !cellId.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires a non-empty cellId string',
+          originalInput: toolInput
+        };
+      }
+      const checked = validateOperands([directPath]);
+      if (typeof checked === 'string') {
+        return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
+      }
+      return {
+        kind: 'edit',
+        toolName,
+        operands: checked,
+        toolUseId,
+        originalInput: toolInput,
+        executionBase: contextCwd
+      };
+    }
+
+    const collectedPaths: string[] = [];
     if (typeof directPath === 'string' && directPath.trim()) {
       collectedPaths.push(directPath);
     }

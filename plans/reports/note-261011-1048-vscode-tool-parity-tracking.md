@@ -13,7 +13,7 @@
 | Source Tool Intent | Host Tool Reference | Internal / Model Name | Normalization Kind | Audit Status | Implementation Summary |
 |---|---|---|---|---|---|
 | **`WebFetch`** | `web/fetch` | `copilot_fetchWebPage`, `fetchWebPage`, `web_fetch`, `webfetch` | `kind: 'web'` | **Mapped (Active)** | Requires non-empty `query` string and non-empty `urls` array of valid `http:` or `https:` URLs. Remote URLs are exempted from workspace `.evcrateignore` and local file privacy matching; non-HTTP(S) schemes (e.g. `file://`) and relative paths fail closed as `unqualified`. |
-| **`NotebookEdit`** | `edit/editNotebook` | `copilot_editNotebook`, `editNotebook` | `kind: 'edit'` | **Mapped (Active)** | Normalizes cell edit operations with `filePath`. Validates `editType` (`insert`, `edit`, `delete` when present). Enforces Scout directory isolation and Privacy rules. |
+| **`NotebookEdit`** | `edit/editNotebook` | `copilot_editNotebook`, `editNotebook` | `kind: 'edit'` | **Mapped (Active)** | Requires non-empty `filePath`, present valid `editType` (`insert`, `edit`, `delete`), and non-empty `cellId`. Enforces Scout directory isolation and Privacy rules. |
 | **`NotebookSummary`** (supporting) | `read/getNotebookSummary` | `copilot_getNotebookSummary`, `getNotebookSummary` | `kind: 'read'` | **Runtime Supported** | Normalizes notebook summary reads with `filePath`. Enforces Scout directory isolation and Privacy rules. |
 | **`WebSearch`** | *(none)* | *(none)* | `unqualified` if invoked | **Dropped (Unsupported)** | VS Code Copilot Chat `0.68.0` manifest `web` tool set includes only `fetch`, `githubRepo`, and `githubTextSearch`. No generic search tool exists. Kept intentionally dropped to prevent false aliasing. |
 
@@ -41,10 +41,13 @@ If users report errors or unexpected behavior during subagent tool use:
 - **Root Cause:** Model invoked `web/fetch` without the required `query` field, passed a scalar `url` instead of a `urls` array, or supplied a local path / `file://` URI instead of an `http(s)://` URL.
 - **Resolution:** Ensure tool invocations match the native Copilot Chat schema: `{ urls: ["https://..."], query: "..." }`.
 
-### Error 2: PreToolUse denies `edit/editNotebook` due to invalid `editType`
-- **Message:** `Notebook edit tool requires editType to be "insert", "edit", or "delete"`
-- **Root Cause:** Model supplied an unsupported `editType` (such as `"replace"`).
-- **Resolution:** Pinned Copilot Chat `0.68.0` supports only `"insert"`, `"edit"`, and `"delete"`.
+### Error 2: PreToolUse denies `edit/editNotebook` due to missing/invalid `filePath`, `editType`, or `cellId`
+- **Messages:**
+  - `Notebook edit tool requires a non-empty filePath string`
+  - `Notebook edit tool requires editType to be "insert", "edit", or "delete"`
+  - `Notebook edit tool requires a non-empty cellId string`
+- **Root Cause:** Model omitted a required native field (`filePath`, `editType`, or `cellId`) or supplied an unsupported `editType` (such as `"replace"`).
+- **Resolution:** Pinned Copilot Chat `0.68.0` requires `{ filePath: "...", editType: "insert" | "edit" | "delete", cellId: "..." }`.
 
 ### Error 3: PreToolUse blocks `edit/editNotebook` or `read/getNotebookSummary` on Scout directory
 - **Message:** `Scout policy blocked access to directory operand "...": matching .evcrateignore pattern "..."`
@@ -63,7 +66,7 @@ If users report errors or unexpected behavior during subagent tool use:
 ## 4. Verification Evidence
 
 - `tests/adapters/vscode-metadata-permissions.test.mjs`: Verified `WebFetch -> web/fetch` and `NotebookEdit -> edit/editNotebook` mapping, `WebSearch` dropped, and capability fixture parity.
-- `tests/adapters/vscode-policy.test.mjs`: Verified `web/fetch` HTTP(S) schema validation, remote URL exemption from `/dist/` and `/.env` local blocks, `file://` rejection, `edit/editNotebook` valid `editType` enforcement, and TS/CJS nullish-coalescing parity.
+- `tests/adapters/vscode-policy.test.mjs`: Verified `web/fetch` HTTP(S) schema validation, remote URL exemption from `/dist/` and `/.env` local blocks, `file://` rejection, `edit/editNotebook` required `filePath` + `editType` + `cellId` enforcement, and TS/CJS nullish-coalescing parity.
 - `tests/adapters/vscode-behavior.test.mjs`: Verified positive and negative hook bridge execution for `web/fetch` and `edit/editNotebook`.
 - Total adapter tests: **242 passed, 0 failed**.
 - Qualification tests: **17 passed, 0 failed**.

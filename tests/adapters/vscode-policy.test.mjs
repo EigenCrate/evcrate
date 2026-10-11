@@ -476,6 +476,39 @@ test('policy: notebook edit and summary tools enforce file policies and valid ed
   assert.ok(nbInvalidEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
   assert.equal(evaluateLocalPolicies(nbInvalidEditType).decision, 'deny');
 
+  // P3 regression: missing editType or missing/empty cellId fails closed as unqualified
+  const nbMissingEditType = normalizeLocalTool('edit/editNotebook', {
+    filePath: 'notebooks/report.ipynb'
+  });
+  assert.equal(nbMissingEditType.kind, 'unqualified');
+  assert.ok(nbMissingEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
+  assert.equal(evaluateLocalPolicies(nbMissingEditType).decision, 'deny');
+
+  const nbMissingCellId = normalizeLocalTool('edit/editNotebook', {
+    filePath: 'notebooks/report.ipynb',
+    editType: 'edit'
+  });
+  assert.equal(nbMissingCellId.kind, 'unqualified');
+  assert.ok(nbMissingCellId.reason.includes('non-empty cellId string'));
+  assert.equal(evaluateLocalPolicies(nbMissingCellId).decision, 'deny');
+
+  const nbEmptyCellId = normalizeLocalTool('copilot_editNotebook', {
+    filePath: 'notebooks/report.ipynb',
+    editType: 'insert',
+    cellId: '   '
+  });
+  assert.equal(nbEmptyCellId.kind, 'unqualified');
+  assert.ok(nbEmptyCellId.reason.includes('non-empty cellId string'));
+  assert.equal(evaluateLocalPolicies(nbEmptyCellId).decision, 'deny');
+
+  const nbMissingFilePath = normalizeLocalTool('edit/editNotebook', {
+    editType: 'delete',
+    cellId: 'cell-0',
+    files: [{ filePath: 'notebooks/report.ipynb' }]
+  });
+  assert.equal(nbMissingFilePath.kind, 'unqualified');
+  assert.ok(nbMissingFilePath.reason.includes('non-empty filePath string'));
+  assert.equal(evaluateLocalPolicies(nbMissingFilePath).decision, 'deny');
   // Allowed notebook summary read
   const nbSummaryAllowed = evaluateLocalPolicies(normalizeLocalTool('read/getNotebookSummary', {
     filePath: 'notebooks/pipeline.ipynb'
@@ -514,6 +547,10 @@ test('policy: TypeScript and generated CommonJS runtime maintain exact fallback 
     // Notebook cases
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: 'c1' }],
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'replace', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: '' }],
+    ['edit/editNotebook', { editType: 'edit', cellId: 'c1' }],
     ['read/getNotebookSummary', { filePath: 'notebooks/a.ipynb' }]
   ];
 

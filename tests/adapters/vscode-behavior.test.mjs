@@ -448,4 +448,39 @@ test('vscode-behavior: bridge allows edit/editNotebook with valid editType and d
   assert.equal(parsedType.continue, true);
   assert.equal(parsedType.hookSpecificOutput?.permissionDecision, 'deny');
   assert.ok(parsedType.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
+
+  const denyMissingFieldsRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/report.ipynb'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyMissingFieldsRes.status, 0);
+  const parsedMissingFields = JSON.parse(denyMissingFieldsRes.stdout);
+  assert.equal(parsedMissingFields.continue, true);
+  assert.equal(parsedMissingFields.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedMissingFields.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
+
+  const denyMissingCellIdRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/report.ipynb',
+        editType: 'edit'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyMissingCellIdRes.status, 0);
+  const parsedMissingCellId = JSON.parse(denyMissingCellIdRes.stdout);
+  assert.equal(parsedMissingCellId.continue, true);
+  assert.equal(parsedMissingCellId.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedMissingCellId.hookSpecificOutput?.permissionDecisionReason?.includes('non-empty cellId string'));
 });

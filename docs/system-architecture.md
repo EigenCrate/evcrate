@@ -144,7 +144,7 @@ touches editor settings or agent-authored docs. Copilot CLI (`copilot`) and VS C
 extra extensions. It preserves `tools: []` deny-all, omitted-tool inheritance, `Task`-derived
 `canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and direct `todo`, while keeping
 frontmatter references distinct from model-facing names and hook operands (`filePath`, search
-`includePattern`/glob roots, notebook `editType`, and `web/fetch` HTTP(S) `urls`/`query` normalized in `tool-inputs.ts` and `runtime-sources.ts`). `evcrate/agent-tool-audit.json`
+`includePattern`/glob roots, notebook `filePath`/`editType`/`cellId`, and `web/fetch` HTTP(S) `urls`/`query` normalized in `tool-inputs.ts` and `runtime-sources.ts`). `evcrate/agent-tool-audit.json`
 records build declarations, not effective host grants. Linux x64 is qualified across N01–N10 and
 W01–W04 (candidate tree `81792bf2...`); Windows Local qualification, incident closure, and
 production rollout remain blocked pending affected-host verification and operator approval.
