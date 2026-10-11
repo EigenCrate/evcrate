@@ -66,11 +66,6 @@ plans/
 - List each phase with status/progress
 - Link to detailed phase files
 - Key dependencies
-- **Plan progress & reconciliation**: Follow neutral [Plan progress and phase reconciliation](./plan-progress.md).
-  - Sealed plan/phase/evidence/index identities remain protected; history grants no new write authority.
-  - Parent alone publishes immutable completion receipts outside capture and updates uncaptured `<plan-dir>/progress.md`; if a destination is already captured, stop publication rather than altering protection.
-  - Ordinary unprotected plans retain normal `plan.md` tracking after required approval/validation; new ordinary phases on protected plans use expressly ordinary approval/validation receipts. Never invent progress links or historical completion.
-  - Child documentation writers follow exact parent-authorized writable/protected paths and return terminal reports; settle and validate all authorized finalization before reporting completion.
 ##### Phase Files (phase-XX-name.md)
 Fully respect the `./docs/development-rules.md` file.
 Each phase file should contain:

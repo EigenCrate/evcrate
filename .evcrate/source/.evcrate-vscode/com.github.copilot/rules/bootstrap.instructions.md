@@ -19,7 +19,7 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Documentation management: `./.evcrate-vscode/evcrate/workflows/documentation-management.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/documentation-management.md` (the published install)
 - And other workflows: `./.evcrate-vscode/evcrate/workflows/*`
 
-Resolve required workflow resources from `./.evcrate-vscode/evcrate/workflows/<name>` when present; otherwise use the published `~/.evcrate-vscode/evcrate/workflows/<name>`. This shared lookup includes `plan-progress.md` and `advisory-interview.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
+Resolve required workflow resources from `./.evcrate-vscode/evcrate/workflows/<name>` when present; otherwise use the published `~/.evcrate-vscode/evcrate/workflows/<name>`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
 
 ## Subagent Completion Contract
 
