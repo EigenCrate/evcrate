@@ -94,7 +94,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(scoutParsed.fields.model, 'haiku');
     assert.deepEqual(
       [...(scoutParsed.fields.tools || [])].sort(),
-      ['getTerminalOutput', 'killTerminal', 'read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch', 'todo'].sort()
+      ['getTerminalOutput', 'killTerminal', 'read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch', 'todo', 'web/fetch'].sort()
     );
     assert.deepEqual(scoutParsed.fields.agents, [], 'Scout must have agents: [] to prevent delegation');
     assert.ok(!scoutParsed.fields.tools.includes('editFiles'), 'Scout must not have editFiles');

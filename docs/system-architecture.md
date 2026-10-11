@@ -139,12 +139,12 @@ touches editor settings or agent-authored docs. Copilot CLI (`copilot`) and VS C
 `mapAgentTools` projects canonical tool intent to pinned VS Code `1.140.0` / Copilot Chat
 `0.68.0` frontmatter references (`read/readFile`, `search/fileSearch`, `search/textSearch`,
 `search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`,
-`agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`) without broad
-groups, runtime discovery, or extra extensions. It preserves `tools: []` deny-all, omitted-tool
-inheritance, `Task`-derived `canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and direct
-`todo` (disabled by the host in child subagents), while keeping frontmatter references distinct
-from model-facing names (`copilot_readFile`, `manage_todo_list`) and hook operands (`filePath`/`path`
-normalized in `tool-inputs.ts` and `runtime-sources.ts`). `evcrate/agent-tool-audit.json`
+`agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`, `web/fetch`,
+`edit/editNotebook`; `WebSearch` stays dropped) without broad groups, runtime discovery, or
+extra extensions. It preserves `tools: []` deny-all, omitted-tool inheritance, `Task`-derived
+`canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and direct `todo`, while keeping
+frontmatter references distinct from model-facing names and hook operands (`filePath`, search
+`includePattern`/glob roots, notebook `filePath`/`editType`/`cellId`, and `web/fetch` HTTP(S) `urls`/`query` normalized in `tool-inputs.ts` and `runtime-sources.ts`). `evcrate/agent-tool-audit.json`
 records build declarations, not effective host grants. Linux x64 is qualified across N01–N10 and
 W01–W04 (candidate tree `81792bf2...`); Windows Local qualification, incident closure, and
 production rollout remain blocked pending affected-host verification and operator approval.

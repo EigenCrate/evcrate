@@ -10,6 +10,7 @@ tools:
   - search/fileSearch
   - search/textSearch
   - todo
+  - web/fetch
 agents: []
 model: haiku
 ---

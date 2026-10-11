@@ -328,3 +328,197 @@ test('vscode-behavior: bridge denies search/fileSearch targeting node_modules/**
   assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
   assert.ok(parsed.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
 });
+
+test('vscode-behavior: bridge allows valid web/fetch including URLs with /dist/ segment', () => {
+  const bridgeScript = join(repository, '.evcrate/source/.evcrate-vscode/evcrate/runtime/local-hook-bridge.cjs');
+
+  const allowRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'web/fetch',
+      tool_input: {
+        urls: ['https://nodejs.org/dist/v20.0.0/'],
+        query: 'Node 20 release notes'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(allowRes.status, 0);
+  const parsed = JSON.parse(allowRes.stdout);
+  assert.equal(parsed.continue, true);
+  assert.equal(parsed.hookSpecificOutput?.permissionDecision, undefined);
+});
+
+test('vscode-behavior: bridge denies web/fetch with non-HTTP(S) URL or missing query', () => {
+  const bridgeScript = join(repository, '.evcrate/source/.evcrate-vscode/evcrate/runtime/local-hook-bridge.cjs');
+
+  const denyFileUrl = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'web/fetch',
+      tool_input: {
+        urls: ['file:///etc/passwd'],
+        query: 'passwd'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyFileUrl.status, 0);
+  const parsedFile = JSON.parse(denyFileUrl.stdout);
+  assert.equal(parsedFile.continue, true);
+  assert.equal(parsedFile.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedFile.hookSpecificOutput?.permissionDecisionReason?.includes('only permits http: or https: protocols'));
+
+  const denyNoQuery = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'web/fetch',
+      tool_input: {
+        urls: ['https://code.visualstudio.com/docs']
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyNoQuery.status, 0);
+  const parsedNoQuery = JSON.parse(denyNoQuery.stdout);
+  assert.equal(parsedNoQuery.continue, true);
+  assert.equal(parsedNoQuery.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedNoQuery.hookSpecificOutput?.permissionDecisionReason?.includes('non-empty query string'));
+});
+
+test('vscode-behavior: bridge allows edit/editNotebook with valid editType and denies blocked directory or invalid editType', () => {
+  const bridgeScript = join(repository, '.evcrate/source/.evcrate-vscode/evcrate/runtime/local-hook-bridge.cjs');
+
+  const allowRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/pipeline.ipynb',
+        editType: 'edit',
+        cellId: 'cell-0',
+        newCode: 'print(1)'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(allowRes.status, 0);
+  const parsedAllow = JSON.parse(allowRes.stdout);
+  assert.equal(parsedAllow.continue, true);
+  assert.equal(parsedAllow.hookSpecificOutput?.permissionDecision, undefined);
+
+  const denyScoutRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'node_modules/demo/notebook.ipynb',
+        editType: 'edit',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyScoutRes.status, 0);
+  const parsedScout = JSON.parse(denyScoutRes.stdout);
+  assert.equal(parsedScout.continue, true);
+  assert.equal(parsedScout.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedScout.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
+
+  const denyTypeRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/pipeline.ipynb',
+        editType: 'replace',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyTypeRes.status, 0);
+  const parsedType = JSON.parse(denyTypeRes.stdout);
+  assert.equal(parsedType.continue, true);
+  assert.equal(parsedType.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedType.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
+
+  const denyMissingFieldsRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/report.ipynb'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyMissingFieldsRes.status, 0);
+  const parsedMissingFields = JSON.parse(denyMissingFieldsRes.stdout);
+  assert.equal(parsedMissingFields.continue, true);
+  assert.equal(parsedMissingFields.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedMissingFields.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
+
+  const denyMissingCellIdRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/report.ipynb',
+        editType: 'edit'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyMissingCellIdRes.status, 0);
+  const parsedMissingCellId = JSON.parse(denyMissingCellIdRes.stdout);
+  assert.equal(parsedMissingCellId.continue, true);
+  assert.equal(parsedMissingCellId.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedMissingCellId.hookSpecificOutput?.permissionDecisionReason?.includes('non-empty cellId string'));
+
+  const denyProtoEditTypeRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/report.ipynb',
+        editType: 'constructor',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyProtoEditTypeRes.status, 0);
+  const parsedProtoEditType = JSON.parse(denyProtoEditTypeRes.stdout);
+  assert.equal(parsedProtoEditType.continue, true);
+  assert.equal(parsedProtoEditType.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedProtoEditType.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
+
+  const denyProtoToolRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'constructor',
+      tool_input: {
+        filePath: 'src/index.ts',
+        editType: 'edit',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyProtoToolRes.status, 0);
+  const parsedProtoTool = JSON.parse(denyProtoToolRes.stdout);
+  assert.equal(parsedProtoTool.continue, true);
+  assert.equal(parsedProtoTool.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedProtoTool.hookSpecificOutput?.permissionDecisionReason?.includes('Unrecognized or unqualified tool schema: "constructor"'));
+});
