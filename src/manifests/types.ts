@@ -83,10 +83,9 @@ export interface TargetManifestRegistry {
 }
 
 export interface BuildManifest {
-  readonly schema_version: 2;
+  readonly schema_version: 3;
   readonly source_hashes: Readonly<Record<string, string>>;
   readonly adapter_hashes: Readonly<Record<string, string>>;
-  readonly controller_hashes: Readonly<Record<string, string>>;
   readonly owners: Readonly<Record<string, string>>;
   readonly output_hashes: Readonly<Record<string, string>>;
   readonly validation: Readonly<Record<string, unknown>>;

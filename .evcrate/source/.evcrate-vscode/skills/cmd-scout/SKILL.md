@@ -6,6 +6,7 @@ disable-model-invocation: true
 argument-hint: "[user-prompt] [scale]"
 ---
 
+
 ## Purpose
 
 Search the codebase for files needed to complete the task using a fast, token efficient agent.
@@ -19,7 +20,7 @@ REPORT_OUTPUT_DIR: Use `Report:` from `## Naming` section
 ## Workflow:
 
 - Write a prompt for 'SCALE' number of agents to the `Task` tool that will immediately call the `Bash` tool to run these commands to kick off your agents to conduct the search: spawn many `Explore` subagents to search the codebase in parallel based on the user's prompt.
-- The parent agent must wait for all requested evc-scout agents to return terminal results before synthesizing the report. A timed-out or interrupted scout is incomplete; do not silently treat it as a successful search or continue with partial coverage.
+- The parent agent must wait for all requested scout agents to return terminal results before synthesizing the report. A timed-out or interrupted scout is incomplete; do not silently treat it as a successful search or continue with partial coverage.
 
 **How to prompt the agents:**
 - IMPORTANT: Kick these agents off in parallel using the `Task` tool, analyze and divide folders for each agent to scout intelligently and quickly.

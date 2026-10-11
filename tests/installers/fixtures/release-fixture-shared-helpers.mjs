@@ -2,21 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import { canonicalJsonBytes, sha256Bytes } from '../../../scripts/release/canonical-json.cjs';
-import { ADVISOR_CONTROLLER_FILES } from '../../../dist/index.js';
 
 export const PROJECT_ROOT = path.resolve(import.meta.dirname, '../../..');
 
-export function computeControllerClosureDigest(sortedRecords) {
-  const controllerMap = {};
-  for (const f of ADVISOR_CONTROLLER_FILES) {
-    const rec = sortedRecords.find((r) => r.path === `.evcrate/source/.evcrate/bin/${f}`);
-    if (rec) {
-      controllerMap[`.evcrate/bin/${f}`] = rec.sha256;
-    }
-  }
-  return sha256Bytes(canonicalJsonBytes(controllerMap));
-}
 
 export function computeBuildManifestDigests(sortedRecords) {
   const buildManifestDigests = {};

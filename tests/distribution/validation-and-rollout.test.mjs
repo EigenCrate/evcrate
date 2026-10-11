@@ -10,7 +10,6 @@ import {
   getAllTargetGateReceipts,
   PERSISTED_TARGETS,
   publicationStateRoot,
-  PUBLICATION_BINDING_ORDER,
   publishApply,
   resolveCurrentBuild,
   resolveInvocationContext,
@@ -22,22 +21,21 @@ const packageRoot = fileURLToPath(new URL('../..', import.meta.url)).replace(/[/
 const packageMetadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
 
 
-test('consumer mode build resolution verifies outputs and controller closure without requiring authoring adapter sources', () => {
+test('consumer mode verifies harness outputs without requiring authoring adapter sources', () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-val-home-'));
   try {
     const context = resolveInvocationContext({ packageRoot, cwd: packageRoot, home, targets: [] });
     const consumerBuild = resolveCurrentBuild({
       packageRoot: context.packageRoot,
       canonicalSourceRoot: context.canonicalSourceRoot,
-      controllerRoot: context.controllerRoot,
       targetRegistryPath: context.registryPath,
       selectedTargets: context.selectedTargetIds,
       mode: 'consumer'
     });
     assert.ok(consumerBuild.manifest);
-    assert.equal(consumerBuild.manifest.schema_version, 2);
+    assert.equal(consumerBuild.manifest.schema_version, 3);
     assert.equal(consumerBuild.selectedManifests.length, PERSISTED_TARGETS.length);
-    assert.ok(consumerBuild.outputPaths['.evcrate']);
+    assert.equal(Object.keys(consumerBuild.manifest.home_policy).length, PERSISTED_TARGETS.length);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
@@ -50,7 +48,6 @@ test('consumer mode verification fails closed if output projection is tampered',
     const build = resolveCurrentBuild({
       packageRoot: context.packageRoot,
       canonicalSourceRoot: context.canonicalSourceRoot,
-      controllerRoot: context.controllerRoot,
       targetRegistryPath: context.registryPath,
       selectedTargets: context.selectedTargetIds,
       mode: 'consumer'
@@ -59,7 +56,6 @@ test('consumer mode verification fails closed if output projection is tampered',
     assert.throws(() => verifyBuild({
       manifestPath: build.manifestPath,
       outputRoots: fakeOutputRoots,
-      controllerRoot: context.controllerRoot
     }));
   } finally {
     rmSync(home, { recursive: true, force: true });
@@ -121,9 +117,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.ok(Array.isArray(dryRunChanges));
     assert.ok(dryRunChanges.length > 0);
 
-    // Verify promotion order: shared controller, then HOME harness bindings
-    assert.deepEqual([...dryRunResult.payload.phases[0].bindingOrder], ['.evcrate/bin']);
-    assert.deepEqual([...dryRunResult.payload.phases[1].bindingOrder], [
+    assert.deepEqual([...dryRunResult.payload.phases[0].bindingOrder], [
       '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
 
@@ -150,7 +144,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.equal(packageHashAfter, packageHashBefore, 'installed package root must not be mutated during publish');
 
     // Verify target projections exist in home
-    assert.ok(existsSync(join(home, '.evcrate', 'bin', 'evcrate-advisor')), 'advisor controller bin exists');
+    assert.equal(existsSync(join(home, '.evcrate', 'bin')), false);
     assert.ok(existsSync(join(home, '.claude')), 'claude home exists');
     assert.ok(existsSync(join(home, '.copilot')), 'copilot home exists');
     assert.ok(existsSync(join(home, '.omp')), 'omp home exists');
@@ -160,11 +154,6 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.ok(existsSync(join(home, '.agents', 'skills')), 'Codex skills home exists');
     assert.ok(existsSync(join(home, '.evcrate-vscode')), 'vscode home exists');
 
-    // Verify advisor controller is executable
-    const advisorStat = lstatSync(join(home, '.evcrate', 'bin', 'evcrate-advisor'));
-    if (process.platform !== 'win32') {
-      assert.ok((advisorStat.mode & 0o111) !== 0, 'evcrate-advisor must be executable');
-    }
     const projectApply = spawnSync(cliPath, [
       'publish', '--apply', '--json', '--scope', 'project', '--home', home, '--state-home', state,
       '--project-root', project, '--target', 'claude', '--target', 'copilot'
@@ -174,8 +163,7 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.equal(projectApply.status, 0, projectApply.stderr || projectApply.stdout);
     const projectResult = JSON.parse(projectApply.stdout);
     assert.equal(projectResult.status, 'published');
-    assert.equal(projectResult.payload.phases[0].scope, 'home');
-    assert.equal(projectResult.payload.phases[1].scope, 'project');
+    assert.equal(projectResult.payload.phases[0].scope, 'project');
     assert.ok(existsSync(join(project, '.claude')));
     assert.ok(existsSync(join(project, '.copilot')));
     assert.ok(existsSync(join(project, '.github', 'copilot-instructions.md')));
@@ -214,19 +202,6 @@ test('installed registry-free unpacked snapshot runs publish dry-run and apply w
     assert.equal(JSON.parse(projectRecover.stdout).payload.scope, 'project');
     assert.equal(treeHash(installedPackageDir), packageHashBefore);
 
-    // 5. Health diagnostic in consumer environment
-    const health = spawnSync(cliPath, [
-      'health', '--json', '--home', home, '--state-home', state
-    ], {
-      cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000, maxBuffer: 32 * 1024 * 1024
-    });
-    assert.ok(health.status === 0 || health.status === 1 || health.status === 3, health.stderr || health.stdout);
-    const healthResult = JSON.parse(health.stdout);
-    assert.ok(healthResult.status === 'QUALIFIED' || healthResult.status === 'FAILED');
-    assert.equal(healthResult.protocol, 'evcrate-advisor-diagnostic');
-    // Inviolable: zero counsel or checkpoint generation in health output
-    assert.equal(health.stdout.includes('evcrate-advisor-checkpoint'), false);
-    assert.equal(health.stdout.includes('counsel'), false);
 
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -277,7 +252,7 @@ test('unmanaged existing content in user HOME is preserved across publication ap
   }
 });
 
-test('advisor settings and target publication maintain strictly isolated journals and locks', () => {
+test('publication uses its existing scoped state and lock namespace', () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-isolation-home-'));
   try {
     const context = resolveInvocationContext({
@@ -288,7 +263,6 @@ test('advisor settings and target publication maintain strictly isolated journal
 
     // Verify target publication state root is separate and isolated
     assert.equal(pubState, join(home, '.evcrate', 'publication'));
-    assert.ok(!pubState.includes('advisor-settings'));
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

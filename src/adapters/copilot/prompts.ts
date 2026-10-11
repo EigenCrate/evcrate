@@ -94,6 +94,6 @@ export function commandBody(body: string, targetName: string, workflows: readonl
     return line.replace(/`(?:\.\/)?\.github\/copilot-instructions\.md`/gu, '`.github/copilot-instructions.md` if present; otherwise read `~/.copilot/copilot-instructions.md` (the published install)');
   });
   const assets = workflows.map((name) => `- \`@evcrate/workflows/${name}\``).join('\n');
-  return `## Invocation contract\n\nThe literal \`$ARGUMENTS\` is the exact raw text following \`/${targetName}\`. Do not split, normalize, or discard it before the canonical command parses it.\n\nRead the mandatory documentation ownership policy at \`@evcrate/workflows/documentation-management.md\`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.\n\n## Available workflow assets\n\n${assets}\n\n${body.replace(/^\s+/u, '')}`;
+  return `## Invocation contract\n\nThe literal \`$ARGUMENTS\` is the exact raw text following \`/${targetName}\`. Do not split, normalize, or discard it; arguments are ordinary task data.\n\nRead the mandatory documentation ownership policy at \`@evcrate/workflows/documentation-management.md\`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.\n\n## Available workflow assets\n\n${assets}\n\n${body.replace(/^\s+/u, '')}`;
 }
 function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'); }

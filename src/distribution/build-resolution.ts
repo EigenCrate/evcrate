@@ -15,7 +15,6 @@ import { localProjectionPath } from './output-paths.js';
 export interface CurrentBuildOptions {
   readonly packageRoot: string;
   readonly canonicalSourceRoot: string;
-  readonly controllerRoot: string;
   readonly targetRegistryPath: string;
   readonly selectedTargets: readonly PersistedTarget[];
   readonly mode?: 'authoring' | 'consumer';
@@ -37,13 +36,7 @@ function sameJson(left: unknown, right: unknown): boolean {
 }
 
 function expectedPolicy(manifests: readonly TargetManifest[]): Record<string, unknown> {
-  const result: Record<string, unknown> = {
-    'advisor-controller': {
-      bindings: { '.evcrate/bin': '.evcrate/bin' },
-      preserve_paths: {},
-      promotion_order: 5
-    }
-  };
+  const result: Record<string, unknown> = {};
   for (const manifest of manifests) {
     const policy = manifest.homePolicy;
     const value: Record<string, unknown> = {
@@ -80,7 +73,7 @@ function expectedOutputPaths(
   manifests: readonly TargetManifest[]
 ): Record<string, string> {
   const parent = dirname(canonicalSourceRoot);
-  const names = new Set<string>(['.evcrate']);
+  const names = new Set<string>();
   for (const manifest of manifests) {
     for (const root of manifest.outputRoots) names.add(root);
     for (const document of manifest.projectDocs) names.add(document);
@@ -117,15 +110,11 @@ function assertOwners(
   selected: readonly TargetManifest[]
 ): void {
   const owners = manifest.owners;
-  const allowed = new Set<string>(['baseline', 'advisor-controller', ...selected.map(({ name }) => name)]);
+  const allowed = new Set<string>(['baseline', ...selected.map(({ name }) => name)]);
   const roots = Object.keys(outputPaths);
   for (const [key, owner] of Object.entries(owners)) {
     if (!allowed.has(owner) || !roots.some((root) => key === root || key.startsWith(`${root}/`))) fail('PUBLICATION_FAILED');
-    if (owner === 'advisor-controller' && !key.startsWith('.evcrate/bin/')) fail('PUBLICATION_FAILED');
-    if (owner !== 'advisor-controller' && key.startsWith('.evcrate/bin/')) fail('PUBLICATION_FAILED');
-  }
-  for (const key of Object.keys(manifest.controller_hashes)) {
-    if (owners[key] !== 'advisor-controller') fail('PUBLICATION_FAILED');
+    if (key === '.evcrate/bin' || key.startsWith('.evcrate/bin/')) fail('PUBLICATION_FAILED');
   }
 }
 
@@ -134,11 +123,6 @@ function assertValidation(manifest: BuildManifest): void {
   if (manifest.validation.complete !== true
     || manifest.validation.target_registry !== 'validated'
     || manifest.validation.symlinks !== 'rejected') fail('PUBLICATION_FAILED');
-  const controller = manifest.validation.advisor_controller;
-  if (!controller || typeof controller !== 'object' || Array.isArray(controller)) fail('PUBLICATION_FAILED');
-  const metadata = controller as Record<string, unknown>;
-  if (metadata.schema !== 'evcrate-advisor-controller/v1' || metadata.root !== '.evcrate/bin'
-    || metadata.entrypoint !== 'evcrate-advisor' || metadata.parity !== 'byte-identical') fail('PUBLICATION_FAILED');
 }
 
 export function buildManifestPath(packageRoot: string, selectedTargets: readonly PersistedTarget[]): string {
@@ -158,19 +142,21 @@ function resolveBuild(
   const manifest = snapshot.manifest;
   assertValidation(manifest);
   const applicableManifests = verifiedManifests.filter((m) => Object.hasOwn(manifest.home_policy, m.name));
+  const expectedManifests = allTargets ? verifiedManifests : selected;
+  if (!sameJson(Object.keys(manifest.home_policy).sort(), expectedManifests.map(({ name }) => name).sort())) fail('PUBLICATION_FAILED');
   if (!sameJson(manifest.home_policy, expectedPolicy(applicableManifests))) fail('PUBLICATION_FAILED');
   const applicableOutputPaths = Object.fromEntries(
-    Object.entries(outputPaths).filter(([k]) => k === '.evcrate' || applicableManifests.some((m) => m.outputRoots.includes(k) || m.projectDocs.includes(k)))
+    Object.entries(outputPaths).filter(([k]) => applicableManifests.some((m) => m.outputRoots.includes(k) || m.projectDocs.includes(k)))
   );
   assertOwners(manifest, applicableOutputPaths, applicableManifests);
   if (!sameJson(Object.keys(manifest.output_hashes).sort(), Object.keys(applicableOutputPaths).sort())) fail('PUBLICATION_FAILED');
   const isConsumer = options.mode === 'consumer' || (options.mode !== 'authoring' && !hasAuthoringSources(options, applicableManifests));
   if (isConsumer) {
-    verifyBuild({ manifestPath, manifest, outputRoots: applicableOutputPaths, controllerRoot: options.controllerRoot });
+    verifyBuild({ manifestPath, manifest, outputRoots: applicableOutputPaths });
   } else {
     const sourceHashes = currentSourceHashes(options, applicableManifests, allTargets);
     const adapterHashes = manifestAdapterHashes(applicableManifests, options.packageRoot);
-    verifyBuild({ manifestPath, manifest, outputRoots: applicableOutputPaths, controllerRoot: options.controllerRoot, sourceHashes, adapterHashes });
+    verifyBuild({ manifestPath, manifest, outputRoots: applicableOutputPaths, sourceHashes, adapterHashes });
   }
   return Object.freeze({
     manifestPath, manifest, manifestDigest: snapshot.digest,
@@ -196,7 +182,7 @@ function publicationBuildOptions(input: CurrentBuildOptions | InvocationContext)
   if ('selectedTargetIds' in input) {
     return {
       packageRoot: input.packageRoot, canonicalSourceRoot: input.canonicalSourceRoot,
-      controllerRoot: input.controllerRoot, targetRegistryPath: input.registryPath,
+      targetRegistryPath: input.registryPath,
       selectedTargets: input.selectedTargetIds, mode: 'consumer'
     };
   }

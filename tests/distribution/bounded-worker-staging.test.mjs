@@ -185,7 +185,6 @@ describe('Phase 03: Bounded Worker Staging', () => {
           assert.deepEqual(readFileSync(join(source, 'AGENTS.md')), generatedCodex);
           const options = {
             packageRoot: fixture, canonicalSourceRoot: canonicalRoot,
-            controllerRoot: join(source, '.evcrate', 'bin'),
             targetRegistryPath: join(fixture, '.evcrate', 'targets', 'manifest.json'),
             selectedTargets: ['claude', 'codex']
           };

@@ -43,7 +43,9 @@ def test_canonical():
         assert isinstance(c["argument_hint"], str), f"Bad hint in {c}"
         assert isinstance(c["category"], str) and c["category"], f"Bad category in {c}"
     skills = scan_skills(root_skill)
-    assert len(skills) == 38, f"Expected 38 skills (excluding template), got {len(skills)}"
+    expected_skills = sum(1 for entry in root_skill.rglob("SKILL.md")
+                          if entry.parent.name != "template-skill")
+    assert len(skills) == expected_skills, f"Expected {expected_skills} live skills, got {len(skills)}"
     names = {s["name"] for s in skills}
     assert "template-skill" not in names, "template-skill should be excluded"
     assert "document-skills/docx" in names, "nested skill document-skills/evc-docx missing"
@@ -51,7 +53,7 @@ def test_canonical():
         assert s["path"].endswith("SKILL.md"), f"Invalid skill path: {s['path']}"
         assert s["source"].endswith("SKILL.md"), f"Invalid source: {s['source']}"
         assert isinstance(s["description"], str) and s["description"], f"Bad desc in {s}"
-    print(f"{GREEN}✓ PASS canonical scans (70 commands, 38 skills){RESET}")
+    print(f"{GREEN}✓ PASS canonical scans ({len(cmds)} commands, {len(skills)} skills){RESET}")
 
 
 def test_three_formats_and_flat_names():
@@ -393,14 +395,14 @@ def test_catalog_freshness_and_generator():
         assert res_cmd.returncode == 0, f"Command catalog generation failed: {res_cmd.stderr}"
         assert cmd_out.is_file()
         cmd_catalog = yaml.safe_load(cmd_out.read_text(encoding="utf-8"))
-        assert cmd_catalog["metadata"]["total_commands"] == 70
+        assert cmd_catalog["metadata"]["total_commands"] == len(scan_commands(script_dir.parent / "commands"))
         assert "commands" in cmd_catalog and "categories" in cmd_catalog
 
         res_skill = subprocess.run([sys.executable, str(gen_script), "--skills", "--output", str(skill_out)], capture_output=True, text=True)
         assert res_skill.returncode == 0, f"Skill catalog generation failed: {res_skill.stderr}"
         assert skill_out.is_file()
         skill_catalog = yaml.safe_load(skill_out.read_text(encoding="utf-8"))
-        assert skill_catalog["metadata"]["total_skills"] == 38
+        assert skill_catalog["metadata"]["total_skills"] == len(scan_skills(script_dir.parent / "skills"))
         assert "skills" in skill_catalog and "legend" in skill_catalog
 
         bad_out = tmp_dir / "sentinel.yaml"

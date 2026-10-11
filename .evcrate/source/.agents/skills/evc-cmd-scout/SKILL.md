@@ -11,8 +11,6 @@ Description: Scout given directories to respond to the user's requests
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -37,7 +35,7 @@ REPORT_OUTPUT_DIR: Use `Report:` from `## Naming` section
 ## Workflow:
 
 - Write a prompt for 'SCALE' number of agents to the `Task` tool that will immediately call the `Bash` tool to run these commands to kick off your agents to conduct the search: spawn many `Explore` subagents to search the codebase in parallel based on the user's prompt.
-- The parent agent must wait for all requested evc-scout agents to return terminal results before synthesizing the report. A timed-out or interrupted scout is incomplete; do not silently treat it as a successful search or continue with partial coverage.
+- The parent agent must wait for all requested scout agents to return terminal results before synthesizing the report. A timed-out or interrupted scout is incomplete; do not silently treat it as a successful search or continue with partial coverage.
 
 **How to prompt the agents:**
 - IMPORTANT: Kick these agents off in parallel using the `Task` tool, analyze and divide folders for each agent to scout intelligently and quickly.

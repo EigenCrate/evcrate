@@ -3,6 +3,7 @@ argument-hint: "[task]"
 description: "Research & create an implementation plan with 2 approaches"
 ---
 
+
 Think harder.
 Activate `planning` skill.
 

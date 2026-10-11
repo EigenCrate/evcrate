@@ -11,8 +11,6 @@ Description: Utilize tools of Model Context Protocol (MCP) servers
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -34,7 +32,7 @@ Execute MCP operations via **Gemini CLI** to preserve context budget.
    echo "{{args}}. Return JSON only per GEMINI.md instructions." | gemini -y -m gemini-2.5-flash
    ```
 
-2. **Fallback to evc-mcp-manager subagent** (if Gemini CLI unavailable):
+2. **Fallback to mcp-manager subagent** (if Gemini CLI unavailable):
    - Use `evc-mcp-manager` subagent to discover and execute tools
    - If the subagent got issues with the scripts of `mcp-management` skill, use `mcp-builder` skill to fix them
    - **DO NOT** create ANY new scripts

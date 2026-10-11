@@ -6,6 +6,7 @@ disable-model-invocation: true
 argument-hint: "[skill-name] [prompt]"
 ---
 
+
 Think harder.
 First: Activate `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.

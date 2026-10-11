@@ -148,16 +148,7 @@ export class DamHopperSubprocessClient {
       });
     }
 
-    if (parsed.protocol === 'evcrate-advisor-diagnostic') {
-      if (parsed.protocolVersion !== 1) {
-        throw new DamHopperClientError(`Unsupported diagnostic protocol version: ${parsed.protocolVersion}`, {
-          code: 'PROTOCOL_UNSUPPORTED', category: 'protocol'
-        });
-      }
-      return parsed;
-    }
-
-    if (parsed.protocol !== 'evcrate-resource-control' && parsed.protocol !== 'evcrate-advisor-settings') {
+    if (parsed.protocol !== 'evcrate-resource-control') {
       throw new DamHopperClientError(`Unexpected protocol: ${parsed.protocol}`, {
         code: 'PROTOCOL_UNSUPPORTED', category: 'protocol', details: parsed
       });
@@ -173,7 +164,6 @@ export class DamHopperSubprocessClient {
   }
 
   version() { return this.invoke(['version']); }
-  health() { return this.invoke(['health']); }
   resourcesList(options = {}) { return this.invoke(buildResourcesListArgs(options)); }
   resourcesGet(resourceId) { return this.invoke(buildResourcesGetArgs(resourceId)); }
   scopesList() { return this.invoke(['scopes', 'list']); }

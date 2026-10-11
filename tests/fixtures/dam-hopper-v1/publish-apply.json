@@ -32,16 +32,6 @@
       "buildManifestDigest": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       "phases": [
         {
-          "phase": "shared",
-          "scope": "home",
-          "selectedTargets": [],
-          "bindingOrder": [".evcrate/bin"],
-          "changes": [],
-          "status": "committed",
-          "releaseId": "dam-hopper-rel-001",
-          "retainedReleaseId": null
-        },
-        {
           "phase": "harness",
           "scope": "home",
           "selectedTargets": ["claude", "omp", "copilot"],

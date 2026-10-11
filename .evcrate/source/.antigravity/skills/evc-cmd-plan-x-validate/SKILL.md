@@ -12,6 +12,7 @@ Description: Validate plan with critical questions interview
 description: "Validate plan with critical questions interview"
 argument-hint: "[plan-path]"
 ---
+
 ## Your mission
 
 Interview the user with critical questions to validate assumptions, confirm decisions, and surface potential issues in an implementation plan before coding begins.
@@ -38,14 +39,6 @@ Read the plan directory:
 - `plan.md` - Overview and phases list
 - `phase-*.md` - All phase files
 - Look for decision points, assumptions, risks, tradeoffs
-
-Apply neutral plan progress and phase reconciliation in
-`.antigravity/workflows/plan-progress.md` if present; otherwise read `~/.gemini/config/workflows/plan-progress.md` (the published install) before interpreting current status.
-If a plan is captured by an advice run, do not offer or perform in-place
-frontmatter/summary edits below. Record proposed answers in a separately
-authorized, uncaptured document or terminal output; preserve active-run gates.
-The live progress overview is not a place to amend scope or acceptance criteria.
-Ordinary uncaptured plans retain the normal persistence choices below.
 
 ### Step 2: Extract Question Topics
 

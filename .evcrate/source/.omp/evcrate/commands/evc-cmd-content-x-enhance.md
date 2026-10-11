@@ -3,6 +3,7 @@ argument-hint: "[issues]"
 description: "Analyze the current copy issues and enhance it"
 ---
 
+
 Enhance the copy based on reported issues:
 <issues>$ARGUMENTS</issues>
 

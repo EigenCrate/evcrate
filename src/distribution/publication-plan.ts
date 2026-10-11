@@ -1,4 +1,3 @@
-import { lstatSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import type {
@@ -18,16 +17,15 @@ import { normalizeRelativePath, pathOverlaps } from '../filesystem/paths.js';
 import { hashBytes, readBoundedFile, completeTreeHash } from '../filesystem/hashing.js';
 import { isPlainObject } from '../protocol/json.js';
 import {
-  buildManifestPath, resolveCurrentBuild, resolveCurrentPublicationBuild, type VerifiedCurrentBuild
+  buildManifestPath, resolveCurrentPublicationBuild, type VerifiedCurrentBuild
 } from './build-resolution.js';
 import { assertPublicationRules, mapPublicationPath, publishFile } from './publication-rules.js';
 import {
   MAX_PUBLICATION_FILE_BYTES, listPublicationFiles, publicationNode, safePublicationChild,
-  validatePublicationAncestors, readOptionalPublicationMarker, publicationMarkerRecord, controllerTreeHash,
+  validatePublicationAncestors, readOptionalPublicationMarker, publicationMarkerRecord,
   type PublicationNode, type PublicationNodeSnapshot
 } from './publication-inventory.js';
 import { planSharedJson, type SharedJsonPlan } from './shared-json.js';
-import { validateAdvisorControllerProjection } from '../manifests/controller.js';
 import { resolvePublicationProjectContext } from '../context/invocation-context.js';
 import { isMigratedDestination } from './legacy-leftovers.js';
 import { retiredBindingCleanupDestination } from './publication-cleanup.js';
@@ -54,8 +52,7 @@ export interface PublicationBindingPlan {
   readonly sourceRoot: string;
   readonly destinationRoot: string;
   readonly order: number;
-  readonly controller: boolean;
-  readonly kind: 'controller' | 'directory' | 'document';
+  readonly kind: 'directory' | 'document';
   readonly managedPaths: readonly string[];
   readonly operations: readonly PlannedPublicationOperation[];
 }
@@ -85,9 +82,8 @@ export interface PublicationPlanSet {
   readonly build: VerifiedCurrentBuild;
   readonly buildManifestPath: string;
   readonly buildManifestDigest: string;
-  readonly shared: PublicationPhasePlan;
   readonly harness: PublicationPhasePlan;
-  readonly phases: readonly [PublicationPhasePlan, PublicationPhasePlan];
+  readonly phases: readonly [PublicationPhasePlan];
 }
 
 export interface PublicationPlanningOptions {
@@ -118,7 +114,7 @@ interface BindingDescriptor {
   readonly destinationRoot: string;
   readonly policyRoot: string;
   readonly order: number;
-  readonly kind: 'controller' | 'directory' | 'document';
+  readonly kind: 'directory' | 'document';
 }
 
 type Materialization = 'home' | 'project';
@@ -252,7 +248,7 @@ function markerPaths(marker: Record<string, unknown> | null, key: string): Set<s
 function legacyOwnership(
   marker: Record<string, unknown> | null, manifests: readonly TargetManifest[]
 ): PriorManagedOwnership {
-  if (marker?.schema_version === 2) {
+  if (marker?.schema_version === 2 || marker?.schema_version === 3) {
     const record = publicationMarkerRecord(marker, 'harness');
     if (record === null) return Object.freeze({});
     if (record.status !== 'complete' && record.status !== 'recovered') fail();
@@ -293,13 +289,13 @@ function legacyOwnership(
 }
 
 function snapshotFor(
-  node: PublicationNode, destination: string, controller = false
+  node: PublicationNode, destination: string
 ): PublicationNodeSnapshot {
   if (!node.present) return Object.freeze({ present: false });
   return Object.freeze({
     ...node,
     hash: node.kind === 'directory'
-      ? (controller ? controllerTreeHash(destination) : completeTreeHash(destination))
+      ? completeTreeHash(destination)
       : node.hash
   });
 }
@@ -370,8 +366,6 @@ function isDirectLauncherRole(relativePath: string): boolean {
   const normalized = relativePath.split('\\').join('/');
   const base = normalized.split('/').pop() ?? '';
   return normalized.endsWith('.sh')
-    || base === 'evcrate-advisor'
-    || normalized === 'evcrate-advisor'
     || normalized.startsWith('bin/')
     || base === 'evcrate';
 }
@@ -488,7 +482,7 @@ function directoryBinding(
   return Object.freeze({
     target: descriptor.target, localRoot: descriptor.localRoot, binding: descriptor.binding,
     sourceRoot: descriptor.sourceRoot, destinationRoot: descriptor.destinationRoot, order: descriptor.order,
-    controller: false, kind: descriptor.kind, managedPaths: Object.freeze([...managed].sort()),
+    kind: descriptor.kind, managedPaths: Object.freeze([...managed].sort()),
     operations: Object.freeze(operations)
   });
 }
@@ -528,40 +522,16 @@ function documentBinding(
   return Object.freeze({
     target: descriptor.target, localRoot: descriptor.localRoot, binding: descriptor.binding,
     sourceRoot: descriptor.sourceRoot, destinationRoot: descriptor.destinationRoot, order: descriptor.order,
-    controller: false, kind: 'document', managedPaths: Object.freeze(managed),
+    kind: 'document', managedPaths: Object.freeze(managed),
     operations: Object.freeze(operations)
   });
 }
 
-function controllerBinding(
-  context: InvocationContext, descriptor: BindingDescriptor
-): PublicationBindingPlan {
-  validateAdvisorControllerProjection(context.controllerRoot, descriptor.sourceRoot);
-  const current = publicationNode(descriptor.destinationRoot);
-  if (current.present && current.kind !== 'directory') fail('PATH_UNSAFE');
-  const intendedHash = controllerTreeHash(descriptor.sourceRoot);
-  const currentSnapshot = snapshotFor(current, descriptor.destinationRoot, true);
-  const beforeHash = currentSnapshot.present ? currentSnapshot.hash as string : null;
-  const action = beforeHash === null ? 'create'
-    : beforeHash === intendedHash ? 'noop' : 'update';
-  const operation: PlannedPublicationOperation = plannedOperation({
-    target: 'advisor-controller', binding: descriptor.binding, localRoot: descriptor.localRoot,
-    relativePath: descriptor.binding, destination: descriptor.destinationRoot, action,
-    beforeHash, beforeSnapshot: currentSnapshot, intendedHash
-  }, null);
-  return Object.freeze({
-    target: 'advisor-controller', localRoot: descriptor.localRoot, binding: descriptor.binding,
-    sourceRoot: descriptor.sourceRoot, destinationRoot: descriptor.destinationRoot, order: descriptor.order,
-    controller: true, kind: 'controller', managedPaths: Object.freeze([]),
-    operations: Object.freeze([operation])
-  });
-}
 
 function planBinding(
   context: InvocationContext, descriptor: BindingDescriptor,
   ownership: PriorManagedOwnership, materialization: Materialization
 ): PublicationBindingPlan {
-  if (descriptor.kind === 'controller') return controllerBinding(context, descriptor);
   if (descriptor.kind === 'document') return documentBinding(descriptor, ownership);
   return directoryBinding(descriptor, ownership, materialization);
 }
@@ -591,9 +561,8 @@ function assertUniqueOperationDestinations(bindings: readonly PublicationBinding
 function assertAggregateBuild(context: InvocationContext, build: VerifiedCurrentBuild): void {
   const expectedManifestPath = buildManifestPath(context.packageRoot, []);
   if (resolve(build.manifestPath) !== resolve(expectedManifestPath)
-    || build.manifest.schema_version !== 2
-    || Object.keys(build.manifest.home_policy).length !== PERSISTED_TARGETS.length + 1
-    || !Object.hasOwn(build.manifest.home_policy, 'advisor-controller')
+    || build.manifest.schema_version !== 3
+    || Object.keys(build.manifest.home_policy).length !== PERSISTED_TARGETS.length
     || PERSISTED_TARGETS.some((target) => !Object.hasOwn(build.manifest.home_policy, target))) {
     fail('PROTOCOL_INVALID');
   }
@@ -611,7 +580,7 @@ function reconcileRetiredBindings(
   readonly bindings: readonly PublicationBindingPlan[];
   readonly managedOwnership: PriorManagedOwnership;
 } {
-  if (phase === 'shared' || !context.selectedTargetIds.includes('antigravity') || !prior.gemini) {
+  if (!context.selectedTargetIds.includes('antigravity') || !prior.gemini) {
     return { bindings: Object.freeze([]), managedOwnership: currentManagedOwnership };
   }
   const removedBindings: PublicationBindingPlan[] = [];
@@ -635,7 +604,7 @@ function reconcileRetiredBindings(
     if (operations.length > 0) {
       removedBindings.push(Object.freeze({
         target: 'gemini', localRoot: binding, binding, sourceRoot: '', destinationRoot,
-        order: 1000, controller: false, kind: 'document', managedPaths: Object.freeze([]),
+        order: 1000, kind: 'document', managedPaths: Object.freeze([]),
         operations: Object.freeze(operations)
       }));
     }
@@ -683,7 +652,7 @@ function phasePlan(
   const activeBindingSet = new Set(activeBindingOrder);
   const changes = Object.freeze(frozenBindings
     .filter((binding) => activeBindingSet.has(binding.binding)
-      && binding.target !== 'advisor-controller' && binding.target !== 'gemini'
+      && binding.target !== 'gemini'
       && context.selectedTargetIds.includes(binding.target))
     .flatMap((binding) => binding.operations.map((operation) => changeFor(binding, operation)))
   );
@@ -694,7 +663,7 @@ function phasePlan(
     projectIdentity, build,
     buildManifestPath: buildManifestRelativePath(context, build),
     buildManifestDigest: build.manifestDigest,
-    selectedTargets: Object.freeze(phase === 'shared' ? [] : [...context.selectedTargetIds]),
+    selectedTargets: Object.freeze([...context.selectedTargetIds]),
     bindingOrder: activeBindingOrder,
     bindings: frozenBindings,
     changes,
@@ -702,16 +671,6 @@ function phasePlan(
   });
 }
 
-function controllerDescriptor(context: InvocationContext, build: VerifiedCurrentBuild): BindingDescriptor {
-  const output = build.outputPaths['.evcrate'];
-  if (typeof output !== 'string') fail();
-  return Object.freeze({
-    phase: 'shared', scope: 'home', target: 'advisor-controller', manifest: null,
-    localRoot: '.evcrate/bin', binding: '.evcrate/bin', sourceRoot: join(output, 'bin'),
-    destinationRoot: lexicalChild(context.homeRoot, '.evcrate/bin'),
-    policyRoot: context.homeRoot, order: 0, kind: 'controller'
-  });
-}
 
 function assertBuildSelection(context: InvocationContext, build: VerifiedCurrentBuild): void {
   const actual = build.selectedManifests.map(({ id }) => id as PersistedTarget);
@@ -744,7 +703,7 @@ function homeDescriptors(
     || PUBLICATION_BINDING_ORDER.indexOf(left.binding as never) - PUBLICATION_BINDING_ORDER.indexOf(right.binding as never)
   );
   const expected = PUBLICATION_BINDING_ORDER.filter((binding) =>
-    binding !== '.evcrate/bin' && sorted.some(({ binding: actual }) => actual === binding)
+    sorted.some(({ binding: actual }) => actual === binding)
   );
   if (sorted.length !== expected.length || sorted.some(({ binding }, index) => binding !== expected[index])) {
     fail('PROTOCOL_INVALID');
@@ -813,18 +772,9 @@ function destinationPath(descriptor: BindingDescriptor): string {
 
 
 function assertDescriptorShape(descriptor: BindingDescriptor): void {
-  if (descriptor.kind === 'controller') {
-    if (descriptor.phase !== 'shared' || descriptor.scope !== 'home'
-      || descriptor.target !== 'advisor-controller' || descriptor.manifest !== null
-      || descriptor.localRoot !== '.evcrate/bin' || descriptor.binding !== '.evcrate/bin') {
-      fail('PROTOCOL_INVALID');
-    }
-    return;
-  }
   if (descriptor.kind !== 'directory' && descriptor.kind !== 'document') fail('PROTOCOL_INVALID');
   const manifest = descriptor.manifest;
   if (descriptor.phase !== 'harness' || manifest === null
-    || descriptor.target === 'advisor-controller'
     || manifest.id !== descriptor.target || manifest.name !== descriptor.target) {
     fail('PROTOCOL_INVALID');
   }
@@ -872,15 +822,6 @@ function preflightDescriptors(descriptors: readonly BindingDescriptor[]): void {
 }
 
 
-export function createSharedPublicationPlan(
-  context: InvocationContext, build: VerifiedCurrentBuild,
-  priorManagedOwnership: PriorManagedOwnership = {}
-): PublicationPhasePlan {
-  assertAggregateBuild(context, build);
-  const descriptors = [controllerDescriptor(context, build)];
-  preflightDescriptors(descriptors);
-  return phasePlan(context, build, 'shared', 'home', null, context.homeRoot, descriptors, priorManagedOwnership);
-}
 
 export function createHomeHarnessPublicationPlan(
   context: InvocationContext, build: VerifiedCurrentBuild,
@@ -888,7 +829,7 @@ export function createHomeHarnessPublicationPlan(
 ): PublicationPhasePlan {
   assertAggregateBuild(context, build);
   const descriptors = homeDescriptors(context, build);
-  preflightDescriptors([controllerDescriptor(context, build), ...descriptors]);
+  preflightDescriptors(descriptors);
   return phasePlan(context, build, 'harness', 'home', null, context.homeRoot, descriptors, priorManagedOwnership);
 }
 
@@ -899,7 +840,7 @@ export function createProjectHarnessPublicationPlan(
   assertAggregateBuild(context, build);
   const identity = resolvePublicationProjectContext(context);
   const descriptors = projectDescriptors(context, build, identity.canonicalRoot);
-  preflightDescriptors([controllerDescriptor(context, build), ...descriptors]);
+  preflightDescriptors(descriptors);
   return phasePlan(
     context, build, 'harness', 'project', identity.projectIdentity,
     identity.canonicalRoot, descriptors, priorManagedOwnership
@@ -913,20 +854,16 @@ export function createPublicationPlanSet(
   if (scope !== 'home' && scope !== 'project') fail('PROTOCOL_INVALID');
   const build = options.build ?? resolveCurrentPublicationBuild({
     packageRoot: context.packageRoot, canonicalSourceRoot: context.canonicalSourceRoot,
-    controllerRoot: context.controllerRoot, targetRegistryPath: context.registryPath,
+    targetRegistryPath: context.registryPath,
     selectedTargets: context.selectedTargetIds, mode: 'consumer'
   });
   assertAggregateBuild(context, build);
   const prior = normalizeOwnership(options.priorManagedOwnership);
   const identity = scope === 'project' ? resolvePublicationProjectContext(context) : null;
-  const sharedDescriptors = [controllerDescriptor(context, build)];
   const harnessDescriptors = scope === 'project'
     ? projectDescriptors(context, build, identity?.canonicalRoot ?? fail('PATH_UNSAFE'))
     : homeDescriptors(context, build);
-  preflightDescriptors([...sharedDescriptors, ...harnessDescriptors]);
-  const shared = phasePlan(
-    context, build, 'shared', 'home', null, context.homeRoot, sharedDescriptors, prior
-  );
+  preflightDescriptors(harnessDescriptors);
   const harness = phasePlan(
     context, build, 'harness', scope, identity?.projectIdentity ?? null,
     scope === 'project' ? identity?.canonicalRoot ?? fail('PATH_UNSAFE') : context.homeRoot,
@@ -934,51 +871,19 @@ export function createPublicationPlanSet(
   );
   return Object.freeze({
     scope, projectIdentity: identity?.projectIdentity ?? null, build,
-    buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
-    shared, harness,
-    phases: Object.freeze([shared, harness]) as readonly [PublicationPhasePlan, PublicationPhasePlan]
+    buildManifestPath: harness.buildManifestPath, buildManifestDigest: harness.buildManifestDigest,
+    harness,
+    phases: Object.freeze([harness]) as readonly [PublicationPhasePlan]
   });
 }
 
-function composeLegacyPlan(
-  context: InvocationContext, build: VerifiedCurrentBuild,
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan
-): PublicationPlan {
-  const bindings = Object.freeze([...shared.bindings, ...harness.bindings]);
-  const changes = Object.freeze([...shared.changes, ...harness.changes]);
-  if (changes.length > MAX_PUBLICATION_CHANGES) fail();
-  return Object.freeze({
-    build, buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
-    selectedTargets: Object.freeze([...context.selectedTargetIds]),
-    bindingOrder: Object.freeze([...shared.bindingOrder, ...harness.bindingOrder]),
-    bindings, changes,
-    managedOwnership: harness.managedOwnership
-  });
-}
-
-/**
- * Compatibility composer for the Phase 05-owned publication caller.
- * It keeps the legacy selected-manifest HOME path while sharing one build
- * object across the shared and harness planners.
- */
 export function createPublicationPlan(
   context: InvocationContext, markerPath?: string
 ): PublicationPlan {
-  const build = resolveCurrentBuild({
-    packageRoot: context.packageRoot, canonicalSourceRoot: context.canonicalSourceRoot,
-    controllerRoot: context.controllerRoot, targetRegistryPath: context.registryPath,
-    selectedTargets: context.selectedTargetIds, mode: 'consumer'
-  });
+  const build = resolveCurrentPublicationBuild(context);
   const marker = markerPath === undefined ? null : readOptionalPublicationMarker(markerPath);
   const prior = legacyOwnership(marker, build.selectedManifests);
-  const sharedDescriptors = [controllerDescriptor(context, build)];
-  const harnessDescriptors = homeDescriptors(context, build);
-  preflightDescriptors([...sharedDescriptors, ...harnessDescriptors]);
-  const shared = phasePlan(
-    context, build, 'shared', 'home', null, context.homeRoot, sharedDescriptors, prior
-  );
-  const harness = phasePlan(
-    context, build, 'harness', 'home', null, context.homeRoot, harnessDescriptors, prior
-  );
-  return composeLegacyPlan(context, build, shared, harness);
+  const descriptors = homeDescriptors(context, build);
+  preflightDescriptors(descriptors);
+  return phasePlan(context, build, 'harness', 'home', null, context.homeRoot, descriptors, prior);
 }

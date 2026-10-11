@@ -27,7 +27,6 @@ import {
   copilotSkillName,
   copilotStyleName,
 } from '../../dist/adapters/resource-naming.js';
-import { ADVISOR_COMMAND_NAMES } from '../../dist/manifests/controller.js';
 import { vscodeAdapter } from '../../dist/adapters/vscode/index.js';
 import { makeTempDir, packageRoot, prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 const registry = loadTargetManifestRegistry(join(packageRoot, '.evcrate/targets/manifest.json'));
@@ -40,7 +39,8 @@ const canonicalSourceDir = join(packageRoot, '.evcrate/source/.claude');
 test('Phase 09: all canonical command files round-trip through -x- reversibility', () => {
   const commandFiles = readdirSync(join(canonicalSourceDir, 'commands'))
     .filter((f) => f.endsWith('.md'));
-  assert.ok(commandFiles.length >= 70, 'Must have at least 70 canonical commands');
+  assert.equal(commandFiles.length, 69, 'Must have exactly 69 canonical commands');
+  assert.ok(!commandFiles.includes('evc-cmd-advise.md'), 'evc-cmd-advise.md must be retired');
 
   for (const file of commandFiles) {
     const stem = file.replace(/\.md$/, '');

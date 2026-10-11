@@ -16,7 +16,7 @@ Execute MCP operations via **Gemini CLI** to preserve context budget.
    echo "$ARGUMENTS. Return JSON only per GEMINI.md instructions." | gemini -y -m gemini-2.5-flash
    ```
 
-2. **Fallback to evc-mcp-manager subagent** (if Gemini CLI unavailable):
+2. **Fallback to mcp-manager subagent** (if Gemini CLI unavailable):
    - Use `evc-mcp-manager` subagent to discover and execute tools
    - If the subagent got issues with the scripts of `mcp-management` skill, use `mcp-builder` skill to fix them
    - **DO NOT** create ANY new scripts

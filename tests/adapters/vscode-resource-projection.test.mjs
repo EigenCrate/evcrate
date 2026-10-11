@@ -11,7 +11,6 @@ import { vscodeAdapter } from '../../dist/adapters/vscode/index.js';
 import { parseFrontmatter } from '../../dist/adapters/vscode/metadata.js';
 import { parseCatalogYaml } from '../../dist/adapters/catalog-types.js';
 import { discoverAllVscodeNames, discoverVscodeAgents, discoverVscodeCommands } from '../../dist/adapters/vscode/names.js';
-import { convertVscodeAgents } from '../../dist/adapters/vscode/agents.js';
 import { buildVscodeInventory } from '../../dist/adapters/vscode/inventory.js';
 
 const repository = process.cwd();
@@ -52,14 +51,6 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(instructionsParsed.fields.applyTo, '**');
 
     // 3. Verify key agents
-    // Advisor: tools: [], agents: [], model: opus
-    const advisorPath = join(stageRoot, 'com.github.copilot/agents/evc-advisor.agent.md');
-    assert.ok(existsSync(advisorPath), 'evc-advisor.agent.md must exist');
-    const advisorParsed = parseFrontmatter(readFileSync(advisorPath, 'utf8'));
-    assert.equal(advisorParsed.fields.name, 'evc-advisor');
-    assert.equal(advisorParsed.fields.model, 'opus');
-    assert.deepEqual(advisorParsed.fields.tools, []);
-    assert.deepEqual(advisorParsed.fields.agents, []);
 
     // Git-manager: tools mapped, no task -> agents: [], model: haiku
     const gitPath = join(stageRoot, 'com.github.copilot/agents/evc-git-manager.agent.md');
@@ -85,6 +76,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.ok(existsSync(reviewerPath), 'evc-code-reviewer.agent.md must exist');
     const reviewerParsed = parseFrontmatter(readFileSync(reviewerPath, 'utf8'));
     assert.equal(reviewerParsed.fields.name, 'evc-code-reviewer');
+    assert.equal(reviewerParsed.fields.model, 'sonnet');
 
     // Scout: search/read tools mapped, no edit capability, no task -> agents: [], model: haiku
     const scoutPath = join(stageRoot, 'com.github.copilot/agents/evc-scout.agent.md');
@@ -125,7 +117,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(croParsed.fields['user-invocable'], true);
     assert.equal(croParsed.fields['disable-model-invocation'], true);
 
-    // 5. Verify skills (40)
+    // 5. Verify skills (39)
     // Normalized lowercase claude-code/skill.md -> skills/claude-code/SKILL.md
     const claudeCodeSkill = join(stageRoot, 'skills/claude-code/SKILL.md');
     assert.ok(existsSync(claudeCodeSkill), 'skills/claude-code/SKILL.md must exist');
@@ -151,7 +143,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const commandsDataPath = join(stageRoot, 'evcrate/scripts/commands_data.yaml');
     assert.ok(existsSync(commandsDataPath), 'commands_data.yaml must exist');
     const commandsData = parseCatalogYaml(readFileSync(commandsDataPath, 'utf8'));
-    assert.equal(commandsData.length, 70, 'All 70 commands must be in commands_data.yaml');
+    assert.equal(commandsData.length, 69, 'All 69 commands must be in commands_data.yaml');
     const croCatalogItem = commandsData.find((c) => c.source === 'evc-cmd-plan-x-cro.md');
     assert.ok(croCatalogItem);
     assert.equal(croCatalogItem.name, '/evc:cmd-plan-x-cro');
@@ -160,8 +152,8 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const skillsDataPath = join(stageRoot, 'evcrate/scripts/skills_data.yaml');
     assert.ok(existsSync(skillsDataPath), 'skills_data.yaml must exist');
     const skillsData = parseCatalogYaml(readFileSync(skillsDataPath, 'utf8'));
-    // Canonical skills_data.yaml has 38 skills; all 38 are mapped and projected
-    assert.equal(skillsData.length, 38, 'All 38 catalog skills must be in skills_data.yaml');
+    // Canonical skills_data.yaml has 37 skills; all 37 are mapped and projected
+    assert.equal(skillsData.length, 37, 'All 37 catalog skills must be in skills_data.yaml');
     assert.equal(
       skillsData.some((s) => s.name === 'template-skill'),
       false,
@@ -174,13 +166,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const commandMapPath = join(stageRoot, 'evcrate/command-name-map.json');
     assert.ok(existsSync(commandMapPath));
     const commandMapJson = JSON.parse(readFileSync(commandMapPath, 'utf8'));
-    assert.equal(commandMapJson.commands.length, 70);
+    assert.equal(commandMapJson.commands.length, 69);
     assert.equal(commandMapJson.schema, 'evcrate-vscode-command-name-map-v1');
     assert.equal(commandMapJson.plugin_id, 'evc');
     for (const [canonicalName, semanticId, localName] of [
       ['evc-cmd-plan-x-cro', 'plan/cro', 'cmd-plan-x-cro'],
       ['evc-cmd-code-x-auto', 'code/auto', 'cmd-code-x-auto'],
-      ['evc-cmd-advise', 'advise', 'cmd-advise']
+      ['evc-cmd-ask', 'ask', 'cmd-ask']
     ]) {
       const entry = commandMapJson.commands.find((command) => command.localName === localName);
       assert.ok(entry);
@@ -206,7 +198,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const skillMapPath = join(stageRoot, 'evcrate/skill-map.json');
     assert.ok(existsSync(skillMapPath));
     const skillMapJson = JSON.parse(readFileSync(skillMapPath, 'utf8'));
-    assert.equal(skillMapJson.skills.length, 40);
+    assert.equal(skillMapJson.skills.length, 39);
 
     const resourceMapPath = join(stageRoot, 'evcrate/resource-name-map.json');
     assert.ok(existsSync(resourceMapPath));
@@ -277,28 +269,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(modelMap.mappings.sonnet.nativeModel, 'claude-3.5-sonnet');
     assert.equal(modelMap.mappings.haiku.nativeModel, 'claude-3.5-haiku');
 
-    // 11. Verify Phase 05 advisory command and workflows
-    const cmdAdvisePath = join(stageRoot, 'skills/cmd-advise/SKILL.md');
-    assert.ok(existsSync(cmdAdvisePath));
-    const cmdAdviseContent = readFileSync(cmdAdvisePath, 'utf8');
-    assert.ok(cmdAdviseContent.includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
-    assert.ok(cmdAdviseContent.includes('vscode/askQuestions'));
-
-    const adviseInterviewWorkflowPath = join(stageRoot, 'evcrate/workflows/advisory-interview.md');
-    assert.ok(existsSync(adviseInterviewWorkflowPath));
-    const adviseInterviewContent = readFileSync(adviseInterviewWorkflowPath, 'utf8');
-    assert.ok(adviseInterviewContent.includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
-
-    const advisorMentoringWorkflowPath = join(stageRoot, 'evcrate/workflows/advisor-mentoring.md');
-    assert.ok(existsSync(advisorMentoringWorkflowPath));
-    const advisorMentoringContent = readFileSync(advisorMentoringWorkflowPath, 'utf8');
-    assert.ok(advisorMentoringContent.includes('<!-- EVCRATE_CAPABILITY: mentoring/supported/v2 -->'));
-    assert.ok(advisorMentoringContent.includes('<!-- EVCRATE_CAPABILITY: write-checks/vscode/advisory-only/v1 -->'));
+    // 11. Verify canonical command delivery.
+    const cmdAskPath = join(stageRoot, 'skills/cmd-ask/SKILL.md');
+    assert.ok(existsSync(cmdAskPath));
 
     // 12. Verify workflow fallback in staged instructions, agents, and skills
     assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/primary-workflow.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/primary-workflow.md` (the published install)'));
     assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)'));
-    assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install)'));
     assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` (the published install)'));
     assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/documentation-management.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/documentation-management.md` (the published install)'));
     assert.equal(instructionsContent.includes('./docs/development-rules.md'), false);
@@ -321,8 +298,6 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(docMgmtContent.includes('./docs/development-rules.md'), false);
     assert.ok(docMgmtContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
 
-    assert.ok(advisorMentoringContent.includes('.evcrate-vscode/evcrate/workflows/advisor-mentoring.md'));
-    assert.ok(advisorMentoringContent.includes('if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install)'));
   } finally {
     stage.cleanup();
   }
@@ -424,14 +399,3 @@ test('vscode-names: shared skill directories reject command and style collisions
   assert.deepEqual(names.skillDirectoryNames, ['cmd-plan-x-cro', 'planning', 'style-concise']);
 });
 
-test('vscode-projection: canonical advisor still rejects incomplete checkpoint contracts', () => {
-  for (const body of ['', '## Required checkpoint method', '## Checkpoint terminal report']) {
-    const context = namingContext([
-      ['agents/evc-advisor.md', `---\nname: evc-advisor\ndescription: Checkpoint advisor\n---\n${body}`]
-    ]);
-    assert.throws(
-      () => convertVscodeAgents(context, discoverVscodeAgents(context), {}, []),
-      { code: 'VALIDATION_INVALID' }
-    );
-  }
-});

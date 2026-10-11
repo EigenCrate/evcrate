@@ -1,6 +1,5 @@
-import { spawn } from "node:child_process";
-import { readFile, stat } from "node:fs/promises";
-import { homedir } from "node:os";
+import { constants } from "node:fs";
+import { lstat, open, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,7 +7,6 @@ interface Metadata {
   name: string;
   canonicalName: string;
   description: string;
-  activation: boolean;
   template: string;
 }
 interface Context {
@@ -16,100 +14,50 @@ interface Context {
   hasUI?: boolean;
   ui?: { notify(message: string, level: "error"): unknown };
 }
-type ActivationContext = {
+type CommandContext = {
   project_root: string; command: string; work_target: string;
-  plan_path: string | null; phase_path: string | null; phase_id: string | null;
-};
-type ActivationResult = {
-  protocol: "evcrate-advice-mode"; version: 1; status: "MODE_READY";
-  mode: "off" | "explicit";
-  reason: "NO_FINAL_FLAG" | "EXPLICIT_FINAL_FLAG";
-  work_arguments: string; context: ActivationContext; run: null; error: null;
+  plan_path: null; phase_path: null; phase_id: null;
 };
 
-const OUTPUT_LIMIT = 256 * 1024;
-const RESULT_KEYS = ["protocol", "version", "status", "mode", "reason", "work_arguments", "context", "run", "error"];
-const CONTEXT_KEYS = ["project_root", "command", "work_target", "plan_path", "phase_path", "phase_id"];
-const REPUBLISH = "evcrate publish --apply --scope home --target omp";
-// Diagnostics stay below the 200-character notice cap so the repair command is never truncated.
-const NODE_MISSING = "Node >=22.19.0 not found on PATH; install a supported Node.js and make node available on PATH, then retry";
-const HELPER_MISSING = "the HOME activation helper is missing; install or republish it with: " + REPUBLISH;
-const RESOURCE_MISSING = "a packaged OMP command resource is unreadable; republish it with: " + REPUBLISH;
-const helperFailure = (reason: string) => new Error("HOME activation helper failed: " + reason);
+const RESOURCE_LIMIT = 1024 * 1024;
+const RESOURCE_MISSING = "a packaged OMP command resource is unreadable; republish it with: evcrate publish --apply --scope home --target omp";
 
-function objectWithKeys(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
-}
-
-// A native user entry is always evaluated with a null handoff: only off or explicit with no run can result.
-function validateNativeResult(output: Buffer, context: ActivationContext, raw: string): ActivationResult {
-  const text = new TextDecoder("utf-8", { fatal: true }).decode(output);
-  if (!text.endsWith("\n")) throw new Error("helper output is not newline terminated");
-  const result: unknown = JSON.parse(text);
-  if (!objectWithKeys(result, RESULT_KEYS)) throw new Error("helper result does not match the native admission contract");
-  const resultContext = result.context;
-  if (result.protocol !== "evcrate-advice-mode" || result.version !== 1
-    || result.status !== "MODE_READY" || result.error !== null || result.run !== null
-    || typeof result.work_arguments !== "string" || !objectWithKeys(resultContext, CONTEXT_KEYS)
-    || !CONTEXT_KEYS.every(key => resultContext[key] === context[key as keyof ActivationContext])) {
-    throw new Error("helper result does not match the native admission contract");
-  }
-  const r = result as ActivationResult;
-  if (!((r.mode === "off" && r.reason === "NO_FINAL_FLAG" && r.work_arguments === raw)
-    || (r.mode === "explicit" && r.reason === "EXPLICIT_FINAL_FLAG"))) {
-    throw new Error("helper result does not match the native admission contract");
-  }
-  return r;
-}
-
-function evaluate(helper: string, context: ActivationContext, raw: string): Promise<ActivationResult> {
-  const wire = JSON.stringify({ protocol: "evcrate-advice-mode", version: 1,
-    raw_arguments: raw, context, handoff: null });
-  if (Buffer.byteLength(wire) > 64 * 1024) throw new Error("request exceeds the 64 KiB bound");
-  const { promise, resolve, reject } = Promise.withResolvers<ActivationResult>();
-  const child = spawn("node", [helper], { shell: false, cwd: context.project_root,
-    env: process.env, stdio: ["pipe", "pipe", "pipe"] });
-  const chunks: Buffer[] = [];
-  let size = 0;
-  let settled = false;
-  const finish = (error?: Error, result?: ActivationResult) => {
-    if (settled) return;
-    settled = true;
-    clearTimeout(timer);
-    if (error) child.kill("SIGKILL");
-    child.stdin.destroy();
-    child.stdout.destroy();
-    child.stderr.destroy();
-    if (error) reject(error); else resolve(result!);
-  };
-  const timer = setTimeout(() => finish(helperFailure("no result within two seconds")), 2000);
-  // The project cwd is validated before spawn, so ENOENT here means the node executable itself was not found.
-  child.on("error", (error: NodeJS.ErrnoException) => finish(error.code === "ENOENT" ? new Error(NODE_MISSING) : helperFailure("could not be started")));
-  child.stdin.on("error", () => finish(helperFailure("could not receive its request")));
-  child.stdout.on("error", () => finish(helperFailure("its output could not be read")));
-  child.stderr.on("error", () => finish(helperFailure("its diagnostics could not be read")));
-  // Drain diagnostics, but never expose helper stderr or supplied error text to users.
-  child.stderr.resume();
-  child.stdout.on("data", (chunk: Buffer) => {
-    size += chunk.length;
-    if (size > OUTPUT_LIMIT) finish(helperFailure("output exceeded 256 KiB"));
-    else if (!settled) chunks.push(chunk);
-  });
-  child.on("close", (code, signal) => {
-    if (settled) return;
-    if (code !== 0 || signal !== null) return finish(helperFailure("nonzero exit or signal"));
-    try { finish(undefined, validateNativeResult(Buffer.concat(chunks, size), context, raw)); }
-    catch { finish(helperFailure("returned invalid activation output")); }
-  });
-  // All process and stream handlers exist before the input is sent.
-  child.stdin.end(wire, "utf8");
-  return promise;
-}
-
-async function readResource(file: string): Promise<string> {
-  try { return await readFile(file, "utf8"); }
-  catch { throw new Error(RESOURCE_MISSING); }
+async function readResource(root: string, relative: string): Promise<string> {
+  const file = path.join(root, relative);
+  let handle;
+  try {
+    // Inspect every ancestor: neither a leaf nor an installation component may redirect reads.
+    const parsed = path.parse(file);
+    let current = parsed.root;
+    const parts = file.slice(parsed.root.length).split(path.sep);
+    for (let index = 0; index < parts.length; index++) {
+      current = path.join(current, parts[index]!);
+      const entry = await lstat(current);
+      if (entry.isSymbolicLink() || (index < parts.length - 1 ? !entry.isDirectory() : !entry.isFile())) {
+        throw new Error(RESOURCE_MISSING);
+      }
+    }
+    const initial = await lstat(file);
+    handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const entry = await handle.stat();
+    if (!entry.isFile() || entry.dev !== initial.dev || entry.ino !== initial.ino
+      || entry.size !== initial.size || entry.size === 0 || entry.size > RESOURCE_LIMIT) throw new Error(RESOURCE_MISSING);
+    const bytes = Buffer.alloc(entry.size + 1);
+    let size = 0;
+    while (size < bytes.length) {
+      const chunk = await handle.read(bytes, size, bytes.length - size, null);
+      if (!chunk.bytesRead) break;
+      size += chunk.bytesRead;
+    }
+    if (size !== entry.size) throw new Error(RESOURCE_MISSING);
+    const final = await lstat(file);
+    if (final.isSymbolicLink() || final.dev !== entry.dev || final.ino !== entry.ino || final.size !== entry.size
+      || await realpath(file) !== file) throw new Error(RESOURCE_MISSING);
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, size));
+    if (!text.trim() || text.includes("\0")) throw new Error(RESOURCE_MISSING);
+    return text;
+  } catch { throw new Error(RESOURCE_MISSING); }
+  finally { await handle?.close(); }
 }
 function commandBody(content: string): string {
   const frontmatter = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/u.exec(content);
@@ -127,25 +75,8 @@ function substitute(body: string, raw: string, args: readonly string[]): string 
     });
 }
 
-function buildHeader(command: string, context: ActivationContext, result: ActivationResult) {
-  return {
-    evcrate_omp_command_context: {
-      protocol: "evcrate-omp-command-context",
-      version: 2,
-      source: "native-user",
-      command,
-      mode: result.mode,
-      reason: result.reason,
-      context,
-      run: result.run
-    }
-  };
-}
-
-async function reportError(ctx: Context, error: unknown): Promise<undefined> {
-  const detail = error instanceof Error && !('code' in error)
-    ? error.message.replace(/[\r\n]/gu, " ").slice(0, 200) : "required command resource is unreadable";
-  const diagnostic = "EVCrate command stopped before prompt admission: " + detail;
+async function reportError(ctx: Context, detail: string): Promise<undefined> {
+  const diagnostic = ("EVCrate command stopped before prompt admission: " + detail).slice(0, 256);
   if (ctx.hasUI === false || !ctx.ui || typeof ctx.ui.notify !== "function") {
     process.stderr.write(diagnostic + "\n");
   } else {
@@ -158,38 +89,31 @@ export function createCommand(metadata: Metadata, moduleUrl: string) {
   const directory = path.dirname(fileURLToPath(moduleUrl));
   const commands = path.dirname(directory);
   if (path.basename(commands) !== "commands" || path.basename(directory) !== metadata.name
-    || path.basename(metadata.template) !== metadata.template) throw new Error("Invalid native command resource binding");
+    || metadata.template !== metadata.name + ".md") throw new Error("Invalid native command resource binding");
   const resources = path.join(path.dirname(commands), "evcrate");
   return {
     name: metadata.name,
     description: metadata.description,
     async execute(args: string[], ctx: Context, raw?: string): Promise<string | undefined> {
-      try {
-        if (typeof raw !== "string") throw new Error("original raw string arguments are unavailable");
-        let admitted: { context: ActivationContext; result: ActivationResult } | undefined;
-        if (metadata.activation) {
-          const home = process.env.HOME ?? (process.platform === "win32" ? homedir() : undefined);
-          if (!home || !path.isAbsolute(home)) throw new Error("HOME must be a nonempty absolute path");
-          if (!ctx.cwd || !path.isAbsolute(ctx.cwd)) throw new Error("an absolute project cwd is required");
-          const projectRoot = path.resolve(ctx.cwd);
-          if (!(await stat(projectRoot).catch(() => null))?.isDirectory()) throw new Error("the project cwd is not a directory");
-          const helper = path.join(home, ".evcrate/bin/evcrate-advice-mode");
-          if (!(await stat(helper).catch(() => null))?.isFile()) throw new Error(HELPER_MISSING);
-          // Native discovery selects the installation; required resources belong to that same root.
-          await readResource(path.join(resources, "workflows/advice-activation.md"));
-          await readResource(path.join(resources, "workflows/plan-progress.md"));
-          const context: ActivationContext = { project_root: projectRoot, command: metadata.canonicalName,
-            work_target: metadata.canonicalName, plan_path: null, phase_path: null, phase_id: null };
-          admitted = { context, result: await evaluate(helper, context, raw) };
-        }
-        const template = commandBody(await readResource(path.join(resources, "commands", metadata.template)));
-        if (!admitted) return substitute(template, raw, args);
-        const body = substitute(template, admitted.result.work_arguments, args);
-        return JSON.stringify(buildHeader(metadata.canonicalName, admitted.context, admitted.result)) + "\n\n" + body;
-      } catch (error) {
-        return reportError(ctx, error);
+      if (typeof raw !== "string") return reportError(ctx, "original raw string arguments are unavailable");
+      if (Buffer.byteLength(raw, "utf8") > 64 * 1024) return reportError(ctx, "raw arguments exceed the 64 KiB bound");
+      if (typeof ctx.cwd !== "string" || !ctx.cwd || !path.isAbsolute(ctx.cwd)) {
+        return reportError(ctx, "an absolute project cwd is required");
       }
+      let projectRoot: string;
+      try {
+        projectRoot = await realpath(ctx.cwd);
+        if (!(await stat(projectRoot)).isDirectory()) return reportError(ctx, "the project cwd is not a directory");
+      } catch { return reportError(ctx, "the project cwd is not a directory"); }
+      try {
+        await readResource(resources, "workflows/documentation-management.md");
+        const template = commandBody(await readResource(resources, path.join("commands", metadata.template)));
+        const context: CommandContext = { project_root: projectRoot, command: metadata.canonicalName,
+          work_target: metadata.canonicalName, plan_path: null, phase_path: null, phase_id: null };
+        const header = { evcrate_omp_command_context: { protocol: "evcrate-omp-command-context",
+          version: 3, source: "native-user", command: metadata.canonicalName, context } };
+        return JSON.stringify(header) + "\n\n" + substitute(template, raw, args);
+      } catch { return reportError(ctx, RESOURCE_MISSING); }
     }
   };
 }
-

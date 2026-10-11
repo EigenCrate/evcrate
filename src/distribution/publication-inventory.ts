@@ -12,7 +12,8 @@ import {
 import { parseJsonDocument, isPlainObject } from '../protocol/json.js';
 import {
   MAX_PUBLICATION_STATE_BYTES, MAX_PUBLICATION_CHANGES, PUBLICATION_LOCAL_ROOTS,
-  publicationStateTargets, publicationStateLayout, publicationStateOwnership, publicationFlatOwnership
+  publicationStateTargets, publicationStateLayout, publicationStateOwnership, publicationFlatOwnership,
+  type PublicationStateGeneration
 } from '../protocol/publication-payloads.js';
 
 export const MAX_PUBLICATION_FILE_BYTES = COMPLETE_TREE_HASH_LIMITS.maxFileBytes;
@@ -221,7 +222,8 @@ const V2_RECORD_KEYS = [
   'workspace_root', 'workspace_name', 'project_identity', 'retention'
 ] as const;
 export function validatePublicationStateRecord(
-  value: unknown, phase: 'shared' | 'harness', scope: 'home' | 'project'
+  value: unknown, phase: 'shared' | 'harness', scope: 'home' | 'project',
+  requiredGeneration?: PublicationStateGeneration
 ): void {
   if (!isPlainObject(value)
     || Object.keys(value).length !== V2_RECORD_KEYS.length
@@ -234,6 +236,7 @@ export function validatePublicationStateRecord(
     const selected = publicationStateTargets(value.selected_targets, phase === 'shared');
     if (phase === 'shared' && selected.length !== 0) fail();
     const layout = publicationStateLayout(value.binding_order, selected, scope, phase === 'shared');
+    if (requiredGeneration !== undefined && layout.generation !== requiredGeneration) fail();
     const ownership = publicationStateOwnership(
       value.managed_paths, value.previous_managed_paths, selected, scope, layout.generation
     );
@@ -258,6 +261,15 @@ export function validatePublicationStateRecord(
       || !/^[a-f0-9]{64}$/u.test(value.project_identity)))
     || (scope === 'home' && value.retention !== 'bounded-one-home-release')
     || (scope === 'project' && value.retention !== 'none')) fail();
+}
+function validatePublicationMarkerV3(marker: Record<string, unknown>): void {
+  const keys = ['schema_version', 'transaction_type', 'scope', 'records'];
+  if (Object.keys(marker).length !== keys.length || Object.keys(marker).some((key) => !keys.includes(key))
+    || marker.transaction_type !== 'target-publication'
+    || (marker.scope !== 'home' && marker.scope !== 'project')
+    || !isPlainObject(marker.records) || Object.keys(marker.records).length !== 1
+    || !Object.hasOwn(marker.records, 'harness')) fail();
+  validatePublicationStateRecord(marker.records.harness, 'harness', marker.scope, 'current');
 }
 function validatePublicationMarkerV2(marker: Record<string, unknown>): void {
   const keys = ['schema_version', 'transaction_type', 'scope', 'records'];
@@ -286,7 +298,7 @@ function validatePublicationMarkerV2(marker: Record<string, unknown>): void {
 export function publicationMarkerRecord(
   marker: Record<string, unknown> | null, phase: 'shared' | 'harness'
 ): Record<string, unknown> | null {
-  if (marker === null || marker.schema_version !== 2 || !isPlainObject(marker.records)) return null;
+  if (marker === null || (marker.schema_version !== 2 && marker.schema_version !== 3) || !isPlainObject(marker.records)) return null;
   const records = marker.records as Record<string, unknown>;
   const value = records[phase];
   return value === null || value === undefined ? null : isPlainObject(value) ? value : fail();
@@ -364,6 +376,10 @@ function validatePythonMarker(marker: Record<string, unknown>): void {
   }
 }
 function validatePublicationMarker(marker: Record<string, unknown>): void {
+  if (marker.schema_version === 3) {
+    validatePublicationMarkerV3(marker);
+    return;
+  }
   if (marker.schema_version === 2) {
     validatePublicationMarkerV2(marker);
     return;

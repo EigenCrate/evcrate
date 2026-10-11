@@ -3,8 +3,47 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
+const { parseZipEocd } = require('./zip-eocd.cjs');
 
 const releaseContract = require('./release-contract.cjs');
+
+function extractZipInventory(zipPath) {
+  const buf = fs.readFileSync(zipPath);
+  const { recordCount, cdSize, cdOffset } = parseZipEocd(buf);
+  let offset = cdOffset;
+  const records = [];
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+
+  for (let i = 0; i < recordCount; i += 1) {
+    if (offset + 46 > cdOffset + cdSize || buf.readUInt32LE(offset) !== 0x02014b50) {
+      throw new Error('Invalid central directory header in ZIP');
+    }
+    const compSize = buf.readUInt32LE(offset + 20);
+    const uncompSize = buf.readUInt32LE(offset + 24);
+    const nameLen = buf.readUInt16LE(offset + 28);
+    const extraLen = buf.readUInt16LE(offset + 30);
+    const commentLen = buf.readUInt16LE(offset + 32);
+    const localOffset = buf.readUInt32LE(offset + 42);
+    const name = decoder.decode(buf.subarray(offset + 46, offset + 46 + nameLen));
+    offset += 46 + nameLen + extraLen + commentLen;
+
+    if (!name.startsWith('package/')) {
+      throw new Error(`ZIP entry does not start with package/: ${name}`);
+    }
+    const path = name.slice('package/'.length);
+
+    const localNameLen = buf.readUInt16LE(localOffset + 26);
+    const localExtraLen = buf.readUInt16LE(localOffset + 28);
+    const dataOffset = localOffset + 30 + localNameLen + localExtraLen;
+    const compData = buf.subarray(dataOffset, dataOffset + compSize);
+    const uncompressed = zlib.inflateRawSync(compData, { maxOutputLength: Math.max(1, uncompSize) });
+    const sha256 = crypto.createHash('sha256').update(uncompressed).digest('hex');
+
+    records.push({ path, size: uncompressed.length, sha256 });
+  }
+  return records;
+}
 
 /**
  * Returns the exact list of 7 release asset filenames sorted by Unicode code point.
@@ -174,7 +213,11 @@ function verifyAssetSetInternal(kind, options) {
   }
 
   // Schema-level validation via release-contract
-  releaseContract.validateReleaseMetadata(metadata);
+  if (kind === 'windows') {
+    releaseContract.validatePredecessorReleaseMetadata(metadata);
+  } else {
+    releaseContract.validateReleaseMetadata(metadata);
+  }
 
   // Version and tag cross-checks
   if (metadata.version !== version) {
@@ -242,6 +285,26 @@ function verifyAssetSetInternal(kind, options) {
   }
   computedHashes.set(winArchive, winArchiveHash);
 
+  if (kind === 'windows' && metadata.schema === 'evcrate-private-release/v1') {
+    const records = extractZipInventory(winArchivePath);
+    const computedInv = releaseContract.computeInventoryDigest(records);
+    if (computedInv !== metadata.inventory_digest) {
+      throw new Error(
+        `Predecessor archive inventory digest mismatch: computed ${computedInv}, metadata records ${metadata.inventory_digest}`
+      );
+    }
+    const prefix = '.evcrate/source/.evcrate/bin/';
+    const map = {};
+    for (const rec of records) {
+      if (rec.path.startsWith(prefix)) {
+        map[`.evcrate/bin/${rec.path.slice(prefix.length)}`] = rec.sha256;
+      }
+    }
+    if (Object.keys(map).length === 0
+      || releaseContract.sha256Bytes(releaseContract.canonicalJsonBytes(map)) !== metadata.controller_closure_digest) {
+      throw new Error(`Predecessor controller closure digest mismatch for "${winArchive}"`);
+    }
+  }
   const ps1Record = metadata.installers && metadata.installers['install.ps1'];
   if (!ps1Record) {
     throw new Error(`Metadata missing "install.ps1" installer record`);

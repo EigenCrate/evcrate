@@ -3,7 +3,6 @@
   "name": "copilot",
   "adapter": "dist/adapters/copilot/index.js",
   "adapter_sources": [
-    "dist/adapters/advisory.js",
     "dist/adapters/catalog-data.js",
     "dist/adapters/catalog-types.js",
     "dist/adapters/copilot/adapter.js",

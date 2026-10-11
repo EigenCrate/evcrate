@@ -12,8 +12,6 @@ export interface SharedBuildInputs {
   readonly agentsMdHash: string;
   readonly registryPath: string;
   readonly registry: TargetManifestRegistry;
-  readonly controllerBinSource: string;
-  readonly controllerHashes: Readonly<Record<string, string>>;
   readonly targetsRegistryHash?: string;
   readonly runtimeRoot: string;
 }
@@ -34,18 +32,9 @@ export interface DerivedManifestView {
   readonly manifestData: Uint8Array;
 }
 
-/**
- * Constructs the canonical home_policy dictionary for a set of target manifests,
- * always including the mandatory advisor-controller entry.
- */
+/** Constructs the selected or aggregate harness policy view. */
 export function buildTargetPolicies(manifests: readonly TargetManifest[]): Record<string, unknown> {
-  const result: Record<string, unknown> = {
-    'advisor-controller': {
-      bindings: { '.evcrate/bin': '.evcrate/bin' },
-      preserve_paths: {},
-      promotion_order: 5
-    }
-  };
+  const result: Record<string, unknown> = {};
   for (const manifest of manifests) {
     const policy = manifest.homePolicy;
     const value: Record<string, unknown> = {
@@ -68,7 +57,6 @@ export function deriveManifestView(
   targetFactsList: readonly TargetBuildFacts[],
   shared: SharedBuildInputs,
   stagePath: string,
-  controllerMetadata: Record<string, unknown>,
   forceTargetId?: PersistedTarget | string
 ): DerivedManifestView {
   const manifests = targetFactsList.map((fact) => fact.manifest);
@@ -96,13 +84,8 @@ export function deriveManifestView(
       ownersMap[key] = owner;
     }
   }
-  for (const key of Object.keys(shared.controllerHashes)) {
-    ownersMap[key] = 'advisor-controller';
-  }
 
-  const stagedOutputRoots: Record<string, string> = {
-    '.evcrate': join(stagePath, '.evcrate')
-  };
+  const stagedOutputRoots: Record<string, string> = {};
   for (const fact of targetFactsList) {
     Object.assign(stagedOutputRoots, fact.stagedOutputRoots);
   }
@@ -110,15 +93,13 @@ export function deriveManifestView(
   const manifestInputs = {
     sourceHashes,
     adapterHashes,
-    controllerHashes: shared.controllerHashes,
     owners: ownersMap,
     outputRoots: stagedOutputRoots,
     homePolicy: buildTargetPolicies(manifests),
     validation: {
       complete: true,
       symlinks: 'rejected',
-      target_registry: 'validated',
-      advisor_controller: controllerMetadata
+      target_registry: 'validated'
     }
   };
 

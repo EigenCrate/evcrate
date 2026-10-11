@@ -4,7 +4,6 @@ import { filesUnder, sourcePath, decodeUtf8, copyText, writeJson } from './commo
 import { parseFrontmatter, serializeFrontmatter } from './metadata.js';
 import { transformVscodePrompt } from './references.js';
 import type { VscodeCommandMapEntry, VscodeSkillMapEntry } from './names.js';
-import { renderVscodeInlineAdviseCommand } from './advisory.js';
 
 export function convertVscodeCommands(
   context: ProjectionBuildContext,
@@ -35,11 +34,7 @@ export function convertVscodeCommands(
       'disable-model-invocation': true
     };
     let body = parsed.body;
-    if (entry.sourceSemanticId === 'advise') {
-      outFrontmatter.description = 'Interview-first technical advice; advisor relay is unsupported by VS Code Local.';
-      outFrontmatter['argument-hint'] = '[prompt-or-url]';
-      body = renderVscodeInlineAdviseCommand(parsed.body, 'vscode/askQuestions');
-    } else if (entry.argumentHint) {
+    if (entry.argumentHint) {
       outFrontmatter['argument-hint'] = entry.argumentHint;
     }
 

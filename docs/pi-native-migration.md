@@ -5,8 +5,8 @@
 **Central contract:** [system architecture](./system-architecture.md)
 
 This guide covers the Pi adapter and its user-owned settings boundary. General
-controller policy, checkpoint wire format, publication, and command naming live in
-the central architecture and are not duplicated here.
+publication, resource contracts, and command naming live in the central architecture
+and are not duplicated here.
 
 ## Ownership and build
 
@@ -38,8 +38,6 @@ node dist/cli/evcrate.js publish --apply --scope project --project-root /path/to
 use it only after reviewing a verified build and intended HOME changes. Publication
 consumes only current verified output. For HOME scope, it binds local `.pi` to the
 Pi HOME `<home>/.pi` root; for project scope, it binds to `<project-root>/.pi`.
-The shared controller closure (`.evcrate/bin`) is always published under `--home`
-(`<home>/.evcrate/bin`) and is never placed under `--project-root`.
 `PI_CODING_AGENT_DIR` is a runtime configuration variable and does not change the
 publisher destination. Native Windows validation remains pending.
 
@@ -52,8 +50,8 @@ Windows runtime equivalence.
 Under the unified naming contract, the Pi target projects flat `/evc-cmd-*` command names
 with reserved `-x-` nesting tokens (e.g. `commands/evc-cmd-fix-x-fast.md`), matching all
 other active harnesses. The Pi extension resolves child commands and workflows directly
-from its installed resource root. Internal semantic command identifiers (e.g. `fix/fast`, `code/auto`)
-remain the stable keys for advisor activation.
+from its installed resource root. Internal semantic command identifiers
+(e.g. `fix/fast`, `code/auto`) retain their ordinary command identities.
 
 - `evcrate_command` performs bounded nested command expansion; static workflows
   remain Markdown documents.
@@ -68,9 +66,13 @@ remain the stable keys for advisor activation.
   their explicit reasons; shutdown performs canonical cleanup without fabricating a
   Claude-only clear event.
 
-Pi's generated inventory records checkpoint and inline advisory capabilities but
-marks controller relay unsupported. The shared controller remains the only
-checkpoint backend and uses `$HOME/.evcrate/bin/evcrate-advisor`.
+The command context header is `evcrate-pi-command-context` v2, with exact fields
+`protocol`, `version`, `source`, `command`, and `raw_arguments`; source is
+`native-user` or `model-tool`. Raw arguments are transported unchanged.
+Nested dispatch retains depth/count/cycle limits, allowed-tool policy, child-start
+hook timing, installed-root containment, and privacy/scout hooks.
+The inline interview capability is `advise-inline/v1`; generated inventory and
+portable tests do not establish actual native host qualification.
 
 ## Managed packages and settings
 

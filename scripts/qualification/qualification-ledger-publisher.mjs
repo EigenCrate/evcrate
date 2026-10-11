@@ -2,7 +2,7 @@
  * qualification-ledger-publisher.mjs
  *
  * Publishes unexercised / unsupported receipts and generates the
- * authoritative Qualification Index reconciling capability matrix C01-C50.
+ * historical qualification matrix, excluding retired controller/relay rows.
  */
 
 import fs from 'node:fs';
@@ -115,7 +115,7 @@ export function generateQualificationIndex() {
 
 ---
 
-## 2. Authoritative Capability Matrix (C01 – C50) Reconciliation
+## 2. Historical Capability Matrix Reconciliation (C37/C38 Retired)
 
 | ID | Title / Capability | Owners | Observable Status / Verification Link |
 |---|---|---|---|
@@ -155,15 +155,13 @@ export function generateQualificationIndex() {
 | **C34** | Trust, approvals, and hooks enablement | 00, 03, 05, 08 | **VERIFIED (N):** Untrusted workspace boundary explicitly documented |
 | **C35** | MCP opt-in | 05, 08 | **VERIFIED (B+N):** Inert example configuration; no default active server |
 | **C36** | Inline advice interview | 02, 05, 08 | **VERIFIED (B+N):** One question per turn, canonical bounds preserved |
-| **C37** | Existing HOME controller caller | 05, 08-09 | **VERIFIED (B+I+N):** Direct HOME caller instructions; v2 checkpoint contract |
-| **C38** | Advisor relay rejection | 05, 07-09 | **VERIFIED (B+N):** Standalone final \`--agent\` rejected with explicit error |
 | **C39** | No SessionEnd / shell env persistence | 03-04, 08-09 | **VERIFIED (B+N+docs):** Honest gap: no fictitious teardown or shell exports |
 | **C40** | No shell statusline / token telemetry | 02-05, 08-09 | **VERIFIED (S+B+docs):** Honest gap: statusline/tokens omitted by design |
 | **C41** | Eighth persisted target & migration | 01, 06-07 | **VERIFIED (B+I):** Target \`vscode\` registered; schema 2 migration passed |
-| **C42** | Projection directory manifest | 02, 07 | **VERIFIED (S+B):** 116 skill dirs, 0 collisions, complete closure |
+| **C42** | Projection directory manifest | 02, 07 | **VERIFIED (S+B):** Declared skill dirs, 0 collisions, complete closure |
 | **C43** | Resource registry generation | 01, 07 | **VERIFIED (B):** Single mapping authority across all targets |
 | **C44** | Publication idempotency | 06-07 | **VERIFIED (B+I):** Project & HOME publish idempotent; zero drift |
-| **C45** | Scope recovery & rollback | 06-07 | **VERIFIED (B+I):** Partial failures recover cleanly to prior release |
+| **C45** | Scope recovery & rollback | 06-07 | **VERIFIED (B+I):** Failed transactions recover cleanly to prior release |
 | **C46** | Core release asset invariant | 07 | **VERIFIED (B):** Exact seven release assets maintained |
 | **C47** | Package allowlist and tarball | 07 | **VERIFIED (B):** \`.evcrate-vscode\` included in npm files allowlist |
 | **C48** | Installed lifecycle assertions | 07-08 | **VERIFIED (I):** Materialized runtime executes cleanly from foreign CWD |
@@ -173,8 +171,8 @@ export function generateQualificationIndex() {
 ---
 
 ## 3. Qualification Summary
-- **Total Matrix Rows (C01–C50):** 50
-- **Directly Verified on Active Workstation (Linux x64):** 44 capabilities
+- **Retained Historical Matrix Rows:** 48 (C37/C38 excluded)
+- **Qualification Authority:** Historical phase evidence only; not qualification of regenerated current output.
 - **Honest Gaps by Design (C39, C40):** 2 capabilities (documented, non-fictitious)
 - **Unexercised Platform Rows (G, H, I, J, K):** 5 contexts documented with exact missing prerequisites
 - **Explicitly Unsupported Context (L - Web):** 1 context documented with architectural boundary

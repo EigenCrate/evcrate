@@ -2,8 +2,6 @@ import { canonicalJson } from '../protocol/json.js';
 import { serializeControlPlaneError, CONTROL_PLANE_ERROR_DETAILS } from '../errors/control-plane-error.js';
 import type { SerializedControlPlaneError } from '../errors/control-plane-error.js';
 import { CONTROL_PLANE_EXIT_CODES } from '../errors/control-plane-error.js';
-import type { AdvisorSettingsResult } from '../protocol/advisor-settings.js';
-import type { DiagnosticFailure, DiagnosticSuccess } from '../protocol/diagnostic.js';
 import type { ResourceResult } from '../protocol/resource-control.js';
 import type { CliOutput } from './types.js';
 
@@ -16,7 +14,7 @@ export interface CliErrorResult {
   readonly error: SerializedControlPlaneError;
 }
 
-export type CliResult = ResourceResult | AdvisorSettingsResult | DiagnosticSuccess | DiagnosticFailure | CliErrorResult;
+export type CliResult = ResourceResult | CliErrorResult;
 
 export interface RenderOptions {
   readonly json?: boolean;
@@ -47,11 +45,7 @@ function formatLegacyLeftoversWarning(leftovers: unknown): string {
 }
 
 function statusText(result: Record<string, unknown>, debug = false): string {
-  if (result.status === 'QUALIFIED') {
-    const target = result.target as Record<string, unknown> | null;
-    return target ? `qualified ${String(target.backend)} ${String(target.model)}` : 'qualified';
-  }
-  if (result.status === 'FAILED' || result.status === 'error') {
+  if (result.status === 'error') {
     const error = result.error as Record<string, unknown> | undefined;
     const isDebug = debug || process.argv.includes('--debug')
       || process.env.EVCRATE_DEBUG === '1' || process.env.EVCRATE_DEBUG === 'true';
@@ -60,15 +54,7 @@ function statusText(result: Record<string, unknown>, debug = false): string {
       : '';
     return error ? `error ${String(error.code)}: ${String(error.message)}${detail}` : 'error';
   }
-  if (result.status === 'partial') {
-    const error = result.error as Record<string, unknown> | undefined;
-    return error ? `partial ${String(error.code)}: ${String(error.message)}` : 'partial';
-  }
-  if (result.status === 'OK' && result.operation === 'get') return 'advisor settings read';
-  if (result.status === 'PREVIEW') return 'advisor settings preview ready';
-  if (result.status === 'APPLIED') return 'advisor settings applied';
-  if (result.status === 'CONFLICT') return 'advisor settings conflict';
-  if (result.status === 'RECOVERED' || result.status === 'recovered') return 'recovered';
+  if (result.status === 'recovered') return 'recovered';
   if (result.status === 'published' || result.status === 'activated') {
     const payload = result.payload as Record<string, unknown> | undefined;
     const warning = formatLegacyLeftoversWarning(payload?.legacyLeftovers);
@@ -104,16 +90,9 @@ export function writeResult(
 
 export function exitCodeForResult(result: CliResult): number {
   if (result.protocol === 'evcrate-cli') return CONTROL_PLANE_EXIT_CODES[result.error.category];
-  if (result.status === 'QUALIFIED' || result.status === 'OK' || result.status === 'PREVIEW'
-    || result.status === 'APPLIED' || result.status === 'RECOVERED' || result.status === 'ok'
-    || result.status === 'preview' || result.status === 'applied' || result.status === 'published'
-    || result.status === 'activated' || result.status === 'recovered') return 0;
-  if (result.status === 'CONFLICT' || result.status === 'conflict') return 4;
-  if (result.status === 'partial') return 5;
-  if (result.status === 'FAILED') {
-    const category = result.error.category;
-    return ['timeout', 'cancel', 'process', 'output'].includes(category) ? 6 : 3;
-  }
+  if (result.status === 'ok' || result.status === 'preview' || result.status === 'applied'
+    || result.status === 'published' || result.status === 'activated' || result.status === 'recovered') return 0;
+  if (result.status === 'conflict') return 4;
   if (result.status === 'error') return CONTROL_PLANE_EXIT_CODES[result.error.category];
   return 6;
 }

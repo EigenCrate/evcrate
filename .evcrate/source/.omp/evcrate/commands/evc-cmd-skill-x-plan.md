@@ -3,6 +3,7 @@ argument-hint: "[skill-name] [prompt]"
 description: "Plan to create a new agent skill"
 ---
 
+
 Think harder.
 First: Activate `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.

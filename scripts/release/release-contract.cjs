@@ -79,7 +79,9 @@ function isValidReleaseCommitOrSource(gitHead, expectedParentSha, expectedVersio
 function validateReleaseMetadata(data) {
   return metadataSchema.validateReleaseMetadata(data, pathPolicy.MUTABLE_PATHS);
 }
-
+function validatePredecessorReleaseMetadata(data) {
+  return metadataSchema.validatePredecessorReleaseMetadata(data, pathPolicy.MUTABLE_PATHS);
+}
 module.exports = {
   // Schema and platforms
   SCHEMA_ID: metadataSchema.SCHEMA_ID,
@@ -118,6 +120,7 @@ module.exports = {
 
   // Metadata validation
   validateReleaseMetadata,
+  validatePredecessorReleaseMetadata,
   // Git lineage validation
   ALLOWED_RELEASE_COMMIT_FILES,
   isValidReleaseCommitOrSource,

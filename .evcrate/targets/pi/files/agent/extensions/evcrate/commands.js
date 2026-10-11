@@ -170,7 +170,6 @@ export function registerManagedCommands(pi, options = {}) {
                 source: "native-user",
                 command: command.canonicalName,
                 rawArguments: args,
-                handoff: null,
               },
             });
             pi.sendUserMessage(current.body);

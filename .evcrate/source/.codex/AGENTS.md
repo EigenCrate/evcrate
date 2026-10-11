@@ -11,11 +11,10 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Primary workflow: `./.codex/workflows/primary-workflow.md`
 - Development rules: `./.codex/workflows/development-rules.md`
 - Orchestration protocols: `./.codex/workflows/orchestration-protocol.md`
-- Advisor mentoring: `./.codex/workflows/advisor-mentoring.md`
 - Documentation management: `./.codex/workflows/documentation-management.md`
 - And other workflows: `./.codex/workflows/*`
 
-Resolve required workflow resources from `./.codex/workflows/<name>` when present; otherwise use the published `~/.codex/workflows/<name>`. This shared lookup includes `advice-activation.md` and `plan-progress.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read full `advisor-mentoring.md` only after resolved explicit/inherited activation.
+Resolve required workflow resources from `./.codex/workflows/<name>` when present; otherwise use the published `~/.codex/workflows/<name>`. This shared lookup includes `plan-progress.md` and `advisory-interview.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
 
 ## Subagent Completion Contract
 

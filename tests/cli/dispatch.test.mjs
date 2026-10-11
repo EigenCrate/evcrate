@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  createResourceRequest, createSettingsGetResult, createAdvisorSettingsRequest,
+  createResourceRequest,
   exitCodeForResult, main, resolveInvocationContext
 } from '../../dist/index.js';
 
@@ -25,7 +25,6 @@ function runtime(captureValue, extra = {}) {
 }
 test('conflict result statuses retain the conflict exit code', () => {
   assert.equal(exitCodeForResult({ status: 'conflict' }), 4);
-  assert.equal(exitCodeForResult({ status: 'CONFLICT' }), 4);
 });
 
 test('version emits one resource envelope and supports human rendering', async () => {
@@ -42,38 +41,17 @@ test('version emits one resource envelope and supports human rendering', async (
   await main(['version'], runtime(human));
   assert.deepEqual(human.values, ['evcrate 1.0.0\n']);
 });
-test('settings stay on their dedicated handler boundary', async () => {
-  const captured = capture(false);
-  const settingsRuntime = runtime(captured);
-  const exitCode = await main([
-    'advisor', 'settings', 'get', '--home', settingsRuntime.home, '--json'
-  ], settingsRuntime);
-  assert.equal(exitCode, 0);
-  const result = JSON.parse(captured.values[0]);
-  assert.equal(result.protocol, 'evcrate-advisor-settings');
-  assert.equal(result.status, 'OK');
-  assert.equal(result.policy, null);
-  assert.deepEqual(result.revision, { kind: 'absent', identity: 'absent' });
-  for (const operation of ['preview', 'apply']) {
-    const unsupported = capture(false);
-    assert.equal(
-      await main(['advisor', 'settings', operation, '--json'], runtime(unsupported)), 3
-    );
-    const unsupportedResult = JSON.parse(unsupported.values[0]);
-    assert.equal(unsupportedResult.protocol, 'evcrate-advisor-settings');
-    assert.equal(unsupportedResult.operation, operation);
-    assert.equal(unsupportedResult.status, 'FAILED');
-    assert.equal(unsupportedResult.error.code, 'CAPABILITY_UNSUPPORTED');
+test('retired commands reject without invoking any process boundary', async () => {
+  for (const argv of [['health'], ...['get', 'preview', 'apply'].map((operation) => ['advisor', 'settings', operation])]) {
+    const captured = capture(false);
+    const selected = runtime(captured, { processRunner: { run() { throw new Error('unexpected process'); } } });
+    try {
+      assert.equal(await main([...argv, '--home', selected.home, '--json'], selected), 2);
+      const result = JSON.parse(captured.values[0]);
+      assert.equal(result.status, 'error');
+      assert.equal(result.error.code, 'USAGE_INVALID');
+    } finally { rmSync(selected.home, { recursive: true, force: true }); }
   }
-
-  const handled = capture(false);
-  const handler = {
-    handle(request) {
-      return createSettingsGetResult(request, null, { kind: 'absent', identity: 'absent' });
-    }
-  };
-  assert.equal(await main(['advisor', 'settings', 'get'], runtime(handled, { settingsHandler: handler })), 0);
-  assert.equal(JSON.parse(handled.values[0]).status, 'OK');
 });
 
 test('distribution commands execute purely via TypeScript', async () => {
@@ -94,20 +72,19 @@ test('distribution commands execute purely via TypeScript', async () => {
   assert.equal(JSON.parse(retired.values[0]).error.code, 'CAPABILITY_UNSUPPORTED');
 });
 
-test('request-file accepts a complete typed settings envelope', async () => {
+test('retired request protocols reject before process access', async () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-request-'));
-  const requestPath = join(root, 'request.json');
-  const request = createAdvisorSettingsRequest('file-1', 'get');
-  writeFileSync(requestPath, JSON.stringify(request));
-  const captured = capture(false);
-  const requestRuntime = runtime(captured);
-  const exitCode = await main([
-    'advisor', 'settings', 'get', '--request-file', requestPath, '--home', requestRuntime.home, '--json'
-  ], requestRuntime);
-  assert.equal(exitCode, 0);
-  const result = JSON.parse(captured.values[0]);
-  assert.equal(result.requestId, 'file-1');
-  assert.equal(result.operation, 'get');
+  try {
+    for (const protocol of ['evcrate-advisor-settings', 'evcrate-advisor-diagnostic']) {
+      const requestPath = join(root, 'request.json');
+      writeFileSync(requestPath, JSON.stringify({ protocol, protocolVersion: 1, requestId: 'file-1', operation: 'get', payload: {} }));
+      const captured = capture(false);
+      const selected = runtime(captured, { processRunner: { run() { throw new Error('unexpected process'); } } });
+      assert.equal(await main(['--request-file', requestPath, '--home', root, '--json'], selected), 2);
+      assert.equal(JSON.parse(captured.values[0]).error.code, 'PROTOCOL_INVALID');
+      rmSync(selected.home, { recursive: true, force: true });
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 test('request-file distribution publication uses compatibility orchestration', async () => {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-request-distribute-'));

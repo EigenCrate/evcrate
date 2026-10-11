@@ -18,12 +18,5 @@
       "checkpoint": "review:forbidden-counsel-proxy",
       "question": "Should this proxy counsel?"
     }
-  },
-  "counselPayloadInHealthRequest": {
-    "protocol": "evcrate-advisor-diagnostic",
-    "protocolVersion": 1,
-    "requestId": "dam-hopper-neg-002",
-    "operation": "qualify",
-    "question": "Forbidden counsel question in diagnostic probe"
   }
 }

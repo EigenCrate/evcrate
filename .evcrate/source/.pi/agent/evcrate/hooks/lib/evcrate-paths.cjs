@@ -7,7 +7,6 @@
  * All EVCrate temporary/runtime state lives under the
  * ${TMPDIR:-/tmp}/evcrate/ namespace:
  * - markers, calibration, and debug logs use its direct children
- * - advisory state uses ${TMPDIR:-/tmp}/evcrate/advice/v1/
  *
  * Fixes:
  * - #177: Race condition from shared global state file
@@ -31,10 +30,6 @@ const CALIBRATION_PATH = path.join(EVCRATE_TMP_DIR, 'calibration.json');
 
 // Debug logs directory
 const DEBUG_DIR = path.join(EVCRATE_TMP_DIR, 'debug');
-
-// Advisory state has its own subtree under the EVCrate runtime namespace.
-const EVCRATE_ADVICE_ROOT = EVCRATE_TMP_DIR;
-const ADVICE_DIR = path.join(EVCRATE_ADVICE_ROOT, 'advice');
 
 /**
  * Ensure directory exists
@@ -98,10 +93,8 @@ function cleanAll() {
 module.exports = {
   // Directories
   EVCRATE_TMP_DIR,
-  EVCRATE_ADVICE_ROOT,
   MARKERS_DIR,
   DEBUG_DIR,
-  ADVICE_DIR,
 
   // Files
   CALIBRATION_PATH,

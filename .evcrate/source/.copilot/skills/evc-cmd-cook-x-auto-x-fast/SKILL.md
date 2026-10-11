@@ -1,44 +1,27 @@
 ---
 name: "evc-cmd-cook-x-auto-x-fast"
 description: "Low-risk fast cook: scout, plan fast, implement with quality gates"
-argument-hint: "[tasks-or-prompt] [--advice]"
+argument-hint: "[tasks-or-prompt]"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-cook-x-auto-x-fast`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-cook-x-auto-x-fast`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<raw-tasks>$ARGUMENTS</raw-tasks>
+<tasks>$ARGUMENTS</tasks>
 
-## Canonical checkpoint routing
-
-When advice mode is active (`explicit` or `inherited`), named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in `.copilot/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence and does not duplicate route or adapter selection. In `off` mode, named checkpoints and mentoring lifecycle are never invoked.
-
-## Advice Mode
-
-Before discovery or routing, resolve the HOME helper per `.copilot/evcrate/workflows/advice-activation.md` with original `$ARGUMENTS`, canonical `context.command: "cook/auto/fast"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
-Preserve known selections from the exact-call router; use `work_target: "cook/auto/fast"` only when no such target exists, and null plan/phase fields only when unknown.
-Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-
-Apply neutral `.copilot/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.copilot/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
-This command is a stateless router; `/evc-cmd-code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
 ---
 
 ## Role Responsibilities
@@ -59,7 +42,7 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 ## Workflow
 
 - **Scout**: Use `evc-scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
-- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/evc-cmd-cook` with `WORK_ARGUMENTS` and structured caller context per `.copilot/evcrate/workflows/advice-activation.md` (no synthetic flag).
-- **Plan**: Trigger slash command `/evc-cmd-plan-x-fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` per `.copilot/evcrate/workflows/plan-progress.md` before capture; old sealed plans remain untouched.
-- **Implementation**: Trigger slash command `/evc-cmd-code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates without appending a synthetic `--advice` flag. Pass structured pre-run or same-run context per `.copilot/evcrate/workflows/advice-activation.md` when advice mode is active (`explicit` or `inherited`); pass no activation handoff when `off`. `/evc-cmd-code` is the sole durable-state owner and enforces the full lifecycle per `## Caller lifecycle binding` in `.copilot/evcrate/workflows/advisor-mentoring.md` and neutral reconciliation per `.copilot/evcrate/workflows/plan-progress.md`. Root `/evc-cmd-cook-x-auto-x-fast` is a delegate router and delegates ownership to `/evc-cmd-code`; do not duplicate publication or durable controller operations. Preserved historical snapshot protection applies across runs even in `off` mode; prior sealed paths remain immutable, while current-run registered pre-seal writes within parent-authorized paths remain permitted. Never direct edits to sealed plans or metadata/roadmap after seal.
-- **Fallback handoff**: If `/evc-cmd-code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, continue with base `/evc-cmd-cook` or `/evc-cmd-fix-x-hard` using `WORK_ARGUMENTS` and structured caller context per `.copilot/evcrate/workflows/advice-activation.md` (no synthetic flag). Preserve scoped approval and commit behavior (no actual commit now).
+- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/evc-cmd-cook`.
+- **Plan**: Trigger slash command `/evc-cmd-plan-x-fast <detailed-instruction-prompt>` to create an implementation plan based on scout findings and fast preflight.
+- **Implementation**: Trigger slash command `/evc-cmd-code <plan-path-name>` to implement the plan with compile/typecheck, tests, and code review gates.
+- **Escalation**: If `/evc-cmd-code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, stop fast mode and continue with base `/evc-cmd-cook` or `/evc-cmd-fix-x-hard`.

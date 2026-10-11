@@ -4,10 +4,9 @@ import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  ControlPlaneError, createPublicationPlan, main, recoverPublication, resolveInvocationContext,
+  ControlPlaneError, createPublicationPlan, main, readReleaseMarker, recoverPublication, resolveInvocationContext,
   resolvePublicationProjectContext, runAllManifestsBuild
 } from '../../dist/index.js';
-import { PublicationPartialError } from '../../dist/distribution/publication.js';
 
 import { prepareFixtureWorkspace } from '../distribution/parity-verification-helpers.mjs';
 
@@ -27,7 +26,6 @@ const dryRun = Object.freeze({
   scope: 'home', projectIdentity: null,
   buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'a'.repeat(64),
   phases: [
-    { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
     { phase: 'harness', scope: 'home', selectedTargets: ['omp'], bindingOrder, changes: [] }
   ]
 });
@@ -60,11 +58,11 @@ test('top-level publish routes dry-run and apply through the typed resource enve
     const preview = capture();
     assert.equal(await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'], runtime(home, preview, handler)), 0);
     assert.equal(JSON.parse(preview.values[0]).status, 'preview');
-    assert.deepEqual(JSON.parse(preview.values[0]).payload.phases[1].bindingOrder, bindingOrder);
+    assert.deepEqual(JSON.parse(preview.values[0]).payload.phases[0].bindingOrder, bindingOrder);
     const result = capture();
     assert.equal(await main(['publish', '--apply', '--target', 'omp', '--home', home, '--json'], runtime(home, result, handler)), 0);
     assert.equal(JSON.parse(result.values[0]).status, 'published');
-    assert.equal(JSON.parse(result.values[0]).payload.phases[1].releaseId, 'release-cli-1');
+    assert.equal(JSON.parse(result.values[0]).payload.phases[0].releaseId, 'release-cli-1');
     const recovery = capture();
     assert.equal(await main(['recover', '--target', 'omp', '--home', home, '--json'], runtime(home, recovery, handler)), 0);
     const recovered = JSON.parse(recovery.values[0]);
@@ -111,6 +109,11 @@ test('real authority apply matches the typed plan on repeat', async () => {
     assert.equal(await main(['publish', '--apply', '--target', 'omp', '--home', home, '--json'],
       runtime(home, applied)), 0);
     assert.equal(JSON.parse(applied.values[0]).status, 'published');
+    const marker = readReleaseMarker(join(home, '.evcrate', 'publication'));
+    assert.equal(marker.schema_version, 3);
+    assert.deepEqual(Object.keys(marker.records), ['harness']);
+    assert.equal(marker.records.harness.status, 'complete');
+    assert.deepEqual(marker.records.harness.binding_order, bindingOrder);
     const repeated = capture();
     assert.equal(await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'],
       runtime(home, repeated)), 0);
@@ -122,37 +125,24 @@ test('real authority apply matches the typed plan on repeat', async () => {
   }
 });
 
-test('project typed publication serializes a valid partial result with exit five', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-project-partial-'));
+test('HOME and project publication failures use exact error-only envelopes', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'evcrate-cli-failure-'));
   try {
-    const captured = capture();
-    const handler = {
-      publishApply(context) {
-        const partial = {
-          scope: 'project',
-          projectIdentity: resolvePublicationProjectContext(context).projectIdentity,
-          buildManifestPath: '.evcrate/build-manifest-omp.json',
-          buildManifestDigest: 'a'.repeat(64),
-          phases: [
-            { ...dryRun.phases[0], status: 'committed', releaseId: 'shared-release', retainedReleaseId: null },
-            { ...dryRun.phases[1], scope: 'project', status: 'failed', releaseId: null, retainedReleaseId: null }
-          ]
-        };
-        throw new PublicationPartialError(partial, 'PUBLICATION_FAILED');
+    for (const scope of ['home', 'project']) {
+      for (const code of ['PATH_UNSAFE', 'CAS_CONFLICT', 'PUBLICATION_FAILED', 'ROLLBACK_FAILED']) {
+        const captured = capture();
+        const handler = { publishApply() { throw new ControlPlaneError(code); } };
+        assert.notEqual(await main([
+          'publish', '--apply', '--scope', scope, '--target', 'omp',
+          '--home', home, '--project-root', packageRoot, '--json'
+        ], runtime(home, captured, handler)), 0);
+        const result = JSON.parse(captured.values[0]);
+        assert.deepEqual(Object.keys(result).sort(), ['protocol', 'protocolVersion', 'requestId', 'operation', 'status', 'error'].sort());
+        assert.equal(result.status, 'error');
+        assert.equal(result.error.code, code);
       }
-    };
-    assert.equal(await main([
-      'publish', '--apply', '--scope', 'project', '--target', 'omp',
-      '--home', home, '--project-root', packageRoot, '--json'
-    ], runtime(home, captured, handler)), 5);
-    const result = JSON.parse(captured.values[0]);
-    assert.equal(result.status, 'partial');
-    assert.equal(result.error.code, 'PUBLICATION_FAILED');
-    assert.equal(result.payload.phases[0].status, 'committed');
-    assert.equal(result.payload.phases[1].status, 'failed');
-  } finally {
-    rmSync(home, { recursive: true, force: true });
-  }
+    }
+  } finally { rmSync(home, { recursive: true, force: true }); }
 });
 
 
@@ -166,7 +156,6 @@ test('typed publication rejects handler output with mismatched binding order', a
         scope: 'home', projectIdentity: null,
         buildManifestPath: '.evcrate/build-manifest.json', buildManifestDigest: 'a'.repeat(64),
         phases: [
-          { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
           { phase: 'harness', scope: 'home', selectedTargets: ['codex'], bindingOrder: ['.agents/skills', '.codex'], changes: [] }
         ]
       }),

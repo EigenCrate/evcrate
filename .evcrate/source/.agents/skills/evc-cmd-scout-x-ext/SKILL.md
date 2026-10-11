@@ -11,8 +11,6 @@ Description: Use external agentic tools to scout given directories
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -40,7 +38,7 @@ RELEVANT_FILE_OUTPUT_DIR: Use `Report:` from `## Naming` section
   - `opencode run "[prompt]" --model opencode/grok-code` (if count > 3 and count < 6)
   - if count >= 6, spawn `Explore` subagents to search the codebase in parallel
 
-The parent agent must wait for all requested evc-scout agents or external searches to return terminal results before synthesizing the report. Missing, interrupted, timed-out, or partial results do not satisfy the scout gate.
+The parent agent must wait for all requested scout agents or external searches to return terminal results before synthesizing the report. Missing, interrupted, timed-out, or partial results do not satisfy the scout gate.
 
 **Why use external agentic tools?**
 - External agentic tools are faster and more efficient when using LLMs with large context windows (1M+ tokens).

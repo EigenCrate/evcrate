@@ -69,14 +69,6 @@
     },
     {
       "kind": "command-prose",
-      "source": "evc-cmd-advise.md",
-      "classification": "command-prose",
-      "status": "migrated",
-      "target": "evc-cmd-advise/SKILL.md",
-      "target_name": "evc-cmd-advise"
-    },
-    {
-      "kind": "command-prose",
       "source": "evc-cmd-ask.md",
       "classification": "command-prose",
       "status": "migrated",
@@ -626,14 +618,6 @@
       "status": "migrated",
       "target": "evc-cmd-worktree/SKILL.md",
       "target_name": "evc-cmd-worktree"
-    },
-    {
-      "kind": "skill-package",
-      "source": "advisor-strategy/SKILL.md",
-      "classification": "skill-package",
-      "status": "migrated",
-      "target": "advisor-strategy/SKILL.md",
-      "target_name": "advisor-strategy"
     },
     {
       "kind": "skill-package",

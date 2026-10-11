@@ -2,7 +2,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
 const { execNpmSync } = require('./npm-runner.cjs');
 const crypto = require('node:crypto');
 const { sha256Bytes } = require('./canonical-json.cjs');
@@ -37,10 +36,7 @@ function collectPackInventory(projectRoot) {
       throw new Error(`Inventory item must be regular non-symlink file: ${file.path}`);
     }
     const data = Buffer.from(fs.readFileSync(fullPath));
-    const isExecutable = (stat.mode & 0o111) !== 0 ||
-      file.path === 'dist/cli/evcrate.js' ||
-      file.path === '.evcrate/source/.evcrate/bin/evcrate-advisor' ||
-      file.path === '.evcrate/source/.evcrate/bin/evcrate-advice-mode';
+    const isExecutable = (stat.mode & 0o111) !== 0 || file.path === 'dist/cli/evcrate.js';
     const normMode = isExecutable ? 0o755 : 0o644;
     const sha256 = crypto.createHash('sha256').update(data).digest('hex');
 
@@ -60,7 +56,6 @@ function collectPackInventory(projectRoot) {
 function collectBuildManifestDigests(projectRoot) {
   const evcrateDir = path.join(projectRoot, '.evcrate');
   const sourceRoot = path.join(evcrateDir, 'source');
-  const controllerRoot = path.join(sourceRoot, '.evcrate', 'bin');
 
   const manifestLib = require(path.join(projectRoot, 'dist', 'distribution', 'manifest.js'));
   const { readBuildManifest, verifyBuild } = manifestLib;
@@ -92,7 +87,7 @@ function collectBuildManifestDigests(projectRoot) {
       outputRoots[key] = localProjectionPath(sourceRoot, key, true);
     }
 
-    verifyBuild({ manifestPath, outputRoots, controllerRoot });
+    verifyBuild({ manifestPath, outputRoots });
 
     const rawBytes = fs.readFileSync(manifestPath);
     digests[targetKey] = sha256Bytes(rawBytes);
@@ -101,13 +96,6 @@ function collectBuildManifestDigests(projectRoot) {
   return digests;
 }
 
-function collectControllerClosureDigest(projectRoot) {
-  const controllerMod = require(path.join(projectRoot, 'dist', 'manifests', 'controller.js'));
-  const { validateAdvisorControllerSource, controllerHashBytes } = controllerMod;
-  const controllerRoot = path.join(projectRoot, '.evcrate', 'source', '.evcrate', 'bin');
-  validateAdvisorControllerSource(controllerRoot);
-  return sha256Bytes(controllerHashBytes(controllerRoot));
-}
 
 function getInstallerEntry(projectRoot, filename) {
   const filePath = path.join(projectRoot, filename);
@@ -131,6 +119,5 @@ module.exports = {
   EXPECTED_TARGETS,
   collectPackInventory,
   collectBuildManifestDigests,
-  collectControllerClosureDigest,
   getInstallerEntry
 };

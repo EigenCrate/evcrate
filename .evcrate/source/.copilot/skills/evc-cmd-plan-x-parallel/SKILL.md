@@ -8,19 +8,15 @@ disable-model-invocation: true
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-plan-x-parallel`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-plan-x-parallel`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 Think strategically about parallelization.
@@ -59,7 +55,7 @@ After plan creation, offer validation interview to confirm decisions before impl
 
 ## Special Requirements for Parallel Execution
 
-**CRITICAL:** The evc-planner subagent must create phases that:
+**CRITICAL:** The planner subagent must create phases that:
 1. **Can be executed independently** - Each phase should be self-contained with no runtime dependencies on other phases
 2. **Have clear boundaries** - No file overlap between phases (each file should only be modified in ONE phase)
 3. **Separate concerns logically** - Group by architectural layer, feature domain, or technology stack
@@ -117,7 +113,7 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
   created: {YYYY-MM-DD}
   ---
   ```
-- Save the overview access point at `{plan-dir}/plan.md`. Keep it generic, under 80 lines, and list each implementation phase with status, progress, parallelization group, and links to phase files.
+- Save the overview access point at `{plan-dir}/evc-cmd-plan.md`. Keep it generic, under 80 lines, and list each implementation phase with status, progress, parallelization group, and links to phase files.
 - For each phase, create `{plan-dir}/phase-XX-phase-name-here.md` containing the following sections in order:
   - Context links (reference parent plan, dependencies, docs)
   - **Parallelization Info** (which phases can run concurrently, which must wait)

@@ -21,7 +21,7 @@ import { execFileSync } from 'node:child_process';
 import releaseContract from '../../scripts/release/release-contract.cjs';
 import { validateRuntimeClosure } from '../../scripts/release/runtime-closure.cjs';
 import { buildReleaseArchives } from '../../scripts/release/archive-writers.cjs';
-import { ADVISOR_CONTROLLER_FILES, PERSISTED_TARGETS } from '../../dist/index.js';
+import { PERSISTED_TARGETS } from '../../dist/index.js';
 import assetVerification from '../../scripts/release/asset-verification.cjs';
 import semanticReleaseAssetPrepare from '../../scripts/release/semantic-release-asset-prepare.cjs';
 import { execNpmSync } from '../../scripts/release/npm-runner.cjs';
@@ -32,7 +32,7 @@ import './private-release-negative-fixtures.mjs';
 const packageRoot = process.cwd();
 
 test('release-contract freezes schema, platforms, limits, and mutable path policy', () => {
-  assert.equal(releaseContract.SCHEMA_ID, 'evcrate-private-release/v1');
+  assert.equal(releaseContract.SCHEMA_ID, 'evcrate-private-release/v2');
   assert.deepEqual(releaseContract.SUPPORTED_PLATFORMS, ['linux-x64', 'windows-x64']);
   assert.equal(releaseContract.MAX_FILES, 100000);
   assert.equal(releaseContract.MAX_FILE_BYTES, 16 * 1024 * 1024);
@@ -97,14 +97,13 @@ test('archive writers produce verified tar.gz, zip, sidecars, and metadata inclu
       outputDir: tmp,
       version,
       metadataGenerator: ({ inventoryDigest, platforms }) => ({
-        schema: 'evcrate-private-release/v1',
+        schema: 'evcrate-private-release/v2',
         version,
         tag: `v${version}`,
         source_commit: commit,
         node_floor: '>=22.19.0',
         inventory_digest: inventoryDigest,
         build_manifest_digests: { all: hash },
-        controller_closure_digest: hash,
         platforms,
         installers: {
           'install.sh': { name: 'install.sh', size: instData.length, sha256: instHash },
@@ -160,11 +159,6 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
   assert.equal(files.some((f) => f.startsWith('viewer/dist/')), false, 'viewer/dist must be excluded from root package');
 
 
-  // Assert authoritative controller files present (ADVISOR_CONTROLLER_FILES)
-  for (const entry of ADVISOR_CONTROLLER_FILES) {
-    const p = `.evcrate/source/.evcrate/bin/${entry}`;
-    assert.ok(files.includes(p), `Missing controller file: ${p}`);
-  }
 
   // Assert target manifests present
   for (const target of PERSISTED_TARGETS) {
@@ -175,11 +169,7 @@ test('packed artifact allowlist is Python-free, plan-free, test-free, and contai
     targetManifestFiles.sort(),
     PERSISTED_TARGETS.map((target) => `.evcrate/targets/${target}/manifest.json`).sort()
   );
-  const controllerFiles = files
-    .filter((file) => file.startsWith('.evcrate/source/.evcrate/bin/'))
-    .map((file) => file.slice('.evcrate/source/.evcrate/bin/'.length))
-    .sort();
-  assert.deepEqual(controllerFiles, [...ADVISOR_CONTROLLER_FILES].sort());
+  assert.equal(files.some((file) => file.startsWith('.evcrate/source/.evcrate/')), false);
 
   // Assert NO distribution, migration, adapter Python scripts and NO pycache/bytecode
   const forbiddenPython = files.filter((f) =>
@@ -252,14 +242,13 @@ function createTestReleaseSet(dir, version = '9.9.9', commit = 'd'.repeat(40)) {
     outputDir: dir,
     version,
     metadataGenerator: ({ inventoryDigest, platforms }) => ({
-      schema: 'evcrate-private-release/v1',
+      schema: 'evcrate-private-release/v2',
       version,
       tag: `v${version}`,
       source_commit: commit,
       node_floor: '>=22.19.0',
       inventory_digest: inventoryDigest,
       build_manifest_digests: { all: hash },
-      controller_closure_digest: hash,
       platforms,
       installers: {
         'install.sh': { name: 'install.sh', size: instSh.length, sha256: instShHash },

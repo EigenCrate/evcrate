@@ -388,6 +388,8 @@ def discover_skill_commands(skills_dir: Path, target: str = "claude") -> dict:
         commands[category].sort(key=lambda command: command["name"])
     return {"commands": commands, "categories": categories}
 
+SUPPORTED_TARGETS = {"claude", "codex", "antigravity", "pi", "omp", "copilot", "vscode"}
+
 
 def installed_layout(script_path: Path) -> dict:
     """Read installed host authority, never the caller's working directory."""
@@ -397,6 +399,9 @@ def installed_layout(script_path: Path) -> dict:
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
     if not isinstance(layout, dict) or layout.get("schema") != "evcrate-scanner-layout-v1":
         raise ValueError(f"Invalid scanner layout: {layout_path}")
+    target = layout.get("target")
+    if target is not None and target not in SUPPORTED_TARGETS:
+        raise ValueError(f"Unsupported or retired target in scanner layout: {target}")
     return layout
 
 
@@ -633,50 +638,26 @@ def show_command(data: dict, command: str) -> None:
             print(f"**Related:** {related_names}")
 
 
-def advisory_target(script_path: Path) -> str:
-    """Use the installed target ID, including nonstandard HOME resource roots."""
-    target = installed_layout(script_path).get("target")
-    if target not in {"claude", "codex", "antigravity", "pi", "omp", "copilot", "vscode"}:
-        raise ValueError("Missing or unsupported target in installed scanner layout")
-    return target
-
-
-def show_advisory_guide(target: str) -> None:
-    """Explain checkpoint, inline, and target-accurate relay capabilities."""
-    relay_target = "claude"
-    supports_relay = target == relay_target
+def show_advisory_guide(target: str = "claude") -> None:
+    """Describe the shared main-session interview and report procedure."""
     emit_output_type("command-details")
     command = format_for_target("/evc:cmd-advise", target)
     print(f"# `{command}`")
     print()
-    if supports_relay:
-        print(f"Interview-first technical advice with an optional {relay_target.title()}-only relay.")
-    else:
-        print("Interview-first technical advice with a native inline interview.")
+    print("Interview-first technical advice in the main session.")
     print()
     print("**Usage:**")
-    print(f"- `{command} <prompt-or-url>` - inline interview in the main session")
-    if supports_relay:
-        print(f"- `{command} <prompt-or-url> --agent` - {relay_target.title()} relay v1")
-    else:
-        error = f"ADVISE_AGENT_RELAY_UNSUPPORTED_{target.upper()}"
-        print(f"- `{command} <prompt-or-url> --agent` - rejects with `{error}`")
+    print(f"- `{command} <prompt-or-url>`")
+    print("- Complete invocation arguments are ordinary task data.")
     print()
-    print("**Interview contract:** one question per turn, explicit reframe confirmation, eight discovery-question cap, two reframe cycles, and a linked sanitized report.")
+    print("**Interview:** one substantive question per turn, at most eight discovery questions, explicit confirm/correct for a concise reframe, and at most two confirmation cycles.")
+    print("- Cancellation, interruption or nonconvergence produces no report.")
     print()
-    if supports_relay:
-        unsupported_targets = ("codex", "antigravity", "pi", "omp", "copilot", "vscode")
-        projected_names = ", ".join(name.title() for name in unsupported_targets)
-        print(f"**Relay capability:** `--agent` is supported only by {relay_target.title()} relay v1. {projected_names} must reject it explicitly; they must not silently run inline or create relay state.")
-    else:
-        print(f"**Relay capability:** this {target} projection rejects `--agent` before advisor delegation or relay-state creation. Run `{command} <prompt-or-url>` for inline advice.")
-    print()
-    if supports_relay:
-        print(f"**State retention ({relay_target.title()} relay only):** paused/failed relay state is retained for seven days; completed relay state leaves a 24-hour tombstone.")
-    else:
-        print("**State retention:** this projection creates no relay state.")
-    print()
-    print("`--advice` is a separate one-shot checkpoint counsel mode for implementation commands. `@advisor` is ordinary input and never activates supervision.")
+    print("**Report:** sanitized UTF-8 Markdown, at most 32 KiB, eight required sections.")
+    print("- Use plans/reports/ unless an explicitly active plan authorizes its reports directory.")
+    print("- Fresh advise-YYYYMMDD-HHMM-<uuid>.md; inspect paths, reject traversal/symlinks/unsafe destinations, create without clobbering, then reinspect and read back before linking.")
+    print("- Exclude credentials, tokens, private keys, page bodies, environment dumps, execution traces and hidden reasoning.")
+    print("- If host tools cannot safely inspect/create, stop writing and state the limitation; do not claim a saved report or race-free OS enforcement.")
 
 
 def do_search(data: dict, term: str) -> None:
@@ -1095,13 +1076,8 @@ def main():
         show_coding_level_guide(target)
         return
 
-    # Advisory surfaces need capability and migration guidance beyond metadata.
-    if normalize_command_token(input_str) in ["advise", "advice", "evc-cmd-advise", "cmd-advise"]:
-        try:
-            target = advisory_target(script_path)
-        except (OSError, ValueError) as error:
-            print(f"Error: {error}")
-            sys.exit(1)
+    # The interview has shared guidance beyond ordinary command metadata.
+    if normalize_command_token(input_str) in ["advise", "evc-cmd-advise", "cmd-advise"]:
         show_advisory_guide(target)
         return
 

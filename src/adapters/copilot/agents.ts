@@ -40,7 +40,6 @@ export function convertAgents(context: ProjectionBuildContext, map: SimpleMap, t
     if (!targetName) invalid();
     const tools = mapTools(fieldString(parsed.fields, 'tools'));
     const body = transform(parsed.body);
-    if (sourceName === 'evc-advisor' && (!body.includes('## Required checkpoint method') || !body.includes('## Checkpoint terminal report'))) invalid();
     const description = transform(fieldString(parsed.fields, 'description').trim()).trim(); if (!description) invalid();
     copyText(context, file.path, `agents/${targetName}.agent.md`, () => serializeAgent(targetName, description, parsed.fields.tools === undefined ? undefined : tools.mapped, body));
     const droppedFields = Object.keys(parsed.fields).filter((key) => !['name', 'description', 'tools', 'model'].includes(key)); if (parsed.fields.model) droppedFields.push('model');

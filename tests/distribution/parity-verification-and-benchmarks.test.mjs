@@ -127,8 +127,7 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
 
       const aggregateManifestPath = join(packageRoot, '.evcrate', 'build-manifest.json');
       const aggregateManifest = readBuildManifest(aggregateManifestPath);
-      assert.equal(aggregateManifest.schema_version, 2);
-      assert.ok(aggregateManifest.controller_hashes);
+      assert.equal(aggregateManifest.schema_version, 3);
       assert.ok(aggregateManifest.adapter_hashes);
       assert.ok(aggregateManifest.source_hashes);
       assert.ok(aggregateManifest.output_hashes);
@@ -137,7 +136,7 @@ describe('Phase 05: Output Parity & Manifest Verification', () => {
         const manifestPath = join(packageRoot, '.evcrate', `build-manifest-${target}.json`);
         assert.ok(existsSync(manifestPath), `Manifest for target ${target} must exist`);
         const manifest = readBuildManifest(manifestPath);
-        assert.equal(manifest.schema_version, 2);
+        assert.equal(manifest.schema_version, 3);
         assert.ok(manifest.home_policy);
         assert.ok(manifest.output_hashes);
       }

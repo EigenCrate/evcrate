@@ -1,7 +1,7 @@
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
 import { validateProjection } from '../projection-utils.js';
-import { copy, filesUnder, json, prepareOutput, productionFiles, text, writeJson, writeText } from './resources.js';
+import { copy, json, prepareOutput, productionFiles, text, writeJson, writeText } from './resources.js';
 import { buildCommandMap, convertCommands, convertWorkflows, translatePrompt } from './commands.js';
 import { convertAgents } from './agents.js';
 import { convertSkills } from './skills.js';
@@ -74,7 +74,7 @@ function build(context: ProjectionBuildContext): void {
     skillRuntime: { projectRoot: '.omp/skills', homeRoot: '~/.omp/agent/skills', noSkills: 'OMP --no-skills disables skill discovery and loading; workflows must read required SKILL.md files directly or use the archived .omp/evcrate/skills packages.' },
     managedStatic: { workflows, scripts: staticResources.scripts, sourceHooks: staticResources.hooks, outputStyles: outputStyles.sort(), archivedSkills: skills.archived },
     modelAliases: { opus: '@slow', sonnet: '@default', haiku: '@smol', inherit: 'omitted' },
-    limitations: { advisorController: 'Uses shared ~/.evcrate/bin/evcrate-advisor; OMP is an enabled backend candidate qualified by the central controller.', subagentStart: 'OMP has no direct Claude agent_type/agent_id hook payload', settingsLocal: 'not activated; source settings.local.json is retained only by the canonical source' },
+    limitations: { subagentStart: 'OMP has no direct Claude agent_type/agent_id hook payload', settingsLocal: 'not activated; source settings.local.json is retained only by the canonical source' },
   });
 }
 function validate(context: ProjectionBuildContext): ProjectionValidation { assertManifest(context); return validateProjection(context); }

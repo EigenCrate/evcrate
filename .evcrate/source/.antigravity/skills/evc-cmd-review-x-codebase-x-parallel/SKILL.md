@@ -12,6 +12,7 @@ Description: Ultrathink edge cases, then parallel verify with code-reviewers
 description: "Ultrathink edge cases, then parallel verify with code-reviewers"
 argument-hint: "[scope-or-prompt]"
 ---
+
 **Ultrathink** to exhaustively list ALL potential edge cases, then dispatch parallel `evc-code-reviewer` agents to verify: <scope>$ARGUMENTS</scope>
 
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.

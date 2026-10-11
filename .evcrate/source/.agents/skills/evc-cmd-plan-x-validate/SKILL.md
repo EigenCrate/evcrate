@@ -11,8 +11,6 @@ Description: Validate plan with critical questions interview
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -50,14 +48,6 @@ Read the plan directory:
 - `plan.md` - Overview and phases list
 - `phase-*.md` - All phase files
 - Look for decision points, assumptions, risks, tradeoffs
-
-Apply neutral plan progress and phase reconciliation in
-`.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install) before interpreting current status.
-If a plan is captured by an advice run, do not offer or perform in-place
-frontmatter/summary edits below. Record proposed answers in a separately
-authorized, uncaptured document or terminal output; preserve active-run gates.
-The live progress overview is not a place to amend scope or acceptance criteria.
-Ordinary uncaptured plans retain the normal persistence choices below.
 
 ### Step 2: Extract Question Topics
 
