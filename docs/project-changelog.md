@@ -3,7 +3,14 @@
 ## Unreleased
 
 **Updated:** 2026-10-11
-**Status:** Core package `evcrate` 3.0.0; VS Code subagent frontmatter tool-reference correction and Linux candidate handoff complete (Phases 01–07; Windows native qualification and deployment blocked); Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+**Status:** Core package `evcrate` 3.0.0; VS Code `evc` plugin identity and container-local `cmd-*` command mapping complete; VS Code subagent frontmatter tool-reference correction and Linux candidate handoff complete (Phases 01–07; Windows native qualification and deployment blocked); Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+
+### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
+
+- Changed `plugin.json` name from `evcrate-local` to `evc`; VS Code command/resource metadata uses the same plugin identity.
+- Canonical `evc-cmd-*` commands now project to `.evcrate-vscode/skills/cmd-*/SKILL.md`, preserving `-x-` nesting and semantic advisor IDs. Copilot Chat displays `evc cmd-*`; host-qualified `/<plugin-name>:<skill-name>` becomes `/evc:cmd-*`, avoiding duplicate `evc` prefixing.
+- `src/adapters/vscode/references.ts` (`replaceCommandInvocations`) rewrites `/evc-cmd-*` and `$evc-cmd-*` to local `/cmd-*` and `$cmd-*`, including wildcard command families.
+- Shared `.evcrate/source/.claude/scripts/ev-help.py` scans both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`; canonical source naming and non-VS Code projections remain unchanged.
 
 ### 2026-10-11 — fix(vscode): correct subagent frontmatter tool references and qualify Linux candidate handoff (Phases 01–07)
 

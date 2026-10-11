@@ -73,7 +73,7 @@ function build(context: ProjectionBuildContext): void {
   // 9. Plugin descriptor (plugin.json) conforming to Agent Plugins 1.0
   const pluginDescriptor = {
     $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
-    name: 'evcrate-local',
+    name: 'evc',
     version: '1.0.0',
     description: 'EVCrate VS Code Local Plugin Bundle'
   };

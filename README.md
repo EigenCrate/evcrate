@@ -282,13 +282,13 @@ for authoritative host-aware lifecycle syntax.
 Starting in version 3.0.0, EVCrate enforces universal `evc-*` resource naming and single `AGENTS.md` instruction authority across all supported targets:
 
 ### Naming invariants
-- **Universal Commands**: All commands project with prefix `evc-cmd-*` (e.g. `/evc-cmd-code`, `/evc-cmd-plan`).
+- **Canonical Commands**: Commands use `evc-cmd-*` (e.g. `/evc-cmd-code`, `/evc-cmd-plan`). VS Code Local projects container-local `cmd-*` skills under plugin `evc`; other targets retain `evc-cmd-*`.
 - **Nested Commands**: Subcommands use the reserved separator `-x-` (e.g. `/evc-cmd-code-x-auto`, `/evc-cmd-fix-x-hard`). This separator maps reversibly to internal semantic identifiers (`code/auto`, `fix/hard`).
 - **Universal Agents**: All 18 custom agents use prefix `evc-*` (e.g. `evc-planner`, `evc-reviewer`, `evc-debugger`).
 - **Copilot Skills & Styles**: Copilot ordinary skills are renamed to `evc-<skill>` and styles to `evc-style-<style>`.
 - **Specification**: Charset `^[a-z0-9]+(-[a-z0-9]+)*$`, maximum length 64 characters, no underscores, colons, or double hyphens.
 - **Advisor Stability**: Internal advisor semantic IDs (21 allowlisted IDs, e.g. `code/auto`, `cook/auto`) remain unchanged invariants for fail-closed advisor activation.
-- **VS Code Plugin**: The plugin ID `evcrate-local` is preserved; the `evcrate-local:` qualifier is VS Code's internal namespace disambiguation and is never emitted by EVCrate.
+- **VS Code Plugin**: `plugin.json` declares `"name": "evc"` (formerly `evcrate-local`). Copilot Chat displays `evc cmd-*`, with qualified invocation `/evc:cmd-*` (`/<plugin-name>:<skill-name>`); skill names omit the extra `evc-` prefix.
 
 ### Canonical instruction authority & delivery matrix
 - **Single Canonical Source**: Canonical instructions are authored only in `.evcrate/source/.claude/AGENTS.md`. Root `.evcrate/source/AGENTS.md` remains distinct as a generated Codex projection.
@@ -319,15 +319,22 @@ Untracked user files are never deleted and are mandatorily reported during publi
 | Custom Agent | `planner`, `evcrate-planner`, `code-reviewer` | `evc-planner`, `evc-code-reviewer` |
 | Copilot Ordinary Skill | `<skill>` | `evc-<skill>` |
 | Copilot Style | `<style>` | `evc-style-<style>` |
+| VS Code Command Skill | `evcrate-local` plugin / `evc-cmd-*` skill | `evc` plugin / `cmd-*` skill; qualified `/evc:cmd-*` |
 | Instruction Authority | `CLAUDE.md`, `.claude/CLAUDE.md` | `AGENTS.md`, `.claude/rules/AGENTS.md` |
 ## VS Code Local native support
 
-EVCrate provides native support for VS Code Local as an isolated Agent Plugins 1.0 bundle (`evcrate-local`), distinct from the GitHub Copilot CLI target (`copilot`).
+EVCrate provides native support for VS Code Local as an isolated Agent Plugins 1.0 bundle (`evc`), distinct from the GitHub Copilot CLI target (`copilot`).
 
 ### Separation from Copilot CLI
 
 - **Copilot CLI (`copilot`)**: Publishes Markdown prompt and skill files to `.copilot/` for the standalone CLI.
 - **VS Code Local (`vscode`)**: Publishes a complete Agent Plugins 1.0 bundle to `.evcrate-vscode/`, including `plugin.json`, `hooks.json`, 19 custom agents, 70 commands (mapped as manual skills), 40 skills, 6 styles, and runtime hook closures.
+
+### Command identity and invocation
+
+Canonical `evc-cmd-*` commands become manual skills at `.evcrate-vscode/skills/cmd-*/SKILL.md`. For example, `evc-cmd-code-x-auto` becomes `cmd-code-x-auto`: Copilot Chat displays `evc cmd-code-x-auto` and qualifies it as `/evc:cmd-code-x-auto`. The plugin supplies the `evc` namespace; do not duplicate it in skill names.
+
+Generated prompt references use local `/cmd-*` and `$cmd-*` forms. `replaceCommandInvocations` in `src/adapters/vscode/references.ts` rewrites canonical `/evc-cmd-*` and `$evc-cmd-*` references, including wildcard families such as `/evc-cmd-plan-x-*` → `/cmd-plan-x-*`. The shared `ev-help.py` scanner discovers both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`. Canonical sources, other targets, and semantic advisor IDs remain unchanged.
 
 ### Qualified runtime prerequisites
 

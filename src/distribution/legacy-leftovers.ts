@@ -349,7 +349,7 @@ export function isMigratedDestination(target: PublicationTarget, binding: string
 
   // VS Code renamed skills
   if (target === 'vscode') {
-    if (norm.startsWith('skills/evc-cmd-') || norm.startsWith('agents/evc-')) return true;
+    if (norm.startsWith('skills/cmd-') || norm.startsWith('skills/evc-cmd-') || norm.startsWith('agents/evc-')) return true;
   }
 
   // Canonical instruction documents across all targets

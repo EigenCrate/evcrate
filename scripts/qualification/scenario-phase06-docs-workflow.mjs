@@ -532,8 +532,8 @@ export async function runPhase06DocsWorkflow(options = {}) {
     {
       const caseId = 'W03';
 
-      // Verify skill manifest for evc-cmd-docs-x-update
-      const skillPath = path.join(candidateDir, 'skills/evc-cmd-docs-x-update/SKILL.md');
+      // Verify skill manifest for cmd-docs-x-update
+      const skillPath = path.join(candidateDir, 'skills/cmd-docs-x-update/SKILL.md');
       const skillExists = fs.existsSync(skillPath);
       const skillContent = skillExists ? fs.readFileSync(skillPath, 'utf8') : '';
 

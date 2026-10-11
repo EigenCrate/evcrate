@@ -22,7 +22,7 @@ During publication planning across all active targets (`claude`, `codex`, `antig
 - **Unified agents**: Any agent file or directory prefixed with `evc-` under target agent locations (e.g. `.claude/agents/evc-planner.md`).
 - **Target-specific unified extensions**:
   - Copilot: `skills/evc-*`, `styles/evc-style-*`
-  - VS Code Local: `skills/evc-cmd-*`, `agents/evc-*`
+  - VS Code Local: `skills/cmd-*`, `agents/evc-*`
 - **Canonical instructions**: Root and target `AGENTS.md`, `.github/copilot-instructions.md`, `.agents/rules/evcrate-antigravity.md`, and `.agents/hooks.json`.
 
 ### Fail-Closed Behavior

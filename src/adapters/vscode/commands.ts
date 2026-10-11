@@ -63,7 +63,7 @@ export function convertVscodeCommands(
 
   writeJson(context, 'evcrate/command-name-map.json', {
     schema: 'evcrate-vscode-command-name-map-v1',
-    plugin_id: 'evcrate-local',
+    plugin_id: 'evc',
     commands: commandsList
   });
 }

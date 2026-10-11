@@ -41,7 +41,7 @@ counsel bounded and fail-closed.
   of shared commit, and schema-2 scope-isolated recovery.
 - One shared advisor controller published to `$HOME/.evcrate/bin`.
 - Deterministic advice activation via `evcrate-advice-mode`, explicit checkpoint counsel through a final `--advice` token, and structured caller handoffs.
-- Unified command and agent naming as `/evc-cmd-*` (with `-x-` segment separation) and `/evc-*` across all seven targets.
+- Canonical command and agent naming as `/evc-cmd-*` (with `-x-` segment separation) and `/evc-*`; VS Code Local uses container-local `cmd-*` command skills under plugin `evc`.
 
 ### Out of scope for this baseline
 
@@ -262,18 +262,18 @@ command is treated as canonical.
 - **Boundaries & qualification:** Caller JSON and handoffs provide cooperative consistency without authenticated user intent or session-token provenance guarantees; mentoring instructions are loaded lazily. Linux x64 bounded native qualification observed on OMP 18.6.1 across six scenario classes (`s01`, `s02`, `s03`, `s05`, `s07`, `s11`) capped at Step 0; prerequisite admission gates (`s10` diagnostic uncaptured, `s12` timed out) remain explicit native limits; incomplete A02/A22 historical artifact evidence, A12 retained-record reconciliation without compiler loops, and unexercised A13/A16 native branches. Other vendor model loops remain unqualified; native Windows and macOS are excluded by user direction; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim.
 ### FR-12: Unified command/agent naming, canonical AGENTS.md, and release promotion
 
-**Requirement:** Documentation, maintained source, and target-facing projections use unified
-`/evc-cmd-*` for every slash command/resource name, `/evc-*` for custom agents, and `evc-<skill>` /
-`evc-style-<style>` for Copilot skills and styles. Nested commands use the reserved `-x-` path
-separator, reversibly mapping to internal semantic identifiers. All names conform to spec64
-(`^[a-z0-9]+(-[a-z0-9]+)*$`, <= 64 chars, no `_`, `:`, `--`). Advisor semantic IDs (e.g. `code/auto`)
+**Requirement:** Documentation and maintained source use canonical `/evc-cmd-*` command names,
+`/evc-*` custom agents, and `evc-<skill>` / `evc-style-<style>` Copilot skills and styles.
+VS Code Local projects `cmd-*` command skills within plugin `evc`; other targets retain `evc-cmd-*`.
+Nested commands retain the reserved `-x-` separator and reversible semantic identifiers.
+Resource names conform to spec64 (`^[a-z0-9]+(-[a-z0-9]+)*$`, <= 64 chars, no `_`, `:`, `--`); the colon in host-qualified `/evc:cmd-*` is not part of the resource name. Advisor semantic IDs (e.g. `code/auto`)
 remain stable invariants. Instructions author solely in `.evcrate/source/.claude/AGENTS.md`. Upgrades
 enforce ownership-based pruning with pre-upgrade customization backup warnings, unmanaged collision refusal,
 and untracked leftover reporting. Releases validate through prerelease channel `next` (`3.0.0-rc.N`)
 before candidate-bound stable promotion on `main` (`3.0.0`).
 
-**Acceptance:** Core docs and all seven active target projections emit unified `evc-*` names with zero
-compatibility aliases. Single naming authority is `src/adapters/resource-naming.ts`, enforced by
+**Acceptance:** Core docs and all seven active target projections retain unified canonical identities,
+with container-local VS Code command names and zero compatibility aliases. Canonical naming authority is `src/adapters/resource-naming.ts`, enforced by
 `.evcrate/source/.claude/scripts/scan_commands.py`. Claude publishes native unconditional
 `.claude/rules/AGENTS.md` (no duplicate direct AGENTS or CLAUDE shim). Pre-upgrade backups are required;
 recorded ownership controls pruning. Prerelease builds on `next` publish via verified mirror topology;
@@ -561,9 +561,11 @@ production-runtime qualification remain outside this phase.
 
 ### FR-25: VS Code Local native support
 
-**Requirement:** Add a distinct persisted `vscode` target for VS Code Local as an isolated Agent Plugins 1.0 bundle (`evcrate-local`), generated at `.evcrate/source/.evcrate-vscode/` and published to project or HOME `.evcrate-vscode/`. User-controlled registration via VS Code's `chat.pluginLocations` setting; publication never writes editor settings. Standalone `--agent` relay is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`. Native hook protocol covers eight Agent Plugins 1.0 events with scout and privacy policies (no lexical trust, fail-closed unqualified tools, bare command operand inspection) and CommonJS runtime closure. Explicit session context uses atomic CAS v1 state with bounded retention (7d, 256/proj, 1024/user). Coexistence preserves Copilot CLI target (`copilot`) and opt-in `.claude` discoveries. Opt-in MCP examples remain inert templates.
+**Requirement:** Add a distinct persisted `vscode` target for VS Code Local as an isolated Agent Plugins 1.0 bundle (`plugin.json` name `evc`, formerly `evcrate-local`), generated at `.evcrate/source/.evcrate-vscode/` and published to project or HOME `.evcrate-vscode/`. User-controlled registration via VS Code's `chat.pluginLocations` setting; publication never writes editor settings. Standalone `--agent` relay is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`. Native hook protocol covers eight Agent Plugins 1.0 events with scout and privacy policies (no lexical trust, fail-closed unqualified tools, bare command operand inspection) and CommonJS runtime closure. Explicit session context uses atomic CAS v1 state with bounded retention (7d, 256/proj, 1024/user). Coexistence preserves Copilot CLI target (`copilot`) and opt-in `.claude` discoveries. Opt-in MCP examples remain inert templates.
 
 **Acceptance:** Live qualification on Linux x64 with VS Code 1.140.0 and Copilot Chat 0.68.0 verified with 12 context receipts (6 qualified, 5 unexercised workstation-dependent, 1 unsupported browser web). Core release assets remain exactly seven files.
+
+**Container-aware naming acceptance:** Canonical `evc-cmd-*` commands become `.evcrate-vscode/skills/cmd-*/SKILL.md`, preserving `-x-` nesting and semantic advisor IDs. Copilot Chat displays `evc cmd-*`; `/<plugin-name>:<skill-name>` resolves to `/evc:cmd-*` without duplicate `evc` prefixing. `replaceCommandInvocations` in `src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*`, including wildcard families, to local `/cmd-*` and `$cmd-*`. Shared `ev-help.py` discovers both `evc-cmd-*` and `cmd-*` skill directories. Earlier live qualification is dated evidence, not a new GUI qualification of this naming change.
 
 ### Historical Workspace Advisor requirements (FR-25–FR-33)
 

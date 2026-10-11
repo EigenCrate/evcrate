@@ -13,10 +13,10 @@ const mockCommands = {
     source: 'evc-cmd-plan-x-cro.md',
     sourceSemanticId: 'plan/cro',
     sourceName: 'plan/cro',
-    target: 'skills/evc-cmd-plan-x-cro/SKILL.md',
-    localName: 'evc-cmd-plan-x-cro',
-    targetName: 'evc-cmd-plan-x-cro',
-    nativeInvocationName: '/evc-cmd-plan-x-cro',
+    target: 'skills/cmd-plan-x-cro/SKILL.md',
+    localName: 'cmd-plan-x-cro',
+    targetName: 'cmd-plan-x-cro',
+    nativeInvocationName: '/evc:cmd-plan-x-cro',
     description: 'CRO plan procedure',
     disposition: 'approximated'
   },
@@ -24,10 +24,10 @@ const mockCommands = {
     source: 'evc-cmd-ask.md',
     sourceSemanticId: 'ask',
     sourceName: 'ask',
-    target: 'skills/evc-cmd-ask/SKILL.md',
-    localName: 'evc-cmd-ask',
-    targetName: 'evc-cmd-ask',
-    nativeInvocationName: '/evc-cmd-ask',
+    target: 'skills/cmd-ask/SKILL.md',
+    localName: 'cmd-ask',
+    targetName: 'cmd-ask',
+    nativeInvocationName: '/evc:cmd-ask',
     description: 'Ask question',
     disposition: 'approximated'
   }
@@ -72,7 +72,7 @@ Or email test@example.com for /evc-cmd-ask.
   const transformed = transformVscodePrompt(input, mockCommands, mockSkills);
   assert.match(transformed, /https:\/\/example\.com\/plan\/cro/);
   assert.match(transformed, /test@example\.com/);
-  assert.match(transformed, /cat ~\/\.evcrate-vscode\/skills\/evc-cmd-plan-x-cro\/SKILL\.md/);
+  assert.match(transformed, /cat ~\/\.evcrate-vscode\/skills\/cmd-plan-x-cro\/SKILL\.md/);
 });
 
 test('references: replaceCommandPaths rewrites command file paths', () => {
@@ -80,13 +80,14 @@ test('references: replaceCommandPaths rewrites command file paths', () => {
   const output = replaceCommandPaths(input, mockCommands);
   assert.equal(
     output,
-    'Read ${HOME}/.evcrate-vscode/skills/evc-cmd-plan-x-cro/SKILL.md or ~/.evcrate-vscode/skills/evc-cmd-ask/SKILL.md'
+    'Read ${HOME}/.evcrate-vscode/skills/cmd-plan-x-cro/SKILL.md or ~/.evcrate-vscode/skills/cmd-ask/SKILL.md'
   );
 });
 
-test('references: prompt transformation does not rewrite command identities or semantic IDs', () => {
-  const input = '/evc-cmd-plan-x-cro /evc-cmd-ask /plan/cro /plan:cro /evcrate:plan:cro /ask';
-  assert.equal(transformVscodePrompt(input, mockCommands, mockSkills), input);
+test('references: prompt transformation rewrites command invocations and wildcard families to plugin-qualified names while preserving semantic IDs', () => {
+  const input = '/evc-cmd-plan-x-cro $evc-cmd-ask /evc-cmd-plan-x-* /evc-cmd-code* /plan/cro /plan:cro /evcrate:plan:cro /ask';
+  const expected = '/evc:cmd-plan-x-cro $evc:cmd-ask /evc:cmd-plan-x-* /evc:cmd-code* /plan/cro /plan:cro /evcrate:plan:cro /ask';
+  assert.equal(transformVscodePrompt(input, mockCommands, mockSkills), expected);
 });
 
 test('references: replaceSkillReferences rewrites skill paths and document-skills relative links', () => {

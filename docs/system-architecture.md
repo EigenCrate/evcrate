@@ -127,7 +127,7 @@ HOME, native byte limits, disabled settings sources, and managed-only policies.
 VS Code GUI and Antigravity native execution remain unavailable in the Phase12
 environment; generated-file/runtime bridge checks are not native qualification.
 
-`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`.
+`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`; `plugin.json` declares `"name": "evc"` (formerly `evcrate-local`) and canonical `evc-cmd-*` commands project to container-local `.evcrate-vscode/skills/cmd-*/SKILL.md`.
 Default publication is inert and never mutates editor settings; explicit opt-in registration
 (`--register-vscode-settings` or interactive first-time TTY prompt; suppressed by
 `--no-register-vscode-settings`) surgically updates `chat.pluginLocations` in workspace or
@@ -148,6 +148,15 @@ frontmatter references distinct from model-facing names and hook operands (`file
 records build declarations, not effective host grants. Linux x64 is qualified across N01–N10 and
 W01–W04 (candidate tree `81792bf2...`); Windows Local qualification, incident closure, and
 production rollout remain blocked pending affected-host verification and operator approval.
+
+The plugin supplies the command namespace: canonical `evc-cmd-*` commands project to
+`.evcrate-vscode/skills/cmd-*/SKILL.md`, retaining `-x-` nesting. Copilot Chat displays
+`evc cmd-*` and qualifies skills as `/<plugin-name>:<skill-name>` → `/evc:cmd-*`,
+without duplicating `evc` in the local skill name. `src/adapters/vscode/names.ts`
+records local `/cmd-*` invocations; `replaceCommandInvocations` in
+`src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*` to
+`/cmd-*` and `$cmd-*`, including wildcard families such as `/evc-cmd-plan-x-*`.
+The shared canonical `ev-help.py` scans both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`.
 
 ### Snyk specialist composition: local porting boundary
 
@@ -755,7 +764,7 @@ Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<s
 and agents as `agents/evc-<agent>.md`, governed by `src/adapters/resource-naming.ts` and
 enforced by `.evcrate/source/.claude/scripts/scan_commands.py`:
 
-- Slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, `/evc-cmd-advise`).
+- Canonical and non-VS Code slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, `/evc-cmd-advise`). VS Code Local uses `/cmd-*` inside plugin `evc`, with host-qualified `/evc:cmd-*` invocation; the colon is host syntax, not part of a resource name.
 - Nested commands use reserved `-x-` path separator (e.g., `/evc-cmd-fix-x-hard`), reversible to semantic IDs (`fix/hard`).
 - Agents use `evc-*` (e.g., `evc-advisor`, `evc-planner`). Copilot skills use `evc-<skill>` and styles use `evc-style-<style>`.
 - Specification: charset `^[a-z0-9]+(-[a-z0-9]+)*$`, length <= 64, no `_`, `:`, `--`. Advisor semantic IDs (`code/auto`) remain unchanged invariants.

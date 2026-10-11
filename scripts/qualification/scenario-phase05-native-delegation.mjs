@@ -710,7 +710,7 @@ export async function runPhase05Qualification(options = {}) {
       const pluginJsonPath = path.join(candidateDir, 'plugin.json');
       const pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf8'));
 
-      const idMatch = pluginJson.name === 'evcrate-local';
+      const idMatch = pluginJson.name === 'evc';
       const treeMatch = candidateTree.hash === CANDIDATE_IDENTITY.pluginTree.hash;
 
       rawEvents.push({

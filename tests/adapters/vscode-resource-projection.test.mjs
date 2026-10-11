@@ -38,7 +38,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.ok(existsSync(pluginJsonPath), 'plugin.json must exist');
     const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
     assert.equal(pluginJson.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
-    assert.equal(pluginJson.name, 'evcrate-local');
+    assert.equal(pluginJson.name, 'evc');
     assert.equal(pluginJson.version, '1.0.0');
     assert.equal(pluginJson.rules, undefined);
     assert.equal(pluginJson.agents, undefined);
@@ -76,7 +76,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     // TodoWrite is mapped to frontmatter 'todo' while prose remains manage_todo_list
     const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-project-manager.agent.md'), 'utf8'));
     assert.ok(pmParsed.fields.tools.includes('todo'));
-    const cmdCodeContent = readFileSync(join(stageRoot, 'skills/evc-cmd-code/SKILL.md'), 'utf8');
+    const cmdCodeContent = readFileSync(join(stageRoot, 'skills/cmd-code/SKILL.md'), 'utf8');
     assert.ok(cmdCodeContent.includes('manage_todo_list'));
     assert.ok(!cmdCodeContent.includes('TodoWrite'));
 
@@ -118,10 +118,10 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(docsManagerParsed.fields.tools, undefined, 'Docs manager must omit tools in frontmatter');
     assert.equal(docsManagerParsed.fields.agents, undefined, 'Docs manager must omit agents in frontmatter');
     // 4. Verify commands (70)
-    const croCommandPath = join(stageRoot, 'skills/evc-cmd-plan-x-cro/SKILL.md');
-    assert.ok(existsSync(croCommandPath), 'evc-cmd-plan-x-cro/SKILL.md must exist');
+    const croCommandPath = join(stageRoot, 'skills/cmd-plan-x-cro/SKILL.md');
+    assert.ok(existsSync(croCommandPath), 'cmd-plan-x-cro/SKILL.md must exist');
     const croParsed = parseFrontmatter(readFileSync(croCommandPath, 'utf8'));
-    assert.equal(croParsed.fields.name, 'evc-cmd-plan-x-cro');
+    assert.equal(croParsed.fields.name, 'cmd-plan-x-cro');
     assert.equal(croParsed.fields['user-invocable'], true);
     assert.equal(croParsed.fields['disable-model-invocation'], true);
 
@@ -154,8 +154,8 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(commandsData.length, 70, 'All 70 commands must be in commands_data.yaml');
     const croCatalogItem = commandsData.find((c) => c.source === 'evc-cmd-plan-x-cro.md');
     assert.ok(croCatalogItem);
-    assert.equal(croCatalogItem.name, '/evc-cmd-plan-x-cro');
-    assert.equal(croCatalogItem.path, 'evc-cmd-plan-x-cro/SKILL.md');
+    assert.equal(croCatalogItem.name, '/evc:cmd-plan-x-cro');
+    assert.equal(croCatalogItem.path, 'cmd-plan-x-cro/SKILL.md');
 
     const skillsDataPath = join(stageRoot, 'evcrate/scripts/skills_data.yaml');
     assert.ok(existsSync(skillsDataPath), 'skills_data.yaml must exist');
@@ -176,13 +176,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const commandMapJson = JSON.parse(readFileSync(commandMapPath, 'utf8'));
     assert.equal(commandMapJson.commands.length, 70);
     assert.equal(commandMapJson.schema, 'evcrate-vscode-command-name-map-v1');
-    assert.equal(commandMapJson.plugin_id, 'evcrate-local');
-    for (const [name, semanticId] of [
-      ['evc-cmd-plan-x-cro', 'plan/cro'],
-      ['evc-cmd-code-x-auto', 'code/auto'],
-      ['evc-cmd-advise', 'advise']
+    assert.equal(commandMapJson.plugin_id, 'evc');
+    for (const [canonicalName, semanticId, localName] of [
+      ['evc-cmd-plan-x-cro', 'plan/cro', 'cmd-plan-x-cro'],
+      ['evc-cmd-code-x-auto', 'code/auto', 'cmd-code-x-auto'],
+      ['evc-cmd-advise', 'advise', 'cmd-advise']
     ]) {
-      const entry = commandMapJson.commands.find((command) => command.localName === name);
+      const entry = commandMapJson.commands.find((command) => command.localName === localName);
       assert.ok(entry);
       assert.deepEqual({
         source: entry.source,
@@ -193,13 +193,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
         targetName: entry.targetName,
         nativeInvocationName: entry.nativeInvocationName
       }, {
-        source: `${name}.md`,
+        source: `${canonicalName}.md`,
         sourceName: semanticId,
         sourceSemanticId: semanticId,
-        target: `skills/${name}/SKILL.md`,
-        localName: name,
-        targetName: name,
-        nativeInvocationName: `/${name}`
+        target: `skills/${localName}/SKILL.md`,
+        localName: localName,
+        targetName: localName,
+        nativeInvocationName: `/evc:${localName}`
       });
     }
 
@@ -278,7 +278,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(modelMap.mappings.haiku.nativeModel, 'claude-3.5-haiku');
 
     // 11. Verify Phase 05 advisory command and workflows
-    const cmdAdvisePath = join(stageRoot, 'skills/evc-cmd-advise/SKILL.md');
+    const cmdAdvisePath = join(stageRoot, 'skills/cmd-advise/SKILL.md');
     assert.ok(existsSync(cmdAdvisePath));
     const cmdAdviseContent = readFileSync(cmdAdvisePath, 'utf8');
     assert.ok(cmdAdviseContent.includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
@@ -409,7 +409,7 @@ test('vscode-names: agent metadata must match its canonical basename', () => {
 
 test('vscode-names: shared skill directories reject command and style collisions', () => {
   for (const entries of [
-    [['commands/evc-cmd-plan.md'], ['skills/evc-cmd-plan/SKILL.md']],
+    [['commands/evc-cmd-plan.md'], ['skills/cmd-plan/SKILL.md']],
     [['output-styles/concise.md'], ['skills/style-concise/SKILL.md']],
     [['skills/docx/SKILL.md'], ['skills/document-skills/docx/SKILL.md']]
   ]) {
@@ -421,7 +421,7 @@ test('vscode-names: shared skill directories reject command and style collisions
     ['output-styles/concise.md'],
     ['agents/evc-planner.md', '---\nname: evc-planner\n---\n']
   ]));
-  assert.deepEqual(names.skillDirectoryNames, ['evc-cmd-plan-x-cro', 'planning', 'style-concise']);
+  assert.deepEqual(names.skillDirectoryNames, ['cmd-plan-x-cro', 'planning', 'style-concise']);
 });
 
 test('vscode-projection: canonical advisor still rejects incomplete checkpoint contracts', () => {

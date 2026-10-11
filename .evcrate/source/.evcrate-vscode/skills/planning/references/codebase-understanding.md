@@ -5,7 +5,7 @@
 ## Core Activities
 
 ### Parallel evc-scout Agents
-- Use `/evc-cmd-scout-x-ext` (preferred) or `/evc-cmd-scout` (fallback) slash command to search the codebase for files needed to complete the task
+- Use `/evc:cmd-scout-x-ext` (preferred) or `/evc:cmd-scout` (fallback) slash command to search the codebase for files needed to complete the task
 - Each scout locates files needed for specific task aspects
 - Wait for all evc-scout agents to report back before analysis
 - Efficient for finding relevant code across large codebases
