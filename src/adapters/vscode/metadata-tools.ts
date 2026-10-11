@@ -18,23 +18,25 @@
  * - MultiEdit maps to narrow string replacement ('multiReplaceString'); broad 'applyPatch' is not granted.
  * - canDelegate is derived from recognized source Task capability, independent of output spelling.
  */
-export const VSCODE_LOCAL_TOOL_MAP: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  read: Object.freeze(['read/readFile']),
-  edit: Object.freeze(['editFiles']),
-  write: Object.freeze(['createFile', 'editFiles']),
-  multiedit: Object.freeze(['multiReplaceString']),
-  bash: Object.freeze(['runInTerminal']),
-  bashoutput: Object.freeze(['getTerminalOutput']),
-  killbash: Object.freeze(['killTerminal']),
-  killshell: Object.freeze(['killTerminal']),
-  grep: Object.freeze(['search/textSearch']),
-  glob: Object.freeze(['search/fileSearch']),
-  ls: Object.freeze(['search/listDirectory']),
-  task: Object.freeze(['agent/runSubagent']),
-  todowrite: Object.freeze(['todo']),
-  webfetch: Object.freeze(['web/fetch']),
-  notebookedit: Object.freeze(['edit/editNotebook'])
-});
+export const VSCODE_LOCAL_TOOL_MAP: Readonly<Record<string, readonly string[]>> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, readonly string[]>, {
+    read: Object.freeze(['read/readFile']),
+    edit: Object.freeze(['editFiles']),
+    write: Object.freeze(['createFile', 'editFiles']),
+    multiedit: Object.freeze(['multiReplaceString']),
+    bash: Object.freeze(['runInTerminal']),
+    bashoutput: Object.freeze(['getTerminalOutput']),
+    killbash: Object.freeze(['killTerminal']),
+    killshell: Object.freeze(['killTerminal']),
+    grep: Object.freeze(['search/textSearch']),
+    glob: Object.freeze(['search/fileSearch']),
+    ls: Object.freeze(['search/listDirectory']),
+    task: Object.freeze(['agent/runSubagent']),
+    todowrite: Object.freeze(['todo']),
+    webfetch: Object.freeze(['web/fetch']),
+    notebookedit: Object.freeze(['edit/editNotebook'])
+  })
+);
 
 export interface ToolMappingResult {
   readonly hasExplicitTools: boolean;
@@ -91,13 +93,13 @@ export function mapAgentTools(sourceValue: unknown): ToolMappingResult {
     });
   }
 
-  const mappedSet: Record<string, true> = {};
-  const droppedSet: Record<string, true> = {};
+  const mappedSet: Record<string, true> = Object.create(null);
+  const droppedSet: Record<string, true> = Object.create(null);
   let canDelegate = false;
 
   for (const item of items) {
     const lower = item.toLowerCase();
-    const native = VSCODE_LOCAL_TOOL_MAP[lower];
+    const native = Object.hasOwn(VSCODE_LOCAL_TOOL_MAP, lower) ? VSCODE_LOCAL_TOOL_MAP[lower] : undefined;
     if (native) {
       for (const ref of native) {
         mappedSet[ref] = true;

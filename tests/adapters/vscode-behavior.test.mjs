@@ -483,4 +483,42 @@ test('vscode-behavior: bridge allows edit/editNotebook with valid editType and d
   assert.equal(parsedMissingCellId.continue, true);
   assert.equal(parsedMissingCellId.hookSpecificOutput?.permissionDecision, 'deny');
   assert.ok(parsedMissingCellId.hookSpecificOutput?.permissionDecisionReason?.includes('non-empty cellId string'));
+
+  const denyProtoEditTypeRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/report.ipynb',
+        editType: 'constructor',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyProtoEditTypeRes.status, 0);
+  const parsedProtoEditType = JSON.parse(denyProtoEditTypeRes.stdout);
+  assert.equal(parsedProtoEditType.continue, true);
+  assert.equal(parsedProtoEditType.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedProtoEditType.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
+
+  const denyProtoToolRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'constructor',
+      tool_input: {
+        filePath: 'src/index.ts',
+        editType: 'edit',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyProtoToolRes.status, 0);
+  const parsedProtoTool = JSON.parse(denyProtoToolRes.stdout);
+  assert.equal(parsedProtoTool.continue, true);
+  assert.equal(parsedProtoTool.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedProtoTool.hookSpecificOutput?.permissionDecisionReason?.includes('Unrecognized or unqualified tool schema: "constructor"'));
 });

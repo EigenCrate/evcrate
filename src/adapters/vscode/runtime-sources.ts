@@ -329,7 +329,7 @@ export const LOCAL_TOOL_INPUTS_SOURCE = `'use strict';
 const MAX_OPERANDS = 256;
 const MAX_OPERAND_BYTES = 4096;
 
-const READ_TOOL_NAMES = {
+const READ_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   read_file: true,
   view: true,
   readfile: true,
@@ -339,9 +339,9 @@ const READ_TOOL_NAMES = {
   getnotebooksummary: true,
   'read/getnotebooksummary': true,
   copilot_getnotebooksummary: true
-};
+}));
 
-const EDIT_TOOL_NAMES = {
+const EDIT_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   edit_file: true,
   edit: true,
   editfiles: true,
@@ -361,27 +361,27 @@ const EDIT_TOOL_NAMES = {
   editnotebook: true,
   'edit/editnotebook': true,
   copilot_editnotebook: true
-};
+}));
 
-const TERMINAL_TOOL_NAMES = {
+const TERMINAL_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   run_in_terminal: true,
   execute: true,
   runinterminal: true,
   bash: true,
   terminal: true,
   powershell: true
-};
+}));
 
-const GREP_TOOL_NAMES = {
+const GREP_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   grep_search: true,
   grep: true,
   rg: true,
   textsearch: true,
   'search/textsearch': true,
   copilot_findtextinfiles: true
-};
+}));
 
-const GLOB_TOOL_NAMES = {
+const GLOB_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   file_search: true,
   glob: true,
   find: true,
@@ -391,16 +391,16 @@ const GLOB_TOOL_NAMES = {
   listdirectory: true,
   'search/listdirectory': true,
   copilot_listdirectory: true
-};
+}));
 
-const SUBAGENT_TOOL_NAMES = {
+const SUBAGENT_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   runsubagent: true,
   'agent/runsubagent': true,
   task: true,
   subagent: true
-};
+}));
 
-const UNRELATED_TOOL_NAMES = {
+const UNRELATED_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   ask_user: true,
   askuserquestion: true,
   question: true,
@@ -413,30 +413,30 @@ const UNRELATED_TOOL_NAMES = {
   list_resources: true,
   getterminaloutput: true,
   killterminal: true
-};
+}));
 
-const WEB_TOOL_NAMES = {
+const WEB_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   web_fetch: true,
   webfetch: true,
   fetch: true,
   'web/fetch': true,
   copilot_fetchwebpage: true,
   fetchwebpage: true
-};
+}));
 
-const NOTEBOOK_EDIT_TOOL_NAMES = {
+const NOTEBOOK_EDIT_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   editnotebook: true,
   'edit/editnotebook': true,
   copilot_editnotebook: true
-};
+}));
 
-const VALID_NOTEBOOK_EDIT_TYPES = {
+const VALID_NOTEBOOK_EDIT_TYPES = Object.freeze(Object.assign(Object.create(null), {
   insert: true,
   edit: true,
   delete: true
-};
+}));
 
-const CANONICAL_BLOCKED_DIR_NAMES = {
+const CANONICAL_BLOCKED_DIR_NAMES = Object.freeze(Object.assign(Object.create(null), {
   node_modules: true,
   dist: true,
   build: true,
@@ -449,7 +449,7 @@ const CANONICAL_BLOCKED_DIR_NAMES = {
   target: true,
   '.git': true,
   coverage: true
-};
+}));
 
 const BARE_PRIVACY_REGEX = /credentials|id_rsa|id_ed25519|secrets?\\.ya?ml|\\.env/i;
 
@@ -491,7 +491,7 @@ function extractCommandOperands(command) {
       token.includes('\\\\') ||
       token.startsWith('.') ||
       token.includes('.') ||
-      CANONICAL_BLOCKED_DIR_NAMES[token] ||
+      Object.hasOwn(CANONICAL_BLOCKED_DIR_NAMES, token) ||
       BARE_PRIVACY_REGEX.test(token)
     ) {
       operands.push(token);
@@ -601,7 +601,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   };
 
   // 1. Read operations
-  if (READ_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(READ_TOOL_NAMES, lowerName)) {
     const rawPath = toolInput.filePath ?? toolInput.FilePath ?? toolInput.path ?? toolInput.file_path ?? toolInput.target_file ?? toolInput.TargetFile;
     if (typeof rawPath !== 'string' || !rawPath.trim()) {
       return {
@@ -626,9 +626,9 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 2. Edit operations
-  if (EDIT_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(EDIT_TOOL_NAMES, lowerName)) {
     const directPath = toolInput.filePath ?? toolInput.FilePath ?? toolInput.path ?? toolInput.file_path ?? toolInput.target_file ?? toolInput.TargetFile;
-    if (NOTEBOOK_EDIT_TOOL_NAMES[lowerName]) {
+    if (Object.hasOwn(NOTEBOOK_EDIT_TOOL_NAMES, lowerName)) {
       if (typeof directPath !== 'string' || !directPath.trim()) {
         return {
           kind: 'unqualified',
@@ -638,7 +638,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
         };
       }
       const editType = toolInput.editType;
-      if (typeof editType !== 'string' || !VALID_NOTEBOOK_EDIT_TYPES[editType]) {
+      if (typeof editType !== 'string' || !Object.hasOwn(VALID_NOTEBOOK_EDIT_TYPES, editType)) {
         return {
           kind: 'unqualified',
           toolName,
@@ -730,7 +730,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 3. Terminal operations
-  if (TERMINAL_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(TERMINAL_TOOL_NAMES, lowerName)) {
     const command = toolInput.command ?? toolInput.CommandLine;
     if (typeof command !== 'string' || !command.trim()) {
       return {
@@ -758,7 +758,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 4. Grep search operations
-  if (GREP_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(GREP_TOOL_NAMES, lowerName)) {
     const query = toolInput.query ?? toolInput.pattern;
     if (typeof query !== 'string' || !query.trim()) {
       return {
@@ -785,7 +785,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 5. File search operations
-  if (GLOB_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(GLOB_TOOL_NAMES, lowerName)) {
     const isListDir = lowerName.includes('listdirectory');
     const pattern = toolInput.pattern ?? toolInput.query ?? (isListDir ? '*' : undefined);
     if (typeof pattern !== 'string' || !pattern.trim()) {
@@ -814,7 +814,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 6. Subagent operations
-  if (SUBAGENT_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(SUBAGENT_TOOL_NAMES, lowerName)) {
     const agentName = toolInput.agentName ?? toolInput.agent_type ?? toolInput.agent_id;
     if (typeof agentName !== 'string' || !agentName.trim()) {
       return {
@@ -835,7 +835,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 7. Web fetch operations
-  if (WEB_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(WEB_TOOL_NAMES, lowerName)) {
     const query = toolInput.query;
     if (typeof query !== 'string' || !query.trim()) {
       return {
@@ -927,7 +927,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   }
 
   // 7. Unrelated tools
-  if (UNRELATED_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(UNRELATED_TOOL_NAMES, lowerName)) {
     return {
       kind: 'unrelated',
       toolName,

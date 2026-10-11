@@ -66,7 +66,7 @@ If users report errors or unexpected behavior during subagent tool use:
 ## 4. Verification Evidence
 
 - `tests/adapters/vscode-metadata-permissions.test.mjs`: Verified `WebFetch -> web/fetch` and `NotebookEdit -> edit/editNotebook` mapping, `WebSearch` dropped, and capability fixture parity.
-- `tests/adapters/vscode-policy.test.mjs`: Verified `web/fetch` HTTP(S) schema validation, remote URL exemption from `/dist/` and `/.env` local blocks, `file://` rejection, `edit/editNotebook` required `filePath` + `editType` + `cellId` enforcement, and TS/CJS nullish-coalescing parity.
+- `tests/adapters/vscode-policy.test.mjs`: Verified `web/fetch` HTTP(S) schema validation, remote URL exemption from `/dist/` and `/.env` local blocks, `file://` rejection, `edit/editNotebook` required `filePath` + `editType` + `cellId` enforcement, null-prototype + `Object.hasOwn` immunity against `Object.prototype` keys (`constructor`, `toString`, `__proto__`), and TS/CJS nullish-coalescing parity.
 - `tests/adapters/vscode-behavior.test.mjs`: Verified positive and negative hook bridge execution for `web/fetch` and `edit/editNotebook`.
 - Total adapter tests: **242 passed, 0 failed**.
 - Qualification tests: **17 passed, 0 failed**.

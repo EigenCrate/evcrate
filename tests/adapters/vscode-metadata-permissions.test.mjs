@@ -197,6 +197,11 @@ test('metadata: mapAgentTools maps WebFetch and NotebookEdit to pinned host refe
   const resWebSearch = mapAgentTools('WebSearch');
   assert.deepEqual([...resWebSearch.mapped], []);
   assert.deepEqual(resWebSearch.dropped, ['WebSearch']);
+
+  // Object.prototype keys are treated as unsupported/dropped without throwing
+  const resProto = mapAgentTools(['constructor', 'toString', '__proto__', 'Read']);
+  assert.deepEqual([...resProto.mapped], ['read/readFile']);
+  assert.deepEqual([...resProto.dropped], ['__proto__', 'constructor', 'toString']);
 });
 
 test('metadata: capability contract cases match independently recorded host references', () => {

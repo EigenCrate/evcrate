@@ -475,6 +475,30 @@ test('policy: notebook edit and summary tools enforce file policies and valid ed
   assert.equal(nbInvalidEditType.kind, 'unqualified');
   assert.ok(nbInvalidEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
   assert.equal(evaluateLocalPolicies(nbInvalidEditType).decision, 'deny');
+  // P2 regression: Object.prototype property names ('constructor', 'toString', '__proto__') must be rejected as editType
+  for (const protoKey of ['constructor', 'toString', '__proto__', 'valueOf', 'hasOwnProperty']) {
+    const nbProtoEditType = normalizeLocalTool('edit/editNotebook', {
+      filePath: 'notebooks/report.ipynb',
+      editType: protoKey,
+      cellId: 'cell-0'
+    });
+    assert.equal(nbProtoEditType.kind, 'unqualified');
+    assert.ok(nbProtoEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
+    assert.equal(evaluateLocalPolicies(nbProtoEditType).decision, 'deny');
+
+    // P2 regression: Object.prototype property names as toolName must fail closed as unrecognized tool schema
+    const protoTool = normalizeLocalTool(protoKey, {
+      filePath: 'src/index.ts',
+      editType: 'edit',
+      cellId: 'cell-0'
+    });
+    assert.equal(protoTool.kind, 'unqualified');
+    assert.ok(protoTool.reason.includes('Unrecognized or unqualified tool schema'));
+    assert.equal(evaluateLocalPolicies(protoTool).decision, 'deny');
+  }
+
+  // P2 regression: Object.prototype tokens in terminal commands must not match CANONICAL_BLOCKED_DIR_NAMES
+  assert.deepEqual(extractCommandOperands('echo constructor toString valueOf hasOwnProperty'), []);
 
   // P3 regression: missing editType or missing/empty cellId fails closed as unqualified
   const nbMissingEditType = normalizeLocalTool('edit/editNotebook', {
@@ -547,11 +571,17 @@ test('policy: TypeScript and generated CommonJS runtime maintain exact fallback 
     // Notebook cases
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: 'c1' }],
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'replace', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'constructor', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'toString', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: '__proto__', cellId: 'c1' }],
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb' }],
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit' }],
     ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: '' }],
     ['edit/editNotebook', { editType: 'edit', cellId: 'c1' }],
-    ['read/getNotebookSummary', { filePath: 'notebooks/a.ipynb' }]
+    ['read/getNotebookSummary', { filePath: 'notebooks/a.ipynb' }],
+    ['constructor', { filePath: 'src/index.ts', editType: 'edit', cellId: 'c1' }],
+    ['toString', { filePath: 'src/index.ts' }],
+    ['__proto__', { filePath: 'src/index.ts' }]
   ];
 
   for (const [toolName, input] of testCases) {
