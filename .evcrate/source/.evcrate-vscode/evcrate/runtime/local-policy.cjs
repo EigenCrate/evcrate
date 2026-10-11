@@ -184,8 +184,9 @@ function evaluateLocalPolicies(operation, config = {}) {
   const warnings = [];
 
   const isTerminalBuild = operation.kind === 'terminal' && operation.command && isBuildCommand(operation.command);
+  const isWebFetch = operation.kind === 'web';
 
-  if (!isTerminalBuild) {
+  if (!isTerminalBuild && !isWebFetch) {
     for (const operand of operation.operands) {
       const scoutCheck = matchesScoutPattern(operand, compiledScout);
       if (scoutCheck.blocked) {
@@ -196,7 +197,6 @@ function evaluateLocalPolicies(operation, config = {}) {
         };
       }
     }
-  }
     if (operation.kind === 'search' && operation.pattern) {
       const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
       if (patternCheck.blocked) {
@@ -207,6 +207,7 @@ function evaluateLocalPolicies(operation, config = {}) {
         };
       }
     }
+  }
 
   if (operation.kind === 'search' && operation.pattern && isBroadPattern(operation.pattern)) {
     const isRootSearch = operation.operands.length === 0 || operation.operands.every(
@@ -221,10 +222,10 @@ function evaluateLocalPolicies(operation, config = {}) {
     }
   }
 
-  if (config.privacyEnabled !== false) {
+  if (config.privacyEnabled !== false && !isWebFetch) {
     for (const operand of operation.operands) {
       if (isPrivacySensitive(operand)) {
-        if (operation.kind === 'read' || operation.kind === 'edit' || operation.kind === 'web') {
+        if (operation.kind === 'read' || operation.kind === 'edit') {
           return {
             decision: 'ask',
             reason: 'Access to privacy-sensitive file "' + operand + '" requires explicit user confirmation.',

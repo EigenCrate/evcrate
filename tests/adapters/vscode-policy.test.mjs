@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const cjsToolInputs = require('../../.evcrate/source/.evcrate-vscode/evcrate/runtime/local-tool-inputs.cjs');
+const cjsPolicy = require('../../.evcrate/source/.evcrate-vscode/evcrate/runtime/local-policy.cjs');
 
 import {
   normalizeLocalTool,
@@ -393,49 +398,83 @@ test('policy: native search parameters normalize scope and block protected direc
   assert.equal(fileSearchPermitted.decision, 'none');
 });
 
-test('policy: web fetch tools normalize URLs and enforce scout and privacy policies', () => {
-  // Allowed external web fetch
+test('policy: web fetch tools validate HTTP(S) URLs and exempt remote URLs from local directory/privacy blocks', () => {
+  // Allowed external web fetch with valid urls array and query
   const webAllowed = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
     urls: ['https://code.visualstudio.com/docs'],
     query: 'API reference'
   }));
   assert.equal(webAllowed.decision, 'none');
 
-  // Allowed single url string
-  const webSingleAllowed = evaluateLocalPolicies(normalizeLocalTool('copilot_fetchWebPage', {
+  // P1 regression: remote URLs containing /dist/, /build/, or /.env are NOT blocked or prompted by local workspace rules
+  const webDistAndEnvAllowed = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
+    urls: [
+      'https://nodejs.org/dist/v20.0.0/',
+      'https://example.com/build/artifacts',
+      'https://example.com/docs/.env/configuration'
+    ],
+    query: 'Node release and environment docs'
+  }));
+  assert.equal(webDistAndEnvAllowed.decision, 'none');
+
+  // P2 regression: non-HTTP(S) scheme (file://) fails closed as unqualified and is denied
+  const webFileScheme = normalizeLocalTool('web/fetch', {
+    urls: ['file:///etc/passwd'],
+    query: 'content'
+  });
+  assert.equal(webFileScheme.kind, 'unqualified');
+  assert.ok(webFileScheme.reason.includes('only permits http: or https: protocols'));
+  assert.equal(evaluateLocalPolicies(webFileScheme).decision, 'deny');
+
+  // P2 regression: relative local path fails closed as unqualified and is denied
+  const webRelativePath = normalizeLocalTool('web/fetch', {
+    urls: ['node_modules/express/README.md'],
+    query: 'express docs'
+  });
+  assert.equal(webRelativePath.kind, 'unqualified');
+  assert.equal(evaluateLocalPolicies(webRelativePath).decision, 'deny');
+
+  // P2 regression: single url string without urls array fails closed as unqualified
+  const webSingleUrl = normalizeLocalTool('copilot_fetchWebPage', {
     url: 'https://github.com/microsoft/vscode',
     query: 'README'
-  }));
-  assert.equal(webSingleAllowed.decision, 'none');
+  });
+  assert.equal(webSingleUrl.kind, 'unqualified');
+  assert.ok(webSingleUrl.reason.includes('non-empty urls array'));
 
-  // Privacy-sensitive local operand in web fetch triggers ask
-  const webPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
-    urls: ['.env.local'],
-    query: 'config'
-  }));
-  assert.equal(webPrivacyAsk.decision, 'ask');
-  assert.ok(webPrivacyAsk.reason.includes('privacy-sensitive'));
-
-  // Scout-blocked directory operand in web fetch triggers deny
-  const webScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
-    urls: ['node_modules/express/README.md']
-  }));
-  assert.equal(webScoutBlocked.decision, 'deny');
-  assert.ok(webScoutBlocked.reason.includes('Scout policy blocked'));
+  // P2 regression: missing query fails closed as unqualified
+  const webMissingQuery = normalizeLocalTool('web/fetch', {
+    urls: ['https://code.visualstudio.com/docs']
+  });
+  assert.equal(webMissingQuery.kind, 'unqualified');
+  assert.ok(webMissingQuery.reason.includes('non-empty query string'));
 
   // Missing urls fails closed as unqualified
-  const webMissing = normalizeLocalTool('web/fetch', { query: 'test' });
-  assert.equal(webMissing.kind, 'unqualified');
+  const webMissingUrls = normalizeLocalTool('web/fetch', { query: 'test' });
+  assert.equal(webMissingUrls.kind, 'unqualified');
 });
 
-test('policy: notebook edit and summary tools enforce file policies with filePath', () => {
-  // Allowed notebook edit
-  const nbEditAllowed = evaluateLocalPolicies(normalizeLocalTool('edit/editNotebook', {
+test('policy: notebook edit and summary tools enforce file policies and valid editType', () => {
+  // Allowed notebook edit with valid native editType ('edit', 'insert', 'delete')
+  for (const editType of ['edit', 'insert', 'delete']) {
+    const nbEditAllowed = evaluateLocalPolicies(normalizeLocalTool('edit/editNotebook', {
+      filePath: 'notebooks/pipeline.ipynb',
+      editType,
+      cellId: 'cell-0',
+      newCode: 'print(1)'
+    }));
+    assert.equal(nbEditAllowed.decision, 'none');
+  }
+
+  // P2 regression: invalid editType ('replace') fails closed as unqualified and is denied
+  const nbInvalidEditType = normalizeLocalTool('edit/editNotebook', {
     filePath: 'notebooks/pipeline.ipynb',
     editType: 'replace',
     cellId: 'cell-0'
-  }));
-  assert.equal(nbEditAllowed.decision, 'none');
+  });
+  assert.equal(nbInvalidEditType.kind, 'unqualified');
+  assert.ok(nbInvalidEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
+  assert.equal(evaluateLocalPolicies(nbInvalidEditType).decision, 'deny');
 
   // Allowed notebook summary read
   const nbSummaryAllowed = evaluateLocalPolicies(normalizeLocalTool('read/getNotebookSummary', {
@@ -445,7 +484,9 @@ test('policy: notebook edit and summary tools enforce file policies with filePat
 
   // Scout-blocked notebook edit
   const nbEditBlocked = evaluateLocalPolicies(normalizeLocalTool('copilot_editNotebook', {
-    filePath: 'node_modules/demo/notebook.ipynb'
+    filePath: 'node_modules/demo/notebook.ipynb',
+    editType: 'insert',
+    cellId: 'cell-0'
   }));
   assert.equal(nbEditBlocked.decision, 'deny');
   assert.ok(nbEditBlocked.reason.includes('Scout policy blocked'));
@@ -456,4 +497,33 @@ test('policy: notebook edit and summary tools enforce file policies with filePat
   }));
   assert.equal(nbPrivacyAsk.decision, 'ask');
   assert.ok(nbPrivacyAsk.reason.includes('privacy-sensitive'));
+});
+
+test('policy: TypeScript and generated CommonJS runtime maintain exact fallback and normalization parity', () => {
+  const testCases = [
+    // P3 regression: empty string on earlier property must not fall through via || when TS uses ??
+    ['read/readFile', { filePath: '', path: 'src/fallback.ts' }],
+    ['editFiles', { filePath: '', path: 'src/fallback.ts' }],
+    ['search/textSearch', { query: 'test', path: '', folder: 'src' }],
+    ['search/fileSearch', { pattern: '', query: 'src/**/*.ts' }],
+    // WebFetch cases
+    ['web/fetch', { urls: ['https://nodejs.org/dist/v20.0.0/'], query: 'Node 20' }],
+    ['web/fetch', { urls: ['file:///etc/passwd'], query: 'passwd' }],
+    ['web/fetch', { url: 'https://example.com', query: 'single' }],
+    ['web/fetch', { urls: ['https://example.com'] }],
+    // Notebook cases
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'replace', cellId: 'c1' }],
+    ['read/getNotebookSummary', { filePath: 'notebooks/a.ipynb' }]
+  ];
+
+  for (const [toolName, input] of testCases) {
+    const tsNorm = normalizeLocalTool(toolName, input);
+    const cjsNorm = cjsToolInputs.normalizeLocalTool(toolName, input);
+    assert.deepEqual(cjsNorm, tsNorm, `Normalization parity mismatch for ${toolName} with ${JSON.stringify(input)}`);
+
+    const tsPol = evaluateLocalPolicies(tsNorm);
+    const cjsPol = cjsPolicy.evaluateLocalPolicies(cjsNorm);
+    assert.deepEqual(cjsPol, tsPol, `Policy parity mismatch for ${toolName} with ${JSON.stringify(input)}`);
+  }
 });

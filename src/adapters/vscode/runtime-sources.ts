@@ -424,6 +424,18 @@ const WEB_TOOL_NAMES = {
   fetchwebpage: true
 };
 
+const NOTEBOOK_EDIT_TOOL_NAMES = {
+  editnotebook: true,
+  'edit/editnotebook': true,
+  copilot_editnotebook: true
+};
+
+const VALID_NOTEBOOK_EDIT_TYPES = {
+  insert: true,
+  edit: true,
+  delete: true
+};
+
 const CANONICAL_BLOCKED_DIR_NAMES = {
   node_modules: true,
   dist: true,
@@ -513,24 +525,24 @@ function extractGlobRoot(pattern) {
 function collectSearchOperands(toolInput, extraOperand) {
   const operands = [];
   const directPath =
-    toolInput.path ||
-    toolInput.folder ||
-    toolInput.SearchPath ||
-    toolInput.filePath ||
-    toolInput.FilePath ||
-    toolInput.dirPath ||
-    toolInput.DirPath ||
-    toolInput.directoryPath ||
+    toolInput.path ??
+    toolInput.folder ??
+    toolInput.SearchPath ??
+    toolInput.filePath ??
+    toolInput.FilePath ??
+    toolInput.dirPath ??
+    toolInput.DirPath ??
+    toolInput.directoryPath ??
     toolInput.DirectoryPath;
   if (typeof directPath === 'string' && directPath.trim()) {
     operands.push(directPath.trim());
   }
 
   const rawIncludes =
-    toolInput.includePattern ||
-    toolInput.filesToInclude ||
-    toolInput.include ||
-    toolInput.includes ||
+    toolInput.includePattern ??
+    toolInput.filesToInclude ??
+    toolInput.include ??
+    toolInput.includes ??
     toolInput.includePatterns;
   if (typeof rawIncludes === 'string' && rawIncludes.trim()) {
     for (const item of rawIncludes.split(',')) {
@@ -590,7 +602,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 1. Read operations
   if (READ_TOOL_NAMES[lowerName]) {
-    const rawPath = toolInput.filePath || toolInput.FilePath || toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
+    const rawPath = toolInput.filePath ?? toolInput.FilePath ?? toolInput.path ?? toolInput.file_path ?? toolInput.target_file ?? toolInput.TargetFile;
     if (typeof rawPath !== 'string' || !rawPath.trim()) {
       return {
         kind: 'unqualified',
@@ -615,16 +627,28 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 2. Edit operations
   if (EDIT_TOOL_NAMES[lowerName]) {
+    if (NOTEBOOK_EDIT_TOOL_NAMES[lowerName]) {
+      const editType = toolInput.editType;
+      if (editType !== undefined && (typeof editType !== 'string' || !VALID_NOTEBOOK_EDIT_TYPES[editType])) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires editType to be "insert", "edit", or "delete"',
+          originalInput: toolInput
+        };
+      }
+    }
+
     const collectedPaths = [];
-    const directPath = toolInput.filePath || toolInput.FilePath || toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
+    const directPath = toolInput.filePath ?? toolInput.FilePath ?? toolInput.path ?? toolInput.file_path ?? toolInput.target_file ?? toolInput.TargetFile;
     if (typeof directPath === 'string' && directPath.trim()) {
       collectedPaths.push(directPath);
     }
 
     if (Array.isArray(toolInput.files)) {
       for (const item of toolInput.files) {
-        if (item && typeof item === 'object') {
-          const itemPath = item.filePath || item.FilePath || item.path || item.file_path || item.target_file || item.TargetFile;
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          const itemPath = item.filePath ?? item.FilePath ?? item.path ?? item.file_path ?? item.target_file ?? item.TargetFile;
           if (typeof itemPath === 'string' && itemPath.trim()) {
             collectedPaths.push(itemPath);
           }
@@ -634,8 +658,8 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
     if (Array.isArray(toolInput.replacements)) {
       for (const item of toolInput.replacements) {
-        if (item && typeof item === 'object') {
-          const itemPath = item.filePath || item.FilePath || item.path || item.file_path || item.target_file || item.TargetFile;
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          const itemPath = item.filePath ?? item.FilePath ?? item.path ?? item.file_path ?? item.target_file ?? item.TargetFile;
           if (typeof itemPath === 'string' && itemPath.trim()) {
             collectedPaths.push(itemPath);
           }
@@ -678,7 +702,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 3. Terminal operations
   if (TERMINAL_TOOL_NAMES[lowerName]) {
-    const command = toolInput.command || toolInput.CommandLine;
+    const command = toolInput.command ?? toolInput.CommandLine;
     if (typeof command !== 'string' || !command.trim()) {
       return {
         kind: 'unqualified',
@@ -706,7 +730,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 4. Grep search operations
   if (GREP_TOOL_NAMES[lowerName]) {
-    const query = toolInput.query || toolInput.pattern;
+    const query = toolInput.query ?? toolInput.pattern;
     if (typeof query !== 'string' || !query.trim()) {
       return {
         kind: 'unqualified',
@@ -734,7 +758,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   // 5. File search operations
   if (GLOB_TOOL_NAMES[lowerName]) {
     const isListDir = lowerName.includes('listdirectory');
-    const pattern = toolInput.pattern || toolInput.query || (isListDir ? '*' : undefined);
+    const pattern = toolInput.pattern ?? toolInput.query ?? (isListDir ? '*' : undefined);
     if (typeof pattern !== 'string' || !pattern.trim()) {
       return {
         kind: 'unqualified',
@@ -762,7 +786,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 6. Subagent operations
   if (SUBAGENT_TOOL_NAMES[lowerName]) {
-    const agentName = toolInput.agentName || toolInput.agent_type || toolInput.agent_id;
+    const agentName = toolInput.agentName ?? toolInput.agent_type ?? toolInput.agent_id;
     if (typeof agentName !== 'string' || !agentName.trim()) {
       return {
         kind: 'unqualified',
@@ -783,37 +807,90 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 7. Web fetch operations
   if (WEB_TOOL_NAMES[lowerName]) {
-    const rawUrls = toolInput.urls || toolInput.url || toolInput.uri || toolInput.uris;
-    const urlList = [];
-    if (typeof rawUrls === 'string' && rawUrls.trim()) {
-      urlList.push(rawUrls.trim());
-    } else if (Array.isArray(rawUrls)) {
-      for (const u of rawUrls) {
-        if (typeof u === 'string' && u.trim()) {
-          urlList.push(u.trim());
-        }
-      }
-    }
-
-    if (urlList.length === 0) {
+    const query = toolInput.query;
+    if (typeof query !== 'string' || !query.trim()) {
       return {
         kind: 'unqualified',
         toolName,
-        reason: 'Web fetch tool requires valid urls or url string',
+        reason: 'Web fetch tool requires a non-empty query string',
         originalInput: toolInput
       };
     }
 
-    const checked = validateOperands(urlList);
-    if (typeof checked === 'string') {
-      return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
+    const rawUrls = toolInput.urls;
+    if (!Array.isArray(rawUrls) || rawUrls.length === 0) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: 'Web fetch tool requires a non-empty urls array',
+        originalInput: toolInput
+      };
+    }
+
+    if (rawUrls.length > MAX_OPERANDS) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: 'Total URL operands (' + rawUrls.length + ') exceed maximum permitted limit (' + MAX_OPERANDS + ')',
+        originalInput: toolInput
+      };
+    }
+
+    const validatedUrls = [];
+    for (const u of rawUrls) {
+      if (typeof u !== 'string' || !u.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Web fetch urls array must contain only non-empty URL strings',
+          originalInput: toolInput
+        };
+      }
+      const trimmedUrl = u.trim();
+      const byteLen = Buffer.byteLength(trimmedUrl, 'utf8');
+      if (byteLen > MAX_OPERAND_BYTES) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'URL operand length (' + byteLen + ' bytes) exceeds maximum permitted limit (' + MAX_OPERAND_BYTES + ' bytes)',
+          originalInput: toolInput
+        };
+      }
+      let parsed;
+      try {
+        parsed = new URL(trimmedUrl);
+      } catch {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Web fetch requires valid HTTP(S) URLs; invalid URL "' + trimmedUrl + '"',
+          originalInput: toolInput
+        };
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Web fetch only permits http: or https: protocols; rejected "' + parsed.protocol + '"',
+          originalInput: toolInput
+        };
+      }
+      if (!parsed.hostname) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Web fetch URL requires a valid hostname: "' + trimmedUrl + '"',
+          originalInput: toolInput
+        };
+      }
+      validatedUrls.push(trimmedUrl);
     }
 
     return {
       kind: 'web',
       toolName,
-      operands: checked,
-      pattern: typeof toolInput.query === 'string' && toolInput.query.trim() ? toolInput.query.trim() : undefined,
+      operands: validatedUrls,
+      pattern: query.trim(),
       toolUseId,
       originalInput: toolInput,
       executionBase: contextCwd
@@ -1037,8 +1114,9 @@ function evaluateLocalPolicies(operation, config = {}) {
   const warnings = [];
 
   const isTerminalBuild = operation.kind === 'terminal' && operation.command && isBuildCommand(operation.command);
+  const isWebFetch = operation.kind === 'web';
 
-  if (!isTerminalBuild) {
+  if (!isTerminalBuild && !isWebFetch) {
     for (const operand of operation.operands) {
       const scoutCheck = matchesScoutPattern(operand, compiledScout);
       if (scoutCheck.blocked) {
@@ -1049,7 +1127,6 @@ function evaluateLocalPolicies(operation, config = {}) {
         };
       }
     }
-  }
     if (operation.kind === 'search' && operation.pattern) {
       const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
       if (patternCheck.blocked) {
@@ -1060,6 +1137,7 @@ function evaluateLocalPolicies(operation, config = {}) {
         };
       }
     }
+  }
 
   if (operation.kind === 'search' && operation.pattern && isBroadPattern(operation.pattern)) {
     const isRootSearch = operation.operands.length === 0 || operation.operands.every(
@@ -1074,10 +1152,10 @@ function evaluateLocalPolicies(operation, config = {}) {
     }
   }
 
-  if (config.privacyEnabled !== false) {
+  if (config.privacyEnabled !== false && !isWebFetch) {
     for (const operand of operation.operands) {
       if (isPrivacySensitive(operand)) {
-        if (operation.kind === 'read' || operation.kind === 'edit' || operation.kind === 'web') {
+        if (operation.kind === 'read' || operation.kind === 'edit') {
           return {
             decision: 'ask',
             reason: 'Access to privacy-sensitive file "' + operand + '" requires explicit user confirmation.',

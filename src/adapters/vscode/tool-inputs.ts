@@ -127,6 +127,18 @@ const WEB_TOOL_NAMES: Record<string, true> = {
   fetchwebpage: true
 };
 
+const NOTEBOOK_EDIT_TOOL_NAMES: Record<string, true> = {
+  editnotebook: true,
+  'edit/editnotebook': true,
+  copilot_editnotebook: true
+};
+
+const VALID_NOTEBOOK_EDIT_TYPES: Record<string, true> = {
+  insert: true,
+  edit: true,
+  delete: true
+};
+
 const CANONICAL_BLOCKED_DIR_NAMES: Record<string, true> = {
   node_modules: true,
   dist: true,
@@ -341,6 +353,18 @@ export function normalizeLocalTool(
 
   // 2. Edit operations
   if (EDIT_TOOL_NAMES[lowerName]) {
+    if (NOTEBOOK_EDIT_TOOL_NAMES[lowerName]) {
+      const editType = toolInput.editType;
+      if (editType !== undefined && (typeof editType !== 'string' || !VALID_NOTEBOOK_EDIT_TYPES[editType])) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires editType to be "insert", "edit", or "delete"',
+          originalInput: toolInput
+        };
+      }
+    }
+
     const collectedPaths: string[] = [];
     const directPath =
       toolInput.filePath ??
@@ -531,37 +555,90 @@ export function normalizeLocalTool(
 
   // 7. Web fetch operations
   if (WEB_TOOL_NAMES[lowerName]) {
-    const rawUrls = toolInput.urls ?? toolInput.url ?? toolInput.uri ?? toolInput.uris;
-    const urlList: string[] = [];
-    if (typeof rawUrls === 'string' && rawUrls.trim()) {
-      urlList.push(rawUrls.trim());
-    } else if (Array.isArray(rawUrls)) {
-      for (const u of rawUrls) {
-        if (typeof u === 'string' && u.trim()) {
-          urlList.push(u.trim());
-        }
-      }
-    }
-
-    if (urlList.length === 0) {
+    const query = toolInput.query;
+    if (typeof query !== 'string' || !query.trim()) {
       return {
         kind: 'unqualified',
         toolName,
-        reason: 'Web fetch tool requires valid urls or url string',
+        reason: 'Web fetch tool requires a non-empty query string',
         originalInput: toolInput
       };
     }
 
-    const checked = validateOperands(urlList);
-    if (typeof checked === 'string') {
-      return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
+    const rawUrls = toolInput.urls;
+    if (!Array.isArray(rawUrls) || rawUrls.length === 0) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: 'Web fetch tool requires a non-empty urls array',
+        originalInput: toolInput
+      };
+    }
+
+    if (rawUrls.length > MAX_OPERANDS) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: `Total URL operands (${rawUrls.length}) exceed maximum permitted limit (${MAX_OPERANDS})`,
+        originalInput: toolInput
+      };
+    }
+
+    const validatedUrls: string[] = [];
+    for (const u of rawUrls) {
+      if (typeof u !== 'string' || !u.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Web fetch urls array must contain only non-empty URL strings',
+          originalInput: toolInput
+        };
+      }
+      const trimmedUrl = u.trim();
+      const bytes = new TextEncoder().encode(trimmedUrl).byteLength;
+      if (bytes > MAX_OPERAND_BYTES) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `URL operand length (${bytes} bytes) exceeds maximum permitted limit (${MAX_OPERAND_BYTES} bytes)`,
+          originalInput: toolInput
+        };
+      }
+      let parsed: URL;
+      try {
+        parsed = new URL(trimmedUrl);
+      } catch {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `Web fetch requires valid HTTP(S) URLs; invalid URL "${trimmedUrl}"`,
+          originalInput: toolInput
+        };
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `Web fetch only permits http: or https: protocols; rejected "${parsed.protocol}"`,
+          originalInput: toolInput
+        };
+      }
+      if (!parsed.hostname) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `Web fetch URL requires a valid hostname: "${trimmedUrl}"`,
+          originalInput: toolInput
+        };
+      }
+      validatedUrls.push(trimmedUrl);
     }
 
     return {
       kind: 'web',
       toolName,
-      operands: checked,
-      pattern: typeof toolInput.query === 'string' && toolInput.query.trim() ? toolInput.query.trim() : undefined,
+      operands: validatedUrls,
+      pattern: query.trim(),
       toolUseId,
       originalInput: toolInput,
       executionBase: contextCwd

@@ -329,37 +329,113 @@ test('vscode-behavior: bridge denies search/fileSearch targeting node_modules/**
   assert.ok(parsed.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
 });
 
-test('vscode-behavior: bridge denies web/fetch targeting blocked directory operand', () => {
+test('vscode-behavior: bridge allows valid web/fetch including URLs with /dist/ segment', () => {
   const bridgeScript = join(repository, '.evcrate/source/.evcrate-vscode/evcrate/runtime/local-hook-bridge.cjs');
 
-  const denyRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+  const allowRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
     input: JSON.stringify({
       hook_event_name: 'PreToolUse',
       tool_name: 'web/fetch',
       tool_input: {
-        urls: ['node_modules/express/README.md'],
-        query: 'test'
+        urls: ['https://nodejs.org/dist/v20.0.0/'],
+        query: 'Node 20 release notes'
       }
     }),
     encoding: 'utf8'
   });
 
-  assert.equal(denyRes.status, 0);
-  const parsed = JSON.parse(denyRes.stdout);
+  assert.equal(allowRes.status, 0);
+  const parsed = JSON.parse(allowRes.stdout);
   assert.equal(parsed.continue, true);
-  assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
-  assert.ok(parsed.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
+  assert.equal(parsed.hookSpecificOutput?.permissionDecision, undefined);
 });
 
-test('vscode-behavior: bridge denies edit/editNotebook targeting blocked directory', () => {
+test('vscode-behavior: bridge denies web/fetch with non-HTTP(S) URL or missing query', () => {
   const bridgeScript = join(repository, '.evcrate/source/.evcrate-vscode/evcrate/runtime/local-hook-bridge.cjs');
 
-  const denyRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+  const denyFileUrl = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'web/fetch',
+      tool_input: {
+        urls: ['file:///etc/passwd'],
+        query: 'passwd'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyFileUrl.status, 0);
+  const parsedFile = JSON.parse(denyFileUrl.stdout);
+  assert.equal(parsedFile.continue, true);
+  assert.equal(parsedFile.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedFile.hookSpecificOutput?.permissionDecisionReason?.includes('only permits http: or https: protocols'));
+
+  const denyNoQuery = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'web/fetch',
+      tool_input: {
+        urls: ['https://code.visualstudio.com/docs']
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyNoQuery.status, 0);
+  const parsedNoQuery = JSON.parse(denyNoQuery.stdout);
+  assert.equal(parsedNoQuery.continue, true);
+  assert.equal(parsedNoQuery.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedNoQuery.hookSpecificOutput?.permissionDecisionReason?.includes('non-empty query string'));
+});
+
+test('vscode-behavior: bridge allows edit/editNotebook with valid editType and denies blocked directory or invalid editType', () => {
+  const bridgeScript = join(repository, '.evcrate/source/.evcrate-vscode/evcrate/runtime/local-hook-bridge.cjs');
+
+  const allowRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/pipeline.ipynb',
+        editType: 'edit',
+        cellId: 'cell-0',
+        newCode: 'print(1)'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(allowRes.status, 0);
+  const parsedAllow = JSON.parse(allowRes.stdout);
+  assert.equal(parsedAllow.continue, true);
+  assert.equal(parsedAllow.hookSpecificOutput?.permissionDecision, undefined);
+
+  const denyScoutRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
     input: JSON.stringify({
       hook_event_name: 'PreToolUse',
       tool_name: 'edit/editNotebook',
       tool_input: {
         filePath: 'node_modules/demo/notebook.ipynb',
+        editType: 'edit',
+        cellId: 'cell-0'
+      }
+    }),
+    encoding: 'utf8'
+  });
+
+  assert.equal(denyScoutRes.status, 0);
+  const parsedScout = JSON.parse(denyScoutRes.stdout);
+  assert.equal(parsedScout.continue, true);
+  assert.equal(parsedScout.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedScout.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
+
+  const denyTypeRes = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'edit/editNotebook',
+      tool_input: {
+        filePath: 'notebooks/pipeline.ipynb',
         editType: 'replace',
         cellId: 'cell-0'
       }
@@ -367,9 +443,9 @@ test('vscode-behavior: bridge denies edit/editNotebook targeting blocked directo
     encoding: 'utf8'
   });
 
-  assert.equal(denyRes.status, 0);
-  const parsed = JSON.parse(denyRes.stdout);
-  assert.equal(parsed.continue, true);
-  assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
-  assert.ok(parsed.hookSpecificOutput?.permissionDecisionReason?.includes('Scout policy blocked'));
+  assert.equal(denyTypeRes.status, 0);
+  const parsedType = JSON.parse(denyTypeRes.stdout);
+  assert.equal(parsedType.continue, true);
+  assert.equal(parsedType.hookSpecificOutput?.permissionDecision, 'deny');
+  assert.ok(parsedType.hookSpecificOutput?.permissionDecisionReason?.includes('editType to be "insert", "edit", or "delete"'));
 });
