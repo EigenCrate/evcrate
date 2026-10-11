@@ -111,6 +111,19 @@ const LEGACY_AGENTS: readonly string[] = Object.freeze([
   'ui-ux-designer'
 ]);
 
+// 9 legacy OMP coordinator workers from internal 2026-09-07 planning milestone
+const LEGACY_OMP_COORDINATOR_AGENTS: readonly string[] = Object.freeze([
+  'evcrate-astra-high',
+  'evcrate-astra-medium',
+  'evcrate-astra-xhigh',
+  'evcrate-luna-medium',
+  'evcrate-sol-high',
+  'evcrate-sol-medium',
+  'evcrate-sol-xhigh',
+  'evcrate-terra-high',
+  'evcrate-terra-medium'
+]);
+
 // Copilot former skills (prefixed with evcrate-)
 const COPILOT_LEGACY_SKILLS: readonly string[] = Object.freeze([
   'advisor-strategy',
@@ -217,6 +230,14 @@ function legacyItemsForTarget(target: PublicationStateTarget, scope: Publication
         }
       }
       for (const agent of LEGACY_AGENTS) {
+        items.push({ relativePath: `${prefix}agents/${agent}.md`, kind: 'agent' });
+        if (scope === 'home') {
+          items.push({ relativePath: `agents/${agent}.md`, kind: 'agent' });
+        } else {
+          items.push({ relativePath: `evcrate/agents/${agent}.md`, kind: 'agent' });
+        }
+      }
+      for (const agent of LEGACY_OMP_COORDINATOR_AGENTS) {
         items.push({ relativePath: `${prefix}agents/${agent}.md`, kind: 'agent' });
         if (scope === 'home') {
           items.push({ relativePath: `agents/${agent}.md`, kind: 'agent' });

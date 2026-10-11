@@ -489,6 +489,36 @@ test('Phase 08: Untracked legacy files are preserved and reported in legacyLefto
   }
 });
 
+test('Phase 08: Legacy OMP coordinator worker agents are detected and reported in legacyLeftovers', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-omp-coordinator-leftovers-'));
+  try {
+    const home = join(root, 'home');
+    const project = join(root, 'project');
+    directory(home);
+    directory(project);
+    mkdirSync(join(home, '.omp/agent/agents'), { recursive: true });
+
+    // Place an unmanaged coordinator worker in home agent/agents
+    const astraAgent = join(home, '.omp/agent/agents/evcrate-astra-high.md');
+    writeFileSync(astraAgent, '---\nname: evcrate-astra-high\n---\n');
+
+    const context = resolveInvocationContext({
+      packageRoot, cwd: packageRoot, home, projectRoot: project, targets: ['omp']
+    });
+
+    const dryRunResult = publishDryRun(context, { scope: 'home', selectedTargets: ['omp'] });
+    assert.ok(Array.isArray(dryRunResult.legacyLeftovers));
+    const paths = dryRunResult.legacyLeftovers.map((l) => l.path);
+    assert.ok(paths.includes('agent/agents/evcrate-astra-high.md'), 'Must report untracked legacy OMP coordinator agent');
+
+    const leftover = dryRunResult.legacyLeftovers.find((l) => l.path === 'agent/agents/evcrate-astra-high.md');
+    assert.equal(leftover?.target, 'omp');
+    assert.equal(leftover?.kind, 'agent');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('Phase 08: validatePublishApplyResultPayload and validatePublishDryRunResultPayload enforce strict leftover validation and absent-field compatibility', () => {
   const validBase = {
     scope: 'home',
