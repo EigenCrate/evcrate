@@ -5,11 +5,17 @@
 **Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-12 — feat(vscode): implement runtime model bindings contracts and ownership boundaries (Phase 02)
+
+- Implemented pure contract and validation modules under `src/adapters/vscode/{model-intent.ts,companion-package-contracts.ts,companion-cli-contracts.ts}` (`evcrate-vscode-agent-intent-v1`, `evcrate-vscode-agent-tool-audit-v2`, `evcrate-vscode-companion-descriptor-v1`, `evcrate-vscode-companion-source-receipt-v1`, `evcrate-vscode-companion-install-v1`, `verifyCompanionLayoutContract`, `validateCompanionCliOptions`) and standalone extension workspace `extensions/vscode-model-bindings/{package.json,tsconfig.json,vscode.proposed.chatPromptFiles.d.ts,src/runtime-contracts.ts,src/diagnostics-contracts.ts,src/contracts.ts}` (`evcrate-vscode-bindings-v1`, `evcrate-vscode-runtime-bindings-v1`, `validateLocalRootUri`, `resolveInstallationRoot`, `resolveEffectiveActorBinding`, `STORAGE_AND_SOURCE_BOUNDS`).
+- Verified standalone extension and root compilation plus boundary suites in `tests/vscode-companion/contracts.test.mjs` (4/4 companion contract tests + 97/97 VS Code adapter tests = 101/101 passing; Review Cycle 2 approved 8.5/10, 0 critical issues; [interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)).
+- Existing static VS Code projection (`.evcrate/source/.evcrate-vscode/**`) and core CLI runtime closure remain untouched until Phase 03/07/08 cutover; live native editor qualification remains deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment.
+
 ### 2026-10-12 — docs(vscode): native feasibility evaluation for runtime model bindings companion (Phase 01)
 
 - Evaluated proposed `chatPromptFiles` API (`registerCustomAgentProvider`) for private companion model bindings on Linux x86_64 host (pinned candidate VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`).
 - Offline spike test harness passed 10/10 checks as documented in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md). Validated selector formatting, ambiguity rejection (`SELECTOR_AMBIGUOUS`), precedence layering, fail-closed remote authority rejection (`vscode-remote://`, `wsl://`), local file URI acceptance, simulated generation retention bounds, frontmatter contracts, simulated in-turn generation immutability, and storage isolation. Temporary spike removed; artifact packaging and digest recorded in report.
-- Native runtime qualification gates remain **NOT RUN / BLOCKED** pending an authorized interactive editor session with live Copilot Chat authentication; Phase 02+ production cutover is gated. Existing static projection remains unchanged.
+- Native runtime qualification gates remain deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment ([interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)); existing static projection remains unchanged.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 
@@ -733,42 +739,11 @@
 
 ### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
 
-**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 05 plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)
-
-- Delivered the Node-builtins-only qualification CLI with strict host,
-  receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners;
-  smoke/full lifecycle controllers; immutable-state and PATH observers; and
-  isolated negative scenarios.
-- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts
-  17/17, and Linux installer wildcard 15/15. Direct `--help` invocation
-  exited 0, confirming the standalone entrypoint.
-- Native Windows smoke/full execution remains an explicit downstream Phase 09
-  evidence gate; Phase 07 workflow wiring is complete but does not execute hosted
-  rows. This deterministic host-independent evidence makes no runtime support claim.
-- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
-  publisher.
+- **Status:** Phase 05 DONE (2026-09-14; 100%, 60/60 scoped checks, Cycle 2 review 10/10; [plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md), [review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)). Delivered Node-builtins-only qualification CLI with strict host/receipt/byte preflight, safe PowerShell/`cmd.exe` runners, smoke/full lifecycle controllers, and isolated negative scenarios.
 
 ### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
 
-**Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
-**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
-and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
-
-- Factored shared fixture record ordering, controller/build-manifest digests, real
-  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
-  now uses `buildReleaseArchives` and emits exactly four Windows assets.
-- Added bounded stable-release enumeration and exact-label/canonical-name
-  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
-  lowercase `a`×40 identity only before qualification history; latest stable is
-  mandatory afterward, with no older/bootstrap fallback.
-- Added private staged streaming downloads with cross-origin token stripping,
-  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
-  CLI flags, and cleanup of partial output on failure.
-- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
-  This deterministic Linux evidence does not qualify native Windows runtime.
+- **Status:** Phase 04 DONE (2026-09-14; 100%, 39/39 suites, Cycle 2 review 10/10; [plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md), [tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md), [review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)). Factored deterministic four-asset Windows fixtures (`buildWindowsTestReleaseSet`), irreversible bootstrap/latest-stable predecessor resolution, and private staged streaming downloads with exact-four verification.
 
 ### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 
