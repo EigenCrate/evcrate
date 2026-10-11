@@ -74,9 +74,9 @@ When evaluating Node.js and TypeScript dependency changes, review these concrete
    - Inspect packages with native C/C++ or Rust bindings (`node-gyp`, `@napi-rs/*`, prebuilds).
    - Verify Node-API (N-API) version compatibility against target Node.js runtime, as well as OS (`linux`, `darwin`, `win32`), libc (`glibc` vs `musl`), and CPU architecture (`x64`, `arm64`). Incompatible native bindings cause build failures or runtime dynamic link errors (`ERR_DLOPEN_FAILED`).
 6. **Coupled tool suites and testing frameworks**:
-   - Inspect coordinated tooling pairs such as test runners and coverage providers (e.g. `vitest` and `@vitest/coverage-v8`, which require identical matched versions like `vitest@4.0.0` and `@vitest/coverage-v8@4.0.0`), linter suites (`eslint` and `@typescript-eslint/*`), or framework build plugins.
+   - Inspect coordinated tooling pairs such as test runners and coverage providers (e.g. `vitest` and `@vitest/coverage-v8`), linter suites (`eslint` and `@typescript-eslint/*`), or framework build plugins.
    - Upgrading one half of a coupled tool while leaving its companion on an incompatible major/minor line causes broken test reporters, provider mismatch errors, or runner failures.
-   - Candidate versions in proposals are illustrative; verify authorized registry availability, release notes, and version coupling across both packages before proposing.
+   - Versions in this documentation are illustrative; caller-supplied proposals remain exact. Derive runner and coverage compatibility from proposed releases' peer metadata, engine constraints, and upstream guidance rather than prescribing identical versions universally.
 7. **Licensing and major transitive dependency shifts**:
    - Check candidate license changes across intermediate versions (e.g. permissive MIT/Apache to copyleft or proprietary licenses).
    - Review major transitive dependency churn or dropped legacy polyfills that downstream consumers may rely upon.

@@ -107,7 +107,7 @@ describe('Snyk Expert - Workflow Qualification Scenarios & Boundaries', () => {
     assert.ok(nodeRemediation.includes('Full ordered dependency path accounting'));
     assert.ok(nodeRemediation.includes('Comparable lockfile baseline'));
     assert.ok(nodeRemediation.includes('Coupled testing and coverage suites'));
-    assert.ok(nodeRemediation.includes('Pre-update test execution'));
+    assert.ok(nodeRemediation.includes('Pre-update test baseline execution'));
     assert.ok(nodeRemediation.includes('Script inspection before execution'));
 
     const reviewSkill = fs.readFileSync(reviewSkillPath, 'utf8');
