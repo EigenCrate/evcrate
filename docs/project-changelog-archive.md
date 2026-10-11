@@ -579,7 +579,7 @@ deterministic acceptance entry above; the v2.0.0 milestone is recorded above
 
 **Status:** Complete (100%); Lead Mentor approval: 10/10; user approved  
 **Plan:** [Phase 08 plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-08-workflow-and-harness-gate-integration.md)  
-**Evidence:** [Phase 08 integration tests](../tests/adapters/phase08-mentoring-integration.test.mjs)
+**Evidence:** Phase 08 integration tests (historical)
 
 - Added one canonical `evcrate-advisor-checkpoint/v2` dispatcher and state
   lifecycle for all 16 canonical code/cook/bootstrap/fix consumers:

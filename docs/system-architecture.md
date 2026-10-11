@@ -1,8 +1,10 @@
 # System Architecture
 
-**Status:** Core architecture for the completed advisor subsystem retirement and harness-only cutover; live vendor/native-host qualification remains separate.
+**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0-rc.1` (prerelease on `next`) / `3.0.0` (stable on `main`).
+**Status:** Core architecture for the completed advisor subsystem retirement and 7-target harness-only cutover; live vendor/native-host qualification remains separate.
 **Windows support:** Standalone installer lifecycle and clean-install `version --json` only. Prior candidate results do not qualify the current package.
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 
 **Authority:** TypeScript control plane and canonical harness resources.
 
@@ -10,7 +12,6 @@ This document is the central authority for distribution, wire contracts, context
 admission, isolation, and publication. The [codebase summary](./codebase-summary.md)
 provides the source map; the [project overview and PDR](./project-overview-pdr.md)
 turns these contracts into requirements.
-
 ## Advisor subsystem retirement boundary
 
 **Status:** Completed in repository cutover (2026-10-11); live vendor/native-host qualification remains separate.
@@ -18,8 +19,8 @@ Keep `/evc-cmd-advise` as a multi-turn main-session interview with ordinary raw 
 arguments. Preserve generic JSON/resource/publication contracts, target context/privacy
 guards, user-owned settings/history/state, and immutable historical records.
 BuildManifest v3, publication journal v4/marker v3, release metadata v2, and native
-context versions follow the [approved interface freeze](../plans/261011-0559-retire-advisor-subsystem/reports/interface-freeze.md)
-and [retirement design](../plans/261011-0559-retire-advisor-subsystem/design-contracts.md).
+context versions follow the approved advisor subsystem retirement interface freeze
+and retirement design contracts.
 Strict historical recovery remains bounded; ordinary harness publication leaves
 installed `.evcrate/bin` and user data untouched. No cleanup CLI, receipt/index,
 process scanner, or migration guide is added.
@@ -142,6 +143,48 @@ records local `/cmd-*` invocations; `replaceCommandInvocations` in
 `src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*` to
 `/cmd-*` and `$cmd-*`, including wildcard families such as `/evc-cmd-plan-x-*`.
 The shared canonical `ev-help.py` scans both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`.
+
+### Proposed VS Code runtime model bindings — planning only
+
+The [runtime-bindings design](../plans/261011-2349-vscode-runtime-model-bindings/design-contracts.md)
+and [implementation plan](../plans/261011-2349-vscode-runtime-model-bindings/plan.md)
+propose a private companion using proposed `chatPromptFiles`, not a shipped feature
+or Marketplace-compatible extension. Native feasibility is the first blocking gate:
+provider discovery, direct/subagent model selection, tool/delegation restrictions,
+plugin hook attribution, reference resolution and refresh must be observed before
+removing static actors.
+
+Canonical `evc-*` actors retain Claude tier intent. The proposed VS Code cutover
+publishes immutable converted templates/intent instead of simultaneously selectable
+static actors. A single companion registration owner derives concrete file resources
+under extension storage, outside publication hashes, from user-selected catalog
+identities. Actor specificity wins across scopes: a user-default actor override beats
+a root tier binding, and a root actor override beats that user override. Canonical
+inheritance stays omitted unless explicitly overridden. No inferred newest model, build-time catalog discovery,
+or silent static fallback. The `evc` plugin continues owning hooks/skills/workflows;
+cross-source attribution remains unqualified until native evidence establishes it.
+
+Required companion qualification is local project/HOME coexistence, multi-root and
+profiles only; SSH, dev-container and WSL are outside this deliverable, without
+changing unrelated baseline support. Cached agent selections may execute an unintended
+model until explicit reselection/reload. Native race and recovery evidence remains
+required; refreshed/reselected resources, trust, restrictions and hooks retain hard
+correctness gates. Storage remains bounded; measured caps and safe fully closed-editor
+manual cleanup are acceptable when automatic reclamation is unproven. Exhaustion
+blocks new derivation without deleting possibly referenced resources.
+
+The proposed VSIX is a hashed artifact within the VS Code harness binding, not
+new control-plane infrastructure or an eighth core release asset. Installation is
+a consented CLI post-action after committed publication, outside transaction rollback.
+Editor/profile selection, extension disabled state and proposal enablement are separate
+boundaries. No automatic `argv.json` edits, editor restart, all-profile installation,
+or advisor-controller resurrection. The existing baseline above remains authoritative
+until this pending plan passes its implementation and qualification gates.
+Explicitly requested failed or manual-setup-required installation returns exit 5,
+preserving committed publication stdout and separate companion-status stderr;
+no rollback or blind publication retry. Each live qualification session requires
+explicit approval for the exact isolated profile/workspace, selected models and
+invocation scope, separate from installation and proposed-API authorization.
 
 ### Snyk specialist composition: local porting boundary
 
@@ -394,8 +437,13 @@ reported explicitly; unavailable rows remain unqualified.
 
 ## Related documents
 
+- [Agent guidance](../AGENTS.md)
 - [Project overview and PDR](./project-overview-pdr.md)
 - [Code standards](./code-standards.md)
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
+- [Project changelog archive](./project-changelog-archive.md)
+- [Pi-native migration](./pi-native-migration.md)
+- [Snyk specialist guide](./snyk-expert-cli.md)
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md)

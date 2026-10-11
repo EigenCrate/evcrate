@@ -1,14 +1,13 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-11
-**Source:** Canonical resources and TypeScript control-plane contracts for the completed advisor subsystem retirement cutover and VS Code `evc`/`cmd-*` container mapping; live vendor/native-host qualification remains separate.
+**Maintained:** 2026-10-12
+**Source:** Canonical resources and TypeScript control-plane contracts for the 2.11.0 baseline and 3.0.0 release path (`3.0.0-rc.1` / `3.0.0`), including completed advisor subsystem retirement cutover and VS Code `evc`/`cmd-*` container mapping; live vendor/native-host qualification remains separate.
 **Package:** Private npm package `evcrate` 2.11.0; Node `>=22.19.0`.
 Single binary: `evcrate` (`dist/cli/evcrate.js`).
 **Qualification:** Historical candidates and test counts do not qualify the current package. Windows support is limited to standalone installer lifecycle and `version --json`; actual-host native qualification remains separate.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness
 source tree. The TypeScript CLI is the package control plane.
-
 ## Source-of-truth map
 
 | Path | Role | Editing rule |
@@ -25,23 +24,24 @@ source tree. The TypeScript CLI is the package control plane.
 
 The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Standalone Gemini is retired, not Antigravity's vendor HOME directory. Codex owns `.agents/skills`; Antigravity owns exact `.agents` hook/rule leaves. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
 
-## TypeScript module map
+## TypeScript module map and exact exported symbols
 
-| Area | Responsibility | Representative files |
+| Area | Responsibility | Exact exported symbols |
 |---|---|---|
-| `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts` (`PUBLICATION_BINDING_ORDER`, `PREDECESSOR_BINDING_ORDER`, validated `legacyLeftovers`), `index.ts` |
-| `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
-| `src/manifests/` | Target manifest loading and resource roots | `manifest.ts`, `registry.ts` |
-| `src/adapters/` | Seven target projection adapters; canonical graph `AGENTS.md`, native instruction formats, OMP admission/context guards, Pi main/child extension, current Antigravity hooks/rules, Copilot `.github` project instructions, VS Code Local plugin; shared URI restoration and Markdown frontmatter | `registry.ts`, `qualification.ts`, `markdown-frontmatter.ts`, `vscode/`, `codex/`, `omp/`, `pi/`, `copilot/`, `antigravity.ts` |
-| `src/distribution/` | Local build/check, single-projection manifest reuse, bounded worker pool (`worker-pool.ts`), input snapshot isolation (`input-snapshot.ts`, `input-snapshot-tree.ts`), publication planning, staging, atomic promotion, and recovery | `local-build.ts`, `local-build-staging.ts`, `manifest-view-derivation.ts`, `local-staging-fs.ts`, `worker-pool.ts`, `input-snapshot.ts`, `publication-plan.ts` (Phase 08 removed bindings reconciliation), `publication.ts`, `legacy-leftovers.ts` (Phase 08 unmanaged leftover scanning and migrated collision checks) |
-| `src/filesystem/` | Host/portable paths, hashing, atomic writes, and locks | `paths.ts`, `hashing.ts`, `atomic.ts`, `locking.ts` (`readReleaseMarker`/`writeReleaseMarker` v1/v2/v3) |
-| `src/registry/` | Canonical resource scan, schema, validation, and queries | `scanner.ts`, `schema.ts`, `store.ts` |
-| `src/imports/` | Bounded explicit-source preview/apply and materialization | `source.ts`, `preview.ts`, `apply.ts`, `handler.ts` |
-| `src/scopes/` | Global/project assignments, revisions, and CAS | `identity.ts`, `state.ts`, `mutations.ts`, `changes.ts` |
-| `src/cli/`, `src/errors/` | One-shot dispatch, output, stable errors, and exit mapping | `arguments.ts`, `dispatch.ts`, `main.ts`, `output.ts` (Phase 08 legacy leftovers TTY warning), `control-plane-error.ts` |
+| `src/cli/` | CLI parsing, process runner, request-file decoding, dispatch, and JSON/TTY result rendering | `main`, `parseArguments`, `dispatchInvocation`, `runCompatibilityDistribution`, `runTypedPublication`, `MAX_CLI_TIMEOUT_MS`, `CliCommand`, `CliOptions`, `CliInvocation`, `renderResult`, `writeResult`, `exitCodeForResult`, `readBoundedRequestFile`, `resolveRequestFile`, `runBoundedProcess`, `sanitizeEnvironment` |
+| `src/protocol/` | Bounded JSON, canonical JSON, wire validation, resource contracts, publication/recovery payloads | `ResourceRequest`, `ResourceResult`, `RESOURCE_OPERATIONS`, `RESOURCE_PROTOCOL`, `PROTOCOL_VERSION`, `PERSISTED_TARGETS`, `PublishRequestPayload`, `RecoverRequestPayload`, `PublicationChange`, `DryRunPhaseRecord`, `ApplyPhaseRecord`, `RecoveryPhaseRecord`, `ScopeRevisionVector`, `ScopeAssignment`, `ChangesPreviewResultPayload`, `PUBLICATION_BINDING_ORDER`, `PREDECESSOR_BINDING_ORDER` |
+| `src/manifests/` | Schema-2 target manifest loading, aggregate registry, manifest validation and digests | `loadTargetManifest`, `loadTargetManifestRegistry`, `loadSelectedManifests`, `validateManifestSet`, `buildManifestBytes`, `buildManifestDigest`, `TargetManifest`, `TargetManifestRegistry`, `BuildManifest` |
+| `src/filesystem/` | Host/portable paths, symlink ancestor rejection, SHA-256 tree hashing, atomic file writes, staged root lifecycle, and lock protocols | `normalizeRelativePath`, `containedPath`, `assertNoSymlinkAncestors`, `assertRegularFile`, `assertRealDirectory`, `hashFile`, `treeHash`, `completeTreeHash`, `writeAtomicFile`, `writeAtomicProjectionFile`, `createStagedRoot`, `assertStagedRoot`, `removePath`, `sameVolume`, `withLock`, `withPublishLock`, `readReleaseMarker`, `writeReleaseMarker`, `PUBLISH_LOCK_NAME`, `RELEASE_MARKER_NAME` |
+| `src/context/` | Immutable invocation context, safe path resolution, target registry selection, and project identity | `resolveInvocationContext`, `InvocationContext`, `SelectedTargetContext`, `assertNoDescriptorOverlap`, `resolveSafePath`, `resolveProjectIdentity` |
+| `src/distribution/` | Local build/check orchestration, worker pool, snapshot isolation, publication planning, journal v4/marker v3 transactional promotion, collision checks, legacy leftovers, and recovery | `runLocalBuild`, `runAllManifestsBuild`, `runLocalCheck`, `runLocalDistribution`, `assembleLocalStage`, `buildAndStageTarget`, `resolveCurrentBuild`, `resolveCurrentPublicationBuild`, `validateBuildManifest`, `verifyBuild`, `verifyOutputHashes`, `publishDryRun`, `publishApply`, `recoverPublication`, `isMigratedDestination`, `detectLegacyLeftovers`, `reconcileRetiredBindings` |
+| `src/scopes/` | Global and project scope assignments, revision CAS vectors, change preview tokens, and mutations | `effectiveAssignmentFor`, `loadScopeState`, `scopeMutationCandidate`, `applyScopeMutation`, `previewScopeChange`, `applyScopeChange`, `canonicalProjectRoot`, `projectIdentity` |
+| `src/imports/` | Bounded external resource tree ingestion, preview tokens, and transactional canonical promotion | `prepareImport`, `assertPreviewBinding`, `applyImport`, `readImportSource`, `canonicalImportDestination` |
+| `src/registry/` | Canonical resource rescan (140 resources), domain-separated file hashes, schema-2 store, and queries | `scanCanonicalResources`, `validateRegistryDocument`, `loadResourceRegistry`, `listResources`, `getResource`, `upsertResource` |
+| `src/adapters/` | Target projection adapters, canonical naming authority, native delivery formats, catalog layout, and VS Code Local transforms | `ProjectionAdapter`, `ProjectionBuildContext`, `ProjectionValidation`, `ProjectionExpectedEntry`, `registerProjectionAdapter`, `registerProjectionAdapters`, `getProjectionAdapter`, `requireProjectionAdapters`, `PROJECTION_REGISTRY_ORDER`, `PROJECTION_QUALIFICATION_ORDER`, `COMMAND_PREFIX`, `SEGMENT_SEPARATOR`, `AGENT_PREFIX`, `COPILOT_STYLE_PREFIX`, `parseCommandName`, `formatCommandName`, `commandNameFromSourcePath`, `assertAgentName`, `assertUniqueNames`, `claudeAdapter`, `antigravityAdapter`, `codexAdapter`, `piAdapter`, `ompAdapter`, `copilotAdapter`, `vscodeAdapter`, `discoverAllVscodeNames`, `convertVscodeCommands`, `convertVscodeAgents`, `convertVscodeSkills`, `convertVscodeHooks`, `replaceCommandInvocations`, `transformVscodePrompt`, `mapAgentTools`, `VSCODE_LOCAL_HOOK_EVENTS` |
+| `src/errors/` | Control-plane error hierarchy, sanitized messages, and stable exit-code mapping | `ControlPlaneError`, `SerializedControlPlaneError`, `CONTROL_PLANE_ERROR_CODES`, `CONTROL_PLANE_EXIT_CODES` |
+| `scripts/` | Incremental TS build caching, manifest generation, registry generation, release packaging, and sandboxed verification | `buildTypeScript`, `PROJECT_ROOT` (`build-typescript.mjs`), `validateAndInvalidateCache`, `isBuildInfoCorrupt` (`typescript-build-cache.mjs`), `cleanStaleOutputs` (`typescript-build-receipt.mjs`), `build-manifests.mjs`, `benchmark-build-generation.mjs`, `generate-resource-registry.mjs`, `verify-private-linux-release.cjs`, `prepare-release-assets.cjs` |
 
 The CLI resolves context, validates one invocation, dispatches one operation, writes one validated result, and exits. It exposes version, resource/import operations, scopes/changes, and distribution build/check/publish/recover. There is no canonical root `distribute.py` runtime.
-
 ## Build, publication, and installer flow
 
 `npm run build` compiles the TypeScript control plane incrementally via `scripts/build-typescript.mjs -p tsconfig.json`. `npm run build:clean` uses `--clean`, invalidating `.tsbuildinfo` while preserving prior receipts for stale-output ownership cleanup. Distribution build/check creates and verifies target projections and strict BuildManifest v3.
@@ -349,11 +349,14 @@ Phase 10 cuts over maintained documentation, migration guidance, and the dual-br
 - **Normative documentation reconciliation:** Reconciled `README.md`, `code-standards.md`, `system-architecture.md`, `project-overview-pdr.md` (FR-12), `project-roadmap.md`, `pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, single `AGENTS.md` authority, pre-upgrade customization backup warnings, and exact local-asset installer installation procedures.
 ## Documentation navigation
 
+- [Agent guidance](../AGENTS.md) — shared agent workflows and subagent completion contract.
 - [System architecture](./system-architecture.md) — central contracts.
 - [Project overview and PDR](./project-overview-pdr.md) — requirements.
 - [Code standards](./code-standards.md) — implementation rules.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
+- [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.
+- [Snyk specialist guide](./snyk-expert-cli.md) — standalone common .agents bundle.
 - Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.
 - [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md) — operational upgrade, backup, and collision safety guidance.

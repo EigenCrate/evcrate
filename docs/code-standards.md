@@ -1,7 +1,9 @@
 # Code Standards and Codebase Structure
 
-**Status:** EVCrate core implementation standards for the completed advisor subsystem retirement cutover; live vendor/native-host qualification remains separate.
-**Updated:** 2026-10-11
+**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0-rc.1` (prerelease on `next`) / `3.0.0` (stable on `main`).
+**Status:** EVCrate core implementation standards for the completed advisor subsystem retirement cutover and 7-target unified naming; live vendor/native-host qualification remains separate.
+**Updated:** 2026-10-12
 **Applies to:** TypeScript control plane, canonical harness resources, generated projections, and publication tooling.
 **Windows release boundary:** Standalone installer lifecycle and clean-install `version --json` only; prior candidate evidence does not qualify the current package.
 
@@ -10,7 +12,6 @@
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
 is the navigation map.
-
 ## Governing principles
 
 - **Correctness before optimization.** Prefer explicit validation and predictable
@@ -218,23 +219,26 @@ overlong values, traversal, symlinked ancestors, special entries, and invalid
 ownership. Use stable control-plane error codes and established exit mapping. Never
 return secrets, policy credentials, raw child output, raw filesystem implementation
 paths, or stack traces.
-### Control-plane error taxonomy
+### Control-plane error hierarchy and exit codes
 
-`ControlPlaneErrorCategory` is the stable public classification. Exit codes are
-grouped by category:
+`ControlPlaneErrorCategory` and `ControlPlaneErrorCode` define the public error model in `src/errors/control-plane-error.ts`. Exit codes are deterministically grouped:
 
-| Category | Exit code | Typical boundary |
-|---|---:|---|
-| `success` | 0 | Operation completed successfully. |
-| `usage`, `protocol` | 2 | CLI syntax or versioned request shape is invalid. |
-| `validation`, `path`, `capability` | 3 | Input, path, or requested capability is unsupported. |
-| `conflict` | 4 | A revision or ownership CAS check failed. |
-| `publication`, `rollback`, `recovery` | 5 | Publication transaction or recovery failed. |
-| `internal` | 6 | Unexpected failure; expose only the sanitized diagnostic. |
+| Error code | Category | Exit code | Message | Required action |
+|---|---|:---:|---|---|
+| `OK` | `success` | 0 | Success | No action required. |
+| `USAGE_INVALID` | `usage` | 2 | Usage is invalid | Use the documented command syntax. |
+| `PROTOCOL_INVALID` | `protocol` | 2 | Protocol is invalid | Provide one valid versioned protocol request. |
+| `VALIDATION_INVALID` | `validation` | 3 | Validation failed | Correct the invalid value and retry. |
+| `PATH_UNSAFE` | `path` | 3 | Path is unsafe | Use a safe path within the selected context. |
+| `CAPABILITY_UNSUPPORTED` | `capability` | 3 | Capability is unsupported | Select a supported target or capability. |
+| `CAS_CONFLICT` | `conflict` | 4 | Revision conflict | Refresh the current revision and preview again. |
+| `PUBLICATION_FAILED` | `publication` | 5 | Publication failed | Repair the publication state before retrying. |
+| `ROLLBACK_FAILED` | `rollback` | 5 | Rollback failed | Run recovery for the incomplete publication. |
+| `RECOVERY_FAILED` | `recovery` | 5 | Recovery failed | Resolve the recovery marker before retrying. |
+| `INTERNAL_ERROR` | `internal` | 6 | Internal error | Retry or inspect the bounded diagnostic. |
 
 Keep this mapping in `src/errors/control-plane-error.ts`; do not invent
 operation-specific exit codes at individual call sites.
-
 ## Manifest, registry, and resource standards
 
 ### Target manifests
@@ -488,7 +492,8 @@ before reporting success.
 
 ## References
 
-- [System architecture](./system-architecture.md), [Project overview and PDR](./project-overview-pdr.md), [Codebase summary](./codebase-summary.md).
+- [Agent guidance](../AGENTS.md), [System architecture](./system-architecture.md), [Project overview and PDR](./project-overview-pdr.md), [Codebase summary](./codebase-summary.md).
 - [Project roadmap](./project-roadmap.md), [Project changelog](./project-changelog.md), [Project changelog archive](./project-changelog-archive.md).
 - [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md).
 - [Pi-native migration](./pi-native-migration.md).
+- [Snyk specialist guide](./snyk-expert-cli.md).

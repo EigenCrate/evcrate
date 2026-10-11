@@ -1,14 +1,15 @@
 # Project Overview and Product Development Requirements
 
+**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0-rc.1` (prerelease on `next`) / `3.0.0` (stable on `main`).
 **Status:** Requirements for the completed harness-only repository cutover; live vendor/native-host acceptance remains separate.
-**Updated:** 2026-10-11
-**Scope:** EVCrate package, seven generated projections, resource management, atomic publication, recovery, and release.
+**Updated:** 2026-10-12
+**Scope:** EVCrate package, seven persisted target projections, resource management, atomic publication, recovery, and release.
 
 EVCrate turns one canonical agent-harness source tree into verified target
 projections and publishes those projections safely. This PDR records observable
 requirements; implementation detail belongs in the [system architecture](./system-architecture.md)
 and [code standards](./code-standards.md).
-
 ## Product intent
 
 EVCrate gives maintainers one source of truth for Claude-oriented harness resources
@@ -153,7 +154,7 @@ VS Code Local projects `cmd-*` command skills within plugin `evc`; other targets
 Nested commands retain the reserved `-x-` separator and reversible semantic identifiers.
 Resource names conform to spec64 (`^[a-z0-9]+(-[a-z0-9]+)*$`, <= 64 chars, no `_`, `:`, `--`); the colon in host-qualified `/evc:cmd-*` is not part of the resource name. Instructions author solely in `.evcrate/source/.claude/AGENTS.md`. Upgrades
 enforce ownership-based pruning with pre-upgrade customization backup warnings, unmanaged collision refusal,
-and untracked leftover reporting. Releases validate through prerelease channel `next` (`3.0.0-rc.N`)
+Releases validate through prerelease channel `next` (`3.0.0-rc.1` / `3.0.0-rc.N`)
 before candidate-bound stable promotion on `main` (`3.0.0`).
 
 **Acceptance:** Core docs and all seven active target projections retain unified canonical identities,
@@ -346,10 +347,13 @@ for this cutover; live vendor/GUI and native Windows host acceptance remain sepa
 
 ## Documentation map
 
-- [System architecture](./system-architecture.md) — distribution, context,
-  wire, isolation, and publication contracts.
+- [Agent guidance](../AGENTS.md) — shared agent workflows and subagent completion contract.
+- [System architecture](./system-architecture.md) — distribution, context, wire, isolation, and publication contracts.
 - [Code standards](./code-standards.md) — normative implementation and naming rules.
 - [Codebase summary](./codebase-summary.md) — source/module/generated-output map.
 - [Project roadmap](./project-roadmap.md) — package milestones and current release boundaries.
 - [Project changelog](./project-changelog.md) — dated phase evidence.
+- [Project changelog archive](./project-changelog-archive.md) — older phase detail.
 - [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.
+- [Snyk specialist guide](./snyk-expert-cli.md) — standalone common .agents bundle.
+- [Upgrade & leftover guidance](./upgrade-backup-and-leftover-guidance.md) — pre-upgrade backup and collision rules.

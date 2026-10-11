@@ -1,16 +1,16 @@
 # Project Roadmap
 
-**Status:** Unified evc-* naming and AGENTS.md instructions across all harnesses milestone:
+**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0-rc.1` (channel: `next`) / `3.0.0` (stable on `main`).
+**Status:** Unified `evc-*` naming and `AGENTS.md` instructions across all harnesses milestone:
 Phases 01–11 complete per the [project changelog](./project-changelog.md); VS Code plugin identity and container-aware command mapping cutover complete.
-Package line targeting 3.0.0-rc.1 (channel: `next`) and stable 3.0.0 (branch: `main`).
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 **Advisor subsystem retirement progress:** 100% (7/7 phases complete — 2026-10-11; Phase 01 interface freeze DONE 2026-10-11T07:08:04+07:00; Phases 02–07 DONE 2026-10-11; portable Linux/repo verification complete; Review Cycle 2 approved 9.8/10). Native GUI/Windows host boundaries remain host-dependent.
-**VS Code plugin identity & container-aware command mapping:** 100% (completed 2026-10-11). Plugin identity is `evc`; VS Code command skills use local `cmd-*` names within that container, while canonical and other-target commands retain `evc-cmd-*`. See [status report](../plans/reports/project-manager-261011-1044-vscode-command-mapping.md) and [review](../plans/reports/code-review-261011-1105-vscode-command-mapping.md). These results do not claim live editor qualification or release publication.
+**VS Code plugin identity & container-aware command mapping:** 100% (completed 2026-10-11). Plugin identity is `evc`; VS Code command skills use local `cmd-*` names within that container, while canonical and other-target commands retain `evc-cmd-*` (see [project changelog](./project-changelog.md)). These results do not claim live editor qualification or release publication.
 
 **Filesystem-policy cutover progress:** 100% (2/2 phases complete; Phase 01 DONE 2026-09-27; Phase 02 DONE 2026-09-27; review approved 9.6/10; user approved). Cutover plan complete; broader operator release deployment matrix remains release-gated.
 
 **Evidence source:** [project changelog](./project-changelog.md), current package scripts, and [system architecture](./system-architecture.md). Historical Windows release-phase plans and reports are not retained in this repository.
-
 This roadmap distinguishes implementation gates recorded in the repository from
 operator/release work that has not been claimed. `docs/project-changelog.md` is the
 maintained phase mirror for this package; root `CHANGELOG.md` is semantic-release
@@ -35,10 +35,10 @@ Portable Linux/repo generation, build, distribution parity, and sandbox fresh/up
 | Phase 9 packed consumer/adapter work | Historical evidence recorded | The changelog records packed-consumer contracts; it does not claim live Agent Store release or current target qualification. |
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
 | Phase 11 validation and staged rollout | Historical evidence recorded | The changelog records consumer validation and staged-rollout gates; it does not claim live vendor qualification, npm publication, deployment, or main-branch merge. |
-| Advisor subsystem retirement — Phases 01–07 | DONE (2026-10-11; 7/7 phases, 100%; Review Cycle 2 approved 9.8/10) | [Plan](../plans/261011-0559-retire-advisor-subsystem/plan.md) and [approved interface freeze](../plans/261011-0559-retire-advisor-subsystem/reports/interface-freeze.md); retired checkpoint/activation/relay/viewer/evaluation/metrics/settings/health surfaces, shipped controller-free BuildManifest v3 / journal v4 / marker v3 with strict historical recovery, clean inline `/evc-cmd-advise` across seven targets (140 canonical resources), and completed portable Linux/repo verification. Native GUI/Windows host boundaries remain host-dependent. |
+| Advisor subsystem retirement — Phases 01–07 | DONE (2026-10-11; 7/7 phases, 100%; Review Cycle 2 approved 9.8/10) | Completed in dedicated cutover worktree and merged to repository baseline (see [system architecture](./system-architecture.md#advisor-subsystem-retirement-boundary) and [project changelog](./project-changelog.md)); retired checkpoint/activation/relay/viewer/evaluation/metrics/settings/health surfaces, shipped controller-free BuildManifest v3 / journal v4 / marker v3 with strict historical recovery, clean inline `/evc-cmd-advise` across seven targets (140 canonical resources), and completed portable Linux/repo verification. Native GUI/Windows host boundaries remain host-dependent. |
 | VS Code Local Native qualification — Phase 08 | DONE (2026-10-04; review approved 9.4/10; user approved; commit `cbd298a4`) | Historical [index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md) reconciles 50 capability rows and 12 contexts for that candidate. It is not current cutover/native interview qualification. |
 | VS Code Local documentation & rollout — Phase 09 | DONE (2026-10-04; review approved; report `phase-09-rollout-and-lifecycle-report.md`) | [Phase 09 Spec](../plans/261002-2213-vscode-local-native-support/phase-09-documentation-and-rollout.md) and [Rollout Report](../plans/261002-2213-vscode-local-native-support/reports/phase-09-rollout-and-lifecycle-report.md); delivers support matrix (12 contexts), quickstart, coexistence with Copilot CLI, bounded recovery runbook, and lifecycle stop triggers for undated Local retirement. |
-| VS Code plugin identity & container-aware command mapping | DONE (2026-10-11; 100%; Cycle 2 review 10/10) | Plugin `evc`; local command skills `cmd-*`, including nested `cmd-plan-x-fast`; canonical/other-target `evc-cmd-*` unchanged. Help discovery, projected paths, command invocations, and wildcard references migrated. [Status report](../plans/reports/project-manager-261011-1044-vscode-command-mapping.md); [review](../plans/reports/code-review-261011-1105-vscode-command-mapping.md). Live editor qualification and operator rollout remain separate. |
+| VS Code plugin identity & container-aware command mapping | DONE (2026-10-11; 100%; Cycle 2 review 10/10) | Plugin `evc`; local command skills `cmd-*`, including nested `cmd-plan-x-fast`; canonical/other-target `evc-cmd-*` unchanged. Help discovery, projected paths, command invocations, and wildcard references migrated (see [project changelog](./project-changelog.md)). Live editor qualification and operator rollout remain separate. |
 | Documentation centralization | Current gate | Distribution, resource, native-context, and publication contracts are centralized in the maintained core docs. |
 | Filesystem-policy cutover — Phase 01 | DONE (2026-09-27; 1/2 phases, 50%) | Historical summary in the [project changelog](./project-changelog.md): direct-launch publication/install, file-kind-separated registry/import identity, and required staging chmod failures. Source plan/review artifacts are not retained. |
 | Filesystem-policy cutover — Phase 02 | DONE (2026-09-27; 2/2 phases, 100%) | Historical summary in the [project changelog](./project-changelog.md): schema-3 journal writing, strict schema-1/2 recovery, mode-free registry/import capability derivation, and shell-free Windows client dispatch. Current journal writing is v4; historical proof is not new qualification. |
@@ -141,10 +141,13 @@ The unified naming and instruction authority refactoring is implemented across a
   totals into new documentation.
 
 ## Related documents
+- [Agent guidance](../AGENTS.md)
 - [System architecture](./system-architecture.md)
 - [Project overview and PDR](./project-overview-pdr.md)
 - [Code standards](./code-standards.md)
 - [Codebase summary](./codebase-summary.md)
 - [Project changelog](./project-changelog.md)
+- [Project changelog archive](./project-changelog-archive.md)
 - [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md)
 - [Pi-native migration](./pi-native-migration.md)
+- [Snyk specialist guide](./snyk-expert-cli.md)
