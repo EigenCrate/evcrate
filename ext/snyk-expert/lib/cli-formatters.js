@@ -9,12 +9,13 @@ Usage: npx @evcrate/snyk-expert [options]
 Install portable Snyk specialist instructions and skills into a project's .agents/ directory.
 
 Options:
-  -t, --target <path>   Project directory to install into (defaults to current working directory)
-  -n, --dry-run         Preview installation changes without modifying any files
-  -f, --force           Authorize overwriting existing files when collisions occur
-  -y, --yes             Confirm overwrite non-interactively (requires --force)
-  -h, --help            Show this help message
-  -v, --version         Show package version
+  -t, --target <target>     Target agent layout (required: 'agents')
+  -d, --directory <path>    Project directory to install into
+  -n, --dry-run             Preview installation changes without modifying any files
+  -f, --force               Authorize overwriting existing files when collisions occur
+  -y, --yes                 Confirm overwrite non-interactively (requires --force)
+  -h, --help                Show this help message
+  -v, --version             Show package version
 `);
 }
 
@@ -30,13 +31,13 @@ export function printVersion(packageRoot) {
 export function printDryRun(plan) {
   console.log(`\nDry run preview for ${plan.targetDir}:`);
   for (const a of plan.additions) {
-    console.log(`  + .agents/${a.relPath} (new)`);
+    console.log(`  + .agents/${a.relativePath || a.relPath} (new)`);
   }
   for (const r of plan.replacements) {
-    console.log(`  ! .agents/${r.relPath} (collision: differs)`);
+    console.log(`  ! .agents/${r.relativePath || r.relPath} (collision: differs)`);
   }
   for (const u of plan.unchanged) {
-    console.log(`  = .agents/${u.relPath} (identical, will skip)`);
+    console.log(`  = .agents/${u.relativePath || u.relPath} (identical, will skip)`);
   }
   console.log(`\nSummary: ${plan.additions.length} to add, ${plan.replacements.length} to replace, ${plan.unchanged.length} unchanged.`);
 }
@@ -44,7 +45,7 @@ export function printDryRun(plan) {
 export function printInstallationSuccess(targetDir, result, plan) {
   console.log(`\nInstalled assets:`);
   for (const c of result.committed) {
-    const isReplacement = plan.replacements.some(r => r.relPath === c);
+    const isReplacement = plan.replacements.some(r => (r.relativePath || r.relPath) === c);
     console.log(`  ${isReplacement ? '!' : '+'} .agents/${c}`);
   }
   if (result.unchanged.length > 0) {

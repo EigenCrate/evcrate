@@ -12,11 +12,11 @@ source tree. The TypeScript CLI is the package control plane.
 
 | Path | Role | Editing rule |
 |---|---|---|
-| `.evcrate/source/.claude/` | Canonical harness resources | Author 140 resources: 17 agents, 70 commands, 13 hooks, 34 skills, 6 workflows, including neutral `plan-progress.md` and the main-session interview. Do not hand-edit target copies. |
+| `.evcrate/source/.claude/` | Canonical harness resources | Author 137 resources: 17 agents, 69 commands, 13 hooks, 34 skills, 4 workflows. Do not hand-edit target copies. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlays | Change target policy or declared overlays, then rebuild. |
 | `.evcrate/source/{.claude-projection,.agents/skills,.codex,.antigravity,.pi,.omp,.copilot}/` and declared native project documents | Generated target projections | Regenerate; never treat as authoring roots. |
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
-| `.evcrate/registry.json` | Schema-2 canonical resource records | Regenerate from the canonical 140-resource scan; distinct from target/build manifests. |
+| `.evcrate/registry.json` | Schema-2 canonical resource records | Regenerate from the canonical 137-resource scan; distinct from target/build manifests. |
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `scripts/` | Generation, package, release, benchmark (`benchmark-build-generation.mjs`), and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |

@@ -1,105 +1,73 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getSourceInventory } from './inventory.js';
-import { isSymlinkOrContainsSymlink } from './target-resolver.js';
+import {
+  resolveInstallTarget,
+  resolveTarget,
+  inspectDestination,
+  lstatOrNull
+} from './target-resolver.js';
 
 /**
  * Build a deterministic installation plan.
  */
 export function planInstallation({
   sourceDir,
+  target,
+  directory,
   targetDir,
   inventory = null
 }) {
-  const assets = inventory || getSourceInventory(sourceDir);
-  const normalizedTarget = path.resolve(targetDir);
-  const targetAgentsDir = path.join(normalizedTarget, '.agents');
-
-  const actions = [];
-  const additions = [];
-  const replacements = [];
-  const unchanged = [];
-  const blockers = [];
-
-  for (const asset of assets) {
-    const destPath = path.join(targetAgentsDir, asset.relPath);
-
-    // Symlink escape validation
-    if (isSymlinkOrContainsSymlink(destPath, normalizedTarget)) {
-      const action = {
-        relPath: asset.relPath,
-        srcPath: asset.fullPath,
-        destPath,
-        status: 'blocked',
-        reason: 'Destination or parent path contains a symbolic link escaping target directory'
-      };
-      actions.push(action);
-      blockers.push(action);
-      continue;
-    }
-
-    const destLstat = fs.lstatSync(destPath, { throwIfNoEntry: false });
-
-    if (!destLstat) {
-      const action = {
-        relPath: asset.relPath,
-        srcPath: asset.fullPath,
-        destPath,
-        status: 'add',
-        reason: 'Destination file does not exist'
-      };
-      actions.push(action);
-      additions.push(action);
-    } else if (destLstat.isSymbolicLink()) {
-      const action = {
-        relPath: asset.relPath,
-        srcPath: asset.fullPath,
-        destPath,
-        status: 'blocked',
-        reason: 'Existing destination is a symbolic link'
-      };
-      actions.push(action);
-      blockers.push(action);
-    } else if (!destLstat.isFile()) {
-      const action = {
-        relPath: asset.relPath,
-        srcPath: asset.fullPath,
-        destPath,
-        status: 'blocked',
-        reason: 'Existing destination is not a regular file'
-      };
-      actions.push(action);
-      blockers.push(action);
-    } else {
-      const srcBytes = fs.readFileSync(asset.fullPath);
-      const destBytes = fs.readFileSync(destPath);
-
-      if (srcBytes.equals(destBytes)) {
-        const action = {
-          relPath: asset.relPath,
-          srcPath: asset.fullPath,
-          destPath,
-          status: 'unchanged',
-          reason: 'Identical file already exists'
-        };
-        actions.push(action);
-        unchanged.push(action);
-      } else {
-        const action = {
-          relPath: asset.relPath,
-          srcPath: asset.fullPath,
-          destPath,
-          status: 'replace',
-          reason: 'Existing file content differs'
-        };
-        actions.push(action);
-        replacements.push(action);
-      }
-    }
+  let resolved;
+  if (target !== undefined || directory !== undefined) {
+    resolved = resolveInstallTarget({ target, directory });
+  } else if (targetDir !== undefined) {
+    resolved = resolveTarget(targetDir);
+  } else {
+    resolved = resolveInstallTarget({ target: undefined, directory: undefined });
   }
 
+  const assets = inventory || getSourceInventory(sourceDir);
+  const normalizedTarget = resolved.targetDir;
+  const targetAgentsDir = resolved.installationRoot;
+
+  const actions = [];
+
+  for (const asset of assets) {
+    const sourceRelative = typeof asset === 'string' ? asset : (asset.relPath || asset.relativePath);
+    const sourcePath = asset.fullPath || path.join(sourceDir, '.agents', ...sourceRelative.split('/'));
+    const destinationPath = path.resolve(targetAgentsDir, sourceRelative);
+
+    const sourceStat = lstatOrNull(sourcePath);
+    if (!sourceStat || !sourceStat.isFile() || sourceStat.isSymbolicLink()) {
+      throw new Error(`Required regular bundle file is missing: ${sourceRelative}`);
+    }
+
+    const sourceBytes = fs.readFileSync(sourcePath);
+    const inspected = inspectDestination(targetAgentsDir, sourceRelative, sourceBytes);
+
+    actions.push({
+      sourceRelative,
+      relativePath: sourceRelative,
+      relPath: sourceRelative,
+      sourcePath,
+      srcPath: sourcePath,
+      destinationPath,
+      destPath: destinationPath,
+      sourceBytes,
+      ...inspected
+    });
+  }
+
+  const additions = actions.filter(action => action.status === 'add');
+  const replacements = actions.filter(action => action.status === 'replace');
+  const unchanged = actions.filter(action => action.status === 'unchanged');
+  const blockers = actions.filter(action => action.status === 'blocked');
+
   return {
+    target: resolved.target,
     targetDir: normalizedTarget,
+    installationRoot: targetAgentsDir,
     targetAgentsDir,
     actions,
     additions,

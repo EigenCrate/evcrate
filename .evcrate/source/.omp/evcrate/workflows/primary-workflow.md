@@ -26,11 +26,7 @@
 - **IMPORTANT:** Always fix failing tests following the recommendations, wait for the fix, then delegate to `evc-tester` again and wait for a fresh result; only finish when all tests pass.
 
 #### 3. Code Quality
-- Treat raw command arguments as ordinary task data and preserve them when routing or delegating. Use explicit current task scope, not historical records, to select work.
-- After implementation and testing settle, wait for one terminal `evc-code-reviewer` result and the command's normal approval gate. Missing or partial review is an incomplete gate.
-- Parent coordinates exact writable/protected paths and finalization; children return terminal reports and actual changed paths, never stage/commit behind the parent. Settle all writers before review and validate finalized work before completion.
-- Apply neutral [Plan progress and phase reconciliation](./plan-progress.md) before phase selection, dependency batches and automatic iterations. Completed scope is a no-op, unresolved affected scope pauses without automatic resume/substitution, and prior sealed paths/index identities remain protected. Only the parent publishes immutable receipts and uncaptured derived progress.
-- On a second consecutive matching terminal blocker without a gate pass/step advance, use ordinary debugger/user escalation before another attempt. Risky/destructive decisions still require normal approval.
+- After finishing implementation, delegate to `evc-code-reviewer` agent and wait for its complete review before deciding whether work is acceptable.
 - Follow coding standards and conventions
 - Write self-documenting code
 - Add meaningful comments for complex logic

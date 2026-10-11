@@ -28,7 +28,7 @@ describe('Snyk Expert Installer - Executor', () => {
   });
 
   test('performs fresh installation and validates byte equality', () => {
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     const result = executeInstallation(plan);
 
     assert.equal(result.unchanged.length, 0);
@@ -46,7 +46,7 @@ describe('Snyk Expert Installer - Executor', () => {
     fs.mkdirSync(path.dirname(unrelated), { recursive: true });
     fs.writeFileSync(unrelated, '# My Custom Agent');
 
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     executeInstallation(plan);
 
     assert.ok(fs.existsSync(unrelated));
@@ -58,7 +58,7 @@ describe('Snyk Expert Installer - Executor', () => {
     fs.mkdirSync(path.dirname(otherFile), { recursive: true });
     fs.writeFileSync(otherFile, 'EXISTING CONFIGURATION');
 
-    executeInstallation(planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir }));
+    executeInstallation(planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir }));
 
     assert.equal(fs.readFileSync(otherFile, 'utf8'), 'EXISTING CONFIGURATION');
     assert.deepEqual(fs.readdirSync(path.dirname(otherFile)), ['agent.md']);
@@ -69,7 +69,7 @@ describe('Snyk Expert Installer - Executor', () => {
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     assert.throws(
       () => executeInstallation(plan, { force: false }),
       (err) => {
@@ -85,7 +85,7 @@ describe('Snyk Expert Installer - Executor', () => {
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     assert.throws(
       () => executeInstallation(plan, { force: false, yes: true }),
       (err) => {
@@ -100,7 +100,7 @@ describe('Snyk Expert Installer - Executor', () => {
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     assert.throws(
       () => executeInstallation(plan, { force: true, yes: false }),
       (err) => {
@@ -115,7 +115,7 @@ describe('Snyk Expert Installer - Executor', () => {
     fs.mkdirSync(path.dirname(agentDest), { recursive: true });
     fs.writeFileSync(agentDest, 'USER WORK');
 
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     const result = executeInstallation(plan, { force: true, yes: true });
 
     const srcAgent = path.join(PACKAGE_ROOT, '.agents', 'agents', 'snyk-expert.md');
@@ -123,10 +123,68 @@ describe('Snyk Expert Installer - Executor', () => {
   });
 
   test('dryRun writes zero files to disk', () => {
-    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir: tmpDir });
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
     const result = executeInstallation(plan, { dryRun: true });
 
     assert.equal(result.dryRun, true);
     assert.ok(!fs.existsSync(path.join(tmpDir, '.agents')));
+  });
+
+  test('exclusive installation locking prevents concurrent installer execution', () => {
+    const lockPath = path.join(tmpDir, '.agents', '.install.lock');
+    fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+    fs.writeFileSync(lockPath, 'active');
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
+    assert.throws(
+      () => executeInstallation(plan),
+      /Installation locked by another process/
+    );
+  });
+
+  test('refuses a changed replacement after planning before writing any additions', () => {
+    executeInstallation(planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir }));
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md'), 'changed after planning');
+    assert.throws(
+      () => executeInstallation(plan, { force: true, yes: true }),
+      /Destination changed after planning/
+    );
+  });
+
+  test('prevents overwriting a destination created concurrently immediately before publication', () => {
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
+    assert.throws(
+      () => executeInstallation(plan, {
+        _beforePublish: action => {
+          if (action.status === 'add') {
+            fs.mkdirSync(path.dirname(action.destinationPath), { recursive: true });
+            fs.writeFileSync(action.destinationPath, 'concurrent');
+          }
+        }
+      }),
+      /already exists/
+    );
+  });
+
+  test('rolls back to previous usable installation if a fault occurs during replacement', () => {
+    executeInstallation(planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir }));
+    const targetFile = path.join(tmpDir, '.agents', 'agents', 'snyk-expert.md');
+    fs.writeFileSync(targetFile, 'v1-custom');
+    const plan = planInstallation({ sourceDir: PACKAGE_ROOT, target: 'agents', directory: tmpDir });
+    let replacedCount = 0;
+    assert.throws(
+      () => executeInstallation(plan, {
+        force: true,
+        yes: true,
+        _beforePublish: action => {
+          if (action.status === 'replace') {
+            replacedCount += 1;
+            if (replacedCount === 1) throw new Error('simulated disk failure');
+          }
+        }
+      }),
+      /simulated disk failure/
+    );
+    assert.equal(fs.readFileSync(targetFile, 'utf8'), 'v1-custom');
   });
 });
