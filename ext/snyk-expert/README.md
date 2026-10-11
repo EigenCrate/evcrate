@@ -13,27 +13,29 @@ Portable `.agents/` Snyk CLI, Node.js/TypeScript, and Maven/Spring remediation s
 
 ## Installation via npx / npm
 
-Install the bundle directly into any project using the zero-dependency CLI installer:
+Install the bundle directly into any project using the zero-dependency CLI installer matching the `@evcrate/sonarqube-test-quality` contract:
 
 ```bash
-# In your target project:
-npx @evcrate/snyk-expert
+# Preview installation before writing files:
+node bin/install.js --help
+node bin/install.js --target agents --directory /path/to/project --dry-run
 
-# Or specify a target directory explicitly:
-npx @evcrate/snyk-expert --target /path/to/project
+# Run installation:
+node bin/install.js --target agents --directory /path/to/project
 
-# Dry run to preview additions and unchanged files:
-npx @evcrate/snyk-expert --dry-run
-
-# Local execution from repository checkout:
-node ext/snyk-expert/bin/install.js --target /path/to/project
+# Or via npx:
+npx @evcrate/snyk-expert --target agents --directory /path/to/project
 ```
+
+The installer requires `--target agents` and an explicit project root via `--directory`, installing into `<project-root>/.agents/`.
 
 ### CLI Installer Safety Guarantees
 
-- **Project-Local Only**: Installs strictly into the project's `.agents/` directory. Refuses to default to user `$HOME` to prevent polluting global configurations.
+- **Project-Local Only**: Installs strictly into the project's `.agents/` directory. Requires an explicit non-symbolic-link project directory.
 - **Collision Detection & Protection**: Existing files that differ trigger collision warnings and fail closed. Overwrite requires explicit `--force` plus interactive confirmation (or non-interactive `--force --yes`). `--yes` alone without `--force` is rejected.
-- **Atomic Staging & Integrity**: Files are staged to temporary files in destination directories and atomically moved (`renameSync`) with complete byte-level integrity verification.
+- **Exclusive Locking**: Exclusive installation locking (`.install.lock`) prevents concurrent installer conflicts.
+- **Pre-execution Drift & Race Checks**: Detects destination file changes between planning and execution or concurrent file creation, failing closed without corruption.
+- **Atomic Staging & Rollback**: Files are staged to temporary files in destination directories; if a fault occurs during replacement, the installer automatically rolls back to the previous usable installation and prunes empty temporary directories.
 - **Preserves Pre-existing Files**: Pre-existing unrelated files and directories in the target are preserved untouched.
 - **Symlink Defense**: Rejects destination paths or components containing symlinks that escape the target project root.
 

@@ -1,20 +1,25 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { inspectDestination } from './target-resolver.js';
+import { acquireLock, releaseLock, pruneEmptyDirectories } from './lock-manager.js';
 
 /**
- * Execute the installation plan with safety guarantees and atomic staging.
+ * Execute the installation plan with safety guarantees, exclusive locking,
+ * atomic staging, drift detection, and transactional rollback.
  */
 export function executeInstallation(plan, options = {}) {
   const {
     dryRun = false,
     force = false,
-    yes = false
+    yes = false,
+    _beforePublish = null
   } = options;
 
-  if (plan.isBlocked) {
+  if (plan.isBlocked || (plan.blockers && plan.blockers.length > 0)) {
     const error = new Error(
       `Installation blocked by incompatible destination paths:\n` +
-      plan.blockers.map(b => `  - ${b.relPath}: ${b.reason}`).join('\n')
+      plan.blockers.map(b => `  - ${b.relativePath || b.relPath}: ${b.reason}`).join('\n')
     );
     error.code = 'ERR_INSTALL_BLOCKED';
     throw error;
@@ -32,7 +37,7 @@ export function executeInstallation(plan, options = {}) {
     if (!force) {
       const error = new Error(
         `Destination files already exist and differ:\n` +
-        plan.replacements.map(r => `  - .agents/${r.relPath}`).join('\n') +
+        plan.replacements.map(r => `  - .agents/${r.relativePath || r.relPath}`).join('\n') +
         `\nUse --force (with --yes or interactive confirmation) to overwrite.`
       );
       error.code = 'ERR_COLLISION_DETECTED';
@@ -52,75 +57,113 @@ export function executeInstallation(plan, options = {}) {
     return {
       dryRun: true,
       targetDir: plan.targetDir,
+      installationRoot: plan.installationRoot,
       committed: [],
-      plannedAdditions: plan.additions.map(a => a.relPath),
-      plannedReplacements: plan.replacements.map(r => r.relPath),
-      unchanged: plan.unchanged.map(u => u.relPath)
+      plannedAdditions: plan.additions.map(a => a.relativePath || a.relPath),
+      plannedReplacements: plan.replacements.map(r => r.relativePath || r.relPath),
+      additions: plan.additions.map(a => a.relativePath || a.relPath),
+      replacements: plan.replacements.map(r => r.relativePath || r.relPath),
+      unchanged: plan.unchanged.map(u => u.relativePath || u.relPath)
     };
   }
 
-  const committed = [];
-  const stagedTemps = [];
+  const lockPath = path.join(plan.installationRoot, '.install.lock');
+  acquireLock(lockPath);
 
   try {
-    const toApply = [...plan.additions, ...plan.replacements];
+    // 1. Pre-execution drift check: ensure destination state hasn't changed since planning
+    for (const action of plan.actions) {
+      const rel = action.relativePath || action.relPath;
+      const current = inspectDestination(plan.installationRoot, rel, action.sourceBytes);
+      if (current.status !== action.status || (action.status === 'replace' && !current.existingBytes.equals(action.existingBytes))) {
+        throw new Error(`Destination changed after planning: ${rel}`);
+      }
+    }
 
-    for (const item of toApply) {
-      const destDir = path.dirname(item.destPath);
-      fs.mkdirSync(destDir, { recursive: true });
+    const committed = [];
+    const temporaryPaths = [];
+    const createdFiles = new Set();
+    const backups = new Map();
 
-      const tempFile = path.join(
-        destDir,
-        `.tmp-install-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${path.basename(item.destPath)}`
-      );
-      stagedTemps.push(tempFile);
-
-      fs.copyFileSync(item.srcPath, tempFile);
-
-      // Verify staged file
-      const srcBuf = fs.readFileSync(item.srcPath);
-      const tmpBuf = fs.readFileSync(tempFile);
-      if (!srcBuf.equals(tmpBuf)) {
-        throw new Error(`Byte verification failed during staging for ${item.relPath}`);
+    try {
+      const staged = [];
+      const toApply = [...plan.additions, ...plan.replacements];
+      for (const action of toApply) {
+        const dest = action.destinationPath || action.destPath;
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        const temporaryPath = path.join(path.dirname(dest), `.tmp-${crypto.randomUUID()}`);
+        temporaryPaths.push(temporaryPath);
+        fs.writeFileSync(temporaryPath, action.sourceBytes, { flag: 'wx' });
+        staged.push({ action, temporaryPath, dest });
       }
 
-      // Atomic rename
-      fs.renameSync(tempFile, item.destPath);
-      const idx = stagedTemps.indexOf(tempFile);
-      if (idx !== -1) stagedTemps.splice(idx, 1);
+      for (let index = 0; index < staged.length; index += 1) {
+        const { action, temporaryPath, dest } = staged[index];
+        const rel = action.relativePath || action.relPath;
 
-      committed.push(item.relPath);
+        if (typeof _beforePublish === 'function') {
+          _beforePublish(action, index);
+        }
+
+        if (action.status === 'add') {
+          try {
+            fs.copyFileSync(temporaryPath, dest, fs.constants.COPYFILE_EXCL);
+          } catch (error) {
+            if (error.code === 'EEXIST') {
+              throw new Error(`Destination changed during installation: ${rel} already exists`);
+            }
+            throw error;
+          }
+          createdFiles.add(dest);
+          fs.rmSync(temporaryPath, { force: true });
+          committed.push(rel);
+        } else if (action.status === 'replace') {
+          const current = inspectDestination(plan.installationRoot, rel, action.sourceBytes);
+          if (current.status !== 'replace' || !current.existingBytes.equals(action.existingBytes)) {
+            throw new Error(`Destination changed during installation: ${rel}`);
+          }
+          backups.set(dest, current.existingBytes);
+          fs.renameSync(temporaryPath, dest);
+          committed.push(rel);
+        }
+      }
+
+      // Final verification of all installed files
+      for (const action of plan.actions) {
+        const dest = action.destinationPath || action.destPath;
+        if (!fs.readFileSync(dest).equals(action.sourceBytes)) {
+          throw new Error(`Installed file verification failed: ${action.relativePath || action.relPath}`);
+        }
+      }
+
+      return {
+        dryRun: false,
+        targetDir: plan.targetDir,
+        installationRoot: plan.installationRoot,
+        committed,
+        unchanged: plan.unchanged.map(u => u.relativePath || u.relPath)
+      };
+    } catch (err) {
+      for (const temporaryPath of temporaryPaths) fs.rmSync(temporaryPath, { force: true });
+      for (const createdPath of createdFiles) fs.rmSync(createdPath, { force: true });
+      for (const [destPath, existingBytes] of backups) {
+        try {
+          fs.writeFileSync(destPath, existingBytes);
+        } catch {}
+      }
+      for (const createdPath of createdFiles) {
+        pruneEmptyDirectories(path.dirname(createdPath), plan.installationRoot);
+      }
+      for (const temporaryPath of temporaryPaths) {
+        pruneEmptyDirectories(path.dirname(temporaryPath), plan.installationRoot);
+      }
+      const error = new Error(`Installation failed after ${committed.length} file(s): ${err.message}`);
+      error.code = 'ERR_INSTALL_FAILED';
+      error.committed = committed;
+      throw error;
     }
-  } catch (err) {
-    // Clean up any remaining temp files
-    for (const tmp of stagedTemps) {
-      try {
-        fs.rmSync(tmp, { force: true });
-      } catch (_) {}
-    }
-    const error = new Error(
-      `Installation failed partway through: ${err.message}.\n` +
-      `Committed files (${committed.length}):\n` +
-      committed.map(c => `  - .agents/${c}`).join('\n')
-    );
-    error.code = 'ERR_INSTALL_FAILED';
-    error.committed = committed;
-    throw error;
+  } finally {
+    releaseLock(lockPath);
+    pruneEmptyDirectories(path.dirname(lockPath), plan.installationRoot);
   }
-
-  // Final verification of all installed files
-  for (const relPath of committed) {
-    const src = path.join(plan.actions.find(a => a.relPath === relPath).srcPath);
-    const dest = path.join(plan.actions.find(a => a.relPath === relPath).destPath);
-    if (!fs.readFileSync(src).equals(fs.readFileSync(dest))) {
-      throw new Error(`Post-install verification failed for .agents/${relPath}`);
-    }
-  }
-
-  return {
-    dryRun: false,
-    targetDir: plan.targetDir,
-    committed,
-    unchanged: plan.unchanged.map(u => u.relPath)
-  };
 }

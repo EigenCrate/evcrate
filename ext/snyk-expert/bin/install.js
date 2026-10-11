@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import readline from 'node:readline/promises';
 import {
-  resolveTarget,
   planInstallation,
-  executeInstallation
+  executeInstallation,
+  isSupportedNodeVersion,
+  MIN_NODE_VERSION
 } from '../lib/install.js';
 import {
   printHelp,
@@ -16,11 +17,17 @@ import {
   printInstallationSuccess
 } from '../lib/cli-formatters.js';
 
+if (!isSupportedNodeVersion()) {
+  console.error(`Error: Node.js >=${MIN_NODE_VERSION} is required (current: ${process.version}).`);
+  process.exit(1);
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 
 const optionsConfig = {
   target: { type: 'string', short: 't' },
+  directory: { type: 'string', short: 'd' },
   'dry-run': { type: 'boolean', short: 'n', default: false },
   force: { type: 'boolean', short: 'f', default: false },
   yes: { type: 'boolean', short: 'y', default: false },
@@ -33,7 +40,7 @@ async function main() {
   try {
     parsed = parseArgs({ options: optionsConfig, allowPositionals: false });
   } catch (err) {
-    console.error(`Error: ${err.message}\nRun with --help to see available options.`);
+    console.error(`Error: ${err.message}\nRun with --help for usage.`);
     process.exit(1);
   }
 
@@ -50,87 +57,92 @@ async function main() {
   }
 
   if (values.yes && !values.force) {
-    console.error(`Error: Option --yes cannot be used without --force.`);
+    console.error('Error: Option --yes cannot be used without --force.');
     process.exit(1);
   }
 
-  let targetDir;
+  if (!values.target) {
+    console.error('Error: Option --target is required. Choose agents.');
+    process.exit(1);
+  }
+
+  let plan;
   try {
-    const resolved = resolveTarget(values.target);
-    targetDir = resolved.targetDir;
+    plan = planInstallation({
+      sourceDir: PACKAGE_ROOT,
+      target: values.target,
+      directory: values.directory
+    });
   } catch (err) {
     console.error(`Error: ${err.message}`);
     process.exit(1);
   }
 
-  console.log(`Target project: ${targetDir}`);
-
-  let plan;
-  try {
-    plan = planInstallation({ sourceDir: PACKAGE_ROOT, targetDir });
-  } catch (err) {
-    console.error(`Error planning installation: ${err.message}`);
-    process.exit(1);
-  }
+  console.log(`Target: ${plan.target}`);
+  console.log(`Install root: ${plan.installationRoot}`);
 
   if (plan.isBlocked) {
-    console.error(`\nInstallation blocked by destination conflicts:`);
+    console.error('\nInstallation blocked by destination conflicts:');
     for (const b of plan.blockers) {
-      console.error(`  ✖ .agents/${b.relPath}: ${b.reason}`);
+      console.error(`  - ${b.relativePath || b.relPath}: ${b.reason}`);
     }
     process.exit(1);
   }
 
   if (values['dry-run']) {
     printDryRun(plan);
+    console.log('Dry run complete; no files were written.');
     process.exit(0);
   }
 
   let authorizedYes = values.yes;
 
   if (plan.hasCollisions) {
-    console.log(`\nExisting files differ from bundle:`);
-    for (const r of plan.replacements) {
-      console.log(`  ! .agents/${r.relPath}`);
-    }
-
     if (!values.force) {
-      console.error(`\nError: Destination files already exist and differ.\nTo overwrite, re-run with --force.`);
+      console.error('\nError: Destination files already exist and differ.');
+      console.error('To overwrite existing files, re-run with --force.');
       process.exit(1);
     }
 
+    const isInteractive = Boolean(process.stdin.isTTY || process.env.FORCE_TTY === '1');
     if (!authorizedYes) {
-      if (process.stdin.isTTY) {
+      if (isInteractive) {
+        console.log('\nExisting files will be replaced:');
+        for (const r of plan.replacements) {
+          console.log(`  ! .agents/${r.relativePath || r.relPath}`);
+        }
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
         try {
-          const answer = await rl.question(`\nOverwrite ${plan.replacements.length} existing file(s)? [y/N]: `);
-          if (answer.trim().toLowerCase() === 'y' || answer.trim().toLowerCase() === 'yes') {
+          const answer = await rl.question('\nAuthorize overwriting existing files? (yes/no): ');
+          if (answer.trim().toLowerCase() === 'yes' || answer.trim().toLowerCase() === 'y') {
             authorizedYes = true;
           } else {
-            console.log(`Installation cancelled by user.`);
-            process.exit(0);
+            console.log('Installation cancelled by user.');
+            process.exit(1);
           }
         } finally {
           rl.close();
         }
       } else {
-        console.error(`\nError: Overwrite authorized with --force, but confirmation (--yes) is required in non-interactive mode.`);
+        console.error('Error: Destination files differ. Non-interactive replacement requires both --force and --yes.');
         process.exit(1);
       }
     }
   }
 
   try {
-    const result = executeInstallation(plan, { dryRun: false, force: values.force, yes: authorizedYes });
-    printInstallationSuccess(targetDir, result, plan);
-    console.log(`Usage guide: ${path.join(PACKAGE_ROOT, 'docs', 'usage.md')}`);
+    const result = executeInstallation(plan, {
+      force: values.force,
+      yes: authorizedYes
+    });
+    printInstallationSuccess(plan.targetDir, result, plan);
   } catch (err) {
-    console.error(`\nInstallation failed: ${err.message}`);
+    console.error(`Error executing installation: ${err.message}`);
     process.exit(1);
   }
 }
 
 main().catch((err) => {
-  console.error(`Unexpected fatal error: ${err.message}`);
+  console.error(`Fatal error: ${err.message}`);
   process.exit(1);
 });
