@@ -218,11 +218,11 @@ export function evaluateVscode(isolatedHome, isolatedProject, nativeProbe) {
     },
     checks: {
       bootstrapInstructionsExist: fs.existsSync(projBootstrap),
-      hasPlanCro: skills.includes('evc-cmd-plan-x-cro'),
+      hasPlanCro: skills.includes('cmd-plan-x-cro'),
       hasPlannerAgent: skills.includes('evc-planner')
     },
     native: nativeProbe,
-    limitations: 'Editor plugin registered via explicit setting; verified bootstrap.instructions.md, unqualified evc-cmd-plan-x-cro, and isolated plugin store.'
+    limitations: 'Editor plugin registered via explicit setting; verified bootstrap.instructions.md, cmd-plan-x-cro, and isolated plugin store.'
   };
 }
 

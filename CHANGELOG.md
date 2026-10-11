@@ -104,11 +104,13 @@
 * **pi:** resolve command, workflow and main/child instruction references from the active installed resource root instead of the caller's working directory.
 * **antigravity:** bound canonical context-hook execution to 25 seconds and refuse timed-out hooks before context injection.
 * **advisor:** allow bounded OMP usage and model discovery beyond five seconds while preserving the shared preflight deadline and excluding ambient extensions from usage readiness.
+* **vscode:** cut over `VSCODE_LOCAL_TOOL_MAP` frontmatter tool references to pinned VS Code `1.140.0` / Copilot Chat `0.68.0` native identifiers (`read/readFile`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`, `agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`, `web/fetch`, `edit/editNotebook`; keeping `WebSearch` unsupported), derive `canDelegate` from source `Task` intent, and normalize `filePath`/`FilePath`, `includePattern`/glob-root search scopes, `edit/editNotebook` required `filePath`/`editType`/`cellId`, and `web/fetch` HTTP(S) `urls` + `query` schemas using null-prototype tables and `Object.hasOwn` lookups across `tool-inputs.ts` and `LOCAL_TOOL_INPUTS_SOURCE` while exempting remote URLs from local workspace `.evcrateignore` and privacy matching.
 
 
 ### Documentation
 
 * **standards:** document compiler emit closure, receipt partitioning, snapshot traversal safety, runtime revision binding, promotion lock freshness, and post-build parent RSS benchmark metrics.
+* **vscode:** document four-namespace tool separation, declaration audit versus effective runtime grants, Linux x64 native/workflow qualification (`N01`–`N10`, `W01`–`W04` passed; child `todo` disabled by host in subagents), operator republish/verification/rollback boundaries, and Windows-unqualified non-deployed candidate handoff status.
 
 
 ### ♻️ Chores & Refactoring

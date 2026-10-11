@@ -9,6 +9,7 @@ export type NormalizedToolKind =
   | 'search'
   | 'terminal'
   | 'subagent'
+  | 'web'
   | 'unrelated';
 
 export interface NormalizedToolOperation {
@@ -31,77 +32,149 @@ export interface UnqualifiedToolInput {
 
 export type NormalizedToolResult = NormalizedToolOperation | UnqualifiedToolInput;
 
-const READ_TOOL_NAMES: Record<string, true> = {
-  read_file: true,
-  view: true,
-  readfile: true,
-  read: true
-};
+const READ_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    read_file: true,
+    view: true,
+    readfile: true,
+    read: true,
+    'read/readfile': true,
+    copilot_readfile: true,
+    getnotebooksummary: true,
+    'read/getnotebooksummary': true,
+    copilot_getnotebooksummary: true
+  })
+);
 
-const EDIT_TOOL_NAMES: Record<string, true> = {
-  edit_file: true,
-  edit: true,
-  editfiles: true,
-  str_replace_editor: true,
-  apply_patch: true,
-  write: true,
-  create: true
-};
+const EDIT_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    edit_file: true,
+    edit: true,
+    editfiles: true,
+    str_replace_editor: true,
+    apply_patch: true,
+    applypatch: true,
+    write: true,
+    create: true,
+    createfile: true,
+    copilot_createfile: true,
+    replacestring: true,
+    copilot_replacestring: true,
+    insertedit: true,
+    copilot_insertedit: true,
+    multireplacestring: true,
+    copilot_multireplacestring: true,
+    editnotebook: true,
+    'edit/editnotebook': true,
+    copilot_editnotebook: true
+  })
+);
 
-const TERMINAL_TOOL_NAMES: Record<string, true> = {
-  run_in_terminal: true,
-  execute: true,
-  runinterminal: true,
-  bash: true,
-  terminal: true,
-  powershell: true
-};
+const TERMINAL_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    run_in_terminal: true,
+    execute: true,
+    runinterminal: true,
+    bash: true,
+    terminal: true,
+    powershell: true
+  })
+);
 
-const GREP_TOOL_NAMES: Record<string, true> = {
-  grep_search: true,
-  grep: true,
-  rg: true
-};
+const GREP_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    grep_search: true,
+    grep: true,
+    rg: true,
+    textsearch: true,
+    'search/textsearch': true,
+    copilot_findtextinfiles: true
+  })
+);
 
-const GLOB_TOOL_NAMES: Record<string, true> = {
-  file_search: true,
-  glob: true,
-  find: true
-};
+const GLOB_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    file_search: true,
+    glob: true,
+    find: true,
+    filesearch: true,
+    'search/filesearch': true,
+    copilot_findfiles: true,
+    listdirectory: true,
+    'search/listdirectory': true,
+    copilot_listdirectory: true
+  })
+);
 
-const SUBAGENT_TOOL_NAMES: Record<string, true> = {
-  runsubagent: true,
-  'agent/runsubagent': true,
-  task: true,
-  subagent: true
-};
+const SUBAGENT_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    runsubagent: true,
+    'agent/runsubagent': true,
+    task: true,
+    subagent: true
+  })
+);
 
-const UNRELATED_TOOL_NAMES: Record<string, true> = {
-  ask_user: true,
-  askuserquestion: true,
-  question: true,
-  todo: true,
-  manage_todo_list: true,
-  todowrite: true,
-  view_image: true,
-  read_resource: true,
-  list_resources: true
-};
+const UNRELATED_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    ask_user: true,
+    askuserquestion: true,
+    question: true,
+    todo: true,
+    manage_todo_list: true,
+    todowrite: true,
+    view_image: true,
+    copilot_viewimage: true,
+    read_resource: true,
+    list_resources: true,
+    getterminaloutput: true,
+    killterminal: true
+  })
+);
 
-const CANONICAL_BLOCKED_DIR_NAMES: Record<string, true> = {
-  node_modules: true,
-  dist: true,
-  build: true,
-  '.next': true,
-  '.nuxt': true,
-  __pycache__: true,
-  '.venv': true,
-  venv: true,
-  vendor: true,
-  target: true,
-  '.git': true,
-  coverage: true
-};
+const WEB_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    web_fetch: true,
+    webfetch: true,
+    fetch: true,
+    'web/fetch': true,
+    copilot_fetchwebpage: true,
+    fetchwebpage: true
+  })
+);
+
+const NOTEBOOK_EDIT_TOOL_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    editnotebook: true,
+    'edit/editnotebook': true,
+    copilot_editnotebook: true
+  })
+);
+
+const VALID_NOTEBOOK_EDIT_TYPES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    insert: true,
+    edit: true,
+    delete: true
+  })
+);
+
+const CANONICAL_BLOCKED_DIR_NAMES: Record<string, true> = Object.freeze(
+  Object.assign(Object.create(null) as Record<string, true>, {
+    node_modules: true,
+    dist: true,
+    build: true,
+    '.next': true,
+    '.nuxt': true,
+    __pycache__: true,
+    '.venv': true,
+    venv: true,
+    vendor: true,
+    target: true,
+    '.git': true,
+    coverage: true
+  })
+);
 
 const BARE_PRIVACY_REGEX = /credentials|id_rsa|id_ed25519|secrets?\.ya?ml|\.env/i;
 
@@ -150,10 +223,76 @@ export function extractCommandOperands(command: string): string[] {
       token.includes('\\') ||
       token.startsWith('.') ||
       token.includes('.') ||
-      CANONICAL_BLOCKED_DIR_NAMES[token] ||
+      Object.hasOwn(CANONICAL_BLOCKED_DIR_NAMES, token) ||
       BARE_PRIVACY_REGEX.test(token)
     ) {
       operands.push(token);
+    }
+  }
+
+  return operands;
+}
+export function extractGlobRoot(pattern: string): string | undefined {
+  if (typeof pattern !== 'string') return undefined;
+  let normalized = pattern.trim().replace(/\\/g, '/');
+  while (normalized.startsWith('./')) normalized = normalized.slice(2);
+  while (normalized.startsWith('/')) normalized = normalized.slice(1);
+  const wildcardIndex = normalized.search(/[*?[{]/);
+  let dirPrefix: string;
+  if (wildcardIndex === -1) {
+    dirPrefix = normalized;
+  } else {
+    const prefix = normalized.slice(0, wildcardIndex);
+    const lastSlash = prefix.lastIndexOf('/');
+    if (lastSlash === -1) {
+      return undefined;
+    }
+    dirPrefix = prefix.slice(0, lastSlash);
+  }
+  dirPrefix = dirPrefix.trim();
+  while (dirPrefix.endsWith('/')) dirPrefix = dirPrefix.slice(0, -1);
+  return dirPrefix || undefined;
+}
+
+export function collectSearchOperands(toolInput: Record<string, unknown>, extraOperand?: string): string[] {
+  const operands: string[] = [];
+  const directPath =
+    toolInput.path ??
+    toolInput.folder ??
+    toolInput.SearchPath ??
+    toolInput.filePath ??
+    toolInput.FilePath ??
+    toolInput.dirPath ??
+    toolInput.DirPath ??
+    toolInput.directoryPath ??
+    toolInput.DirectoryPath;
+  if (typeof directPath === 'string' && directPath.trim()) {
+    operands.push(directPath.trim());
+  }
+
+  const rawIncludes =
+    toolInput.includePattern ??
+    toolInput.filesToInclude ??
+    toolInput.include ??
+    toolInput.includes ??
+    toolInput.includePatterns;
+  if (typeof rawIncludes === 'string' && rawIncludes.trim()) {
+    for (const item of rawIncludes.split(',')) {
+      const trimmed = item.trim();
+      if (trimmed) operands.push(trimmed);
+    }
+  } else if (Array.isArray(rawIncludes)) {
+    for (const item of rawIncludes) {
+      if (typeof item === 'string' && item.trim()) {
+        operands.push(item.trim());
+      }
+    }
+  }
+
+  if (typeof extraOperand === 'string' && extraOperand.trim()) {
+    const trimmedExtra = extraOperand.trim();
+    if (!operands.includes(trimmedExtra)) {
+      operands.push(trimmedExtra);
     }
   }
 
@@ -204,8 +343,14 @@ export function normalizeLocalTool(
   };
 
   // 1. Read operations
-  if (READ_TOOL_NAMES[lowerName]) {
-    const rawPath = toolInput.path ?? toolInput.file_path ?? toolInput.target_file ?? toolInput.TargetFile;
+  if (Object.hasOwn(READ_TOOL_NAMES, lowerName)) {
+    const rawPath =
+      toolInput.filePath ??
+      toolInput.FilePath ??
+      toolInput.path ??
+      toolInput.file_path ??
+      toolInput.target_file ??
+      toolInput.TargetFile;
     if (typeof rawPath !== 'string' || !rawPath.trim()) {
       return {
         kind: 'unqualified',
@@ -229,9 +374,56 @@ export function normalizeLocalTool(
   }
 
   // 2. Edit operations
-  if (EDIT_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(EDIT_TOOL_NAMES, lowerName)) {
+    const directPath =
+      toolInput.filePath ??
+      toolInput.FilePath ??
+      toolInput.path ??
+      toolInput.file_path ??
+      toolInput.target_file ??
+      toolInput.TargetFile;
+    if (Object.hasOwn(NOTEBOOK_EDIT_TOOL_NAMES, lowerName)) {
+      if (typeof directPath !== 'string' || !directPath.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires a non-empty filePath string',
+          originalInput: toolInput
+        };
+      }
+      const editType = toolInput.editType;
+      if (typeof editType !== 'string' || !Object.hasOwn(VALID_NOTEBOOK_EDIT_TYPES, editType)) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires editType to be "insert", "edit", or "delete"',
+          originalInput: toolInput
+        };
+      }
+      const cellId = toolInput.cellId;
+      if (typeof cellId !== 'string' || !cellId.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Notebook edit tool requires a non-empty cellId string',
+          originalInput: toolInput
+        };
+      }
+      const checked = validateOperands([directPath]);
+      if (typeof checked === 'string') {
+        return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
+      }
+      return {
+        kind: 'edit',
+        toolName,
+        operands: checked,
+        toolUseId,
+        originalInput: toolInput,
+        executionBase: contextCwd
+      };
+    }
+
     const collectedPaths: string[] = [];
-    const directPath = toolInput.path ?? toolInput.file_path ?? toolInput.target_file ?? toolInput.TargetFile;
     if (typeof directPath === 'string' && directPath.trim()) {
       collectedPaths.push(directPath);
     }
@@ -239,8 +431,35 @@ export function normalizeLocalTool(
     // Check multi-file edits array
     if (Array.isArray(toolInput.files)) {
       for (const item of toolInput.files) {
-        if (isPlainObject(item) && typeof item.path === 'string' && item.path.trim()) {
-          collectedPaths.push(item.path);
+        if (isPlainObject(item)) {
+          const itemPath =
+            item.filePath ??
+            item.FilePath ??
+            item.path ??
+            item.file_path ??
+            item.target_file ??
+            item.TargetFile;
+          if (typeof itemPath === 'string' && itemPath.trim()) {
+            collectedPaths.push(itemPath);
+          }
+        }
+      }
+    }
+
+    // Check multi-replace replacements array
+    if (Array.isArray(toolInput.replacements)) {
+      for (const item of toolInput.replacements) {
+        if (isPlainObject(item)) {
+          const itemPath =
+            item.filePath ??
+            item.FilePath ??
+            item.path ??
+            item.file_path ??
+            item.target_file ??
+            item.TargetFile;
+          if (typeof itemPath === 'string' && itemPath.trim()) {
+            collectedPaths.push(itemPath);
+          }
         }
       }
     }
@@ -281,7 +500,7 @@ export function normalizeLocalTool(
   }
 
   // 3. Terminal operations
-  if (TERMINAL_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(TERMINAL_TOOL_NAMES, lowerName)) {
     const command = toolInput.command ?? toolInput.CommandLine;
     if (typeof command !== 'string' || !command.trim()) {
       return {
@@ -309,7 +528,7 @@ export function normalizeLocalTool(
   }
 
   // 4. Grep / Text search operations
-  if (GREP_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(GREP_TOOL_NAMES, lowerName)) {
     const query = toolInput.query ?? toolInput.pattern;
     if (typeof query !== 'string' || !query.trim()) {
       return {
@@ -319,8 +538,7 @@ export function normalizeLocalTool(
         originalInput: toolInput
       };
     }
-    const pathOperand = toolInput.path ?? toolInput.folder ?? toolInput.SearchPath;
-    const operandsToValidate = typeof pathOperand === 'string' && pathOperand.trim() ? [pathOperand] : [];
+    const operandsToValidate = collectSearchOperands(toolInput);
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
       return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
@@ -337,8 +555,9 @@ export function normalizeLocalTool(
   }
 
   // 5. Glob / File search operations
-  if (GLOB_TOOL_NAMES[lowerName]) {
-    const pattern = toolInput.pattern ?? toolInput.query;
+  if (Object.hasOwn(GLOB_TOOL_NAMES, lowerName)) {
+    const isListDir = lowerName.includes('listdirectory');
+    const pattern = toolInput.pattern ?? toolInput.query ?? (isListDir ? '*' : undefined);
     if (typeof pattern !== 'string' || !pattern.trim()) {
       return {
         kind: 'unqualified',
@@ -347,8 +566,8 @@ export function normalizeLocalTool(
         originalInput: toolInput
       };
     }
-    const folderOperand = toolInput.folder ?? toolInput.path ?? toolInput.DirectoryPath;
-    const operandsToValidate = typeof folderOperand === 'string' && folderOperand.trim() ? [folderOperand] : [];
+    const globRoot = extractGlobRoot(pattern);
+    const operandsToValidate = collectSearchOperands(toolInput, globRoot);
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
       return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
@@ -365,7 +584,7 @@ export function normalizeLocalTool(
   }
 
   // 6. Subagent operations
-  if (SUBAGENT_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(SUBAGENT_TOOL_NAMES, lowerName)) {
     const agentName = toolInput.agentName ?? toolInput.agent_type ?? toolInput.agent_id;
     if (typeof agentName !== 'string' || !agentName.trim()) {
       return {
@@ -385,8 +604,100 @@ export function normalizeLocalTool(
     };
   }
 
+  // 7. Web fetch operations
+  if (Object.hasOwn(WEB_TOOL_NAMES, lowerName)) {
+    const query = toolInput.query;
+    if (typeof query !== 'string' || !query.trim()) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: 'Web fetch tool requires a non-empty query string',
+        originalInput: toolInput
+      };
+    }
+
+    const rawUrls = toolInput.urls;
+    if (!Array.isArray(rawUrls) || rawUrls.length === 0) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: 'Web fetch tool requires a non-empty urls array',
+        originalInput: toolInput
+      };
+    }
+
+    if (rawUrls.length > MAX_OPERANDS) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: `Total URL operands (${rawUrls.length}) exceed maximum permitted limit (${MAX_OPERANDS})`,
+        originalInput: toolInput
+      };
+    }
+
+    const validatedUrls: string[] = [];
+    for (const u of rawUrls) {
+      if (typeof u !== 'string' || !u.trim()) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: 'Web fetch urls array must contain only non-empty URL strings',
+          originalInput: toolInput
+        };
+      }
+      const trimmedUrl = u.trim();
+      const bytes = new TextEncoder().encode(trimmedUrl).byteLength;
+      if (bytes > MAX_OPERAND_BYTES) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `URL operand length (${bytes} bytes) exceeds maximum permitted limit (${MAX_OPERAND_BYTES} bytes)`,
+          originalInput: toolInput
+        };
+      }
+      let parsed: URL;
+      try {
+        parsed = new URL(trimmedUrl);
+      } catch {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `Web fetch requires valid HTTP(S) URLs; invalid URL "${trimmedUrl}"`,
+          originalInput: toolInput
+        };
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `Web fetch only permits http: or https: protocols; rejected "${parsed.protocol}"`,
+          originalInput: toolInput
+        };
+      }
+      if (!parsed.hostname) {
+        return {
+          kind: 'unqualified',
+          toolName,
+          reason: `Web fetch URL requires a valid hostname: "${trimmedUrl}"`,
+          originalInput: toolInput
+        };
+      }
+      validatedUrls.push(trimmedUrl);
+    }
+
+    return {
+      kind: 'web',
+      toolName,
+      operands: validatedUrls,
+      pattern: query.trim(),
+      toolUseId,
+      originalInput: toolInput,
+      executionBase: contextCwd
+    };
+  }
+
   // 7. Known unrelated tools
-  if (UNRELATED_TOOL_NAMES[lowerName]) {
+  if (Object.hasOwn(UNRELATED_TOOL_NAMES, lowerName)) {
     return {
       kind: 'unrelated',
       toolName,

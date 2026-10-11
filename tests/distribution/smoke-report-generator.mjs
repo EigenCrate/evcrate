@@ -67,8 +67,8 @@ export function generateSmokeResultsMarkdown(results) {
       name: 'VS Code Local',
       key: 'vscode',
       probe: 'code --version (v1.140.0), inspect .evcrate-vscode/skills/ & bootstrap.instructions.md',
-      expected: 'evcrate-local plugin; unqualified evc-cmd-plan-x-cro; evc-planner; bootstrap.instructions.md in managed store',
-      observed: 'Unqualified evc-cmd-plan-x-cro and evc-planner verified; plugin identity evcrate-local preserved; bootstrap.instructions.md verified'
+      expected: 'evc plugin; cmd-plan-x-cro; evc-planner; bootstrap.instructions.md in managed store',
+      observed: 'cmd-plan-x-cro and evc-planner verified; plugin identity evc preserved; bootstrap.instructions.md verified'
     }
   ];
 

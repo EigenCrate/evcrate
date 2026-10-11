@@ -250,29 +250,57 @@ SEGMENT_SEPARATOR = "-x-"
 _KEBAB_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
+def normalize_command_token(text: str) -> str:
+    """Strip leading slash and optional evc: plugin prefix for command lookup."""
+    token = text.strip().lower().lstrip("/")
+    if token.startswith("evc:"):
+        token = token[4:]
+    return token
+
+
+def format_for_target(text: str, target: str) -> str:
+    """Render command references in prose for the active target."""
+    if target == "vscode":
+        return re.sub(r"(?<![A-Za-z0-9_:-])/" + COMMAND_PREFIX, "/evc:cmd-", text)
+    return re.sub(r"(?<![A-Za-z0-9_:-])/evc:cmd-", "/" + COMMAND_PREFIX, text)
+
+
 def command_segments(stem: str) -> list:
-    """Segments of a flat command stem (`evc-cmd-a-x-b` -> ['a', 'b']); [] when the stem is not a command."""
-    if not _KEBAB_NAME.fullmatch(stem) or not stem.startswith(COMMAND_PREFIX):
+    """Segments of a flat command stem (`evc-cmd-a-x-b` or `cmd-a-x-b` -> ['a', 'b']); [] when not a command."""
+    stem = normalize_command_token(stem)
+    if not _KEBAB_NAME.fullmatch(stem):
         return []
-    segments = stem[len(COMMAND_PREFIX):].split(SEGMENT_SEPARATOR)
+    if stem.startswith(COMMAND_PREFIX):
+        rest = stem[len(COMMAND_PREFIX):]
+    elif stem.startswith("cmd-"):
+        rest = stem[4:]
+    else:
+        return []
+    segments = rest.split(SEGMENT_SEPARATOR)
     if any(not seg or "x" in seg.split("-") for seg in segments):
         return []
     return segments
 
 
 def command_key(text: str) -> tuple:
-    """Segments for user input: `plan:hard`, `/plan:hard` or `/evc-cmd-plan-x-hard`."""
-    text = text.strip().lower().lstrip("/")
-    if text.startswith(COMMAND_PREFIX):
-        return tuple(command_segments(text))
-    return tuple(part for part in re.split(r"[:/]+", text) if part)
+    """Segments for user input: `plan:hard`, `/plan:hard`, `/evc-cmd-plan-x-hard`, `/cmd-plan-x-hard`, or `/evc:cmd-plan-x-hard`."""
+    token = normalize_command_token(text)
+    if token.startswith(COMMAND_PREFIX) or token.startswith("cmd-"):
+        return tuple(command_segments(token))
+    return tuple(part for part in re.split(r"[:/]+", token) if part)
 
 
-def build_command(stem: str, description: str) -> dict:
+def build_command(stem: str, description: str, target: str = "claude") -> dict:
     """Catalog record for a flat command stem; category = first segment, else core."""
     segments = command_segments(stem)
+    if target == "vscode":
+        local_stem = f"cmd-{stem[len(COMMAND_PREFIX):]}" if stem.startswith(COMMAND_PREFIX) else stem
+        name = f"/evc:{local_stem}"
+    else:
+        canonical_stem = f"{COMMAND_PREFIX}{stem[4:]}" if stem.startswith("cmd-") else stem
+        name = f"/{canonical_stem}"
     return {
-        "name": f"/{stem}",
+        "name": name,
         "id": ":".join(segments),
         "description": description,
         "category": segments[0] if len(segments) > 1 else "core",
@@ -331,14 +359,14 @@ def parse_command_metadata(file_path: Path) -> dict:
 COMMAND_PATH_RE = re.compile(r"(?im)^\s*Command Path:\s*([/$]\S+)")
 
 
-def discover_skill_commands(skills_dir: Path) -> dict:
+def discover_skill_commands(skills_dir: Path, target: str = "claude") -> dict:
     """Discover generated command skills by native name or embedded Command Path."""
     commands = {}
     categories = {}
     if not skills_dir.is_dir():
         return {"commands": commands, "categories": categories}
 
-    for skill_file in sorted(skills_dir.glob("evc-cmd-*/SKILL.md")):
+    for skill_file in sorted([*skills_dir.glob("evc-cmd-*/SKILL.md"), *skills_dir.glob("cmd-*/SKILL.md")]):
         metadata = parse_command_metadata(skill_file)
         description = metadata.get("description", "")
         match = COMMAND_PATH_RE.search(skill_file.read_text(encoding="utf-8"))
@@ -351,7 +379,7 @@ def discover_skill_commands(skills_dir: Path) -> dict:
         if not command_segments(stem):
             continue
         clean_desc = re.sub(r"^[^\w\s]+\s*", "", description).strip()
-        command = build_command(stem, clean_desc)
+        command = build_command(stem, clean_desc, target)
         category = command["category"]
         commands.setdefault(category, []).append(command)
         categories.setdefault(category, category.title())
@@ -376,28 +404,32 @@ def installed_layout(script_path: Path) -> dict:
         raise ValueError(f"Unsupported or retired target in scanner layout: {target}")
     return layout
 
-def resolve_command_source(script_path: Path) -> tuple[str, Path]:
+
+def resolve_command_source(script_path: Path) -> tuple[str, Path, str]:
     """Use the installed layout; standalone copies only inspect adjacent resources."""
     layout = installed_layout(script_path)
     if layout:
+        target = layout.get("target", "claude")
         commands = layout.get("commands")
         if (not isinstance(commands, dict) or not isinstance(commands.get("root"), str)
                 or commands.get("format") not in {"markdown", "toml", "command-skill"}):
             raise ValueError("Invalid commands block in installed scanner layout")
         kind = "skills" if commands["format"] == "command-skill" else "commands"
-        return kind, (script_path.parent / commands["root"]).resolve()
+        return kind, (script_path.parent / commands["root"]).resolve(), target
 
     target_root = script_path.parent.parent
     direct_commands = target_root / "commands"
     if direct_commands.is_dir():
-        return "commands", direct_commands
+        return "commands", direct_commands, "claude"
     # Standalone Codex copies retain their sibling command-skill layout.
     if target_root.name == ".codex":
-        return "skills", target_root.parent / ".agents" / "skills"
-    return "skills", target_root / "skills"
+        return "skills", target_root.parent / ".agents" / "skills", "codex"
+    if target_root.parent.name == ".evcrate-vscode":
+        return "skills", target_root.parent / "skills", "vscode"
+    return "skills", target_root / "skills", "claude"
 
 
-def discover_commands(commands_dir: Path) -> dict:
+def discover_commands(commands_dir: Path, target: str = "claude") -> dict:
     """Scan flat command files (evc-cmd-*.md / .toml) and build the command catalog."""
     commands = {}
     categories = {}
@@ -421,7 +453,7 @@ def discover_commands(commands_dir: Path) -> dict:
         # Clean description (remove emoji indicators)
         clean_desc = re.sub(r'^[^\w\s]+\s*', '', description).strip()
 
-        command = build_command(command_file.stem, clean_desc)
+        command = build_command(command_file.stem, clean_desc, target)
         category = command["category"]
         commands.setdefault(category, []).append(command)
         categories.setdefault(category, category.title())
@@ -441,8 +473,9 @@ def detect_intent(input_str: str, categories: list) -> str:
     input_lower = input_str.lower()
     words = input_str.split()
 
-    # A lone flat command name (/evc-cmd-plan-x-hard) is a command lookup; with free text it is a task description
-    if len(words) == 1 and input_lower.lstrip("/").startswith(COMMAND_PREFIX):
+    # A lone flat command name (/evc-cmd-plan-x-hard, /cmd-plan-x-hard, or /evc:cmd-plan-x-hard) is a command lookup; with free text it is a task description
+    token = normalize_command_token(input_str)
+    if len(words) == 1 and (token.startswith(COMMAND_PREFIX) or token.startswith("cmd-")):
         return "command"
 
     # Multiple words = likely task description (even if first word is a category)
@@ -468,47 +501,52 @@ def detect_intent(input_str: str, categories: list) -> str:
     return "search"
 
 
-def show_overview(data: dict) -> None:
+def show_overview(data: dict, target: str = "claude") -> None:
     """Display overview with quick start guide."""
     emit_output_type("category-guide")
 
     commands = data["commands"]
     categories = data["categories"]
     total = sum(len(cmds) for cmds in commands.values())
-    help_cmd = "/evc-cmd-help"
+    help_cmd = format_for_target("/evc-cmd-help", target)
 
-    print("# EVCrate Commands")
-    print()
-    print(f"{total} commands across {len(categories)} categories.")
-    print()
-    print("**Quick Start:**")
-    print("- `/evc-cmd-cook` - Implement features (standalone)")
-    print("- `/evc-cmd-plan` + `/evc-cmd-code` - Plan then execute")
-    print("- `/evc-cmd-fix` - Fix bugs intelligently")
-    print("- `/evc-cmd-test` - Run and analyze tests")
-    print()
-    print("**Common Workflows:**")
-    print("- New feature: `/evc-cmd-plan` → `/evc-cmd-code` → `/evc-cmd-test` → `/evc-cmd-git-x-pr`")
-    print("- Bug fix: `/evc-cmd-debug` → `/evc-cmd-fix` → `/evc-cmd-test` → `/evc-cmd-git-x-cm`")
-    print("- Review: `/evc-cmd-scout` → `/evc-cmd-review-x-codebase` → `/evc-cmd-watzup`")
-    print()
-    print("**Categories:**")
+    lines = [
+        "# EVCrate Commands",
+        "",
+        f"{total} commands across {len(categories)} categories.",
+        "",
+        "**Quick Start:**",
+        "- `/evc-cmd-cook` - Implement features (standalone)",
+        "- `/evc-cmd-plan` + `/evc-cmd-code` - Plan then execute",
+        "- `/evc-cmd-fix` - Fix bugs intelligently",
+        "- `/evc-cmd-test` - Run and analyze tests",
+        "",
+        "**Common Workflows:**",
+        "- New feature: `/evc-cmd-plan` → `/evc-cmd-code` → `/evc-cmd-test` → `/evc-cmd-git-x-pr`",
+        "- Bug fix: `/evc-cmd-debug` → `/evc-cmd-fix` → `/evc-cmd-test` → `/evc-cmd-git-x-cm`",
+        "- Review: `/evc-cmd-scout` → `/evc-cmd-review-x-codebase` → `/evc-cmd-watzup`",
+        "",
+        "**Categories:**",
+    ]
     for cat_key in sorted(categories.keys()):
         count = len(commands.get(cat_key, []))
-        print(f"- `{cat_key}` ({count})")
-    print()
-    print("**Usage:**")
-    print(f"- `{help_cmd} <category>` - Category guide with workflow")
-    print(f"- `{help_cmd} <command>` - Command details (e.g. `plan:hard` or `/evc-cmd-plan-x-hard`)")
-    print(f"- `{help_cmd} <task description>` - Recommendations")
-    print()
-    print("**Tips:**")
-    print("- Unclear about approach? → `/evc-cmd-brainstorm` first")
-    print("- Add `ultrathink` for deep analysis (more tokens)")
-    print("- `-x-parallel` variants (e.g., `/evc-cmd-code-x-parallel`) = faster but more tokens, check quota")
+        lines.append(f"- `{cat_key}` ({count})")
+    lines.extend([
+        "",
+        "**Usage:**",
+        f"- `{help_cmd} <category>` - Category guide with workflow",
+        f"- `{help_cmd} <command>` - Command details (e.g. `plan:hard` or `/evc-cmd-plan-x-hard`)",
+        f"- `{help_cmd} <task description>` - Recommendations",
+        "",
+        "**Tips:**",
+        "- Unclear about approach? → `/evc-cmd-brainstorm` first",
+        "- Add `ultrathink` for deep analysis (more tokens)",
+        "- `-x-parallel` variants (e.g., `/evc-cmd-code-x-parallel`) = faster but more tokens, check quota",
+    ])
+    print(format_for_target("\n".join(lines), target))
 
 
-def show_category_guide(data: dict, category: str) -> None:
+def show_category_guide(data: dict, category: str, target: str = "claude") -> None:
     """Display category guide with workflow and tips."""
     emit_output_type("category-guide")
 
@@ -546,7 +584,7 @@ def show_category_guide(data: dict, category: str) -> None:
     if "workflow" in guide:
         print("**Workflow:**")
         for step, cmd in guide["workflow"]:
-            print(f"- {step}: {cmd}")
+            print(f"- {step}: {format_for_target(cmd, target)}")
         print()
 
     # Commands list (only if we have discovered commands for this category)
@@ -558,8 +596,7 @@ def show_category_guide(data: dict, category: str) -> None:
     # Tip at the end
     if "tip" in guide:
         print()
-        print(f"*Tip: {guide['tip']}*")
-
+        print(f"*Tip: {format_for_target(guide['tip'], target)}*")
 
 def show_command(data: dict, command: str) -> None:
     """Display command details."""
@@ -601,10 +638,10 @@ def show_command(data: dict, command: str) -> None:
             print(f"**Related:** {related_names}")
 
 
-def show_advisory_guide() -> None:
+def show_advisory_guide(target: str = "claude") -> None:
     """Describe the shared main-session interview and report procedure."""
     emit_output_type("command-details")
-    command = "/evc-cmd-advise"
+    command = format_for_target("/evc-cmd-advise", target)
     print(f"# `{command}`")
     print()
     print("Interview-first technical advice in the main session.")
@@ -652,7 +689,7 @@ def do_search(data: dict, term: str) -> None:
         print(f"- `{cmd['name']}` - {cmd['description']}")
 
 
-def recommend_task(data: dict, task: str) -> None:
+def recommend_task(data: dict, task: str, target: str = "claude") -> None:
     """Recommend commands for a task description."""
     emit_output_type("task-recommendations")
 
@@ -693,7 +730,7 @@ def recommend_task(data: dict, task: str) -> None:
     if "workflow" in guide:
         print("**Workflow:**")
         for step, cmd in guide["workflow"][:3]:
-            print(f"- {step}: {cmd}")
+            print(f"- {step}: {format_for_target(cmd, target)}")
         print()
 
     # Show relevant commands
@@ -711,11 +748,10 @@ def recommend_task(data: dict, task: str) -> None:
 
     if "tip" in guide:
         print()
-        print(f"*Tip: {guide['tip']}*")
+        print(f"*Tip: {format_for_target(guide['tip'], target)}*")
 
 
-def show_config_guide() -> None:
-    """Display comprehensive .evcrate.json configuration guide."""
+def show_config_guide(target: str = "claude") -> None:
     emit_output_type("comprehensive-docs")
 
     print("# EVCrate Configuration (.evcrate.json)")
@@ -820,7 +856,7 @@ def show_config_guide() -> None:
     print("**Plan Validation:**")
     print("- `mode: \"prompt\"` - Ask user after plan creation (default)")
     print("- `mode: \"auto\"` - Always run validation interview")
-    print("- `mode: \"off\"` - Skip; user runs `/evc-cmd-plan-x-validate` manually")
+    print(format_for_target("- `mode: \"off\"` - Skip; user runs `/evc-cmd-plan-x-validate` manually", target))
     print()
     print("Validation interviews the user with critical questions to confirm")
     print("assumptions, risks, and architectural decisions before implementation.")
@@ -834,7 +870,7 @@ def show_config_guide() -> None:
     print("- `4` = Tech Lead - executive summary, risk matrix, business impact")
     print("- `5` = God Mode - code first, minimal prose, no hand-holding")
     print()
-    print("Guidelines auto-inject on session start. Commands like `/evc-cmd-brainstorm` respect them.")
+    print(format_for_target("Guidelines auto-inject on session start. Commands like `/evc-cmd-brainstorm` respect them.", target))
     print()
     print("---")
     print()
@@ -897,7 +933,7 @@ def show_config_guide() -> None:
     print("*Tip: Config is optional - all fields have sensible defaults.*")
 
 
-def show_coding_level_guide() -> None:
+def show_coding_level_guide(target: str = "claude") -> None:
     """Display comprehensive codingLevel configuration guide."""
     emit_output_type("comprehensive-docs")
 
@@ -941,7 +977,7 @@ def show_coding_level_guide() -> None:
     print()
     print("1. SessionStart hook reads `codingLevel` from `.evcrate.json`")
     print("2. If 0-5, injects guidelines from `.pi/agent/evcrate/output-styles/coding-level-*.md`")
-    print("3. Commands like `/evc-cmd-brainstorm` follow the injected guidelines")
+    print(format_for_target("3. Commands like `/evc-cmd-brainstorm` follow the injected guidelines", target))
     print()
     print("**Token Efficiency:**")
     print("- `-1` (default): Zero injection, zero overhead")
@@ -1009,7 +1045,7 @@ def show_coding_level_guide() -> None:
 def main():
     script_path = Path(__file__).resolve()
     try:
-        source_kind, source_dir = resolve_command_source(script_path)
+        source_kind, source_dir, target = resolve_command_source(script_path)
     except (OSError, ValueError) as error:
         print(f"Error: {error}")
         sys.exit(1)
@@ -1018,9 +1054,9 @@ def main():
         sys.exit(1)
 
     if source_kind == "skills":
-        data = discover_skill_commands(source_dir)
+        data = discover_skill_commands(source_dir, target)
     else:
-        data = discover_commands(source_dir)
+        data = discover_commands(source_dir, target)
 
     if not data["commands"]:
         print(f"No commands found in {source_dir}.")
@@ -1032,30 +1068,30 @@ def main():
 
     # Special case: config documentation (not a command category)
     if input_str.lower() in ["config", "configuration", ".evcrate.json", "evcrate.json"]:
-        show_config_guide()
+        show_config_guide(target)
         return
 
     # Special case: coding level documentation
     if input_str.lower() in ["coding-level", "codinglevel", "coding level", "level", "eli5", "god mode"]:
-        show_coding_level_guide()
+        show_coding_level_guide(target)
         return
 
     # The interview has shared guidance beyond ordinary command metadata.
-    if input_str.lower().lstrip("/") in ["advise", "evc-cmd-advise"]:
-        show_advisory_guide()
+    if normalize_command_token(input_str) in ["advise", "evc-cmd-advise", "cmd-advise"]:
+        show_advisory_guide(target)
         return
 
     # Detect intent and route
     intent = detect_intent(input_str, list(data["categories"].keys()))
 
     if intent == "overview":
-        show_overview(data)
+        show_overview(data, target)
     elif intent == "category":
-        show_category_guide(data, input_str)
+        show_category_guide(data, input_str, target)
     elif intent == "command":
         show_command(data, input_str)
     elif intent == "task":
-        recommend_task(data, input_str)
+        recommend_task(data, input_str, target)
     else:
         do_search(data, input_str)
 

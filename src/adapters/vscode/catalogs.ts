@@ -31,7 +31,7 @@ export function projectVscodeCatalogs(
         const item = Object.values(commandMap).find((c) => c.source === cmd.source);
         if (!item) throw new ControlPlaneError('VALIDATION_INVALID');
         return {
-          name: `/${item.localName}`,
+          name: item.nativeInvocationName,
           path: `${item.localName}/SKILL.md`
         };
       }

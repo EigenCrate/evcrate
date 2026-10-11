@@ -5,7 +5,7 @@
 **Applies to:** TypeScript control plane, canonical harness resources, generated projections, and publication tooling.
 **Windows release boundary:** Standalone installer lifecycle and clean-install `version --json` only; prior candidate evidence does not qualify the current package.
 
-**Plugin architecture:** VS Code Local native support is an isolated Agent Plugins 1.0 bundle (`evcrate-local`) registered through user-controlled `chat.pluginLocations`, separate from Copilot CLI.
+**Plugin architecture:** VS Code Local native support is an isolated Agent Plugins 1.0 bundle (`evc`, formerly `evcrate-local`) registered through user-controlled `chat.pluginLocations`, separate from Copilot CLI.
 **Linting standard:** Package script `npm run lint` is currently an echo-only check (`echo "Linting passed"`). Code standards and invariants are enforced deterministically via TypeScript compiler checks (`tsc`), runtime closure checks, and the automated test suite.
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
@@ -37,7 +37,7 @@ The following patterns are strictly prohibited across the codebase:
 - **No hand edits to generated files**: Never edit generated target projections, build manifests, or registries directly. Modify canonical sources and regenerate through established scripts.
 - **No cross-scope recovery search**: Recovery never crosses the requested publication scope. HOME recovery does not mutate project files; project recovery does not inspect or mutate HOME publication state or locks. HOME-derived storage for project-scoped durable state grants no cross-scope authority.
 - **Protected historical progress**: Inspect immutable in-repo receipts and sealed-path metadata without rewriting captured plan/phase/evidence/index identities. Parent alone publishes uncaptured progress/receipts; recorded completion and present freshness remain distinct.
-- **No legacy command or agent naming in maintained sources**: All commands strictly project `evc-cmd-*` (nested with `-x-`, length <= 64), custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy shapes (`cmd_`, colons, underscores).
+- **No legacy command or agent naming in maintained sources**: Canonical commands use `evc-cmd-*` (nested with `-x-`, length <= 64); VS Code Local alone projects `cmd-*` within plugin `evc`. Custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy resource names (`cmd_`, colons, underscores); VS Code's `/evc:cmd-*` qualifier is host syntax, not a resource name.
 - **Single AGENTS.md authoring authority**: Canonical instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never author in root `AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
 - **Branch topology and release qualification**: Canonical release branches are `main` (stable) and `next` (prerelease `rc`). Stable publication always requires live, candidate-bound GitHub authorization; caller-authored approval files and environment flags cannot grant authorization.
 
@@ -182,10 +182,10 @@ child stderr, credentials, and stack traces do not cross the public boundary.
 
 ## Normative command and resource naming
 
-All documentation and target-facing examples use unified `evc-cmd-*` naming for
-slash commands and `evc-*` naming for agents. The single authority is
-`src/adapters/resource-naming.ts`, enforced canonically by
-`.evcrate/source/.claude/scripts/scan_commands.py`:
+Canonical documentation and non-VS Code command projections use `evc-cmd-*`;
+VS Code Local uses container-local `cmd-*` skills in plugin `evc`. Agents use
+`evc-*`. Canonical naming authority is `src/adapters/resource-naming.ts`, enforced
+by `.evcrate/source/.claude/scripts/scan_commands.py`:
 
 - Canonical command source files are flat files under `.evcrate/source/.claude/commands/evc-cmd-*.md`.
 - Root forms are `/evc-cmd-plan`, `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, and `/evc-cmd-advise`.
@@ -194,7 +194,10 @@ slash commands and `evc-*` naming for agents. The single authority is
 - Agents use `/evc-*` (e.g., `evc-code-reviewer`, `evc-planner`).
 - Copilot projects user-invocable skills as `evc-cmd-*` (with raw `$ARGUMENTS`) and styles as `evc-style-*`.
 - Semantic identities (e.g. `code/auto`) join segments with `/` and remain stable command identities.
-- All seven active target projection adapters emit flat `evc-*` names without compatibility aliases.
+- VS Code `plugin.json` declares `"name": "evc"`; canonical `evc-cmd-*` maps to `.evcrate-vscode/skills/cmd-*/SKILL.md`. Copilot Chat displays `evc cmd-*` and qualifies invocation as `/evc:cmd-*`; never emit duplicate `evc-` prefixes in local command skill names.
+- `src/adapters/vscode/references.ts` (`replaceCommandInvocations`) rewrites `/evc-cmd-*` and `$evc-cmd-*` to local `/cmd-*` and `$cmd-*`, including wildcard family references. Preserve `-x-` nesting and semantic IDs.
+- The shared `ev-help.py` scanner must discover both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`.
+- All seven adapters retain flat resource names without compatibility aliases; plugin qualification is separate from resource naming.
 - Shell executable syntax (`npm`, `node`, `python3`, `cp`, `export`) is executable shell syntax, not slash resource names.
 ## Protocol and JSON standards
 
@@ -460,6 +463,12 @@ cover a later or chained access to a protected path.
 Tests that mutate canonical policy must snapshot the original bytes, restore them
 in `finally` and termination handlers, and remove backups or temporary drivers
 before reporting success.
+
+### VS Code Local tool-reference, qualification, and rollout standards
+
+- **Namespace separation & mapper authority**: `src/adapters/vscode/metadata-tools.ts` (`mapAgentTools`) is the sole authority mapping canonical tool intent (`Read`, `Glob`, `Grep`, `LS`, `Bash`, `BashOutput`, `KillBash`, `KillShell`, `Task`, `TodoWrite`, `Edit`, `Write`, `MultiEdit`, `WebFetch`, `NotebookEdit`; `WebSearch` intentionally dropped) to pinned VS Code `1.140.0` / Copilot Chat `0.68.0` frontmatter references (`read/readFile`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`, `agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`, `web/fetch`, `edit/editNotebook`). Keep frontmatter references distinct from model-facing names (`copilot_readFile`, `copilot_fetchWebPage`, `copilot_editNotebook`, `manage_todo_list`) and hook event identities; test capability contracts against independent host provenance (`tests/fixtures/vscode-local/tool-references.json`), never circular map copies.
+- **Permission & hook-normalization invariants**: Preserve `tools: []` deny-all, omitted-tool inheritance (`hasExplicitTools: false`), unsupported-only empty lists, `Task`-derived `canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and direct `todo` (disabled by host `runSubagentTool.ts` in child subagents). Normalize `filePath`, `FilePath`, `path`, `file_path`, `target_file`, `TargetFile`, search `includePattern`/glob roots, notebook `filePath` + `editType` (`insert`, `edit`, `delete`) + `cellId`, and `web/fetch` HTTP(S) `urls` arrays + `query` identically with `??` fallback and null-prototype/`Object.hasOwn` allowlist parity in `src/adapters/vscode/tool-inputs.ts` and `src/adapters/vscode/runtime-sources.ts` (`LOCAL_TOOL_INPUTS_SOURCE`), while exempting remote `kind: 'web'` URLs from local directory/privacy blocks. `evcrate/agent-tool-audit.json` attests build declarations, never effective runtime grants.
+- **Operator republish, verification, workaround & rollback**: Preview then apply with explicit scope/paths (`evcrate publish --dry-run|--apply --scope home|project --target vscode`, using `--no-register-vscode-settings` unless user settings registration in `chat.pluginLocations` is explicitly approved). Confirm the loaded agent URI and candidate digest (`81792bf2...`) in a fresh session and run direct/delegated smoke before relying on subagents; while Windows Local remains unqualified, use parent-owned scouting as a temporary workaround without widening leaf permissions. `evcrate recover` repairs interrupted transactions only—it never downgrades versions, rolls back committed shared HOME controller state after a project failure, reverts agent-edited docs, or mutates user `settings.json`.
 
 ## Documentation standards
 

@@ -1,7 +1,7 @@
 # Codebase Summary
 
 **Maintained:** 2026-10-11
-**Source:** Canonical resources and TypeScript control-plane contracts for the completed advisor subsystem retirement cutover; live vendor/native-host qualification remains separate.
+**Source:** Canonical resources and TypeScript control-plane contracts for the completed advisor subsystem retirement cutover and VS Code `evc`/`cmd-*` container mapping; live vendor/native-host qualification remains separate.
 **Package:** Private npm package `evcrate` 2.11.0; Node `>=22.19.0`.
 Single binary: `evcrate` (`dist/cli/evcrate.js`).
 **Qualification:** Historical candidates and test counts do not qualify the current package. Windows support is limited to standalone installer lifecycle and `version --json`; actual-host native qualification remains separate.
@@ -109,6 +109,17 @@ six adapters use the shared registry. The npm allowlist includes the generated
 seven. Activation stays user-controlled through manual `chat.pluginLocations`
 registration.
 
+The current plugin descriptor declares `"name": "evc"` (formerly `evcrate-local`).
+`src/adapters/vscode/names.ts` maps canonical `evc-cmd-*` commands to local `cmd-*`;
+`commands.ts` emits `.evcrate-vscode/skills/cmd-*/SKILL.md` as manual skills.
+Copilot Chat displays `evc cmd-*` and qualifies invocation as
+`/<plugin-name>:<skill-name>` → `/evc:cmd-*`, avoiding a duplicate `evc` prefix.
+`replaceCommandInvocations` in `src/adapters/vscode/references.ts` converts
+`/evc-cmd-*` and `$evc-cmd-*` to `/cmd-*` and `$cmd-*`, including wildcard families
+such as `/evc-cmd-plan-x-*` → `/cmd-plan-x-*`. Shared
+`.evcrate/source/.claude/scripts/ev-help.py` scans both `evc-cmd-*/SKILL.md`
+and `cmd-*/SKILL.md`. Canonical names, `-x-` nesting, and semantic IDs remain stable.
+
 Historical Phase 08 evidence used Linux x64, VS Code 1.140.0 and Copilot Chat 0.68.0:
 [qualification index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md),
 [project receipt](../plans/261002-2213-vscode-local-native-support/reports/native-local/linux-x64-project/receipt.md),
@@ -122,6 +133,10 @@ Phase 09 establishes documentation, controlled rollout, and lifecycle governance
 - Coexistence rules for project and HOME plugin installations.
 - Privacy boundaries (fail-closed security bridge, ask/deny human confirmation).
 - Explicit stop-trigger criteria for version drift and announced upstream Local retirement.
+### VS Code subagent tool reference normalization
+
+- **Namespace decoupling:** `src/adapters/vscode/metadata-tools.ts` separates canonical source tool intent, host frontmatter tool references (`read/readFile`, `runInTerminal`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `todo`, `web/fetch`, `edit/editNotebook`), model invocation spellings, and hook event names.
+- **Dual-authority parameter normalization:** `src/adapters/vscode/tool-inputs.ts` and `runtime-sources.ts:LOCAL_TOOL_INPUTS_SOURCE` (projected to `.evcrate-vscode/evcrate/runtime/local-tool-inputs.cjs`) normalize host `filePath`, `FilePath`, `dirPath`, batch edit paths (`files`, `replacements`), notebook `filePath`/`editType`/`cellId`, `web/fetch` HTTP(S) `urls`/`query`, and terminal helper tools (`getTerminalOutput`, `killTerminal`).
 ## Phase 01 launchability and identity
 
 Publication execution intent is derived from the published relative path and published shebang bytes (with explicit launcher roles), not from source permission metadata. The plan carries execution intent separately from content hashes and CAS identity: a content-equal no-op stays a no-op, while new or changed POSIX launchers receive the required execute bit. Required staging/install chmod failures are errors rather than successful fallbacks.
@@ -291,13 +306,13 @@ must be exercised separately, not inferred from historical fixtures or counts.
   its resource-graph entry. Local Claude projection uses `.claude-projection`
   without replacing authoring resources. See the [native delivery matrix and
   loader prerequisites](./system-architecture.md#instruction-authority-and-native-delivery).
-- All seven active targets project unified `evc-cmd-*` command names and `evc-*` agent names.
+- Commands retain canonical `evc-cmd-*` identities; VS Code Local projects container-local `cmd-*` skills under plugin `evc`, while the other six targets retain `evc-cmd-*`. Agent names remain `evc-*`.
 - Copilot emits `evc-cmd-*` skills with raw `$ARGUMENTS`.
 - Pi resolves command, workflow, and main/child instruction references from its active installed resource root.
 
 ### Command and resource naming convention
 
-Canonical commands are flat files (`commands/evc-cmd-<segment>(-x-<segment>)*.md`) and agents use `evc-*`. `src/adapters/resource-naming.ts` and the canonical command scanner govern seven-target names. Semantic command IDs (`code/auto`) retain their command identities. Shell commands remain executable syntax, not slash resource names.
+Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<segment>)*.md`) with `-x-` segment separation, and agents use `evc-*`. Governed by `src/adapters/resource-naming.ts` and enforced by `.evcrate/source/.claude/scripts/scan_commands.py`, all seven active targets retain flat resource names; VS Code Local uses `cmd-*` command skill names inside plugin `evc`. Semantic command identities (`code/auto`) retain their command identities. Shell commands remain executable syntax, not slash resource names.
 
 ### Projection and catalog inventories
 

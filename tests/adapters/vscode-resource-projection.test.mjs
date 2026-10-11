@@ -37,7 +37,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.ok(existsSync(pluginJsonPath), 'plugin.json must exist');
     const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
     assert.equal(pluginJson.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
-    assert.equal(pluginJson.name, 'evcrate-local');
+    assert.equal(pluginJson.name, 'evc');
     assert.equal(pluginJson.version, '1.0.0');
     assert.equal(pluginJson.rules, undefined);
     assert.equal(pluginJson.agents, undefined);
@@ -60,14 +60,14 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(gitParsed.fields.model, 'haiku');
     assert.deepEqual(
       [...(gitParsed.fields.tools || [])].sort(),
-      ['file_search', 'grep_search', 'read_file', 'run_in_terminal'].sort()
+      ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
     );
     assert.deepEqual(gitParsed.fields.agents, []);
 
-    // TodoWrite is rewritten in tools and prose to VS Code's manage_todo_list
+    // TodoWrite is mapped to frontmatter 'todo' while prose remains manage_todo_list
     const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-project-manager.agent.md'), 'utf8'));
-    assert.ok(pmParsed.fields.tools.includes('manage_todo_list'));
-    const cmdCodeContent = readFileSync(join(stageRoot, 'skills/evc-cmd-code/SKILL.md'), 'utf8');
+    assert.ok(pmParsed.fields.tools.includes('todo'));
+    const cmdCodeContent = readFileSync(join(stageRoot, 'skills/cmd-code/SKILL.md'), 'utf8');
     assert.ok(cmdCodeContent.includes('manage_todo_list'));
     assert.ok(!cmdCodeContent.includes('TodoWrite'));
 
@@ -77,11 +77,43 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const reviewerParsed = parseFrontmatter(readFileSync(reviewerPath, 'utf8'));
     assert.equal(reviewerParsed.fields.name, 'evc-code-reviewer');
     assert.equal(reviewerParsed.fields.model, 'sonnet');
+
+    // Scout: search/read tools mapped, no edit capability, no task -> agents: [], model: haiku
+    const scoutPath = join(stageRoot, 'com.github.copilot/agents/evc-scout.agent.md');
+    assert.ok(existsSync(scoutPath), 'evc-scout.agent.md must exist');
+    const scoutParsed = parseFrontmatter(readFileSync(scoutPath, 'utf8'));
+    assert.equal(scoutParsed.fields.name, 'evc-scout');
+    assert.equal(scoutParsed.fields.model, 'haiku');
+    assert.deepEqual(
+      [...(scoutParsed.fields.tools || [])].sort(),
+      ['getTerminalOutput', 'killTerminal', 'read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch', 'todo', 'web/fetch'].sort()
+    );
+    assert.deepEqual(scoutParsed.fields.agents, [], 'Scout must have agents: [] to prevent delegation');
+    assert.ok(!scoutParsed.fields.tools.includes('editFiles'), 'Scout must not have editFiles');
+    assert.ok(!scoutParsed.fields.tools.includes('createFile'), 'Scout must not have createFile');
+    assert.ok(!scoutParsed.fields.tools.includes('multiReplaceString'), 'Scout must not have multiReplaceString');
+    assert.ok(!scoutParsed.fields.tools.includes('agent/runSubagent'), 'Scout must not have agent/runSubagent');
+
+    // Planner: tools omitted in source -> tools and agents omitted in frontmatter (intentional host capability inheritance, delegation permitted)
+    const plannerPath = join(stageRoot, 'com.github.copilot/agents/evc-planner.agent.md');
+    assert.ok(existsSync(plannerPath), 'evc-planner.agent.md must exist');
+    const plannerAgentParsed = parseFrontmatter(readFileSync(plannerPath, 'utf8'));
+    assert.equal(plannerAgentParsed.fields.name, 'evc-planner');
+    assert.equal(plannerAgentParsed.fields.tools, undefined, 'Planner must omit tools in frontmatter');
+    assert.equal(plannerAgentParsed.fields.agents, undefined, 'Planner must not restrict agents: []');
+
+    // Docs-manager: tools omitted in source -> tools and agents omitted in frontmatter (intentional host capability inheritance)
+    const docsManagerPath = join(stageRoot, 'com.github.copilot/agents/evc-docs-manager.agent.md');
+    assert.ok(existsSync(docsManagerPath), 'evc-docs-manager.agent.md must exist');
+    const docsManagerParsed = parseFrontmatter(readFileSync(docsManagerPath, 'utf8'));
+    assert.equal(docsManagerParsed.fields.name, 'evc-docs-manager');
+    assert.equal(docsManagerParsed.fields.tools, undefined, 'Docs manager must omit tools in frontmatter');
+    assert.equal(docsManagerParsed.fields.agents, undefined, 'Docs manager must omit agents in frontmatter');
     // 4. Verify commands (70)
-    const croCommandPath = join(stageRoot, 'skills/evc-cmd-plan-x-cro/SKILL.md');
-    assert.ok(existsSync(croCommandPath), 'evc-cmd-plan-x-cro/SKILL.md must exist');
+    const croCommandPath = join(stageRoot, 'skills/cmd-plan-x-cro/SKILL.md');
+    assert.ok(existsSync(croCommandPath), 'cmd-plan-x-cro/SKILL.md must exist');
     const croParsed = parseFrontmatter(readFileSync(croCommandPath, 'utf8'));
-    assert.equal(croParsed.fields.name, 'evc-cmd-plan-x-cro');
+    assert.equal(croParsed.fields.name, 'cmd-plan-x-cro');
     assert.equal(croParsed.fields['user-invocable'], true);
     assert.equal(croParsed.fields['disable-model-invocation'], true);
 
@@ -114,8 +146,8 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(commandsData.length, 70, 'All 70 commands must be in commands_data.yaml');
     const croCatalogItem = commandsData.find((c) => c.source === 'evc-cmd-plan-x-cro.md');
     assert.ok(croCatalogItem);
-    assert.equal(croCatalogItem.name, '/evc-cmd-plan-x-cro');
-    assert.equal(croCatalogItem.path, 'evc-cmd-plan-x-cro/SKILL.md');
+    assert.equal(croCatalogItem.name, '/evc:cmd-plan-x-cro');
+    assert.equal(croCatalogItem.path, 'cmd-plan-x-cro/SKILL.md');
 
     const skillsDataPath = join(stageRoot, 'evcrate/scripts/skills_data.yaml');
     assert.ok(existsSync(skillsDataPath), 'skills_data.yaml must exist');
@@ -136,13 +168,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const commandMapJson = JSON.parse(readFileSync(commandMapPath, 'utf8'));
     assert.equal(commandMapJson.commands.length, 70);
     assert.equal(commandMapJson.schema, 'evcrate-vscode-command-name-map-v1');
-    assert.equal(commandMapJson.plugin_id, 'evcrate-local');
-    for (const [name, semanticId] of [
-      ['evc-cmd-plan-x-cro', 'plan/cro'],
-      ['evc-cmd-code-x-auto', 'code/auto'],
-      ['evc-cmd-advise', 'advise']
+    assert.equal(commandMapJson.plugin_id, 'evc');
+    for (const [canonicalName, semanticId, localName] of [
+      ['evc-cmd-plan-x-cro', 'plan/cro', 'cmd-plan-x-cro'],
+      ['evc-cmd-code-x-auto', 'code/auto', 'cmd-code-x-auto'],
+      ['evc-cmd-advise', 'advise', 'cmd-advise']
     ]) {
-      const entry = commandMapJson.commands.find((command) => command.localName === name);
+      const entry = commandMapJson.commands.find((command) => command.localName === localName);
       assert.ok(entry);
       assert.deepEqual({
         source: entry.source,
@@ -153,13 +185,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
         targetName: entry.targetName,
         nativeInvocationName: entry.nativeInvocationName
       }, {
-        source: `${name}.md`,
+        source: `${canonicalName}.md`,
         sourceName: semanticId,
         sourceSemanticId: semanticId,
-        target: `skills/${name}/SKILL.md`,
-        localName: name,
-        targetName: name,
-        nativeInvocationName: `/${name}`
+        target: `skills/${localName}/SKILL.md`,
+        localName: localName,
+        targetName: localName,
+        nativeInvocationName: `/evc:${localName}`
       });
     }
 
@@ -238,7 +270,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(modelMap.mappings.haiku.nativeModel, 'claude-3.5-haiku');
 
     // 11. Verify canonical inline command and workflow delivery.
-    const cmdAdvisePath = join(stageRoot, 'skills/evc-cmd-advise/SKILL.md');
+    const cmdAdvisePath = join(stageRoot, 'skills/cmd-advise/SKILL.md');
     assert.ok(existsSync(cmdAdvisePath));
     const cmdAdviseContent = readFileSync(cmdAdvisePath, 'utf8');
     assert.ok(cmdAdviseContent.includes('advise-inline/v1'));
@@ -359,7 +391,7 @@ test('vscode-names: agent metadata must match its canonical basename', () => {
 
 test('vscode-names: shared skill directories reject command and style collisions', () => {
   for (const entries of [
-    [['commands/evc-cmd-plan.md'], ['skills/evc-cmd-plan/SKILL.md']],
+    [['commands/evc-cmd-plan.md'], ['skills/cmd-plan/SKILL.md']],
     [['output-styles/concise.md'], ['skills/style-concise/SKILL.md']],
     [['skills/docx/SKILL.md'], ['skills/document-skills/docx/SKILL.md']]
   ]) {
@@ -371,6 +403,6 @@ test('vscode-names: shared skill directories reject command and style collisions
     ['output-styles/concise.md'],
     ['agents/evc-planner.md', '---\nname: evc-planner\n---\n']
   ]));
-  assert.deepEqual(names.skillDirectoryNames, ['evc-cmd-plan-x-cro', 'planning', 'style-concise']);
+  assert.deepEqual(names.skillDirectoryNames, ['cmd-plan-x-cro', 'planning', 'style-concise']);
 });
 

@@ -128,13 +128,13 @@ def test_installed_layout_from_foreign_cwd():
                 "commands": {"format": "markdown", "root": "../native commands",
                              "output": "commands_data.yaml"},
             }), encoding="utf-8")
+            expected = "/evc:cmd-advise" if target == "vscode" else "/evc-cmd-advise"
             for args in (["core"], ["evc-cmd-advise"]):
                 result = subprocess.run(
                     [sys.executable, str(scripts / "ev-help.py"), *args],
                     capture_output=True, text=True, cwd=foreign, env=clean_env,
                 )
-                if (result.returncode != 0 or "/evc-cmd-advise" not in result.stdout
-                        or "/evc-cmd-foreign" in result.stdout
+                if (result.returncode != 0 or expected not in result.stdout
                         or not result.stdout.startswith("@EVCRATE_OUTPUT_TYPE:")):
                     print(f"{RED}✗ FAIL installed layout from foreign cwd: {target}{RESET}")
                     return False

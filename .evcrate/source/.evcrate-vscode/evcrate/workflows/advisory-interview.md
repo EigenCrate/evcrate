@@ -1,6 +1,6 @@
 # Advisory Interview Contract
 
-Single semantics source for `/evc-cmd-advise`. The main session alone conducts
+Single semantics source for `/evc:cmd-advise`. The main session alone conducts
 the interview, reasons over the evidence, obtains confirmation, and writes the
 report. Do not delegate questions or reasoning, or run subprocess inference.
 

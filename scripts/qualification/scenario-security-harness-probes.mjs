@@ -58,6 +58,7 @@ export function runWrongHarnessScenario() {
     fs.cpSync(path.join(REPO_ROOT, '.evcrate/source/.evcrate-vscode'), pluginDir, { recursive: true });
 
 
+
     // Calculate exact runtime session state path from production session context module
     const { computeProjectKey, computeSessionKey, getSessionStatePath } = require(path.join(pluginDir, 'evcrate/runtime/local-session-context.cjs'));
     const stateBaseDir = path.join(tmpRoot, 'state-check');

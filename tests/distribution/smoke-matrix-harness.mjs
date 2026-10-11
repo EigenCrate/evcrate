@@ -387,7 +387,7 @@ export async function runSmokeMatrix(options = {}) {
       { id: '9.target-gemini', name: 'Target 5/8: Gemini', status: 'PASS', label: results.eightTargetMatrix.gemini.label, details: 'TOML command skills, ~/.gemini/config/AGENTS.md, shared antigravity rules' },
       { id: '10.target-antigravity', name: 'Target 6/8: Antigravity', status: 'PASS', label: results.eightTargetMatrix.antigravity.label, details: 'evc-cmd-plan skill, SessionStart context forwarding, hooks.json & rules' },
       { id: '11.target-copilot', name: 'Target 7/8: Copilot CLI', status: 'PASS', label: results.eightTargetMatrix.copilot.label, details: 'evc-cmd-plan command, evc-planner agent, evc-planning skill, manual styles' },
-      { id: '12.target-vscode', name: 'Target 8/8: VS Code Local', status: 'PASS', label: results.eightTargetMatrix.vscode.label, details: 'evcrate-local plugin, evc-cmd-plan-x-cro, bootstrap.instructions.md' },
+      { id: '12.target-vscode', name: 'Target 8/8: VS Code Local', status: 'PASS', label: results.eightTargetMatrix.vscode.label, details: 'evc plugin, cmd-plan-x-cro, bootstrap.instructions.md' },
       { id: '13.coexistence', name: 'Phase 12 Multi-Harness Coexistence Cases', status: 'PASS', details: 'No document collisions, no CLAUDE.md files, clean loader separation' },
       { id: '14.upgrade-scenarios', name: 'Phase 08 Pinned Upgrade & Pruning Scenarios', status: 'PASS', details: 'Owned deleted, untracked preserved & reported, candidate destinations injected' },
       { id: '15.windows-contracts', name: 'Windows Qualification Contracts Verification', status: 'PASS', details: 'Asset and receipt contracts verified; 4-row native execution preserved for windows-2025' }

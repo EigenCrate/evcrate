@@ -114,11 +114,33 @@ HOME, native byte limits, disabled settings sources, and managed-only policies.
 Generated-file/runtime bridge checks do not establish native qualification.
 Unavailable GUI/native hosts and current model access remain explicit evidence gaps.
 
-`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`.
-Registration uses VS Code's `chat.pluginLocations` setting and remains user-controlled:
-manual configuration or the CLI's explicit optional registration/prompt path.
-Copilot CLI (`copilot`) and VS Code Local (`vscode`) are distinct targets with
-separate formats, hook protocols, and runtime lifecycles.
+`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`; `plugin.json` declares `"name": "evc"` (formerly `evcrate-local`) and canonical `evc-cmd-*` commands project to container-local `.evcrate-vscode/skills/cmd-*/SKILL.md`.
+Default publication is inert and never mutates editor settings; explicit opt-in registration
+(`--register-vscode-settings` or interactive first-time TTY prompt; suppressed by
+`--no-register-vscode-settings`) surgically updates `chat.pluginLocations` in workspace or
+User `settings.json`, while `evcrate recover` repairs only published artifacts and never
+touches editor settings or agent-authored docs. Copilot CLI (`copilot`) and VS Code Local
+(`vscode`) are distinct targets with separate formats, hook protocols, and runtime lifecycles.
+In `src/adapters/vscode/metadata-tools.ts`,
+`mapAgentTools` projects canonical tool intent to pinned VS Code `1.140.0` / Copilot Chat
+`0.68.0` frontmatter references (`read/readFile`, `search/fileSearch`, `search/textSearch`,
+`search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`,
+`agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`, `web/fetch`,
+`edit/editNotebook`; `WebSearch` stays dropped) without broad groups, runtime discovery, or
+extra extensions. It preserves `tools: []` deny-all, omitted-tool inheritance, `Task`-derived
+`canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and direct `todo`, while keeping
+frontmatter references distinct from model-facing names and hook operands (`filePath`, search
+`includePattern`/glob roots, notebook `filePath`/`editType`/`cellId`, and `web/fetch` HTTP(S) `urls`/`query` normalized in `tool-inputs.ts` and `runtime-sources.ts`). `evcrate/agent-tool-audit.json`
+records build declarations, not effective host grants.
+
+The plugin supplies the command namespace: canonical `evc-cmd-*` commands project to
+`.evcrate-vscode/skills/cmd-*/SKILL.md`, retaining `-x-` nesting. Copilot Chat displays
+`evc cmd-*` and qualifies skills as `/<plugin-name>:<skill-name>` → `/evc:cmd-*`,
+without duplicating `evc` in the local skill name. `src/adapters/vscode/names.ts`
+records local `/cmd-*` invocations; `replaceCommandInvocations` in
+`src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*` to
+`/cmd-*` and `$cmd-*`, including wildcard families such as `/evc-cmd-plan-x-*`.
+The shared canonical `ev-help.py` scans both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`.
 
 ### Snyk specialist composition: local porting boundary
 
@@ -336,7 +358,7 @@ Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<s
 and agents as `agents/evc-<agent>.md`, governed by `src/adapters/resource-naming.ts` and
 enforced by `.evcrate/source/.claude/scripts/scan_commands.py`:
 
-- Slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, `/evc-cmd-advise`).
+- Canonical and non-VS Code slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, `/evc-cmd-advise`). VS Code Local uses `/cmd-*` inside plugin `evc`, with host-qualified `/evc:cmd-*` invocation; the colon is host syntax, not part of a resource name.
 - Nested commands use reserved `-x-` path separator (e.g., `/evc-cmd-fix-x-hard`), reversible to semantic IDs (`fix/hard`).
 - Agents use `evc-*` (e.g., `evc-planner`, `evc-code-reviewer`). Copilot skills use `evc-<skill>` and styles use `evc-style-<style>`.
 - Specification: charset `^[a-z0-9]+(-[a-z0-9]+)*$`, length <= 64, no `_`, `:`, `--`. Semantic command IDs (`code/auto`) remain stable.
