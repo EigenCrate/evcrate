@@ -14,7 +14,9 @@
     "bin",
     "lib",
     ".agents",
-    "docs"
+    "docs",
+    "evals",
+    "README.md"
   ],
   "engines": {
     "node": ">=18.0.0"
