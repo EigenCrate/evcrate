@@ -1,8 +1,8 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-09 (Phase 09 tests and golden fixtures verified; tmpfs concurrency protection and buffer overrun fixes active).
-**Source:** Current repository declarations and implementation modules. Historical candidate qualification evidence remains dated separately.
-**Updated:** 2026-10-09
+**Maintained:** 2026-10-11 (VS Code `evc` plugin identity and container-local `cmd-*` command mapping documented).
+**Source:** Repomix compaction (`repomix-output.xml`, 360 files, compressed; ignored and binary files excluded), cross-referenced with current implementation including the canonical help scanner. Historical candidate qualification evidence remains dated separately.
+**Updated:** 2026-10-11
 **Package:** Private npm package `evcrate` 2.10.0; Node `>=22.19.0`. Binaries: `evcrate` (`dist/cli/evcrate.js`) and `evcrate-advisor` (`.evcrate/source/.evcrate/bin/evcrate-advisor`). The controller closure also packages the HOME helper asset `evcrate-advice-mode` (`.evcrate/source/.evcrate/bin/evcrate-advice-mode`), invoked explicitly with supported Node (not an npm CLI binary). The former Advisor plugin API package/runtime is retired; the core Advisor controller and producer history remain.
 **Windows advisor:** Phase 07 exercised one native Windows x64 row (111 passed; formal qualification invalidated by stale `.omp` manifest under Rule 94). Phase 06 completed replacement candidate regeneration (`evcrate-candidate-1791140555626`, 7,410 files, archive SHA-256 `6a720dfb...`, manifest SHA-256 `365f145b...`) with repaired `.omp` output hash, 9/9 extracted root launch test pass, Cycle 2 native Windows runner fixes, clean Linux qualification (753/753 passed, 25 win32 skips), and code review score 9.8/10; ready for Phase 07 requalification. Broader Windows support remains limited to installer lifecycle and `version --json`.
 **Current phases:** Filesystem-policy Phases 01–02, Windows readiness Repairs 01–04, and VS Code Local Phases 08–09 are complete. Advisor Node-only Phases 01–05 are durably complete; Phase 06 candidate regeneration and Linux requalification are complete (review 9.8/10, user approved). Build generation performance Phases 01–05 complete 2026-10-05. Deterministic advice activation Phases 01–03 are ordinary user-approved complete with no durable parent run or receipt (CommonJS activation helper, 30 canonical workflows/commands, and 8-target projection cutover); Phase 04 behavioral qualification and docs integration complete for exercised fixture gates with bounded observed native qualification on Linux x64 (OMP six scenario classes capped at Step 0; prerequisite gate and workflow limits retained; ordinary Phase 04 user approved completed 2026-10-06T14:13:41+07:00 / 9.8 review, no durable completion/provider release/commit claim). Deterministic advice review repairs & prompt economy (PR #19) Phases 01–02 complete (DONE 2026-10-06; review approved 9.2/10, misleading test-title warning fixed, user approved; parser quote/apostrophe/escape handling repaired, OMP delegated receiving path `executeDelegated` added, later removed in PR #19 hardening, cook known-phase handoffs preserved, primary-workflow admission scoped, compact v2 header prompt economy with task expanded once, 9 manifests / 8 targets regenerated; programmatic smoke verified 84 admissions and 6 routed delegations; live model loops and 8-host qualification excluded; no commit/push claims). Unified naming migration: Phases 01–06, Phase 12, Phase 07 (projections/manifests), Phase 08 (publication prune/upgrade), and Phase 09 (tests & golden fixtures; review 9.0/10) are complete. Pending phases: 10 (docs/changelog cutover), 11 (native packaging & multi-harness qualification).
@@ -148,6 +148,18 @@ six adapters use the shared registry. The npm allowlist includes the generated
 `.evcrate/source/.evcrate-vscode/**` bundle, but core release assets remain exactly
 seven. Activation stays user-controlled through manual `chat.pluginLocations`
 registration.
+
+The current plugin descriptor declares `"name": "evc"` (formerly `evcrate-local`).
+`src/adapters/vscode/names.ts` maps canonical `evc-cmd-*` commands to local `cmd-*`;
+`commands.ts` emits `.evcrate-vscode/skills/cmd-*/SKILL.md` as manual skills.
+Copilot Chat displays `evc cmd-*` and qualifies invocation as
+`/<plugin-name>:<skill-name>` → `/evc:cmd-*`, avoiding a duplicate `evc` prefix.
+`replaceCommandInvocations` in `src/adapters/vscode/references.ts` converts
+`/evc-cmd-*` and `$evc-cmd-*` to `/cmd-*` and `$cmd-*`, including wildcard families
+such as `/evc-cmd-plan-x-*` → `/cmd-plan-x-*`. Shared
+`.evcrate/source/.claude/scripts/ev-help.py` scans both `evc-cmd-*/SKILL.md`
+and `cmd-*/SKILL.md`. Canonical names, `-x-` nesting, and semantic IDs remain stable;
+the historical qualification below is not a new GUI qualification of this change.
 
 Phase 08 completed real VS Code Local qualification on Linux x64 (VS Code 1.140.0;
 Copilot Chat 0.68.0), verified via the [qualification index](../plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md),
@@ -666,13 +678,13 @@ Phase 09 reconciles and finalizes operator documentation against that proof:
   its resource-graph entry. Local Claude projection uses `.claude-projection`
   without replacing authoring resources. See the [native delivery matrix and
   loader prerequisites](./system-architecture.md#instruction-authority-and-native-delivery).
-- All seven active targets project unified `evc-cmd-*` command names and `evc-*` agent names.
+- Commands retain canonical `evc-cmd-*` identities; VS Code Local projects container-local `cmd-*` skills under plugin `evc`, while the other six targets retain `evc-cmd-*`. Agent names remain `evc-*`.
 - Copilot emits `evc-cmd-*` skills with raw `$ARGUMENTS`; it is not an advisor backend.
 - Pi resolves command, workflow, and main/child instruction references from its active installed resource root.
 
 ### Command and resource naming convention
 
-Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<segment>)*.md`) with `-x-` segment separation, and agents use `evc-*`. Governed by `src/adapters/resource-naming.ts` and enforced by `.evcrate/source/.claude/scripts/scan_commands.py`, all seven active targets project flat `evc-*` identities. Semantic command identities (`code/auto`) remain the stable keys for advisor activation. Shell commands remain executable syntax, not slash resource names.
+Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<segment>)*.md`) with `-x-` segment separation, and agents use `evc-*`. Governed by `src/adapters/resource-naming.ts` and enforced by `.evcrate/source/.claude/scripts/scan_commands.py`, all seven active targets retain flat resource names; VS Code Local uses `cmd-*` command skill names inside plugin `evc`. Semantic command identities (`code/auto`) remain the stable keys for advisor activation. Shell commands remain executable syntax, not slash resource names.
 
 ### Phase 07 unified projection and catalog regeneration
 

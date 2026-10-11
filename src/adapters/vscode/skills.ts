@@ -111,7 +111,7 @@ export function convertVscodeSkills(
   // Write evcrate/skill-map.json
   const skillMapData = {
     schema: 'evcrate-vscode-skill-map-v1',
-    plugin_id: 'evcrate-local',
+    plugin_id: 'evc',
     skills: skills.map((s) => ({
       source: s.source,
       sourceSemanticId: s.sourceSemanticId,

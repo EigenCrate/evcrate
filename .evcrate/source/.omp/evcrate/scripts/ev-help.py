@@ -251,19 +251,25 @@ _KEBAB_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def command_segments(stem: str) -> list:
-    """Segments of a flat command stem (`evc-cmd-a-x-b` -> ['a', 'b']); [] when the stem is not a command."""
-    if not _KEBAB_NAME.fullmatch(stem) or not stem.startswith(COMMAND_PREFIX):
+    """Segments of a flat command stem (`evc-cmd-a-x-b` or `cmd-a-x-b` -> ['a', 'b']); [] when not a command."""
+    if not _KEBAB_NAME.fullmatch(stem):
         return []
-    segments = stem[len(COMMAND_PREFIX):].split(SEGMENT_SEPARATOR)
+    if stem.startswith(COMMAND_PREFIX):
+        rest = stem[len(COMMAND_PREFIX):]
+    elif stem.startswith("cmd-"):
+        rest = stem[4:]
+    else:
+        return []
+    segments = rest.split(SEGMENT_SEPARATOR)
     if any(not seg or "x" in seg.split("-") for seg in segments):
         return []
     return segments
 
 
 def command_key(text: str) -> tuple:
-    """Segments for user input: `plan:hard`, `/plan:hard` or `/evc-cmd-plan-x-hard`."""
+    """Segments for user input: `plan:hard`, `/plan:hard`, `/evc-cmd-plan-x-hard` or `/cmd-plan-x-hard`."""
     text = text.strip().lower().lstrip("/")
-    if text.startswith(COMMAND_PREFIX):
+    if text.startswith(COMMAND_PREFIX) or text.startswith("cmd-"):
         return tuple(command_segments(text))
     return tuple(part for part in re.split(r"[:/]+", text) if part)
 
@@ -338,7 +344,7 @@ def discover_skill_commands(skills_dir: Path) -> dict:
     if not skills_dir.is_dir():
         return {"commands": commands, "categories": categories}
 
-    for skill_file in sorted(skills_dir.glob("evc-cmd-*/SKILL.md")):
+    for skill_file in sorted([*skills_dir.glob("evc-cmd-*/SKILL.md"), *skills_dir.glob("cmd-*/SKILL.md")]):
         metadata = parse_command_metadata(skill_file)
         description = metadata.get("description", "")
         match = COMMAND_PATH_RE.search(skill_file.read_text(encoding="utf-8"))
@@ -437,8 +443,8 @@ def detect_intent(input_str: str, categories: list) -> str:
     input_lower = input_str.lower()
     words = input_str.split()
 
-    # A lone flat command name (/evc-cmd-plan-x-hard) is a command lookup; with free text it is a task description
-    if len(words) == 1 and input_lower.lstrip("/").startswith(COMMAND_PREFIX):
+    # A lone flat command name (/evc-cmd-plan-x-hard or /cmd-plan-x-hard) is a command lookup; with free text it is a task description
+    if len(words) == 1 and (input_lower.lstrip("/").startswith(COMMAND_PREFIX) or input_lower.lstrip("/").startswith("cmd-")):
         return "command"
 
     # Multiple words = likely task description (even if first word is a category)

@@ -254,7 +254,7 @@ export function buildVscodeInventory(
   // Write resource-name-map.json
   writeJson(context, 'evcrate/resource-name-map.json', {
     schema: 'evcrate-vscode-resource-name-map-v1',
-    plugin_id: 'evcrate-local',
+    plugin_id: 'evc',
     resources: resourceMap.sort((a, b) => a.source.localeCompare(b.source))
   });
 
@@ -346,7 +346,7 @@ export function buildVscodeInventory(
   // Write directory-manifest.json
   writeJson(context, 'evcrate/directory-manifest.json', {
     schema: 'evcrate-vscode-directory-manifest-v1',
-    plugin_id: 'evcrate-local',
+    plugin_id: 'evc',
     total_skill_directories: directoryEntries.length,
     total_archived_directories: archivedDirectoryCount,
     directories: directoryEntries.sort((a, b) => a.destinationDirectory.localeCompare(b.destinationDirectory))
@@ -355,7 +355,7 @@ export function buildVscodeInventory(
   // Write projection-inventory.json
   const inventory = {
     schema: 'evcrate-vscode-projection-inventory-v1',
-    plugin_id: 'evcrate-local',
+    plugin_id: 'evc',
     source: '.evcrate/source/.claude',
     target: '.evcrate-vscode',
     entries: entries.sort((a, b) => a.source.localeCompare(b.source)),

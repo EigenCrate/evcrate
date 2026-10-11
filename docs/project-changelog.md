@@ -2,8 +2,16 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-10
+**Updated:** 2026-10-11
 **Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+
+### 2026-10-11 — fix(vscode): shorten plugin identity and use container-local command names
+
+- Changed `plugin.json` name from `evcrate-local` to `evc`; VS Code command/resource metadata uses the same plugin identity.
+- Canonical `evc-cmd-*` commands now project to `.evcrate-vscode/skills/cmd-*/SKILL.md`, preserving `-x-` nesting and semantic advisor IDs. Copilot Chat displays `evc cmd-*`; host-qualified `/<plugin-name>:<skill-name>` becomes `/evc:cmd-*`, avoiding duplicate `evc` prefixing.
+- `src/adapters/vscode/references.ts` (`replaceCommandInvocations`) rewrites `/evc-cmd-*` and `$evc-cmd-*` to local `/cmd-*` and `$cmd-*`, including wildcard command families.
+- Shared `.evcrate/source/.claude/scripts/ev-help.py` scans both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`; canonical source naming and non-VS Code projections remain unchanged.
+- Reconciled README, codebase summary, architecture, standards, and PDR. Documentation update ran no build/test gates and makes no new live Copilot Chat qualification claim.
 
 ### 2026-10-10 — fix(distribution): recover retired cleanup and authenticate stable approval
 

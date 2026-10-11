@@ -1,420 +1,420 @@
 - source: evc-cmd-advise.md
-  name: /evc-cmd-advise
-  path: evc-cmd-advise/SKILL.md
+  name: /cmd-advise
+  path: cmd-advise/SKILL.md
   description: Interview-first technical advice; advisor relay is unsupported by VS Code Local.
   argument_hint: '[prompt-or-url]'
   category: core
 - source: evc-cmd-ask.md
-  name: /evc-cmd-ask
-  path: evc-cmd-ask/SKILL.md
+  name: /cmd-ask
+  path: cmd-ask/SKILL.md
   description: Answer technical and architectural questions.
   argument_hint: '[technical-question]'
   category: core
 - source: evc-cmd-bootstrap.md
-  name: /evc-cmd-bootstrap
-  path: evc-cmd-bootstrap/SKILL.md
+  name: /cmd-bootstrap
+  path: cmd-bootstrap/SKILL.md
   description: Bootstrap a new project step by step
   argument_hint: '[user-requirements] [--advice]'
   category: core
 - source: evc-cmd-bootstrap-x-auto.md
-  name: /evc-cmd-bootstrap-x-auto
-  path: evc-cmd-bootstrap-x-auto/SKILL.md
+  name: /cmd-bootstrap-x-auto
+  path: cmd-bootstrap-x-auto/SKILL.md
   description: Bootstrap a new project automatically
   argument_hint: '[user-requirements] [--advice]'
   category: bootstrap
 - source: evc-cmd-bootstrap-x-auto-x-fast.md
-  name: /evc-cmd-bootstrap-x-auto-x-fast
-  path: evc-cmd-bootstrap-x-auto-x-fast/SKILL.md
+  name: /cmd-bootstrap-x-auto-x-fast
+  path: cmd-bootstrap-x-auto-x-fast/SKILL.md
   description: Quickly bootstrap a new project automatically
   argument_hint: '[user-requirements] [--advice]'
   category: bootstrap
 - source: evc-cmd-bootstrap-x-auto-x-parallel.md
-  name: /evc-cmd-bootstrap-x-auto-x-parallel
-  path: evc-cmd-bootstrap-x-auto-x-parallel/SKILL.md
+  name: /cmd-bootstrap-x-auto-x-parallel
+  path: cmd-bootstrap-x-auto-x-parallel/SKILL.md
   description: Bootstrap project with parallel execution
   argument_hint: '[user-requirements] [--advice]'
   category: bootstrap
 - source: evc-cmd-brainstorm.md
-  name: /evc-cmd-brainstorm
-  path: evc-cmd-brainstorm/SKILL.md
+  name: /cmd-brainstorm
+  path: cmd-brainstorm/SKILL.md
   description: Brainstorm a feature
   argument_hint: '[question]'
   category: core
 - source: evc-cmd-code.md
-  name: /evc-cmd-code
-  path: evc-cmd-code/SKILL.md
+  name: /cmd-code
+  path: cmd-code/SKILL.md
   description: Start coding & testing an existing plan
   argument_hint: '[plan] [--advice]'
   category: core
 - source: evc-cmd-code-x-auto.md
-  name: /evc-cmd-code-x-auto
-  path: evc-cmd-code-x-auto/SKILL.md
+  name: /cmd-code-x-auto
+  path: cmd-code-x-auto/SKILL.md
   description: '[AUTO] Start coding & testing an existing plan (\"trust me bro\")'
   argument_hint: '[plan] [all-phases-yes-or-no] [--advice] (default: yes)'
   category: code
 - source: evc-cmd-code-x-no-test.md
-  name: /evc-cmd-code-x-no-test
-  path: evc-cmd-code-x-no-test/SKILL.md
+  name: /cmd-code-x-no-test
+  path: cmd-code-x-no-test/SKILL.md
   description: Start coding an existing plan (no testing)
   argument_hint: '[plan] [--advice]'
   category: code
 - source: evc-cmd-code-x-parallel.md
-  name: /evc-cmd-code-x-parallel
-  path: evc-cmd-code-x-parallel/SKILL.md
+  name: /cmd-code-x-parallel
+  path: cmd-code-x-parallel/SKILL.md
   description: Execute parallel or sequential phases based on plan structure
   argument_hint: '[plan-path] [--advice]'
   category: code
 - source: evc-cmd-coding-level.md
-  name: /evc-cmd-coding-level
-  path: evc-cmd-coding-level/SKILL.md
+  name: /cmd-coding-level
+  path: cmd-coding-level/SKILL.md
   description: Set your coding experience level for tailored explanations and output format.
   argument_hint: '[0-5]'
   category: core
 - source: evc-cmd-content-x-cro.md
-  name: /evc-cmd-content-x-cro
-  path: evc-cmd-content-x-cro/SKILL.md
+  name: /cmd-content-x-cro
+  path: cmd-content-x-cro/SKILL.md
   description: Analyze the current content and optimize for conversion
   argument_hint: '[issues]'
   category: content
 - source: evc-cmd-content-x-enhance.md
-  name: /evc-cmd-content-x-enhance
-  path: evc-cmd-content-x-enhance/SKILL.md
+  name: /cmd-content-x-enhance
+  path: cmd-content-x-enhance/SKILL.md
   description: Analyze the current copy issues and enhance it
   argument_hint: '[issues]'
   category: content
 - source: evc-cmd-content-x-fast.md
-  name: /evc-cmd-content-x-fast
-  path: evc-cmd-content-x-fast/SKILL.md
+  name: /cmd-content-x-fast
+  path: cmd-content-x-fast/SKILL.md
   description: Write creative & smart copy [FAST]
   argument_hint: '[user-request]'
   category: content
 - source: evc-cmd-content-x-good.md
-  name: /evc-cmd-content-x-good
-  path: evc-cmd-content-x-good/SKILL.md
+  name: /cmd-content-x-good
+  path: cmd-content-x-good/SKILL.md
   description: Write good creative & smart copy [GOOD]
   argument_hint: '[user-request]'
   category: content
 - source: evc-cmd-cook.md
-  name: /evc-cmd-cook
-  path: evc-cmd-cook/SKILL.md
+  name: /cmd-cook
+  path: cmd-cook/SKILL.md
   description: Implement a feature [step by step]
   argument_hint: '[tasks] [--advice]'
   category: core
 - source: evc-cmd-cook-x-auto.md
-  name: /evc-cmd-cook-x-auto
-  path: evc-cmd-cook-x-auto/SKILL.md
+  name: /cmd-cook-x-auto
+  path: cmd-cook-x-auto/SKILL.md
   description: Implement a feature automatically with plan and quality gates
   argument_hint: '[tasks] [--advice]'
   category: cook
 - source: evc-cmd-cook-x-auto-x-fast.md
-  name: /evc-cmd-cook-x-auto-x-fast
-  path: evc-cmd-cook-x-auto-x-fast/SKILL.md
+  name: /cmd-cook-x-auto-x-fast
+  path: cmd-cook-x-auto-x-fast/SKILL.md
   description: 'Low-risk fast cook: scout, plan fast, implement with quality gates'
   argument_hint: '[tasks-or-prompt] [--advice]'
   category: cook
 - source: evc-cmd-cook-x-auto-x-parallel.md
-  name: /evc-cmd-cook-x-auto-x-parallel
-  path: evc-cmd-cook-x-auto-x-parallel/SKILL.md
+  name: /cmd-cook-x-auto-x-parallel
+  path: cmd-cook-x-auto-x-parallel/SKILL.md
   description: Plan parallel phases & execute with evc-fullstack-developer agents
   argument_hint: '[tasks] [--advice]'
   category: cook
 - source: evc-cmd-debug.md
-  name: /evc-cmd-debug
-  path: evc-cmd-debug/SKILL.md
+  name: /cmd-debug
+  path: cmd-debug/SKILL.md
   description: Debugging technical issues and providing solutions.
   argument_hint: '[issues]'
   category: core
 - source: evc-cmd-design-x-3d.md
-  name: /evc-cmd-design-x-3d
-  path: evc-cmd-design-x-3d/SKILL.md
+  name: /cmd-design-x-3d
+  path: cmd-design-x-3d/SKILL.md
   description: Create immersive interactive 3D designs with Three.js
   argument_hint: '[tasks]'
   category: design
 - source: evc-cmd-design-x-describe.md
-  name: /evc-cmd-design-x-describe
-  path: evc-cmd-design-x-describe/SKILL.md
+  name: /cmd-design-x-describe
+  path: cmd-design-x-describe/SKILL.md
   description: Describe a design based on screenshot/video
   argument_hint: '[screenshot]'
   category: design
 - source: evc-cmd-design-x-fast.md
-  name: /evc-cmd-design-x-fast
-  path: evc-cmd-design-x-fast/SKILL.md
+  name: /cmd-design-x-fast
+  path: cmd-design-x-fast/SKILL.md
   description: Create a quick design
   argument_hint: '[tasks]'
   category: design
 - source: evc-cmd-design-x-good.md
-  name: /evc-cmd-design-x-good
-  path: evc-cmd-design-x-good/SKILL.md
+  name: /cmd-design-x-good
+  path: cmd-design-x-good/SKILL.md
   description: Create an immersive design
   argument_hint: '[tasks]'
   category: design
 - source: evc-cmd-design-x-screenshot.md
-  name: /evc-cmd-design-x-screenshot
-  path: evc-cmd-design-x-screenshot/SKILL.md
+  name: /cmd-design-x-screenshot
+  path: cmd-design-x-screenshot/SKILL.md
   description: Create a design based on screenshot
   argument_hint: '[screenshot]'
   category: design
 - source: evc-cmd-design-x-video.md
-  name: /evc-cmd-design-x-video
-  path: evc-cmd-design-x-video/SKILL.md
+  name: /cmd-design-x-video
+  path: cmd-design-x-video/SKILL.md
   description: Create a design based on video
   argument_hint: '[video]'
   category: design
 - source: evc-cmd-docs-x-init.md
-  name: /evc-cmd-docs-x-init
-  path: evc-cmd-docs-x-init/SKILL.md
+  name: /cmd-docs-x-init
+  path: cmd-docs-x-init/SKILL.md
   description: Analyze the codebase and create initial documentation
   argument_hint: ''
   category: docs
 - source: evc-cmd-docs-x-summarize.md
-  name: /evc-cmd-docs-x-summarize
-  path: evc-cmd-docs-x-summarize/SKILL.md
+  name: /cmd-docs-x-summarize
+  path: cmd-docs-x-summarize/SKILL.md
   description: Analyze the codebase and update documentation
   argument_hint: '[focused-topics] [should-scan-codebase]'
   category: docs
 - source: evc-cmd-docs-x-update.md
-  name: /evc-cmd-docs-x-update
-  path: evc-cmd-docs-x-update/SKILL.md
+  name: /cmd-docs-x-update
+  path: cmd-docs-x-update/SKILL.md
   description: Analyze the codebase and update documentation
   argument_hint: ''
   category: docs
 - source: evc-cmd-fix.md
-  name: /evc-cmd-fix
-  path: evc-cmd-fix/SKILL.md
+  name: /cmd-fix
+  path: cmd-fix/SKILL.md
   description: Analyze and fix issues [INTELLIGENT ROUTING]
   argument_hint: '[issues] [--advice]'
   category: core
 - source: evc-cmd-fix-x-ci.md
-  name: /evc-cmd-fix-x-ci
-  path: evc-cmd-fix-x-ci/SKILL.md
+  name: /cmd-fix-x-ci
+  path: cmd-fix-x-ci/SKILL.md
   description: Analyze Github Actions logs and fix issues
   argument_hint: '[github-actions-url] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-fast.md
-  name: /evc-cmd-fix-x-fast
-  path: evc-cmd-fix-x-fast/SKILL.md
+  name: /cmd-fix-x-fast
+  path: cmd-fix-x-fast/SKILL.md
   description: Analyze and fix small issues [FAST]
   argument_hint: '[issues] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-hard.md
-  name: /evc-cmd-fix-x-hard
-  path: evc-cmd-fix-x-hard/SKILL.md
+  name: /cmd-fix-x-hard
+  path: cmd-fix-x-hard/SKILL.md
   description: Use subagents to plan and fix hard issues
   argument_hint: '[issues] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-logs.md
-  name: /evc-cmd-fix-x-logs
-  path: evc-cmd-fix-x-logs/SKILL.md
+  name: /cmd-fix-x-logs
+  path: cmd-fix-x-logs/SKILL.md
   description: Analyze logs and fix issues
   argument_hint: '[issue] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-parallel.md
-  name: /evc-cmd-fix-x-parallel
-  path: evc-cmd-fix-x-parallel/SKILL.md
+  name: /cmd-fix-x-parallel
+  path: cmd-fix-x-parallel/SKILL.md
   description: Analyze & fix issues with parallel evc-fullstack-developer agents
   argument_hint: '[issues] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-test.md
-  name: /evc-cmd-fix-x-test
-  path: evc-cmd-fix-x-test/SKILL.md
+  name: /cmd-fix-x-test
+  path: cmd-fix-x-test/SKILL.md
   description: Run test suite and fix issues
   argument_hint: '[issues] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-types.md
-  name: /evc-cmd-fix-x-types
-  path: evc-cmd-fix-x-types/SKILL.md
+  name: /cmd-fix-x-types
+  path: cmd-fix-x-types/SKILL.md
   description: Fix type errors
   argument_hint: '[options] [--advice]'
   category: fix
 - source: evc-cmd-fix-x-ui.md
-  name: /evc-cmd-fix-x-ui
-  path: evc-cmd-fix-x-ui/SKILL.md
+  name: /cmd-fix-x-ui
+  path: cmd-fix-x-ui/SKILL.md
   description: Analyze and fix UI issues
   argument_hint: '[issue] [--advice]'
   category: fix
 - source: evc-cmd-git-x-cm.md
-  name: /evc-cmd-git-x-cm
-  path: evc-cmd-git-x-cm/SKILL.md
+  name: /cmd-git-x-cm
+  path: cmd-git-x-cm/SKILL.md
   description: Stage all files and create a commit.
   argument_hint: ''
   category: git
 - source: evc-cmd-git-x-cp.md
-  name: /evc-cmd-git-x-cp
-  path: evc-cmd-git-x-cp/SKILL.md
+  name: /cmd-git-x-cp
+  path: cmd-git-x-cp/SKILL.md
   description: Stage, commit and push all code in the current branch
   argument_hint: ''
   category: git
 - source: evc-cmd-git-x-merge.md
-  name: /evc-cmd-git-x-merge
-  path: evc-cmd-git-x-merge/SKILL.md
+  name: /cmd-git-x-merge
+  path: cmd-git-x-merge/SKILL.md
   description: ⚠️ Merge code from one branch to another
   argument_hint: '[branch] [from-branch]'
   category: git
 - source: evc-cmd-git-x-pr.md
-  name: /evc-cmd-git-x-pr
-  path: evc-cmd-git-x-pr/SKILL.md
+  name: /cmd-git-x-pr
+  path: cmd-git-x-pr/SKILL.md
   description: Create a pull request
   argument_hint: '[branch] [from-branch]'
   category: git
 - source: evc-cmd-help.md
-  name: /evc-cmd-help
-  path: evc-cmd-help/SKILL.md
+  name: /cmd-help
+  path: cmd-help/SKILL.md
   description: EVCrate usage guide - just type naturally
   argument_hint: '[category|command|task description]'
   category: core
 - source: evc-cmd-journal.md
-  name: /evc-cmd-journal
-  path: evc-cmd-journal/SKILL.md
+  name: /cmd-journal
+  path: cmd-journal/SKILL.md
   description: Write some journal entries.
   argument_hint: ''
   category: core
 - source: evc-cmd-plan.md
-  name: /evc-cmd-plan
-  path: evc-cmd-plan/SKILL.md
+  name: /cmd-plan
+  path: cmd-plan/SKILL.md
   description: Intelligent plan creation with prompt enhancement
   argument_hint: '[task]'
   category: core
 - source: evc-cmd-plan-x-archive.md
-  name: /evc-cmd-plan-x-archive
-  path: evc-cmd-plan-x-archive/SKILL.md
+  name: /cmd-plan-x-archive
+  path: cmd-plan-x-archive/SKILL.md
   description: Write journal entries and archive specific plans or all plans
   argument_hint: '[path-to-plan] (default: all plans)'
   category: plan
 - source: evc-cmd-plan-x-ci.md
-  name: /evc-cmd-plan-x-ci
-  path: evc-cmd-plan-x-ci/SKILL.md
+  name: /cmd-plan-x-ci
+  path: cmd-plan-x-ci/SKILL.md
   description: Analyze Github Actions logs and provide a plan to fix the issues
   argument_hint: '[github-actions-url]'
   category: plan
 - source: evc-cmd-plan-x-cro.md
-  name: /evc-cmd-plan-x-cro
-  path: evc-cmd-plan-x-cro/SKILL.md
+  name: /cmd-plan-x-cro
+  path: cmd-plan-x-cro/SKILL.md
   description: Create a CRO plan for the given content
   argument_hint: '[issues]'
   category: plan
 - source: evc-cmd-plan-x-fast.md
-  name: /evc-cmd-plan-x-fast
-  path: evc-cmd-plan-x-fast/SKILL.md
+  name: /cmd-plan-x-fast
+  path: cmd-plan-x-fast/SKILL.md
   description: No research. Only analyze and create an implementation plan
   argument_hint: '[task]'
   category: plan
 - source: evc-cmd-plan-x-hard.md
-  name: /evc-cmd-plan-x-hard
-  path: evc-cmd-plan-x-hard/SKILL.md
+  name: /cmd-plan-x-hard
+  path: cmd-plan-x-hard/SKILL.md
   description: Research, analyze, and create an implementation plan
   argument_hint: '[task]'
   category: plan
 - source: evc-cmd-plan-x-parallel.md
-  name: /evc-cmd-plan-x-parallel
-  path: evc-cmd-plan-x-parallel/SKILL.md
+  name: /cmd-plan-x-parallel
+  path: cmd-plan-x-parallel/SKILL.md
   description: Create detailed plan with parallel-executable phases
   argument_hint: '[task]'
   category: plan
 - source: evc-cmd-plan-x-two.md
-  name: /evc-cmd-plan-x-two
-  path: evc-cmd-plan-x-two/SKILL.md
+  name: /cmd-plan-x-two
+  path: cmd-plan-x-two/SKILL.md
   description: Research & create an implementation plan with 2 approaches
   argument_hint: '[task]'
   category: plan
 - source: evc-cmd-plan-x-validate.md
-  name: /evc-cmd-plan-x-validate
-  path: evc-cmd-plan-x-validate/SKILL.md
+  name: /cmd-plan-x-validate
+  path: cmd-plan-x-validate/SKILL.md
   description: Validate plan with critical questions interview
   argument_hint: '[plan-path]'
   category: plan
 - source: evc-cmd-review-x-codebase.md
-  name: /evc-cmd-review-x-codebase
-  path: evc-cmd-review-x-codebase/SKILL.md
+  name: /cmd-review-x-codebase
+  path: cmd-review-x-codebase/SKILL.md
   description: Scan & analyze the codebase.
   argument_hint: '[tasks-or-prompt]'
   category: review
 - source: evc-cmd-review-x-codebase-x-parallel.md
-  name: /evc-cmd-review-x-codebase-x-parallel
-  path: evc-cmd-review-x-codebase-x-parallel/SKILL.md
+  name: /cmd-review-x-codebase-x-parallel
+  path: cmd-review-x-codebase-x-parallel/SKILL.md
   description: Ultrathink edge cases, then parallel verify with code-reviewers
   argument_hint: '[scope-or-prompt]'
   category: review
 - source: evc-cmd-scout.md
-  name: /evc-cmd-scout
-  path: evc-cmd-scout/SKILL.md
+  name: /cmd-scout
+  path: cmd-scout/SKILL.md
   description: Scout given directories to respond to the user's requests
   argument_hint: '[user-prompt] [scale]'
   category: core
 - source: evc-cmd-scout-x-ext.md
-  name: /evc-cmd-scout-x-ext
-  path: evc-cmd-scout-x-ext/SKILL.md
+  name: /cmd-scout-x-ext
+  path: cmd-scout-x-ext/SKILL.md
   description: Use external agentic tools to scout given directories
   argument_hint: '[user-prompt] [scale]'
   category: scout
 - source: evc-cmd-skill-x-add.md
-  name: /evc-cmd-skill-x-add
-  path: evc-cmd-skill-x-add/SKILL.md
+  name: /cmd-skill-x-add
+  path: cmd-skill-x-add/SKILL.md
   description: Add new reference files or scripts to a skill
   argument_hint: '[skill-name] [reference-or-script-prompt]'
   category: skill
 - source: evc-cmd-skill-x-create.md
-  name: /evc-cmd-skill-x-create
-  path: evc-cmd-skill-x-create/SKILL.md
+  name: /cmd-skill-x-create
+  path: cmd-skill-x-create/SKILL.md
   description: Create a new agent skill
   argument_hint: '[prompt-or-llms-or-github-url]'
   category: skill
 - source: evc-cmd-skill-x-fix-logs.md
-  name: /evc-cmd-skill-x-fix-logs
-  path: evc-cmd-skill-x-fix-logs/SKILL.md
+  name: /cmd-skill-x-fix-logs
+  path: cmd-skill-x-fix-logs/SKILL.md
   description: Fix the agent skill based on `logs.txt` file.
   argument_hint: '[prompt-or-path-to-skill]'
   category: skill
 - source: evc-cmd-skill-x-optimize.md
-  name: /evc-cmd-skill-x-optimize
-  path: evc-cmd-skill-x-optimize/SKILL.md
+  name: /cmd-skill-x-optimize
+  path: cmd-skill-x-optimize/SKILL.md
   description: Optimize an existing agent skill
   argument_hint: '[skill-name] [prompt]'
   category: skill
 - source: evc-cmd-skill-x-optimize-x-auto.md
-  name: /evc-cmd-skill-x-optimize-x-auto
-  path: evc-cmd-skill-x-optimize-x-auto/SKILL.md
+  name: /cmd-skill-x-optimize-x-auto
+  path: cmd-skill-x-optimize-x-auto/SKILL.md
   description: Optimize an existing agent skill [auto]
   argument_hint: '[skill-name] [prompt]'
   category: skill
 - source: evc-cmd-skill-x-plan.md
-  name: /evc-cmd-skill-x-plan
-  path: evc-cmd-skill-x-plan/SKILL.md
+  name: /cmd-skill-x-plan
+  path: cmd-skill-x-plan/SKILL.md
   description: Plan to create a new agent skill
   argument_hint: '[skill-name] [prompt]'
   category: skill
 - source: evc-cmd-take.md
-  name: /evc-cmd-take
-  path: evc-cmd-take/SKILL.md
+  name: /cmd-take
+  path: cmd-take/SKILL.md
   description: Transfer a feature from another project through compare, copy, improve, or port gates
   argument_hint: '[mode] <source-repo-or-path> <feature> [local-notes]'
   category: core
 - source: evc-cmd-test.md
-  name: /evc-cmd-test
-  path: evc-cmd-test/SKILL.md
+  name: /cmd-test
+  path: cmd-test/SKILL.md
   description: Run tests locally and analyze the summary report.
   argument_hint: ''
   category: core
 - source: evc-cmd-test-x-ui.md
-  name: /evc-cmd-test-x-ui
-  path: evc-cmd-test-x-ui/SKILL.md
+  name: /cmd-test-x-ui
+  path: cmd-test-x-ui/SKILL.md
   description: Run UI tests on a website & generate a detailed report.
   argument_hint: '[url] [options]'
   category: test
 - source: evc-cmd-use-mcp.md
-  name: /evc-cmd-use-mcp
-  path: evc-cmd-use-mcp/SKILL.md
+  name: /cmd-use-mcp
+  path: cmd-use-mcp/SKILL.md
   description: Utilize tools of Model Context Protocol (MCP) servers
   argument_hint: '[task]'
   category: core
 - source: evc-cmd-watzup.md
-  name: /evc-cmd-watzup
-  path: evc-cmd-watzup/SKILL.md
+  name: /cmd-watzup
+  path: cmd-watzup/SKILL.md
   description: Review recent changes and wrap up the work
   argument_hint: ''
   category: core
 - source: evc-cmd-worktree.md
-  name: /evc-cmd-worktree
-  path: evc-cmd-worktree/SKILL.md
+  name: /cmd-worktree
+  path: cmd-worktree/SKILL.md
   description: Create isolated git worktree for parallel development
   argument_hint: '[feature-description] OR [project] [feature] (monorepo) [--base <branch>] [--plan <path>]'
   category: core

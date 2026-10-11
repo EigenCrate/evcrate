@@ -1,12 +1,12 @@
 # Code Standards and Codebase Structure
 
 **Status:** Current implementation standards for the EVCrate core package; former plugin-specific guidance below is historical.
-**Updated:** 2026-10-06
+**Updated:** 2026-10-11
 **Applies to:** TypeScript control plane, core advisor controller, canonical harness resources, generated projections, and publication tooling.
 **Windows release boundary:** Qualification covers only standalone installer lifecycle and clean-install `version --json`.
 Native Windows advisor Phases 01–04 are complete: Phase 03 observed OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi remain unverified. This does not establish broad Windows runtime parity or authorize production release.
 
-**Plugin architecture:** DamHopper's former plugin runtime, SDK, and host integration were retired 2026-10-02. VS Code Local native support is an isolated Agent Plugins 1.0 bundle (`evcrate-local`) registered via user-controlled `chat.pluginLocations`, completely distinct from the retired DamHopper plugin and VSIX distribution.
+**Plugin architecture:** DamHopper's former plugin runtime, SDK, and host integration were retired 2026-10-02. VS Code Local native support is an isolated Agent Plugins 1.0 bundle (`evc`, formerly `evcrate-local`) registered via user-controlled `chat.pluginLocations`, completely distinct from the retired DamHopper plugin and VSIX distribution.
 **Linting standard:** Package script `npm run lint` is currently an echo-only check (`echo "Linting passed"`). Code standards and invariants are enforced deterministically via TypeScript compiler checks (`tsc`), runtime closure checks, and the automated test suite.
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
@@ -42,7 +42,7 @@ The following patterns are strictly prohibited across the codebase:
 - **No full mentoring load or controller consultation in off mode**: Callers must resolve activation mode via `evcrate-advice-mode` before loading `advisor-mentoring.md`. Off mode strictly forbids reading mentoring instructions through navigation, loops, or fallback prompts, and never invokes `evcrate-advisor` (no get, no locks).
 - **No synthetic flag appending or handoff replay**: Routers and delegators must use structured direct handoffs (`kind: "pre-run"` or `"same-run"`) built for the exact current call only. User-entered commands always use `handoff: null`; appending fake or synthetic `--advice` flags or replaying prior handoffs is banned.
 - **No historical state mutation or off-mode state get during progress inspection**: Progress reconciliation via `plan-progress.md` in `off` mode never invokes `evcrate-advisor` (dependency basis is immutable in-repo receipts + sealed-path metadata, reported `receipt-attested; controller not consulted`; identified unreceipted runs pause same/overlapping scope only). Only `explicit` and `inherited` modes use identified `state get`, and progress inspection never invokes `init`, checkpoint reservations, claims, consultation, disposition, outcome, or completion.
-- **No legacy command or agent naming in maintained sources**: All commands strictly project `evc-cmd-*` (nested with `-x-`, length <= 64), custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy shapes (`cmd_`, colons, underscores).
+- **No legacy command or agent naming in maintained sources**: Canonical commands use `evc-cmd-*` (nested with `-x-`, length <= 64); VS Code Local alone projects `cmd-*` within plugin `evc`. Custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy resource names (`cmd_`, colons, underscores); VS Code's `/evc:cmd-*` qualifier is host syntax, not a resource name.
 - **Single AGENTS.md authoring authority**: Canonical instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never author in root `AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
 - **Branch topology and release qualification**: Canonical release branches are `main` (stable) and `next` (prerelease `rc`). Stable publication always requires live, candidate-bound GitHub authorization; caller-authored approval files and environment flags cannot grant authorization.
 
@@ -194,10 +194,10 @@ stderr, credentials, and stack traces do not cross the public boundary.
 
 ## Normative command and resource naming
 
-All documentation and target-facing examples use unified `evc-cmd-*` naming for
-slash commands and `evc-*` naming for agents. The single authority is
-`src/adapters/resource-naming.ts`, enforced canonically by
-`.evcrate/source/.claude/scripts/scan_commands.py`:
+Canonical documentation and non-VS Code command projections use `evc-cmd-*`;
+VS Code Local uses container-local `cmd-*` skills in plugin `evc`. Agents use
+`evc-*`. Canonical naming authority is `src/adapters/resource-naming.ts`, enforced
+by `.evcrate/source/.claude/scripts/scan_commands.py`:
 
 - Canonical command source files are flat files under `.evcrate/source/.claude/commands/evc-cmd-*.md`.
 - Root forms are `/evc-cmd-plan`, `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, and `/evc-cmd-advise`.
@@ -206,7 +206,10 @@ slash commands and `evc-*` naming for agents. The single authority is
 - Agents use `/evc-*` (e.g., `evc-advisor`, `evc-code-reviewer`, `evc-planner`).
 - Copilot projects user-invocable skills as `evc-cmd-*` (with raw `$ARGUMENTS`) and styles as `evc-style-*`.
 - Semantic identities (e.g. `code/auto`) join segments with `/` and remain the stable key for advisor activation allowlists.
-- All seven active target projection adapters emit flat `evc-*` names without compatibility aliases.
+- VS Code `plugin.json` declares `"name": "evc"`; canonical `evc-cmd-*` maps to `.evcrate-vscode/skills/cmd-*/SKILL.md`. Copilot Chat displays `evc cmd-*` and qualifies invocation as `/evc:cmd-*`; never emit duplicate `evc-` prefixes in local command skill names.
+- `src/adapters/vscode/references.ts` (`replaceCommandInvocations`) rewrites `/evc-cmd-*` and `$evc-cmd-*` to local `/cmd-*` and `$cmd-*`, including wildcard family references. Preserve `-x-` nesting and semantic IDs.
+- The shared `ev-help.py` scanner must discover both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`.
+- All seven adapters retain flat resource names without compatibility aliases; plugin qualification is separate from resource naming.
 - Shell executable syntax (`npm`, `node`, `python3`, `cp`, `export`) is executable shell syntax, not slash resource names.
 ## Protocol and JSON standards
 

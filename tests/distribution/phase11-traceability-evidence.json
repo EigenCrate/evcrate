@@ -135,9 +135,9 @@
       "target": "vscode",
       "mode": "file-level-pass (editor runtime unproven)",
       "probe": "code --version (1.140.0), structural verification of .evcrate-vscode/skills/ & bootstrap.instructions.md",
-      "expected": "evcrate-local plugin; unqualified evc-cmd-plan-x-cro; evc-planner; bootstrap.instructions.md in managed store",
-      "observed": "Unqualified evc-cmd-plan-x-cro and evc-planner verified; plugin identity evcrate-local preserved; bootstrap.instructions.md verified; editor UI unexercised",
-      "limitations": "Editor plugin registered via explicit setting; verified bootstrap.instructions.md, unqualified evc-cmd-plan-x-cro, and isolated plugin store."
+      "expected": "evc plugin; cmd-plan-x-cro; evc-planner; bootstrap.instructions.md in managed store",
+      "observed": "cmd-plan-x-cro and evc-planner verified; plugin identity evc preserved; bootstrap.instructions.md verified; editor UI unexercised",
+      "limitations": "Editor plugin registered via explicit setting; verified bootstrap.instructions.md, cmd-plan-x-cro, and isolated plugin store."
     }
   ],
   "regression_suite_accounting": {

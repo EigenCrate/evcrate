@@ -3,7 +3,7 @@ import type { ProjectionBuildContext } from '../types.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 import { filesUnder, sourcePath, decodeUtf8 } from './common.js';
 import { parseFrontmatter } from './metadata.js';
-import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
+import { assertAgentName, assertUniqueNames, commandNameFromSourcePath, SEGMENT_SEPARATOR } from '../resource-naming.js';
 
 export interface VscodeCommandMapEntry {
   readonly source: string;
@@ -82,15 +82,16 @@ export function discoverVscodeCommands(context: ProjectionBuildContext): Record<
     const parsed = parseFrontmatter(decodeUtf8(file.bytes));
     const description = typeof parsed.fields.description === 'string' ? parsed.fields.description.trim() : '';
     const argumentHint = typeof parsed.fields['argument-hint'] === 'string' ? parsed.fields['argument-hint'].trim() : undefined;
-    names.push(command.name);
+    const localName = `cmd-${command.segments.join(SEGMENT_SEPARATOR)}`;
+    names.push(localName);
     result[command.name] = Object.freeze({
       source: rel,
       sourceSemanticId: command.semanticId,
       sourceName: command.semanticId,
-      target: `skills/${command.name}/SKILL.md`,
-      localName: command.name,
-      targetName: command.name,
-      nativeInvocationName: `/${command.name}`,
+      target: `skills/${localName}/SKILL.md`,
+      localName,
+      targetName: localName,
+      nativeInvocationName: `/${localName}`,
       description,
       argumentHint,
       disposition: 'approximated'

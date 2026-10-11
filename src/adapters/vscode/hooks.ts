@@ -95,7 +95,7 @@ export function convertVscodeHooks(context: ProjectionBuildContext): VscodeHookA
   // 5. Write hook-inventory.json
   writeJson(context, 'evcrate/hook-inventory.json', {
     schema: 'evcrate-vscode-hook-inventory-v1',
-    plugin_id: 'evcrate-local',
+    plugin_id: 'evc',
     registered_events: [...VSCODE_LOCAL_HOOK_EVENTS],
     runtime_scripts: scripts,
     unsupported_capabilities: unsupported

@@ -54,6 +54,29 @@ export function replaceCommandPaths(
   return restoreSegments(rendered, guarded.protectedEntries);
 }
 
+export function replaceCommandInvocations(
+  value: string,
+  commandMap: Record<string, VscodeCommandMapEntry>
+): string {
+  const guarded = protectSegments(value);
+  let rendered = guarded.text;
+
+  const entries = Object.values(commandMap).sort((a, b) => b.source.length - a.source.length);
+
+  for (const item of entries) {
+    const canonicalStem = item.source.endsWith('.md') ? item.source.slice(0, -3) : item.source;
+    if (canonicalStem !== item.localName) {
+      const pattern = new RegExp(`(?<![A-Za-z0-9_-])([/$])${escapeRegex(canonicalStem)}(?![A-Za-z0-9_-])`, 'gu');
+      rendered = rendered.replace(pattern, `$1${item.localName}`);
+    }
+  }
+
+  // Rewrite wildcard command family references (e.g. /evc-cmd-plan-x-*, /evc-cmd-code*)
+  rendered = rendered.replace(/(?<![A-Za-z0-9_-])([/$])evc-cmd-(?=[a-z0-9])/gu, '$1cmd-');
+
+  return restoreSegments(rendered, guarded.protectedEntries);
+}
+
 export function replaceSkillReferences(
   value: string,
   skills: readonly VscodeSkillMapEntry[]
@@ -170,6 +193,7 @@ export function transformVscodePrompt(
   skills: readonly VscodeSkillMapEntry[]
 ): string {
   let result = replaceCommandPaths(value, commandMap);
+  result = replaceCommandInvocations(result, commandMap);
   result = replaceSkillReferences(result, skills);
   result = replaceWorkflowReferences(result);
   result = replaceInstructionReferences(result);

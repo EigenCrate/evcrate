@@ -53,7 +53,7 @@ for (const target of targets) {
     const files = projectionExpectations(context).filter((entry) => entry.kind === 'file');
     const helper = files.find((entry) => entry.path.endsWith('/scripts/ev-help.py'));
     assert.ok(helper, 'Documented help helper must be emitted and hash-managed');
-    const document = files.find((entry) => /\/(?:evc-cmd-help\.md|evc-cmd-help\/SKILL\.md)$/u.test(entry.path));
+    const document = files.find((entry) => /\/(?:evc-cmd-help\.md|(?:evc-)?cmd-help\/SKILL\.md)$/u.test(entry.path));
     assert.ok(document, 'Help procedure must be emitted');
     const guidance = readFileSync(join(stage.path, document.path), 'utf8');
     const roster = [...guidance.matchAll(/^\d+\. `([^`]+)` \(/gmu)].map((match) => match[1]);
@@ -84,7 +84,7 @@ for (const target of targets) {
       const layout = JSON.parse(readFileSync(join(dirname(script), 'scanner-layout.json'), 'utf8'));
       const commands = resolve(dirname(script), layout.commands.root);
       const ownCommand = layout.commands.format === 'command-skill'
-        ? join(commands, 'evc-cmd-plan-x-fast/SKILL.md')
+        ? join(commands, target === 'vscode' ? 'cmd-plan-x-fast/SKILL.md' : 'evc-cmd-plan-x-fast/SKILL.md')
         : join(commands, 'evc-cmd-plan-x-fast.md');
       const sentinel = `Installed ${target} ${scope} catalog`;
       writeFileSync(ownCommand, readFileSync(ownCommand, 'utf8').replace(/^description:.*$/mu, `description: ${sentinel}`));
